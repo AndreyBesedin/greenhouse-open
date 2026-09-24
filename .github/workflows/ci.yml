@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    name: install each package, then ruff, mypy, pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Built and installed as wheels, as a user would get them.
+      - name: Install the packages and tools
+        run: >-
+          python -m pip install
+          ./greenhouse_protocol ./greenhouse_sim ./greenhouse_adapters
+          -r requirements-dev.txt
+
+      - name: Check each package
+        run: |
+          for package in greenhouse_protocol greenhouse_sim greenhouse_adapters; do
+            echo "::group::$package"
+            (cd "$package" && ruff check . && ruff format --check . && mypy && pytest -q)
+            echo "::endgroup::"
+          done
+
+      - name: Cross-package tests and examples
+        run: ruff check tests examples && ruff format --check tests examples && mypy && pytest -q
+
+  dco:
+    name: commits are signed off
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check Signed-off-by
+        run: |
+          missing=$(git log --format='%H %s%n%b%n--end--' \
+            "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" |
+            awk '/^[0-9a-f]{40} /{sha=$1; signed=0} /^Signed-off-by: /{signed=1} /^--end--$/{if(!signed) print sha}')
+          if [ -n "$missing" ]; then
+            echo "Commits without Signed-off-by (see CONTRIBUTING.md):"; echo "$missing"; exit 1
+          fi

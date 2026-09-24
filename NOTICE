@@ -1,0 +1,12 @@
+greenhouse-open
+Copyright 2026 The greenhouse-open Authors
+
+This product includes software developed by The greenhouse-open Authors,
+licensed under the Apache License, Version 2.0.
+
+The dataset adapters in greenhouse-adapters read datasets published by
+Wageningen University & Research through 4TU.ResearchData under the
+Creative Commons Attribution 4.0 International licence (CC BY 4.0). No
+dataset content is distributed with this software; the dataset manifests
+record only publicly available metadata (file names, sizes, checksums and
+download locations).

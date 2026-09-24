@@ -1,0 +1,28 @@
+{
+  "title": "4th Autonomous Greenhouse Challenge: Dwarf Tomato Timeseries and Images ",
+  "version": 1,
+  "doi": "10.4121/fa102772-32db-4b30-bace-12f2016722ce.v1",
+  "license": {
+    "name": "CC BY 4.0"
+  },
+  "files": [
+    {
+      "name": "autonomous_greenhouse_challenge4_canopy_camera.zip",
+      "size": 31416872168,
+      "computed_md5": "671a1c6e2b2e1627f821a36e431ceb28",
+      "download_url": "https://data.4tu.nl/file/fa102772-32db-4b30-bace-12f2016722ce/818e2966-7015-432d-aa7c-1b9158c011cf"
+    },
+    {
+      "name": "autonomous_greenhouse_challenge4_timeseries.zip",
+      "size": 6014133,
+      "computed_md5": "c4da1b2696c4a1e5ea5744f2482b0f93",
+      "download_url": "https://data.4tu.nl/file/fa102772-32db-4b30-bace-12f2016722ce/14a4a8cd-e081-4dbd-94e3-cd7b332ce120"
+    },
+    {
+      "name": "README.md",
+      "size": 3715,
+      "computed_md5": "f22125b584f3e25ae80ed87e2ba72de1",
+      "download_url": "https://data.4tu.nl/file/fa102772-32db-4b30-bace-12f2016722ce/4cc2f511-9eb4-4cd3-99b9-97a6e106f3e1"
+    }
+  ]
+}
