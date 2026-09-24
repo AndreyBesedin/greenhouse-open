@@ -5,7 +5,7 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the
 project uses [semantic versioning](https://semver.org/): a change that
 breaks the conformance checks is a major version.
 
-## 0.1.0 - unreleased
+## 0.1.0 - 2026-09-24
 
 First public release.
 
