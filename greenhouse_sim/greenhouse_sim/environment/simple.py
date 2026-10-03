@@ -1,18 +1,29 @@
+"""The simple environment model: one greenhouse-wide climate, day by day.
+
+Air temperature and humidity are single values for the whole greenhouse.
+Each day they drift randomly and are pulled back towards the middle of the
+scenario's bounds, so warm or humid spells last a few days rather than every
+day being an independent draw. There is no light, CO2, weather, equipment or
+spatial variation. Like the simple tomato model, it is kept as the fast,
+deterministic reference that richer environment models are compared against.
+"""
+
 import numpy as np
 
+from greenhouse_sim.core.rng import seeded_rng
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.world.state import GreenhouseEnvironment
 
 
 def advance_environment(
-    environment: GreenhouseEnvironment,
-    config: ScenarioConfig,
-    rng: np.random.Generator,
+    environment: GreenhouseEnvironment, config: ScenarioConfig, day: int
 ) -> GreenhouseEnvironment:
     """Evolve yesterday's environment into today's via a small mean-reverting drift.
 
-    Coherent weather periods, rather than every day being an independent draw.
+    The day's randomness is drawn from the scenario seed and the day alone,
+    so the climate does not depend on what else the simulator draws.
     """
+    rng = seeded_rng(config.random_seed, day, "environment")
     temp_low, temp_high = config.air_temperature_bounds
     temp_center = (temp_low + temp_high) / 2
     temp_drift = rng.normal(0.0, 0.6) + 0.1 * (temp_center - environment.air_temperature_c)

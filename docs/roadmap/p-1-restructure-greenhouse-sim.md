@@ -50,7 +50,8 @@ greenhouse_sim/
     core/          engine, checkpoints, seeded randomness, simulation time
     world/         hidden world state, identifiers, geometry contracts
     biology/
-      tomato/      the current simple model: growth, ripening, water
+      tomato/
+        simple/    the current daily model, kept as the reference model
     environment/   environment state, the simple model, field interface
     sensors/       observation generation and sensor models
     actions/       validation and execution
@@ -78,7 +79,7 @@ TypeScript workflow.
 | --- | --- | --- |
 | P-1.1 | `test(sim): capture the simulator baseline before restructuring` | Done ([#4](https://github.com/AndreyBesedin/greenhouse-open/pull/4)) |
 | P-1.2 | `refactor(sim): introduce internal package boundaries without behavior change` | Done ([#9](https://github.com/AndreyBesedin/greenhouse-open/pull/9)) |
-| P-1.3 | `refactor(sim): isolate current dynamics as the simple reference backend` | Planned |
+| P-1.3 | `refactor(sim): isolate current dynamics as the simple reference backend` | Done ([#10](https://github.com/AndreyBesedin/greenhouse-open/pull/10)) |
 | P-1.4 | `refactor(sim): separate world state from model-specific latent parameters` | Planned |
 | P-1.5 | `feat(sim): introduce backend capability contracts as minimal protocols` | Planned |
 | P-1.6 | `feat(sim): introduce a scene and geometry snapshot contract` | Planned |
@@ -157,6 +158,37 @@ The current daily tomato and environment logic becomes explicitly the
 for future models, and usable while P03 and P04 mature. It stops defining how
 plant and environment simulation work in general. Reference scenarios produce
 the same baseline.
+
+As implemented:
+
+- The daily tomato rules (growth, ripening, water) move into
+  `biology/tomato/simple/`. That leaves `biology/tomato/` for P03's
+  organ-level model, which is a different model rather than an evolution of
+  these rules.
+- One plant's day (`initial_plant`, `advance_plant`) moves out of
+  `world_builder` into `biology/tomato/simple/daily.py`. The simple
+  environment model in `environment/simple.py` derives its own random stream
+  from the scenario seed and the day. `world_builder` is left only composing
+  the two: the environment advances, then each plant responds to it. Its
+  public functions are unchanged.
+- The package docstrings of both simple models state what they model, what
+  they leave out and why they stay. One known limit is that fruit ripens long
+  before it nears its target size, so harvested fruit averages between about
+  0.2 g and 2 g across the reference scenarios.
+- A new test pins that a plant develops identically whatever other plants
+  share the greenhouse, because each plant's randomness is keyed by its own
+  identity. Batching and parallel runs depend on that.
+
+Open questions for P-1.4 and P-1.5:
+
+- `ScenarioConfig` mixes the description of the world (size, seed, duration,
+  sensor noise) with the simple models' tuning parameters. Separating them
+  changes a public type, so it waits until backends have contracts and their
+  own parameters.
+- Watering adds to the simple model's water reservoir directly from
+  `actions/effects.py`, so an action's effect is tied to one plant model.
+  That coupling has to be resolved when world state and model state are
+  separated.
 
 ### P-1.4: Separate world state from model-specific parameters
 

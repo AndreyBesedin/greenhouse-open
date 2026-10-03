@@ -24,6 +24,20 @@ def test_initialize_world_creates_one_plant_world_per_plant_id() -> None:
     assert all(p.trusses == [] for p in world.plants)
 
 
+def test_a_plant_develops_the_same_whatever_else_is_in_the_greenhouse() -> None:
+    """A plant's randomness is keyed by its own identity, never drawn from a
+    shared stream, so adding, removing or reordering other plants leaves its
+    trajectory unchanged. Batching and parallel runs depend on that."""
+    alone = initialize_world(CONFIG, ["gh_001_plant_007"])
+    crowded = initialize_world(CONFIG, ["gh_001_plant_009", "gh_001_plant_007", *PLANT_IDS])
+    for day in range(1, 31):
+        alone = advance_world(alone, CONFIG, day)
+        crowded = advance_world(crowded, CONFIG, day)
+
+    assert crowded.plant("gh_001_plant_007") == alone.plant("gh_001_plant_007")
+    assert crowded.environment == alone.environment
+
+
 def test_advance_world_is_deterministic_for_the_same_inputs() -> None:
     first = advance_world(initialize_world(CONFIG, PLANT_IDS), CONFIG, 1)
     second = advance_world(initialize_world(CONFIG, PLANT_IDS), CONFIG, 1)
