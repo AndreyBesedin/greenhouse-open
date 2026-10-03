@@ -10,6 +10,7 @@ published with the source.
 import hashlib
 import pathlib
 import re
+import subprocess
 
 import pytest
 
@@ -29,17 +30,6 @@ TEXT_SUFFIXES = {
     ".js",
     ".html",
     ".css",
-}
-# Tool caches, installed dependencies and build output: none of it is source.
-SKIPPED_PARTS = {
-    "__pycache__",
-    ".venv",
-    ".mypy_cache",
-    ".ruff_cache",
-    ".pytest_cache",
-    ".git",
-    "node_modules",
-    "dist",
 }
 
 # A path into the repository's own docs/ folder, as cited in prose or a link.
@@ -87,12 +77,23 @@ def _name_digests(line: str) -> set[str]:
 
 
 def _text_files() -> list[pathlib.Path]:
+    """What would be published: tracked files, and new files git would track.
+
+    Ignored files (tool caches, installed dependencies, build output, test
+    reports) are not part of the repository, so they are not checked.
+    """
+    listed = subprocess.run(
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.splitlines()
     return sorted(
         path
-        for path in ROOT.rglob("*")
+        for path in (ROOT / name for name in listed)
         if path.is_file()
         and path.suffix in TEXT_SUFFIXES
-        and not SKIPPED_PARTS & set(path.parts)
         and path != pathlib.Path(__file__).resolve()
     )
 
