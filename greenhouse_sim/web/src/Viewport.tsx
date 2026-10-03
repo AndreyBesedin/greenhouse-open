@@ -3,11 +3,13 @@ import { CameraRig } from "./CameraRig";
 import type { PresetRequest } from "./camera";
 import { HudProbe } from "./HudProbe";
 import type { ViewSample } from "./readouts";
+import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
+import { SceneView } from "./scene/SceneView";
 import { type Point3, viewerToWorld, WORLD_TO_VIEWER_ROTATION } from "./world";
 
-// A 20 m ground grid with 1 m cells, 2 m world axes, and a 1 m cube resting on
-// the grid cell from (1, 1) to (2, 2) m, clear of the axes, so scale and
-// orientation read at a glance.
+// A 20 m ground grid with 1 m cells is always shown. Without a scene, 2 m world
+// axes and a 1 m cube resting on the grid cell from (1, 1) to (2, 2) m, clear
+// of the axes, make scale and orientation read at a glance.
 const GRID_SIZE_M = 20;
 const GRID_DIVISIONS = 20;
 const AXES_LENGTH_M = 2;
@@ -27,11 +29,13 @@ const AMBIENT_LIGHT_INTENSITY = 0.6;
 const SUN_INTENSITY = 1.2;
 const SUN = { x: 5, y: 10, z: 7 };
 
-export function ReferenceScene({
+export function Viewport({
+  snapshot,
   presetRequest,
   onSample,
   onPointer,
 }: {
+  snapshot: SceneSnapshot | null;
   presetRequest: PresetRequest | null;
   onSample: (sample: ViewSample) => void;
   onPointer: (point: Point3 | null) => void;
@@ -46,11 +50,17 @@ export function ReferenceScene({
       {/* Three.js's grid lies in its own x-z plane, which is the world's ground. */}
       <gridHelper args={[GRID_SIZE_M, GRID_DIVISIONS, GRID_COLORS.centre, GRID_COLORS.cells]} />
       <group rotation={WORLD_TO_VIEWER_ROTATION}>
-        <axesHelper args={[AXES_LENGTH_M]} />
-        <mesh position={CUBE_CENTRE}>
-          <boxGeometry args={[CUBE_SIZE_M, CUBE_SIZE_M, CUBE_SIZE_M]} />
-          <meshStandardMaterial color={CUBE_COLOR} />
-        </mesh>
+        {snapshot === null ? (
+          <>
+            <axesHelper args={[AXES_LENGTH_M]} />
+            <mesh position={CUBE_CENTRE}>
+              <boxGeometry args={[CUBE_SIZE_M, CUBE_SIZE_M, CUBE_SIZE_M]} />
+              <meshStandardMaterial color={CUBE_COLOR} />
+            </mesh>
+          </>
+        ) : (
+          <SceneView snapshot={snapshot} />
+        )}
         {/* An undrawn ground plane that reports where the pointer meets the ground. */}
         <mesh
           onPointerMove={(event) => onPointer(viewerToWorld(event.point))}
