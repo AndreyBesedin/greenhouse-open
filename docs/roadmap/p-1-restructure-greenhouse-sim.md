@@ -76,8 +76,8 @@ TypeScript workflow.
 
 | Step | Commit summary | Status |
 | --- | --- | --- |
-| P-1.1 | `test(sim): capture the simulator baseline before restructuring` | In review ([#4](https://github.com/AndreyBesedin/greenhouse-open/pull/4)) |
-| P-1.2 | `refactor(sim): introduce internal package boundaries without behavior change` | Planned |
+| P-1.1 | `test(sim): capture the simulator baseline before restructuring` | Done ([#4](https://github.com/AndreyBesedin/greenhouse-open/pull/4)) |
+| P-1.2 | `refactor(sim): introduce internal package boundaries without behavior change` | Done ([#9](https://github.com/AndreyBesedin/greenhouse-open/pull/9)) |
 | P-1.3 | `refactor(sim): isolate current dynamics as the simple reference backend` | Planned |
 | P-1.4 | `refactor(sim): separate world state from model-specific latent parameters` | Planned |
 | P-1.5 | `feat(sim): introduce backend capability contracts as minimal protocols` | Planned |
@@ -124,6 +124,31 @@ paths. The existing characterization and conformance tests change only in
 their imports. The risk gate and dependency tests that name file paths are
 updated in the same change, so moving a file never silently removes it from
 their protection.
+
+As implemented (see [decision 0004](../decisions/0004-organize-greenhouse-sim-by-domain.md)):
+
+| Before | After |
+| --- | --- |
+| `engine.py`, `checkpoints.py`, `rng.py` | `core/` |
+| `world.py` | `world/state.py` |
+| `dynamics/growth.py`, `ripening.py`, `water.py` | `biology/tomato/` |
+| `dynamics/environment.py` | `environment/simple.py` |
+| `observations.py` | `sensors/generation.py` |
+| `actions.py`, `validation.py`, `executor.py` | `actions/effects.py`, `actions/validation.py`, `actions/executor.py` |
+
+- One commit per domain. Every moved file is unchanged apart from its import
+  lines, and the reference baseline from P-1.1 passes unchanged after each
+  commit.
+- `greenhouse_sim.engine`, `.checkpoints` and `.executor` remain as
+  re-export modules, and `greenhouse_sim.world` re-exports the state types,
+  so every path in `tests/test_public_imports.py` still resolves. Paths that
+  were internal (`rng`, `observations`, `validation`, `actions`,
+  `dynamics.*`) are not re-exported; their importers were updated.
+- `records`, `world_builder`, `ground_truth`, `scenarios` and `evaluation`
+  stay where they were. `world_builder` is P-1.3's subject.
+- The risk gate's sensitive paths follow the engine, the randomness and
+  observation generation, and a new test fails if any sensitive path stops
+  existing.
 
 ### P-1.3: Isolate the current dynamics as the simple reference backend
 
