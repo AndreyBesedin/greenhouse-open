@@ -66,7 +66,7 @@ class GreenhouseDescription(BaseModel):
     created_at: datetime
 
     @model_validator(mode="after")
-    def _identities_are_unique(self) -> "GreenhouseDescription":
+    def _identities_are_unique(self) -> GreenhouseDescription:
         compartment_ids = [c.compartment_id for c in self.compartments]
         duplicates = _duplicates(compartment_ids)
         if duplicates:
