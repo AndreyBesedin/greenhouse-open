@@ -28,7 +28,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from greenhouse_sim.world import FruitStatus, GreenhouseWorld, PlantWorld
+from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
 
 
 class PlantTruth(BaseModel):
@@ -62,8 +62,8 @@ def ground_truth(
     """The noiseless reading of every quantity the simulator's sensors report.
 
     `water_capacity_ml` comes from the scenario, because soil moisture is a
-    percentage of it - the same conversion `greenhouse_sim.observations` makes
-    before adding noise.
+    percentage of it - the same conversion
+    `greenhouse_sim.sensors.generation` makes before adding noise.
     """
     return GroundTruth(
         greenhouse_id=world.greenhouse_id,

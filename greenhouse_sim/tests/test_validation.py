@@ -1,7 +1,7 @@
 from greenhouse_protocol.action import LowerPlantAction, ScheduleInspectionAction, WaterPlantAction
 
+from greenhouse_sim.actions.validation import validate_action
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
-from greenhouse_sim.validation import validate_action
 from greenhouse_sim.world import GreenhouseWorld
 from greenhouse_sim.world_builder import advance_world, initialize_world
 

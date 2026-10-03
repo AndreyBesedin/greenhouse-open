@@ -1,5 +1,5 @@
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.world import GreenhouseEnvironment, PlantWorld
+from greenhouse_sim.world.state import GreenhouseEnvironment, PlantWorld
 
 _STRESS_RISE_PER_DAY = 0.08
 _STRESS_RECOVERY_PER_DAY = 0.05

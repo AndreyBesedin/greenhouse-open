@@ -15,6 +15,7 @@ changes course is a new record that supersedes the old one.
 | [0001](0001-keep-roadmap-and-decisions-in-the-repository.md) | Keep the roadmap and decisions in the repository | Accepted |
 | [0002](0002-use-conventional-commits.md) | Use Conventional Commits | Accepted |
 | [0003](0003-require-python-3-14.md) | Require Python 3.14 | Accepted |
+| [0004](0004-organize-greenhouse-sim-by-domain.md) | Organize `greenhouse_sim` by simulation domain | Accepted |
 
 ## Template
 

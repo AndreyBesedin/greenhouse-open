@@ -1,4 +1,4 @@
-from greenhouse_sim.world import Fruit, FruitStatus, GreenhouseEnvironment, RipenessStage
+from greenhouse_sim.world.state import Fruit, FruitStatus, GreenhouseEnvironment, RipenessStage
 
 _OVERRIPE_BUFFER_DAYS = 8
 

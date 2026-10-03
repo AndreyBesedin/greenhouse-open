@@ -6,8 +6,8 @@ from greenhouse_sim.scenarios.config import ScenarioConfig
 # dynamics - not scripted outcomes - reach watering, an ambiguous reading
 # worth inspecting, and a harvest within about the first ten simulated days,
 # instead of the ~26-40 days gh_001/gh_002 need (see the truss/ripening
-# timing in greenhouse_sim/dynamics/growth.py and ripening.py). A shorter
-# greenhouse also means LOWER_PLANT is reachable in that window. Which
+# timing in greenhouse_sim/biology/tomato/growth.py and ripening.py). A
+# shorter greenhouse also means LOWER_PLANT is reachable in that window. Which
 # policy manages it, and with what thresholds, is the caller's choice.
 GREENHOUSE_DEMO = ScenarioConfig(
     greenhouse_id="gh_demo",

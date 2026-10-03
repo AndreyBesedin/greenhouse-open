@@ -1,8 +1,15 @@
-from scripts.check_pr_risk import _risk_reasons
+from scripts.check_pr_risk import ROOT, SENSITIVE_FILES, _risk_reasons
+
+
+def test_every_sensitive_path_exists() -> None:
+    """A sensitive file that moves must take its entry with it. Otherwise the
+    gate silently stops flagging changes to it."""
+    missing = sorted(path for path in SENSITIVE_FILES if not (ROOT / path).exists())
+    assert not missing, f"sensitive paths that no longer exist: {missing}"
 
 
 def test_small_single_package_change_is_normal_risk() -> None:
-    assert _risk_reasons(["greenhouse_sim/greenhouse_sim/dynamics/growth.py"], 80) == []
+    assert _risk_reasons(["greenhouse_sim/greenhouse_sim/biology/tomato/growth.py"], 80) == []
 
 
 def test_large_change_requires_manual_review() -> None:

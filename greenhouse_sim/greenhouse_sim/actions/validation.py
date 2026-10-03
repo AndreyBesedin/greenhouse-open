@@ -17,7 +17,7 @@ from greenhouse_protocol.action import (
     WaterPlantAction,
 )
 
-from greenhouse_sim.world import GreenhouseWorld
+from greenhouse_sim.world.state import GreenhouseWorld
 
 
 def validate_action(world: GreenhouseWorld, action: RequestedAction) -> ActionResult:
