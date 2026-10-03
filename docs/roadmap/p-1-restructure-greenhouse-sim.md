@@ -83,7 +83,7 @@ TypeScript workflow.
 | P-1.4 | `refactor(sim): separate world state from model-specific latent parameters` | Done ([#11](https://github.com/AndreyBesedin/greenhouse-open/pull/11)) |
 | P-1.5 | `feat(sim): introduce backend capability contracts as minimal protocols` | Done ([#13](https://github.com/AndreyBesedin/greenhouse-open/pull/13)) |
 | P-1.6 | `feat(sim): introduce a scene and geometry snapshot contract` | Done ([#14](https://github.com/AndreyBesedin/greenhouse-open/pull/14)) |
-| P-1.7 | `chore(web): add the browser package inside greenhouse_sim` | Planned |
+| P-1.7 | `chore(web): add the browser package inside greenhouse_sim` | Done ([#15](https://github.com/AndreyBesedin/greenhouse-open/pull/15)) |
 | P-1.8 | `feat(api): add a thin local simulator-viewer adapter` | Planned |
 | P-1.9 | `ci: extend CI to the browser package` | Planned |
 | P-1.10 | `docs(sim): document the new architecture and developer workflow` | Planned |
@@ -278,6 +278,22 @@ As implemented:
 `greenhouse_sim/web/` with React, TypeScript and Vite, frontend tests and
 build, and a bootstrap page that identifies itself as the `greenhouse-sim`
 viewer and shows build metadata.
+
+As implemented (see [decision 0008](../decisions/0008-build-the-viewer-with-npm-node-24-and-vite.md)):
+
+- npm on Node 24 (`.nvmrc`, `engines`), Vite and Vitest, and strict
+  TypeScript, including unchecked index access and exact optional
+  properties. The lockfile is committed.
+- The bootstrap page shows the simulator version, read from
+  `greenhouse_sim/pyproject.toml` at build time, and the commit it was built
+  from. The viewer has no version of its own.
+- Vitest renders the page in Node and checks its title, that it shows the
+  build metadata it is given, and that the version it reports is the
+  simulator's. The production build was also checked in a real browser.
+- The publishable check now reads TypeScript, JavaScript, HTML and CSS too,
+  and skips `node_modules` and `dist`.
+- TypeScript linting and formatting, and CI for the viewer, are left to
+  P-1.9.
 
 ### P-1.8: Add a thin local API adapter
 
