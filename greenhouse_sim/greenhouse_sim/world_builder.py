@@ -6,7 +6,6 @@ composes them.
 """
 
 from greenhouse_sim.biology.tomato.simple.daily import advance_plant, initial_plant
-from greenhouse_sim.core.rng import seeded_rng
 from greenhouse_sim.environment.simple import advance_environment, initial_environment
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.world.state import GreenhouseWorld
@@ -24,9 +23,7 @@ def initialize_world(
 
 
 def advance_world(world: GreenhouseWorld, config: ScenarioConfig, day: int) -> GreenhouseWorld:
-    environment_rng = seeded_rng(config.random_seed, day, "environment")
-    environment = advance_environment(world.environment, config, environment_rng)
-
+    environment = advance_environment(world.environment, config, day)
     plants = [advance_plant(plant, environment, config) for plant in world.plants]
 
     return world.model_copy(
