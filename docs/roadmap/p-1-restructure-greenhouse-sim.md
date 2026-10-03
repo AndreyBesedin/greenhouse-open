@@ -81,7 +81,7 @@ TypeScript workflow.
 | P-1.2 | `refactor(sim): introduce internal package boundaries without behavior change` | Done ([#9](https://github.com/AndreyBesedin/greenhouse-open/pull/9)) |
 | P-1.3 | `refactor(sim): isolate current dynamics as the simple reference backend` | Done ([#10](https://github.com/AndreyBesedin/greenhouse-open/pull/10)) |
 | P-1.4 | `refactor(sim): separate world state from model-specific latent parameters` | Done ([#11](https://github.com/AndreyBesedin/greenhouse-open/pull/11)) |
-| P-1.5 | `feat(sim): introduce backend capability contracts as minimal protocols` | Planned |
+| P-1.5 | `feat(sim): introduce backend capability contracts as minimal protocols` | Done ([#13](https://github.com/AndreyBesedin/greenhouse-open/pull/13)) |
 | P-1.6 | `feat(sim): introduce a scene and geometry snapshot contract` | Planned |
 | P-1.7 | `chore(web): add the browser package inside greenhouse_sim` | Planned |
 | P-1.8 | `feat(api): add a thin local simulator-viewer adapter` | Planned |
@@ -184,7 +184,8 @@ Open questions for P-1.4 and P-1.5:
 - `ScenarioConfig` mixes the description of the world (size, seed, duration,
   sensor noise) with the simple models' tuning parameters. Separating them
   changes a public type, so it waits until backends have contracts and their
-  own parameters.
+  own parameters. *Still open after P-1.5: it waits for the first model that
+  needs parameters of its own (P03 or P04).*
 - Watering adds to the simple model's water reservoir directly from
   `actions/effects.py`, so an action's effect is tied to one plant model.
   That coupling has to be resolved when world state and model state are
@@ -222,6 +223,26 @@ As implemented (see [decision 0005](../decisions/0005-keep-model-state-apart-fro
 Only the interfaces the roadmap already justifies: plant development,
 environment and sensor generation. No empty interfaces for hypothetical
 components. Contract tests run the existing simple backends.
+
+As implemented (see [decision 0006](../decisions/0006-plug-models-in-through-minimal-protocols.md)):
+
+- `biology/contract.py` (`PlantModel[StateT]`), `environment/contract.py`
+  (`EnvironmentModel`) and `sensors/contract.py` (`SensorModel`) are
+  `typing.Protocol`s. Their docstrings state the rules every implementation
+  follows, and `tests/test_model_contracts.py` checks each listed
+  implementation against them.
+- The simple models gain small classes that satisfy them:
+  `SimpleTomatoModel`, `SimpleEnvironmentModel` and `SimpleSensorModel`. The
+  crop-level loop moves from `world_builder` into `SimpleTomatoModel`.
+- `SimulationEngine` takes the three models as keyword arguments, defaulting
+  to the simple ones, and so do `initialize_world` and `advance_world`. A test
+  plugs in a constant-climate environment model and sees it drive the world
+  and the sensor readings, with no change to the engine.
+- `world/state.py` names the plant-model state the world can carry
+  (`PlantModelState`), so the engine does not import a model's internals. The
+  model-state boundary test from P-1.4 caught the first draft doing so.
+- Not added yet, because nothing would use them: capability flags, state for
+  environment models, and model parameters separate from `ScenarioConfig`.
 
 ### P-1.6: Introduce a scene and geometry snapshot contract
 
