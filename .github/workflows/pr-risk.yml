@@ -1,0 +1,35 @@
+name: Pull request risk
+
+# Separate from CI so that editing the pull request description, which is
+# where the manual-review acknowledgement is given, re-runs only this gate
+# and evaluates the description and base branch as they are now. Re-running
+# an earlier run would not: a re-run replays the event that started it,
+# including the description and base commit it saw then.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: pr-risk-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pr-risk:
+    name: pull request risk gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Classify review risk
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: >-
+          python scripts/check_pr_risk.py
+          "${{ github.event.pull_request.base.sha }}"
+          "${{ github.event.pull_request.head.sha }}"
