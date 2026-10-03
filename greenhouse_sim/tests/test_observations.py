@@ -3,8 +3,8 @@ from datetime import UTC, datetime
 from greenhouse_protocol.enums import ObservationType
 from greenhouse_protocol.observation import Observation
 
-from greenhouse_sim.observations import generate_observations
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.sensors.generation import generate_observations
 from greenhouse_sim.world import GreenhouseWorld
 from greenhouse_sim.world_builder import advance_world, initialize_world
 

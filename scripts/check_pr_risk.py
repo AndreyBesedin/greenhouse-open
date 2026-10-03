@@ -47,7 +47,7 @@ SENSITIVE_FILES = {
     "tests/test_publishable.py",
     "greenhouse_sim/greenhouse_sim/core/engine.py",
     "greenhouse_sim/greenhouse_sim/ground_truth.py",
-    "greenhouse_sim/greenhouse_sim/observations.py",
+    "greenhouse_sim/greenhouse_sim/sensors/generation.py",
     "greenhouse_sim/greenhouse_sim/core/rng.py",
 }
 
