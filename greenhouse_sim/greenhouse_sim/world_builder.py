@@ -1,3 +1,4 @@
+from greenhouse_sim.core.rng import seeded_rng
 from greenhouse_sim.dynamics.environment import advance_environment, initial_environment
 from greenhouse_sim.dynamics.growth import (
     advance_stem,
@@ -8,7 +9,6 @@ from greenhouse_sim.dynamics.growth import (
 )
 from greenhouse_sim.dynamics.ripening import advance_ripening
 from greenhouse_sim.dynamics.water import advance_water
-from greenhouse_sim.rng import seeded_rng
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.world import (
     Fruit,

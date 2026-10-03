@@ -45,10 +45,10 @@ SENSITIVE_FILES = {
     "requirements-dev.txt",
     "tests/test_dependencies.py",
     "tests/test_publishable.py",
-    "greenhouse_sim/greenhouse_sim/engine.py",
+    "greenhouse_sim/greenhouse_sim/core/engine.py",
     "greenhouse_sim/greenhouse_sim/ground_truth.py",
     "greenhouse_sim/greenhouse_sim/observations.py",
-    "greenhouse_sim/greenhouse_sim/rng.py",
+    "greenhouse_sim/greenhouse_sim/core/rng.py",
 }
 
 

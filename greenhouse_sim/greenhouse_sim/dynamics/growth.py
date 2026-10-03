@@ -1,6 +1,6 @@
 import numpy as np
 
-from greenhouse_sim.rng import seeded_rng
+from greenhouse_sim.core.rng import seeded_rng
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.world import Fruit, GreenhouseEnvironment, PlantWorld, Truss, TrussStage
 
