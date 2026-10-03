@@ -85,7 +85,7 @@ TypeScript workflow.
 | P-1.6 | `feat(sim): introduce a scene and geometry snapshot contract` | Done ([#14](https://github.com/AndreyBesedin/greenhouse-open/pull/14)) |
 | P-1.7 | `chore(web): add the browser package inside greenhouse_sim` | Done ([#15](https://github.com/AndreyBesedin/greenhouse-open/pull/15)) |
 | P-1.8 | `feat(api): add a thin local simulator-viewer adapter` | Done ([#16](https://github.com/AndreyBesedin/greenhouse-open/pull/16)) |
-| P-1.9 | `ci: extend CI to the browser package` | Planned |
+| P-1.9 | `ci: extend CI to the browser package` | Done ([#17](https://github.com/AndreyBesedin/greenhouse-open/pull/17)) |
 | P-1.10 | `docs(sim): document the new architecture and developer workflow` | Planned |
 
 ### P-1.1: Capture the simulator baseline
@@ -328,6 +328,20 @@ As implemented (see [decision 0009](../decisions/0009-a-standard-library-local-a
 Keep the Python checks and add frontend install, tests, build and a
 lightweight browser smoke test. Expensive CFD or rendering work stays out of
 default CI.
+
+As implemented (see [decision 0010](../decisions/0010-check-the-viewer-with-biome-vitest-and-playwright.md)):
+
+- A `viewer checks` CI job runs `npm ci`, Biome, the type check, Vitest, the
+  production build and a Playwright smoke test. The Python job is unchanged.
+- The smoke test starts the simulator's local API and the built viewer, opens
+  the page in Chromium, and checks that it lists `gh_001`, `gh_002` and
+  `gh_demo` from Python with no console or page errors. A failed run keeps
+  its report as an artifact.
+- Biome formats and lints the viewer, configured at the repository root.
+  Its `noMagicNumbers` rule extends the named-numbers convention to
+  TypeScript, and a pre-commit hook runs it on staged viewer files.
+- The publishable check now reads the files git would publish, rather than
+  walking the disk with a skip list.
 
 ### P-1.10: Document the architecture and workflow
 

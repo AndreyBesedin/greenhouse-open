@@ -31,11 +31,11 @@ function isScenarioSummary(value: unknown): value is ScenarioSummary {
   }
   const fields = value as Record<string, unknown>;
   return (
-    typeof fields["id"] === "string" &&
-    typeof fields["name"] === "string" &&
-    typeof fields["description"] === "string" &&
-    Number.isInteger(fields["plants"]) &&
-    Number.isInteger(fields["duration_days"])
+    typeof fields.id === "string" &&
+    typeof fields.name === "string" &&
+    typeof fields.description === "string" &&
+    Number.isInteger(fields.plants) &&
+    Number.isInteger(fields.duration_days)
   );
 }
 
