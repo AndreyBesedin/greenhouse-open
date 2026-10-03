@@ -28,8 +28,3 @@ def advance_water(
         water_stress = max(0.0, plant.water_stress - _STRESS_RECOVERY_PER_DAY)
 
     return plant.model_copy(update={"water_reservoir_ml": reservoir, "water_stress": water_stress})
-
-
-def apply_irrigation(plant: PlantWorld, amount_ml: float, config: ScenarioConfig) -> PlantWorld:
-    reservoir = min(config.water_capacity_ml, plant.water_reservoir_ml + amount_ml)
-    return plant.model_copy(update={"water_reservoir_ml": reservoir})
