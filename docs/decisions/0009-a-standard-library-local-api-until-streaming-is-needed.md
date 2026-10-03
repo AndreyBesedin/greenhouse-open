@@ -1,6 +1,6 @@
 # 0009: A standard-library local API until streaming is needed
 
-**Status:** Accepted
+**Status:** Accepted; its plan for streaming is superseded by [0012](0012-stream-to-the-viewer-with-server-sent-events.md)
 **Date:** 2026-10-03
 
 ## Context

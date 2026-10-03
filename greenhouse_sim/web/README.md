@@ -21,8 +21,12 @@ else in the viewer deals with the difference.
 
 The panel chooses what is drawn, and the address bar keeps the choice:
 `?scene=example` is a deterministic example scene from
-`public/scenes/example.json`, and `?scenario=gh_demo` is that scenario before
-day one, from the simulator's API. The viewer checks every scene against the
+`public/scenes/example.json`, `?scenario=gh_demo` is that scenario before
+day one, from the simulator's API, and `?live=gh_demo` follows it live as the
+API plays it one simulated day per second (`python -m greenhouse_sim.api
+--seconds-per-day 0.2` plays faster). The HUD then shows the stream's state
+and the simulated day; if the API goes away the viewer says so and reconnects
+when it is back. The viewer checks every scene against the
 schema the simulator publishes, and says why when it refuses one.
 
 The scene contract has one source, the simulator's types. After changing
