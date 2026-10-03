@@ -1,7 +1,7 @@
 import numpy as np
 
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.world import GreenhouseEnvironment
+from greenhouse_sim.world.state import GreenhouseEnvironment
 
 
 def advance_environment(

@@ -13,7 +13,7 @@ from greenhouse_protocol.event import Event
 from greenhouse_sim.dynamics.water import apply_irrigation
 from greenhouse_sim.records import event_id
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.world import FruitStatus, GreenhouseWorld, PlantWorld
+from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
 
 
 def apply_action(

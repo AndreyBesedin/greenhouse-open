@@ -15,7 +15,7 @@ in a synthetic world, not an instant in a greenhouse's chronology.
 
 from typing import Protocol
 
-from greenhouse_sim.world import GreenhouseWorld
+from greenhouse_sim.world.state import GreenhouseWorld
 
 
 class WorldCheckpoints(Protocol):

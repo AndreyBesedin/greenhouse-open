@@ -19,7 +19,7 @@ from greenhouse_protocol.event import Event
 
 from greenhouse_sim.actions import apply_action
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.world import GreenhouseWorld
+from greenhouse_sim.world.state import GreenhouseWorld
 
 
 class ActionExecutor(Protocol):
