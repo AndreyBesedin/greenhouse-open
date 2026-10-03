@@ -84,7 +84,7 @@ TypeScript workflow.
 | P-1.5 | `feat(sim): introduce backend capability contracts as minimal protocols` | Done ([#13](https://github.com/AndreyBesedin/greenhouse-open/pull/13)) |
 | P-1.6 | `feat(sim): introduce a scene and geometry snapshot contract` | Done ([#14](https://github.com/AndreyBesedin/greenhouse-open/pull/14)) |
 | P-1.7 | `chore(web): add the browser package inside greenhouse_sim` | Done ([#15](https://github.com/AndreyBesedin/greenhouse-open/pull/15)) |
-| P-1.8 | `feat(api): add a thin local simulator-viewer adapter` | Planned |
+| P-1.8 | `feat(api): add a thin local simulator-viewer adapter` | Done ([#16](https://github.com/AndreyBesedin/greenhouse-open/pull/16)) |
 | P-1.9 | `ci: extend CI to the browser package` | Planned |
 | P-1.10 | `docs(sim): document the new architecture and developer workflow` | Planned |
 
@@ -303,6 +303,25 @@ logic, is not needed to run the simulator, and does not expose ground truth
 on the observation path. Visible result: the browser lists `gh_001`, `gh_002`
 and `gh_demo` from Python. Core tests run without importing the API, and API
 integration tests run separately.
+
+As implemented (see [decision 0009](../decisions/0009-a-standard-library-local-api-until-streaming-is-needed.md)):
+
+- `greenhouse_sim.api` uses the standard library's HTTP server, so it adds no
+  dependency. It binds to loopback, answers GET only, and serves
+  `/api/health`, `/api/version`, `/api/scenarios` and
+  `/api/scenarios/{id}/scene` (the full crop before day one). Run it with
+  `python -m greenhouse_sim.api`.
+- Routing is a plain function, tested without sockets, plus one real HTTP
+  round trip.
+- A test fails if any module outside `api/` imports it, and the
+  standalone-run test fails if a simulator run loads the API or
+  `http.server`.
+- The viewer lists the scenarios from `/api/scenarios`, checks the response's
+  shape, and says how to start the API when it cannot reach it. Vite's dev
+  and preview servers forward `/api`, so no cross-origin headers are needed.
+  Checked in a browser with the API running and stopped.
+- The scene endpoint is served, but the viewer draws no scene until P00, so
+  publishing the scene snapshot's JSON Schema as a file moves to P00 too.
 
 ### P-1.9: Extend CI to the browser package
 

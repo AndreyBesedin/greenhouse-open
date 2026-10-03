@@ -199,13 +199,14 @@ def test_executor_for_resolves_the_simulated_operator() -> None:
     )
 
 
-def test_a_whole_run_loads_no_database_or_web_framework() -> None:
+def test_a_whole_run_loads_no_database_web_framework_or_api() -> None:
     """The simulator runs standalone, checked at runtime.
 
     The dependency test proves no simulator source file imports anything
     undeclared. This proves the consequence a standalone user experiences:
-    driving the engine never loads a database layer or a web framework. Run
-    in a subprocess so modules imported by other tests do not count.
+    driving the engine never loads a database layer, a web framework, an HTTP
+    server or the simulator's own local API. Run in a subprocess so modules
+    imported by other tests do not count.
     """
     program = textwrap.dedent(
         """
@@ -236,6 +237,8 @@ def test_a_whole_run_loads_no_database_or_web_framework() -> None:
             name
             for name in sys.modules
             if name.split(".")[0] in {"sqlalchemy", "fastapi", "starlette"}
+            or name == "http.server"
+            or name.startswith("greenhouse_sim.api")
         )
         print(",".join(leaked))
         """

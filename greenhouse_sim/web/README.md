@@ -2,9 +2,21 @@
 
 The browser viewer for the simulator. It is an adapter around the headless
 simulator core: it displays what the simulator produces, and the simulator
-never depends on it. For now it is a bootstrap page that identifies itself
-and the build; scenes arrive with the browser renderer (P00 in the
-[simulator roadmap](../../docs/roadmap/README.md)).
+never depends on it. For now it identifies itself and its build, and lists
+the simulator's scenarios; scenes arrive with the browser renderer (P00 in
+the [simulator roadmap](../../docs/roadmap/README.md)).
+
+## Run it with the simulator
+
+The viewer reads the simulator through its local API. Start the API, then the
+viewer, in two terminals:
+
+```bash
+python -m greenhouse_sim.api          # http://127.0.0.1:8765/api
+cd greenhouse_sim/web && npm run dev  # the viewer, which forwards /api there
+```
+
+Without the API, the page says so and how to start it.
 
 ## Develop
 
