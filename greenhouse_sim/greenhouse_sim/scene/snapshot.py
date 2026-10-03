@@ -19,7 +19,7 @@ import math
 from enum import StrEnum
 from typing import Final
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.world.geometry import Axes, Cylinder, Plane, Shape, Transform, Vector3
@@ -27,6 +27,8 @@ from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
 
 # Bumped when a change to these types would break an existing viewer.
 SCHEMA_VERSION: Final = 1
+# The JSON Schema dialect Pydantic generates, stated in the published schema.
+JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 
 # Provisional layout until planting positions are part of the world (P02).
 # Plants of one scenario row stand along +x at this pitch, rows follow one
@@ -43,7 +45,7 @@ METRES_PER_CENTIMETRE: Final = 0.01
 class Color(BaseModel):
     """An sRGB colour, each channel from 0 to 1."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, json_schema_serialization_defaults_required=True)
 
     r: float = Field(ge=0.0, le=1.0)
     g: float = Field(ge=0.0, le=1.0)
@@ -62,7 +64,7 @@ class SceneEntityKind(StrEnum):
 
 
 class SceneEntity(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, json_schema_serialization_defaults_required=True)
 
     entity_id: str
     kind: SceneEntityKind
@@ -77,7 +79,7 @@ class SceneSnapshot(BaseModel):
     """One greenhouse at one simulated day, as a viewer draws it. Positions
     and sizes are in metres, in right-handed world axes with z up."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, json_schema_serialization_defaults_required=True)
 
     schema_version: int = SCHEMA_VERSION
     greenhouse_id: str
@@ -147,3 +149,30 @@ def _plant_entity(plant: PlantWorld, position: Vector3) -> SceneEntity:
             "cumulative_harvest_g": plant.cumulative_harvest_g,
         },
     )
+
+
+def snapshot_json_schema() -> dict[str, JsonValue]:
+    """The JSON Schema a viewer validates snapshots against, published as
+    `snapshot.schema.json` next to this module.
+
+    It describes snapshots as the simulator sends them, so every field with a
+    default is still required: a viewer never has to supply one. Pydantic
+    marks tagged unions with OpenAPI's `discriminator` keyword, which is not
+    JSON Schema. The `oneOf` and each shape's constant `shape` already say the
+    same, so the published schema leaves the keyword out.
+    """
+    schema = _without_discriminators(SceneSnapshot.model_json_schema(mode="serialization"))
+    assert isinstance(schema, dict)
+    return {"$schema": JSON_SCHEMA_DIALECT, **schema}
+
+
+def _without_discriminators(value: JsonValue) -> JsonValue:
+    if isinstance(value, dict):
+        return {
+            key: _without_discriminators(item)
+            for key, item in value.items()
+            if not (key == "discriminator" and isinstance(item, dict) and "propertyName" in item)
+        }
+    if isinstance(value, list):
+        return [_without_discriminators(item) for item in value]
+    return value

@@ -34,7 +34,7 @@ renderer on them.
 | --- | --- | --- |
 | P00.1 | `chore(web): scaffold the browser simulation viewer` | Done ([#19](https://github.com/AndreyBesedin/greenhouse-open/pull/19)) |
 | P00.2 | `feat(viewer): add orbit camera, presets and scene HUD` | Done ([#20](https://github.com/AndreyBesedin/greenhouse-open/pull/20)) |
-| P00.3 | `feat(scene): render typed scene entities from JSON` | Planned |
+| P00.3 | `feat(scene): render typed scene entities from JSON` | Done ([#21](https://github.com/AndreyBesedin/greenhouse-open/pull/21)) |
 | P00.4 | `feat(sim-bridge): stream scene snapshots from the local Python process` | Planned |
 | P00.5 | `feat(time): add play, pause, step, speed and reset controls` | Planned |
 | P00.6 | `feat(debug): add selection, an inspector and overlay primitives` | Planned |
@@ -97,6 +97,24 @@ generated from, and add a deterministic example scene. Visible result: a JSON
 scene of differently sized and placed objects renders without scene-specific
 code. Tests: schema validation, an unknown kind fails visibly, and entity
 transforms match the fixture.
+
+As implemented:
+
+- The simulator publishes `greenhouse_sim/scene/snapshot.schema.json`. It is
+  plain JSON Schema 2020-12, without Pydantic's OpenAPI `discriminator`
+  keyword, and it describes snapshots as the simulator sends them, so every
+  field it always writes is required. It sits next to a deterministic example
+  scene, gh_demo on day 9, in `web/public/scenes/`. Python tests fail if
+  either drifts from the types.
+- `npm run generate` turns the schema into the viewer's TypeScript types and
+  a schema module, and a Vitest test fails if those are stale. The viewer
+  checks every scene with Ajv in strict mode before drawing it, and lists the
+  problems with their paths when it refuses one.
+- A registry typed by the published kinds draws each entity, inside the
+  world's z-up group. A new kind does not compile until it has a renderer.
+- `?scene=example` or `?scenario=<id>` chooses the scene, and a refresh keeps
+  it. Browser tests draw the example and gh_001's 40 plants from the API, and
+  show an entity of an unknown kind being refused visibly.
 
 ### P00.4: Stream scene snapshots from Python
 

@@ -6,7 +6,12 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["greenhouse_sim/web/**", "!**/package-lock.json"]
+    "includes": [
+      "greenhouse_sim/web/**",
+      "!**/package-lock.json",
+      "!greenhouse_sim/web/public/scenes/**",
+      "!greenhouse_sim/web/src/scene/generated/**"
+    ]
   },
   "formatter": {
     "enabled": true,

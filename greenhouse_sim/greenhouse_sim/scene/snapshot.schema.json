@@ -1,0 +1,309 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Axes": {
+      "description": "A reference marker: one arrow from the origin along each of +x, +y and\n+z.",
+      "properties": {
+        "shape": {
+          "const": "axes",
+          "default": "axes",
+          "title": "Shape",
+          "type": "string"
+        },
+        "length": {
+          "exclusiveMinimum": 0,
+          "title": "Length",
+          "type": "number"
+        }
+      },
+      "required": [
+        "shape",
+        "length"
+      ],
+      "title": "Axes",
+      "type": "object"
+    },
+    "Color": {
+      "description": "An sRGB colour, each channel from 0 to 1.",
+      "properties": {
+        "r": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "R",
+          "type": "number"
+        },
+        "g": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "G",
+          "type": "number"
+        },
+        "b": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "B",
+          "type": "number"
+        }
+      },
+      "required": [
+        "r",
+        "g",
+        "b"
+      ],
+      "title": "Color",
+      "type": "object"
+    },
+    "Cylinder": {
+      "description": "An upright cylinder: its base is centred on its frame's origin and it\nrises along +z. A height of zero is allowed: a plant can be lowered by its\nwhole visible height.",
+      "properties": {
+        "shape": {
+          "const": "cylinder",
+          "default": "cylinder",
+          "title": "Shape",
+          "type": "string"
+        },
+        "radius": {
+          "exclusiveMinimum": 0,
+          "title": "Radius",
+          "type": "number"
+        },
+        "height": {
+          "minimum": 0,
+          "title": "Height",
+          "type": "number"
+        }
+      },
+      "required": [
+        "shape",
+        "radius",
+        "height"
+      ],
+      "title": "Cylinder",
+      "type": "object"
+    },
+    "Plane": {
+      "description": "A flat rectangle in its frame's x-y plane, centred on its origin,\nfacing +z.",
+      "properties": {
+        "shape": {
+          "const": "plane",
+          "default": "plane",
+          "title": "Shape",
+          "type": "string"
+        },
+        "size_x": {
+          "exclusiveMinimum": 0,
+          "title": "Size X",
+          "type": "number"
+        },
+        "size_y": {
+          "exclusiveMinimum": 0,
+          "title": "Size Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "shape",
+        "size_x",
+        "size_y"
+      ],
+      "title": "Plane",
+      "type": "object"
+    },
+    "Quaternion": {
+      "description": "A rotation as a unit quaternion; the default is no rotation.",
+      "properties": {
+        "w": {
+          "default": 1.0,
+          "title": "W",
+          "type": "number"
+        },
+        "x": {
+          "default": 0.0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "default": 0.0,
+          "title": "Y",
+          "type": "number"
+        },
+        "z": {
+          "default": 0.0,
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "required": [
+        "w",
+        "x",
+        "y",
+        "z"
+      ],
+      "title": "Quaternion",
+      "type": "object"
+    },
+    "SceneEntity": {
+      "properties": {
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/SceneEntityKind"
+        },
+        "transform": {
+          "$ref": "#/$defs/Transform"
+        },
+        "shape": {
+          "$ref": "#/$defs/Shape"
+        },
+        "color": {
+          "$ref": "#/$defs/Color"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "default": {},
+          "title": "Properties"
+        }
+      },
+      "required": [
+        "entity_id",
+        "kind",
+        "transform",
+        "shape",
+        "color",
+        "label",
+        "properties"
+      ],
+      "title": "SceneEntity",
+      "type": "object"
+    },
+    "SceneEntityKind": {
+      "enum": [
+        "GROUND",
+        "AXES",
+        "PLANT"
+      ],
+      "title": "SceneEntityKind",
+      "type": "string"
+    },
+    "Shape": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Plane"
+        },
+        {
+          "$ref": "#/$defs/Cylinder"
+        },
+        {
+          "$ref": "#/$defs/Axes"
+        }
+      ]
+    },
+    "Transform": {
+      "description": "Places a shape's own frame in the world: rotate, then translate.",
+      "properties": {
+        "position": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "rotation": {
+          "$ref": "#/$defs/Quaternion",
+          "default": {
+            "w": 1.0,
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        }
+      },
+      "required": [
+        "position",
+        "rotation"
+      ],
+      "title": "Transform",
+      "type": "object"
+    },
+    "Vector3": {
+      "properties": {
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        },
+        "z": {
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
+      "title": "Vector3",
+      "type": "object"
+    }
+  },
+  "description": "One greenhouse at one simulated day, as a viewer draws it. Positions\nand sizes are in metres, in right-handed world axes with z up.",
+  "properties": {
+    "schema_version": {
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "greenhouse_id": {
+      "title": "Greenhouse Id",
+      "type": "string"
+    },
+    "simulated_day": {
+      "title": "Simulated Day",
+      "type": "integer"
+    },
+    "entities": {
+      "items": {
+        "$ref": "#/$defs/SceneEntity"
+      },
+      "title": "Entities",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "greenhouse_id",
+    "simulated_day",
+    "entities"
+  ],
+  "title": "SceneSnapshot",
+  "type": "object"
+}

@@ -17,6 +17,24 @@ The view uses the simulator's world axes: metres, right-handed, z up. Three.js
 is y up, so `src/world.ts` converts once, at the root of the scene; nothing
 else in the viewer deals with the difference.
 
+## Scenes
+
+The panel chooses what is drawn, and the address bar keeps the choice:
+`?scene=example` is a deterministic example scene from
+`public/scenes/example.json`, and `?scenario=gh_demo` is that scenario before
+day one, from the simulator's API. The viewer checks every scene against the
+schema the simulator publishes, and says why when it refuses one.
+
+The scene contract has one source, the simulator's types. After changing
+them, regenerate both sides:
+
+```bash
+python greenhouse_sim/tests/test_scene_schema.py --update  # schema and example scene
+cd greenhouse_sim/web && npm run generate                  # the viewer's types
+```
+
+Tests on both sides fail while either is stale.
+
 ## Run it with the simulator
 
 The viewer reads the simulator through its local API. Start the API, then the

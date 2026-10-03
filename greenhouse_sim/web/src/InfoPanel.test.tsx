@@ -7,10 +7,21 @@ import { buildInfo } from "./buildInfo";
 import { InfoPanel } from "./InfoPanel";
 
 const LOADING = { status: "loading" } as const;
+const REFERENCE = { kind: "reference" } as const;
+const NONE = { status: "none" } as const;
+const ignore = () => undefined;
 
 describe("the viewer's information panel", () => {
   it("identifies the viewer", () => {
-    const html = renderToStaticMarkup(<InfoPanel build={buildInfo} scenarios={LOADING} />);
+    const html = renderToStaticMarkup(
+      <InfoPanel
+        build={buildInfo}
+        scenarios={LOADING}
+        source={REFERENCE}
+        scene={NONE}
+        onSource={ignore}
+      />,
+    );
 
     expect(html).toContain("<h1>greenhouse-sim viewer</h1>");
   });
@@ -20,6 +31,9 @@ describe("the viewer's information panel", () => {
       <InfoPanel
         build={{ simulatorVersion: "9.8.7", sourceCommit: "abc1234" }}
         scenarios={LOADING}
+        source={REFERENCE}
+        scene={NONE}
+        onSource={ignore}
       />,
     );
 

@@ -1,6 +1,12 @@
 import type { ScenariosState } from "./scenarios";
 
-export function ScenarioList({ state }: { state: ScenariosState }) {
+export function ScenarioList({
+  state,
+  onShow,
+}: {
+  state: ScenariosState;
+  onShow?: (scenarioId: string) => void;
+}) {
   switch (state.status) {
     case "loading":
       return <p>Loading scenarios from the simulator…</p>;
@@ -21,6 +27,7 @@ export function ScenarioList({ state }: { state: ScenariosState }) {
               <th>Name</th>
               <th>Plants</th>
               <th>Days</th>
+              {onShow && <th />}
             </tr>
           </thead>
           <tbody>
@@ -32,6 +39,17 @@ export function ScenarioList({ state }: { state: ScenariosState }) {
                 <td title={scenario.description}>{scenario.name}</td>
                 <td>{scenario.plants}</td>
                 <td>{scenario.duration_days}</td>
+                {onShow && (
+                  <td>
+                    <button
+                      type="button"
+                      aria-label={`Show ${scenario.id}`}
+                      onClick={() => onShow(scenario.id)}
+                    >
+                      Show
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
