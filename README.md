@@ -74,7 +74,10 @@ checks that span packages: every producer against the canonical contract,
 each package's declared dependencies, and the examples.
 
 Engineering conventions, pull request scope guidance and the solo-developer
-review policy live in [docs/engineering.md](docs/engineering.md).
+review policy live in [docs/engineering.md](docs/engineering.md). Where the
+simulator is heading is in [docs/roadmap/](docs/roadmap/README.md), and the
+lasting technical decisions behind it are in
+[docs/decisions/](docs/decisions/README.md).
 
 Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
 

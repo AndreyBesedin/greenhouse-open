@@ -78,6 +78,36 @@ when that is clearer. Leave the scope out for a change across the repository.
 Commits before this convention used plain imperative summaries. They are not
 rewritten.
 
+## Roadmap and decision records
+
+The repository explains its own direction. Anything a commit, pull request or
+code comment refers to must be readable here, without access to a private
+planning tool or document.
+
+- **Roadmap projects** live in [`docs/roadmap/`](roadmap/README.md), one
+  document per project. A project's document is written, or adapted from
+  private planning notes, in the first pull request that implements part of
+  it. It describes the goal, what must stay stable, the steps, the acceptance
+  criteria and the final QA scenario.
+- **Steps have public identifiers** such as `P-1.2`. Commits and pull requests
+  may cite them, because the roadmap document defines them. The pull request
+  that delivers a step updates its status in that document.
+- **Decisions** live in [`docs/decisions/`](decisions/README.md) as short,
+  numbered records. A change that sets or reverses a lasting technical
+  direction records a decision in the same pull request: architecture
+  boundaries, shared contracts, runtime dependencies, supported platforms or
+  the development workflow. A decision is not edited after it is accepted. A
+  later record supersedes it.
+- **When implementation departs from the roadmap**, the pull request updates
+  the roadmap document, so it stays an accurate account rather than an
+  aspiration.
+- **Public documents describe this open project only.** Product plans,
+  business strategy, customer information and the names or internals of
+  private systems stay out. Applications that build on these packages are
+  "downstream applications". `tests/test_publishable.py` rejects known private
+  names and citations of documents that are not in this repository. It is a
+  backstop, not a substitute for writing the documents for a public reader.
+
 ## Solo-developer review policy
 
 The default path is automated and fast:
