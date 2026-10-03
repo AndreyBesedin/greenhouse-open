@@ -49,6 +49,8 @@ type Commands = argparse._SubParsersAction[argparse.ArgumentParser]
 #     load = "mypackage.cli:add_load_command"
 COMMAND_PLUGINS = "greenhouse_data.commands"
 
+_BYTES_PER_UNIT = 1024
+
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser, commands = build_parser()
@@ -153,9 +155,9 @@ def _print_manifest(manifest: DatasetManifest) -> None:
 def _human_size(size_bytes: int) -> str:
     size = float(size_bytes)
     for unit in ("B", "KB", "MB", "GB"):
-        if size < 1024 or unit == "GB":
+        if size < _BYTES_PER_UNIT or unit == "GB":
             return f"{size:.1f} {unit}" if unit != "B" else f"{int(size)} B"
-        size /= 1024
+        size /= _BYTES_PER_UNIT
     return f"{size:.1f} GB"
 
 

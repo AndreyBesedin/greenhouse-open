@@ -40,6 +40,8 @@ from greenhouse_adapters.wur.common.time import local_noon
 _SAMPLING_SHEET = re.compile(r"^Destructive harvest (\d{1,2})-(\d{1,2})-(\d{2})$")
 _FINAL_SHEET = re.compile(r"^Final Harvest\s+(\d\.\d{2})\s*$")
 _PLANT_LABEL = re.compile(r"^(\d{3})-(\d+)$")
+# Sampling sheets name their date with a two-digit year, always in the 2000s.
+_SHEET_CENTURY = 2000
 
 
 @dataclass(frozen=True)
@@ -81,7 +83,9 @@ def read_harvest_workbook(source: Path | IO[bytes]) -> HarvestWorkbook:
         rows = list(workbook[sheet_name].iter_rows(values_only=True))
         if match := _SAMPLING_SHEET.match(sheet_name.strip()):
             day_, month, year = (int(g) for g in match.groups())
-            samplings.append(Sampling(date(2000 + year, month, day_), _sampled_plants(rows)))
+            samplings.append(
+                Sampling(date(_SHEET_CENTURY + year, month, day_), _sampled_plants(rows))
+            )
         elif match := _FINAL_SHEET.match(sheet_name):
             code = match.group(1).replace(".", "")
             finals.append(FinalHarvest(code, _sampled_plants(rows)))
