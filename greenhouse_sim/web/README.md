@@ -4,7 +4,13 @@ The browser viewer for the simulator. It is an adapter around the headless
 simulator core: it displays what the simulator produces, and the simulator
 never depends on it. It shows a full-window 3D view (for now a reference
 scene: a 1 m grid on the ground, the world axes and a 1 m cube) with a panel
-listing its build and the simulator's scenarios. The browser renderer is
+listing its build and the simulator's scenarios, and a HUD.
+
+Drag to orbit, right-drag to pan, and scroll to zoom. The HUD's buttons jump
+to the top, front, side and isometric views; a refresh always returns to the
+isometric one. It also shows the camera's position and where the pointer
+meets the ground, both in world metres, with the frame rate and object
+count. The browser renderer is
 being built out in P00 of the [simulator roadmap](../../docs/roadmap/README.md).
 
 The view uses the simulator's world axes: metres, right-handed, z up. Three.js
