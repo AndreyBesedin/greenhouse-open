@@ -139,7 +139,7 @@ Ruff formatting is the source of truth. Do not hand-format around it.
 
 The Python baseline is:
 
-- Python 3.12+;
+- Python 3.14+;
 - Ruff formatting and linting;
 - strict mypy;
 - pytest;
