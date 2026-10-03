@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-import { SIMULATOR_API, SIMULATOR_API_PORT } from "./simulatorApi";
+import { SIMULATOR_API, SIMULATOR_API_PORT } from "./simulatorApi.ts";
 
 // The smoke test runs the real thing: the simulator's local API and the
 // production build of the viewer, in Chromium. PYTHON names an interpreter

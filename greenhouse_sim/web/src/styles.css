@@ -1,0 +1,53 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+}
+
+/* The 3D view fills the window; panels float over it. */
+.viewer {
+  position: fixed;
+  inset: 0;
+}
+
+.info-panel {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  max-width: 420px;
+  padding: 8px 12px;
+  background: rgb(255 255 255 / 88%);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.info-panel h1 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.info-panel dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  margin: 0 0 8px;
+}
+
+.info-panel dd {
+  margin: 0;
+}
+
+.info-panel table {
+  border-collapse: collapse;
+}
+
+.info-panel th,
+.info-panel td {
+  padding: 1px 8px 1px 0;
+  text-align: left;
+}

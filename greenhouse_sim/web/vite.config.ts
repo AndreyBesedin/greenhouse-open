@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-import { SIMULATOR_API } from "./simulatorApi";
+import { SIMULATOR_API } from "./simulatorApi.ts";
 
 // The viewer ships with the simulator, so it reports the simulator's version
 // rather than keeping a second one in step.
@@ -17,6 +17,10 @@ function simulatorVersion(): string {
   return match[1];
 }
 
+// Three.js alone is about a megabyte minified. The viewer is a local
+// development tool, so a single chunk of this size is fine.
+const CHUNK_SIZE_WARNING_KB = 1500;
+
 // The commit the viewer was built from, when built inside a git checkout.
 function sourceCommit(): string {
   try {
@@ -28,6 +32,7 @@ function sourceCommit(): string {
 
 export default defineConfig({
   plugins: [react()],
+  build: { chunkSizeWarningLimit: CHUNK_SIZE_WARNING_KB },
   // Forward /api to the simulator, so the page and the API share an origin.
   server: { proxy: { "/api": SIMULATOR_API } },
   preview: { proxy: { "/api": SIMULATOR_API } },
