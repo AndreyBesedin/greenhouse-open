@@ -77,7 +77,8 @@ def test_fruit_diameter_grows_monotonically_and_stays_bounded() -> None:
         plant = world.plant(plant_id)
         if plant.trusses and plant.trusses[0].fruits:
             fruit = plant.trusses[0].fruits[0]
-            diameters.append((fruit.diameter_mm, fruit.target_diameter_mm))
+            target = world.plant_model.fruits[fruit.fruit_id].target_diameter_mm
+            diameters.append((fruit.diameter_mm, target))
 
     values = [d for d, _ in diameters]
     assert values == sorted(values)

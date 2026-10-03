@@ -1,3 +1,4 @@
+from greenhouse_sim.biology.tomato.simple.state import SimplePlantState
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.world.state import GreenhouseEnvironment, PlantWorld
 
@@ -15,16 +16,23 @@ def daily_water_use_ml(
 
 
 def advance_water(
-    plant: PlantWorld, environment: GreenhouseEnvironment, config: ScenarioConfig
-) -> PlantWorld:
+    plant: PlantWorld,
+    plant_state: SimplePlantState,
+    environment: GreenhouseEnvironment,
+    config: ScenarioConfig,
+) -> tuple[PlantWorld, SimplePlantState]:
+    """The day's water use empties the root zone; a low root zone builds stress."""
     use = daily_water_use_ml(plant, environment, config)
     reservoir = plant.water_reservoir_ml - use - config.evaporation_ml_per_day
     reservoir = max(0.0, min(config.water_capacity_ml, reservoir))
 
     reservoir_pct = 100.0 * reservoir / config.water_capacity_ml
     if reservoir_pct < config.water_stress_threshold_pct:
-        water_stress = min(1.0, plant.water_stress + _STRESS_RISE_PER_DAY)
+        water_stress = min(1.0, plant_state.water_stress + _STRESS_RISE_PER_DAY)
     else:
-        water_stress = max(0.0, plant.water_stress - _STRESS_RECOVERY_PER_DAY)
+        water_stress = max(0.0, plant_state.water_stress - _STRESS_RECOVERY_PER_DAY)
 
-    return plant.model_copy(update={"water_reservoir_ml": reservoir, "water_stress": water_stress})
+    return (
+        plant.model_copy(update={"water_reservoir_ml": reservoir}),
+        plant_state.model_copy(update={"water_stress": water_stress}),
+    )

@@ -1,11 +1,15 @@
 """The simulator's hidden state: what is true of the simulated world.
 
-None of this could exist at a real greenhouse's boundary.
-`growth_multiplier`, `ripening_day`, `target_diameter_mm` and `water_stress`
-are latent variables the simulator invents in order to generate a world, and
-`simulated_day` is the simulator's own clock. Shared records hold only what
-could be observed for real, and a consumer reconstructs its picture from
-evidence rather than reading this one.
+None of this could exist at a real greenhouse's boundary. The entities below
+describe what the world is: sizes, ages, stages, the water in each plant's
+root zone, what has been harvested. `simulated_day` is the simulator's own
+clock. Shared records hold only what could be observed for real, and a
+consumer reconstructs its picture from evidence rather than reading this one.
+
+How the world is generated is kept apart. `GreenhouseWorld.plant_model` holds
+the values the plant model invents for itself, such as a plant's vigour or a
+fruit's drawn ripening day. It belongs to that model: it travels with the
+world so a run can be saved and resumed, and nothing else reads it.
 
 What leaves the simulator on the normal path is `SimulationStep.observations`;
 this is what those observations are noisy measurements *of*.
@@ -14,6 +18,8 @@ this is what those observations are noisy measurements *of*.
 from enum import StrEnum
 
 from pydantic import BaseModel
+
+from greenhouse_sim.biology.tomato.simple.state import SimpleTomatoState
 
 
 class FruitStatus(StrEnum):
@@ -47,9 +53,6 @@ class Fruit(BaseModel):
     mass_g: float = 0.0
     ripeness_stage: RipenessStage = RipenessStage.FRUIT_SET
     status: FruitStatus = FruitStatus.GROWING
-    target_diameter_mm: float
-    growth_rate_multiplier: float
-    ripening_day: int
 
 
 class Truss(BaseModel):
@@ -67,8 +70,6 @@ class PlantWorld(BaseModel):
     stem_length_cm: float
     lowered_length_cm: float = 0.0
     water_reservoir_ml: float
-    water_stress: float = 0.0
-    growth_multiplier: float = 1.0
     trusses: list[Truss] = []
     cumulative_harvest_g: float = 0.0
 
@@ -83,6 +84,7 @@ class GreenhouseWorld(BaseModel):
     simulated_day: int
     environment: GreenhouseEnvironment
     plants: list[PlantWorld]
+    plant_model: SimpleTomatoState
 
     def plant(self, plant_id: str) -> PlantWorld:
         for plant in self.plants:

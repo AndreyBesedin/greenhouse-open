@@ -106,7 +106,8 @@ def test_the_run_reaches_the_recorded_growth_and_ripening_state() -> None:
     # of full water stress - the deterministic policy, absent here, is what
     # normally prevents that.
     assert [round(plant.water_reservoir_ml, 3) for plant in world.plants] == [0.0, 0.0]
-    assert [round(plant.water_stress, 3) for plant in world.plants] == [1.0, 1.0]
+    stress = [world.plant_model.plants[plant.plant_id].water_stress for plant in world.plants]
+    assert [round(value, 3) for value in stress] == [1.0, 1.0]
     assert _fruit_counts(world) == {FruitStatus.RIPE: 12, FruitStatus.GROWING: 34}
 
 
