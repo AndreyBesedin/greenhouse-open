@@ -7,7 +7,7 @@ research datasets into that format.
 | Package | What it is |
 | --- | --- |
 | [`greenhouse-protocol`](greenhouse_protocol/) | Canonical records (observations, events, media captures, sensors, semantic actions and their outcomes, greenhouse descriptions) and the contracts a producer or consumer implements: record stores and queries, action execution, conformance checks, and an in-memory reference store. |
-| [`greenhouse-sim`](greenhouse_sim/) | A simulator with a hidden world and noisy sensors. It publishes canonical observations, accepts semantic actions, and exposes ground truth only through a separate evaluation interface. |
+| [`greenhouse-sim`](greenhouse_sim/) | A simulator with a hidden world and noisy sensors. It publishes canonical observations, accepts semantic actions, and exposes ground truth only through a separate evaluation interface. Plant, environment and sensor models plug in through small contracts, and a browser viewer shows what it is doing. |
 | [`greenhouse-adapters`](greenhouse_adapters/) | Reproducible adapters from recorded datasets to canonical records, starting with the Wageningen University & Research Autonomous Greenhouse Challenge datasets, and the `greenhouse-data` command. |
 
 ## Why a shared format
@@ -45,6 +45,13 @@ python examples/03_close_the_loop.py          # observe, decide, act, observe ag
 python examples/04_score_against_ground_truth.py  # how noisy is the sensing?
 ```
 
+The simulator's browser viewer, with Node 24:
+
+```bash
+python -m greenhouse_sim.api                    # the simulator's local API
+cd greenhouse_sim/web && npm ci && npm run dev  # the viewer, in a second terminal
+```
+
 Recorded data, with nothing heavier than about 10 MB downloaded:
 
 ```bash
@@ -72,6 +79,10 @@ Each package is still checked from its own directory with its own configuration,
 as a user installing it alone would see it. `tests/` at the top level holds
 checks that span packages: every producer against the canonical contract,
 each package's declared dependencies, and the examples.
+
+The browser viewer in `greenhouse_sim/web` has its own checks (Biome,
+TypeScript, Vitest, a Playwright smoke test), which CI runs as a separate job;
+see [docs/engineering.md](docs/engineering.md#local-checks).
 
 Engineering conventions, pull request scope guidance and the solo-developer
 review policy live in [docs/engineering.md](docs/engineering.md). Where the
