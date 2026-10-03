@@ -21,6 +21,10 @@ from pydantic import BaseModel
 
 from greenhouse_sim.biology.tomato.simple.state import SimpleTomatoState
 
+# The state of the plant models a world can carry in `plant_model`. Only the
+# simple tomato model's today; a second plant model makes this a union.
+type PlantModelState = SimpleTomatoState
+
 
 class FruitStatus(StrEnum):
     GROWING = "GROWING"
@@ -84,7 +88,7 @@ class GreenhouseWorld(BaseModel):
     simulated_day: int
     environment: GreenhouseEnvironment
     plants: list[PlantWorld]
-    plant_model: SimpleTomatoState
+    plant_model: PlantModelState
 
     def plant(self, plant_id: str) -> PlantWorld:
         for plant in self.plants:
