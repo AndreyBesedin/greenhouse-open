@@ -123,3 +123,15 @@ def test_an_unknown_kind_of_entity_is_refused() -> None:
 
     with pytest.raises(ValidationError):
         SceneSnapshot.model_validate(document)
+
+
+def test_the_scene_schema_tells_a_viewer_exactly_what_it_may_receive() -> None:
+    """What a viewer's own types will be generated from: shapes are a union
+    tagged by `shape`, kinds are a closed list, and the units are stated."""
+    schema = SceneSnapshot.model_json_schema()
+    definitions = schema["$defs"]
+
+    assert definitions["Shape"]["discriminator"]["propertyName"] == "shape"
+    assert set(definitions["Shape"]["discriminator"]["mapping"]) == {"plane", "cylinder", "axes"}
+    assert definitions["SceneEntityKind"]["enum"] == [kind.value for kind in SceneEntityKind]
+    assert "metres" in schema["description"] and "z up" in schema["description"]

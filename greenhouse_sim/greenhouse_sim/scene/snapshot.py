@@ -74,6 +74,9 @@ class SceneEntity(BaseModel):
 
 
 class SceneSnapshot(BaseModel):
+    """One greenhouse at one simulated day, as a viewer draws it. Positions
+    and sizes are in metres, in right-handed world axes with z up."""
+
     model_config = ConfigDict(frozen=True)
 
     schema_version: int = SCHEMA_VERSION
