@@ -9,7 +9,8 @@ clear ownership over clever abstractions or framework ceremony.
 Keep changes easy to reason about and easy to revert.
 
 - One pull request should answer one question.
-- Prefer a sequence of small working commits with descriptive messages.
+- Prefer a sequence of small working commits, each described in the
+  [commit message format](#commit-messages).
 - Separate behavior changes from mechanical moves or large renames.
 - Do not include unrelated cleanup because a file happened to be open.
 - Aim for at most 500 non-generated code/config lines and 15 code/config files.
@@ -25,6 +26,57 @@ Keep changes easy to reason about and easy to revert.
 There is deliberately no hard pull request size limit yet. Delivery speed
 matters while the project is young. If large changes become routine, tighten
 the gate based on actual review pain rather than an arbitrary rule.
+
+## Commit messages
+
+Commits follow [Conventional Commits 1.0](https://www.conventionalcommits.org/en/v1.0.0/):
+
+```text
+<type>(<scope>): <summary>
+
+<body: why the change is needed, when the summary cannot say it>
+
+Signed-off-by: Your Name <you@example.com>
+```
+
+For example, `refactor(sim): move the daily dynamics into biology/tomato`.
+
+The type says what kind of change the commit is:
+
+| Type | Use for |
+| --- | --- |
+| `feat` | New behavior or capability |
+| `fix` | A bug fix; it comes with a regression test |
+| `refactor` | A structural change with no behavior change |
+| `perf` | A change made for speed or memory, with no behavior change |
+| `test` | Tests only |
+| `docs` | Documentation only |
+| `build` | Packaging, dependencies, package metadata |
+| `ci` | CI workflows, hooks and review automation |
+| `style` | Formatting only |
+| `chore` | Repository maintenance that fits none of the above |
+| `revert` | Reverting an earlier commit |
+
+The scope names the package or area the commit changes: `protocol`, `sim` or
+`adapters` for a package, or a narrower area such as `web`, `api` or `viewer`
+when that is clearer. Leave the scope out for a change across the repository.
+
+- Write the summary in the imperative mood, starting in lower case, with no
+  trailing period, and keep the whole first line within 72 characters.
+- Use the body for the reason behind the change and anything a reviewer would
+  otherwise have to reconstruct. Wrap it at 72 characters.
+- Mark a change that breaks a package's public interface with `!` after the
+  scope and a `BREAKING CHANGE:` footer that says what consumers must do,
+  for example `feat(protocol)!: ...`. This matters most for
+  `greenhouse_protocol`, which every producer and consumer depends on.
+- Every commit carries a `Signed-off-by` trailer (see
+  [CONTRIBUTING.md](../CONTRIBUTING.md#sign-your-commits-dco)).
+- Give the pull request title the same format. GitHub uses it as the merge
+  commit's description, and as the commit message itself when a pull request
+  is squash-merged.
+
+Commits before this convention used plain imperative summaries. They are not
+rewritten.
 
 ## Solo-developer review policy
 
