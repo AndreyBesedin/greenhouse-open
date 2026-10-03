@@ -1,0 +1,280 @@
+{
+  "schema_version": 1,
+  "greenhouse_id": "gh_demo",
+  "simulated_day": 9,
+  "entities": [
+    {
+      "entity_id": "gh_demo_ground",
+      "kind": "GROUND",
+      "transform": {
+        "position": {
+          "x": 1.0,
+          "y": 2.4000000000000004,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 2.0,
+        "size_y": 4.800000000000001
+      },
+      "color": {
+        "r": 0.42,
+        "g": 0.33,
+        "b": 0.24
+      },
+      "label": "ground",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_axes",
+      "kind": "AXES",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "axes",
+        "length": 1.0
+      },
+      "color": {
+        "r": 0.5,
+        "g": 0.5,
+        "b": 0.5
+      },
+      "label": "world axes",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_plant_001",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 0.5,
+          "y": 1.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.3515088043875913
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "label": "gh_demo_plant_001",
+      "properties": {
+        "age_days": 9,
+        "visible_height_cm": 35.15088043875913,
+        "trusses": 3,
+        "fruits_on_plant": 12,
+        "ripe_fruits": 1,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "gh_demo_plant_002",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 1.0,
+          "y": 1.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.34998978599305425
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "label": "gh_demo_plant_002",
+      "properties": {
+        "age_days": 9,
+        "visible_height_cm": 34.998978599305424,
+        "trusses": 3,
+        "fruits_on_plant": 13,
+        "ripe_fruits": 2,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "gh_demo_plant_003",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 1.5,
+          "y": 1.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.331110771338165
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "label": "gh_demo_plant_003",
+      "properties": {
+        "age_days": 9,
+        "visible_height_cm": 33.1110771338165,
+        "trusses": 3,
+        "fruits_on_plant": 10,
+        "ripe_fruits": 3,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "gh_demo_plant_004",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 0.5,
+          "y": 3.2,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.360068218503963
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "label": "gh_demo_plant_004",
+      "properties": {
+        "age_days": 9,
+        "visible_height_cm": 36.0068218503963,
+        "trusses": 3,
+        "fruits_on_plant": 12,
+        "ripe_fruits": 3,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "gh_demo_plant_005",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 1.0,
+          "y": 3.2,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.3417821237234413
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "label": "gh_demo_plant_005",
+      "properties": {
+        "age_days": 9,
+        "visible_height_cm": 34.17821237234413,
+        "trusses": 3,
+        "fruits_on_plant": 15,
+        "ripe_fruits": 3,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "gh_demo_plant_006",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 1.5,
+          "y": 3.2,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.36010976318018906
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "label": "gh_demo_plant_006",
+      "properties": {
+        "age_days": 9,
+        "visible_height_cm": 36.010976318018905,
+        "trusses": 3,
+        "fruits_on_plant": 14,
+        "ripe_fruits": 5,
+        "cumulative_harvest_g": 0.0
+      }
+    }
+  ]
+}

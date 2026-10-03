@@ -19,7 +19,7 @@ import math
 from enum import StrEnum
 from typing import Final
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.world.geometry import Axes, Cylinder, Plane, Shape, Transform, Vector3
@@ -27,6 +27,8 @@ from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
 
 # Bumped when a change to these types would break an existing viewer.
 SCHEMA_VERSION: Final = 1
+# The JSON Schema dialect Pydantic generates, stated in the published schema.
+JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 
 # Provisional layout until planting positions are part of the world (P02).
 # Plants of one scenario row stand along +x at this pitch, rows follow one
@@ -147,3 +149,28 @@ def _plant_entity(plant: PlantWorld, position: Vector3) -> SceneEntity:
             "cumulative_harvest_g": plant.cumulative_harvest_g,
         },
     )
+
+
+def snapshot_json_schema() -> dict[str, JsonValue]:
+    """The JSON Schema a viewer validates snapshots against, published as
+    `snapshot.schema.json` next to this module.
+
+    Pydantic marks tagged unions with OpenAPI's `discriminator` keyword, which
+    is not JSON Schema. The `oneOf` and each shape's constant `shape` already
+    say the same, so the published schema leaves the keyword out.
+    """
+    schema = _without_discriminators(SceneSnapshot.model_json_schema())
+    assert isinstance(schema, dict)
+    return {"$schema": JSON_SCHEMA_DIALECT, **schema}
+
+
+def _without_discriminators(value: JsonValue) -> JsonValue:
+    if isinstance(value, dict):
+        return {
+            key: _without_discriminators(item)
+            for key, item in value.items()
+            if not (key == "discriminator" and isinstance(item, dict) and "propertyName" in item)
+        }
+    if isinstance(value, list):
+        return [_without_discriminators(item) for item in value]
+    return value
