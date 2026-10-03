@@ -61,7 +61,8 @@ python scripts/check.py
 - Describe an observable/testable result for simulator changes.
 - Resolve or explicitly acknowledge automated review feedback.
 - If the pull request risk gate asks for it, review the complete diff yourself
-  and check the manual-review acknowledgement in the pull request body.
+  and check the manual-review acknowledgement in the pull request body. The
+  gate runs again when the description is saved.
 - A package may import only the standard library, itself and the
   dependencies it declares; `tests/test_dependencies.py` enforces this.
 

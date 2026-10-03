@@ -88,6 +88,8 @@ The default path is automated and fast:
 4. Resolve or explicitly acknowledge every review conversation.
 5. If the risk gate classifies the pull request as higher risk, review the full
    diff yourself and check the manual-review item in the pull request body.
+   Saving the edited description runs the gate again. Re-running an earlier
+   gate run does not help: it replays the description that run saw.
 6. Low-risk changes may use auto-merge once the automated checks and review are
    clear. Higher-risk changes should be merged manually after the explicit
    self-review.

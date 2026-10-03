@@ -26,26 +26,8 @@ jobs:
       - name: Run canonical repository checks
         run: python scripts/check.py
 
-  pr-risk:
-    name: pull request risk gate
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Classify review risk
-        env:
-          PR_BODY: ${{ github.event.pull_request.body }}
-        run: >-
-          python scripts/check_pr_risk.py
-          "${{ github.event.pull_request.base.sha }}"
-          "${{ github.event.pull_request.head.sha }}"
+  # The pull request risk gate lives in pr-risk.yml, so that it also runs
+  # when the pull request description is edited.
 
   dco:
     name: commits are signed off
