@@ -1,6 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
-test("the viewer lists the simulator's scenarios, without console errors", async ({ page }) => {
+/** Everything the page reports as an error, so a test can insist on none. */
+function collectErrors(page: Page): string[] {
   const errors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") {
@@ -10,6 +11,11 @@ test("the viewer lists the simulator's scenarios, without console errors", async
   page.on("pageerror", (error) => {
     errors.push(error.message);
   });
+  return errors;
+}
+
+test("the viewer lists the simulator's scenarios, without console errors", async ({ page }) => {
+  const errors = collectErrors(page);
 
   await page.goto("/");
 
@@ -18,5 +24,19 @@ test("the viewer lists the simulator's scenarios, without console errors", async
   for (const scenario of ["gh_001", "gh_002", "gh_demo"]) {
     await expect(scenarios).toContainText(scenario);
   }
+  expect(errors).toEqual([]);
+});
+
+test("the 3D view fills the window and follows its size", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1000, height: 700 });
+
+  await page.goto("/");
+  const view = page.locator("canvas");
+  await expect(view).toBeVisible();
+  await expect.poll(() => view.boundingBox()).toMatchObject({ width: 1000, height: 700 });
+
+  await page.setViewportSize({ width: 640, height: 480 });
+  await expect.poll(() => view.boundingBox()).toMatchObject({ width: 640, height: 480 });
   expect(errors).toEqual([]);
 });

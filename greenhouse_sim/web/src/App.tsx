@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 
 import { type BuildInfo, buildInfo } from "./buildInfo";
-import { ScenarioList } from "./ScenarioList";
+import { InfoPanel } from "./InfoPanel";
+import { ReferenceScene } from "./ReferenceScene";
 import { loadScenarios, type ScenariosState } from "./scenarios";
 
 export function App({ build = buildInfo }: { build?: BuildInfo }) {
@@ -20,15 +21,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   }, []);
 
   return (
-    <main>
-      <h1>greenhouse-sim viewer</h1>
-      <dl>
-        <dt>Simulator version</dt>
-        <dd>{build.simulatorVersion}</dd>
-        <dt>Built from commit</dt>
-        <dd>{build.sourceCommit}</dd>
-      </dl>
-      <ScenarioList state={scenarios} />
+    <main className="viewer">
+      <ReferenceScene />
+      <InfoPanel build={build} scenarios={scenarios} />
     </main>
   );
 }

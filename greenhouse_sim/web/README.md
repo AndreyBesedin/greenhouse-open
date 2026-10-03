@@ -2,9 +2,14 @@
 
 The browser viewer for the simulator. It is an adapter around the headless
 simulator core: it displays what the simulator produces, and the simulator
-never depends on it. For now it identifies itself and its build, and lists
-the simulator's scenarios; scenes arrive with the browser renderer (P00 in
-the [simulator roadmap](../../docs/roadmap/README.md)).
+never depends on it. It shows a full-window 3D view (for now a reference
+scene: a 1 m grid on the ground, the world axes and a 1 m cube) with a panel
+listing its build and the simulator's scenarios. The browser renderer is
+being built out in P00 of the [simulator roadmap](../../docs/roadmap/README.md).
+
+The view uses the simulator's world axes: metres, right-handed, z up. Three.js
+is y up, so `src/world.ts` converts once, at the root of the scene; nothing
+else in the viewer deals with the difference.
 
 ## Run it with the simulator
 

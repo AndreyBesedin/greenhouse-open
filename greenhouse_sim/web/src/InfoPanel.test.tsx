@@ -3,19 +3,24 @@ import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { App } from "./App";
 import { buildInfo } from "./buildInfo";
+import { InfoPanel } from "./InfoPanel";
 
-describe("the viewer's bootstrap page", () => {
-  it("identifies itself as the greenhouse-sim viewer", () => {
-    const html = renderToStaticMarkup(<App />);
+const LOADING = { status: "loading" } as const;
+
+describe("the viewer's information panel", () => {
+  it("identifies the viewer", () => {
+    const html = renderToStaticMarkup(<InfoPanel build={buildInfo} scenarios={LOADING} />);
 
     expect(html).toContain("<h1>greenhouse-sim viewer</h1>");
   });
 
   it("shows the build metadata it was given", () => {
     const html = renderToStaticMarkup(
-      <App build={{ simulatorVersion: "9.8.7", sourceCommit: "abc1234" }} />,
+      <InfoPanel
+        build={{ simulatorVersion: "9.8.7", sourceCommit: "abc1234" }}
+        scenarios={LOADING}
+      />,
     );
 
     expect(html).toContain("<dd>9.8.7</dd>");
