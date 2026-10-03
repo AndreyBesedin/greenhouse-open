@@ -9,14 +9,19 @@ import pathlib
 import subprocess
 import sys
 import textwrap
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from greenhouse_protocol.action import HarvestPlantAction, LowerPlantAction, WaterPlantAction
-from greenhouse_protocol.enums import ActionExecutorType, EventType
+from greenhouse_protocol.enums import ActionExecutorType, EventType, ObservationType
 
+from greenhouse_sim.biology.tomato.simple.model import SimpleTomatoModel
 from greenhouse_sim.engine import SimulationEngine
+from greenhouse_sim.environment.contract import EnvironmentModel
+from greenhouse_sim.environment.simple import SimpleEnvironmentModel
 from greenhouse_sim.executor import SimulatedOperatorExecutor, executor_for
-from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios import SCENARIO_REGISTRY, ScenarioConfig
+from greenhouse_sim.sensors.generation import SimpleSensorModel
+from greenhouse_sim.world import GreenhouseEnvironment
 
 CONFIG = SCENARIO_REGISTRY["gh_001"]
 PLANT_IDS = ["gh_001_plant_001", "gh_001_plant_002"]
@@ -128,6 +133,64 @@ def test_actions_are_applied_in_order_against_one_world() -> None:
     )
 
     assert [result.accepted for result in execution.results] == [True, False]
+
+
+def test_by_default_the_engine_runs_the_simple_models() -> None:
+    explicit = SimulationEngine(
+        CONFIG,
+        environment_model=SimpleEnvironmentModel(),
+        plant_model=SimpleTomatoModel(),
+        sensor_model=SimpleSensorModel(),
+    )
+    by_default = _engine()
+    worlds = [
+        engine.initialize(PLANT_IDS, greenhouse_id="gh_001") for engine in (explicit, by_default)
+    ]
+
+    for day in range(1, 8):
+        timestamp = TIMESTAMP + timedelta(days=day)
+        steps = [
+            engine.advance(world, day=day, timestamp=timestamp, simulation_id="sim_1")
+            for engine, world in zip((explicit, by_default), worlds, strict=True)
+        ]
+        assert steps[0] == steps[1]
+        worlds = [step.world for step in steps]
+
+
+class _ConstantClimate:
+    """The simplest other environment model: the same weather every day."""
+
+    CLIMATE = GreenhouseEnvironment(air_temperature_c=30.0, humidity_pct=50.0)
+
+    def initial(self, config: ScenarioConfig) -> GreenhouseEnvironment:
+        return self.CLIMATE
+
+    def advance(
+        self, environment: GreenhouseEnvironment, config: ScenarioConfig, day: int
+    ) -> GreenhouseEnvironment:
+        return environment
+
+
+def test_the_engine_runs_the_environment_model_it_is_given() -> None:
+    """A model plugged in through its contract drives the world and what the
+    sensors report, with no change to the engine."""
+    climate: EnvironmentModel = _ConstantClimate()
+    engine = SimulationEngine(CONFIG, environment_model=climate)
+    world = engine.initialize(PLANT_IDS, greenhouse_id="gh_001")
+
+    for day in range(1, 8):
+        step = engine.advance(
+            world, day=day, timestamp=TIMESTAMP + timedelta(days=day), simulation_id="sim_1"
+        )
+        world = step.world
+        readings = [
+            o.value
+            for o in step.observations
+            if o.observation_type == ObservationType.AIR_TEMPERATURE_C
+        ]
+        assert world.environment == _ConstantClimate.CLIMATE
+        assert readings and all(abs(reading - 30.0) < 2.0 for reading in readings)
+    assert all(plant.stem_length_cm > CONFIG.initial_stem_length_cm for plant in world.plants)
 
 
 def test_executor_for_resolves_the_simulated_operator() -> None:

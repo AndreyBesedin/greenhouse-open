@@ -115,3 +115,23 @@ def _noisy_count(true_count: int, error_probability: float, rng: np.random.Gener
         delta = int(rng.choice([-1, 1]))
         true_count = max(0, true_count + delta)
     return float(true_count)
+
+
+class SimpleSensorModel:
+    """The simulator's current sensors, as the engine uses them: each day, one
+    noisy greenhouse air temperature and, for every plant, noisy soil
+    moisture, fruit counts, ripe mass and visible height."""
+
+    def observe(
+        self,
+        world: GreenhouseWorld,
+        config: ScenarioConfig,
+        *,
+        day: int,
+        timestamp: datetime,
+        simulation_id: str,
+    ) -> list[Observation]:
+        generation = generate_observations(
+            world, config, day=day, timestamp=timestamp, simulation_id=simulation_id
+        )
+        return generation.observations

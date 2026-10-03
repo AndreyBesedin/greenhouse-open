@@ -61,3 +61,15 @@ def initial_environment(config: ScenarioConfig) -> GreenhouseEnvironment:
         air_temperature_c=(temp_low + temp_high) / 2,
         humidity_pct=(humidity_low + humidity_high) / 2,
     )
+
+
+class SimpleEnvironmentModel:
+    """The simple environment model, as the engine uses it."""
+
+    def initial(self, config: ScenarioConfig) -> GreenhouseEnvironment:
+        return initial_environment(config)
+
+    def advance(
+        self, environment: GreenhouseEnvironment, config: ScenarioConfig, day: int
+    ) -> GreenhouseEnvironment:
+        return advance_environment(environment, config, day)

@@ -11,9 +11,11 @@ Two deliberate omissions:
   owns checkpointing it, but everything a consumer uses to decide should be
   derived from `SimulationStep.observations`. Evaluation is the explicit
   exception (`greenhouse_sim.ground_truth`).
-- The dynamics are reached through `world_builder`, and the executor is
-  injected, so a different fidelity level or a specialized physics backend
-  can be plugged in later without changing this interface.
+- The environment, plant and sensor models and the executor are injected,
+  each defaulting to the simple implementation, so a different fidelity
+  level or a specialized physics backend plugs in without changing this
+  interface. What each model must do is stated in its domain's
+  `contract.py`.
 """
 
 from datetime import datetime
@@ -25,9 +27,14 @@ from pydantic import BaseModel
 
 from greenhouse_sim.actions.executor import ActionExecutor, SimulatedOperatorExecutor
 from greenhouse_sim.actions.validation import validate_action
+from greenhouse_sim.biology.contract import PlantModel
+from greenhouse_sim.biology.tomato.simple.model import SimpleTomatoModel
+from greenhouse_sim.environment.contract import EnvironmentModel
+from greenhouse_sim.environment.simple import SimpleEnvironmentModel
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.sensors.generation import generate_observations
-from greenhouse_sim.world.state import GreenhouseWorld
+from greenhouse_sim.sensors.contract import SensorModel
+from greenhouse_sim.sensors.generation import SimpleSensorModel
+from greenhouse_sim.world.state import GreenhouseWorld, PlantModelState
 from greenhouse_sim.world_builder import advance_world, initialize_world
 
 
@@ -54,16 +61,35 @@ class ActionExecution(BaseModel):
 
 
 class SimulationEngine:
-    def __init__(self, config: ScenarioConfig, *, executor: ActionExecutor | None = None) -> None:
+    def __init__(
+        self,
+        config: ScenarioConfig,
+        *,
+        executor: ActionExecutor | None = None,
+        environment_model: EnvironmentModel | None = None,
+        plant_model: PlantModel[PlantModelState] | None = None,
+        sensor_model: SensorModel | None = None,
+    ) -> None:
+        """`plant_model` is limited to models whose state the world can carry
+        (`PlantModelState`)."""
         self._config = config
         self._executor = executor or SimulatedOperatorExecutor()
+        self._environment_model = environment_model or SimpleEnvironmentModel()
+        self._plant_model = plant_model or SimpleTomatoModel()
+        self._sensor_model = sensor_model or SimpleSensorModel()
 
     @property
     def config(self) -> ScenarioConfig:
         return self._config
 
     def initialize(self, plant_ids: list[str], *, greenhouse_id: str) -> GreenhouseWorld:
-        return initialize_world(self._config, plant_ids, greenhouse_id=greenhouse_id)
+        return initialize_world(
+            self._config,
+            plant_ids,
+            greenhouse_id=greenhouse_id,
+            environment_model=self._environment_model,
+            plant_model=self._plant_model,
+        )
 
     def advance(
         self,
@@ -79,15 +105,18 @@ class SimulationEngine:
         produce the same step, which is what makes a run reproducible
         (greenhouse_sim/tests/test_run_characterization.py).
         """
-        advanced = advance_world(world, self._config, day)
-        generation = generate_observations(
+        advanced = advance_world(
+            world,
+            self._config,
+            day,
+            environment_model=self._environment_model,
+            plant_model=self._plant_model,
+        )
+        observations = self._sensor_model.observe(
             advanced, self._config, day=day, timestamp=timestamp, simulation_id=simulation_id
         )
         return SimulationStep(
-            day=day,
-            timestamp=timestamp,
-            world=advanced,
-            observations=generation.observations,
+            day=day, timestamp=timestamp, world=advanced, observations=observations
         )
 
     def apply_actions(
