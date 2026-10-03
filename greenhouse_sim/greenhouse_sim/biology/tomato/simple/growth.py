@@ -1,5 +1,12 @@
 import numpy as np
 
+from greenhouse_sim.biology.tomato.simple.parameters import (
+    FRUIT_GROWTH_RATE_RANGE,
+    REFERENCE_TEMPERATURE_C,
+    STEM_GROWTH_LOSS_AT_FULL_WATER_STRESS,
+    STEM_GROWTH_LOSS_PER_DEGREE,
+    STEM_GROWTH_MIN_TEMPERATURE_FACTOR,
+)
 from greenhouse_sim.biology.tomato.simple.state import SimpleFruitState, SimplePlantState
 from greenhouse_sim.core.rng import seeded_rng
 from greenhouse_sim.scenarios.config import ScenarioConfig
@@ -10,9 +17,11 @@ def advance_stem(
     plant_state: SimplePlantState, environment: GreenhouseEnvironment, config: ScenarioConfig
 ) -> float:
     """Stem length gained today. Stressed or too-hot/cold plants grow slower."""
-    water_factor = 1.0 - 0.6 * plant_state.water_stress
-    temp_deviation = abs(environment.air_temperature_c - 24.0)
-    temp_factor = max(0.5, 1.0 - temp_deviation * 0.02)
+    water_factor = 1.0 - STEM_GROWTH_LOSS_AT_FULL_WATER_STRESS * plant_state.water_stress
+    temp_deviation = abs(environment.air_temperature_c - REFERENCE_TEMPERATURE_C)
+    temp_factor = max(
+        STEM_GROWTH_MIN_TEMPERATURE_FACTOR, 1.0 - temp_deviation * STEM_GROWTH_LOSS_PER_DEGREE
+    )
     return (
         config.stem_growth_cm_per_day_base
         * water_factor
@@ -60,7 +69,7 @@ def _new_fruit(
     diameter_low, diameter_high = config.target_diameter_mm_bounds
     ripening_low, ripening_high = config.ripening_days_bounds
     target_diameter_mm = float(rng.uniform(diameter_low, diameter_high))
-    growth_rate_multiplier = float(rng.uniform(0.85, 1.15))
+    growth_rate_multiplier = float(rng.uniform(*FRUIT_GROWTH_RATE_RANGE))
     ripening_day = int(rng.integers(ripening_low, ripening_high + 1))
     fruit = Fruit(fruit_id=f"{truss_id}_fruit_{index:02d}", truss_id=truss_id, plant_id=plant_id)
     state = SimpleFruitState(

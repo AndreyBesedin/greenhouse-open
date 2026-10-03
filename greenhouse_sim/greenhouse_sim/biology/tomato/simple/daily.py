@@ -7,6 +7,7 @@ from greenhouse_sim.biology.tomato.simple.growth import (
     maybe_initiate_truss,
     truss_stage,
 )
+from greenhouse_sim.biology.tomato.simple.parameters import PLANT_VIGOUR_RANGE
 from greenhouse_sim.biology.tomato.simple.ripening import advance_ripening
 from greenhouse_sim.biology.tomato.simple.state import (
     SimpleFruitState,
@@ -32,7 +33,7 @@ def initial_plant(plant_id: str, config: ScenarioConfig) -> tuple[PlantWorld, Si
         stem_length_cm=config.initial_stem_length_cm,
         water_reservoir_ml=config.initial_water_reservoir_ml,
     )
-    return plant, SimplePlantState(growth_multiplier=float(rng.uniform(0.85, 1.15)))
+    return plant, SimplePlantState(growth_multiplier=float(rng.uniform(*PLANT_VIGOUR_RANGE)))
 
 
 def advance_plant(
