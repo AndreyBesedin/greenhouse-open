@@ -33,7 +33,7 @@ renderer on them.
 | Step | Commit summary | Status |
 | --- | --- | --- |
 | P00.1 | `chore(web): scaffold the browser simulation viewer` | Done ([#19](https://github.com/AndreyBesedin/greenhouse-open/pull/19)) |
-| P00.2 | `feat(viewer): add orbit camera, presets and scene HUD` | Planned |
+| P00.2 | `feat(viewer): add orbit camera, presets and scene HUD` | Done ([#20](https://github.com/AndreyBesedin/greenhouse-open/pull/20)) |
 | P00.3 | `feat(scene): render typed scene entities from JSON` | Planned |
 | P00.4 | `feat(sim-bridge): stream scene snapshots from the local Python process` | Planned |
 | P00.5 | `feat(time): add play, pause, step, speed and reset controls` | Planned |
@@ -71,6 +71,23 @@ world-coordinate readout; and a HUD with camera position, frame rate and
 object count. Visible result: the reference scene can be inspected
 predictably from predefined viewpoints. Tests: each preset moves the camera
 to its expected pose, and a refresh restores the default view.
+
+As implemented:
+
+- Orbit, pan and zoom use the orbit controls that ship with Three.js, so no
+  dependency is added.
+- The presets look at the world origin from 9 m. They are plain data in
+  world coordinates (`src/camera.ts`), shared by the viewer and its tests.
+  The isometric view is the default, and the top view leans a millimetre
+  towards -y so world +y stays up the screen.
+- The HUD shows the camera position in world coordinates, where the pointer
+  meets the ground, the frame rate and the scene's object count. A probe in
+  the canvas samples them four times a second, so the page does not
+  re-render on every frame.
+- Browser tests check that each preset puts the camera at its pose, that
+  dragging orbits and a refresh restores the default view, and that the HUD
+  reports its readouts. Screenshots confirmed the top view shows +x to the
+  right and +y up the screen.
 
 ### P00.3: Render typed scene entities
 
