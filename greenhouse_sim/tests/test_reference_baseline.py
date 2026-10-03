@@ -146,7 +146,11 @@ def _run(scenario_id: str) -> Baseline:
 
 
 def _state(world: GreenhouseWorld) -> Json:
-    """The hidden world, without the simple model's creation-time draws."""
+    """The hidden world, without the simple model's creation-time draws.
+
+    Water stress is the one value from the model's own section included,
+    because it changes every day and drives growth.
+    """
     return {
         "simulated_day": world.simulated_day,
         "environment": world.environment.model_dump(mode="json"),
@@ -157,7 +161,7 @@ def _state(world: GreenhouseWorld) -> Json:
                 "stem_length_cm": plant.stem_length_cm,
                 "lowered_length_cm": plant.lowered_length_cm,
                 "water_reservoir_ml": plant.water_reservoir_ml,
-                "water_stress": plant.water_stress,
+                "water_stress": world.plant_model.plants[plant.plant_id].water_stress,
                 "cumulative_harvest_g": plant.cumulative_harvest_g,
                 "trusses": [
                     {
@@ -213,7 +217,9 @@ def _summary(
         },
         "lowered_length_cm": round(sum(p.lowered_length_cm for p in world.plants), 2),
         "water_reservoir_ml_mean": round(fmean(p.water_reservoir_ml for p in world.plants), 2),
-        "fully_water_stressed_plants": sum(p.water_stress == 1.0 for p in world.plants),
+        "fully_water_stressed_plants": sum(
+            state.water_stress == 1.0 for state in world.plant_model.plants.values()
+        ),
         "trusses": sum(len(plant.trusses) for plant in world.plants),
         "fruits_by_status": _counts(fruit.status.value for fruit in fruits),
         "fruits_by_ripeness": _counts(fruit.ripeness_stage.value for fruit in fruits),

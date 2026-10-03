@@ -8,6 +8,11 @@ breaks the conformance checks is a major version.
 ## Unreleased
 
 - All three packages now require Python 3.14 or newer (previously 3.12).
+- `greenhouse-sim`: the simple tomato model's own values (a plant's growth
+  multiplier and water stress; a fruit's target diameter, growth-rate
+  multiplier and ripening day) move from `PlantWorld` and `Fruit` to
+  `GreenhouseWorld.plant_model`. Worlds serialized by earlier versions no
+  longer load.
 
 ## 0.1.0 - 2026-09-24
 

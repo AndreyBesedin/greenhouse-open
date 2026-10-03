@@ -80,7 +80,7 @@ TypeScript workflow.
 | P-1.1 | `test(sim): capture the simulator baseline before restructuring` | Done ([#4](https://github.com/AndreyBesedin/greenhouse-open/pull/4)) |
 | P-1.2 | `refactor(sim): introduce internal package boundaries without behavior change` | Done ([#9](https://github.com/AndreyBesedin/greenhouse-open/pull/9)) |
 | P-1.3 | `refactor(sim): isolate current dynamics as the simple reference backend` | Done ([#10](https://github.com/AndreyBesedin/greenhouse-open/pull/10)) |
-| P-1.4 | `refactor(sim): separate world state from model-specific latent parameters` | Planned |
+| P-1.4 | `refactor(sim): separate world state from model-specific latent parameters` | Done ([#11](https://github.com/AndreyBesedin/greenhouse-open/pull/11)) |
 | P-1.5 | `feat(sim): introduce backend capability contracts as minimal protocols` | Planned |
 | P-1.6 | `feat(sim): introduce a scene and geometry snapshot contract` | Planned |
 | P-1.7 | `chore(web): add the browser package inside greenhouse_sim` | Planned |
@@ -188,7 +188,7 @@ Open questions for P-1.4 and P-1.5:
 - Watering adds to the simple model's water reservoir directly from
   `actions/effects.py`, so an action's effect is tied to one plant model.
   That coupling has to be resolved when world state and model state are
-  separated.
+  separated. *Resolved in P-1.4.*
 
 ### P-1.4: Separate world state from model-specific parameters
 
@@ -197,6 +197,25 @@ latent parameters (such as growth multipliers and ripening targets) and from
 the current scalar environment, so that new tomato or environment models do
 not grow one world module. No move to array storage yet. Ground-truth access
 rules stay enforced.
+
+As implemented (see [decision 0005](../decisions/0005-keep-model-state-apart-from-the-world.md)):
+
+- `PlantWorld` and `Fruit` keep only what the world is. The simple tomato
+  model's own values (a plant's growth multiplier and water stress; a fruit's
+  target diameter, growth-rate multiplier and ripening day) move to
+  `SimpleTomatoState` in `biology/tomato/simple/state.py`, keyed by plant and
+  fruit identifier, and the world carries it as `GreenhouseWorld.plant_model`.
+- The model's rule functions take that state explicitly, and draw random
+  values in the same order, so the reference baseline is unchanged.
+- Watering now fills the root zone in the action's own code, instead of
+  calling into the tomato model.
+- Two new tests: a world saved as JSON loads back unchanged, and nothing
+  outside the model and `world_builder` reads `plant_model`.
+- The environment needed no split: the simple environment model keeps no
+  values of its own beyond the temperature and humidity it produces.
+- This is a breaking change to the world types and their serialized form.
+  Worlds saved before it do not load, which is acceptable while the packages
+  are unpublished.
 
 ### P-1.5: Introduce minimal backend contracts
 

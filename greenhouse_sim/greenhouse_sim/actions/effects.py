@@ -10,7 +10,6 @@ from greenhouse_protocol.action import (
 from greenhouse_protocol.enums import EventSource, EventType
 from greenhouse_protocol.event import Event
 
-from greenhouse_sim.biology.tomato.simple.water import apply_irrigation
 from greenhouse_sim.records import event_id
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
@@ -48,8 +47,11 @@ def _apply_water(
     day: int,
     timestamp: datetime,
 ) -> tuple[GreenhouseWorld, Event]:
+    # Water reaches the root zone, up to what it holds. How the plant responds
+    # is the plant model's business on the next day.
     plant = world.plant(action.plant_id)
-    updated_plant = apply_irrigation(plant, action.amount_ml, config)
+    reservoir = min(config.water_capacity_ml, plant.water_reservoir_ml + action.amount_ml)
+    updated_plant = plant.model_copy(update={"water_reservoir_ml": reservoir})
     world = _replace_plant(world, updated_plant)
     event = Event(
         event_id=event_id(action.plant_id, timestamp, "watering"),

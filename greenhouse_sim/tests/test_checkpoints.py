@@ -1,6 +1,11 @@
 """Keeping a run's hidden world between steps, with no database."""
 
+from datetime import UTC, datetime, timedelta
+
+from greenhouse_protocol.action import HarvestPlantAction, RequestedAction
+
 from greenhouse_sim.checkpoints import InMemoryWorldCheckpoints, WorldCheckpoints
+from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.world import GreenhouseWorld
 from greenhouse_sim.world_builder import initialize_world
@@ -39,3 +44,22 @@ def test_deleting_a_greenhouse_forgets_only_that_greenhouse() -> None:
 
     assert checkpoints.get_latest("gh_a") is None
     assert checkpoints.get_latest("gh_b") == _world("gh_b")
+
+
+def test_a_world_saved_as_json_loads_back_unchanged() -> None:
+    """A store that persists worlds outside the process, such as a database,
+    keeps them as JSON. Everything a run needs to continue, including the
+    values a model keeps for itself, must survive the round trip."""
+    config = SCENARIO_REGISTRY["gh_demo"]
+    engine = SimulationEngine(config)
+    plant_ids = ["gh_demo_plant_001", "gh_demo_plant_002"]
+    world = engine.initialize(plant_ids, greenhouse_id="gh_demo")
+    start = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
+    for day in range(1, config.duration_days + 1):
+        timestamp = start + timedelta(days=day - 1)
+        world = engine.advance(world, day=day, timestamp=timestamp, simulation_id="sim").world
+        harvest: list[RequestedAction] = [HarvestPlantAction(plant_id=plant_ids[0])]
+        world = engine.apply_actions(world, harvest, day=day, timestamp=timestamp).world
+    assert any(f.status == "HARVESTED" for p in world.plants for t in p.trusses for f in t.fruits)
+
+    assert GreenhouseWorld.model_validate_json(world.model_dump_json()) == world
