@@ -5,7 +5,8 @@ import type { SceneSnapshot } from "./generated/snapshotTypes";
 export type SceneSource =
   | { kind: "reference" }
   | { kind: "example" }
-  | { kind: "scenario"; scenarioId: string };
+  | { kind: "scenario"; scenarioId: string }
+  | { kind: "live"; scenarioId: string };
 
 export type SceneState =
   | { status: "none" }
@@ -18,6 +19,10 @@ const EXAMPLE_SCENE_URL = "/scenes/example.json";
 
 export function sourceFromSearch(search: string): SceneSource {
   const parameters = new URLSearchParams(search);
+  const liveId = parameters.get("live");
+  if (liveId) {
+    return { kind: "live", scenarioId: liveId };
+  }
   const scenarioId = parameters.get("scenario");
   if (scenarioId) {
     return { kind: "scenario", scenarioId };
@@ -33,12 +38,16 @@ export function searchFor(source: SceneSource): string {
       return "?scene=example";
     case "scenario":
       return `?scenario=${encodeURIComponent(source.scenarioId)}`;
+    case "live":
+      return `?live=${encodeURIComponent(source.scenarioId)}`;
   }
 }
 
 function sceneUrl(source: SceneSource): string | null {
   switch (source.kind) {
     case "reference":
+    case "live":
+      // A live scene streams in instead (see useLiveScene).
       return null;
     case "example":
       return EXAMPLE_SCENE_URL;

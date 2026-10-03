@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import { type BuildInfo, buildInfo } from "./buildInfo";
 import type { PresetName, PresetRequest } from "./camera";
-import { Hud } from "./Hud";
+import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import type { ViewSample } from "./readouts";
 import { loadScenarios, type ScenariosState } from "./scenarios";
@@ -13,6 +13,7 @@ import {
   searchFor,
   sourceFromSearch,
 } from "./scene/source";
+import { useLiveScene } from "./scene/useLiveScene";
 import { Viewport } from "./Viewport";
 import type { Point3 } from "./world";
 
@@ -23,6 +24,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [presetRequest, setPresetRequest] = useState<PresetRequest | null>(null);
   const [sample, setSample] = useState<ViewSample | null>(null);
   const [pointer, setPointer] = useState<Point3 | null>(null);
+  const live = useLiveScene(source.kind === "live" ? source.scenarioId : null);
 
   useEffect(() => {
     let current = true;
@@ -37,6 +39,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   }, []);
 
   useEffect(() => {
+    if (source.kind === "live") {
+      return;
+    }
     let current = true;
     setScene(source.kind === "reference" ? { status: "none" } : { status: "loading" });
     void loadScene(source).then((state) => {
@@ -54,6 +59,10 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     setSource(next);
   }
 
+  const shown = source.kind === "live" ? live.scene : scene;
+  const liveStatus: LiveStatus | null =
+    source.kind === "live" ? { connection: live.connection, frame: live.frame } : null;
+
   function choosePreset(preset: PresetName): void {
     setPresetRequest((previous) => ({ preset, serial: (previous?.serial ?? 0) + 1 }));
   }
@@ -61,7 +70,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   return (
     <main className="viewer">
       <Viewport
-        snapshot={scene.status === "loaded" ? scene.snapshot : null}
+        snapshot={shown.status === "loaded" ? shown.snapshot : null}
         presetRequest={presetRequest}
         onSample={setSample}
         onPointer={setPointer}
@@ -70,10 +79,10 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         build={build}
         scenarios={scenarios}
         source={source}
-        scene={scene}
+        scene={shown}
         onSource={chooseSource}
       />
-      <Hud sample={sample} pointer={pointer} onPreset={choosePreset} />
+      <Hud sample={sample} pointer={pointer} live={liveStatus} onPreset={choosePreset} />
     </main>
   );
 }

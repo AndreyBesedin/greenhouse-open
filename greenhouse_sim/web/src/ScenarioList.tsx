@@ -3,9 +3,11 @@ import type { ScenariosState } from "./scenarios";
 export function ScenarioList({
   state,
   onShow,
+  onLive,
 }: {
   state: ScenariosState;
   onShow?: (scenarioId: string) => void;
+  onLive?: (scenarioId: string) => void;
 }) {
   switch (state.status) {
     case "loading":
@@ -28,6 +30,7 @@ export function ScenarioList({
               <th>Plants</th>
               <th>Days</th>
               {onShow && <th />}
+              {onLive && <th />}
             </tr>
           </thead>
           <tbody>
@@ -47,6 +50,17 @@ export function ScenarioList({
                       onClick={() => onShow(scenario.id)}
                     >
                       Show
+                    </button>
+                  </td>
+                )}
+                {onLive && (
+                  <td>
+                    <button
+                      type="button"
+                      aria-label={`Play ${scenario.id} live`}
+                      onClick={() => onLive(scenario.id)}
+                    >
+                      Live
                     </button>
                   </td>
                 )}

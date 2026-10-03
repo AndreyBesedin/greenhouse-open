@@ -38,6 +38,7 @@ export function InfoPanel({
       <ScenarioList
         state={scenarios}
         onShow={(scenarioId) => onSource({ kind: "scenario", scenarioId })}
+        onLive={(scenarioId) => onSource({ kind: "live", scenarioId })}
       />
     </aside>
   );

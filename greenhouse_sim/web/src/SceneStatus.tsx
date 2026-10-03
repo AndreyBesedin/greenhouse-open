@@ -8,6 +8,8 @@ function describeSource(source: SceneSource): string {
       return "example scene";
     case "scenario":
       return `scenario ${source.scenarioId}, before day one`;
+    case "live":
+      return `scenario ${source.scenarioId}, live`;
   }
 }
 
