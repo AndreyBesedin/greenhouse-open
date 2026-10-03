@@ -4,8 +4,7 @@ A deterministic greenhouse simulator that produces canonical observations.
 Part of [greenhouse-open](../README.md). Apache-2.0.
 
 - **A hidden world, noisy sensors.** `GreenhouseWorld` holds what is really
-  true, including latent variables no sensor measures. Each step publishes
-  only noisy `Observation`s of it.
+  true. Each step publishes only noisy `Observation`s of it.
 - **Semantic actions.** `SimulationEngine.apply_actions` validates each
   `RequestedAction` against the world and executes the accepted ones through
   a pluggable `ActionExecutor`, returning an `Event` for each.
@@ -17,11 +16,8 @@ Part of [greenhouse-open](../README.md). Apache-2.0.
 - **Scenarios.** `greenhouse_sim.scenarios` holds ready-made worlds; a
   `ScenarioConfig` describes size, crop, dynamics and sensor noise, and
   nothing about who manages the greenhouse.
-
-The dynamics are deliberately simple today: air temperature, humidity, a
-per-plant water reservoir, stem growth, trusses and fruit ripening. They
-are reached through one module, so richer or specialised physics can
-replace them without changing the engine's interface.
+- **Pluggable models.** Plant, environment and sensor models plug into the
+  engine through small contracts. Simple reference models are the default.
 
 ```python
 from datetime import UTC, datetime
@@ -34,6 +30,85 @@ step = engine.advance(world, day=1, timestamp=datetime(2026, 3, 1, tzinfo=UTC), 
 print(step.observations)
 ```
 
+More complete runs are in the repository's [examples](../examples/).
+
+## How it is built
+
+The simulator core is plain Python with no server, database or browser. The
+local API and the browser viewer are adapters around it: they depend on the
+core, never the other way round.
+
+```text
+greenhouse_sim/
+  greenhouse_sim/
+    core/          the engine, world checkpoints and seeded randomness
+    world/         the hidden world's state, and geometry conventions
+    biology/       plant models; tomato/simple is the reference model
+    environment/   environment models; simple.py is the reference model
+    sensors/       sensor models: what instruments report of the world
+    actions/       validating and carrying out semantic actions
+    scenarios/     ready-made worlds
+    evaluation/    scoring against ground truth, its only reader
+    scene/         the world as a renderable scene for a viewer
+    api/           a thin local HTTP API for the viewer (adapter)
+  web/             the browser viewer (adapter, not part of the wheel)
+```
+
+- **A day.** The environment model produces the day's climate, the plant
+  model develops the crop in it, and the sensor model reports what
+  instruments would read. Each model is passed to `SimulationEngine` and
+  defaults to the simple reference model. What a model must do is stated in
+  its domain's `contract.py`, and contract tests check every implementation.
+- **World and model state.** The world's entities describe what is: sizes,
+  ages, stages, root-zone water, harvest. The values a model invents for
+  itself, such as a plant's vigour, live in that model's own section of the
+  world (`GreenhouseWorld.plant_model`), which nothing else reads.
+- **Geometry.** Metres and radians, right-handed axes with z up, the ground
+  at z = 0.
+- **Headless by design.** Tests fail if a simulator module imports the API,
+  if a simulator run loads a web framework, an HTTP server or the API, or if
+  anything but evaluation reads ground truth.
+
+## Public API
+
+Import from these modules. They stay where they are while the implementation
+behind them moves.
+
+| To | Import from |
+| --- | --- |
+| Run a simulation | `greenhouse_sim.engine`, `greenhouse_sim.scenarios`, `greenhouse_sim.world` |
+| Keep a run between steps | `greenhouse_sim.checkpoints` |
+| Carry out actions another way | `greenhouse_sim.executor` |
+| Advance a world without the engine | `greenhouse_sim.world_builder` |
+| Score readings against the truth | `greenhouse_sim.ground_truth`, `greenhouse_sim.evaluation.observation_accuracy` |
+| Write or compose a model | `greenhouse_sim.biology.contract`, `greenhouse_sim.environment.contract`, `greenhouse_sim.sensors.contract`, and the simple models in `greenhouse_sim.biology.tomato.simple.model`, `greenhouse_sim.environment.simple`, `greenhouse_sim.sensors.generation` |
+| Draw a simulation | `greenhouse_sim.world.geometry`, `greenhouse_sim.scene.snapshot` |
+
+Everything else is internal and may move. `tests/test_public_imports.py`
+lists every public name.
+
+## The viewer
+
+The browser viewer shows what the simulator is doing. Today it lists the
+scenarios; 3D scenes come next. Start the local API, then the viewer:
+
+```bash
+python -m greenhouse_sim.api                    # http://127.0.0.1:8765/api
+cd greenhouse_sim/web && npm ci && npm run dev  # Node 24
+```
+
+See [web/README.md](web/README.md) for the viewer's own checks.
+
+## Where it is going
+
+The simulator is growing into a visual, physical simulation environment,
+one project at a time: the [roadmap](../docs/roadmap/README.md) describes
+the projects and their status, and the
+[decision records](../docs/decisions/README.md) explain the choices made
+along the way.
+
 ## Dependencies
 
-`greenhouse-protocol`, Pydantic 2 and NumPy.
+`greenhouse-protocol`, Pydantic 2 and NumPy. The local API uses only the
+standard library. The viewer is a separate npm package and is not part of
+the Python distribution.

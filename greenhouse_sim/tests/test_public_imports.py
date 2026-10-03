@@ -1,12 +1,15 @@
-"""The import paths callers rely on today.
+"""greenhouse-sim's public API: every name callers may import, and from where.
 
-The examples, this package's README and downstream applications import the
-names below from these modules. As the package is reorganised into domain
-subpackages, each path keeps resolving, through a re-export if its module
-moves, until removing it is a deliberate, announced change.
+These paths are stable (decision 0011). Running a simulation goes through
+short top-level modules such as `greenhouse_sim.engine` and
+`greenhouse_sim.world`, which stay put while the implementation behind them
+moves between domain subpackages. Writing or composing a model goes through
+the contracts and the simple models; looking at a simulation goes through the
+geometry and scene types. Removing or moving any of these is a breaking
+change.
 
-Internal helpers that only this package's own tests reach into are not
-listed: those tests are import-adjusted when the code they test moves.
+Everything else in the package is internal and may move without notice, so
+this package's own tests import it from wherever it currently lives.
 """
 
 import importlib
@@ -22,6 +25,7 @@ PUBLIC_IMPORTS: dict[str, tuple[str, ...]] = {
         "FruitStatus",
         "GreenhouseEnvironment",
         "GreenhouseWorld",
+        "PlantModelState",
         "PlantWorld",
         "RipenessStage",
         "Truss",
@@ -35,6 +39,30 @@ PUBLIC_IMPORTS: dict[str, tuple[str, ...]] = {
         "AccuracyByType",
         "AccuracyReport",
         "observation_accuracy",
+    ),
+    # Writing or composing models.
+    "greenhouse_sim.biology.contract": ("PlantModel",),
+    "greenhouse_sim.environment.contract": ("EnvironmentModel",),
+    "greenhouse_sim.sensors.contract": ("SensorModel",),
+    "greenhouse_sim.biology.tomato.simple.model": ("SimpleTomatoModel",),
+    "greenhouse_sim.environment.simple": ("SimpleEnvironmentModel",),
+    "greenhouse_sim.sensors.generation": ("SimpleSensorModel",),
+    # Looking at a simulation.
+    "greenhouse_sim.world.geometry": (
+        "Axes",
+        "Cylinder",
+        "Plane",
+        "Quaternion",
+        "Shape",
+        "Transform",
+        "Vector3",
+    ),
+    "greenhouse_sim.scene.snapshot": (
+        "Color",
+        "SceneEntity",
+        "SceneEntityKind",
+        "SceneSnapshot",
+        "scene_snapshot",
     ),
 }
 

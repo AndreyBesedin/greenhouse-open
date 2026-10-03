@@ -98,7 +98,7 @@ adds a visible or measurable result.
 
 | Project | Goal | Status |
 | --- | --- | --- |
-| [P-1](p-1-restructure-greenhouse-sim.md) | Restructure `greenhouse_sim` into a modular foundation, without changing behavior | In progress |
+| [P-1](p-1-restructure-greenhouse-sim.md) | Restructure `greenhouse_sim` into a modular foundation, without changing behavior | Done |
 | P00 | Browser renderer and visual QA foundation | Planned |
 | P01 | Greenhouse envelope and world geometry | Planned |
 | P02 | Static greenhouse fixtures and layout | Planned |

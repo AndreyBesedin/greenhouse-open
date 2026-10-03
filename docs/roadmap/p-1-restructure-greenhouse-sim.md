@@ -1,6 +1,6 @@
 # P-1: Restructure `greenhouse_sim`
 
-**Status:** in progress. Part of the [simulator roadmap](README.md).
+**Status:** done; final QA passed on 2026-10-03. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -86,7 +86,7 @@ TypeScript workflow.
 | P-1.7 | `chore(web): add the browser package inside greenhouse_sim` | Done ([#15](https://github.com/AndreyBesedin/greenhouse-open/pull/15)) |
 | P-1.8 | `feat(api): add a thin local simulator-viewer adapter` | Done ([#16](https://github.com/AndreyBesedin/greenhouse-open/pull/16)) |
 | P-1.9 | `ci: extend CI to the browser package` | Done ([#17](https://github.com/AndreyBesedin/greenhouse-open/pull/17)) |
-| P-1.10 | `docs(sim): document the new architecture and developer workflow` | Planned |
+| P-1.10 | `docs(sim): document the new architecture and developer workflow` | Done ([#18](https://github.com/AndreyBesedin/greenhouse-open/pull/18)) |
 
 ### P-1.1: Capture the simulator baseline
 
@@ -349,6 +349,21 @@ Update the package README and the root README: the roadmap, the core and
 viewer boundary, the package layout, how to run the examples and the viewer,
 and the guarantee that the core stays headless.
 
+As implemented:
+
+- The package README describes how the simulator is built: the headless
+  core and its domains, the API and viewer as adapters, one day's flow
+  through the models, world and model state, the geometry conventions, and
+  the tests that keep the core headless. It also covers the public API by
+  task, starting the viewer, and links to this roadmap and the decision
+  records. The root README mentions the viewer and its separate checks.
+- The public API is settled ([decision 0011](../decisions/0011-the-public-api-is-the-top-level-modules-contracts-and-scene.md)):
+  the short top-level modules stay the stable way to run a simulation, with
+  the model contracts, the simple models, the geometry and the scene snapshot
+  added. `tests/test_public_imports.py` lists every public name, and
+  everything else is internal.
+- The changelog lists what P-1 added.
+
 ## Final QA: `refactor-baseline`
 
 Before P00 starts:
@@ -364,14 +379,28 @@ Before P00 starts:
 8. The browser package builds and lists the current scenarios.
 9. Python checks and the new frontend checks pass in CI.
 
+Result on 2026-10-03: all nine pass.
+
+| Check | Evidence |
+| --- | --- |
+| 1. Examples run | `tests/test_examples.py` runs all four |
+| 2. Reference scenarios match | `test_reference_baseline.py`: every scenario, every day, unchanged since P-1.1 |
+| 3. Protocol conformance | `tests/test_conformance.py`, and the sensor contract test runs the canonical conformance checks |
+| 4. Ground truth is evaluation-only | `test_dependencies.py` allows only `evaluation/` to import it, and `test_model_state_boundary.py` keeps model state private too |
+| 5. The engine runs without web or API dependencies | `test_engine.py` runs a simulation and fails if a web framework, `http.server` or the API is loaded; `test_api.py` fails if a simulator module imports the API |
+| 6. The simple models run through the backend boundaries | `test_model_contracts.py`, and the engine's default is checked step for step against the simple models given explicitly |
+| 7. The scene snapshot is deterministic | `test_scene_snapshot.py`: identical JSON for the same world, and a JSON round trip |
+| 8. The viewer builds and lists the scenarios | `npm run build`, and the Playwright smoke test finds `gh_001`, `gh_002` and `gh_demo` from the real API with no console errors |
+| 9. Python and viewer checks pass in CI | the `repository checks` and `viewer checks` jobs, first green together on [#17](https://github.com/AndreyBesedin/greenhouse-open/pull/17) |
+
 ## Acceptance criteria
 
-- [ ] `greenhouse_protocol` and `greenhouse_adapters` keep their roles.
-- [ ] `greenhouse_sim` has internal boundaries compatible with P00 to P09.
-- [ ] The current simulator survives as a fast reference backend.
-- [ ] Current behavior is characterized before any model changes.
-- [ ] The API and viewer are optional and do not reach into the headless
+- [x] `greenhouse_protocol` and `greenhouse_adapters` keep their roles.
+- [x] `greenhouse_sim` has internal boundaries compatible with P00 to P09.
+- [x] The current simulator survives as a fast reference backend.
+- [x] Current behavior is characterized before any model changes.
+- [x] The API and viewer are optional and do not reach into the headless
       core.
-- [ ] The scene-snapshot boundary exists for P00.
-- [ ] CI covers the Python packages and the viewer.
-- [ ] No dependency on private or proprietary code is introduced.
+- [x] The scene-snapshot boundary exists for P00.
+- [x] CI covers the Python packages and the viewer.
+- [x] No dependency on private or proprietary code is introduced.

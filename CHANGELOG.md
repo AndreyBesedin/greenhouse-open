@@ -13,6 +13,17 @@ breaks the conformance checks is a major version.
   multiplier and ripening day) move from `PlantWorld` and `Fruit` to
   `GreenhouseWorld.plant_model`. Worlds serialized by earlier versions no
   longer load.
+- `greenhouse-sim`: plant, environment and sensor models plug into
+  `SimulationEngine` through contracts (`PlantModel`, `EnvironmentModel`,
+  `SensorModel`), with the existing dynamics kept as the default simple
+  models. The internal modules are regrouped by domain; the public import
+  paths are unchanged and now documented.
+- `greenhouse-sim`: `scene_snapshot` describes a world as a renderable scene,
+  in metres with z up.
+- `greenhouse-sim`: a local API for the browser viewer
+  (`python -m greenhouse_sim.api`), using only the standard library.
+- A browser viewer for the simulator in `greenhouse_sim/web`, outside the
+  Python package.
 
 ## 0.1.0 - 2026-09-24
 
