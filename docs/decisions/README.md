@@ -19,6 +19,7 @@ changes course is a new record that supersedes the old one.
 | [0005](0005-keep-model-state-apart-from-the-world.md) | Keep a model's own state apart from the world | Accepted |
 | [0006](0006-plug-models-in-through-minimal-protocols.md) | Plug simulation models in through minimal protocols | Accepted |
 | [0007](0007-world-coordinates-metres-right-handed-z-up.md) | World coordinates are metres, right-handed, z up | Accepted |
+| [0008](0008-build-the-viewer-with-npm-node-24-and-vite.md) | Build the viewer with npm, Node 24, Vite and strict TypeScript | Accepted |
 
 ## Template
 

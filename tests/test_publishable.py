@@ -14,8 +14,33 @@ import re
 import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-TEXT_SUFFIXES = {".py", ".md", ".toml", ".txt", ".ini", ".json", ".yml", ".yaml", ".cfg"}
-SKIPPED_PARTS = {"__pycache__", ".venv", ".mypy_cache", ".ruff_cache", ".pytest_cache", ".git"}
+TEXT_SUFFIXES = {
+    ".py",
+    ".md",
+    ".toml",
+    ".txt",
+    ".ini",
+    ".json",
+    ".yml",
+    ".yaml",
+    ".cfg",
+    ".ts",
+    ".tsx",
+    ".js",
+    ".html",
+    ".css",
+}
+# Tool caches, installed dependencies and build output: none of it is source.
+SKIPPED_PARTS = {
+    "__pycache__",
+    ".venv",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".pytest_cache",
+    ".git",
+    "node_modules",
+    "dist",
+}
 
 # A path into the repository's own docs/ folder, as cited in prose or a link.
 # The lookbehind skips URLs and paths nested under another folder.
