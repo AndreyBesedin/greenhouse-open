@@ -1,7 +1,7 @@
 import { Euler, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 
-import { WORLD_TO_VIEWER_ROTATION, worldToViewer } from "./world";
+import { viewerToWorld, WORLD_TO_VIEWER_ROTATION, worldToViewer } from "./world";
 
 describe("drawing the z-up world in Three.js's y-up axes", () => {
   it.each([
@@ -34,5 +34,14 @@ describe("drawing the z-up world in Three.js's y-up axes", () => {
     const z = new Vector3(0, 0, 1).applyEuler(new Euler(...WORLD_TO_VIEWER_ROTATION));
 
     expect(x.clone().cross(y).distanceTo(z)).toBeCloseTo(0);
+  });
+
+  it("converts back exactly, for pointer and camera readouts", () => {
+    const point = { x: 1.5, y: -2, z: 3 };
+    const back = viewerToWorld(worldToViewer(point));
+
+    expect(back.x).toBeCloseTo(point.x);
+    expect(back.y).toBeCloseTo(point.y);
+    expect(back.z).toBeCloseTo(point.z);
   });
 });

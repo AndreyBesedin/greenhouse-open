@@ -16,3 +16,8 @@ export interface Point3 {
 export function worldToViewer(point: Point3): Point3 {
   return { x: point.x, y: point.z, z: -point.y };
 }
+
+/** Where a point drawn in Three.js's axes lies in the world: the inverse of `worldToViewer`. */
+export function viewerToWorld(point: Point3): Point3 {
+  return { x: point.x, y: -point.z, z: point.y };
+}

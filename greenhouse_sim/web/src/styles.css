@@ -51,3 +51,34 @@ body {
   padding: 1px 8px 1px 0;
   text-align: left;
 }
+
+.hud {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 300px;
+  padding: 8px 12px;
+  background: rgb(255 255 255 / 88%);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.hud fieldset {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+}
+
+.hud dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  margin: 0;
+}
+
+.hud dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
