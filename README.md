@@ -32,7 +32,7 @@ The packages are not on PyPI yet. From a clone:
 python -m pip install ./greenhouse_protocol ./greenhouse_sim ./greenhouse_adapters
 ```
 
-Python 3.12 or newer. Each package also installs on its own, with only its
+Python 3.14 or newer. Each package also installs on its own, with only its
 declared dependencies (`greenhouse-sim` and `greenhouse-adapters` need
 `greenhouse-protocol`).
 
