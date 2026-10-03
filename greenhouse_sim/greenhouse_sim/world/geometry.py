@@ -19,7 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, PositiveFlo
 
 
 class Vector3(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, json_schema_serialization_defaults_required=True)
 
     x: float
     y: float
@@ -29,7 +29,7 @@ class Vector3(BaseModel):
 class Quaternion(BaseModel):
     """A rotation as a unit quaternion; the default is no rotation."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, json_schema_serialization_defaults_required=True)
 
     w: float = 1.0
     x: float = 0.0
@@ -40,7 +40,7 @@ class Quaternion(BaseModel):
 class Transform(BaseModel):
     """Places a shape's own frame in the world: rotate, then translate."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, json_schema_serialization_defaults_required=True)
 
     position: Vector3
     rotation: Quaternion = Quaternion()
@@ -50,7 +50,7 @@ class Plane(BaseModel):
     """A flat rectangle in its frame's x-y plane, centred on its origin,
     facing +z."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, json_schema_serialization_defaults_required=True)
 
     shape: Literal["plane"] = "plane"
     size_x: PositiveFloat
@@ -62,7 +62,7 @@ class Cylinder(BaseModel):
     rises along +z. A height of zero is allowed: a plant can be lowered by its
     whole visible height."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, json_schema_serialization_defaults_required=True)
 
     shape: Literal["cylinder"] = "cylinder"
     radius: PositiveFloat
@@ -73,7 +73,7 @@ class Axes(BaseModel):
     """A reference marker: one arrow from the origin along each of +x, +y and
     +z."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, json_schema_serialization_defaults_required=True)
 
     shape: Literal["axes"] = "axes"
     length: PositiveFloat

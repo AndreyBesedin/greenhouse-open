@@ -1,4 +1,7 @@
-{
+// Generated from greenhouse_sim/scene/snapshot.schema.json by `npm run generate`.
+// Do not edit: change the simulator's types and regenerate.
+
+export const SNAPSHOT_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "Axes": {
@@ -27,20 +30,20 @@
       "description": "An sRGB colour, each channel from 0 to 1.",
       "properties": {
         "r": {
-          "maximum": 1.0,
-          "minimum": 0.0,
+          "maximum": 1,
+          "minimum": 0,
           "title": "R",
           "type": "number"
         },
         "g": {
-          "maximum": 1.0,
-          "minimum": 0.0,
+          "maximum": 1,
+          "minimum": 0,
           "title": "G",
           "type": "number"
         },
         "b": {
-          "maximum": 1.0,
-          "minimum": 0.0,
+          "maximum": 1,
+          "minimum": 0,
           "title": "B",
           "type": "number"
         }
@@ -113,22 +116,22 @@
       "description": "A rotation as a unit quaternion; the default is no rotation.",
       "properties": {
         "w": {
-          "default": 1.0,
+          "default": 1,
           "title": "W",
           "type": "number"
         },
         "x": {
-          "default": 0.0,
+          "default": 0,
           "title": "X",
           "type": "number"
         },
         "y": {
-          "default": 0.0,
+          "default": 0,
           "title": "Y",
           "type": "number"
         },
         "z": {
-          "default": 0.0,
+          "default": 0,
           "title": "Z",
           "type": "number"
         }
@@ -237,10 +240,10 @@
         "rotation": {
           "$ref": "#/$defs/Quaternion",
           "default": {
-            "w": 1.0,
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0
+            "w": 1,
+            "x": 0,
+            "y": 0,
+            "z": 0
           }
         }
       },
@@ -306,4 +309,4 @@
   ],
   "title": "SceneSnapshot",
   "type": "object"
-}
+};

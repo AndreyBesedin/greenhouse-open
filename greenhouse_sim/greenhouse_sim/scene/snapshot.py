@@ -45,7 +45,7 @@ METRES_PER_CENTIMETRE: Final = 0.01
 class Color(BaseModel):
     """An sRGB colour, each channel from 0 to 1."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, json_schema_serialization_defaults_required=True)
 
     r: float = Field(ge=0.0, le=1.0)
     g: float = Field(ge=0.0, le=1.0)
@@ -64,7 +64,7 @@ class SceneEntityKind(StrEnum):
 
 
 class SceneEntity(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, json_schema_serialization_defaults_required=True)
 
     entity_id: str
     kind: SceneEntityKind
@@ -79,7 +79,7 @@ class SceneSnapshot(BaseModel):
     """One greenhouse at one simulated day, as a viewer draws it. Positions
     and sizes are in metres, in right-handed world axes with z up."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, json_schema_serialization_defaults_required=True)
 
     schema_version: int = SCHEMA_VERSION
     greenhouse_id: str
@@ -155,11 +155,13 @@ def snapshot_json_schema() -> dict[str, JsonValue]:
     """The JSON Schema a viewer validates snapshots against, published as
     `snapshot.schema.json` next to this module.
 
-    Pydantic marks tagged unions with OpenAPI's `discriminator` keyword, which
-    is not JSON Schema. The `oneOf` and each shape's constant `shape` already
-    say the same, so the published schema leaves the keyword out.
+    It describes snapshots as the simulator sends them, so every field with a
+    default is still required: a viewer never has to supply one. Pydantic
+    marks tagged unions with OpenAPI's `discriminator` keyword, which is not
+    JSON Schema. The `oneOf` and each shape's constant `shape` already say the
+    same, so the published schema leaves the keyword out.
     """
-    schema = _without_discriminators(SceneSnapshot.model_json_schema())
+    schema = _without_discriminators(SceneSnapshot.model_json_schema(mode="serialization"))
     assert isinstance(schema, dict)
     return {"$schema": JSON_SCHEMA_DIALECT, **schema}
 
