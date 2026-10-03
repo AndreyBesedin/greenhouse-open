@@ -2,7 +2,7 @@ from scripts.check_pr_risk import _risk_reasons
 
 
 def test_small_single_package_change_is_normal_risk() -> None:
-    assert _risk_reasons(["greenhouse_sim/greenhouse_sim/rng.py"], 80) == []
+    assert _risk_reasons(["greenhouse_sim/greenhouse_sim/dynamics/growth.py"], 80) == []
 
 
 def test_large_change_requires_manual_review() -> None:

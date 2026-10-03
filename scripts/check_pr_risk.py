@@ -98,7 +98,9 @@ def _risk_reasons(files: list[str], changed_code_lines: int) -> list[str]:
         reasons.append(f"{len(code_files)} code/config files changed (> 15)")
 
     touched_packages = {
-        package for package in PACKAGE_ROOTS if any(path.startswith(f"{package}/") for path in files)
+        package
+        for package in PACKAGE_ROOTS
+        if any(path.startswith(f"{package}/") for path in files)
     }
     if len(touched_packages) > 1:
         reasons.append(
