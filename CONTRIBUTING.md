@@ -11,11 +11,20 @@ line to each commit, you certify that you wrote the change or otherwise
 have the right to submit it under the project's licence (Apache-2.0):
 
 ```bash
-git commit -s -m "Describe the change"
+git commit -s -m "fix(sim): describe the change"
 ```
 
 That adds `Signed-off-by: Your Name <you@example.com>`, using your Git
 name and email. Pull requests with unsigned commits cannot be merged.
+
+## Write Conventional Commits
+
+Commit messages and pull request titles follow
+[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):
+`<type>(<scope>): <summary>`, for example
+`test(sim): capture the simulator baseline before refactoring`. See
+[docs/engineering.md](docs/engineering.md#commit-messages) for the types,
+scopes and how to mark a breaking change.
 
 ## Set up development checks
 
