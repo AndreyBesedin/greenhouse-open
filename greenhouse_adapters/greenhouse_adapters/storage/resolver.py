@@ -6,6 +6,7 @@ silently turn into a 30 GB image pull.
 
 import hashlib
 from collections.abc import Sequence
+from http import HTTPStatus
 from pathlib import Path
 from typing import Protocol
 
@@ -64,7 +65,9 @@ class UpstreamHttpMirror:
                 timeout=self._timeout_seconds,
                 follow_redirects=True,
             ) as response,
-            partial.open("ab" if already and response.status_code == 206 else "wb") as sink,
+            partial.open(
+                "ab" if already and response.status_code == HTTPStatus.PARTIAL_CONTENT else "wb"
+            ) as sink,
         ):
             response.raise_for_status()
             for chunk in response.iter_bytes(_CHUNK_BYTES):

@@ -182,6 +182,31 @@ obvious from the surrounding code or test.
 Prefer straightforward code over dense transformations. Small duplication is
 often cheaper than a premature generic abstraction.
 
+### Name the numbers that carry meaning
+
+A number that encodes a modelling assumption, a rate, a threshold, a range, a
+tolerance or a unit conversion gets a name that says what it is. That is
+where a reader looks to understand the model, and where a later change
+happens without hunting for every copy.
+
+- Use an UPPER_CASE constant, annotated `Final`, next to the code that owns
+  it. Its comment gives the unit and what it controls.
+- When several modules of one model share parameters, keep them in that
+  model's `parameters.py`. `greenhouse_sim/biology/tomato/simple/parameters.py`
+  is the example.
+- A value a scenario should be able to change belongs in its configuration,
+  not in a constant.
+- Literals remain fine for arithmetic structure: `0`, `1`, `-1`, `2` for
+  halves and midpoints, `100` for percentages, exponents and indices. They
+  are also fine in tests, where the literal is the expected value.
+
+`scripts/check_named_constants.py` enforces this for the packages' source. It
+runs as a pre-commit hook on staged files and through the test suite in CI. It
+treats a number as named when it is assigned to an UPPER_CASE or `Final` name,
+is a class field's default, is passed as a keyword argument or is a
+parameter's default. It cannot judge whether a keyword or a field is the
+right home for a value, so review still applies.
+
 ## Tests
 
 Test behavior at the narrowest useful level.

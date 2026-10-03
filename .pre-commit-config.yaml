@@ -28,6 +28,14 @@ repos:
 
   - repo: local
     hooks:
+      # Standard library only, so it runs in pre-commit's own environment.
+      - id: named-constants
+        name: numbers in package source are named
+        entry: python scripts/check_named_constants.py
+        language: python
+        types: [python]
+        files: ^greenhouse_(protocol|sim|adapters)/greenhouse_(protocol|sim|adapters)/
+
       - id: fast-project-checks
         name: fast repository checks
         entry: python scripts/check.py --fast

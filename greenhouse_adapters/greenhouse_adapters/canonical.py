@@ -30,6 +30,8 @@ OBSERVATIONS_FILE = "observations.jsonl"
 EVENTS_FILE = "events.jsonl"
 PROVENANCE_FILE = "provenance.json"
 
+_HASH_CHUNK_BYTES = 1024 * 1024
+
 
 class SourceMember(BaseModel):
     """One input the build read: an artifact from the dataset manifest and,
@@ -149,6 +151,6 @@ def _read_jsonl[T: BaseModel](path: Path, model: type[T]) -> Iterator[T]:
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as source:
-        while chunk := source.read(1024 * 1024):
+        while chunk := source.read(_HASH_CHUNK_BYTES):
             digest.update(chunk)
     return digest.hexdigest()

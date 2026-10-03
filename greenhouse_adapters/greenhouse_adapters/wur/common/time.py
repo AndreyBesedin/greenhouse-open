@@ -12,6 +12,7 @@ _EXCEL_EPOCH = datetime(1899, 12, 30)
 # MATLAB datenum 1 is 1 January of year 0; Python ordinal 1 is 1 January of
 # year 1, 366 days later.
 _MATLAB_ORDINAL_OFFSET = 366
+_LOCAL_NOON = time(12, 0)
 
 
 def parse_offset_timestamp(value: str) -> datetime:
@@ -25,7 +26,7 @@ def parse_offset_timestamp(value: str) -> datetime:
 def local_noon(day: date) -> datetime:
     """A manual measurement whose source gives only a date: pinned to local
     noon so it sorts inside that day's readings rather than at midnight."""
-    return datetime.combine(day, time(12, 0), tzinfo=WUR_LOCAL_TIMEZONE).astimezone(UTC)
+    return datetime.combine(day, _LOCAL_NOON, tzinfo=WUR_LOCAL_TIMEZONE).astimezone(UTC)
 
 
 def excel_serial_to_utc(serial: float) -> datetime:
