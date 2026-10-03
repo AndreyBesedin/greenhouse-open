@@ -1,0 +1,280 @@
+{
+  "gh_001": {
+    "summary": {
+      "plants": 40,
+      "days": 28,
+      "air_temperature_c": 24.22,
+      "humidity_pct": 67.244,
+      "stem_length_cm": {
+        "min": 45.77,
+        "mean": 62.16,
+        "max": 82.4
+      },
+      "lowered_length_cm": 630.0,
+      "water_reservoir_ml_mean": 548.27,
+      "fully_water_stressed_plants": 20,
+      "trusses": 160,
+      "fruits_by_status": {
+        "GROWING": 584,
+        "HARVESTED": 153
+      },
+      "fruits_by_ripeness": {
+        "IMMATURE_GREEN": 198,
+        "MATURE_GREEN": 306,
+        "RIPE": 153,
+        "TURNING": 80
+      },
+      "fruit_mass_on_plants_g": 398.17,
+      "cumulative_harvest_g": 265.78,
+      "actions": {
+        "accepted": 527,
+        "refused": 11
+      },
+      "events_by_type": {
+        "HARVEST": 280,
+        "LOWERING": 63,
+        "MANUAL_INSPECTION": 4,
+        "WATERING": 180
+      },
+      "observations_by_type": {
+        "air_temperature_c": 28,
+        "estimated_ripe_mass_g": 1120,
+        "ripe_fruit_count": 1120,
+        "soil_moisture_pct": 1120,
+        "visible_fruit_count": 1120,
+        "visible_height_cm": 1120
+      },
+      "observation_value_sums": {
+        "air_temperature_c": 681.9,
+        "estimated_ripe_mass_g": 628.5,
+        "ripe_fruit_count": 419.0,
+        "soil_moisture_pct": 41602.6,
+        "visible_fruit_count": 10301.0,
+        "visible_height_cm": 39435.4
+      },
+      "observation_mean_absolute_error": {
+        "air_temperature_c": 0.222,
+        "estimated_ripe_mass_g": 0.034,
+        "ripe_fruit_count": 0.065,
+        "soil_moisture_pct": 1.835,
+        "visible_fruit_count": 0.107,
+        "visible_height_cm": 1.223
+      }
+    },
+    "days": [
+      "day 01: state=c0ad23d464ad observations=1c312fd55501 ground_truth=94af14c4774b actions=f92da432258e",
+      "day 02: state=3992d9ab850e observations=68badfa9d1bd ground_truth=ec51357c33b1 actions=5ead270af919",
+      "day 03: state=d7e53777f732 observations=fe9c4148e1d9 ground_truth=b09dde7d7ac8 actions=55dbbb47bb22",
+      "day 04: state=037c412f32af observations=3976743a3a50 ground_truth=2f1095c64da1 actions=39162981b421",
+      "day 05: state=5aa688a7a462 observations=1de514f585f1 ground_truth=e27a55383967 actions=0cf4edc34a87",
+      "day 06: state=95f7a15ed173 observations=92e31af5f9e4 ground_truth=6d0842d5dba9 actions=808a84a014fa",
+      "day 07: state=614ff55a989c observations=95d210edae28 ground_truth=5f9a287cc940 actions=c92d60f06a7a",
+      "day 08: state=3770453cb949 observations=f72faedfd4d4 ground_truth=e24153034812 actions=c61700444e59",
+      "day 09: state=34f4f478543f observations=8a8018c54518 ground_truth=7176b6d3bc71 actions=bd614556d553",
+      "day 10: state=beefdee6c6d5 observations=c90d1e7e4e64 ground_truth=d184ec12587b actions=a09213f9671a",
+      "day 11: state=b73f4d84a01b observations=e4cdb870186f ground_truth=f4d8bab6a012 actions=f92da432258e",
+      "day 12: state=421e52875090 observations=bf8cb8a85750 ground_truth=63949b0c8941 actions=c31c654fc69f",
+      "day 13: state=2124b105b943 observations=97570a06669d ground_truth=28236bbf6089 actions=f92da432258e",
+      "day 14: state=ed1419a52da9 observations=6e86611bc14b ground_truth=f08a12bb1dd1 actions=5639364349f8",
+      "day 15: state=4c335fe2e047 observations=2f1ba8362594 ground_truth=cc1310a8661b actions=d1e7f6f4e291",
+      "day 16: state=6c9d2c7eaee4 observations=c51ef6a2a30b ground_truth=4bc40a910c35 actions=604754099c46",
+      "day 17: state=1ba856c9f9cf observations=64545ca53eed ground_truth=afadd71b74e4 actions=f92da432258e",
+      "day 18: state=b2b65f639dd8 observations=f718efbead62 ground_truth=680e5344e3eb actions=f65ae6319ab2",
+      "day 19: state=d1301e9783a1 observations=7cc36111d41a ground_truth=9dd8f6ff9969 actions=f92da432258e",
+      "day 20: state=d05b5fde4262 observations=fa2629f2954c ground_truth=d7b1f24cb502 actions=e9d57140bee6",
+      "day 21: state=45e4225b107e observations=646b8f3e346c ground_truth=2558d63316aa actions=b58cc4eb7110",
+      "day 22: state=556e37a6e960 observations=a12140b1edbb ground_truth=eba8f2009912 actions=f92da432258e",
+      "day 23: state=7056a508df67 observations=f679753cafcf ground_truth=64118d836c80 actions=f92da432258e",
+      "day 24: state=9bda8d0ab583 observations=baf338e6e2ea ground_truth=0f7a7ac82f52 actions=ee094d0b0122",
+      "day 25: state=a80261c3348b observations=af101d5f3137 ground_truth=158b2ec22ade actions=def506dbce30",
+      "day 26: state=825f3931050d observations=54d7bea573fb ground_truth=24bd78948c2f actions=f92da432258e",
+      "day 27: state=3f443aec1e5a observations=2edecc8c2b52 ground_truth=36e9e2a196ac actions=72a77cdbb003",
+      "day 28: state=e29b2f06a5b0 observations=4a96566f511b ground_truth=d222ef1c3c89 actions=a95dd796091b"
+    ]
+  },
+  "gh_002": {
+    "summary": {
+      "plants": 1,
+      "days": 40,
+      "air_temperature_c": 24.053,
+      "humidity_pct": 65.565,
+      "stem_length_cm": {
+        "min": 101.63,
+        "mean": 101.63,
+        "max": 101.63
+      },
+      "lowered_length_cm": 80.0,
+      "water_reservoir_ml_mean": 1095.88,
+      "fully_water_stressed_plants": 0,
+      "trusses": 6,
+      "fruits_by_status": {
+        "GROWING": 13,
+        "HARVESTED": 14
+      },
+      "fruits_by_ripeness": {
+        "IMMATURE_GREEN": 5,
+        "MATURE_GREEN": 8,
+        "RIPE": 14
+      },
+      "fruit_mass_on_plants_g": 7.53,
+      "cumulative_harvest_g": 29.32,
+      "actions": {
+        "accepted": 36,
+        "refused": 4
+      },
+      "events_by_type": {
+        "HARVEST": 10,
+        "LOWERING": 8,
+        "MANUAL_INSPECTION": 5,
+        "WATERING": 13
+      },
+      "observations_by_type": {
+        "air_temperature_c": 40,
+        "estimated_ripe_mass_g": 40,
+        "ripe_fruit_count": 40,
+        "soil_moisture_pct": 40,
+        "visible_fruit_count": 40,
+        "visible_height_cm": 40
+      },
+      "observation_value_sums": {
+        "air_temperature_c": 980.9,
+        "estimated_ripe_mass_g": 78.1,
+        "ripe_fruit_count": 36.0,
+        "soil_moisture_pct": 2925.3,
+        "visible_fruit_count": 460.0,
+        "visible_height_cm": 1056.0
+      },
+      "observation_mean_absolute_error": {
+        "air_temperature_c": 0.353,
+        "estimated_ripe_mass_g": 0.105,
+        "ripe_fruit_count": 0.075,
+        "soil_moisture_pct": 2.653,
+        "visible_fruit_count": 0.025,
+        "visible_height_cm": 1.029
+      }
+    },
+    "days": [
+      "day 01: state=9924f660837d observations=e06f893d3057 ground_truth=1134c1f5b17f actions=f92da432258e",
+      "day 02: state=3525b3922de8 observations=a59f1c2889c7 ground_truth=04dba5b73a70 actions=5ead270af919",
+      "day 03: state=7cd952874882 observations=eb7d6aa2e74a ground_truth=25c711089085 actions=538fa5f09699",
+      "day 04: state=debff75feeb4 observations=7ae53f3e81c3 ground_truth=c33e8d65f2fb actions=2e2bed2142ec",
+      "day 05: state=5cf5bcf81a35 observations=6b046a528399 ground_truth=d829341f60e5 actions=16c19dc9892d",
+      "day 06: state=ee2ccccab1c4 observations=b4a77b7eda7c ground_truth=e7d29bbbd478 actions=685e80c78410",
+      "day 07: state=52ef1803a585 observations=200e724908a8 ground_truth=393b927d372a actions=16cb17f2cb65",
+      "day 08: state=3502780ce33f observations=10806de8a782 ground_truth=ddaba0d68daa actions=5bfe4cac2df2",
+      "day 09: state=de2284ed3a36 observations=c9f7c2b77109 ground_truth=1b5ad43316cd actions=0785a22bd311",
+      "day 10: state=8b49687ffc6c observations=50c909f81e90 ground_truth=cfcca1a41748 actions=0b8fe199c5ed",
+      "day 11: state=ce1451b559e8 observations=9e4137e86351 ground_truth=7400e5605603 actions=f92da432258e",
+      "day 12: state=71182cf734da observations=350e61d0511a ground_truth=ab0b3b968faf actions=64eab59df3fa",
+      "day 13: state=36f2183acf26 observations=c28648b95636 ground_truth=36dbf51c5d87 actions=f92da432258e",
+      "day 14: state=a8de6b3b2431 observations=6222f7c6c4d9 ground_truth=64e855e10a69 actions=4189e140a906",
+      "day 15: state=0eff69f35084 observations=db2e08db0fca ground_truth=e4fda00ac40f actions=d7b93b6a9b2a",
+      "day 16: state=0026bcd2dbcc observations=d90cdd71c971 ground_truth=916852e12f41 actions=6bebf314eeab",
+      "day 17: state=9359d980fbe4 observations=5b910f28b0b6 ground_truth=25f039a35b0c actions=f92da432258e",
+      "day 18: state=4891cf345226 observations=56bb8c39fd5b ground_truth=7aeb5915d84e actions=aa6080611f9e",
+      "day 19: state=09d088e44092 observations=07d5e31c806f ground_truth=16ca316d0e7c actions=f92da432258e",
+      "day 20: state=009116de129d observations=00f01b394133 ground_truth=68827c07425f actions=87458a7daab3",
+      "day 21: state=8d5089b21617 observations=221e0a20aa04 ground_truth=7f402f6bb506 actions=c7ae14f7d487",
+      "day 22: state=fe5b1f17cbe7 observations=c18054f21682 ground_truth=882659796e89 actions=f92da432258e",
+      "day 23: state=28204286023a observations=61a83c938082 ground_truth=400d7c6eb14e actions=f92da432258e",
+      "day 24: state=ecdd6f5f20b4 observations=be28cdf8aa00 ground_truth=1520f7e6d0f6 actions=ea0bd9757a56",
+      "day 25: state=ab3300c07636 observations=bd46d1d5b0a1 ground_truth=89d96d1786b0 actions=16b87f7fcfc7",
+      "day 26: state=27dd18adb243 observations=689c1cf58c0d ground_truth=0cd5ce4471be actions=f92da432258e",
+      "day 27: state=dd5d2b4eb1af observations=8e7000caa0d3 ground_truth=6c43925e3997 actions=57d3b805a61f",
+      "day 28: state=8dd20a8b895e observations=87026141b18d ground_truth=6b08ac486346 actions=5defeded3463",
+      "day 29: state=e38c3234b2bf observations=07192614fbd3 ground_truth=9eda482657a2 actions=f92da432258e",
+      "day 30: state=c61a77f11d84 observations=3d7007f30235 ground_truth=642e1cc977c7 actions=8f9e3ef2a089",
+      "day 31: state=7a49e1296f62 observations=64bfbf6184bc ground_truth=e836ad372bb7 actions=f92da432258e",
+      "day 32: state=58e4ed85267f observations=d9be05b3ecd3 ground_truth=993b632753a4 actions=ff670336db59",
+      "day 33: state=78fb9d2e0b91 observations=c80f7c30d6a5 ground_truth=b9437935ee98 actions=37d21a3d2e2c",
+      "day 34: state=59be9a82e8f5 observations=eeda1eb0fce7 ground_truth=44d6ac853839 actions=f92da432258e",
+      "day 35: state=ffdd31875287 observations=7759169cbbc3 ground_truth=6f90b5f3bd52 actions=67e4b787f158",
+      "day 36: state=e488a8461cb8 observations=01bde181ba21 ground_truth=e5b335db04a3 actions=c1d848c893e9",
+      "day 37: state=57c23f275e28 observations=1c83a8b6d2bf ground_truth=fc0c909426db actions=f92da432258e",
+      "day 38: state=2be21a350778 observations=7a2485a6e94c ground_truth=c5f6f32a5e43 actions=f92da432258e",
+      "day 39: state=131391e7fe23 observations=7856fa8159ef ground_truth=6dea804b4464 actions=ace275876af4",
+      "day 40: state=e0f068b6c24c observations=4be5fa315b54 ground_truth=a64af68931b9 actions=abf050e95202"
+    ]
+  },
+  "gh_demo": {
+    "summary": {
+      "plants": 6,
+      "days": 15,
+      "air_temperature_c": 23.877,
+      "humidity_pct": 62.367,
+      "stem_length_cm": {
+        "min": 40.76,
+        "mean": 45.22,
+        "max": 50.79
+      },
+      "lowered_length_cm": 60.0,
+      "water_reservoir_ml_mean": 600.0,
+      "fully_water_stressed_plants": 3,
+      "trusses": 30,
+      "fruits_by_status": {
+        "GROWING": 63,
+        "HARVESTED": 42,
+        "RIPE": 25
+      },
+      "fruits_by_ripeness": {
+        "FRUIT_SET": 26,
+        "MATURE_GREEN": 28,
+        "RIPE": 67,
+        "TURNING": 9
+      },
+      "fruit_mass_on_plants_g": 8.59,
+      "cumulative_harvest_g": 9.95,
+      "actions": {
+        "accepted": 41,
+        "refused": 4
+      },
+      "events_by_type": {
+        "HARVEST": 18,
+        "LOWERING": 6,
+        "MANUAL_INSPECTION": 2,
+        "WATERING": 15
+      },
+      "observations_by_type": {
+        "air_temperature_c": 15,
+        "estimated_ripe_mass_g": 90,
+        "ripe_fruit_count": 90,
+        "soil_moisture_pct": 90,
+        "visible_fruit_count": 90,
+        "visible_height_cm": 90
+      },
+      "observation_value_sums": {
+        "air_temperature_c": 359.0,
+        "estimated_ripe_mass_g": 31.9,
+        "ripe_fruit_count": 148.0,
+        "soil_moisture_pct": 2926.4,
+        "visible_fruit_count": 732.0,
+        "visible_height_cm": 2793.4
+      },
+      "observation_mean_absolute_error": {
+        "air_temperature_c": 0.257,
+        "estimated_ripe_mass_g": 0.027,
+        "ripe_fruit_count": 0.144,
+        "soil_moisture_pct": 2.046,
+        "visible_fruit_count": 0.089,
+        "visible_height_cm": 1.135
+      }
+    },
+    "days": [
+      "day 01: state=974c34e46318 observations=36f5da2550a9 ground_truth=ca9386c30b55 actions=f92da432258e",
+      "day 02: state=50cc1e7bafff observations=ea4ffa6a99f9 ground_truth=437ea587c32a actions=5ead270af919",
+      "day 03: state=cb34f147fca4 observations=fb4a6d9e4a70 ground_truth=c887f32d1414 actions=8659e5f27807",
+      "day 04: state=df133a9a6b48 observations=ab1a577ff19c ground_truth=a8fb780b6122 actions=baa76667eed8",
+      "day 05: state=8232f9df6146 observations=6df6f1d98118 ground_truth=70e3e2382a8e actions=3fb4c1945dfc",
+      "day 06: state=d687a88a430a observations=e7d3f9d3600b ground_truth=7c138c907eec actions=b1cf411a708b",
+      "day 07: state=dcf4ce7944dc observations=ae87650b7548 ground_truth=b3f488a9e0fc actions=52cee0b51327",
+      "day 08: state=1d2743cd008a observations=1a4a86ecfeac ground_truth=492c2e32cdf0 actions=444d77031419",
+      "day 09: state=465202a929ff observations=9e87b3c8b23d ground_truth=d458d987c8c9 actions=d46dd9f0c83a",
+      "day 10: state=a6328f5417ac observations=0beb854b94b6 ground_truth=19d361749e22 actions=99f5373af2ff",
+      "day 11: state=e62526783530 observations=229f61cff563 ground_truth=69cc8261e207 actions=f92da432258e",
+      "day 12: state=ec068f727cd7 observations=658d47091e54 ground_truth=277ce1548445 actions=b4a2826b851c",
+      "day 13: state=4c00f3dc1ffe observations=0d846c4541fa ground_truth=2a5922568dfa actions=f92da432258e",
+      "day 14: state=d78ca0286647 observations=76864a0e32ea ground_truth=dbc2079025c1 actions=a4f7a6a8e0f3",
+      "day 15: state=fd6a692ee6e0 observations=f3703b52cc3a ground_truth=6099d26ced72 actions=0deb56307f78"
+    ]
+  }
+}
