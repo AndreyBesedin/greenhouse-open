@@ -9,7 +9,9 @@ def test_every_sensitive_path_exists() -> None:
 
 
 def test_small_single_package_change_is_normal_risk() -> None:
-    assert _risk_reasons(["greenhouse_sim/greenhouse_sim/biology/tomato/growth.py"], 80) == []
+    assert (
+        _risk_reasons(["greenhouse_sim/greenhouse_sim/biology/tomato/simple/growth.py"], 80) == []
+    )
 
 
 def test_large_change_requires_manual_review() -> None:

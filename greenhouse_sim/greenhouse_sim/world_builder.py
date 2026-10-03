@@ -1,12 +1,12 @@
-from greenhouse_sim.biology.tomato.growth import (
+from greenhouse_sim.biology.tomato.simple.growth import (
     advance_stem,
     fruit_mass_g,
     grow_fruit_diameter,
     maybe_initiate_truss,
     truss_stage,
 )
-from greenhouse_sim.biology.tomato.ripening import advance_ripening
-from greenhouse_sim.biology.tomato.water import advance_water
+from greenhouse_sim.biology.tomato.simple.ripening import advance_ripening
+from greenhouse_sim.biology.tomato.simple.water import advance_water
 from greenhouse_sim.core.rng import seeded_rng
 from greenhouse_sim.environment.simple import advance_environment, initial_environment
 from greenhouse_sim.scenarios.config import ScenarioConfig

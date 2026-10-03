@@ -10,7 +10,7 @@ from greenhouse_protocol.action import (
 from greenhouse_protocol.enums import EventSource, EventType
 from greenhouse_protocol.event import Event
 
-from greenhouse_sim.biology.tomato.water import apply_irrigation
+from greenhouse_sim.biology.tomato.simple.water import apply_irrigation
 from greenhouse_sim.records import event_id
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
