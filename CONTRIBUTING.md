@@ -59,6 +59,9 @@ python scripts/check.py
 - Add or update tests. A new adapter comes with small synthetic fixtures;
   never commit dataset content.
 - Describe an observable/testable result for simulator changes.
+- If the change delivers a [roadmap](docs/roadmap/README.md) step, update the
+  step's status in its project document. If it sets a lasting technical
+  direction, add a [decision record](docs/decisions/README.md).
 - Resolve or explicitly acknowledge automated review feedback.
 - If the pull request risk gate asks for it, review the complete diff yourself
   and check the manual-review acknowledgement in the pull request body. The
