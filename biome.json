@@ -1,13 +1,12 @@
 {
-  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "$schema": "./greenhouse_sim/web/node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
-    "root": "../..",
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!package-lock.json"]
+    "includes": ["greenhouse_sim/web/**", "!**/package-lock.json"]
   },
   "formatter": {
     "enabled": true,
@@ -31,7 +30,7 @@
   },
   "overrides": [
     {
-      "includes": ["**/*.test.ts", "**/*.test.tsx", "e2e/**"],
+      "includes": ["**/*.test.ts", "**/*.test.tsx", "greenhouse_sim/web/e2e/**"],
       "linter": {
         "rules": {
           "style": {
