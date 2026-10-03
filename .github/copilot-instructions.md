@@ -28,6 +28,12 @@ Repository invariants:
   `helpers.py`, `common.py` or `misc.py` when a domain-specific owner exists.
 - Avoid speculative abstractions. Prefer a narrow interface tied to a real
   boundary or second implementation.
+- Numbers that encode model assumptions, rates, thresholds, ranges or unit
+  conversions are named constants (see "Name the numbers that carry meaning"
+  in `docs/engineering.md`). A check enforces this for literals in arithmetic
+  and comparisons; flag what it cannot see, such as a meaningful value passed
+  as a keyword argument or hard-coded as a field default where a scenario
+  should be able to change it.
 - A behavior change should include a test. A refactor should preserve the
   relevant characterization unless the behavior change is intentional.
 - Do not commit credentials, private code references, private design artifacts,
