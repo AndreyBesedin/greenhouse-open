@@ -7,7 +7,7 @@ on:
 
 jobs:
   check:
-    name: install each package, then ruff, mypy, pytest
+    name: repository checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,16 +23,29 @@ jobs:
           ./greenhouse_protocol ./greenhouse_sim ./greenhouse_adapters
           -r requirements-dev.txt
 
-      - name: Check each package
-        run: |
-          for package in greenhouse_protocol greenhouse_sim greenhouse_adapters; do
-            echo "::group::$package"
-            (cd "$package" && ruff check . && ruff format --check . && mypy && pytest -q)
-            echo "::endgroup::"
-          done
+      - name: Run canonical repository checks
+        run: python scripts/check.py
 
-      - name: Cross-package tests and examples
-        run: ruff check tests examples && ruff format --check tests examples && mypy && pytest -q
+  pr-risk:
+    name: pull request risk gate
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Classify review risk
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: >-
+          python scripts/check_pr_risk.py
+          "${{ github.event.pull_request.base.sha }}"
+          "${{ github.event.pull_request.head.sha }}"
 
   dco:
     name: commits are signed off

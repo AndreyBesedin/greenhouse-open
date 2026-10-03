@@ -17,15 +17,48 @@ git commit -s -m "Describe the change"
 That adds `Signed-off-by: Your Name <you@example.com>`, using your Git
 name and email. Pull requests with unsigned commits cannot be merged.
 
+## Set up development checks
+
+After installing the editable packages and `requirements-dev.txt`, install
+the repository hooks once:
+
+```bash
+pre-commit install --hook-type pre-commit --hook-type pre-push
+```
+
+The pre-commit hook handles fast file hygiene plus Ruff fixes/formatting.
+The pre-push hook runs the repository's fast Python check suite.
+
+You can run the same checks manually:
+
+```bash
+pre-commit run --all-files
+python scripts/check.py --fast
+```
+
+Run the full suite before requesting review for a non-trivial change:
+
+```bash
+python scripts/check.py
+```
+
 ## Before opening a pull request
 
 - Keep the change focused: one concern per pull request.
+- Prefer small working commits that keep the branch runnable.
+- Separate mechanical moves/renames from behavior changes where practical.
 - Add or update tests. A new adapter comes with small synthetic fixtures;
   never commit dataset content.
-- Run the checks described in the README's Development section. CI runs
-  the same checks, with each package installed on its own.
+- Describe an observable/testable result for simulator changes.
+- Resolve or explicitly acknowledge automated review feedback.
+- If the pull request risk gate asks for it, review the complete diff yourself
+  and check the manual-review acknowledgement in the pull request body.
 - A package may import only the standard library, itself and the
   dependencies it declares; `tests/test_dependencies.py` enforces this.
+
+The repository deliberately does not require a human approval while it has a
+single active developer. See [docs/engineering.md](docs/engineering.md) for
+the current risk-based review policy and architecture conventions.
 
 ## What belongs here
 
