@@ -8,7 +8,7 @@ from greenhouse_sim.biology.tomato.growth import (
 from greenhouse_sim.biology.tomato.ripening import advance_ripening
 from greenhouse_sim.biology.tomato.water import advance_water
 from greenhouse_sim.core.rng import seeded_rng
-from greenhouse_sim.dynamics.environment import advance_environment, initial_environment
+from greenhouse_sim.environment.simple import advance_environment, initial_environment
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.world.state import (
     Fruit,
