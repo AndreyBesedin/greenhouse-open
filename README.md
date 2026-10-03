@@ -61,16 +61,20 @@ greenhouse-data prepare wur agc4-2024 --profile tiny
 ```bash
 python -m pip install -e ./greenhouse_protocol -e ./greenhouse_sim -e ./greenhouse_adapters \
     -r requirements-dev.txt
-for p in greenhouse_protocol greenhouse_sim greenhouse_adapters; do
-    (cd $p && ruff check . && ruff format --check . && mypy && pytest -q)
-done
-ruff check tests examples && mypy && pytest -q   # cross-package tests and examples
+pre-commit install --hook-type pre-commit --hook-type pre-push
+python scripts/check.py --fast
 ```
 
-Each package is checked from its own directory with its own configuration,
+Use `python scripts/check.py` for the full repository check before requesting
+review or merging a non-trivial change. CI runs the same canonical command.
+
+Each package is still checked from its own directory with its own configuration,
 as a user installing it alone would see it. `tests/` at the top level holds
 checks that span packages: every producer against the canonical contract,
 each package's declared dependencies, and the examples.
+
+Engineering conventions, pull request scope guidance and the solo-developer
+review policy live in [docs/engineering.md](docs/engineering.md).
 
 Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
