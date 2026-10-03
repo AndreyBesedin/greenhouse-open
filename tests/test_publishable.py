@@ -17,8 +17,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 TEXT_SUFFIXES = {".py", ".md", ".toml", ".txt", ".ini", ".json", ".yml", ".yaml", ".cfg"}
 SKIPPED_PARTS = {"__pycache__", ".venv", ".mypy_cache", ".ruff_cache", ".pytest_cache", ".git"}
 
+# A path into the repository's own docs/ folder, as cited in prose or a link.
+# The lookbehind skips URLs and paths nested under another folder.
+DOCS_CITATION = re.compile(r"(?<![\w/.-])docs/[\w./-]*[\w/]")
+
 FORBIDDEN = {
-    "a private design document": re.compile(r"docs/(design|archive)/"),
     "a module of the original codebase": re.compile(
         r"\b(application|management|intelligence)\.[a-z_]+\b"
     ),
@@ -71,6 +74,33 @@ def _text_files() -> list[pathlib.Path]:
 
 def test_there_is_something_to_check() -> None:
     assert len(_text_files()) > 50
+
+
+def test_every_cited_document_is_in_this_repository() -> None:
+    """The original codebase kept design documents this repository does not
+    have. Citing one points readers at something they cannot open, so a cited
+    `docs/` path must exist here. What the folder is called does not matter.
+    """
+    hits = [
+        f"  {path.relative_to(ROOT)}:{lineno}: {cited}"
+        for path in _text_files()
+        for lineno, line in enumerate(path.read_text(errors="replace").splitlines(), start=1)
+        for cited in DOCS_CITATION.findall(line)
+        if not (ROOT / cited).exists()
+    ]
+    assert not hits, "citations of documents that are not in this repository:\n" + "\n".join(hits)
+
+
+def test_the_document_citation_check_can_fail() -> None:
+    """A check that cannot fail is worth nothing."""
+    line = "See docs/design/not-in-this-repository.md, docs/engineering.md and https://example.org/docs/x."
+
+    cited = DOCS_CITATION.findall(line)
+
+    assert cited == ["docs/design/not-in-this-repository.md", "docs/engineering.md"]
+    assert [c for c in cited if not (ROOT / c).exists()] == [
+        "docs/design/not-in-this-repository.md"
+    ]
 
 
 def test_no_file_uses_a_name_from_the_original_codebase() -> None:
