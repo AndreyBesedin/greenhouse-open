@@ -21,6 +21,7 @@ changes course is a new record that supersedes the old one.
 | [0007](0007-world-coordinates-metres-right-handed-z-up.md) | World coordinates are metres, right-handed, z up | Accepted |
 | [0008](0008-build-the-viewer-with-npm-node-24-and-vite.md) | Build the viewer with npm, Node 24, Vite and strict TypeScript | Accepted |
 | [0009](0009-a-standard-library-local-api-until-streaming-is-needed.md) | A standard-library local API until streaming is needed | Accepted |
+| [0010](0010-check-the-viewer-with-biome-vitest-and-playwright.md) | Check the viewer with Biome, Vitest and a Playwright smoke test | Accepted |
 
 ## Template
 

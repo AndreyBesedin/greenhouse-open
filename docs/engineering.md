@@ -207,6 +207,25 @@ is a class field's default, is passed as a keyword argument or is a
 parameter's default. It cannot judge whether a keyword or a field is the
 right home for a value, so review still applies.
 
+In the viewer, Biome's `noMagicNumbers` rule enforces the same convention,
+with test files exempt as well.
+
+## TypeScript style (viewer)
+
+The browser viewer in `greenhouse_sim/web` follows the same intent with its
+own tools ([decision 0010](decisions/0010-check-the-viewer-with-biome-vitest-and-playwright.md)):
+
+- Biome is the source of truth for formatting and linting, configured in
+  `biome.json` at the repository root: two-space indent, 100-character
+  lines, double quotes, the recommended rules, and `noMagicNumbers`.
+- TypeScript is strict, with unchecked index access and exact optional
+  properties also checked. Avoid `any` and non-null assertions as escape
+  hatches, as with `Any` and `type: ignore` in Python.
+- Data arriving from outside the viewer, such as an API response, is checked
+  at runtime before it is trusted.
+- Vitest covers behaviour at the narrowest useful level. A Playwright smoke
+  test runs the built viewer against the real simulator API in Chromium.
+
 ## Tests
 
 Test behavior at the narrowest useful level.
@@ -240,3 +259,12 @@ python scripts/check.py
 
 The same canonical command is used by CI so local and remote checks do not
 quietly drift apart.
+
+For a change to the viewer, from `greenhouse_sim/web`, run the steps CI runs
+in its `viewer checks` job:
+
+```bash
+npm ci
+npm run lint && npm run typecheck && npm test && npm run build
+PYTHON=python npm run e2e   # needs greenhouse-sim installed for that python
+```

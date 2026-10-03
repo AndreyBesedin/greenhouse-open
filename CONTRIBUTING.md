@@ -35,8 +35,16 @@ the repository hooks once:
 pre-commit install --hook-type pre-commit --hook-type pre-push
 ```
 
-The pre-commit hook handles fast file hygiene plus Ruff fixes/formatting.
-The pre-push hook runs the repository's fast Python check suite.
+The pre-commit hook handles fast file hygiene, Ruff fixes and formatting,
+the named-numbers check, and Biome for viewer files. The pre-push hook runs
+the repository's fast Python check suite.
+
+To work on the browser viewer, install its dependencies once with Node 24
+(see `greenhouse_sim/web/.nvmrc`); the Biome hook uses them:
+
+```bash
+cd greenhouse_sim/web && npm ci
+```
 
 You can run the same checks manually:
 

@@ -26,10 +26,16 @@ Node 24 (see `.nvmrc`) and npm.
 cd greenhouse_sim/web
 npm ci
 npm run dev         # local development server
-npm test            # Vitest
+npm run lint        # Biome: formatting and lint (npm run format applies fixes)
 npm run typecheck   # TypeScript, strict
+npm test            # Vitest
 npm run build       # production build into dist/
+PYTHON=python npm run e2e  # Playwright smoke test against the real simulator API
 ```
+
+The smoke test starts the simulator's API with `$PYTHON -m greenhouse_sim.api`,
+so that interpreter needs greenhouse-sim installed. Run
+`npx playwright install chromium` once to get the browser.
 
 The page shows the simulator version, read from `../pyproject.toml` at build
 time, and the commit it was built from. The viewer has no version of its own:
