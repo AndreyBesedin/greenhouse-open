@@ -9,7 +9,7 @@ from greenhouse_protocol.action import (
 )
 from greenhouse_protocol.enums import EventType
 
-from greenhouse_sim.actions import apply_action
+from greenhouse_sim.actions.effects import apply_action
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.world import FruitStatus, GreenhouseWorld
 from greenhouse_sim.world_builder import advance_world, initialize_world

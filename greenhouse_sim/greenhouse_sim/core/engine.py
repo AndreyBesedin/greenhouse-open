@@ -23,10 +23,10 @@ from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
 from pydantic import BaseModel
 
-from greenhouse_sim.executor import ActionExecutor, SimulatedOperatorExecutor
+from greenhouse_sim.actions.executor import ActionExecutor, SimulatedOperatorExecutor
+from greenhouse_sim.actions.validation import validate_action
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.sensors.generation import generate_observations
-from greenhouse_sim.validation import validate_action
 from greenhouse_sim.world.state import GreenhouseWorld
 from greenhouse_sim.world_builder import advance_world, initialize_world
 
