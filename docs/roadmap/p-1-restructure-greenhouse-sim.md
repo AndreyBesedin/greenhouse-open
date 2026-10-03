@@ -82,7 +82,7 @@ TypeScript workflow.
 | P-1.3 | `refactor(sim): isolate current dynamics as the simple reference backend` | Done ([#10](https://github.com/AndreyBesedin/greenhouse-open/pull/10)) |
 | P-1.4 | `refactor(sim): separate world state from model-specific latent parameters` | Done ([#11](https://github.com/AndreyBesedin/greenhouse-open/pull/11)) |
 | P-1.5 | `feat(sim): introduce backend capability contracts as minimal protocols` | Done ([#13](https://github.com/AndreyBesedin/greenhouse-open/pull/13)) |
-| P-1.6 | `feat(sim): introduce a scene and geometry snapshot contract` | Planned |
+| P-1.6 | `feat(sim): introduce a scene and geometry snapshot contract` | Done ([#14](https://github.com/AndreyBesedin/greenhouse-open/pull/14)) |
 | P-1.7 | `chore(web): add the browser package inside greenhouse_sim` | Planned |
 | P-1.8 | `feat(api): add a thin local simulator-viewer adapter` | Planned |
 | P-1.9 | `ci: extend CI to the browser package` | Planned |
@@ -251,6 +251,27 @@ geometry descriptor, and visual or debug metadata, with no renderer concepts
 in the domain state. The first snapshot may contain only the ground,
 reference markers and placeholder plants. It is deterministic, serializable
 and schema-valid.
+
+As implemented:
+
+- `world/geometry.py` fixes the geometry conventions ([decision 0007](../decisions/0007-world-coordinates-metres-right-handed-z-up.md)):
+  metres and radians, right-handed axes with z up, the ground at z = 0, and
+  rotations as quaternions with named components. It defines the shapes the
+  first scene needs (`Plane`, `Cylinder`, `Axes`), each described in its own
+  frame and placed by a `Transform`.
+- `scene/snapshot.py` turns a world into a `SceneSnapshot`: the ground, an
+  axes marker at the origin, and an upright cylinder per plant as tall as its
+  visible stem, each with a stable identifier, a kind, a colour, a label and
+  inspector properties. Plants stand on a provisional grid built from the
+  scenario's rows and columns until P02 makes planting positions part of the
+  world.
+- Tests pin that a scene is deterministic, survives JSON, holds every plant
+  in world coordinates, allows a fully lowered plant, refuses an unknown kind
+  of entity, and that its JSON Schema tags shapes by `shape`, closes the list
+  of kinds and states units and axes.
+- The JSON Schema is not committed as a file yet. The viewer that consumes it
+  arrives in P-1.7 and P-1.8, and a committed copy would fail CI on any
+  Pydantic release that formats the schema differently.
 
 ### P-1.7: Add the browser package
 
