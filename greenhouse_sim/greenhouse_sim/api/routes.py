@@ -7,6 +7,9 @@ API can be tested without a socket and the server stays a thin shell.
     GET /api/version                      simulator and scene schema versions
     GET /api/scenarios                    the registered scenarios
     GET /api/scenarios/{id}/scene         a scenario's scene before its first day
+    GET /api/scenarios/{id}/live          the scenario played live, as Server-Sent
+                                          Events (served by `server`, found by
+                                          `live_scenario`)
 """
 
 from dataclasses import dataclass
@@ -88,3 +91,13 @@ def _initial_scene(config: ScenarioConfig) -> JsonValue:
 
 def _error(status: HTTPStatus, message: str) -> Response:
     return Response(status, {"error": message})
+
+
+def live_scenario(path: str) -> ScenarioConfig | None:
+    """The scenario a request for its live stream names, if it names one."""
+    segments = [segment for segment in path.split("?", 1)[0].split("/") if segment]
+    match segments:
+        case ["api", "scenarios", scenario_id, "live"]:
+            return SCENARIO_REGISTRY.get(scenario_id)
+        case _:
+            return None
