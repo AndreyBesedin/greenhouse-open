@@ -8,6 +8,7 @@ tool for a developer's own machine, not a service.
 
 Live scenarios stream as Server-Sent Events (decision 0012): a `frame` event
 per simulated day, and a comment now and then to keep the connection open.
+Commands for a live run (play, pause, step, reset, speed) are POST requests.
 """
 
 import argparse
@@ -18,7 +19,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Final, cast
 
 from greenhouse_sim.api.live import DEFAULT_SECONDS_PER_DAY, LiveRun, LiveRuns
-from greenhouse_sim.api.routes import Response, live_scenario, respond
+from greenhouse_sim.api.routes import Response, control, live_scenario, respond
 
 LOOPBACK: Final = "127.0.0.1"
 DEFAULT_PORT: Final = 8765
@@ -51,7 +52,8 @@ class _Handler(BaseHTTPRequestHandler):
         self._send(respond("GET", self.path))
 
     def do_POST(self) -> None:
-        self._send(respond("POST", self.path))
+        response = control(self.path, cast(SimulatorServer, self.server).live)
+        self._send(response if response is not None else respond("POST", self.path))
 
     def _send(self, response: Response) -> None:
         body = json.dumps(response.body).encode()

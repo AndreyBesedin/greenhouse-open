@@ -10,14 +10,19 @@ API can be tested without a socket and the server stays a thin shell.
     GET /api/scenarios/{id}/live          the scenario played live, as Server-Sent
                                           Events (served by `server`, found by
                                           `live_scenario`)
+    POST /api/scenarios/{id}/live/...     commands for that live run (`control`)
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from http import HTTPStatus
 from importlib.metadata import version
+from typing import Final
+from urllib.parse import parse_qs, urlsplit
 
 from pydantic import BaseModel
 
+from greenhouse_sim.api.live import SPEEDS, LiveFrame, LiveRun, LiveRuns
 from greenhouse_sim.core.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.config import ScenarioConfig
@@ -42,10 +47,9 @@ class ScenarioSummary(BaseModel):
 
 def respond(method: str, path: str) -> Response:
     if method != "GET":
-        return _error(HTTPStatus.METHOD_NOT_ALLOWED, "only GET is supported")
+        return _error(HTTPStatus.METHOD_NOT_ALLOWED, f"{path!r} only answers GET")
 
-    segments = [segment for segment in path.split("?", 1)[0].split("/") if segment]
-    match segments:
+    match _segments(path):
         case ["api", "health"]:
             return Response(HTTPStatus.OK, {"status": "ok"})
         case ["api", "version"]:
@@ -95,9 +99,69 @@ def _error(status: HTTPStatus, message: str) -> Response:
 
 def live_scenario(path: str) -> ScenarioConfig | None:
     """The scenario a request for its live stream names, if it names one."""
-    segments = [segment for segment in path.split("?", 1)[0].split("/") if segment]
-    match segments:
+    match _segments(path):
         case ["api", "scenarios", scenario_id, "live"]:
             return SCENARIO_REGISTRY.get(scenario_id)
         case _:
             return None
+
+
+_COMMANDS: Final[dict[str, Callable[[LiveRun], LiveFrame]]] = {
+    "play": LiveRun.play,
+    "pause": LiveRun.pause,
+    "step": LiveRun.advance,
+    "reset": LiveRun.reset,
+}
+
+
+def control(path: str, runs: LiveRuns) -> Response | None:
+    """Applies a command to a scenario's live run, if `path` names one.
+
+        POST /api/scenarios/{id}/live/play                 play on from the current day
+        POST /api/scenarios/{id}/live/pause                hold the current day
+        POST /api/scenarios/{id}/live/step                 one simulated day on
+        POST /api/scenarios/{id}/live/reset                back to before day one
+        POST /api/scenarios/{id}/live/speed?multiplier=2   play faster or slower
+
+    The answer is the run's new state without its scene, which reaches every
+    viewer on the stream.
+    """
+    url = urlsplit(path)
+    match _segments(url.path):
+        case ["api", "scenarios", scenario_id, "live", command]:
+            pass
+        case _:
+            return None
+    config = SCENARIO_REGISTRY.get(scenario_id)
+    if config is None:
+        return _error(HTTPStatus.NOT_FOUND, f"no scenario {scenario_id!r}")
+    if command == "speed":
+        speed = _speed(parse_qs(url.query).get("multiplier", []))
+        if speed is None:
+            allowed = ", ".join(f"{speed:g}" for speed in SPEEDS)
+            return _error(HTTPStatus.BAD_REQUEST, f"multiplier must be one of {allowed}")
+        return _state(runs.run_for(config).set_speed(speed))
+    act = _COMMANDS.get(command)
+    if act is None:
+        return _error(HTTPStatus.NOT_FOUND, f"no live command {command!r}")
+    return _state(act(runs.run_for(config)))
+
+
+def _speed(values: list[str]) -> float | None:
+    """The one speed a query asks for, if it is one the runs accept."""
+    if len(values) != 1:
+        return None
+    try:
+        speed = float(values[0])
+    except ValueError:
+        return None
+    return speed if speed in SPEEDS else None
+
+
+def _state(frame: LiveFrame) -> Response:
+    state: JsonValue = frame.model_dump(mode="json", exclude={"snapshot"})
+    return Response(HTTPStatus.OK, state)
+
+
+def _segments(path: str) -> list[str]:
+    return [segment for segment in urlsplit(path).path.split("/") if segment]

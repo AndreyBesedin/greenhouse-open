@@ -8,10 +8,15 @@ simulation logic: it paces the engine and describes the result as a scene.
 When the scenario reaches its last day it starts again from the beginning, so
 a viewer left open keeps seeing it grow. Runs are deterministic, so day *d*
 always looks the same; only the frame's sequence number keeps rising.
+
+A run can be paused, played, stepped one day, reset to before day one, and
+sped up or slowed down. Every change is published as a new frame, so every
+viewer sees it.
 """
 
 import threading
 from datetime import UTC, datetime, time, timedelta
+from time import monotonic
 from typing import Final
 
 from pydantic import BaseModel, ConfigDict
@@ -26,6 +31,8 @@ DEFAULT_SECONDS_PER_DAY: Final = 1.0
 # Simulated days start at local noon, as the examples and baselines do.
 DAY_START: Final = time(12, 0)
 LIVE_SIMULATION_ID: Final = "sim_live"
+# How much faster than the server's pace a run may play.
+SPEEDS: Final = (0.25, 0.5, 1.0, 2.0, 4.0, 8.0)
 
 
 class LiveFrame(BaseModel):
@@ -34,6 +41,8 @@ class LiveFrame(BaseModel):
     sequence: int
     day: int
     timestamp: datetime
+    playing: bool
+    speed: float
     snapshot: SceneSnapshot
 
 
@@ -49,9 +58,12 @@ class LiveRun:
         self._start = datetime.combine(config.start_date, DAY_START, tzinfo=UTC)
         self._changed = threading.Condition()
         self._stopped = threading.Event()
+        self._playing = True
+        self._speed = 1.0
         self._world = self._engine.initialize(self._plant_ids, greenhouse_id=config.greenhouse_id)
         self._frame = self._describe(sequence=0, day=0)
-        self._thread = threading.Thread(target=self._play, daemon=True)
+        self._published_at = monotonic()
+        self._thread = threading.Thread(target=self._pace, daemon=True)
 
     @property
     def stopped(self) -> bool:
@@ -82,28 +94,71 @@ class LiveRun:
             return self._frame
 
     def advance(self) -> LiveFrame:
-        """Moves the run on by one simulated day, starting over after the last."""
+        """Moves the run on by one simulated day, starting over after the last.
+        Works whether the run is playing or paused: it is also the single step."""
         with self._changed:
             day = self._frame.day + 1
             if day > self._config.duration_days:
-                day = 0
-                self._world = self._engine.initialize(
-                    self._plant_ids, greenhouse_id=self._config.greenhouse_id
-                )
-            else:
-                self._world = self._engine.advance(
-                    self._world,
-                    day=day,
-                    timestamp=self._timestamp(day),
-                    simulation_id=LIVE_SIMULATION_ID,
-                ).world
-            self._frame = self._describe(sequence=self._frame.sequence + 1, day=day)
-            self._changed.notify_all()
-            return self._frame
+                self._restart()
+                return self._publish(day=0)
+            self._world = self._engine.advance(
+                self._world,
+                day=day,
+                timestamp=self._timestamp(day),
+                simulation_id=LIVE_SIMULATION_ID,
+            ).world
+            return self._publish(day=day)
 
-    def _play(self) -> None:
-        while not self._stopped.wait(self._seconds_per_day):
-            self.advance()
+    def play(self) -> LiveFrame:
+        with self._changed:
+            self._playing = True
+            return self._publish(day=self._frame.day)
+
+    def pause(self) -> LiveFrame:
+        with self._changed:
+            self._playing = False
+            return self._publish(day=self._frame.day)
+
+    def reset(self) -> LiveFrame:
+        """Back to before day one. The world comes from the scenario's seed
+        again, so every day that follows is the same as the first time."""
+        with self._changed:
+            self._restart()
+            return self._publish(day=0)
+
+    def set_speed(self, multiplier: float) -> LiveFrame:
+        if multiplier not in SPEEDS:
+            raise ValueError(f"speed must be one of {SPEEDS}, not {multiplier}")
+        with self._changed:
+            self._speed = multiplier
+            return self._publish(day=self._frame.day)
+
+    def _pace(self) -> None:
+        """While playing, advances a day once the latest frame has been shown
+        for a day's interval at the current speed. Every new frame wakes the
+        loop, so a pause, a step or a new speed takes effect at once."""
+        with self._changed:
+            while not self.stopped:
+                if not self._playing:
+                    self._changed.wait()
+                    continue
+                interval = self._seconds_per_day / self._speed
+                remaining = self._published_at + interval - monotonic()
+                if remaining > 0:
+                    self._changed.wait(remaining)
+                else:
+                    self.advance()
+
+    def _restart(self) -> None:
+        self._world = self._engine.initialize(
+            self._plant_ids, greenhouse_id=self._config.greenhouse_id
+        )
+
+    def _publish(self, *, day: int) -> LiveFrame:
+        self._frame = self._describe(sequence=self._frame.sequence + 1, day=day)
+        self._published_at = monotonic()
+        self._changed.notify_all()
+        return self._frame
 
     def _timestamp(self, day: int) -> datetime:
         return self._start + timedelta(days=day)
@@ -113,6 +168,8 @@ class LiveRun:
             sequence=sequence,
             day=day,
             timestamp=self._timestamp(day),
+            playing=self._playing,
+            speed=self._speed,
             snapshot=scene_snapshot(self._world, self._config),
         )
 
