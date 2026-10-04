@@ -1,5 +1,6 @@
 import { PRESET_ORDER, type PresetName } from "./camera";
-import { formatMetres, formatPoint, type ViewSample } from "./readouts";
+import { formatInstant, formatMetres, formatPoint, type ViewSample } from "./readouts";
+import type { LiveConnection, LiveFrame } from "./scene/live";
 import type { Point3 } from "./world";
 
 const PRESET_LABELS: Record<PresetName, string> = {
@@ -11,13 +12,27 @@ const PRESET_LABELS: Record<PresetName, string> = {
 
 const PENDING = "…";
 
+const CONNECTION_LABELS: Record<LiveConnection, string> = {
+  connecting: "connecting…",
+  live: "live",
+  disconnected: "disconnected, reconnecting…",
+};
+
+/** A live scenario's progress, when one is being followed. */
+export interface LiveStatus {
+  connection: LiveConnection;
+  frame: LiveFrame | null;
+}
+
 export function Hud({
   sample,
   pointer,
+  live = null,
   onPreset,
 }: {
   sample: ViewSample | null;
   pointer: Point3 | null;
+  live?: LiveStatus | null;
   onPreset: (preset: PresetName) => void;
 }) {
   return (
@@ -42,6 +57,18 @@ export function Hud({
         </dd>
         <dt>Objects</dt>
         <dd data-testid="object-count">{sample ? sample.objects : PENDING}</dd>
+        {live && (
+          <>
+            <dt>Stream</dt>
+            <dd data-testid="stream-status">{CONNECTION_LABELS[live.connection]}</dd>
+            <dt>Simulation</dt>
+            <dd data-testid="simulation-time">
+              {live.frame
+                ? `day ${live.frame.day} · ${formatInstant(live.frame.timestamp)}`
+                : PENDING}
+            </dd>
+          </>
+        )}
       </dl>
     </section>
   );

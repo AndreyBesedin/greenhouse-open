@@ -35,7 +35,7 @@ renderer on them.
 | P00.1 | `chore(web): scaffold the browser simulation viewer` | Done ([#19](https://github.com/AndreyBesedin/greenhouse-open/pull/19)) |
 | P00.2 | `feat(viewer): add orbit camera, presets and scene HUD` | Done ([#20](https://github.com/AndreyBesedin/greenhouse-open/pull/20)) |
 | P00.3 | `feat(scene): render typed scene entities from JSON` | Done ([#21](https://github.com/AndreyBesedin/greenhouse-open/pull/21)) |
-| P00.4 | `feat(sim-bridge): stream scene snapshots from the local Python process` | Planned |
+| P00.4 | `feat(sim-bridge): stream scene snapshots from the local Python process` | Done ([#22](https://github.com/AndreyBesedin/greenhouse-open/pull/22)) |
 | P00.5 | `feat(time): add play, pause, step, speed and reset controls` | Planned |
 | P00.6 | `feat(debug): add selection, an inspector and overlay primitives` | Planned |
 | P00.7 | `test(visual): add a deterministic screenshot regression harness` | Planned |
@@ -126,6 +126,28 @@ dependency of the API. The viewer shows the simulation timestamp, and one test
 entity moves because Python advances it. Tests: stopping the API shows a
 disconnected state, restarting it reconnects, and the known timestamp appears
 in the HUD.
+
+As implemented (see [decision 0012](../decisions/0012-stream-to-the-viewer-with-server-sent-events.md),
+which replaces the framework plan above):
+
+- `GET /api/scenarios/{id}/live` streams Server-Sent Events from the existing
+  standard-library server, so the API still adds no dependency. A shared
+  `LiveRun` steps the scenario through the engine one simulated day per
+  second (`--seconds-per-day`), and each `frame` event carries a sequence
+  number, the simulated day and instant, and the scene. After the last day the
+  run starts over, and a given day always looks the same.
+- Rather than a test cube, a real scenario moves: the crop grows as Python
+  advances it.
+- `?live=<id>`, or a scenario's Live button, follows the stream. Each frame is
+  checked like any other scene, and the HUD shows the stream's state and the
+  simulated day and instant. A lost stream shows "disconnected,
+  reconnecting…" with the last frame kept on screen, and the viewer
+  reconnects by itself, also after the error response a proxy gives while
+  the API is down.
+- Browser tests watch the day advance and the stream recover after its
+  requests are blocked. Stopping and restarting the real API was checked by
+  hand: the viewer showed the disconnection, then went live again without a
+  reload.
 
 ### P00.5: Time controls
 
