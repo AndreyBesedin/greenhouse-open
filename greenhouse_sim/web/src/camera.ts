@@ -10,6 +10,9 @@ export interface CameraPose {
   target: Point3;
 }
 
+// The camera's vertical field of view.
+export const CAMERA_FIELD_OF_VIEW_DEG = 50;
+
 const VIEW_DISTANCE_M = 9;
 // Straight down would leave "up" on screen undefined; leaning a millimetre
 // towards -y keeps world +y pointing up the screen in the top view.
