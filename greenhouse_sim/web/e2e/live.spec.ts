@@ -1,12 +1,8 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+
+import { simulatedDay } from "./hud";
 
 const LIVE_STREAM = /\/api\/scenarios\/gh_demo\/live$/;
-
-async function simulatedDay(page: Page): Promise<number> {
-  const text = (await page.getByTestId("simulation-time").textContent()) ?? "";
-  const match = /^day (\d+) · /.exec(text);
-  return match?.[1] === undefined ? -1 : Number(match[1]);
-}
 
 test("a live scenario plays one simulated day after another", async ({ page }) => {
   await page.goto("/?live=gh_demo");

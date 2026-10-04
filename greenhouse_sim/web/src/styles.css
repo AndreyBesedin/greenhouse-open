@@ -82,3 +82,16 @@ body {
   margin: 0;
   font-variant-numeric: tabular-nums;
 }
+
+.hud .time-controls {
+  align-items: center;
+  margin: 8px 0 0;
+}
+
+.hud .time-controls label {
+  margin-left: auto;
+}
+
+.hud .command-problem {
+  margin: 6px 0 0;
+}

@@ -91,7 +91,8 @@ lists every public name.
 
 The browser viewer shows what the simulator is doing, in 3D: a scenario
 before its first day, or live, growing day by day as the simulator advances
-it. Start the local API, then the viewer:
+it, with controls to pause, step, reset and change its speed. Start the local
+API, then the viewer:
 
 ```bash
 python -m greenhouse_sim.api                    # http://127.0.0.1:8765/api

@@ -36,7 +36,7 @@ renderer on them.
 | P00.2 | `feat(viewer): add orbit camera, presets and scene HUD` | Done ([#20](https://github.com/AndreyBesedin/greenhouse-open/pull/20)) |
 | P00.3 | `feat(scene): render typed scene entities from JSON` | Done ([#21](https://github.com/AndreyBesedin/greenhouse-open/pull/21)) |
 | P00.4 | `feat(sim-bridge): stream scene snapshots from the local Python process` | Done ([#22](https://github.com/AndreyBesedin/greenhouse-open/pull/22)) |
-| P00.5 | `feat(time): add play, pause, step, speed and reset controls` | Planned |
+| P00.5 | `feat(time): add play, pause, step, speed and reset controls` | Done ([#23](https://github.com/AndreyBesedin/greenhouse-open/pull/23)) |
 | P00.6 | `feat(debug): add selection, an inspector and overlay primitives` | Planned |
 | P00.7 | `test(visual): add a deterministic screenshot regression harness` | Planned |
 | P00.8 | `perf(viewer): add an instancing stress scene and diagnostics` | Planned |
@@ -155,6 +155,33 @@ Play, pause, single step, speed and reset, with deterministic restart.
 Visible result: the moving entity can be paused, stepped, sped up and reset.
 Tests: a reset with the same seed returns to an identical state, and a single
 step advances exactly one tick.
+
+As implemented, the controls act on a scenario's live run from P00.4, and a
+tick is one simulated day:
+
+- As [decision 0012](../decisions/0012-stream-to-the-viewer-with-server-sent-events.md)
+  planned, commands are POST requests:
+  `/api/scenarios/{id}/live/{play,pause,step,reset}` and
+  `/api/scenarios/{id}/live/speed?multiplier=2`. Speeds run from a quarter
+  of the server's pace to eight times it (`SPEEDS` in `api/live.py`). An
+  unknown scenario or command is refused with a 404, and a speed outside
+  that list with a 400.
+- A run is shared, so a command changes it for every viewer. Each command
+  publishes a new frame, which now also says whether the run is playing and
+  at what speed, and the viewer's controls follow those frames.
+- Step works whether the run is playing or paused; the viewer offers it
+  while paused. Reset rebuilds the world from the scenario's seed, back to
+  before day one, and keeps the run playing or paused as it was.
+- The HUD has Play or Pause, Step, Reset and a speed selector. They are
+  disabled until a frame arrives and while the stream is lost. When the
+  simulator refuses a command, the HUD says why.
+- Tests:
+  - Python: a reset matches a fresh run, and the days after it repeat
+    exactly. A step advances exactly one day. A paused run publishes nothing.
+    A faster run moves on sooner. Each command answers over HTTP.
+  - Browser: one test pauses `gh_002`, resets it, holds day 0, steps to
+    days 1 and 2, then plays on. Another checks that the simulator accepts
+    every speed the viewer offers.
 
 ### P00.6: Selection, inspector and overlays
 
