@@ -7,7 +7,9 @@ const ignore = () => undefined;
 
 describe("the HUD", () => {
   it("offers a button per camera preset", () => {
-    const html = renderToStaticMarkup(<Hud sample={null} pointer={null} onPreset={ignore} />);
+    const html = renderToStaticMarkup(
+      <Hud sample={null} pointer={null} onPreset={ignore} onCommand={ignore} />,
+    );
 
     for (const label of ["Top", "Front", "Side", "Isometric"]) {
       expect(html).toContain(`>${label}</button>`);
@@ -20,6 +22,7 @@ describe("the HUD", () => {
         sample={{ framesPerSecond: 59.6, camera: { x: 5.196, y: -5.196, z: 5.196 }, objects: 8 }}
         pointer={{ x: 1.234, y: -0.5, z: 0 }}
         onPreset={ignore}
+        onCommand={ignore}
       />,
     );
 
@@ -30,7 +33,9 @@ describe("the HUD", () => {
   });
 
   it("says nothing is measured yet before the first sample", () => {
-    const html = renderToStaticMarkup(<Hud sample={null} pointer={null} onPreset={ignore} />);
+    const html = renderToStaticMarkup(
+      <Hud sample={null} pointer={null} onPreset={ignore} onCommand={ignore} />,
+    );
 
     expect(html).toContain('data-testid="camera-position">…<');
     expect(html).toContain('data-testid="pointer-position">—<');

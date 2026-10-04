@@ -35,3 +35,8 @@ export function formatInstant(iso: string): string {
   }
   return `${instant.toISOString().slice(0, ISO_DATE_AND_MINUTES_LENGTH).replace("T", " ")} UTC`;
 }
+
+/** A speed as a multiple of the simulator's own pace, such as `0.5×`. */
+export function formatSpeed(speed: number): string {
+  return `${speed}×`;
+}

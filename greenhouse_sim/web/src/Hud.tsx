@@ -1,6 +1,7 @@
 import { PRESET_ORDER, type PresetName } from "./camera";
 import { formatInstant, formatMetres, formatPoint, type ViewSample } from "./readouts";
-import type { LiveConnection, LiveFrame } from "./scene/live";
+import type { LiveCommand, LiveConnection, LiveFrame } from "./scene/live";
+import { TimeControls } from "./TimeControls";
 import type { Point3 } from "./world";
 
 const PRESET_LABELS: Record<PresetName, string> = {
@@ -22,6 +23,8 @@ const CONNECTION_LABELS: Record<LiveConnection, string> = {
 export interface LiveStatus {
   connection: LiveConnection;
   frame: LiveFrame | null;
+  /** Why the latest command was not taken, if it was not. */
+  problem: string | null;
 }
 
 export function Hud({
@@ -29,11 +32,13 @@ export function Hud({
   pointer,
   live = null,
   onPreset,
+  onCommand,
 }: {
   sample: ViewSample | null;
   pointer: Point3 | null;
   live?: LiveStatus | null;
   onPreset: (preset: PresetName) => void;
+  onCommand: (command: LiveCommand) => void;
 }) {
   return (
     <section className="hud" aria-label="View">
@@ -70,6 +75,20 @@ export function Hud({
           </>
         )}
       </dl>
+      {live && (
+        <>
+          <TimeControls
+            frame={live.frame}
+            connected={live.connection === "live"}
+            onCommand={onCommand}
+          />
+          {live.problem && (
+            <p className="command-problem" role="alert" data-testid="command-problem">
+              {live.problem}
+            </p>
+          )}
+        </>
+      )}
     </section>
   );
 }

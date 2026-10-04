@@ -6,6 +6,7 @@ import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import type { ViewSample } from "./readouts";
 import { loadScenarios, type ScenariosState } from "./scenarios";
+import { type LiveCommand, sendLiveCommand } from "./scene/live";
 import {
   loadScene,
   type SceneSource,
@@ -24,7 +25,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [presetRequest, setPresetRequest] = useState<PresetRequest | null>(null);
   const [sample, setSample] = useState<ViewSample | null>(null);
   const [pointer, setPointer] = useState<Point3 | null>(null);
-  const live = useLiveScene(source.kind === "live" ? source.scenarioId : null);
+  const [commandProblem, setCommandProblem] = useState<string | null>(null);
+  const liveScenario = source.kind === "live" ? source.scenarioId : null;
+  const live = useLiveScene(liveScenario);
 
   useEffect(() => {
     let current = true;
@@ -57,11 +60,23 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   function chooseSource(next: SceneSource): void {
     history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
     setSource(next);
+    setCommandProblem(null);
+  }
+
+  function command(next: LiveCommand): void {
+    if (liveScenario === null) {
+      return;
+    }
+    void sendLiveCommand(liveScenario, next).then((result) => {
+      setCommandProblem(result.ok ? null : result.problem);
+    });
   }
 
   const shown = source.kind === "live" ? live.scene : scene;
   const liveStatus: LiveStatus | null =
-    source.kind === "live" ? { connection: live.connection, frame: live.frame } : null;
+    source.kind === "live"
+      ? { connection: live.connection, frame: live.frame, problem: commandProblem }
+      : null;
 
   function choosePreset(preset: PresetName): void {
     setPresetRequest((previous) => ({ preset, serial: (previous?.serial ?? 0) + 1 }));
@@ -82,7 +97,13 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         scene={shown}
         onSource={chooseSource}
       />
-      <Hud sample={sample} pointer={pointer} live={liveStatus} onPreset={choosePreset} />
+      <Hud
+        sample={sample}
+        pointer={pointer}
+        live={liveStatus}
+        onPreset={choosePreset}
+        onCommand={command}
+      />
     </main>
   );
 }
