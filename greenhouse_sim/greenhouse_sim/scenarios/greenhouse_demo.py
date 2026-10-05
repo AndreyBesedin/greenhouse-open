@@ -1,6 +1,7 @@
 from datetime import date
 
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.world.envelope import Envelope
 
 # Walkthrough scenario: a small greenhouse tuned so ordinary simulator
 # dynamics - not scripted outcomes - reach watering, an ambiguous reading
@@ -22,6 +23,8 @@ GREENHOUSE_DEMO = ScenarioConfig(
     start_date=date(2026, 1, 1),
     duration_days=15,
     random_seed=4242,
+    # Room around its two rows of three plants.
+    envelope=Envelope(length=4.0, width=6.4, height=4.0),
     truss_interval_days=3,
     ripening_days_bounds=(4, 7),
 )

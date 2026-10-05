@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-
+import { BoundsBox } from "./BoundsBox";
 import type { Color, SceneEntity, SceneEntityKind } from "./generated/snapshotTypes";
 import { ShapeMesh } from "./ShapeMesh";
 
@@ -23,6 +23,13 @@ export const RENDERERS: Record<
   AXES: (entity, look) => (
     <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} />
   ),
+  // A space rather than a solid: see-through, and clickable by its edges.
+  GREENHOUSE_BOUNDS: (entity, look) =>
+    entity.shape.shape === "box" ? (
+      <BoundsBox shape={entity.shape} color={look.color} highlighted={look.selected} />
+    ) : (
+      <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} />
+    ),
   PLANT: (entity, look) => (
     <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} />
   ),

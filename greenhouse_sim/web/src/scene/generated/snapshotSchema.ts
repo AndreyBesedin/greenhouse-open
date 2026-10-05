@@ -26,6 +26,40 @@ export const SNAPSHOT_SCHEMA = {
       "title": "Axes",
       "type": "object"
     },
+    "Box": {
+      "description": "A rectangular box standing on its frame's origin: its base is centred\non the origin, and it rises along +z.",
+      "properties": {
+        "shape": {
+          "const": "box",
+          "default": "box",
+          "title": "Shape",
+          "type": "string"
+        },
+        "size_x": {
+          "exclusiveMinimum": 0,
+          "title": "Size X",
+          "type": "number"
+        },
+        "size_y": {
+          "exclusiveMinimum": 0,
+          "title": "Size Y",
+          "type": "number"
+        },
+        "size_z": {
+          "exclusiveMinimum": 0,
+          "title": "Size Z",
+          "type": "number"
+        }
+      },
+      "required": [
+        "shape",
+        "size_x",
+        "size_y",
+        "size_z"
+      ],
+      "title": "Box",
+      "type": "object"
+    },
     "Color": {
       "description": "An sRGB colour, each channel from 0 to 1.",
       "properties": {
@@ -213,6 +247,7 @@ export const SNAPSHOT_SCHEMA = {
       "enum": [
         "GROUND",
         "AXES",
+        "GREENHOUSE_BOUNDS",
         "PLANT"
       ],
       "title": "SceneEntityKind",
@@ -225,6 +260,9 @@ export const SNAPSHOT_SCHEMA = {
         },
         {
           "$ref": "#/$defs/Cylinder"
+        },
+        {
+          "$ref": "#/$defs/Box"
         },
         {
           "$ref": "#/$defs/Axes"
@@ -281,7 +319,7 @@ export const SNAPSHOT_SCHEMA = {
   "description": "One greenhouse at one simulated day, as a viewer draws it. Positions\nand sizes are in metres, in right-handed world axes with z up.",
   "properties": {
     "schema_version": {
-      "default": 1,
+      "default": 2,
       "title": "Schema Version",
       "type": "integer"
     },

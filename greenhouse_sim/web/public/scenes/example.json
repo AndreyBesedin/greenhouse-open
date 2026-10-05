@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "greenhouse_id": "gh_demo",
   "simulated_day": 9,
   "entities": [
@@ -58,6 +58,36 @@
         "b": 0.5
       },
       "label": "world axes",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_bounds",
+      "kind": "GREENHOUSE_BOUNDS",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 3.2,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 4.0,
+        "size_y": 6.4,
+        "size_z": 4.0
+      },
+      "color": {
+        "r": 0.62,
+        "g": 0.78,
+        "b": 0.88
+      },
+      "label": "greenhouse bounds",
       "properties": {}
     },
     {

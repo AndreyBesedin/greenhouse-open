@@ -17,6 +17,8 @@ export function describeShape(shape: Shape): string {
       return `plane, ${formatMetres(shape.size_x)} × ${formatMetres(shape.size_y)} m`;
     case "cylinder":
       return `cylinder, radius ${formatMetres(shape.radius)} m, height ${formatMetres(shape.height)} m`;
+    case "box":
+      return `box, ${formatMetres(shape.size_x)} × ${formatMetres(shape.size_y)} × ${formatMetres(shape.size_z)} m`;
     case "axes":
       return `axes, ${formatMetres(shape.length)} m`;
   }

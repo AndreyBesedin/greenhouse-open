@@ -60,6 +60,11 @@ function shapeExtent(shape: Shape): Bounds {
         min: { x: -shape.radius, y: -shape.radius, z: 0 },
         max: { x: shape.radius, y: shape.radius, z: shape.height },
       };
+    case "box":
+      return {
+        min: { x: -shape.size_x / 2, y: -shape.size_y / 2, z: 0 },
+        max: { x: shape.size_x / 2, y: shape.size_y / 2, z: shape.size_z },
+      };
     case "axes":
       return {
         min: { x: 0, y: 0, z: 0 },

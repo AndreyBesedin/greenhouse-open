@@ -56,6 +56,14 @@ export function ShapeMesh({
           <meshStandardMaterial color={threeColor(color)} {...glow} />
         </mesh>
       );
+    case "box":
+      // Its base is the frame's origin, so lift it by half its height.
+      return (
+        <mesh position={[0, 0, shape.size_z / 2]}>
+          <boxGeometry args={[shape.size_x, shape.size_y, shape.size_z]} />
+          <meshStandardMaterial color={threeColor(color)} {...glow} />
+        </mesh>
+      );
     case "axes":
       // Lines cannot glow; the selection's bounding box marks it instead.
       return <axesHelper args={[shape.length]} />;
