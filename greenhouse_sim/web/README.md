@@ -49,6 +49,26 @@ cd greenhouse_sim/web && npm run generate                  # the viewer's types
 
 Tests on both sides fail while either is stale.
 
+## Screenshots
+
+`/qa/renderer?seed=42` is the renderer's canonical page: a QA scene the viewer
+builds from the seed, with a plant selected, every overlay drawn and the
+plants coloured by height. CI's "visual checks" job compares its screenshot
+with `e2e/visual/__screenshots__/renderer-seed-42-linux.png`, in a pinned
+Playwright container that draws the same pixels on every run
+([decision 0014](../../docs/decisions/0014-compare-screenshots-in-a-pinned-container-in-ci.md)).
+Elsewhere `npm run e2e:visual` skips the comparison.
+
+When a change to what the renderer draws is intended, the job fails and keeps
+what it drew in its `visual-results` artifact. Review it, then make it the
+baseline:
+
+```bash
+gh run download <run id> --name visual-results --dir /tmp/visual-results
+cp "$(find /tmp/visual-results -name 'renderer-seed-42-actual.png' | head -1)" \
+  e2e/visual/__screenshots__/renderer-seed-42-linux.png
+```
+
 ## Run it with the simulator
 
 The viewer reads the simulator through its local API. Start the API, then the
@@ -74,6 +94,7 @@ npm run typecheck   # TypeScript, strict
 npm test            # Vitest
 npm run build       # production build into dist/
 PYTHON=python npm run e2e  # Playwright smoke test against the real simulator API
+npm run e2e:visual  # screenshot comparisons (they run in CI's container only)
 ```
 
 The smoke test starts the simulator's API with `$PYTHON -m greenhouse_sim.api`,
