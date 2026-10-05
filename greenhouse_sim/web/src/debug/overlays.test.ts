@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import type { SceneEntity, SceneSnapshot } from "../scene/generated/snapshotTypes";
+import { sceneDimensionOverlays } from "./dimensions";
 import { entityBounds, type OverlayToggles, selectionOverlays } from "./overlays";
 import { colouringBy, scalarColor, scalarProperties, scalarValue } from "./scalar";
 
@@ -118,7 +119,7 @@ describe("the overlays around a selection", () => {
     expect(label?.kind === "label" && label.position.z).toBeGreaterThan(0.3515);
   });
 
-  it("never change the scene they explain, nor do colourings", () => {
+  it("never change the scene they explain, nor do dimensions or colourings", () => {
     const scene = deepFreeze(JSON.parse(EXAMPLE_JSON) as SceneSnapshot);
 
     for (const toggles of EVERY_TOGGLE) {
@@ -126,6 +127,7 @@ describe("the overlays around a selection", () => {
         selectionOverlays(shown, toggles);
       }
     }
+    sceneDimensionOverlays(scene);
     for (const property of scalarProperties(scene)) {
       const colouring = colouringBy(scene, property);
       for (const shown of scene.entities) {
