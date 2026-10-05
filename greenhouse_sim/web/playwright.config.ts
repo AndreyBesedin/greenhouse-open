@@ -8,15 +8,30 @@ import { SIMULATOR_API, SIMULATOR_API_PORT } from "./simulatorApi.ts";
 const PYTHON = process.env.PYTHON ?? "python";
 const PREVIEW_PORT = 4317;
 const IN_CI = process.env.CI !== undefined;
+// Screenshot comparisons and the benchmark have their own configurations.
+const ELSEWHERE = ["visual/**", "bench/**"];
+// P00's final QA drives a shared live run, so it runs once the others pass.
+const RENDERER_SMOKE = "renderer-smoke.spec.ts";
 
 export default defineConfig({
   testDir: "e2e",
-  // Screenshot comparisons and the benchmark have their own configurations.
-  testIgnore: ["visual/**", "bench/**"],
+  testIgnore: ELSEWHERE,
   forbidOnly: IN_CI,
   reporter: IN_CI ? "github" : "list",
   use: { baseURL: `http://localhost:${PREVIEW_PORT}` },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      testIgnore: [...ELSEWHERE, RENDERER_SMOKE],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "renderer-smoke",
+      testMatch: RENDERER_SMOKE,
+      dependencies: ["chromium"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+  ],
   webServer: [
     {
       command: `${PYTHON} -m greenhouse_sim.api --port ${SIMULATOR_API_PORT}`,

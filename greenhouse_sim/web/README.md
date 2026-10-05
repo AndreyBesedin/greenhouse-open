@@ -114,7 +114,10 @@ npm run bench       # the renderer's benchmark, on this machine's graphics card
 ```
 
 The smoke test starts the simulator's API with `$PYTHON -m greenhouse_sim.api`,
-so that interpreter needs greenhouse-sim installed. Run
+so that interpreter needs greenhouse-sim installed. Once every other browser
+test has passed, `e2e/renderer-smoke.spec.ts` walks through the whole renderer
+as a person would: live play, camera presets, pause, step and reset with a
+deterministic replay, selection and overlays, and the stress scene. Run
 `npx playwright install chromium` once to get the browser.
 
 The page shows the simulator version, read from `../pyproject.toml` at build
