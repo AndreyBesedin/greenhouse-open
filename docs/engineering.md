@@ -238,7 +238,9 @@ Test behavior at the narrowest useful level.
 - Contract/conformance tests protect package boundaries.
 - Statistical tests validate stochastic behavior by distributions, not exact
   samples, except where deterministic seeds are intentionally part of the API.
-- Visual regression tests will protect stable browser QA scenarios.
+- Visual regression tests protect the renderer's QA page: screenshots are
+  compared in CI's pinned container
+  ([decision 0014](decisions/0014-compare-screenshots-in-a-pinned-container-in-ci.md)).
 - Slow external/network/CFD tests must be marked `slow` or kept outside the
   default fast loop.
 

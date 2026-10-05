@@ -38,7 +38,7 @@ renderer on them.
 | P00.4 | `feat(sim-bridge): stream scene snapshots from the local Python process` | Done ([#22](https://github.com/AndreyBesedin/greenhouse-open/pull/22)) |
 | P00.5 | `feat(time): add play, pause, step, speed and reset controls` | Done ([#23](https://github.com/AndreyBesedin/greenhouse-open/pull/23)) |
 | P00.6 | `feat(debug): add selection, an inspector and overlay primitives` | Done ([#24](https://github.com/AndreyBesedin/greenhouse-open/pull/24)) |
-| P00.7 | `test(visual): add a deterministic screenshot regression harness` | Planned |
+| P00.7 | `test(visual): add a deterministic screenshot regression harness` | Done ([#25](https://github.com/AndreyBesedin/greenhouse-open/pull/25)) |
 | P00.8 | `perf(viewer): add an instancing stress scene and diagnostics` | Planned |
 
 ### P00.1: Scaffold the 3D viewer
@@ -224,6 +224,26 @@ Playwright visual tests on a canonical route such as `/qa/renderer?seed=42`,
 with a fixed viewport and camera, golden screenshots and a documented
 tolerance. Tests: an intentional scene change produces a difference, and the
 restored scene passes.
+
+As implemented (see [decision 0014](../decisions/0014-compare-screenshots-in-a-pinned-container-in-ci.md)):
+
+- `/qa/renderer?seed=42` shows a QA scene the viewer builds from the seed:
+  the ground, the axes and fifteen leaning plants of seeded heights. It is
+  drawn from the default camera in a 1280 by 720 view, with one plant
+  selected, every overlay drawn and the plants coloured by height. The
+  simulator plays no part, so the screenshot changes only when the renderer
+  does.
+- CI's "visual checks" job compares it in a pinned Playwright container,
+  which draws the same pixels on every run. A pixel differs when its colour
+  moves by more than 0.2, and the screenshot fails when more than 100
+  pixels differ. Moving one stem by its own width changes about 200 pixels.
+- Comparisons never overwrite the baseline. A failed comparison keeps what
+  it drew as an artifact, from which an intended change, or the first
+  baseline, takes its new baseline.
+- Tests: the QA scene matches its baseline. Seed 43 fails against it, and
+  seed 42 then passes again. Unit tests check that the scene passes the
+  scene check and is the same for a seed. A browser test checks the page
+  everywhere, while the screenshot comparisons run only in the container.
 
 ### P00.8: Instancing and diagnostics
 

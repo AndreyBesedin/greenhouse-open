@@ -18,5 +18,13 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src", "e2e", "scripts", "vite.config.ts", "playwright.config.ts", "simulatorApi.ts"]
+  "include": [
+    "src",
+    "e2e",
+    "scripts",
+    "vite.config.ts",
+    "playwright.config.ts",
+    "playwright.visual.config.ts",
+    "simulatorApi.ts"
+  ]
 }

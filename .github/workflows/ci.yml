@@ -79,6 +79,42 @@ jobs:
           path: greenhouse_sim/web/playwright-report
           retention-days: 7
 
+  visual:
+    name: visual checks
+    runs-on: ubuntu-latest
+    # Screenshots are compared in a pinned image, so the fonts and software
+    # renderer that drew the baselines are the ones that check them (decision
+    # 0014). Its version moves with @playwright/test.
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble-amd64
+    defaults:
+      run:
+        working-directory: greenhouse_sim/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: greenhouse_sim/web/.nvmrc
+          cache: npm
+          cache-dependency-path: greenhouse_sim/web/package-lock.json
+
+      - name: Install the viewer's dependencies
+        run: npm ci
+
+      - name: Compare the renderer's screenshots
+        run: npm run e2e:visual
+
+      # What was drawn, and how it differs from the baseline. An intended
+      # change takes its new baseline from here.
+      - name: Keep the screenshots of a failed comparison
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-results
+          path: greenhouse_sim/web/test-results
+          retention-days: 14
+
   # The pull request risk gate lives in pr-risk.yml, so that it also runs
   # when the pull request description is edited.
 

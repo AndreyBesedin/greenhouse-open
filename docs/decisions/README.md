@@ -25,6 +25,7 @@ changes course is a new record that supersedes the old one.
 | [0011](0011-the-public-api-is-the-top-level-modules-contracts-and-scene.md) | The public API is the top-level modules, the model contracts and the scene | Accepted |
 | [0012](0012-stream-to-the-viewer-with-server-sent-events.md) | Stream to the viewer with Server-Sent Events | Accepted |
 | [0013](0013-describe-debug-overlays-as-data-in-world-coordinates.md) | Describe debug overlays as data, in world coordinates | Accepted |
+| [0014](0014-compare-screenshots-in-a-pinned-container-in-ci.md) | Compare the renderer's screenshots in a pinned container in CI | Accepted |
 
 ## Template
 

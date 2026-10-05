@@ -11,6 +11,8 @@ const IN_CI = process.env.CI !== undefined;
 
 export default defineConfig({
   testDir: "e2e",
+  // Screenshot comparisons have their own configuration and container.
+  testIgnore: "visual/**",
   forbidOnly: IN_CI,
   reporter: IN_CI ? "github" : "list",
   use: { baseURL: `http://localhost:${PREVIEW_PORT}` },
