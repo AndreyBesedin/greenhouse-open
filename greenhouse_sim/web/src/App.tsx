@@ -1,9 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { type BuildInfo, buildInfo } from "./buildInfo";
+import { ColourBy } from "./ColourBy";
 import type { PresetName, PresetRequest } from "./camera";
+import { ALL_OVERLAYS, type OverlayToggles, selectionOverlays } from "./debug/overlays";
+import { ScalarLegend } from "./debug/ScalarLegend";
+import { colouringBy, scalarProperties } from "./debug/scalar";
 import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
+import { Inspector } from "./Inspector";
 import type { ViewSample } from "./readouts";
 import { loadScenarios, type ScenariosState } from "./scenarios";
 import { type LiveCommand, sendLiveCommand } from "./scene/live";
@@ -15,6 +20,7 @@ import {
   sourceFromSearch,
 } from "./scene/source";
 import { useLiveScene } from "./scene/useLiveScene";
+import { selectedEntity } from "./selection";
 import { Viewport } from "./Viewport";
 import type { Point3 } from "./world";
 
@@ -26,6 +32,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [sample, setSample] = useState<ViewSample | null>(null);
   const [pointer, setPointer] = useState<Point3 | null>(null);
   const [commandProblem, setCommandProblem] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [overlayToggles, setOverlayToggles] = useState<OverlayToggles>(ALL_OVERLAYS);
+  const [colourBy, setColourBy] = useState<string | null>(null);
   const liveScenario = source.kind === "live" ? source.scenarioId : null;
   const live = useLiveScene(liveScenario);
 
@@ -61,6 +70,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
     setSource(next);
     setCommandProblem(null);
+    setSelectedId(null);
+    setColourBy(null);
   }
 
   function command(next: LiveCommand): void {
@@ -73,6 +84,21 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   }
 
   const shown = source.kind === "live" ? live.scene : scene;
+  const snapshot = shown.status === "loaded" ? shown.snapshot : null;
+  // Overlays and colours are worked out from the scene, which they only read.
+  const selected = selectedEntity(snapshot, selectedId);
+  const overlays = useMemo(
+    () => (selected === null ? [] : selectionOverlays(selected, overlayToggles)),
+    [selected, overlayToggles],
+  );
+  const colourProperties = useMemo(
+    () => (snapshot === null ? [] : scalarProperties(snapshot)),
+    [snapshot],
+  );
+  const colouring = useMemo(
+    () => (snapshot === null || colourBy === null ? null : colouringBy(snapshot, colourBy)),
+    [snapshot, colourBy],
+  );
   const liveStatus: LiveStatus | null =
     source.kind === "live"
       ? { connection: live.connection, frame: live.frame, problem: commandProblem }
@@ -85,10 +111,14 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   return (
     <main className="viewer">
       <Viewport
-        snapshot={shown.status === "loaded" ? shown.snapshot : null}
+        snapshot={snapshot}
         presetRequest={presetRequest}
+        selectedId={selectedId}
+        colouring={colouring}
+        overlays={overlays}
         onSample={setSample}
         onPointer={setPointer}
+        onSelect={setSelectedId}
       />
       <InfoPanel
         build={build}
@@ -96,7 +126,11 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         source={source}
         scene={shown}
         onSource={chooseSource}
-      />
+      >
+        {colourProperties.length > 0 && (
+          <ColourBy properties={colourProperties} value={colourBy} onChange={setColourBy} />
+        )}
+      </InfoPanel>
       <Hud
         sample={sample}
         pointer={pointer}
@@ -104,6 +138,15 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         onPreset={choosePreset}
         onCommand={command}
       />
+      {selected && (
+        <Inspector
+          entity={selected}
+          overlays={overlayToggles}
+          onOverlays={setOverlayToggles}
+          onClear={() => setSelectedId(null)}
+        />
+      )}
+      {colouring && <ScalarLegend colouring={colouring} />}
     </main>
   );
 }

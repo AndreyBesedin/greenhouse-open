@@ -40,3 +40,24 @@ export function formatInstant(iso: string): string {
 export function formatSpeed(speed: number): string {
   return `${speed}×`;
 }
+
+// Enough to tell a quaternion's components apart without implying more precision.
+const QUATERNION_DECIMALS = 3;
+// Property values are shown to the hundredth, as positions are.
+const VALUE_DECIMALS = 2;
+
+/** A rotation as the snapshot gives it, a unit quaternion. */
+export function formatRotation(rotation: { w: number; x: number; y: number; z: number }): string {
+  const parts = (["w", "x", "y", "z"] as const).map(
+    (axis) => `${axis} ${rotation[axis].toFixed(QUATERNION_DECIMALS)}`,
+  );
+  return parts.join(", ");
+}
+
+/** A property value as the inspector shows it: whole numbers whole, others to the hundredth. */
+export function formatValue(value: string | number | boolean): string {
+  if (typeof value !== "number" || Number.isInteger(value)) {
+    return String(value);
+  }
+  return value.toFixed(VALUE_DECIMALS);
+}

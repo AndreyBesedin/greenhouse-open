@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { BuildInfo } from "./buildInfo";
 import { ScenarioList } from "./ScenarioList";
 import { SceneStatus } from "./SceneStatus";
@@ -10,12 +12,15 @@ export function InfoPanel({
   source,
   scene,
   onSource,
+  children,
 }: {
   build: BuildInfo;
   scenarios: ScenariosState;
   source: SceneSource;
   scene: SceneState;
   onSource: (source: SceneSource) => void;
+  /** Display options for the scene, shown under its choice. */
+  children?: ReactNode;
 }) {
   return (
     <aside className="info-panel">
@@ -35,6 +40,7 @@ export function InfoPanel({
           Example scene
         </button>
       </p>
+      {children}
       <ScenarioList
         state={scenarios}
         onShow={(scenarioId) => onSource({ kind: "scenario", scenarioId })}

@@ -223,6 +223,9 @@ own tools ([decision 0010](decisions/0010-check-the-viewer-with-biome-vitest-and
   hatches, as with `Any` and `type: ignore` in Python.
 - Data arriving from outside the viewer, such as an API response, is checked
   at runtime before it is trusted.
+- Biome's accessibility rules take Three.js elements in the canvas, such as
+  `<group onClick>`, for page elements. Ignore such a finding on its line,
+  saying so; the rules still apply to the page around the canvas.
 - Vitest covers behaviour at the narrowest useful level. A Playwright smoke
   test runs the built viewer against the real simulator API in Chromium.
 

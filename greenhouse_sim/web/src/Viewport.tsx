@@ -1,10 +1,14 @@
-import { Canvas } from "@react-three/fiber";
+import { Canvas, type ThreeEvent } from "@react-three/fiber";
 import { CameraRig } from "./CameraRig";
-import type { PresetRequest } from "./camera";
+import { CAMERA_FIELD_OF_VIEW_DEG, type PresetRequest } from "./camera";
+import { Overlays } from "./debug/DebugPrimitives";
+import type { OverlayPrimitive } from "./debug/overlays";
+import type { Colouring } from "./debug/scalar";
 import { HudProbe } from "./HudProbe";
 import type { ViewSample } from "./readouts";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
 import { SceneView } from "./scene/SceneView";
+import { CLICK_TOLERANCE_PX, pickEntity } from "./selection";
 import { type Point3, viewerToWorld, WORLD_TO_VIEWER_ROTATION } from "./world";
 
 // A 20 m ground grid with 1 m cells is always shown. Without a scene, 2 m world
@@ -24,24 +28,51 @@ const CUBE_COLOR = "#4f8a5b";
 const GRID_COLORS = { centre: "#888888", cells: "#cccccc" };
 const BACKGROUND_COLOR = "#f4f4f2";
 
-const CAMERA_FIELD_OF_VIEW_DEG = 50;
 const AMBIENT_LIGHT_INTENSITY = 0.6;
 const SUN_INTENSITY = 1.2;
 const SUN = { x: 5, y: 10, z: 7 };
+// How near a click must pass to a line, such as the world axes, to land on
+// it. Three.js's default of a metre would let the axes take clicks meant for
+// the ground around them.
+const LINE_PICK_TOLERANCE_M = 0.05;
 
 export function Viewport({
   snapshot,
   presetRequest,
+  selectedId = null,
+  colouring = null,
+  overlays = [],
   onSample,
   onPointer,
+  onSelect,
 }: {
   snapshot: SceneSnapshot | null;
   presetRequest: PresetRequest | null;
+  selectedId?: string | null;
+  colouring?: Colouring | null;
+  overlays?: readonly OverlayPrimitive[];
   onSample: (sample: ViewSample) => void;
   onPointer: (point: Point3 | null) => void;
+  /** A click picked an entity, or nothing (null). Drags orbit and pick nothing. */
+  onSelect: (entityId: string | null) => void;
 }) {
+  function pick(event: ThreeEvent<MouseEvent>): void {
+    // Every hit along the ray reaches this group; the nearest entity decides.
+    event.stopPropagation();
+    if (event.delta <= CLICK_TOLERANCE_PX) {
+      onSelect(pickEntity(event.intersections));
+    }
+  }
+
   return (
-    <Canvas camera={{ fov: CAMERA_FIELD_OF_VIEW_DEG }} aria-label="3D view">
+    <Canvas
+      camera={{ fov: CAMERA_FIELD_OF_VIEW_DEG }}
+      onCreated={({ raycaster }) => {
+        raycaster.params.Line = { threshold: LINE_PICK_TOLERANCE_M };
+      }}
+      onPointerMissed={() => onSelect(null)}
+      aria-label="3D view"
+    >
       <CameraRig request={presetRequest} />
       <HudProbe onSample={onSample} />
       <color attach="background" args={[BACKGROUND_COLOR]} />
@@ -50,25 +81,29 @@ export function Viewport({
       {/* Three.js's grid lies in its own x-z plane, which is the world's ground. */}
       <gridHelper args={[GRID_SIZE_M, GRID_DIVISIONS, GRID_COLORS.centre, GRID_COLORS.cells]} />
       <group rotation={WORLD_TO_VIEWER_ROTATION}>
-        {snapshot === null ? (
-          <>
-            <axesHelper args={[AXES_LENGTH_M]} />
-            <mesh position={CUBE_CENTRE}>
-              <boxGeometry args={[CUBE_SIZE_M, CUBE_SIZE_M, CUBE_SIZE_M]} />
-              <meshStandardMaterial color={CUBE_COLOR} />
-            </mesh>
-          </>
-        ) : (
-          <SceneView snapshot={snapshot} />
-        )}
-        {/* An undrawn ground plane that reports where the pointer meets the ground. */}
-        <mesh
-          onPointerMove={(event) => onPointer(viewerToWorld(event.point))}
-          onPointerOut={() => onPointer(null)}
-        >
-          <planeGeometry args={[GRID_SIZE_M, GRID_SIZE_M]} />
-          <meshBasicMaterial visible={false} />
-        </mesh>
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: a Three.js group in the canvas, not a page element. */}
+        <group onClick={pick}>
+          {snapshot === null ? (
+            <>
+              <axesHelper args={[AXES_LENGTH_M]} />
+              <mesh position={CUBE_CENTRE}>
+                <boxGeometry args={[CUBE_SIZE_M, CUBE_SIZE_M, CUBE_SIZE_M]} />
+                <meshStandardMaterial color={CUBE_COLOR} />
+              </mesh>
+            </>
+          ) : (
+            <SceneView snapshot={snapshot} selectedId={selectedId} colouring={colouring} />
+          )}
+          {/* An undrawn ground plane that reports where the pointer meets the ground. */}
+          <mesh
+            onPointerMove={(event) => onPointer(viewerToWorld(event.point))}
+            onPointerOut={() => onPointer(null)}
+          >
+            <planeGeometry args={[GRID_SIZE_M, GRID_SIZE_M]} />
+            <meshBasicMaterial visible={false} />
+          </mesh>
+        </group>
+        <Overlays primitives={overlays} />
       </group>
     </Canvas>
   );

@@ -37,7 +37,7 @@ renderer on them.
 | P00.3 | `feat(scene): render typed scene entities from JSON` | Done ([#21](https://github.com/AndreyBesedin/greenhouse-open/pull/21)) |
 | P00.4 | `feat(sim-bridge): stream scene snapshots from the local Python process` | Done ([#22](https://github.com/AndreyBesedin/greenhouse-open/pull/22)) |
 | P00.5 | `feat(time): add play, pause, step, speed and reset controls` | Done ([#23](https://github.com/AndreyBesedin/greenhouse-open/pull/23)) |
-| P00.6 | `feat(debug): add selection, an inspector and overlay primitives` | Planned |
+| P00.6 | `feat(debug): add selection, an inspector and overlay primitives` | Done ([#24](https://github.com/AndreyBesedin/greenhouse-open/pull/24)) |
 | P00.7 | `test(visual): add a deterministic screenshot regression harness` | Planned |
 | P00.8 | `perf(viewer): add an instancing stress scene and diagnostics` | Planned |
 
@@ -190,6 +190,33 @@ primitives: point, vector arrow, bounding box, line, label and scalar legend.
 Visible result: selecting an entity shows its identifier and transform, and
 arrows, boxes and labels can be toggled around it. Tests: selection is
 stable, and toggling overlays never changes world state.
+
+As implemented (see [decision 0013](../decisions/0013-describe-debug-overlays-as-data-in-world-coordinates.md)):
+
+- A click selects the nearest entity under the pointer. A drag orbits the
+  camera and selects nothing, and clicking the sky clears the selection.
+  The selection is kept by the entity's identifier, so it follows the entity
+  from one live frame to the next.
+- The selected entity glows in the selection colour. The inspector shows its
+  identifier, kind, label, position, rotation, shape and properties.
+- The debug primitives are point, arrow, box, line and label. They are data
+  in world coordinates, drawn by one component. Around the selection they
+  show its bounding box, its origin and its own axes (turned as the entity
+  is), and its label on a leader line. Each of the three can be switched off.
+- The scalar legend comes with "Colour by", which shades entities by any
+  numeric property on a viridis scale. The legend names the property and its
+  range in the scene.
+- Tests:
+  - Unit: picking takes the nearest entity hit. A selection follows its
+    entity into the next scene. Bounding boxes follow rotation. Each overlay
+    appears only when switched on. Colours run from the scale's ends and
+    blend in between. The scene, deep-frozen, comes out unchanged after
+    every combination of overlays and every colouring.
+  - Browser: clicking a plant shows its identifier and transform, a drag
+    keeps the selection, the ground and the sky select as expected. A
+    selection stays on a live plant while its age changes. On a paused run,
+    switching every overlay and colouring sends no request to the simulator
+    and leaves the day and the scene unchanged.
 
 ### P00.7: Screenshot regression
 
