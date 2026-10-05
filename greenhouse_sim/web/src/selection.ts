@@ -7,10 +7,20 @@ import type { SceneEntity, SceneSnapshot } from "./scene/generated/snapshotTypes
 export const CLICK_TOLERANCE_PX = 2;
 
 /** The entity a click landed on: the nearest hit drawn as part of an entity.
- * `SceneView` marks each entity's group with its identifier. */
-export function pickEntity(hits: readonly { object: Object3D }[]): string | null {
+ * `SceneView` marks each entity's group with its identifier, and an instanced
+ * batch lists its entities in instance order. */
+export function pickEntity(
+  hits: readonly { object: Object3D; instanceId?: number | undefined }[],
+): string | null {
   for (const hit of hits) {
     for (let object: Object3D | null = hit.object; object !== null; object = object.parent) {
+      const batch: unknown = object.userData.entityIds;
+      if (hit.instanceId !== undefined && Array.isArray(batch)) {
+        const instanceOf: unknown = batch[hit.instanceId];
+        if (typeof instanceOf === "string") {
+          return instanceOf;
+        }
+      }
       const entityId: unknown = object.userData.entityId;
       if (typeof entityId === "string") {
         return entityId;

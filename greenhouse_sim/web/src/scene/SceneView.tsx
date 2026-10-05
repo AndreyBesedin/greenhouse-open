@@ -1,5 +1,8 @@
+import { useMemo } from "react";
+
 import { type Colouring, scalarColor, scalarValue } from "../debug/scalar";
 import type { Color, SceneEntity, SceneSnapshot } from "./generated/snapshotTypes";
+import { InstancedCylinders } from "./InstancedCylinders";
 import { placement } from "./placement";
 import { RENDERERS } from "./renderers";
 
@@ -9,9 +12,12 @@ function shownColor(entity: SceneEntity, colouring: Colouring | null): Color {
 }
 
 /**
- * A checked snapshot, drawn entity by entity. Belongs inside the world's z-up
- * group. Each entity's group carries its identifier, so a click can tell which
- * entity it landed on (`pickEntity`).
+ * A checked snapshot. Belongs inside the world's z-up group. Cylinders, the
+ * shape repeated by the hundred in a greenhouse, are drawn together in one
+ * instanced batch; every other entity, and a selected cylinder, which glows,
+ * is drawn on its own by its kind's renderer. Either way a click can tell
+ * which entity it landed on (`pickEntity`): an entity's own group carries its
+ * identifier, and the batch lists its entities.
  */
 export function SceneView({
   snapshot,
@@ -23,9 +29,30 @@ export function SceneView({
   /** Shades the entities that have the property; the others keep their colour. */
   colouring?: Colouring | null;
 }) {
+  const { batch, batchColors, capacity, single } = useMemo(() => {
+    const cylinders = snapshot.entities.filter((entity) => entity.shape.shape === "cylinder");
+    const batched = cylinders.filter((entity) => entity.entity_id !== selectedId);
+    return {
+      batch: batched,
+      batchColors: batched.map((entity) => shownColor(entity, colouring)),
+      capacity: cylinders.length,
+      single: snapshot.entities.filter(
+        (entity) => entity.shape.shape !== "cylinder" || entity.entity_id === selectedId,
+      ),
+    };
+  }, [snapshot, selectedId, colouring]);
+
   return (
     <>
-      {snapshot.entities.map((entity) => {
+      {capacity > 0 && (
+        <InstancedCylinders
+          key={capacity}
+          entities={batch}
+          colors={batchColors}
+          capacity={capacity}
+        />
+      )}
+      {single.map((entity) => {
         const { position, quaternion } = placement(entity.transform);
         const look = {
           color: shownColor(entity, colouring),

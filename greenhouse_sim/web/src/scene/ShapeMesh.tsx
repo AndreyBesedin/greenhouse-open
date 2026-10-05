@@ -4,15 +4,15 @@ import { SELECTION_COLOR } from "../debug/overlays";
 import type { Color, Shape } from "./generated/snapshotTypes";
 
 // Enough sides for a stem to read as round at greenhouse distances.
-const CYLINDER_SIDES = 24;
+export const CYLINDER_SIDES = 24;
 // A quarter turn about x stands Three.js's y-aligned cylinder up along z.
-const STAND_UP: [number, number, number] = [Math.PI / 2, 0, 0];
+export const STAND_UP: [number, number, number] = [Math.PI / 2, 0, 0];
 // A selected shape glows in the selection colour, enough to stand out in
 // daylight without hiding its own colour.
 const HIGHLIGHT_INTENSITY = 0.6;
 const NO_GLOW = "#000000";
 
-function threeColor(color: Color): ThreeColor {
+export function threeColor(color: Color): ThreeColor {
   return new ThreeColor().setRGB(color.r, color.g, color.b, SRGBColorSpace);
 }
 
