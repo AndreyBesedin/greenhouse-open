@@ -36,7 +36,11 @@ export async function onScreen(
 }
 
 // Near the top of the view the camera looks past the ground grid at the sky.
+// The default camera looks at the world origin, so anything standing there,
+// such as a corner of the greenhouse's bounds, rises up the view's middle
+// line; the sky is clicked to the right of it.
 const SKY_MARGIN_PX = 30;
+const SKY_OFFSET_PX = 160;
 
 export async function clickAt(page: Page, point: Point3): Promise<void> {
   const target = await onScreen(page, point);
@@ -49,7 +53,7 @@ export async function clickSky(page: Page): Promise<void> {
   if (box === null) {
     throw new Error("the 3D view is not on the page");
   }
-  await page.mouse.click(box.x + box.width / 2, box.y + SKY_MARGIN_PX);
+  await page.mouse.click(box.x + box.width / 2 + SKY_OFFSET_PX, box.y + SKY_MARGIN_PX);
 }
 
 /** Clicks a world point until the inspector shows `entityId`: a view that has

@@ -8,6 +8,7 @@ import {
   TYPES_FILE,
 } from "../../scripts/generateSceneSources";
 import { checkScene } from "./checkScene";
+import { SUPPORTED_SCHEMA_VERSION } from "./schemaVersion";
 
 function example(): { entities: Record<string, unknown>[]; [key: string]: unknown } {
   return JSON.parse(
@@ -61,11 +62,13 @@ describe("checking a scene before drawing it", () => {
   });
 
   it("refuses a schema version it does not draw", () => {
-    const check = checkScene({ ...example(), schema_version: 2 });
+    const check = checkScene({ ...example(), schema_version: SUPPORTED_SCHEMA_VERSION + 1 });
 
     expect(check).toEqual({
       ok: false,
-      problems: ["schema version 2 is not the 1 this viewer draws"],
+      problems: [
+        `schema version ${SUPPORTED_SCHEMA_VERSION + 1} is not the ${SUPPORTED_SCHEMA_VERSION} this viewer draws`,
+      ],
     });
   });
 

@@ -9,10 +9,11 @@ The viewer is a tool for looking at the simulation, so a snapshot shows the
 simulated truth, as the world does. It is not an observation: decision-making
 code works from observations, never from a snapshot.
 
-This first snapshot holds the ground, a reference axes marker at the origin,
-and an upright cylinder per plant, as tall as its visible stem. Until
-planting positions become part of the world (P02), plants stand on a
-provisional grid built from the scenario's rows and columns.
+A snapshot holds the ground, a reference axes marker at the origin, the
+greenhouse's bounds (the space its envelope encloses, as a box), and an
+upright cylinder per plant, as tall as its visible stem. Until planting
+positions become part of the world (P02), plants stand on a provisional grid
+built from the scenario's rows and columns.
 """
 
 import math
@@ -22,11 +23,14 @@ from typing import Final
 from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.world.geometry import Axes, Cylinder, Plane, Shape, Transform, Vector3
+from greenhouse_sim.world.envelope import Envelope
+from greenhouse_sim.world.geometry import Axes, Box, Cylinder, Plane, Shape, Transform, Vector3
 from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
 
-# Bumped when a change to these types would break an existing viewer.
-SCHEMA_VERSION: Final = 1
+# Bumped when a change to these types would break an existing viewer, as a new
+# kind or shape does: a viewer that does not know it refuses the scene.
+# 2: the greenhouse's bounds, drawn as a box.
+SCHEMA_VERSION: Final = 2
 # The JSON Schema dialect Pydantic generates, stated in the published schema.
 JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 
@@ -55,11 +59,13 @@ class Color(BaseModel):
 GROUND_COLOR: Final = Color(r=0.42, g=0.33, b=0.24)
 AXES_COLOR: Final = Color(r=0.5, g=0.5, b=0.5)
 PLANT_COLOR: Final = Color(r=0.2, g=0.55, b=0.24)
+GREENHOUSE_BOUNDS_COLOR: Final = Color(r=0.62, g=0.78, b=0.88)
 
 
 class SceneEntityKind(StrEnum):
     GROUND = "GROUND"
     AXES = "AXES"
+    GREENHOUSE_BOUNDS = "GREENHOUSE_BOUNDS"
     PLANT = "PLANT"
 
 
@@ -88,7 +94,8 @@ class SceneSnapshot(BaseModel):
 
 
 def scene_snapshot(world: GreenhouseWorld, config: ScenarioConfig) -> SceneSnapshot:
-    """The scene a viewer draws for `world`: ground, axes, one entity per plant."""
+    """The scene a viewer draws for `world`: ground, axes, the greenhouse's
+    bounds, and one entity per plant."""
     columns = max(config.columns, 1)
     rows = max(config.rows, math.ceil(len(world.plants) / columns))
     ground_size_x = (columns + 1) * PLANT_PITCH_M
@@ -117,7 +124,22 @@ def scene_snapshot(world: GreenhouseWorld, config: ScenarioConfig) -> SceneSnaps
     return SceneSnapshot(
         greenhouse_id=world.greenhouse_id,
         simulated_day=world.simulated_day,
-        entities=[ground, axes, *plants],
+        entities=[ground, axes, _bounds_entity(world.greenhouse_id, config.envelope), *plants],
+    )
+
+
+def _bounds_entity(greenhouse_id: str, envelope: Envelope) -> SceneEntity:
+    """The space the envelope encloses, as a box standing on the middle of the floor."""
+    middle_of_floor = Vector3(x=envelope.length / 2, y=envelope.width / 2, z=0.0)
+    return SceneEntity(
+        entity_id=f"{greenhouse_id}_bounds",
+        kind=SceneEntityKind.GREENHOUSE_BOUNDS,
+        transform=Transform(
+            position=envelope.to_world(middle_of_floor), rotation=envelope.origin.rotation
+        ),
+        shape=Box(size_x=envelope.length, size_y=envelope.width, size_z=envelope.height),
+        color=GREENHOUSE_BOUNDS_COLOR,
+        label="greenhouse bounds",
     )
 
 

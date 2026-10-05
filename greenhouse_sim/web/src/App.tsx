@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { type BuildInfo, buildInfo } from "./buildInfo";
-import { ColourBy } from "./ColourBy";
 import type { PresetName, PresetRequest } from "./camera";
+import { DisplayOptions } from "./DisplayOptions";
+import { sceneDimensionOverlays } from "./debug/dimensions";
 import { ALL_OVERLAYS, type OverlayToggles, selectionOverlays } from "./debug/overlays";
 import { ScalarLegend } from "./debug/ScalarLegend";
 import { colouringBy, scalarProperties } from "./debug/scalar";
@@ -35,6 +36,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [overlayToggles, setOverlayToggles] = useState<OverlayToggles>(ALL_OVERLAYS);
   const [colourBy, setColourBy] = useState<string | null>(null);
+  const [showDimensions, setShowDimensions] = useState(false);
   const liveScenario = source.kind === "live" ? source.scenarioId : null;
   const live = useLiveScene(liveScenario);
 
@@ -88,8 +90,11 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // Overlays and colours are worked out from the scene, which they only read.
   const selected = selectedEntity(snapshot, selectedId);
   const overlays = useMemo(
-    () => (selected === null ? [] : selectionOverlays(selected, overlayToggles)),
-    [selected, overlayToggles],
+    () => [
+      ...(selected === null ? [] : selectionOverlays(selected, overlayToggles)),
+      ...(snapshot !== null && showDimensions ? sceneDimensionOverlays(snapshot) : []),
+    ],
+    [selected, overlayToggles, snapshot, showDimensions],
   );
   const colourProperties = useMemo(
     () => (snapshot === null ? [] : scalarProperties(snapshot)),
@@ -127,8 +132,14 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         scene={shown}
         onSource={chooseSource}
       >
-        {colourProperties.length > 0 && (
-          <ColourBy properties={colourProperties} value={colourBy} onChange={setColourBy} />
+        {snapshot !== null && (
+          <DisplayOptions
+            colourProperties={colourProperties}
+            colourBy={colourBy}
+            onColourBy={setColourBy}
+            showDimensions={showDimensions}
+            onShowDimensions={setShowDimensions}
+          />
         )}
       </InfoPanel>
       <Hud

@@ -1,6 +1,7 @@
 from datetime import date
 
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.world.envelope import Envelope
 
 GREENHOUSE_002 = ScenarioConfig(
     greenhouse_id="gh_002",
@@ -12,4 +13,6 @@ GREENHOUSE_002 = ScenarioConfig(
     start_date=date(2026, 1, 1),
     duration_days=40,
     random_seed=2001,
+    # A small house around its single plant.
+    envelope=Envelope(length=4.0, width=3.2, height=4.0),
 )

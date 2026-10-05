@@ -2,9 +2,11 @@ from datetime import date
 
 from pydantic import BaseModel
 
+from greenhouse_sim.world.envelope import Envelope
+
 
 class ScenarioConfig(BaseModel):
-    """The simulated world: its size, crop, dynamics and sensor noise.
+    """The simulated world: its greenhouse, crop, dynamics and sensor noise.
 
     Which management policy runs against it, and with what thresholds, is
     not part of the world. That is the caller's choice about a run.
@@ -19,6 +21,8 @@ class ScenarioConfig(BaseModel):
     start_date: date
     duration_days: int
     random_seed: int
+    # The greenhouse around the crop: where it stands, and the space it encloses.
+    envelope: Envelope
 
     # Environment: bounds the smooth day-to-day drift stays within.
     air_temperature_bounds: tuple[float, float] = (18.0, 32.0)

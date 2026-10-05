@@ -18,7 +18,8 @@ from greenhouse_sim.scene.snapshot import (
     scene_snapshot,
 )
 from greenhouse_sim.world import GreenhouseWorld
-from greenhouse_sim.world.geometry import Cylinder, Plane
+from greenhouse_sim.world.envelope import Envelope
+from greenhouse_sim.world.geometry import Box, Cylinder, Plane, Quaternion, Transform, Vector3
 
 CONFIG = SCENARIO_REGISTRY["gh_001"]
 # More plants than one scenario row holds (10 columns), so the grid wraps.
@@ -132,6 +133,50 @@ def test_the_scene_schema_tells_a_viewer_exactly_what_it_may_receive() -> None:
     definitions = schema["$defs"]
 
     assert definitions["Shape"]["discriminator"]["propertyName"] == "shape"
-    assert set(definitions["Shape"]["discriminator"]["mapping"]) == {"plane", "cylinder", "axes"}
+    assert set(definitions["Shape"]["discriminator"]["mapping"]) == {
+        "plane",
+        "cylinder",
+        "box",
+        "axes",
+    }
     assert definitions["SceneEntityKind"]["enum"] == [kind.value for kind in SceneEntityKind]
     assert "metres" in schema["description"] and "z up" in schema["description"]
+
+
+def test_the_greenhouse_bounds_are_a_box_standing_on_the_middle_of_its_floor() -> None:
+    envelope = CONFIG.envelope
+    [bounds] = [
+        entity
+        for entity in scene_snapshot(_world(), CONFIG).entities
+        if entity.kind == SceneEntityKind.GREENHOUSE_BOUNDS
+    ]
+
+    assert bounds.entity_id == "gh_001_bounds"
+    assert bounds.shape == Box(
+        size_x=envelope.length, size_y=envelope.width, size_z=envelope.height
+    )
+    assert bounds.transform.position == Vector3(x=envelope.length / 2, y=envelope.width / 2, z=0.0)
+
+
+def test_the_bounds_follow_a_greenhouse_placed_elsewhere_in_the_world() -> None:
+    # A quarter turn about z, so the greenhouse's length runs along the world's y.
+    turned = Quaternion(w=0.5**0.5, z=0.5**0.5)
+    placed = CONFIG.model_copy(
+        update={
+            "envelope": Envelope(
+                length=8.0,
+                width=4.0,
+                height=3.0,
+                origin=Transform(position=Vector3(x=10.0, y=0.0, z=0.0), rotation=turned),
+            )
+        }
+    )
+    [bounds] = [
+        entity
+        for entity in scene_snapshot(_world(), placed).entities
+        if entity.kind == SceneEntityKind.GREENHOUSE_BOUNDS
+    ]
+
+    assert bounds.transform.rotation == turned
+    assert bounds.transform.position.x == pytest.approx(10.0 - 2.0)
+    assert bounds.transform.position.y == pytest.approx(4.0)

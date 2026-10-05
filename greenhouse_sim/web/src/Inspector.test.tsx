@@ -52,6 +52,9 @@ describe("the inspector", () => {
   it("describes each kind of shape in metres", () => {
     expect(describeShape({ shape: "plane", size_x: 2, size_y: 4.8 })).toBe("plane, 2.00 × 4.80 m");
     expect(describeShape({ shape: "axes", length: 1 })).toBe("axes, 1.00 m");
+    expect(describeShape({ shape: "box", size_x: 4, size_y: 6.4, size_z: 4 })).toBe(
+      "box, 4.00 × 6.40 × 4.00 m",
+    );
   });
 });
 

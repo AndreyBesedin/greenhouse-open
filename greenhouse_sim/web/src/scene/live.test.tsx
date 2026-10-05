@@ -8,6 +8,7 @@ import { formatInstant, formatSpeed } from "../readouts";
 import { TimeControls } from "../TimeControls";
 import type { SceneSnapshot } from "./generated/snapshotTypes";
 import { commandUrl, type LiveFrame, liveUrl, parseLiveFrame, sendLiveCommand } from "./live";
+import { SUPPORTED_SCHEMA_VERSION } from "./schemaVersion";
 import { searchFor, sourceFromSearch } from "./source";
 
 const EXAMPLE: SceneSnapshot = JSON.parse(
@@ -56,11 +57,16 @@ describe("following a scenario live", () => {
   });
 
   it("refuses a frame whose scene fails the check, saying why", () => {
-    const broken = { ...FRAME, snapshot: { ...EXAMPLE, schema_version: 2 } };
+    const broken = {
+      ...FRAME,
+      snapshot: { ...EXAMPLE, schema_version: SUPPORTED_SCHEMA_VERSION + 1 },
+    };
 
     expect(parseLiveFrame(JSON.stringify(broken))).toEqual({
       ok: false,
-      problems: ["schema version 2 is not the 1 this viewer draws"],
+      problems: [
+        `schema version ${SUPPORTED_SCHEMA_VERSION + 1} is not the ${SUPPORTED_SCHEMA_VERSION} this viewer draws`,
+      ],
     });
   });
 

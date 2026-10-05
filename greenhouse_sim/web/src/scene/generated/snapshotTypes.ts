@@ -1,8 +1,8 @@
 // Generated from greenhouse_sim/scene/snapshot.schema.json by `npm run generate`.
 // Do not edit: change the simulator's types and regenerate.
 
-export type SceneEntityKind = "GROUND" | "AXES" | "PLANT";
-export type Shape = Plane | Cylinder | Axes;
+export type SceneEntityKind = "GROUND" | "AXES" | "GREENHOUSE_BOUNDS" | "PLANT";
+export type Shape = Plane | Cylinder | Box | Axes;
 
 /**
  * One greenhouse at one simulated day, as a viewer draws it. Positions
@@ -64,6 +64,16 @@ export interface Cylinder {
   shape: "cylinder";
   radius: number;
   height: number;
+}
+/**
+ * A rectangular box standing on its frame's origin: its base is centred
+ * on the origin, and it rises along +z.
+ */
+export interface Box {
+  shape: "box";
+  size_x: number;
+  size_y: number;
+  size_z: number;
 }
 /**
  * A reference marker: one arrow from the origin along each of +x, +y and

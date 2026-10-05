@@ -48,8 +48,10 @@ PUBLIC_IMPORTS: dict[str, tuple[str, ...]] = {
     "greenhouse_sim.environment.simple": ("SimpleEnvironmentModel",),
     "greenhouse_sim.sensors.generation": ("SimpleSensorModel",),
     # Looking at a simulation.
+    "greenhouse_sim.world.envelope": ("Envelope",),
     "greenhouse_sim.world.geometry": (
         "Axes",
+        "Box",
         "Cylinder",
         "Plane",
         "Quaternion",

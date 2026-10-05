@@ -20,7 +20,7 @@ import pytest
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.api.server import create_server
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
-from greenhouse_sim.scene.snapshot import SceneEntityKind, SceneSnapshot
+from greenhouse_sim.scene.snapshot import SCHEMA_VERSION, SceneEntityKind, SceneSnapshot
 
 PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "greenhouse_sim"
 
@@ -36,7 +36,7 @@ def test_the_version_names_the_simulator_and_the_scene_schema() -> None:
 
     assert isinstance(body, dict)
     assert body["simulator"] == "greenhouse-sim"
-    assert body["scene_schema_version"] == 1
+    assert body["scene_schema_version"] == SCHEMA_VERSION
     assert isinstance(body["version"], str) and body["version"]
 
 
