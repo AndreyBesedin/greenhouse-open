@@ -3,6 +3,17 @@ import type { Point3 } from "./world";
 /** What the HUD shows about the 3D view, sampled a few times a second. */
 export interface ViewSample {
   framesPerSecond: number;
+  /** The mean and the longest time from one frame to the next, in milliseconds. */
+  frameTimeMs: number;
+  worstFrameMs: number;
+  /** What the renderer drew in a frame. */
+  drawCalls: number;
+  triangles: number;
+  /** What the renderer holds in GPU memory. */
+  geometries: number;
+  textures: number;
+  /** The page's JavaScript heap in bytes, where the browser reports it (Chromium). */
+  heapBytes: number | null;
   camera: Point3;
   objects: number;
 }
@@ -60,4 +71,30 @@ export function formatValue(value: string | number | boolean): string {
     return String(value);
   }
   return value.toFixed(VALUE_DECIMALS);
+}
+
+// Frame times to a tenth of a millisecond: finer is noise.
+const FRAME_TIME_DECIMALS = 1;
+const BYTES_PER_MEBIBYTE = 1_048_576;
+
+/** A frame's mean and worst time, as the HUD writes them. */
+export function formatFrameTime(meanMs: number, worstMs: number): string {
+  return `${meanMs.toFixed(FRAME_TIME_DECIMALS)} ms, worst ${worstMs.toFixed(FRAME_TIME_DECIMALS)} ms`;
+}
+
+/** A count with thousands separated, such as 12,345, the same in every locale. */
+export function formatCount(count: number): string {
+  return count.toLocaleString("en-US");
+}
+
+/** What the renderer holds, and the page's heap where the browser reports it. */
+export function formatMemory(
+  geometries: number,
+  textures: number,
+  heapBytes: number | null,
+): string {
+  const held = `${formatCount(geometries)} geometries, ${formatCount(textures)} textures`;
+  return heapBytes === null
+    ? held
+    : `${held}, ${formatCount(Math.round(heapBytes / BYTES_PER_MEBIBYTE))} MiB heap`;
 }

@@ -1,5 +1,13 @@
 import { PRESET_ORDER, type PresetName } from "./camera";
-import { formatInstant, formatMetres, formatPoint, type ViewSample } from "./readouts";
+import {
+  formatCount,
+  formatFrameTime,
+  formatInstant,
+  formatMemory,
+  formatMetres,
+  formatPoint,
+  type ViewSample,
+} from "./readouts";
 import type { LiveCommand, LiveConnection, LiveFrame } from "./scene/live";
 import { TimeControls } from "./TimeControls";
 import type { Point3 } from "./world";
@@ -60,8 +68,22 @@ export function Hud({
         <dd data-testid="frame-rate">
           {sample ? `${Math.round(sample.framesPerSecond)} fps` : PENDING}
         </dd>
+        <dt>Frame time</dt>
+        <dd data-testid="frame-time">
+          {sample ? formatFrameTime(sample.frameTimeMs, sample.worstFrameMs) : PENDING}
+        </dd>
+        <dt>Draw calls</dt>
+        <dd data-testid="draw-calls">
+          {sample
+            ? `${formatCount(sample.drawCalls)} (${formatCount(sample.triangles)} triangles)`
+            : PENDING}
+        </dd>
         <dt>Objects</dt>
         <dd data-testid="object-count">{sample ? sample.objects : PENDING}</dd>
+        <dt>Memory</dt>
+        <dd data-testid="memory">
+          {sample ? formatMemory(sample.geometries, sample.textures, sample.heapBytes) : PENDING}
+        </dd>
         {live && (
           <>
             <dt>Stream</dt>

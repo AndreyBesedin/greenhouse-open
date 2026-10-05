@@ -2,10 +2,9 @@ import Ajv2020 from "ajv/dist/2020";
 
 import { SNAPSHOT_SCHEMA } from "./generated/snapshotSchema";
 import type { SceneSnapshot } from "./generated/snapshotTypes";
+import { SUPPORTED_SCHEMA_VERSION } from "./schemaVersion";
 
-// The snapshot schema version this viewer draws. The simulator bumps it when
-// a change would break an existing viewer.
-export const SUPPORTED_SCHEMA_VERSION = 1;
+export { SUPPORTED_SCHEMA_VERSION };
 
 const validate = new Ajv2020({ allErrors: true, strict: true }).compile<SceneSnapshot>(
   SNAPSHOT_SCHEMA,

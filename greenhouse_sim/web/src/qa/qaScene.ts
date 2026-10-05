@@ -1,7 +1,6 @@
 import { MathUtils } from "three";
-
-import { SUPPORTED_SCHEMA_VERSION } from "../scene/checkScene";
 import type { Color, SceneEntity, SceneSnapshot } from "../scene/generated/snapshotTypes";
+import { SUPPORTED_SCHEMA_VERSION } from "../scene/schemaVersion";
 import { QA_COLOUR_PROPERTY } from "./qaPage";
 
 /**

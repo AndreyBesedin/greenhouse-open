@@ -1,3 +1,4 @@
+import { stressPlants, stressScene } from "../qa/stressScene";
 import { checkScene } from "./checkScene";
 import type { SceneSnapshot } from "./generated/snapshotTypes";
 
@@ -5,6 +6,8 @@ import type { SceneSnapshot } from "./generated/snapshotTypes";
 export type SceneSource =
   | { kind: "reference" }
   | { kind: "example" }
+  /** A dense field of plants built in the viewer, for measuring the renderer. */
+  | { kind: "stress"; plants: number }
   | { kind: "scenario"; scenarioId: string }
   | { kind: "live"; scenarioId: string };
 
@@ -27,7 +30,14 @@ export function sourceFromSearch(search: string): SceneSource {
   if (scenarioId) {
     return { kind: "scenario", scenarioId };
   }
-  return parameters.get("scene") === "example" ? { kind: "example" } : { kind: "reference" };
+  switch (parameters.get("scene")) {
+    case "example":
+      return { kind: "example" };
+    case "stress":
+      return { kind: "stress", plants: stressPlants(parameters.get("plants")) };
+    default:
+      return { kind: "reference" };
+  }
 }
 
 export function searchFor(source: SceneSource): string {
@@ -36,6 +46,8 @@ export function searchFor(source: SceneSource): string {
       return "";
     case "example":
       return "?scene=example";
+    case "stress":
+      return `?scene=stress&plants=${source.plants}`;
     case "scenario":
       return `?scenario=${encodeURIComponent(source.scenarioId)}`;
     case "live":
@@ -46,8 +58,9 @@ export function searchFor(source: SceneSource): string {
 function sceneUrl(source: SceneSource): string | null {
   switch (source.kind) {
     case "reference":
+    case "stress":
     case "live":
-      // A live scene streams in instead (see useLiveScene).
+      // A stress scene is built here, and a live scene streams in (see useLiveScene).
       return null;
     case "example":
       return EXAMPLE_SCENE_URL;
@@ -61,6 +74,10 @@ export async function loadScene(
   source: SceneSource,
   fetchFn: typeof fetch = fetch,
 ): Promise<SceneState> {
+  if (source.kind === "stress") {
+    // The viewer builds it, so it needs no check.
+    return { status: "loaded", snapshot: stressScene(source.plants) };
+  }
   const url = sceneUrl(source);
   if (url === null) {
     return { status: "none" };
