@@ -14,8 +14,8 @@ Part of [greenhouse-open](../README.md). Apache-2.0.
   the noiseless values, and `greenhouse_sim.evaluation` scores observations
   against them. Nothing on the observation path exposes them.
 - **Scenarios.** `greenhouse_sim.scenarios` holds ready-made worlds; a
-  `ScenarioConfig` describes size, crop, dynamics and sensor noise, and
-  nothing about who manages the greenhouse.
+  `ScenarioConfig` describes the greenhouse (its `Envelope`), crop, dynamics
+  and sensor noise, and nothing about who manages the greenhouse.
 - **Pluggable models.** Plant, environment and sensor models plug into the
   engine through small contracts. Simple reference models are the default.
 
@@ -76,7 +76,7 @@ behind them moves.
 
 | To | Import from |
 | --- | --- |
-| Run a simulation | `greenhouse_sim.engine`, `greenhouse_sim.scenarios`, `greenhouse_sim.world` |
+| Run a simulation | `greenhouse_sim.engine`, `greenhouse_sim.scenarios`, `greenhouse_sim.world`, `greenhouse_sim.world.envelope` |
 | Keep a run between steps | `greenhouse_sim.checkpoints` |
 | Carry out actions another way | `greenhouse_sim.executor` |
 | Advance a world without the engine | `greenhouse_sim.world_builder` |

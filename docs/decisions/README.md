@@ -27,6 +27,7 @@ changes course is a new record that supersedes the old one.
 | [0013](0013-describe-debug-overlays-as-data-in-world-coordinates.md) | Describe debug overlays as data, in world coordinates | Accepted |
 | [0014](0014-compare-screenshots-in-a-pinned-container-in-ci.md) | Compare the renderer's screenshots in a pinned container in CI | Accepted |
 | [0015](0015-batch-repeated-shapes-and-benchmark-on-a-graphics-card.md) | Batch repeated shapes, and benchmark the renderer on a graphics card | Accepted |
+| [0016](0016-the-greenhouse-has-its-own-frame.md) | The greenhouse has its own frame, described by its envelope | Accepted |
 
 ## Template
 
