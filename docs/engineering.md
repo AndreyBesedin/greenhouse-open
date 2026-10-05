@@ -243,6 +243,9 @@ Test behavior at the narrowest useful level.
   ([decision 0014](decisions/0014-compare-screenshots-in-a-pinned-container-in-ci.md)).
 - Slow external/network/CFD tests must be marked `slow` or kept outside the
   default fast loop.
+- The renderer's performance is a local, non-blocking benchmark
+  (`npm run bench` in the viewer), recorded with the machine it ran on
+  ([decision 0015](decisions/0015-batch-repeated-shapes-and-benchmark-on-a-graphics-card.md)).
 
 A test should make the failure understandable. Avoid broad end-to-end tests when
 a smaller test can explain the broken contract.

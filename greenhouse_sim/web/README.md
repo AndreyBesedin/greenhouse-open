@@ -21,7 +21,8 @@ else in the viewer deals with the difference.
 
 The panel chooses what is drawn, and the address bar keeps the choice:
 `?scene=example` is a deterministic example scene from
-`public/scenes/example.json`, `?scenario=gh_demo` is that scenario before
+`public/scenes/example.json`, `?scene=stress&plants=10000` is a dense field of
+plants for measuring the renderer, `?scenario=gh_demo` is that scenario before
 day one, from the simulator's API, and `?live=gh_demo` follows it live as the
 API plays it one simulated day per second (`python -m greenhouse_sim.api
 --seconds-per-day 0.2` plays faster). The HUD then shows the stream's state
@@ -48,6 +49,20 @@ cd greenhouse_sim/web && npm run generate                  # the viewer's types
 ```
 
 Tests on both sides fail while either is stale.
+
+## Performance
+
+Repeated shapes, plants' stems today, are drawn in instanced batches: a field
+of 100,000 plants takes four draw calls. The HUD reports the frame rate and
+time, draw calls and triangles, and memory.
+
+`npm run bench` measures the stress scene at 1,000 to 100,000 plants while
+orbiting, in the full Chromium on this machine's graphics card, and compares
+it with the baseline in `benchmarks/stress.json`; `RECORD_BENCHMARK=1 npm run
+bench` records a new one. It never fails on the numbers, and CI, which has no
+graphics card, does not run it
+([decision 0015](../../docs/decisions/0015-batch-repeated-shapes-and-benchmark-on-a-graphics-card.md)).
+Run `npx playwright install chromium` once for it.
 
 ## Screenshots
 
@@ -95,6 +110,7 @@ npm test            # Vitest
 npm run build       # production build into dist/
 PYTHON=python npm run e2e  # Playwright smoke test against the real simulator API
 npm run e2e:visual  # screenshot comparisons (they run in CI's container only)
+npm run bench       # the renderer's benchmark, on this machine's graphics card
 ```
 
 The smoke test starts the simulator's API with `$PYTHON -m greenhouse_sim.api`,
