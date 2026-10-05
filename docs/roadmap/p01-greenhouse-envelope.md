@@ -38,7 +38,7 @@ around it.
 | Step | Commit summary | Status |
 | --- | --- | --- |
 | P01.1 | `feat(world): define the greenhouse's origin, axes and bounds` | Done ([#28](https://github.com/AndreyBesedin/greenhouse-open/pull/28)) |
-| P01.2 | `feat(greenhouse): generate the floor and a rectangular envelope` | Planned |
+| P01.2 | `feat(greenhouse): generate the floor and a rectangular envelope` | Done ([#29](https://github.com/AndreyBesedin/greenhouse-open/pull/29)) |
 | P01.3 | `feat(greenhouse): add pitched roof geometry` | Planned |
 | P01.4 | `feat(greenhouse): add bays and repeated structural frames` | Planned |
 | P01.5 | `feat(envelope): add doors, vents and configurable openings` | Planned |
@@ -87,6 +87,32 @@ A floor and side and end walls, of configurable length and width, each
 surface with a semantic identifier. Visible result: an empty glasshouse box
 with visible frame edges, which the camera can enter. Tests: changing the
 dimensions in a scenario's configuration changes the geometry accordingly.
+
+As implemented (see [decision 0017](../decisions/0017-envelope-surfaces-face-into-the-greenhouse.md)):
+
+- `Envelope.surfaces()` generates the floor and four walls in the
+  greenhouse's frame, each a rectangle with an identifier and a category,
+  facing into the greenhouse. `surfaces_in_world()` places them with the
+  greenhouse's origin. Walls are named as seen from the origin, looking
+  along the length: `side_wall_right` (y = 0), `side_wall_left`,
+  `end_wall_front` (x = 0) and `end_wall_back`.
+- The scene shows them as `FLOOR` and `WALL` entities in place of the
+  provisional ground, so the scene schema moves to version 3.
+- The viewer draws the floor like the ground before it, and the walls as
+  see-through glass framed by their edges. Clicks pass through the glass
+  to what the walls enclose, and a wall's edges select it. The bounds,
+  which now lie on the walls, are drawn only with the dimensions, as an
+  outline that takes no clicks.
+- Tests:
+  - Python: one floor and four walls, with their names. The floor covers the
+    footprint, and each wall stands on one of its edges up to the height.
+    Every surface faces into the greenhouse. Every shared edge is shared by
+    exactly two surfaces, with the four top edges open until the roof. The
+    surfaces follow the envelope's dimensions, for a small house and a
+    60 by 32 m one, and a placed greenhouse places them. A wall turned to
+    face outwards, or a side wall a metre short, fails these tests.
+  - Browser: a click through the glass reaches the floor; from above, the
+    right side wall is selected by its top edge, with its size and position.
 
 ### P01.3: Pitched roof
 

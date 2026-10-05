@@ -36,9 +36,10 @@ transform, shape and properties, and debug overlays (its bounding box, its
 origin and axes, and its label) can be switched on and off around it. A
 selection stays on its entity as a live scenario moves on; clicking the sky
 clears it. "Colour by" shades entities by a numeric property, with a legend,
-and "Dimensions and axis labels" measures the greenhouse's bounds and names
-the world's axes. The bounds are see-through: clicks reach what they enclose,
-and their edges select them.
+and "Dimensions and axis labels" measures the greenhouse and names the
+world's axes, drawing its bounds as an outline. The greenhouse's walls are
+see-through glass: clicks reach what they enclose, and a wall's edges select
+it.
 Overlays are data in world coordinates, drawn by `src/debug`
 ([decision 0013](../../docs/decisions/0013-describe-debug-overlays-as-data-in-world-coordinates.md)),
 and they only ever read the scene.
