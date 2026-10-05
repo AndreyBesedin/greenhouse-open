@@ -31,10 +31,11 @@ CI is the environment that is always there.
 - A pixel differs when its colour moves by more than 0.2 on Playwright's
   scale, and a screenshot fails when more than 100 pixels differ. Moving one
   stem by its own width changes about 200.
-- A comparison never writes a baseline. When a renderer change is intended,
-  the failed job's `visual-results` artifact holds what was drawn; it is
-  reviewed and committed as the new baseline, where the pull request shows
-  the image difference.
+- A comparison never overwrites a baseline. A missing one is drawn and the
+  test fails. When a renderer change is intended, or the first baseline is
+  wanted, the failed job's `visual-results` artifact holds what was drawn;
+  it is reviewed and committed as the baseline, where the pull request
+  shows the image difference.
 - Elsewhere the comparisons are skipped. A functional test of the QA page
   runs with the other browser tests, on every platform.
 

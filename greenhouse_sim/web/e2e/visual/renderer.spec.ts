@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+
 import { expect, type Page, test } from "@playwright/test";
 
 import { DEFAULT_QA_SEED, QA_RENDERER_PATH, QA_SELECTED_ID } from "../../src/qa/qaPage.ts";
@@ -23,8 +25,10 @@ test("the renderer's QA scene matches its baseline", async ({ page }) => {
 test("a changed scene differs from the baseline, and the restored scene matches", async ({
   page,
 }, testInfo) => {
+  // This test only compares with the baseline: it must never be the one to write it.
   const updating = ["all", "changed"].includes(testInfo.config.updateSnapshots);
-  test.skip(updating, "this test only reads the baseline, so it must not rewrite it");
+  const missing = !existsSync(testInfo.snapshotPath(BASELINE, { kind: "screenshot" }));
+  test.skip(updating || missing, "compares with the baseline, which it must never write");
 
   await openQaPage(page, CHANGED_SEED);
   const matched = await expect(page)

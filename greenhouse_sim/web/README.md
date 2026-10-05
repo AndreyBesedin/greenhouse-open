@@ -60,12 +60,12 @@ Playwright container that draws the same pixels on every run
 Elsewhere `npm run e2e:visual` skips the comparison.
 
 When a change to what the renderer draws is intended, the job fails and keeps
-what it drew in its `visual-results` artifact. Review it, then make it the
-baseline:
+what it drew in its `visual-results` artifact. Review the baseline test's
+screenshot there, then make it the baseline:
 
 ```bash
 gh run download <run id> --name visual-results --dir /tmp/visual-results
-cp "$(find /tmp/visual-results -name 'renderer-seed-42-actual.png' | head -1)" \
+cp /tmp/visual-results/renderer-the-renderer-s-QA-scene-matches-its-baseline-chromium/renderer-seed-42-actual.png \
   e2e/visual/__screenshots__/renderer-seed-42-linux.png
 ```
 

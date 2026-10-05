@@ -18,8 +18,10 @@ const MAX_DIFF_PIXELS = 100;
 export default defineConfig({
   testDir: "e2e/visual",
   snapshotPathTemplate: "{testDir}/__screenshots__/{arg}-{platform}{ext}",
-  // A comparison never writes a baseline unless asked to (--update-snapshots).
-  updateSnapshots: "none",
+  // A comparison never overwrites a baseline unless asked to
+  // (--update-snapshots). A missing one is drawn into the test's results and
+  // the test fails, which is how CI hands over a first baseline.
+  updateSnapshots: "missing",
   expect: {
     toHaveScreenshot: { threshold: PIXEL_THRESHOLD, maxDiffPixels: MAX_DIFF_PIXELS },
   },

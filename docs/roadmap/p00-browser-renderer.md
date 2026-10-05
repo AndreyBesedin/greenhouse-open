@@ -237,8 +237,9 @@ As implemented (see [decision 0014](../decisions/0014-compare-screenshots-in-a-p
   which draws the same pixels on every run. A pixel differs when its colour
   moves by more than 0.2, and the screenshot fails when more than 100
   pixels differ. Moving one stem by its own width changes about 200 pixels.
-- Comparisons never write the baseline. A failed comparison keeps what it
-  drew as an artifact, from which an intended change takes its new baseline.
+- Comparisons never overwrite the baseline. A failed comparison keeps what
+  it drew as an artifact, from which an intended change, or the first
+  baseline, takes its new baseline.
 - Tests: the QA scene matches its baseline. Seed 43 fails against it, and
   seed 42 then passes again. Unit tests check that the scene passes the
   scene check and is the same for a seed. A browser test checks the page
