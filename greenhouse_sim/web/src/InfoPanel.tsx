@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { BuildInfo } from "./buildInfo";
+import { DEFAULT_STRESS_PLANTS } from "./qa/stressScene";
 import { ScenarioList } from "./ScenarioList";
 import { SceneStatus } from "./SceneStatus";
 import type { ScenariosState } from "./scenarios";
@@ -38,6 +39,12 @@ export function InfoPanel({
         </button>{" "}
         <button type="button" onClick={() => onSource({ kind: "example" })}>
           Example scene
+        </button>{" "}
+        <button
+          type="button"
+          onClick={() => onSource({ kind: "stress", plants: DEFAULT_STRESS_PLANTS })}
+        >
+          Stress scene
         </button>
       </p>
       {children}

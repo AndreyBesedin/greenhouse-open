@@ -1,0 +1,46 @@
+{
+  "recorded": "2026-10-05",
+  "machine": {
+    "platform": "darwin arm64",
+    "cpu": "Apple M2",
+    "cores": 8,
+    "memoryGib": 8
+  },
+  "browser": "Chromium 153.0.8010.12",
+  "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)",
+  "viewport": "1280 x 720",
+  "measurements": [
+    {
+      "plants": 1000,
+      "medianFramesPerSecond": 572,
+      "medianFrameMs": 1.7,
+      "worstFrameMs": 14.2,
+      "drawCalls": 4,
+      "triangles": 96002
+    },
+    {
+      "plants": 10000,
+      "medianFramesPerSecond": 570,
+      "medianFrameMs": 1.8,
+      "worstFrameMs": 19.2,
+      "drawCalls": 4,
+      "triangles": 960002
+    },
+    {
+      "plants": 50000,
+      "medianFramesPerSecond": 302,
+      "medianFrameMs": 3.3,
+      "worstFrameMs": 18,
+      "drawCalls": 4,
+      "triangles": 4800002
+    },
+    {
+      "plants": 100000,
+      "medianFramesPerSecond": 153,
+      "medianFrameMs": 6.5,
+      "worstFrameMs": 13.7,
+      "drawCalls": 4,
+      "triangles": 9600002
+    }
+  ]
+}

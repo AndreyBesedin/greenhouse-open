@@ -6,6 +6,8 @@ function describeSource(source: SceneSource): string {
       return "reference scene";
     case "example":
       return "example scene";
+    case "stress":
+      return `stress scene of ${source.plants} plants`;
     case "scenario":
       return `scenario ${source.scenarioId}, before day one`;
     case "live":

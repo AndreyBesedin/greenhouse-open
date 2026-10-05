@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { Group, Mesh } from "three";
+import { Group, InstancedMesh, Mesh } from "three";
 import { describe, expect, it } from "vitest";
 
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
@@ -34,6 +34,16 @@ describe("picking an entity", () => {
     expect(pickEntity([{ object: pointerPlane }, { object: ground.mesh }])).toBe("gh_demo_ground");
     expect(pickEntity([{ object: pointerPlane }])).toBeNull();
     expect(pickEntity([])).toBeNull();
+  });
+});
+
+describe("picking an instance of a batch", () => {
+  it("names the entity drawn as that instance", () => {
+    const batch = new InstancedMesh(undefined, undefined, 3);
+    batch.userData.entityIds = ["gh_demo_plant_001", "gh_demo_plant_002", "gh_demo_plant_003"];
+
+    expect(pickEntity([{ object: batch, instanceId: 1 }])).toBe("gh_demo_plant_002");
+    expect(pickEntity([{ object: batch, instanceId: 7 }])).toBeNull();
   });
 });
 

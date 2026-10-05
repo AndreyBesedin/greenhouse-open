@@ -39,7 +39,7 @@ renderer on them.
 | P00.5 | `feat(time): add play, pause, step, speed and reset controls` | Done ([#23](https://github.com/AndreyBesedin/greenhouse-open/pull/23)) |
 | P00.6 | `feat(debug): add selection, an inspector and overlay primitives` | Done ([#24](https://github.com/AndreyBesedin/greenhouse-open/pull/24)) |
 | P00.7 | `test(visual): add a deterministic screenshot regression harness` | Done ([#25](https://github.com/AndreyBesedin/greenhouse-open/pull/25)) |
-| P00.8 | `perf(viewer): add an instancing stress scene and diagnostics` | Planned |
+| P00.8 | `perf(viewer): add an instancing stress scene and diagnostics` | Done ([#26](https://github.com/AndreyBesedin/greenhouse-open/pull/26)) |
 
 ### P00.1: Scaffold the 3D viewer
 
@@ -251,6 +251,35 @@ An instanced rendering path, a stress scene with thousands of repeated
 objects, and frame-time, draw-call and memory diagnostics where available.
 Visible result: a dense, greenhouse-like grid stays navigable. Tests: a
 baseline performance measurement, kept as a non-blocking benchmark.
+
+As implemented (see [decision 0015](../decisions/0015-batch-repeated-shapes-and-benchmark-on-a-graphics-card.md)):
+
+- Every cylinder is drawn as one instance of a single mesh, placed by a
+  matrix from its transform, radius and height, and coloured per instance.
+  A click on an instance selects its entity; a selected plant is drawn on
+  its own so it can glow.
+- `?scene=stress&plants=10000` (the panel's Stress scene button) is a field
+  of double rows of plants, built in the viewer, of up to 100,000 plants.
+- The HUD reports the frame time (mean and worst), draw calls and
+  triangles, what the renderer holds in GPU memory, and the JavaScript heap
+  where the browser reports it.
+- `npm run bench` measures the field at 1,000 to 100,000 plants while
+  orbiting, on the graphics card, and compares with the baseline in
+  `greenhouse_sim/web/benchmarks/stress.json`. It never fails on the numbers,
+  and CI, which has no graphics card, does not run it. On the development
+  machine (Apple M2, Chromium 153), the frame rate not tied to the display:
+
+  | Plants | Frame rate | Frame time | Draw calls | Triangles |
+  | ---: | ---: | ---: | ---: | ---: |
+  | 1,000 | 572 fps | 1.7 ms | 4 | 96,002 |
+  | 10,000 | 570 fps | 1.8 ms | 4 | 960,002 |
+  | 50,000 | 302 fps | 3.3 ms | 4 | 4,800,002 |
+  | 100,000 | 153 fps | 6.5 ms | 4 | 9,600,002 |
+
+- Tests: unit tests place, turn and scale instances, pick an instance's
+  entity, and check the stress scene's layout and address. A browser test,
+  in CI's software renderer, draws 2,000 plants in single-figure draw
+  calls and picks one of them.
 
 ## Final QA: `renderer-smoke`
 
