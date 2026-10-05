@@ -1,15 +1,15 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "greenhouse_id": "gh_demo",
   "simulated_day": 9,
   "entities": [
     {
-      "entity_id": "gh_demo_ground",
-      "kind": "GROUND",
+      "entity_id": "gh_demo_floor",
+      "kind": "FLOOR",
       "transform": {
         "position": {
-          "x": 1.0,
-          "y": 2.4000000000000004,
+          "x": 2.0,
+          "y": 3.2,
           "z": 0.0
         },
         "rotation": {
@@ -21,15 +21,131 @@
       },
       "shape": {
         "shape": "plane",
-        "size_x": 2.0,
-        "size_y": 4.800000000000001
+        "size_x": 4.0,
+        "size_y": 6.4
       },
       "color": {
         "r": 0.42,
         "g": 0.33,
         "b": 0.24
       },
-      "label": "ground",
+      "label": "floor",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_side_wall_right",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 0.0,
+          "z": 2.0
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": -0.7071067811865475,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 4.0,
+        "size_y": 4.0
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "label": "side wall right",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_side_wall_left",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 6.4,
+          "z": 2.0
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.7071067811865475,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 4.0,
+        "size_y": 4.0
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "label": "side wall left",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_end_wall_front",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 3.2,
+          "z": 2.0
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 4.0,
+        "size_y": 6.4
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "label": "end wall front",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_end_wall_back",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 3.2,
+          "z": 2.0
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": -0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 4.0,
+        "size_y": 6.4
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "label": "end wall back",
       "properties": {}
     },
     {

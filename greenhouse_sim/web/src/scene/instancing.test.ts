@@ -57,8 +57,8 @@ describe("instancing cylinders", () => {
   });
 
   it("refuses an entity that is not a cylinder", () => {
-    const ground = EXAMPLE.entities.find((entity) => entity.kind === "GROUND") as SceneEntity;
+    const floor = EXAMPLE.entities.find((entity) => entity.kind === "FLOOR") as SceneEntity;
 
-    expect(() => cylinderMatrices([ground])).toThrow("gh_demo_ground is a plane, not a cylinder");
+    expect(() => cylinderMatrices([floor])).toThrow("gh_demo_floor is a plane, not a cylinder");
   });
 });

@@ -121,6 +121,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         selectedId={selectedId}
         colouring={colouring}
         overlays={overlays}
+        showBounds={showDimensions}
         onSample={setSample}
         onPointer={setPointer}
         onSelect={setSelectedId}
