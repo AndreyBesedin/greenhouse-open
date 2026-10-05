@@ -1,6 +1,6 @@
 # P00: Browser renderer and visual QA foundation
 
-**Status:** in progress. Part of the [simulator roadmap](README.md).
+**Status:** done. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -288,10 +288,49 @@ driven by Python, pause, step and reset, overlay arrows and bounding boxes,
 deterministic replay, the screenshot baseline, and stress-scene
 interactivity.
 
+As implemented ([#27](https://github.com/AndreyBesedin/greenhouse-open/pull/27)),
+`e2e/renderer-smoke.spec.ts` walks through the renderer as a person would,
+starting from `/?live=gh_002`:
+
+1. The live scenario moves on, day by day, as Python advances it.
+2. Each camera preset moves the camera to its pose.
+3. Pause holds the day, reset returns to day 0, and step moves one day.
+4. A plant is selected, and the inspector shows its position.
+5. Its bounding box and its origin and axes are drawn: switching each off
+   removes objects from the scene, and switching them back restores the
+   count. Its label is shown.
+6. A reset, followed by the same steps, shows the plant's properties exactly
+   as before: the replay is deterministic.
+7. Playing again, Python moves it on.
+8. The screenshot baseline's page, `/qa/renderer?seed=42`, draws its seeded
+   scene. Its screenshot is compared in CI's visual checks job (P00.7).
+9. The stress scene of 10,000 plants keeps single-figure draw calls, orbits
+   when dragged, and lets a plant be picked.
+
+It runs with the other browser tests in CI, as a Playwright project of its
+own that starts once they have passed, since it drives a shared live run.
+A reset that keeps the grown world, planted on purpose, fails it at step 6.
+Frame rates on a graphics card are recorded by the benchmark (P00.8).
+
 ## Acceptance criteria
 
-- [ ] The renderer runs entirely in the browser.
-- [ ] Python drives scene state without any rendering responsibility.
-- [ ] A deterministic scene is visually regression-tested.
-- [ ] Debug overlays are reusable by airflow, radiation, sensors and plants.
-- [ ] Later projects do not need another visualization stack.
+- [x] The renderer runs entirely in the browser: React, Three.js and React
+  Three Fiber in `greenhouse_sim/web` (P00.1, decision
+  [0008](../decisions/0008-build-the-viewer-with-npm-node-24-and-vite.md)).
+- [x] Python drives scene state without any rendering responsibility: the
+  simulator sends scene snapshots, which are data with no renderer in them,
+  and streams them live (P00.3, P00.4, decision
+  [0012](../decisions/0012-stream-to-the-viewer-with-server-sent-events.md)).
+- [x] A deterministic scene is visually regression-tested: the seeded QA
+  page, in CI's pinned container (P00.7, decision
+  [0014](../decisions/0014-compare-screenshots-in-a-pinned-container-in-ci.md)).
+- [x] Debug overlays are reusable by airflow, radiation, sensors and plants:
+  they are data in world coordinates, which any project can produce (P00.6,
+  decision
+  [0013](../decisions/0013-describe-debug-overlays-as-data-in-world-coordinates.md)).
+- [x] Later projects do not need another visualization stack: a new kind of
+  entity is a schema change and a renderer entry, repeated shapes are
+  batched (decision
+  [0015](../decisions/0015-batch-repeated-shapes-and-benchmark-on-a-graphics-card.md)),
+  and overlays, selection, time controls and screenshots come with the
+  viewer. P01 onwards build on it.
