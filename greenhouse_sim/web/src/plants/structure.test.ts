@@ -32,8 +32,12 @@ const PLANT = {
               fruit: {
                 born_tt: 70,
                 fruit_id: "p01_t01_fr01",
-                diameter_mm: 4,
-                stage: "growing",
+                diameter_mm: 40,
+                final_diameter_mm: 60,
+                mass_g: 33.5,
+                breaker_tt: 90,
+                ripeness: 0.4,
+                stage: "attached",
               },
             },
             { born_tt: 45, flower_id: "p01_t01_fl02", rank: 2, stage: "bud", fruit: null },
@@ -42,7 +46,16 @@ const PLANT = {
               flower_id: "p01_t01_fl03",
               rank: 3,
               stage: "set",
-              fruit: { born_tt: 80, fruit_id: "p01_t01_fr03", diameter_mm: 6, stage: "aborted" },
+              fruit: {
+                born_tt: 80,
+                fruit_id: "p01_t01_fr03",
+                diameter_mm: 6,
+                final_diameter_mm: 55,
+                mass_g: 0.1,
+                breaker_tt: 560,
+                ripeness: 0,
+                stage: "aborted",
+              },
             },
           ],
         },
@@ -82,7 +95,8 @@ describe("a plant's structure", () => {
     const organs = Object.fromEntries(flatten(organTree(PLANT)).map((node) => [node.id, node]));
 
     expect(organs.p01_n01_leaf?.detail).toBe("100 °Cd, mature");
-    expect(organs.p01_t01_fr01?.detail).toBe("30 °Cd, growing");
+    expect(organs.p01_t01_fr01?.detail).toBe("30 °Cd, attached, 40% ripe");
+    expect(organs.p01_t01_fr03?.detail).toBe("20 °Cd, aborted");
     expect(organs.p01_n01?.detail).toBe("100 °Cd");
   });
 

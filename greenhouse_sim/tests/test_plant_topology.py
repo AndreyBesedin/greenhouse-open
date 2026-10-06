@@ -25,6 +25,17 @@ from greenhouse_sim.world.geometry import Transform, Vector3
 PLANT = young_plant("p01")
 
 
+def _fruit(fruit_id: str) -> Fruit:
+    return Fruit(
+        fruit_id=fruit_id,
+        born_tt=264.0,
+        diameter_mm=2.0,
+        final_diameter_mm=60.0,
+        mass_g=0.004,
+        breaker_tt=700.0,
+    )
+
+
 def test_the_reference_plant_keeps_every_rule_of_the_structure() -> None:
     assert topology_problems(PLANT) == []
 
@@ -87,9 +98,7 @@ def _first_flower(plant: Plant) -> Flower:
         (
             _with_flower(
                 PLANT,
-                _first_flower(PLANT).model_copy(
-                    update={"fruit": Fruit(fruit_id="p01_t01_fr01", born_tt=264.0, diameter_mm=2.0)}
-                ),
+                _first_flower(PLANT).model_copy(update={"fruit": _fruit("p01_t01_fr01")}),
             ),
             "has a fruit if and only if it set",
         ),
@@ -105,7 +114,7 @@ def _first_flower(plant: Plant) -> Flower:
                 _first_flower(PLANT).model_copy(
                     update={
                         "stage": FlowerStage.SET,
-                        "fruit": Fruit(fruit_id="p01_t01_fr09", born_tt=264.0, diameter_mm=2.0),
+                        "fruit": _fruit("p01_t01_fr09"),
                     }
                 ),
             ),

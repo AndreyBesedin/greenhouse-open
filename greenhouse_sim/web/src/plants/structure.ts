@@ -53,13 +53,18 @@ function list(value: Fields, name: string): unknown[] {
 // The stages in which the view draws a flower, and a fruit: a set flower is
 // drawn as its fruit, and an aborted flower or fruit has dropped.
 const DRAWN_FLOWER_STAGES: ReadonlySet<unknown> = new Set(["bud", "open"]);
-const DRAWN_FRUIT_STAGES: ReadonlySet<unknown> = new Set(["growing"]);
+const DRAWN_FRUIT_STAGES: ReadonlySet<unknown> = new Set(["attached"]);
+const PERCENT = 100;
 
-/** An organ's thermal age, and its stage if it has one. */
+/** An organ's thermal age, its stage if it has one, and how ripe it is if
+ * it has started to ripen. */
 function describe(organ: Fields, thermalTime: number): string {
   const age = `${Math.round(thermalTime - number(organ, "born_tt"))} °Cd`;
-  const stage = organ.stage;
-  return typeof stage === "string" ? `${age}, ${stage}` : age;
+  const stage = typeof organ.stage === "string" ? `, ${organ.stage}` : "";
+  const ripeness = organ.ripeness;
+  const ripe =
+    typeof ripeness === "number" && ripeness > 0 ? `, ${Math.round(ripeness * PERCENT)}% ripe` : "";
+  return `${age}${stage}${ripe}`;
 }
 
 /** The plant's structure as a tree, checked rather than trusted. */

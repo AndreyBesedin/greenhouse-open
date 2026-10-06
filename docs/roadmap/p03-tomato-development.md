@@ -54,7 +54,7 @@ P00 gives the viewer, P02 the planting positions plants stand at.
 | P03.3 | `feat(plants): add thermal-time organogenesis` | Done |
 | P03.4 | `feat(plants): add correlated stochastic plant variation` | Done |
 | P03.5 | `feat(plants): add trusses, flowers and fruit set` | Done |
-| P03.6 | `feat(plants): add fruit growth, ripeness and colour` | Planned |
+| P03.6 | `feat(plants): add fruit growth, ripeness and colour` | Done |
 | P03.7 | `feat(plants): consume local environment inputs` | Planned |
 | P03.8 | `feat(plants): add pruning, harvest and lowering actions` | Planned |
 | P03.9 | `test(plants): add biological and visual regression scenarios` | Planned |
@@ -356,6 +356,58 @@ A fruit size and mass curve, maturity stages, a green to breaker to orange
 and red appearance mapping, and a stochastic ripening offset. Visible
 result: a time-lapse visibly changes fruit size and colour. Tests: ripeness
 never decreases, and the drawn colour is derived from biological state.
+
+As implemented:
+
+- `organ.fruit` (`FruitParams`, part of the truss parameters):
+  - **When it sets:** a fruit draws, from its own generator, its final
+    diameter and its ripening offset. The final diameter is around 62 mm
+    (about 125 g) by 8%, 4% smaller for each flower further along its truss.
+    The offset is how much earlier or later than typical it starts to
+    ripen, by 8%.
+  - **Growth:** it grows from 6 mm to its final diameter along a smooth
+    S-curve over 450 °Cd.
+  - **Ripening:** it starts to ripen (breaker) a typical 480 °Cd after it
+    set, scaled by its offset, and ripens to red over 100 °Cd. Its
+    ripeness, from 0 to 1, never goes back.
+  - **Mass and class:** its fresh mass follows from its volume, and its
+    maturity class (green, breaker, turning, pink, light red, red) from its
+    ripeness.
+  - **Aborted fruit:** stays as it was when it dropped, however long the
+    step.
+- **State:** a fruit records its diameter, final diameter, mass, breaker
+  time and ripeness. The fruit stage `growing` becomes `attached`: on the
+  plant, growing and ripening.
+- **Rules:** the topology gains two, that no fruit is larger than it grows
+  and none ripens before it sets. `change_problems` adds that no organ
+  shrinks and no fruit unripens.
+- **Scene:**
+  - **Colour:** a fruit's colour is its ripeness's, blended from green
+    through yellow and orange to red.
+  - **Properties:** every organ's entity reports its sizes, and a fruit its
+    mass, ripeness and maturity class, so the viewer can colour by any of
+    them.
+- **Viewer:** the tree adds how ripe a ripening fruit is.
+- **The lab's run** extends to 90 days, by which the lower trusses are red,
+  and its camera sees its nearest plants whole on that day.
+- Tests:
+  - Python:
+    - a fruit sets small and grows along an S-curve to its final size;
+    - its mass follows its volume;
+    - final sizes vary within their range and shrink along the truss;
+    - a fruit ripens from its breaker to red and never back;
+    - each fruit draws its own ripening offset;
+    - maturity classes;
+    - colours run from green through orange to red;
+    - a drawn fruit's colour, sizes and class are its state's;
+    - an aborted fruit stays as it was;
+    - the lab's first plant's fruits by class and their mass on days 60, 75
+      and 90;
+    - shrinking and unripening are found out;
+    - three lab plants are followed day by day through the whole run.
+  - Viewer: a ripening fruit's ripeness in the tree.
+  - Browser: a fruit followed from day 60 to the run's end turns from green
+    to red and gains mass.
 
 ### P03.7: Local environment inputs
 

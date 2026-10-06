@@ -128,7 +128,7 @@ def test_a_set_flowers_fruit_takes_its_place_and_appears_when_it_set() -> None:
             assert flower.fruit.born_tt == pytest.approx(
                 flower.born_tt + TRUSSES.anthesis_cd + TRUSSES.set_decision_cd
             )
-            assert flower.fruit.diameter_mm == TRUSSES.set_fruit_diameter_mm
+            assert flower.fruit.diameter_mm >= TRUSSES.fruits.set_diameter_mm
 
 
 def test_flowers_near_a_trusss_base_set_more_often_than_those_at_its_tip() -> None:
@@ -155,17 +155,19 @@ def test_a_young_fruit_aborts_now_and_then_and_stays_aborted() -> None:
         TRUSSES.fruit_abortion_probability, abs=0.02
     )
     young = [f for f in fruits if f.born_tt + TRUSSES.fruit_abortion_cd > FRUITING_CD]
-    assert all(f.stage == FruitStage.GROWING for f in young)
+    assert all(f.stage == FruitStage.ATTACHED for f in young)
 
 
 def test_every_organ_keeps_its_identity_and_changes_stage_only_as_allowed() -> None:
+    """Three of the lab's plants, day after day through the lab's run."""
     for plant_id in ("p01", "p02", "p03"):
         previous = plants.structure(0, plants.LAB_SEED, plant_id)
         for day in range(1, plants.LAST_DAY + 1):
-            current = plants.structure(day, plants.LAB_SEED, plant_id)
+            current = grow(previous, [plants.LAB_TEMPERATURE_C], plants.DEVELOPMENT)
             assert change_problems(previous, current) == [], (plant_id, day)
             assert topology_problems(current) == [], (plant_id, day)
             previous = current
+        assert previous == plants.structure(plants.LAST_DAY, plants.LAB_SEED, plant_id)
 
 
 def test_a_fruit_followed_from_its_set_keeps_its_identifier_and_birth() -> None:
@@ -245,7 +247,7 @@ def test_buds_flowers_and_fruits_are_drawn_as_they_are_and_dropped_ones_not() ->
                 assert drawn.shape.radius == radius
             else:
                 assert drawn is None
-            if fruit is not None and fruit.stage == FruitStage.GROWING:
+            if fruit is not None and fruit.stage == FruitStage.ATTACHED:
                 sphere = shapes[fruit.fruit_id].shape
                 assert isinstance(sphere, Sphere)
                 assert sphere.radius == pytest.approx(fruit.diameter_mm * METRES_PER_MM / 2)

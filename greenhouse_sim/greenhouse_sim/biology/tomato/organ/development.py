@@ -27,6 +27,7 @@ from typing import Annotated, Final
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt
 
+from greenhouse_sim.biology.tomato.organ.curves import smoothstep
 from greenhouse_sim.biology.tomato.organ.reproduction import (
     TrussParams,
     bears_truss,
@@ -51,9 +52,6 @@ from greenhouse_sim.biology.tomato.organ.topology import (
 
 type Fraction = Annotated[float, Field(gt=0, lt=1)]
 
-# The smoothstep curve, 3p² - 2p³: flat at both ends, steepest halfway.
-SMOOTHSTEP_SQUARE: Final = 3
-SMOOTHSTEP_CUBE: Final = 2
 # An organ's own variation is held within this many standard deviations.
 ORGAN_LIMIT_SD: Final = 2.5
 
@@ -120,9 +118,7 @@ def growth_fraction(age_cd: float, initial: float, params: DevelopmentParams) ->
     """The share of its final size an organ of this thermal age has reached:
     `initial` when it appears, rising along a smooth S-curve to all of it
     when its expansion time has passed."""
-    progress = min(1.0, max(0.0, age_cd / params.expansion_cd))
-    smooth = progress * progress * (SMOOTHSTEP_SQUARE - SMOOTHSTEP_CUBE * progress)
-    return min(1.0, initial + (1 - initial) * smooth)
+    return min(1.0, initial + (1 - initial) * smoothstep(age_cd / params.expansion_cd))
 
 
 def final_size_fraction(rank: int, params: DevelopmentParams) -> float:
