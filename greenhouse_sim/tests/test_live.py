@@ -10,10 +10,10 @@ from http import HTTPStatus
 
 import pytest
 
-from greenhouse_sim.api.live import SPEEDS, LiveFrame, LiveRun, LiveRuns
 from greenhouse_sim.api.routes import control
 from greenhouse_sim.api.server import SimulatorServer, create_server
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.services.live import SPEEDS, LiveFrame, LiveRun, LiveRuns
 
 CONFIG = SCENARIO_REGISTRY["gh_demo"]
 NOON_ON_DAY_ZERO = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)

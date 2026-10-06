@@ -17,8 +17,9 @@ from http.server import ThreadingHTTPServer
 
 import pytest
 
-from greenhouse_sim.api.routes import respond
-from greenhouse_sim.api.server import create_server
+from greenhouse_sim.api import server as server_module
+from greenhouse_sim.api.routes import Response, respond
+from greenhouse_sim.api.server import UNEXPECTED_FAILURE, create_server
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scene.snapshot import SCHEMA_VERSION, SceneEntityKind, SceneSnapshot
 
@@ -109,6 +110,23 @@ def test_the_server_answers_over_http_on_the_loopback_interface(
         urllib.request.urlopen(f"http://{host!s}:{port}/api/nothing_here")
     assert refused.value.code == HTTPStatus.NOT_FOUND
     assert json.load(refused.value)["error"]
+
+
+def test_a_request_the_simulator_fails_on_is_answered_500_and_logged(
+    server: ThreadingHTTPServer, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def failing(method: str, path: str) -> Response:
+        raise RuntimeError("a failure nobody planned for")
+
+    monkeypatch.setattr(server_module, "respond", failing)
+    host, port = server.server_address[:2]
+
+    with pytest.raises(urllib.error.HTTPError) as failed:
+        urllib.request.urlopen(f"http://{host!s}:{port}/api/health")
+
+    assert failed.value.code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert json.load(failed.value) == {"error": UNEXPECTED_FAILURE}
+    assert "a failure nobody planned for" in capsys.readouterr().err
 
 
 def test_nothing_in_the_simulator_imports_its_api() -> None:

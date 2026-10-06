@@ -9,19 +9,24 @@ tool for a developer's own machine, not a service.
 Live scenarios stream as Server-Sent Events (decision 0012): a `frame` event
 per simulated day, and a comment now and then to keep the connection open.
 Commands for a live run (play, pause, step, reset, speed) are POST requests.
+A request the simulator fails on unexpectedly is answered 500, with the
+failure in the server's log.
 """
 
 import argparse
 import json
-from collections.abc import Sequence
+import traceback
+from collections.abc import Callable, Sequence
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Final, cast
 
-from greenhouse_sim.api.live import DEFAULT_SECONDS_PER_DAY, LiveRun, LiveRuns
-from greenhouse_sim.api.routes import Response, control, live_scenario, respond
+from greenhouse_sim.api.routes import Response, control, live_stream, respond
+from greenhouse_sim.services.live import DEFAULT_SECONDS_PER_DAY, LiveRun, LiveRuns
 
 LOOPBACK: Final = "127.0.0.1"
+# What a client is told when the simulator fails on its request unexpectedly.
+UNEXPECTED_FAILURE: Final = "the simulator failed to answer; its log says why"
 DEFAULT_PORT: Final = 8765
 # How long a quiet stream waits before sending a keep-alive comment.
 KEEPALIVE_SECONDS: Final = 15.0
@@ -45,15 +50,32 @@ class SimulatorServer(ThreadingHTTPServer):
 
 class _Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
-        config = live_scenario(self.path)
-        if config is not None:
-            self._stream(cast(SimulatorServer, self.server).live.run_for(config))
-            return
-        self._send(respond("GET", self.path))
+        stream = self._safely(lambda: live_stream(self.path, self._live))
+        if isinstance(stream, LiveRun):
+            self._stream(stream)
+        elif stream is not None:
+            self._send(stream)
+        else:
+            self._send(self._safely(lambda: respond("GET", self.path)))
 
     def do_POST(self) -> None:
-        response = control(self.path, cast(SimulatorServer, self.server).live)
-        self._send(response if response is not None else respond("POST", self.path))
+        response = self._safely(lambda: control(self.path, self._live))
+        if response is None:
+            response = self._safely(lambda: respond("POST", self.path))
+        self._send(response)
+
+    @property
+    def _live(self) -> LiveRuns:
+        return cast(SimulatorServer, self.server).live
+
+    def _safely[T](self, answer: Callable[[], T]) -> T | Response:
+        """The route's answer, or a 500 if the simulator failed unexpectedly."""
+        try:
+            return answer()
+        except Exception:  # every failure is answered, and logged
+            self.log_error("failed to answer %s %s", self.command, self.path)
+            traceback.print_exc()
+            return Response(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": UNEXPECTED_FAILURE})
 
     def _send(self, response: Response) -> None:
         body = json.dumps(response.body).encode()
