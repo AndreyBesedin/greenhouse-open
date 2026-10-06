@@ -43,7 +43,7 @@ export function InfoPanel({
         <button type="button" onClick={() => onSource({ kind: "fixtures" })}>
           Fixture gallery
         </button>{" "}
-        <button type="button" onClick={() => onSource({ kind: "plants" })}>
+        <button type="button" onClick={() => onSource({ kind: "plants", day: 0 })}>
           Plant lab
         </button>{" "}
         <button

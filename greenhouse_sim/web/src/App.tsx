@@ -14,6 +14,7 @@ import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
 import { OpeningControls } from "./OpeningControls";
 import { PLANT_LAB_POSE } from "./plants/lab";
+import { PlantDay } from "./plants/PlantDay";
 import { PlantStructure } from "./plants/PlantStructure";
 import type { ViewSample } from "./readouts";
 import { loadScenarios, type ScenariosState } from "./scenarios";
@@ -45,8 +46,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [colourBy, setColourBy] = useState<string | null>(null);
   const [showDimensions, setShowDimensions] = useState(false);
   const [byCategory, setByCategory] = useState(false);
-  // Which scenario's scene is on show, so reopening it does not blank it.
-  const shownScenario = useRef<string | null>(null);
+  // Which scenario's scene, or the plant lab's, is on show, so reopening it
+  // does not blank it.
+  const shownView = useRef<string | null>(null);
   const liveScenario = source.kind === "live" ? source.scenarioId : null;
   const live = useLiveScene(liveScenario);
 
@@ -75,14 +77,21 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       return;
     }
     let current = true;
-    // A scenario reopened by its sliders keeps its scene on show until the
-    // next arrives; any other change of scene starts from loading.
-    const sameScenario = source.kind === "scenario" && source.scenarioId === shownScenario.current;
-    shownScenario.current = source.kind === "scenario" ? source.scenarioId : null;
+    // A scenario reopened by its sliders, or the plant lab on another day,
+    // keeps its scene on show until the next arrives; any other change of
+    // scene starts from loading.
+    const view =
+      source.kind === "scenario"
+        ? `scenario ${source.scenarioId}`
+        : source.kind === "plants"
+          ? "plants"
+          : null;
+    const sameView = view !== null && view === shownView.current;
+    shownView.current = view;
     setScene((previous) =>
       source.kind === "reference"
         ? { status: "none" }
-        : sameScenario && previous.status === "loaded"
+        : sameView && previous.status === "loaded"
           ? previous
           : { status: "loading" },
     );
@@ -101,6 +110,16 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       return;
     }
     const next: SceneSource = { ...source, openings };
+    history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
+    setSource(next);
+  }
+
+  // A selection is kept from one day to the next: its organ is the same organ.
+  function setPlantDay(day: number): void {
+    if (source.kind !== "plants") {
+      return;
+    }
+    const next: SceneSource = { ...source, day };
     history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
     setSource(next);
   }
@@ -197,7 +216,15 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
               />
             )}
             {source.kind === "plants" && (
+              <PlantDay
+                day={source.day}
+                shownDay={snapshot === null ? null : snapshot.simulated_day}
+                onDay={setPlantDay}
+              />
+            )}
+            {source.kind === "plants" && (
               <PlantStructure
+                day={source.day}
                 selectedOrgan={selected === null ? null : organOf(selected)}
                 onSelect={(organId) => setSelectedId(entityOfOrgan(snapshot, organId))}
               />

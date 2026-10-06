@@ -1,3 +1,4 @@
+import { PLANT_LAB_LAST_DAY } from "../plants/lab";
 import { stressPlants, stressScene } from "../qa/stressScene";
 import { checkScene } from "./checkScene";
 import type { SceneSnapshot } from "./generated/snapshotTypes";
@@ -8,8 +9,9 @@ export type SceneSource =
   | { kind: "example" }
   /** One fixture of each primitive, side by side, as the simulator draws them. */
   | { kind: "fixtures" }
-  /** The plant lab: tomato plants from the organ-level model. */
-  | { kind: "plants" }
+  /** The plant lab: tomato plants from the organ-level model, on a day of
+   * the lab's run. */
+  | { kind: "plants"; day: number }
   /** A dense field of plants built in the viewer, for measuring the renderer. */
   | { kind: "stress"; plants: number }
   /** A scenario's scene from the simulator, with another of its layouts if
@@ -58,7 +60,7 @@ export function sourceFromSearch(search: string): SceneSource {
     };
   }
   if (parameters.get("plants") === "lab") {
-    return { kind: "plants" };
+    return { kind: "plants", day: labDay(parameters.get("day")) };
   }
   switch (parameters.get("scene")) {
     case "example":
@@ -72,6 +74,13 @@ export function sourceFromSearch(search: string): SceneSource {
   }
 }
 
+/** The plant lab's day an address asks for: a whole number of days within
+ * the lab's run, or its first day. */
+function labDay(text: string | null): number {
+  const day = Number(text ?? "0");
+  return Number.isInteger(day) && day >= 0 && day <= PLANT_LAB_LAST_DAY ? day : 0;
+}
+
 export function searchFor(source: SceneSource): string {
   switch (source.kind) {
     case "reference":
@@ -81,7 +90,7 @@ export function searchFor(source: SceneSource): string {
     case "fixtures":
       return "?scene=fixtures";
     case "plants":
-      return "?plants=lab";
+      return source.day === 0 ? "?plants=lab" : `?plants=lab&day=${source.day}`;
     case "stress":
       return `?scene=stress&plants=${source.plants}`;
     case "scenario":
@@ -151,7 +160,7 @@ function sceneUrl(source: SceneSource): string | null {
     case "fixtures":
       return FIXTURE_GALLERY_URL;
     case "plants":
-      return PLANT_LAB_SCENE_URL;
+      return `${PLANT_LAB_SCENE_URL}?day=${source.day}`;
     case "scenario":
       return `/api/scenarios/${encodeURIComponent(source.scenarioId)}/scene${changesQuery(source, "?")}`;
   }

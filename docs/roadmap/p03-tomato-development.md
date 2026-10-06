@@ -51,7 +51,7 @@ P00 gives the viewer, P02 the planting positions plants stand at.
 | --- | --- | --- |
 | P03.1 | `feat(plants): define plant topology and organ state schema` | Done |
 | P03.2 | `feat(plants): procedural stem, internode and leaf geometry` | Done |
-| P03.3 | `feat(plants): add thermal-time organogenesis` | Planned |
+| P03.3 | `feat(plants): add thermal-time organogenesis` | Done |
 | P03.4 | `feat(plants): add correlated stochastic plant variation` | Planned |
 | P03.5 | `feat(plants): add trusses, flowers and fruit set` | Planned |
 | P03.6 | `feat(plants): add fruit growth, ripeness and colour` | Planned |
@@ -173,6 +173,62 @@ expansion, with configurable developmental rates. Visible result: a time
 slider grows one plant from transplant size to a taller vegetative plant.
 Tests: a fixed environment and seed give exact organ counts at reference
 dates.
+
+As implemented:
+
+- `organ.development` grows a plant as thermal time accumulates.
+  - **Thermal time:** each day adds its mean temperature above a base of
+    10 °C, counting nothing past a cap of 30 °C.
+  - **Phytomers:** a plant emerges with one phytomer, and another appears at
+    the top of the stem every phyllochron (33 °Cd), each when its
+    phyllochron is up rather than when a step ends.
+  - **Growth:** internodes and leaves appear at a small share of their final
+    sizes and grow to them along a smooth S-curve of their thermal age, over
+    an expansion time of 160 °Cd. A leaf is expanding until then, and mature
+    after.
+  - **Final sizes:** fixed when the organ appears, and recorded in its state.
+    They grow up the stem from the first phytomer's, a third of the full
+    sizes, to the full sizes from the tenth phytomer up.
+  - **What is carried:** a removed leaf stays removed, and trusses are
+    carried as they are until P03.5 grows them.
+  - **Step size:** development depends on thermal time alone, so a plant
+    grown in one step or day by day is the same plant.
+- `DevelopmentParams` holds the rates and sizes: base and cap temperatures,
+  phyllochron, expansion time, initial shares, full final sizes, and how
+  they grow up the stem.
+- The topology's rules gain one: an organ is never larger than it grows.
+- **The plant lab runs for 60 days.** Its plant is a transplant of 230 °Cd,
+  seven phytomers and about 20 cm, grown at a constant 21 °C (11 °Cd a day).
+  By day 60 it has 27 phytomers and is about 1.5 m tall.
+  - **API:** `GET /api/plants/scene?day=` and `/structure?day=` show any day,
+    and refuse a day outside the run, or one that is not a whole number.
+  - **Viewer:** a day slider (`?plants=lab&day=30`) asks for the plant on that
+    day. The scene and tree on show stay until the next day's arrive. A
+    selected organ stays selected from day to day, since it is the same
+    organ.
+  - **Camera:** the lab opens far enough out to see the plant whole on its
+    last day.
+- Tests:
+  - Python:
+    - a day's thermal time, with its base and cap;
+    - a plant emerges with its first phytomer at its initial size;
+    - a phytomer appears every phyllochron;
+    - exact organ counts on reference days of the lab's run (days 0, 10,
+      30, 60);
+    - one step or day by day give the same plant;
+    - organs grow and mature, but never shrink or grow young, and every day's
+      plant keeps the structure's rules;
+    - the S-curve, leaf maturity and final sizes up the stem;
+    - a removed leaf and a truss are carried;
+    - an organ keeps its identity from one day to the next;
+    - the lab's days, and the days it refuses.
+  - Viewer: the address bar's day, and the structure is asked for by day.
+  - Browser:
+    - the lab draws day 0's plant;
+    - a leaflet clicked in the view presses its leaf in the tree;
+    - the slider grows the plant to day 30, keeping a selected leaf selected
+      and older;
+    - the slider's last day is the simulator's.
 
 ### P03.4: Correlated stochastic plant variation
 

@@ -25,8 +25,10 @@ check; a route that comes to need one checks it first.
     GET /api/scenarios/{id}/layout        a scenario's layout, as its file holds
                                           it; ?layout=benches another of them
     GET /api/plants/scene                 the plant lab's scene: tomato plants from
-                                          the organ-level model
-    GET /api/plants/structure             the lab's plant, organ by organ
+                                          the organ-level model; ?day=12 on
+                                          another day of the lab's run
+    GET /api/plants/structure             the lab's plant, organ by organ; ?day=12
+                                          on another day
     GET /api/scenarios/{id}/live          the scenario played live, as Server-Sent
                                           Events (served by `server`, found by
                                           `live_stream`)
@@ -75,9 +77,9 @@ def respond(method: str, path: str) -> Response:
         case ["api", "scenarios"]:
             return _answer(scenarios.scenario_summaries)
         case ["api", "plants", "scene"]:
-            return _answer(plants.scene)
+            return _answer(lambda: plants.scene(_day(query)))
         case ["api", "plants", "structure"]:
-            return _answer(plants.structure)
+            return _answer(lambda: plants.structure(_day(query)))
         case ["api", "scenarios", scenario_id, "scene"]:
             return _answer(lambda: scenarios.initial_scene(scenario_id, _scene_changes(query)))
         case ["api", "scenarios", scenario_id, "layout"]:
@@ -189,6 +191,17 @@ def _multiplier(query: Query) -> float:
         return float(values[0])
     except ValueError:
         raise InvalidSpeed() from None
+
+
+def _day(query: Query) -> int:
+    """The day a query asks for, as a whole number: day 0 unless it says."""
+    day = _last(query, "day")
+    if day is None:
+        return 0
+    try:
+        return int(day)
+    except ValueError:
+        raise InvalidRequest(f"day wants a whole number, not {day!r}") from None
 
 
 def _last(query: Query, name: str) -> str | None:

@@ -44,18 +44,22 @@ function Organ({
  * its kind, thermal age and stage. An organ the view draws can be selected
  * from here, as it can by clicking any part of it. */
 export function PlantStructure({
+  day,
   selectedOrgan,
   onSelect,
 }: {
+  /** The day of the lab's run whose plant it shows. */
+  day: number;
   /** The organ the selected entity draws part of. */
   selectedOrgan: string | null;
   onSelect: (organId: string) => void;
 }) {
   const [state, setState] = useState<StructureState>({ status: "loading" });
 
+  // Another day's tree stays on show until this day's arrives.
   useEffect(() => {
     let current = true;
-    void loadPlantStructure().then((loaded) => {
+    void loadPlantStructure(day).then((loaded) => {
       if (current) {
         setState(loaded);
       }
@@ -63,7 +67,7 @@ export function PlantStructure({
     return () => {
       current = false;
     };
-  }, []);
+  }, [day]);
 
   switch (state.status) {
     case "loading":

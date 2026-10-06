@@ -1,11 +1,11 @@
 """A reference young tomato plant, built by hand from fixed sizes.
 
-Until the model grows plants itself from thermal time (P03.3), this is the
-plant the lab shows and the tests hold to the topology's rules: nine
-phytomers, a phyllochron apart, the first truss on the ninth with six flower
-buds. Its sizes are typical of a transplant a few weeks old: its lower
-phytomers full grown, and its youngest still growing, each in proportion to
-its thermal age.
+The development model grows plants from thermal time (`development`); this
+one is built by hand, with a truss the model does not yet grow (P03.5), for
+the tests to hold to the topology's rules and to draw: nine phytomers, a
+phyllochron apart, the first truss on the ninth with six flower buds. Its
+sizes are typical of a transplant a few weeks old: its lower phytomers full
+grown, and its youngest still growing, each in proportion to its thermal age.
 """
 
 from typing import Final
@@ -82,11 +82,14 @@ def young_plant(plant_id: str) -> Plant:
                     born_tt=born,
                     length_cm=INTERNODE_LENGTH_CM * grown,
                     diameter_mm=INTERNODE_DIAMETER_MM * diameter,
+                    final_length_cm=INTERNODE_LENGTH_CM,
+                    final_diameter_mm=INTERNODE_DIAMETER_MM,
                 ),
                 leaf=Leaf(
                     leaf_id=leaf_id(plant_id, rank),
                     born_tt=born,
                     length_cm=LEAF_LENGTH_CM * grown,
+                    final_length_cm=LEAF_LENGTH_CM,
                     stage=LeafStage.MATURE if grown == 1.0 else LeafStage.EXPANDING,
                 ),
                 truss=truss,

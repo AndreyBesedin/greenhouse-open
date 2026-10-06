@@ -92,10 +92,16 @@ describe("a plant's structure", () => {
     );
   });
 
-  it("is loaded from the plant lab, and an error becomes unavailable", async () => {
-    const loaded = await loadPlantStructure(answering(200, PLANT));
-    const refused = await loadPlantStructure(answering(502, { error: "bad gateway" }));
+  it("is loaded from the plant lab for a day, and an error becomes unavailable", async () => {
+    const asked: string[] = [];
+    const recording: typeof fetch = async (input) => {
+      asked.push(String(input));
+      return new Response(JSON.stringify(PLANT), { status: 200 });
+    };
+    const loaded = await loadPlantStructure(12, recording);
+    const refused = await loadPlantStructure(0, answering(502, { error: "bad gateway" }));
 
+    expect(asked).toEqual(["/api/plants/structure?day=12"]);
     expect(loaded.status).toBe("loaded");
     expect(refused).toEqual({ status: "unavailable", reason: "the simulator API answered 502" });
   });
