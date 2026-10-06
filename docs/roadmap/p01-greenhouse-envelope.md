@@ -1,6 +1,6 @@
 # P01: Greenhouse envelope and world geometry
 
-**Status:** in progress. Part of the [simulator roadmap](README.md).
+**Status:** done. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -277,14 +277,51 @@ surfaces, that the physical dimensions are right, that the camera can enter
 the greenhouse, that the debug colours match each surface's semantics, and
 that the screenshots stay deterministic.
 
+As implemented ([#35](https://github.com/AndreyBesedin/greenhouse-open/pull/35)):
+
+- `GET /api/scenarios/{id}/scene?envelope=length:12,spans:3,...` changes a
+  scenario's greenhouse (its length, width, spans, bays, eave and ridge
+  heights), alongside `open=` for its vents, and checks the envelope afresh:
+  a ridge below the eaves, or an opening that no longer fits, is refused
+  with the reason. The viewer carries both in the address bar, and shows the
+  simulator's reason when it refuses. There are no input fields: the editor
+  stays for later.
+- `tests/test_greenhouse_shell.py` changes the shell over a grid of 729
+  greenhouses (lengths of 4 to 100 m, widths of 3.2 to 48 m, 1 to 5 spans, 1
+  to 25 bays, flat and pitched roofs, vents closed to wide open) and checks
+  each for gaps (every edge shared by exactly two surfaces), inverted
+  surfaces (a point just in front of each lies inside the greenhouse), its
+  dimensions, frames and vent aperture. The checks live in
+  `greenhouse_sim/world/envelope_checks.py`. They first judged facing by
+  pointing at the middle of the house, which the grid showed wrong for the
+  outer slopes of steep multi-span roofs; the probe replaces it. Left roof
+  slopes turned outwards fail 730 of these tests.
+- `e2e/greenhouse-shell.spec.ts` walks through it in the browser: a
+  three-span, four-bay, 12 m greenhouse from the address bar, its dimensions
+  measured as asked, a vent opened wide with both changes kept in the
+  address, the surface categories' legend, a greenhouse that cannot stand
+  refused with its reason, and the camera inside the QA greenhouse's aisle.
+- The screenshots stay deterministic in CI's visual checks job (P00.7 and
+  P01.7).
+
 ## Acceptance criteria
 
-- [ ] A configurable greenhouse shell exists as semantic geometry, not only
-  as meshes.
-- [ ] Openings can later become airflow boundaries.
-- [ ] World dimensions are physically meaningful and inspectable.
-- [ ] The renderer stays responsive at representative commercial
-  dimensions.
+- [x] A configurable greenhouse shell exists as semantic geometry, not only
+  as meshes: an `Envelope` description generates every surface, opening,
+  gutter and member, each with a semantic category (decisions
+  [0016](../decisions/0016-the-greenhouse-has-its-own-frame.md) and
+  [0017](../decisions/0017-envelope-surfaces-face-into-the-greenhouse.md)).
+- [x] Openings can later become airflow boundaries: each lies on a host
+  surface, with its open fraction and the aperture it exposes (decision
+  [0018](../decisions/0018-openings-lie-on-a-surface-and-expose-an-aperture.md)).
+- [x] World dimensions are physically meaningful and inspectable: metres
+  throughout, with the dimensions labelled, every entity's size and place in
+  the inspector, and the dimensions checked over the grid of greenhouses.
+- [x] The renderer stays responsive at representative commercial
+  dimensions: on the development machine (Apple M2, Chromium on the graphics
+  card, the frame rate not tied to the display), a 100 by 48 m greenhouse of
+  ten 4.8 m spans and 25 bays, with 806 structural members, runs at about
+  700 frames per second while orbiting, 1.5 ms per frame, in 87 draw calls.
 
 ## Later
 
