@@ -36,6 +36,14 @@ repos:
         types: [python]
         files: ^greenhouse_(protocol|sim|adapters)/greenhouse_(protocol|sim|adapters)/
 
+      # Standard library only, as above.
+      - id: api-layers
+        name: APIs reach their packages only through services
+        entry: python scripts/check_api_layers.py
+        language: python
+        types: [python]
+        files: ^greenhouse_(protocol|sim|adapters)/greenhouse_(protocol|sim|adapters)/(api|services)/
+
       # The viewer's own Biome, so the hook and the lockfile always agree on
       # its version. Run `npm ci` in greenhouse_sim/web before committing
       # viewer changes.
