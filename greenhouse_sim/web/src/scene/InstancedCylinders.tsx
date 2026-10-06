@@ -3,7 +3,7 @@ import { CylinderGeometry, type InstancedMesh } from "three";
 
 import type { Color, SceneEntity } from "./generated/snapshotTypes";
 import { cylinderMatrices } from "./instancing";
-import { CYLINDER_SIDES, STAND_UP, threeColor } from "./ShapeMesh";
+import { CYLINDER_SIDES, METAL, STAND_UP, threeColor } from "./ShapeMesh";
 
 /**
  * Many cylinders in one draw call: one mesh, drawn once per entity with that
@@ -16,10 +16,13 @@ export function InstancedCylinders({
   entities,
   colors,
   capacity,
+  metallic = false,
 }: {
   entities: readonly SceneEntity[];
   colors: readonly Color[];
   capacity: number;
+  /** Drawn as metal, such as a greenhouse's structural members. */
+  metallic?: boolean;
 }) {
   const mesh = useRef<InstancedMesh>(null);
   // A unit cylinder standing on the origin along +z, as `cylinderMatrices` expects.
@@ -52,7 +55,7 @@ export function InstancedCylinders({
 
   return (
     <instancedMesh ref={mesh} args={[geometry, undefined, capacity]}>
-      <meshStandardMaterial />
+      <meshStandardMaterial {...(metallic ? METAL : {})} />
     </instancedMesh>
   );
 }

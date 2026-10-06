@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scene.snapshot import (
+    _SURFACE_KINDS,
     PLANT_PITCH_M,
     ROW_SPACING_M,
     SceneEntityKind,
@@ -18,7 +19,7 @@ from greenhouse_sim.scene.snapshot import (
     scene_snapshot,
 )
 from greenhouse_sim.world import GreenhouseWorld
-from greenhouse_sim.world.envelope import Envelope
+from greenhouse_sim.world.envelope import Envelope, OpeningKind, SurfaceCategory
 from greenhouse_sim.world.geometry import Box, Cylinder, Plane, Quaternion, Transform, Vector3
 
 CONFIG = SCENARIO_REGISTRY["gh_001"]
@@ -233,3 +234,20 @@ def test_a_structural_member_is_a_cylinder_from_its_foot_to_its_head() -> None:
         head = entity.transform.apply(Vector3(x=0.0, y=0.0, z=entity.shape.height))
         assert (head.x, head.y, head.z) == pytest.approx((member.end.x, member.end.y, member.end.z))
         assert entity.transform.position == member.start
+
+
+def test_every_part_of_the_envelope_is_drawn_as_its_semantic_category() -> None:
+    """Every surface, opening, gutter and structural member becomes one entity
+    whose kind says what it is; no category of surface lacks a kind."""
+    envelope = CONFIG.envelope
+    kinds = [entity.kind for entity in scene_snapshot(_world(), CONFIG).entities]
+    surfaces = envelope.surfaces()
+
+    assert set(_SURFACE_KINDS) == set(SurfaceCategory)
+    for category, (kind, _) in _SURFACE_KINDS.items():
+        assert kinds.count(kind) == sum(s.category == category for s in surfaces), category
+    doors = sum(o.kind == OpeningKind.DOOR for o in envelope.openings)
+    assert kinds.count(SceneEntityKind.DOOR) == doors
+    assert kinds.count(SceneEntityKind.VENT) == len(envelope.openings) - doors
+    assert kinds.count(SceneEntityKind.GUTTER) == len(envelope.gutters())
+    assert kinds.count(SceneEntityKind.FRAME) == len(envelope.members())

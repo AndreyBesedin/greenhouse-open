@@ -5,8 +5,10 @@ import { SELECTION_COLOR } from "../debug/overlays";
 import type { Box, Color, Plane, Polygon } from "./generated/snapshotTypes";
 import { flatGeometry, threeColor } from "./ShapeMesh";
 
-// See-through enough to show everything behind or inside.
+// See-through enough to show everything behind or inside; denser when a debug
+// colouring has to read on it.
 const FACE_OPACITY = 0.12;
+const DENSE_FACE_OPACITY = 0.45;
 // Edges are drawn a shade darker than the faces, as a frame.
 const EDGE_SHADE = 0.6;
 
@@ -26,12 +28,14 @@ export function SeeThrough({
   color,
   highlighted,
   outlineOnly = false,
+  dense = false,
 }: {
   shape: Box | Plane | Polygon;
   color: Color;
   highlighted: boolean;
   /** Takes no clicks at all, such as bounds lying on a greenhouse's walls. */
   outlineOnly?: boolean;
+  dense?: boolean;
 }) {
   // Rebuilt with each new scene, which for a live scenario is once a day.
   const faces = useMemo(() => flatGeometry(shape), [shape]);
@@ -54,7 +58,7 @@ export function SeeThrough({
         <meshStandardMaterial
           color={fill}
           transparent
-          opacity={FACE_OPACITY}
+          opacity={dense ? DENSE_FACE_OPACITY : FACE_OPACITY}
           depthWrite={false}
           side={DoubleSide}
         />

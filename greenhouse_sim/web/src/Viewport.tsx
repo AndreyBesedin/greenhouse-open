@@ -43,6 +43,7 @@ export function Viewport({
   colouring = null,
   overlays = [],
   showBounds = false,
+  byCategory = false,
   onSample,
   onPointer,
   onSelect,
@@ -53,6 +54,7 @@ export function Viewport({
   colouring?: Colouring | null;
   overlays?: readonly OverlayPrimitive[];
   showBounds?: boolean;
+  byCategory?: boolean;
   onSample: (sample: ViewSample) => void;
   onPointer: (point: Point3 | null) => void;
   /** A click picked an entity, or nothing (null). Drags orbit and pick nothing. */
@@ -99,6 +101,7 @@ export function Viewport({
               selectedId={selectedId}
               colouring={colouring}
               showBounds={showBounds}
+              byCategory={byCategory}
             />
           )}
           {/* An undrawn ground plane that reports where the pointer meets the ground. */}

@@ -4,10 +4,12 @@ import { SeeThrough } from "./SeeThrough";
 import { ShapeMesh } from "./ShapeMesh";
 
 /** How the viewer wants an entity to look: its colour, which a colouring may
- * replace, and whether it is selected. */
+ * replace, whether it is selected, and whether see-through parts should be
+ * denser, so that a debug colouring reads on them. */
 export interface EntityLook {
   color: Color;
   selected: boolean;
+  emphasised: boolean;
 }
 
 function seeThrough(entity: SceneEntity, look: EntityLook, outlineOnly = false): ReactElement {
@@ -18,6 +20,7 @@ function seeThrough(entity: SceneEntity, look: EntityLook, outlineOnly = false):
       color={look.color}
       highlighted={look.selected}
       outlineOnly={outlineOnly}
+      dense={look.emphasised}
     />
   ) : (
     <ShapeMesh shape={shape} color={look.color} highlighted={look.selected} />
@@ -49,7 +52,7 @@ export const RENDERERS: Record<
   WALL: (entity, look) => seeThrough(entity, look),
   ROOF: (entity, look) => seeThrough(entity, look),
   GUTTER: (entity, look) => (
-    <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} />
+    <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} metallic />
   ),
   // A vent is a glazed panel, framed; a door a solid one, seen from either side.
   VENT: (entity, look) => seeThrough(entity, look),
@@ -59,7 +62,7 @@ export const RENDERERS: Record<
   // Posts and rafters are cylinders, so they join the plants' instanced batch;
   // this draws one on its own, when it is selected.
   FRAME: (entity, look) => (
-    <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} />
+    <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} metallic />
   ),
   PLANT: (entity, look) => (
     <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} />
