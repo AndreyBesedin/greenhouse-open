@@ -43,6 +43,10 @@ from pydantic import (
 )
 
 
+# The organs' kinds and stages, and the structure below, are partly generic
+# to fruiting crops and partly the tomato's. Where they go once P03 is done,
+# shared domain descriptors and a generic plant with tomato as one kind, is
+# planned in docs/roadmap/p03-cleanup.md.
 class OrganKind(StrEnum):
     PLANT = "plant"
     AXIS = "axis"
