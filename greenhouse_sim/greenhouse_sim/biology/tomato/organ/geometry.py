@@ -15,8 +15,10 @@ successive leaves turn about the stem by the golden angle. A truss is still
 a stick hanging opposite its phytomer's leaf, with its flowers and fruits
 spheres along it, until P03.5 shapes them.
 
-How a plant's organs are proportioned and held comes from its form
-(`PlantForm`), the parameters its geometry is generated from.
+How a plant's organs are proportioned and held comes from its crop's form
+(`PlantForm`), the parameters its geometry is generated from, as the plant's
+traits change it (`plant_form`): how steeply it holds its leaves, how far they
+droop, and where its first leaf points about its stem.
 """
 
 import math
@@ -24,7 +26,7 @@ from typing import Annotated, Final
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt
 
-from greenhouse_sim.biology.tomato.organ.topology import Leaf, OrganKind, Plant
+from greenhouse_sim.biology.tomato.organ.topology import Leaf, OrganKind, Plant, PlantTraits
 from greenhouse_sim.world.geometry import (
     Cylinder,
     Ellipsoid,
@@ -79,6 +81,16 @@ class PlantForm(BaseModel):
     full_leaf_length_cm: PositiveFloat = 45.0
     # The petiole and rachis's diameter, as a fraction of the leaf's length.
     rachis_diameter_fraction: Fraction = 0.012
+
+
+def plant_form(form: PlantForm, traits: PlantTraits) -> PlantForm:
+    """The crop's form as a plant of these traits holds its leaves."""
+    return form.model_copy(
+        update={
+            "leaf_insertion_rad": form.leaf_insertion_rad * traits.leaf_insertion_scale,
+            "full_leaf_droop_rad": form.full_leaf_droop_rad * traits.leaf_droop_scale,
+        }
+    )
 
 
 class OrganShape(BaseModel):
@@ -214,8 +226,9 @@ def leaf_shapes(leaf: Leaf, node: Vector3, azimuth: float, form: PlantForm) -> l
 
 def organ_geometry(plant: Plant, form: PlantForm | None = None) -> list[OrganShape]:
     """Every shape of the plant, from the stem's base up, as `form` (by
-    default a typical tomato's) proportions its organs."""
-    form = PlantForm() if form is None else form
+    default a typical tomato's) proportions its organs and the plant's traits
+    change it."""
+    form = plant_form(PlantForm() if form is None else form, plant.traits)
     shapes: list[OrganShape] = []
     height = 0.0
     for phytomer in plant.stem.phytomers:
@@ -233,7 +246,7 @@ def organ_geometry(plant: Plant, form: PlantForm | None = None) -> list[OrganSha
         )
         height += length
         node = Vector3(x=0.0, y=0.0, z=height)
-        azimuth = phytomer.rank * GOLDEN_ANGLE_RAD
+        azimuth = plant.traits.rotation_rad + (phytomer.rank - 1) * GOLDEN_ANGLE_RAD
         shapes.extend(leaf_shapes(phytomer.leaf, node, azimuth, form))
         if phytomer.truss is None:
             continue

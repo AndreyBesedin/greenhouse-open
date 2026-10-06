@@ -52,7 +52,7 @@ P00 gives the viewer, P02 the planting positions plants stand at.
 | P03.1 | `feat(plants): define plant topology and organ state schema` | Done |
 | P03.2 | `feat(plants): procedural stem, internode and leaf geometry` | Done |
 | P03.3 | `feat(plants): add thermal-time organogenesis` | Done |
-| P03.4 | `feat(plants): add correlated stochastic plant variation` | Planned |
+| P03.4 | `feat(plants): add correlated stochastic plant variation` | Done |
 | P03.5 | `feat(plants): add trusses, flowers and fruit set` | Planned |
 | P03.6 | `feat(plants): add fruit growth, ripeness and colour` | Planned |
 | P03.7 | `feat(plants): consume local environment inputs` | Planned |
@@ -237,6 +237,56 @@ leaf scale and orientation, drawn from seeded generators. Visible result: a
 row of 20 plants that clearly varies while remaining recognisably the same
 crop. Tests: the same seed reproduces geometry, different seeds change
 plants, and distributions stay within their configured ranges.
+
+As implemented (see [decision 0023](../decisions/0023-plants-vary-through-a-shared-vigour-and-keep-their-draws.md)):
+
+- **Traits:** `organ.variation` draws each plant's traits from the seed
+  hierarchy.
+  - **Vigour:** a latent vigour that six factors load on.
+  - **The factors:** phyllochron (−0.6, so vigorous plants develop faster),
+    internode length (0.6), stem diameter (0.8), leaf length (0.8), leaf
+    insertion angle (0) and leaf droop (−0.3), with coefficients of
+    variation from 6% to 15%.
+  - **Rotation:** a uniform turn about the stem.
+  - **Limits:** every draw is held within 2.5 standard deviations, so every
+    factor stays within its configured range.
+- **Where they're kept:** a plant records its traits and its seed.
+  Development takes the plant's phyllochron and full sizes from its traits,
+  and geometry takes how it holds its leaves and where its first leaf
+  points.
+- **Organs:** each organ's final size varies around its plant's by 8%, drawn
+  from the organ's own generator when it appears.
+- **The lab's row:** 20 plants, 0.5 m apart along +y, drawn from a seed.
+  - **API:** `?seed=` on its scene and structure, and `?plant=` for one
+    plant's structure. A negative or wordy seed is refused, and an unknown
+    plant is not found.
+  - **Viewer:** a seed field and an "Another seed" button. The debug tree
+    shows the selected organ's plant, and the camera looks along the row
+    from its first plant.
+  - **Rendering:** leaflets are drawn with fewer facets, so the row on its
+    last day is about 740,000 triangles rather than 1.65 million.
+- Tests:
+  - Python:
+    - the same seed gives the same plants, geometry and scene, while another
+      seed or another plant differs;
+    - a plant's draws don't depend on which other plants exist;
+    - over 400 plants:
+      - every factor stays within its range;
+      - each spreads about 1 by its coefficient of variation;
+      - each follows vigour as its loading says;
+    - a spread that could vary a trait to nothing is refused;
+    - traits drive development, and turn the plant and change how it holds
+      its leaves;
+    - organs vary around their plant, each from its own generator;
+    - the lab's row varies yet stays one crop, and keeps every rule on days
+      0, 30 and 60;
+    - the row stands along y;
+    - the lab answers for any seed and plant, and refuses what it can't.
+  - Viewer: the address bar's seed, the structure asked for by plant, day and
+    seed, and the plant an entity draws.
+  - Browser:
+    - another seed draws another row;
+    - a leaflet of the third plant, clicked, brings that plant's tree.
 
 ### P03.5: Trusses, flowers and fruit set
 

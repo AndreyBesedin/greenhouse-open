@@ -70,7 +70,8 @@ def test_a_phytomer_appears_every_phyllochron(thermal_time: float) -> None:
 
 
 def test_the_labs_plant_has_exact_organ_counts_on_reference_days() -> None:
-    """At the lab's constant 21 °C, 11 °Cd a day after a transplant of 230 °Cd."""
+    """The lab's first plant, drawn from its seed, at the lab's constant
+    21 °C, 11 °Cd a day after a transplant of 230 °Cd."""
     counts = {}
     for day in (0, 10, 30, 60):
         plant = plants.structure(day)
@@ -80,9 +81,9 @@ def test_the_labs_plant_has_exact_organ_counts_on_reference_days() -> None:
 
     assert counts == {
         0: (230.0, 7, 3),
-        10: (340.0, 11, 6),
-        30: (560.0, 17, 13),
-        60: (890.0, 27, 23),
+        10: (340.0, 10, 6),
+        30: (560.0, 17, 12),
+        60: (890.0, 26, 22),
     }
 
 
@@ -139,7 +140,7 @@ def test_final_sizes_grow_up_the_stem_to_the_full_ones() -> None:
     assert fractions[0] == pytest.approx(PARAMS.first_phytomer_fraction)
     assert fractions == sorted(fractions)
     assert fractions[PARAMS.full_size_rank - 1 :] == [1.0] * (15 - PARAMS.full_size_rank)
-    plant = plants.structure(30)
+    plant = develop(emerged("p01", PARAMS), 560.0, PARAMS)
     top = plant.stem.phytomers[-1]
     assert top.leaf.final_length_cm == pytest.approx(PARAMS.leaf_length_cm)
     assert top.internode.final_length_cm == pytest.approx(PARAMS.internode_length_cm)

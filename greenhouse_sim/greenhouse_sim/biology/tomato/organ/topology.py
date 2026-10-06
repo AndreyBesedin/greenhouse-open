@@ -20,15 +20,27 @@ Identifiers say where an organ sits, so they never depend on anything else:
 
 Every organ records when it appeared, as the plant's accumulated thermal
 time then (degree-days, °Cd); its thermal age is how much the plant has
-accumulated since. `topology_problems` lists whatever breaks the structure's
-rules, so tests, and later the model itself, can hold every plant to them.
+accumulated since. A plant also records the seed its draws come from and its
+traits: how it differs from its crop's typical plant. `topology_problems`
+lists whatever breaks the structure's rules, so tests, and later the model
+itself, can hold every plant to them.
 """
 
+import math
 from collections import Counter
 from collections.abc import Iterator
 from enum import StrEnum
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, NonNegativeFloat, PositiveInt
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    NonNegativeFloat,
+    NonNegativeInt,
+    PositiveFloat,
+    PositiveInt,
+)
 
 
 class OrganKind(StrEnum):
@@ -155,12 +167,34 @@ class Axis(Organ):
     phytomers: tuple[Phytomer, ...] = ()
 
 
+class PlantTraits(BaseModel):
+    """How one plant differs from its crop's typical plant: a factor on each
+    of the crop's values (1 for a typical plant), its turn about its stem,
+    and the latent vigour its factors share."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    # In standard deviations from the crop's mean; 0 for a typical plant.
+    vigour: float = 0.0
+    phyllochron_scale: PositiveFloat = 1.0
+    internode_length_scale: PositiveFloat = 1.0
+    stem_diameter_scale: PositiveFloat = 1.0
+    leaf_length_scale: PositiveFloat = 1.0
+    leaf_insertion_scale: PositiveFloat = 1.0
+    leaf_droop_scale: PositiveFloat = 1.0
+    # Where its first leaf points about its stem, from +x.
+    rotation_rad: Annotated[float, Field(ge=0, lt=2 * math.pi)] = 0.0
+
+
 class Plant(Organ):
     """One plant, organ by organ, and the thermal time it has accumulated."""
 
     plant_id: str
     thermal_time: NonNegativeFloat
     stem: Axis
+    # The simulation's seed, which the plant's and its organs' draws come from.
+    seed: NonNegativeInt = 0
+    traits: PlantTraits = PlantTraits()
 
     def thermal_age(self, organ: Organ) -> float:
         """How long an organ has developed, in °Cd."""

@@ -1,4 +1,4 @@
-import { PLANT_LAB_LAST_DAY } from "../plants/lab";
+import { PLANT_LAB_LAST_DAY, PLANT_LAB_SEED } from "../plants/lab";
 import { stressPlants, stressScene } from "../qa/stressScene";
 import { checkScene } from "./checkScene";
 import type { SceneSnapshot } from "./generated/snapshotTypes";
@@ -9,9 +9,9 @@ export type SceneSource =
   | { kind: "example" }
   /** One fixture of each primitive, side by side, as the simulator draws them. */
   | { kind: "fixtures" }
-  /** The plant lab: tomato plants from the organ-level model, on a day of
-   * the lab's run. */
-  | { kind: "plants"; day: number }
+  /** The plant lab: a row of tomato plants from the organ-level model, on a
+   * day of the lab's run, drawn from a seed. */
+  | { kind: "plants"; day: number; seed: number }
   /** A dense field of plants built in the viewer, for measuring the renderer. */
   | { kind: "stress"; plants: number }
   /** A scenario's scene from the simulator, with another of its layouts if
@@ -60,7 +60,11 @@ export function sourceFromSearch(search: string): SceneSource {
     };
   }
   if (parameters.get("plants") === "lab") {
-    return { kind: "plants", day: labDay(parameters.get("day")) };
+    return {
+      kind: "plants",
+      day: labDay(parameters.get("day")),
+      seed: labSeed(parameters.get("seed")),
+    };
   }
   switch (parameters.get("scene")) {
     case "example":
@@ -81,6 +85,23 @@ function labDay(text: string | null): number {
   return Number.isInteger(day) && day >= 0 && day <= PLANT_LAB_LAST_DAY ? day : 0;
 }
 
+/** The plant lab's seed an address asks for: a whole number from 0, or the
+ * lab's own. */
+function labSeed(text: string | null): number {
+  const seed = Number(text ?? "");
+  return text !== null && Number.isSafeInteger(seed) && seed >= 0 ? seed : PLANT_LAB_SEED;
+}
+
+/** The plant lab's day and seed as a query, leaving out what is as the lab
+ * starts. */
+function labQuery(source: { day: number; seed: number }, separator: "?" | "&"): string {
+  const parts = [
+    ...(source.day === 0 ? [] : [`day=${source.day}`]),
+    ...(source.seed === PLANT_LAB_SEED ? [] : [`seed=${source.seed}`]),
+  ];
+  return parts.length === 0 ? "" : `${separator}${parts.join("&")}`;
+}
+
 export function searchFor(source: SceneSource): string {
   switch (source.kind) {
     case "reference":
@@ -90,7 +111,7 @@ export function searchFor(source: SceneSource): string {
     case "fixtures":
       return "?scene=fixtures";
     case "plants":
-      return source.day === 0 ? "?plants=lab" : `?plants=lab&day=${source.day}`;
+      return `?plants=lab${labQuery(source, "&")}`;
     case "stress":
       return `?scene=stress&plants=${source.plants}`;
     case "scenario":
@@ -160,7 +181,7 @@ function sceneUrl(source: SceneSource): string | null {
     case "fixtures":
       return FIXTURE_GALLERY_URL;
     case "plants":
-      return `${PLANT_LAB_SCENE_URL}?day=${source.day}`;
+      return `${PLANT_LAB_SCENE_URL}?day=${source.day}&seed=${source.seed}`;
     case "scenario":
       return `/api/scenarios/${encodeURIComponent(source.scenarioId)}/scene${changesQuery(source, "?")}`;
   }

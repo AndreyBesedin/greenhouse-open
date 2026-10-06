@@ -4,7 +4,14 @@ import { Group, InstancedMesh, Mesh } from "three";
 import { describe, expect, it } from "vitest";
 
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
-import { entityOfOrgan, highlighted, organOf, pickEntity, selectedEntity } from "./selection";
+import {
+  entityOfOrgan,
+  highlighted,
+  organOf,
+  pickEntity,
+  plantOf,
+  selectedEntity,
+} from "./selection";
 
 const EXAMPLE: SceneSnapshot = JSON.parse(
   readFileSync(new URL("../public/scenes/example.json", import.meta.url), "utf8"),
@@ -111,7 +118,7 @@ describe("selecting part of an organ", () => {
   const part = (entityId: string, organId: string) => ({
     ...(plant as SceneSnapshot["entities"][number]),
     entity_id: entityId,
-    properties: { organ_id: organId },
+    properties: { organ_id: organId, plant_id: "p01" },
   });
   const LAB: SceneSnapshot = {
     ...EXAMPLE,
@@ -137,5 +144,8 @@ describe("selecting part of an organ", () => {
     expect(entityOfOrgan(LAB, "p01_n01_leaf")).toBe("p01_n01_leaf_petiole");
     expect(entityOfOrgan(LAB, "p01_n09_leaf")).toBeNull();
     expect(entityOfOrgan(null, "p01_n01_leaf")).toBeNull();
+    expect(plantOf(LAB.entities[1] ?? null)).toBe("p01");
+    expect(plantOf(plant ?? null)).toBeNull();
+    expect(plantOf(null)).toBeNull();
   });
 });

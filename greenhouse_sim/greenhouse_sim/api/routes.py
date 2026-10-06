@@ -24,11 +24,13 @@ check; a route that comes to need one checks it first.
                                           far its doors and vents stand open
     GET /api/scenarios/{id}/layout        a scenario's layout, as its file holds
                                           it; ?layout=benches another of them
-    GET /api/plants/scene                 the plant lab's scene: tomato plants from
-                                          the organ-level model; ?day=12 on
-                                          another day of the lab's run
-    GET /api/plants/structure             the lab's plant, organ by organ; ?day=12
-                                          on another day
+    GET /api/plants/scene                 the plant lab's scene: a row of tomato
+                                          plants from the organ-level model;
+                                          ?day=12 on another day of the lab's
+                                          run, ?seed=7 drawn from another seed
+    GET /api/plants/structure             one of the lab's plants, organ by organ;
+                                          ?plant=p07 another plant, and ?day
+                                          and ?seed as for its scene
     GET /api/scenarios/{id}/live          the scenario played live, as Server-Sent
                                           Events (served by `server`, found by
                                           `live_stream`)
@@ -77,9 +79,10 @@ def respond(method: str, path: str) -> Response:
         case ["api", "scenarios"]:
             return _answer(scenarios.scenario_summaries)
         case ["api", "plants", "scene"]:
-            return _answer(lambda: plants.scene(_day(query)))
+            return _answer(lambda: plants.scene(*_lab_run(query)))
         case ["api", "plants", "structure"]:
-            return _answer(lambda: plants.structure(_day(query)))
+            plant_id = _last(query, "plant") or plants.LAB_PLANT_ID
+            return _answer(lambda: plants.structure(*_lab_run(query), plant_id))
         case ["api", "scenarios", scenario_id, "scene"]:
             return _answer(lambda: scenarios.initial_scene(scenario_id, _scene_changes(query)))
         case ["api", "scenarios", scenario_id, "layout"]:
@@ -193,15 +196,21 @@ def _multiplier(query: Query) -> float:
         raise InvalidSpeed() from None
 
 
-def _day(query: Query) -> int:
-    """The day a query asks for, as a whole number: day 0 unless it says."""
-    day = _last(query, "day")
-    if day is None:
-        return 0
+def _lab_run(query: Query) -> tuple[int, int]:
+    """The plant lab's day and seed a query asks for: day 0 and the lab's
+    own seed unless it says."""
+    return _whole(query, "day", 0), _whole(query, "seed", plants.LAB_SEED)
+
+
+def _whole(query: Query, name: str, default: int) -> int:
+    """A parameter as a whole number, or `default` if the query has none."""
+    value = _last(query, name)
+    if value is None:
+        return default
     try:
-        return int(day)
+        return int(value)
     except ValueError:
-        raise InvalidRequest(f"day wants a whole number, not {day!r}") from None
+        raise InvalidRequest(f"{name} wants a whole number, not {value!r}") from None
 
 
 def _last(query: Query, name: str) -> str | None:

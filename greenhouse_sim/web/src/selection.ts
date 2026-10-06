@@ -93,6 +93,12 @@ export function organOf(entity: SceneEntity): string | null {
   return typeof organ === "string" ? organ : null;
 }
 
+/** The plant an entity draws part of, if it draws one. */
+export function plantOf(entity: SceneEntity | null): string | null {
+  const plant = entity?.properties.plant_id;
+  return typeof plant === "string" ? plant : null;
+}
+
 /** The entity that stands for an organ when it is chosen by name: the first
  * part of it the scene draws. */
 export function entityOfOrgan(snapshot: SceneSnapshot | null, organId: string): string | null {
