@@ -41,7 +41,7 @@ around it.
 | P01.2 | `feat(greenhouse): generate the floor and a rectangular envelope` | Done ([#29](https://github.com/AndreyBesedin/greenhouse-open/pull/29)) |
 | P01.3 | `feat(greenhouse): add pitched roof geometry` | Done ([#30](https://github.com/AndreyBesedin/greenhouse-open/pull/30)) |
 | P01.4 | `feat(greenhouse): add bays and repeated structural frames` | Done ([#31](https://github.com/AndreyBesedin/greenhouse-open/pull/31)) |
-| P01.5 | `feat(envelope): add doors, vents and configurable openings` | Planned |
+| P01.5 | `feat(envelope): add doors, vents and configurable openings` | Done ([#32](https://github.com/AndreyBesedin/greenhouse-open/pull/32)) |
 | P01.6 | `feat(materials): distinguish envelope semantics visually` | Planned |
 | P01.7 | `test(visual): add greenhouse geometry QA snapshots` | Planned |
 
@@ -188,6 +188,32 @@ As implemented:
 Semantic openings with an open fraction or angle, with a roof vent and a side
 vent as examples. Visible result: a slider opens a roof vent in the view.
 Tests: an opening exposes the expected aperture area at the boundary.
+
+As implemented (see [decision 0018](../decisions/0018-openings-lie-on-a-surface-and-expose-an-aperture.md)):
+
+- The envelope's `openings` are rectangles on a host surface, given in the
+  host's own plane, each a door, roof vent or side vent with an open fraction.
+  The envelope refuses one that does not fit on its host.
+- Vents are top-hung and swing outward, up to 45 degrees; doors slide along
+  their wall, just outside it. `aperture_area()` gives the open area: a
+  door's fraction of itself, a vent's curtain up to its frame.
+- The scene adds `VENT` and `DOOR` entities, each panel where it stands
+  open, with its open fraction and aperture, so its schema moves to version
+  6. gh_demo has two roof vents, a side vent and a door; gh_001 two roof
+  vents and a door.
+- `GET /api/scenarios/{id}/scene?open=roof_vent_1:0.5` sets how far its
+  openings stand, checking the envelope afresh. On a scenario's view the
+  viewer shows a slider per opening, which asks the API for the reopened
+  scene and keeps the fractions in the address bar.
+- Tests: no aperture closed; a door's fraction of its area; a vent's curtain
+  at a known angle, growing as it opens and capped by its frame. Openings
+  that do not fit, share a name or open beyond 1 are refused. A closed vent
+  lies on its slope; an open one keeps its hinge and swings out by its
+  height times the sine of its angle; a door slides outside its wall. The
+  API opens a vent and refuses what cannot open. A browser test moves the
+  roof vent's slider to wide open, sees 0.96 m², and keeps it on reload. A
+  vent swinging inward, or an aperture without its side triangles, fails
+  these tests.
 
 ### P01.6: Envelope semantics, visually
 
