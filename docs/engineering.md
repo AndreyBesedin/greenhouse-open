@@ -163,6 +163,31 @@ For the simulator specifically:
 - new physics/biology fidelity should arrive behind narrow contracts rather
   than spreading engine-specific concepts through the world model.
 
+## APIs
+
+Every API in the repository, whatever its transport, is only an interface to
+services ([decision 0021](decisions/0021-routes-are-the-interface-services-hold-the-logic.md)).
+
+- A route does four things, in order: checks that the caller may make the
+  request, once the API has callers to tell apart; reads the request into the
+  typed form its service takes; calls the service; and answers with the
+  result, or turns the service's error into the transport's status.
+- Services hold the logic and the case handling: lookups, composing the
+  domain's models, and turning their refusals into typed errors
+  (`NotFound`, `InvalidRequest`, or a new kind when a client needs a
+  different answer). They take typed inputs, return typed results, and never
+  import the API or a transport, nor choose a status.
+- Reading the request's format (a query string's syntax, a path's segments)
+  is the route's. Deciding whether what it names exists, or may be done, is
+  the service's.
+- Each API maps service errors to statuses in one table, and answers an
+  unexpected failure with its transport's internal error, logged.
+- Domain rules stay in the domain's models. Services compose them; they do
+  not copy them.
+- `scripts/check_api_layers.py` enforces the imports, in every package, as a
+  pre-commit hook and a CI test: an `api` package reaches the rest of its
+  package only through its `services`.
+
 ## Python style
 
 Ruff formatting is the source of truth. Do not hand-format around it.

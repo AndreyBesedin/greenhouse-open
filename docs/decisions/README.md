@@ -32,6 +32,7 @@ changes course is a new record that supersedes the old one.
 | [0018](0018-openings-lie-on-a-surface-and-expose-an-aperture.md) | Openings lie on a surface, and expose an aperture | Accepted |
 | [0019](0019-fixtures-say-what-they-are-made-of-and-what-they-obstruct.md) | Fixtures say what they are made of, and what they obstruct | Accepted |
 | [0020](0020-scenario-layouts-are-declarative-json-files.md) | Scenario layouts are declarative JSON files | Accepted |
+| [0021](0021-routes-are-the-interface-services-hold-the-logic.md) | Routes are the interface; services hold the logic | Accepted |
 
 ## Template
 
