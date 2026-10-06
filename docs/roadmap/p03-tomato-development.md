@@ -50,7 +50,7 @@ P00 gives the viewer, P02 the planting positions plants stand at.
 | Step | Commit summary | Status |
 | --- | --- | --- |
 | P03.1 | `feat(plants): define plant topology and organ state schema` | Done |
-| P03.2 | `feat(plants): procedural stem, internode and leaf geometry` | Planned |
+| P03.2 | `feat(plants): procedural stem, internode and leaf geometry` | Done |
 | P03.3 | `feat(plants): add thermal-time organogenesis` | Planned |
 | P03.4 | `feat(plants): add correlated stochastic plant variation` | Planned |
 | P03.5 | `feat(plants): add trusses, flowers and fruit set` | Planned |
@@ -120,6 +120,51 @@ Internodes as cylinders along the stem, simplified leaves (a petiole and
 leaflets), phyllotaxis, and organ transforms derived from the topology.
 Visible result: a recognisable young tomato plant generated only from
 biological parameters. Tests: geometry dimensions correspond to organ state.
+
+As implemented:
+
+- Each leaf is a tomato's compound leaf, coarsely. A petiole leaves its node,
+  then the rachis's segments bear a pair of leaflets at each joint and a
+  terminal leaflet at the tip, all together as long as the leaf. The leaf
+  rises from its node and each segment bends further down than the last: in
+  all, a full-grown leaf droops by a set angle, and a shorter one in
+  proportion to its length. Leaflets are flat ellipsoids lying in the leaf's
+  plane, growing towards the tip, the lateral ones spreading from the rachis
+  at a set angle. Successive leaves turn by the golden angle, as before.
+- The stem's internodes are drawn as long and as thick as they are. The
+  reference plant's three youngest phytomers are still growing, each in
+  proportion to its thermal age, so the plant tapers to its tip.
+- How the organs are proportioned and held is the plant's form
+  (`PlantForm`): leaflet pairs, the terminal leaflet's and the petiole's
+  shares, leaflet sizes and aspect, the leaflets' spread, the leaf's
+  insertion angle and droop, and the rachis's thickness. It has a tomato's
+  typical values, and P03.4 varies it from plant to plant.
+- Every shape names its organ and its part (`internode`, `petiole`, `rachis`,
+  `leaflet`, `truss`, `flower`, `fruit`), and so does its entity.
+- The scene gains an `ellipsoid` shape, so its schema moves to version 13.
+  The viewer batches spheres and ellipsoids as it batches cylinders: by kind,
+  shape and finish. The plant lab's 115 shapes take eight draw calls.
+- Selecting any part of an organ highlights the whole organ, and marks it in
+  the debug tree; choosing an organ in the tree selects its first part. The
+  inspector writes sizes under a centimetre to a tenth of a millimetre.
+- Tests:
+  - Python:
+    - internodes stack as long and thick as they are, and the youngest
+      phytomers are still growing;
+    - a leaf's parts join end to end, from its node to its terminal leaflet,
+      and reach as far as the leaf is long;
+    - leaflets are sized by their leaf, growing towards its tip, and lie in
+      the leaf's plane on either side of the rachis;
+    - a leaf droops in proportion to its length;
+    - successive leaves turn by the golden angle;
+    - a longer leaf is longer in every part;
+    - the plant's form shapes its leaves;
+    - every shape is a part of an organ of its kind.
+  - Viewer: spheres and ellipsoids are placed and scaled as their shapes say,
+    and batched by shape; a selection highlights every part of its organ.
+  - Browser: the lab draws the plant's 117 entities, and a leaf chosen in the
+    tree is selected by its petiole and pressed in the tree, until an
+    internode clicked in the view takes its place.
 
 ### P03.3: Thermal-time organogenesis
 

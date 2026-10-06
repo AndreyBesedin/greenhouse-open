@@ -1,5 +1,5 @@
 {
-  "schema_version": 12,
+  "schema_version": 13,
   "greenhouse_id": "gh_demo",
   "simulated_day": 9,
   "entities": [

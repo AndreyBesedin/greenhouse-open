@@ -2,9 +2,10 @@ import { useMemo } from "react";
 
 import { categoryColor } from "../debug/categories";
 import { type Colouring, scalarColor, scalarValue } from "../debug/scalar";
+import { highlighted } from "../selection";
 import type { Color, SceneEntity, SceneSnapshot } from "./generated/snapshotTypes";
-import { InstancedCylinders } from "./InstancedCylinders";
-import { cylinderBatches } from "./instancing";
+import { InstancedShapes } from "./InstancedShapes";
+import { isInstanced, shapeBatches } from "./instancing";
 import { placement } from "./placement";
 import { RENDERERS } from "./renderers";
 
@@ -20,13 +21,15 @@ function shownColor(entity: SceneEntity, colouring: Colouring | null, byCategory
 }
 
 /**
- * A checked snapshot. Belongs inside the world's z-up group. Cylinders, the
- * shape repeated by the hundred in a greenhouse (stems, posts, rafters,
- * pipes), are drawn in one instanced batch per kind, and per finish: metal
- * or not. Every other entity, and a selected cylinder, which glows, is drawn
- * on its own by its kind's renderer. Either way
- * a click can tell which entity it landed on (`pickEntity`): an entity's own
- * group carries its identifier, and a batch lists its entities.
+ * A checked snapshot. Belongs inside the world's z-up group. Cylinders,
+ * spheres and ellipsoids, the shapes repeated by the hundred in a greenhouse
+ * (posts, rafters, pipes, and plants' stems, leaflets and fruits), are drawn
+ * in one instanced batch per kind, per shape and per finish: metal or not.
+ * Every other entity, and a highlighted one, which glows, is drawn on its own
+ * by its kind's renderer: the selected entity and, if it is part of a plant's
+ * organ, the organ's other parts. Either way a click can tell which entity it
+ * landed on (`pickEntity`): an entity's own group carries its identifier, and
+ * a batch lists its entities.
  */
 export function SceneView({
   snapshot,
@@ -45,12 +48,15 @@ export function SceneView({
   /** Colours each part of the envelope by its semantic category. */
   byCategory?: boolean;
 }) {
-  const { batches, single } = useMemo(() => {
+  const { batches, single, glowing } = useMemo(() => {
+    const glowing = highlighted(snapshot, selectedId);
     return {
-      batches: cylinderBatches(snapshot.entities).map(({ batch, metallic, entities: all }) => {
-        const batched = all.filter((entity) => entity.entity_id !== selectedId);
+      glowing,
+      batches: shapeBatches(snapshot.entities).map(({ batch, shape, metallic, entities: all }) => {
+        const batched = all.filter((entity) => !glowing.has(entity.entity_id));
         return {
           batch,
+          shape,
           metallic,
           entities: batched,
           colors: batched.map((entity) => shownColor(entity, colouring, byCategory)),
@@ -59,7 +65,7 @@ export function SceneView({
       }),
       single: snapshot.entities.filter(
         (entity) =>
-          (entity.shape.shape !== "cylinder" || entity.entity_id === selectedId) &&
+          (!isInstanced(entity) || glowing.has(entity.entity_id)) &&
           (showBounds || entity.kind !== "GREENHOUSE_BOUNDS"),
       ),
     };
@@ -67,9 +73,10 @@ export function SceneView({
 
   return (
     <>
-      {batches.map(({ batch, metallic, entities, colors, capacity }) => (
-        <InstancedCylinders
+      {batches.map(({ batch, shape, metallic, entities, colors, capacity }) => (
+        <InstancedShapes
           key={`${batch}-${capacity}`}
+          shape={shape}
           entities={entities}
           colors={colors}
           capacity={capacity}
@@ -80,7 +87,7 @@ export function SceneView({
         const { position, quaternion } = placement(entity.transform);
         const look = {
           color: shownColor(entity, colouring, byCategory),
-          selected: entity.entity_id === selectedId,
+          selected: glowing.has(entity.entity_id),
           emphasised: byCategory,
         };
         return (

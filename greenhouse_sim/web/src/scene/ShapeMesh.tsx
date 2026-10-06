@@ -19,6 +19,7 @@ import type {
   Box,
   Color,
   Cylinder,
+  Ellipsoid,
   Plane,
   Polygon,
   Shape,
@@ -56,13 +57,22 @@ export function flatGeometry(shape: Box | Plane | Polygon): BufferGeometry {
   }
 }
 
-/** A box, cylinder or sphere as Three.js geometry, as `world/geometry.py`
- * places them: a box or cylinder standing on its base at the shape's origin
- * and rising along +z, a sphere centred on it. */
-export function solidGeometry(shape: Box | Cylinder | Sphere): BufferGeometry {
+/** The shapes drawn as closed solids. */
+export type Solid = Box | Cylinder | Sphere | Ellipsoid;
+
+/** A solid as Three.js geometry, as `world/geometry.py` places them: a box
+ * or cylinder standing on its base at the shape's origin and rising along +z,
+ * a sphere or ellipsoid centred on it. */
+export function solidGeometry(shape: Solid): BufferGeometry {
   switch (shape.shape) {
     case "sphere":
       return new SphereGeometry(shape.radius, SPHERE_WIDTH_SEGMENTS, SPHERE_HEIGHT_SEGMENTS);
+    case "ellipsoid":
+      return new SphereGeometry(1 / 2, SPHERE_WIDTH_SEGMENTS, SPHERE_HEIGHT_SEGMENTS).scale(
+        shape.size_x,
+        shape.size_y,
+        shape.size_z,
+      );
     case "box":
       return new BoxGeometry(shape.size_x, shape.size_y, shape.size_z).translate(
         0,
@@ -76,16 +86,8 @@ export function solidGeometry(shape: Box | Cylinder | Sphere): BufferGeometry {
   }
 }
 
-/** A box, cylinder or sphere, drawn from the front. */
-function SolidMesh({
-  shape,
-  color,
-  glow,
-}: {
-  shape: Box | Cylinder | Sphere;
-  color: Color;
-  glow: object;
-}) {
+/** A solid, drawn from the front. */
+function SolidMesh({ shape, color, glow }: { shape: Solid; color: Color; glow: object }) {
   const geometry = useMemo(() => solidGeometry(shape), [shape]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   return (
@@ -153,6 +155,7 @@ export function ShapeMesh({
     case "cylinder":
     case "box":
     case "sphere":
+    case "ellipsoid":
       return <SolidMesh shape={shape} color={color} glow={glow} />;
     case "polygon":
       return <PolygonMesh shape={shape} color={color} glow={glow} />;

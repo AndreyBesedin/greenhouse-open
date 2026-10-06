@@ -38,6 +38,16 @@ export function formatMetres(value: number): string {
   return rounded === "-0.00" ? "0.00" : rounded;
 }
 
+// A size under a centimetre, such as a leaflet's thickness or a petiole's
+// radius, is written to a tenth of a millimetre, not as nothing.
+const SMALL_SIZE_M = 0.01;
+const SMALL_SIZE_DECIMALS = 4;
+
+/** A size in metres: to the centimetre, or finer if it is under one. */
+export function formatSize(value: number): string {
+  return Math.abs(value) < SMALL_SIZE_M ? value.toFixed(SMALL_SIZE_DECIMALS) : formatMetres(value);
+}
+
 /** A simulated instant as the HUD writes it, in UTC to the minute. */
 export function formatInstant(iso: string): string {
   const instant = new Date(iso);

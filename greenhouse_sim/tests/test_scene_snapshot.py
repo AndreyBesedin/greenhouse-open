@@ -151,6 +151,7 @@ def test_the_scene_schema_tells_a_viewer_exactly_what_it_may_receive() -> None:
         "box",
         "polygon",
         "sphere",
+        "ellipsoid",
         "axes",
     }
     assert definitions["SceneEntityKind"]["enum"] == [kind.value for kind in SceneEntityKind]

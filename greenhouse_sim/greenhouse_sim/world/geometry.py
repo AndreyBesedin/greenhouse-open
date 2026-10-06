@@ -212,6 +212,19 @@ class Sphere(BaseModel):
     radius: PositiveFloat
 
 
+class Ellipsoid(BaseModel):
+    """An ellipsoid centred on its frame's origin, as long, wide and thick as
+    its sizes along x, y and z, such as a leaflet lying in its frame's x-y
+    plane."""
+
+    model_config = ConfigDict(frozen=True, json_schema_serialization_defaults_required=True)
+
+    shape: Literal["ellipsoid"] = "ellipsoid"
+    size_x: PositiveFloat
+    size_y: PositiveFloat
+    size_z: PositiveFloat
+
+
 class Axes(BaseModel):
     """A reference marker: one arrow from the origin along each of +x, +y and
     +z."""
@@ -223,5 +236,5 @@ class Axes(BaseModel):
 
 
 type Shape = Annotated[
-    Plane | Cylinder | Box | Polygon | Sphere | Axes, Field(discriminator="shape")
+    Plane | Cylinder | Box | Polygon | Sphere | Ellipsoid | Axes, Field(discriminator="shape")
 ]

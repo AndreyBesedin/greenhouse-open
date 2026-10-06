@@ -26,7 +26,7 @@ import {
   sourceFromSearch,
 } from "./scene/source";
 import { useLiveScene } from "./scene/useLiveScene";
-import { selectedEntity } from "./selection";
+import { entityOfOrgan, organOf, selectedEntity } from "./selection";
 import { Viewport } from "./Viewport";
 import type { Point3 } from "./world";
 
@@ -197,7 +197,10 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
               />
             )}
             {source.kind === "plants" && (
-              <PlantStructure selectedId={selectedId} onSelect={setSelectedId} />
+              <PlantStructure
+                selectedOrgan={selected === null ? null : organOf(selected)}
+                onSelect={(organId) => setSelectedId(entityOfOrgan(snapshot, organId))}
+              />
             )}
           </InfoPanel>
           {selected && (

@@ -118,6 +118,40 @@ export const SNAPSHOT_SCHEMA = {
       "title": "Cylinder",
       "type": "object"
     },
+    "Ellipsoid": {
+      "description": "An ellipsoid centred on its frame's origin, as long, wide and thick as\nits sizes along x, y and z, such as a leaflet lying in its frame's x-y\nplane.",
+      "properties": {
+        "shape": {
+          "const": "ellipsoid",
+          "default": "ellipsoid",
+          "title": "Shape",
+          "type": "string"
+        },
+        "size_x": {
+          "exclusiveMinimum": 0,
+          "title": "Size X",
+          "type": "number"
+        },
+        "size_y": {
+          "exclusiveMinimum": 0,
+          "title": "Size Y",
+          "type": "number"
+        },
+        "size_z": {
+          "exclusiveMinimum": 0,
+          "title": "Size Z",
+          "type": "number"
+        }
+      },
+      "required": [
+        "shape",
+        "size_x",
+        "size_y",
+        "size_z"
+      ],
+      "title": "Ellipsoid",
+      "type": "object"
+    },
     "Material": {
       "description": "What a fixture, or a part of the envelope, is made of.",
       "enum": [
@@ -362,6 +396,9 @@ export const SNAPSHOT_SCHEMA = {
           "$ref": "#/$defs/Sphere"
         },
         {
+          "$ref": "#/$defs/Ellipsoid"
+        },
+        {
           "$ref": "#/$defs/Axes"
         }
       ]
@@ -438,7 +475,7 @@ export const SNAPSHOT_SCHEMA = {
   "description": "One greenhouse at one simulated day, as a viewer draws it. Positions\nand sizes are in metres, in right-handed world axes with z up.",
   "properties": {
     "schema_version": {
-      "default": 12,
+      "default": 13,
       "title": "Schema Version",
       "type": "integer"
     },

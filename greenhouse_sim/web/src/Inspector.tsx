@@ -3,7 +3,7 @@ import { Quaternion, Vector3 } from "three";
 
 import { semanticType } from "./debug/categories";
 import type { OverlayToggles } from "./debug/overlays";
-import { formatMetres, formatPoint, formatRotation, formatValue } from "./readouts";
+import { formatPoint, formatRotation, formatSize, formatValue } from "./readouts";
 import type { SceneEntity, Shape } from "./scene/generated/snapshotTypes";
 
 // A cylinder whose axis leans less than this from the vertical stands up.
@@ -19,17 +19,19 @@ const OVERLAY_ORDER: readonly (keyof OverlayToggles)[] = ["box", "axes", "label"
 export function describeShape(shape: Shape): string {
   switch (shape.shape) {
     case "plane":
-      return `plane, ${formatMetres(shape.size_x)} × ${formatMetres(shape.size_y)} m`;
+      return `plane, ${formatSize(shape.size_x)} × ${formatSize(shape.size_y)} m`;
     case "cylinder":
-      return `cylinder, radius ${formatMetres(shape.radius)} m, height ${formatMetres(shape.height)} m`;
+      return `cylinder, radius ${formatSize(shape.radius)} m, height ${formatSize(shape.height)} m`;
     case "box":
-      return `box, ${formatMetres(shape.size_x)} × ${formatMetres(shape.size_y)} × ${formatMetres(shape.size_z)} m`;
+      return `box, ${formatSize(shape.size_x)} × ${formatSize(shape.size_y)} × ${formatSize(shape.size_z)} m`;
     case "polygon":
       return `polygon, ${shape.points.length} corners`;
     case "sphere":
-      return `sphere, radius ${formatMetres(shape.radius)} m`;
+      return `sphere, radius ${formatSize(shape.radius)} m`;
+    case "ellipsoid":
+      return `ellipsoid, ${formatSize(shape.size_x)} × ${formatSize(shape.size_y)} × ${formatSize(shape.size_z)} m`;
     case "axes":
-      return `axes, ${formatMetres(shape.length)} m`;
+      return `axes, ${formatSize(shape.length)} m`;
   }
 }
 
@@ -39,17 +41,19 @@ export function describeDimensions(entity: SceneEntity): string | null {
   const { shape } = entity;
   switch (shape.shape) {
     case "box":
-      return `length ${formatMetres(shape.size_x)} m, width ${formatMetres(shape.size_y)} m, height ${formatMetres(shape.size_z)} m`;
+      return `length ${formatSize(shape.size_x)} m, width ${formatSize(shape.size_y)} m, height ${formatSize(shape.size_z)} m`;
     case "cylinder": {
       const { w, x, y, z } = entity.transform.rotation;
       const axis = new Vector3(0, 0, 1).applyQuaternion(new Quaternion(x, y, z, w));
       const extent = Math.abs(axis.z) > UPRIGHT_COSINE ? "height" : "length";
-      return `diameter ${formatMetres(2 * shape.radius)} m, ${extent} ${formatMetres(shape.height)} m`;
+      return `diameter ${formatSize(2 * shape.radius)} m, ${extent} ${formatSize(shape.height)} m`;
     }
     case "plane":
-      return `${formatMetres(shape.size_x)} × ${formatMetres(shape.size_y)} m`;
+      return `${formatSize(shape.size_x)} × ${formatSize(shape.size_y)} m`;
     case "sphere":
-      return `diameter ${formatMetres(2 * shape.radius)} m`;
+      return `diameter ${formatSize(2 * shape.radius)} m`;
+    case "ellipsoid":
+      return `length ${formatSize(shape.size_x)} m, width ${formatSize(shape.size_y)} m, thickness ${formatSize(shape.size_z)} m`;
     case "polygon":
     case "axes":
       return null;

@@ -29,7 +29,7 @@ export type SceneEntityKind =
   | "TRUSS"
   | "FLOWER"
   | "FRUIT";
-export type Shape = Plane | Cylinder | Box | Polygon | Sphere | Axes;
+export type Shape = Plane | Cylinder | Box | Polygon | Sphere | Ellipsoid | Axes;
 /**
  * What a fixture, or a part of the envelope, is made of.
  */
@@ -133,6 +133,17 @@ export interface Point2 {
 export interface Sphere {
   shape: "sphere";
   radius: number;
+}
+/**
+ * An ellipsoid centred on its frame's origin, as long, wide and thick as
+ * its sizes along x, y and z, such as a leaflet lying in its frame's x-y
+ * plane.
+ */
+export interface Ellipsoid {
+  shape: "ellipsoid";
+  size_x: number;
+  size_y: number;
+  size_z: number;
 }
 /**
  * A reference marker: one arrow from the origin along each of +x, +y and
