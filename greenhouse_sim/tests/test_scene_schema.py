@@ -55,6 +55,10 @@ QA_FIXTURES_FILE = ROOT / "web" / "public" / "scenes" / "qa-fixtures.json"
 QA_LAYOUT_FILE = ROOT / "web" / "public" / "scenes" / "qa-layout.json"
 # Written compact, as it is the largest: a plant at four ages, organ by organ.
 QA_PLANTS_FILE = ROOT / "web" / "public" / "scenes" / "qa-plants.json"
+# Its numbers are kept to this many decimals, a micrometre: its geometry turns
+# leaves by angles whose sines and cosines differ in their last bit from one
+# platform's maths library to another's.
+QA_PLANTS_DECIMALS = 6
 # The canonical greenhouse for the viewer's screenshot tests: three 3.2 m
 # spans and four 4 m bays, its eaves at 4 m and ridges at 4.65 m, with a roof
 # vent half open, a closed side vent and a door half open.
@@ -277,8 +281,18 @@ def test_the_qa_layout_is_what_the_simulator_draws() -> None:
     assert json.loads(QA_LAYOUT_FILE.read_text()) == _qa_layout()
 
 
+def _rounded(value: object, decimals: int) -> object:
+    if isinstance(value, float):
+        return round(value, decimals)
+    if isinstance(value, dict):
+        return {key: _rounded(item, decimals) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_rounded(item, decimals) for item in value]
+    return value
+
+
 def _qa_plants() -> object:
-    return json.loads(plants.time_lapse().model_dump_json())
+    return _rounded(json.loads(plants.time_lapse().model_dump_json()), QA_PLANTS_DECIMALS)
 
 
 def test_the_qa_plant_time_lapse_is_what_the_simulator_draws() -> None:
