@@ -11,13 +11,13 @@ from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scene.snapshot import SceneEntityKind, scene_snapshot
 from greenhouse_sim.world.envelope import Envelope, MemberKind, Surface, SurfaceCategory
+from greenhouse_sim.world.envelope_checks import Point, inverted_surfaces, outline, shared_edges
 from greenhouse_sim.world.geometry import Quaternion, Transform, Vector3
 
 # A quarter turn about the world's z: x turns onto y, and y onto -x.
 QUARTER_TURN_ABOUT_Z = Quaternion(w=math.sqrt(0.5), z=math.sqrt(0.5))
 # A 24 m house of one 12.8 m span, its eaves at 5.5 m and its ridge 2.4 m higher.
 HOUSE = Envelope(length=24.0, width=12.8, eave_height=5.5, ridge_height=7.9)
-type Point = tuple[float, float, float]
 
 
 def _close(actual: Vector3, expected: Vector3) -> bool:
@@ -27,28 +27,6 @@ def _close(actual: Vector3, expected: Vector3) -> bool:
             (actual.x, actual.y, actual.z), (expected.x, expected.y, expected.z), strict=True
         )
     )
-
-
-def _rounded(point: Vector3) -> Point:
-    """A point rounded to a micrometre, so that corners can be compared."""
-    return (round(point.x, 6), round(point.y, 6), round(point.z, 6))
-
-
-def _outline(surface: Surface) -> list[Point]:
-    """A surface's corners in order, in the greenhouse's frame."""
-    shape = surface.shape
-    if shape.shape == "plane":
-        half_x, half_y = shape.size_x / 2, shape.size_y / 2
-        corners = [(-half_x, -half_y), (half_x, -half_y), (half_x, half_y), (-half_x, half_y)]
-    else:
-        corners = [(point.x, point.y) for point in shape.points]
-    return [_rounded(surface.transform.apply(Vector3(x=x, y=y, z=0.0))) for x, y in corners]
-
-
-def _edges(surface: Surface) -> set[frozenset[Point]]:
-    """A surface's edges, each as the pair of corners it joins."""
-    outline = _outline(surface)
-    return {frozenset((outline[i], outline[(i + 1) % len(outline)])) for i in range(len(outline))}
 
 
 def _by_id(envelope: Envelope) -> dict[str, Surface]:
@@ -163,7 +141,7 @@ def test_each_surface_has_the_corners_the_configuration_gives_it() -> None:
     surfaces = _by_id(HOUSE)
 
     def corners(surface_id: str) -> set[Point]:
-        return set(_outline(surfaces[surface_id]))
+        return set(outline(surfaces[surface_id]))
 
     assert corners("floor") == {(0, 0, 0), (length, 0, 0), (length, width, 0), (0, width, 0)}
     assert corners("side_wall_right") == {
@@ -204,7 +182,7 @@ def test_each_surface_has_the_corners_the_configuration_gives_it() -> None:
 def test_the_cross_section_matches_the_configuration() -> None:
     """The gable is the greenhouse's cross-section: walls to the eaves on both
     sides, and the ridge above the middle of the width."""
-    gable = _outline(_by_id(HOUSE)["end_wall_front"])
+    gable = outline(_by_id(HOUSE)["end_wall_front"])
     heights_across = sorted({(y, z) for _, y, z in gable})
 
     assert heights_across == [(0, 0), (0, 5.5), (6.4, 7.9), (12.8, 0), (12.8, 5.5)]
@@ -213,17 +191,7 @@ def test_the_cross_section_matches_the_configuration() -> None:
 
 def test_every_surface_faces_into_the_greenhouse() -> None:
     """No inverted surfaces: each one's front points at the middle of the house."""
-    middle = (HOUSE.length / 2, HOUSE.width / 2, HOUSE.eave_height / 2)
-
-    for surface in HOUSE.surfaces():
-        facing = surface.transform.rotation.rotate(Vector3(x=0, y=0, z=1))
-        outline = _outline(surface)
-        centre = [sum(corner[axis] for corner in outline) / len(outline) for axis in range(3)]
-        reach = sum(
-            f * (m - c)
-            for f, m, c in zip((facing.x, facing.y, facing.z), middle, centre, strict=True)
-        )
-        assert reach > 0, surface.surface_id
+    assert inverted_surfaces(HOUSE) == []
 
 
 @pytest.mark.parametrize(("ridge_height", "spans"), [(7.9, 1), (5.5, 1), (7.9, 2), (6.2, 5)])
@@ -231,12 +199,8 @@ def test_the_surfaces_close_the_greenhouse(ridge_height: float, spans: int) -> N
     """No gaps: every edge of every surface is shared with exactly one other,
     for a pitched roof and a flat one, of one span and of several."""
     house = HOUSE.model_copy(update={"ridge_height": ridge_height, "spans": spans})
-    shared: dict[frozenset[Point], int] = {}
-    for surface in house.surfaces():
-        for edge in _edges(surface):
-            shared[edge] = shared.get(edge, 0) + 1
 
-    assert set(shared.values()) == {2}
+    assert set(shared_edges(house).values()) == {2}
 
 
 @pytest.mark.parametrize(
@@ -251,10 +215,10 @@ def test_the_surfaces_follow_the_envelopes_dimensions(
     )
     surfaces = _by_id(envelope)
 
-    assert max(z for _, _, z in _outline(surfaces["end_wall_back"])) == ridge_height
-    assert max(z for _, _, z in _outline(surfaces["side_wall_right"])) == eave_height
-    assert max(x for x, _, _ in _outline(surfaces["roof_1_left"])) == length
-    assert max(y for _, y, _ in _outline(surfaces["floor"])) == width
+    assert max(z for _, _, z in outline(surfaces["end_wall_back"])) == ridge_height
+    assert max(z for _, _, z in outline(surfaces["side_wall_right"])) == eave_height
+    assert max(x for x, _, _ in outline(surfaces["roof_1_left"])) == length
+    assert max(y for _, y, _ in outline(surfaces["floor"])) == width
 
 
 def test_a_gutter_runs_along_each_eave() -> None:
@@ -299,13 +263,13 @@ def test_each_span_has_its_own_roof_and_ridge() -> None:
     assert len(roofs) == 2 * VENLO.spans
     for number in range(1, VENLO.spans + 1):
         ridge_y = 9.6 * (number - 1) + 4.8
-        outline = set(_outline(surfaces[f"roof_{number}_right"]))
-        assert (0, round(ridge_y, 6), 7.0) in outline
-        assert (0, round(9.6 * (number - 1), 6), 6.0) in outline
+        corners = set(outline(surfaces[f"roof_{number}_right"]))
+        assert (0, round(ridge_y, 6), 7.0) in corners
+        assert (0, round(9.6 * (number - 1), 6), 6.0) in corners
 
 
 def test_the_gable_has_a_peak_per_span_and_a_valley_between() -> None:
-    gable = _outline(_by_id(VENLO)["end_wall_front"])
+    gable = outline(_by_id(VENLO)["end_wall_front"])
     tops = sorted((y, z) for _, y, z in gable if z > 0)
 
     assert [z for _, z in tops] == [6.0, 7.0] * VENLO.spans + [6.0]

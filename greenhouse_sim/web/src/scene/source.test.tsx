@@ -53,7 +53,7 @@ describe("loading a scene", () => {
     });
   });
 
-  it("reports a scenario the API does not know", async () => {
+  it("reports a scenario the API does not know, with the API's reason", async () => {
     const state = await loadScene(
       { kind: "scenario", scenarioId: "nope" },
       answering(404, '{"error": "no scenario"}'),
@@ -61,8 +61,24 @@ describe("loading a scene", () => {
 
     expect(state).toEqual({
       status: "unavailable",
-      reason: "/api/scenarios/nope/scene answered 404",
+      reason: "/api/scenarios/nope/scene answered 404: no scenario",
     });
+  });
+
+  it("asks the simulator for a scenario's greenhouse changed and opened", async () => {
+    const asked: string[] = [];
+    const recording: typeof fetch = async (url) => {
+      asked.push(String(url));
+      return new Response("{}", { status: 500 });
+    };
+    const source = sourceFromSearch("?scenario=gh_demo&envelope=spans:3,length:12&open=door_1:1");
+
+    await loadScene(source, recording);
+
+    expect(searchFor(source)).toBe("?scenario=gh_demo&envelope=length:12,spans:3&open=door_1:1");
+    expect(asked).toEqual([
+      "/api/scenarios/gh_demo/scene?envelope=length:12,spans:3&open=door_1:1",
+    ]);
   });
 });
 

@@ -8,9 +8,16 @@ export type SceneSource =
   | { kind: "example" }
   /** A dense field of plants built in the viewer, for measuring the renderer. */
   | { kind: "stress"; plants: number }
-  /** A scenario's scene from the simulator, with its doors and vents opened as
-   * `openings` asks (by opening identifier, from 0 to 1). */
-  | { kind: "scenario"; scenarioId: string; openings?: Readonly<Record<string, number>> }
+  /** A scenario's scene from the simulator, its greenhouse's dimensions
+   * changed as `envelope` asks (length, width, spans, bays, eave_height,
+   * ridge_height), and its doors and vents opened as `openings` asks (by
+   * opening identifier, from 0 to 1). */
+  | {
+      kind: "scenario";
+      scenarioId: string;
+      envelope?: Readonly<Record<string, number>>;
+      openings?: Readonly<Record<string, number>>;
+    }
   | { kind: "live"; scenarioId: string };
 
 export type SceneState =
@@ -30,10 +37,14 @@ export function sourceFromSearch(search: string): SceneSource {
   }
   const scenarioId = parameters.get("scenario");
   if (scenarioId) {
-    const openings = openingsFrom(parameters.get("open"));
-    return openings === null
-      ? { kind: "scenario", scenarioId }
-      : { kind: "scenario", scenarioId, openings };
+    const envelope = pairsFrom(parameters.get("envelope"));
+    const openings = pairsFrom(parameters.get("open"));
+    return {
+      kind: "scenario",
+      scenarioId,
+      ...(envelope === null ? {} : { envelope }),
+      ...(openings === null ? {} : { openings }),
+    };
   }
   switch (parameters.get("scene")) {
     case "example":
@@ -54,42 +65,55 @@ export function searchFor(source: SceneSource): string {
     case "stress":
       return `?scene=stress&plants=${source.plants}`;
     case "scenario":
-      return `?scenario=${encodeURIComponent(source.scenarioId)}${openingsQuery(source.openings, "&")}`;
+      return `?scenario=${encodeURIComponent(source.scenarioId)}${changesQuery(source, "&")}`;
     case "live":
       return `?live=${encodeURIComponent(source.scenarioId)}`;
   }
 }
 
-/** `open=roof_vent_1:0.5,door_1:1`, as the address bar and the simulator's
- * API both take it, or nothing when no opening is set. */
-function openingsQuery(
-  openings: Readonly<Record<string, number>> | undefined,
-  separator: "?" | "&",
-): string {
-  const entries = Object.entries(openings ?? {}).sort(([a], [b]) => a.localeCompare(b));
-  if (entries.length === 0) {
-    return "";
-  }
-  const pairs = entries.map(([id, fraction]) => `${encodeURIComponent(id)}:${fraction}`);
-  return `${separator}open=${pairs.join(",")}`;
+/** `key:number` pairs, sorted by key, as the address bar and the simulator's
+ * API both take them: `length:12,spans:3`. */
+function pairsText(pairs: Readonly<Record<string, number>> | undefined): string {
+  return Object.entries(pairs ?? {})
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, number]) => `${encodeURIComponent(key)}:${number}`)
+    .join(",");
 }
 
-/** The openings an address sets, or null when it sets none or says nothing
- * readable. The simulator checks the fractions themselves. */
-function openingsFrom(value: string | null): Record<string, number> | null {
+/** The changes a scenario's scene asks the simulator for: its greenhouse's
+ * dimensions (`envelope=`) and its openings (`open=`), or nothing. */
+function changesQuery(
+  source: {
+    envelope?: Readonly<Record<string, number>>;
+    openings?: Readonly<Record<string, number>>;
+  },
+  separator: "?" | "&",
+): string {
+  const parts = [
+    ["envelope", pairsText(source.envelope)],
+    ["open", pairsText(source.openings)],
+  ].filter(([, text]) => text !== "");
+  return parts.length === 0
+    ? ""
+    : `${separator}${parts.map(([name, text]) => `${name}=${text}`).join("&")}`;
+}
+
+/** The pairs an address sets, or null when it sets none or says nothing
+ * readable. The simulator checks the numbers themselves. */
+function pairsFrom(value: string | null): Record<string, number> | null {
   if (!value) {
     return null;
   }
-  const openings: Record<string, number> = {};
+  const pairs: Record<string, number> = {};
   for (const pair of value.split(",")) {
-    const [id, fraction] = pair.split(":");
-    const number = Number(fraction);
-    if (!id || fraction === undefined || Number.isNaN(number)) {
+    const [key, text] = pair.split(":");
+    const number = Number(text);
+    if (!key || text === undefined || Number.isNaN(number)) {
       return null;
     }
-    openings[id] = number;
+    pairs[key] = number;
   }
-  return openings;
+  return pairs;
 }
 
 function sceneUrl(source: SceneSource): string | null {
@@ -102,7 +126,7 @@ function sceneUrl(source: SceneSource): string | null {
     case "example":
       return EXAMPLE_SCENE_URL;
     case "scenario":
-      return `/api/scenarios/${encodeURIComponent(source.scenarioId)}/scene${openingsQuery(source.openings, "?")}`;
+      return `/api/scenarios/${encodeURIComponent(source.scenarioId)}/scene${changesQuery(source, "?")}`;
   }
 }
 
@@ -119,12 +143,25 @@ export async function loadScene(
   return url === null ? { status: "none" } : fetchScene(url, fetchFn);
 }
 
+/** Why a scene was refused: the simulator's own reason, where it gives one. */
+async function refusal(url: string, response: Response): Promise<string> {
+  const answered = `${url} answered ${response.status}`;
+  try {
+    const body: unknown = await response.json();
+    const error =
+      typeof body === "object" && body !== null ? (body as Record<string, unknown>).error : null;
+    return typeof error === "string" ? `${answered}: ${error}` : answered;
+  } catch {
+    return answered;
+  }
+}
+
 /** Fetches and checks the scene at `url`; every failure becomes a state to show. */
 export async function fetchScene(url: string, fetchFn: typeof fetch = fetch): Promise<SceneState> {
   try {
     const response = await fetchFn(url);
     if (!response.ok) {
-      return { status: "unavailable", reason: `${url} answered ${response.status}` };
+      return { status: "unavailable", reason: await refusal(url, response) };
     }
     const check = checkScene(await response.json());
     return check.ok

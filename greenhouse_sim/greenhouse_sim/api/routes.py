@@ -7,8 +7,10 @@ API can be tested without a socket and the server stays a thin shell.
     GET /api/version                      simulator and scene schema versions
     GET /api/scenarios                    the registered scenarios
     GET /api/scenarios/{id}/scene         a scenario's scene before its first day;
-                                          ?open=roof_vent_1:0.5,door_1:1 sets how
-                                          far its doors and vents stand open
+                                          ?envelope=length:12,spans:3 changes its
+                                          greenhouse's dimensions, and
+                                          ?open=roof_vent_1:0.5,door_1:1 how far
+                                          its doors and vents stand open
     GET /api/scenarios/{id}/live          the scenario played live, as Server-Sent
                                           Events (served by `server`, found by
                                           `live_scenario`)
@@ -63,10 +65,11 @@ def respond(method: str, path: str) -> Response:
             config = SCENARIO_REGISTRY.get(scenario_id)
             if config is None:
                 return _error(HTTPStatus.NOT_FOUND, f"no scenario {scenario_id!r}")
-            opened = _with_openings(config, parse_qs(urlsplit(path).query).get("open", []))
-            if isinstance(opened, str):
-                return _error(HTTPStatus.BAD_REQUEST, opened)
-            return Response(HTTPStatus.OK, _initial_scene(opened))
+            query = parse_qs(urlsplit(path).query)
+            changed = _with_envelope(config, query.get("envelope", []), query.get("open", []))
+            if isinstance(changed, str):
+                return _error(HTTPStatus.BAD_REQUEST, changed)
+            return Response(HTTPStatus.OK, _initial_scene(changed))
         case _:
             return _error(HTTPStatus.NOT_FOUND, f"nothing at {path!r}")
 
@@ -89,33 +92,58 @@ def _summary(config: ScenarioConfig) -> ScenarioSummary:
     )
 
 
-def _with_openings(config: ScenarioConfig, requests: list[str]) -> ScenarioConfig | str:
-    """The scenario with its doors and vents opened as `open=id:fraction,...`
-    asks, or why it cannot be. The envelope is checked afresh, as any
-    description of a greenhouse is."""
-    fractions: dict[str, float] = {}
+# The envelope's dimensions a scene request may change.
+_DIMENSIONS: Final = ("length", "width", "spans", "bays", "eave_height", "ridge_height")
+
+
+def _pairs(requests: list[str], name: str) -> dict[str, float] | str:
+    """`name=key:number,key:number` as numbers by key, or why it cannot be read."""
+    pairs: dict[str, float] = {}
     for request in ",".join(requests).split(","):
         if not request:
             continue
-        opening_id, _, fraction = request.partition(":")
+        key, _, number = request.partition(":")
         try:
-            fractions[opening_id] = float(fraction)
+            pairs[key] = float(number)
         except ValueError:
-            return f"open wants opening:fraction, not {request!r}"
+            return f"{name} wants key:number pairs, not {request!r}"
+    return pairs
+
+
+def _with_envelope(
+    config: ScenarioConfig, dimensions: list[str], openings: list[str]
+) -> ScenarioConfig | str:
+    """The scenario with its greenhouse's dimensions changed as
+    `envelope=length:12,spans:3,...` asks, and its doors and vents opened as
+    `open=id:fraction,...` asks, or why it cannot be. The envelope is checked
+    afresh, as any description of a greenhouse is: an opening that no longer
+    fits, or a ridge below the eaves, is refused."""
+    sizes = _pairs(dimensions, "envelope")
+    if isinstance(sizes, str):
+        return sizes
+    unknown_sizes = sorted(set(sizes) - set(_DIMENSIONS))
+    if unknown_sizes:
+        named = ", ".join(map(repr, unknown_sizes))
+        return f"the envelope has no {named}; it has {', '.join(_DIMENSIONS)}"
+    fractions = _pairs(openings, "open")
+    if isinstance(fractions, str):
+        return fractions
     envelope = config.envelope
     known = {opening.opening_id for opening in envelope.openings}
     unknown = sorted(set(fractions) - known)
     if unknown:
         return f"{config.greenhouse_id} has no opening {', '.join(map(repr, unknown))}"
-    openings = [
+    opened = [
         opening.model_dump() | {"opening": fractions.get(opening.opening_id, opening.opening)}
         for opening in envelope.openings
     ]
     try:
-        opened = type(envelope).model_validate(envelope.model_dump() | {"openings": openings})
+        changed = type(envelope).model_validate(
+            envelope.model_dump() | sizes | {"openings": opened}
+        )
     except ValidationError as error:
-        return f"cannot open so: {error.errors()[0]['msg']}"
-    return config.model_copy(update={"envelope": opened})
+        return f"no such greenhouse: {error.errors()[0]['msg']}"
+    return config.model_copy(update={"envelope": changed})
 
 
 def _initial_scene(config: ScenarioConfig) -> JsonValue:
