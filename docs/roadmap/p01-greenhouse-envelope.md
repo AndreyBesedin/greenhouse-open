@@ -43,7 +43,7 @@ around it.
 | P01.4 | `feat(greenhouse): add bays and repeated structural frames` | Done ([#31](https://github.com/AndreyBesedin/greenhouse-open/pull/31)) |
 | P01.5 | `feat(envelope): add doors, vents and configurable openings` | Done ([#32](https://github.com/AndreyBesedin/greenhouse-open/pull/32)) |
 | P01.6 | `feat(materials): distinguish envelope semantics visually` | Done ([#33](https://github.com/AndreyBesedin/greenhouse-open/pull/33)) |
-| P01.7 | `test(visual): add greenhouse geometry QA snapshots` | Planned |
+| P01.7 | `test(visual): add greenhouse geometry QA snapshots` | Done ([#34](https://github.com/AndreyBesedin/greenhouse-open/pull/34)) |
 
 ### P01.1: Greenhouse origin, axes and bounds
 
@@ -247,6 +247,27 @@ As implemented:
 Four fixed views of a canonical greenhouse: outside isometric, inside along
 an aisle, top, and a debug section. Visible result: four stable baseline
 screenshots, compared as P00.7's are.
+
+As implemented:
+
+- The canonical greenhouse is `public/scenes/qa-greenhouse.json`: three 3.2 m
+  spans by four 4 m bays, 16 by 9.6 m, its eaves at 4 m and ridges at
+  4.65 m, with a roof vent and a door half open and a side vent closed, and
+  no crop. The simulator writes it (`greenhouse_scene`, new and public), and
+  a test fails if the committed copy is stale, as for the example scene.
+  CI's screenshot container has no Python, so it reads the file.
+- `/qa/greenhouse?view=outside|aisle|top|section` shows it from a fixed
+  camera per view, worked out from its bounds: from beyond a back corner;
+  standing inside near the back, looking down the middle aisle; from above;
+  and facing a cut across the middle of the length, with the surface
+  categories on. The viewer can start from any camera pose, and cut its view
+  by a plane.
+- CI's visual checks job compares the four views with their baselines, drawn
+  in its pinned container, as P00.7's are.
+- Tests: the QA greenhouse is a scene the viewer draws, of the expected
+  size; the aisle camera stands inside it, the outside one outside, the top
+  one above it; only the section view is cut, at the middle of the length. A
+  browser test draws all four views without console errors.
 
 ## Final QA: `greenhouse-shell`
 

@@ -1,0 +1,2131 @@
+{
+  "schema_version": 6,
+  "greenhouse_id": "qa_greenhouse",
+  "simulated_day": 0,
+  "entities": [
+    {
+      "entity_id": "qa_greenhouse_floor",
+      "kind": "FLOOR",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 4.8,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 16.0,
+        "size_y": 9.6
+      },
+      "color": {
+        "r": 0.42,
+        "g": 0.33,
+        "b": 0.24
+      },
+      "label": "floor",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_side_wall_right",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 0.0,
+          "z": 2.0
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.7071067811865476
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 16.0,
+        "size_y": 4.0
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "label": "side wall right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_side_wall_left",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 9.6,
+          "z": 2.0
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.7071067811865475,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 16.0,
+        "size_y": 4.0
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "label": "side wall left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_end_wall_front",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 0.5,
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        }
+      },
+      "shape": {
+        "shape": "polygon",
+        "points": [
+          {
+            "x": 0.0,
+            "y": 0.0
+          },
+          {
+            "x": 9.6,
+            "y": 0.0
+          },
+          {
+            "x": 9.6,
+            "y": 4.0
+          },
+          {
+            "x": 7.999999999999999,
+            "y": 4.65
+          },
+          {
+            "x": 6.3999999999999995,
+            "y": 4.0
+          },
+          {
+            "x": 4.8,
+            "y": 4.65
+          },
+          {
+            "x": 3.1999999999999997,
+            "y": 4.0
+          },
+          {
+            "x": 1.5999999999999999,
+            "y": 4.65
+          },
+          {
+            "x": 0.0,
+            "y": 4.0
+          }
+        ]
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "label": "end wall front",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_end_wall_back",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 9.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": -0.5,
+          "x": -0.5,
+          "y": 0.5,
+          "z": 0.5
+        }
+      },
+      "shape": {
+        "shape": "polygon",
+        "points": [
+          {
+            "x": 0.0,
+            "y": 0.0
+          },
+          {
+            "x": 9.6,
+            "y": 0.0
+          },
+          {
+            "x": 9.6,
+            "y": 4.0
+          },
+          {
+            "x": 7.999999999999999,
+            "y": 4.65
+          },
+          {
+            "x": 6.3999999999999995,
+            "y": 4.0
+          },
+          {
+            "x": 4.8,
+            "y": 4.65
+          },
+          {
+            "x": 3.1999999999999997,
+            "y": 4.0
+          },
+          {
+            "x": 1.5999999999999999,
+            "y": 4.65
+          },
+          {
+            "x": 0.0,
+            "y": 4.0
+          }
+        ]
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "label": "end wall back",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_roof_1_right",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 0.7999999999999999,
+          "z": 4.325
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.9814444908201149,
+          "z": 0.19174647699200495
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 16.0,
+        "size_y": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "label": "roof 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_roof_1_left",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 2.4,
+          "z": 4.325
+        },
+        "rotation": {
+          "w": 0.19174647699200495,
+          "x": 0.9814444908201149,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 16.0,
+        "size_y": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "label": "roof 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_roof_2_right",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 3.9999999999999996,
+          "z": 4.325
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.9814444908201149,
+          "z": 0.19174647699200495
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 16.0,
+        "size_y": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "label": "roof 2 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_roof_2_left",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 5.6,
+          "z": 4.325
+        },
+        "rotation": {
+          "w": 0.19174647699200495,
+          "x": 0.9814444908201149,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 16.0,
+        "size_y": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "label": "roof 2 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_roof_3_right",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 7.199999999999999,
+          "z": 4.325
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.9814444908201149,
+          "z": 0.19174647699200495
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 16.0,
+        "size_y": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "label": "roof 3 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_roof_3_left",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 8.799999999999999,
+          "z": 4.325
+        },
+        "rotation": {
+          "w": 0.19174647699200495,
+          "x": 0.9814444908201149,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 16.0,
+        "size_y": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "label": "roof 3 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_roof_vent_1",
+      "kind": "VENT",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 4.441180231192359,
+          "z": 4.628146545419272
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.9999941920710405,
+          "z": -0.0034081995521161035
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 3.0,
+        "size_y": 0.6
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.74,
+        "b": 0.86
+      },
+      "label": "roof vent 1",
+      "properties": {
+        "opening_id": "roof_vent_1",
+        "opening_kind": "roof_vent",
+        "on_surface": "roof_2_right",
+        "open_fraction": 0.5,
+        "aperture_m2": 0.8400911949094939
+      }
+    },
+    {
+      "entity_id": "qa_greenhouse_side_vent_1",
+      "kind": "VENT",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 9.6,
+          "z": 3.2
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.7071067811865475,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 4.0,
+        "size_y": 0.6
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.74,
+        "b": 0.86
+      },
+      "label": "side vent 1",
+      "properties": {
+        "opening_id": "side_vent_1",
+        "opening_kind": "side_vent",
+        "on_surface": "side_wall_left",
+        "open_fraction": 0.0,
+        "aperture_m2": 0.0
+      }
+    },
+    {
+      "entity_id": "qa_greenhouse_door_1",
+      "kind": "DOOR",
+      "transform": {
+        "position": {
+          "x": -0.020000000000000018,
+          "y": 2.2,
+          "z": 1.0499999999999998
+        },
+        "rotation": {
+          "w": 0.5,
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 1.2,
+        "size_y": 2.1
+      },
+      "color": {
+        "r": 0.45,
+        "g": 0.5,
+        "b": 0.56
+      },
+      "label": "door 1",
+      "properties": {
+        "opening_id": "door_1",
+        "opening_kind": "door",
+        "on_surface": "end_wall_front",
+        "open_fraction": 0.5,
+        "aperture_m2": 1.26
+      }
+    },
+    {
+      "entity_id": "qa_greenhouse_gutter_0",
+      "kind": "GUTTER",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 0.0,
+          "z": 3.85
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 16.0,
+        "size_y": 0.2,
+        "size_z": 0.15
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.57,
+        "b": 0.6
+      },
+      "label": "gutter 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_gutter_1",
+      "kind": "GUTTER",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 3.1999999999999997,
+          "z": 3.85
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 16.0,
+        "size_y": 0.2,
+        "size_z": 0.15
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.57,
+        "b": 0.6
+      },
+      "label": "gutter 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_gutter_2",
+      "kind": "GUTTER",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 6.3999999999999995,
+          "z": 3.85
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 16.0,
+        "size_y": 0.2,
+        "size_z": 0.15
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.57,
+        "b": 0.6
+      },
+      "label": "gutter 2",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_gutter_3",
+      "kind": "GUTTER",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 9.6,
+          "z": 3.85
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 16.0,
+        "size_y": 0.2,
+        "size_z": 0.15
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.57,
+        "b": 0.6
+      },
+      "label": "gutter 3",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_0_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 0 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_0_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 3.1999999999999997,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 0 post 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_0_post_2",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 6.3999999999999995,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 0 post 2",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_0_post_3",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 9.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 0 post 3",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_0_rafter_1_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 0 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_0_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 0 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_0_rafter_2_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": -0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170545
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 0 rafter 2 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_0_rafter_2_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 0 rafter 2 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_0_rafter_3_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 0 rafter 3 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_0_rafter_3_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 9.6,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": 0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917055
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 0 rafter 3 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_1_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 1 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_1_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 3.1999999999999997,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 1 post 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_1_post_2",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 6.3999999999999995,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 1 post 2",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_1_post_3",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 9.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 1 post 3",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_1_rafter_1_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 0.0,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 1 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_1_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 1 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_1_rafter_2_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": -0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170545
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 1 rafter 2 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_1_rafter_2_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 1 rafter 2 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_1_rafter_3_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 1 rafter 3 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_1_rafter_3_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 9.6,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": 0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917055
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 1 rafter 3 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_2_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 2 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_2_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 3.1999999999999997,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 2 post 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_2_post_2",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 6.3999999999999995,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 2 post 2",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_2_post_3",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 9.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 2 post 3",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_2_rafter_1_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 0.0,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 2 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_2_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 2 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_2_rafter_2_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": -0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170545
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 2 rafter 2 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_2_rafter_2_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 2 rafter 2 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_2_rafter_3_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 2 rafter 3 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_2_rafter_3_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 9.6,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": 0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917055
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 2 rafter 3 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_3_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 3 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_3_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 3.1999999999999997,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 3 post 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_3_post_2",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 6.3999999999999995,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 3 post 2",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_3_post_3",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 9.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 3 post 3",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_3_rafter_1_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 0.0,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 3 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_3_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 3 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_3_rafter_2_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": -0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170545
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 3 rafter 2 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_3_rafter_2_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 3 rafter 2 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_3_rafter_3_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 3 rafter 3 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_3_rafter_3_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 9.6,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": 0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917055
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 3 rafter 3 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_4_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 4 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_4_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 3.1999999999999997,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 4 post 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_4_post_2",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 6.3999999999999995,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 4 post 2",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_4_post_3",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 9.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 4 post 3",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_4_rafter_1_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 0.0,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 4 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_4_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 4 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_4_rafter_2_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": -0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170545
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 4 rafter 2 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_4_rafter_2_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 4 rafter 2 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_4_rafter_3_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 4 rafter 3 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_frame_4_rafter_3_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 9.6,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": 0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917055
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 4 rafter 3 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_axes",
+      "kind": "AXES",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "axes",
+        "length": 1.0
+      },
+      "color": {
+        "r": 0.5,
+        "g": 0.5,
+        "b": 0.5
+      },
+      "label": "world axes",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_greenhouse_bounds",
+      "kind": "GREENHOUSE_BOUNDS",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 4.8,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 16.0,
+        "size_y": 9.6,
+        "size_z": 4.65
+      },
+      "color": {
+        "r": 0.62,
+        "g": 0.78,
+        "b": 0.88
+      },
+      "label": "greenhouse bounds",
+      "properties": {}
+    }
+  ]
+}
