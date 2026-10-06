@@ -75,6 +75,11 @@ Run `npx playwright install chromium` once for it.
 
 ## Screenshots
 
+`/qa/greenhouse?view=outside|aisle|top|section` shows the canonical QA
+greenhouse (`public/scenes/qa-greenhouse.json`, written by the simulator's
+`tests/test_scene_schema.py --update`) from four fixed views, which CI compares
+with `e2e/visual/__screenshots__/greenhouse-<view>-linux.png` in the same way.
+
 `/qa/renderer?seed=42` is the renderer's canonical page: a QA scene the viewer
 builds from the seed, with a plant selected, every overlay drawn and the
 plants coloured by height. CI's "visual checks" job compares its screenshot
