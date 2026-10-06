@@ -2,13 +2,11 @@ import { useMemo } from "react";
 
 import { categoryColor } from "../debug/categories";
 import { type Colouring, scalarColor, scalarValue } from "../debug/scalar";
-import type { Color, SceneEntity, SceneEntityKind, SceneSnapshot } from "./generated/snapshotTypes";
+import type { Color, SceneEntity, SceneSnapshot } from "./generated/snapshotTypes";
 import { InstancedCylinders } from "./InstancedCylinders";
+import { isMetal } from "./materials";
 import { placement } from "./placement";
 import { RENDERERS } from "./renderers";
-
-// Structural members are metal; plants are not.
-const METALLIC_KINDS: ReadonlySet<SceneEntityKind> = new Set(["FRAME"]);
 
 /** The colour an entity is drawn in: its category's in the categories' debug
  * view, a colouring's where it has the property, or its own. */
@@ -23,9 +21,10 @@ function shownColor(entity: SceneEntity, colouring: Colouring | null, byCategory
 
 /**
  * A checked snapshot. Belongs inside the world's z-up group. Cylinders, the
- * shape repeated by the hundred in a greenhouse (stems, posts, rafters), are
- * drawn in one instanced batch per kind; every other entity, and a selected
- * cylinder, which glows, is drawn on its own by its kind's renderer. Either way
+ * shape repeated by the hundred in a greenhouse (stems, posts, rafters,
+ * pipes), are drawn in one instanced batch per kind, and per finish: metal
+ * or not. Every other entity, and a selected cylinder, which glows, is drawn
+ * on its own by its kind's renderer. Either way
  * a click can tell which entity it landed on (`pickEntity`): an entity's own
  * group carries its identifier, and a batch lists its entities.
  */
@@ -47,17 +46,21 @@ export function SceneView({
   byCategory?: boolean;
 }) {
   const { batches, single } = useMemo(() => {
-    const cylinders = new Map<SceneEntityKind, SceneEntity[]>();
+    const cylinders = new Map<string, { metallic: boolean; all: SceneEntity[] }>();
     for (const entity of snapshot.entities) {
       if (entity.shape.shape === "cylinder") {
-        cylinders.set(entity.kind, [...(cylinders.get(entity.kind) ?? []), entity]);
+        const metallic = isMetal(entity);
+        const batch = `${entity.kind}-${metallic ? "metal" : "matt"}`;
+        const all = cylinders.get(batch)?.all ?? [];
+        cylinders.set(batch, { metallic, all: [...all, entity] });
       }
     }
     return {
-      batches: [...cylinders].map(([kind, all]) => {
+      batches: [...cylinders].map(([batch, { metallic, all }]) => {
         const batched = all.filter((entity) => entity.entity_id !== selectedId);
         return {
-          kind,
+          batch,
+          metallic,
           entities: batched,
           colors: batched.map((entity) => shownColor(entity, colouring, byCategory)),
           capacity: all.length,
@@ -73,13 +76,13 @@ export function SceneView({
 
   return (
     <>
-      {batches.map(({ kind, entities, colors, capacity }) => (
+      {batches.map(({ batch, metallic, entities, colors, capacity }) => (
         <InstancedCylinders
-          key={`${kind}-${capacity}`}
+          key={`${batch}-${capacity}`}
           entities={entities}
           colors={colors}
           capacity={capacity}
-          metallic={METALLIC_KINDS.has(kind)}
+          metallic={metallic}
         />
       ))}
       {single.map((entity) => {

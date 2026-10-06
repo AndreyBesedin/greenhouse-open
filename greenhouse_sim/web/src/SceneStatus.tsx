@@ -6,6 +6,8 @@ function describeSource(source: SceneSource): string {
       return "reference scene";
     case "example":
       return "example scene";
+    case "fixtures":
+      return "fixture gallery";
     case "stress":
       return `stress scene of ${source.plants} plants`;
     case "scenario":

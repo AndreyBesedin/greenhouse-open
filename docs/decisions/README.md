@@ -30,6 +30,7 @@ changes course is a new record that supersedes the old one.
 | [0016](0016-the-greenhouse-has-its-own-frame.md) | The greenhouse has its own frame, described by its envelope | Accepted |
 | [0017](0017-envelope-surfaces-face-into-the-greenhouse.md) | Envelope surfaces face into the greenhouse, and carry a category | Accepted |
 | [0018](0018-openings-lie-on-a-surface-and-expose-an-aperture.md) | Openings lie on a surface, and expose an aperture | Accepted |
+| [0019](0019-fixtures-say-what-they-are-made-of-and-what-they-obstruct.md) | Fixtures say what they are made of, and what they obstruct | Accepted |
 
 ## Template
 

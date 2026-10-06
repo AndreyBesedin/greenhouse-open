@@ -75,6 +75,23 @@ def encloses(envelope: Envelope, point: Point) -> bool:
     )
 
 
+def encloses_hull(envelope: Envelope, points: list[Point]) -> bool:
+    """Whether everything between the points, their convex hull, lies inside
+    the space the envelope encloses, or on its boundary.
+
+    Within one span that space is convex, so the points themselves decide. The
+    roof dips between spans, to the eaves at each valley: a hull reaching
+    across a valley must stay below the eaves there.
+    """
+    if not all(encloses(envelope, point) for point in points):
+        return False
+    lowest_y, highest_y = min(p[1] for p in points), max(p[1] for p in points)
+    valleys = [gutter.start.y for gutter in envelope.gutters()[1:-1]]
+    if any(lowest_y < valley < highest_y for valley in valleys):
+        return max(p[2] for p in points) <= envelope.eave_height + PROBE_M / 2
+    return True
+
+
 def inverted_surfaces(envelope: Envelope) -> list[str]:
     """The surfaces whose front does not face into the house: a point just in
     front of each one's centre must lie inside the space the envelope encloses."""

@@ -1,5 +1,5 @@
 {
-  "schema_version": 6,
+  "schema_version": 7,
   "greenhouse_id": "gh_demo",
   "simulated_day": 9,
   "entities": [
@@ -29,6 +29,7 @@
         "g": 0.33,
         "b": 0.24
       },
+      "material": null,
       "label": "floor",
       "properties": {}
     },
@@ -58,6 +59,7 @@
         "g": 0.86,
         "b": 0.92
       },
+      "material": null,
       "label": "side wall right",
       "properties": {}
     },
@@ -87,6 +89,7 @@
         "g": 0.86,
         "b": 0.92
       },
+      "material": null,
       "label": "side wall left",
       "properties": {}
     },
@@ -144,6 +147,7 @@
         "g": 0.86,
         "b": 0.92
       },
+      "material": null,
       "label": "end wall front",
       "properties": {}
     },
@@ -201,6 +205,7 @@
         "g": 0.86,
         "b": 0.92
       },
+      "material": null,
       "label": "end wall back",
       "properties": {}
     },
@@ -230,6 +235,7 @@
         "g": 0.83,
         "b": 0.9
       },
+      "material": null,
       "label": "roof 1 right",
       "properties": {}
     },
@@ -259,6 +265,7 @@
         "g": 0.83,
         "b": 0.9
       },
+      "material": null,
       "label": "roof 1 left",
       "properties": {}
     },
@@ -288,6 +295,7 @@
         "g": 0.83,
         "b": 0.9
       },
+      "material": null,
       "label": "roof 2 right",
       "properties": {}
     },
@@ -317,6 +325,7 @@
         "g": 0.83,
         "b": 0.9
       },
+      "material": null,
       "label": "roof 2 left",
       "properties": {}
     },
@@ -346,6 +355,7 @@
         "g": 0.74,
         "b": 0.86
       },
+      "material": null,
       "label": "roof vent 1",
       "properties": {
         "opening_id": "roof_vent_1",
@@ -381,6 +391,7 @@
         "g": 0.74,
         "b": 0.86
       },
+      "material": null,
       "label": "roof vent 2",
       "properties": {
         "opening_id": "roof_vent_2",
@@ -416,6 +427,7 @@
         "g": 0.74,
         "b": 0.86
       },
+      "material": null,
       "label": "side vent 1",
       "properties": {
         "opening_id": "side_vent_1",
@@ -451,6 +463,7 @@
         "g": 0.5,
         "b": 0.56
       },
+      "material": null,
       "label": "door 1",
       "properties": {
         "opening_id": "door_1",
@@ -487,6 +500,7 @@
         "g": 0.57,
         "b": 0.6
       },
+      "material": "aluminium",
       "label": "gutter 0",
       "properties": {}
     },
@@ -517,6 +531,7 @@
         "g": 0.57,
         "b": 0.6
       },
+      "material": "aluminium",
       "label": "gutter 1",
       "properties": {}
     },
@@ -547,6 +562,7 @@
         "g": 0.57,
         "b": 0.6
       },
+      "material": "aluminium",
       "label": "gutter 2",
       "properties": {}
     },
@@ -576,6 +592,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 0 post 0",
       "properties": {}
     },
@@ -605,6 +622,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 0 post 1",
       "properties": {}
     },
@@ -634,6 +652,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 0 post 2",
       "properties": {}
     },
@@ -663,6 +682,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 0 rafter 1 right",
       "properties": {}
     },
@@ -692,6 +712,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 0 rafter 1 left",
       "properties": {}
     },
@@ -721,6 +742,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 0 rafter 2 right",
       "properties": {}
     },
@@ -750,6 +772,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 0 rafter 2 left",
       "properties": {}
     },
@@ -779,6 +802,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 1 post 0",
       "properties": {}
     },
@@ -808,6 +832,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 1 post 1",
       "properties": {}
     },
@@ -837,6 +862,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 1 post 2",
       "properties": {}
     },
@@ -866,6 +892,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 1 rafter 1 right",
       "properties": {}
     },
@@ -895,6 +922,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 1 rafter 1 left",
       "properties": {}
     },
@@ -924,6 +952,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 1 rafter 2 right",
       "properties": {}
     },
@@ -953,6 +982,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 1 rafter 2 left",
       "properties": {}
     },
@@ -982,6 +1012,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 2 post 0",
       "properties": {}
     },
@@ -1011,6 +1042,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 2 post 1",
       "properties": {}
     },
@@ -1040,6 +1072,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 2 post 2",
       "properties": {}
     },
@@ -1069,6 +1102,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 2 rafter 1 right",
       "properties": {}
     },
@@ -1098,6 +1132,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 2 rafter 1 left",
       "properties": {}
     },
@@ -1127,6 +1162,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 2 rafter 2 right",
       "properties": {}
     },
@@ -1156,6 +1192,7 @@
         "g": 0.68,
         "b": 0.7
       },
+      "material": "steel",
       "label": "frame 2 rafter 2 left",
       "properties": {}
     },
@@ -1184,6 +1221,7 @@
         "g": 0.5,
         "b": 0.5
       },
+      "material": null,
       "label": "world axes",
       "properties": {}
     },
@@ -1214,6 +1252,7 @@
         "g": 0.78,
         "b": 0.88
       },
+      "material": null,
       "label": "greenhouse bounds",
       "properties": {}
     },
@@ -1243,6 +1282,7 @@
         "g": 0.55,
         "b": 0.24
       },
+      "material": null,
       "label": "gh_demo_plant_001",
       "properties": {
         "age_days": 9,
@@ -1279,6 +1319,7 @@
         "g": 0.55,
         "b": 0.24
       },
+      "material": null,
       "label": "gh_demo_plant_002",
       "properties": {
         "age_days": 9,
@@ -1315,6 +1356,7 @@
         "g": 0.55,
         "b": 0.24
       },
+      "material": null,
       "label": "gh_demo_plant_003",
       "properties": {
         "age_days": 9,
@@ -1351,6 +1393,7 @@
         "g": 0.55,
         "b": 0.24
       },
+      "material": null,
       "label": "gh_demo_plant_004",
       "properties": {
         "age_days": 9,
@@ -1387,6 +1430,7 @@
         "g": 0.55,
         "b": 0.24
       },
+      "material": null,
       "label": "gh_demo_plant_005",
       "properties": {
         "age_days": 9,
@@ -1423,6 +1467,7 @@
         "g": 0.55,
         "b": 0.24
       },
+      "material": null,
       "label": "gh_demo_plant_006",
       "properties": {
         "age_days": 9,

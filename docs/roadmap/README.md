@@ -101,7 +101,7 @@ adds a visible or measurable result.
 | [P-1](p-1-restructure-greenhouse-sim.md) | Restructure `greenhouse_sim` into a modular foundation, without changing behavior | Done |
 | [P00](p00-browser-renderer.md) | Browser renderer and visual QA foundation | Done |
 | [P01](p01-greenhouse-envelope.md) | Greenhouse envelope and world geometry | Done |
-| P02 | Static greenhouse fixtures and layout | Planned |
+| [P02](p02-greenhouse-layout.md) | Static greenhouse fixtures and layout | In progress |
 | P03 | Stochastic tomato development and procedural plant geometry | Planned |
 | P04 | Environmental fields and airflow foundation | Planned |
 | P05 | Climate actuators: fans, heaters, dehumidification and vents | Planned |

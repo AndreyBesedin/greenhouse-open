@@ -73,6 +73,7 @@ function plant(index: number, column: number, row: number, random: () => number)
     },
     shape: { shape: "cylinder", radius: STEM_RADIUS_M, height },
     color: PLANT_COLOR,
+    material: null,
     label: entityId,
     properties: { [QA_COLOUR_PROPERTY]: height * CENTIMETRES_PER_METRE, row, column },
   };
@@ -100,6 +101,7 @@ export function qaScene(seed: number): SceneSnapshot {
         },
         shape: { shape: "plane", size_x: GROUND_SIZE_X_M, size_y: GROUND_SIZE_Y_M },
         color: GROUND_COLOR,
+        material: null,
         label: "ground",
         properties: {},
       },
@@ -109,6 +111,7 @@ export function qaScene(seed: number): SceneSnapshot {
         transform: { position: { x: 0, y: 0, z: 0 }, rotation: UPRIGHT },
         shape: { shape: "axes", length: AXES_LENGTH_M },
         color: AXES_COLOR,
+        material: null,
         label: "world axes",
         properties: {},
       },

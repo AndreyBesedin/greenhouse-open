@@ -118,6 +118,17 @@ export const SNAPSHOT_SCHEMA = {
       "title": "Cylinder",
       "type": "object"
     },
+    "Material": {
+      "description": "What a fixture, or a part of the envelope, is made of.",
+      "enum": [
+        "steel",
+        "aluminium",
+        "plastic",
+        "concrete"
+      ],
+      "title": "Material",
+      "type": "string"
+    },
     "Plane": {
       "description": "A flat rectangle in its frame's x-y plane, centred on its origin,\nfacing +z.",
       "properties": {
@@ -241,6 +252,17 @@ export const SNAPSHOT_SCHEMA = {
         "color": {
           "$ref": "#/$defs/Color"
         },
+        "material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Material"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "label": {
           "anyOf": [
             {
@@ -281,6 +303,7 @@ export const SNAPSHOT_SCHEMA = {
         "transform",
         "shape",
         "color",
+        "material",
         "label",
         "properties"
       ],
@@ -299,6 +322,11 @@ export const SNAPSHOT_SCHEMA = {
         "FRAME",
         "VENT",
         "DOOR",
+        "CROP_GUTTER",
+        "WALKWAY",
+        "RAIL",
+        "PIPE",
+        "OBSTACLE",
         "PLANT"
       ],
       "title": "SceneEntityKind",
@@ -373,7 +401,7 @@ export const SNAPSHOT_SCHEMA = {
   "description": "One greenhouse at one simulated day, as a viewer draws it. Positions\nand sizes are in metres, in right-handed world axes with z up.",
   "properties": {
     "schema_version": {
-      "default": 6,
+      "default": 7,
       "title": "Schema Version",
       "type": "integer"
     },

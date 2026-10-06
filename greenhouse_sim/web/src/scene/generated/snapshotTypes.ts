@@ -2,8 +2,27 @@
 // Do not edit: change the simulator's types and regenerate.
 
 export type SceneEntityKind =
-  "GROUND" | "AXES" | "GREENHOUSE_BOUNDS" | "FLOOR" | "WALL" | "ROOF" | "GUTTER" | "FRAME" | "VENT" | "DOOR" | "PLANT";
+  | "GROUND"
+  | "AXES"
+  | "GREENHOUSE_BOUNDS"
+  | "FLOOR"
+  | "WALL"
+  | "ROOF"
+  | "GUTTER"
+  | "FRAME"
+  | "VENT"
+  | "DOOR"
+  | "CROP_GUTTER"
+  | "WALKWAY"
+  | "RAIL"
+  | "PIPE"
+  | "OBSTACLE"
+  | "PLANT";
 export type Shape = Plane | Cylinder | Box | Polygon | Axes;
+/**
+ * What a fixture, or a part of the envelope, is made of.
+ */
+export type Material = "steel" | "aluminium" | "plastic" | "concrete";
 
 /**
  * One greenhouse at one simulated day, as a viewer draws it. Positions
@@ -21,6 +40,7 @@ export interface SceneEntity {
   transform: Transform;
   shape: Shape;
   color: Color;
+  material: Material | null;
   label: string | null;
   properties: {
     [k: string]: string | number | boolean;

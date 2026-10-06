@@ -6,6 +6,8 @@ import type { SceneSnapshot } from "./generated/snapshotTypes";
 export type SceneSource =
   | { kind: "reference" }
   | { kind: "example" }
+  /** One fixture of each primitive, side by side, as the simulator draws them. */
+  | { kind: "fixtures" }
   /** A dense field of plants built in the viewer, for measuring the renderer. */
   | { kind: "stress"; plants: number }
   /** A scenario's scene from the simulator, its greenhouse's dimensions
@@ -28,6 +30,8 @@ export type SceneState =
   | { status: "loaded"; snapshot: SceneSnapshot };
 
 const EXAMPLE_SCENE_URL = "/scenes/example.json";
+// The simulator writes it (`tests/test_scene_schema.py --update`).
+export const FIXTURE_GALLERY_URL = "/scenes/qa-fixtures.json";
 
 export function sourceFromSearch(search: string): SceneSource {
   const parameters = new URLSearchParams(search);
@@ -49,6 +53,8 @@ export function sourceFromSearch(search: string): SceneSource {
   switch (parameters.get("scene")) {
     case "example":
       return { kind: "example" };
+    case "fixtures":
+      return { kind: "fixtures" };
     case "stress":
       return { kind: "stress", plants: stressPlants(parameters.get("plants")) };
     default:
@@ -62,6 +68,8 @@ export function searchFor(source: SceneSource): string {
       return "";
     case "example":
       return "?scene=example";
+    case "fixtures":
+      return "?scene=fixtures";
     case "stress":
       return `?scene=stress&plants=${source.plants}`;
     case "scenario":
@@ -125,6 +133,8 @@ function sceneUrl(source: SceneSource): string | null {
       return null;
     case "example":
       return EXAMPLE_SCENE_URL;
+    case "fixtures":
+      return FIXTURE_GALLERY_URL;
     case "scenario":
       return `/api/scenarios/${encodeURIComponent(source.scenarioId)}/scene${changesQuery(source, "?")}`;
   }

@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import type { Color, SceneEntity, SceneEntityKind } from "./generated/snapshotTypes";
+import { isMetal } from "./materials";
 import { SeeThrough } from "./SeeThrough";
 import { ShapeMesh } from "./ShapeMesh";
 
@@ -27,6 +28,18 @@ function seeThrough(entity: SceneEntity, look: EntityLook, outlineOnly = false):
   );
 }
 
+/** A solid, drawn as metal if it is made of one. */
+function solid(entity: SceneEntity, look: EntityLook): ReactElement {
+  return (
+    <ShapeMesh
+      shape={entity.shape}
+      color={look.color}
+      highlighted={look.selected}
+      metallic={isMetal(entity)}
+    />
+  );
+}
+
 /** How each kind of entity is drawn. Typed by the kinds the simulator
  * publishes, so a new kind does not compile until the viewer can draw it. */
 export const RENDERERS: Record<
@@ -51,19 +64,21 @@ export const RENDERERS: Record<
   // nothing solid lies behind it.
   WALL: (entity, look) => seeThrough(entity, look),
   ROOF: (entity, look) => seeThrough(entity, look),
-  GUTTER: (entity, look) => (
-    <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} metallic />
-  ),
+  GUTTER: solid,
   // A vent is a glazed panel, framed; a door a solid one, seen from either side.
   VENT: (entity, look) => seeThrough(entity, look),
   DOOR: (entity, look) => (
     <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} doubleSided />
   ),
-  // Posts and rafters are cylinders, so they join the plants' instanced batch;
-  // this draws one on its own, when it is selected.
-  FRAME: (entity, look) => (
-    <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} metallic />
-  ),
+  // Posts and rafters are cylinders, so they are drawn in an instanced batch;
+  // this draws one on its own, when it is selected. So are pipes and rails.
+  FRAME: solid,
+  // The layout's fixtures, each in its material.
+  CROP_GUTTER: solid,
+  WALKWAY: solid,
+  RAIL: solid,
+  PIPE: solid,
+  OBSTACLE: solid,
   PLANT: (entity, look) => (
     <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} />
   ),
