@@ -53,9 +53,7 @@ test("the QA greenhouse draws each of its views, without console errors", async 
   );
 });
 
-test("the QA layout draws each of its views, coloured by category, without console errors", async ({
-  page,
-}) => {
+test("the QA layout draws each of its views, without console errors", async ({ page }) => {
   const errors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") {
@@ -66,20 +64,26 @@ test("the QA layout draws each of its views, coloured by category, without conso
   for (const view of QA_LAYOUT_VIEWS) {
     await page.goto(`${QA_LAYOUT_PATH}?view=${view}`);
     await expect(page.getByTestId("qa-caption")).toHaveText(`Layout QA, ${view} view`);
-    await expect(page.getByTestId("layout-category")).toHaveText([
-      "planting position",
-      "crop gutter",
-      "slab",
-      "walkway",
-      "service zone",
-      "keep-out",
-      "rail",
-      "pipe",
-      "wire",
-      "obstacle",
-    ]);
   }
   expect(errors).toEqual([]);
+
+  // Only the plan is coloured by category, with its legends.
+  await page.goto(`${QA_LAYOUT_PATH}?view=top`);
+  await expect(page.getByTestId("layout-category")).toHaveText([
+    "planting position",
+    "crop gutter",
+    "slab",
+    "walkway",
+    "service zone",
+    "keep-out",
+    "rail",
+    "pipe",
+    "wire",
+    "obstacle",
+  ]);
+  await page.goto(`${QA_LAYOUT_PATH}?view=between-rows`);
+  await expect(page.getByTestId("qa-caption")).toHaveText("Layout QA, between-rows view");
+  await expect(page.getByTestId("layout-category")).toHaveCount(0);
 
   await page.goto(`${QA_LAYOUT_PATH}?view=sideways`);
   await expect(page.getByRole("alert")).toHaveText(
