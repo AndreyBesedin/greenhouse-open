@@ -3,6 +3,15 @@
 `respond` maps a method and a path to a status and a JSON-ready body, so the
 API can be tested without a socket and the server stays a thin shell.
 
+The routes are only the interface to the simulator's services
+(`greenhouse_sim.services`). Each does four things, in order: checks that
+the caller may make the request, reads the request into the typed form its
+service takes, calls the service, and answers with the result, or with the
+status that says what went wrong. Everything else (lookups, rules, case
+handling) is the services'. The API answers only on this
+machine (decision 0009) and has no users yet, so no route has a right to
+check; a route that comes to need one checks it first.
+
     GET /api/health                       the API is up
     GET /api/version                      simulator and scene schema versions
     GET /api/scenarios                    the registered scenarios, with the
@@ -17,32 +26,24 @@ API can be tested without a socket and the server stays a thin shell.
                                           it; ?layout=benches another of them
     GET /api/scenarios/{id}/live          the scenario played live, as Server-Sent
                                           Events (served by `server`, found by
-                                          `live_scenario`)
+                                          `live_stream`)
     POST /api/scenarios/{id}/live/...     commands for that live run (`control`)
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from http import HTTPStatus
-from importlib.metadata import version
 from typing import Final
 from urllib.parse import parse_qs, urlsplit
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
-from greenhouse_sim.api.live import SPEEDS, LiveFrame, LiveRun, LiveRuns
-from greenhouse_sim.core.engine import SimulationEngine
-from greenhouse_sim.scenarios import SCENARIO_REGISTRY
-from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.scenarios.layout_files import (
-    DEFAULT_LAYOUT,
-    layout_document,
-    layout_names,
-    load_layout,
-)
-from greenhouse_sim.scene.snapshot import SCHEMA_VERSION, scene_snapshot
+from greenhouse_sim.services import scenarios, system
+from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
+from greenhouse_sim.services.live import InvalidSpeed, LiveCommand, LiveRun, LiveRuns
 
 type JsonValue = dict[str, JsonValue] | list[JsonValue] | str | int | float | bool | None
+type Query = dict[str, list[str]]
 
 
 @dataclass(frozen=True)
@@ -51,173 +52,47 @@ class Response:
     body: JsonValue
 
 
-class ScenarioSummary(BaseModel):
-    id: str
-    name: str
-    description: str
-    plants: int
-    duration_days: int
-    # Its layouts' names, its default first.
-    layouts: list[str]
+# How each kind of service error is answered; the first that matches.
+_REFUSALS: Final = (
+    (NotFound, HTTPStatus.NOT_FOUND),
+    (InvalidRequest, HTTPStatus.BAD_REQUEST),
+)
 
 
 def respond(method: str, path: str) -> Response:
     if method != "GET":
         return _error(HTTPStatus.METHOD_NOT_ALLOWED, f"{path!r} only answers GET")
+    query = parse_qs(urlsplit(path).query)
 
     match _segments(path):
         case ["api", "health"]:
-            return Response(HTTPStatus.OK, {"status": "ok"})
+            return _answer(system.health)
         case ["api", "version"]:
-            return Response(HTTPStatus.OK, _version())
+            return _answer(system.version)
         case ["api", "scenarios"]:
-            summaries = [_summary(config) for config in SCENARIO_REGISTRY.values()]
-            return Response(HTTPStatus.OK, [summary.model_dump() for summary in summaries])
+            return _answer(scenarios.scenario_summaries)
         case ["api", "scenarios", scenario_id, "scene"]:
-            config = SCENARIO_REGISTRY.get(scenario_id)
-            if config is None:
-                return _error(HTTPStatus.NOT_FOUND, f"no scenario {scenario_id!r}")
-            query = parse_qs(urlsplit(path).query)
-            laid_out = _with_layout(config, query.get("layout", [DEFAULT_LAYOUT])[-1])
-            if isinstance(laid_out, Response):
-                return laid_out
-            changed = _with_envelope(laid_out, query.get("envelope", []), query.get("open", []))
-            if isinstance(changed, str):
-                return _error(HTTPStatus.BAD_REQUEST, changed)
-            return Response(HTTPStatus.OK, _initial_scene(changed))
+            return _answer(lambda: scenarios.initial_scene(scenario_id, _scene_changes(query)))
         case ["api", "scenarios", scenario_id, "layout"]:
-            config = SCENARIO_REGISTRY.get(scenario_id)
-            if config is None:
-                return _error(HTTPStatus.NOT_FOUND, f"no scenario {scenario_id!r}")
-            query = parse_qs(urlsplit(path).query)
-            laid_out = _with_layout(config, query.get("layout", [DEFAULT_LAYOUT])[-1])
-            if isinstance(laid_out, Response):
-                return laid_out
-            return Response(HTTPStatus.OK, layout_document(laid_out.layout))
+            name = _last(query, "layout")
+            if name is None:
+                return _answer(lambda: scenarios.layout(scenario_id))
+            return _answer(lambda: scenarios.layout(scenario_id, name))
         case _:
             return _error(HTTPStatus.NOT_FOUND, f"nothing at {path!r}")
 
 
-def _version() -> JsonValue:
-    return {
-        "simulator": "greenhouse-sim",
-        "version": version("greenhouse-sim"),
-        "scene_schema_version": SCHEMA_VERSION,
-    }
-
-
-def _summary(config: ScenarioConfig) -> ScenarioSummary:
-    return ScenarioSummary(
-        id=config.greenhouse_id,
-        name=config.name,
-        description=config.description,
-        plants=config.rows * config.columns,
-        duration_days=config.duration_days,
-        layouts=layout_names(config.greenhouse_id),
-    )
-
-
-def _with_layout(config: ScenarioConfig, name: str) -> ScenarioConfig | Response:
-    """The scenario with another of its layouts, read from its file, or why it
-    cannot have it: a layout it does not have, or one that does not fit its
-    greenhouse or crop."""
-    if name == DEFAULT_LAYOUT:
-        return config
-    try:
-        layout = load_layout(config.greenhouse_id, name)
-    except KeyError:
-        return _error(HTTPStatus.NOT_FOUND, f"{config.greenhouse_id} has no layout {name!r}")
-    except ValidationError as error:
-        return _error(HTTPStatus.BAD_REQUEST, f"no such layout: {error.errors()[0]['msg']}")
-    try:
-        return ScenarioConfig.model_validate(config.model_dump() | {"layout": layout})
-    except ValidationError as error:
-        return _error(HTTPStatus.BAD_REQUEST, f"no such layout: {error.errors()[0]['msg']}")
-
-
-# The envelope's dimensions a scene request may change.
-_DIMENSIONS: Final = ("length", "width", "spans", "bays", "eave_height", "ridge_height")
-
-
-def _pairs(requests: list[str], name: str) -> dict[str, float] | str:
-    """`name=key:number,key:number` as numbers by key, or why it cannot be read."""
-    pairs: dict[str, float] = {}
-    for request in ",".join(requests).split(","):
-        if not request:
-            continue
-        key, _, number = request.partition(":")
-        try:
-            pairs[key] = float(number)
-        except ValueError:
-            return f"{name} wants key:number pairs, not {request!r}"
-    return pairs
-
-
-def _with_envelope(
-    config: ScenarioConfig, dimensions: list[str], openings: list[str]
-) -> ScenarioConfig | str:
-    """The scenario with its greenhouse's dimensions changed as
-    `envelope=length:12,spans:3,...` asks, and its doors and vents opened as
-    `open=id:fraction,...` asks, or why it cannot be. The envelope is checked
-    afresh, as any description of a greenhouse is: an opening that no longer
-    fits, or a ridge below the eaves, is refused, as is a greenhouse the
-    scenario's layout no longer fits in."""
-    sizes = _pairs(dimensions, "envelope")
-    if isinstance(sizes, str):
-        return sizes
-    unknown_sizes = sorted(set(sizes) - set(_DIMENSIONS))
-    if unknown_sizes:
-        named = ", ".join(map(repr, unknown_sizes))
-        return f"the envelope has no {named}; it has {', '.join(_DIMENSIONS)}"
-    fractions = _pairs(openings, "open")
-    if isinstance(fractions, str):
-        return fractions
-    envelope = config.envelope
-    known = {opening.opening_id for opening in envelope.openings}
-    unknown = sorted(set(fractions) - known)
-    if unknown:
-        return f"{config.greenhouse_id} has no opening {', '.join(map(repr, unknown))}"
-    opened = [
-        opening.model_dump() | {"opening": fractions.get(opening.opening_id, opening.opening)}
-        for opening in envelope.openings
-    ]
-    try:
-        changed = type(envelope).model_validate(
-            envelope.model_dump() | sizes | {"openings": opened}
-        )
-        return ScenarioConfig.model_validate(config.model_dump() | {"envelope": changed})
-    except ValidationError as error:
-        return f"no such greenhouse: {error.errors()[0]['msg']}"
-
-
-def _initial_scene(config: ScenarioConfig) -> JsonValue:
-    """The scenario's full crop before its first day, as the viewer draws it."""
-    plant_count = config.rows * config.columns
-    plant_ids = [f"{config.greenhouse_id}_plant_{i:03d}" for i in range(1, plant_count + 1)]
-    world = SimulationEngine(config).initialize(plant_ids, greenhouse_id=config.greenhouse_id)
-    snapshot: JsonValue = scene_snapshot(world, config).model_dump(mode="json")
-    return snapshot
-
-
-def _error(status: HTTPStatus, message: str) -> Response:
-    return Response(status, {"error": message})
-
-
-def live_scenario(path: str) -> ScenarioConfig | None:
-    """The scenario a request for its live stream names, if it names one."""
+def live_stream(path: str, runs: LiveRuns) -> LiveRun | Response | None:
+    """The live run a request for a scenario's stream names, or the refusal
+    if it names no scenario; None for any other path."""
     match _segments(path):
         case ["api", "scenarios", scenario_id, "live"]:
-            return SCENARIO_REGISTRY.get(scenario_id)
+            try:
+                return runs.run(scenario_id)
+            except ServiceError as error:
+                return _refusal(error)
         case _:
             return None
-
-
-_COMMANDS: Final[dict[str, Callable[[LiveRun], LiveFrame]]] = {
-    "play": LiveRun.play,
-    "pause": LiveRun.pause,
-    "step": LiveRun.advance,
-    "reset": LiveRun.reset,
-}
 
 
 def control(path: str, runs: LiveRuns) -> Response | None:
@@ -234,39 +109,85 @@ def control(path: str, runs: LiveRuns) -> Response | None:
     """
     url = urlsplit(path)
     match _segments(url.path):
+        case ["api", "scenarios", scenario_id, "live", "speed"]:
+            query = parse_qs(url.query)
+            return _answer(lambda: runs.set_speed(scenario_id, _multiplier(query)))
         case ["api", "scenarios", scenario_id, "live", command]:
-            pass
+            if command not in LiveCommand:
+                return _error(HTTPStatus.NOT_FOUND, f"no live command {command!r}")
+            return _answer(lambda: runs.command(scenario_id, LiveCommand(command)))
         case _:
             return None
-    config = SCENARIO_REGISTRY.get(scenario_id)
-    if config is None:
-        return _error(HTTPStatus.NOT_FOUND, f"no scenario {scenario_id!r}")
-    if command == "speed":
-        speed = _speed(parse_qs(url.query).get("multiplier", []))
-        if speed is None:
-            allowed = ", ".join(f"{speed:g}" for speed in SPEEDS)
-            return _error(HTTPStatus.BAD_REQUEST, f"multiplier must be one of {allowed}")
-        return _state(runs.run_for(config).set_speed(speed))
-    act = _COMMANDS.get(command)
-    if act is None:
-        return _error(HTTPStatus.NOT_FOUND, f"no live command {command!r}")
-    return _state(act(runs.run_for(config)))
 
 
-def _speed(values: list[str]) -> float | None:
-    """The one speed a query asks for, if it is one the runs accept."""
-    if len(values) != 1:
-        return None
+def _answer(
+    call: Callable[[], BaseModel | Sequence[BaseModel] | dict[str, JsonValue]],
+) -> Response:
+    """The service's result as a response, or its error as a refusal."""
     try:
-        speed = float(values[0])
+        result = call()
+    except ServiceError as error:
+        return _refusal(error)
+    body: JsonValue
+    if isinstance(result, BaseModel):
+        body = result.model_dump(mode="json")
+    elif isinstance(result, dict):
+        body = result
+    else:
+        body = [item.model_dump(mode="json") for item in result]
+    return Response(HTTPStatus.OK, body)
+
+
+def _refusal(error: ServiceError) -> Response:
+    status = next(status for kind, status in _REFUSALS if isinstance(error, kind))
+    return _error(status, error.message)
+
+
+def _error(status: HTTPStatus, message: str) -> Response:
+    return Response(status, {"error": message})
+
+
+def _scene_changes(query: Query) -> scenarios.SceneChanges:
+    """The changes a scene request asks for, as its query writes them."""
+    changes: dict[str, object] = {
+        "envelope": _pairs(query.get("envelope", []), "envelope"),
+        "openings": _pairs(query.get("open", []), "open"),
+    }
+    name = _last(query, "layout")
+    if name is not None:
+        changes["layout"] = name
+    return scenarios.SceneChanges.model_validate(changes)
+
+
+def _pairs(requests: list[str], name: str) -> dict[str, float]:
+    """`name=key:number,key:number` as numbers by key."""
+    pairs: dict[str, float] = {}
+    for request in ",".join(requests).split(","):
+        if not request:
+            continue
+        key, _, number = request.partition(":")
+        try:
+            pairs[key] = float(number)
+        except ValueError:
+            raise InvalidRequest(f"{name} wants key:number pairs, not {request!r}") from None
+    return pairs
+
+
+def _multiplier(query: Query) -> float:
+    """The one speed multiplier a query gives, as a number."""
+    values = query.get("multiplier", [])
+    if len(values) != 1:
+        raise InvalidSpeed()
+    try:
+        return float(values[0])
     except ValueError:
-        return None
-    return speed if speed in SPEEDS else None
+        raise InvalidSpeed() from None
 
 
-def _state(frame: LiveFrame) -> Response:
-    state: JsonValue = frame.model_dump(mode="json", exclude={"snapshot"})
-    return Response(HTTPStatus.OK, state)
+def _last(query: Query, name: str) -> str | None:
+    """A parameter's last value in a query, if it has one."""
+    values = query.get(name)
+    return values[-1] if values else None
 
 
 def _segments(path: str) -> list[str]:

@@ -37,9 +37,11 @@ More complete runs are in the repository's [examples](../examples/).
 
 ## How it is built
 
-The simulator core is plain Python with no server, database or browser. The
-local API and the browser viewer are adapters around it: they depend on the
-core, never the other way round.
+The simulator core is plain Python with no server, database or browser. Its
+services do what a client asks of it (list scenarios, draw a scene, play a
+scenario live), whatever the transport. The local API and the browser
+viewer are adapters around them: the API's routes are only the interface to
+the services, and nothing depends on the API or the viewer.
 
 ```text
 greenhouse_sim/
@@ -53,7 +55,10 @@ greenhouse_sim/
     scenarios/     ready-made worlds
     evaluation/    scoring against ground truth, its only reader
     scene/         the world as a renderable scene for a viewer
-    api/           a thin local HTTP API for the viewer (adapter)
+    services/      what the simulator does for a client: scenarios, scenes,
+                   layouts and live runs, independent of any transport
+    api/           a thin local HTTP API for the viewer (adapter): the
+                   interface to the services
   web/             the browser viewer (adapter, not part of the wheel)
 ```
 

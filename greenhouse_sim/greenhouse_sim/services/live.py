@@ -11,11 +11,13 @@ always looks the same; only the frame's sequence number keeps rising.
 
 A run can be paused, played, stepped one day, reset to before day one, and
 sped up or slowed down. Every change is published as a new frame, so every
-viewer sees it.
+viewer sees it. A client commands a run through `LiveRuns`, by scenario,
+and is answered with the run's new state, its frame without the scene.
 """
 
 import threading
 from datetime import UTC, datetime, time, timedelta
+from enum import StrEnum
 from time import monotonic
 from typing import Final
 
@@ -24,6 +26,8 @@ from pydantic import BaseModel, ConfigDict
 from greenhouse_sim.core.engine import SimulationEngine
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scene.snapshot import SceneSnapshot, scene_snapshot
+from greenhouse_sim.services.errors import InvalidRequest
+from greenhouse_sim.services.scenarios import plant_ids, scenario
 
 # One simulated day per second by default: fast enough to watch plants grow,
 # slow enough to follow.
@@ -35,7 +39,27 @@ LIVE_SIMULATION_ID: Final = "sim_live"
 SPEEDS: Final = (0.25, 0.5, 1.0, 2.0, 4.0, 8.0)
 
 
-class LiveFrame(BaseModel):
+class LiveCommand(StrEnum):
+    """What a client can tell a live run to do, apart from changing its speed."""
+
+    PLAY = "play"
+    PAUSE = "pause"
+    STEP = "step"
+    RESET = "reset"
+
+
+class InvalidSpeed(InvalidRequest):
+    """A speed the runs do not play at."""
+
+    def __init__(self) -> None:
+        allowed = ", ".join(f"{speed:g}" for speed in SPEEDS)
+        super().__init__(f"multiplier must be one of {allowed}")
+
+
+class LiveState(BaseModel):
+    """Where a run stands: its frame's sequence, simulated day and instant,
+    and whether it plays, and how fast."""
+
     model_config = ConfigDict(frozen=True)
 
     sequence: int
@@ -43,7 +67,15 @@ class LiveFrame(BaseModel):
     timestamp: datetime
     playing: bool
     speed: float
+
+
+class LiveFrame(LiveState):
+    """A run's state with its scene, as every viewer of it receives it."""
+
     snapshot: SceneSnapshot
+
+    def state(self) -> LiveState:
+        return LiveState.model_validate(self.model_dump(exclude={"snapshot"}))
 
 
 class LiveRun:
@@ -51,10 +83,7 @@ class LiveRun:
         self._config = config
         self._seconds_per_day = seconds_per_day
         self._engine = SimulationEngine(config)
-        plant_count = config.rows * config.columns
-        self._plant_ids = [
-            f"{config.greenhouse_id}_plant_{i:03d}" for i in range(1, plant_count + 1)
-        ]
+        self._plant_ids = plant_ids(config)
         self._start = datetime.combine(config.start_date, DAY_START, tzinfo=UTC)
         self._changed = threading.Condition()
         self._stopped = threading.Event()
@@ -175,7 +204,9 @@ class LiveRun:
 
 
 class LiveRuns:
-    """One shared run per scenario, started when a viewer first asks for it."""
+    """One shared run per scenario, started when a viewer first asks for it.
+    Clients reach a run by its scenario's identifier: one that is not
+    registered is not found."""
 
     def __init__(self, *, seconds_per_day: float = DEFAULT_SECONDS_PER_DAY) -> None:
         self._seconds_per_day = seconds_per_day
@@ -190,6 +221,30 @@ class LiveRuns:
                 run.start()
                 self._runs[config.greenhouse_id] = run
             return run
+
+    def run(self, scenario_id: str) -> LiveRun:
+        """The scenario's shared run, started if it was not."""
+        return self.run_for(scenario(scenario_id))
+
+    def command(self, scenario_id: str, command: LiveCommand) -> LiveState:
+        """Tells the scenario's run to play, pause, step or reset, and answers
+        with its new state."""
+        run = self.run(scenario_id)
+        act = {
+            LiveCommand.PLAY: run.play,
+            LiveCommand.PAUSE: run.pause,
+            LiveCommand.STEP: run.advance,
+            LiveCommand.RESET: run.reset,
+        }[command]
+        return act().state()
+
+    def set_speed(self, scenario_id: str, multiplier: float) -> LiveState:
+        """Sets how much faster than the server's pace the scenario's run
+        plays, one of `SPEEDS`, and answers with its new state."""
+        run = self.run(scenario_id)
+        if multiplier not in SPEEDS:
+            raise InvalidSpeed()
+        return run.set_speed(multiplier).state()
 
     def stop(self) -> None:
         with self._lock:
