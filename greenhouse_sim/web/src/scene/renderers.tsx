@@ -77,6 +77,8 @@ export const RENDERERS: Record<
   PLANTING_POSITION: solid,
   // The layout's fixtures, each in its material.
   CROP_GUTTER: solid,
+  BENCH: solid,
+  SLAB: solid,
   WALKWAY: solid,
   RAIL: solid,
   PIPE: solid,

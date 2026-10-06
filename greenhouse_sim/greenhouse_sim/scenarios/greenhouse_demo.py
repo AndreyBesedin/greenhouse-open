@@ -66,7 +66,8 @@ GREENHOUSE_DEMO = ScenarioConfig(
             ),
         ],
     ),
-    # Two rows of three, along the length, near the front wall.
+    # Two rows of three, along the length, near the front wall, grown in the
+    # soil.
     layout=Layout(
         crop_rows=CropRows(
             origin=Point2(x=0.5, y=1.6),

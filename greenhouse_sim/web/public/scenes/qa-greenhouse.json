@@ -1,5 +1,5 @@
 {
-  "schema_version": 8,
+  "schema_version": 9,
   "greenhouse_id": "qa_greenhouse",
   "simulated_day": 0,
   "entities": [

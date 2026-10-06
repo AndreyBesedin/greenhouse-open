@@ -124,7 +124,8 @@ export const SNAPSHOT_SCHEMA = {
         "steel",
         "aluminium",
         "plastic",
-        "concrete"
+        "concrete",
+        "substrate"
       ],
       "title": "Material",
       "type": "string"
@@ -324,6 +325,8 @@ export const SNAPSHOT_SCHEMA = {
         "DOOR",
         "PLANTING_POSITION",
         "CROP_GUTTER",
+        "BENCH",
+        "SLAB",
         "WALKWAY",
         "RAIL",
         "PIPE",
@@ -402,7 +405,7 @@ export const SNAPSHOT_SCHEMA = {
   "description": "One greenhouse at one simulated day, as a viewer draws it. Positions\nand sizes are in metres, in right-handed world axes with z up.",
   "properties": {
     "schema_version": {
-      "default": 8,
+      "default": 9,
       "title": "Schema Version",
       "type": "integer"
     },

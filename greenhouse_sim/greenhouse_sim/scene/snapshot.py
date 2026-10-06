@@ -58,7 +58,8 @@ from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
 # 6: its doors and vents.
 # 7: its layout's fixtures, and what entities are made of.
 # 8: its planting positions.
-SCHEMA_VERSION: Final = 8
+# 9: benches and substrate slabs.
+SCHEMA_VERSION: Final = 9
 # The JSON Schema dialect Pydantic generates, stated in the published schema.
 JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 
@@ -108,6 +109,7 @@ MATERIAL_COLORS: Final = {
     Material.ALUMINIUM: Color(r=0.8, g=0.82, b=0.85),
     Material.PLASTIC: Color(r=0.9, g=0.9, b=0.88),
     Material.CONCRETE: Color(r=0.64, g=0.63, b=0.6),
+    Material.SUBSTRATE: Color(r=0.8, g=0.72, b=0.58),
 }
 
 
@@ -127,6 +129,8 @@ class SceneEntityKind(StrEnum):
     PLANTING_POSITION = "PLANTING_POSITION"
     # The layout's fixtures, one kind for each kind of fixture.
     CROP_GUTTER = "CROP_GUTTER"
+    BENCH = "BENCH"
+    SLAB = "SLAB"
     WALKWAY = "WALKWAY"
     RAIL = "RAIL"
     PIPE = "PIPE"
@@ -346,6 +350,8 @@ def _planting_position_entities(
 
 _FIXTURE_KINDS: Final = {
     FixtureKind.CROP_GUTTER: SceneEntityKind.CROP_GUTTER,
+    FixtureKind.BENCH: SceneEntityKind.BENCH,
+    FixtureKind.SLAB: SceneEntityKind.SLAB,
     FixtureKind.WALKWAY: SceneEntityKind.WALKWAY,
     FixtureKind.RAIL: SceneEntityKind.RAIL,
     FixtureKind.PIPE: SceneEntityKind.PIPE,

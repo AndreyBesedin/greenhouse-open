@@ -40,8 +40,8 @@ rows and columns, at a fixed pitch and spacing in the scene module.
 | Step | Commit summary | Status |
 | --- | --- | --- |
 | P02.1 | `feat(layout): define reusable fixture primitives` | Done ([#36](https://github.com/AndreyBesedin/greenhouse-open/pull/36)) |
-| P02.2 | `feat(layout): generate crop rows and planting positions` | Done |
-| P02.3 | `feat(layout): add gutters, tables, benches and slabs` | Planned |
+| P02.2 | `feat(layout): generate crop rows and planting positions` | Done ([#38](https://github.com/AndreyBesedin/greenhouse-open/pull/38)) |
+| P02.3 | `feat(layout): add gutters, tables, benches and slabs` | Done |
 | P02.4 | `feat(layout): add walkways, service zones and exclusion volumes` | Planned |
 | P02.5 | `feat(layout): add rails, pipes and overhead structures` | Planned |
 | P02.6 | `feat(layout): import and export the layout configuration` | Planned |
@@ -149,6 +149,46 @@ As implemented:
 Generic support structures, with their height, width, length and offsets,
 and presets for a tomato gutter and for a bench or table. Visible result:
 the rows are physically supported, not floating markers.
+
+As implemented:
+
+- Crop rows may have a `support` (`greenhouse_sim.world.rows.RowSupport`): a
+  generic structure along each row, of a kind (crop gutter or bench), with
+  the height of its top, its width and depth, how far it reaches beyond the
+  row's first and last positions (`overhang`), how far it lies beside the row
+  (`offset`), its material, legs at most `leg_spacing` apart (or none, when it
+  hangs from the structure), and optionally a substrate `slab` along its top.
+  The planting positions stand on the slab, or on the top.
+- Each row's support is generated from its row: the top (`row_<r>_support_1`)
+  laid along the row, the legs (`..._leg_<k>`) evenly spaced from end to end
+  under it, from the floor to its underside, and the slab (`row_<r>_slab_1`),
+  stopping 5 cm short of each end. The `_1` leaves room for a row split into
+  several supports, around a walkway (P02.4).
+- Presets: `TOMATO_GUTTER`, a galvanised steel gutter 30 cm wide and 12 cm
+  deep, its top at 60 cm, on stands at most 2 m apart, with a stone wool slab
+  20 cm wide and 7.5 cm high; and `BENCH`, an aluminium top 1.2 m wide at
+  80 cm, on legs at most 1.5 m apart, for plants in pots. The plan's "tomato
+  gutter and rail preset" is split: the pipe rail between rows comes with
+  P02.5's rails.
+- gh_001's four rows grow in tomato gutters. gh_demo's and gh_002's crops
+  stay in the soil, on the floor: they are the small walkthrough houses, and
+  their scenes stay as they were.
+- New fixture kinds `BENCH` and `SLAB`, and a `substrate` material, so the
+  scene schema moves to version 9. Legs take their support's kind, so the
+  categories' colours show them as part of it, and, being cylinders, they are
+  drawn in instanced batches.
+- Tests:
+  - Python: planting positions stand on the slab; each row's support reaches
+    the overhang beyond its first and last positions, at its height, width
+    and depth; legs stand evenly from end to end, never further apart than
+    their spacing, from the floor to the underside; a hung support has none;
+    the slab lies on the top, short of its ends; a support can lie beside its
+    row and follows the rows' heading; the bench preset carries pots at
+    80 cm without a slab; a support too deep for its height, or reaching
+    through a wall, is refused; the scene draws each part as its kind.
+  - Browser: in gh_001, a gutter, its first leg and its slab are picked, with
+    their kinds, sizes and materials; the plants' coordinates now read the
+    slab's height.
 
 ### P02.4: Walkways, service zones and exclusion volumes
 

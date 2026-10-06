@@ -121,7 +121,8 @@
         "steel",
         "aluminium",
         "plastic",
-        "concrete"
+        "concrete",
+        "substrate"
       ],
       "title": "Material",
       "type": "string"
@@ -321,6 +322,8 @@
         "DOOR",
         "PLANTING_POSITION",
         "CROP_GUTTER",
+        "BENCH",
+        "SLAB",
         "WALKWAY",
         "RAIL",
         "PIPE",
@@ -399,7 +402,7 @@
   "description": "One greenhouse at one simulated day, as a viewer draws it. Positions\nand sizes are in metres, in right-handed world axes with z up.",
   "properties": {
     "schema_version": {
-      "default": 8,
+      "default": 9,
       "title": "Schema Version",
       "type": "integer"
     },

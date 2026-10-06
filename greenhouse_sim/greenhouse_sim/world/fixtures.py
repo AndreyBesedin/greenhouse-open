@@ -35,6 +35,10 @@ class FixtureKind(StrEnum):
 
     # A trough the crop grows in, on stands or hung from the structure.
     CROP_GUTTER = "crop_gutter"
+    # A bench or table that plants stand on, in pots or trays.
+    BENCH = "bench"
+    # Substrate the crop roots in, such as a stone wool or coir slab.
+    SLAB = "slab"
     # A path on the floor, kept clear for people, trolleys and robots.
     WALKWAY = "walkway"
     # A rail that trolleys and robots run on.
@@ -52,6 +56,8 @@ class Material(StrEnum):
     ALUMINIUM = "aluminium"
     PLASTIC = "plastic"
     CONCRETE = "concrete"
+    # A growing medium, such as stone wool or coir.
+    SUBSTRATE = "substrate"
 
 
 METALS: Final = frozenset({Material.STEEL, Material.ALUMINIUM})
@@ -73,6 +79,8 @@ EVERYTHING: Final = frozenset(Obstruction)
 # What each kind is made of, unless its description says otherwise.
 DEFAULT_MATERIALS: Final = {
     FixtureKind.CROP_GUTTER: Material.STEEL,
+    FixtureKind.BENCH: Material.ALUMINIUM,
+    FixtureKind.SLAB: Material.SUBSTRATE,
     FixtureKind.WALKWAY: Material.CONCRETE,
     FixtureKind.RAIL: Material.STEEL,
     FixtureKind.PIPE: Material.STEEL,
@@ -83,6 +91,8 @@ DEFAULT_MATERIALS: Final = {
 # back the air around it, but it casts a shadow and cannot be driven through.
 DEFAULT_OBSTRUCTIONS: Final = {
     FixtureKind.CROP_GUTTER: EVERYTHING,
+    FixtureKind.BENCH: EVERYTHING,
+    FixtureKind.SLAB: EVERYTHING,
     FixtureKind.WALKWAY: frozenset[Obstruction](),
     FixtureKind.RAIL: frozenset({Obstruction.MOVEMENT, Obstruction.LIGHT}),
     FixtureKind.PIPE: frozenset({Obstruction.MOVEMENT, Obstruction.LIGHT}),
