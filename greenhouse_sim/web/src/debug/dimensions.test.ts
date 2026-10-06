@@ -29,7 +29,7 @@ describe("measuring a scene", () => {
       "z",
       "length 4.00 m",
       "width 6.40 m",
-      "height 4.00 m",
+      "height 4.30 m",
     ]);
   });
 
@@ -47,7 +47,7 @@ describe("measuring a scene", () => {
       ],
       [
         { x: 0, y: expect.closeTo(0), z: 0 },
-        { x: 0, y: expect.closeTo(0), z: 4 },
+        { x: 0, y: expect.closeTo(0), z: 4.3 },
       ],
     ]);
   });
@@ -80,7 +80,7 @@ describe("measuring a scene", () => {
   it("finds a box's bounds from its base up", () => {
     expect(entityBounds(BOUNDS)).toEqual({
       min: { x: 0, y: expect.closeTo(0), z: 0 },
-      max: { x: 4, y: expect.closeTo(6.4), z: 4 },
+      max: { x: 4, y: expect.closeTo(6.4), z: 4.3 },
     });
   });
 });

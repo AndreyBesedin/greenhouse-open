@@ -6,12 +6,21 @@ import type { SceneEntity, SceneSnapshot } from "./scene/generated/snapshotTypes
 // orbited the camera, not a pick. React Three Fiber uses the same threshold.
 export const CLICK_TOLERANCE_PX = 2;
 
-/** The entity a click landed on: the nearest hit drawn as part of an entity.
+type Hit = { object: Object3D; instanceId?: number | undefined };
+
+/**
+ * The entity a click landed on: the nearest hit drawn as part of an entity.
  * `SceneView` marks each entity's group with its identifier, and an instanced
- * batch lists its entities in instance order. */
-export function pickEntity(
-  hits: readonly { object: Object3D; instanceId?: number | undefined }[],
-): string | null {
+ * batch lists its entities in instance order. See-through things, such as
+ * glazing, are picked only when nothing solid lies along the click: a click
+ * through a greenhouse's glass reaches the plants and floor inside.
+ */
+export function pickEntity(hits: readonly Hit[]): string | null {
+  const solid = hits.filter((hit) => hit.object.userData.seeThrough !== true);
+  return nearestEntity(solid) ?? nearestEntity(hits);
+}
+
+function nearestEntity(hits: readonly Hit[]): string | null {
   for (const hit of hits) {
     for (let object: Object3D | null = hit.object; object !== null; object = object.parent) {
       const batch: unknown = object.userData.entityIds;

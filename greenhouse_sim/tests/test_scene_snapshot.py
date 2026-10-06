@@ -68,6 +68,8 @@ def test_a_scene_holds_the_greenhouse_the_axes_and_every_plant() -> None:
 
     assert kinds.count(SceneEntityKind.FLOOR) == 1
     assert kinds.count(SceneEntityKind.WALL) == 4
+    assert kinds.count(SceneEntityKind.ROOF) == 2
+    assert kinds.count(SceneEntityKind.GUTTER) == 2
     assert kinds.count(SceneEntityKind.GREENHOUSE_BOUNDS) == 1
     assert kinds.count(SceneEntityKind.AXES) == 1
     assert SceneEntityKind.GROUND not in kinds
@@ -140,6 +142,7 @@ def test_the_scene_schema_tells_a_viewer_exactly_what_it_may_receive() -> None:
         "plane",
         "cylinder",
         "box",
+        "polygon",
         "axes",
     }
     assert definitions["SceneEntityKind"]["enum"] == [kind.value for kind in SceneEntityKind]
@@ -156,7 +159,7 @@ def test_the_greenhouse_bounds_are_a_box_standing_on_the_middle_of_its_floor() -
 
     assert bounds.entity_id == "gh_001_bounds"
     assert bounds.shape == Box(
-        size_x=envelope.length, size_y=envelope.width, size_z=envelope.height
+        size_x=envelope.length, size_y=envelope.width, size_z=envelope.ridge_height
     )
     assert bounds.transform.position == Vector3(x=envelope.length / 2, y=envelope.width / 2, z=0.0)
 
@@ -169,7 +172,8 @@ def test_the_bounds_follow_a_greenhouse_placed_elsewhere_in_the_world() -> None:
             "envelope": Envelope(
                 length=8.0,
                 width=4.0,
-                height=3.0,
+                eave_height=2.5,
+                ridge_height=3.0,
                 origin=Transform(position=Vector3(x=10.0, y=0.0, z=0.0), rotation=turned),
             )
         }
@@ -201,3 +205,16 @@ def test_the_floor_and_walls_are_the_envelopes_surfaces_in_the_world() -> None:
     assert entities["gh_001_floor"].kind == SceneEntityKind.FLOOR
     assert entities["gh_001_side_wall_right"].kind == SceneEntityKind.WALL
     assert entities["gh_001_side_wall_right"].label == "side wall right"
+
+
+def test_a_gutter_is_a_channel_along_its_eave_with_its_top_at_the_eave() -> None:
+    envelope = CONFIG.envelope
+    entities = {entity.entity_id: entity for entity in scene_snapshot(_world(), CONFIG).entities}
+    gutter = entities["gh_001_gutter_left"]
+
+    assert gutter.kind == SceneEntityKind.GUTTER
+    assert isinstance(gutter.shape, Box)
+    assert gutter.shape.size_x == pytest.approx(envelope.length)
+    position = gutter.transform.position
+    assert (position.x, position.y) == pytest.approx((envelope.length / 2, envelope.width))
+    assert position.z + gutter.shape.size_z == pytest.approx(envelope.eave_height)

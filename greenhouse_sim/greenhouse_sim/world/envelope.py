@@ -11,22 +11,33 @@ it, for viewers now and for physics and airflow later, so a scenario, or later
 an editor, changes the greenhouse by changing this description. P01 grows it
 from the enclosed space to the floor, walls, roof, bays and openings.
 
-Each surface is a rectangle that faces into the greenhouse, and carries a
+Each surface is flat, faces into the greenhouse (decision 0017), and carries a
 semantic category. Walls are named as seen from the greenhouse's origin,
 looking along its length (+x): the right side wall stands along y = 0, the
 left along y = width, the front end wall at x = 0 and the back at x = length.
+
+The roof is pitched: the side walls rise to the eaves, and two roof slopes
+meet at the ridge, which runs along the length above the middle of the width.
+The end walls are gables, up to the ridge. A gutter runs along each eave.
 """
 
 import math
 from enum import StrEnum
+from typing import Self
 
-from pydantic import BaseModel, ConfigDict, PositiveFloat
+from pydantic import BaseModel, ConfigDict, PositiveFloat, model_validator
 
-from greenhouse_sim.world.geometry import Plane, Quaternion, Transform, Vector3
+from greenhouse_sim.world.geometry import Plane, Point2, Polygon, Quaternion, Transform, Vector3
 
 # Where a greenhouse stands unless a scenario says otherwise: its floor corner
 # at the world's origin, its axes along the world's.
 AT_WORLD_ORIGIN = Transform(position=Vector3(x=0.0, y=0.0, z=0.0))
+
+_ALONG = Vector3(x=1.0, y=0.0, z=0.0)
+_BACK_ALONG = Vector3(x=-1.0, y=0.0, z=0.0)
+_ACROSS = Vector3(x=0.0, y=1.0, z=0.0)
+_BACK_ACROSS = Vector3(x=0.0, y=-1.0, z=0.0)
+_UP = Vector3(x=0.0, y=0.0, z=1.0)
 
 
 class SurfaceCategory(StrEnum):
@@ -34,27 +45,46 @@ class SurfaceCategory(StrEnum):
 
     FLOOR = "floor"
     WALL = "wall"
+    ROOF = "roof"
 
 
 class Surface(BaseModel):
-    """One flat piece of the envelope: a rectangle placed in the greenhouse's
-    frame, with its front (the plane's +z) facing into the greenhouse."""
+    """One flat piece of the envelope, placed in the greenhouse's frame, with
+    its front (its shape's +z) facing into the greenhouse."""
 
     model_config = ConfigDict(frozen=True)
 
     surface_id: str
     category: SurfaceCategory
     transform: Transform
-    shape: Plane
+    shape: Plane | Polygon
 
 
-# Quarter turns that stand a plane facing +z up as a wall facing into the house.
-_X_AXIS = Vector3(x=1.0, y=0.0, z=0.0)
-_Y_AXIS = Vector3(x=0.0, y=1.0, z=0.0)
-_FACING_PLUS_Y = Quaternion.about(_X_AXIS, -math.pi / 2)
-_FACING_MINUS_Y = Quaternion.about(_X_AXIS, math.pi / 2)
-_FACING_PLUS_X = Quaternion.about(_Y_AXIS, math.pi / 2)
-_FACING_MINUS_X = Quaternion.about(_Y_AXIS, -math.pi / 2)
+class Gutter(BaseModel):
+    """A gutter's line, from end to end, in the greenhouse's frame."""
+
+    model_config = ConfigDict(frozen=True)
+
+    gutter_id: str
+    start: Vector3
+    end: Vector3
+
+
+def _surface(
+    surface_id: str,
+    category: SurfaceCategory,
+    origin: Vector3,
+    axes: tuple[Vector3, Vector3],
+    shape: Plane | Polygon,
+) -> Surface:
+    """A surface whose own x and y axes lie along `axes`; its front faces their
+    cross product."""
+    return Surface(
+        surface_id=surface_id,
+        category=category,
+        transform=Transform(position=origin, rotation=Quaternion.from_axes(*axes)),
+        shape=shape,
+    )
 
 
 class Envelope(BaseModel):
@@ -66,16 +96,32 @@ class Envelope(BaseModel):
     length: PositiveFloat
     # Along the greenhouse's y.
     width: PositiveFloat
-    # From the floor to the highest point of the envelope.
-    height: PositiveFloat
+    # From the floor to the eaves, where the side walls meet the roof.
+    eave_height: PositiveFloat
+    # From the floor to the ridge, the roof's highest line. A ridge as high as
+    # the eaves makes a flat roof.
+    ridge_height: PositiveFloat
     # Places the greenhouse's frame in the world.
     origin: Transform = AT_WORLD_ORIGIN
+
+    @model_validator(mode="after")
+    def _ridge_is_not_below_the_eaves(self) -> Self:
+        if self.ridge_height < self.eave_height:
+            raise ValueError(
+                f"the ridge ({self.ridge_height} m) is below the eaves ({self.eave_height} m)"
+            )
+        return self
+
+    @property
+    def roof_pitch(self) -> float:
+        """The roof's slope from the eaves to the ridge, in radians."""
+        return math.atan2(self.ridge_height - self.eave_height, self.width / 2)
 
     def bounds(self) -> tuple[Vector3, Vector3]:
         """The enclosed space's opposite corners, in the greenhouse's frame."""
         return (
             Vector3(x=0.0, y=0.0, z=0.0),
-            Vector3(x=self.length, y=self.width, z=self.height),
+            Vector3(x=self.length, y=self.width, z=self.ridge_height),
         )
 
     def to_world(self, point: Vector3) -> Vector3:
@@ -83,43 +129,73 @@ class Envelope(BaseModel):
         return self.origin.apply(point)
 
     def surfaces(self) -> list[Surface]:
-        """The floor and the four walls, in the greenhouse's frame. The walls
-        rise from the floor's edges to the envelope's height; the roof comes
-        with P01.3."""
-        length, width, height = self.length, self.width, self.height
-
-        def wall(surface_id: str, centre: Vector3, facing: Quaternion, size: Plane) -> Surface:
-            return Surface(
-                surface_id=surface_id,
-                category=SurfaceCategory.WALL,
-                transform=Transform(position=centre, rotation=facing),
-                shape=size,
-            )
-
-        floor = Surface(
-            surface_id="floor",
-            category=SurfaceCategory.FLOOR,
-            transform=Transform(position=Vector3(x=length / 2, y=width / 2, z=0.0)),
-            shape=Plane(size_x=length, size_y=width),
+        """The floor, the four walls and the two roof slopes, in the
+        greenhouse's frame. Together they close the greenhouse."""
+        length, width = self.length, self.width
+        eave, ridge = self.eave_height, self.ridge_height
+        half_width = width / 2
+        rise = ridge - eave
+        slope = math.hypot(half_width, rise)
+        # The end walls' gable, from its bottom corner along the width, then up.
+        gable = Polygon(
+            points=[
+                Point2(x=0.0, y=0.0),
+                Point2(x=width, y=0.0),
+                Point2(x=width, y=eave),
+                Point2(x=half_width, y=ridge),
+                Point2(x=0.0, y=eave),
+            ]
         )
-        # A side wall's plane keeps x along the length and turns y upright; an
-        # end wall's turns x upright and keeps y across the width.
-        side = Plane(size_x=length, size_y=height)
-        end = Plane(size_x=height, size_y=width)
+        side = Plane(size_x=length, size_y=eave)
+        roof = Plane(size_x=length, size_y=slope)
+        # Up each roof slope, from its eave to the ridge.
+        up_right_slope = Vector3(x=0.0, y=half_width / slope, z=rise / slope)
+        up_left_slope = Vector3(x=0.0, y=-half_width / slope, z=rise / slope)
+        mid_slope = (eave + ridge) / 2
+        wall, roof_slope = SurfaceCategory.WALL, SurfaceCategory.ROOF
         return [
-            floor,
-            wall(
-                "side_wall_right", Vector3(x=length / 2, y=0.0, z=height / 2), _FACING_PLUS_Y, side
+            _surface(
+                "floor",
+                SurfaceCategory.FLOOR,
+                Vector3(x=length / 2, y=half_width, z=0.0),
+                (_ALONG, _ACROSS),
+                Plane(size_x=length, size_y=width),
             ),
-            wall(
-                "side_wall_left",
-                Vector3(x=length / 2, y=width, z=height / 2),
-                _FACING_MINUS_Y,
+            _surface(
+                "side_wall_right",
+                wall,
+                Vector3(x=length / 2, y=0.0, z=eave / 2),
+                (_BACK_ALONG, _UP),
                 side,
             ),
-            wall("end_wall_front", Vector3(x=0.0, y=width / 2, z=height / 2), _FACING_PLUS_X, end),
-            wall(
-                "end_wall_back", Vector3(x=length, y=width / 2, z=height / 2), _FACING_MINUS_X, end
+            _surface(
+                "side_wall_left",
+                wall,
+                Vector3(x=length / 2, y=width, z=eave / 2),
+                (_ALONG, _UP),
+                side,
+            ),
+            _surface("end_wall_front", wall, Vector3(x=0.0, y=0.0, z=0.0), (_ACROSS, _UP), gable),
+            _surface(
+                "end_wall_back",
+                wall,
+                Vector3(x=length, y=width, z=0.0),
+                (_BACK_ACROSS, _UP),
+                gable,
+            ),
+            _surface(
+                "roof_right",
+                roof_slope,
+                Vector3(x=length / 2, y=half_width / 2, z=mid_slope),
+                (_BACK_ALONG, up_right_slope),
+                roof,
+            ),
+            _surface(
+                "roof_left",
+                roof_slope,
+                Vector3(x=length / 2, y=width - half_width / 2, z=mid_slope),
+                (_ALONG, up_left_slope),
+                roof,
             ),
         ]
 
@@ -128,4 +204,20 @@ class Envelope(BaseModel):
         return [
             surface.model_copy(update={"transform": self.origin.after(surface.transform)})
             for surface in self.surfaces()
+        ]
+
+    def gutters(self) -> list[Gutter]:
+        """A gutter along each eave, the length of the greenhouse."""
+        eave = self.eave_height
+        return [
+            Gutter(
+                gutter_id="gutter_right",
+                start=Vector3(x=0.0, y=0.0, z=eave),
+                end=Vector3(x=self.length, y=0.0, z=eave),
+            ),
+            Gutter(
+                gutter_id="gutter_left",
+                start=Vector3(x=0.0, y=self.width, z=eave),
+                end=Vector3(x=self.length, y=self.width, z=eave),
+            ),
         ]

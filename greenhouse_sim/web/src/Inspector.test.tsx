@@ -55,6 +55,14 @@ describe("the inspector", () => {
     expect(describeShape({ shape: "box", size_x: 4, size_y: 6.4, size_z: 4 })).toBe(
       "box, 4.00 × 6.40 × 4.00 m",
     );
+    const gable = [
+      { x: 0, y: 0 },
+      { x: 6.4, y: 0 },
+      { x: 6.4, y: 3 },
+      { x: 3.2, y: 4.3 },
+      { x: 0, y: 3 },
+    ];
+    expect(describeShape({ shape: "polygon", points: gable as never })).toBe("polygon, 5 corners");
   });
 });
 

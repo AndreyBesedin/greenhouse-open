@@ -26,6 +26,23 @@ class Vector3(BaseModel):
     y: float
     z: float
 
+    def cross(self, other: Vector3) -> Vector3:
+        """The vector at right angles to both, right-handed: x cross y is z."""
+        return Vector3(
+            x=self.y * other.z - self.z * other.y,
+            y=self.z * other.x - self.x * other.z,
+            z=self.x * other.y - self.y * other.x,
+        )
+
+
+class Point2(BaseModel):
+    """A point in a shape's own x-y plane."""
+
+    model_config = ConfigDict(frozen=True, json_schema_serialization_defaults_required=True)
+
+    x: float
+    y: float
+
 
 class Quaternion(BaseModel):
     """A rotation as a unit quaternion; the default is no rotation."""
@@ -47,6 +64,50 @@ class Quaternion(BaseModel):
             x=axis.x * math.sin(half),
             y=axis.y * math.sin(half),
             z=axis.z * math.sin(half),
+        )
+
+    @classmethod
+    def from_axes(cls, x_axis: Vector3, y_axis: Vector3) -> Quaternion:
+        """The rotation that turns a frame's x and y axes onto `x_axis` and
+        `y_axis`, two unit vectors at right angles; its z turns onto their cross
+        product."""
+        z_axis = x_axis.cross(y_axis)
+        # The rotation matrix's columns are the turned axes.
+        m00, m10, m20 = x_axis.x, x_axis.y, x_axis.z
+        m01, m11, m21 = y_axis.x, y_axis.y, y_axis.z
+        m02, m12, m22 = z_axis.x, z_axis.y, z_axis.z
+        # From whichever diagonal term is largest, for numerical stability.
+        trace = m00 + m11 + m22
+        if trace > 0:
+            root = math.sqrt(1 + trace)
+            return cls(
+                w=root / 2,
+                x=(m21 - m12) / (2 * root),
+                y=(m02 - m20) / (2 * root),
+                z=(m10 - m01) / (2 * root),
+            )
+        if m00 > m11 and m00 > m22:
+            root = math.sqrt(1 + m00 - m11 - m22)
+            return cls(
+                w=(m21 - m12) / (2 * root),
+                x=root / 2,
+                y=(m01 + m10) / (2 * root),
+                z=(m02 + m20) / (2 * root),
+            )
+        if m11 > m22:
+            root = math.sqrt(1 + m11 - m00 - m22)
+            return cls(
+                w=(m02 - m20) / (2 * root),
+                x=(m01 + m10) / (2 * root),
+                y=root / 2,
+                z=(m12 + m21) / (2 * root),
+            )
+        root = math.sqrt(1 + m22 - m00 - m11)
+        return cls(
+            w=(m10 - m01) / (2 * root),
+            x=(m02 + m20) / (2 * root),
+            y=(m12 + m21) / (2 * root),
+            z=root / 2,
         )
 
     def after(self, first: Quaternion) -> Quaternion:
@@ -130,6 +191,17 @@ class Box(BaseModel):
     size_z: PositiveFloat
 
 
+class Polygon(BaseModel):
+    """A flat polygon in its frame's x-y plane, facing +z: its corners in
+    order, counter-clockwise as seen from its front, such as a greenhouse's
+    gable end."""
+
+    model_config = ConfigDict(frozen=True, json_schema_serialization_defaults_required=True)
+
+    shape: Literal["polygon"] = "polygon"
+    points: list[Point2] = Field(min_length=3)
+
+
 class Axes(BaseModel):
     """A reference marker: one arrow from the origin along each of +x, +y and
     +z."""
@@ -140,4 +212,4 @@ class Axes(BaseModel):
     length: PositiveFloat
 
 
-type Shape = Annotated[Plane | Cylinder | Box | Axes, Field(discriminator="shape")]
+type Shape = Annotated[Plane | Cylinder | Box | Polygon | Axes, Field(discriminator="shape")]

@@ -14,5 +14,5 @@ GREENHOUSE_002 = ScenarioConfig(
     duration_days=40,
     random_seed=2001,
     # A small house around its single plant.
-    envelope=Envelope(length=4.0, width=3.2, height=4.0),
+    envelope=Envelope(length=4.0, width=3.2, eave_height=3.0, ridge_height=3.65),
 )
