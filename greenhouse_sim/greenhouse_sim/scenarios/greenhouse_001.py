@@ -3,6 +3,8 @@ from datetime import date
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.world.envelope import Envelope, Opening, OpeningKind
 from greenhouse_sim.world.geometry import Point2
+from greenhouse_sim.world.layout import Layout
+from greenhouse_sim.world.rows import CropRows
 
 GREENHOUSE_001 = ScenarioConfig(
     greenhouse_id="gh_001",
@@ -45,5 +47,15 @@ GREENHOUSE_001 = ScenarioConfig(
                 height=2.1,
             ),
         ],
+    ),
+    # Four rows of ten along the length, 1.6 m apart, centred in the house.
+    layout=Layout(
+        crop_rows=CropRows(
+            origin=Point2(x=1.75, y=2.4),
+            rows=4,
+            positions_per_row=10,
+            plant_pitch=0.5,
+            row_spacing=1.6,
+        )
     ),
 )

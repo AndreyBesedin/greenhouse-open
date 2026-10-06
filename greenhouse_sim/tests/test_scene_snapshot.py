@@ -12,15 +12,13 @@ from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scene.snapshot import (
     _SURFACE_KINDS,
-    PLANT_PITCH_M,
-    ROW_SPACING_M,
     SceneEntityKind,
     SceneSnapshot,
     scene_snapshot,
 )
 from greenhouse_sim.world import GreenhouseWorld
 from greenhouse_sim.world.envelope import Envelope, OpeningKind, SurfaceCategory
-from greenhouse_sim.world.geometry import Box, Cylinder, Plane, Quaternion, Transform, Vector3
+from greenhouse_sim.world.geometry import Box, Cylinder, Quaternion, Transform, Vector3
 
 CONFIG = SCENARIO_REGISTRY["gh_001"]
 # More plants than one scenario row holds (10 columns), so the grid wraps.
@@ -93,22 +91,28 @@ def test_a_plant_is_as_tall_as_its_visible_stem_in_metres() -> None:
         assert heights[plant.plant_id] == pytest.approx(visible_cm / 100)
 
 
-def test_plants_stand_on_the_floor_in_rows_along_x() -> None:
-    """z is up and the floor is z = 0. Plants of one scenario row share y and
-    step along +x; the next row starts further along +y."""
+def test_plants_stand_at_their_planting_positions_in_order() -> None:
+    """The first plant at the first row's first position, and so on: with 13
+    plants and rows of ten, the eleventh starts the second row."""
     snapshot = scene_snapshot(_world(), CONFIG)
-    positions = [(x, y, z) for x, y, z, _ in _plants(snapshot).values()]
-    floor = next(e for e in snapshot.entities if e.kind == SceneEntityKind.FLOOR)
-    assert isinstance(floor.shape, Plane)
+    by_id = {entity.entity_id: entity for entity in snapshot.entities}
+    positions = CONFIG.layout.planting_positions()
 
-    first_row, second_row = positions[: CONFIG.columns], positions[CONFIG.columns :]
-    assert all(z == 0.0 for _, _, z in positions)
-    assert len({y for _, y, _ in first_row}) == 1
-    assert [x for x, _, _ in first_row] == pytest.approx(
-        [PLANT_PITCH_M * (i + 1) for i in range(CONFIG.columns)]
-    )
-    assert second_row[0][1] == pytest.approx(first_row[0][1] + ROW_SPACING_M)
-    assert all(0 < x < floor.shape.size_x and 0 < y < floor.shape.size_y for x, y, _ in positions)
+    for plant_id, position in zip(PLANT_IDS, positions, strict=False):
+        plant = by_id[plant_id]
+        marker = by_id[f"gh_001_{position.position_id}"]
+        assert plant.transform.position == position.point
+        assert plant.properties["planting_position"] == position.position_id
+        assert marker.transform.position == plant.transform.position
+    assert by_id[PLANT_IDS[10]].properties["planting_position"] == "row_2_position_1"
+
+
+def test_a_scene_refuses_more_plants_than_planting_positions() -> None:
+    world = _world(days=0)
+    crowded = world.model_copy(update={"plants": world.plants * 4})
+
+    with pytest.raises(ValueError, match="52 plants, but only 40 planting positions"):
+        scene_snapshot(crowded, CONFIG)
 
 
 def test_a_fully_lowered_plant_has_zero_height() -> None:

@@ -12,6 +12,7 @@ export type SceneEntityKind =
   | "FRAME"
   | "VENT"
   | "DOOR"
+  | "PLANTING_POSITION"
   | "CROP_GUTTER"
   | "WALKWAY"
   | "RAIL"

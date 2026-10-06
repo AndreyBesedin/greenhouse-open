@@ -7,6 +7,8 @@ import { clickAt, clickSky, onScreen, selectAt } from "./view";
 // it in live scenes, where young plants are shorter.
 const EXAMPLE_PLANT = { x: 0.5, y: 1.6, z: 0.15 };
 const LIVE_PLANT = { x: 0.5, y: 1.6, z: 0.1 };
+// gh_001's first plant, on the first of its rows centred in its greenhouse.
+const STILL_PLANT = { x: 1.75, y: 2.4, z: 0.1 };
 // A point on the example scene's floor, clear of the plants.
 const EXAMPLE_FLOOR = { x: 1.0, y: 4.0, z: 0 };
 // live.spec.ts and controls.spec.ts drive gh_demo and gh_002; this file
@@ -17,7 +19,7 @@ test("clicking an entity selects it, and the inspector shows what it is and wher
   page,
 }) => {
   await page.goto("/?scene=example");
-  await expect(page.getByTestId("scene-status")).toContainText("45 entities");
+  await expect(page.getByTestId("scene-status")).toContainText("51 entities");
   const selected = page.getByTestId("selected-entity");
 
   await selectAt(page, EXAMPLE_PLANT, "gh_demo_plant_001");
@@ -72,7 +74,7 @@ test("overlays and colours change the view, never the simulation", async ({ page
   await page.goto(`/?live=${STILL_SCENARIO}`);
   await expect(page.getByTestId("stream-status")).toHaveText("live");
   await expect.poll(() => simulatedDay(page)).toBe(0);
-  await selectAt(page, LIVE_PLANT, "gh_001_plant_001");
+  await selectAt(page, STILL_PLANT, "gh_001_plant_001");
   const status = await page.getByTestId("scene-status").textContent();
 
   const requests: Request[] = [];
