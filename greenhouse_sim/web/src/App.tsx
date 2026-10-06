@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { type BuildInfo, buildInfo } from "./buildInfo";
 import type { PresetName, PresetRequest } from "./camera";
@@ -10,6 +10,7 @@ import { colouringBy, scalarProperties } from "./debug/scalar";
 import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
+import { OpeningControls } from "./OpeningControls";
 import type { ViewSample } from "./readouts";
 import { loadScenarios, type ScenariosState } from "./scenarios";
 import { type LiveCommand, sendLiveCommand } from "./scene/live";
@@ -37,6 +38,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [overlayToggles, setOverlayToggles] = useState<OverlayToggles>(ALL_OVERLAYS);
   const [colourBy, setColourBy] = useState<string | null>(null);
   const [showDimensions, setShowDimensions] = useState(false);
+  // Which scenario's scene is on show, so reopening it does not blank it.
+  const shownScenario = useRef<string | null>(null);
   const liveScenario = source.kind === "live" ? source.scenarioId : null;
   const live = useLiveScene(liveScenario);
 
@@ -57,7 +60,17 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       return;
     }
     let current = true;
-    setScene(source.kind === "reference" ? { status: "none" } : { status: "loading" });
+    // A scenario reopened by its sliders keeps its scene on show until the
+    // next arrives; any other change of scene starts from loading.
+    const sameScenario = source.kind === "scenario" && source.scenarioId === shownScenario.current;
+    shownScenario.current = source.kind === "scenario" ? source.scenarioId : null;
+    setScene((previous) =>
+      source.kind === "reference"
+        ? { status: "none" }
+        : sameScenario && previous.status === "loaded"
+          ? previous
+          : { status: "loading" },
+    );
     void loadScene(source).then((state) => {
       if (current) {
         setScene(state);
@@ -67,6 +80,15 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       current = false;
     };
   }, [source]);
+
+  function setOpenings(openings: Record<string, number>): void {
+    if (source.kind !== "scenario") {
+      return;
+    }
+    const next: SceneSource = { ...source, openings };
+    history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
+    setSource(next);
+  }
 
   function chooseSource(next: SceneSource): void {
     history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
@@ -140,6 +162,13 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             onColourBy={setColourBy}
             showDimensions={showDimensions}
             onShowDimensions={setShowDimensions}
+          />
+        )}
+        {snapshot !== null && source.kind === "scenario" && (
+          <OpeningControls
+            snapshot={snapshot}
+            requested={source.openings ?? {}}
+            onChange={setOpenings}
           />
         )}
       </InfoPanel>

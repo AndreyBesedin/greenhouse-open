@@ -1,5 +1,5 @@
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "greenhouse_id": "gh_demo",
   "simulated_day": 9,
   "entities": [
@@ -319,6 +319,146 @@
       },
       "label": "roof 2 left",
       "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_roof_vent_1",
+      "kind": "VENT",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 1.2465455714226759,
+          "z": 3.569581516164336
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.9955130086837737,
+          "z": 0.09462478291325564
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 1.6,
+        "size_y": 0.6
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.74,
+        "b": 0.86
+      },
+      "label": "roof vent 1",
+      "properties": {
+        "opening_id": "roof_vent_1",
+        "opening_kind": "roof_vent",
+        "on_surface": "roof_1_right",
+        "open_fraction": 0.25,
+        "aperture_m2": 0.2584254253585625
+      }
+    },
+    {
+      "entity_id": "gh_demo_roof_vent_2",
+      "kind": "VENT",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 4.446545571422676,
+          "z": 3.569581516164336
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.9955130086837737,
+          "z": 0.09462478291325564
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 1.6,
+        "size_y": 0.6
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.74,
+        "b": 0.86
+      },
+      "label": "roof vent 2",
+      "properties": {
+        "opening_id": "roof_vent_2",
+        "opening_kind": "roof_vent",
+        "on_surface": "roof_2_right",
+        "open_fraction": 0.25,
+        "aperture_m2": 0.2584254253585625
+      }
+    },
+    {
+      "entity_id": "gh_demo_side_vent_1",
+      "kind": "VENT",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": -2.220446049250313e-16,
+          "z": 2.5
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.7071067811865476
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 2.0,
+        "size_y": 0.5
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.74,
+        "b": 0.86
+      },
+      "label": "side vent 1",
+      "properties": {
+        "opening_id": "side_vent_1",
+        "opening_kind": "side_vent",
+        "on_surface": "side_wall_right",
+        "open_fraction": 0.0,
+        "aperture_m2": 0.0
+      }
+    },
+    {
+      "entity_id": "gh_demo_door_1",
+      "kind": "DOOR",
+      "transform": {
+        "position": {
+          "x": 4.0200000000000005,
+          "y": 5.4,
+          "z": 1.0499999999999998
+        },
+        "rotation": {
+          "w": -0.5,
+          "x": -0.5,
+          "y": 0.5,
+          "z": 0.5
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 1.2,
+        "size_y": 2.1
+      },
+      "color": {
+        "r": 0.45,
+        "g": 0.5,
+        "b": 0.56
+      },
+      "label": "door 1",
+      "properties": {
+        "opening_id": "door_1",
+        "opening_kind": "door",
+        "on_surface": "end_wall_back",
+        "open_fraction": 0.0,
+        "aperture_m2": 0.0
+      }
     },
     {
       "entity_id": "gh_demo_gutter_0",

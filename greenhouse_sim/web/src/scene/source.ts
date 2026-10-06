@@ -8,7 +8,9 @@ export type SceneSource =
   | { kind: "example" }
   /** A dense field of plants built in the viewer, for measuring the renderer. */
   | { kind: "stress"; plants: number }
-  | { kind: "scenario"; scenarioId: string }
+  /** A scenario's scene from the simulator, with its doors and vents opened as
+   * `openings` asks (by opening identifier, from 0 to 1). */
+  | { kind: "scenario"; scenarioId: string; openings?: Readonly<Record<string, number>> }
   | { kind: "live"; scenarioId: string };
 
 export type SceneState =
@@ -28,7 +30,10 @@ export function sourceFromSearch(search: string): SceneSource {
   }
   const scenarioId = parameters.get("scenario");
   if (scenarioId) {
-    return { kind: "scenario", scenarioId };
+    const openings = openingsFrom(parameters.get("open"));
+    return openings === null
+      ? { kind: "scenario", scenarioId }
+      : { kind: "scenario", scenarioId, openings };
   }
   switch (parameters.get("scene")) {
     case "example":
@@ -49,10 +54,42 @@ export function searchFor(source: SceneSource): string {
     case "stress":
       return `?scene=stress&plants=${source.plants}`;
     case "scenario":
-      return `?scenario=${encodeURIComponent(source.scenarioId)}`;
+      return `?scenario=${encodeURIComponent(source.scenarioId)}${openingsQuery(source.openings, "&")}`;
     case "live":
       return `?live=${encodeURIComponent(source.scenarioId)}`;
   }
+}
+
+/** `open=roof_vent_1:0.5,door_1:1`, as the address bar and the simulator's
+ * API both take it, or nothing when no opening is set. */
+function openingsQuery(
+  openings: Readonly<Record<string, number>> | undefined,
+  separator: "?" | "&",
+): string {
+  const entries = Object.entries(openings ?? {}).sort(([a], [b]) => a.localeCompare(b));
+  if (entries.length === 0) {
+    return "";
+  }
+  const pairs = entries.map(([id, fraction]) => `${encodeURIComponent(id)}:${fraction}`);
+  return `${separator}open=${pairs.join(",")}`;
+}
+
+/** The openings an address sets, or null when it sets none or says nothing
+ * readable. The simulator checks the fractions themselves. */
+function openingsFrom(value: string | null): Record<string, number> | null {
+  if (!value) {
+    return null;
+  }
+  const openings: Record<string, number> = {};
+  for (const pair of value.split(",")) {
+    const [id, fraction] = pair.split(":");
+    const number = Number(fraction);
+    if (!id || fraction === undefined || Number.isNaN(number)) {
+      return null;
+    }
+    openings[id] = number;
+  }
+  return openings;
 }
 
 function sceneUrl(source: SceneSource): string | null {
@@ -65,7 +102,7 @@ function sceneUrl(source: SceneSource): string | null {
     case "example":
       return EXAMPLE_SCENE_URL;
     case "scenario":
-      return `/api/scenarios/${encodeURIComponent(source.scenarioId)}/scene`;
+      return `/api/scenarios/${encodeURIComponent(source.scenarioId)}/scene${openingsQuery(source.openings, "?")}`;
   }
 }
 

@@ -3,6 +3,7 @@ import {
   BoxGeometry,
   type BufferGeometry,
   DoubleSide,
+  FrontSide,
   PlaneGeometry,
   ShapeGeometry,
   SRGBColorSpace,
@@ -61,10 +62,13 @@ export function ShapeMesh({
   color,
   highlighted = false,
   behindLines = false,
+  doubleSided = false,
 }: {
   shape: Shape;
   color: Color;
   highlighted?: boolean;
+  /** Drawn from behind as well, such as a panel seen from either side. */
+  doubleSided?: boolean;
   /** Drawn just behind lines at the same depth, such as the ground grid. */
   behindLines?: boolean;
 }) {
@@ -80,6 +84,7 @@ export function ShapeMesh({
           <meshStandardMaterial
             color={threeColor(color)}
             {...glow}
+            side={doubleSided ? DoubleSide : FrontSide}
             polygonOffset={behindLines}
             polygonOffsetFactor={1}
             polygonOffsetUnits={1}

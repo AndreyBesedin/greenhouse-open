@@ -10,9 +10,9 @@ simulated truth, as the world does. It is not an observation: decision-making
 code works from observations, never from a snapshot.
 
 A snapshot holds a reference axes marker at the origin, the greenhouse's
-envelope (its floor, walls and roof, its gutters, its structural frames, and
-its bounds: the space it encloses, as a box), and an upright cylinder per
-plant, as tall as its visible stem. Until
+envelope (its floor, walls and roof, its doors and vents as they stand open,
+its gutters, its structural frames, and its bounds: the space it encloses, as
+a box), and an upright cylinder per plant, as tall as its visible stem. Until
 planting positions become part of the world (P02), plants stand on a
 provisional grid built from the scenario's rows and columns.
 """
@@ -29,6 +29,8 @@ from greenhouse_sim.world.envelope import (
     Gutter,
     Member,
     MemberKind,
+    OpeningKind,
+    OpeningPanel,
     Surface,
     SurfaceCategory,
 )
@@ -49,7 +51,8 @@ from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
 # 3: the greenhouse's floor and walls, in place of the provisional ground.
 # 4: its roof, gable end walls as polygons, and gutters.
 # 5: its structural frames.
-SCHEMA_VERSION: Final = 5
+# 6: its doors and vents.
+SCHEMA_VERSION: Final = 6
 # The JSON Schema dialect Pydantic generates, stated in the published schema.
 JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 
@@ -83,6 +86,8 @@ GUTTER_COLOR: Final = Color(r=0.55, g=0.57, b=0.6)
 GUTTER_WIDTH_M: Final = 0.2
 GUTTER_DEPTH_M: Final = 0.15
 FRAME_COLOR: Final = Color(r=0.66, g=0.68, b=0.7)
+VENT_COLOR: Final = Color(r=0.55, g=0.74, b=0.86)
+DOOR_COLOR: Final = Color(r=0.45, g=0.5, b=0.56)
 # Structural members are drawn as round bars of these radii, until they have
 # profiles of their own.
 MEMBER_RADII_M: Final = {MemberKind.POST: 0.05, MemberKind.RAFTER: 0.03}
@@ -101,6 +106,8 @@ class SceneEntityKind(StrEnum):
     ROOF = "ROOF"
     GUTTER = "GUTTER"
     FRAME = "FRAME"
+    VENT = "VENT"
+    DOOR = "DOOR"
     PLANT = "PLANT"
 
 
@@ -130,7 +137,8 @@ class SceneSnapshot(BaseModel):
 
 def scene_snapshot(world: GreenhouseWorld, config: ScenarioConfig) -> SceneSnapshot:
     """The scene a viewer draws for `world`: axes, the greenhouse's floor,
-    walls, roof, gutters, frames and bounds, and one entity per plant."""
+    walls, roof, openings, gutters, frames and bounds, and one entity per
+    plant."""
     columns = max(config.columns, 1)
     axes = SceneEntity(
         entity_id=f"{world.greenhouse_id}_axes",
@@ -149,6 +157,7 @@ def scene_snapshot(world: GreenhouseWorld, config: ScenarioConfig) -> SceneSnaps
         simulated_day=world.simulated_day,
         entities=[
             *_surface_entities(world.greenhouse_id, config.envelope),
+            *_opening_entities(world.greenhouse_id, config.envelope),
             *_gutter_entities(world.greenhouse_id, config.envelope),
             *_member_entities(world.greenhouse_id, config.envelope),
             axes,
@@ -179,6 +188,32 @@ def _surface_entity(greenhouse_id: str, surface: Surface) -> SceneEntity:
         shape=surface.shape,
         color=color,
         label=surface.surface_id.replace("_", " "),
+    )
+
+
+def _opening_entities(greenhouse_id: str, envelope: Envelope) -> list[SceneEntity]:
+    return [_opening_entity(greenhouse_id, envelope, panel) for panel in envelope.opening_panels()]
+
+
+def _opening_entity(greenhouse_id: str, envelope: Envelope, panel: OpeningPanel) -> SceneEntity:
+    """A door or vent's panel as it stands, with how far it is open and the
+    aperture it exposes."""
+    opening = panel.opening
+    is_door = opening.kind == OpeningKind.DOOR
+    return SceneEntity(
+        entity_id=f"{greenhouse_id}_{opening.opening_id}",
+        kind=SceneEntityKind.DOOR if is_door else SceneEntityKind.VENT,
+        transform=envelope.origin.after(panel.transform),
+        shape=panel.shape,
+        color=DOOR_COLOR if is_door else VENT_COLOR,
+        label=opening.opening_id.replace("_", " "),
+        properties={
+            "opening_id": opening.opening_id,
+            "opening_kind": opening.kind.value,
+            "on_surface": opening.surface_id,
+            "open_fraction": opening.opening,
+            "aperture_m2": opening.aperture_area(),
+        },
     )
 
 

@@ -1,7 +1,8 @@
 from datetime import date
 
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.world.envelope import Envelope
+from greenhouse_sim.world.envelope import Envelope, Opening, OpeningKind
+from greenhouse_sim.world.geometry import Point2
 
 GREENHOUSE_001 = ScenarioConfig(
     greenhouse_id="gh_001",
@@ -13,6 +14,36 @@ GREENHOUSE_001 = ScenarioConfig(
     start_date=date(2026, 1, 1),
     duration_days=28,
     random_seed=1001,
-    # Room around its four rows of ten plants: two 4.8 m spans, two 4 m bays.
-    envelope=Envelope(length=8.0, width=9.6, eave_height=3.5, ridge_height=4.5, spans=2, bays=2),
+    # Room around its four rows of ten plants: two 4.8 m spans, two 4 m bays,
+    # a roof vent near each ridge and a door on the front gable.
+    envelope=Envelope(
+        length=8.0,
+        width=9.6,
+        eave_height=3.5,
+        ridge_height=4.5,
+        spans=2,
+        bays=2,
+        openings=[
+            *(
+                Opening(
+                    opening_id=f"roof_vent_{span}",
+                    kind=OpeningKind.ROOF_VENT,
+                    surface_id=f"roof_{span}_right",
+                    centre=Point2(x=0.0, y=0.85),
+                    width=3.0,
+                    height=0.8,
+                    opening=0.2,
+                )
+                for span in (1, 2)
+            ),
+            Opening(
+                opening_id="door_1",
+                kind=OpeningKind.DOOR,
+                surface_id="end_wall_front",
+                centre=Point2(x=1.5, y=1.05),
+                width=1.2,
+                height=2.1,
+            ),
+        ],
+    ),
 )

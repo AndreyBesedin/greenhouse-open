@@ -177,3 +177,19 @@ body {
   border-radius: 6px;
   font-size: 13px;
 }
+
+.opening-controls {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+}
+
+.opening-control {
+  display: grid;
+  grid-template-columns: 7em 1fr 7em;
+  gap: 6px;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}

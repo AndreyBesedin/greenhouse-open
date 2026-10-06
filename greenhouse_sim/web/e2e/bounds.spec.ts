@@ -15,7 +15,7 @@ test("the greenhouse is measured and labelled, and its glass yields to what it e
   page,
 }) => {
   await page.goto("/?scene=example");
-  await expect(page.getByTestId("scene-status")).toContainText("41 entities");
+  await expect(page.getByTestId("scene-status")).toContainText("45 entities");
 
   await page.getByLabel("Dimensions and axis labels").check();
   await expect(page.getByTestId("debug-label")).toHaveText([
