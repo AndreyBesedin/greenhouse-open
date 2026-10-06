@@ -73,6 +73,9 @@ test("the QA layout draws each of its views, coloured by category, without conso
       "walkway",
       "service zone",
       "keep-out",
+      "rail",
+      "pipe",
+      "wire",
       "obstacle",
     ]);
   }

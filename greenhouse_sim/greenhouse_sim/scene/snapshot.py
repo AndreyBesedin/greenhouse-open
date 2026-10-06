@@ -61,7 +61,8 @@ from greenhouse_sim.world.zones import Zone, ZoneKind
 # 8: its planting positions.
 # 9: benches and substrate slabs.
 # 10: service zones and keep-out volumes.
-SCHEMA_VERSION: Final = 10
+# 11: crop wires.
+SCHEMA_VERSION: Final = 11
 # The JSON Schema dialect Pydantic generates, stated in the published schema.
 JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 
@@ -141,6 +142,7 @@ class SceneEntityKind(StrEnum):
     KEEP_OUT = "KEEP_OUT"
     RAIL = "RAIL"
     PIPE = "PIPE"
+    WIRE = "WIRE"
     OBSTACLE = "OBSTACLE"
     PLANT = "PLANT"
 
@@ -363,6 +365,7 @@ _FIXTURE_KINDS: Final = {
     FixtureKind.WALKWAY: SceneEntityKind.WALKWAY,
     FixtureKind.RAIL: SceneEntityKind.RAIL,
     FixtureKind.PIPE: SceneEntityKind.PIPE,
+    FixtureKind.WIRE: SceneEntityKind.WIRE,
     FixtureKind.OBSTACLE: SceneEntityKind.OBSTACLE,
 }
 

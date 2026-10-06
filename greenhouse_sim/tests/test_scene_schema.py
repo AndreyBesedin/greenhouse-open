@@ -34,13 +34,14 @@ from greenhouse_sim.world.fixtures import (
     CylinderPrimitive,
     Material,
     PipePrimitive,
+    PipeRunPrimitive,
     RailPrimitive,
     TrayPrimitive,
     WalkwayPrimitive,
 )
 from greenhouse_sim.world.geometry import Point2, Transform, Vector3
 from greenhouse_sim.world.layout import Layout
-from greenhouse_sim.world.rows import TOMATO_GUTTER, CropRows
+from greenhouse_sim.world.rows import PIPE_RAIL, TOMATO_GUTTER, CropRows, CropWires
 from greenhouse_sim.world.zones import Strip, Zone, ZoneKind
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -145,9 +146,11 @@ QA_FIXTURES_LAYOUT = Layout(
     ]
 )
 # The canonical layout, in the QA greenhouse: five rows of tomato gutters
-# along its length, split by a central aisle; aisles across the front, past
-# the door, and along the right side wall; a service zone at the back; and a
-# keep-out volume around an electrical cabinet, which cuts the last row short.
+# along its length under crop wires, with pipe rails between them, split by a
+# central aisle; aisles across the front, past the door, and along the right
+# side wall; heating pipes along both side walls; a service zone at the back;
+# and a keep-out volume around an electrical cabinet, which cuts the last row
+# short.
 QA_LAYOUT = Layout(
     crop_rows=CropRows(
         origin=Point2(x=1.75, y=2.0),
@@ -156,6 +159,8 @@ QA_LAYOUT = Layout(
         plant_pitch=0.5,
         row_spacing=1.6,
         support=TOMATO_GUTTER,
+        rails=PIPE_RAIL,
+        wires=CropWires(height=3.5),
     ),
     placed=[
         WalkwayPrimitive(
@@ -175,6 +180,17 @@ QA_LAYOUT = Layout(
             start=Point2(x=1.3, y=0.7),
             end=Point2(x=15.8, y=0.7),
             width=0.8,
+        ),
+        *(
+            PipeRunPrimitive(
+                fixture_id=f"heating_pipes_{side}",
+                start=Vector3(x=1.3, y=y, z=0.3),
+                end=Vector3(x=15.8, y=y, z=0.3),
+                radius=0.0255,
+                count=4,
+                step=Vector3(x=0.0, y=0.0, z=0.15),
+            )
+            for side, y in (("right", 0.15), ("left", 9.45))
         ),
         BoxPrimitive(
             fixture_id="electrical_cabinet",

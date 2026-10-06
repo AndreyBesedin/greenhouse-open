@@ -11,7 +11,7 @@ const IN_THE_SERVICE_ZONE = { x: 7.35, y: 2.5, z: 1.0 };
 
 test("gh_001's aisles and zones are coloured and picked by what they are", async ({ page }) => {
   await page.goto("/?scenario=gh_001");
-  await expect(page.getByTestId("scene-status")).toContainText("gh_001, day 0, 147 entities");
+  await expect(page.getByTestId("scene-status")).toContainText("gh_001, day 0, 165 entities");
 
   await page.getByRole("checkbox", { name: "Categories" }).check();
   await expect(page.getByTestId("layout-category")).toHaveText([
@@ -21,6 +21,9 @@ test("gh_001's aisles and zones are coloured and picked by what they are", async
     "walkway",
     "service zone",
     "keep-out",
+    "rail",
+    "pipe",
+    "wire",
     "obstacle",
   ]);
   await expect(page.getByTestId("category")).toHaveCount(7);

@@ -1,5 +1,5 @@
 {
-  "schema_version": 10,
+  "schema_version": 11,
   "greenhouse_id": "qa_layout",
   "simulated_day": 0,
   "entities": [
@@ -6238,6 +6238,40 @@
       }
     },
     {
+      "entity_id": "qa_layout_row_1_wire_1",
+      "kind": "WIRE",
+      "transform": {
+        "position": {
+          "x": 1.5,
+          "y": 2.0,
+          "z": 3.5
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0025,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 wire 1",
+      "properties": {
+        "obstructs_movement": false,
+        "obstructs_airflow": false,
+        "obstructs_light": false
+      }
+    },
+    {
       "entity_id": "qa_layout_row_1_support_2",
       "kind": "CROP_GUTTER",
       "transform": {
@@ -6441,6 +6475,40 @@
         "obstructs_movement": true,
         "obstructs_airflow": true,
         "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_wire_2",
+      "kind": "WIRE",
+      "transform": {
+        "position": {
+          "x": 8.6,
+          "y": 2.0,
+          "z": 3.5
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0025,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 wire 2",
+      "properties": {
+        "obstructs_movement": false,
+        "obstructs_airflow": false,
+        "obstructs_light": false
       }
     },
     {
@@ -6650,6 +6718,40 @@
       }
     },
     {
+      "entity_id": "qa_layout_row_2_wire_1",
+      "kind": "WIRE",
+      "transform": {
+        "position": {
+          "x": 1.5,
+          "y": 3.6,
+          "z": 3.5
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0025,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 wire 1",
+      "properties": {
+        "obstructs_movement": false,
+        "obstructs_airflow": false,
+        "obstructs_light": false
+      }
+    },
+    {
       "entity_id": "qa_layout_row_2_support_2",
       "kind": "CROP_GUTTER",
       "transform": {
@@ -6853,6 +6955,40 @@
         "obstructs_movement": true,
         "obstructs_airflow": true,
         "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_wire_2",
+      "kind": "WIRE",
+      "transform": {
+        "position": {
+          "x": 8.6,
+          "y": 3.6,
+          "z": 3.5
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0025,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 wire 2",
+      "properties": {
+        "obstructs_movement": false,
+        "obstructs_airflow": false,
+        "obstructs_light": false
       }
     },
     {
@@ -7062,6 +7198,40 @@
       }
     },
     {
+      "entity_id": "qa_layout_row_3_wire_1",
+      "kind": "WIRE",
+      "transform": {
+        "position": {
+          "x": 1.5,
+          "y": 5.2,
+          "z": 3.5
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0025,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 3 wire 1",
+      "properties": {
+        "obstructs_movement": false,
+        "obstructs_airflow": false,
+        "obstructs_light": false
+      }
+    },
+    {
       "entity_id": "qa_layout_row_3_support_2",
       "kind": "CROP_GUTTER",
       "transform": {
@@ -7265,6 +7435,40 @@
         "obstructs_movement": true,
         "obstructs_airflow": true,
         "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_wire_2",
+      "kind": "WIRE",
+      "transform": {
+        "position": {
+          "x": 8.6,
+          "y": 5.2,
+          "z": 3.5
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0025,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 3 wire 2",
+      "properties": {
+        "obstructs_movement": false,
+        "obstructs_airflow": false,
+        "obstructs_light": false
       }
     },
     {
@@ -7474,6 +7678,40 @@
       }
     },
     {
+      "entity_id": "qa_layout_row_4_wire_1",
+      "kind": "WIRE",
+      "transform": {
+        "position": {
+          "x": 1.5,
+          "y": 6.800000000000001,
+          "z": 3.5
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0025,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 4 wire 1",
+      "properties": {
+        "obstructs_movement": false,
+        "obstructs_airflow": false,
+        "obstructs_light": false
+      }
+    },
+    {
       "entity_id": "qa_layout_row_4_support_2",
       "kind": "CROP_GUTTER",
       "transform": {
@@ -7677,6 +7915,40 @@
         "obstructs_movement": true,
         "obstructs_airflow": true,
         "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_wire_2",
+      "kind": "WIRE",
+      "transform": {
+        "position": {
+          "x": 8.6,
+          "y": 6.800000000000001,
+          "z": 3.5
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0025,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 4 wire 2",
+      "properties": {
+        "obstructs_movement": false,
+        "obstructs_airflow": false,
+        "obstructs_light": false
       }
     },
     {
@@ -7886,6 +8158,40 @@
       }
     },
     {
+      "entity_id": "qa_layout_row_5_wire_1",
+      "kind": "WIRE",
+      "transform": {
+        "position": {
+          "x": 1.5,
+          "y": 8.4,
+          "z": 3.5
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0025,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 5 wire 1",
+      "properties": {
+        "obstructs_movement": false,
+        "obstructs_airflow": false,
+        "obstructs_light": false
+      }
+    },
+    {
       "entity_id": "qa_layout_row_5_support_2",
       "kind": "CROP_GUTTER",
       "transform": {
@@ -8092,6 +8398,584 @@
       }
     },
     {
+      "entity_id": "qa_layout_row_5_wire_2",
+      "kind": "WIRE",
+      "transform": {
+        "position": {
+          "x": 8.6,
+          "y": 8.4,
+          "z": 3.5
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0025,
+        "height": 4.800000000000001
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 5 wire 2",
+      "properties": {
+        "obstructs_movement": false,
+        "obstructs_airflow": false,
+        "obstructs_light": false
+      }
+    },
+    {
+      "entity_id": "qa_layout_rail_1_1_right",
+      "kind": "RAIL",
+      "transform": {
+        "position": {
+          "x": 1.5,
+          "y": 2.525,
+          "z": 0.1
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "rail 1 1 right",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_rail_1_1_left",
+      "kind": "RAIL",
+      "transform": {
+        "position": {
+          "x": 1.5,
+          "y": 3.0749999999999997,
+          "z": 0.1
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "rail 1 1 left",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_rail_1_2_right",
+      "kind": "RAIL",
+      "transform": {
+        "position": {
+          "x": 8.6,
+          "y": 2.525,
+          "z": 0.1
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "rail 1 2 right",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_rail_1_2_left",
+      "kind": "RAIL",
+      "transform": {
+        "position": {
+          "x": 8.6,
+          "y": 3.0749999999999997,
+          "z": 0.1
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "rail 1 2 left",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_rail_2_1_right",
+      "kind": "RAIL",
+      "transform": {
+        "position": {
+          "x": 1.5,
+          "y": 4.125,
+          "z": 0.1
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "rail 2 1 right",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_rail_2_1_left",
+      "kind": "RAIL",
+      "transform": {
+        "position": {
+          "x": 1.5,
+          "y": 4.675000000000001,
+          "z": 0.1
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "rail 2 1 left",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_rail_2_2_right",
+      "kind": "RAIL",
+      "transform": {
+        "position": {
+          "x": 8.6,
+          "y": 4.125,
+          "z": 0.1
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "rail 2 2 right",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_rail_2_2_left",
+      "kind": "RAIL",
+      "transform": {
+        "position": {
+          "x": 8.6,
+          "y": 4.675000000000001,
+          "z": 0.1
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "rail 2 2 left",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_rail_3_1_right",
+      "kind": "RAIL",
+      "transform": {
+        "position": {
+          "x": 1.5,
+          "y": 5.725,
+          "z": 0.1
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "rail 3 1 right",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_rail_3_1_left",
+      "kind": "RAIL",
+      "transform": {
+        "position": {
+          "x": 1.5,
+          "y": 6.275,
+          "z": 0.1
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "rail 3 1 left",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_rail_3_2_right",
+      "kind": "RAIL",
+      "transform": {
+        "position": {
+          "x": 8.6,
+          "y": 5.725,
+          "z": 0.1
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "rail 3 2 right",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_rail_3_2_left",
+      "kind": "RAIL",
+      "transform": {
+        "position": {
+          "x": 8.6,
+          "y": 6.275,
+          "z": 0.1
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "rail 3 2 left",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_rail_4_1_right",
+      "kind": "RAIL",
+      "transform": {
+        "position": {
+          "x": 1.5,
+          "y": 7.325,
+          "z": 0.1
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "rail 4 1 right",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_rail_4_1_left",
+      "kind": "RAIL",
+      "transform": {
+        "position": {
+          "x": 1.5,
+          "y": 7.875000000000001,
+          "z": 0.1
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 5.9
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "rail 4 1 left",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_rail_4_2_right",
+      "kind": "RAIL",
+      "transform": {
+        "position": {
+          "x": 8.6,
+          "y": 7.325,
+          "z": 0.1
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 4.800000000000001
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "rail 4 2 right",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_rail_4_2_left",
+      "kind": "RAIL",
+      "transform": {
+        "position": {
+          "x": 8.6,
+          "y": 7.875000000000001,
+          "z": 0.1
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 4.800000000000001
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "rail 4 2 left",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
       "entity_id": "qa_layout_front_aisle",
       "kind": "WALKWAY",
       "transform": {
@@ -8194,6 +9078,278 @@
         "obstructs_movement": false,
         "obstructs_airflow": false,
         "obstructs_light": false
+      }
+    },
+    {
+      "entity_id": "qa_layout_heating_pipes_right_1",
+      "kind": "PIPE",
+      "transform": {
+        "position": {
+          "x": 1.3,
+          "y": 0.15,
+          "z": 0.3
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 14.5
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "heating pipes right 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_heating_pipes_right_2",
+      "kind": "PIPE",
+      "transform": {
+        "position": {
+          "x": 1.3,
+          "y": 0.15,
+          "z": 0.44999999999999996
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 14.5
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "heating pipes right 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_heating_pipes_right_3",
+      "kind": "PIPE",
+      "transform": {
+        "position": {
+          "x": 1.3,
+          "y": 0.15,
+          "z": 0.6
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 14.5
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "heating pipes right 3",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_heating_pipes_right_4",
+      "kind": "PIPE",
+      "transform": {
+        "position": {
+          "x": 1.3,
+          "y": 0.15,
+          "z": 0.75
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 14.5
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "heating pipes right 4",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_heating_pipes_left_1",
+      "kind": "PIPE",
+      "transform": {
+        "position": {
+          "x": 1.3,
+          "y": 9.45,
+          "z": 0.3
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 14.5
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "heating pipes left 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_heating_pipes_left_2",
+      "kind": "PIPE",
+      "transform": {
+        "position": {
+          "x": 1.3,
+          "y": 9.45,
+          "z": 0.44999999999999996
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 14.5
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "heating pipes left 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_heating_pipes_left_3",
+      "kind": "PIPE",
+      "transform": {
+        "position": {
+          "x": 1.3,
+          "y": 9.45,
+          "z": 0.6
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 14.5
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "heating pipes left 3",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_heating_pipes_left_4",
+      "kind": "PIPE",
+      "transform": {
+        "position": {
+          "x": 1.3,
+          "y": 9.45,
+          "z": 0.75
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 14.5
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "heating pipes left 4",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
       }
     },
     {

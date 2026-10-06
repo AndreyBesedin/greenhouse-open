@@ -27,6 +27,7 @@ export const LAYOUT_CATEGORIES = [
   "KEEP_OUT",
   "RAIL",
   "PIPE",
+  "WIRE",
   "OBSTACLE",
 ] as const satisfies readonly SceneEntityKind[];
 export type LayoutCategory = (typeof LAYOUT_CATEGORIES)[number];
@@ -35,7 +36,7 @@ export type Category = EnvelopeCategory | LayoutCategory;
 
 /** A colour per category, each group from a palette that stays distinct for
  * most colour-blind viewers: the envelope's from Okabe-Ito, the layout's from
- * Paul Tol's muted scheme. */
+ * Paul Tol's muted scheme, and wires in Okabe-Ito's black. */
 export const CATEGORY_COLORS: Record<Category, string> = {
   FLOOR: "#e69f00",
   WALL: "#56b4e9",
@@ -53,6 +54,7 @@ export const CATEGORY_COLORS: Record<Category, string> = {
   KEEP_OUT: "#882255",
   RAIL: "#999933",
   PIPE: "#aa4499",
+  WIRE: "#000000",
   OBSTACLE: "#dddddd",
 };
 
@@ -73,6 +75,7 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   KEEP_OUT: "keep-out",
   RAIL: "rail",
   PIPE: "pipe",
+  WIRE: "wire",
   OBSTACLE: "obstacle",
 };
 

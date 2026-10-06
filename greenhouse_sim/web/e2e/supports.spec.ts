@@ -13,7 +13,7 @@ const SLAB_TOP = { x: 2.0, y: 2.4, z: 0.675 };
 
 test("gh_001's rows stand on gutters, with legs and a slab", async ({ page }) => {
   await page.goto("/?scenario=gh_001");
-  await expect(page.getByTestId("scene-status")).toContainText("gh_001, day 0, 147 entities");
+  await expect(page.getByTestId("scene-status")).toContainText("gh_001, day 0, 165 entities");
   const inspector = page.getByRole("region", { name: "Inspector" });
   const shape = page.getByTestId("selected-shape");
   const material = page.getByTestId("selected-material");
