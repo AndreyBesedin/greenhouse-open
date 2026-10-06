@@ -53,7 +53,7 @@ P00 gives the viewer, P02 the planting positions plants stand at.
 | P03.2 | `feat(plants): procedural stem, internode and leaf geometry` | Done |
 | P03.3 | `feat(plants): add thermal-time organogenesis` | Done |
 | P03.4 | `feat(plants): add correlated stochastic plant variation` | Done |
-| P03.5 | `feat(plants): add trusses, flowers and fruit set` | Planned |
+| P03.5 | `feat(plants): add trusses, flowers and fruit set` | Done |
 | P03.6 | `feat(plants): add fruit growth, ripeness and colour` | Planned |
 | P03.7 | `feat(plants): consume local environment inputs` | Planned |
 | P03.8 | `feat(plants): add pruning, harvest and lowering actions` | Planned |
@@ -295,6 +295,60 @@ abortion, and stable fruit identity. Visible result: plants develop visible
 trusses, flowers and small green fruits over time. Tests: fruit identifiers
 persist through growth, and an aborted fruit follows an allowed state
 transition.
+
+As implemented:
+
+- `organ.reproduction`, with `TrussParams` in the development parameters:
+  - **Trusses:** a plant's first truss appears with its eighth phytomer, and
+    another with every third above it, numbered from the bottom. Each draws
+    its flower count, 4 to 8, from its own generator when it appears, and its
+    flowers appear 8 °Cd apart from its base.
+  - **Flowers:** a flower is a bud until its anthesis, 180 °Cd after it
+    appears, then open. 60 °Cd later it sets fruit or aborts by its own draw:
+    a truss's first flower sets with a chance of 0.9, each flower further
+    along 0.05 less.
+  - **Fruits:** a fruit takes its flower's place, appears when the flower
+    set, at 6 mm, and keeps that size until P03.6. A young fruit aborts with
+    a chance of 0.05, decided 100 °Cd after it set.
+  - **Draws:** every chance is drawn once, when its moment comes, so a plant
+    grown in one step or day by day sets the same fruit.
+- **The topology:**
+  - **States:** fruits gain an aborted stage, and a truss records how many
+    flowers it bears.
+  - **Changes:** each kind's allowed stage changes are stated
+    (`LEAF_CHANGES`, `FLOWER_CHANGES`, `FRUIT_CHANGES`).
+  - **`change_problems(before, after)`:** lists whatever is wrong with a
+    later moment of a plant. Time must run forward, every organ must still be
+    there, of the same kind and appearing when it did, and every stage must
+    change only as allowed.
+- **Geometry:**
+  - **Trusses:** a truss is as long as its flowers need, 2 cm each.
+  - **Flowers and fruits:** buds are small green-yellow spheres, open
+    flowers larger yellow ones, and a set flower is drawn as its fruit.
+    Aborted flowers and fruits have dropped, and are not drawn. The tree
+    marks them as not drawn.
+  - **Facets:** spheres are drawn with fewer facets, so the fruiting row on
+    day 60 stays under 900,000 triangles.
+- Tests:
+  - Python:
+    - trusses appear on their phytomers and are numbered from the bottom;
+    - flower counts cover their range, and flowers appear one after another;
+    - a flower is a bud, opens and is decided at its moments;
+    - a set flower's fruit takes its place when it set;
+    - over 150 plants, basal flowers set more than distal ones, at their
+      configured chances, and young fruits abort at theirs;
+    - three of the lab's plants keep every organ and change stages only as
+      allowed, day after day for 60 days;
+    - a fruit keeps its identifier and birth;
+    - disallowed changes are found out;
+    - one step and daily steps set the same fruit;
+    - the lab's first plant's trusses, flower stages and fruits on days 0,
+      30 and 60;
+    - buds, flowers and fruits are drawn as they are, and dropped ones not;
+    - buds are coloured green and open flowers yellow.
+  - Viewer: an aborted flower and fruit are not drawn.
+  - Browser: on day 45 the tree lists the plant's trusses, flowers and
+    fruits, and a fruit chosen there is selected, under its flower.
 
 ### P03.6: Fruit growth, ripeness and colour
 

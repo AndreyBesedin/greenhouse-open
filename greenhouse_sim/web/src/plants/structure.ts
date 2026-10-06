@@ -50,6 +50,11 @@ function list(value: Fields, name: string): unknown[] {
   return found;
 }
 
+// The stages in which the view draws a flower, and a fruit: a set flower is
+// drawn as its fruit, and an aborted flower or fruit has dropped.
+const DRAWN_FLOWER_STAGES: ReadonlySet<unknown> = new Set(["bud", "open"]);
+const DRAWN_FRUIT_STAGES: ReadonlySet<unknown> = new Set(["growing"]);
+
 /** An organ's thermal age, and its stage if it has one. */
 function describe(organ: Fields, thermalTime: number): string {
   const age = `${Math.round(thermalTime - number(organ, "born_tt"))} °Cd`;
@@ -82,19 +87,14 @@ export function organTree(body: unknown): OrganNode {
       const truss = fields(phytomer.truss, "a truss");
       const flowers = list(truss, "flowers").map((flowerValue) => {
         const flower = fields(flowerValue, "a flower");
-        const fruit = flower.fruit;
-        const fruits =
-          fruit === null || fruit === undefined
-            ? []
-            : [
-                node(
-                  fields(fruit, "a fruit"),
-                  text(fields(fruit, "a fruit"), "fruit_id"),
-                  "fruit",
-                  true,
-                ),
-              ];
-        return node(flower, text(flower, "flower_id"), "flower", fruits.length === 0, fruits);
+        const fruits = flower.fruit === null || flower.fruit === undefined ? [] : [flower.fruit];
+        const children = fruits.map((value) => {
+          const fruit = fields(value, "a fruit");
+          const drawn = DRAWN_FRUIT_STAGES.has(fruit.stage);
+          return node(fruit, text(fruit, "fruit_id"), "fruit", drawn);
+        });
+        const drawn = DRAWN_FLOWER_STAGES.has(flower.stage);
+        return node(flower, text(flower, "flower_id"), "flower", drawn, children);
       });
       children.push(node(truss, text(truss, "truss_id"), "truss", true, flowers));
     }

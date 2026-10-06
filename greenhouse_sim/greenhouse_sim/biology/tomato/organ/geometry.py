@@ -11,9 +11,11 @@ and as thick as its internode. A leaf is a tomato's compound leaf, coarsely:
 a petiole from its node, then a rachis bearing pairs of leaflets and ending
 in a terminal leaflet, together as long as the leaf. It rises from its node
 and bends down along its length, the more the longer it has grown, and
-successive leaves turn about the stem by the golden angle. A truss is still
-a stick hanging opposite its phytomer's leaf, with its flowers and fruits
-spheres along it, until P03.5 shapes them.
+successive leaves turn about the stem by the golden angle. A truss is a stick
+hanging opposite its phytomer's leaf, as long as its flowers need, each
+flower at its place along it: a bud as a small sphere, an open flower a
+larger one, a set flower as its fruit, of its diameter. An aborted flower or
+fruit has dropped, and is not drawn.
 
 How a plant's organs are proportioned and held comes from its crop's form
 (`PlantForm`), the parameters its geometry is generated from, as the plant's
@@ -26,7 +28,14 @@ from typing import Annotated, Final
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt
 
-from greenhouse_sim.biology.tomato.organ.topology import Leaf, OrganKind, Plant, PlantTraits
+from greenhouse_sim.biology.tomato.organ.topology import (
+    FlowerStage,
+    FruitStage,
+    Leaf,
+    OrganKind,
+    Plant,
+    PlantTraits,
+)
 from greenhouse_sim.world.geometry import (
     Cylinder,
     Ellipsoid,
@@ -43,10 +52,16 @@ GOLDEN_ANGLE_RAD: Final = math.pi * (3 - math.sqrt(5))
 # Trusses hang below the horizontal, on the side opposite their phytomer's leaf.
 TRUSS_ELEVATION_RAD: Final = math.radians(-20)
 TRUSS_STICK_RADIUS_M: Final = 0.003
-TRUSS_LENGTH_M: Final = 0.1
-FLOWER_RADIUS_M: Final = 0.006
+# Flowers sit this far apart along their truss, the first this far from the
+# stem.
+FLOWER_SPACING_M: Final = 0.02
+BUD_RADIUS_M: Final = 0.004
+FLOWER_RADIUS_M: Final = 0.007
 # A leaflet is drawn as a flat ellipsoid this thick.
 LEAFLET_THICKNESS_M: Final = 0.002
+
+# The fruits still on the plant, and so drawn.
+ATTACHED_FRUIT: Final = frozenset({FruitStage.GROWING})
 
 _UP: Final = Vector3(x=0.0, y=0.0, z=1.0)
 
@@ -259,15 +274,18 @@ def organ_geometry(plant: Plant, form: PlantForm | None = None) -> list[OrganSha
                 kind=OrganKind.TRUSS,
                 part="truss",
                 transform=_pointing(node, hanging),
-                shape=Cylinder(radius=TRUSS_STICK_RADIUS_M, height=TRUSS_LENGTH_M),
+                shape=Cylinder(
+                    radius=TRUSS_STICK_RADIUS_M,
+                    height=FLOWER_SPACING_M * truss.final_flower_count,
+                ),
             )
         )
-        flowers = len(truss.flowers)
         for flower in truss.flowers:
-            # Evenly along the truss, the first nearest the stem.
-            centre = _along(node, hanging, TRUSS_LENGTH_M * flower.rank / flowers)
+            # At its place along the truss, the first nearest the stem.
+            centre = _along(node, hanging, FLOWER_SPACING_M * flower.rank)
             fruit = flower.fruit
-            if fruit is None:
+            if flower.stage in {FlowerStage.BUD, FlowerStage.OPEN}:
+                radius = BUD_RADIUS_M if flower.stage == FlowerStage.BUD else FLOWER_RADIUS_M
                 shapes.append(
                     OrganShape(
                         shape_id=flower.flower_id,
@@ -275,10 +293,10 @@ def organ_geometry(plant: Plant, form: PlantForm | None = None) -> list[OrganSha
                         kind=OrganKind.FLOWER,
                         part="flower",
                         transform=Transform(position=centre),
-                        shape=Sphere(radius=FLOWER_RADIUS_M),
+                        shape=Sphere(radius=radius),
                     )
                 )
-            elif fruit.diameter_mm > 0:
+            elif fruit is not None and fruit.stage in ATTACHED_FRUIT and fruit.diameter_mm > 0:
                 shapes.append(
                     OrganShape(
                         shape_id=fruit.fruit_id,
