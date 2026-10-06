@@ -51,7 +51,7 @@ export function QaRenderer({ search }: { search: string }) {
       <p className="qa-caption" data-testid="qa-caption">
         Renderer QA, seed {seed}
       </p>
-      {colouring && <ScalarLegend colouring={colouring} />}
+      <div className="legends">{colouring && <ScalarLegend colouring={colouring} />}</div>
     </main>
   );
 }

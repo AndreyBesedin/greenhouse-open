@@ -42,7 +42,7 @@ around it.
 | P01.3 | `feat(greenhouse): add pitched roof geometry` | Done ([#30](https://github.com/AndreyBesedin/greenhouse-open/pull/30)) |
 | P01.4 | `feat(greenhouse): add bays and repeated structural frames` | Done ([#31](https://github.com/AndreyBesedin/greenhouse-open/pull/31)) |
 | P01.5 | `feat(envelope): add doors, vents and configurable openings` | Done ([#32](https://github.com/AndreyBesedin/greenhouse-open/pull/32)) |
-| P01.6 | `feat(materials): distinguish envelope semantics visually` | Planned |
+| P01.6 | `feat(materials): distinguish envelope semantics visually` | Done ([#33](https://github.com/AndreyBesedin/greenhouse-open/pull/33)) |
 | P01.7 | `test(visual): add greenhouse geometry QA snapshots` | Planned |
 
 ### P01.1: Greenhouse origin, axes and bounds
@@ -222,6 +222,25 @@ with a debug mode that colours each boundary category distinctly. Visible
 result: the normal mode looks like a greenhouse, and the debug mode shows
 each category in its own colour. Tests: every envelope polygon has a
 semantic category.
+
+As implemented:
+
+- Glazing (walls, roof, vents) is translucent and framed; the floor and doors
+  are opaque; gutters and structural members are drawn as metal. The
+  "opaque foundation and floor" is the greenhouse's base, its floor: there is
+  no separate plinth along the walls.
+- Every part of the envelope is an entity whose kind is its semantic
+  category: floor, wall, roof, vent, door, gutter or frame. A "Surface
+  categories" option colours each in its own colour from the Okabe-Ito
+  palette, which most colour-blind viewers can tell apart, makes the glazing
+  denser so that the colours read, and shows a legend.
+- Cylinders are batched per kind, so that structural members can be metal
+  while plants are not.
+- Tests: every category of surface has a scene kind, and every surface,
+  opening, gutter and member of the envelope becomes one entity of its
+  category. The categories' colours are all different, cover the example
+  greenhouse and nothing else of it, and the legend lists them. A browser
+  test shows and hides the legend.
 
 ### P01.7: Greenhouse geometry QA snapshots
 

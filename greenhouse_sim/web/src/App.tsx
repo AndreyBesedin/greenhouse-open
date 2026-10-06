@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { type BuildInfo, buildInfo } from "./buildInfo";
 import type { PresetName, PresetRequest } from "./camera";
 import { DisplayOptions } from "./DisplayOptions";
+import { CategoryLegend } from "./debug/CategoryLegend";
+import { categoriesIn } from "./debug/categories";
 import { sceneDimensionOverlays } from "./debug/dimensions";
 import { ALL_OVERLAYS, type OverlayToggles, selectionOverlays } from "./debug/overlays";
 import { ScalarLegend } from "./debug/ScalarLegend";
@@ -38,6 +40,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [overlayToggles, setOverlayToggles] = useState<OverlayToggles>(ALL_OVERLAYS);
   const [colourBy, setColourBy] = useState<string | null>(null);
   const [showDimensions, setShowDimensions] = useState(false);
+  const [byCategory, setByCategory] = useState(false);
   // Which scenario's scene is on show, so reopening it does not blank it.
   const shownScenario = useRef<string | null>(null);
   const liveScenario = source.kind === "live" ? source.scenarioId : null;
@@ -144,6 +147,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         colouring={colouring}
         overlays={overlays}
         showBounds={showDimensions}
+        byCategory={byCategory}
         onSample={setSample}
         onPointer={setPointer}
         onSelect={setSelectedId}
@@ -162,6 +166,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             onColourBy={setColourBy}
             showDimensions={showDimensions}
             onShowDimensions={setShowDimensions}
+            byCategory={byCategory}
+            onByCategory={setByCategory}
           />
         )}
         {snapshot !== null && source.kind === "scenario" && (
@@ -187,7 +193,10 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
           onClear={() => setSelectedId(null)}
         />
       )}
-      {colouring && <ScalarLegend colouring={colouring} />}
+      <div className="legends">
+        {byCategory && snapshot !== null && <CategoryLegend categories={categoriesIn(snapshot)} />}
+        {colouring && <ScalarLegend colouring={colouring} />}
+      </div>
     </main>
   );
 }

@@ -39,3 +39,21 @@ test("the greenhouse is measured and labelled, and its glass yields to what it e
   await expect(page.getByTestId("selected-shape")).toHaveText("polygon, 7 corners");
   await expect(page.getByTestId("selected-position")).toHaveText("x 4.00, y 6.40, z 0.00");
 });
+
+test("the surface categories colour the envelope by what each part is", async ({ page }) => {
+  await page.goto("/?scene=example");
+  await expect(page.getByTestId("scene-status")).toContainText("45 entities");
+
+  await page.getByRole("checkbox", { name: "Surface categories" }).check();
+  await expect(page.getByTestId("category")).toHaveText([
+    "floor",
+    "wall",
+    "roof",
+    "vent",
+    "door",
+    "gutter",
+    "frame",
+  ]);
+  await page.getByRole("checkbox", { name: "Surface categories" }).uncheck();
+  await expect(page.getByTestId("category")).toHaveCount(0);
+});

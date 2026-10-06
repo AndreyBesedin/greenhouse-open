@@ -7,12 +7,16 @@ export function DisplayOptions({
   onColourBy,
   showDimensions,
   onShowDimensions,
+  byCategory,
+  onByCategory,
 }: {
   colourProperties: readonly string[];
   colourBy: string | null;
   onColourBy: (property: string | null) => void;
   showDimensions: boolean;
   onShowDimensions: (show: boolean) => void;
+  byCategory: boolean;
+  onByCategory: (show: boolean) => void;
 }) {
   return (
     <>
@@ -27,6 +31,14 @@ export function DisplayOptions({
             onChange={(event) => onShowDimensions(event.target.checked)}
           />{" "}
           Dimensions and axis labels
+        </label>{" "}
+        <label>
+          <input
+            type="checkbox"
+            checked={byCategory}
+            onChange={(event) => onByCategory(event.target.checked)}
+          />{" "}
+          Surface categories
         </label>
       </p>
     </>
