@@ -30,9 +30,11 @@ future parameter fitting.
 - Every visible organ has a persistent identity, derived from where it sits
   in the plant, so it is the same organ from one day to the next and from one
   run to the next.
-- Randomness follows a seed hierarchy: the simulation's seed, then the plant,
-  then the organ, then the process, so one plant's or organ's draws never
-  depend on another's.
+- Randomness comes from one seed, the simulation's. Each draw's generator is
+  derived from it and a hash of who draws and what for: the plant, then the
+  organ if it is an organ's own draw, then the process. So one plant's or
+  organ's draws never depend on another's. What is hashed is the drawer's
+  identifier, which never changes, not its state, which does.
 - Biological state drives geometry and appearance: the viewer draws what the
   model's organs say, never the other way round.
 - The plant takes its environment through an explicit interface, so the
@@ -44,6 +46,12 @@ future parameter fitting.
 whole plants with a stem length, trusses and fruits, behind the plant-model
 contract (decision 0006), and drawn in the viewer as one cylinder per plant.
 P00 gives the viewer, P02 the planting positions plants stand at.
+
+## Clean-up
+
+What the reviews of P03's pull requests leave for the end of P03 is collected
+in [the P03 clean-up](p03-cleanup.md), done in one pass once its steps are
+merged.
 
 ## Steps
 
