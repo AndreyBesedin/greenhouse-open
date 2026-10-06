@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import {
   BoxGeometry,
   type BufferGeometry,
+  CylinderGeometry,
   DoubleSide,
   FrontSide,
   PlaneGeometry,
@@ -13,12 +14,12 @@ import {
 } from "three";
 
 import { SELECTION_COLOR } from "../debug/overlays";
-import type { Box, Color, Plane, Polygon, Shape } from "./generated/snapshotTypes";
+import type { Box, Color, Cylinder, Plane, Polygon, Shape } from "./generated/snapshotTypes";
 
 // Enough sides for a stem to read as round at greenhouse distances.
-export const CYLINDER_SIDES = 24;
+const CYLINDER_SIDES = 24;
 // A quarter turn about x stands Three.js's y-aligned cylinder up along z.
-export const STAND_UP: [number, number, number] = [Math.PI / 2, 0, 0];
+const STAND_UP: [number, number, number] = [Math.PI / 2, 0, 0];
 // Structural metal: somewhat shiny, without the environment map that full
 // metalness would need to look like more than a dark grey.
 export const METAL = { metalness: 0.35, roughness: 0.45 };
@@ -41,6 +42,34 @@ export function flatGeometry(shape: Box | Plane | Polygon): BufferGeometry {
         new ThreeShape(shape.points.map((point) => new Vector2(point.x, point.y))),
       );
   }
+}
+
+/** A box or cylinder as Three.js geometry, standing on its base at the
+ * shape's origin and rising along +z, as `world/geometry.py` stands them. */
+export function solidGeometry(shape: Box | Cylinder): BufferGeometry {
+  switch (shape.shape) {
+    case "box":
+      return new BoxGeometry(shape.size_x, shape.size_y, shape.size_z).translate(
+        0,
+        0,
+        shape.size_z / 2,
+      );
+    case "cylinder":
+      return new CylinderGeometry(shape.radius, shape.radius, shape.height, CYLINDER_SIDES)
+        .rotateX(STAND_UP[0])
+        .translate(0, 0, shape.height / 2);
+  }
+}
+
+/** A box or cylinder, drawn from the front. */
+function SolidMesh({ shape, color, glow }: { shape: Box | Cylinder; color: Color; glow: object }) {
+  const geometry = useMemo(() => solidGeometry(shape), [shape]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return (
+    <mesh geometry={geometry}>
+      <meshStandardMaterial color={threeColor(color)} {...glow} />
+    </mesh>
+  );
 }
 
 /** A flat polygon, drawn from both sides. */
@@ -99,21 +128,8 @@ export function ShapeMesh({
         </mesh>
       );
     case "cylinder":
-      // Its base is the frame's origin, so lift it by half its height.
-      return (
-        <mesh position={[0, 0, shape.height / 2]} rotation={STAND_UP}>
-          <cylinderGeometry args={[shape.radius, shape.radius, shape.height, CYLINDER_SIDES]} />
-          <meshStandardMaterial color={threeColor(color)} {...glow} />
-        </mesh>
-      );
     case "box":
-      // Its base is the frame's origin, so lift it by half its height.
-      return (
-        <mesh position={[0, 0, shape.size_z / 2]}>
-          <boxGeometry args={[shape.size_x, shape.size_y, shape.size_z]} />
-          <meshStandardMaterial color={threeColor(color)} {...glow} />
-        </mesh>
-      );
+      return <SolidMesh shape={shape} color={color} glow={glow} />;
     case "polygon":
       return <PolygonMesh shape={shape} color={color} glow={glow} />;
     case "axes":

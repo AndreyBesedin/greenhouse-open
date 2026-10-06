@@ -1,8 +1,10 @@
 from datetime import date
+from typing import Self
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from greenhouse_sim.world.envelope import Envelope
+from greenhouse_sim.world.layout import Layout, fixtures_outside
 
 
 class ScenarioConfig(BaseModel):
@@ -23,6 +25,8 @@ class ScenarioConfig(BaseModel):
     random_seed: int
     # The greenhouse around the crop: where it stands, and the space it encloses.
     envelope: Envelope
+    # What stands inside it, in its frame.
+    layout: Layout = Layout()
 
     # Environment: bounds the smooth day-to-day drift stays within.
     air_temperature_bounds: tuple[float, float] = (18.0, 32.0)
@@ -54,3 +58,10 @@ class ScenarioConfig(BaseModel):
     fruit_count_noise_probability: float = 0.1
     ripe_mass_noise_pct: float = 8.0
     height_noise_cm: float = 1.5
+
+    @model_validator(mode="after")
+    def _the_layout_fits_in_the_greenhouse(self) -> Self:
+        outside = fixtures_outside(self.layout, self.envelope)
+        if outside:
+            raise ValueError(f"outside the greenhouse: {', '.join(outside)}")
+        return self

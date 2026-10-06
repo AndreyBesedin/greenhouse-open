@@ -4,12 +4,13 @@
 types from and validates scenes against, `web/public/scenes/example.json` is a
 deterministic scene the viewer can draw without the API, and
 `web/public/scenes/qa-greenhouse.json` is the canonical greenhouse its
-screenshot tests draw (P01.7). All three are generated here, from
+screenshot tests draw (P01.7), and `web/public/scenes/qa-fixtures.json` is
+its gallery of fixture primitives (P02.1). All four are generated here, from
 `greenhouse_sim/`:
 
     python tests/test_scene_schema.py --update
 
-These tests fail if either drifts from what the simulator produces now. They
+These tests fail if any drifts from what the simulator produces now. They
 compare parsed JSON, so formatting does not count.
 """
 
@@ -27,12 +28,23 @@ from greenhouse_sim.scene.snapshot import (
     snapshot_json_schema,
 )
 from greenhouse_sim.world.envelope import Envelope, Opening, OpeningKind
-from greenhouse_sim.world.geometry import Point2
+from greenhouse_sim.world.fixtures import (
+    BoxPrimitive,
+    CylinderPrimitive,
+    Material,
+    PipePrimitive,
+    RailPrimitive,
+    TrayPrimitive,
+    WalkwayPrimitive,
+)
+from greenhouse_sim.world.geometry import Point2, Transform, Vector3
+from greenhouse_sim.world.layout import Layout
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_FILE = ROOT / "greenhouse_sim" / "scene" / "snapshot.schema.json"
 EXAMPLE_FILE = ROOT / "web" / "public" / "scenes" / "example.json"
 QA_GREENHOUSE_FILE = ROOT / "web" / "public" / "scenes" / "qa-greenhouse.json"
+QA_FIXTURES_FILE = ROOT / "web" / "public" / "scenes" / "qa-fixtures.json"
 # The canonical greenhouse for the viewer's screenshot tests: three 3.2 m
 # spans and four 4 m bays, its eaves at 4 m and ridges at 4.65 m, with a roof
 # vent half open, a closed side vent and a door half open.
@@ -71,6 +83,62 @@ QA_ENVELOPE = Envelope(
             opening=0.5,
         ),
     ],
+)
+# The gallery of fixture primitives: one of each, side by side along an 8 by
+# 4.8 m greenhouse, each running across it. The greenhouse is centred on the
+# world's origin, where the viewer's camera presets look.
+QA_FIXTURES_ENVELOPE = Envelope(
+    length=8.0,
+    width=4.8,
+    eave_height=3.0,
+    ridge_height=3.65,
+    bays=2,
+    origin=Transform(position=Vector3(x=-4.0, y=-2.4, z=0.0)),
+)
+QA_FIXTURES_LAYOUT = Layout(
+    placed=[
+        BoxPrimitive(
+            fixture_id="cabinet",
+            base=Vector3(x=1.2, y=2.4, z=0.0),
+            size_x=0.6,
+            size_y=1.2,
+            size_z=1.8,
+        ),
+        CylinderPrimitive(
+            fixture_id="tank",
+            base=Vector3(x=2.4, y=2.4, z=0.0),
+            radius=0.5,
+            height=1.5,
+            material=Material.PLASTIC,
+        ),
+        PipePrimitive(
+            fixture_id="heating_pipe",
+            start=Vector3(x=3.4, y=0.6, z=0.3),
+            end=Vector3(x=3.4, y=4.2, z=0.9),
+            radius=0.0255,
+        ),
+        RailPrimitive(
+            fixture_id="pipe_rail",
+            start=Vector3(x=4.5, y=0.6, z=0.1),
+            end=Vector3(x=4.5, y=4.2, z=0.1),
+            gauge=0.55,
+            tube_radius=0.0255,
+        ),
+        TrayPrimitive(
+            fixture_id="crop_gutter",
+            start=Vector3(x=5.6, y=0.6, z=0.0),
+            end=Vector3(x=5.6, y=4.2, z=0.0),
+            width=0.3,
+            depth=0.12,
+            material=Material.PLASTIC,
+        ),
+        WalkwayPrimitive(
+            fixture_id="walkway",
+            start=Point2(x=6.8, y=0.3),
+            end=Point2(x=6.8, y=4.5),
+            width=1.2,
+        ),
+    ]
 )
 # Long enough in gh_demo for the plants to differ in height.
 EXAMPLE_DAYS = 9
@@ -112,6 +180,15 @@ def test_the_qa_greenhouse_is_what_the_simulator_draws() -> None:
     assert json.loads(QA_GREENHOUSE_FILE.read_text()) == _qa_greenhouse()
 
 
+def _qa_fixtures() -> object:
+    scene = greenhouse_scene("qa_fixtures", QA_FIXTURES_ENVELOPE, layout=QA_FIXTURES_LAYOUT)
+    return scene.model_dump(mode="json")
+
+
+def test_the_qa_fixture_gallery_is_what_the_simulator_draws() -> None:
+    assert json.loads(QA_FIXTURES_FILE.read_text()) == _qa_fixtures()
+
+
 def test_the_example_scene_holds_differently_sized_and_placed_plants() -> None:
     entities = json.loads(EXAMPLE_FILE.read_text())["entities"]
     plants = [entity for entity in entities if entity["kind"] == "PLANT"]
@@ -128,10 +205,11 @@ def _update() -> None:
     EXAMPLE_FILE.parent.mkdir(parents=True, exist_ok=True)
     EXAMPLE_FILE.write_text(json.dumps(_example_scene(), indent=2) + "\n")
     QA_GREENHOUSE_FILE.write_text(json.dumps(_qa_greenhouse(), indent=2) + "\n")
+    QA_FIXTURES_FILE.write_text(json.dumps(_qa_fixtures(), indent=2) + "\n")
 
 
 if __name__ == "__main__":
     if sys.argv[1:] != ["--update"]:
         raise SystemExit("usage: python tests/test_scene_schema.py --update")
     _update()
-    print(f"wrote {SCHEMA_FILE}, {EXAMPLE_FILE} and {QA_GREENHOUSE_FILE}")
+    print(f"wrote {SCHEMA_FILE}, {EXAMPLE_FILE}, {QA_GREENHOUSE_FILE} and {QA_FIXTURES_FILE}")

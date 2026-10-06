@@ -58,6 +58,12 @@ export function Inspector({
         <dd data-testid="selected-rotation">{formatRotation(entity.transform.rotation)}</dd>
         <dt>Shape</dt>
         <dd data-testid="selected-shape">{describeShape(entity.shape)}</dd>
+        {entity.material !== null && (
+          <>
+            <dt>Material</dt>
+            <dd data-testid="selected-material">{entity.material}</dd>
+          </>
+        )}
         {Object.entries(entity.properties).map(([name, value]) => (
           <Fragment key={name}>
             <dt>{name}</dt>

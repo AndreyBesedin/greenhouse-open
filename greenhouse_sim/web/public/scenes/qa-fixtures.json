@@ -1,0 +1,980 @@
+{
+  "schema_version": 7,
+  "greenhouse_id": "qa_fixtures",
+  "simulated_day": 0,
+  "entities": [
+    {
+      "entity_id": "qa_fixtures_floor",
+      "kind": "FLOOR",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 8.0,
+        "size_y": 4.8
+      },
+      "color": {
+        "r": 0.42,
+        "g": 0.33,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "floor",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_side_wall_right",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": -2.4,
+          "z": 1.5
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.7071067811865476
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 8.0,
+        "size_y": 3.0
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "material": null,
+      "label": "side wall right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_side_wall_left",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 2.4,
+          "z": 1.5
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.7071067811865475,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 8.0,
+        "size_y": 3.0
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "material": null,
+      "label": "side wall left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_end_wall_front",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": -4.0,
+          "y": -2.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 0.5,
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        }
+      },
+      "shape": {
+        "shape": "polygon",
+        "points": [
+          {
+            "x": 0.0,
+            "y": 0.0
+          },
+          {
+            "x": 4.8,
+            "y": 0.0
+          },
+          {
+            "x": 4.8,
+            "y": 3.0
+          },
+          {
+            "x": 2.4,
+            "y": 3.65
+          },
+          {
+            "x": 0.0,
+            "y": 3.0
+          }
+        ]
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "material": null,
+      "label": "end wall front",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_end_wall_back",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 2.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": -0.5,
+          "x": -0.5,
+          "y": 0.5,
+          "z": 0.5
+        }
+      },
+      "shape": {
+        "shape": "polygon",
+        "points": [
+          {
+            "x": 0.0,
+            "y": 0.0
+          },
+          {
+            "x": 4.8,
+            "y": 0.0
+          },
+          {
+            "x": 4.8,
+            "y": 3.0
+          },
+          {
+            "x": 2.4,
+            "y": 3.65
+          },
+          {
+            "x": 0.0,
+            "y": 3.0
+          }
+        ]
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "material": null,
+      "label": "end wall back",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_roof_1_right",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": -1.2,
+          "z": 3.325
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.991268473199855,
+          "z": 0.13185906885773244
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 8.0,
+        "size_y": 2.4864633518312713
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "material": null,
+      "label": "roof 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_roof_1_left",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 1.1999999999999997,
+          "z": 3.325
+        },
+        "rotation": {
+          "w": 0.13185906885773244,
+          "x": 0.991268473199855,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 8.0,
+        "size_y": 2.4864633518312713
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "material": null,
+      "label": "roof 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_gutter_0",
+      "kind": "GUTTER",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": -2.4,
+          "z": 2.85
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 8.0,
+        "size_y": 0.2,
+        "size_z": 0.15
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.57,
+        "b": 0.6
+      },
+      "material": "aluminium",
+      "label": "gutter 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_gutter_1",
+      "kind": "GUTTER",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 2.4,
+          "z": 2.85
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 8.0,
+        "size_y": 0.2,
+        "size_z": 0.15
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.57,
+        "b": 0.6
+      },
+      "material": "aluminium",
+      "label": "gutter 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_frame_0_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": -4.0,
+          "y": -2.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 0 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_frame_0_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": -4.0,
+          "y": 2.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 0 post 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_frame_0_rafter_1_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": -4.0,
+          "y": -2.4,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.7941711011262995,
+          "x": -0.6076942176258063,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 2.4864633518312713
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 0 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_frame_0_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": -4.0,
+          "y": 2.4,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.7941711011262995,
+          "x": 0.6076942176258063,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 2.4864633518312713
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 0 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_frame_1_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": -2.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 1 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_frame_1_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 2.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 1 post 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_frame_1_rafter_1_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": -2.4,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.7941711011262995,
+          "x": -0.6076942176258063,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 2.4864633518312713
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 1 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_frame_1_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 2.4,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.7941711011262995,
+          "x": 0.6076942176258063,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 2.4864633518312713
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 1 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_frame_2_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": -2.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 2 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_frame_2_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 2.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 2 post 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_frame_2_rafter_1_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": -2.4,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.7941711011262995,
+          "x": -0.6076942176258063,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 2.4864633518312713
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 2 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_frame_2_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 2.4,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.7941711011262995,
+          "x": 0.6076942176258063,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 2.4864633518312713
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 2 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_cabinet",
+      "kind": "OBSTACLE",
+      "transform": {
+        "position": {
+          "x": -2.8,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 0.6,
+        "size_y": 1.2,
+        "size_z": 1.8
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "cabinet",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_fixtures_tank",
+      "kind": "OBSTACLE",
+      "transform": {
+        "position": {
+          "x": -1.6,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.5,
+        "height": 1.5
+      },
+      "color": {
+        "r": 0.9,
+        "g": 0.9,
+        "b": 0.88
+      },
+      "material": "plastic",
+      "label": "tank",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_fixtures_heating_pipe",
+      "kind": "PIPE",
+      "transform": {
+        "position": {
+          "x": -0.6000000000000001,
+          "y": -1.7999999999999998,
+          "z": 0.3
+        },
+        "rotation": {
+          "w": 0.539536603787305,
+          "x": -0.4570560722424116,
+          "y": 0.4570560722424117,
+          "z": 0.539536603787305
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 3.649657518178932
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "heating pipe",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_fixtures_pipe_rail_right",
+      "kind": "RAIL",
+      "transform": {
+        "position": {
+          "x": 0.7750000000000004,
+          "y": -1.7999999999999998,
+          "z": 0.1
+        },
+        "rotation": {
+          "w": 0.5,
+          "x": -0.5,
+          "y": 0.5,
+          "z": 0.5
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 3.6
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "pipe rail right",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_fixtures_pipe_rail_left",
+      "kind": "RAIL",
+      "transform": {
+        "position": {
+          "x": 0.22499999999999964,
+          "y": -1.7999999999999998,
+          "z": 0.1
+        },
+        "rotation": {
+          "w": 0.5,
+          "x": -0.5,
+          "y": 0.5,
+          "z": 0.5
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0255,
+        "height": 3.6
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "pipe rail left",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": false,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_fixtures_crop_gutter",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 1.5999999999999996,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.7071067811865475
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 3.6,
+        "size_y": 0.3,
+        "size_z": 0.12
+      },
+      "color": {
+        "r": 0.9,
+        "g": 0.9,
+        "b": 0.88
+      },
+      "material": "plastic",
+      "label": "crop gutter",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_fixtures_walkway",
+      "kind": "WALKWAY",
+      "transform": {
+        "position": {
+          "x": 2.8,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.7071067811865475
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 4.2,
+        "size_y": 1.2,
+        "size_z": 0.02
+      },
+      "color": {
+        "r": 0.64,
+        "g": 0.63,
+        "b": 0.6
+      },
+      "material": "concrete",
+      "label": "walkway",
+      "properties": {
+        "obstructs_movement": false,
+        "obstructs_airflow": false,
+        "obstructs_light": false
+      }
+    },
+    {
+      "entity_id": "qa_fixtures_axes",
+      "kind": "AXES",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "axes",
+        "length": 1.0
+      },
+      "color": {
+        "r": 0.5,
+        "g": 0.5,
+        "b": 0.5
+      },
+      "material": null,
+      "label": "world axes",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_fixtures_bounds",
+      "kind": "GREENHOUSE_BOUNDS",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 8.0,
+        "size_y": 4.8,
+        "size_z": 3.65
+      },
+      "color": {
+        "r": 0.62,
+        "g": 0.78,
+        "b": 0.88
+      },
+      "material": null,
+      "label": "greenhouse bounds",
+      "properties": {}
+    }
+  ]
+}

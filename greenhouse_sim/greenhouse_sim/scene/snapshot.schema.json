@@ -115,6 +115,17 @@
       "title": "Cylinder",
       "type": "object"
     },
+    "Material": {
+      "description": "What a fixture, or a part of the envelope, is made of.",
+      "enum": [
+        "steel",
+        "aluminium",
+        "plastic",
+        "concrete"
+      ],
+      "title": "Material",
+      "type": "string"
+    },
     "Plane": {
       "description": "A flat rectangle in its frame's x-y plane, centred on its origin,\nfacing +z.",
       "properties": {
@@ -238,6 +249,17 @@
         "color": {
           "$ref": "#/$defs/Color"
         },
+        "material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Material"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "label": {
           "anyOf": [
             {
@@ -278,6 +300,7 @@
         "transform",
         "shape",
         "color",
+        "material",
         "label",
         "properties"
       ],
@@ -296,6 +319,11 @@
         "FRAME",
         "VENT",
         "DOOR",
+        "CROP_GUTTER",
+        "WALKWAY",
+        "RAIL",
+        "PIPE",
+        "OBSTACLE",
         "PLANT"
       ],
       "title": "SceneEntityKind",
@@ -370,7 +398,7 @@
   "description": "One greenhouse at one simulated day, as a viewer draws it. Positions\nand sizes are in metres, in right-handed world axes with z up.",
   "properties": {
     "schema_version": {
-      "default": 6,
+      "default": 7,
       "title": "Schema Version",
       "type": "integer"
     },

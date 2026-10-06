@@ -70,6 +70,7 @@ export function stressScene(plantCount: number): SceneSnapshot {
       transform: { position: stressPlantPosition(column, row, rows), rotation: UPRIGHT },
       shape: { shape: "cylinder", radius: STEM_RADIUS_M, height },
       color: PLANT_COLOR,
+      material: null,
       label: null,
       properties: { height_cm: height * CENTIMETRES_PER_METRE, row, column },
     });
@@ -90,6 +91,7 @@ export function stressScene(plantCount: number): SceneSnapshot {
           size_y: pairs * PAIR_SPACING_M + 2 * GROUND_MARGIN_M,
         },
         color: GROUND_COLOR,
+        material: null,
         label: "ground",
         properties: {},
       },
@@ -99,6 +101,7 @@ export function stressScene(plantCount: number): SceneSnapshot {
         transform: { position: { x: 0, y: 0, z: 0 }, rotation: UPRIGHT },
         shape: { shape: "axes", length: AXES_LENGTH_M },
         color: AXES_COLOR,
+        material: null,
         label: "world axes",
         properties: {},
       },

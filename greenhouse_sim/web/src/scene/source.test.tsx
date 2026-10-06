@@ -24,6 +24,7 @@ describe("choosing a scene in the address bar", () => {
   it.each<[string, SceneSource]>([
     ["", { kind: "reference" }],
     ["?scene=example", { kind: "example" }],
+    ["?scene=fixtures", { kind: "fixtures" }],
     ["?scenario=gh_demo", { kind: "scenario", scenarioId: "gh_demo" }],
   ])("%s", (search, source) => {
     expect(sourceFromSearch(search)).toEqual(source);

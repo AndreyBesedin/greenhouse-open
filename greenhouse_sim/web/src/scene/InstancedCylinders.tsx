@@ -1,9 +1,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
-import { CylinderGeometry, type InstancedMesh } from "three";
+import type { InstancedMesh } from "three";
 
-import type { Color, SceneEntity } from "./generated/snapshotTypes";
+import type { Color, Cylinder, SceneEntity } from "./generated/snapshotTypes";
 import { cylinderMatrices } from "./instancing";
-import { CYLINDER_SIDES, METAL, STAND_UP, threeColor } from "./ShapeMesh";
+import { METAL, solidGeometry, threeColor } from "./ShapeMesh";
+
+const UNIT_CYLINDER: Cylinder = { shape: "cylinder", radius: 1, height: 1 };
 
 /**
  * Many cylinders in one draw call: one mesh, drawn once per entity with that
@@ -26,10 +28,7 @@ export function InstancedCylinders({
 }) {
   const mesh = useRef<InstancedMesh>(null);
   // A unit cylinder standing on the origin along +z, as `cylinderMatrices` expects.
-  const geometry = useMemo(() => {
-    const unit = new CylinderGeometry(1, 1, 1, CYLINDER_SIDES);
-    return unit.rotateX(STAND_UP[0]).translate(0, 0, 1 / 2);
-  }, []);
+  const geometry = useMemo(() => solidGeometry(UNIT_CYLINDER), []);
   useEffect(() => () => geometry.dispose(), [geometry]);
   const matrices = useMemo(() => cylinderMatrices(entities), [entities]);
 

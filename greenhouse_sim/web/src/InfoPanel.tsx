@@ -40,6 +40,9 @@ export function InfoPanel({
         <button type="button" onClick={() => onSource({ kind: "example" })}>
           Example scene
         </button>{" "}
+        <button type="button" onClick={() => onSource({ kind: "fixtures" })}>
+          Fixture gallery
+        </button>{" "}
         <button
           type="button"
           onClick={() => onSource({ kind: "stress", plants: DEFAULT_STRESS_PLANTS })}

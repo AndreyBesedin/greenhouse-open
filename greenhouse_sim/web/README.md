@@ -21,7 +21,9 @@ else in the viewer deals with the difference.
 
 The panel chooses what is drawn, and the address bar keeps the choice:
 `?scene=example` is a deterministic example scene from
-`public/scenes/example.json`, `?scene=stress&plants=10000` is a dense field of
+`public/scenes/example.json`, `?scene=fixtures` is a gallery of the layout's
+fixture primitives (`public/scenes/qa-fixtures.json`), one of each, drawn in
+its material, `?scene=stress&plants=10000` is a dense field of
 plants for measuring the renderer, `?scenario=gh_demo` is that scenario before
 day one, from the simulator's API, and `?live=gh_demo` follows it live as the
 API plays it one simulated day per second (`python -m greenhouse_sim.api
@@ -32,7 +34,7 @@ which every viewer of that scenario shares. The viewer checks every scene
 against the schema the simulator publishes, and says why when it refuses one.
 
 Click an entity to select it: it glows, the inspector shows its identifier,
-transform, shape and properties, and debug overlays (its bounding box, its
+transform, shape, material and properties, and debug overlays (its bounding box, its
 origin and axes, and its label) can be switched on and off around it. A
 selection stays on its entity as a live scenario moves on; clicking the sky
 clears it. "Colour by" shades entities by a numeric property, with a legend,

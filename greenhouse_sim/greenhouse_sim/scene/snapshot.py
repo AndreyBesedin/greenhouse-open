@@ -12,8 +12,9 @@ code works from observations, never from a snapshot.
 A snapshot holds a reference axes marker at the origin, the greenhouse's
 envelope (its floor, walls and roof, its doors and vents as they stand open,
 its gutters, its structural frames, and its bounds: the space it encloses, as
-a box), and an upright cylinder per plant, as tall as its visible stem. Until
-planting positions become part of the world (P02), plants stand on a
+a box), the fixtures of its layout, each with what it is made of and what it
+obstructs, and an upright cylinder per plant, as tall as its visible stem.
+Until planting positions become part of the world (P02), plants stand on a
 provisional grid built from the scenario's rows and columns.
 """
 
@@ -34,6 +35,7 @@ from greenhouse_sim.world.envelope import (
     Surface,
     SurfaceCategory,
 )
+from greenhouse_sim.world.fixtures import Fixture, FixtureKind, Material, Obstruction
 from greenhouse_sim.world.geometry import (
     Axes,
     Box,
@@ -43,6 +45,7 @@ from greenhouse_sim.world.geometry import (
     Transform,
     Vector3,
 )
+from greenhouse_sim.world.layout import Layout
 from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
 
 # Bumped when a change to these types would break an existing viewer, as a new
@@ -52,7 +55,8 @@ from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
 # 4: its roof, gable end walls as polygons, and gutters.
 # 5: its structural frames.
 # 6: its doors and vents.
-SCHEMA_VERSION: Final = 6
+# 7: its layout's fixtures, and what entities are made of.
+SCHEMA_VERSION: Final = 7
 # The JSON Schema dialect Pydantic generates, stated in the published schema.
 JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 
@@ -94,6 +98,16 @@ MEMBER_RADII_M: Final = {MemberKind.POST: 0.05, MemberKind.RAFTER: 0.03}
 AXES_COLOR: Final = Color(r=0.5, g=0.5, b=0.5)
 PLANT_COLOR: Final = Color(r=0.2, g=0.55, b=0.24)
 GREENHOUSE_BOUNDS_COLOR: Final = Color(r=0.62, g=0.78, b=0.88)
+# What the envelope's metal parts are made of.
+GUTTER_MATERIAL: Final = Material.ALUMINIUM
+FRAME_MATERIAL: Final = Material.STEEL
+# A fixture is drawn in its material's colour.
+MATERIAL_COLORS: Final = {
+    Material.STEEL: Color(r=0.68, g=0.7, b=0.72),
+    Material.ALUMINIUM: Color(r=0.8, g=0.82, b=0.85),
+    Material.PLASTIC: Color(r=0.9, g=0.9, b=0.88),
+    Material.CONCRETE: Color(r=0.64, g=0.63, b=0.6),
+}
 
 
 class SceneEntityKind(StrEnum):
@@ -108,6 +122,12 @@ class SceneEntityKind(StrEnum):
     FRAME = "FRAME"
     VENT = "VENT"
     DOOR = "DOOR"
+    # The layout's fixtures, one kind for each kind of fixture.
+    CROP_GUTTER = "CROP_GUTTER"
+    WALKWAY = "WALKWAY"
+    RAIL = "RAIL"
+    PIPE = "PIPE"
+    OBSTACLE = "OBSTACLE"
     PLANT = "PLANT"
 
 
@@ -119,6 +139,8 @@ class SceneEntity(BaseModel):
     transform: Transform
     shape: Shape
     color: Color
+    # What it is made of, where that is known.
+    material: Material | None = None
     label: str | None = None
     properties: dict[str, str | int | float | bool] = {}
 
@@ -136,10 +158,12 @@ class SceneSnapshot(BaseModel):
 
 
 def scene_snapshot(world: GreenhouseWorld, config: ScenarioConfig) -> SceneSnapshot:
-    """The scene a viewer draws for `world`: its greenhouse, as
-    `greenhouse_scene` draws it, and one entity per plant."""
+    """The scene a viewer draws for `world`: its greenhouse and layout, as
+    `greenhouse_scene` draws them, and one entity per plant."""
     columns = max(config.columns, 1)
-    greenhouse = greenhouse_scene(world.greenhouse_id, config.envelope, world.simulated_day)
+    greenhouse = greenhouse_scene(
+        world.greenhouse_id, config.envelope, world.simulated_day, layout=config.layout
+    )
     plants = [
         _plant_entity(plant, _planting_position(index, columns))
         for index, plant in enumerate(world.plants)
@@ -148,10 +172,15 @@ def scene_snapshot(world: GreenhouseWorld, config: ScenarioConfig) -> SceneSnaps
 
 
 def greenhouse_scene(
-    greenhouse_id: str, envelope: Envelope, simulated_day: int = 0
+    greenhouse_id: str,
+    envelope: Envelope,
+    simulated_day: int = 0,
+    *,
+    layout: Layout | None = None,
 ) -> SceneSnapshot:
-    """A greenhouse on its own, without a crop: the world's axes, and its
-    floor, walls, roof, openings, gutters, frames and bounds."""
+    """A greenhouse on its own, without a crop: the world's axes, its floor,
+    walls, roof, openings, gutters, frames and bounds, and the fixtures of its
+    layout, if it has one."""
     axes = SceneEntity(
         entity_id=f"{greenhouse_id}_axes",
         kind=SceneEntityKind.AXES,
@@ -168,6 +197,7 @@ def greenhouse_scene(
             *_opening_entities(greenhouse_id, envelope),
             *_gutter_entities(greenhouse_id, envelope),
             *_member_entities(greenhouse_id, envelope),
+            *_fixture_entities(greenhouse_id, envelope, layout or Layout()),
             axes,
             _bounds_entity(greenhouse_id, envelope),
         ],
@@ -250,6 +280,7 @@ def _gutter_entity(greenhouse_id: str, envelope: Envelope, gutter: Gutter) -> Sc
         transform=envelope.origin.after(in_greenhouse),
         shape=Box(size_x=length, size_y=GUTTER_WIDTH_M, size_z=GUTTER_DEPTH_M),
         color=GUTTER_COLOR,
+        material=GUTTER_MATERIAL,
         label=gutter.gutter_id.replace("_", " "),
     )
 
@@ -280,7 +311,39 @@ def _member_entity(greenhouse_id: str, envelope: Envelope, member: Member) -> Sc
         transform=envelope.origin.after(in_greenhouse),
         shape=Cylinder(radius=MEMBER_RADII_M[member.kind], height=length),
         color=FRAME_COLOR,
+        material=FRAME_MATERIAL,
         label=member.member_id.replace("_", " "),
+    )
+
+
+_FIXTURE_KINDS: Final = {
+    FixtureKind.CROP_GUTTER: SceneEntityKind.CROP_GUTTER,
+    FixtureKind.WALKWAY: SceneEntityKind.WALKWAY,
+    FixtureKind.RAIL: SceneEntityKind.RAIL,
+    FixtureKind.PIPE: SceneEntityKind.PIPE,
+    FixtureKind.OBSTACLE: SceneEntityKind.OBSTACLE,
+}
+
+
+def _fixture_entities(greenhouse_id: str, envelope: Envelope, layout: Layout) -> list[SceneEntity]:
+    return [_fixture_entity(greenhouse_id, envelope, fixture) for fixture in layout.fixtures()]
+
+
+def _fixture_entity(greenhouse_id: str, envelope: Envelope, fixture: Fixture) -> SceneEntity:
+    """A fixture, placed in the world, in its material's colour, with what it
+    obstructs."""
+    return SceneEntity(
+        entity_id=f"{greenhouse_id}_{fixture.fixture_id}",
+        kind=_FIXTURE_KINDS[fixture.kind],
+        transform=envelope.origin.after(fixture.transform),
+        shape=fixture.shape,
+        color=MATERIAL_COLORS[fixture.material],
+        material=fixture.material,
+        label=fixture.fixture_id.replace("_", " "),
+        properties={
+            f"obstructs_{obstruction.value}": obstruction in fixture.obstructs
+            for obstruction in Obstruction
+        },
     )
 
 
