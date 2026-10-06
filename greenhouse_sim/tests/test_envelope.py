@@ -1,5 +1,6 @@
-"""The greenhouse's envelope and its own frame (decision 0016): known points
-of the greenhouse land where they should in the world."""
+"""The greenhouse's envelope and its own frame (decisions 0016 and 0017): known
+points land where they should in the world, and the surfaces close the
+greenhouse, facing into it."""
 
 import math
 
@@ -14,7 +15,9 @@ from greenhouse_sim.world.geometry import Quaternion, Transform, Vector3
 
 # A quarter turn about the world's z: x turns onto y, and y onto -x.
 QUARTER_TURN_ABOUT_Z = Quaternion(w=math.sqrt(0.5), z=math.sqrt(0.5))
-HOUSE = Envelope(length=24.0, width=12.8, height=5.5)
+# A 24 m house of one 12.8 m span, its eaves at 5.5 m and its ridge 2.4 m higher.
+HOUSE = Envelope(length=24.0, width=12.8, eave_height=5.5, ridge_height=7.9)
+type Point = tuple[float, float, float]
 
 
 def _close(actual: Vector3, expected: Vector3) -> bool:
@@ -26,6 +29,32 @@ def _close(actual: Vector3, expected: Vector3) -> bool:
     )
 
 
+def _rounded(point: Vector3) -> Point:
+    """A point rounded to a micrometre, so that corners can be compared."""
+    return (round(point.x, 6), round(point.y, 6), round(point.z, 6))
+
+
+def _outline(surface: Surface) -> list[Point]:
+    """A surface's corners in order, in the greenhouse's frame."""
+    shape = surface.shape
+    if shape.shape == "plane":
+        half_x, half_y = shape.size_x / 2, shape.size_y / 2
+        corners = [(-half_x, -half_y), (half_x, -half_y), (half_x, half_y), (-half_x, half_y)]
+    else:
+        corners = [(point.x, point.y) for point in shape.points]
+    return [_rounded(surface.transform.apply(Vector3(x=x, y=y, z=0.0))) for x, y in corners]
+
+
+def _edges(surface: Surface) -> set[frozenset[Point]]:
+    """A surface's edges, each as the pair of corners it joins."""
+    outline = _outline(surface)
+    return {frozenset((outline[i], outline[(i + 1) % len(outline)])) for i in range(len(outline))}
+
+
+def _by_id(envelope: Envelope) -> dict[str, Surface]:
+    return {surface.surface_id: surface for surface in envelope.surfaces()}
+
+
 def test_a_rotation_turns_vectors_and_a_transform_moves_points() -> None:
     assert _close(QUARTER_TURN_ABOUT_Z.rotate(Vector3(x=1, y=0, z=0)), Vector3(x=0, y=1, z=0))
     assert _close(QUARTER_TURN_ABOUT_Z.rotate(Vector3(x=0, y=1, z=0)), Vector3(x=-1, y=0, z=0))
@@ -35,11 +64,19 @@ def test_a_rotation_turns_vectors_and_a_transform_moves_points() -> None:
     assert _close(moved.apply(Vector3(x=2, y=0, z=1)), Vector3(x=10, y=2, z=1))
 
 
+def test_a_rotation_built_from_axes_turns_the_frame_onto_them() -> None:
+    along_the_slope = Vector3(x=0.0, y=math.cos(0.4), z=math.sin(0.4))
+    turn = Quaternion.from_axes(Vector3(x=-1, y=0, z=0), along_the_slope)
+
+    assert _close(turn.rotate(Vector3(x=1, y=0, z=0)), Vector3(x=-1, y=0, z=0))
+    assert _close(turn.rotate(Vector3(x=0, y=1, z=0)), along_the_slope)
+
+
 def test_the_greenhouse_fills_the_positive_octant_of_its_frame() -> None:
     corner, far_corner = HOUSE.bounds()
 
     assert corner == Vector3(x=0, y=0, z=0)
-    assert far_corner == Vector3(x=24.0, y=12.8, z=5.5)
+    assert far_corner == Vector3(x=24.0, y=12.8, z=7.9)
 
 
 def test_by_default_the_greenhouse_frame_is_the_world_frame() -> None:
@@ -62,16 +99,24 @@ def test_known_points_of_a_placed_greenhouse_land_where_they_should() -> None:
     assert _close(placed.to_world(Vector3(x=0, y=0, z=0)), Vector3(x=100, y=50, z=0))
     assert _close(placed.to_world(Vector3(x=24, y=0, z=0)), Vector3(x=100, y=74, z=0))
     assert _close(placed.to_world(Vector3(x=0, y=12.8, z=0)), Vector3(x=87.2, y=50, z=0))
-    assert _close(placed.to_world(Vector3(x=24, y=12.8, z=5.5)), Vector3(x=87.2, y=74, z=5.5))
+    assert _close(placed.to_world(Vector3(x=24, y=12.8, z=7.9)), Vector3(x=87.2, y=74, z=7.9))
 
 
-@pytest.mark.parametrize("field", ["length", "width", "height"])
+@pytest.mark.parametrize("field", ["length", "width", "eave_height", "ridge_height"])
 @pytest.mark.parametrize("size", [0.0, -1.0])
 def test_an_envelope_without_room_is_refused(field: str, size: float) -> None:
-    sizes = {"length": 24.0, "width": 12.8, "height": 5.5, field: size}
+    sizes = {"length": 24.0, "width": 12.8, "eave_height": 5.5, "ridge_height": 7.9, field: size}
 
     with pytest.raises(ValidationError):
         Envelope(**sizes)
+
+
+def test_a_ridge_below_the_eaves_is_refused_and_one_level_with_them_is_flat() -> None:
+    with pytest.raises(ValidationError, match="the ridge"):
+        Envelope(length=24.0, width=12.8, eave_height=5.5, ridge_height=5.0)
+
+    flat = Envelope(length=24.0, width=12.8, eave_height=5.5, ridge_height=5.5)
+    assert flat.roof_pitch == 0.0
 
 
 @pytest.mark.parametrize("scenario_id", sorted(SCENARIO_REGISTRY))
@@ -90,28 +135,7 @@ def test_every_scenario_keeps_its_plants_inside_its_greenhouse(scenario_id: str)
         assert 0.0 < position.y < far_corner.y, entity.entity_id
 
 
-def _corners(surface: Surface) -> set[tuple[float, float, float]]:
-    """A surface's four corners in the greenhouse's frame, rounded to a micrometre."""
-    half_x, half_y = surface.shape.size_x / 2, surface.shape.size_y / 2
-    corners = set()
-    for x, y in [(-half_x, -half_y), (half_x, -half_y), (half_x, half_y), (-half_x, half_y)]:
-        point = surface.transform.apply(Vector3(x=x, y=y, z=0.0))
-        corners.add((round(point.x, 6), round(point.y, 6), round(point.z, 6)))
-    return corners
-
-
-def _edges(surface: Surface) -> set[frozenset[tuple[float, float, float]]]:
-    """A rectangle's four edges, each as the pair of corners it joins."""
-    half_x, half_y = surface.shape.size_x / 2, surface.shape.size_y / 2
-    loop = [(-half_x, -half_y), (half_x, -half_y), (half_x, half_y), (-half_x, half_y)]
-    points = []
-    for x, y in loop:
-        point = surface.transform.apply(Vector3(x=x, y=y, z=0.0))
-        points.append((round(point.x, 6), round(point.y, 6), round(point.z, 6)))
-    return {frozenset((points[i], points[(i + 1) % len(points)])) for i in range(len(points))}
-
-
-def test_the_envelope_has_one_floor_and_four_walls_with_their_own_names() -> None:
+def test_the_envelope_has_a_floor_four_walls_and_two_roof_slopes() -> None:
     surfaces = HOUSE.surfaces()
 
     assert [(s.surface_id, s.category) for s in surfaces] == [
@@ -120,69 +144,124 @@ def test_the_envelope_has_one_floor_and_four_walls_with_their_own_names() -> Non
         ("side_wall_left", SurfaceCategory.WALL),
         ("end_wall_front", SurfaceCategory.WALL),
         ("end_wall_back", SurfaceCategory.WALL),
+        ("roof_right", SurfaceCategory.ROOF),
+        ("roof_left", SurfaceCategory.ROOF),
     ]
 
 
-def test_the_floor_covers_the_footprint_and_the_walls_stand_on_its_edges() -> None:
-    floor, right, left, front, back = HOUSE.surfaces()
-    length, width, height = HOUSE.length, HOUSE.width, HOUSE.height
+def test_each_surface_has_the_corners_the_configuration_gives_it() -> None:
+    length, width = HOUSE.length, HOUSE.width
+    eave, ridge, middle = HOUSE.eave_height, HOUSE.ridge_height, HOUSE.width / 2
+    surfaces = _by_id(HOUSE)
 
-    assert _corners(floor) == {(0, 0, 0), (length, 0, 0), (length, width, 0), (0, width, 0)}
-    assert _corners(right) == {(0, 0, 0), (length, 0, 0), (length, 0, height), (0, 0, height)}
-    assert _corners(left) == {
+    def corners(surface_id: str) -> set[Point]:
+        return set(_outline(surfaces[surface_id]))
+
+    assert corners("floor") == {(0, 0, 0), (length, 0, 0), (length, width, 0), (0, width, 0)}
+    assert corners("side_wall_right") == {
+        (0, 0, 0),
+        (length, 0, 0),
+        (length, 0, eave),
+        (0, 0, eave),
+    }
+    assert corners("side_wall_left") == {
         (0, width, 0),
         (length, width, 0),
-        (length, width, height),
-        (0, width, height),
+        (length, width, eave),
+        (0, width, eave),
     }
-    assert _corners(front) == {(0, 0, 0), (0, width, 0), (0, width, height), (0, 0, height)}
-    assert _corners(back) == {
-        (length, 0, 0),
-        (length, width, 0),
-        (length, width, height),
-        (length, 0, height),
+    for x in (0, length):
+        surface_id = "end_wall_front" if x == 0 else "end_wall_back"
+        assert corners(surface_id) == {
+            (x, 0, 0),
+            (x, width, 0),
+            (x, width, eave),
+            (x, middle, ridge),
+            (x, 0, eave),
+        }
+    assert corners("roof_right") == {
+        (0, 0, eave),
+        (length, 0, eave),
+        (length, middle, ridge),
+        (0, middle, ridge),
     }
+    assert corners("roof_left") == {
+        (0, width, eave),
+        (length, width, eave),
+        (length, middle, ridge),
+        (0, middle, ridge),
+    }
+
+
+def test_the_cross_section_matches_the_configuration() -> None:
+    """The gable is the greenhouse's cross-section: walls to the eaves on both
+    sides, and the ridge above the middle of the width."""
+    gable = _outline(_by_id(HOUSE)["end_wall_front"])
+    heights_across = sorted({(y, z) for _, y, z in gable})
+
+    assert heights_across == [(0, 0), (0, 5.5), (6.4, 7.9), (12.8, 0), (12.8, 5.5)]
+    assert HOUSE.roof_pitch == pytest.approx(math.atan2(2.4, 6.4))
 
 
 def test_every_surface_faces_into_the_greenhouse() -> None:
     """No inverted surfaces: each one's front points at the middle of the house."""
-    middle = Vector3(x=HOUSE.length / 2, y=HOUSE.width / 2, z=HOUSE.height / 2)
+    middle = (HOUSE.length / 2, HOUSE.width / 2, HOUSE.eave_height / 2)
 
     for surface in HOUSE.surfaces():
         facing = surface.transform.rotation.rotate(Vector3(x=0, y=0, z=1))
-        centre = surface.transform.position
-        towards_middle = (middle.x - centre.x, middle.y - centre.y, middle.z - centre.z)
+        outline = _outline(surface)
+        centre = [sum(corner[axis] for corner in outline) / len(outline) for axis in range(3)]
         reach = sum(
-            f * t for f, t in zip((facing.x, facing.y, facing.z), towards_middle, strict=True)
+            f * (m - c)
+            for f, m, c in zip((facing.x, facing.y, facing.z), middle, centre, strict=True)
         )
         assert reach > 0, surface.surface_id
 
 
-def test_the_surfaces_close_the_greenhouse_up_to_its_open_top() -> None:
-    """No gaps: every edge of the floor and every corner post is shared by
-    exactly two surfaces. The top edges have one each, until the roof (P01.3)."""
-    shared: dict[frozenset[tuple[float, float, float]], int] = {}
-    for surface in HOUSE.surfaces():
+@pytest.mark.parametrize("ridge_height", [7.9, 5.5])
+def test_the_surfaces_close_the_greenhouse(ridge_height: float) -> None:
+    """No gaps: every edge of every surface is shared with exactly one other,
+    for a pitched roof and for a flat one."""
+    house = HOUSE.model_copy(update={"ridge_height": ridge_height})
+    shared: dict[frozenset[Point], int] = {}
+    for surface in house.surfaces():
         for edge in _edges(surface):
             shared[edge] = shared.get(edge, 0) + 1
 
-    on_top = {
-        edge: count for edge, count in shared.items() if all(p[2] == HOUSE.height for p in edge)
-    }
-    below = {edge: count for edge, count in shared.items() if edge not in on_top}
-    assert len(below) == 8 and set(below.values()) == {2}
-    assert len(on_top) == 4 and set(on_top.values()) == {1}
+    assert set(shared.values()) == {2}
 
 
-@pytest.mark.parametrize(("length", "width", "height"), [(4.0, 3.2, 4.0), (60.0, 32.0, 6.5)])
+@pytest.mark.parametrize(
+    ("length", "width", "eave_height", "ridge_height"),
+    [(4.0, 3.2, 3.0, 3.65), (60.0, 32.0, 6.5, 12.0)],
+)
 def test_the_surfaces_follow_the_envelopes_dimensions(
-    length: float, width: float, height: float
+    length: float, width: float, eave_height: float, ridge_height: float
 ) -> None:
-    floor, right, *_, back = Envelope(length=length, width=width, height=height).surfaces()
+    envelope = Envelope(
+        length=length, width=width, eave_height=eave_height, ridge_height=ridge_height
+    )
+    surfaces = _by_id(envelope)
 
-    assert (floor.shape.size_x, floor.shape.size_y) == (length, width)
-    assert (right.shape.size_x, right.shape.size_y) == (length, height)
-    assert back.transform.position == Vector3(x=length, y=width / 2, z=height / 2)
+    assert max(z for _, _, z in _outline(surfaces["end_wall_back"])) == ridge_height
+    assert max(z for _, _, z in _outline(surfaces["side_wall_right"])) == eave_height
+    assert max(x for x, _, _ in _outline(surfaces["roof_left"])) == length
+    assert max(y for _, y, _ in _outline(surfaces["floor"])) == width
+
+
+def test_a_gutter_runs_along_each_eave() -> None:
+    right, left = HOUSE.gutters()
+
+    assert (right.gutter_id, right.start, right.end) == (
+        "gutter_right",
+        Vector3(x=0, y=0, z=5.5),
+        Vector3(x=24.0, y=0, z=5.5),
+    )
+    assert (left.gutter_id, left.start, left.end) == (
+        "gutter_left",
+        Vector3(x=0, y=12.8, z=5.5),
+        Vector3(x=24.0, y=12.8, z=5.5),
+    )
 
 
 def test_a_placed_greenhouse_places_its_surfaces() -> None:
@@ -198,4 +277,4 @@ def test_a_placed_greenhouse_places_its_surfaces() -> None:
     # The floor's middle, half the length along the world's y and half the
     # width along its -x.
     assert _close(floor.transform.position, Vector3(x=100 - 6.4, y=50 + 12, z=0))
-    assert floor.transform.rotation == QUARTER_TURN_ABOUT_Z
+    assert _close(floor.transform.rotation.rotate(Vector3(x=1, y=0, z=0)), Vector3(x=0, y=1, z=0))

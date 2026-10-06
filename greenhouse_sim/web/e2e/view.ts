@@ -36,11 +36,11 @@ export async function onScreen(
 }
 
 // Near the top of the view the camera looks past the ground grid at the sky.
-// The default camera looks at the world origin, so anything standing there,
-// such as a corner of the greenhouse's bounds, rises up the view's middle
-// line; the sky is clicked to the right of it.
+// The default camera looks at the world origin, where a scenario's greenhouse
+// has its corner; the greenhouse fills the view to the right of the middle
+// line and rises above it, so the sky is clicked to the left.
 const SKY_MARGIN_PX = 30;
-const SKY_OFFSET_PX = 160;
+const SKY_OFFSET_PX = -120;
 
 export async function clickAt(
   page: Page,

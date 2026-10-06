@@ -146,6 +146,50 @@ export const SNAPSHOT_SCHEMA = {
       "title": "Plane",
       "type": "object"
     },
+    "Point2": {
+      "description": "A point in a shape's own x-y plane.",
+      "properties": {
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "title": "Point2",
+      "type": "object"
+    },
+    "Polygon": {
+      "description": "A flat polygon in its frame's x-y plane, facing +z: its corners in\norder, counter-clockwise as seen from its front, such as a greenhouse's\ngable end.",
+      "properties": {
+        "shape": {
+          "const": "polygon",
+          "default": "polygon",
+          "title": "Shape",
+          "type": "string"
+        },
+        "points": {
+          "items": {
+            "$ref": "#/$defs/Point2"
+          },
+          "minItems": 3,
+          "title": "Points",
+          "type": "array"
+        }
+      },
+      "required": [
+        "shape",
+        "points"
+      ],
+      "title": "Polygon",
+      "type": "object"
+    },
     "Quaternion": {
       "description": "A rotation as a unit quaternion; the default is no rotation.",
       "properties": {
@@ -250,6 +294,8 @@ export const SNAPSHOT_SCHEMA = {
         "GREENHOUSE_BOUNDS",
         "FLOOR",
         "WALL",
+        "ROOF",
+        "GUTTER",
         "PLANT"
       ],
       "title": "SceneEntityKind",
@@ -265,6 +311,9 @@ export const SNAPSHOT_SCHEMA = {
         },
         {
           "$ref": "#/$defs/Box"
+        },
+        {
+          "$ref": "#/$defs/Polygon"
         },
         {
           "$ref": "#/$defs/Axes"
@@ -321,7 +370,7 @@ export const SNAPSHOT_SCHEMA = {
   "description": "One greenhouse at one simulated day, as a viewer draws it. Positions\nand sizes are in metres, in right-handed world axes with z up.",
   "properties": {
     "schema_version": {
-      "default": 3,
+      "default": 4,
       "title": "Schema Version",
       "type": "integer"
     },

@@ -65,6 +65,14 @@ function shapeExtent(shape: Shape): Bounds {
         min: { x: -shape.size_x / 2, y: -shape.size_y / 2, z: 0 },
         max: { x: shape.size_x / 2, y: shape.size_y / 2, z: shape.size_z },
       };
+    case "polygon": {
+      const xs = shape.points.map((point) => point.x);
+      const ys = shape.points.map((point) => point.y);
+      return {
+        min: { x: Math.min(...xs), y: Math.min(...ys), z: 0 },
+        max: { x: Math.max(...xs), y: Math.max(...ys), z: 0 },
+      };
+    }
     case "axes":
       return {
         min: { x: 0, y: 0, z: 0 },

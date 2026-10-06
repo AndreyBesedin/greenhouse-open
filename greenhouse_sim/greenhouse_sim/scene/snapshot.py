@@ -10,27 +10,38 @@ simulated truth, as the world does. It is not an observation: decision-making
 code works from observations, never from a snapshot.
 
 A snapshot holds a reference axes marker at the origin, the greenhouse's
-envelope (its floor and walls, and its bounds: the space it encloses, as a
-box), and an upright cylinder per plant, as tall as its visible stem. Until
+envelope (its floor, walls and roof, its gutters, and its bounds: the space it
+encloses, as a box), and an upright cylinder per plant, as tall as its visible
+stem. Until
 planting positions become part of the world (P02), plants stand on a
 provisional grid built from the scenario's rows and columns.
 """
 
+import math
 from enum import StrEnum
 from typing import Final
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.world.envelope import Envelope, Surface, SurfaceCategory
-from greenhouse_sim.world.geometry import Axes, Box, Cylinder, Shape, Transform, Vector3
+from greenhouse_sim.world.envelope import Envelope, Gutter, Surface, SurfaceCategory
+from greenhouse_sim.world.geometry import (
+    Axes,
+    Box,
+    Cylinder,
+    Quaternion,
+    Shape,
+    Transform,
+    Vector3,
+)
 from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
 
 # Bumped when a change to these types would break an existing viewer, as a new
 # kind or shape does: a viewer that does not know it refuses the scene.
 # 2: the greenhouse's bounds, drawn as a box.
 # 3: the greenhouse's floor and walls, in place of the provisional ground.
-SCHEMA_VERSION: Final = 3
+# 4: its roof, gable end walls as polygons, and gutters.
+SCHEMA_VERSION: Final = 4
 # The JSON Schema dialect Pydantic generates, stated in the published schema.
 JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 
@@ -57,6 +68,12 @@ class Color(BaseModel):
 
 FLOOR_COLOR: Final = Color(r=0.42, g=0.33, b=0.24)
 WALL_COLOR: Final = Color(r=0.74, g=0.86, b=0.92)
+ROOF_COLOR: Final = Color(r=0.7, g=0.83, b=0.9)
+GUTTER_COLOR: Final = Color(r=0.55, g=0.57, b=0.6)
+# A gutter is drawn as a channel of this cross-section, its top at the eaves,
+# until gutters have a profile of their own.
+GUTTER_WIDTH_M: Final = 0.2
+GUTTER_DEPTH_M: Final = 0.15
 AXES_COLOR: Final = Color(r=0.5, g=0.5, b=0.5)
 PLANT_COLOR: Final = Color(r=0.2, g=0.55, b=0.24)
 GREENHOUSE_BOUNDS_COLOR: Final = Color(r=0.62, g=0.78, b=0.88)
@@ -69,6 +86,8 @@ class SceneEntityKind(StrEnum):
     GREENHOUSE_BOUNDS = "GREENHOUSE_BOUNDS"
     FLOOR = "FLOOR"
     WALL = "WALL"
+    ROOF = "ROOF"
+    GUTTER = "GUTTER"
     PLANT = "PLANT"
 
 
@@ -98,7 +117,7 @@ class SceneSnapshot(BaseModel):
 
 def scene_snapshot(world: GreenhouseWorld, config: ScenarioConfig) -> SceneSnapshot:
     """The scene a viewer draws for `world`: axes, the greenhouse's floor,
-    walls and bounds, and one entity per plant."""
+    walls, roof, gutters and bounds, and one entity per plant."""
     columns = max(config.columns, 1)
     axes = SceneEntity(
         entity_id=f"{world.greenhouse_id}_axes",
@@ -117,6 +136,7 @@ def scene_snapshot(world: GreenhouseWorld, config: ScenarioConfig) -> SceneSnaps
         simulated_day=world.simulated_day,
         entities=[
             *_surface_entities(world.greenhouse_id, config.envelope),
+            *_gutter_entities(world.greenhouse_id, config.envelope),
             axes,
             _bounds_entity(world.greenhouse_id, config.envelope),
             *plants,
@@ -127,6 +147,7 @@ def scene_snapshot(world: GreenhouseWorld, config: ScenarioConfig) -> SceneSnaps
 _SURFACE_KINDS: Final = {
     SurfaceCategory.FLOOR: (SceneEntityKind.FLOOR, FLOOR_COLOR),
     SurfaceCategory.WALL: (SceneEntityKind.WALL, WALL_COLOR),
+    SurfaceCategory.ROOF: (SceneEntityKind.ROOF, ROOF_COLOR),
 }
 
 
@@ -147,16 +168,47 @@ def _surface_entity(greenhouse_id: str, surface: Surface) -> SceneEntity:
     )
 
 
+def _gutter_entities(greenhouse_id: str, envelope: Envelope) -> list[SceneEntity]:
+    return [_gutter_entity(greenhouse_id, envelope, gutter) for gutter in envelope.gutters()]
+
+
+def _gutter_entity(greenhouse_id: str, envelope: Envelope, gutter: Gutter) -> SceneEntity:
+    """A gutter as a channel along its line, its top at the line."""
+    along = Vector3(
+        x=gutter.end.x - gutter.start.x,
+        y=gutter.end.y - gutter.start.y,
+        z=gutter.end.z - gutter.start.z,
+    )
+    length = math.hypot(along.x, along.y, along.z)
+    direction = Vector3(x=along.x / length, y=along.y / length, z=along.z / length)
+    level = Vector3(x=0.0, y=0.0, z=1.0).cross(direction)
+    base_middle = Vector3(
+        x=(gutter.start.x + gutter.end.x) / 2,
+        y=(gutter.start.y + gutter.end.y) / 2,
+        z=(gutter.start.z + gutter.end.z) / 2 - GUTTER_DEPTH_M,
+    )
+    in_greenhouse = Transform(position=base_middle, rotation=Quaternion.from_axes(direction, level))
+    return SceneEntity(
+        entity_id=f"{greenhouse_id}_{gutter.gutter_id}",
+        kind=SceneEntityKind.GUTTER,
+        transform=envelope.origin.after(in_greenhouse),
+        shape=Box(size_x=length, size_y=GUTTER_WIDTH_M, size_z=GUTTER_DEPTH_M),
+        color=GUTTER_COLOR,
+        label=gutter.gutter_id.replace("_", " "),
+    )
+
+
 def _bounds_entity(greenhouse_id: str, envelope: Envelope) -> SceneEntity:
     """The space the envelope encloses, as a box standing on the middle of the floor."""
     middle_of_floor = Vector3(x=envelope.length / 2, y=envelope.width / 2, z=0.0)
+    height = envelope.ridge_height
     return SceneEntity(
         entity_id=f"{greenhouse_id}_bounds",
         kind=SceneEntityKind.GREENHOUSE_BOUNDS,
         transform=Transform(
             position=envelope.to_world(middle_of_floor), rotation=envelope.origin.rotation
         ),
-        shape=Box(size_x=envelope.length, size_y=envelope.width, size_z=envelope.height),
+        shape=Box(size_x=envelope.length, size_y=envelope.width, size_z=height),
         color=GREENHOUSE_BOUNDS_COLOR,
         label="greenhouse bounds",
     )

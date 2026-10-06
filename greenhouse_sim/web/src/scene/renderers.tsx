@@ -12,7 +12,7 @@ export interface EntityLook {
 
 function seeThrough(entity: SceneEntity, look: EntityLook, outlineOnly = false): ReactElement {
   const { shape } = entity;
-  return shape.shape === "box" || shape.shape === "plane" ? (
+  return shape.shape === "box" || shape.shape === "plane" || shape.shape === "polygon" ? (
     <SeeThrough
       shape={shape}
       color={look.color}
@@ -44,8 +44,13 @@ export const RENDERERS: Record<
   FLOOR: (entity, look) => (
     <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} behindLines />
   ),
-  // Glazing: see-through, framed by its edges, and clickable by them.
+  // Glazing: see-through and framed by its edges. A click picks it only where
+  // nothing solid lies behind it.
   WALL: (entity, look) => seeThrough(entity, look),
+  ROOF: (entity, look) => seeThrough(entity, look),
+  GUTTER: (entity, look) => (
+    <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} />
+  ),
   PLANT: (entity, look) => (
     <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} />
   ),

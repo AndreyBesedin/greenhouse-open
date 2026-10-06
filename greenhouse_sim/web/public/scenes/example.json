@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "greenhouse_id": "gh_demo",
   "simulated_day": 9,
   "entities": [
@@ -39,19 +39,19 @@
         "position": {
           "x": 2.0,
           "y": 0.0,
-          "z": 2.0
+          "z": 1.5
         },
         "rotation": {
-          "w": 0.7071067811865476,
-          "x": -0.7071067811865475,
-          "y": 0.0,
-          "z": 0.0
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.7071067811865476
         }
       },
       "shape": {
         "shape": "plane",
         "size_x": 4.0,
-        "size_y": 4.0
+        "size_y": 3.0
       },
       "color": {
         "r": 0.74,
@@ -68,7 +68,7 @@
         "position": {
           "x": 2.0,
           "y": 6.4,
-          "z": 2.0
+          "z": 1.5
         },
         "rotation": {
           "w": 0.7071067811865476,
@@ -80,7 +80,7 @@
       "shape": {
         "shape": "plane",
         "size_x": 4.0,
-        "size_y": 4.0
+        "size_y": 3.0
       },
       "color": {
         "r": 0.74,
@@ -96,20 +96,40 @@
       "transform": {
         "position": {
           "x": 0.0,
-          "y": 3.2,
-          "z": 2.0
+          "y": 0.0,
+          "z": 0.0
         },
         "rotation": {
-          "w": 0.7071067811865476,
-          "x": 0.0,
-          "y": 0.7071067811865475,
-          "z": 0.0
+          "w": 0.5,
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
         }
       },
       "shape": {
-        "shape": "plane",
-        "size_x": 4.0,
-        "size_y": 6.4
+        "shape": "polygon",
+        "points": [
+          {
+            "x": 0.0,
+            "y": 0.0
+          },
+          {
+            "x": 6.4,
+            "y": 0.0
+          },
+          {
+            "x": 6.4,
+            "y": 3.0
+          },
+          {
+            "x": 3.2,
+            "y": 4.3
+          },
+          {
+            "x": 0.0,
+            "y": 3.0
+          }
+        ]
       },
       "color": {
         "r": 0.74,
@@ -125,20 +145,40 @@
       "transform": {
         "position": {
           "x": 4.0,
-          "y": 3.2,
-          "z": 2.0
+          "y": 6.4,
+          "z": 0.0
         },
         "rotation": {
-          "w": 0.7071067811865476,
-          "x": 0.0,
-          "y": -0.7071067811865475,
-          "z": 0.0
+          "w": -0.5,
+          "x": -0.5,
+          "y": 0.5,
+          "z": 0.5
         }
       },
       "shape": {
-        "shape": "plane",
-        "size_x": 4.0,
-        "size_y": 6.4
+        "shape": "polygon",
+        "points": [
+          {
+            "x": 0.0,
+            "y": 0.0
+          },
+          {
+            "x": 6.4,
+            "y": 0.0
+          },
+          {
+            "x": 6.4,
+            "y": 3.0
+          },
+          {
+            "x": 3.2,
+            "y": 4.3
+          },
+          {
+            "x": 0.0,
+            "y": 3.0
+          }
+        ]
       },
       "color": {
         "r": 0.74,
@@ -146,6 +186,124 @@
         "b": 0.92
       },
       "label": "end wall back",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_roof_right",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 1.6,
+          "z": 3.65
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.9814444908201149,
+          "z": 0.1917464769920048
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 4.0,
+        "size_y": 3.4539832078341086
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "label": "roof right",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_roof_left",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 4.800000000000001,
+          "z": 3.65
+        },
+        "rotation": {
+          "w": 0.1917464769920048,
+          "x": 0.9814444908201149,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 4.0,
+        "size_y": 3.4539832078341086
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "label": "roof left",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_gutter_right",
+      "kind": "GUTTER",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 0.0,
+          "z": 2.85
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 4.0,
+        "size_y": 0.2,
+        "size_z": 0.15
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.57,
+        "b": 0.6
+      },
+      "label": "gutter right",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_gutter_left",
+      "kind": "GUTTER",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 6.4,
+          "z": 2.85
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 4.0,
+        "size_y": 0.2,
+        "size_z": 0.15
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.57,
+        "b": 0.6
+      },
+      "label": "gutter left",
       "properties": {}
     },
     {
@@ -196,7 +354,7 @@
         "shape": "box",
         "size_x": 4.0,
         "size_y": 6.4,
-        "size_z": 4.0
+        "size_z": 4.3
       },
       "color": {
         "r": 0.62,
