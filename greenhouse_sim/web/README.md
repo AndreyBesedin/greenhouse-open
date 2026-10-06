@@ -36,8 +36,10 @@ transform, shape and properties, and debug overlays (its bounding box, its
 origin and axes, and its label) can be switched on and off around it. A
 selection stays on its entity as a live scenario moves on; clicking the sky
 clears it. "Colour by" shades entities by a numeric property, with a legend,
-and "Dimensions and axis labels" measures the greenhouse and names the
-world's axes, drawing its bounds as an outline. The greenhouse's walls and
+"Dimensions and axis labels" measures the greenhouse and names the world's
+axes, drawing its bounds as an outline, and "Surface categories" colours each
+part of the greenhouse (floor, wall, roof, vent, door, gutter, frame) by what
+it is, with a legend. The greenhouse's walls and
 roof are see-through glass: a click picks the nearest solid thing along it,
 such as a plant or the floor, and picks the glass only where nothing solid
 lies behind. On a scenario's view, a slider per door and vent sets how far
