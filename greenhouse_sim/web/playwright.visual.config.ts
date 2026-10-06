@@ -14,6 +14,10 @@ const PIXEL_THRESHOLD = 0.2;
 // 1280 by 720 view. Moving one stem of the QA scene by its own width (6 cm)
 // changes about 200 pixels and fails; half that passes.
 const MAX_DIFF_PIXELS = 100;
+// A screenshot is retaken until two in a row match; drawing in software, the
+// layout's and greenhouse's views can take longer than the usual five
+// seconds to settle, more so when two are drawn at once.
+const SETTLE_TIMEOUT_MS = 20_000;
 
 export default defineConfig({
   testDir: "e2e/visual",
@@ -23,8 +27,11 @@ export default defineConfig({
   // the test fails, which is how CI hands over a first baseline.
   updateSnapshots: "missing",
   expect: {
+    timeout: SETTLE_TIMEOUT_MS,
     toHaveScreenshot: { threshold: PIXEL_THRESHOLD, maxDiffPixels: MAX_DIFF_PIXELS },
   },
+  // One screenshot at a time, so that each has the processor to itself.
+  workers: 1,
   forbidOnly: IN_CI,
   reporter: IN_CI ? "github" : "list",
   use: { baseURL: `http://localhost:${PREVIEW_PORT}` },
