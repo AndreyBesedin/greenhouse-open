@@ -5,7 +5,12 @@ export interface ScenarioSummary {
   description: string;
   plants: number;
   duration_days: number;
+  /** The names of its layouts, its default first. */
+  layouts: string[];
 }
+
+/** The layout a scenario is defined with. */
+export const DEFAULT_LAYOUT = "default";
 
 export type ScenariosState =
   | { status: "loading" }
@@ -35,7 +40,9 @@ function isScenarioSummary(value: unknown): value is ScenarioSummary {
     typeof fields.name === "string" &&
     typeof fields.description === "string" &&
     Number.isInteger(fields.plants) &&
-    Number.isInteger(fields.duration_days)
+    Number.isInteger(fields.duration_days) &&
+    Array.isArray(fields.layouts) &&
+    fields.layouts.every((layout) => typeof layout === "string")
   );
 }
 

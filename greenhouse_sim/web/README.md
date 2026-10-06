@@ -47,7 +47,10 @@ each. Plants stand on their planting positions, each marked by an orange disc
 around the plant's foot. The greenhouse's walls and
 roof are see-through glass: a click picks the nearest solid thing along it,
 such as a plant or the floor, and picks the glass only where nothing solid
-lies behind. On a scenario's view, a slider per door and vent sets how far
+lies behind. A scenario with several layouts offers them in the scenarios table: choosing
+one shows the scenario with it, and the address keeps it (`&layout=benches`).
+The inspector says what the selected entity is in words, and names its
+dimensions. On a scenario's view, a slider per door and vent sets how far
 it stands open: the viewer asks the simulator for the scene with it so
 (`?open=roof_vent_1:0.5`), and the address bar keeps it. The address can
 change the greenhouse itself too (`?scenario=gh_demo&envelope=length:12,spans:3`:

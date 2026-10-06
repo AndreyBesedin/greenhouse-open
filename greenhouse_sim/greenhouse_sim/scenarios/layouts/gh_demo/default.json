@@ -1,0 +1,16 @@
+{
+  "$schema": "../../layout.schema.json",
+  "crop_rows": {
+    "origin": {
+      "x": 0.5,
+      "y": 1.6
+    },
+    "heading": 0.0,
+    "rows": 2,
+    "positions_per_row": 3,
+    "plant_pitch": 0.5,
+    "row_spacing": 1.6
+  },
+  "placed": [],
+  "zones": []
+}

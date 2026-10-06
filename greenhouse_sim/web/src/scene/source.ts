@@ -10,13 +10,15 @@ export type SceneSource =
   | { kind: "fixtures" }
   /** A dense field of plants built in the viewer, for measuring the renderer. */
   | { kind: "stress"; plants: number }
-  /** A scenario's scene from the simulator, its greenhouse's dimensions
-   * changed as `envelope` asks (length, width, spans, bays, eave_height,
-   * ridge_height), and its doors and vents opened as `openings` asks (by
-   * opening identifier, from 0 to 1). */
+  /** A scenario's scene from the simulator, with another of its layouts if
+   * `layout` names one, its greenhouse's dimensions changed as `envelope`
+   * asks (length, width, spans, bays, eave_height, ridge_height), and its
+   * doors and vents opened as `openings` asks (by opening identifier, from 0
+   * to 1). */
   | {
       kind: "scenario";
       scenarioId: string;
+      layout?: string;
       envelope?: Readonly<Record<string, number>>;
       openings?: Readonly<Record<string, number>>;
     }
@@ -41,11 +43,13 @@ export function sourceFromSearch(search: string): SceneSource {
   }
   const scenarioId = parameters.get("scenario");
   if (scenarioId) {
+    const layout = parameters.get("layout");
     const envelope = pairsFrom(parameters.get("envelope"));
     const openings = pairsFrom(parameters.get("open"));
     return {
       kind: "scenario",
       scenarioId,
+      ...(layout ? { layout } : {}),
       ...(envelope === null ? {} : { envelope }),
       ...(openings === null ? {} : { openings }),
     };
@@ -88,16 +92,19 @@ function pairsText(pairs: Readonly<Record<string, number>> | undefined): string 
     .join(",");
 }
 
-/** The changes a scenario's scene asks the simulator for: its greenhouse's
- * dimensions (`envelope=`) and its openings (`open=`), or nothing. */
+/** The changes a scenario's scene asks the simulator for: another of its
+ * layouts (`layout=`), its greenhouse's dimensions (`envelope=`) and its
+ * openings (`open=`), or nothing. */
 function changesQuery(
   source: {
+    layout?: string;
     envelope?: Readonly<Record<string, number>>;
     openings?: Readonly<Record<string, number>>;
   },
   separator: "?" | "&",
 ): string {
   const parts = [
+    ["layout", encodeURIComponent(source.layout ?? "")],
     ["envelope", pairsText(source.envelope)],
     ["open", pairsText(source.openings)],
   ].filter(([, text]) => text !== "");

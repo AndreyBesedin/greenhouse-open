@@ -1,0 +1,976 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "BoxPrimitive": {
+      "additionalProperties": false,
+      "description": "A box standing on the floor or anything else: its base centred on\n`base`, turned about the vertical by `heading` radians from the\ngreenhouse's x.",
+      "properties": {
+        "fixture_id": {
+          "title": "Fixture Id",
+          "type": "string"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Material"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "obstructs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Obstruction"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Obstructs"
+        },
+        "primitive": {
+          "const": "box",
+          "default": "box",
+          "title": "Primitive",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FixtureKind",
+          "default": "obstacle"
+        },
+        "base": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "size_x": {
+          "exclusiveMinimum": 0,
+          "title": "Size X",
+          "type": "number"
+        },
+        "size_y": {
+          "exclusiveMinimum": 0,
+          "title": "Size Y",
+          "type": "number"
+        },
+        "size_z": {
+          "exclusiveMinimum": 0,
+          "title": "Size Z",
+          "type": "number"
+        },
+        "heading": {
+          "default": 0.0,
+          "title": "Heading",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fixture_id",
+        "base",
+        "size_x",
+        "size_y",
+        "size_z"
+      ],
+      "title": "BoxPrimitive",
+      "type": "object"
+    },
+    "CropRows": {
+      "additionalProperties": false,
+      "description": "Parallel rows of planting positions, in metres and radians.",
+      "properties": {
+        "origin": {
+          "$ref": "#/$defs/Point2"
+        },
+        "heading": {
+          "default": 0.0,
+          "title": "Heading",
+          "type": "number"
+        },
+        "rows": {
+          "exclusiveMinimum": 0,
+          "title": "Rows",
+          "type": "integer"
+        },
+        "positions_per_row": {
+          "exclusiveMinimum": 0,
+          "title": "Positions Per Row",
+          "type": "integer"
+        },
+        "plant_pitch": {
+          "exclusiveMinimum": 0,
+          "title": "Plant Pitch",
+          "type": "number"
+        },
+        "row_spacing": {
+          "exclusiveMinimum": 0,
+          "title": "Row Spacing",
+          "type": "number"
+        },
+        "pair_gap": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pair Gap"
+        },
+        "support": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RowSupport"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "rails": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RowRails"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "wires": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CropWires"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "origin",
+        "rows",
+        "positions_per_row",
+        "plant_pitch",
+        "row_spacing"
+      ],
+      "title": "CropRows",
+      "type": "object"
+    },
+    "CropWires": {
+      "additionalProperties": false,
+      "description": "A crop wire above each run of a row's positions, `height` above the\nfloor, which the plants are trained up to.",
+      "properties": {
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "number"
+        },
+        "radius": {
+          "default": 0.0025,
+          "exclusiveMinimum": 0,
+          "title": "Radius",
+          "type": "number"
+        }
+      },
+      "required": [
+        "height"
+      ],
+      "title": "CropWires",
+      "type": "object"
+    },
+    "CylinderPrimitive": {
+      "additionalProperties": false,
+      "description": "An upright cylinder, its base centred on `base`.",
+      "properties": {
+        "fixture_id": {
+          "title": "Fixture Id",
+          "type": "string"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Material"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "obstructs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Obstruction"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Obstructs"
+        },
+        "primitive": {
+          "const": "cylinder",
+          "default": "cylinder",
+          "title": "Primitive",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FixtureKind",
+          "default": "obstacle"
+        },
+        "base": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "radius": {
+          "exclusiveMinimum": 0,
+          "title": "Radius",
+          "type": "number"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fixture_id",
+        "base",
+        "radius",
+        "height"
+      ],
+      "title": "CylinderPrimitive",
+      "type": "object"
+    },
+    "FixtureKind": {
+      "description": "What a fixture is, for every consumer of its geometry.",
+      "enum": [
+        "crop_gutter",
+        "bench",
+        "slab",
+        "walkway",
+        "rail",
+        "pipe",
+        "wire",
+        "obstacle"
+      ],
+      "title": "FixtureKind",
+      "type": "string"
+    },
+    "Material": {
+      "description": "What a fixture, or a part of the envelope, is made of.",
+      "enum": [
+        "steel",
+        "aluminium",
+        "plastic",
+        "concrete",
+        "substrate"
+      ],
+      "title": "Material",
+      "type": "string"
+    },
+    "Obstruction": {
+      "description": "What a fixture stands in the way of.",
+      "enum": [
+        "movement",
+        "airflow",
+        "light"
+      ],
+      "title": "Obstruction",
+      "type": "string"
+    },
+    "PipePrimitive": {
+      "additionalProperties": false,
+      "description": "A straight pipe, its axis from `start` to `end`.",
+      "properties": {
+        "fixture_id": {
+          "title": "Fixture Id",
+          "type": "string"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Material"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "obstructs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Obstruction"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Obstructs"
+        },
+        "primitive": {
+          "const": "pipe",
+          "default": "pipe",
+          "title": "Primitive",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FixtureKind",
+          "default": "pipe"
+        },
+        "start": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "end": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "radius": {
+          "exclusiveMinimum": 0,
+          "title": "Radius",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fixture_id",
+        "start",
+        "end",
+        "radius"
+      ],
+      "title": "PipePrimitive",
+      "type": "object"
+    },
+    "PipeRunPrimitive": {
+      "additionalProperties": false,
+      "description": "Pipes repeated in parallel, such as heating pipes stacked along a wall:\nthe first from `start` to `end`, each next one `step` further on, `count`\nin all. Each is its own multiple of the step from the first, and is called\n`<fixture_id>_<n>`, from 1.",
+      "properties": {
+        "fixture_id": {
+          "title": "Fixture Id",
+          "type": "string"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Material"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "obstructs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Obstruction"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Obstructs"
+        },
+        "primitive": {
+          "const": "pipe_run",
+          "default": "pipe_run",
+          "title": "Primitive",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FixtureKind",
+          "default": "pipe"
+        },
+        "start": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "end": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "radius": {
+          "exclusiveMinimum": 0,
+          "title": "Radius",
+          "type": "number"
+        },
+        "count": {
+          "exclusiveMinimum": 0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "step": {
+          "$ref": "#/$defs/Vector3"
+        }
+      },
+      "required": [
+        "fixture_id",
+        "start",
+        "end",
+        "radius",
+        "count",
+        "step"
+      ],
+      "title": "PipeRunPrimitive",
+      "type": "object"
+    },
+    "Point2": {
+      "description": "A point in a shape's own x-y plane.",
+      "properties": {
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "title": "Point2",
+      "type": "object"
+    },
+    "Primitive": {
+      "discriminator": {
+        "mapping": {
+          "box": "#/$defs/BoxPrimitive",
+          "cylinder": "#/$defs/CylinderPrimitive",
+          "pipe": "#/$defs/PipePrimitive",
+          "pipe_run": "#/$defs/PipeRunPrimitive",
+          "rail": "#/$defs/RailPrimitive",
+          "tray": "#/$defs/TrayPrimitive",
+          "walkway": "#/$defs/WalkwayPrimitive"
+        },
+        "propertyName": "primitive"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/BoxPrimitive"
+        },
+        {
+          "$ref": "#/$defs/CylinderPrimitive"
+        },
+        {
+          "$ref": "#/$defs/PipePrimitive"
+        },
+        {
+          "$ref": "#/$defs/PipeRunPrimitive"
+        },
+        {
+          "$ref": "#/$defs/RailPrimitive"
+        },
+        {
+          "$ref": "#/$defs/TrayPrimitive"
+        },
+        {
+          "$ref": "#/$defs/WalkwayPrimitive"
+        }
+      ]
+    },
+    "RailPrimitive": {
+      "additionalProperties": false,
+      "description": "A rail of two parallel tubes, `gauge` apart from axis to axis, either\nside of its centre line from `start` to `end`. Its tubes are\n`<fixture_id>_right` and `<fixture_id>_left`, as seen looking along it.",
+      "properties": {
+        "fixture_id": {
+          "title": "Fixture Id",
+          "type": "string"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Material"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "obstructs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Obstruction"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Obstructs"
+        },
+        "primitive": {
+          "const": "rail",
+          "default": "rail",
+          "title": "Primitive",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FixtureKind",
+          "default": "rail"
+        },
+        "start": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "end": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "gauge": {
+          "exclusiveMinimum": 0,
+          "title": "Gauge",
+          "type": "number"
+        },
+        "tube_radius": {
+          "exclusiveMinimum": 0,
+          "title": "Tube Radius",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fixture_id",
+        "start",
+        "end",
+        "gauge",
+        "tube_radius"
+      ],
+      "title": "RailPrimitive",
+      "type": "object"
+    },
+    "RowRails": {
+      "additionalProperties": false,
+      "description": "A pipe rail in each path between neighbouring rows wide enough for it:\ntwo tubes `gauge` apart from axis to axis, their axes `height` above the\nfloor, along the rows. They are often the heating pipes too.",
+      "properties": {
+        "gauge": {
+          "exclusiveMinimum": 0,
+          "title": "Gauge",
+          "type": "number"
+        },
+        "tube_radius": {
+          "exclusiveMinimum": 0,
+          "title": "Tube Radius",
+          "type": "number"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "number"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Material"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "gauge",
+        "tube_radius",
+        "height"
+      ],
+      "title": "RowRails",
+      "type": "object"
+    },
+    "RowSupport": {
+      "additionalProperties": false,
+      "description": "What carries each crop row: a top along the row, its upper surface\n`height` above the floor, `width` across and `depth` thick, reaching\n`overhang` beyond the row's first and last positions, its centre line\n`offset` to the left of the row's. Legs stand under it at most\n`leg_spacing` apart, from the floor to its underside; without, it hangs\nfrom the structure above.",
+      "properties": {
+        "kind": {
+          "default": "crop_gutter",
+          "enum": [
+            "crop_gutter",
+            "bench"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "number"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "number"
+        },
+        "depth": {
+          "exclusiveMinimum": 0,
+          "title": "Depth",
+          "type": "number"
+        },
+        "overhang": {
+          "default": 0.25,
+          "minimum": 0,
+          "title": "Overhang",
+          "type": "number"
+        },
+        "offset": {
+          "default": 0.0,
+          "title": "Offset",
+          "type": "number"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Material"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "leg_spacing": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Leg Spacing"
+        },
+        "leg_radius": {
+          "default": 0.02,
+          "exclusiveMinimum": 0,
+          "title": "Leg Radius",
+          "type": "number"
+        },
+        "slab": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Slab"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "height",
+        "width",
+        "depth"
+      ],
+      "title": "RowSupport",
+      "type": "object"
+    },
+    "Slab": {
+      "additionalProperties": false,
+      "description": "Substrate laid along the top of a row's support.",
+      "properties": {
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "number"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "number"
+        },
+        "material": {
+          "$ref": "#/$defs/Material",
+          "default": "substrate"
+        }
+      },
+      "required": [
+        "width",
+        "height"
+      ],
+      "title": "Slab",
+      "type": "object"
+    },
+    "Strip": {
+      "additionalProperties": false,
+      "description": "A rectangle of the floor: a centre line from `start` to `end`, `width`\nwide.",
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/Point2"
+        },
+        "end": {
+          "$ref": "#/$defs/Point2"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "number"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "width"
+      ],
+      "title": "Strip",
+      "type": "object"
+    },
+    "TrayPrimitive": {
+      "additionalProperties": false,
+      "description": "An open tray, such as a crop gutter: `width` across and `depth` deep,\nits bottom's centre line from `start` to `end`. It may slope, as gutters\ndo to drain; it stays level across.",
+      "properties": {
+        "fixture_id": {
+          "title": "Fixture Id",
+          "type": "string"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Material"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "obstructs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Obstruction"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Obstructs"
+        },
+        "primitive": {
+          "const": "tray",
+          "default": "tray",
+          "title": "Primitive",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FixtureKind",
+          "default": "crop_gutter"
+        },
+        "start": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "end": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "number"
+        },
+        "depth": {
+          "exclusiveMinimum": 0,
+          "title": "Depth",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fixture_id",
+        "start",
+        "end",
+        "width",
+        "depth"
+      ],
+      "title": "TrayPrimitive",
+      "type": "object"
+    },
+    "Vector3": {
+      "properties": {
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        },
+        "z": {
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
+      "title": "Vector3",
+      "type": "object"
+    },
+    "WalkwayPrimitive": {
+      "additionalProperties": false,
+      "description": "A path on the floor, `width` wide, its centre line from `start` to\n`end`.",
+      "properties": {
+        "fixture_id": {
+          "title": "Fixture Id",
+          "type": "string"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Material"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "obstructs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Obstruction"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Obstructs"
+        },
+        "primitive": {
+          "const": "walkway",
+          "default": "walkway",
+          "title": "Primitive",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FixtureKind",
+          "default": "walkway"
+        },
+        "start": {
+          "$ref": "#/$defs/Point2"
+        },
+        "end": {
+          "$ref": "#/$defs/Point2"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fixture_id",
+        "start",
+        "end",
+        "width"
+      ],
+      "title": "WalkwayPrimitive",
+      "type": "object"
+    },
+    "Zone": {
+      "additionalProperties": false,
+      "description": "A service zone or keep-out volume: a strip of the floor, rising\n`height` above it.",
+      "properties": {
+        "zone_id": {
+          "title": "Zone Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ZoneKind"
+        },
+        "area": {
+          "$ref": "#/$defs/Strip"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "number"
+        }
+      },
+      "required": [
+        "zone_id",
+        "kind",
+        "area",
+        "height"
+      ],
+      "title": "Zone",
+      "type": "object"
+    },
+    "ZoneKind": {
+      "description": "What an area of the floor is kept for.",
+      "enum": [
+        "service",
+        "keep_out"
+      ],
+      "title": "ZoneKind",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "What stands inside a greenhouse, in metres, in its frame.",
+  "properties": {
+    "crop_rows": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CropRows"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "placed": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Primitive"
+      },
+      "title": "Placed",
+      "type": "array"
+    },
+    "zones": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Zone"
+      },
+      "title": "Zones",
+      "type": "array"
+    },
+    "$schema": {
+      "type": "string"
+    }
+  },
+  "title": "Layout",
+  "type": "object"
+}

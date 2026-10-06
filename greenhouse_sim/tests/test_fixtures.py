@@ -179,23 +179,30 @@ def test_a_walkway_lies_on_the_floor_at_its_width() -> None:
 
 
 @pytest.mark.parametrize(
-    "primitive",
+    ("primitive", "size"),
     [
-        PipePrimitive,
-        TrayPrimitive,
+        (PipePrimitive, {"radius": 0.1}),
+        (TrayPrimitive, {"width": 0.1, "depth": 0.1}),
     ],
 )
-def test_a_line_without_length_is_refused(primitive: type[PipePrimitive | TrayPrimitive]) -> None:
+def test_a_line_without_length_is_refused(
+    primitive: type[PipePrimitive | TrayPrimitive], size: dict[str, float]
+) -> None:
     point = Vector3(x=1.0, y=1.0, z=1.0)
     with pytest.raises(ValidationError, match="same point"):
-        primitive.model_validate(
+        primitive.model_validate({"fixture_id": "x", "start": point, "end": point, **size})
+
+
+def test_a_description_with_a_field_it_does_not_have_is_refused() -> None:
+    """A typo in a layout file is an error, not a silently ignored line."""
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        PipePrimitive.model_validate(
             {
                 "fixture_id": "x",
-                "start": point,
-                "end": point,
-                "radius": 0.1,
-                "width": 0.1,
-                "depth": 0.1,
+                "start": Vector3(x=0.0, y=0.0, z=0.3),
+                "end": Vector3(x=1.0, y=0.0, z=0.3),
+                "radius": 0.03,
+                "radious": 0.03,
             }
         )
 

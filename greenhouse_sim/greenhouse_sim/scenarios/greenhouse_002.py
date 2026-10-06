@@ -1,10 +1,8 @@
 from datetime import date
 
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.scenarios.layout_files import load_layout
 from greenhouse_sim.world.envelope import Envelope
-from greenhouse_sim.world.geometry import Point2
-from greenhouse_sim.world.layout import Layout
-from greenhouse_sim.world.rows import CropRows
 
 GREENHOUSE_002 = ScenarioConfig(
     greenhouse_id="gh_002",
@@ -18,14 +16,7 @@ GREENHOUSE_002 = ScenarioConfig(
     random_seed=2001,
     # A small house around its single plant.
     envelope=Envelope(length=4.0, width=3.2, eave_height=3.0, ridge_height=3.65),
-    # Its one planting position.
-    layout=Layout(
-        crop_rows=CropRows(
-            origin=Point2(x=0.5, y=1.6),
-            rows=1,
-            positions_per_row=1,
-            plant_pitch=0.5,
-            row_spacing=1.6,
-        )
-    ),
+    # Its layout (scenarios/layouts/gh_002/default.json): its one planting
+    # position, in the soil.
+    layout=load_layout("gh_002"),
 )
