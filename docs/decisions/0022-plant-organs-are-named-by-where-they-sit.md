@@ -28,9 +28,12 @@ stand.
 - Every organ records when it appeared as the plant's accumulated thermal
   time then; its thermal age follows. `topology_problems` states the
   structure's rules, and tests hold every plant to them.
-- Randomness follows a hierarchy: the simulation's seed, then the plant,
-  then, for an organ's own draws, the organ, then the process. One plant's
-  or organ's draws never depend on another's existence or order.
+- Randomness follows a hierarchy of identifiers under one seed. There is one
+  seed, the simulation's, and each draw's generator is derived from it and a
+  hash of the plant, then, for an organ's own draws, the organ, then the
+  process. One plant's or organ's draws never depend on another's existence
+  or order. The hash is of identifiers, never of state: a drawer's state
+  changes as it grows, and its draws must not.
 - The organ-level model (`greenhouse_sim.biology.tomato.organ`) is built and
   shown in a plant lab first: a service (`greenhouse_sim.services.plants`)
   and its routes, and a viewer page. It is not yet one of the engine's plant
