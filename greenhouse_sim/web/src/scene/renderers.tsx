@@ -51,6 +51,11 @@ export const RENDERERS: Record<
   GUTTER: (entity, look) => (
     <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} />
   ),
+  // Posts and rafters are cylinders, so they join the plants' instanced batch;
+  // this draws one on its own, when it is selected.
+  FRAME: (entity, look) => (
+    <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} />
+  ),
   PLANT: (entity, look) => (
     <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} />
   ),

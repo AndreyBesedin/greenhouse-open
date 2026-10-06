@@ -27,7 +27,7 @@ test("the example scene is drawn from its JSON file", async ({ page }) => {
   await page.goto("/?scene=example");
 
   await expect(page.getByTestId("scene-status")).toHaveText(
-    "Showing the example scene: gh_demo, day 9, 17 entities.",
+    "Showing the example scene: gh_demo, day 9, 41 entities.",
   );
   await expect.poll(() => objectCount(page)).toBeGreaterThan(referenceObjects);
   expect(errors).toEqual([]);
@@ -43,12 +43,12 @@ test("a scenario's scene comes from the simulator and stays chosen on refresh", 
 
   const status = page.getByTestId("scene-status");
   await expect(status).toHaveText(
-    "Showing the scenario gh_001, before day one: gh_001, day 0, 51 entities.",
+    "Showing the scenario gh_001, before day one: gh_001, day 0, 75 entities.",
   );
   await expect(page).toHaveURL(/\?scenario=gh_001$/);
   await page.reload();
   await expect(status).toHaveText(
-    "Showing the scenario gh_001, before day one: gh_001, day 0, 51 entities.",
+    "Showing the scenario gh_001, before day one: gh_001, day 0, 75 entities.",
   );
   expect(errors).toEqual([]);
 });

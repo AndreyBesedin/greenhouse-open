@@ -16,16 +16,24 @@ semantic category. Walls are named as seen from the greenhouse's origin,
 looking along its length (+x): the right side wall stands along y = 0, the
 left along y = width, the front end wall at x = 0 and the back at x = length.
 
-The roof is pitched: the side walls rise to the eaves, and two roof slopes
-meet at the ridge, which runs along the length above the middle of the width.
-The end walls are gables, up to the ridge. A gutter runs along each eave.
+The width is divided into spans, side by side, each with a pitched roof of its
+own: two slopes meeting at a ridge along the length, above the middle of the
+span. The side walls rise to the eaves, and the end walls are gables, with a
+peak for each span. Gutters run along both eaves and along each valley between
+spans. Spans are numbered from the right side wall (y = 0), starting at 1.
+
+The length is divided into bays. A structural frame stands at each end of
+every bay: a post at every gutter line, from the floor to the eaves, and a
+rafter up each roof slope. Frames are numbered from the front end wall (x = 0),
+starting at 0, and each is placed at its own multiple of the bay spacing, so
+nothing drifts along the house.
 """
 
 import math
 from enum import StrEnum
 from typing import Self
 
-from pydantic import BaseModel, ConfigDict, PositiveFloat, model_validator
+from pydantic import BaseModel, ConfigDict, PositiveFloat, PositiveInt, model_validator
 
 from greenhouse_sim.world.geometry import Plane, Point2, Polygon, Quaternion, Transform, Vector3
 
@@ -70,6 +78,26 @@ class Gutter(BaseModel):
     end: Vector3
 
 
+class MemberKind(StrEnum):
+    """What a structural member is."""
+
+    POST = "post"
+    RAFTER = "rafter"
+
+
+class Member(BaseModel):
+    """A structural member's line, from its foot to its head, in the
+    greenhouse's frame."""
+
+    model_config = ConfigDict(frozen=True)
+
+    member_id: str
+    kind: MemberKind
+    frame: int
+    start: Vector3
+    end: Vector3
+
+
 def _surface(
     surface_id: str,
     category: SurfaceCategory,
@@ -94,13 +122,17 @@ class Envelope(BaseModel):
 
     # Along the greenhouse's x.
     length: PositiveFloat
-    # Along the greenhouse's y.
+    # Along the greenhouse's y, across all its spans.
     width: PositiveFloat
-    # From the floor to the eaves, where the side walls meet the roof.
+    # From the floor to the eaves, where the walls and gutters meet the roof.
     eave_height: PositiveFloat
-    # From the floor to the ridge, the roof's highest line. A ridge as high as
-    # the eaves makes a flat roof.
+    # From the floor to each span's ridge, the roof's highest line. A ridge as
+    # high as the eaves makes a flat roof.
     ridge_height: PositiveFloat
+    # Spans side by side across the width, each as wide as the others.
+    spans: PositiveInt = 1
+    # Bays one after another along the length, each as long as the others.
+    bays: PositiveInt = 1
     # Places the greenhouse's frame in the world.
     origin: Transform = AT_WORLD_ORIGIN
 
@@ -113,9 +145,17 @@ class Envelope(BaseModel):
         return self
 
     @property
+    def span_width(self) -> float:
+        return self.width / self.spans
+
+    @property
+    def bay_spacing(self) -> float:
+        return self.length / self.bays
+
+    @property
     def roof_pitch(self) -> float:
         """The roof's slope from the eaves to the ridge, in radians."""
-        return math.atan2(self.ridge_height - self.eave_height, self.width / 2)
+        return math.atan2(self.ridge_height - self.eave_height, self.span_width / 2)
 
     def bounds(self) -> tuple[Vector3, Vector3]:
         """The enclosed space's opposite corners, in the greenhouse's frame."""
@@ -128,36 +168,42 @@ class Envelope(BaseModel):
         """Where a point given in the greenhouse's frame lies in the world."""
         return self.origin.apply(point)
 
+    def _span_edge(self, index: int) -> float:
+        """Where span `index` (counted from 0) starts across the width. Each
+        edge is its own multiple of the span width, so none drifts."""
+        return self.width * index / self.spans
+
+    def _frame_position(self, frame: int) -> float:
+        """Where frame `frame` stands along the length, as its own multiple."""
+        return self.length * frame / self.bays
+
     def surfaces(self) -> list[Surface]:
-        """The floor, the four walls and the two roof slopes, in the
+        """The floor, the four walls and two roof slopes per span, in the
         greenhouse's frame. Together they close the greenhouse."""
         length, width = self.length, self.width
         eave, ridge = self.eave_height, self.ridge_height
-        half_width = width / 2
+        half_span = self.span_width / 2
         rise = ridge - eave
-        slope = math.hypot(half_width, rise)
-        # The end walls' gable, from its bottom corner along the width, then up.
-        gable = Polygon(
-            points=[
-                Point2(x=0.0, y=0.0),
-                Point2(x=width, y=0.0),
-                Point2(x=width, y=eave),
-                Point2(x=half_width, y=ridge),
-                Point2(x=0.0, y=eave),
-            ]
-        )
+        slope = math.hypot(half_span, rise)
+        # The end walls' gable, from its bottom corner along the width, up the
+        # far side, then back over each span's peak and the valleys between.
+        tops = [Point2(x=width, y=eave)]
+        for index in reversed(range(self.spans)):
+            tops.append(Point2(x=self._span_edge(index) + half_span, y=ridge))
+            tops.append(Point2(x=self._span_edge(index), y=eave))
+        gable = Polygon(points=[Point2(x=0.0, y=0.0), Point2(x=width, y=0.0), *tops])
         side = Plane(size_x=length, size_y=eave)
         roof = Plane(size_x=length, size_y=slope)
         # Up each roof slope, from its eave to the ridge.
-        up_right_slope = Vector3(x=0.0, y=half_width / slope, z=rise / slope)
-        up_left_slope = Vector3(x=0.0, y=-half_width / slope, z=rise / slope)
+        up_right_slope = Vector3(x=0.0, y=half_span / slope, z=rise / slope)
+        up_left_slope = Vector3(x=0.0, y=-half_span / slope, z=rise / slope)
         mid_slope = (eave + ridge) / 2
-        wall, roof_slope = SurfaceCategory.WALL, SurfaceCategory.ROOF
-        return [
+        wall = SurfaceCategory.WALL
+        surfaces = [
             _surface(
                 "floor",
                 SurfaceCategory.FLOOR,
-                Vector3(x=length / 2, y=half_width, z=0.0),
+                Vector3(x=length / 2, y=width / 2, z=0.0),
                 (_ALONG, _ACROSS),
                 Plane(size_x=length, size_y=width),
             ),
@@ -183,21 +229,29 @@ class Envelope(BaseModel):
                 (_BACK_ACROSS, _UP),
                 gable,
             ),
-            _surface(
-                "roof_right",
-                roof_slope,
-                Vector3(x=length / 2, y=half_width / 2, z=mid_slope),
-                (_BACK_ALONG, up_right_slope),
-                roof,
-            ),
-            _surface(
-                "roof_left",
-                roof_slope,
-                Vector3(x=length / 2, y=width - half_width / 2, z=mid_slope),
-                (_ALONG, up_left_slope),
-                roof,
-            ),
         ]
+        for index in range(self.spans):
+            span_start = self._span_edge(index)
+            number = index + 1
+            surfaces += [
+                _surface(
+                    f"roof_{number}_right",
+                    SurfaceCategory.ROOF,
+                    Vector3(x=length / 2, y=span_start + half_span / 2, z=mid_slope),
+                    (_BACK_ALONG, up_right_slope),
+                    roof,
+                ),
+                _surface(
+                    f"roof_{number}_left",
+                    SurfaceCategory.ROOF,
+                    Vector3(
+                        x=length / 2, y=span_start + self.span_width - half_span / 2, z=mid_slope
+                    ),
+                    (_ALONG, up_left_slope),
+                    roof,
+                ),
+            ]
+        return surfaces
 
     def surfaces_in_world(self) -> list[Surface]:
         """The same surfaces, placed in the world by the greenhouse's origin."""
@@ -207,17 +261,48 @@ class Envelope(BaseModel):
         ]
 
     def gutters(self) -> list[Gutter]:
-        """A gutter along each eave, the length of the greenhouse."""
+        """A gutter along each eave and each valley, the length of the
+        greenhouse, numbered from the right side wall starting at 0."""
         eave = self.eave_height
         return [
             Gutter(
-                gutter_id="gutter_right",
-                start=Vector3(x=0.0, y=0.0, z=eave),
-                end=Vector3(x=self.length, y=0.0, z=eave),
-            ),
-            Gutter(
-                gutter_id="gutter_left",
-                start=Vector3(x=0.0, y=self.width, z=eave),
-                end=Vector3(x=self.length, y=self.width, z=eave),
-            ),
+                gutter_id=f"gutter_{index}",
+                start=Vector3(x=0.0, y=self._span_edge(index), z=eave),
+                end=Vector3(x=self.length, y=self._span_edge(index), z=eave),
+            )
+            for index in range(self.spans + 1)
         ]
+
+    def members(self) -> list[Member]:
+        """The structural frames: at every bay line, a post at every gutter
+        line and a rafter up each roof slope, from the eaves to the ridge."""
+        eave, ridge = self.eave_height, self.ridge_height
+        half_span = self.span_width / 2
+        members: list[Member] = []
+        for frame in range(self.bays + 1):
+            x = self._frame_position(frame)
+            for index in range(self.spans + 1):
+                y = self._span_edge(index)
+                members.append(
+                    Member(
+                        member_id=f"frame_{frame}_post_{index}",
+                        kind=MemberKind.POST,
+                        frame=frame,
+                        start=Vector3(x=x, y=y, z=0.0),
+                        end=Vector3(x=x, y=y, z=eave),
+                    )
+                )
+            for index in range(self.spans):
+                span_start = self._span_edge(index)
+                ridge_point = Vector3(x=x, y=span_start + half_span, z=ridge)
+                for side, foot in (("right", span_start), ("left", self._span_edge(index + 1))):
+                    members.append(
+                        Member(
+                            member_id=f"frame_{frame}_rafter_{index + 1}_{side}",
+                            kind=MemberKind.RAFTER,
+                            frame=frame,
+                            start=Vector3(x=x, y=foot, z=eave),
+                            end=ridge_point,
+                        )
+                    )
+        return members

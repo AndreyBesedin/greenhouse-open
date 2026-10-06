@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scene.snapshot import SceneEntityKind, scene_snapshot
-from greenhouse_sim.world.envelope import Envelope, Surface, SurfaceCategory
+from greenhouse_sim.world.envelope import Envelope, MemberKind, Surface, SurfaceCategory
 from greenhouse_sim.world.geometry import Quaternion, Transform, Vector3
 
 # A quarter turn about the world's z: x turns onto y, and y onto -x.
@@ -102,10 +102,18 @@ def test_known_points_of_a_placed_greenhouse_land_where_they_should() -> None:
     assert _close(placed.to_world(Vector3(x=24, y=12.8, z=7.9)), Vector3(x=87.2, y=74, z=7.9))
 
 
-@pytest.mark.parametrize("field", ["length", "width", "eave_height", "ridge_height"])
+@pytest.mark.parametrize(
+    "field", ["length", "width", "eave_height", "ridge_height", "spans", "bays"]
+)
 @pytest.mark.parametrize("size", [0.0, -1.0])
 def test_an_envelope_without_room_is_refused(field: str, size: float) -> None:
-    sizes = {"length": 24.0, "width": 12.8, "eave_height": 5.5, "ridge_height": 7.9, field: size}
+    sizes: dict[str, float] = {
+        "length": 24.0,
+        "width": 12.8,
+        "eave_height": 5.5,
+        "ridge_height": 7.9,
+        field: size,
+    }
 
     with pytest.raises(ValidationError):
         Envelope(**sizes)
@@ -144,8 +152,8 @@ def test_the_envelope_has_a_floor_four_walls_and_two_roof_slopes() -> None:
         ("side_wall_left", SurfaceCategory.WALL),
         ("end_wall_front", SurfaceCategory.WALL),
         ("end_wall_back", SurfaceCategory.WALL),
-        ("roof_right", SurfaceCategory.ROOF),
-        ("roof_left", SurfaceCategory.ROOF),
+        ("roof_1_right", SurfaceCategory.ROOF),
+        ("roof_1_left", SurfaceCategory.ROOF),
     ]
 
 
@@ -179,13 +187,13 @@ def test_each_surface_has_the_corners_the_configuration_gives_it() -> None:
             (x, middle, ridge),
             (x, 0, eave),
         }
-    assert corners("roof_right") == {
+    assert corners("roof_1_right") == {
         (0, 0, eave),
         (length, 0, eave),
         (length, middle, ridge),
         (0, middle, ridge),
     }
-    assert corners("roof_left") == {
+    assert corners("roof_1_left") == {
         (0, width, eave),
         (length, width, eave),
         (length, middle, ridge),
@@ -218,11 +226,11 @@ def test_every_surface_faces_into_the_greenhouse() -> None:
         assert reach > 0, surface.surface_id
 
 
-@pytest.mark.parametrize("ridge_height", [7.9, 5.5])
-def test_the_surfaces_close_the_greenhouse(ridge_height: float) -> None:
+@pytest.mark.parametrize(("ridge_height", "spans"), [(7.9, 1), (5.5, 1), (7.9, 2), (6.2, 5)])
+def test_the_surfaces_close_the_greenhouse(ridge_height: float, spans: int) -> None:
     """No gaps: every edge of every surface is shared with exactly one other,
-    for a pitched roof and for a flat one."""
-    house = HOUSE.model_copy(update={"ridge_height": ridge_height})
+    for a pitched roof and a flat one, of one span and of several."""
+    house = HOUSE.model_copy(update={"ridge_height": ridge_height, "spans": spans})
     shared: dict[frozenset[Point], int] = {}
     for surface in house.surfaces():
         for edge in _edges(surface):
@@ -245,7 +253,7 @@ def test_the_surfaces_follow_the_envelopes_dimensions(
 
     assert max(z for _, _, z in _outline(surfaces["end_wall_back"])) == ridge_height
     assert max(z for _, _, z in _outline(surfaces["side_wall_right"])) == eave_height
-    assert max(x for x, _, _ in _outline(surfaces["roof_left"])) == length
+    assert max(x for x, _, _ in _outline(surfaces["roof_1_left"])) == length
     assert max(y for _, y, _ in _outline(surfaces["floor"])) == width
 
 
@@ -253,12 +261,12 @@ def test_a_gutter_runs_along_each_eave() -> None:
     right, left = HOUSE.gutters()
 
     assert (right.gutter_id, right.start, right.end) == (
-        "gutter_right",
+        "gutter_0",
         Vector3(x=0, y=0, z=5.5),
         Vector3(x=24.0, y=0, z=5.5),
     )
     assert (left.gutter_id, left.start, left.end) == (
-        "gutter_left",
+        "gutter_1",
         Vector3(x=0, y=12.8, z=5.5),
         Vector3(x=24.0, y=12.8, z=5.5),
     )
@@ -278,3 +286,75 @@ def test_a_placed_greenhouse_places_its_surfaces() -> None:
     # width along its -x.
     assert _close(floor.transform.position, Vector3(x=100 - 6.4, y=50 + 12, z=0))
     assert _close(floor.transform.rotation.rotate(Vector3(x=1, y=0, z=0)), Vector3(x=0, y=1, z=0))
+
+
+# Five 9.6 m spans and twelve 4.5 m bays: a greenhouse of commercial proportions.
+VENLO = Envelope(length=54.0, width=48.0, eave_height=6.0, ridge_height=7.0, spans=5, bays=12)
+
+
+def test_each_span_has_its_own_roof_and_ridge() -> None:
+    surfaces = _by_id(VENLO)
+    roofs = [surface for surface in VENLO.surfaces() if surface.category == SurfaceCategory.ROOF]
+
+    assert len(roofs) == 2 * VENLO.spans
+    for number in range(1, VENLO.spans + 1):
+        ridge_y = 9.6 * (number - 1) + 4.8
+        outline = set(_outline(surfaces[f"roof_{number}_right"]))
+        assert (0, round(ridge_y, 6), 7.0) in outline
+        assert (0, round(9.6 * (number - 1), 6), 6.0) in outline
+
+
+def test_the_gable_has_a_peak_per_span_and_a_valley_between() -> None:
+    gable = _outline(_by_id(VENLO)["end_wall_front"])
+    tops = sorted((y, z) for _, y, z in gable if z > 0)
+
+    assert [z for _, z in tops] == [6.0, 7.0] * VENLO.spans + [6.0]
+    assert VENLO.roof_pitch == pytest.approx(math.atan2(1.0, 4.8))
+
+
+def test_a_gutter_runs_along_each_eave_and_each_valley() -> None:
+    gutters = VENLO.gutters()
+
+    assert [gutter.start.y for gutter in gutters] == pytest.approx([0, 9.6, 19.2, 28.8, 38.4, 48])
+    assert all(gutter.start.z == gutter.end.z == 6.0 for gutter in gutters)
+    assert all((gutter.start.x, gutter.end.x) == (0, 54.0) for gutter in gutters)
+
+
+@pytest.mark.parametrize("bays", [1, 3, 12, 37])
+def test_each_bay_count_gives_one_frame_more_than_its_bays(bays: int) -> None:
+    house = VENLO.model_copy(update={"bays": bays})
+    members = house.members()
+    frames = sorted({member.frame for member in members})
+
+    assert frames == list(range(bays + 1))
+    posts = [member for member in members if member.kind == MemberKind.POST]
+    rafters = [member for member in members if member.kind == MemberKind.RAFTER]
+    assert len(posts) == (bays + 1) * (house.spans + 1)
+    assert len(rafters) == (bays + 1) * 2 * house.spans
+
+
+@pytest.mark.parametrize("bays", [3, 7, 37, 1000])
+def test_frames_do_not_drift_along_the_house(bays: int) -> None:
+    """Each frame stands at exactly its own multiple of the bay spacing, never
+    at a sum of spacings, which gathers rounding error along the house: the
+    last stands exactly at the back wall, however many bays."""
+    house = VENLO.model_copy(update={"bays": bays})
+    xs = sorted({member.start.x for member in house.members()})
+
+    assert xs == [house.length * k / bays for k in range(bays + 1)]
+    assert xs[-1] == house.length
+
+
+def test_posts_stand_on_the_gutter_lines_and_rafters_climb_to_the_ridges() -> None:
+    gutter_lines = {round(gutter.start.y, 6) for gutter in VENLO.gutters()}
+    ridges = {round(9.6 * index + 4.8, 6) for index in range(VENLO.spans)}
+
+    for member in VENLO.members():
+        if member.kind == MemberKind.POST:
+            assert (member.start.z, member.end.z) == (0.0, 6.0)
+            assert round(member.start.y, 6) in gutter_lines
+        else:
+            assert (member.start.z, member.end.z) == (6.0, 7.0)
+            assert round(member.start.y, 6) in gutter_lines
+            assert round(member.end.y, 6) in ridges
+            assert member.start.x == member.end.x

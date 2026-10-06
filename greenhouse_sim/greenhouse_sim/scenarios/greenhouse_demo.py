@@ -23,8 +23,8 @@ GREENHOUSE_DEMO = ScenarioConfig(
     start_date=date(2026, 1, 1),
     duration_days=15,
     random_seed=4242,
-    # Room around its two rows of three plants.
-    envelope=Envelope(length=4.0, width=6.4, eave_height=3.0, ridge_height=4.3),
+    # Room around its two rows of three plants: two 3.2 m spans, two 2 m bays.
+    envelope=Envelope(length=4.0, width=6.4, eave_height=3.0, ridge_height=3.65, spans=2, bays=2),
     truss_interval_days=3,
     ripening_days_bounds=(4, 7),
 )

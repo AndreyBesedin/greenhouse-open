@@ -68,8 +68,10 @@ def test_a_scene_holds_the_greenhouse_the_axes_and_every_plant() -> None:
 
     assert kinds.count(SceneEntityKind.FLOOR) == 1
     assert kinds.count(SceneEntityKind.WALL) == 4
-    assert kinds.count(SceneEntityKind.ROOF) == 2
-    assert kinds.count(SceneEntityKind.GUTTER) == 2
+    spans, bays = CONFIG.envelope.spans, CONFIG.envelope.bays
+    assert kinds.count(SceneEntityKind.ROOF) == 2 * spans
+    assert kinds.count(SceneEntityKind.GUTTER) == spans + 1
+    assert kinds.count(SceneEntityKind.FRAME) == (bays + 1) * (spans + 1 + 2 * spans)
     assert kinds.count(SceneEntityKind.GREENHOUSE_BOUNDS) == 1
     assert kinds.count(SceneEntityKind.AXES) == 1
     assert SceneEntityKind.GROUND not in kinds
@@ -210,7 +212,7 @@ def test_the_floor_and_walls_are_the_envelopes_surfaces_in_the_world() -> None:
 def test_a_gutter_is_a_channel_along_its_eave_with_its_top_at_the_eave() -> None:
     envelope = CONFIG.envelope
     entities = {entity.entity_id: entity for entity in scene_snapshot(_world(), CONFIG).entities}
-    gutter = entities["gh_001_gutter_left"]
+    gutter = entities[f"gh_001_gutter_{envelope.spans}"]
 
     assert gutter.kind == SceneEntityKind.GUTTER
     assert isinstance(gutter.shape, Box)
@@ -218,3 +220,16 @@ def test_a_gutter_is_a_channel_along_its_eave_with_its_top_at_the_eave() -> None
     position = gutter.transform.position
     assert (position.x, position.y) == pytest.approx((envelope.length / 2, envelope.width))
     assert position.z + gutter.shape.size_z == pytest.approx(envelope.eave_height)
+
+
+def test_a_structural_member_is_a_cylinder_from_its_foot_to_its_head() -> None:
+    envelope = CONFIG.envelope
+    entities = {entity.entity_id: entity for entity in scene_snapshot(_world(), CONFIG).entities}
+
+    for member in envelope.members():
+        entity = entities[f"gh_001_{member.member_id}"]
+        assert entity.kind == SceneEntityKind.FRAME
+        assert isinstance(entity.shape, Cylinder)
+        head = entity.transform.apply(Vector3(x=0.0, y=0.0, z=entity.shape.height))
+        assert (head.x, head.y, head.z) == pytest.approx((member.end.x, member.end.y, member.end.z))
+        assert entity.transform.position == member.start
