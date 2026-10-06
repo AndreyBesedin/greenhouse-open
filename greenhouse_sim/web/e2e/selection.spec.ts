@@ -7,8 +7,9 @@ import { clickAt, clickSky, onScreen, selectAt } from "./view";
 // it in live scenes, where young plants are shorter.
 const EXAMPLE_PLANT = { x: 0.5, y: 1.6, z: 0.15 };
 const LIVE_PLANT = { x: 0.5, y: 1.6, z: 0.1 };
-// gh_001's first plant, on the first of its rows centred in its greenhouse.
-const STILL_PLANT = { x: 1.75, y: 2.4, z: 0.1 };
+// gh_001's first plant, on the first of its rows centred in its greenhouse,
+// low on its stem above its gutter's slab.
+const STILL_PLANT = { x: 1.75, y: 2.4, z: 0.775 };
 // A point on the example scene's floor, clear of the plants.
 const EXAMPLE_FLOOR = { x: 1.0, y: 4.0, z: 0 };
 // live.spec.ts and controls.spec.ts drive gh_demo and gh_002; this file

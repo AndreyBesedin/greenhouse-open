@@ -14,6 +14,8 @@ export type SceneEntityKind =
   | "DOOR"
   | "PLANTING_POSITION"
   | "CROP_GUTTER"
+  | "BENCH"
+  | "SLAB"
   | "WALKWAY"
   | "RAIL"
   | "PIPE"
@@ -23,7 +25,7 @@ export type Shape = Plane | Cylinder | Box | Polygon | Axes;
 /**
  * What a fixture, or a part of the envelope, is made of.
  */
-export type Material = "steel" | "aluminium" | "plastic" | "concrete";
+export type Material = "steel" | "aluminium" | "plastic" | "concrete" | "substrate";
 
 /**
  * One greenhouse at one simulated day, as a viewer draws it. Positions

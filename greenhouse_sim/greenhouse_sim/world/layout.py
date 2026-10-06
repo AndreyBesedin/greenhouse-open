@@ -41,8 +41,10 @@ class Layout(BaseModel):
         return self
 
     def fixtures(self) -> list[Fixture]:
-        """Every fixture the layout describes, in the greenhouse's frame."""
-        return [fixture for primitive in self.placed for fixture in primitive.fixtures()]
+        """Every fixture the layout describes, in the greenhouse's frame: what
+        carries its rows, then what is placed one by one."""
+        rows = [] if self.crop_rows is None else self.crop_rows.fixtures()
+        return rows + [fixture for primitive in self.placed for fixture in primitive.fixtures()]
 
     def planting_positions(self) -> list[PlantingPosition]:
         """Every planting position, row by row, in the greenhouse's frame."""
