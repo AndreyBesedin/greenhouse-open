@@ -24,6 +24,9 @@ check; a route that comes to need one checks it first.
                                           far its doors and vents stand open
     GET /api/scenarios/{id}/layout        a scenario's layout, as its file holds
                                           it; ?layout=benches another of them
+    GET /api/plants/scene                 the plant lab's scene: tomato plants from
+                                          the organ-level model
+    GET /api/plants/structure             the lab's plant, organ by organ
     GET /api/scenarios/{id}/live          the scenario played live, as Server-Sent
                                           Events (served by `server`, found by
                                           `live_stream`)
@@ -38,7 +41,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from pydantic import BaseModel
 
-from greenhouse_sim.services import scenarios, system
+from greenhouse_sim.services import plants, scenarios, system
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.live import InvalidSpeed, LiveCommand, LiveRun, LiveRuns
 
@@ -71,6 +74,10 @@ def respond(method: str, path: str) -> Response:
             return _answer(system.version)
         case ["api", "scenarios"]:
             return _answer(scenarios.scenario_summaries)
+        case ["api", "plants", "scene"]:
+            return _answer(plants.scene)
+        case ["api", "plants", "structure"]:
+            return _answer(plants.structure)
         case ["api", "scenarios", scenario_id, "scene"]:
             return _answer(lambda: scenarios.initial_scene(scenario_id, _scene_changes(query)))
         case ["api", "scenarios", scenario_id, "layout"]:

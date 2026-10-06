@@ -88,6 +88,13 @@ export const RENDERERS: Record<
   PIPE: solid,
   WIRE: solid,
   OBSTACLE: solid,
+  // A plant organ by organ: stems and leaves are cylinders, drawn in
+  // instanced batches; flowers and fruits are spheres.
+  INTERNODE: solid,
+  LEAF: solid,
+  TRUSS: solid,
+  FLOWER: solid,
+  FRUIT: solid,
   PLANT: (entity, look) => (
     <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} />
   ),

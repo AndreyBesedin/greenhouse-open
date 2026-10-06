@@ -7,6 +7,7 @@ import {
   FrontSide,
   PlaneGeometry,
   ShapeGeometry,
+  SphereGeometry,
   SRGBColorSpace,
   Color as ThreeColor,
   Shape as ThreeShape,
@@ -14,10 +15,21 @@ import {
 } from "three";
 
 import { SELECTION_COLOR } from "../debug/overlays";
-import type { Box, Color, Cylinder, Plane, Polygon, Shape } from "./generated/snapshotTypes";
+import type {
+  Box,
+  Color,
+  Cylinder,
+  Plane,
+  Polygon,
+  Shape,
+  Sphere,
+} from "./generated/snapshotTypes";
 
 // Enough sides for a stem to read as round at greenhouse distances.
 const CYLINDER_SIDES = 24;
+// Enough facets for a fruit to read as round at a plant's distance.
+const SPHERE_WIDTH_SEGMENTS = 16;
+const SPHERE_HEIGHT_SEGMENTS = 12;
 // A quarter turn about x stands Three.js's y-aligned cylinder up along z.
 const STAND_UP: [number, number, number] = [Math.PI / 2, 0, 0];
 // Structural metal: somewhat shiny, without the environment map that full
@@ -44,10 +56,13 @@ export function flatGeometry(shape: Box | Plane | Polygon): BufferGeometry {
   }
 }
 
-/** A box or cylinder as Three.js geometry, standing on its base at the
- * shape's origin and rising along +z, as `world/geometry.py` stands them. */
-export function solidGeometry(shape: Box | Cylinder): BufferGeometry {
+/** A box, cylinder or sphere as Three.js geometry, as `world/geometry.py`
+ * places them: a box or cylinder standing on its base at the shape's origin
+ * and rising along +z, a sphere centred on it. */
+export function solidGeometry(shape: Box | Cylinder | Sphere): BufferGeometry {
   switch (shape.shape) {
+    case "sphere":
+      return new SphereGeometry(shape.radius, SPHERE_WIDTH_SEGMENTS, SPHERE_HEIGHT_SEGMENTS);
     case "box":
       return new BoxGeometry(shape.size_x, shape.size_y, shape.size_z).translate(
         0,
@@ -61,8 +76,16 @@ export function solidGeometry(shape: Box | Cylinder): BufferGeometry {
   }
 }
 
-/** A box or cylinder, drawn from the front. */
-function SolidMesh({ shape, color, glow }: { shape: Box | Cylinder; color: Color; glow: object }) {
+/** A box, cylinder or sphere, drawn from the front. */
+function SolidMesh({
+  shape,
+  color,
+  glow,
+}: {
+  shape: Box | Cylinder | Sphere;
+  color: Color;
+  glow: object;
+}) {
   const geometry = useMemo(() => solidGeometry(shape), [shape]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   return (
@@ -129,6 +152,7 @@ export function ShapeMesh({
       );
     case "cylinder":
     case "box":
+    case "sphere":
       return <SolidMesh shape={shape} color={color} glow={glow} />;
     case "polygon":
       return <PolygonMesh shape={shape} color={color} glow={glow} />;

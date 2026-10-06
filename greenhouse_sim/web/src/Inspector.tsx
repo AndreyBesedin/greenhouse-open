@@ -26,6 +26,8 @@ export function describeShape(shape: Shape): string {
       return `box, ${formatMetres(shape.size_x)} × ${formatMetres(shape.size_y)} × ${formatMetres(shape.size_z)} m`;
     case "polygon":
       return `polygon, ${shape.points.length} corners`;
+    case "sphere":
+      return `sphere, radius ${formatMetres(shape.radius)} m`;
     case "axes":
       return `axes, ${formatMetres(shape.length)} m`;
   }
@@ -46,6 +48,8 @@ export function describeDimensions(entity: SceneEntity): string | null {
     }
     case "plane":
       return `${formatMetres(shape.size_x)} × ${formatMetres(shape.size_y)} m`;
+    case "sphere":
+      return `diameter ${formatMetres(2 * shape.radius)} m`;
     case "polygon":
     case "axes":
       return null;

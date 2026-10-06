@@ -225,6 +225,36 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* The plant lab's debug tree: an organ per line, scrolling on its own. */
+.plant-structure {
+  max-height: 40vh;
+  margin: 0 0 8px;
+  overflow: auto;
+}
+
+.plant-structure ul {
+  margin: 0;
+  padding-left: 14px;
+  list-style: none;
+}
+
+.plant-structure .organ-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #1f5fbf;
+  font: inherit;
+  cursor: pointer;
+}
+
+.plant-structure .organ-link[aria-pressed="true"] {
+  font-weight: 600;
+}
+
+.plant-structure .organ-detail {
+  color: #555555;
+}
+
 /* The panels stand in two columns at the sides of the view: the info panel
  * above the inspector on the left, the HUD above the legends on the right.
  * A column shares its height among its panels, which scroll rather than

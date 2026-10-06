@@ -56,7 +56,8 @@ greenhouse_sim/
     evaluation/    scoring against ground truth, its only reader
     scene/         the world as a renderable scene for a viewer
     services/      what the simulator does for a client: scenarios, scenes,
-                   layouts and live runs, independent of any transport
+                   layouts, live runs and the plant lab, independent of any
+                   transport
     api/           a thin local HTTP API for the viewer (adapter): the
                    interface to the services
   web/             the browser viewer (adapter, not part of the wheel)

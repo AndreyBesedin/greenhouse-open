@@ -23,8 +23,13 @@ export type SceneEntityKind =
   | "PIPE"
   | "WIRE"
   | "OBSTACLE"
-  | "PLANT";
-export type Shape = Plane | Cylinder | Box | Polygon | Axes;
+  | "PLANT"
+  | "INTERNODE"
+  | "LEAF"
+  | "TRUSS"
+  | "FLOWER"
+  | "FRUIT";
+export type Shape = Plane | Cylinder | Box | Polygon | Sphere | Axes;
 /**
  * What a fixture, or a part of the envelope, is made of.
  */
@@ -120,6 +125,14 @@ export interface Polygon {
 export interface Point2 {
   x: number;
   y: number;
+}
+/**
+ * A sphere centred on its frame's origin, such as a flower bud or a
+ * fruit.
+ */
+export interface Sphere {
+  shape: "sphere";
+  radius: number;
 }
 /**
  * A reference marker: one arrow from the origin along each of +x, +y and

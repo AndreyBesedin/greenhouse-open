@@ -202,6 +202,16 @@ class Polygon(BaseModel):
     points: list[Point2] = Field(min_length=3)
 
 
+class Sphere(BaseModel):
+    """A sphere centred on its frame's origin, such as a flower bud or a
+    fruit."""
+
+    model_config = ConfigDict(frozen=True, json_schema_serialization_defaults_required=True)
+
+    shape: Literal["sphere"] = "sphere"
+    radius: PositiveFloat
+
+
 class Axes(BaseModel):
     """A reference marker: one arrow from the origin along each of +x, +y and
     +z."""
@@ -212,4 +222,6 @@ class Axes(BaseModel):
     length: PositiveFloat
 
 
-type Shape = Annotated[Plane | Cylinder | Box | Polygon | Axes, Field(discriminator="shape")]
+type Shape = Annotated[
+    Plane | Cylinder | Box | Polygon | Sphere | Axes, Field(discriminator="shape")
+]
