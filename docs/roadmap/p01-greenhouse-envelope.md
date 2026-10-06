@@ -40,7 +40,7 @@ around it.
 | P01.1 | `feat(world): define the greenhouse's origin, axes and bounds` | Done ([#28](https://github.com/AndreyBesedin/greenhouse-open/pull/28)) |
 | P01.2 | `feat(greenhouse): generate the floor and a rectangular envelope` | Done ([#29](https://github.com/AndreyBesedin/greenhouse-open/pull/29)) |
 | P01.3 | `feat(greenhouse): add pitched roof geometry` | Done ([#30](https://github.com/AndreyBesedin/greenhouse-open/pull/30)) |
-| P01.4 | `feat(greenhouse): add bays and repeated structural frames` | Planned |
+| P01.4 | `feat(greenhouse): add bays and repeated structural frames` | Done ([#31](https://github.com/AndreyBesedin/greenhouse-open/pull/31)) |
 | P01.5 | `feat(envelope): add doors, vents and configurable openings` | Planned |
 | P01.6 | `feat(materials): distinguish envelope semantics visually` | Planned |
 | P01.7 | `test(visual): add greenhouse geometry QA snapshots` | Planned |
@@ -157,6 +157,31 @@ Bay spacing, repeated posts and rafters, several spans, and frames drawn
 instanced. Visible result: a greenhouse of several spans and bays, with a
 realistic structural rhythm. Tests: changing the bay count gives the expected
 number of frames, without coordinates drifting along the house.
+
+As implemented:
+
+- The envelope gains `spans` across its width and `bays` along its length,
+  each of equal size (`span_width`, `bay_spacing`). Each span has its own
+  pair of roof slopes and its own ridge (`roof_1_right`, `roof_1_left`, ...),
+  the gables have a peak per span, and gutters run along both eaves and each
+  valley (`gutter_0` to `gutter_<spans>`).
+- `Envelope.members()` gives the structural frames: one at each end of every
+  bay, each with a post at every gutter line, from the floor to the eaves,
+  and a rafter up each roof slope. Every frame and span edge is computed as
+  its own multiple of the length or width, never as a sum of spacings.
+- The scene adds `FRAME` entities, cylinders from each member's foot to its
+  head, so its schema moves to version 5. Being cylinders, they join the
+  plants' instanced batch. gh_001 and gh_demo now have two spans and two
+  bays.
+- Tests: each span has its own roof and ridge; the gable has a peak per span
+  and a valley between; a gutter runs along each eave and valley; the
+  surfaces close greenhouses of one, two and five spans. Each bay count
+  gives one frame more than its bays, with the expected posts and rafters,
+  and frames stand exactly at their multiples of the bay spacing up to
+  1,000 bays, where summing spacings would drift. Posts stand on the gutter
+  lines and rafters climb to the ridges, and each member is drawn from its
+  foot to its head. A frame too few, or frames placed by summing spacings,
+  fails these tests.
 
 ### P01.5: Doors, vents and configurable openings
 
