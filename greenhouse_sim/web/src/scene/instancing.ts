@@ -1,12 +1,38 @@
 import { Matrix4, Quaternion, Vector3 } from "three";
 
 import type { SceneEntity } from "./generated/snapshotTypes";
+import { isMetal } from "./materials";
 
 export const MATRIX_SIZE = 16;
 // A cylinder of zero height is drawn this tall, so that its matrix stays
 // invertible and its lighting defined; at a tenth of a millimetre it still
 // reads as a disc on the ground.
 const LEAST_DRAWN_HEIGHT_M = 0.0001;
+
+/** Cylinders drawn in one instanced batch: of one kind, and one finish. */
+export interface CylinderBatch {
+  /** The kind and finish, such as `PIPE-metal`. */
+  batch: string;
+  metallic: boolean;
+  entities: SceneEntity[];
+}
+
+/** A scene's cylinders, grouped by kind and by finish (metal or not), each
+ * group in scene order: every group is drawn as one instanced batch. */
+export function cylinderBatches(entities: readonly SceneEntity[]): CylinderBatch[] {
+  const batches = new Map<string, CylinderBatch>();
+  for (const entity of entities) {
+    if (entity.shape.shape !== "cylinder") {
+      continue;
+    }
+    const metallic = isMetal(entity);
+    const key = `${entity.kind}-${metallic ? "metal" : "matt"}`;
+    const batch = batches.get(key) ?? { batch: key, metallic, entities: [] };
+    batch.entities.push(entity);
+    batches.set(key, batch);
+  }
+  return [...batches.values()];
+}
 
 /**
  * Each cylinder's placement as a 4x4 matrix, column-major as Three.js stores
