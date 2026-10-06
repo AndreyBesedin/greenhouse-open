@@ -8,6 +8,8 @@ export type SceneSource =
   | { kind: "example" }
   /** One fixture of each primitive, side by side, as the simulator draws them. */
   | { kind: "fixtures" }
+  /** The plant lab: tomato plants from the organ-level model. */
+  | { kind: "plants" }
   /** A dense field of plants built in the viewer, for measuring the renderer. */
   | { kind: "stress"; plants: number }
   /** A scenario's scene from the simulator, with another of its layouts if
@@ -34,6 +36,7 @@ export type SceneState =
 const EXAMPLE_SCENE_URL = "/scenes/example.json";
 // The simulator writes it (`tests/test_scene_schema.py --update`).
 export const FIXTURE_GALLERY_URL = "/scenes/qa-fixtures.json";
+export const PLANT_LAB_SCENE_URL = "/api/plants/scene";
 
 export function sourceFromSearch(search: string): SceneSource {
   const parameters = new URLSearchParams(search);
@@ -53,6 +56,9 @@ export function sourceFromSearch(search: string): SceneSource {
       ...(envelope === null ? {} : { envelope }),
       ...(openings === null ? {} : { openings }),
     };
+  }
+  if (parameters.get("plants") === "lab") {
+    return { kind: "plants" };
   }
   switch (parameters.get("scene")) {
     case "example":
@@ -74,6 +80,8 @@ export function searchFor(source: SceneSource): string {
       return "?scene=example";
     case "fixtures":
       return "?scene=fixtures";
+    case "plants":
+      return "?plants=lab";
     case "stress":
       return `?scene=stress&plants=${source.plants}`;
     case "scenario":
@@ -142,6 +150,8 @@ function sceneUrl(source: SceneSource): string | null {
       return EXAMPLE_SCENE_URL;
     case "fixtures":
       return FIXTURE_GALLERY_URL;
+    case "plants":
+      return PLANT_LAB_SCENE_URL;
     case "scenario":
       return `/api/scenarios/${encodeURIComponent(source.scenarioId)}/scene${changesQuery(source, "?")}`;
   }

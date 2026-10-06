@@ -13,6 +13,8 @@ import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
 import { OpeningControls } from "./OpeningControls";
+import { PLANT_LAB_POSE } from "./plants/lab";
+import { PlantStructure } from "./plants/PlantStructure";
 import type { ViewSample } from "./readouts";
 import { loadScenarios, type ScenariosState } from "./scenarios";
 import { type LiveCommand, sendLiveCommand } from "./scene/live";
@@ -162,6 +164,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         overlays={overlays}
         showBounds={showDimensions}
         byCategory={byCategory}
+        initialPose={source.kind === "plants" ? PLANT_LAB_POSE : null}
         onSample={setSample}
         onPointer={setPointer}
         onSelect={setSelectedId}
@@ -192,6 +195,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 requested={source.openings ?? {}}
                 onChange={setOpenings}
               />
+            )}
+            {source.kind === "plants" && (
+              <PlantStructure selectedId={selectedId} onSelect={setSelectedId} />
             )}
           </InfoPanel>
           {selected && (

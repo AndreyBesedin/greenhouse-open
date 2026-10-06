@@ -4,24 +4,25 @@ import { PerspectiveCamera, Vector3 } from "three";
 import {
   CAMERA_FIELD_OF_VIEW_DEG,
   CAMERA_PRESETS,
+  type CameraPose,
   DEFAULT_PRESET,
   type PresetName,
 } from "../src/camera.ts";
 import { type Point3, worldToViewer } from "../src/world.ts";
 
-/** Where a world point appears on the page, seen from a camera preset, worked
- * out as the viewer's own camera works it out. */
+/** Where a world point appears on the page, seen from a camera preset or
+ * pose, worked out as the viewer's own camera works it out. */
 export async function onScreen(
   page: Page,
   point: Point3,
-  preset: PresetName = DEFAULT_PRESET,
+  preset: PresetName | CameraPose = DEFAULT_PRESET,
 ): Promise<{ x: number; y: number }> {
   const box = await page.locator("canvas").boundingBox();
   if (box === null) {
     throw new Error("the 3D view is not on the page");
   }
   const camera = new PerspectiveCamera(CAMERA_FIELD_OF_VIEW_DEG, box.width / box.height);
-  const pose = CAMERA_PRESETS[preset];
+  const pose = typeof preset === "string" ? CAMERA_PRESETS[preset] : preset;
   const position = worldToViewer(pose.position);
   const target = worldToViewer(pose.target);
   camera.position.set(position.x, position.y, position.z);
@@ -45,7 +46,7 @@ const SKY_OFFSET_PX = -120;
 export async function clickAt(
   page: Page,
   point: Point3,
-  preset: PresetName = DEFAULT_PRESET,
+  preset: PresetName | CameraPose = DEFAULT_PRESET,
 ): Promise<void> {
   const target = await onScreen(page, point, preset);
   await page.mouse.click(target.x, target.y);
@@ -67,7 +68,7 @@ export async function selectAt(
   page: Page,
   point: Point3,
   entityId: string,
-  preset: PresetName = DEFAULT_PRESET,
+  preset: PresetName | CameraPose = DEFAULT_PRESET,
 ): Promise<void> {
   const selected = page.getByTestId("selected-entity");
   await expect(async () => {

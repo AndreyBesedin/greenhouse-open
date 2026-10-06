@@ -334,7 +334,12 @@ export const SNAPSHOT_SCHEMA = {
         "PIPE",
         "WIRE",
         "OBSTACLE",
-        "PLANT"
+        "PLANT",
+        "INTERNODE",
+        "LEAF",
+        "TRUSS",
+        "FLOWER",
+        "FRUIT"
       ],
       "title": "SceneEntityKind",
       "type": "string"
@@ -354,9 +359,34 @@ export const SNAPSHOT_SCHEMA = {
           "$ref": "#/$defs/Polygon"
         },
         {
+          "$ref": "#/$defs/Sphere"
+        },
+        {
           "$ref": "#/$defs/Axes"
         }
       ]
+    },
+    "Sphere": {
+      "description": "A sphere centred on its frame's origin, such as a flower bud or a\nfruit.",
+      "properties": {
+        "shape": {
+          "const": "sphere",
+          "default": "sphere",
+          "title": "Shape",
+          "type": "string"
+        },
+        "radius": {
+          "exclusiveMinimum": 0,
+          "title": "Radius",
+          "type": "number"
+        }
+      },
+      "required": [
+        "shape",
+        "radius"
+      ],
+      "title": "Sphere",
+      "type": "object"
     },
     "Transform": {
       "description": "Places a shape's own frame in the world: rotate, then translate.",
@@ -408,7 +438,7 @@ export const SNAPSHOT_SCHEMA = {
   "description": "One greenhouse at one simulated day, as a viewer draws it. Positions\nand sizes are in metres, in right-handed world axes with z up.",
   "properties": {
     "schema_version": {
-      "default": 11,
+      "default": 12,
       "title": "Schema Version",
       "type": "integer"
     },

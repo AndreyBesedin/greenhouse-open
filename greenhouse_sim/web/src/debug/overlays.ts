@@ -73,6 +73,11 @@ function shapeExtent(shape: Shape): Bounds {
         max: { x: Math.max(...xs), y: Math.max(...ys), z: 0 },
       };
     }
+    case "sphere":
+      return {
+        min: { x: -shape.radius, y: -shape.radius, z: -shape.radius },
+        max: { x: shape.radius, y: shape.radius, z: shape.radius },
+      };
     case "axes":
       return {
         min: { x: 0, y: 0, z: 0 },

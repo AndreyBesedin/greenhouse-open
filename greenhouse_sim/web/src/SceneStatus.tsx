@@ -8,6 +8,8 @@ function describeSource(source: SceneSource): string {
       return "example scene";
     case "fixtures":
       return "fixture gallery";
+    case "plants":
+      return "plant lab";
     case "stress":
       return `stress scene of ${source.plants} plants`;
     case "scenario":

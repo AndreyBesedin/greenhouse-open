@@ -62,7 +62,9 @@ from greenhouse_sim.world.zones import Zone, ZoneKind
 # 9: benches and substrate slabs.
 # 10: service zones and keep-out volumes.
 # 11: crop wires.
-SCHEMA_VERSION: Final = 11
+# 12: plants organ by organ (internodes, leaves, trusses, flowers, fruits),
+#     and the sphere shape.
+SCHEMA_VERSION: Final = 12
 # The JSON Schema dialect Pydantic generates, stated in the published schema.
 JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 
@@ -145,6 +147,12 @@ class SceneEntityKind(StrEnum):
     WIRE = "WIRE"
     OBSTACLE = "OBSTACLE"
     PLANT = "PLANT"
+    # A plant organ by organ, as the organ-level model grows it.
+    INTERNODE = "INTERNODE"
+    LEAF = "LEAF"
+    TRUSS = "TRUSS"
+    FLOWER = "FLOWER"
+    FRUIT = "FRUIT"
 
 
 class SceneEntity(BaseModel):

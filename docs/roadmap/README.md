@@ -102,7 +102,7 @@ adds a visible or measurable result.
 | [P00](p00-browser-renderer.md) | Browser renderer and visual QA foundation | Done |
 | [P01](p01-greenhouse-envelope.md) | Greenhouse envelope and world geometry | Done |
 | [P02](p02-greenhouse-layout.md) | Static greenhouse fixtures and layout | Done |
-| P03 | Stochastic tomato development and procedural plant geometry | Planned |
+| [P03](p03-tomato-development.md) | Stochastic tomato development and procedural plant geometry | In progress |
 | P04 | Environmental fields and airflow foundation | Planned |
 | P05 | Climate actuators: fans, heaters, dehumidification and vents | Planned |
 | P06 | Virtual sensors and the observation layer | Planned |
