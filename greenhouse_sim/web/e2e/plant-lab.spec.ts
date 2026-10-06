@@ -1,12 +1,15 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect as baseExpect, type Page, test } from "@playwright/test";
 
 import { PLANT_LAB_LAST_DAY, PLANT_LAB_POSE } from "../src/plants/lab.ts";
 import type { SceneSnapshot } from "../src/scene/generated/snapshotTypes.ts";
 import type { Point3 } from "../src/world.ts";
 import { selectAt } from "./view";
 
-// The lab's row is thousands of entities, which CI's software renderer draws
-// slowly: its tests have three times the usual time.
+// The lab's row is thousands of entities, which the simulator takes a while
+// to grow on its later days and CI's software renderer to draw: its tests have
+// three times the usual time, and wait this long for what they expect.
+const LAB_EXPECT_TIMEOUT_MS = 30_000;
+const expect = baseExpect.configure({ timeout: LAB_EXPECT_TIMEOUT_MS });
 test.beforeEach(() => {
   test.slow();
 });
