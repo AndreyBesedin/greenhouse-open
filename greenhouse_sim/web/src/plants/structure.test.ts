@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { FIRST_LAB_RUN } from "./lab";
-import { loadPlantStructure, type OrganNode, organTree } from "./structure";
+import { FIRST_LAB_RUN, labRunQuery } from "./lab";
+import { loadPlantStructure, type OrganNode, organTree, plantHistory } from "./structure";
 
 // A plant of one phytomer with a truss of two flowers, one set as a fruit, as
 // the simulator's plant lab writes it.
@@ -112,6 +112,50 @@ describe("a plant's structure", () => {
     expect(organs.p01_stem?.drawn).toBe(false);
   });
 
+  it("does not draw a removed leaf, or a truss that bears nothing", () => {
+    const pruned = structuredClone(PLANT);
+    const [first] = pruned.stem.phytomers;
+    if (first === undefined) {
+      throw new Error("the plant has no phytomer");
+    }
+    first.leaf.stage = "removed";
+    for (const flower of first.truss.flowers) {
+      flower.stage = "aborted";
+      flower.fruit = null;
+    }
+    const organs = Object.fromEntries(flatten(organTree(pruned)).map((node) => [node.id, node]));
+
+    expect(organs.p01_n01_leaf?.drawn).toBe(false);
+    expect(organs.p01_t01?.drawn).toBe(false);
+  });
+
+  it("reads the plant's history, and none if it has none", () => {
+    const history = [
+      {
+        thermal_time: 560,
+        action: { kind: "remove_leaf", leaf_id: "p01_n01_leaf" },
+        applied: true,
+        note: "removed p01_n01_leaf",
+        organs: ["p01_n01_leaf"],
+        harvested_g: 0,
+      },
+      {
+        thermal_time: 560.4,
+        action: { kind: "lower_stem", internodes: 1 },
+        applied: false,
+        note: "p01_n02_leaf is still on the stem",
+        organs: [],
+        harvested_g: 0,
+      },
+    ];
+
+    expect(plantHistory({ ...PLANT, history })).toEqual([
+      { thermalTime: 560, applied: true, note: "removed p01_n01_leaf" },
+      { thermalTime: 560.4, applied: false, note: "p01_n02_leaf is still on the stem" },
+    ]);
+    expect(plantHistory(PLANT)).toEqual([]);
+  });
+
   it("refuses a structure it cannot read", () => {
     expect(() => organTree({ plant_id: "p01", thermal_time: 1 })).toThrow("the stem");
     expect(() => organTree({ ...PLANT, stem: { ...PLANT.stem, phytomers: {} } })).toThrow(
@@ -125,10 +169,11 @@ describe("a plant's structure", () => {
       asked.push(String(input));
       return new Response(JSON.stringify(PLANT), { status: 200 });
     };
-    const run = { day: 12, seed: 3, environment: "cool_dim", versus: "dry" };
-    const loaded = await loadPlantStructure({ plantId: "p07", ...run }, recording);
+    const run = { day: 12, seed: 3, environment: "cool_dim", versus: "dry", actions: [] };
+    const loaded = await loadPlantStructure("p07", labRunQuery(run), recording);
     const refused = await loadPlantStructure(
-      { plantId: "p01", ...FIRST_LAB_RUN },
+      "p01",
+      labRunQuery(FIRST_LAB_RUN),
       answering(502, { error: "bad gateway" }),
     );
 

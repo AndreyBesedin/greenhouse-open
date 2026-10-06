@@ -25,22 +25,46 @@ describe("choosing a scene in the address bar", () => {
     ["", { kind: "reference" }],
     ["?scene=example", { kind: "example" }],
     ["?scene=fixtures", { kind: "fixtures" }],
-    ["?plants=lab", { kind: "plants", day: 0, seed: 1, environment: "reference", versus: null }],
+    [
+      "?plants=lab",
+      { kind: "plants", day: 0, seed: 1, environment: "reference", versus: null, actions: [] },
+    ],
     [
       "?plants=lab&day=12",
-      { kind: "plants", day: 12, seed: 1, environment: "reference", versus: null },
+      { kind: "plants", day: 12, seed: 1, environment: "reference", versus: null, actions: [] },
     ],
     [
       "?plants=lab&day=12&seed=7",
-      { kind: "plants", day: 12, seed: 7, environment: "reference", versus: null },
+      { kind: "plants", day: 12, seed: 7, environment: "reference", versus: null, actions: [] },
     ],
     [
       "?plants=lab&seed=0",
-      { kind: "plants", day: 0, seed: 0, environment: "reference", versus: null },
+      { kind: "plants", day: 0, seed: 0, environment: "reference", versus: null, actions: [] },
+    ],
+    [
+      "?plants=lab&day=31&act=30%3Ap01%3Aremove_leaf%3Ap01_n02_leaf&act=31%3Ap01%3Alower_stem%3A1",
+      {
+        kind: "plants",
+        day: 31,
+        seed: 1,
+        environment: "reference",
+        versus: null,
+        actions: [
+          { day: 30, plantId: "p01", kind: "remove_leaf", target: "p01_n02_leaf" },
+          { day: 31, plantId: "p01", kind: "lower_stem", target: "1" },
+        ],
+      },
     ],
     [
       "?plants=lab&environment=cool_dim&versus=warm_bright",
-      { kind: "plants", day: 0, seed: 1, environment: "cool_dim", versus: "warm_bright" },
+      {
+        kind: "plants",
+        day: 0,
+        seed: 1,
+        environment: "cool_dim",
+        versus: "warm_bright",
+        actions: [],
+      },
     ],
     ["?scenario=gh_demo", { kind: "scenario", scenarioId: "gh_demo" }],
     [

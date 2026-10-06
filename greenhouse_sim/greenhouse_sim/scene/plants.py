@@ -78,6 +78,17 @@ def plant_entities(
     return [_entity(plant, shape, at, organs, shared) for shape in organ_geometry(plant)]
 
 
+def _truss_of(organ_id: str, organs: dict[str, tuple[OrganKind, str | None, Organ]]) -> str | None:
+    """The truss an organ is, or is borne on, if any."""
+    current: str | None = organ_id
+    while current is not None:
+        kind, parent, _ = organs[current]
+        if kind == OrganKind.TRUSS:
+            return current
+        current = parent
+    return None
+
+
 def _entity(
     plant: Plant,
     shape: OrganShape,
@@ -110,6 +121,9 @@ def _entity(
     if isinstance(organ, Fruit):
         properties["maturity"] = maturity(organ.ripeness).value
         color = fruit_color(organ.ripeness)
+    truss = _truss_of(shape.organ_id, organs)
+    if truss is not None:
+        properties["truss_id"] = truss
     return SceneEntity(
         entity_id=shape.shape_id,
         kind=kind,

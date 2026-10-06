@@ -15,6 +15,7 @@ import { Inspector } from "./Inspector";
 import { OpeningControls } from "./OpeningControls";
 import { LabControls } from "./plants/LabControls";
 import { type LabRun, PLANT_LAB_FIRST_PLANT, PLANT_LAB_POSE } from "./plants/lab";
+import { PlantActions } from "./plants/PlantActions";
 import { PlantStructure } from "./plants/PlantStructure";
 import type { ViewSample } from "./readouts";
 import { loadScenarios, type ScenariosState } from "./scenarios";
@@ -224,14 +225,18 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
               />
             )}
             {source.kind === "plants" && (
+              <PlantActions
+                entity={selected}
+                day={source.day}
+                scheduled={source.actions.length}
+                onAct={(action) => setLabRun({ actions: [...source.actions, action] })}
+                onUndo={() => setLabRun({ actions: source.actions.slice(0, -1) })}
+                onClear={() => setLabRun({ actions: [] })}
+              />
+            )}
+            {source.kind === "plants" && (
               <PlantStructure
-                plant={{
-                  plantId: plantOf(selected) ?? PLANT_LAB_FIRST_PLANT,
-                  day: source.day,
-                  seed: source.seed,
-                  environment: source.environment,
-                  versus: source.versus,
-                }}
+                plant={{ ...source, plantId: plantOf(selected) ?? PLANT_LAB_FIRST_PLANT }}
                 selectedOrgan={selected === null ? null : organOf(selected)}
                 onSelect={(organId) => setSelectedId(entityOfOrgan(snapshot, organId))}
               />

@@ -30,7 +30,7 @@ import math
 from collections import Counter
 from collections.abc import Iterator
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import (
     BaseModel,
@@ -223,6 +223,65 @@ class PlantTraits(BaseModel):
     rotation_rad: Annotated[float, Field(ge=0, lt=2 * math.pi)] = 0.0
 
 
+class RemoveLeaf(BaseModel):
+    """Prune a leaf off the plant."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["remove_leaf"] = "remove_leaf"
+    leaf_id: str
+
+
+class HarvestFruit(BaseModel):
+    """Pick one fruit."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["harvest_fruit"] = "harvest_fruit"
+    fruit_id: str
+
+
+class HarvestTruss(BaseModel):
+    """Cut a truss: pick its fruits, and drop the flowers it still bears."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["harvest_truss"] = "harvest_truss"
+    truss_id: str
+
+
+class LowerStem(BaseModel):
+    """Lower the stem, laying its lowest standing internodes down along the
+    row; they must be bare, their leaves removed and their trusses cut."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["lower_stem"] = "lower_stem"
+    internodes: PositiveInt = 1
+
+
+type PlantAction = Annotated[
+    RemoveLeaf | HarvestFruit | HarvestTruss | LowerStem, Field(discriminator="kind")
+]
+
+
+class PlantEvent(BaseModel):
+    """An action done to a plant, or asked of it and refused."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    # The plant's thermal time when it was done.
+    thermal_time: NonNegativeFloat
+    action: PlantAction
+    applied: bool
+    # What it did, or why it was refused, in words.
+    note: str
+    # The organs it changed.
+    organs: tuple[str, ...] = ()
+    # The fresh mass of the fruit it picked, in grams.
+    harvested_g: NonNegativeFloat = 0.0
+
+
 class Plant(Organ):
     """One plant, organ by organ, and the thermal time it has accumulated."""
 
@@ -232,6 +291,10 @@ class Plant(Organ):
     # The simulation's seed, which the plant's and its organs' draws come from.
     seed: NonNegativeInt = 0
     traits: PlantTraits = PlantTraits()
+    # How many of its lowest internodes have been laid down along the row.
+    laid_internodes: NonNegativeInt = 0
+    # Everything done to it, or asked of it, in order.
+    history: tuple[PlantEvent, ...] = ()
 
     def thermal_age(self, organ: Organ) -> float:
         """How long an organ has developed, in °Cd."""
@@ -259,6 +322,15 @@ class Plant(Organ):
                 yield OrganKind.FLOWER, flower.flower_id, truss.truss_id, flower
                 if flower.fruit is not None:
                     yield OrganKind.FRUIT, flower.fruit.fruit_id, flower.flower_id, flower.fruit
+
+
+def bears_anything(truss: Truss) -> bool:
+    """Whether a truss still bears a flower or a fruit on the plant."""
+    return any(
+        flower.stage in {FlowerStage.BUD, FlowerStage.OPEN}
+        or (flower.fruit is not None and flower.fruit.stage == FruitStage.ATTACHED)
+        for flower in truss.flowers
+    )
 
 
 def topology_problems(plant: Plant) -> list[str]:
@@ -325,6 +397,13 @@ def topology_problems(plant: Plant) -> list[str]:
                 problems.append(f"{fruit.fruit_id} is larger than it grows")
             if fruit is not None and fruit.breaker_tt < fruit.born_tt:
                 problems.append(f"{fruit.fruit_id} ripens before it sets")
+    if plant.laid_internodes > len(plant.stem.phytomers):
+        problems.append("more internodes are laid down than the stem has")
+    for phytomer in plant.stem.phytomers[: plant.laid_internodes]:
+        if phytomer.leaf.stage != LeafStage.REMOVED:
+            problems.append(f"{phytomer.leaf.leaf_id} is laid down with its internode")
+        if phytomer.truss is not None and bears_anything(phytomer.truss):
+            problems.append(f"{phytomer.truss.truss_id} is laid down still bearing")
     return problems
 
 
@@ -350,12 +429,17 @@ def change_problems(before: Plant, after: Plant) -> list[str]:
     was, or nothing: time runs forward, every organ is still there, of the
     same kind and appearing when it did, and every stage has changed only as
     its kind's stages may (`LEAF_CHANGES`, `FLOWER_CHANGES`, `FRUIT_CHANGES`),
-    and no organ has shrunk, nor any fruit unripened."""
+    no organ has shrunk, nor any fruit unripened, nothing laid down has stood
+    up again, and the plant's history has only grown."""
     problems: list[str] = []
     if after.plant_id != before.plant_id:
         problems.append(f"{after.plant_id} is not {before.plant_id}")
     if after.thermal_time < before.thermal_time:
         problems.append("the plant's thermal time went back")
+    if after.laid_internodes < before.laid_internodes:
+        problems.append("laid-down internodes stood up again")
+    if after.history[: len(before.history)] != before.history:
+        problems.append("the plant's history was rewritten")
     later = {organ_id: (kind, organ) for kind, organ_id, _, organ in after.organs()}
     for kind, organ_id, _, organ in before.organs():
         if organ_id not in later:

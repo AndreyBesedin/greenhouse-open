@@ -1,4 +1,4 @@
-import { type LabRun, labRunQuery } from "./lab";
+import type { LabRun } from "./lab";
 
 /** One organ of a plant's structure, with the organs attached to it, as the
  * simulator's plant lab describes them (`GET /api/plants/structure`). */
@@ -12,10 +12,18 @@ export interface OrganNode {
   children: OrganNode[];
 }
 
+/** Something done to the plant, or asked of it and refused. */
+export interface PlantEvent {
+  thermalTime: number;
+  applied: boolean;
+  /** What it did, or why it was refused. */
+  note: string;
+}
+
 export type StructureState =
   | { status: "loading" }
   | { status: "unavailable"; reason: string }
-  | { status: "loaded"; tree: OrganNode };
+  | { status: "loaded"; tree: OrganNode; history: PlantEvent[] };
 
 export const PLANT_LAB_STRUCTURE_URL = "/api/plants/structure";
 
@@ -88,22 +96,26 @@ export function organTree(body: unknown): OrganNode {
     const leaf = fields(phytomer.leaf, "a leaf");
     const children = [
       node(internode, text(internode, "internode_id"), "internode", true),
-      node(leaf, text(leaf, "leaf_id"), "leaf", true),
+      node(leaf, text(leaf, "leaf_id"), "leaf", leaf.stage !== "removed"),
     ];
     if (phytomer.truss !== null && phytomer.truss !== undefined) {
       const truss = fields(phytomer.truss, "a truss");
+      let bearing = false;
       const flowers = list(truss, "flowers").map((flowerValue) => {
         const flower = fields(flowerValue, "a flower");
         const fruits = flower.fruit === null || flower.fruit === undefined ? [] : [flower.fruit];
         const children = fruits.map((value) => {
           const fruit = fields(value, "a fruit");
           const drawn = DRAWN_FRUIT_STAGES.has(fruit.stage);
+          bearing ||= drawn;
           return node(fruit, text(fruit, "fruit_id"), "fruit", drawn);
         });
         const drawn = DRAWN_FLOWER_STAGES.has(flower.stage);
+        bearing ||= drawn;
         return node(flower, text(flower, "flower_id"), "flower", drawn, children);
       });
-      children.push(node(truss, text(truss, "truss_id"), "truss", true, flowers));
+      // A truss that bears nothing more has been cut, or is about to be.
+      children.push(node(truss, text(truss, "truss_id"), "truss", bearing, flowers));
     }
     return node(phytomer, text(phytomer, "phytomer_id"), "phytomer", false, children);
   });
@@ -111,24 +123,43 @@ export function organTree(body: unknown): OrganNode {
   return node(plant, text(plant, "plant_id"), "plant", false, [stemNode]);
 }
 
+/** Everything done to the plant, or asked of it, in order. */
+export function plantHistory(body: unknown): PlantEvent[] {
+  const plant = fields(body, "the plant");
+  const history = plant.history === undefined ? [] : list(plant, "history");
+  return history.map((value) => {
+    const event = fields(value, "an event");
+    if (typeof event.applied !== "boolean") {
+      throw new Error("applied is not true or false");
+    }
+    return {
+      thermalTime: number(event, "thermal_time"),
+      applied: event.applied,
+      note: text(event, "note"),
+    };
+  });
+}
+
 /** Which of the plant lab's plants, on which run of the lab. */
 export interface LabPlant extends LabRun {
   plantId: string;
 }
 
-/** Asks the plant lab for one of its plant's structure; any failure becomes
- * `unavailable`. */
+/** Asks the plant lab for one of its plant's structure on a run, as
+ * `labRunQuery` writes it; any failure becomes `unavailable`. */
 export async function loadPlantStructure(
-  { plantId, ...run }: LabPlant,
+  plantId: string,
+  runQuery: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<StructureState> {
   try {
-    const query = `${labRunQuery(run)}&plant=${encodeURIComponent(plantId)}`;
+    const query = `${runQuery}&plant=${encodeURIComponent(plantId)}`;
     const response = await fetchFn(`${PLANT_LAB_STRUCTURE_URL}?${query}`);
     if (!response.ok) {
       return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
     }
-    return { status: "loaded", tree: organTree(await response.json()) };
+    const body: unknown = await response.json();
+    return { status: "loaded", tree: organTree(body), history: plantHistory(body) };
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     return { status: "unavailable", reason };

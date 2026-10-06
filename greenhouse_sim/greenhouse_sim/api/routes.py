@@ -31,6 +31,11 @@ check; a route that comes to need one checks it first.
                                           ?environment=cool_dim in another of
                                           its environments, &versus=warm_bright
                                           every second plant in another
+                                          &act=30:p01:remove_leaf:p01_n02_leaf
+                                          schedules an action (repeatable):
+                                          remove_leaf, harvest_fruit,
+                                          harvest_truss, or lower_stem by a
+                                          number of internodes
     GET /api/plants/structure             one of the lab's plants, organ by organ;
                                           ?plant=p07 another plant, and the rest
                                           as for its scene
@@ -206,6 +211,10 @@ def _multiplier(query: Query) -> float:
         raise InvalidSpeed() from None
 
 
+# A scheduled action's parts: its day, plant, kind and target.
+LAB_ACTION_PARTS: Final = ("day", "plant", "action", "organ")
+
+
 def _lab_run(query: Query) -> plants.LabRun:
     """The plant lab's run a query asks for: day 0, the lab's own seed and
     its reference environment, unless it says."""
@@ -214,7 +223,17 @@ def _lab_run(query: Query) -> plants.LabRun:
         seed=_whole(query, "seed", plants.LAB_SEED),
         environment=_last(query, "environment") or plants.REFERENCE,
         versus=_last(query, "versus"),
+        actions=tuple(_lab_action(text) for text in query.get("act", [])),
     )
+
+
+def _lab_action(text: str) -> plants.LabAction:
+    """A scheduled action as a query writes it: `day:plant:action:organ`."""
+    parts = text.split(":")
+    if len(parts) != len(LAB_ACTION_PARTS) or not parts[0].isdigit():
+        raise InvalidRequest(f"act wants day:plant:action:organ, not {text!r}")
+    day, plant_id, kind, target = parts
+    return plants.LabAction(day=int(day), plant_id=plant_id, kind=kind, target=target)
 
 
 def _whole(query: Query, name: str, default: int) -> int:

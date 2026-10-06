@@ -237,6 +237,62 @@ test("two environments side by side: every second plant lives in the other", asy
   }
 });
 
+test("a leaf pruned in the lab is gone from that day on, and there before it", async ({ page }) => {
+  const pruning = "&act=30%3Ap01%3Aremove_leaf%3Ap01_n02_leaf";
+  const pruned = await labScene(page, 30, 1, pruning);
+  await page.goto("/?plants=lab&day=30");
+  await expect(page.getByTestId("scene-status")).toContainText("day 30");
+  await page.getByRole("button", { name: "p01_n02_leaf", exact: true }).click();
+
+  await page.getByRole("button", { name: "Remove this leaf" }).click();
+
+  await expect(page).toHaveURL(/\?plants=lab&day=30&act=30%3Ap01%3Aremove_leaf%3Ap01_n02_leaf$/);
+  await expect(page.getByTestId("scene-status")).toHaveText(
+    `Showing the plant lab: plant_lab, day 30, ${pruned.entities.length} entities.`,
+  );
+  await expect(page.getByTestId("plant-event")).toHaveText(["at 560 °Cd: removed p01_n02_leaf"]);
+  const leaf = page.getByRole("button", { name: "p01_n02_leaf", exact: true });
+  await expect(leaf).toHaveCount(0);
+  await expect(page.getByText(/^p01_n02_leaf$/)).toBeVisible();
+
+  // Still pruned ten days on; not yet, ten days before.
+  await page.getByRole("slider").fill("40");
+  await expect(page.getByTestId("scene-status")).toContainText("day 40");
+  await expect(leaf).toHaveCount(0);
+  await expect(page.getByTestId("plant-event")).toHaveCount(1);
+  await page.getByRole("slider").fill("20");
+  await expect(page.getByTestId("scene-status")).toContainText("day 20");
+  await expect(leaf).toHaveCount(1);
+  await expect(page.getByTestId("plant-event")).toHaveCount(0);
+});
+
+test("a fruit harvested leaves the plant, its weight in the history, until taken back", async ({
+  page,
+}) => {
+  await page.goto("/?plants=lab&day=85");
+  await expect(page.getByTestId("scene-status")).toContainText("day 85");
+  const fruit = page.getByRole("button", { name: "p01_t01_fr01", exact: true });
+  await fruit.click();
+  await expect(page.getByTestId("property-maturity")).toHaveText("red");
+
+  await page.getByRole("button", { name: "Harvest this fruit" }).click();
+
+  await expect(page.getByTestId("plant-event")).toHaveText([
+    /^at \d+ °Cd: harvested p01_t01_fr01, \d+ g$/,
+  ]);
+  await expect(fruit).toHaveCount(0);
+  // Still in the tree, as harvested, though no longer drawn.
+  await expect(
+    page.locator('[data-organ-kind="fruit"]', { hasText: "p01_t01_fr01" }),
+  ).toContainText("harvested");
+
+  await page.getByRole("button", { name: "Take back the last action" }).click();
+
+  await expect(page).toHaveURL(/\?plants=lab&day=85$/);
+  await expect(fruit).toHaveCount(1);
+  await expect(page.getByTestId("plant-event")).toHaveCount(0);
+});
+
 test("the slider runs as far as the simulator's lab does, and no further", async ({ page }) => {
   const last = await page.request.get(`/api/plants/scene?day=${PLANT_LAB_LAST_DAY}`);
   const beyond = await page.request.get(`/api/plants/scene?day=${PLANT_LAB_LAST_DAY + 1}`);

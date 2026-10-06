@@ -227,6 +227,27 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* The plant lab's actions on the selected organ's plant. */
+.plant-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+}
+
+/* The plant's history: what was done to it, and what was refused. */
+.plant-history {
+  max-height: 20vh;
+  margin: 0 0 8px;
+  overflow: auto;
+}
+
+.plant-history .refused {
+  color: #8a3b12;
+}
+
 /* The plant lab's debug tree: an organ per line, scrolling on its own. */
 .plant-structure {
   max-height: 40vh;
