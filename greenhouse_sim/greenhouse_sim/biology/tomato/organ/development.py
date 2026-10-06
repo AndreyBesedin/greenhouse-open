@@ -4,9 +4,12 @@ Thermal time is the plant's clock: each day adds its mean temperature above
 a base, counting nothing below it and nothing past a cap, in degree-days
 (°Cd). A plant emerges with one phytomer, and a new one appears at the top
 of the stem every phyllochron. Each internode and leaf appears at a small
-share of its final size, fixed when it appears, and grows to all of it along
-a smooth S-curve of its thermal age, over the organs' expansion time: a leaf
-is expanding until then, and mature after. Final sizes grow up the stem, from
+share of its final size, fixed when it appears, and grows towards all of it
+along a smooth S-curve of its thermal age, over the organs' expansion time: a
+leaf is expanding until then, and mature after. Each step, an organ makes the
+growth the curve gives for its thermal age, times the step's growth factor
+(`environment`): all of it under reference conditions, less under poorer
+ones, which an organ never makes up. Final sizes grow up the stem, from
 the first phytomer's, a share of the full sizes, to the full sizes themselves
 from a set rank up.
 
@@ -18,8 +21,10 @@ appears, so one plant's leaves are not all alike.
 Trusses appear with their phytomers and develop their flowers and fruits as
 `reproduction` says.
 
-Development depends on thermal time alone here, so a plant grown in one step
-or day by day is the same plant.
+A plant lives its days one at a time, each in its local environment
+(`live_day`, `grow`): the day's temperature gives its thermal time, and its
+light, CO₂ and water its growth factor. Under a steady environment, a plant
+grown in one step or day by day is the same plant, to rounding.
 """
 
 from collections.abc import Iterable
@@ -28,6 +33,11 @@ from typing import Annotated, Final
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt
 
 from greenhouse_sim.biology.tomato.organ.curves import smoothstep
+from greenhouse_sim.biology.tomato.organ.environment import (
+    LocalEnvironment,
+    ResponseParams,
+    growth_factor,
+)
 from greenhouse_sim.biology.tomato.organ.reproduction import (
     TrussParams,
     bears_truss,
@@ -85,6 +95,8 @@ class DevelopmentParams(BaseModel):
     organ_size_cv: Annotated[float, Field(ge=0, lt=1 / ORGAN_LIMIT_SD)] = 0.0
     # When trusses appear and how their flowers develop.
     trusses: TrussParams = TrussParams()
+    # How growth responds to light and CO₂.
+    responses: ResponseParams = ResponseParams()
 
 
 def plant_params(params: DevelopmentParams, traits: PlantTraits) -> DevelopmentParams:
@@ -166,24 +178,43 @@ def _new_phytomer(
     )
 
 
+def _gain(
+    before: float, after: float, initial: float, growth: float, params: DevelopmentParams
+) -> float:
+    """The share of its final size an organ adds as its thermal age moves
+    from `before` to `after`, making `growth` of its potential."""
+    return (
+        growth_fraction(after, initial, params) - growth_fraction(before, initial, params)
+    ) * growth
+
+
+def _toward(size: float, final: float, gain: float) -> float:
+    """A size after gaining this share of its final size, which it never
+    passes, however the gains add up."""
+    return min(final, size + final * gain)
+
+
 def _grown(
     plant: Plant,
     phytomer: Phytomer,
     previous_tt: float,
     thermal_time: float,
     params: DevelopmentParams,
+    growth: float,
 ) -> Phytomer:
     """The phytomer's internode, leaf and truss as the plant's thermal time
-    moves on from `previous_tt`. A leaf that has been removed stays removed."""
+    moves on from `previous_tt`, its organs making `growth` of their potential
+    growth. A leaf that has been removed stays removed."""
     age = thermal_time - phytomer.born_tt
-    length = growth_fraction(age, params.initial_fraction, params)
-    diameter = growth_fraction(age, params.initial_diameter_fraction, params)
+    before = max(0.0, previous_tt - phytomer.born_tt)
+    length = _gain(before, age, params.initial_fraction, growth, params)
+    diameter = _gain(before, age, params.initial_diameter_fraction, growth, params)
     internode = phytomer.internode
     leaf = phytomer.leaf
     if leaf.stage != LeafStage.REMOVED:
         leaf = leaf.model_copy(
             update={
-                "length_cm": leaf.final_length_cm * length,
+                "length_cm": _toward(leaf.length_cm, leaf.final_length_cm, length),
                 "stage": LeafStage.MATURE if age >= params.expansion_cd else LeafStage.EXPANDING,
             }
         )
@@ -191,14 +222,18 @@ def _grown(
         update={
             "internode": internode.model_copy(
                 update={
-                    "length_cm": internode.final_length_cm * length,
-                    "diameter_mm": internode.final_diameter_mm * diameter,
+                    "length_cm": _toward(internode.length_cm, internode.final_length_cm, length),
+                    "diameter_mm": _toward(
+                        internode.diameter_mm, internode.final_diameter_mm, diameter
+                    ),
                 }
             ),
             "leaf": leaf,
             "truss": None
             if phytomer.truss is None
-            else grown_truss(plant, phytomer.truss, previous_tt, thermal_time, params.trusses),
+            else grown_truss(
+                plant, phytomer.truss, previous_tt, thermal_time, params.trusses, growth
+            ),
         }
     )
 
@@ -226,11 +261,14 @@ def emerged(
     return bare.model_copy(update={"stem": bare.stem.model_copy(update={"phytomers": (first,)})})
 
 
-def develop(plant: Plant, thermal_time_cd: float, params: DevelopmentParams) -> Plant:
+def develop(
+    plant: Plant, thermal_time_cd: float, params: DevelopmentParams, growth: float = 1.0
+) -> Plant:
     """The plant after this much more thermal time, developing by its crop's
-    `params` as its traits change them: its organs grown, and a phytomer for
-    every phyllochron that has passed since the youngest appeared, each
-    appearing when its phyllochron is up."""
+    `params` as its traits change them, its organs making `growth` of their
+    potential growth (all of it unless said): its organs grown, and a
+    phytomer for every phyllochron that has passed since the youngest
+    appeared, each appearing when its phyllochron is up."""
     own = plant_params(params, plant.traits)
     thermal_time = plant.thermal_time + thermal_time_cd
     phytomers = list(plant.stem.phytomers)
@@ -245,7 +283,8 @@ def develop(plant: Plant, thermal_time_cd: float, params: DevelopmentParams) -> 
         phytomers.append(_new_phytomer(plant, rank, born, own, truss))
         born += own.phyllochron_cd
     grown = tuple(
-        _grown(plant, phytomer, plant.thermal_time, thermal_time, own) for phytomer in phytomers
+        _grown(plant, phytomer, plant.thermal_time, thermal_time, own, growth)
+        for phytomer in phytomers
     )
     return plant.model_copy(
         update={
@@ -255,11 +294,20 @@ def develop(plant: Plant, thermal_time_cd: float, params: DevelopmentParams) -> 
     )
 
 
-def grow(
-    plant: Plant, daily_mean_temperatures_c: Iterable[float], params: DevelopmentParams
-) -> Plant:
-    """The plant after these days, one after another, at these mean
-    temperatures."""
-    for temperature in daily_mean_temperatures_c:
-        plant = develop(plant, daily_thermal_time(temperature, params), params)
+def live_day(plant: Plant, environment: LocalEnvironment, params: DevelopmentParams) -> Plant:
+    """The plant after a day in this local environment: its temperature's
+    thermal time, at its light's, CO₂'s and water's growth factor."""
+    return develop(
+        plant,
+        daily_thermal_time(environment.mean_temperature_c, params),
+        params,
+        growth_factor(environment, params.responses),
+    )
+
+
+def grow(plant: Plant, days: Iterable[LocalEnvironment], params: DevelopmentParams) -> Plant:
+    """The plant after these days, one after another, each in its local
+    environment."""
+    for environment in days:
+        plant = live_day(plant, environment, params)
     return plant

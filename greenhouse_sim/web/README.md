@@ -23,8 +23,9 @@ The panel chooses what is drawn, and the address bar keeps the choice:
 `?scene=example` is a deterministic example scene from
 `public/scenes/example.json`, `?plants=lab` is the plant lab, a row of tomato plants from the
 organ-level model, with the selected plant's structure as a debug tree, a
-slider for the day of its run and the seed its row is drawn from
-(`?plants=lab&day=30&seed=7`), `?scene=fixtures` is a gallery of the layout's
+slider for the day of its run, the seed its row is drawn from, and the
+environment its plants live in, with another beside it for every second plant
+(`?plants=lab&day=30&seed=7&environment=cool_dim&versus=warm_bright`), `?scene=fixtures` is a gallery of the layout's
 fixture primitives (`public/scenes/qa-fixtures.json`), one of each, drawn in
 its material, `?scene=stress&plants=10000` is a dense field of
 plants for measuring the renderer, `?scenario=gh_demo` is that scenario before

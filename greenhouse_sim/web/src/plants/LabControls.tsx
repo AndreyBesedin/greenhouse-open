@@ -1,26 +1,51 @@
-import { PLANT_LAB_LAST_DAY } from "./lab";
+import { useEffect, useState } from "react";
+
+import { describeEnvironment, type EnvironmentsState, loadLabEnvironments } from "./environments";
+import { type LabRun, PLANT_LAB_LAST_DAY } from "./lab";
+
+// The choice of no second environment beside the first.
+const NOTHING_BESIDE = "";
 
 /**
- * The plant lab's day and seed. Moving the slider asks the simulator for its
- * row on that day, so its development stays the simulator's; the day shown is
- * the day of the scene on show, which the slider leads while the next
- * arrives. Another seed draws another row of the same crop.
+ * The plant lab's run: its day, its seed and its plants' environments.
+ * Moving the slider asks the simulator for its row on that day, so its
+ * development stays the simulator's; the day shown is the day of the scene on
+ * show, which the slider leads while the next arrives. Another seed draws
+ * another row of the same crop. With a second environment beside the first,
+ * every second plant lives in it instead, so the two can be compared side by
+ * side.
  */
 export function LabControls({
-  day,
+  run,
   shownDay,
-  seed,
-  onDay,
-  onSeed,
+  onChange,
 }: {
-  /** The day asked for. */
-  day: number;
+  run: LabRun;
   /** The day of the scene on show, if one is. */
   shownDay: number | null;
-  seed: number;
-  onDay: (day: number) => void;
-  onSeed: (seed: number) => void;
+  onChange: (change: Partial<LabRun>) => void;
 }) {
+  const [environments, setEnvironments] = useState<EnvironmentsState>({ status: "loading" });
+
+  useEffect(() => {
+    let current = true;
+    void loadLabEnvironments().then((loaded) => {
+      if (current) {
+        setEnvironments(loaded);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, []);
+
+  const known = environments.status === "loaded" ? environments.environments : {};
+  const names = Object.keys(known);
+  const described = (name: string | null) => {
+    const environment = name === null ? undefined : known[name];
+    return environment === undefined ? "" : describeEnvironment(environment);
+  };
+
   return (
     <fieldset className="lab-controls" aria-label="Plant lab">
       <label className="lab-control">
@@ -30,8 +55,8 @@ export function LabControls({
           min={0}
           max={PLANT_LAB_LAST_DAY}
           step={1}
-          value={day}
-          onChange={(event) => onDay(Number(event.target.value))}
+          value={run.day}
+          onChange={(event) => onChange({ day: Number(event.target.value) })}
         />
         <span data-testid="plant-day">{shownDay === null ? "…" : `day ${shownDay}`}</span>
       </label>
@@ -41,18 +66,58 @@ export function LabControls({
           type="number"
           min={0}
           step={1}
-          value={seed}
+          value={run.seed}
           onChange={(event) => {
             const next = Number(event.target.value);
             if (Number.isInteger(next) && next >= 0) {
-              onSeed(next);
+              onChange({ seed: next });
             }
           }}
         />
-        <button type="button" onClick={() => onSeed(seed + 1)}>
+        <button type="button" onClick={() => onChange({ seed: run.seed + 1 })}>
           Another seed
         </button>
       </label>
+      {environments.status === "unavailable" && (
+        <p role="alert">The lab's environments are not available: {environments.reason}.</p>
+      )}
+      {names.length > 0 && (
+        <>
+          <label className="lab-control">
+            <span>Environment</span>
+            <select
+              value={run.environment}
+              onChange={(event) => onChange({ environment: event.target.value })}
+            >
+              {names.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+            <span data-testid="lab-environment">{described(run.environment)}</span>
+          </label>
+          <label className="lab-control">
+            <span>Beside it</span>
+            <select
+              value={run.versus ?? NOTHING_BESIDE}
+              onChange={(event) =>
+                onChange({
+                  versus: event.target.value === NOTHING_BESIDE ? null : event.target.value,
+                })
+              }
+            >
+              <option value={NOTHING_BESIDE}>nothing else</option>
+              {names.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+            <span data-testid="lab-versus">{described(run.versus)}</span>
+          </label>
+        </>
+      )}
     </fieldset>
   );
 }

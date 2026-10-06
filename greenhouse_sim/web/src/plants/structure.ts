@@ -1,3 +1,5 @@
+import { type LabRun, labRunQuery } from "./lab";
+
 /** One organ of a plant's structure, with the organs attached to it, as the
  * simulator's plant lab describes them (`GET /api/plants/structure`). */
 export interface OrganNode {
@@ -109,22 +111,19 @@ export function organTree(body: unknown): OrganNode {
   return node(plant, text(plant, "plant_id"), "plant", false, [stemNode]);
 }
 
-/** Which of the plant lab's plants, on which day of its run, drawn from
- * which seed. */
-export interface LabPlant {
+/** Which of the plant lab's plants, on which run of the lab. */
+export interface LabPlant extends LabRun {
   plantId: string;
-  day: number;
-  seed: number;
 }
 
 /** Asks the plant lab for one of its plant's structure; any failure becomes
  * `unavailable`. */
 export async function loadPlantStructure(
-  { plantId, day, seed }: LabPlant,
+  { plantId, ...run }: LabPlant,
   fetchFn: typeof fetch = fetch,
 ): Promise<StructureState> {
   try {
-    const query = `day=${day}&seed=${seed}&plant=${encodeURIComponent(plantId)}`;
+    const query = `${labRunQuery(run)}&plant=${encodeURIComponent(plantId)}`;
     const response = await fetchFn(`${PLANT_LAB_STRUCTURE_URL}?${query}`);
     if (!response.ok) {
       return { status: "unavailable", reason: `the simulator API answered ${response.status}` };

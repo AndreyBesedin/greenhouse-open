@@ -37,6 +37,21 @@ from greenhouse_sim.services import plants
 from greenhouse_sim.world.geometry import Cylinder, Sphere, Transform, Vector3
 
 PARAMS = DevelopmentParams()
+REFERENCE = plants.ENVIRONMENTS[plants.REFERENCE]
+
+
+def _rounded(value: object) -> object:
+    """A plant's description with its numbers to nine decimals: growth adds
+    up step by step, so one step and many agree only to rounding."""
+    if isinstance(value, float):
+        return round(value, 9)
+    if isinstance(value, dict):
+        return {key: _rounded(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_rounded(item) for item in value]
+    return value
+
+
 TRUSSES = PARAMS.trusses
 # Long enough for a plant to set fruit on several trusses.
 FRUITING_CD = 900.0
@@ -161,27 +176,27 @@ def test_a_young_fruit_aborts_now_and_then_and_stays_aborted() -> None:
 def test_every_organ_keeps_its_identity_and_changes_stage_only_as_allowed() -> None:
     """Three of the lab's plants, day after day through the lab's run."""
     for plant_id in ("p01", "p02", "p03"):
-        previous = plants.structure(0, plants.LAB_SEED, plant_id)
+        previous = plants.structure(plants.LabRun(), plant_id)
         for day in range(1, plants.LAST_DAY + 1):
-            current = grow(previous, [plants.LAB_TEMPERATURE_C], plants.DEVELOPMENT)
+            current = grow(previous, [plants.ENVIRONMENTS[plants.REFERENCE]], plants.DEVELOPMENT)
             assert change_problems(previous, current) == [], (plant_id, day)
             assert topology_problems(current) == [], (plant_id, day)
             previous = current
-        assert previous == plants.structure(plants.LAST_DAY, plants.LAB_SEED, plant_id)
+        assert previous == plants.structure(plants.LabRun(day=plants.LAST_DAY), plant_id)
 
 
 def test_a_fruit_followed_from_its_set_keeps_its_identifier_and_birth() -> None:
     seen: dict[str, float] = {}
     for day in range(0, plants.LAST_DAY + 1, 5):
-        fruits = {f.fruit_id: f.born_tt for f in _fruits(plants.structure(day))}
+        fruits = {f.fruit_id: f.born_tt for f in _fruits(plants.structure(plants.LabRun(day=day)))}
         assert seen.items() <= fruits.items()
         seen = fruits
     assert seen
 
 
 def test_a_change_that_is_not_allowed_is_found_out() -> None:
-    before = plants.structure(45)
-    after = plants.structure(50)
+    before = plants.structure(plants.LabRun(day=45))
+    after = plants.structure(plants.LabRun(day=50))
     rank, truss = next((p.rank, p.truss) for p in after.stem.phytomers if p.truss is not None)
     assert truss is not None
     flower = next(f for f in truss.flowers if f.stage == FlowerStage.SET)
@@ -214,15 +229,17 @@ def test_a_change_that_is_not_allowed_is_found_out() -> None:
 
 def test_a_plant_sets_the_same_fruit_grown_in_one_step_or_day_by_day() -> None:
     transplant = develop(emerged("p01", PARAMS, seed=4), plants.TRANSPLANT_CD, PARAMS)
-    daily = grow(transplant, [21.0] * 60, PARAMS)
+    daily = grow(transplant, [REFERENCE] * 60, PARAMS)
 
-    assert daily == develop(transplant, 60 * 11.0, PARAMS)
+    assert _rounded(daily.model_dump(mode="json")) == _rounded(
+        develop(transplant, 60 * 11.0, PARAMS).model_dump(mode="json")
+    )
     assert _fruits(daily)
 
 
 def test_the_labs_first_plant_flowers_and_fruits_on_reference_days() -> None:
     def tally(day: int) -> tuple[int, dict[str, int], int]:
-        plant = plants.structure(day)
+        plant = plants.structure(plants.LabRun(day=day))
         stages = Counter(flower.stage.value for flower in _flowers(plant))
         return len(_trusses(plant)), dict(sorted(stages.items())), len(_fruits(plant))
 
@@ -232,7 +249,7 @@ def test_the_labs_first_plant_flowers_and_fruits_on_reference_days() -> None:
 
 
 def test_buds_flowers_and_fruits_are_drawn_as_they_are_and_dropped_ones_not() -> None:
-    plant = plants.structure(60)
+    plant = plants.structure(plants.LabRun(day=60))
     shapes = {s.organ_id: s for s in organ_geometry(plant)}
     for truss in _trusses(plant):
         stick = shapes[truss.truss_id].shape
@@ -256,7 +273,9 @@ def test_buds_flowers_and_fruits_are_drawn_as_they_are_and_dropped_ones_not() ->
 
 
 def test_the_scene_colours_a_bud_green_and_an_open_flower_yellow() -> None:
-    entities = plant_entities(plants.structure(60), Transform(position=Vector3(x=0, y=0, z=0)))
+    entities = plant_entities(
+        plants.structure(plants.LabRun(day=60)), Transform(position=Vector3(x=0, y=0, z=0))
+    )
     flowers = [e for e in entities if e.kind == SceneEntityKind.FLOWER]
     fruits = [e for e in entities if e.kind == SceneEntityKind.FRUIT]
 
@@ -269,7 +288,7 @@ def test_the_scene_colours_a_bud_green_and_an_open_flower_yellow() -> None:
 def test_a_truss_with_fewer_flowers_than_it_bears_is_found_out() -> None:
     with pytest.raises(ValidationError, match="min_flowers is more than max_flowers"):
         TrussParams(min_flowers=9)
-    plant = plants.structure(30)
+    plant = plants.structure(plants.LabRun(day=30))
     rank, truss = next((p.rank, p.truss) for p in plant.stem.phytomers if p.truss is not None)
     assert truss is not None
     crowded = truss.model_copy(update={"final_flower_count": len(truss.flowers) - 1})

@@ -55,7 +55,7 @@ P00 gives the viewer, P02 the planting positions plants stand at.
 | P03.4 | `feat(plants): add correlated stochastic plant variation` | Done |
 | P03.5 | `feat(plants): add trusses, flowers and fruit set` | Done |
 | P03.6 | `feat(plants): add fruit growth, ripeness and colour` | Done |
-| P03.7 | `feat(plants): consume local environment inputs` | Planned |
+| P03.7 | `feat(plants): consume local environment inputs` | Done |
 | P03.8 | `feat(plants): add pruning, harvest and lowering actions` | Planned |
 | P03.9 | `test(plants): add biological and visual regression scenarios` | Planned |
 
@@ -416,6 +416,55 @@ first response functions; physiological realism is not yet required.
 Visible result: two plants side by side under different environments
 diverge in growth and ripening. Tests: a controlled perturbation gives the
 expected direction of response.
+
+As implemented (see [decision 0024](../decisions/0024-plants-take-their-environment-a-day-at-a-time.md)):
+
+- **The interface:** `organ.environment` defines it.
+  - **A day:** a `LocalEnvironment` is the day's mean temperature, PAR
+    daily light integral, CO₂ and water status.
+  - **A source:** an `Environment` is anything that says what each plant
+    experiences on each day.
+  - **Living days:** `live_day` and `grow` live a plant's days one at a time.
+- **Responses:**
+  - **Temperature** paces development through thermal time.
+  - **Light, CO₂ and water** give a growth factor from 0 to 1. Light and CO₂
+    respond saturating towards the reference, 25 mol/m²/d and 800 ppm, and
+    water scales growth directly.
+  - **Organs** (internodes, leaves and fruits) grow by increments: each day,
+    their S-curve's share of their final size times the day's growth
+    factor. They never pass the final size, and never make up growth lost.
+    The crop's sizes are its potential under reference conditions or
+    better.
+- **The lab's environments:** reference (21 °C, 25 mol/m²/d, 800 ppm),
+  warm_bright (25 °C, 32, 1000), cool_dim (17 °C, 8, 400) and dry (the
+  reference at half water).
+  - **API:** `?environment=` keeps the row in one, and `&versus=` every
+    second plant in another, beside the first. `GET /api/plants/environments`
+    lists them, and an unknown one is refused. Each plant's entities name its
+    environment.
+  - **Viewer:** an environment picker, and a second for "beside it", each
+    describing its environment.
+- Tests:
+  - Python:
+    - light and CO₂ saturate towards the reference, water scales growth, and
+      the reference's factor is exactly 1;
+    - **controlled perturbations, one input at a time:**
+      - warmer days develop a plant faster and ripen its fruit sooner;
+      - days below the base develop nothing;
+      - dimmer days grow smaller organs at the same pace;
+      - less CO₂ or water grows less;
+      - better than the reference grows no more;
+      - growth lost is not made up;
+    - any source serves as the environment, asked day by day in order;
+    - the lab keeps its plants in the environment asked for;
+    - two environments alternate along the row, and their plants diverge in
+      height and ripeness;
+    - an unknown environment is refused.
+  - Viewer: the address bar's environments, the structure asked for with
+    them, and the environments read and described.
+  - Browser: cool_dim with warm_bright beside it, chosen in the pickers. The
+    row's second plant is in warm_bright and its first in cool_dim, each
+    clicked in the view.
 
 ### P03.8: Pruning, harvest and lowering actions
 

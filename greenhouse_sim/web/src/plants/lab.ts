@@ -17,3 +17,33 @@ export const PLANT_LAB_POSE: CameraPose = {
 export const PLANT_LAB_LAST_DAY = 90;
 export const PLANT_LAB_SEED = 1;
 export const PLANT_LAB_FIRST_PLANT = "p01";
+// The environment the lab keeps its plants in unless asked for another.
+export const PLANT_LAB_REFERENCE = "reference";
+
+/** A run of the plant lab: the day shown, the seed its row is drawn from, the
+ * environment its plants live in and, if `versus` names another, the one
+ * every second plant lives in instead. */
+export interface LabRun {
+  day: number;
+  seed: number;
+  environment: string;
+  versus: string | null;
+}
+
+export const FIRST_LAB_RUN: LabRun = {
+  day: 0,
+  seed: PLANT_LAB_SEED,
+  environment: PLANT_LAB_REFERENCE,
+  versus: null,
+};
+
+/** A run as the simulator's lab is asked for it. */
+export function labRunQuery(run: LabRun): string {
+  const parts = [
+    `day=${run.day}`,
+    `seed=${run.seed}`,
+    `environment=${encodeURIComponent(run.environment)}`,
+    ...(run.versus === null ? [] : [`versus=${encodeURIComponent(run.versus)}`]),
+  ];
+  return parts.join("&");
+}

@@ -43,9 +43,17 @@ function organsOf(plant: Structure): number {
   }, 2);
 }
 
-/** The lab's row on a day, from a seed, as the simulator draws it. */
-async function labScene(page: Page, day: number, seed = 1): Promise<SceneSnapshot> {
-  const response = await page.request.get(`/api/plants/scene?day=${day}&seed=${seed}`);
+/** The lab's row on a day, from a seed, as the simulator draws it, in more
+ * than its reference environment if `environments` says. */
+async function labScene(
+  page: Page,
+  day: number,
+  seed = 1,
+  environments = "",
+): Promise<SceneSnapshot> {
+  const response = await page.request.get(
+    `/api/plants/scene?day=${day}&seed=${seed}${environments}`,
+  );
   return response.json();
 }
 
@@ -196,6 +204,37 @@ test("a fruit followed through the days grows and ripens from green to red", asy
   await expect(page.getByTestId("property-ripeness")).toHaveText("1");
   const red = Number(await page.getByTestId("property-mass_g").textContent());
   expect(red).toBeGreaterThan(green);
+});
+
+test("two environments side by side: every second plant lives in the other", async ({ page }) => {
+  const both = "&environment=cool_dim&versus=warm_bright";
+  // Early in the run, while the plants are small enough not to hide each other.
+  const scene = await labScene(page, 10, 1, both);
+  await page.goto("/?plants=lab&day=10");
+  await expect(page.getByTestId("lab-environment")).toHaveText(
+    "21 °C, 25 mol/m²/d PAR, 800 ppm CO₂, water 100%",
+  );
+
+  await page.getByRole("combobox", { name: "Environment" }).selectOption("cool_dim");
+  await page.getByRole("combobox", { name: "Beside it" }).selectOption("warm_bright");
+
+  await expect(page).toHaveURL(/\?plants=lab&day=10&environment=cool_dim&versus=warm_bright$/);
+  await expect(page.getByTestId("lab-versus")).toHaveText(
+    "25 °C, 32 mol/m²/d PAR, 1000 ppm CO₂, water 100%",
+  );
+  await expect(page.getByTestId("scene-status")).toHaveText(
+    `Showing the plant lab: plant_lab, day 10, ${scene.entities.length} entities.`,
+  );
+  // The row's second plant lives beside its first, in the other environment.
+  for (const [plantId, environment] of [
+    ["p02", "warm_bright"],
+    ["p01", "cool_dim"],
+  ]) {
+    const leaflet = `${plantId}_n03_leaf_terminal`;
+    await selectAt(page, centreOf(scene, leaflet), leaflet, PLANT_LAB_POSE);
+    await expect(page.getByTestId("property-environment")).toHaveText(environment ?? "");
+    await expect(page.getByText(`Plant structure: ${plantId}`)).toBeVisible();
+  }
 });
 
 test("the slider runs as far as the simulator's lab does, and no further", async ({ page }) => {

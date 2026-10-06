@@ -51,7 +51,9 @@ def _set(rank: int = 1, fruit_id: str = "p01_t01_fr01", born_tt: float = 500.0) 
 def test_a_fruit_sets_small_and_grows_along_an_s_curve_to_its_final_size() -> None:
     fruit = _set()
     sizes = [
-        grown_fruit(fruit, fruit.born_tt + FRUITS.growth_cd * step / 10, FRUITS).diameter_mm
+        grown_fruit(
+            fruit, fruit.born_tt, fruit.born_tt + FRUITS.growth_cd * step / 10, FRUITS
+        ).diameter_mm
         for step in range(11)
     ]
 
@@ -61,13 +63,13 @@ def test_a_fruit_sets_small_and_grows_along_an_s_curve_to_its_final_size() -> No
     assert sizes[5] == pytest.approx((FRUITS.set_diameter_mm + fruit.final_diameter_mm) / 2)
     gains = np.diff(sizes)
     assert (gains > 0).all() and gains[0] < gains[4] and gains[-1] < gains[5]
-    later = grown_fruit(fruit, fruit.born_tt + 3 * FRUITS.growth_cd, FRUITS)
+    later = grown_fruit(fruit, fruit.born_tt, fruit.born_tt + 3 * FRUITS.growth_cd, FRUITS)
     assert later.diameter_mm == pytest.approx(fruit.final_diameter_mm)
 
 
 def test_a_fruits_mass_follows_its_volume() -> None:
     assert fruit_mass_g(60.0, FRUITS) == pytest.approx(math.pi / 6 * 6.0**3)
-    grown = grown_fruit(_set(), 2000.0, FRUITS)
+    grown = grown_fruit(_set(), 500.0, 2000.0, FRUITS)
     assert grown.mass_g == pytest.approx(fruit_mass_g(grown.diameter_mm, FRUITS))
     # A typical full-grown truss tomato weighs about 125 g.
     assert fruit_mass_g(FRUITS.final_diameter_mm, FRUITS) == pytest.approx(125, abs=10)
@@ -95,15 +97,15 @@ def test_a_fruit_ripens_from_its_breaker_to_red_and_never_back() -> None:
     breaker = fruit.breaker_tt
 
     def ripeness(thermal_time: float) -> float:
-        return grown_fruit(fruit, thermal_time, FRUITS).ripeness
+        return grown_fruit(fruit, fruit.born_tt, thermal_time, FRUITS).ripeness
 
     assert ripeness(breaker) == 0.0
     assert ripeness(breaker + FRUITS.ripening_cd / 2) == pytest.approx(0.5)
     assert ripeness(breaker + FRUITS.ripening_cd) == 1.0
     assert ripeness(breaker + 5 * FRUITS.ripening_cd) == 1.0
-    ripe = grown_fruit(fruit, breaker + FRUITS.ripening_cd, FRUITS)
+    ripe = grown_fruit(fruit, fruit.born_tt, breaker + FRUITS.ripening_cd, FRUITS)
     # Grown again to an earlier moment, a fruit does not unripen.
-    assert grown_fruit(ripe, breaker, FRUITS).ripeness == 1.0
+    assert grown_fruit(ripe, breaker, breaker, FRUITS).ripeness == 1.0
 
 
 def test_each_fruit_draws_its_own_ripening_offset() -> None:
@@ -144,7 +146,7 @@ def test_a_fruits_colour_runs_from_green_through_orange_to_red() -> None:
 
 
 def test_a_drawn_fruits_colour_and_sizes_are_its_biological_state() -> None:
-    plant = plants.structure(80)
+    plant = plants.structure(plants.LabRun(day=80))
     fruits = {fruit.fruit_id: fruit for fruit in _fruits(plant)}
     entities = [
         e
@@ -168,10 +170,11 @@ def test_an_aborted_fruit_stays_as_it_was_when_it_dropped() -> None:
 
     assert aborted
     for fruit in aborted:
+        as_set = fruit.model_copy(
+            update={"stage": FruitStage.ATTACHED, "diameter_mm": trusses.fruits.set_diameter_mm}
+        )
         at_abortion = grown_fruit(
-            fruit.model_copy(update={"stage": FruitStage.ATTACHED}),
-            fruit.born_tt + trusses.fruit_abortion_cd,
-            trusses.fruits,
+            as_set, fruit.born_tt, fruit.born_tt + trusses.fruit_abortion_cd, trusses.fruits
         )
         assert fruit.diameter_mm == pytest.approx(at_abortion.diameter_mm)
         assert fruit.ripeness == 0.0
@@ -179,7 +182,11 @@ def test_an_aborted_fruit_stays_as_it_was_when_it_dropped() -> None:
 
 def test_the_labs_first_plant_ripens_its_lower_trusses_by_the_end_of_its_run() -> None:
     def tally(day: int) -> tuple[dict[str, int], int]:
-        fruits = [f for f in _fruits(plants.structure(day)) if f.stage == FruitStage.ATTACHED]
+        fruits = [
+            f
+            for f in _fruits(plants.structure(plants.LabRun(day=day)))
+            if f.stage == FruitStage.ATTACHED
+        ]
         classes = Counter(maturity(f.ripeness).value for f in fruits)
         return dict(sorted(classes.items())), round(sum(f.mass_g for f in fruits))
 
@@ -189,7 +196,7 @@ def test_the_labs_first_plant_ripens_its_lower_trusses_by_the_end_of_its_run() -
 
 
 def test_shrinking_or_unripening_is_found_out() -> None:
-    before = plants.structure(85)
+    before = plants.structure(plants.LabRun(day=85))
     fruit = next(f for f in _fruits(before) if 0 < f.ripeness < 1)
 
     def changed(update: dict[str, float]) -> list[str]:

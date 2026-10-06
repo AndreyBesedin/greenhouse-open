@@ -14,7 +14,7 @@ import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
 import { OpeningControls } from "./OpeningControls";
 import { LabControls } from "./plants/LabControls";
-import { PLANT_LAB_FIRST_PLANT, PLANT_LAB_POSE } from "./plants/lab";
+import { type LabRun, PLANT_LAB_FIRST_PLANT, PLANT_LAB_POSE } from "./plants/lab";
 import { PlantStructure } from "./plants/PlantStructure";
 import type { ViewSample } from "./readouts";
 import { loadScenarios, type ScenariosState } from "./scenarios";
@@ -114,9 +114,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     setSource(next);
   }
 
-  // A selection is kept from one day to the next, and from one seed to the
-  // next: its organ is the same organ, of the plant in the same place.
-  function setLabRun(change: { day?: number; seed?: number }): void {
+  // A selection is kept from one run of the lab to the next: its organ is the
+  // same organ, of the plant in the same place.
+  function setLabRun(change: Partial<LabRun>): void {
     if (source.kind !== "plants") {
       return;
     }
@@ -218,11 +218,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             )}
             {source.kind === "plants" && (
               <LabControls
-                day={source.day}
+                run={source}
                 shownDay={snapshot === null ? null : snapshot.simulated_day}
-                seed={source.seed}
-                onDay={(day) => setLabRun({ day })}
-                onSeed={(seed) => setLabRun({ seed })}
+                onChange={setLabRun}
               />
             )}
             {source.kind === "plants" && (
@@ -231,6 +229,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                   plantId: plantOf(selected) ?? PLANT_LAB_FIRST_PLANT,
                   day: source.day,
                   seed: source.seed,
+                  environment: source.environment,
+                  versus: source.versus,
                 }}
                 selectedOrgan={selected === null ? null : organOf(selected)}
                 onSelect={(organId) => setSelectedId(entityOfOrgan(snapshot, organId))}
