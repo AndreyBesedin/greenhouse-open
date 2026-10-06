@@ -37,6 +37,17 @@ describe("picking an entity", () => {
   });
 });
 
+describe("picking through glass", () => {
+  it("reaches a solid entity behind it, and picks the glass only with nothing behind", () => {
+    const wall = drawnEntity("gh_demo_side_wall_right");
+    wall.mesh.userData.seeThrough = true;
+    const plant = drawnEntity("gh_demo_plant_001");
+
+    expect(pickEntity([{ object: wall.mesh }, { object: plant.mesh }])).toBe("gh_demo_plant_001");
+    expect(pickEntity([{ object: wall.mesh }])).toBe("gh_demo_side_wall_right");
+  });
+});
+
 describe("picking an instance of a batch", () => {
   it("names the entity drawn as that instance", () => {
     const batch = new InstancedMesh(undefined, undefined, 3);
