@@ -16,7 +16,7 @@ from greenhouse_sim.biology.tomato.organ.development import (
     final_size_fraction,
 )
 from greenhouse_sim.biology.tomato.organ.geometry import GOLDEN_ANGLE_RAD, PlantForm, organ_geometry
-from greenhouse_sim.biology.tomato.organ.topology import Plant, PlantTraits, topology_problems
+from greenhouse_sim.biology.tomato.organ.topology import Plant, PlantTraits
 from greenhouse_sim.biology.tomato.organ.variation import (
     TraitSpread,
     VariationParams,
@@ -155,7 +155,7 @@ def test_the_labs_row_varies_and_keeps_every_rule() -> None:
         row = [
             plants.structure(plants.LabRun(day=day), plant_id) for plant_id in plants.plant_ids()
         ]
-        assert all(topology_problems(plant) == [] for plant in row)
+        assert all(plant.problems() == [] for plant in row)
     heights = [sum(p.internode.length_cm for p in plant.stem.phytomers) for plant in row]
     counts = {len(plant.stem.phytomers) for plant in row}
     # Clearly not clones, yet one crop: within a third of the row's mean.

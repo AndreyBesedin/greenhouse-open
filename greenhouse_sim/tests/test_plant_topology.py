@@ -15,7 +15,6 @@ from greenhouse_sim.biology.tomato.organ.topology import (
     FlowerStage,
     Fruit,
     Plant,
-    topology_problems,
 )
 from greenhouse_sim.scene.plants import plant_entities
 from greenhouse_sim.scene.snapshot import SceneEntityKind, SceneSnapshot
@@ -37,7 +36,7 @@ def _fruit(fruit_id: str) -> Fruit:
 
 
 def test_the_reference_plant_keeps_every_rule_of_the_structure() -> None:
-    assert topology_problems(PLANT) == []
+    assert PLANT.problems() == []
 
 
 def test_organs_are_named_by_where_they_sit() -> None:
@@ -135,7 +134,7 @@ def _first_flower(plant: Plant) -> Flower:
     ],
 )
 def test_a_structure_that_breaks_a_rule_is_found_out(broken: Plant, problem: str) -> None:
-    problems = topology_problems(broken)
+    problems = broken.problems()
 
     assert any(problem in found for found in problems), problems
 
@@ -150,7 +149,7 @@ def test_an_organ_larger_than_it_grows_is_found_out() -> None:
     )
     stem = PLANT.stem.model_copy(update={"phytomers": (overgrown, *PLANT.stem.phytomers[1:])})
 
-    assert topology_problems(PLANT.model_copy(update={"stem": stem})) == [
+    assert PLANT.model_copy(update={"stem": stem}).problems() == [
         "p01_n01_internode is longer than it grows",
         "p01_n01_internode is thicker than it grows",
         "p01_n01_leaf is longer than it grows",
@@ -164,7 +163,7 @@ def test_phytomers_out_of_order_or_repeated_are_found_out() -> None:
 
     def problems(stack: tuple[object, ...]) -> list[str]:
         stem = PLANT.stem.model_copy(update={"phytomers": stack})
-        return topology_problems(PLANT.model_copy(update={"stem": stem}))
+        return PLANT.model_copy(update={"stem": stem}).problems()
 
     assert any("has rank 2, not 1" in found for found in problems(swapped))
     assert any("identifiers used twice" in found for found in problems(repeated))

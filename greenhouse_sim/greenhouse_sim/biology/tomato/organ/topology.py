@@ -21,9 +21,10 @@ Identifiers say where an organ sits, so they never depend on anything else:
 Every organ records when it appeared, as the plant's accumulated thermal
 time then (degree-days, °Cd); its thermal age is how much the plant has
 accumulated since. A plant also records the seed its draws come from and its
-traits: how it differs from its crop's typical plant. `topology_problems`
-lists whatever breaks the structure's rules, so tests, and later the model
-itself, can hold every plant to them.
+traits: how it differs from its crop's typical plant. `Plant.problems`
+lists whatever breaks the structure's rules, and `Plant.problems_since`
+whatever is wrong with a later moment of a plant, so tests, and the plant
+lab's checks, can hold every plant to them.
 """
 
 import math
@@ -304,6 +305,18 @@ class Plant(Organ):
         """How long an organ has developed, in °Cd."""
         return self.thermal_time - organ.born_tt
 
+    def problems(self) -> list[str]:
+        """Everything about the plant that breaks the structure's rules, or
+        nothing: tests, and the lab's checks, hold every plant to them."""
+        return _structure_problems(self)
+
+    def problems_since(self, earlier: Plant) -> list[str]:
+        """Everything wrong with the plant as a later moment of the plant
+        `earlier` was, or nothing: time runs forward, every organ is still
+        there, stages change only as allowed, and nothing shrinks, unripens or
+        is undone."""
+        return _change_problems(earlier, self)
+
     def organs(self) -> Iterator[tuple[OrganKind, str, str | None, Organ]]:
         """Every organ with its kind, identifier and its parent's identifier,
         from the plant down, in the order they sit."""
@@ -337,7 +350,7 @@ def bears_anything(truss: Truss) -> bool:
     )
 
 
-def topology_problems(plant: Plant) -> list[str]:
+def _structure_problems(plant: Plant) -> list[str]:
     """Everything that breaks the structure's rules, or nothing."""
     problems: list[str] = []
     pid = plant.plant_id
@@ -428,7 +441,7 @@ def _allowed(before: StrEnum, after: StrEnum) -> bool:
     return False
 
 
-def change_problems(before: Plant, after: Plant) -> list[str]:
+def _change_problems(before: Plant, after: Plant) -> list[str]:
     """Everything wrong with `after` as a later moment of the plant `before`
     was, or nothing: time runs forward, every organ is still there, of the
     same kind and appearing when it did, and every stage has changed only as

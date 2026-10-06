@@ -32,8 +32,6 @@ from greenhouse_sim.biology.tomato.organ.topology import (
     Plant,
     PlantAction,
     RemoveLeaf,
-    change_problems,
-    topology_problems,
 )
 from greenhouse_sim.biology.tomato.organ.variation import VariationParams, draw_traits
 from greenhouse_sim.scene.plants import plant_entities
@@ -224,9 +222,9 @@ def checks(run: LabRun | None = None) -> LabChecks:
     found = {}
     for plant_id in plant_ids():
         *earlier, plant = _days(plant_id, run, environment)
-        problems = topology_problems(plant)
+        problems = plant.problems()
         if earlier:
-            problems += change_problems(earlier[-1], plant)
+            problems += plant.problems_since(earlier[-1])
         found[plant_id] = problems
     return LabChecks(day=run.day, problems=found)
 

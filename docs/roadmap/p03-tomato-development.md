@@ -82,7 +82,7 @@ As implemented (see [decision 0022](../decisions/0022-plant-organs-are-named-by-
   truss, whose flowers become fruits when they set. Identifiers say where an
   organ sits (`p01_n05_leaf`, `p01_t02_fl04`, `p01_t02_fr04`), every organ
   records the plant's thermal time when it appeared, and leaves, flowers and
-  fruits have stages. `topology_problems` lists whatever breaks the
+  fruits have stages. `Plant.problems()` lists whatever breaks the
   structure's rules: identifiers used twice or named for another place,
   phytomers out of order, organs older than what bears them or appearing
   after the plant's thermal time, and a flower with a fruit unless it set.
@@ -325,7 +325,7 @@ As implemented:
     flowers it bears.
   - **Changes:** each kind's allowed stage changes are stated
     (`LEAF_CHANGES`, `FLOWER_CHANGES`, `FRUIT_CHANGES`).
-  - **`change_problems(before, after)`:** lists whatever is wrong with a
+  - **`after.problems_since(before)`:** lists whatever is wrong with a
     later moment of a plant. Time must run forward, every organ must still be
     there, of the same kind and appearing when it did, and every stage must
     change only as allowed.
@@ -387,7 +387,7 @@ As implemented:
   time and ripeness. The fruit stage `growing` becomes `attached`: on the
   plant, growing and ripening.
 - **Rules:** the topology gains two, that no fruit is larger than it grows
-  and none ripens before it sets. `change_problems` adds that no organ
+  and none ripens before it sets. `problems_since` adds that no organ
   shrinks and no fruit unripens.
 - **Scene:**
   - **Colour:** a fruit's colour is its ripeness's, blended from green
@@ -506,7 +506,7 @@ As implemented:
     the stem rises from where they end, so everything above comes down and
     along by their length.
 - **Rules:** the topology holds that laid-down internodes are bare, and
-  `change_problems` that the history only grows and nothing laid down
+  `problems_since` that the history only grows and nothing laid down
   stands up again.
 - **The lab schedules actions in its run.** `act=day:plant:action:organ` is
   repeatable, and each action is applied at the start of its day, before
@@ -650,7 +650,7 @@ and `e2e/plant-lab.spec.ts`), so they repeat on every change.
 - [x] Every visible organ has a persistent simulation identity where
   appropriate. Identifiers say where an organ sits, and an organ keeps its
   identifier, birth and place through growth, ripening, pruning and harvest.
-  `change_problems` holds this from day to day.
+  `problems_since` holds this from day to day.
 - [x] Biological state drives geometry and appearance: every shape, size,
   angle and colour drawn is derived from the organs' state and the plant's
   form and traits.
