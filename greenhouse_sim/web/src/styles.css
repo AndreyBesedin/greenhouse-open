@@ -224,3 +224,135 @@ body {
   align-items: center;
   font-variant-numeric: tabular-nums;
 }
+
+/* The panels stand in two columns at the sides of the view: the info panel
+ * above the inspector on the left, the HUD above the legends on the right.
+ * A column shares its height among its panels, which scroll rather than
+ * overlap when they do not all fit. The columns are independent, so a tall
+ * legend never crops the info panel. The space between them still lets the
+ * canvas take pointer events. */
+.viewer-panels {
+  position: absolute;
+  inset: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.panel-column {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.panel-column.at-the-end {
+  align-items: flex-end;
+}
+
+.panel-column > * {
+  position: static;
+  box-sizing: border-box;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-width: 100%;
+  overflow: auto;
+  pointer-events: auto;
+}
+
+/* The panels' widths as they were when they floated, padding included; in a
+ * narrow window they give way to the column's width. */
+.panel-column > .info-panel {
+  max-width: min(444px, 100%);
+}
+
+.panel-column > .hud {
+  width: 324px;
+}
+
+.panel-column > .inspector {
+  width: 424px;
+}
+
+/* The order in which the panels stack in the narrow window's dock. */
+.panel-column > .info-panel {
+  order: 1;
+}
+
+.panel-column > .hud {
+  order: 2;
+}
+
+.panel-column > .inspector {
+  order: 3;
+}
+
+.panel-column > .legends {
+  order: 4;
+}
+
+.viewer-panels dl {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.viewer-panels dd {
+  overflow-wrap: anywhere;
+}
+
+/* A scrollable dock leaves the upper view free for orbiting and picking.
+ * Panels participate in normal flow, so adding an inspector or legend does
+ * not cover another panel. Every control remains reachable by scrolling. */
+@media (max-width: 840px) {
+  .viewer-panels {
+    inset: auto 12px 12px;
+    max-height: 45%;
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow: auto;
+    pointer-events: auto;
+  }
+
+  /* The columns dissolve: their panels stack in the dock, one under another. */
+  .panel-column {
+    display: contents;
+  }
+
+  .viewer-panels .panel-column > * {
+    flex: none;
+    width: 100%;
+    max-width: none;
+  }
+
+  .viewer-panels .legends {
+    align-items: stretch;
+  }
+
+  .viewer-panels .scalar-legend {
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  .viewer-panels dl {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  }
+
+  .viewer-panels dt {
+    overflow-wrap: anywhere;
+  }
+
+  .hud fieldset {
+    flex-wrap: wrap;
+  }
+
+  .opening-control {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .opening-control input {
+    min-width: 0;
+    width: 100%;
+  }
+}
