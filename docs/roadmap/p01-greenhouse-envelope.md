@@ -39,7 +39,7 @@ around it.
 | --- | --- | --- |
 | P01.1 | `feat(world): define the greenhouse's origin, axes and bounds` | Done ([#28](https://github.com/AndreyBesedin/greenhouse-open/pull/28)) |
 | P01.2 | `feat(greenhouse): generate the floor and a rectangular envelope` | Done ([#29](https://github.com/AndreyBesedin/greenhouse-open/pull/29)) |
-| P01.3 | `feat(greenhouse): add pitched roof geometry` | Planned |
+| P01.3 | `feat(greenhouse): add pitched roof geometry` | Done ([#30](https://github.com/AndreyBesedin/greenhouse-open/pull/30)) |
 | P01.4 | `feat(greenhouse): add bays and repeated structural frames` | Planned |
 | P01.5 | `feat(envelope): add doors, vents and configurable openings` | Planned |
 | P01.6 | `feat(materials): distinguish envelope semantics visually` | Planned |
@@ -119,6 +119,37 @@ As implemented (see [decision 0017](../decisions/0017-envelope-surfaces-face-int
 Eave height, ridge height or roof pitch, roof panels and the gutter lines.
 Visible result: a recognisable greenhouse profile replaces the box. Tests:
 the cross-section's dimensions match the configuration.
+
+As implemented:
+
+- The envelope's height becomes an `eave_height` and a `ridge_height`; a
+  ridge below the eaves is refused, and one level with them makes a flat
+  roof. `roof_pitch` gives the slope. The scenarios' greenhouses now have
+  eaves at 3 to 3.5 m and ridges at 3.65 to 5.4 m.
+- The side walls rise to the eaves, the end walls are gables up to the
+  ridge (a new `polygon` shape), and two roof slopes meet at the ridge,
+  above the middle of the width. Each surface states its own axes
+  (`Quaternion.from_axes`), its front facing into the greenhouse. A gutter
+  runs along each eave (`Envelope.gutters()`).
+- The scene adds `ROOF` and `GUTTER` entities, so its schema moves to
+  version 4. The viewer draws the roof as glass, and gutters as channels
+  with their top at the eaves.
+- With the envelope closed, every edge is shared by two surfaces, so a
+  wall can no longer be told by its edge. Glass is picked by the click
+  instead, but only where nothing solid lies behind it: a click through the
+  glass still reaches the plants and floor inside.
+- Tests:
+  - Python: the envelope's seven surfaces each have the corners the
+    configuration gives them. The gable, the greenhouse's cross-section,
+    has the eaves on both sides and the ridge above the middle, at the
+    configured heights and pitch. Every surface faces in, and every edge is
+    shared by exactly two surfaces, for a pitched roof and a flat one. A
+    roof slope turned outwards, or a gable without its ridge corner, fails
+    them. Gutters run along the eaves, and stand there in the scene.
+  - Viewer: glass yields to a solid entity behind it, and is picked with
+    nothing behind; a gable's bounds follow its corners. A browser test
+    picks the back gable from the side view, and the floor through the
+    glass.
 
 ### P01.4: Bays and repeated structural frames
 

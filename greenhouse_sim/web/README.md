@@ -37,9 +37,10 @@ origin and axes, and its label) can be switched on and off around it. A
 selection stays on its entity as a live scenario moves on; clicking the sky
 clears it. "Colour by" shades entities by a numeric property, with a legend,
 and "Dimensions and axis labels" measures the greenhouse and names the
-world's axes, drawing its bounds as an outline. The greenhouse's walls are
-see-through glass: clicks reach what they enclose, and a wall's edges select
-it.
+world's axes, drawing its bounds as an outline. The greenhouse's walls and
+roof are see-through glass: a click picks the nearest solid thing along it,
+such as a plant or the floor, and picks the glass only where nothing solid
+lies behind.
 Overlays are data in world coordinates, drawn by `src/debug`
 ([decision 0013](../../docs/decisions/0013-describe-debug-overlays-as-data-in-world-coordinates.md)),
 and they only ever read the scene.
