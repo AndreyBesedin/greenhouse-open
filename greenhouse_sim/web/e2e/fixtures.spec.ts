@@ -56,6 +56,9 @@ test.use({ viewport: { width: 1920, height: 1080 } });
 test("the fixture gallery shows each primitive at its size, made of its material", async ({
   page,
 }) => {
+  // Six picks in a large window: slow where the browser draws in software, as
+  // in CI.
+  test.slow();
   await page.goto("/?scene=fixtures");
   await expect(page.getByTestId("scene-status")).toHaveText(
     "Showing the fixture gallery: qa_fixtures, day 0, 30 entities.",
@@ -64,18 +67,20 @@ test("the fixture gallery shows each primitive at its size, made of its material
   const inspector = page.getByRole("region", { name: "Inspector" });
 
   for (const fixture of FIXTURES) {
-    await selectAt(page, fixture.top, fixture.id, "top");
-    await expect(inspector.getByText(fixture.kind, { exact: true })).toBeVisible();
-    await expect(page.getByTestId("selected-shape")).toHaveText(fixture.shape);
-    await expect(page.getByTestId("selected-material")).toHaveText(fixture.material);
-    if (fixture.kind === "WALKWAY") {
-      // A walkway is walked on: it obstructs nothing.
-      await expect(page.getByTestId("property-obstructs_movement")).toHaveText("false");
-      await expect(page.getByTestId("property-obstructs_airflow")).toHaveText("false");
-      await expect(page.getByTestId("property-obstructs_light")).toHaveText("false");
-    }
-    // The inspector covers the right of the view; clearing the selection
-    // closes it, so the next fixture can be clicked.
-    await inspector.getByRole("button", { name: "Clear selection" }).click();
+    await test.step(fixture.id, async () => {
+      await selectAt(page, fixture.top, fixture.id, "top");
+      await expect(inspector.getByText(fixture.kind, { exact: true })).toBeVisible();
+      await expect(page.getByTestId("selected-shape")).toHaveText(fixture.shape);
+      await expect(page.getByTestId("selected-material")).toHaveText(fixture.material);
+      if (fixture.kind === "WALKWAY") {
+        // A walkway is walked on: it obstructs nothing.
+        await expect(page.getByTestId("property-obstructs_movement")).toHaveText("false");
+        await expect(page.getByTestId("property-obstructs_airflow")).toHaveText("false");
+        await expect(page.getByTestId("property-obstructs_light")).toHaveText("false");
+      }
+      // The inspector covers part of the view; clearing the selection closes
+      // it, so that the next fixture can be clicked.
+      await inspector.getByRole("button", { name: "Clear selection" }).click();
+    });
   }
 });
