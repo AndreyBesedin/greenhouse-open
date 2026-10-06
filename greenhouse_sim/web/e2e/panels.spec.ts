@@ -20,12 +20,14 @@ for (const size of [
     await selectAt(page, { x: 0.5, y: 1.6, z: 0.15 }, "gh_demo_plant_001");
 
     const panels = page.locator(".viewer-panels");
-    const boxes = await panels.locator(":scope > *").evaluateAll((elements) =>
-      elements.map((element) => {
-        const { x, y, width, height } = element.getBoundingClientRect();
-        return { x, y, width, height };
-      }),
-    );
+    const boxes = await panels
+      .locator(".info-panel, .hud, .inspector, .legends")
+      .evaluateAll((elements) =>
+        elements.map((element) => {
+          const { x, y, width, height } = element.getBoundingClientRect();
+          return { x, y, width, height };
+        }),
+      );
     for (const [index, box] of boxes.entries()) {
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(size.width);
@@ -59,3 +61,25 @@ for (const size of [
     }
   });
 }
+
+test("at the usual window size, the info panel shows all of itself beside a tall legend", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/?scenario=gh_001");
+  await expect(page.getByTestId("scene-status")).toContainText("Showing the scenario gh_001");
+  // The tallest legend there is, on the other side of the view.
+  // "Surface categories", or "Categories" once the layout has some too.
+  await page.getByRole("checkbox", { name: /categories$/i }).check();
+  await expect(page.getByTestId("category")).toHaveCount(7);
+
+  const infoPanel = page.locator(".info-panel");
+  const { scrollHeight, clientHeight } = await infoPanel.evaluate((element) => ({
+    scrollHeight: element.scrollHeight,
+    clientHeight: element.clientHeight,
+  }));
+  expect(scrollHeight).toBeLessThanOrEqual(clientHeight);
+  await expect(page.getByRole("button", { name: "Show gh_002" })).toBeInViewport({ ratio: 1 });
+  // The HUD keeps its width, so that its readings stay on one line each.
+  expect((await page.locator(".hud").boundingBox())?.width).toBe(324);
+});

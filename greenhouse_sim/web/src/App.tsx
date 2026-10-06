@@ -57,9 +57,16 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     });
     return () => {
       current = false;
-      commandGeneration.current += 1;
     };
   }, []);
+
+  // A command answered after the viewer has gone has no feedback to give.
+  useEffect(
+    () => () => {
+      commandGeneration.current += 1;
+    },
+    [],
+  );
 
   useEffect(() => {
     if (source.kind === "live") {
@@ -160,52 +167,56 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         onSelect={setSelectedId}
       />
       <div className="viewer-panels">
-        <InfoPanel
-          build={build}
-          scenarios={scenarios}
-          source={source}
-          scene={shown}
-          onSource={chooseSource}
-        >
-          {snapshot !== null && (
-            <DisplayOptions
-              colourProperties={colourProperties}
-              colourBy={colourBy}
-              onColourBy={setColourBy}
-              showDimensions={showDimensions}
-              onShowDimensions={setShowDimensions}
-              byCategory={byCategory}
-              onByCategory={setByCategory}
+        <div className="panel-column">
+          <InfoPanel
+            build={build}
+            scenarios={scenarios}
+            source={source}
+            scene={shown}
+            onSource={chooseSource}
+          >
+            {snapshot !== null && (
+              <DisplayOptions
+                colourProperties={colourProperties}
+                colourBy={colourBy}
+                onColourBy={setColourBy}
+                showDimensions={showDimensions}
+                onShowDimensions={setShowDimensions}
+                byCategory={byCategory}
+                onByCategory={setByCategory}
+              />
+            )}
+            {snapshot !== null && source.kind === "scenario" && (
+              <OpeningControls
+                snapshot={snapshot}
+                requested={source.openings ?? {}}
+                onChange={setOpenings}
+              />
+            )}
+          </InfoPanel>
+          {selected && (
+            <Inspector
+              entity={selected}
+              overlays={overlayToggles}
+              onOverlays={setOverlayToggles}
+              onClear={() => setSelectedId(null)}
             />
           )}
-          {snapshot !== null && source.kind === "scenario" && (
-            <OpeningControls
-              snapshot={snapshot}
-              requested={source.openings ?? {}}
-              onChange={setOpenings}
-            />
-          )}
-        </InfoPanel>
-        <Hud
-          sample={sample}
-          pointer={pointer}
-          live={liveStatus}
-          onPreset={choosePreset}
-          onCommand={command}
-        />
-        {selected && (
-          <Inspector
-            entity={selected}
-            overlays={overlayToggles}
-            onOverlays={setOverlayToggles}
-            onClear={() => setSelectedId(null)}
+        </div>
+        <div className="panel-column at-the-end">
+          <Hud
+            sample={sample}
+            pointer={pointer}
+            live={liveStatus}
+            onPreset={choosePreset}
+            onCommand={command}
           />
-        )}
-        <div className="legends">
-          {byCategory && snapshot !== null && (
-            <CategoryLegend categories={categoriesIn(snapshot)} />
-          )}
-          {colouring && <ScalarLegend colouring={colouring} />}
+          <div className="legends">
+            {byCategory && snapshot !== null && (
+              <CategoryLegend categories={categoriesIn(snapshot)} />
+            )}
+            {colouring && <ScalarLegend colouring={colouring} />}
+          </div>
         </div>
       </div>
     </main>

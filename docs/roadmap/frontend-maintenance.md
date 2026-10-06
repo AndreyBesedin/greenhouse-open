@@ -1,10 +1,11 @@
 # Frontend audit follow-up and maintenance
 
 **Priority:** medium for the planned work below.
-**Schedule:** the general refactoring and remaining audit follow-up belong in
-an explicit maintenance window after P07, before P09's integrated release QA.
-They do not block P02–P07. A reproduced defect affecting those projects can
-be brought forward as a focused fix.
+**Schedule:** an explicit maintenance window after P07, before P09's
+integrated release QA: a second frontend audit of the viewer as it stands
+then, followed by the remaining findings below, the second audit's, and
+general clean-up together. They do not block P02–P07. A reproduced defect
+affecting those projects can be brought forward as a focused fix.
 
 Part of the [simulator roadmap](README.md). These maintenance identifiers
 track audit findings separately from the simulator's project steps.
@@ -21,30 +22,9 @@ and the final `greenhouse-shell` QA were still planned.
 - Frozen committed snapshot used to finish browser verification:
   [`bfc8672a4547939973b2f41726dae331e01fb527`](https://github.com/AndreyBesedin/greenhouse-open/commit/bfc8672a4547939973b2f41726dae331e01fb527)
   (the P01.3 merge, with the same project execution stage).
-- Follow-up implementation started on **2026-10-06**, based on
-  [`7e0a752c398417fd76ce95aa800ac217797a80a0`](https://github.com/AndreyBesedin/greenhouse-open/commit/7e0a752c398417fd76ce95aa800ac217797a80a0)
-  (`docs: mark P01 done, with evidence for each acceptance criterion`). At
-  that point P01 was complete and P02.1 fixture primitives were being added
-  in the working tree. The findings below describe the earlier audited
-  snapshot; they do not certify that concurrent P02 implementation.
-
-During verification, P02.1 was committed as
-[`d1755aff0751d8b1bd7e97bb817e61f1ca5b7dad`](https://github.com/AndreyBesedin/greenhouse-open/commit/d1755aff0751d8b1bd7e97bb817e61f1ca5b7dad).
-The follow-up's lint, type check, 150 unit tests and production build passed.
-All 33 browser tests passed against a filesystem snapshot of that P02.1 work
-plus these fixes, with isolated API/preview ports; eight of those tests are
-the new command-feedback and panel-layout regressions. The nine repository
-publication checks also passed. These are follow-up checks, distinct from
-the original audit's counts and execution stage.
-
-For the PR, the fixes were rebased onto `main` at
-[`e57057eba7e5043f2f5b56eee14bd50a75aa41dd`](https://github.com/AndreyBesedin/greenhouse-open/commit/e57057eba7e5043f2f5b56eee14bd50a75aa41dd),
-excluding the separate P02.1 commit. This main-based version passed lint,
-strict TypeScript, 143 unit tests, the production build and all 32 browser
-tests (including the eight new regressions) against fresh isolated servers.
-The full canonical Python checks passed: 2,580 tests, with two external tests
-skipped. Desktop and small-window screenshots were inspected; Linux baseline
-comparisons remain for CI's pinned container.
+- The two immediate fixes (FE-AUDIT.1 and .2) followed the same day, on top
+  of P01's completion,
+  [`e57057eba7e5043f2f5b56eee14bd50a75aa41dd`](https://github.com/AndreyBesedin/greenhouse-open/commit/e57057eba7e5043f2f5b56eee14bd50a75aa41dd).
 
 ## Assessment and evidence at the audit
 
@@ -71,10 +51,6 @@ architecture and improve specific weaknesses rather than rewrite it.
 - The production JavaScript bundle was about 1,318 kB minified / 364 kB
   gzip. The local-tool context and Three.js cost are documented in Vite's
   configuration; this alone is not evidence of a performance defect.
-- The checkout changed during the audit. A local browser run also reused
-  an old simulator with an incompatible contract. Those intermediate
-  failures were separated from committed-code defects using a frozen
-  checkout and isolated ports.
 
 ## Follow-up work
 
@@ -112,13 +88,21 @@ Fixed corner positions and largely fixed widths caused overlap at 640 × 480.
 The existing resize test checked the canvas size without checking whether its
 controls remained usable.
 
-The follow-up gives larger windows separate grid cells with bounded panel
-heights and scrolling. At widths up to 840 px, panels stack in a scrollable
-bottom dock occupying at most 45% of the view's height. The upper canvas
-remains available for orbiting and picking. Inspector and legends join the
-same flow rather than covering other controls. Browser regression checks
-cover 1280 × 720, 1000 × 480, 640 × 480 and 360 × 640, including selecting an
-entity, changing overlays, reaching a legend and clearing selection.
+The follow-up stands the panels in two independent columns at the sides of
+the view: the info panel above the inspector on the left, the HUD above the
+legends on the right. A column shares its height among its panels, which
+scroll rather than overlap when they do not all fit, and keep the widths they
+had when they floated. A first version split the view into a two-by-two
+grid instead, which capped the info panel at half the window's height even
+with no inspector below it, and let a tall legend on the right crop it. At
+widths up to 840 px, the columns dissolve into a scrollable bottom dock
+occupying at most 45% of the view's height. The upper canvas remains
+available for orbiting and picking. Inspector and legends join the same flow
+rather than covering other controls. Browser regression checks cover
+1280 × 720, 1000 × 480, 640 × 480 and 360 × 640, including selecting an
+entity, changing overlays, reaching a legend and clearing selection; and, at
+1280 × 720 beside the tallest legend, that the info panel shows all of itself
+and the HUD keeps its width.
 
 ### FE-AUDIT.3: Test async behavior at its owning boundary
 

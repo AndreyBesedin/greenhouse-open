@@ -114,9 +114,10 @@ A project's document is added when its first pull request lands.
 
 The [frontend audit follow-up and maintenance plan](frontend-maintenance.md)
 records the 2026-10-06 findings from P01.3, their commit provenance, and the
-two immediate fixes. The remaining findings have medium priority and are
-scheduled with general frontend refactoring after P07, before P09's release
-QA; they do not block the simulator's P02–P07 project steps.
+two immediate fixes. The remaining findings have medium priority: after P07,
+before P09's release QA, a second frontend audit is followed by those
+findings and general clean-up together. They do not block the simulator's
+P02–P07 project steps.
 
 ```mermaid
 flowchart LR
