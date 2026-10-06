@@ -112,6 +112,12 @@ adds a visible or measurable result.
 
 A project's document is added when its first pull request lands.
 
+The [frontend audit follow-up and maintenance plan](frontend-maintenance.md)
+records the 2026-10-06 findings from P01.3, their commit provenance, and the
+two immediate fixes. The remaining findings have medium priority and are
+scheduled with general frontend refactoring after P07, before P09's release
+QA; they do not block the simulator's P02–P07 project steps.
+
 ```mermaid
 flowchart LR
     PM1["P-1 Restructure greenhouse_sim"] --> P00["P00 Browser renderer"]

@@ -224,3 +224,107 @@ body {
   align-items: center;
   font-variant-numeric: tabular-nums;
 }
+
+/* Separate grid cells keep the corner panels apart, even in short windows.
+ * The empty space between them still lets the canvas take pointer events. */
+.viewer-panels {
+  position: absolute;
+  inset: 12px;
+  display: grid;
+  grid-template-areas: "info hud" "inspector legends";
+  grid-template-columns: minmax(0, 444px) minmax(0, 324px);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.viewer-panels > * {
+  position: static;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: auto;
+  pointer-events: auto;
+}
+
+.viewer-panels > .info-panel {
+  grid-area: info;
+  align-self: start;
+}
+
+.viewer-panels > .hud {
+  grid-area: hud;
+  justify-self: end;
+  align-self: start;
+}
+
+.viewer-panels > .inspector {
+  grid-area: inspector;
+  align-self: end;
+}
+
+.viewer-panels > .legends {
+  grid-area: legends;
+  justify-self: end;
+  align-self: end;
+}
+
+.viewer-panels dl {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.viewer-panels dd {
+  overflow-wrap: anywhere;
+}
+
+/* A scrollable dock leaves the upper view free for orbiting and picking.
+ * Panels participate in normal flow, so adding an inspector or legend does
+ * not cover another panel. Every control remains reachable by scrolling. */
+@media (max-width: 840px) {
+  .viewer-panels {
+    inset: auto 12px 12px;
+    max-height: 45%;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+    pointer-events: auto;
+  }
+
+  .viewer-panels > * {
+    flex: none;
+    width: 100%;
+    max-height: none;
+  }
+
+  .viewer-panels > .legends {
+    align-items: stretch;
+  }
+
+  .viewer-panels .scalar-legend {
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  .viewer-panels dl {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  }
+
+  .viewer-panels dt {
+    overflow-wrap: anywhere;
+  }
+
+  .hud fieldset {
+    flex-wrap: wrap;
+  }
+
+  .opening-control {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .opening-control input {
+    min-width: 0;
+    width: 100%;
+  }
+}
