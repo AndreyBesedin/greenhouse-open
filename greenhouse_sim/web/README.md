@@ -91,9 +91,12 @@ greenhouse (`public/scenes/qa-greenhouse.json`, written by the simulator's
 `tests/test_scene_schema.py --update`) from four fixed views, which CI compares
 with `e2e/visual/__screenshots__/greenhouse-<view>-linux.png` in the same way.
 
-`/qa/layout?view=top` shows the canonical layout (`public/scenes/qa-layout.json`,
-written by the same test) in the QA greenhouse from above, coloured by
-category and cut just below the eaves, so that the roof does not hide it.
+`/qa/layout?view=top|between-rows|occluded` shows the canonical layout
+(`public/scenes/qa-layout.json`, written by the same test) in the QA
+greenhouse: from above, coloured by category and cut just below the eaves so
+that the roof does not hide it; from a trolley riding a rail between the rows;
+and from low down, looking across a row through the fixtures in the way. CI
+compares them with `e2e/visual/__screenshots__/layout-<view>-linux.png`.
 
 `/qa/renderer?seed=42` is the renderer's canonical page: a QA scene the viewer
 builds from the seed, with a plant selected, every overlay drawn and the

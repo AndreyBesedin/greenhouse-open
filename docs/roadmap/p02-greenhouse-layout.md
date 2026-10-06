@@ -44,8 +44,8 @@ rows and columns, at a fixed pitch and spacing in the scene module.
 | P02.3 | `feat(layout): add gutters, tables, benches and slabs` | Done ([#39](https://github.com/AndreyBesedin/greenhouse-open/pull/39)) |
 | P02.4 | `feat(layout): add walkways, service zones and exclusion volumes` | Done ([#40](https://github.com/AndreyBesedin/greenhouse-open/pull/40)) |
 | P02.5 | `feat(layout): add rails, pipes and overhead structures` | Done ([#41](https://github.com/AndreyBesedin/greenhouse-open/pull/41)) |
-| P02.6 | `feat(layout): import and export the layout configuration` | Done |
-| P02.7 | `test(visual): add fixture occlusion and navigation QA scenes` | Planned |
+| P02.6 | `feat(layout): import and export the layout configuration` | Done ([#42](https://github.com/AndreyBesedin/greenhouse-open/pull/42)) |
+| P02.7 | `test(visual): add fixture occlusion and navigation QA scenes` | Done |
 
 ### P02.1: Reusable fixture primitives
 
@@ -347,6 +347,23 @@ As implemented (see [decision 0020](../decisions/0020-scenario-layouts-are-decla
 
 A camera between the rows, a close-up with fixtures occluding the view, and
 a top-down view of the layout, as screenshot baselines.
+
+As implemented:
+
+- `/qa/layout?view=top|between-rows|occluded` shows the canonical layout
+  (P02.4) from three fixed views: the plan from above, coloured by category
+  and cut below the eaves; a camera on a trolley riding the rail down the
+  second path, a metre up, looking down it to the back of the house; and a
+  camera low in the first path, between its rail's tubes, looking across the
+  second row, which its gutter, legs and the rail tubes partly hide. Only
+  the plan is coloured and cut.
+- CI's visual checks job compares the three views with their baselines,
+  drawn in its pinned container, as P00.7's and P01.7's are.
+- Tests: the views are chosen in the address; the trolley camera stands
+  between the rail's tubes, under the wires, looking along the path; the low
+  camera stands below the gutters' tops, looking past the next row; only the
+  plan is cut and coloured. A browser test draws all three views without
+  console errors, with the legends on the plan only.
 
 ## Final QA: `greenhouse-layout`
 

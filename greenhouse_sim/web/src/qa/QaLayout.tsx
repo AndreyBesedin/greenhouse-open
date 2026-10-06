@@ -6,6 +6,7 @@ import { Viewport } from "../Viewport";
 import { greenhouseExtent } from "./greenhouseViews";
 import {
   eaveHeight,
+  isLayoutPlan,
   QA_LAYOUT_SCENE_URL,
   QA_LAYOUT_VIEWS,
   qaLayoutPose,
@@ -18,9 +19,11 @@ const ignore = () => undefined;
 
 /**
  * The canonical page for the layout's QA views: the canonical layout, in the
- * QA greenhouse, from a fixed view, coloured by category with its legends.
- * The top view cuts the house below its eaves, so that the layout reads from
- * above. Nothing on it changes over time, so it looks the same on every visit.
+ * QA greenhouse, from one of three fixed views. The top view is a plan,
+ * coloured by category with its legends and cut below the eaves; the view
+ * between the rows rides a rail down a path, and the occluded one looks
+ * across a row from low down, through the fixtures in its way. Nothing on it
+ * changes over time, so it looks the same on every visit.
  */
 export function QaLayout({ search }: { search: string }) {
   const view = qaLayoutView(search);
@@ -58,7 +61,7 @@ export function QaLayout({ search }: { search: string }) {
         presetRequest={null}
         initialPose={pose}
         section={section}
-        byCategory
+        byCategory={isLayoutPlan(view)}
         onSample={ignore}
         onPointer={ignore}
         onSelect={ignore}
@@ -67,7 +70,7 @@ export function QaLayout({ search }: { search: string }) {
         Layout QA, {view} view
       </p>
       <div className="legends">
-        <CategoryLegend categories={categoriesIn(snapshot)} />
+        {isLayoutPlan(view) && <CategoryLegend categories={categoriesIn(snapshot)} />}
       </div>
     </main>
   );
