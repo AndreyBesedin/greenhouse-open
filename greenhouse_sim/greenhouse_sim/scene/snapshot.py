@@ -10,9 +10,9 @@ simulated truth, as the world does. It is not an observation: decision-making
 code works from observations, never from a snapshot.
 
 A snapshot holds a reference axes marker at the origin, the greenhouse's
-envelope (its floor, walls and roof, its gutters, and its bounds: the space it
-encloses, as a box), and an upright cylinder per plant, as tall as its visible
-stem. Until
+envelope (its floor, walls and roof, its gutters, its structural frames, and
+its bounds: the space it encloses, as a box), and an upright cylinder per
+plant, as tall as its visible stem. Until
 planting positions become part of the world (P02), plants stand on a
 provisional grid built from the scenario's rows and columns.
 """
@@ -24,7 +24,14 @@ from typing import Final
 from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.world.envelope import Envelope, Gutter, Surface, SurfaceCategory
+from greenhouse_sim.world.envelope import (
+    Envelope,
+    Gutter,
+    Member,
+    MemberKind,
+    Surface,
+    SurfaceCategory,
+)
 from greenhouse_sim.world.geometry import (
     Axes,
     Box,
@@ -41,7 +48,8 @@ from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
 # 2: the greenhouse's bounds, drawn as a box.
 # 3: the greenhouse's floor and walls, in place of the provisional ground.
 # 4: its roof, gable end walls as polygons, and gutters.
-SCHEMA_VERSION: Final = 4
+# 5: its structural frames.
+SCHEMA_VERSION: Final = 5
 # The JSON Schema dialect Pydantic generates, stated in the published schema.
 JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 
@@ -74,6 +82,10 @@ GUTTER_COLOR: Final = Color(r=0.55, g=0.57, b=0.6)
 # until gutters have a profile of their own.
 GUTTER_WIDTH_M: Final = 0.2
 GUTTER_DEPTH_M: Final = 0.15
+FRAME_COLOR: Final = Color(r=0.66, g=0.68, b=0.7)
+# Structural members are drawn as round bars of these radii, until they have
+# profiles of their own.
+MEMBER_RADII_M: Final = {MemberKind.POST: 0.05, MemberKind.RAFTER: 0.03}
 AXES_COLOR: Final = Color(r=0.5, g=0.5, b=0.5)
 PLANT_COLOR: Final = Color(r=0.2, g=0.55, b=0.24)
 GREENHOUSE_BOUNDS_COLOR: Final = Color(r=0.62, g=0.78, b=0.88)
@@ -88,6 +100,7 @@ class SceneEntityKind(StrEnum):
     WALL = "WALL"
     ROOF = "ROOF"
     GUTTER = "GUTTER"
+    FRAME = "FRAME"
     PLANT = "PLANT"
 
 
@@ -117,7 +130,7 @@ class SceneSnapshot(BaseModel):
 
 def scene_snapshot(world: GreenhouseWorld, config: ScenarioConfig) -> SceneSnapshot:
     """The scene a viewer draws for `world`: axes, the greenhouse's floor,
-    walls, roof, gutters and bounds, and one entity per plant."""
+    walls, roof, gutters, frames and bounds, and one entity per plant."""
     columns = max(config.columns, 1)
     axes = SceneEntity(
         entity_id=f"{world.greenhouse_id}_axes",
@@ -137,6 +150,7 @@ def scene_snapshot(world: GreenhouseWorld, config: ScenarioConfig) -> SceneSnaps
         entities=[
             *_surface_entities(world.greenhouse_id, config.envelope),
             *_gutter_entities(world.greenhouse_id, config.envelope),
+            *_member_entities(world.greenhouse_id, config.envelope),
             axes,
             _bounds_entity(world.greenhouse_id, config.envelope),
             *plants,
@@ -195,6 +209,36 @@ def _gutter_entity(greenhouse_id: str, envelope: Envelope, gutter: Gutter) -> Sc
         shape=Box(size_x=length, size_y=GUTTER_WIDTH_M, size_z=GUTTER_DEPTH_M),
         color=GUTTER_COLOR,
         label=gutter.gutter_id.replace("_", " "),
+    )
+
+
+def _member_entities(greenhouse_id: str, envelope: Envelope) -> list[SceneEntity]:
+    return [_member_entity(greenhouse_id, envelope, member) for member in envelope.members()]
+
+
+def _member_entity(greenhouse_id: str, envelope: Envelope, member: Member) -> SceneEntity:
+    """A structural member as a cylinder from its foot to its head. Members lie
+    across the length, so the length's direction stays square to each."""
+    along = Vector3(
+        x=member.end.x - member.start.x,
+        y=member.end.y - member.start.y,
+        z=member.end.z - member.start.z,
+    )
+    length = math.hypot(along.x, along.y, along.z)
+    direction = Vector3(x=along.x / length, y=along.y / length, z=along.z / length)
+    across = Vector3(x=1.0, y=0.0, z=0.0)
+    # A cylinder rises along its +z: turn that onto the member's direction.
+    in_greenhouse = Transform(
+        position=member.start,
+        rotation=Quaternion.from_axes(across, direction.cross(across)),
+    )
+    return SceneEntity(
+        entity_id=f"{greenhouse_id}_{member.member_id}",
+        kind=SceneEntityKind.FRAME,
+        transform=envelope.origin.after(in_greenhouse),
+        shape=Cylinder(radius=MEMBER_RADII_M[member.kind], height=length),
+        color=FRAME_COLOR,
+        label=member.member_id.replace("_", " "),
     )
 
 

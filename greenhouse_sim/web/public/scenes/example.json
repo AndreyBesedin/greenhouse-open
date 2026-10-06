@@ -1,5 +1,5 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "greenhouse_id": "gh_demo",
   "simulated_day": 9,
   "entities": [
@@ -122,8 +122,16 @@
             "y": 3.0
           },
           {
+            "x": 4.800000000000001,
+            "y": 3.65
+          },
+          {
             "x": 3.2,
-            "y": 4.3
+            "y": 3.0
+          },
+          {
+            "x": 1.6,
+            "y": 3.65
           },
           {
             "x": 0.0,
@@ -171,8 +179,16 @@
             "y": 3.0
           },
           {
+            "x": 4.800000000000001,
+            "y": 3.65
+          },
+          {
             "x": 3.2,
-            "y": 4.3
+            "y": 3.0
+          },
+          {
+            "x": 1.6,
+            "y": 3.65
           },
           {
             "x": 0.0,
@@ -189,13 +205,13 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_roof_right",
+      "entity_id": "gh_demo_roof_1_right",
       "kind": "ROOF",
       "transform": {
         "position": {
           "x": 2.0,
-          "y": 1.6,
-          "z": 3.65
+          "y": 0.8,
+          "z": 3.325
         },
         "rotation": {
           "w": 0.0,
@@ -207,24 +223,24 @@
       "shape": {
         "shape": "plane",
         "size_x": 4.0,
-        "size_y": 3.4539832078341086
+        "size_y": 1.7269916039170543
       },
       "color": {
         "r": 0.7,
         "g": 0.83,
         "b": 0.9
       },
-      "label": "roof right",
+      "label": "roof 1 right",
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_roof_left",
+      "entity_id": "gh_demo_roof_1_left",
       "kind": "ROOF",
       "transform": {
         "position": {
           "x": 2.0,
-          "y": 4.800000000000001,
-          "z": 3.65
+          "y": 2.4000000000000004,
+          "z": 3.325
         },
         "rotation": {
           "w": 0.1917464769920048,
@@ -236,18 +252,76 @@
       "shape": {
         "shape": "plane",
         "size_x": 4.0,
-        "size_y": 3.4539832078341086
+        "size_y": 1.7269916039170543
       },
       "color": {
         "r": 0.7,
         "g": 0.83,
         "b": 0.9
       },
-      "label": "roof left",
+      "label": "roof 1 left",
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_gutter_right",
+      "entity_id": "gh_demo_roof_2_right",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 4.0,
+          "z": 3.325
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.9814444908201149,
+          "z": 0.1917464769920048
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 4.0,
+        "size_y": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "label": "roof 2 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_roof_2_left",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 5.6000000000000005,
+          "z": 3.325
+        },
+        "rotation": {
+          "w": 0.1917464769920048,
+          "x": 0.9814444908201149,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 4.0,
+        "size_y": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "label": "roof 2 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_gutter_0",
       "kind": "GUTTER",
       "transform": {
         "position": {
@@ -273,11 +347,41 @@
         "g": 0.57,
         "b": 0.6
       },
-      "label": "gutter right",
+      "label": "gutter 0",
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_gutter_left",
+      "entity_id": "gh_demo_gutter_1",
+      "kind": "GUTTER",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 3.2,
+          "z": 2.85
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 4.0,
+        "size_y": 0.2,
+        "size_z": 0.15
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.57,
+        "b": 0.6
+      },
+      "label": "gutter 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_gutter_2",
       "kind": "GUTTER",
       "transform": {
         "position": {
@@ -303,7 +407,616 @@
         "g": 0.57,
         "b": 0.6
       },
-      "label": "gutter left",
+      "label": "gutter 2",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_0_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 0 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_0_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 3.2,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 0 post 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_0_post_2",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 6.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 0 post 2",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_0_rafter_1_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": -0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 0 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_0_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 3.2,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": 0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 0 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_0_rafter_2_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 3.2,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": -0.5584008206674047,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170548
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 0 rafter 2 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_0_rafter_2_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 6.4,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": 0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 0 rafter 2 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_1_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 1 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_1_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 3.2,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 1 post 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_1_post_2",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 6.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 1 post 2",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_1_rafter_1_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 0.0,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": -0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 1 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_1_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 3.2,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": 0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 1 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_1_rafter_2_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 3.2,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": -0.5584008206674047,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170548
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 1 rafter 2 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_1_rafter_2_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 6.4,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": 0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 1 rafter 2 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_2_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 2 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_2_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 3.2,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 2 post 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_2_post_2",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 6.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 2 post 2",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_2_rafter_1_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 0.0,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": -0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 2 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_2_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 3.2,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": 0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 2 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_2_rafter_2_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 3.2,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": -0.5584008206674047,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170548
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 2 rafter 2 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "gh_demo_frame_2_rafter_2_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 6.4,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": 0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "label": "frame 2 rafter 2 left",
       "properties": {}
     },
     {
@@ -354,7 +1067,7 @@
         "shape": "box",
         "size_x": 4.0,
         "size_y": 6.4,
-        "size_z": 4.3
+        "size_z": 3.65
       },
       "color": {
         "r": 0.62,
