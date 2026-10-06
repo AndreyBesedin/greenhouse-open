@@ -12,10 +12,10 @@ code works from observations, never from a snapshot.
 A snapshot holds a reference axes marker at the origin, the greenhouse's
 envelope (its floor, walls and roof, its doors and vents as they stand open,
 its gutters, its structural frames, and its bounds: the space it encloses, as
-a box), the fixtures of its layout, each with what it is made of and what it
-obstructs, and an upright cylinder per plant, as tall as its visible stem.
-Until planting positions become part of the world (P02), plants stand on a
-provisional grid built from the scenario's rows and columns.
+a box), its layout's planting positions, each marked by a disc on the floor,
+and its fixtures, each with what it is made of and what it obstructs, and an
+upright cylinder per plant, as tall as its visible stem, at its planting
+position.
 """
 
 import math
@@ -46,6 +46,7 @@ from greenhouse_sim.world.geometry import (
     Vector3,
 )
 from greenhouse_sim.world.layout import Layout
+from greenhouse_sim.world.rows import PlantingPosition
 from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
 
 # Bumped when a change to these types would break an existing viewer, as a new
@@ -56,15 +57,10 @@ from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
 # 5: its structural frames.
 # 6: its doors and vents.
 # 7: its layout's fixtures, and what entities are made of.
-SCHEMA_VERSION: Final = 7
+# 8: its planting positions.
+SCHEMA_VERSION: Final = 8
 # The JSON Schema dialect Pydantic generates, stated in the published schema.
 JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
-
-# Provisional layout until planting positions are part of the world (P02).
-# Plants of one scenario row stand along +x at this pitch, and rows follow one
-# another along +y at this spacing.
-PLANT_PITCH_M: Final = 0.5
-ROW_SPACING_M: Final = 1.6
 
 PLANT_STEM_RADIUS_M: Final = 0.02
 AXES_LENGTH_M: Final = 1.0
@@ -97,6 +93,11 @@ DOOR_COLOR: Final = Color(r=0.45, g=0.5, b=0.56)
 MEMBER_RADII_M: Final = {MemberKind.POST: 0.05, MemberKind.RAFTER: 0.03}
 AXES_COLOR: Final = Color(r=0.5, g=0.5, b=0.5)
 PLANT_COLOR: Final = Color(r=0.2, g=0.55, b=0.24)
+# A planting position is marked by a disc this wide and thick, wider than a
+# stem, so that it shows around a plant standing on it.
+PLANTING_MARKER_RADIUS_M: Final = 0.06
+PLANTING_MARKER_HEIGHT_M: Final = 0.01
+PLANTING_POSITION_COLOR: Final = Color(r=0.85, g=0.6, b=0.25)
 GREENHOUSE_BOUNDS_COLOR: Final = Color(r=0.62, g=0.78, b=0.88)
 # What the envelope's metal parts are made of.
 GUTTER_MATERIAL: Final = Material.ALUMINIUM
@@ -122,6 +123,8 @@ class SceneEntityKind(StrEnum):
     FRAME = "FRAME"
     VENT = "VENT"
     DOOR = "DOOR"
+    # Where a plant can stand.
+    PLANTING_POSITION = "PLANTING_POSITION"
     # The layout's fixtures, one kind for each kind of fixture.
     CROP_GUTTER = "CROP_GUTTER"
     WALKWAY = "WALKWAY"
@@ -159,14 +162,19 @@ class SceneSnapshot(BaseModel):
 
 def scene_snapshot(world: GreenhouseWorld, config: ScenarioConfig) -> SceneSnapshot:
     """The scene a viewer draws for `world`: its greenhouse and layout, as
-    `greenhouse_scene` draws them, and one entity per plant."""
-    columns = max(config.columns, 1)
+    `greenhouse_scene` draws them, and one entity per plant, each at its
+    planting position: the first plant at the first, and so on."""
     greenhouse = greenhouse_scene(
         world.greenhouse_id, config.envelope, world.simulated_day, layout=config.layout
     )
+    positions = config.layout.planting_positions()
+    if len(world.plants) > len(positions):
+        raise ValueError(
+            f"{len(world.plants)} plants, but only {len(positions)} planting positions"
+        )
     plants = [
-        _plant_entity(plant, _planting_position(index, columns))
-        for index, plant in enumerate(world.plants)
+        _plant_entity(plant, config.envelope, position)
+        for plant, position in zip(world.plants, positions, strict=False)
     ]
     return greenhouse.model_copy(update={"entities": [*greenhouse.entities, *plants]})
 
@@ -197,6 +205,7 @@ def greenhouse_scene(
             *_opening_entities(greenhouse_id, envelope),
             *_gutter_entities(greenhouse_id, envelope),
             *_member_entities(greenhouse_id, envelope),
+            *_planting_position_entities(greenhouse_id, envelope, layout or Layout()),
             *_fixture_entities(greenhouse_id, envelope, layout or Layout()),
             axes,
             _bounds_entity(greenhouse_id, envelope),
@@ -316,6 +325,25 @@ def _member_entity(greenhouse_id: str, envelope: Envelope, member: Member) -> Sc
     )
 
 
+def _planting_position_entities(
+    greenhouse_id: str, envelope: Envelope, layout: Layout
+) -> list[SceneEntity]:
+    """A disc on the floor at each planting position, with its row and its
+    place along it."""
+    return [
+        SceneEntity(
+            entity_id=f"{greenhouse_id}_{position.position_id}",
+            kind=SceneEntityKind.PLANTING_POSITION,
+            transform=envelope.origin.after(Transform(position=position.point)),
+            shape=Cylinder(radius=PLANTING_MARKER_RADIUS_M, height=PLANTING_MARKER_HEIGHT_M),
+            color=PLANTING_POSITION_COLOR,
+            label=position.position_id.replace("_", " "),
+            properties={"row": position.row, "position_in_row": position.index},
+        )
+        for position in layout.planting_positions()
+    ]
+
+
 _FIXTURE_KINDS: Final = {
     FixtureKind.CROP_GUTTER: SceneEntityKind.CROP_GUTTER,
     FixtureKind.WALKWAY: SceneEntityKind.WALKWAY,
@@ -363,19 +391,14 @@ def _bounds_entity(greenhouse_id: str, envelope: Envelope) -> SceneEntity:
     )
 
 
-def _planting_position(index: int, columns: int) -> Vector3:
-    row, column = divmod(index, columns)
-    return Vector3(x=(column + 1) * PLANT_PITCH_M, y=(row + 1) * ROW_SPACING_M, z=0.0)
-
-
-def _plant_entity(plant: PlantWorld, position: Vector3) -> SceneEntity:
+def _plant_entity(plant: PlantWorld, envelope: Envelope, position: PlantingPosition) -> SceneEntity:
     visible_height_cm = plant.stem_length_cm - plant.lowered_length_cm
     fruits = [fruit for truss in plant.trusses for fruit in truss.fruits]
     on_plant = [fruit for fruit in fruits if fruit.status != FruitStatus.HARVESTED]
     return SceneEntity(
         entity_id=plant.plant_id,
         kind=SceneEntityKind.PLANT,
-        transform=Transform(position=position),
+        transform=envelope.origin.after(Transform(position=position.point)),
         shape=Cylinder(
             radius=PLANT_STEM_RADIUS_M,
             height=max(0.0, visible_height_cm * METRES_PER_CENTIMETRE),
@@ -383,6 +406,7 @@ def _plant_entity(plant: PlantWorld, position: Vector3) -> SceneEntity:
         color=PLANT_COLOR,
         label=plant.plant_id,
         properties={
+            "planting_position": position.position_id,
             "age_days": plant.age_days,
             "visible_height_cm": visible_height_cm,
             "trusses": len(plant.trusses),

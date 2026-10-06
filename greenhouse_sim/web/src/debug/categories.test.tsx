@@ -30,7 +30,7 @@ describe("the envelope's categories", () => {
     ]);
     const others = EXAMPLE.entities.filter((entity) => categoryColor(entity.kind) === null);
     expect(new Set(others.map((entity) => entity.kind))).toEqual(
-      new Set(["AXES", "GREENHOUSE_BOUNDS", "PLANT"]),
+      new Set(["AXES", "GREENHOUSE_BOUNDS", "PLANTING_POSITION", "PLANT"]),
     );
   });
 

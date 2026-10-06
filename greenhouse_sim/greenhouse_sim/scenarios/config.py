@@ -4,7 +4,10 @@ from typing import Self
 from pydantic import BaseModel, model_validator
 
 from greenhouse_sim.world.envelope import Envelope
-from greenhouse_sim.world.layout import Layout, fixtures_outside
+from greenhouse_sim.world.layout import Layout, outside_the_greenhouse
+
+# A refusal names this many of the things it refuses, and counts the rest.
+NAMED_IN_A_REFUSAL = 3
 
 
 class ScenarioConfig(BaseModel):
@@ -18,6 +21,8 @@ class ScenarioConfig(BaseModel):
     name: str
     description: str
     variety: str
+    # The crop: rows times columns plants, standing at the layout's planting
+    # positions in order.
     rows: int
     columns: int
     start_date: date
@@ -25,7 +30,7 @@ class ScenarioConfig(BaseModel):
     random_seed: int
     # The greenhouse around the crop: where it stands, and the space it encloses.
     envelope: Envelope
-    # What stands inside it, in its frame.
+    # What stands inside it, in its frame, including where the plants stand.
     layout: Layout = Layout()
 
     # Environment: bounds the smooth day-to-day drift stays within.
@@ -61,7 +66,18 @@ class ScenarioConfig(BaseModel):
 
     @model_validator(mode="after")
     def _the_layout_fits_in_the_greenhouse(self) -> Self:
-        outside = fixtures_outside(self.layout, self.envelope)
+        outside = outside_the_greenhouse(self.layout, self.envelope)
         if outside:
-            raise ValueError(f"outside the greenhouse: {', '.join(outside)}")
+            named = ", ".join(outside[:NAMED_IN_A_REFUSAL])
+            more = len(outside) - NAMED_IN_A_REFUSAL
+            raise ValueError(
+                f"outside the greenhouse: {named}" + (f" and {more} more" if more > 0 else "")
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _every_plant_has_a_planting_position(self) -> Self:
+        plants, positions = self.rows * self.columns, len(self.layout.planting_positions())
+        if plants > positions:
+            raise ValueError(f"{plants} plants, but only {positions} planting positions")
         return self

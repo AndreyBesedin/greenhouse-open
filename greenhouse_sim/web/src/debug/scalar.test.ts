@@ -30,7 +30,9 @@ describe("shading entities by a property", () => {
       "cumulative_harvest_g",
       "fruits_on_plant",
       "open_fraction",
+      "position_in_row",
       "ripe_fruits",
+      "row",
       "trusses",
       "visible_height_cm",
     ]);

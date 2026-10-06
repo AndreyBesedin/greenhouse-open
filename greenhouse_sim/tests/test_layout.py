@@ -23,7 +23,7 @@ from greenhouse_sim.world.fixtures import (
     RailPrimitive,
 )
 from greenhouse_sim.world.geometry import Quaternion, Transform, Vector3
-from greenhouse_sim.world.layout import Layout, fixtures_outside
+from greenhouse_sim.world.layout import Layout, outside_the_greenhouse
 
 HOUSE = Envelope(length=12.0, width=6.4, eave_height=3.0, ridge_height=3.65, spans=2)
 TANK = CylinderPrimitive(
@@ -83,7 +83,7 @@ def test_a_fixture_must_fit_inside_the_greenhouse(
 ) -> None:
     layout = Layout(placed=[TANK.model_copy(update={"base": base, "height": height})])
 
-    assert fixtures_outside(layout, HOUSE) == ([] if inside else ["tank"])
+    assert outside_the_greenhouse(layout, HOUSE) == ([] if inside else ["tank"])
 
 
 def test_a_scenario_refuses_a_layout_that_does_not_fit() -> None:

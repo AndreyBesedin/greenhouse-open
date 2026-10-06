@@ -73,6 +73,8 @@ export const RENDERERS: Record<
   // Posts and rafters are cylinders, so they are drawn in an instanced batch;
   // this draws one on its own, when it is selected. So are pipes and rails.
   FRAME: solid,
+  // A disc on the floor where a plant can stand; batched, as cylinders are.
+  PLANTING_POSITION: solid,
   // The layout's fixtures, each in its material.
   CROP_GUTTER: solid,
   WALKWAY: solid,

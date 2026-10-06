@@ -39,8 +39,8 @@ rows and columns, at a fixed pitch and spacing in the scene module.
 
 | Step | Commit summary | Status |
 | --- | --- | --- |
-| P02.1 | `feat(layout): define reusable fixture primitives` | Done |
-| P02.2 | `feat(layout): generate crop rows and planting positions` | Planned |
+| P02.1 | `feat(layout): define reusable fixture primitives` | Done ([#36](https://github.com/AndreyBesedin/greenhouse-open/pull/36)) |
+| P02.2 | `feat(layout): generate crop rows and planting positions` | Done |
 | P02.3 | `feat(layout): add gutters, tables, benches and slabs` | Planned |
 | P02.4 | `feat(layout): add walkways, service zones and exclusion volumes` | Planned |
 | P02.5 | `feat(layout): add rails, pipes and overhead structures` | Planned |
@@ -105,6 +105,44 @@ paired rows, and a marker at each planting position. Visible result: the
 greenhouse shows regular rows with visible plant positions. Tests: the
 number of positions and their spacing can be measured from their debug
 coordinates.
+
+As implemented:
+
+- A layout's `crop_rows` (`greenhouse_sim.world.rows.CropRows`) gives its
+  rows: the first row's first planting position (`origin`), a `heading` (the
+  rows run along the greenhouse's length at 0, and follow one another to the
+  left of it), the number of rows and of positions per row, the
+  `plant_pitch` along a row and the `row_spacing` across, and optionally a
+  `pair_gap`, for rows in pairs. Every position is its own multiple of the
+  pitch and spacing from the origin, so none drifts.
+- Planting positions are named by their row and place along it,
+  `row_<r>_position_<p>`, from 1. A scenario's plants stand at them in order,
+  the first plant at the first row's first position, filling each row before
+  the next; a scenario refuses a layout with fewer positions than plants, or
+  positions outside its greenhouse. A refusal names the first three things
+  outside and counts the rest.
+- Every scenario now describes its rows. gh_demo and gh_002 keep the
+  positions of the provisional grid they replace; gh_001's four rows of ten
+  are now centred in its house, from (1.75, 2.4). The scene module's
+  provisional pitch and spacing are gone.
+- The scene marks each position with a disc on the floor, 12 cm across and
+  wider than a stem, so that it shows around the plant on it, as a
+  `PLANTING_POSITION` entity with its `row` and `position_in_row`; the scene
+  schema moves to version 8. Each plant gains a `planting_position` property.
+  The discs are cylinders, so they are drawn in one instanced batch.
+- Tests:
+  - Python: a position for every row and place, named in order; positions at
+    the pitch along a row and the spacing across; a thousand positions along
+    a row, each exactly its multiple of the pitch; rows turned a quarter run
+    along +y and follow one another towards -x; paired rows a gap apart within
+    a pair and a spacing from the next; pairs that would reach the next, too
+    few positions for the plants, and positions outside the greenhouse are
+    refused. The scene marks each position where it stands, placed with the
+    greenhouse, and stands each plant on its position, in order.
+  - Browser: in gh_001, three plants and a marker are picked; the inspector
+    gives their coordinates (0.5 m along a row, 1.6 m to the next) and
+    their positions' names, and colouring by `row` and `position_in_row`
+    counts four rows of ten.
 
 ### P02.3: Gutters, tables, benches and slabs
 

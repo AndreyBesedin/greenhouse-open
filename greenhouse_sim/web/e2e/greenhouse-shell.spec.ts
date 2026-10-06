@@ -17,7 +17,7 @@ test("greenhouse-shell: a changed greenhouse is drawn to its dimensions, open an
   await test.step("the greenhouse is changed through the address bar", async () => {
     await page.goto(`/?scenario=gh_demo&${SHELL}`);
     // Three spans and four bays: 6 roof slopes, 5 frames of 4 posts and 6 rafters.
-    await expect(page.getByTestId("scene-status")).toContainText("gh_demo, day 0, 77 entities");
+    await expect(page.getByTestId("scene-status")).toContainText("gh_demo, day 0, 83 entities");
   });
 
   await test.step("its physical dimensions are the ones asked for", async () => {

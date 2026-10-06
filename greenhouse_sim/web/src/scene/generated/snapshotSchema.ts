@@ -322,6 +322,7 @@ export const SNAPSHOT_SCHEMA = {
         "FRAME",
         "VENT",
         "DOOR",
+        "PLANTING_POSITION",
         "CROP_GUTTER",
         "WALKWAY",
         "RAIL",
@@ -401,7 +402,7 @@ export const SNAPSHOT_SCHEMA = {
   "description": "One greenhouse at one simulated day, as a viewer draws it. Positions\nand sizes are in metres, in right-handed world axes with z up.",
   "properties": {
     "schema_version": {
-      "default": 7,
+      "default": 8,
       "title": "Schema Version",
       "type": "integer"
     },
