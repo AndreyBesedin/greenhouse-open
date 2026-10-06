@@ -6,7 +6,9 @@ API can be tested without a socket and the server stays a thin shell.
     GET /api/health                       the API is up
     GET /api/version                      simulator and scene schema versions
     GET /api/scenarios                    the registered scenarios
-    GET /api/scenarios/{id}/scene         a scenario's scene before its first day
+    GET /api/scenarios/{id}/scene         a scenario's scene before its first day;
+                                          ?open=roof_vent_1:0.5,door_1:1 sets how
+                                          far its doors and vents stand open
     GET /api/scenarios/{id}/live          the scenario played live, as Server-Sent
                                           Events (served by `server`, found by
                                           `live_scenario`)
@@ -20,7 +22,7 @@ from importlib.metadata import version
 from typing import Final
 from urllib.parse import parse_qs, urlsplit
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from greenhouse_sim.api.live import SPEEDS, LiveFrame, LiveRun, LiveRuns
 from greenhouse_sim.core.engine import SimulationEngine
@@ -61,7 +63,10 @@ def respond(method: str, path: str) -> Response:
             config = SCENARIO_REGISTRY.get(scenario_id)
             if config is None:
                 return _error(HTTPStatus.NOT_FOUND, f"no scenario {scenario_id!r}")
-            return Response(HTTPStatus.OK, _initial_scene(config))
+            opened = _with_openings(config, parse_qs(urlsplit(path).query).get("open", []))
+            if isinstance(opened, str):
+                return _error(HTTPStatus.BAD_REQUEST, opened)
+            return Response(HTTPStatus.OK, _initial_scene(opened))
         case _:
             return _error(HTTPStatus.NOT_FOUND, f"nothing at {path!r}")
 
@@ -82,6 +87,35 @@ def _summary(config: ScenarioConfig) -> ScenarioSummary:
         plants=config.rows * config.columns,
         duration_days=config.duration_days,
     )
+
+
+def _with_openings(config: ScenarioConfig, requests: list[str]) -> ScenarioConfig | str:
+    """The scenario with its doors and vents opened as `open=id:fraction,...`
+    asks, or why it cannot be. The envelope is checked afresh, as any
+    description of a greenhouse is."""
+    fractions: dict[str, float] = {}
+    for request in ",".join(requests).split(","):
+        if not request:
+            continue
+        opening_id, _, fraction = request.partition(":")
+        try:
+            fractions[opening_id] = float(fraction)
+        except ValueError:
+            return f"open wants opening:fraction, not {request!r}"
+    envelope = config.envelope
+    known = {opening.opening_id for opening in envelope.openings}
+    unknown = sorted(set(fractions) - known)
+    if unknown:
+        return f"{config.greenhouse_id} has no opening {', '.join(map(repr, unknown))}"
+    openings = [
+        opening.model_dump() | {"opening": fractions.get(opening.opening_id, opening.opening)}
+        for opening in envelope.openings
+    ]
+    try:
+        opened = type(envelope).model_validate(envelope.model_dump() | {"openings": openings})
+    except ValidationError as error:
+        return f"cannot open so: {error.errors()[0]['msg']}"
+    return config.model_copy(update={"envelope": opened})
 
 
 def _initial_scene(config: ScenarioConfig) -> JsonValue:

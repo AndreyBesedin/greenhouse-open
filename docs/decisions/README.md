@@ -29,6 +29,7 @@ changes course is a new record that supersedes the old one.
 | [0015](0015-batch-repeated-shapes-and-benchmark-on-a-graphics-card.md) | Batch repeated shapes, and benchmark the renderer on a graphics card | Accepted |
 | [0016](0016-the-greenhouse-has-its-own-frame.md) | The greenhouse has its own frame, described by its envelope | Accepted |
 | [0017](0017-envelope-surfaces-face-into-the-greenhouse.md) | Envelope surfaces face into the greenhouse, and carry a category | Accepted |
+| [0018](0018-openings-lie-on-a-surface-and-expose-an-aperture.md) | Openings lie on a surface, and expose an aperture | Accepted |
 
 ## Template
 

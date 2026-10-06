@@ -297,6 +297,8 @@ export const SNAPSHOT_SCHEMA = {
         "ROOF",
         "GUTTER",
         "FRAME",
+        "VENT",
+        "DOOR",
         "PLANT"
       ],
       "title": "SceneEntityKind",
@@ -371,7 +373,7 @@ export const SNAPSHOT_SCHEMA = {
   "description": "One greenhouse at one simulated day, as a viewer draws it. Positions\nand sizes are in metres, in right-handed world axes with z up.",
   "properties": {
     "schema_version": {
-      "default": 5,
+      "default": 6,
       "title": "Schema Version",
       "type": "integer"
     },

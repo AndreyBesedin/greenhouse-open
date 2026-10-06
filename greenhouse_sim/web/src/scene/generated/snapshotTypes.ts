@@ -2,7 +2,7 @@
 // Do not edit: change the simulator's types and regenerate.
 
 export type SceneEntityKind =
-  "GROUND" | "AXES" | "GREENHOUSE_BOUNDS" | "FLOOR" | "WALL" | "ROOF" | "GUTTER" | "FRAME" | "PLANT";
+  "GROUND" | "AXES" | "GREENHOUSE_BOUNDS" | "FLOOR" | "WALL" | "ROOF" | "GUTTER" | "FRAME" | "VENT" | "DOOR" | "PLANT";
 export type Shape = Plane | Cylinder | Box | Polygon | Axes;
 
 /**

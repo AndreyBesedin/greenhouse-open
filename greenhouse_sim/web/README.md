@@ -40,7 +40,9 @@ and "Dimensions and axis labels" measures the greenhouse and names the
 world's axes, drawing its bounds as an outline. The greenhouse's walls and
 roof are see-through glass: a click picks the nearest solid thing along it,
 such as a plant or the floor, and picks the glass only where nothing solid
-lies behind.
+lies behind. On a scenario's view, a slider per door and vent sets how far
+it stands open: the viewer asks the simulator for the scene with it so
+(`?open=roof_vent_1:0.5`), and the address bar keeps it.
 Overlays are data in world coordinates, drawn by `src/debug`
 ([decision 0013](../../docs/decisions/0013-describe-debug-overlays-as-data-in-world-coordinates.md)),
 and they only ever read the scene.

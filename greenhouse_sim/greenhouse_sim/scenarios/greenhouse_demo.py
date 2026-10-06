@@ -1,7 +1,8 @@
 from datetime import date
 
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.world.envelope import Envelope
+from greenhouse_sim.world.envelope import Envelope, Opening, OpeningKind
+from greenhouse_sim.world.geometry import Point2
 
 # Walkthrough scenario: a small greenhouse tuned so ordinary simulator
 # dynamics - not scripted outcomes - reach watering, an ambiguous reading
@@ -23,8 +24,46 @@ GREENHOUSE_DEMO = ScenarioConfig(
     start_date=date(2026, 1, 1),
     duration_days=15,
     random_seed=4242,
-    # Room around its two rows of three plants: two 3.2 m spans, two 2 m bays.
-    envelope=Envelope(length=4.0, width=6.4, eave_height=3.0, ridge_height=3.65, spans=2, bays=2),
+    # Room around its two rows of three plants: two 3.2 m spans, two 2 m bays,
+    # a roof vent near each ridge, a side vent and a door on the back gable.
+    envelope=Envelope(
+        length=4.0,
+        width=6.4,
+        eave_height=3.0,
+        ridge_height=3.65,
+        spans=2,
+        bays=2,
+        openings=[
+            *(
+                Opening(
+                    opening_id=f"roof_vent_{span}",
+                    kind=OpeningKind.ROOF_VENT,
+                    surface_id=f"roof_{span}_right",
+                    centre=Point2(x=0.0, y=0.5),
+                    width=1.6,
+                    height=0.6,
+                    opening=0.25,
+                )
+                for span in (1, 2)
+            ),
+            Opening(
+                opening_id="side_vent_1",
+                kind=OpeningKind.SIDE_VENT,
+                surface_id="side_wall_right",
+                centre=Point2(x=0.0, y=1.0),
+                width=2.0,
+                height=0.5,
+            ),
+            Opening(
+                opening_id="door_1",
+                kind=OpeningKind.DOOR,
+                surface_id="end_wall_back",
+                centre=Point2(x=1.0, y=1.05),
+                width=1.2,
+                height=2.1,
+            ),
+        ],
+    ),
     truss_interval_days=3,
     ripening_days_bounds=(4, 7),
 )

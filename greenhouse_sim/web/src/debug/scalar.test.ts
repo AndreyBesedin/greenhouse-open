@@ -26,8 +26,10 @@ describe("shading entities by a property", () => {
   it("offers the numeric properties of the scene's entities", () => {
     expect(scalarProperties(EXAMPLE)).toEqual([
       "age_days",
+      "aperture_m2",
       "cumulative_harvest_g",
       "fruits_on_plant",
+      "open_fraction",
       "ripe_fruits",
       "trusses",
       "visible_height_cm",
