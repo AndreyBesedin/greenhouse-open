@@ -22,6 +22,7 @@ from typing import Annotated, Final, Literal, Self
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, model_validator
 
 from greenhouse_sim.world.geometry import Box, Cylinder, Point2, Quaternion, Transform, Vector3
+from greenhouse_sim.world.zones import Strip
 
 # A walkway is drawn as a slab this thick on the floor: a path poured a little
 # above it, which keeps the two apart for every viewer.
@@ -374,6 +375,11 @@ class WalkwayPrimitive(_Primitive):
             Vector3(x=self.start.x, y=self.start.y, z=0.0),
             Vector3(x=self.end.x, y=self.end.y, z=0.0),
         )
+
+    @property
+    def area(self) -> Strip:
+        """The floor it covers."""
+        return Strip(start=self.start, end=self.end, width=self.width)
 
     def fixtures(self) -> list[Fixture]:
         transform, length = _laid_between(*self._ends())

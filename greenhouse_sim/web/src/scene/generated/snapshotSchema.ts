@@ -328,6 +328,8 @@ export const SNAPSHOT_SCHEMA = {
         "BENCH",
         "SLAB",
         "WALKWAY",
+        "SERVICE_ZONE",
+        "KEEP_OUT",
         "RAIL",
         "PIPE",
         "OBSTACLE",
@@ -405,7 +407,7 @@ export const SNAPSHOT_SCHEMA = {
   "description": "One greenhouse at one simulated day, as a viewer draws it. Positions\nand sizes are in metres, in right-handed world axes with z up.",
   "properties": {
     "schema_version": {
-      "default": 9,
+      "default": 10,
       "title": "Schema Version",
       "type": "integer"
     },

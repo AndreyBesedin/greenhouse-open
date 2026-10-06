@@ -38,7 +38,7 @@ export function DisplayOptions({
             checked={byCategory}
             onChange={(event) => onByCategory(event.target.checked)}
           />{" "}
-          Surface categories
+          Categories
         </label>
       </p>
     </>

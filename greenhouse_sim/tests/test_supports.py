@@ -62,9 +62,13 @@ def test_a_supports_legs_stand_evenly_from_end_to_end_up_to_its_underside() -> N
     fixtures = _by_id(ROWS)
     legs = [fixtures[f"row_1_support_1_leg_{leg}"] for leg in (1, 2, 3)]
 
-    # 4 m of gutter, legs at most 2 m apart: three legs, 2 m apart.
+    # 4 m of gutter, legs at most 2 m apart: three legs, the end ones flush
+    # with the gutter's ends.
+    radius = TOMATO_GUTTER.leg_radius
     assert "row_1_support_1_leg_4" not in fixtures
-    assert [leg.transform.position.x for leg in legs] == pytest.approx([1.75, 3.75, 5.75])
+    assert [leg.transform.position.x for leg in legs] == pytest.approx(
+        [1.75 + radius, 3.75, 5.75 - radius]
+    )
     for leg in legs:
         assert leg.kind == FixtureKind.CROP_GUTTER
         assert isinstance(leg.shape, Cylinder)

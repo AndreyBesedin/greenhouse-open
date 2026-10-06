@@ -39,9 +39,11 @@ origin and axes, and its label) can be switched on and off around it. A
 selection stays on its entity as a live scenario moves on; clicking the sky
 clears it. "Colour by" shades entities by a numeric property, with a legend,
 "Dimensions and axis labels" measures the greenhouse and names the world's
-axes, drawing its bounds as an outline, and "Surface categories" colours each
-part of the greenhouse (floor, wall, roof, vent, door, gutter, frame) by what
-it is, with a legend. Plants stand on their planting positions, each marked by an orange disc
+axes, drawing its bounds as an outline, and "Categories" colours each part of
+the greenhouse (floor, wall, roof, vent, door, gutter, frame) and of its
+layout (planting positions, gutters, benches, slabs, walkways, service zones,
+keep-out volumes, rails, pipes, obstacles) by what it is, with a legend for
+each. Plants stand on their planting positions, each marked by an orange disc
 around the plant's foot. The greenhouse's walls and
 roof are see-through glass: a click picks the nearest solid thing along it,
 such as a plant or the floor, and picks the glass only where nothing solid
@@ -85,6 +87,10 @@ Run `npx playwright install chromium` once for it.
 greenhouse (`public/scenes/qa-greenhouse.json`, written by the simulator's
 `tests/test_scene_schema.py --update`) from four fixed views, which CI compares
 with `e2e/visual/__screenshots__/greenhouse-<view>-linux.png` in the same way.
+
+`/qa/layout?view=top` shows the canonical layout (`public/scenes/qa-layout.json`,
+written by the same test) in the QA greenhouse from above, coloured by
+category and cut just below the eaves, so that the roof does not hide it.
 
 `/qa/renderer?seed=42` is the renderer's canonical page: a QA scene the viewer
 builds from the seed, with a plant selected, every overlay drawn and the

@@ -13,9 +13,9 @@ A snapshot holds a reference axes marker at the origin, the greenhouse's
 envelope (its floor, walls and roof, its doors and vents as they stand open,
 its gutters, its structural frames, and its bounds: the space it encloses, as
 a box), its layout's planting positions, each marked by a disc on the floor,
-and its fixtures, each with what it is made of and what it obstructs, and an
-upright cylinder per plant, as tall as its visible stem, at its planting
-position.
+its fixtures, each with what it is made of and what it obstructs, and its
+service zones and keep-out volumes, as the boxes they keep, and an upright
+cylinder per plant, as tall as its visible stem, at its planting position.
 """
 
 import math
@@ -48,6 +48,7 @@ from greenhouse_sim.world.geometry import (
 from greenhouse_sim.world.layout import Layout
 from greenhouse_sim.world.rows import PlantingPosition
 from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
+from greenhouse_sim.world.zones import Zone, ZoneKind
 
 # Bumped when a change to these types would break an existing viewer, as a new
 # kind or shape does: a viewer that does not know it refuses the scene.
@@ -59,7 +60,8 @@ from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
 # 7: its layout's fixtures, and what entities are made of.
 # 8: its planting positions.
 # 9: benches and substrate slabs.
-SCHEMA_VERSION: Final = 9
+# 10: service zones and keep-out volumes.
+SCHEMA_VERSION: Final = 10
 # The JSON Schema dialect Pydantic generates, stated in the published schema.
 JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 
@@ -99,6 +101,8 @@ PLANT_COLOR: Final = Color(r=0.2, g=0.55, b=0.24)
 PLANTING_MARKER_RADIUS_M: Final = 0.06
 PLANTING_MARKER_HEIGHT_M: Final = 0.01
 PLANTING_POSITION_COLOR: Final = Color(r=0.85, g=0.6, b=0.25)
+SERVICE_ZONE_COLOR: Final = Color(r=0.45, g=0.7, b=0.85)
+KEEP_OUT_COLOR: Final = Color(r=0.9, g=0.35, b=0.3)
 GREENHOUSE_BOUNDS_COLOR: Final = Color(r=0.62, g=0.78, b=0.88)
 # What the envelope's metal parts are made of.
 GUTTER_MATERIAL: Final = Material.ALUMINIUM
@@ -132,6 +136,9 @@ class SceneEntityKind(StrEnum):
     BENCH = "BENCH"
     SLAB = "SLAB"
     WALKWAY = "WALKWAY"
+    # Areas kept for a purpose, as the volumes they keep.
+    SERVICE_ZONE = "SERVICE_ZONE"
+    KEEP_OUT = "KEEP_OUT"
     RAIL = "RAIL"
     PIPE = "PIPE"
     OBSTACLE = "OBSTACLE"
@@ -211,6 +218,7 @@ def greenhouse_scene(
             *_member_entities(greenhouse_id, envelope),
             *_planting_position_entities(greenhouse_id, envelope, layout or Layout()),
             *_fixture_entities(greenhouse_id, envelope, layout or Layout()),
+            *_zone_entities(greenhouse_id, envelope, layout or Layout()),
             axes,
             _bounds_entity(greenhouse_id, envelope),
         ],
@@ -378,6 +386,34 @@ def _fixture_entity(greenhouse_id: str, envelope: Envelope, fixture: Fixture) ->
             f"obstructs_{obstruction.value}": obstruction in fixture.obstructs
             for obstruction in Obstruction
         },
+    )
+
+
+_ZONE_KINDS: Final = {
+    ZoneKind.SERVICE: (SceneEntityKind.SERVICE_ZONE, SERVICE_ZONE_COLOR),
+    ZoneKind.KEEP_OUT: (SceneEntityKind.KEEP_OUT, KEEP_OUT_COLOR),
+}
+
+
+def _zone_entities(greenhouse_id: str, envelope: Envelope, layout: Layout) -> list[SceneEntity]:
+    return [_zone_entity(greenhouse_id, envelope, zone) for zone in layout.zones]
+
+
+def _zone_entity(greenhouse_id: str, envelope: Envelope, zone: Zone) -> SceneEntity:
+    """A zone as the box it keeps, standing on the floor."""
+    kind, color = _ZONE_KINDS[zone.kind]
+    area = zone.area
+    in_greenhouse = Transform(
+        position=Vector3(x=area.middle.x, y=area.middle.y, z=0.0),
+        rotation=Quaternion.about(Vector3(x=0.0, y=0.0, z=1.0), area.heading),
+    )
+    return SceneEntity(
+        entity_id=f"{greenhouse_id}_{zone.zone_id}",
+        kind=kind,
+        transform=envelope.origin.after(in_greenhouse),
+        shape=Box(size_x=area.length, size_y=area.width, size_z=zone.height),
+        color=color,
+        label=zone.zone_id.replace("_", " "),
     )
 
 

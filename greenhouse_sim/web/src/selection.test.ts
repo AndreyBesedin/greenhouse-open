@@ -10,9 +10,10 @@ const EXAMPLE: SceneSnapshot = JSON.parse(
   readFileSync(new URL("../public/scenes/example.json", import.meta.url), "utf8"),
 );
 
-function drawnEntity(entityId: string): { group: Group; mesh: Mesh } {
+function drawnEntity(entityId: string, kind = "PLANT"): { group: Group; mesh: Mesh } {
   const group = new Group();
   group.userData.entityId = entityId;
+  group.userData.entityKind = kind;
   const mesh = new Mesh();
   group.add(mesh);
   return { group, mesh };
@@ -45,6 +46,26 @@ describe("picking through glass", () => {
 
     expect(pickEntity([{ object: wall.mesh }, { object: plant.mesh }])).toBe("gh_demo_plant_001");
     expect(pickEntity([{ object: wall.mesh }])).toBe("gh_demo_side_wall_right");
+  });
+});
+
+describe("picking a zone", () => {
+  it("picks the zone over the floor it stands on, but not over what stands in it", () => {
+    const zone = drawnEntity("gh_001_keep_out_irrigation", "KEEP_OUT");
+    zone.mesh.userData.seeThrough = true;
+    const floor = drawnEntity("gh_001_floor", "FLOOR");
+    const unit = drawnEntity("gh_001_irrigation_unit", "OBSTACLE");
+    const roof = drawnEntity("gh_001_roof_2_right", "ROOF");
+    roof.mesh.userData.seeThrough = true;
+
+    expect(pickEntity([{ object: roof.mesh }, { object: zone.mesh }, { object: floor.mesh }])).toBe(
+      "gh_001_keep_out_irrigation",
+    );
+    expect(pickEntity([{ object: zone.mesh }, { object: unit.mesh }, { object: floor.mesh }])).toBe(
+      "gh_001_irrigation_unit",
+    );
+    // Through the glass, without a zone, the floor.
+    expect(pickEntity([{ object: roof.mesh }, { object: floor.mesh }])).toBe("gh_001_floor");
   });
 });
 

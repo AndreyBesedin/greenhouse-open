@@ -8,16 +8,50 @@ export const CLICK_TOLERANCE_PX = 2;
 
 type Hit = { object: Object3D; instanceId?: number | undefined };
 
+// What everything else stands on: picked only when nothing but glazing lies
+// along the click.
+const BACKGROUND_KINDS: ReadonlySet<string> = new Set(["FLOOR", "GROUND"]);
+// See-through volumes kept for a purpose: picked before the floor they stand
+// on, but after anything solid inside them.
+const VOLUME_KINDS: ReadonlySet<string> = new Set(["SERVICE_ZONE", "KEEP_OUT"]);
+
 /**
  * The entity a click landed on: the nearest hit drawn as part of an entity.
- * `SceneView` marks each entity's group with its identifier, and an instanced
- * batch lists its entities in instance order. See-through things, such as
- * glazing, are picked only when nothing solid lies along the click: a click
- * through a greenhouse's glass reaches the plants and floor inside.
+ * `SceneView` marks each entity's group with its identifier and kind, and an
+ * instanced batch lists its entities in instance order. Hits rank by what
+ * they are: anything solid first; then the see-through volumes of zones; then
+ * the floor; and glazing, which is see-through, last. A click through a
+ * greenhouse's glass reaches the plants and floor inside, and a click on the
+ * floor inside a zone picks the zone.
  */
 export function pickEntity(hits: readonly Hit[]): string | null {
-  const solid = hits.filter((hit) => hit.object.userData.seeThrough !== true);
-  return nearestEntity(solid) ?? nearestEntity(hits);
+  const ranks: ((hit: Hit) => boolean)[] = [
+    (hit) => !isSeeThrough(hit) && !BACKGROUND_KINDS.has(kindOf(hit)),
+    (hit) => isSeeThrough(hit) && VOLUME_KINDS.has(kindOf(hit)),
+    (hit) => !isSeeThrough(hit),
+  ];
+  for (const rank of ranks) {
+    const picked = nearestEntity(hits.filter(rank));
+    if (picked !== null) {
+      return picked;
+    }
+  }
+  return nearestEntity(hits);
+}
+
+function isSeeThrough(hit: Hit): boolean {
+  return hit.object.userData.seeThrough === true;
+}
+
+/** The kind of the entity a hit was drawn for, or "" for a batch or nothing. */
+function kindOf(hit: Hit): string {
+  for (let object: Object3D | null = hit.object; object !== null; object = object.parent) {
+    const kind: unknown = object.userData.entityKind;
+    if (typeof kind === "string") {
+      return kind;
+    }
+  }
+  return "";
 }
 
 function nearestEntity(hits: readonly Hit[]): string | null {

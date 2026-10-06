@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { QA_GREENHOUSE_PATH, QA_GREENHOUSE_VIEWS } from "../src/qa/greenhouseViews.ts";
+import { QA_LAYOUT_PATH, QA_LAYOUT_VIEWS } from "../src/qa/layoutViews.ts";
 import { DEFAULT_QA_SEED, QA_RENDERER_PATH, QA_SELECTED_ID } from "../src/qa/qaPage.ts";
 
 // The screenshot comparison itself runs only in CI's container
@@ -49,5 +50,36 @@ test("the QA greenhouse draws each of its views, without console errors", async 
   await page.goto(`${QA_GREENHOUSE_PATH}?view=sideways`);
   await expect(page.getByRole("alert")).toHaveText(
     "The view must be outside, aisle, top or section.",
+  );
+});
+
+test("the QA layout draws each of its views, coloured by category, without console errors", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      errors.push(message.text());
+    }
+  });
+
+  for (const view of QA_LAYOUT_VIEWS) {
+    await page.goto(`${QA_LAYOUT_PATH}?view=${view}`);
+    await expect(page.getByTestId("qa-caption")).toHaveText(`Layout QA, ${view} view`);
+    await expect(page.getByTestId("layout-category")).toHaveText([
+      "planting position",
+      "crop gutter",
+      "slab",
+      "walkway",
+      "service zone",
+      "keep-out",
+      "obstacle",
+    ]);
+  }
+  expect(errors).toEqual([]);
+
+  await page.goto(`${QA_LAYOUT_PATH}?view=sideways`);
+  await expect(page.getByRole("alert")).toHaveText(
+    `The view must be ${QA_LAYOUT_VIEWS.join(" or ")}.`,
   );
 });

@@ -44,7 +44,7 @@ test("the surface categories colour the envelope by what each part is", async ({
   await page.goto("/?scene=example");
   await expect(page.getByTestId("scene-status")).toContainText("51 entities");
 
-  await page.getByRole("checkbox", { name: "Surface categories" }).check();
+  await page.getByRole("checkbox", { name: "Categories" }).check();
   await expect(page.getByTestId("category")).toHaveText([
     "floor",
     "wall",
@@ -54,6 +54,6 @@ test("the surface categories colour the envelope by what each part is", async ({
     "gutter",
     "frame",
   ]);
-  await page.getByRole("checkbox", { name: "Surface categories" }).uncheck();
+  await page.getByRole("checkbox", { name: "Categories" }).uncheck();
   await expect(page.getByTestId("category")).toHaveCount(0);
 });

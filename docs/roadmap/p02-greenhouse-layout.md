@@ -41,8 +41,8 @@ rows and columns, at a fixed pitch and spacing in the scene module.
 | --- | --- | --- |
 | P02.1 | `feat(layout): define reusable fixture primitives` | Done ([#36](https://github.com/AndreyBesedin/greenhouse-open/pull/36)) |
 | P02.2 | `feat(layout): generate crop rows and planting positions` | Done ([#38](https://github.com/AndreyBesedin/greenhouse-open/pull/38)) |
-| P02.3 | `feat(layout): add gutters, tables, benches and slabs` | Done |
-| P02.4 | `feat(layout): add walkways, service zones and exclusion volumes` | Planned |
+| P02.3 | `feat(layout): add gutters, tables, benches and slabs` | Done ([#39](https://github.com/AndreyBesedin/greenhouse-open/pull/39)) |
+| P02.4 | `feat(layout): add walkways, service zones and exclusion volumes` | Done |
 | P02.5 | `feat(layout): add rails, pipes and overhead structures` | Planned |
 | P02.6 | `feat(layout): import and export the layout configuration` | Planned |
 | P02.7 | `test(visual): add fixture occlusion and navigation QA scenes` | Planned |
@@ -196,6 +196,63 @@ A central aisle, side aisles, service zones and keep-out volumes, coloured
 distinctly in a debug view. Visible result: a top view clearly shows the
 operational layout. Tests: no planting position is generated inside an
 exclusion volume.
+
+As implemented:
+
+- Walkways are the walkway fixtures placed in a layout. A layout's `zones`
+  (`greenhouse_sim.world.zones`) are service zones (room for carts, trolleys,
+  irrigation and climate units) and keep-out volumes (where robots and
+  trolleys must not go), each a strip of the floor (a centre line and a
+  width) rising to a height.
+- No planting position lies inside a walkway, service zone or keep-out
+  volume; the others keep their identifiers, so a row crossed by an aisle
+  numbers on across it. On a support, a position is also left out unless its
+  support can reach 10 cm beyond it, so that every plant stands on its slab.
+- A row's support runs under each unbroken run of its positions, numbered
+  along the row (`row_<r>_support_<k>`, `row_<r>_slab_<k>`), and stops short
+  of any area kept clear that any part of its width would reach into. The
+  end legs stand flush with a support's ends.
+- Walkways stay clear: a layout that puts anything obstructing movement on
+  one is refused. Fixtures and zones share no identifier, and zones must fit
+  inside the greenhouse.
+- gh_001 gains an aisle across its front, past its door, and one along its
+  right side wall, a service zone across its back, and an irrigation unit
+  there with a keep-out volume around it. All forty of its positions stay.
+- The scene shows zones as the volumes they keep (`SERVICE_ZONE`,
+  `KEEP_OUT`), see-through like glazing; the scene schema moves to version
+  10. A click ranks what it hits: anything solid first, then a zone's
+  volume, then the floor, then glazing, so a click on the floor inside a
+  zone picks the zone.
+- The categories' debug view ("Categories", formerly "Surface categories")
+  now also colours the layout, from Paul Tol's muted palette, with a second
+  legend, "Layout categories".
+- `/qa/layout?view=top` shows the canonical layout from above, coloured by
+  category, cut just below the eaves so that the roof does not hide it. The
+  canonical layout (`public/scenes/qa-layout.json`, written by the simulator)
+  is the QA greenhouse with five rows of tomato gutters split by a central
+  aisle, aisles across the front and along the right side wall, a service
+  zone at the back, and a keep-out volume around an electrical cabinet that
+  cuts the last row short. P02.7 adds its other views and baselines.
+- Tests:
+  - Python: a strip holds what lies inside it but not on its edge; where a
+    band along a line reaches into it, square, along it, past its end and
+    beside it. No position lies in a walkway, service zone or keep-out
+    volume, and the others keep their names. A row crossed by an aisle gets
+    a support on each side, stopping at it, with its last plant still on its
+    slab; a support stops short of a keep-out volume. A cabinet on a walkway,
+    or a pipe across one, is refused; something obstructing only light may
+    cross. Over a grid of 60 aisles and keep-out volumes, no position lies
+    inside any area, every support, leg and slab keeps clear of them, and
+    every position stands on a slab. Zones are drawn as the volumes they
+    keep, turned with their strips.
+  - Viewer: zones are picked over the floor, but not over what stands in
+    them; the layout's categories have colours of their own, cover the
+    canonical layout, and have a legend of their own; the QA top view looks
+    down on the house's middle, cut below its eaves.
+  - Browser: in gh_001, the layout's legend lists its categories, the front
+    aisle is picked as a walkway that obstructs nothing, and the service
+    zone is picked from the front. The QA layout's top view draws without
+    console errors.
 
 ### P02.5: Rails, pipes and overhead structures
 

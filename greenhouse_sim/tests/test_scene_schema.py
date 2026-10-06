@@ -4,9 +4,10 @@
 types from and validates scenes against, `web/public/scenes/example.json` is a
 deterministic scene the viewer can draw without the API, and
 `web/public/scenes/qa-greenhouse.json` is the canonical greenhouse its
-screenshot tests draw (P01.7), and `web/public/scenes/qa-fixtures.json` is
-its gallery of fixture primitives (P02.1). All four are generated here, from
-`greenhouse_sim/`:
+screenshot tests draw (P01.7), `web/public/scenes/qa-fixtures.json` is its
+gallery of fixture primitives (P02.1), and `web/public/scenes/qa-layout.json`
+is the canonical layout its layout views draw (P02.4). All five are
+generated here, from `greenhouse_sim/`:
 
     python tests/test_scene_schema.py --update
 
@@ -39,12 +40,15 @@ from greenhouse_sim.world.fixtures import (
 )
 from greenhouse_sim.world.geometry import Point2, Transform, Vector3
 from greenhouse_sim.world.layout import Layout
+from greenhouse_sim.world.rows import TOMATO_GUTTER, CropRows
+from greenhouse_sim.world.zones import Strip, Zone, ZoneKind
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_FILE = ROOT / "greenhouse_sim" / "scene" / "snapshot.schema.json"
 EXAMPLE_FILE = ROOT / "web" / "public" / "scenes" / "example.json"
 QA_GREENHOUSE_FILE = ROOT / "web" / "public" / "scenes" / "qa-greenhouse.json"
 QA_FIXTURES_FILE = ROOT / "web" / "public" / "scenes" / "qa-fixtures.json"
+QA_LAYOUT_FILE = ROOT / "web" / "public" / "scenes" / "qa-layout.json"
 # The canonical greenhouse for the viewer's screenshot tests: three 3.2 m
 # spans and four 4 m bays, its eaves at 4 m and ridges at 4.65 m, with a roof
 # vent half open, a closed side vent and a door half open.
@@ -140,6 +144,61 @@ QA_FIXTURES_LAYOUT = Layout(
         ),
     ]
 )
+# The canonical layout, in the QA greenhouse: five rows of tomato gutters
+# along its length, split by a central aisle; aisles across the front, past
+# the door, and along the right side wall; a service zone at the back; and a
+# keep-out volume around an electrical cabinet, which cuts the last row short.
+QA_LAYOUT = Layout(
+    crop_rows=CropRows(
+        origin=Point2(x=1.75, y=2.0),
+        rows=5,
+        positions_per_row=26,
+        plant_pitch=0.5,
+        row_spacing=1.6,
+        support=TOMATO_GUTTER,
+    ),
+    placed=[
+        WalkwayPrimitive(
+            fixture_id="front_aisle",
+            start=Point2(x=0.7, y=0.2),
+            end=Point2(x=0.7, y=9.4),
+            width=1.2,
+        ),
+        WalkwayPrimitive(
+            fixture_id="central_aisle",
+            start=Point2(x=8.0, y=1.2),
+            end=Point2(x=8.0, y=9.4),
+            width=1.2,
+        ),
+        WalkwayPrimitive(
+            fixture_id="side_aisle_right",
+            start=Point2(x=1.3, y=0.7),
+            end=Point2(x=15.8, y=0.7),
+            width=0.8,
+        ),
+        BoxPrimitive(
+            fixture_id="electrical_cabinet",
+            base=Vector3(x=15.2, y=8.9, z=0.0),
+            size_x=0.8,
+            size_y=0.6,
+            size_z=2.0,
+        ),
+    ],
+    zones=[
+        Zone(
+            zone_id="service_zone_back",
+            kind=ZoneKind.SERVICE,
+            area=Strip(start=Point2(x=15.35, y=1.2), end=Point2(x=15.35, y=7.8), width=1.1),
+            height=2.0,
+        ),
+        Zone(
+            zone_id="keep_out_cabinet",
+            kind=ZoneKind.KEEP_OUT,
+            area=Strip(start=Point2(x=13.4, y=8.65), end=Point2(x=15.9, y=8.65), width=1.5),
+            height=2.4,
+        ),
+    ],
+)
 # Long enough in gh_demo for the plants to differ in height.
 EXAMPLE_DAYS = 9
 
@@ -189,6 +248,14 @@ def test_the_qa_fixture_gallery_is_what_the_simulator_draws() -> None:
     assert json.loads(QA_FIXTURES_FILE.read_text()) == _qa_fixtures()
 
 
+def _qa_layout() -> object:
+    return greenhouse_scene("qa_layout", QA_ENVELOPE, layout=QA_LAYOUT).model_dump(mode="json")
+
+
+def test_the_qa_layout_is_what_the_simulator_draws() -> None:
+    assert json.loads(QA_LAYOUT_FILE.read_text()) == _qa_layout()
+
+
 def test_the_example_scene_holds_differently_sized_and_placed_plants() -> None:
     entities = json.loads(EXAMPLE_FILE.read_text())["entities"]
     plants = [entity for entity in entities if entity["kind"] == "PLANT"]
@@ -206,10 +273,12 @@ def _update() -> None:
     EXAMPLE_FILE.write_text(json.dumps(_example_scene(), indent=2) + "\n")
     QA_GREENHOUSE_FILE.write_text(json.dumps(_qa_greenhouse(), indent=2) + "\n")
     QA_FIXTURES_FILE.write_text(json.dumps(_qa_fixtures(), indent=2) + "\n")
+    QA_LAYOUT_FILE.write_text(json.dumps(_qa_layout(), indent=2) + "\n")
 
 
 if __name__ == "__main__":
     if sys.argv[1:] != ["--update"]:
         raise SystemExit("usage: python tests/test_scene_schema.py --update")
     _update()
-    print(f"wrote {SCHEMA_FILE}, {EXAMPLE_FILE}, {QA_GREENHOUSE_FILE} and {QA_FIXTURES_FILE}")
+    written = (SCHEMA_FILE, EXAMPLE_FILE, QA_GREENHOUSE_FILE, QA_FIXTURES_FILE, QA_LAYOUT_FILE)
+    print("wrote", ", ".join(str(path) for path in written))

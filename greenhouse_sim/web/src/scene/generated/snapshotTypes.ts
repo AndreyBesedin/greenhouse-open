@@ -17,6 +17,8 @@ export type SceneEntityKind =
   | "BENCH"
   | "SLAB"
   | "WALKWAY"
+  | "SERVICE_ZONE"
+  | "KEEP_OUT"
   | "RAIL"
   | "PIPE"
   | "OBSTACLE"

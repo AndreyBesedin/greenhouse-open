@@ -80,6 +80,10 @@ export const RENDERERS: Record<
   BENCH: solid,
   SLAB: solid,
   WALKWAY: solid,
+  // The volumes zones keep: see-through, picked only where nothing solid lies
+  // behind, as glazing is.
+  SERVICE_ZONE: (entity, look) => seeThrough(entity, look),
+  KEEP_OUT: (entity, look) => seeThrough(entity, look),
   RAIL: solid,
   PIPE: solid,
   OBSTACLE: solid,

@@ -1,0 +1,8357 @@
+{
+  "schema_version": 10,
+  "greenhouse_id": "qa_layout",
+  "simulated_day": 0,
+  "entities": [
+    {
+      "entity_id": "qa_layout_floor",
+      "kind": "FLOOR",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 4.8,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 16.0,
+        "size_y": 9.6
+      },
+      "color": {
+        "r": 0.42,
+        "g": 0.33,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "floor",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_side_wall_right",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 0.0,
+          "z": 2.0
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.7071067811865476
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 16.0,
+        "size_y": 4.0
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "material": null,
+      "label": "side wall right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_side_wall_left",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 9.6,
+          "z": 2.0
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.7071067811865475,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 16.0,
+        "size_y": 4.0
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "material": null,
+      "label": "side wall left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_end_wall_front",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 0.5,
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        }
+      },
+      "shape": {
+        "shape": "polygon",
+        "points": [
+          {
+            "x": 0.0,
+            "y": 0.0
+          },
+          {
+            "x": 9.6,
+            "y": 0.0
+          },
+          {
+            "x": 9.6,
+            "y": 4.0
+          },
+          {
+            "x": 7.999999999999999,
+            "y": 4.65
+          },
+          {
+            "x": 6.3999999999999995,
+            "y": 4.0
+          },
+          {
+            "x": 4.8,
+            "y": 4.65
+          },
+          {
+            "x": 3.1999999999999997,
+            "y": 4.0
+          },
+          {
+            "x": 1.5999999999999999,
+            "y": 4.65
+          },
+          {
+            "x": 0.0,
+            "y": 4.0
+          }
+        ]
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "material": null,
+      "label": "end wall front",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_end_wall_back",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 9.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": -0.5,
+          "x": -0.5,
+          "y": 0.5,
+          "z": 0.5
+        }
+      },
+      "shape": {
+        "shape": "polygon",
+        "points": [
+          {
+            "x": 0.0,
+            "y": 0.0
+          },
+          {
+            "x": 9.6,
+            "y": 0.0
+          },
+          {
+            "x": 9.6,
+            "y": 4.0
+          },
+          {
+            "x": 7.999999999999999,
+            "y": 4.65
+          },
+          {
+            "x": 6.3999999999999995,
+            "y": 4.0
+          },
+          {
+            "x": 4.8,
+            "y": 4.65
+          },
+          {
+            "x": 3.1999999999999997,
+            "y": 4.0
+          },
+          {
+            "x": 1.5999999999999999,
+            "y": 4.65
+          },
+          {
+            "x": 0.0,
+            "y": 4.0
+          }
+        ]
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "material": null,
+      "label": "end wall back",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_roof_1_right",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 0.7999999999999999,
+          "z": 4.325
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.9814444908201149,
+          "z": 0.19174647699200495
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 16.0,
+        "size_y": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "material": null,
+      "label": "roof 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_roof_1_left",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 2.4,
+          "z": 4.325
+        },
+        "rotation": {
+          "w": 0.19174647699200495,
+          "x": 0.9814444908201149,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 16.0,
+        "size_y": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "material": null,
+      "label": "roof 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_roof_2_right",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 3.9999999999999996,
+          "z": 4.325
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.9814444908201149,
+          "z": 0.19174647699200495
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 16.0,
+        "size_y": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "material": null,
+      "label": "roof 2 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_roof_2_left",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 5.6,
+          "z": 4.325
+        },
+        "rotation": {
+          "w": 0.19174647699200495,
+          "x": 0.9814444908201149,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 16.0,
+        "size_y": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "material": null,
+      "label": "roof 2 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_roof_3_right",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 7.199999999999999,
+          "z": 4.325
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.9814444908201149,
+          "z": 0.19174647699200495
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 16.0,
+        "size_y": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "material": null,
+      "label": "roof 3 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_roof_3_left",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 8.799999999999999,
+          "z": 4.325
+        },
+        "rotation": {
+          "w": 0.19174647699200495,
+          "x": 0.9814444908201149,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 16.0,
+        "size_y": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "material": null,
+      "label": "roof 3 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_roof_vent_1",
+      "kind": "VENT",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 4.441180231192359,
+          "z": 4.628146545419272
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.9999941920710405,
+          "z": -0.0034081995521161035
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 3.0,
+        "size_y": 0.6
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.74,
+        "b": 0.86
+      },
+      "material": null,
+      "label": "roof vent 1",
+      "properties": {
+        "opening_id": "roof_vent_1",
+        "opening_kind": "roof_vent",
+        "on_surface": "roof_2_right",
+        "open_fraction": 0.5,
+        "aperture_m2": 0.8400911949094939
+      }
+    },
+    {
+      "entity_id": "qa_layout_side_vent_1",
+      "kind": "VENT",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 9.6,
+          "z": 3.2
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.7071067811865475,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 4.0,
+        "size_y": 0.6
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.74,
+        "b": 0.86
+      },
+      "material": null,
+      "label": "side vent 1",
+      "properties": {
+        "opening_id": "side_vent_1",
+        "opening_kind": "side_vent",
+        "on_surface": "side_wall_left",
+        "open_fraction": 0.0,
+        "aperture_m2": 0.0
+      }
+    },
+    {
+      "entity_id": "qa_layout_door_1",
+      "kind": "DOOR",
+      "transform": {
+        "position": {
+          "x": -0.020000000000000018,
+          "y": 2.2,
+          "z": 1.0499999999999998
+        },
+        "rotation": {
+          "w": 0.5,
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 1.2,
+        "size_y": 2.1
+      },
+      "color": {
+        "r": 0.45,
+        "g": 0.5,
+        "b": 0.56
+      },
+      "material": null,
+      "label": "door 1",
+      "properties": {
+        "opening_id": "door_1",
+        "opening_kind": "door",
+        "on_surface": "end_wall_front",
+        "open_fraction": 0.5,
+        "aperture_m2": 1.26
+      }
+    },
+    {
+      "entity_id": "qa_layout_gutter_0",
+      "kind": "GUTTER",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 0.0,
+          "z": 3.85
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 16.0,
+        "size_y": 0.2,
+        "size_z": 0.15
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.57,
+        "b": 0.6
+      },
+      "material": "aluminium",
+      "label": "gutter 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_gutter_1",
+      "kind": "GUTTER",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 3.1999999999999997,
+          "z": 3.85
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 16.0,
+        "size_y": 0.2,
+        "size_z": 0.15
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.57,
+        "b": 0.6
+      },
+      "material": "aluminium",
+      "label": "gutter 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_gutter_2",
+      "kind": "GUTTER",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 6.3999999999999995,
+          "z": 3.85
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 16.0,
+        "size_y": 0.2,
+        "size_z": 0.15
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.57,
+        "b": 0.6
+      },
+      "material": "aluminium",
+      "label": "gutter 2",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_gutter_3",
+      "kind": "GUTTER",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 9.6,
+          "z": 3.85
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 16.0,
+        "size_y": 0.2,
+        "size_z": 0.15
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.57,
+        "b": 0.6
+      },
+      "material": "aluminium",
+      "label": "gutter 3",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_0_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 0 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_0_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 3.1999999999999997,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 0 post 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_0_post_2",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 6.3999999999999995,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 0 post 2",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_0_post_3",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 9.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 0 post 3",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_0_rafter_1_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 0 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_0_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 0 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_0_rafter_2_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": -0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170545
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 0 rafter 2 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_0_rafter_2_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 0 rafter 2 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_0_rafter_3_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 0 rafter 3 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_0_rafter_3_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 9.6,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": 0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917055
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 0 rafter 3 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_1_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 1 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_1_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 3.1999999999999997,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 1 post 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_1_post_2",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 6.3999999999999995,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 1 post 2",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_1_post_3",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 9.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 1 post 3",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_1_rafter_1_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 0.0,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 1 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_1_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 1 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_1_rafter_2_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": -0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170545
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 1 rafter 2 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_1_rafter_2_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 1 rafter 2 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_1_rafter_3_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 1 rafter 3 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_1_rafter_3_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 4.0,
+          "y": 9.6,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": 0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917055
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 1 rafter 3 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_2_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 2 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_2_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 3.1999999999999997,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 2 post 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_2_post_2",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 6.3999999999999995,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 2 post 2",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_2_post_3",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 9.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 2 post 3",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_2_rafter_1_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 0.0,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 2 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_2_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 2 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_2_rafter_2_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": -0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170545
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 2 rafter 2 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_2_rafter_2_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 2 rafter 2 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_2_rafter_3_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 2 rafter 3 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_2_rafter_3_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 9.6,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": 0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917055
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 2 rafter 3 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_3_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 3 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_3_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 3.1999999999999997,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 3 post 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_3_post_2",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 6.3999999999999995,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 3 post 2",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_3_post_3",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 9.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 3 post 3",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_3_rafter_1_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 0.0,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 3 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_3_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 3 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_3_rafter_2_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": -0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170545
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 3 rafter 2 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_3_rafter_2_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 3 rafter 2 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_3_rafter_3_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 3 rafter 3 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_3_rafter_3_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 9.6,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": 0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917055
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 3 rafter 3 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_4_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 4 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_4_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 3.1999999999999997,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 4 post 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_4_post_2",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 6.3999999999999995,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 4 post 2",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_4_post_3",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 9.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 4 post 3",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_4_rafter_1_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 0.0,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 4 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_4_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170543
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 4 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_4_rafter_2_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 3.1999999999999997,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": -0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.7269916039170545
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 4 rafter 2 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_4_rafter_2_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": 0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 4 rafter 2 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_4_rafter_3_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 6.3999999999999995,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667586,
+          "x": -0.5584008206674045,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917054
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 4 rafter 3 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_frame_4_rafter_3_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 16.0,
+          "y": 9.6,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.8295712889667585,
+          "x": 0.5584008206674046,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 1.726991603917055
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 4 rafter 3 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_1",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 1.75,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 1",
+      "properties": {
+        "row": 1,
+        "position_in_row": 1
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_2",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 2.25,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 2",
+      "properties": {
+        "row": 1,
+        "position_in_row": 2
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_3",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 2.75,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 3",
+      "properties": {
+        "row": 1,
+        "position_in_row": 3
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_4",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 3.25,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 4",
+      "properties": {
+        "row": 1,
+        "position_in_row": 4
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_5",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 3.75,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 5",
+      "properties": {
+        "row": 1,
+        "position_in_row": 5
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_6",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 4.25,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 6",
+      "properties": {
+        "row": 1,
+        "position_in_row": 6
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_7",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 4.75,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 7",
+      "properties": {
+        "row": 1,
+        "position_in_row": 7
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_8",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 5.25,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 8",
+      "properties": {
+        "row": 1,
+        "position_in_row": 8
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_9",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 5.75,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 9",
+      "properties": {
+        "row": 1,
+        "position_in_row": 9
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_10",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 6.25,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 10",
+      "properties": {
+        "row": 1,
+        "position_in_row": 10
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_11",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 6.75,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 11",
+      "properties": {
+        "row": 1,
+        "position_in_row": 11
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_12",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 7.25,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 12",
+      "properties": {
+        "row": 1,
+        "position_in_row": 12
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_15",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 8.75,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 15",
+      "properties": {
+        "row": 1,
+        "position_in_row": 15
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_16",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 9.25,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 16",
+      "properties": {
+        "row": 1,
+        "position_in_row": 16
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_17",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 9.75,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 17",
+      "properties": {
+        "row": 1,
+        "position_in_row": 17
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_18",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 10.25,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 18",
+      "properties": {
+        "row": 1,
+        "position_in_row": 18
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_19",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 10.75,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 19",
+      "properties": {
+        "row": 1,
+        "position_in_row": 19
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_20",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 11.25,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 20",
+      "properties": {
+        "row": 1,
+        "position_in_row": 20
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_21",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 11.75,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 21",
+      "properties": {
+        "row": 1,
+        "position_in_row": 21
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_22",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 12.25,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 22",
+      "properties": {
+        "row": 1,
+        "position_in_row": 22
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_23",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 12.75,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 23",
+      "properties": {
+        "row": 1,
+        "position_in_row": 23
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_24",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 13.25,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 24",
+      "properties": {
+        "row": 1,
+        "position_in_row": 24
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_25",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 13.75,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 25",
+      "properties": {
+        "row": 1,
+        "position_in_row": 25
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_position_26",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 14.25,
+          "y": 2.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 26",
+      "properties": {
+        "row": 1,
+        "position_in_row": 26
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_1",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 1.75,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 1",
+      "properties": {
+        "row": 2,
+        "position_in_row": 1
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_2",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 2.25,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 2",
+      "properties": {
+        "row": 2,
+        "position_in_row": 2
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_3",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 2.75,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 3",
+      "properties": {
+        "row": 2,
+        "position_in_row": 3
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_4",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 3.25,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 4",
+      "properties": {
+        "row": 2,
+        "position_in_row": 4
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_5",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 3.75,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 5",
+      "properties": {
+        "row": 2,
+        "position_in_row": 5
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_6",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 4.25,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 6",
+      "properties": {
+        "row": 2,
+        "position_in_row": 6
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_7",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 4.75,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 7",
+      "properties": {
+        "row": 2,
+        "position_in_row": 7
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_8",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 5.25,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 8",
+      "properties": {
+        "row": 2,
+        "position_in_row": 8
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_9",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 5.75,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 9",
+      "properties": {
+        "row": 2,
+        "position_in_row": 9
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_10",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 6.25,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 10",
+      "properties": {
+        "row": 2,
+        "position_in_row": 10
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_11",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 6.75,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 11",
+      "properties": {
+        "row": 2,
+        "position_in_row": 11
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_12",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 7.25,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 12",
+      "properties": {
+        "row": 2,
+        "position_in_row": 12
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_15",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 8.75,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 15",
+      "properties": {
+        "row": 2,
+        "position_in_row": 15
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_16",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 9.25,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 16",
+      "properties": {
+        "row": 2,
+        "position_in_row": 16
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_17",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 9.75,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 17",
+      "properties": {
+        "row": 2,
+        "position_in_row": 17
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_18",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 10.25,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 18",
+      "properties": {
+        "row": 2,
+        "position_in_row": 18
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_19",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 10.75,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 19",
+      "properties": {
+        "row": 2,
+        "position_in_row": 19
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_20",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 11.25,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 20",
+      "properties": {
+        "row": 2,
+        "position_in_row": 20
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_21",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 11.75,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 21",
+      "properties": {
+        "row": 2,
+        "position_in_row": 21
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_22",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 12.25,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 22",
+      "properties": {
+        "row": 2,
+        "position_in_row": 22
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_23",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 12.75,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 23",
+      "properties": {
+        "row": 2,
+        "position_in_row": 23
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_24",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 13.25,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 24",
+      "properties": {
+        "row": 2,
+        "position_in_row": 24
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_25",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 13.75,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 25",
+      "properties": {
+        "row": 2,
+        "position_in_row": 25
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_position_26",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 14.25,
+          "y": 3.6,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 26",
+      "properties": {
+        "row": 2,
+        "position_in_row": 26
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_1",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 1.75,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 1",
+      "properties": {
+        "row": 3,
+        "position_in_row": 1
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_2",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 2.25,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 2",
+      "properties": {
+        "row": 3,
+        "position_in_row": 2
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_3",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 2.75,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 3",
+      "properties": {
+        "row": 3,
+        "position_in_row": 3
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_4",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 3.25,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 4",
+      "properties": {
+        "row": 3,
+        "position_in_row": 4
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_5",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 3.75,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 5",
+      "properties": {
+        "row": 3,
+        "position_in_row": 5
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_6",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 4.25,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 6",
+      "properties": {
+        "row": 3,
+        "position_in_row": 6
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_7",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 4.75,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 7",
+      "properties": {
+        "row": 3,
+        "position_in_row": 7
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_8",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 5.25,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 8",
+      "properties": {
+        "row": 3,
+        "position_in_row": 8
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_9",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 5.75,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 9",
+      "properties": {
+        "row": 3,
+        "position_in_row": 9
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_10",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 6.25,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 10",
+      "properties": {
+        "row": 3,
+        "position_in_row": 10
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_11",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 6.75,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 11",
+      "properties": {
+        "row": 3,
+        "position_in_row": 11
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_12",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 7.25,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 12",
+      "properties": {
+        "row": 3,
+        "position_in_row": 12
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_15",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 8.75,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 15",
+      "properties": {
+        "row": 3,
+        "position_in_row": 15
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_16",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 9.25,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 16",
+      "properties": {
+        "row": 3,
+        "position_in_row": 16
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_17",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 9.75,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 17",
+      "properties": {
+        "row": 3,
+        "position_in_row": 17
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_18",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 10.25,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 18",
+      "properties": {
+        "row": 3,
+        "position_in_row": 18
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_19",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 10.75,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 19",
+      "properties": {
+        "row": 3,
+        "position_in_row": 19
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_20",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 11.25,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 20",
+      "properties": {
+        "row": 3,
+        "position_in_row": 20
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_21",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 11.75,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 21",
+      "properties": {
+        "row": 3,
+        "position_in_row": 21
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_22",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 12.25,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 22",
+      "properties": {
+        "row": 3,
+        "position_in_row": 22
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_23",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 12.75,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 23",
+      "properties": {
+        "row": 3,
+        "position_in_row": 23
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_24",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 13.25,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 24",
+      "properties": {
+        "row": 3,
+        "position_in_row": 24
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_25",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 13.75,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 25",
+      "properties": {
+        "row": 3,
+        "position_in_row": 25
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_position_26",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 14.25,
+          "y": 5.2,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 3 position 26",
+      "properties": {
+        "row": 3,
+        "position_in_row": 26
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_1",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 1.75,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 1",
+      "properties": {
+        "row": 4,
+        "position_in_row": 1
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_2",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 2.25,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 2",
+      "properties": {
+        "row": 4,
+        "position_in_row": 2
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_3",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 2.75,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 3",
+      "properties": {
+        "row": 4,
+        "position_in_row": 3
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_4",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 3.25,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 4",
+      "properties": {
+        "row": 4,
+        "position_in_row": 4
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_5",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 3.75,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 5",
+      "properties": {
+        "row": 4,
+        "position_in_row": 5
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_6",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 4.25,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 6",
+      "properties": {
+        "row": 4,
+        "position_in_row": 6
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_7",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 4.75,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 7",
+      "properties": {
+        "row": 4,
+        "position_in_row": 7
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_8",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 5.25,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 8",
+      "properties": {
+        "row": 4,
+        "position_in_row": 8
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_9",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 5.75,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 9",
+      "properties": {
+        "row": 4,
+        "position_in_row": 9
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_10",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 6.25,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 10",
+      "properties": {
+        "row": 4,
+        "position_in_row": 10
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_11",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 6.75,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 11",
+      "properties": {
+        "row": 4,
+        "position_in_row": 11
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_12",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 7.25,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 12",
+      "properties": {
+        "row": 4,
+        "position_in_row": 12
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_15",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 8.75,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 15",
+      "properties": {
+        "row": 4,
+        "position_in_row": 15
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_16",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 9.25,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 16",
+      "properties": {
+        "row": 4,
+        "position_in_row": 16
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_17",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 9.75,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 17",
+      "properties": {
+        "row": 4,
+        "position_in_row": 17
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_18",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 10.25,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 18",
+      "properties": {
+        "row": 4,
+        "position_in_row": 18
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_19",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 10.75,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 19",
+      "properties": {
+        "row": 4,
+        "position_in_row": 19
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_20",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 11.25,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 20",
+      "properties": {
+        "row": 4,
+        "position_in_row": 20
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_21",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 11.75,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 21",
+      "properties": {
+        "row": 4,
+        "position_in_row": 21
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_22",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 12.25,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 22",
+      "properties": {
+        "row": 4,
+        "position_in_row": 22
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_23",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 12.75,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 23",
+      "properties": {
+        "row": 4,
+        "position_in_row": 23
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_24",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 13.25,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 24",
+      "properties": {
+        "row": 4,
+        "position_in_row": 24
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_25",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 13.75,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 25",
+      "properties": {
+        "row": 4,
+        "position_in_row": 25
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_position_26",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 14.25,
+          "y": 6.800000000000001,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 4 position 26",
+      "properties": {
+        "row": 4,
+        "position_in_row": 26
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_1",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 1.75,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 1",
+      "properties": {
+        "row": 5,
+        "position_in_row": 1
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_2",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 2.25,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 2",
+      "properties": {
+        "row": 5,
+        "position_in_row": 2
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_3",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 2.75,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 3",
+      "properties": {
+        "row": 5,
+        "position_in_row": 3
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_4",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 3.25,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 4",
+      "properties": {
+        "row": 5,
+        "position_in_row": 4
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_5",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 3.75,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 5",
+      "properties": {
+        "row": 5,
+        "position_in_row": 5
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_6",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 4.25,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 6",
+      "properties": {
+        "row": 5,
+        "position_in_row": 6
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_7",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 4.75,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 7",
+      "properties": {
+        "row": 5,
+        "position_in_row": 7
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_8",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 5.25,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 8",
+      "properties": {
+        "row": 5,
+        "position_in_row": 8
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_9",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 5.75,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 9",
+      "properties": {
+        "row": 5,
+        "position_in_row": 9
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_10",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 6.25,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 10",
+      "properties": {
+        "row": 5,
+        "position_in_row": 10
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_11",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 6.75,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 11",
+      "properties": {
+        "row": 5,
+        "position_in_row": 11
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_12",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 7.25,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 12",
+      "properties": {
+        "row": 5,
+        "position_in_row": 12
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_15",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 8.75,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 15",
+      "properties": {
+        "row": 5,
+        "position_in_row": 15
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_16",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 9.25,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 16",
+      "properties": {
+        "row": 5,
+        "position_in_row": 16
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_17",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 9.75,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 17",
+      "properties": {
+        "row": 5,
+        "position_in_row": 17
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_18",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 10.25,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 18",
+      "properties": {
+        "row": 5,
+        "position_in_row": 18
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_19",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 10.75,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 19",
+      "properties": {
+        "row": 5,
+        "position_in_row": 19
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_20",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 11.25,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 20",
+      "properties": {
+        "row": 5,
+        "position_in_row": 20
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_21",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 11.75,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 21",
+      "properties": {
+        "row": 5,
+        "position_in_row": 21
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_22",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 12.25,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 22",
+      "properties": {
+        "row": 5,
+        "position_in_row": 22
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_23",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 12.75,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 23",
+      "properties": {
+        "row": 5,
+        "position_in_row": 23
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_position_24",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 13.25,
+          "y": 8.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 5 position 24",
+      "properties": {
+        "row": 5,
+        "position_in_row": 24
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_support_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 4.45,
+          "y": 2.0,
+          "z": 0.48
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.9,
+        "size_y": 0.3,
+        "size_z": 0.12
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 support 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_support_1_leg_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 1.52,
+          "y": 2.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 support 1 leg 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_support_1_leg_2",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 3.4733333333333336,
+          "y": 2.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 support 1 leg 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_support_1_leg_3",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 5.426666666666668,
+          "y": 2.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 support 1 leg 3",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_support_1_leg_4",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 7.380000000000002,
+          "y": 2.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 support 1 leg 4",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_slab_1",
+      "kind": "SLAB",
+      "transform": {
+        "position": {
+          "x": 4.45,
+          "y": 2.0,
+          "z": 0.6
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.800000000000001,
+        "size_y": 0.2,
+        "size_z": 0.075
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.72,
+        "b": 0.58
+      },
+      "material": "substrate",
+      "label": "row 1 slab 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_support_2",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 11.55,
+          "y": 2.0,
+          "z": 0.48
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.9,
+        "size_y": 0.3,
+        "size_z": 0.12
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 support 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_support_2_leg_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 8.62,
+          "y": 2.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 support 2 leg 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_support_2_leg_2",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 10.573333333333332,
+          "y": 2.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 support 2 leg 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_support_2_leg_3",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 12.526666666666667,
+          "y": 2.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 support 2 leg 3",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_support_2_leg_4",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 14.48,
+          "y": 2.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 support 2 leg 4",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_1_slab_2",
+      "kind": "SLAB",
+      "transform": {
+        "position": {
+          "x": 11.549999999999999,
+          "y": 2.0,
+          "z": 0.6
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.800000000000001,
+        "size_y": 0.2,
+        "size_z": 0.075
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.72,
+        "b": 0.58
+      },
+      "material": "substrate",
+      "label": "row 1 slab 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_support_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 4.45,
+          "y": 3.6,
+          "z": 0.48
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.9,
+        "size_y": 0.3,
+        "size_z": 0.12
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 support 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_support_1_leg_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 1.52,
+          "y": 3.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 support 1 leg 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_support_1_leg_2",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 3.4733333333333336,
+          "y": 3.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 support 1 leg 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_support_1_leg_3",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 5.426666666666668,
+          "y": 3.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 support 1 leg 3",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_support_1_leg_4",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 7.380000000000002,
+          "y": 3.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 support 1 leg 4",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_slab_1",
+      "kind": "SLAB",
+      "transform": {
+        "position": {
+          "x": 4.45,
+          "y": 3.6,
+          "z": 0.6
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.800000000000001,
+        "size_y": 0.2,
+        "size_z": 0.075
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.72,
+        "b": 0.58
+      },
+      "material": "substrate",
+      "label": "row 2 slab 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_support_2",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 11.55,
+          "y": 3.6,
+          "z": 0.48
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.9,
+        "size_y": 0.3,
+        "size_z": 0.12
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 support 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_support_2_leg_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 8.62,
+          "y": 3.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 support 2 leg 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_support_2_leg_2",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 10.573333333333332,
+          "y": 3.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 support 2 leg 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_support_2_leg_3",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 12.526666666666667,
+          "y": 3.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 support 2 leg 3",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_support_2_leg_4",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 14.48,
+          "y": 3.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 support 2 leg 4",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_2_slab_2",
+      "kind": "SLAB",
+      "transform": {
+        "position": {
+          "x": 11.549999999999999,
+          "y": 3.6,
+          "z": 0.6
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.800000000000001,
+        "size_y": 0.2,
+        "size_z": 0.075
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.72,
+        "b": 0.58
+      },
+      "material": "substrate",
+      "label": "row 2 slab 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_support_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 4.45,
+          "y": 5.2,
+          "z": 0.48
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.9,
+        "size_y": 0.3,
+        "size_z": 0.12
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 3 support 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_support_1_leg_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 1.52,
+          "y": 5.2,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 3 support 1 leg 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_support_1_leg_2",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 3.4733333333333336,
+          "y": 5.2,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 3 support 1 leg 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_support_1_leg_3",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 5.426666666666668,
+          "y": 5.2,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 3 support 1 leg 3",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_support_1_leg_4",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 7.380000000000002,
+          "y": 5.2,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 3 support 1 leg 4",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_slab_1",
+      "kind": "SLAB",
+      "transform": {
+        "position": {
+          "x": 4.45,
+          "y": 5.2,
+          "z": 0.6
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.800000000000001,
+        "size_y": 0.2,
+        "size_z": 0.075
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.72,
+        "b": 0.58
+      },
+      "material": "substrate",
+      "label": "row 3 slab 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_support_2",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 11.55,
+          "y": 5.2,
+          "z": 0.48
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.9,
+        "size_y": 0.3,
+        "size_z": 0.12
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 3 support 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_support_2_leg_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 8.62,
+          "y": 5.2,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 3 support 2 leg 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_support_2_leg_2",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 10.573333333333332,
+          "y": 5.2,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 3 support 2 leg 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_support_2_leg_3",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 12.526666666666667,
+          "y": 5.2,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 3 support 2 leg 3",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_support_2_leg_4",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 14.48,
+          "y": 5.2,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 3 support 2 leg 4",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_3_slab_2",
+      "kind": "SLAB",
+      "transform": {
+        "position": {
+          "x": 11.549999999999999,
+          "y": 5.2,
+          "z": 0.6
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.800000000000001,
+        "size_y": 0.2,
+        "size_z": 0.075
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.72,
+        "b": 0.58
+      },
+      "material": "substrate",
+      "label": "row 3 slab 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_support_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 4.45,
+          "y": 6.800000000000001,
+          "z": 0.48
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.9,
+        "size_y": 0.3,
+        "size_z": 0.12
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 4 support 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_support_1_leg_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 1.52,
+          "y": 6.800000000000001,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 4 support 1 leg 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_support_1_leg_2",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 3.4733333333333336,
+          "y": 6.800000000000001,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 4 support 1 leg 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_support_1_leg_3",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 5.426666666666668,
+          "y": 6.800000000000001,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 4 support 1 leg 3",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_support_1_leg_4",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 7.380000000000002,
+          "y": 6.800000000000001,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 4 support 1 leg 4",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_slab_1",
+      "kind": "SLAB",
+      "transform": {
+        "position": {
+          "x": 4.45,
+          "y": 6.800000000000001,
+          "z": 0.6
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.800000000000001,
+        "size_y": 0.2,
+        "size_z": 0.075
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.72,
+        "b": 0.58
+      },
+      "material": "substrate",
+      "label": "row 4 slab 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_support_2",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 11.55,
+          "y": 6.800000000000001,
+          "z": 0.48
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.9,
+        "size_y": 0.3,
+        "size_z": 0.12
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 4 support 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_support_2_leg_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 8.62,
+          "y": 6.800000000000001,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 4 support 2 leg 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_support_2_leg_2",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 10.573333333333332,
+          "y": 6.800000000000001,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 4 support 2 leg 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_support_2_leg_3",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 12.526666666666667,
+          "y": 6.800000000000001,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 4 support 2 leg 3",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_support_2_leg_4",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 14.48,
+          "y": 6.800000000000001,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 4 support 2 leg 4",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_4_slab_2",
+      "kind": "SLAB",
+      "transform": {
+        "position": {
+          "x": 11.549999999999999,
+          "y": 6.800000000000001,
+          "z": 0.6
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.800000000000001,
+        "size_y": 0.2,
+        "size_z": 0.075
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.72,
+        "b": 0.58
+      },
+      "material": "substrate",
+      "label": "row 4 slab 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_support_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 4.45,
+          "y": 8.4,
+          "z": 0.48
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.9,
+        "size_y": 0.3,
+        "size_z": 0.12
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 5 support 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_support_1_leg_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 1.52,
+          "y": 8.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 5 support 1 leg 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_support_1_leg_2",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 3.4733333333333336,
+          "y": 8.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 5 support 1 leg 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_support_1_leg_3",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 5.426666666666668,
+          "y": 8.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 5 support 1 leg 3",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_support_1_leg_4",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 7.380000000000002,
+          "y": 8.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 5 support 1 leg 4",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_slab_1",
+      "kind": "SLAB",
+      "transform": {
+        "position": {
+          "x": 4.45,
+          "y": 8.4,
+          "z": 0.6
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.800000000000001,
+        "size_y": 0.2,
+        "size_z": 0.075
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.72,
+        "b": 0.58
+      },
+      "material": "substrate",
+      "label": "row 5 slab 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_support_2",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 11.0,
+          "y": 8.4,
+          "z": 0.48
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 4.800000000000001,
+        "size_y": 0.3,
+        "size_z": 0.12
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 5 support 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_support_2_leg_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 8.62,
+          "y": 8.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 5 support 2 leg 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_support_2_leg_2",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 10.206666666666667,
+          "y": 8.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 5 support 2 leg 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_support_2_leg_3",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 11.793333333333333,
+          "y": 8.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 5 support 2 leg 3",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_support_2_leg_4",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 13.38,
+          "y": 8.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 5 support 2 leg 4",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_row_5_slab_2",
+      "kind": "SLAB",
+      "transform": {
+        "position": {
+          "x": 11.0,
+          "y": 8.4,
+          "z": 0.6
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 4.700000000000001,
+        "size_y": 0.2,
+        "size_z": 0.075
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.72,
+        "b": 0.58
+      },
+      "material": "substrate",
+      "label": "row 5 slab 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_front_aisle",
+      "kind": "WALKWAY",
+      "transform": {
+        "position": {
+          "x": 0.7,
+          "y": 4.8,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.7071067811865475
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 9.200000000000001,
+        "size_y": 1.2,
+        "size_z": 0.02
+      },
+      "color": {
+        "r": 0.64,
+        "g": 0.63,
+        "b": 0.6
+      },
+      "material": "concrete",
+      "label": "front aisle",
+      "properties": {
+        "obstructs_movement": false,
+        "obstructs_airflow": false,
+        "obstructs_light": false
+      }
+    },
+    {
+      "entity_id": "qa_layout_central_aisle",
+      "kind": "WALKWAY",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 5.3,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.7071067811865475
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 8.200000000000001,
+        "size_y": 1.2,
+        "size_z": 0.02
+      },
+      "color": {
+        "r": 0.64,
+        "g": 0.63,
+        "b": 0.6
+      },
+      "material": "concrete",
+      "label": "central aisle",
+      "properties": {
+        "obstructs_movement": false,
+        "obstructs_airflow": false,
+        "obstructs_light": false
+      }
+    },
+    {
+      "entity_id": "qa_layout_side_aisle_right",
+      "kind": "WALKWAY",
+      "transform": {
+        "position": {
+          "x": 8.55,
+          "y": 0.7,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 14.5,
+        "size_y": 0.8,
+        "size_z": 0.02
+      },
+      "color": {
+        "r": 0.64,
+        "g": 0.63,
+        "b": 0.6
+      },
+      "material": "concrete",
+      "label": "side aisle right",
+      "properties": {
+        "obstructs_movement": false,
+        "obstructs_airflow": false,
+        "obstructs_light": false
+      }
+    },
+    {
+      "entity_id": "qa_layout_electrical_cabinet",
+      "kind": "OBSTACLE",
+      "transform": {
+        "position": {
+          "x": 15.2,
+          "y": 8.9,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 0.8,
+        "size_y": 0.6,
+        "size_z": 2.0
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "electrical cabinet",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "qa_layout_service_zone_back",
+      "kind": "SERVICE_ZONE",
+      "transform": {
+        "position": {
+          "x": 15.35,
+          "y": 4.5,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.7071067811865475
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 6.6,
+        "size_y": 1.1,
+        "size_z": 2.0
+      },
+      "color": {
+        "r": 0.45,
+        "g": 0.7,
+        "b": 0.85
+      },
+      "material": null,
+      "label": "service zone back",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_keep_out_cabinet",
+      "kind": "KEEP_OUT",
+      "transform": {
+        "position": {
+          "x": 14.65,
+          "y": 8.65,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 2.5,
+        "size_y": 1.5,
+        "size_z": 2.4
+      },
+      "color": {
+        "r": 0.9,
+        "g": 0.35,
+        "b": 0.3
+      },
+      "material": null,
+      "label": "keep out cabinet",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_axes",
+      "kind": "AXES",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "axes",
+        "length": 1.0
+      },
+      "color": {
+        "r": 0.5,
+        "g": 0.5,
+        "b": 0.5
+      },
+      "material": null,
+      "label": "world axes",
+      "properties": {}
+    },
+    {
+      "entity_id": "qa_layout_bounds",
+      "kind": "GREENHOUSE_BOUNDS",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 4.8,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 16.0,
+        "size_y": 9.6,
+        "size_z": 4.65
+      },
+      "color": {
+        "r": 0.62,
+        "g": 0.78,
+        "b": 0.88
+      },
+      "material": null,
+      "label": "greenhouse bounds",
+      "properties": {}
+    }
+  ]
+}

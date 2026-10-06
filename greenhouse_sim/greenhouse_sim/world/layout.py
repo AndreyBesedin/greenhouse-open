@@ -10,16 +10,24 @@ pipes.
 Its crop rows (`greenhouse_sim.world.rows`) give the planting positions, where
 plants can stand. A scenario's plants stand at them in order: the first plant
 at the first row's first position, filling each row before the next.
+
+Walkways, service zones and keep-out volumes (`greenhouse_sim.world.zones`)
+are kept clear of planting: no position lies inside one, and the rows'
+supports stop short of them. Walkways stay clear of anything that obstructs
+movement; a layout that puts such a fixture on one is refused.
 """
 
+from collections import Counter
 from typing import Self
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.envelope_checks import encloses, encloses_hull
-from greenhouse_sim.world.fixtures import Fixture, Primitive
+from greenhouse_sim.world.fixtures import Fixture, Obstruction, Primitive, WalkwayPrimitive
+from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.rows import CropRows, PlantingPosition
+from greenhouse_sim.world.zones import Strip, Zone
 
 
 class Layout(BaseModel):
@@ -29,26 +37,56 @@ class Layout(BaseModel):
 
     # The crop's rows, and the planting positions along them.
     crop_rows: CropRows | None = None
-    # Fixtures placed one by one, each described by a primitive.
+    # Fixtures placed one by one, each described by a primitive. Walkways
+    # among them are kept clear.
     placed: list[Primitive] = []
+    # Service zones and keep-out volumes.
+    zones: list[Zone] = []
 
     @model_validator(mode="after")
-    def _every_fixture_has_its_own_identifier(self) -> Self:
-        names = [fixture.fixture_id for fixture in self.fixtures()]
-        repeated = sorted({name for name in names if names.count(name) > 1})
+    def _every_fixture_and_zone_has_its_own_identifier(self) -> Self:
+        names = Counter(
+            [fixture.fixture_id for fixture in self.fixtures()]
+            + [zone.zone_id for zone in self.zones]
+        )
+        repeated = sorted(name for name, count in names.items() if count > 1)
         if repeated:
-            raise ValueError(f"fixtures share an identifier: {', '.join(repeated)}")
+            raise ValueError(f"fixtures or zones share an identifier: {', '.join(repeated)}")
         return self
+
+    @model_validator(mode="after")
+    def _walkways_stay_clear(self) -> Self:
+        for walkway_id, area in self.walkways():
+            for fixture in self.fixtures():
+                if Obstruction.MOVEMENT in fixture.obstructs and area.overlaps(fixture.corners()):
+                    raise ValueError(f"{fixture.fixture_id} stands on the walkway {walkway_id}")
+        return self
+
+    def walkways(self) -> list[tuple[str, Strip]]:
+        """Each walkway placed in the layout, and the floor it covers."""
+        return [
+            (primitive.fixture_id, primitive.area)
+            for primitive in self.placed
+            if isinstance(primitive, WalkwayPrimitive)
+        ]
+
+    def kept_clear(self) -> list[Strip]:
+        """The areas of the floor kept clear of planting: walkways, service
+        zones and keep-out volumes."""
+        return [area for _, area in self.walkways()] + [zone.area for zone in self.zones]
 
     def fixtures(self) -> list[Fixture]:
         """Every fixture the layout describes, in the greenhouse's frame: what
         carries its rows, then what is placed one by one."""
-        rows = [] if self.crop_rows is None else self.crop_rows.fixtures()
+        rows = [] if self.crop_rows is None else self.crop_rows.fixtures(self.kept_clear())
         return rows + [fixture for primitive in self.placed for fixture in primitive.fixtures()]
 
     def planting_positions(self) -> list[PlantingPosition]:
-        """Every planting position, row by row, in the greenhouse's frame."""
-        return [] if self.crop_rows is None else self.crop_rows.planting_positions()
+        """Every planting position outside the areas kept clear, row by row, in
+        the greenhouse's frame."""
+        if self.crop_rows is None:
+            return []
+        return self.crop_rows.planting_positions(self.kept_clear())
 
 
 def outside_the_greenhouse(layout: Layout, envelope: Envelope) -> list[str]:
@@ -65,4 +103,18 @@ def outside_the_greenhouse(layout: Layout, envelope: Envelope) -> list[str]:
         for position in layout.planting_positions()
         if not encloses(envelope, (position.point.x, position.point.y, position.point.z))
     ]
-    return fixtures + positions
+    zones = [
+        zone.zone_id
+        for zone in layout.zones
+        if not encloses_hull(envelope, [(c.x, c.y, c.z) for c in zone_corners(zone)])
+    ]
+    return fixtures + positions + zones
+
+
+def zone_corners(zone: Zone) -> list[Vector3]:
+    """The corners of the volume a zone keeps, in the greenhouse's frame."""
+    return [
+        Vector3(x=corner.x, y=corner.y, z=z)
+        for corner in zone.area.corners()
+        for z in (0.0, zone.height)
+    ]
