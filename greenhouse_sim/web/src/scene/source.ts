@@ -116,9 +116,11 @@ export async function loadScene(
     return { status: "loaded", snapshot: stressScene(source.plants) };
   }
   const url = sceneUrl(source);
-  if (url === null) {
-    return { status: "none" };
-  }
+  return url === null ? { status: "none" } : fetchScene(url, fetchFn);
+}
+
+/** Fetches and checks the scene at `url`; every failure becomes a state to show. */
+export async function fetchScene(url: string, fetchFn: typeof fetch = fetch): Promise<SceneState> {
   try {
     const response = await fetchFn(url);
     if (!response.ok) {

@@ -136,33 +136,40 @@ class SceneSnapshot(BaseModel):
 
 
 def scene_snapshot(world: GreenhouseWorld, config: ScenarioConfig) -> SceneSnapshot:
-    """The scene a viewer draws for `world`: axes, the greenhouse's floor,
-    walls, roof, openings, gutters, frames and bounds, and one entity per
-    plant."""
+    """The scene a viewer draws for `world`: its greenhouse, as
+    `greenhouse_scene` draws it, and one entity per plant."""
     columns = max(config.columns, 1)
+    greenhouse = greenhouse_scene(world.greenhouse_id, config.envelope, world.simulated_day)
+    plants = [
+        _plant_entity(plant, _planting_position(index, columns))
+        for index, plant in enumerate(world.plants)
+    ]
+    return greenhouse.model_copy(update={"entities": [*greenhouse.entities, *plants]})
+
+
+def greenhouse_scene(
+    greenhouse_id: str, envelope: Envelope, simulated_day: int = 0
+) -> SceneSnapshot:
+    """A greenhouse on its own, without a crop: the world's axes, and its
+    floor, walls, roof, openings, gutters, frames and bounds."""
     axes = SceneEntity(
-        entity_id=f"{world.greenhouse_id}_axes",
+        entity_id=f"{greenhouse_id}_axes",
         kind=SceneEntityKind.AXES,
         transform=Transform(position=Vector3(x=0.0, y=0.0, z=0.0)),
         shape=Axes(length=AXES_LENGTH_M),
         color=AXES_COLOR,
         label="world axes",
     )
-    plants = [
-        _plant_entity(plant, _planting_position(index, columns))
-        for index, plant in enumerate(world.plants)
-    ]
     return SceneSnapshot(
-        greenhouse_id=world.greenhouse_id,
-        simulated_day=world.simulated_day,
+        greenhouse_id=greenhouse_id,
+        simulated_day=simulated_day,
         entities=[
-            *_surface_entities(world.greenhouse_id, config.envelope),
-            *_opening_entities(world.greenhouse_id, config.envelope),
-            *_gutter_entities(world.greenhouse_id, config.envelope),
-            *_member_entities(world.greenhouse_id, config.envelope),
+            *_surface_entities(greenhouse_id, envelope),
+            *_opening_entities(greenhouse_id, envelope),
+            *_gutter_entities(greenhouse_id, envelope),
+            *_member_entities(greenhouse_id, envelope),
             axes,
-            _bounds_entity(world.greenhouse_id, config.envelope),
-            *plants,
+            _bounds_entity(greenhouse_id, envelope),
         ],
     )
 

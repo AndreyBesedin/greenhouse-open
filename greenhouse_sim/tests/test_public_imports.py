@@ -64,6 +64,7 @@ PUBLIC_IMPORTS: dict[str, tuple[str, ...]] = {
         "SceneEntity",
         "SceneEntityKind",
         "SceneSnapshot",
+        "greenhouse_scene",
         "scene_snapshot",
     ),
 }

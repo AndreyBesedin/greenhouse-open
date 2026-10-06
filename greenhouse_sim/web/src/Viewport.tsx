@@ -1,11 +1,12 @@
 import { Canvas, type ThreeEvent } from "@react-three/fiber";
 import { CameraRig } from "./CameraRig";
-import { CAMERA_FIELD_OF_VIEW_DEG, type PresetRequest } from "./camera";
+import { CAMERA_FIELD_OF_VIEW_DEG, type CameraPose, type PresetRequest } from "./camera";
 import { Overlays } from "./debug/DebugPrimitives";
 import type { OverlayPrimitive } from "./debug/overlays";
 import type { Colouring } from "./debug/scalar";
 import { HudProbe } from "./HudProbe";
 import type { ViewSample } from "./readouts";
+import { Section, type SectionPlane } from "./Section";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
 import { SceneView } from "./scene/SceneView";
 import { CLICK_TOLERANCE_PX, pickEntity } from "./selection";
@@ -44,6 +45,8 @@ export function Viewport({
   overlays = [],
   showBounds = false,
   byCategory = false,
+  initialPose = null,
+  section = null,
   onSample,
   onPointer,
   onSelect,
@@ -55,6 +58,10 @@ export function Viewport({
   overlays?: readonly OverlayPrimitive[];
   showBounds?: boolean;
   byCategory?: boolean;
+  /** Where the camera starts, rather than the default preset. */
+  initialPose?: CameraPose | null;
+  /** Cuts the view by a plane, keeping what lies behind it. */
+  section?: SectionPlane | null;
   onSample: (sample: ViewSample) => void;
   onPointer: (point: Point3 | null) => void;
   /** A click picked an entity, or nothing (null). Drags orbit and pick nothing. */
@@ -77,7 +84,8 @@ export function Viewport({
       onPointerMissed={() => onSelect(null)}
       aria-label="3D view"
     >
-      <CameraRig request={presetRequest} />
+      <CameraRig request={presetRequest} initialPose={initialPose} />
+      <Section plane={section} />
       <HudProbe onSample={onSample} />
       <color attach="background" args={[BACKGROUND_COLOR]} />
       <ambientLight intensity={AMBIENT_LIGHT_INTENSITY} />
