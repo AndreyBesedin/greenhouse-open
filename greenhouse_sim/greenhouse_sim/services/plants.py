@@ -12,6 +12,7 @@ then shape that plant on every day after. The same seed and schedule give the
 same row on every run; another seed, another row.
 """
 
+from collections.abc import Iterator
 from typing import Final
 
 from pydantic import BaseModel, ConfigDict
@@ -31,6 +32,8 @@ from greenhouse_sim.biology.tomato.organ.topology import (
     Plant,
     PlantAction,
     RemoveLeaf,
+    change_problems,
+    topology_problems,
 )
 from greenhouse_sim.biology.tomato.organ.variation import VariationParams, draw_traits
 from greenhouse_sim.scene.plants import plant_entities
@@ -182,16 +185,50 @@ def _plant_action(action: LabAction) -> PlantAction:
             raise InvalidRequest(f"the plant lab has no action {action.kind!r}, only {known}")
 
 
-def _grown(plant_id: str, run: LabRun, environment: Environment) -> Plant:
+def _days(plant_id: str, run: LabRun, environment: Environment) -> Iterator[Plant]:
+    """The plant on each day of the run up to its day, as it is shown: after
+    that day's actions."""
     traits = draw_traits(run.seed, plant_id, VARIATION)
     plant = develop(emerged(plant_id, DEVELOPMENT, run.seed, traits), TRANSPLANT_CD, DEVELOPMENT)
     for day in range(run.day + 1):
         for action in run.actions:
             if action.day == day and action.plant_id == plant_id:
                 plant = act(plant, _plant_action(action))
+        yield plant
         if day < run.day:
             plant = live_day(plant, environment.local(plant_id, day), DEVELOPMENT)
+
+
+def _grown(plant_id: str, run: LabRun, environment: Environment) -> Plant:
+    *_, plant = _days(plant_id, run, environment)
     return plant
+
+
+class LabChecks(BaseModel):
+    """Whatever is wrong with each of the lab's plants on a run's day."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    day: int
+    # By plant: the structure's rules it breaks, and anything it did since
+    # the day before that a plant cannot. Empty when all is well.
+    problems: dict[str, list[str]]
+
+
+def checks(run: LabRun | None = None) -> LabChecks:
+    """Each of the lab's plants on its run's day, held to the structure's
+    rules, and to what a plant may do from one day to the next."""
+    run = LabRun() if run is None else run
+    _checked(run)
+    environment = LabEnvironment(run)
+    found = {}
+    for plant_id in plant_ids():
+        *earlier, plant = _days(plant_id, run, environment)
+        problems = topology_problems(plant)
+        if earlier:
+            problems += change_problems(earlier[-1], plant)
+        found[plant_id] = problems
+    return LabChecks(day=run.day, problems=found)
 
 
 def structure(run: LabRun | None = None, plant_id: str = LAB_PLANT_ID) -> Plant:

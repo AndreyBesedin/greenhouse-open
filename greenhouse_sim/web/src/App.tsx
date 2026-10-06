@@ -13,10 +13,17 @@ import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
 import { OpeningControls } from "./OpeningControls";
-import { LabControls } from "./plants/LabControls";
-import { type LabRun, PLANT_LAB_FIRST_PLANT, PLANT_LAB_POSE } from "./plants/lab";
+import { type GrowthSpeed, LabControls } from "./plants/LabControls";
+import {
+  type LabRun,
+  PLANT_LAB_FIRST_PLANT,
+  PLANT_LAB_LAST_DAY,
+  PLANT_LAB_POSE,
+} from "./plants/lab";
+import { plantNameOverlays } from "./plants/names";
 import { PlantActions } from "./plants/PlantActions";
 import { PlantStructure } from "./plants/PlantStructure";
+import { RuleChecks } from "./plants/RuleChecks";
 import type { ViewSample } from "./readouts";
 import { loadScenarios, type ScenariosState } from "./scenarios";
 import { type LiveCommand, sendLiveCommand } from "./scene/live";
@@ -31,6 +38,8 @@ import { useLiveScene } from "./scene/useLiveScene";
 import { entityOfOrgan, organOf, plantOf, selectedEntity } from "./selection";
 import { Viewport } from "./Viewport";
 import type { Point3 } from "./world";
+
+const MILLISECONDS_PER_SECOND = 1000;
 
 export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [scenarios, setScenarios] = useState<ScenariosState>({ status: "loading" });
@@ -47,6 +56,10 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [colourBy, setColourBy] = useState<string | null>(null);
   const [showDimensions, setShowDimensions] = useState(false);
   const [byCategory, setByCategory] = useState(false);
+  // The plant lab's play, its speed in days a second, and its plants' names.
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState<GrowthSpeed>(1);
+  const [showPlantNames, setShowPlantNames] = useState(false);
   // Which scenario's scene, or the plant lab's, is on show, so reopening it
   // does not blank it.
   const shownView = useRef<string | null>(null);
@@ -132,6 +145,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     setSource(next);
     setCommandProblem(null);
     setSelectedId(null);
+    setPlaying(false);
     setColourBy(null);
   }
 
@@ -151,13 +165,40 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const snapshot = shown.status === "loaded" ? shown.snapshot : null;
   // Overlays and colours are worked out from the scene, which they only read.
   const selected = selectedEntity(snapshot, selectedId);
+  const showingNames = source.kind === "plants" && showPlantNames;
   const overlays = useMemo(
     () => [
       ...(selected === null ? [] : selectionOverlays(selected, overlayToggles)),
       ...(snapshot !== null && showDimensions ? sceneDimensionOverlays(snapshot) : []),
+      ...(snapshot !== null && showingNames ? plantNameOverlays(snapshot) : []),
     ],
-    [selected, overlayToggles, snapshot, showDimensions],
+    [selected, overlayToggles, snapshot, showDimensions, showingNames],
   );
+
+  // Playing, the lab moves on a day once the day asked for is on show, at
+  // most as fast as its speed, and stops on its last day.
+  const labDay = source.kind === "plants" ? source.day : null;
+  const shownDay = snapshot === null ? null : snapshot.simulated_day;
+  useEffect(() => {
+    if (!playing || labDay === null || shownDay !== labDay) {
+      return;
+    }
+    if (labDay >= PLANT_LAB_LAST_DAY) {
+      setPlaying(false);
+      return;
+    }
+    const next = window.setTimeout(() => {
+      setSource((current) => {
+        if (current.kind !== "plants") {
+          return current;
+        }
+        const later: SceneSource = { ...current, day: labDay + 1 };
+        history.replaceState(null, "", `${location.pathname}${searchFor(later)}`);
+        return later;
+      });
+    }, MILLISECONDS_PER_SECOND / speed);
+    return () => window.clearTimeout(next);
+  }, [playing, labDay, shownDay, speed]);
   const colourProperties = useMemo(
     () => (snapshot === null ? [] : scalarProperties(snapshot)),
     [snapshot],
@@ -220,10 +261,17 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             {source.kind === "plants" && (
               <LabControls
                 run={source}
-                shownDay={snapshot === null ? null : snapshot.simulated_day}
+                shownDay={shownDay}
                 onChange={setLabRun}
+                playing={playing}
+                speed={speed}
+                showNames={showPlantNames}
+                onPlaying={setPlaying}
+                onSpeed={setSpeed}
+                onShowNames={setShowPlantNames}
               />
             )}
+            {source.kind === "plants" && <RuleChecks run={source} />}
             {source.kind === "plants" && (
               <PlantActions
                 entity={selected}

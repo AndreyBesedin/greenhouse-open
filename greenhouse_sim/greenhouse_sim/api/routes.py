@@ -39,6 +39,10 @@ check; a route that comes to need one checks it first.
     GET /api/plants/structure             one of the lab's plants, organ by organ;
                                           ?plant=p07 another plant, and the rest
                                           as for its scene
+    GET /api/plants/checks                what is wrong with each of the lab's
+                                          plants on a run's day, by the
+                                          structure's rules and since the day
+                                          before; the run as for its scene
     GET /api/plants/environments          the lab's environments, by name
     GET /api/scenarios/{id}/live          the scenario played live, as Server-Sent
                                           Events (served by `server`, found by
@@ -92,6 +96,8 @@ def respond(method: str, path: str) -> Response:
         case ["api", "plants", "structure"]:
             plant_id = _last(query, "plant") or plants.LAB_PLANT_ID
             return _answer(lambda: plants.structure(_lab_run(query), plant_id))
+        case ["api", "plants", "checks"]:
+            return _answer(lambda: plants.checks(_lab_run(query)))
         case ["api", "plants", "environments"]:
             return _answer(
                 lambda: {
