@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { CategoryLegend } from "../debug/CategoryLegend";
 import { categoriesIn } from "../debug/categories";
-import { fetchScene, type SceneState } from "../scene/source";
 import { Viewport } from "../Viewport";
 import {
   greenhouseExtent,
@@ -11,6 +10,7 @@ import {
   qaGreenhouseSection,
   qaGreenhouseView,
 } from "./greenhouseViews";
+import { useSceneFile } from "./useSceneFile";
 
 const ignore = () => undefined;
 
@@ -22,19 +22,7 @@ const ignore = () => undefined;
  */
 export function QaGreenhouse({ search }: { search: string }) {
   const view = qaGreenhouseView(search);
-  const [scene, setScene] = useState<SceneState>({ status: "loading" });
-
-  useEffect(() => {
-    let current = true;
-    void fetchScene(QA_GREENHOUSE_SCENE_URL).then((state) => {
-      if (current) {
-        setScene(state);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, []);
+  const scene = useSceneFile(QA_GREENHOUSE_SCENE_URL);
 
   const snapshot = scene.status === "loaded" ? scene.snapshot : null;
   const extent = useMemo(() => (snapshot === null ? null : greenhouseExtent(snapshot)), [snapshot]);

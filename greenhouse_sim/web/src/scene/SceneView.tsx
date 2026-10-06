@@ -97,7 +97,7 @@ export function SceneView({
             key={entity.entity_id}
             position={position}
             quaternion={quaternion}
-            userData={{ entityId: entity.entity_id }}
+            userData={{ entityId: entity.entity_id, entityKind: entity.kind }}
           >
             {RENDERERS[entity.kind](entity, look)}
           </group>

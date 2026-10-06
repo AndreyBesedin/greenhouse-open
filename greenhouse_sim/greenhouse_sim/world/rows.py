@@ -16,6 +16,14 @@ Rows may stand on a support: a generic structure along each row, such as a
 crop gutter or a bench, with a top at a height, legs down to the floor, and
 optionally a substrate slab along the top. The planting positions then stand
 on the slab, or on the top. `TOMATO_GUTTER` and `BENCH` are presets.
+
+Areas kept clear (`greenhouse_sim.world.zones`) take no planting positions:
+a position inside one is left out, and the others keep their identifiers.
+On a support, a position is also left out when the support could not reach
+`LEAST_SUPPORT_REACH_M` beyond it without reaching into the area. A row's
+support runs under each unbroken run of its positions, one support per run,
+numbered along the row from 1, and stops short of any kept area it would
+otherwise reach into.
 """
 
 import math
@@ -38,9 +46,13 @@ from greenhouse_sim.world.fixtures import (
     TrayPrimitive,
 )
 from greenhouse_sim.world.geometry import Point2, Vector3
+from greenhouse_sim.world.zones import EDGE_TOLERANCE_M, Strip
 
 # A slab stops this short of each end of the support it lies on.
 SLAB_INSET_M: Final = 0.05
+# A plant on a support needs its support, and the slab on it, to reach this
+# far beyond it.
+LEAST_SUPPORT_REACH_M: Final = 2 * SLAB_INSET_M
 
 
 class Slab(BaseModel):
@@ -192,8 +204,9 @@ class CropRows(BaseModel):
         """From a row's first planting position to its last."""
         return (self.positions_per_row - 1) * self.plant_pitch
 
-    def planting_positions(self) -> list[PlantingPosition]:
-        """Every planting position, row by row, each row from its first."""
+    def planting_positions(self, kept_clear: list[Strip] | None = None) -> list[PlantingPosition]:
+        """Every planting position outside the areas kept clear, row by row,
+        each row from its first."""
         return [
             PlantingPosition(
                 position_id=f"row_{row}_position_{index}",
@@ -202,25 +215,79 @@ class CropRows(BaseModel):
                 point=self.point(row, (index - 1) * self.plant_pitch, z=self.planting_height),
             )
             for row in range(1, self.rows + 1)
-            for index in range(1, self.positions_per_row + 1)
+            for index in self._kept(row, kept_clear or [])
         ]
 
-    def fixtures(self) -> list[Fixture]:
-        """Each row's support, its legs and its slab, if the rows have one."""
+    def _kept(self, row: int, kept_clear: list[Strip]) -> list[int]:
+        """The places along a row (from 1) whose positions lie outside every
+        area kept clear, with room for their support beyond them."""
+        reach = 0.0 if self.support is None else LEAST_SUPPORT_REACH_M
+        return [
+            index
+            for index in range(1, self.positions_per_row + 1)
+            if not any(
+                area.contains(self.point(row, (index - 1) * self.plant_pitch), reach)
+                for area in kept_clear
+            )
+        ]
+
+    def fixtures(self, kept_clear: list[Strip] | None = None) -> list[Fixture]:
+        """Each row's supports, their legs and their slabs, if the rows have
+        a support: one under each unbroken run of positions, clear of the
+        kept areas."""
+        areas = kept_clear or []
         return [
             fixture
             for row in range(1, self.rows + 1)
-            for fixture in self._support_fixtures(row, f"row_{row}_support_1", f"row_{row}_slab_1")
+            for number, run in enumerate(self._runs(row, areas), start=1)
+            for fixture in self._support_fixtures(row, number, run, areas)
         ]
 
-    def _support_fixtures(self, row: int, support_id: str, slab_id: str) -> list[Fixture]:
-        """A row's support from before its first position to beyond its last:
-        its top, laid along the row, the legs under it, evenly spaced from end
-        to end, and the slab on it."""
+    def _runs(self, row: int, kept_clear: list[Strip]) -> list[tuple[int, int]]:
+        """The unbroken runs of a row's kept positions, each as its first and
+        last place along the row."""
+        runs: list[tuple[int, int]] = []
+        for index in self._kept(row, kept_clear):
+            if runs and runs[-1][1] == index - 1:
+                runs[-1] = (runs[-1][0], index)
+            else:
+                runs.append((index, index))
+        return runs
+
+    def _support_span(
+        self, row: int, run: tuple[int, int], kept_clear: list[Strip]
+    ) -> tuple[float, float]:
+        """How far along the row a support under a run starts and ends: the
+        overhang beyond its first and last positions, cut short where any part
+        of its width would reach into a kept area."""
+        support = self.support
+        assert support is not None
+        first, last = ((index - 1) * self.plant_pitch for index in run)
+        start, end = first - support.overhang, last + support.overhang
+        line_start = self.point(row, 0.0, across=support.offset)
+        for area in kept_clear:
+            crossing = area.crossing(
+                Point2(x=line_start.x, y=line_start.y), self.along, support.width / 2
+            )
+            if crossing is None:
+                continue
+            enters, leaves = crossing
+            if start < leaves <= first + EDGE_TOLERANCE_M:
+                start = min(leaves, first)
+            if last - EDGE_TOLERANCE_M <= enters < end:
+                end = max(enters, last)
+        return start, end
+
+    def _support_fixtures(
+        self, row: int, number: int, run: tuple[int, int], kept_clear: list[Strip]
+    ) -> list[Fixture]:
+        """A support under a run of positions: its top, laid along the row,
+        the legs under it, evenly spaced from end to end, and the slab on it."""
         support = self.support
         if support is None:
             return []
-        start, end = -support.overhang, self.row_length + support.overhang
+        support_id, slab_id = f"row_{row}_support_{number}", f"row_{row}_slab_{number}"
+        start, end = self._support_span(row, run, kept_clear)
         bottom = support.height - support.depth
         across = support.offset
         fixtures = TrayPrimitive(
@@ -233,9 +300,11 @@ class CropRows(BaseModel):
             material=support.material,
         ).fixtures()
         if support.leg_spacing is not None:
-            spans = math.ceil((end - start) / support.leg_spacing)
+            # The end legs stand flush with the support's ends, not past them.
+            first_leg, last_leg = start + support.leg_radius, end - support.leg_radius
+            spans = math.ceil((last_leg - first_leg) / support.leg_spacing)
             for leg in range(spans + 1):
-                along = start + (end - start) * leg / spans
+                along = first_leg + (last_leg - first_leg) * leg / spans
                 fixtures += CylinderPrimitive(
                     fixture_id=f"{support_id}_leg_{leg + 1}",
                     kind=support.kind,

@@ -28,7 +28,7 @@ export function qaGreenhouseView(search: string): QaGreenhouseView | null {
     : null;
 }
 
-interface Extent {
+export interface Extent {
   length: number;
   width: number;
   height: number;

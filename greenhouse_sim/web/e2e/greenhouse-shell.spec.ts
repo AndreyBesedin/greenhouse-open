@@ -41,7 +41,7 @@ test("greenhouse-shell: a changed greenhouse is drawn to its dimensions, open an
   });
 
   await test.step("the debug colours follow each surface's semantics", async () => {
-    await page.getByRole("checkbox", { name: "Surface categories" }).check();
+    await page.getByRole("checkbox", { name: "Categories" }).check();
     await expect(page.getByTestId("category")).toHaveText([
       "floor",
       "wall",

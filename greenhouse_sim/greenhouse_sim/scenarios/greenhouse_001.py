@@ -2,9 +2,11 @@ from datetime import date
 
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.world.envelope import Envelope, Opening, OpeningKind
-from greenhouse_sim.world.geometry import Point2
+from greenhouse_sim.world.fixtures import BoxPrimitive, WalkwayPrimitive
+from greenhouse_sim.world.geometry import Point2, Vector3
 from greenhouse_sim.world.layout import Layout
 from greenhouse_sim.world.rows import TOMATO_GUTTER, CropRows
+from greenhouse_sim.world.zones import Strip, Zone, ZoneKind
 
 GREENHOUSE_001 = ScenarioConfig(
     greenhouse_id="gh_001",
@@ -49,7 +51,9 @@ GREENHOUSE_001 = ScenarioConfig(
         ],
     ),
     # Four rows of ten along the length, 1.6 m apart, centred in the house,
-    # each on a tomato gutter.
+    # each on a tomato gutter. An aisle runs across the front, past the door,
+    # and another along the right side wall; the back is kept for service,
+    # with an irrigation unit that robots keep out of.
     layout=Layout(
         crop_rows=CropRows(
             origin=Point2(x=1.75, y=2.4),
@@ -58,6 +62,41 @@ GREENHOUSE_001 = ScenarioConfig(
             plant_pitch=0.5,
             row_spacing=1.6,
             support=TOMATO_GUTTER,
-        )
+        ),
+        placed=[
+            WalkwayPrimitive(
+                fixture_id="front_aisle",
+                start=Point2(x=0.7, y=0.2),
+                end=Point2(x=0.7, y=9.4),
+                width=1.2,
+            ),
+            WalkwayPrimitive(
+                fixture_id="side_aisle_right",
+                start=Point2(x=1.3, y=1.1),
+                end=Point2(x=7.8, y=1.1),
+                width=1.0,
+            ),
+            BoxPrimitive(
+                fixture_id="irrigation_unit",
+                base=Vector3(x=7.35, y=8.6, z=0.0),
+                size_x=0.6,
+                size_y=1.0,
+                size_z=1.6,
+            ),
+        ],
+        zones=[
+            Zone(
+                zone_id="service_zone_back",
+                kind=ZoneKind.SERVICE,
+                area=Strip(start=Point2(x=7.35, y=1.8), end=Point2(x=7.35, y=9.4), width=1.1),
+                height=2.2,
+            ),
+            Zone(
+                zone_id="keep_out_irrigation",
+                kind=ZoneKind.KEEP_OUT,
+                area=Strip(start=Point2(x=7.35, y=7.9), end=Point2(x=7.35, y=9.3), width=1.0),
+                height=2.0,
+            ),
+        ],
     ),
 )
