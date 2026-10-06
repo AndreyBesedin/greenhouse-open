@@ -25,7 +25,7 @@ class Strip(BaseModel):
     """A rectangle of the floor: a centre line from `start` to `end`, `width`
     wide."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     start: Point2
     end: Point2
@@ -136,7 +136,7 @@ class Zone(BaseModel):
     """A service zone or keep-out volume: a strip of the floor, rising
     `height` above it."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     zone_id: str
     kind: ZoneKind

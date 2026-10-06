@@ -37,7 +37,7 @@ WALKWAY_HEADROOM_M: Final = 2.1
 class Layout(BaseModel):
     """What stands inside a greenhouse, in metres, in its frame."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     # The crop's rows, and the planting positions along them.
     crop_rows: CropRows | None = None

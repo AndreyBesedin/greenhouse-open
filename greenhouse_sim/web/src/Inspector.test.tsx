@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { ScalarLegend } from "./debug/ScalarLegend";
-import { describeShape, Inspector } from "./Inspector";
+import { describeDimensions, describeShape, Inspector } from "./Inspector";
 import type { SceneEntity, SceneSnapshot } from "./scene/generated/snapshotTypes";
 
 const EXAMPLE: SceneSnapshot = JSON.parse(
@@ -14,6 +14,18 @@ const PLANT = EXAMPLE.entities.find(
   (entity) => entity.entity_id === "gh_demo_plant_001",
 ) as SceneEntity;
 const ignore = () => undefined;
+// The canonical layout (`tests/test_scene_schema.py`).
+const QA_LAYOUT: SceneSnapshot = JSON.parse(
+  readFileSync(new URL("../public/scenes/qa-layout.json", import.meta.url), "utf8"),
+);
+
+function layoutEntity(entityId: string): SceneEntity {
+  const entity = QA_LAYOUT.entities.find((each) => each.entity_id === `qa_layout_${entityId}`);
+  if (entity === undefined) {
+    throw new Error(`the QA layout has no ${entityId}`);
+  }
+  return entity;
+}
 
 describe("the inspector", () => {
   it("shows the selected entity's identity, transform, shape and properties", () => {
@@ -78,5 +90,30 @@ describe("the legend", () => {
     expect(html).toContain('data-testid="legend-min">33.11<');
     expect(html).toContain('data-testid="legend-max">36<');
     expect(html).toContain("linear-gradient(to right, #440154");
+  });
+});
+
+describe("what the inspector says an entity is", () => {
+  it("names its type in words, and its size by what each measure is", () => {
+    const html = renderToStaticMarkup(
+      <Inspector
+        entity={layoutEntity("row_1_support_1")}
+        overlays={{ box: true, axes: true, label: true }}
+        onOverlays={ignore}
+        onClear={ignore}
+      />,
+    );
+
+    expect(html).toContain('data-testid="selected-type">crop gutter<');
+    expect(html).toContain(
+      'data-testid="selected-dimensions">length 5.90 m, width 0.30 m, height 0.12 m<',
+    );
+  });
+
+  it("measures a standing cylinder's height, and a lying one's length", () => {
+    expect(describeDimensions(PLANT)).toBe("diameter 0.04 m, height 0.35 m");
+    expect(describeDimensions(layoutEntity("heating_pipes_left_1"))).toBe(
+      "diameter 0.05 m, length 14.50 m",
+    );
   });
 });

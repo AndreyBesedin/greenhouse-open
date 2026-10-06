@@ -43,8 +43,8 @@ rows and columns, at a fixed pitch and spacing in the scene module.
 | P02.2 | `feat(layout): generate crop rows and planting positions` | Done ([#38](https://github.com/AndreyBesedin/greenhouse-open/pull/38)) |
 | P02.3 | `feat(layout): add gutters, tables, benches and slabs` | Done ([#39](https://github.com/AndreyBesedin/greenhouse-open/pull/39)) |
 | P02.4 | `feat(layout): add walkways, service zones and exclusion volumes` | Done ([#40](https://github.com/AndreyBesedin/greenhouse-open/pull/40)) |
-| P02.5 | `feat(layout): add rails, pipes and overhead structures` | Done |
-| P02.6 | `feat(layout): import and export the layout configuration` | Planned |
+| P02.5 | `feat(layout): add rails, pipes and overhead structures` | Done ([#41](https://github.com/AndreyBesedin/greenhouse-open/pull/41)) |
+| P02.6 | `feat(layout): import and export the layout configuration` | Done |
 | P02.7 | `test(visual): add fixture occlusion and navigation QA scenes` | Planned |
 
 ### P02.1: Reusable fixture primitives
@@ -302,6 +302,46 @@ As implemented:
 A declarative layout file per scenario, with stable identifiers, and an
 inspector that shows each fixture's semantic type and dimensions. Visible
 result: switching between two different layouts without changing any code.
+
+As implemented (see [decision 0020](../decisions/0020-scenario-layouts-are-declarative-json-files.md)):
+
+- Each scenario's layouts are JSON files,
+  `greenhouse_sim/scenarios/layouts/<scenario>/<name>.json`, each a `Layout`
+  as the model writes it, naming the published JSON Schema it follows
+  (`scenarios/layout.schema.json`, kept current by a test). `default.json`
+  is the layout a scenario is defined with; the three scenarios now read
+  theirs from files, and draw exactly the scenes they drew before. gh_001
+  has a second layout, `benches.json`: the same rows, aisles, zones and
+  pipes, with the plants on benches instead of gutters.
+- The layout's descriptions refuse fields they do not have, so a typo in a
+  file is an error. A layout's name can only be lower case letters, digits
+  and underscores, so it cannot reach outside its scenario's folder.
+- The local API lists each scenario's layouts, shows a scenario with another
+  of them (`?layout=benches`), and writes a scenario's layout as its file
+  holds it (`GET /api/scenarios/{id}/layout`). A changed envelope is now
+  checked with the scenario's layout too: before, a smaller greenhouse could
+  leave its layout outside it unnoticed.
+- The viewer's scenarios table offers a picker for a scenario with several
+  layouts; the address keeps the choice. The inspector now says what the
+  selected entity is in words ("crop gutter"), and names its dimensions: a
+  box's length, width and height, a cylinder's diameter and its height
+  standing or length lying.
+- Tests:
+  - Python: the published schema matches the model; each scenario's layout
+    is its default file; every layout file fits its scenario; every file is
+    exactly what its layout writes, and reads back to the same fixtures and
+    positions, identifiers and all; a name cannot reach another folder; a
+    misspelt field is refused; the bench layout keeps the same positions on
+    benches. The API shows the bench layout, writes it as its file holds
+    it, and refuses an unknown layout, a name reaching another folder, and a
+    greenhouse shrunk below its layout, with the reason.
+  - Viewer: the scenario list reads layouts, refuses summaries without
+    them, and offers a picker only where there is a choice; the address
+    round-trips `layout=`; the inspector names a gutter's type and
+    dimensions, and a plant's height and a pipe's length.
+  - Browser: gh_001's layout is switched to benches in the picker, a bench
+    is picked with its type and dimensions, a reload keeps the layout, and
+    switching back restores the default.
 
 ### P02.7: Fixture occlusion and navigation QA scenes
 

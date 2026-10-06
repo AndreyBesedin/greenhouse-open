@@ -4,7 +4,7 @@ import type { BuildInfo } from "./buildInfo";
 import { DEFAULT_STRESS_PLANTS } from "./qa/stressScene";
 import { ScenarioList } from "./ScenarioList";
 import { SceneStatus } from "./SceneStatus";
-import type { ScenariosState } from "./scenarios";
+import { DEFAULT_LAYOUT, type ScenariosState } from "./scenarios";
 import type { SceneSource, SceneState } from "./scene/source";
 
 export function InfoPanel({
@@ -53,7 +53,18 @@ export function InfoPanel({
       {children}
       <ScenarioList
         state={scenarios}
-        onShow={(scenarioId) => onSource({ kind: "scenario", scenarioId })}
+        shownLayout={
+          source.kind === "scenario"
+            ? { scenarioId: source.scenarioId, layout: source.layout ?? DEFAULT_LAYOUT }
+            : null
+        }
+        onShow={(scenarioId, layout = DEFAULT_LAYOUT) =>
+          onSource({
+            kind: "scenario",
+            scenarioId,
+            ...(layout === DEFAULT_LAYOUT ? {} : { layout }),
+          })
+        }
         onLive={(scenarioId) => onSource({ kind: "live", scenarioId })}
       />
     </aside>

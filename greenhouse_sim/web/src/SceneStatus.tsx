@@ -11,7 +11,9 @@ function describeSource(source: SceneSource): string {
     case "stress":
       return `stress scene of ${source.plants} plants`;
     case "scenario":
-      return `scenario ${source.scenarioId}, before day one`;
+      return source.layout === undefined
+        ? `scenario ${source.scenarioId}, before day one`
+        : `scenario ${source.scenarioId} with its ${source.layout} layout, before day one`;
     case "live":
       return `scenario ${source.scenarioId}, live`;
   }

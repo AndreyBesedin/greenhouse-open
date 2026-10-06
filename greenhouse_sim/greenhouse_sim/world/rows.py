@@ -70,7 +70,7 @@ SHORTEST_RAIL_M: Final = 1.0
 class Slab(BaseModel):
     """Substrate laid along the top of a row's support."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     width: PositiveFloat
     height: PositiveFloat
@@ -85,7 +85,7 @@ class RowSupport(BaseModel):
     `leg_spacing` apart, from the floor to its underside; without, it hangs
     from the structure above."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     kind: Literal[FixtureKind.CROP_GUTTER, FixtureKind.BENCH] = FixtureKind.CROP_GUTTER
     height: PositiveFloat
@@ -130,7 +130,7 @@ class RowRails(BaseModel):
     two tubes `gauge` apart from axis to axis, their axes `height` above the
     floor, along the rows. They are often the heating pipes too."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     gauge: PositiveFloat
     tube_radius: PositiveFloat
@@ -142,7 +142,7 @@ class CropWires(BaseModel):
     """A crop wire above each run of a row's positions, `height` above the
     floor, which the plants are trained up to."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     height: PositiveFloat
     radius: PositiveFloat = 0.0025
@@ -178,7 +178,7 @@ class PlantingPosition(BaseModel):
 class CropRows(BaseModel):
     """Parallel rows of planting positions, in metres and radians."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     # Where the first row's first planting position stands, on the floor.
     origin: Point2

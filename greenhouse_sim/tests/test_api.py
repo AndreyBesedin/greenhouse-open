@@ -53,6 +53,7 @@ def test_the_scenario_list_is_the_registry() -> None:
             "description": config.description,
             "plants": config.rows * config.columns,
             "duration_days": config.duration_days,
+            "layouts": ["default", "benches"] if scenario_id == "gh_001" else ["default"],
         }
 
 

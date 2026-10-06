@@ -26,6 +26,10 @@ describe("choosing a scene in the address bar", () => {
     ["?scene=example", { kind: "example" }],
     ["?scene=fixtures", { kind: "fixtures" }],
     ["?scenario=gh_demo", { kind: "scenario", scenarioId: "gh_demo" }],
+    [
+      "?scenario=gh_001&layout=benches",
+      { kind: "scenario", scenarioId: "gh_001", layout: "benches" },
+    ],
   ])("%s", (search, source) => {
     expect(sourceFromSearch(search)).toEqual(source);
     expect(searchFor(source)).toBe(search);

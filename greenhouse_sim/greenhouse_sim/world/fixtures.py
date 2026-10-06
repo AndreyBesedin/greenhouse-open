@@ -202,7 +202,7 @@ class _Primitive(BaseModel):
     """What every primitive's description holds: its identifier, its kind,
     and, unless its kind's defaults do, its material and obstructions."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     fixture_id: str
     material: Material | None = None

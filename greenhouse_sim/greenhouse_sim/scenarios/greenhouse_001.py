@@ -1,12 +1,9 @@
 from datetime import date
 
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.scenarios.layout_files import load_layout
 from greenhouse_sim.world.envelope import Envelope, Opening, OpeningKind
-from greenhouse_sim.world.fixtures import BoxPrimitive, PipeRunPrimitive, WalkwayPrimitive
-from greenhouse_sim.world.geometry import Point2, Vector3
-from greenhouse_sim.world.layout import Layout
-from greenhouse_sim.world.rows import PIPE_RAIL, TOMATO_GUTTER, CropRows, CropWires
-from greenhouse_sim.world.zones import Strip, Zone, ZoneKind
+from greenhouse_sim.world.geometry import Point2
 
 GREENHOUSE_001 = ScenarioConfig(
     greenhouse_id="gh_001",
@@ -50,68 +47,12 @@ GREENHOUSE_001 = ScenarioConfig(
             ),
         ],
     ),
-    # Four rows of ten along the length, 1.6 m apart, centred in the house,
-    # each on a tomato gutter under a crop wire, with a pipe rail between
-    # neighbouring rows. An aisle runs across the front, past the door, and
-    # another along the right side wall; heating pipes run along both side
-    # walls; the back is kept for service, with an irrigation unit that robots
-    # keep out of.
-    layout=Layout(
-        crop_rows=CropRows(
-            origin=Point2(x=1.75, y=2.4),
-            rows=4,
-            positions_per_row=10,
-            plant_pitch=0.5,
-            row_spacing=1.6,
-            support=TOMATO_GUTTER,
-            rails=PIPE_RAIL,
-            wires=CropWires(height=3.0),
-        ),
-        placed=[
-            WalkwayPrimitive(
-                fixture_id="front_aisle",
-                start=Point2(x=0.7, y=0.2),
-                end=Point2(x=0.7, y=9.4),
-                width=1.2,
-            ),
-            WalkwayPrimitive(
-                fixture_id="side_aisle_right",
-                start=Point2(x=1.3, y=1.1),
-                end=Point2(x=7.8, y=1.1),
-                width=1.0,
-            ),
-            *(
-                PipeRunPrimitive(
-                    fixture_id=f"heating_pipes_{side}",
-                    start=Vector3(x=1.3, y=y, z=0.3),
-                    end=Vector3(x=7.8, y=y, z=0.3),
-                    radius=0.0255,
-                    count=4,
-                    step=Vector3(x=0.0, y=0.0, z=0.15),
-                )
-                for side, y in (("right", 0.25), ("left", 9.35))
-            ),
-            BoxPrimitive(
-                fixture_id="irrigation_unit",
-                base=Vector3(x=7.35, y=8.6, z=0.0),
-                size_x=0.6,
-                size_y=1.0,
-                size_z=1.6,
-            ),
-        ],
-        zones=[
-            Zone(
-                zone_id="service_zone_back",
-                kind=ZoneKind.SERVICE,
-                area=Strip(start=Point2(x=7.35, y=1.8), end=Point2(x=7.35, y=9.4), width=1.1),
-                height=2.2,
-            ),
-            Zone(
-                zone_id="keep_out_irrigation",
-                kind=ZoneKind.KEEP_OUT,
-                area=Strip(start=Point2(x=7.35, y=7.9), end=Point2(x=7.35, y=9.3), width=1.0),
-                height=2.0,
-            ),
-        ],
-    ),
+    # Its layout (scenarios/layouts/gh_001/default.json): four rows of ten along
+    # the length, 1.6 m apart, centred in the house, each on a tomato gutter
+    # under a crop wire, with a pipe rail between neighbouring rows. An aisle
+    # runs across the front, past the door, and another along the right side
+    # wall; heating pipes run along both side walls; the back is kept for
+    # service, with an irrigation unit that robots keep out of. Its other
+    # layout, benches.json, puts the same rows on benches.
+    layout=load_layout("gh_001"),
 )

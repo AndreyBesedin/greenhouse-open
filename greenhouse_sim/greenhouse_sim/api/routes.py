@@ -5,12 +5,16 @@ API can be tested without a socket and the server stays a thin shell.
 
     GET /api/health                       the API is up
     GET /api/version                      simulator and scene schema versions
-    GET /api/scenarios                    the registered scenarios
+    GET /api/scenarios                    the registered scenarios, with the
+                                          names of their layouts
     GET /api/scenarios/{id}/scene         a scenario's scene before its first day;
-                                          ?envelope=length:12,spans:3 changes its
-                                          greenhouse's dimensions, and
-                                          ?open=roof_vent_1:0.5,door_1:1 how far
-                                          its doors and vents stand open
+                                          ?layout=benches shows another of its
+                                          layouts, ?envelope=length:12,spans:3
+                                          changes its greenhouse's dimensions,
+                                          and ?open=roof_vent_1:0.5,door_1:1 how
+                                          far its doors and vents stand open
+    GET /api/scenarios/{id}/layout        a scenario's layout, as its file holds
+                                          it; ?layout=benches another of them
     GET /api/scenarios/{id}/live          the scenario played live, as Server-Sent
                                           Events (served by `server`, found by
                                           `live_scenario`)
@@ -30,6 +34,12 @@ from greenhouse_sim.api.live import SPEEDS, LiveFrame, LiveRun, LiveRuns
 from greenhouse_sim.core.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.scenarios.layout_files import (
+    DEFAULT_LAYOUT,
+    layout_document,
+    layout_names,
+    load_layout,
+)
 from greenhouse_sim.scene.snapshot import SCHEMA_VERSION, scene_snapshot
 
 type JsonValue = dict[str, JsonValue] | list[JsonValue] | str | int | float | bool | None
@@ -47,6 +57,8 @@ class ScenarioSummary(BaseModel):
     description: str
     plants: int
     duration_days: int
+    # Its layouts' names, its default first.
+    layouts: list[str]
 
 
 def respond(method: str, path: str) -> Response:
@@ -66,10 +78,22 @@ def respond(method: str, path: str) -> Response:
             if config is None:
                 return _error(HTTPStatus.NOT_FOUND, f"no scenario {scenario_id!r}")
             query = parse_qs(urlsplit(path).query)
-            changed = _with_envelope(config, query.get("envelope", []), query.get("open", []))
+            laid_out = _with_layout(config, query.get("layout", [DEFAULT_LAYOUT])[-1])
+            if isinstance(laid_out, Response):
+                return laid_out
+            changed = _with_envelope(laid_out, query.get("envelope", []), query.get("open", []))
             if isinstance(changed, str):
                 return _error(HTTPStatus.BAD_REQUEST, changed)
             return Response(HTTPStatus.OK, _initial_scene(changed))
+        case ["api", "scenarios", scenario_id, "layout"]:
+            config = SCENARIO_REGISTRY.get(scenario_id)
+            if config is None:
+                return _error(HTTPStatus.NOT_FOUND, f"no scenario {scenario_id!r}")
+            query = parse_qs(urlsplit(path).query)
+            laid_out = _with_layout(config, query.get("layout", [DEFAULT_LAYOUT])[-1])
+            if isinstance(laid_out, Response):
+                return laid_out
+            return Response(HTTPStatus.OK, layout_document(laid_out.layout))
         case _:
             return _error(HTTPStatus.NOT_FOUND, f"nothing at {path!r}")
 
@@ -89,7 +113,26 @@ def _summary(config: ScenarioConfig) -> ScenarioSummary:
         description=config.description,
         plants=config.rows * config.columns,
         duration_days=config.duration_days,
+        layouts=layout_names(config.greenhouse_id),
     )
+
+
+def _with_layout(config: ScenarioConfig, name: str) -> ScenarioConfig | Response:
+    """The scenario with another of its layouts, read from its file, or why it
+    cannot have it: a layout it does not have, or one that does not fit its
+    greenhouse or crop."""
+    if name == DEFAULT_LAYOUT:
+        return config
+    try:
+        layout = load_layout(config.greenhouse_id, name)
+    except KeyError:
+        return _error(HTTPStatus.NOT_FOUND, f"{config.greenhouse_id} has no layout {name!r}")
+    except ValidationError as error:
+        return _error(HTTPStatus.BAD_REQUEST, f"no such layout: {error.errors()[0]['msg']}")
+    try:
+        return ScenarioConfig.model_validate(config.model_dump() | {"layout": layout})
+    except ValidationError as error:
+        return _error(HTTPStatus.BAD_REQUEST, f"no such layout: {error.errors()[0]['msg']}")
 
 
 # The envelope's dimensions a scene request may change.
@@ -117,7 +160,8 @@ def _with_envelope(
     `envelope=length:12,spans:3,...` asks, and its doors and vents opened as
     `open=id:fraction,...` asks, or why it cannot be. The envelope is checked
     afresh, as any description of a greenhouse is: an opening that no longer
-    fits, or a ridge below the eaves, is refused."""
+    fits, or a ridge below the eaves, is refused, as is a greenhouse the
+    scenario's layout no longer fits in."""
     sizes = _pairs(dimensions, "envelope")
     if isinstance(sizes, str):
         return sizes
@@ -141,9 +185,9 @@ def _with_envelope(
         changed = type(envelope).model_validate(
             envelope.model_dump() | sizes | {"openings": opened}
         )
+        return ScenarioConfig.model_validate(config.model_dump() | {"envelope": changed})
     except ValidationError as error:
         return f"no such greenhouse: {error.errors()[0]['msg']}"
-    return config.model_copy(update={"envelope": changed})
 
 
 def _initial_scene(config: ScenarioConfig) -> JsonValue:

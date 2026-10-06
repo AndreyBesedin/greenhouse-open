@@ -103,6 +103,11 @@ export function categoryColor(kind: SceneEntityKind): Color | null {
   return { r, g, b };
 }
 
+/** What an entity of a kind is, in words: its category's name, or its kind's. */
+export function semanticType(kind: SceneEntityKind): string {
+  return isCategory(kind) ? CATEGORY_LABELS[kind] : kind.toLowerCase().replaceAll("_", " ");
+}
+
 /** The categories a scene holds, in the legends' order: the envelope's, then
  * the layout's. */
 export function categoriesIn(snapshot: SceneSnapshot): Category[] {

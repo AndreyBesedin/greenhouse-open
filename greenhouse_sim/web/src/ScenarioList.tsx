@@ -1,12 +1,17 @@
-import type { ScenariosState } from "./scenarios";
+import { DEFAULT_LAYOUT, type ScenariosState } from "./scenarios";
 
+/** The simulator's scenarios, each to be shown, with any of its layouts, or
+ * played live. */
 export function ScenarioList({
   state,
+  shownLayout = null,
   onShow,
   onLive,
 }: {
   state: ScenariosState;
-  onShow?: (scenarioId: string) => void;
+  /** The scenario on show and its layout, which its layout picker shows. */
+  shownLayout?: { scenarioId: string; layout: string } | null;
+  onShow?: (scenarioId: string, layout?: string) => void;
   onLive?: (scenarioId: string) => void;
 }) {
   switch (state.status) {
@@ -19,7 +24,8 @@ export function ScenarioList({
           <code>python -m greenhouse_sim.api</code>.
         </p>
       );
-    case "loaded":
+    case "loaded": {
+      const choosing = onShow && state.scenarios.some((scenario) => scenario.layouts.length > 1);
       return (
         <table>
           <caption>Scenarios</caption>
@@ -29,6 +35,7 @@ export function ScenarioList({
               <th>Name</th>
               <th>Plants</th>
               <th>Days</th>
+              {choosing && <th>Layout</th>}
               {onShow && <th />}
               {onLive && <th />}
             </tr>
@@ -42,6 +49,27 @@ export function ScenarioList({
                 <td title={scenario.description}>{scenario.name}</td>
                 <td>{scenario.plants}</td>
                 <td>{scenario.duration_days}</td>
+                {choosing && (
+                  <td>
+                    {scenario.layouts.length > 1 && (
+                      <select
+                        aria-label={`Layout of ${scenario.id}`}
+                        value={
+                          shownLayout?.scenarioId === scenario.id
+                            ? shownLayout.layout
+                            : DEFAULT_LAYOUT
+                        }
+                        onChange={(event) => onShow(scenario.id, event.target.value)}
+                      >
+                        {scenario.layouts.map((layout) => (
+                          <option key={layout} value={layout}>
+                            {layout}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </td>
+                )}
                 {onShow && (
                   <td>
                     <button
@@ -69,5 +97,6 @@ export function ScenarioList({
           </tbody>
         </table>
       );
+    }
   }
 }
