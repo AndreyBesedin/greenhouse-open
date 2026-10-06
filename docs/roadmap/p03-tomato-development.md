@@ -57,7 +57,7 @@ P00 gives the viewer, P02 the planting positions plants stand at.
 | P03.6 | `feat(plants): add fruit growth, ripeness and colour` | Done |
 | P03.7 | `feat(plants): consume local environment inputs` | Done |
 | P03.8 | `feat(plants): add pruning, harvest and lowering actions` | Done |
-| P03.9 | `test(plants): add biological and visual regression scenarios` | Planned |
+| P03.9 | `test(plants): add biological and visual regression scenarios` | Done |
 
 ### P03.1: Plant topology and organ state schema
 
@@ -536,6 +536,47 @@ As implemented:
 
 Reference plant snapshots at several ages, statistical tests over many
 seeds, and a time-lapse screenshot series.
+
+As implemented:
+
+- **Reference plants** (`tests/test_plant_regression.py`, with its golden
+  `tests/golden/plant_lab.json`):
+  - **The references:** eleven of the lab's plants, at several ages, on
+    other plants, another seed, three other environments, and pruned,
+    harvested and lowered.
+  - **The summary:** each is summarised as a grower would read it:
+    - thermal time, phytomers and standing height;
+    - leaf length;
+    - trusses, flowers by stage, and fruits by maturity class;
+    - fruit on the plant and harvested;
+    - its history.
+  - **Updating:** a change to development shows as a changed summary, to be
+    reviewed and, if intended, written anew with `--update`.
+- **The crop over many seeds** (`tests/test_plant_population.py`, slow):
+  - **The sample:** 400 plants, twenty seeds of the lab's row, grown
+    ninety days.
+  - **Rules and identity:** every plant keeps the structure's rules, and no
+    two are clones.
+  - **Height:** day-60 height has a mean between 130 and 180 cm and a CV
+    between 8% and 20%, with no plant beyond 0.6 to 1.5 times the mean.
+  - **Vigour:** taller plants are the vigorous ones (correlation above 0.5),
+    which also carry more fruit.
+  - **Pace:** 25 to 30 phytomers by day 60, and 9 to 12 trusses by day 90.
+  - **Set rate:** flowers set at 70% to 84%.
+  - **Red fruit:** 6 to 13 red fruits a plant by day 90, averaging 85 to
+    115 g.
+- **The time lapse:**
+  - `services.plants.time_lapse` stands the lab's first plant on days 0, 30,
+    60 and 90 side by side. It is written as
+    `web/public/scenes/qa-plants.json` (compact, about 700 KB) by
+    `tests/test_scene_schema.py --update`, and held to it.
+  - The viewer's `/qa/plants` draws it from a fixed view that a unit test
+    proves sees every organ whole.
+  - CI's visual job compares it with
+    `e2e/visual/__screenshots__/plants-time-lapse-linux.png`.
+- **CI's software renderer:** the lab's browser tests wait up to 30 s for
+  what they expect, because growing and drawing the row on its later days
+  takes longer there than the usual 5 s.
 
 ## Final QA: `tomato-season`
 

@@ -1,0 +1,285 @@
+{
+  "p01, day 0": {
+    "thermal_time_cd": 230.0,
+    "phytomers": 7,
+    "laid_internodes": 0,
+    "standing_height_cm": 15.4,
+    "leaf_length_cm": 103.5,
+    "leaves_removed": 0,
+    "trusses": 0,
+    "flowers": {},
+    "fruits_on_plant": {},
+    "fruits_aborted": 0,
+    "fruits_harvested": 0,
+    "fruit_on_plant_g": 0,
+    "harvested_g": 0,
+    "events": [],
+    "open_flowers": 0
+  },
+  "p01, day 30": {
+    "thermal_time_cd": 560.0,
+    "phytomers": 17,
+    "laid_internodes": 0,
+    "standing_height_cm": 67.0,
+    "leaf_length_cm": 446.5,
+    "leaves_removed": 0,
+    "trusses": 4,
+    "flowers": {
+      "aborted": 2,
+      "bud": 7,
+      "open": 5,
+      "set": 2
+    },
+    "fruits_on_plant": {
+      "green": 2
+    },
+    "fruits_aborted": 0,
+    "fruits_harvested": 0,
+    "fruit_on_plant_g": 0.9,
+    "harvested_g": 0,
+    "events": [],
+    "open_flowers": 5
+  },
+  "p01, day 60": {
+    "thermal_time_cd": 890.0,
+    "phytomers": 26,
+    "laid_internodes": 0,
+    "standing_height_cm": 128.2,
+    "leaf_length_cm": 824.7,
+    "leaves_removed": 0,
+    "trusses": 7,
+    "flowers": {
+      "aborted": 6,
+      "bud": 9,
+      "open": 4,
+      "set": 13
+    },
+    "fruits_on_plant": {
+      "green": 13
+    },
+    "fruits_aborted": 0,
+    "fruits_harvested": 0,
+    "fruit_on_plant_g": 368.5,
+    "harvested_g": 0,
+    "events": [],
+    "open_flowers": 4
+  },
+  "p01, day 90": {
+    "thermal_time_cd": 1220.0,
+    "phytomers": 36,
+    "laid_internodes": 0,
+    "standing_height_cm": 188.1,
+    "leaf_length_cm": 1225.2,
+    "leaves_removed": 0,
+    "trusses": 10,
+    "flowers": {
+      "aborted": 7,
+      "bud": 13,
+      "open": 2,
+      "set": 28
+    },
+    "fruits_on_plant": {
+      "breaker": 1,
+      "green": 17,
+      "light_red": 1,
+      "pink": 1,
+      "red": 6
+    },
+    "fruits_aborted": 2,
+    "fruits_harvested": 0,
+    "fruit_on_plant_g": 1534.0,
+    "harvested_g": 0,
+    "events": [],
+    "open_flowers": 2
+  },
+  "p02, day 60": {
+    "thermal_time_cd": 890.0,
+    "phytomers": 28,
+    "laid_internodes": 0,
+    "standing_height_cm": 191.1,
+    "leaf_length_cm": 1000.3,
+    "leaves_removed": 0,
+    "trusses": 7,
+    "flowers": {
+      "aborted": 12,
+      "bud": 10,
+      "open": 4,
+      "set": 22
+    },
+    "fruits_on_plant": {
+      "breaker": 1,
+      "green": 21
+    },
+    "fruits_aborted": 0,
+    "fruits_harvested": 0,
+    "fruit_on_plant_g": 634.9,
+    "harvested_g": 0,
+    "events": [],
+    "open_flowers": 4
+  },
+  "p03, day 60": {
+    "thermal_time_cd": 890.0,
+    "phytomers": 27,
+    "laid_internodes": 0,
+    "standing_height_cm": 167.8,
+    "leaf_length_cm": 990.9,
+    "leaves_removed": 0,
+    "trusses": 7,
+    "flowers": {
+      "aborted": 5,
+      "bud": 13,
+      "open": 5,
+      "set": 22
+    },
+    "fruits_on_plant": {
+      "green": 21
+    },
+    "fruits_aborted": 1,
+    "fruits_harvested": 0,
+    "fruit_on_plant_g": 704.2,
+    "harvested_g": 0,
+    "events": [],
+    "open_flowers": 5
+  },
+  "p01, day 90, seed 7": {
+    "thermal_time_cd": 1220.0,
+    "phytomers": 41,
+    "laid_internodes": 0,
+    "standing_height_cm": 298.5,
+    "leaf_length_cm": 1628.3,
+    "leaves_removed": 0,
+    "trusses": 12,
+    "flowers": {
+      "aborted": 12,
+      "bud": 11,
+      "open": 3,
+      "set": 34
+    },
+    "fruits_on_plant": {
+      "breaker": 2,
+      "green": 20,
+      "light_red": 1,
+      "pink": 1,
+      "red": 9
+    },
+    "fruits_aborted": 1,
+    "fruits_harvested": 0,
+    "fruit_on_plant_g": 1955.3,
+    "harvested_g": 0,
+    "events": [],
+    "open_flowers": 3
+  },
+  "p01, day 60, cool_dim": {
+    "thermal_time_cd": 650.0,
+    "phytomers": 19,
+    "laid_internodes": 0,
+    "standing_height_cm": 52.0,
+    "leaf_length_cm": 343.1,
+    "leaves_removed": 0,
+    "trusses": 4,
+    "flowers": {
+      "aborted": 3,
+      "bud": 6,
+      "open": 4,
+      "set": 6
+    },
+    "fruits_on_plant": {
+      "green": 6
+    },
+    "fruits_aborted": 0,
+    "fruits_harvested": 0,
+    "fruit_on_plant_g": 3.1,
+    "harvested_g": 0,
+    "events": [],
+    "open_flowers": 4
+  },
+  "p01, day 60, warm_bright": {
+    "thermal_time_cd": 1130.0,
+    "phytomers": 33,
+    "laid_internodes": 0,
+    "standing_height_cm": 172.2,
+    "leaf_length_cm": 1114.7,
+    "leaves_removed": 0,
+    "trusses": 9,
+    "flowers": {
+      "aborted": 7,
+      "bud": 13,
+      "set": 25
+    },
+    "fruits_on_plant": {
+      "green": 18,
+      "light_red": 2,
+      "pink": 1,
+      "red": 3
+    },
+    "fruits_aborted": 1,
+    "fruits_harvested": 0,
+    "fruit_on_plant_g": 1256.4,
+    "harvested_g": 0,
+    "events": [],
+    "open_flowers": 0
+  },
+  "p01, day 60, dry": {
+    "thermal_time_cd": 890.0,
+    "phytomers": 26,
+    "laid_internodes": 0,
+    "standing_height_cm": 77.6,
+    "leaf_length_cm": 500.8,
+    "leaves_removed": 0,
+    "trusses": 7,
+    "flowers": {
+      "aborted": 6,
+      "bud": 9,
+      "open": 4,
+      "set": 13
+    },
+    "fruits_on_plant": {
+      "green": 13
+    },
+    "fruits_aborted": 0,
+    "fruits_harvested": 0,
+    "fruit_on_plant_g": 68.3,
+    "harvested_g": 0,
+    "events": [],
+    "open_flowers": 4
+  },
+  "p01, day 90, tended": {
+    "thermal_time_cd": 1220.0,
+    "phytomers": 36,
+    "laid_internodes": 8,
+    "standing_height_cm": 159.5,
+    "leaf_length_cm": 1030.8,
+    "leaves_removed": 8,
+    "trusses": 10,
+    "flowers": {
+      "aborted": 7,
+      "bud": 13,
+      "open": 2,
+      "set": 28
+    },
+    "fruits_on_plant": {
+      "breaker": 1,
+      "green": 17,
+      "light_red": 1,
+      "pink": 1,
+      "red": 4
+    },
+    "fruits_aborted": 2,
+    "fruits_harvested": 2,
+    "fruit_on_plant_g": 1341.7,
+    "harvested_g": 192.3,
+    "events": [
+      "removed p01_n01_leaf",
+      "removed p01_n02_leaf",
+      "removed p01_n03_leaf",
+      "removed p01_n04_leaf",
+      "removed p01_n05_leaf",
+      "removed p01_n06_leaf",
+      "removed p01_n07_leaf",
+      "removed p01_n08_leaf",
+      "harvested p01_t01_fr01, p01_t01_fr04, 192 g",
+      "laid 8 internodes down, lowering the top by 29 cm"
+    ],
+    "open_flowers": 2
+  }
+}

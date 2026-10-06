@@ -5,9 +5,11 @@ types from and validates scenes against, `web/public/scenes/example.json` is a
 deterministic scene the viewer can draw without the API, and
 `web/public/scenes/qa-greenhouse.json` is the canonical greenhouse its
 screenshot tests draw (P01.7), `web/public/scenes/qa-fixtures.json` is its
-gallery of fixture primitives (P02.1), and `web/public/scenes/qa-layout.json`
-is the canonical layout its layout views draw (P02.4). All five are
-generated here, from `greenhouse_sim/`:
+gallery of fixture primitives (P02.1), `web/public/scenes/qa-layout.json` is
+the canonical layout its layout views draw (P02.4), and
+`web/public/scenes/qa-plants.json` is the plant lab's first plant at four
+ages, which its plant time lapse draws (P03.9). All six are generated here,
+from `greenhouse_sim/`:
 
     python tests/test_scene_schema.py --update
 
@@ -28,6 +30,7 @@ from greenhouse_sim.scene.snapshot import (
     scene_snapshot,
     snapshot_json_schema,
 )
+from greenhouse_sim.services import plants
 from greenhouse_sim.world.envelope import Envelope, Opening, OpeningKind
 from greenhouse_sim.world.fixtures import (
     BoxPrimitive,
@@ -50,6 +53,8 @@ EXAMPLE_FILE = ROOT / "web" / "public" / "scenes" / "example.json"
 QA_GREENHOUSE_FILE = ROOT / "web" / "public" / "scenes" / "qa-greenhouse.json"
 QA_FIXTURES_FILE = ROOT / "web" / "public" / "scenes" / "qa-fixtures.json"
 QA_LAYOUT_FILE = ROOT / "web" / "public" / "scenes" / "qa-layout.json"
+# Written compact, as it is the largest: a plant at four ages, organ by organ.
+QA_PLANTS_FILE = ROOT / "web" / "public" / "scenes" / "qa-plants.json"
 # The canonical greenhouse for the viewer's screenshot tests: three 3.2 m
 # spans and four 4 m bays, its eaves at 4 m and ridges at 4.65 m, with a roof
 # vent half open, a closed side vent and a door half open.
@@ -272,6 +277,14 @@ def test_the_qa_layout_is_what_the_simulator_draws() -> None:
     assert json.loads(QA_LAYOUT_FILE.read_text()) == _qa_layout()
 
 
+def _qa_plants() -> object:
+    return json.loads(plants.time_lapse().model_dump_json())
+
+
+def test_the_qa_plant_time_lapse_is_what_the_simulator_draws() -> None:
+    assert json.loads(QA_PLANTS_FILE.read_text()) == _qa_plants()
+
+
 def test_the_example_scene_holds_differently_sized_and_placed_plants() -> None:
     entities = json.loads(EXAMPLE_FILE.read_text())["entities"]
     plants = [entity for entity in entities if entity["kind"] == "PLANT"]
@@ -290,11 +303,19 @@ def _update() -> None:
     QA_GREENHOUSE_FILE.write_text(json.dumps(_qa_greenhouse(), indent=2) + "\n")
     QA_FIXTURES_FILE.write_text(json.dumps(_qa_fixtures(), indent=2) + "\n")
     QA_LAYOUT_FILE.write_text(json.dumps(_qa_layout(), indent=2) + "\n")
+    QA_PLANTS_FILE.write_text(json.dumps(_qa_plants(), separators=(",", ":")) + "\n")
 
 
 if __name__ == "__main__":
     if sys.argv[1:] != ["--update"]:
         raise SystemExit("usage: python tests/test_scene_schema.py --update")
     _update()
-    written = (SCHEMA_FILE, EXAMPLE_FILE, QA_GREENHOUSE_FILE, QA_FIXTURES_FILE, QA_LAYOUT_FILE)
+    written = (
+        SCHEMA_FILE,
+        EXAMPLE_FILE,
+        QA_GREENHOUSE_FILE,
+        QA_FIXTURES_FILE,
+        QA_LAYOUT_FILE,
+        QA_PLANTS_FILE,
+    )
     print("wrote", ", ".join(str(path) for path in written))
