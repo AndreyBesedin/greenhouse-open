@@ -1,14 +1,17 @@
-"""Where the organ model's randomness comes from: a seed hierarchy.
+"""Where the organ model's randomness comes from: one seed, and a hierarchy
+of identifiers under it.
 
-Every draw is made from a generator seeded by the simulation's seed, then
-the plant, then, for an organ's own draws, the organ, then the process the
-draw is for:
+There is one seed, the simulation's. Every draw is made from a generator
+derived from that seed and a hash of who draws and what for: the plant,
+then, for an organ's own draws, the organ, then the process the draw is for:
 
     simulation seed → plant → organ → process
 
 so a plant's draws never depend on which other plants exist, an organ's on
 which other organs do, or one process's on another's. Adding a plant, an
-organ or a kind of draw changes nothing that was drawn before.
+organ or a kind of draw changes nothing that was drawn before. What is
+hashed is an identifier, which never changes, not an organ's state, which
+does as it grows: a draw keyed by state would change with it.
 """
 
 import numpy as np
