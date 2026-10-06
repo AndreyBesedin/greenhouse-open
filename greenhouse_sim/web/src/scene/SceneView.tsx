@@ -4,7 +4,7 @@ import { categoryColor } from "../debug/categories";
 import { type Colouring, scalarColor, scalarValue } from "../debug/scalar";
 import type { Color, SceneEntity, SceneSnapshot } from "./generated/snapshotTypes";
 import { InstancedCylinders } from "./InstancedCylinders";
-import { isMetal } from "./materials";
+import { cylinderBatches } from "./instancing";
 import { placement } from "./placement";
 import { RENDERERS } from "./renderers";
 
@@ -46,17 +46,8 @@ export function SceneView({
   byCategory?: boolean;
 }) {
   const { batches, single } = useMemo(() => {
-    const cylinders = new Map<string, { metallic: boolean; all: SceneEntity[] }>();
-    for (const entity of snapshot.entities) {
-      if (entity.shape.shape === "cylinder") {
-        const metallic = isMetal(entity);
-        const batch = `${entity.kind}-${metallic ? "metal" : "matt"}`;
-        const all = cylinders.get(batch)?.all ?? [];
-        cylinders.set(batch, { metallic, all: [...all, entity] });
-      }
-    }
     return {
-      batches: [...cylinders].map(([batch, { metallic, all }]) => {
+      batches: cylinderBatches(snapshot.entities).map(({ batch, metallic, entities: all }) => {
         const batched = all.filter((entity) => entity.entity_id !== selectedId);
         return {
           batch,

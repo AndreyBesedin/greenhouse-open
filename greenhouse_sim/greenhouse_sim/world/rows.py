@@ -209,6 +209,19 @@ class CropRows(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def _supports_do_not_overlap(self) -> Self:
+        if self.support is None or self.rows < 2:
+            return self
+        nearest = min(
+            self.row_offset(row + 1) - self.row_offset(row) for row in range(1, self.rows)
+        )
+        if nearest < self.support.width:
+            raise ValueError(
+                f"rows {nearest} m apart are too close for supports {self.support.width} m wide"
+            )
+        return self
+
     @property
     def along(self) -> Point2:
         """The unit direction the rows run in."""

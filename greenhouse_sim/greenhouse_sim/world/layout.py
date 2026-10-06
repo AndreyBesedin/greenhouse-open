@@ -91,6 +91,12 @@ class Layout(BaseModel):
         rows = [] if self.crop_rows is None else self.crop_rows.fixtures(self.kept_clear())
         return rows + [fixture for primitive in self.placed for fixture in primitive.fixtures()]
 
+    def obstructing(self, obstruction: Obstruction) -> list[Fixture]:
+        """The fixtures that stand in the way of `obstruction`, in the
+        greenhouse's frame: the obstacles robots (movement), airflow or
+        radiation (light) take from the layout (decision 0019)."""
+        return [fixture for fixture in self.fixtures() if obstruction in fixture.obstructs]
+
     def planting_positions(self) -> list[PlantingPosition]:
         """Every planting position outside the areas kept clear, row by row, in
         the greenhouse's frame."""

@@ -1,6 +1,6 @@
 # P02: Static greenhouse fixtures and layout
 
-**Status:** in progress. Part of the [simulator roadmap](README.md).
+**Status:** done. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -45,7 +45,7 @@ rows and columns, at a fixed pitch and spacing in the scene module.
 | P02.4 | `feat(layout): add walkways, service zones and exclusion volumes` | Done ([#40](https://github.com/AndreyBesedin/greenhouse-open/pull/40)) |
 | P02.5 | `feat(layout): add rails, pipes and overhead structures` | Done ([#41](https://github.com/AndreyBesedin/greenhouse-open/pull/41)) |
 | P02.6 | `feat(layout): import and export the layout configuration` | Done ([#42](https://github.com/AndreyBesedin/greenhouse-open/pull/42)) |
-| P02.7 | `test(visual): add fixture occlusion and navigation QA scenes` | Done |
+| P02.7 | `test(visual): add fixture occlusion and navigation QA scenes` | Done ([#43](https://github.com/AndreyBesedin/greenhouse-open/pull/43)) |
 
 ### P02.1: Reusable fixture primitives
 
@@ -371,10 +371,66 @@ Inspect two scenarios' layouts, measure the row and plant spacing, check that
 walkways stay clear, inspect rails and pipes from inside the rows, check
 semantic selection, and check the visual snapshots.
 
+As implemented ([#44](https://github.com/AndreyBesedin/greenhouse-open/pull/44)):
+
+- `tests/test_greenhouse_layout.py` checks the layout's promises over a grid
+  of 128 layouts: two greenhouses (24 by 9.6 m and 48 by 19.2 m), rows along
+  the length and across it, pitches of 0.4 and 0.5 m, rows 1.6 or 2 m apart
+  or in pairs, on the floor, on gutters or on benches, with and without
+  aisles across them and a keep-out volume over them, and with rails, wires
+  and heating pipes. In each: the layout fits its greenhouse; every position
+  lies its multiple of the pitch along its row and its row's offset across;
+  no position lies in an area kept clear; every supported plant stands on
+  its slab or bench; walkways stay clear below head height; identifiers are
+  unique and survive a layout file; and every fixture is an obstacle to what
+  it obstructs, and to nothing else. Benches too wide for paired rows are
+  refused: a new check refuses rows too close for their supports. The grid
+  takes about 20 seconds, so it is marked slow: the full checks and CI run
+  it, the quick pre-push pass does not.
+- `Layout.obstructing(obstruction)` gives the fixtures that stand in the way
+  of movement, airflow or light: the obstacles robots, airflow and radiation
+  will take from the layout.
+- `e2e/greenhouse-layout.spec.ts` walks through it in the browser: gh_001's
+  default layout, coloured by category, its cylinders in a few instanced
+  batches; a gutter and a walkway selected as what they are, the walkway
+  obstructing nothing; three plants' coordinates giving the pitch and row
+  spacing; a rail and a heating pipe picked from above; the bench layout
+  switched to, with the same spacing at bench height; its layout written out
+  by the API as data; and the canonical layout seen from between its rows.
+- The viewer's cylinder batching is a function of its own
+  (`cylinderBatches`), which a test holds to one batch per kind and finish:
+  the canonical layout's hundreds of cylinders are six draw calls. Grouping
+  them no longer copies each batch as it grows.
+- The screenshots are compared by CI's visual checks job (P02.7).
+
 ## Acceptance criteria
 
-- [ ] The layout is entirely data-driven.
-- [ ] Fixed objects can later be exported as airflow, radiation or robot
-  obstacles.
-- [ ] Planting positions are stable semantic entities.
-- [ ] Large repeated fixtures use instancing where appropriate.
+- [x] The layout is entirely data-driven: every scenario reads its layout
+  from a JSON file, checked against the model and a published schema, and a
+  second layout is a second file (decision
+  [0020](../decisions/0020-scenario-layouts-are-declarative-json-files.md)).
+- [x] Fixed objects can later be exported as airflow, radiation or robot
+  obstacles: each fixture says what it obstructs (decision
+  [0019](../decisions/0019-fixtures-say-what-they-are-made-of-and-what-they-obstruct.md)),
+  and `Layout.obstructing` collects the obstacles for each.
+- [x] Planting positions are stable semantic entities: each is named by its
+  row and place along it, keeps its name when an aisle or zone takes its
+  neighbours, and survives a layout file; plants name the position they
+  stand at.
+- [x] Large repeated fixtures use instancing where appropriate: planting
+  positions, legs, rail tubes, pipes, wires and frames are cylinders, drawn
+  in one instanced batch per kind and finish. On the development machine
+  (Apple M2, Chromium on the graphics card, the frame rate not tied to the
+  display), a 100 by 48 m greenhouse of ten spans and 25 bays, with 28 rows
+  of tomato gutters split by a central aisle, 5,320 planting positions,
+  1,400 legs, 108 rail tubes and 56 wires (7,846 entities), runs at about
+  460 frames per second while orbiting, 2.2 ms per frame, in 206 draw calls.
+  Gutters and slabs are boxes, one draw call each; at that cost they are not
+  yet worth batching.
+
+## Later
+
+- An editor in the viewer that changes a layout through the local API, in
+  the shape of a layout file (decision 0020).
+- Batching boxes as cylinders are batched, if gutters and slabs by the
+  hundred ever cost frames.

@@ -4,7 +4,7 @@ import { Matrix4, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 
 import type { SceneEntity, SceneSnapshot } from "./generated/snapshotTypes";
-import { cylinderMatrices, MATRIX_SIZE } from "./instancing";
+import { cylinderBatches, cylinderMatrices, MATRIX_SIZE } from "./instancing";
 
 const EXAMPLE: SceneSnapshot = JSON.parse(
   readFileSync(new URL("../../public/scenes/example.json", import.meta.url), "utf8"),
@@ -60,5 +60,33 @@ describe("instancing cylinders", () => {
     const floor = EXAMPLE.entities.find((entity) => entity.kind === "FLOOR") as SceneEntity;
 
     expect(() => cylinderMatrices([floor])).toThrow("gh_demo_floor is a plane, not a cylinder");
+  });
+});
+
+describe("batching a layout's repeated fixtures", () => {
+  // The canonical layout (`tests/test_scene_schema.py`).
+  const QA_LAYOUT: SceneSnapshot = JSON.parse(
+    readFileSync(new URL("../../public/scenes/qa-layout.json", import.meta.url), "utf8"),
+  );
+
+  it("draws every cylinder in one batch per kind and finish", () => {
+    const cylinders = QA_LAYOUT.entities.filter((entity) => entity.shape.shape === "cylinder");
+    const batches = cylinderBatches(QA_LAYOUT.entities);
+
+    // Planting positions, structural members, gutter legs, rail tubes,
+    // heating pipes and crop wires: hundreds of cylinders, six draw calls.
+    expect(new Set(batches.map((batch) => batch.batch))).toEqual(
+      new Set([
+        "PLANTING_POSITION-matt",
+        "FRAME-metal",
+        "CROP_GUTTER-metal",
+        "RAIL-metal",
+        "PIPE-metal",
+        "WIRE-metal",
+      ]),
+    );
+    expect(batches).toHaveLength(6);
+    expect(cylinders.length).toBeGreaterThan(200);
+    expect(batches.flatMap((batch) => batch.entities)).toHaveLength(cylinders.length);
   });
 });
