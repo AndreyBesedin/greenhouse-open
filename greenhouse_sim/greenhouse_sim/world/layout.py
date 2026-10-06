@@ -14,11 +14,12 @@ at the first row's first position, filling each row before the next.
 Walkways, service zones and keep-out volumes (`greenhouse_sim.world.zones`)
 are kept clear of planting: no position lies inside one, and the rows'
 supports stop short of them. Walkways stay clear of anything that obstructs
-movement; a layout that puts such a fixture on one is refused.
+movement below `WALKWAY_HEADROOM_M`; a layout that puts such a fixture on
+one is refused. Above it, pipes may cross a walkway.
 """
 
 from collections import Counter
-from typing import Self
+from typing import Final, Self
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
@@ -28,6 +29,9 @@ from greenhouse_sim.world.fixtures import Fixture, Obstruction, Primitive, Walkw
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.rows import CropRows, PlantingPosition
 from greenhouse_sim.world.zones import Strip, Zone
+
+# Walkways stay clear up to this height: a doorway's.
+WALKWAY_HEADROOM_M: Final = 2.1
 
 
 class Layout(BaseModel):
@@ -56,9 +60,15 @@ class Layout(BaseModel):
 
     @model_validator(mode="after")
     def _walkways_stay_clear(self) -> Self:
+        in_the_way = [
+            fixture
+            for fixture in self.fixtures()
+            if Obstruction.MOVEMENT in fixture.obstructs
+            and fixture.bounds()[0].z < WALKWAY_HEADROOM_M
+        ]
         for walkway_id, area in self.walkways():
-            for fixture in self.fixtures():
-                if Obstruction.MOVEMENT in fixture.obstructs and area.overlaps(fixture.corners()):
+            for fixture in in_the_way:
+                if area.overlaps(fixture.corners()):
                     raise ValueError(f"{fixture.fixture_id} stands on the walkway {walkway_id}")
         return self
 

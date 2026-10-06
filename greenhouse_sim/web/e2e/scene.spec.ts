@@ -43,12 +43,12 @@ test("a scenario's scene comes from the simulator and stays chosen on refresh", 
 
   const status = page.getByTestId("scene-status");
   await expect(status).toHaveText(
-    "Showing the scenario gh_001, before day one: gh_001, day 0, 147 entities.",
+    "Showing the scenario gh_001, before day one: gh_001, day 0, 165 entities.",
   );
   await expect(page).toHaveURL(/\?scenario=gh_001$/);
   await page.reload();
   await expect(status).toHaveText(
-    "Showing the scenario gh_001, before day one: gh_001, day 0, 147 entities.",
+    "Showing the scenario gh_001, before day one: gh_001, day 0, 165 entities.",
   );
   expect(errors).toEqual([]);
 });

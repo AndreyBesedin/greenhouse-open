@@ -73,6 +73,9 @@ describe("the layout's categories", () => {
       "WALKWAY",
       "SERVICE_ZONE",
       "KEEP_OUT",
+      "RAIL",
+      "PIPE",
+      "WIRE",
       "OBSTACLE",
     ]);
     const others = QA_LAYOUT.entities.filter((entity) => categoryColor(entity.kind) === null);

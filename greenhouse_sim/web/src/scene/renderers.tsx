@@ -86,6 +86,7 @@ export const RENDERERS: Record<
   KEEP_OUT: (entity, look) => seeThrough(entity, look),
   RAIL: solid,
   PIPE: solid,
+  WIRE: solid,
   OBSTACLE: solid,
   PLANT: (entity, look) => (
     <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} />

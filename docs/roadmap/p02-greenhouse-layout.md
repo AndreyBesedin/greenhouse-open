@@ -42,8 +42,8 @@ rows and columns, at a fixed pitch and spacing in the scene module.
 | P02.1 | `feat(layout): define reusable fixture primitives` | Done ([#36](https://github.com/AndreyBesedin/greenhouse-open/pull/36)) |
 | P02.2 | `feat(layout): generate crop rows and planting positions` | Done ([#38](https://github.com/AndreyBesedin/greenhouse-open/pull/38)) |
 | P02.3 | `feat(layout): add gutters, tables, benches and slabs` | Done ([#39](https://github.com/AndreyBesedin/greenhouse-open/pull/39)) |
-| P02.4 | `feat(layout): add walkways, service zones and exclusion volumes` | Done |
-| P02.5 | `feat(layout): add rails, pipes and overhead structures` | Planned |
+| P02.4 | `feat(layout): add walkways, service zones and exclusion volumes` | Done ([#40](https://github.com/AndreyBesedin/greenhouse-open/pull/40)) |
+| P02.5 | `feat(layout): add rails, pipes and overhead structures` | Done |
 | P02.6 | `feat(layout): import and export the layout configuration` | Planned |
 | P02.7 | `test(visual): add fixture occlusion and navigation QA scenes` | Planned |
 
@@ -259,6 +259,43 @@ As implemented:
 A robot rail, heating pipes as passive geometry for now, overhead crop
 wires, and configurable repeated pipe runs. Visible result: a more credible
 interior, with structures overhead and at floor level.
+
+As implemented:
+
+- Crop rows may have `rails` (`RowRails`): a pipe rail along the middle of
+  each path between neighbouring rows wide enough for it, beside their
+  supports. `PIPE_RAIL` is 51 mm heating pipes 55 cm apart, their axes 10 cm
+  up: in tomato greenhouses the rails trolleys and robots ride on are the
+  heating pipes, so with P02.3's gutter this makes the plan's tomato gutter
+  and rail preset. Rails stop short of the areas kept clear, as supports do,
+  in pieces (`rail_<g>_<k>`, for the path after row `g`); a piece shorter than
+  a metre is not laid.
+- Crop rows may have `wires` (`CropWires`): a crop wire above each run of a
+  row's positions, as long as its support, which the plants are trained up
+  to. A new `WIRE` kind obstructs nothing; the scene schema moves to version
+  11.
+- A new primitive, a pipe run (`PipeRunPrimitive`), repeats a pipe a step
+  apart, each its own multiple of the step: heating pipes stacked along a
+  wall, or pipes repeated across the house.
+- Walkways stay clear only up to a doorway's height, 2.1 m: above it, pipes
+  may cross them.
+- gh_001 gains a pipe rail between each pair of its rows, a crop wire 3 m up
+  above each, and four heating pipes stacked along each side wall. The
+  canonical QA layout gains the same, its rails and wires in pieces either
+  side of its central aisle.
+- Every rail tube, pipe and wire is a cylinder, so all of them are drawn in
+  instanced batches. Wires are drawn at their real 5 mm, which is barely
+  visible from a distance, as from a camera.
+- Tests:
+  - Python: a rail along the middle of each path between rows, at its
+    height and gauge; none where paired rows leave too narrow a path; in
+    pieces either side of an aisle, stopping at its edges; none for a piece
+    too short to ride on. A crop wire above each run, as long as its gutter,
+    or reaching beyond its row without one. A pipe run repeats its pipe a step
+    apart, and refuses pipes that would touch. A pipe may cross a walkway
+    above head height, not below it.
+  - Browser: in gh_001, from above, a rail tube and the top heating pipe are
+    picked, with their kinds, sizes and what they obstruct.
 
 ### P02.6: Layout configuration files
 

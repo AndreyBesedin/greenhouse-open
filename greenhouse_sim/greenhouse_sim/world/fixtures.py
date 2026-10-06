@@ -9,8 +9,8 @@ airflow and radiation each collect their obstacles by what they obstruct,
 not by their kind, so a new kind of fixture needs no change to them.
 
 Fixtures are generated from primitives: a box, an upright cylinder, a pipe
-between two points, a rail of two tubes, an open tray along a line, and a
-walkway on the floor. Each primitive is a description, with an identifier,
+between two points, a run of parallel pipes, a rail of two tubes, an open
+tray along a line, and a walkway on the floor. Each primitive is a description, with an identifier,
 its dimensions, a kind, a material and what it obstructs; the kind brings a
 material and obstructions of its own unless the description says otherwise.
 """
@@ -19,7 +19,7 @@ import math
 from enum import StrEnum
 from typing import Annotated, Final, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt, model_validator
 
 from greenhouse_sim.world.geometry import Box, Cylinder, Point2, Quaternion, Transform, Vector3
 from greenhouse_sim.world.zones import Strip
@@ -46,6 +46,8 @@ class FixtureKind(StrEnum):
     RAIL = "rail"
     # A pipe, such as a heating pipe.
     PIPE = "pipe"
+    # A wire overhead, such as a crop wire the plants are trained up to.
+    WIRE = "wire"
     # Anything else in the way: a column, a tank, a cabinet.
     OBSTACLE = "obstacle"
 
@@ -85,11 +87,13 @@ DEFAULT_MATERIALS: Final = {
     FixtureKind.WALKWAY: Material.CONCRETE,
     FixtureKind.RAIL: Material.STEEL,
     FixtureKind.PIPE: Material.STEEL,
+    FixtureKind.WIRE: Material.STEEL,
     FixtureKind.OBSTACLE: Material.STEEL,
 }
 # What each kind obstructs, unless its description says otherwise. A walkway
 # is walked on, and obstructs nothing. A pipe or rail is too thin to hold
 # back the air around it, but it casts a shadow and cannot be driven through.
+# A wire, overhead and a few millimetres thick, obstructs nothing.
 DEFAULT_OBSTRUCTIONS: Final = {
     FixtureKind.CROP_GUTTER: EVERYTHING,
     FixtureKind.BENCH: EVERYTHING,
@@ -97,6 +101,7 @@ DEFAULT_OBSTRUCTIONS: Final = {
     FixtureKind.WALKWAY: frozenset[Obstruction](),
     FixtureKind.RAIL: frozenset({Obstruction.MOVEMENT, Obstruction.LIGHT}),
     FixtureKind.PIPE: frozenset({Obstruction.MOVEMENT, Obstruction.LIGHT}),
+    FixtureKind.WIRE: frozenset[Obstruction](),
     FixtureKind.OBSTACLE: EVERYTHING,
 }
 
@@ -288,6 +293,44 @@ class PipePrimitive(_Primitive):
         ]
 
 
+class PipeRunPrimitive(_Primitive):
+    """Pipes repeated in parallel, such as heating pipes stacked along a wall:
+    the first from `start` to `end`, each next one `step` further on, `count`
+    in all. Each is its own multiple of the step from the first, and is called
+    `<fixture_id>_<n>`, from 1."""
+
+    primitive: Literal["pipe_run"] = "pipe_run"
+    kind: FixtureKind = FixtureKind.PIPE
+    start: Vector3
+    end: Vector3
+    radius: PositiveFloat
+    count: PositiveInt
+    step: Vector3
+
+    @model_validator(mode="after")
+    def _has_a_length_and_a_step(self) -> Self:
+        _not_a_point(self.start, self.end)
+        if self.count > 1 and _length(self.step) <= 2 * self.radius:
+            raise ValueError(f"{self.fixture_id}'s pipes overlap: its step is too short")
+        return self
+
+    def fixtures(self) -> list[Fixture]:
+        fixtures = []
+        for number in range(1, self.count + 1):
+            transform, length = _pointing_between(
+                _offset(self.start, self.step, number - 1), _offset(self.end, self.step, number - 1)
+            )
+            fixtures.append(
+                self._fixture(
+                    f"{self.fixture_id}_{number}",
+                    self.kind,
+                    transform,
+                    Cylinder(radius=self.radius, height=length),
+                )
+            )
+        return fixtures
+
+
 class RailPrimitive(_Primitive):
     """A rail of two parallel tubes, `gauge` apart from axis to axis, either
     side of its centre line from `start` to `end`. Its tubes are
@@ -397,6 +440,7 @@ type Primitive = Annotated[
     BoxPrimitive
     | CylinderPrimitive
     | PipePrimitive
+    | PipeRunPrimitive
     | RailPrimitive
     | TrayPrimitive
     | WalkwayPrimitive,

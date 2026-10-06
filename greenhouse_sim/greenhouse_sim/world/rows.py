@@ -24,6 +24,11 @@ On a support, a position is also left out when the support could not reach
 support runs under each unbroken run of its positions, one support per run,
 numbered along the row from 1, and stops short of any kept area it would
 otherwise reach into.
+
+Rows may also have a pipe rail in each path between them, wide enough for
+it, which trolleys and robots ride on (`PIPE_RAIL`), and a crop wire above
+each run of positions, which the plants are trained up to. Rails stop short
+of kept areas as supports do; a piece too short to ride on is not laid.
 """
 
 import math
@@ -43,6 +48,8 @@ from greenhouse_sim.world.fixtures import (
     Fixture,
     FixtureKind,
     Material,
+    PipePrimitive,
+    RailPrimitive,
     TrayPrimitive,
 )
 from greenhouse_sim.world.geometry import Point2, Vector3
@@ -53,6 +60,11 @@ SLAB_INSET_M: Final = 0.05
 # A plant on a support needs its support, and the slab on it, to reach this
 # far beyond it.
 LEAST_SUPPORT_REACH_M: Final = 2 * SLAB_INSET_M
+# Without a support, rows' rails and wires reach this far beyond their first
+# and last positions, as a support's overhang does by default.
+ROW_OVERHANG_M: Final = 0.25
+# A rail left shorter than this between kept areas is not laid.
+SHORTEST_RAIL_M: Final = 1.0
 
 
 class Slab(BaseModel):
@@ -111,6 +123,35 @@ TOMATO_GUTTER: Final = RowSupport(
     leg_spacing=2.0,
     slab=Slab(width=0.2, height=0.075),
 )
+
+
+class RowRails(BaseModel):
+    """A pipe rail in each path between neighbouring rows wide enough for it:
+    two tubes `gauge` apart from axis to axis, their axes `height` above the
+    floor, along the rows. They are often the heating pipes too."""
+
+    model_config = ConfigDict(frozen=True)
+
+    gauge: PositiveFloat
+    tube_radius: PositiveFloat
+    height: PositiveFloat
+    material: Material | None = None
+
+
+class CropWires(BaseModel):
+    """A crop wire above each run of a row's positions, `height` above the
+    floor, which the plants are trained up to."""
+
+    model_config = ConfigDict(frozen=True)
+
+    height: PositiveFloat
+    radius: PositiveFloat = 0.0025
+
+
+# A pipe rail of 51 mm heating pipes, 55 cm apart, their axes 10 cm up.
+PIPE_RAIL: Final = RowRails(gauge=0.55, tube_radius=0.0255, height=0.1)
+
+
 # A bench, or table: an aluminium top 1.2 m wide and 5 cm thick at 80 cm, on
 # legs at most 1.5 m apart, for plants in pots.
 BENCH: Final = RowSupport(
@@ -154,6 +195,10 @@ class CropRows(BaseModel):
     pair_gap: PositiveFloat | None = None
     # What carries each row; without, the crop stands on the floor.
     support: RowSupport | None = None
+    # A pipe rail between neighbouring rows.
+    rails: RowRails | None = None
+    # A crop wire above each row.
+    wires: CropWires | None = None
 
     @model_validator(mode="after")
     def _pairs_do_not_overlap(self) -> Self:
@@ -240,8 +285,97 @@ class CropRows(BaseModel):
             fixture
             for row in range(1, self.rows + 1)
             for number, run in enumerate(self._runs(row, areas), start=1)
-            for fixture in self._support_fixtures(row, number, run, areas)
-        ]
+            for fixture in [
+                *self._support_fixtures(row, number, run, areas),
+                *self._wire_fixtures(row, number, run, areas),
+            ]
+        ] + self._rail_fixtures(areas)
+
+    @property
+    def _overhang(self) -> float:
+        return ROW_OVERHANG_M if self.support is None else self.support.overhang
+
+    def _clear_spans(
+        self,
+        line_start: Vector3,
+        start: float,
+        end: float,
+        half_width: float,
+        kept_clear: list[Strip],
+    ) -> list[tuple[float, float]]:
+        """What remains of a span along the rows, from a line's start, once
+        the stretches where a band `half_width` either side of it would reach
+        into a kept area are taken out."""
+        spans = [(start, end)]
+        origin = Point2(x=line_start.x, y=line_start.y)
+        for area in kept_clear:
+            crossing = area.crossing(origin, self.along, half_width)
+            if crossing is None:
+                continue
+            enters, leaves = crossing
+            spans = [
+                piece
+                for low, high in spans
+                for piece in ((low, min(high, enters)), (max(low, leaves), high))
+                if piece[1] - piece[0] > EDGE_TOLERANCE_M
+            ]
+        return spans
+
+    def _rail_fixtures(self, kept_clear: list[Strip]) -> list[Fixture]:
+        """A pipe rail along the middle of each path between neighbouring rows
+        wide enough for it, from the rows' first ends to their last, laid in
+        pieces between the kept areas: `rail_<g>_<k>`, for the path after row
+        `g`, its `k`th piece."""
+        rails = self.rails
+        if rails is None:
+            return []
+        half_width = rails.gauge / 2 + rails.tube_radius
+        support_width = 0.0 if self.support is None else self.support.width
+        fixtures = []
+        for gap in range(1, self.rows):
+            distance = self.row_offset(gap + 1) - self.row_offset(gap)
+            if distance - support_width < 2 * half_width:
+                continue
+            middle = distance / 2
+            spans = self._clear_spans(
+                self.point(gap, 0.0, across=middle),
+                -self._overhang,
+                self.row_length + self._overhang,
+                half_width,
+                kept_clear,
+            )
+            pieces = [(low, high) for low, high in spans if high - low >= SHORTEST_RAIL_M]
+            for number, (low, high) in enumerate(pieces, start=1):
+                fixtures += RailPrimitive(
+                    fixture_id=f"rail_{gap}_{number}",
+                    start=self.point(gap, low, across=middle, z=rails.height),
+                    end=self.point(gap, high, across=middle, z=rails.height),
+                    gauge=rails.gauge,
+                    tube_radius=rails.tube_radius,
+                    material=rails.material,
+                ).fixtures()
+        return fixtures
+
+    def _wire_fixtures(
+        self, row: int, number: int, run: tuple[int, int], kept_clear: list[Strip]
+    ) -> list[Fixture]:
+        """A crop wire above a run of positions, as long as the support under
+        it, or reaching as far beyond the run without one."""
+        wires = self.wires
+        if wires is None:
+            return []
+        if self.support is not None:
+            start, end = self._support_span(row, run, kept_clear)
+        else:
+            first, last = ((index - 1) * self.plant_pitch for index in run)
+            start, end = first - self._overhang, last + self._overhang
+        return PipePrimitive(
+            fixture_id=f"row_{row}_wire_{number}",
+            kind=FixtureKind.WIRE,
+            start=self.point(row, start, z=wires.height),
+            end=self.point(row, end, z=wires.height),
+            radius=wires.radius,
+        ).fixtures()
 
     def _runs(self, row: int, kept_clear: list[Strip]) -> list[tuple[int, int]]:
         """The unbroken runs of a row's kept positions, each as its first and

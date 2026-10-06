@@ -21,6 +21,7 @@ export type SceneEntityKind =
   | "KEEP_OUT"
   | "RAIL"
   | "PIPE"
+  | "WIRE"
   | "OBSTACLE"
   | "PLANT";
 export type Shape = Plane | Cylinder | Box | Polygon | Axes;
