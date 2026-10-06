@@ -64,10 +64,14 @@ describe("an entity's bounding box", () => {
     expect(max.z).toBeCloseTo(0.02);
   });
 
-  it("is flat for the ground, and spans the axes marker", () => {
-    expect(entityBounds(entity("gh_demo_ground"))).toEqual({
+  it("is flat for the floor and a wall, and spans the axes marker", () => {
+    expect(entityBounds(entity("gh_demo_floor"))).toEqual({
       min: { x: 0, y: expect.closeTo(0), z: 0 },
-      max: { x: 2, y: expect.closeTo(4.8), z: 0 },
+      max: { x: 4, y: expect.closeTo(6.4), z: 0 },
+    });
+    expect(entityBounds(entity("gh_demo_side_wall_right"))).toEqual({
+      min: { x: 0, y: expect.closeTo(0), z: expect.closeTo(0) },
+      max: { x: 4, y: expect.closeTo(0), z: expect.closeTo(4) },
     });
     expect(entityBounds(entity("gh_demo_axes"))).toEqual({
       min: { x: 0, y: 0, z: 0 },

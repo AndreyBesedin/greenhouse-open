@@ -23,11 +23,15 @@ export function SceneView({
   snapshot,
   selectedId = null,
   colouring = null,
+  showBounds = false,
 }: {
   snapshot: SceneSnapshot;
   selectedId?: string | null;
   /** Shades the entities that have the property; the others keep their colour. */
   colouring?: Colouring | null;
+  /** The greenhouse's bounds are a debug aid: they lie on its walls, and are
+   * drawn only when asked for. */
+  showBounds?: boolean;
 }) {
   const { batch, batchColors, capacity, single } = useMemo(() => {
     const cylinders = snapshot.entities.filter((entity) => entity.shape.shape === "cylinder");
@@ -37,10 +41,12 @@ export function SceneView({
       batchColors: batched.map((entity) => shownColor(entity, colouring)),
       capacity: cylinders.length,
       single: snapshot.entities.filter(
-        (entity) => entity.shape.shape !== "cylinder" || entity.entity_id === selectedId,
+        (entity) =>
+          (entity.shape.shape !== "cylinder" || entity.entity_id === selectedId) &&
+          (showBounds || entity.kind !== "GREENHOUSE_BOUNDS"),
       ),
     };
-  }, [snapshot, selectedId, colouring]);
+  }, [snapshot, selectedId, colouring, showBounds]);
 
   return (
     <>

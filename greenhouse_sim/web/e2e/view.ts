@@ -42,8 +42,12 @@ export async function onScreen(
 const SKY_MARGIN_PX = 30;
 const SKY_OFFSET_PX = 160;
 
-export async function clickAt(page: Page, point: Point3): Promise<void> {
-  const target = await onScreen(page, point);
+export async function clickAt(
+  page: Page,
+  point: Point3,
+  preset: PresetName = DEFAULT_PRESET,
+): Promise<void> {
+  const target = await onScreen(page, point, preset);
   await page.mouse.click(target.x, target.y);
 }
 
@@ -59,10 +63,15 @@ export async function clickSky(page: Page): Promise<void> {
 /** Clicks a world point until the inspector shows `entityId`: a view that has
  * only just received its scene may not have drawn it yet, and a click then
  * passes through where the entity will be. */
-export async function selectAt(page: Page, point: Point3, entityId: string): Promise<void> {
+export async function selectAt(
+  page: Page,
+  point: Point3,
+  entityId: string,
+  preset: PresetName = DEFAULT_PRESET,
+): Promise<void> {
   const selected = page.getByTestId("selected-entity");
   await expect(async () => {
-    await clickAt(page, point);
+    await clickAt(page, point, preset);
     await expect(selected).toHaveText(entityId, { timeout: 500 });
   }).toPass();
 }

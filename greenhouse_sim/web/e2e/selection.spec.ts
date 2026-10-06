@@ -7,8 +7,8 @@ import { clickAt, clickSky, onScreen, selectAt } from "./view";
 // it in live scenes, where young plants are shorter.
 const EXAMPLE_PLANT = { x: 0.5, y: 1.6, z: 0.15 };
 const LIVE_PLANT = { x: 0.5, y: 1.6, z: 0.1 };
-// A point on the example scene's ground, clear of the plants.
-const EXAMPLE_GROUND = { x: 1.0, y: 4.0, z: 0 };
+// A point on the example scene's floor, clear of the plants.
+const EXAMPLE_FLOOR = { x: 1.0, y: 4.0, z: 0 };
 // live.spec.ts and controls.spec.ts drive gh_demo and gh_002; this file
 // pauses gh_001, which no other test plays.
 const STILL_SCENARIO = "gh_001";
@@ -17,7 +17,7 @@ test("clicking an entity selects it, and the inspector shows what it is and wher
   page,
 }) => {
   await page.goto("/?scene=example");
-  await expect(page.getByTestId("scene-status")).toContainText("9 entities");
+  await expect(page.getByTestId("scene-status")).toContainText("13 entities");
   const selected = page.getByTestId("selected-entity");
 
   await selectAt(page, EXAMPLE_PLANT, "gh_demo_plant_001");
@@ -31,7 +31,7 @@ test("clicking an entity selects it, and the inspector shows what it is and wher
   await expect(page.getByTestId("debug-label")).toHaveText("gh_demo_plant_001");
 
   // A drag orbits the camera and leaves the selection alone.
-  const start = await onScreen(page, EXAMPLE_GROUND);
+  const start = await onScreen(page, EXAMPLE_FLOOR);
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
   await page.mouse.move(start.x + 120, start.y + 40, { steps: 8 });
@@ -39,8 +39,8 @@ test("clicking an entity selects it, and the inspector shows what it is and wher
   await expect(selected).toHaveText("gh_demo_plant_001");
 
   await page.getByRole("button", { name: "Isometric" }).click();
-  await clickAt(page, EXAMPLE_GROUND);
-  await expect(selected).toHaveText("gh_demo_ground");
+  await clickAt(page, EXAMPLE_FLOOR);
+  await expect(selected).toHaveText("gh_demo_floor");
 
   // Clicking the sky selects nothing.
   await clickSky(page);

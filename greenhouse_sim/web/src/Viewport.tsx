@@ -42,6 +42,7 @@ export function Viewport({
   selectedId = null,
   colouring = null,
   overlays = [],
+  showBounds = false,
   onSample,
   onPointer,
   onSelect,
@@ -51,6 +52,7 @@ export function Viewport({
   selectedId?: string | null;
   colouring?: Colouring | null;
   overlays?: readonly OverlayPrimitive[];
+  showBounds?: boolean;
   onSample: (sample: ViewSample) => void;
   onPointer: (point: Point3 | null) => void;
   /** A click picked an entity, or nothing (null). Drags orbit and pick nothing. */
@@ -92,7 +94,12 @@ export function Viewport({
               </mesh>
             </>
           ) : (
-            <SceneView snapshot={snapshot} selectedId={selectedId} colouring={colouring} />
+            <SceneView
+              snapshot={snapshot}
+              selectedId={selectedId}
+              colouring={colouring}
+              showBounds={showBounds}
+            />
           )}
           {/* An undrawn ground plane that reports where the pointer meets the ground. */}
           <mesh

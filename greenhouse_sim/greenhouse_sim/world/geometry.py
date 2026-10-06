@@ -13,6 +13,7 @@ Shapes are described by their dimensions in their own frame, which a
 a viewer whose axes differ converts once, at the root of its scene.
 """
 
+import math
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, PositiveFloat
@@ -36,6 +37,27 @@ class Quaternion(BaseModel):
     y: float = 0.0
     z: float = 0.0
 
+    @classmethod
+    def about(cls, axis: Vector3, angle: float) -> Quaternion:
+        """A turn by `angle` radians about the unit vector `axis`, counter-clockwise
+        when the axis points at the viewer."""
+        half = angle / 2
+        return cls(
+            w=math.cos(half),
+            x=axis.x * math.sin(half),
+            y=axis.y * math.sin(half),
+            z=axis.z * math.sin(half),
+        )
+
+    def after(self, first: Quaternion) -> Quaternion:
+        """The rotation that turns by `first`, then by this one."""
+        return Quaternion(
+            w=self.w * first.w - self.x * first.x - self.y * first.y - self.z * first.z,
+            x=self.w * first.x + self.x * first.w + self.y * first.z - self.z * first.y,
+            y=self.w * first.y - self.x * first.z + self.y * first.w + self.z * first.x,
+            z=self.w * first.z + self.x * first.y - self.y * first.x + self.z * first.w,
+        )
+
     def rotate(self, vector: Vector3) -> Vector3:
         """`vector`, turned by this rotation."""
         # v' = v + w t + q x t, with t = 2 (q x v), for the unit quaternion (w, q).
@@ -56,6 +78,12 @@ class Transform(BaseModel):
 
     position: Vector3
     rotation: Quaternion = Quaternion()
+
+    def after(self, inner: Transform) -> Transform:
+        """Places a frame given within this one: `inner`, then this transform."""
+        return Transform(
+            position=self.apply(inner.position), rotation=self.rotation.after(inner.rotation)
+        )
 
     def apply(self, point: Vector3) -> Vector3:
         """Where a point given in the shape's own frame lies in the world."""

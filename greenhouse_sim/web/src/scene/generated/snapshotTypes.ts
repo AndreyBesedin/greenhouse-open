@@ -1,7 +1,7 @@
 // Generated from greenhouse_sim/scene/snapshot.schema.json by `npm run generate`.
 // Do not edit: change the simulator's types and regenerate.
 
-export type SceneEntityKind = "GROUND" | "AXES" | "GREENHOUSE_BOUNDS" | "PLANT";
+export type SceneEntityKind = "GROUND" | "AXES" | "GREENHOUSE_BOUNDS" | "FLOOR" | "WALL" | "PLANT";
 export type Shape = Plane | Cylinder | Box | Axes;
 
 /**

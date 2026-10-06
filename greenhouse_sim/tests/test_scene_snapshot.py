@@ -61,13 +61,16 @@ def test_a_scene_survives_a_json_round_trip() -> None:
     assert SceneSnapshot.model_validate_json(snapshot.model_dump_json()) == snapshot
 
 
-def test_a_scene_holds_the_ground_the_axes_and_every_plant() -> None:
+def test_a_scene_holds_the_greenhouse_the_axes_and_every_plant() -> None:
     world = _world()
     snapshot = scene_snapshot(world, CONFIG)
     kinds = [entity.kind for entity in snapshot.entities]
 
-    assert kinds.count(SceneEntityKind.GROUND) == 1
+    assert kinds.count(SceneEntityKind.FLOOR) == 1
+    assert kinds.count(SceneEntityKind.WALL) == 4
+    assert kinds.count(SceneEntityKind.GREENHOUSE_BOUNDS) == 1
     assert kinds.count(SceneEntityKind.AXES) == 1
+    assert SceneEntityKind.GROUND not in kinds
     assert list(_plants(snapshot)) == [plant.plant_id for plant in world.plants]
     assert len({entity.entity_id for entity in snapshot.entities}) == len(snapshot.entities)
     assert (snapshot.greenhouse_id, snapshot.simulated_day) == ("gh_001", 8)
@@ -85,13 +88,13 @@ def test_a_plant_is_as_tall_as_its_visible_stem_in_metres() -> None:
         assert heights[plant.plant_id] == pytest.approx(visible_cm / 100)
 
 
-def test_plants_stand_on_the_ground_in_rows_along_x() -> None:
-    """z is up and the ground is z = 0. Plants of one scenario row share y and
+def test_plants_stand_on_the_floor_in_rows_along_x() -> None:
+    """z is up and the floor is z = 0. Plants of one scenario row share y and
     step along +x; the next row starts further along +y."""
     snapshot = scene_snapshot(_world(), CONFIG)
     positions = [(x, y, z) for x, y, z, _ in _plants(snapshot).values()]
-    ground = next(e for e in snapshot.entities if e.kind == SceneEntityKind.GROUND)
-    assert isinstance(ground.shape, Plane)
+    floor = next(e for e in snapshot.entities if e.kind == SceneEntityKind.FLOOR)
+    assert isinstance(floor.shape, Plane)
 
     first_row, second_row = positions[: CONFIG.columns], positions[CONFIG.columns :]
     assert all(z == 0.0 for _, _, z in positions)
@@ -100,7 +103,7 @@ def test_plants_stand_on_the_ground_in_rows_along_x() -> None:
         [PLANT_PITCH_M * (i + 1) for i in range(CONFIG.columns)]
     )
     assert second_row[0][1] == pytest.approx(first_row[0][1] + ROW_SPACING_M)
-    assert all(0 < x < ground.shape.size_x and 0 < y < ground.shape.size_y for x, y, _ in positions)
+    assert all(0 < x < floor.shape.size_x and 0 < y < floor.shape.size_y for x, y, _ in positions)
 
 
 def test_a_fully_lowered_plant_has_zero_height() -> None:
@@ -180,3 +183,21 @@ def test_the_bounds_follow_a_greenhouse_placed_elsewhere_in_the_world() -> None:
     assert bounds.transform.rotation == turned
     assert bounds.transform.position.x == pytest.approx(10.0 - 2.0)
     assert bounds.transform.position.y == pytest.approx(4.0)
+
+
+def test_the_floor_and_walls_are_the_envelopes_surfaces_in_the_world() -> None:
+    placed = CONFIG.model_copy(
+        update={
+            "envelope": CONFIG.envelope.model_copy(
+                update={"origin": Transform(position=Vector3(x=5.0, y=-2.0, z=0.0))}
+            )
+        }
+    )
+    entities = {entity.entity_id: entity for entity in scene_snapshot(_world(), placed).entities}
+
+    for surface in placed.envelope.surfaces_in_world():
+        entity = entities[f"gh_001_{surface.surface_id}"]
+        assert (entity.transform, entity.shape) == (surface.transform, surface.shape)
+    assert entities["gh_001_floor"].kind == SceneEntityKind.FLOOR
+    assert entities["gh_001_side_wall_right"].kind == SceneEntityKind.WALL
+    assert entities["gh_001_side_wall_right"].label == "side wall right"
