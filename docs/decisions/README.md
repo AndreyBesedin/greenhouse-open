@@ -37,6 +37,7 @@ changes course is a new record that supersedes the old one.
 | [0023](0023-plants-vary-through-a-shared-vigour-and-keep-their-draws.md) | Plants vary through a shared vigour, and keep what they drew | Accepted |
 | [0024](0024-plants-take-their-environment-a-day-at-a-time.md) | Plants take their environment a day at a time, and it only holds growth back | Accepted |
 | [0025](0025-shared-vocabulary-in-a-domain-package-and-a-generic-plant.md) | Shared vocabulary lives in a domain package, and a crop builds on a generic plant | Accepted |
+| [0026](0026-environment-fields-are-cell-centred-grids-of-packed-floats.md) | Environment fields are cell-centred grids, published as packed floats | Accepted |
 
 ## Template
 

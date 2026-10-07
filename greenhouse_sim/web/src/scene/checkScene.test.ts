@@ -2,11 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  generatedSources,
-  SCHEMA_MODULE_FILE,
-  TYPES_FILE,
-} from "../../scripts/generateSceneSources";
+import { generatedSources, SCENE_CONTRACT } from "../../scripts/generateContractSources";
 import { checkScene } from "./checkScene";
 import { SUPPORTED_SCHEMA_VERSION } from "./schemaVersion";
 
@@ -18,10 +14,10 @@ function example(): { entities: Record<string, unknown>[]; [key: string]: unknow
 
 describe("the viewer's side of the scene contract", () => {
   it("is generated from the schema the simulator publishes, and up to date", async () => {
-    const sources = await generatedSources();
+    const sources = await generatedSources(SCENE_CONTRACT);
 
-    expect(readFileSync(TYPES_FILE, "utf8")).toBe(sources.types);
-    expect(readFileSync(SCHEMA_MODULE_FILE, "utf8")).toBe(sources.schema);
+    expect(readFileSync(SCENE_CONTRACT.typesFile, "utf8")).toBe(sources.types);
+    expect(readFileSync(SCENE_CONTRACT.schemaModuleFile, "utf8")).toBe(sources.schema);
   });
 });
 

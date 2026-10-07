@@ -57,6 +57,14 @@ roof are see-through glass: a click picks the nearest solid thing along it,
 such as a plant or the floor, and picks the glass only where nothing solid
 lies behind. A scenario with several layouts offers them in the scenarios table: choosing
 one shows the scenario with it, and the address keeps it (`&layout=benches`).
+
+A scenario's air field, one of the environment fields the simulator publishes
+for it (`greenhouse_sim/fields/`), can be drawn over its scene: "Air field"
+chooses it, and the address keeps it (`?scenario=gh_001&field=shear`). The
+viewer checks it against the field schema the simulator publishes
+(`npm run generate` writes the viewer's side of both contracts), and draws its
+air velocity as an arrow at every cell, as long and as warm in colour as the
+air there is fast.
 The inspector says what the selected entity is in words, and names its
 dimensions. On a scenario's view, a slider per door and vent sets how far
 it stands open: the viewer asks the simulator for the scene with it so

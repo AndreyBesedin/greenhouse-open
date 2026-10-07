@@ -9,6 +9,9 @@ import { sceneDimensionOverlays } from "./debug/dimensions";
 import { ALL_OVERLAYS, type OverlayToggles, selectionOverlays } from "./debug/overlays";
 import { ScalarLegend } from "./debug/ScalarLegend";
 import { colouringBy, scalarProperties } from "./debug/scalar";
+import { FieldArrows } from "./fields/FieldArrows";
+import { FieldControls } from "./fields/FieldControls";
+import { type FieldState, loadField } from "./fields/source";
 import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
@@ -45,6 +48,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [scenarios, setScenarios] = useState<ScenariosState>({ status: "loading" });
   const [source, setSource] = useState<SceneSource>(() => sourceFromSearch(location.search));
   const [scene, setScene] = useState<SceneState>({ status: "none" });
+  const [field, setField] = useState<FieldState>({ status: "none" });
   const [presetRequest, setPresetRequest] = useState<PresetRequest | null>(null);
   const [sample, setSample] = useState<ViewSample | null>(null);
   const [pointer, setPointer] = useState<Point3 | null>(null);
@@ -118,6 +122,37 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       current = false;
     };
   }, [source]);
+
+  // The scenario's field, drawn over its scene, loaded whenever another is
+  // chosen; the last one stays on show until the next arrives.
+  const fieldScenario = source.kind === "scenario" ? source.scenarioId : null;
+  const fieldName = source.kind === "scenario" ? (source.field ?? null) : null;
+  useEffect(() => {
+    if (fieldScenario === null || fieldName === null) {
+      setField({ status: "none" });
+      return;
+    }
+    let current = true;
+    setField((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
+    void loadField(fieldScenario, fieldName).then((state) => {
+      if (current) {
+        setField(state);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [fieldScenario, fieldName]);
+
+  function chooseField(name: string | null): void {
+    if (source.kind !== "scenario") {
+      return;
+    }
+    const { field: _, ...rest } = source;
+    const next: SceneSource = name === null ? rest : { ...rest, field: name };
+    history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
+    setSource(next);
+  }
 
   function setOpenings(openings: Record<string, number>): void {
     if (source.kind !== "scenario") {
@@ -230,7 +265,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         onSample={setSample}
         onPointer={setPointer}
         onSelect={setSelectedId}
-      />
+      >
+        {field.status === "loaded" && <FieldArrows field={field.field} />}
+      </Viewport>
       <div className="viewer-panels">
         <div className="panel-column">
           <InfoPanel
@@ -249,6 +286,14 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 onShowDimensions={setShowDimensions}
                 byCategory={byCategory}
                 onByCategory={setByCategory}
+              />
+            )}
+            {source.kind === "scenario" && (
+              <FieldControls
+                scenarioId={source.scenarioId}
+                chosen={source.field ?? null}
+                state={field}
+                onChoose={chooseField}
               />
             )}
             {snapshot !== null && source.kind === "scenario" && (

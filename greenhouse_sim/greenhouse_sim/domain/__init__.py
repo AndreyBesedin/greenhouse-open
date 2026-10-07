@@ -8,6 +8,7 @@ into another's model for its vocabulary:
     layout     fixtures, their materials and obstructions, and zones
     crop       the simple crop model's fruit and truss stages
     organs     a plant's organs, their stages and their allowed changes
+    air        what the air carries, as environment fields describe it
 
 The domain depends on nothing else in the simulator. A contract's own
 vocabulary stays with its contract: the scene's entity kinds with the scene

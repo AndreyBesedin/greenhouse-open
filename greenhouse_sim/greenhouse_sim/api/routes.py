@@ -22,6 +22,9 @@ check; a route that comes to need one checks it first.
                                           changes its greenhouse's dimensions,
                                           and ?open=roof_vent_1:0.5,door_1:1 how
                                           far its doors and vents stand open
+    GET /api/scenarios/{id}/fields        the names of a scenario's fields
+    GET /api/scenarios/{id}/fields/{name} one of a scenario's environment fields:
+                                          its greenhouse's air, cell by cell
     GET /api/scenarios/{id}/layout        a scenario's layout, as its file holds
                                           it; ?layout=benches another of them
     GET /api/plants/scene                 the plant lab's scene: a row of tomato
@@ -58,7 +61,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from pydantic import BaseModel
 
-from greenhouse_sim.services import plants, scenarios, system
+from greenhouse_sim.services import fields, plants, scenarios, system
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.live import InvalidSpeed, LiveCommand, LiveRun, LiveRuns
 
@@ -106,6 +109,10 @@ def respond(method: str, path: str) -> Response:
             )
         case ["api", "scenarios", scenario_id, "scene"]:
             return _answer(lambda: scenarios.initial_scene(scenario_id, _scene_changes(query)))
+        case ["api", "scenarios", scenario_id, "fields"]:
+            return _answer(lambda: {"fields": list(fields.field_names(scenario_id))})
+        case ["api", "scenarios", scenario_id, "fields", field_name]:
+            return _answer(lambda: fields.field(scenario_id, field_name))
         case ["api", "scenarios", scenario_id, "layout"]:
             name = _last(query, "layout")
             if name is None:

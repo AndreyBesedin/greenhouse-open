@@ -58,6 +58,8 @@ greenhouse_sim/
     actions/       validating and carrying out semantic actions
     scenarios/     ready-made worlds
     evaluation/    scoring against ground truth, its only reader
+    fields/        environment fields: the greenhouse's air, cell by cell,
+                   and the format they are exchanged in
     scene/         the world as a renderable scene for a viewer
     services/      what the simulator does for a client: scenarios, scenes,
                    layouts, live runs and the plant lab, independent of any

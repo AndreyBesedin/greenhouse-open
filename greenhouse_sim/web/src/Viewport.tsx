@@ -1,4 +1,5 @@
 import { Canvas, type ThreeEvent } from "@react-three/fiber";
+import type { ReactNode } from "react";
 import { CameraRig } from "./CameraRig";
 import { CAMERA_FIELD_OF_VIEW_DEG, type CameraPose, type PresetRequest } from "./camera";
 import { Overlays } from "./debug/DebugPrimitives";
@@ -50,6 +51,7 @@ export function Viewport({
   onSample,
   onPointer,
   onSelect,
+  children = null,
 }: {
   snapshot: SceneSnapshot | null;
   presetRequest: PresetRequest | null;
@@ -66,6 +68,9 @@ export function Viewport({
   onPointer: (point: Point3 | null) => void;
   /** A click picked an entity, or nothing (null). Drags orbit and pick nothing. */
   onSelect: (entityId: string | null) => void;
+  /** More to draw in the world's frame, such as an environment field, which
+   * clicks pass through. */
+  children?: ReactNode;
 }) {
   function pick(event: ThreeEvent<MouseEvent>): void {
     // Every hit along the ray reaches this group; the nearest entity decides.
@@ -122,6 +127,7 @@ export function Viewport({
           </mesh>
         </group>
         <Overlays primitives={overlays} />
+        {children}
       </group>
     </Canvas>
   );
