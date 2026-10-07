@@ -1,8 +1,11 @@
 import type { Point3 } from "../world";
 import { type Channel, cellCentre, type EnvironmentField, sample } from "./field";
 
-// Streamlines start at every this many cells' centres along each axis.
+// Streamlines start at every this many cells' centres along each axis, or
+// further apart in a field so big that there would be more than
+// `MAX_SEEDS` of them: tracing them all takes time in proportion.
 export const SEED_EVERY_CELLS = 3;
+export const MAX_SEEDS = 300;
 // Each step is this share of a cell's smallest side.
 const STEP_SHARE_OF_CELL = 0.5;
 // A streamline runs at most this many steps each way from its seed.
@@ -92,9 +95,21 @@ function trace(
   return { points, speeds, closed: false };
 }
 
+/** How many cells apart a field's seeds are: `SEED_EVERY_CELLS`, or further
+ * apart, so that there are at most `MAX_SEEDS`. */
+export function seedSpacing(cells: { x: number; y: number; z: number }): number {
+  let spacing = SEED_EVERY_CELLS;
+  const seeds = (every: number) =>
+    Math.ceil(cells.x / every) * Math.ceil(cells.y / every) * Math.ceil(cells.z / every);
+  while (seeds(spacing) > MAX_SEEDS) {
+    spacing += 1;
+  }
+  return spacing;
+}
+
 /**
- * Streamlines through a vector channel: from seeds at every
- * `SEED_EVERY_CELLS` cells' centres, traced both ways until the air leaves
+ * Streamlines through a vector channel: from seeds at every few cells'
+ * centres (`seedSpacing`), traced both ways until the air leaves
  * the field, stands still, comes back to the seed (closing a loop, which is
  * then traced only once), or `MAX_STEPS` are taken.
  * Each runs from its furthest point upstream to its furthest downstream.
@@ -103,10 +118,11 @@ export function streamlines(field: EnvironmentField, channel: Channel): Streamli
   const { grid } = field;
   const step = STEP_SHARE_OF_CELL * Math.min(grid.cell_size.x, grid.cell_size.y, grid.cell_size.z);
   const lines: Streamline[] = [];
-  const first = Math.floor(SEED_EVERY_CELLS / 2);
-  for (let k = first; k < grid.cells.z; k += SEED_EVERY_CELLS) {
-    for (let j = first; j < grid.cells.y; j += SEED_EVERY_CELLS) {
-      for (let i = first; i < grid.cells.x; i += SEED_EVERY_CELLS) {
+  const every = seedSpacing(grid.cells);
+  const first = Math.floor(every / 2);
+  for (let k = first; k < grid.cells.z; k += every) {
+    for (let j = first; j < grid.cells.y; j += every) {
+      for (let i = first; i < grid.cells.x; i += every) {
         const seed = cellCentre(grid, i, j, k);
         const ahead = trace(field, channel, seed, 1, step);
         // A loop closed downstream needs no tracing back.

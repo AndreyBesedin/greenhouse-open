@@ -4,7 +4,7 @@ import { sliceFrom, sliceText } from "./display";
 import { defaultSlice, quantityScale, sliceQuantities } from "./drawing";
 import type { Channel, EnvironmentField } from "./field";
 import { sliceExtent, sliceSpans, sliceValues } from "./slice";
-import { streamlines } from "./streamlines";
+import { MAX_SEEDS, SEED_EVERY_CELLS, seedSpacing, streamlines } from "./streamlines";
 
 const SIZE = 0.5;
 
@@ -105,6 +105,20 @@ describe("streamlines", () => {
     expect(Math.min(...xs)).toBeLessThan(0.3);
     expect(Math.max(...xs)).toBeGreaterThan(12 * SIZE - 0.3);
     expect(line.speeds.every((speed) => Math.abs(speed - 0.5) < 1e-6)).toBe(true);
+  });
+});
+
+describe("streamlines' seeds", () => {
+  it("start every few cells, and spread out in a field too big for more", () => {
+    // gh_001's old field: every third cell.
+    expect(seedSpacing({ x: 16, y: 20, z: 7 })).toBe(SEED_EVERY_CELLS);
+    // The tomato compartment's, 48 by 32 by 12 cells: every fourth, 288 seeds.
+    expect(seedSpacing({ x: 48, y: 32, z: 12 })).toBe(4);
+    const big = { x: 200, y: 100, z: 20 };
+    const every = seedSpacing(big);
+    expect(
+      Math.ceil(big.x / every) * Math.ceil(big.y / every) * Math.ceil(big.z / every),
+    ).toBeLessThanOrEqual(MAX_SEEDS);
   });
 });
 
