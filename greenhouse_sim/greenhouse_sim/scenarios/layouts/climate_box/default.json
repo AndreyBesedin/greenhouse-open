@@ -1,0 +1,50 @@
+{
+  "$schema": "../../layout.schema.json",
+  "crop_rows": {
+    "origin": {
+      "x": 2.25,
+      "y": 2.4
+    },
+    "heading": 0.0,
+    "rows": 2,
+    "positions_per_row": 16,
+    "plant_pitch": 0.5,
+    "row_spacing": 1.6,
+    "support": {
+      "kind": "crop_gutter",
+      "height": 0.6,
+      "width": 0.3,
+      "depth": 0.12,
+      "overhang": 0.25,
+      "offset": 0.0,
+      "leg_spacing": 2.0,
+      "leg_radius": 0.02,
+      "slab": {
+        "width": 0.2,
+        "height": 0.075,
+        "material": "substrate"
+      }
+    },
+    "wires": {
+      "height": 3.0,
+      "radius": 0.0025
+    }
+  },
+  "placed": [
+    {
+      "fixture_id": "front_path",
+      "primitive": "walkway",
+      "kind": "walkway",
+      "start": {
+        "x": 0.9,
+        "y": 0.3
+      },
+      "end": {
+        "x": 0.9,
+        "y": 6.1
+      },
+      "width": 1.2
+    }
+  ],
+  "zones": []
+}
