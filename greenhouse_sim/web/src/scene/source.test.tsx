@@ -92,6 +92,20 @@ describe("choosing a scene in the address bar", () => {
         cfdBoundaries: true,
       },
     ],
+    [
+      "?scenario=airflow_box&layout=open&field=cfd&compare=uniform&probes=3:3.2:0.75,7:3.2:0.75",
+      {
+        kind: "scenario",
+        scenarioId: "airflow_box",
+        layout: "open",
+        field: "cfd",
+        compare: "uniform",
+        probes: [
+          { x: 3, y: 3.2, z: 0.75 },
+          { x: 7, y: 3.2, z: 0.75 },
+        ],
+      },
+    ],
   ])("%s", (search, source) => {
     expect(sourceFromSearch(search)).toEqual(source);
     expect(searchFor(source)).toBe(search);
