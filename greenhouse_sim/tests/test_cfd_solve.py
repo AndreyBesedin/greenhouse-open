@@ -257,10 +257,10 @@ def test_a_result_is_kept_while_it_is_the_scenarios_solution(tmp_path: Path) -> 
 
     keep(result, tmp_path)
 
-    assert kept_result("gh_001", GH_001, GRID_001, tmp_path) == result
+    assert kept_result("gh_001", GH_001, GRID_001, directory=tmp_path) == result
     faster = GH_001.model_copy(update={"cfd": _with(inlet_speed_m_s=0.6)})
-    assert kept_result("gh_001", faster, GRID_001, tmp_path) is None
-    assert kept_result("gh_demo", scenario("gh_demo"), GRID_001, tmp_path) is None
+    assert kept_result("gh_001", faster, GRID_001, directory=tmp_path) is None
+    assert kept_result("gh_demo", scenario("gh_demo"), GRID_001, directory=tmp_path) is None
 
 
 @pytest.mark.cfd

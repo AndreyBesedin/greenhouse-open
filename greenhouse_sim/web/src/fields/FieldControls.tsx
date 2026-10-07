@@ -4,21 +4,24 @@ import { formatValue } from "../readouts";
 import { FIELD_VIEWS, type FieldView, SLICE_AXES, type Slice, type SliceQuantity } from "./display";
 import { sliceQuantities } from "./drawing";
 import { sliceExtent } from "./slice";
-import type { FieldState } from "./source";
+import { type FieldState, layoutQuery } from "./source";
 
 // The choice of drawing no field.
 const NO_FIELD = "";
 // A slice moves in steps of this many metres.
 const SLICE_STEP_M = 0.05;
 
-/** The fields a scenario offers, and which is its own airflow
- * (`GET /api/scenarios/{id}/fields`), or none if they cannot be read. */
+/** The fields a scenario offers with one of its layouts, and which is its own
+ * airflow (`GET /api/scenarios/{id}/fields`), or none if they cannot be read. */
 export async function loadFieldNames(
   scenarioId: string,
+  layout?: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<{ names: string[]; configured: string | null }> {
   try {
-    const response = await fetchFn(`/api/scenarios/${encodeURIComponent(scenarioId)}/fields`);
+    const response = await fetchFn(
+      `/api/scenarios/${encodeURIComponent(scenarioId)}/fields${layoutQuery(layout)}`,
+    );
     const body: unknown = response.ok ? await response.json() : null;
     if (typeof body !== "object" || body === null) {
       return { names: [], configured: null };
@@ -38,6 +41,7 @@ export async function loadFieldNames(
  * and what the drawn one holds. */
 export function FieldControls({
   scenarioId,
+  layout,
   chosen,
   state,
   view,
@@ -47,6 +51,8 @@ export function FieldControls({
   onSlice,
 }: {
   scenarioId: string;
+  /** Another of its layouts, if one is shown. */
+  layout?: string | undefined;
   chosen: string | null;
   state: FieldState;
   view: FieldView;
@@ -61,7 +67,7 @@ export function FieldControls({
 
   useEffect(() => {
     let current = true;
-    void loadFieldNames(scenarioId).then((loaded) => {
+    void loadFieldNames(scenarioId, layout).then((loaded) => {
       if (current) {
         setNames(loaded.names);
         setConfigured(loaded.configured);
@@ -70,7 +76,7 @@ export function FieldControls({
     return () => {
       current = false;
     };
-  }, [scenarioId]);
+  }, [scenarioId, layout]);
 
   if (names.length === 0 && chosen === null) {
     return null;

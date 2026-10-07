@@ -29,7 +29,7 @@ on:
 
 jobs:
   openfoam:
-    name: OpenFOAM meshes and solves the reference case
+    name: OpenFOAM meshes and solves the reference cases
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,10 +52,16 @@ jobs:
         working-directory: greenhouse_sim
         run: python -m pytest -m cfd -v -rs
 
-      - name: Solve the reference case, keeping its result
+      # Every case whose result is kept, so that a stale one can be taken
+      # from here.
+      - name: Solve the reference cases, keeping their results
         if: always()
         working-directory: greenhouse_sim
-        run: python -m greenhouse_sim.cfd gh_001 "$RUNNER_TEMP/cases/gh_001" --solve
+        run: |
+          python -m greenhouse_sim.cfd gh_001 "$RUNNER_TEMP/cases/gh_001" --solve
+          python -m greenhouse_sim.cfd airflow_box "$RUNNER_TEMP/cases/airflow_box" --solve
+          python -m greenhouse_sim.cfd airflow_box "$RUNNER_TEMP/cases/airflow_box@open" \
+            --layout open --solve
 
       - name: Keep the solved results and the solver's logs
         if: always()

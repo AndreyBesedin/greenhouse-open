@@ -1,0 +1,86 @@
+"""The airflow QA case: air blown through `airflow_box` from door to door,
+with a block between the doors (its default layout) and without it (`open`).
+
+The block must turn the air around and over it, and leave a slow wake
+behind it, in which the air turns back towards it near the floor. These
+checks run on OpenFOAM's solutions, with `pytest -m cfd`.
+"""
+
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+from greenhouse_sim.cfd.solve import solve
+from greenhouse_sim.domain.air import AirQuantity
+from greenhouse_sim.fields.field import EnvironmentField
+from greenhouse_sim.services import cfd
+from greenhouse_sim.services.scenarios import SceneChanges, changed, scenario
+from greenhouse_sim.world.geometry import Vector3
+
+SCENARIO = "airflow_box"
+OPEN = "open"
+# Where the block stands: 1 m along the house from x = 5 m, 2 m across it
+# about its middle, y = 3.2 m, and 1.5 m high.
+MIDDLE_Y = 3.2
+BLOCK_HALF_HEIGHT = 0.75
+# Points along the house's middle at the block's half height, and beside it
+# and over it.
+UPSTREAM = Vector3(x=3.0, y=MIDDLE_Y, z=BLOCK_HALF_HEIGHT)
+IN_FRONT_HIGH = Vector3(x=4.5, y=MIDDLE_Y, z=1.25)
+BESIDE = Vector3(x=5.5, y=1.0, z=BLOCK_HALF_HEIGHT)
+OVER = Vector3(x=5.5, y=MIDDLE_Y, z=2.25)
+WAKE = Vector3(x=7.0, y=MIDDLE_Y, z=BLOCK_HALF_HEIGHT)
+
+
+def _velocity(field: EnvironmentField, point: Vector3) -> Vector3:
+    value = field.sample(AirQuantity.VELOCITY, point)
+    assert isinstance(value, Vector3)
+    return value
+
+
+def _speed(field: EnvironmentField, point: Vector3) -> float:
+    v = _velocity(field, point)
+    return float(np.linalg.norm([v.x, v.y, v.z]))
+
+
+def check_the_wake(blocked: EnvironmentField, unblocked: EnvironmentField) -> None:
+    """What the block must do to the air, against the same house without it."""
+    # Upstream, the air comes along the house in both.
+    assert _velocity(blocked, UPSTREAM).x > 0.1 and _velocity(unblocked, UPSTREAM).x > 0.1
+    # In front of the block it rises over it; without it, it hardly does.
+    assert _velocity(blocked, IN_FRONT_HIGH).z > 0.05
+    assert _velocity(blocked, IN_FRONT_HIGH).z > _velocity(unblocked, IN_FRONT_HIGH).z + 0.05
+    # It goes faster beside and over the block than through the open house.
+    assert _speed(blocked, BESIDE) > _speed(unblocked, BESIDE)
+    assert _velocity(blocked, OVER).x > _velocity(unblocked, OVER).x
+    # Behind it, a wake: much slower air than without it...
+    assert _speed(blocked, WAKE) < 0.3 * _speed(unblocked, WAKE)
+    # ...turning back towards the block, low down, close behind it.
+    velocity = blocked.channels[AirQuantity.VELOCITY]
+    xs, ys, zs = blocked.grid.centres()
+    behind = (xs > 6.0) & (xs < 8.0)
+    middle = np.abs(ys - MIDDLE_Y) < 1.0
+    low = zs < 1.5
+    lee = velocity[np.ix_(low, middle, behind)][..., 0]
+    assert lee.min() < 0.0
+
+
+@pytest.mark.cfd
+def test_openfoam_solves_air_turning_around_the_block_and_a_wake_behind_it(
+    tmp_path: Path,
+) -> None:
+    config = scenario(SCENARIO)
+    blocked = solve(cfd.geometry(SCENARIO), config.cfd, tmp_path / "default")
+    unblocked = solve(
+        cfd.geometry(SCENARIO, SceneChanges(layout=OPEN)),
+        changed(config, SceneChanges(layout=OPEN)).cfd,
+        tmp_path / OPEN,
+        OPEN,
+    )
+
+    assert blocked.converged and unblocked.converged
+    check_the_wake(
+        EnvironmentField.from_document(blocked.field),
+        EnvironmentField.from_document(unblocked.field),
+    )

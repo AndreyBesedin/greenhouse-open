@@ -31,6 +31,7 @@ from greenhouse_sim.cfd.results import CfdResult, case_key
 from greenhouse_sim.cfd.setup import AIR_DENSITY_KG_M3, CfdSetup
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import VECTOR_COMPONENTS, EnvironmentField, FieldGrid
+from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 
 # What made a solved field, as its source says.
 SOURCE: Final = f"openfoam:simpleFoam {OPENFOAM_VERSION}"
@@ -162,9 +163,12 @@ def iterations_taken(log: str) -> tuple[int, bool]:
     return (int(steps[-1]) if steps else 0), False
 
 
-def solve(geometry: CfdGeometry, setup: CfdSetup, directory: Path) -> CfdResult:
+def solve(
+    geometry: CfdGeometry, setup: CfdSetup, directory: Path, layout: str = DEFAULT_LAYOUT
+) -> CfdResult:
     """Write the case that solves the geometry's air as the setup drives it
-    into `directory`, solve it with OpenFOAM, and return its solution."""
+    into `directory`, solve it with OpenFOAM, and return its solution. The
+    geometry is its scenario's with `layout`."""
     files = solve_case_files(geometry, setup)
     write_case(files, directory)
     run = runner.run(directory, f"./{SOLVE_SCRIPT}")
@@ -177,6 +181,7 @@ def solve(geometry: CfdGeometry, setup: CfdSetup, directory: Path) -> CfdResult:
     return CfdResult(
         key=case_key(files),
         scenario_id=geometry.scenario_id,
+        layout=layout,
         setup=setup,
         iterations=iterations,
         converged=converged,

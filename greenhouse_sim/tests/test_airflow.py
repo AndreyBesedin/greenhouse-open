@@ -145,7 +145,12 @@ def test_a_uniform_breeze_is_the_same_everywhere() -> None:
 def test_each_scenario_names_its_own_airflow_which_it_offers_first() -> None:
     kinds = {scenario_id: config.airflow.kind for scenario_id, config in SCENARIO_REGISTRY.items()}
 
-    assert kinds == {"gh_001": "vortex", "gh_002": "uniform", "gh_demo": "buoyancy"}
+    assert kinds == {
+        "gh_001": "vortex",
+        "gh_002": "uniform",
+        "gh_demo": "buoyancy",
+        "airflow_box": "uniform",
+    }
     for scenario_id, kind in kinds.items():
         assert fields.field_names(scenario_id)[0] == kind
         assert fields.configured(scenario_id) == kind

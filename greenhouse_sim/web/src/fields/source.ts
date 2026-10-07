@@ -7,19 +7,27 @@ export type FieldState =
   | { status: "rejected"; problems: string[] }
   | { status: "loaded"; field: EnvironmentField };
 
-/** Where a scenario's field is published (`GET /api/scenarios/{id}/fields/{name}`). */
-export function fieldUrl(scenarioId: string, name: string): string {
-  return `/api/scenarios/${encodeURIComponent(scenarioId)}/fields/${encodeURIComponent(name)}`;
+/** Where a scenario's field is published (`GET /api/scenarios/{id}/fields/{name}`),
+ * with another of its layouts if one is named: its CFD solution depends on it. */
+export function fieldUrl(scenarioId: string, name: string, layout?: string): string {
+  const base = `/api/scenarios/${encodeURIComponent(scenarioId)}/fields/${encodeURIComponent(name)}`;
+  return `${base}${layoutQuery(layout)}`;
+}
+
+/** `?layout=` for another of a scenario's layouts, or nothing for its own. */
+export function layoutQuery(layout: string | undefined): string {
+  return layout === undefined ? "" : `?layout=${encodeURIComponent(layout)}`;
 }
 
 /** Fetches and checks a scenario's field; every failure becomes a state to show. */
 export async function loadField(
   scenarioId: string,
   name: string,
+  layout?: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<FieldState> {
   try {
-    const response = await fetchFn(fieldUrl(scenarioId, name));
+    const response = await fetchFn(fieldUrl(scenarioId, name, layout));
     if (!response.ok) {
       return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
     }

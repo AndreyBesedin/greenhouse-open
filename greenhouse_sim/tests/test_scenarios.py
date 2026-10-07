@@ -2,7 +2,7 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 
 
 def test_registry_contains_exactly_the_three_configured_greenhouses() -> None:
-    assert set(SCENARIO_REGISTRY) == {"gh_001", "gh_002", "gh_demo"}
+    assert set(SCENARIO_REGISTRY) == {"gh_001", "gh_002", "gh_demo", "airflow_box"}
 
 
 def test_greenhouse_001_is_the_forty_plant_primary_scenario() -> None:

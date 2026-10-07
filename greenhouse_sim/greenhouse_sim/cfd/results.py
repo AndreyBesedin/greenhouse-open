@@ -7,8 +7,9 @@ the OpenFOAM version, changes the key. So a kept result is used only while
 it is still the solution of the scenario as it is configured.
 
 Each scenario's result is kept in `results/<scenario id>.json` next to this
-module, where `python -m greenhouse_sim.cfd <scenario> <dir> --solve` puts
-it. Solving needs OpenFOAM; reading a kept result does not.
+module, and with another of its layouts in `results/<scenario id>@<layout>.json`,
+where `python -m greenhouse_sim.cfd <scenario> <dir> --solve [--layout ...]`
+puts it. Solving needs OpenFOAM; reading a kept result does not.
 """
 
 import dataclasses
@@ -26,6 +27,7 @@ from greenhouse_sim.cfd.setup import CfdSetup
 from greenhouse_sim.domain.air import VECTOR_QUANTITIES
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument, FieldGrid
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.world.geometry import Vector3
 
 RESULTS_DIR: Final = Path(__file__).parent / "results"
@@ -39,6 +41,8 @@ class CfdResult(BaseModel):
     # The hash of the case solved (`case_key`).
     key: str
     scenario_id: str
+    # The scenario's layout it was solved with.
+    layout: str = DEFAULT_LAYOUT
     setup: CfdSetup
     openfoam: str = OPENFOAM_VERSION
     # How many iterations it took, and whether its residuals fell below the
@@ -70,26 +74,35 @@ def scenario_key(scenario_id: str, config: ScenarioConfig, grid: FieldGrid) -> s
         return None
 
 
-def result_path(scenario_id: str, directory: Path = RESULTS_DIR) -> Path:
-    return directory / f"{scenario_id}.json"
+def result_path(
+    scenario_id: str, layout: str = DEFAULT_LAYOUT, directory: Path = RESULTS_DIR
+) -> Path:
+    name = scenario_id if layout == DEFAULT_LAYOUT else f"{scenario_id}@{layout}"
+    return directory / f"{name}.json"
 
 
 def kept_result(
-    scenario_id: str, config: ScenarioConfig, grid: FieldGrid, directory: Path = RESULTS_DIR
+    scenario_id: str,
+    config: ScenarioConfig,
+    grid: FieldGrid,
+    layout: str = DEFAULT_LAYOUT,
+    directory: Path = RESULTS_DIR,
 ) -> CfdResult | None:
-    """A scenario's kept result, if it is the solution of the scenario as it
+    """A scenario's kept result with one of its layouts, `config` being the
+    scenario with that layout, if it is the solution of the scenario as it
     is configured now."""
-    path = result_path(scenario_id, directory)
+    path = result_path(scenario_id, layout, directory)
     if not path.exists():
         return None
     result = CfdResult.model_validate_json(path.read_text())
     key = scenario_key(scenario_id, config, grid)
-    return result if result.key == key else None
+    return result if result.key == key and result.layout == layout else None
 
 
 def keep(result: CfdResult, directory: Path = RESULTS_DIR) -> Path:
-    """Keep a result as its scenario's, in place of any before it."""
-    path = result_path(result.scenario_id, directory)
+    """Keep a result as its scenario's with its layout, in place of any
+    before it."""
+    path = result_path(result.scenario_id, result.layout, directory)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(result.model_dump_json(indent=1) + "\n")
     return path
