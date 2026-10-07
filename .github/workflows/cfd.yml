@@ -59,6 +59,8 @@ jobs:
         working-directory: greenhouse_sim
         run: |
           python -m greenhouse_sim.cfd gh_001 "$RUNNER_TEMP/cases/gh_001" --solve
+          python -m greenhouse_sim.cfd tomato_compartment \
+            "$RUNNER_TEMP/cases/tomato_compartment" --solve
           python -m greenhouse_sim.cfd airflow_box "$RUNNER_TEMP/cases/airflow_box" --solve
           python -m greenhouse_sim.cfd airflow_box "$RUNNER_TEMP/cases/airflow_box@open" \
             --layout open --solve
