@@ -103,7 +103,7 @@ adds a visible or measurable result.
 | [P01](p01-greenhouse-envelope.md) | Greenhouse envelope and world geometry | Done |
 | [P02](p02-greenhouse-layout.md) | Static greenhouse fixtures and layout | Done |
 | [P03](p03-tomato-development.md) | Stochastic tomato development and procedural plant geometry | Done |
-| [P04](p04-environment-fields.md) | Environmental fields and airflow foundation | In progress |
+| [P04](p04-environment-fields.md) | Environmental fields and airflow foundation | Done |
 | P05 | Climate actuators: fans, heaters, dehumidification and vents | Planned |
 | P06 | Virtual sensors and the observation layer | Planned |
 | P07 | External weather and greenhouse boundary coupling | Planned |

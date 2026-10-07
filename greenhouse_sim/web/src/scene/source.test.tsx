@@ -8,7 +8,7 @@ import { SNAPSHOT_SCHEMA } from "./generated/snapshotSchema";
 import type { SceneSnapshot } from "./generated/snapshotTypes";
 import { placement } from "./placement";
 import { RENDERERS } from "./renderers";
-import { loadScene, type SceneSource, searchFor, sourceFromSearch } from "./source";
+import { loadScene, type SceneSource, searchFor, sourceFromSearch, withItsAir } from "./source";
 
 const EXAMPLE_TEXT = readFileSync(
   new URL("../../public/scenes/example.json", import.meta.url),
@@ -109,6 +109,24 @@ describe("choosing a scene in the address bar", () => {
   ])("%s", (search, source) => {
     expect(sourceFromSearch(search)).toEqual(source);
     expect(searchFor(source)).toBe(search);
+  });
+});
+
+describe("choosing another source", () => {
+  it("keeps the air's drawing, probes and comparison for another layout of the same scenario", () => {
+    const shown = sourceFromSearch(
+      "?scenario=airflow_box&field=cfd&fieldView=streamlines&compare=uniform&probes=7:3.2:0.75&cfd=boundaries",
+    );
+    const open = sourceFromSearch("?scenario=airflow_box&layout=open");
+
+    expect(searchFor(withItsAir(shown, open))).toBe(
+      "?scenario=airflow_box&layout=open&field=cfd&fieldView=streamlines&compare=uniform&probes=7:3.2:0.75&cfd=boundaries",
+    );
+    expect(withItsAir(shown, sourceFromSearch("?scenario=gh_001"))).toEqual({
+      kind: "scenario",
+      scenarioId: "gh_001",
+    });
+    expect(withItsAir(sourceFromSearch("?plants=lab"), open)).toEqual(open);
   });
 });
 

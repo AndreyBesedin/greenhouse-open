@@ -1,0 +1,797 @@
+{
+  "schema_version": 13,
+  "greenhouse_id": "airflow_box",
+  "simulated_day": 0,
+  "entities": [
+    {
+      "entity_id": "airflow_box_floor",
+      "kind": "FLOOR",
+      "transform": {
+        "position": {
+          "x": 6.0,
+          "y": 3.2,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 12.0,
+        "size_y": 6.4
+      },
+      "color": {
+        "r": 0.42,
+        "g": 0.33,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "floor",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_side_wall_right",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 6.0,
+          "y": 0.0,
+          "z": 1.5
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.707107,
+          "z": 0.707107
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 12.0,
+        "size_y": 3.0
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "material": null,
+      "label": "side wall right",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_side_wall_left",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 6.0,
+          "y": 6.4,
+          "z": 1.5
+        },
+        "rotation": {
+          "w": 0.707107,
+          "x": 0.707107,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 12.0,
+        "size_y": 3.0
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "material": null,
+      "label": "side wall left",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_end_wall_front",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 0.5,
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        }
+      },
+      "shape": {
+        "shape": "polygon",
+        "points": [
+          {
+            "x": 0.0,
+            "y": 0.0
+          },
+          {
+            "x": 6.4,
+            "y": 0.0
+          },
+          {
+            "x": 6.4,
+            "y": 3.0
+          },
+          {
+            "x": 3.2,
+            "y": 3.65
+          },
+          {
+            "x": 0.0,
+            "y": 3.0
+          }
+        ]
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "material": null,
+      "label": "end wall front",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_end_wall_back",
+      "kind": "WALL",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 6.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": -0.5,
+          "x": -0.5,
+          "y": 0.5,
+          "z": 0.5
+        }
+      },
+      "shape": {
+        "shape": "polygon",
+        "points": [
+          {
+            "x": 0.0,
+            "y": 0.0
+          },
+          {
+            "x": 6.4,
+            "y": 0.0
+          },
+          {
+            "x": 6.4,
+            "y": 3.0
+          },
+          {
+            "x": 3.2,
+            "y": 3.65
+          },
+          {
+            "x": 0.0,
+            "y": 3.0
+          }
+        ]
+      },
+      "color": {
+        "r": 0.74,
+        "g": 0.86,
+        "b": 0.92
+      },
+      "material": null,
+      "label": "end wall back",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_roof_1_right",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 6.0,
+          "y": 1.6,
+          "z": 3.325
+        },
+        "rotation": {
+          "w": 0.0,
+          "x": 0.0,
+          "y": 0.994984,
+          "z": 0.100032
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 12.0,
+        "size_y": 3.265348
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "material": null,
+      "label": "roof 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_roof_1_left",
+      "kind": "ROOF",
+      "transform": {
+        "position": {
+          "x": 6.0,
+          "y": 4.8,
+          "z": 3.325
+        },
+        "rotation": {
+          "w": 0.100032,
+          "x": 0.994984,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 12.0,
+        "size_y": 3.265348
+      },
+      "color": {
+        "r": 0.7,
+        "g": 0.83,
+        "b": 0.9
+      },
+      "material": null,
+      "label": "roof 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_door_front",
+      "kind": "DOOR",
+      "transform": {
+        "position": {
+          "x": -0.02,
+          "y": 5.2,
+          "z": 1.1
+        },
+        "rotation": {
+          "w": 0.5,
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 2.0,
+        "size_y": 2.2
+      },
+      "color": {
+        "r": 0.45,
+        "g": 0.5,
+        "b": 0.56
+      },
+      "material": null,
+      "label": "door front",
+      "properties": {
+        "opening_id": "door_front",
+        "opening_kind": "door",
+        "on_surface": "end_wall_front",
+        "open_fraction": 1.0,
+        "aperture_m2": 4.4
+      }
+    },
+    {
+      "entity_id": "airflow_box_door_back",
+      "kind": "DOOR",
+      "transform": {
+        "position": {
+          "x": 12.02,
+          "y": 1.2,
+          "z": 1.1
+        },
+        "rotation": {
+          "w": -0.5,
+          "x": -0.5,
+          "y": 0.5,
+          "z": 0.5
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 2.0,
+        "size_y": 2.2
+      },
+      "color": {
+        "r": 0.45,
+        "g": 0.5,
+        "b": 0.56
+      },
+      "material": null,
+      "label": "door back",
+      "properties": {
+        "opening_id": "door_back",
+        "opening_kind": "door",
+        "on_surface": "end_wall_back",
+        "open_fraction": 1.0,
+        "aperture_m2": 4.4
+      }
+    },
+    {
+      "entity_id": "airflow_box_gutter_0",
+      "kind": "GUTTER",
+      "transform": {
+        "position": {
+          "x": 6.0,
+          "y": 0.0,
+          "z": 2.85
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 12.0,
+        "size_y": 0.2,
+        "size_z": 0.15
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.57,
+        "b": 0.6
+      },
+      "material": "aluminium",
+      "label": "gutter 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_gutter_1",
+      "kind": "GUTTER",
+      "transform": {
+        "position": {
+          "x": 6.0,
+          "y": 6.4,
+          "z": 2.85
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 12.0,
+        "size_y": 0.2,
+        "size_z": 0.15
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.57,
+        "b": 0.6
+      },
+      "material": "aluminium",
+      "label": "gutter 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_frame_0_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 0 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_frame_0_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 6.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 0 post 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_frame_0_rafter_1_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.774293,
+          "x": -0.632827,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 3.265348
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 0 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_frame_0_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 6.4,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.774293,
+          "x": 0.632827,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 3.265348
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 0 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_frame_1_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 1 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_frame_1_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 6.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 3.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 1 post 1",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_frame_1_rafter_1_right",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 0.0,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.774293,
+          "x": -0.632827,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 3.265348
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 1 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_frame_1_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 6.4,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.774293,
+          "x": 0.632827,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 3.265348
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 1 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_row_1_position_1",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 11.5,
+          "y": 0.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 1",
+      "properties": {
+        "row": 1,
+        "position_in_row": 1
+      }
+    },
+    {
+      "entity_id": "airflow_box_block",
+      "kind": "OBSTACLE",
+      "transform": {
+        "position": {
+          "x": 5.5,
+          "y": 3.2,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 1.0,
+        "size_y": 2.0,
+        "size_z": 1.5
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "block",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "airflow_box_axes",
+      "kind": "AXES",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "axes",
+        "length": 1.0
+      },
+      "color": {
+        "r": 0.5,
+        "g": 0.5,
+        "b": 0.5
+      },
+      "material": null,
+      "label": "world axes",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_bounds",
+      "kind": "GREENHOUSE_BOUNDS",
+      "transform": {
+        "position": {
+          "x": 6.0,
+          "y": 3.2,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 12.0,
+        "size_y": 6.4,
+        "size_z": 3.65
+      },
+      "color": {
+        "r": 0.62,
+        "g": 0.78,
+        "b": 0.88
+      },
+      "material": null,
+      "label": "greenhouse bounds",
+      "properties": {}
+    },
+    {
+      "entity_id": "airflow_box_plant_001",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 11.5,
+          "y": 0.6,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.2
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "airflow_box_plant_001",
+      "properties": {
+        "planting_position": "row_1_position_1",
+        "age_days": 0,
+        "visible_height_cm": 20.0,
+        "trusses": 0,
+        "fruits_on_plant": 0,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    }
+  ]
+}

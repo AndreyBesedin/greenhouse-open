@@ -1,6 +1,6 @@
 # P04: Environmental fields and airflow foundation
 
-**Status:** in progress. Part of the [simulator roadmap](README.md).
+**Status:** done. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -437,11 +437,67 @@ samples it):
 - enable and disable one obstacle, and check the expected deflection;
 - take screenshots of the vector and slice views.
 
+As implemented, on the airflow QA case, `airflow_box` (P04.6): air blown
+from door to door past a block, solved with OpenFOAM, with the block and
+without it (`&layout=open`).
+
+| QA step | Where |
+| --- | --- |
+| Arrows and streamlines | "Air field" → `cfd`, drawn as arrows or streamlines |
+| Probe points | "Add a probe", or a click in the view while placing them (P04.7) |
+| Prescribed against CFD | "Air field" switches between `uniform` and `cfd`; "Compare with" reads both at every probe |
+| One obstacle, on and off | the scenario's layout, `default` with the block or `open` without it, which keeps the field, its probes and its comparison |
+| Screenshots | `/qa/airflow-box?view=vectors` and `?view=slice`, drawn from the simulator's files (`tests/test_airflow_qa.py --update`) and compared with CI's baselines |
+
+The walkthrough, on 7 October 2026 (`e2e/airflow-box.spec.ts`):
+
+1. **Arrows and streamlines.** The CFD solution, 24 × 13 × 6 cells with air
+   from still to 0.60 m/s, is drawn as arrows and then as streamlines.
+   Streamlines run in at the front door, pass around and over the block,
+   and gather at the back door. Slow eddies turn beside the inlet's jet, in
+   the front corners. The air turning back in the block's lee is too slow
+   and small to show as streamlines; the probes and the slice show it.
+2. **Probes,** upstream of the block, beside it and 1 m behind it, at half
+   its height:
+   - upstream, the air runs at 0.43 m/s, rising a little towards the block;
+   - beside it, at 0.21 m/s, turned 25° outwards;
+   - behind it, at 0.02 m/s, turned back towards the block.
+3. **Prescribed against CFD.** Against the uniform 0.5 m/s breeze, the
+   solution is 0.07 m/s slower upstream and turned 8° upwards. Behind the
+   block it is 0.48 m/s slower and turned back about 130°: a breeze has no
+   wake.
+4. **The block, off and on.** With the `open` layout, the probes stay where
+   they are:
+   - beside where the block stood, the air slows to 0.07 m/s, no longer
+     squeezed past it;
+   - behind it, the air runs on at 0.29 m/s.
+
+   Put back, the wake returns: 0.02 m/s.
+5. **Screenshots.** The vectors view, from beside and above the house,
+   shows the jet from the front door spreading and lifting over the block.
+   The slice view, from above, of the air's speed through the block at
+   0.75 m high, shows:
+   - the inlet's jet splitting around the block;
+   - a still wake behind it, twice the block's length;
+   - the air gathering again towards the back door.
+
+   CI draws and compares both (`e2e/visual/airflow.spec.ts`).
+
 ## Acceptance criteria
 
-- [ ] The browser shows airflow independently of the solver.
-- [ ] The environment field is the stable exchange format.
-- [ ] At least one real CFD case round-trips through an external engine.
-- [ ] OpenFOAM is optional for normal viewer development.
-- [ ] A solver's output can later feed plants and sensors without
-  solver-specific code.
+- [x] **The browser shows airflow independently of the solver.** Arrows,
+  streamlines, slices and probes read any field alike, whether prescribed,
+  synthetic or solved.
+- [x] **The environment field is the stable exchange format.** Every
+  airflow model, prescribed or solved, satisfies the same field contract
+  (decision 0026).
+- [x] **At least one real CFD case round-trips through an external engine.**
+  gh_001 and both layouts of airflow_box are meshed and solved by OpenFOAM
+  and read back as fields. CI solves them again and compares (decision
+  0027).
+- [x] **OpenFOAM is optional for normal viewer development.** Solved results
+  are kept in the repository, keyed by what was solved. Only `pytest -m cfd`,
+  `--mesh` and `--solve` need OpenFOAM, natively or in Docker.
+- [x] **A solver's output can later feed plants and sensors without
+  solver-specific code.** A solution is an `AirflowModel` producing an
+  `EnvironmentField`, sampled by position like any other.

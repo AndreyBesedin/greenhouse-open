@@ -2,9 +2,11 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
+import { QA_AIRFLOW_PATH } from "./qa/airflowViews";
 import { QA_GREENHOUSE_PATH } from "./qa/greenhouseViews";
 import { QA_LAYOUT_PATH } from "./qa/layoutViews";
 import { QA_PLANTS_PATH } from "./qa/plantViews";
+import { QaAirflow } from "./qa/QaAirflow";
 import { QaGreenhouse } from "./qa/QaGreenhouse";
 import { QaLayout } from "./qa/QaLayout";
 import { QaPlants } from "./qa/QaPlants";
@@ -28,6 +30,8 @@ const page =
     <QaLayout search={location.search} />
   ) : path === QA_PLANTS_PATH ? (
     <QaPlants />
+  ) : path === QA_AIRFLOW_PATH ? (
+    <QaAirflow search={location.search} />
   ) : (
     <App />
   );
