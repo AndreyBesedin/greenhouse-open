@@ -1,5 +1,6 @@
-"""Prescribed airflow: every pattern satisfies the same field contract, and
-each has the shape of flow it says it has."""
+"""Airflow models: every one, prescribed or solved, satisfies the same field
+contract, and each prescribed pattern has the shape of flow it says it
+has."""
 
 import math
 
@@ -13,6 +14,8 @@ from greenhouse_sim.airflow.prescribed import (
     UniformAirflow,
     VortexAirflow,
 )
+from greenhouse_sim.cfd.results import CfdAirflow, kept_result
+from greenhouse_sim.cfd.solve import SOURCE as CFD_SOURCE
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldGrid
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
@@ -21,7 +24,21 @@ from greenhouse_sim.world.geometry import Vector3
 
 # A box 8 by 6 by 3 m, in cells of a quarter metre.
 GRID = FieldGrid.over(Vector3(x=0, y=0, z=0), Vector3(x=8, y=6, z=3), 0.25)
-MODELS: dict[str, AirflowModel] = {**PATTERNS}
+
+
+def _solved() -> CfdAirflow:
+    """gh_001's kept CFD solution (see `tests/test_cfd_solve.py`)."""
+    result = kept_result("gh_001", SCENARIO_REGISTRY["gh_001"], fields.grid("gh_001"))
+    assert result is not None, "gh_001's kept CFD result is missing or stale"
+    return CfdAirflow(result)
+
+
+def _model(name: str) -> AirflowModel:
+    return _solved() if name == "cfd" else PATTERNS[name]
+
+
+MODELS = [*PATTERNS, "cfd"]
+SOURCES = {name: f"prescribed:{name}" for name in PATTERNS} | {"cfd": CFD_SOURCE}
 
 
 def _velocity(field: EnvironmentField) -> np.ndarray:
@@ -39,16 +56,19 @@ def _divergence(field: EnvironmentField) -> np.ndarray:
     return divergence
 
 
-@pytest.mark.parametrize("name", list(MODELS))
-def test_every_pattern_satisfies_the_field_contract(name: str) -> None:
-    model = MODELS[name]
+@pytest.mark.parametrize("name", MODELS)
+def test_every_model_satisfies_the_field_contract(name: str) -> None:
+    model = _model(name)
     field = model.field(f"box_{name}", GRID, time_s=12.0)
     again = model.field(f"box_{name}", GRID, time_s=12.0)
 
     assert isinstance(field, EnvironmentField)
     assert field.grid == GRID and field.time_s == 12.0
-    assert field.source == f"prescribed:{name}"
-    assert {AirQuantity.VELOCITY, AirQuantity.TEMPERATURE} <= set(field.channels)
+    assert field.source == SOURCES[name]
+    assert AirQuantity.VELOCITY in field.channels
+    # A prescribed pattern also says how warm the air is; a solve, so far,
+    # is isothermal.
+    assert (AirQuantity.TEMPERATURE in field.channels) == (name in PATTERNS)
     for quantity, values in field.channels.items():
         assert np.isfinite(values).all()
         assert np.array_equal(values, again.channels[quantity])

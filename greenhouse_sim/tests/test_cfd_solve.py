@@ -20,6 +20,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from greenhouse_sim.cfd.geometry import BoundaryCategory, cfd_geometry
 from greenhouse_sim.cfd.openfoam import (
     INITIAL_FIELDS,
     SOLVE_SCRIPT,
@@ -29,6 +30,7 @@ from greenhouse_sim.cfd.openfoam import (
     solve_case_files,
 )
 from greenhouse_sim.cfd.results import (
+    CfdAirflow,
     CfdResult,
     case_key,
     keep,
@@ -46,6 +48,7 @@ from greenhouse_sim.cfd.solve import (
 )
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldGrid
+from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services import cfd, fields
 from greenhouse_sim.services.scenarios import SceneChanges, changed, scenario
@@ -53,6 +56,11 @@ from greenhouse_sim.world.geometry import Vector3
 
 GH_001 = scenario("gh_001")
 GRID_001 = fields.grid("gh_001")
+STALE = (
+    "gh_001's kept CFD result is missing or stale: solve it again with "
+    "`python -m greenhouse_sim.cfd gh_001 cases/gh_001 --solve`, or take gh_001.json "
+    "from the CFD workflow's cfd-results artifact"
+)
 # A box 2 by 1.5 by 1 m in half-metre cells, 4 by 3 by 2, as a solver meshed
 # it with one cell removed.
 SMALL = FieldGrid.over(Vector3(x=0, y=0, z=0), Vector3(x=2, y=1.5, z=1), 0.5)
@@ -266,3 +274,103 @@ def test_openfoam_solves_gh_001_to_a_converged_field_on_its_grid(tmp_path: Path)
     assert set(field.channels) == {AirQuantity.VELOCITY, AirQuantity.PRESSURE}
     speeds = np.linalg.norm(field.channels[AirQuantity.VELOCITY], axis=-1)
     assert 0.3 < speeds.max() < 1.0
+
+
+def _kept_001() -> CfdResult:
+    result = kept_result("gh_001", GH_001, GRID_001)
+    assert result is not None, STALE
+    return result
+
+
+def test_gh_001s_kept_solution_is_its_current_one_and_converged() -> None:
+    result = _kept_001()
+    field = EnvironmentField.from_document(result.field)
+
+    assert result.converged and result.setup == GH_001.cfd
+    assert field.grid == GRID_001 and field.source == SOURCE
+    assert set(field.channels) == {AirQuantity.VELOCITY, AirQuantity.PRESSURE}
+
+
+def test_gh_001s_air_falls_from_its_inlet_vent_and_rises_to_its_outlet_vent() -> None:
+    field = EnvironmentField.from_document(_kept_001().field)
+    velocity = field.channels[AirQuantity.VELOCITY]
+    geometry = cfd_geometry("gh_001", GH_001, GRID_001)
+    (obstacle,) = geometry.of(BoundaryCategory.OBSTACLE)
+
+    def below(name: str) -> Vector3:
+        (vent,) = [b for b in geometry.boundaries if b.name == name]
+        box = vent.box
+        return Vector3(
+            x=(box.minimum.x + box.maximum.x) / 2,
+            y=(box.minimum.y + box.maximum.y) / 2,
+            z=box.minimum.z - GRID_001.cell_size.z / 2,
+        )
+
+    falling = field.sample(AirQuantity.VELOCITY, below("roof_vent_1"))
+    rising = field.sample(AirQuantity.VELOCITY, below("roof_vent_2"))
+    assert isinstance(falling, Vector3) and isinstance(rising, Vector3)
+    # Square to the inlet at its setup's speed, give or take the mesh's
+    # averaging over its cell; out through the outlet.
+    assert -0.6 < falling.z < -0.3
+    assert rising.z > 0.1
+    speeds = np.linalg.norm(velocity, axis=-1)
+    assert speeds.max() < 1.0
+    # Inside the irrigation unit the air does not move.
+    centre = Vector3(
+        x=(obstacle.box.minimum.x + obstacle.box.maximum.x) / 2,
+        y=(obstacle.box.minimum.y + obstacle.box.maximum.y) / 2,
+        z=(obstacle.box.minimum.z + obstacle.box.maximum.z) / 2,
+    )
+    assert field.sample(AirQuantity.VELOCITY, centre) == Vector3(x=0, y=0, z=0)
+
+
+def test_a_kept_solution_is_an_airflow_on_any_grid_at_any_time() -> None:
+    airflow = CfdAirflow(_kept_001())
+    coarse = FieldGrid.over(GRID_001.origin, GRID_001.maximum, 1.0)
+
+    own = airflow.field("gh_001_cfd", GRID_001, time_s=60.0)
+    resampled = airflow.field("coarse", coarse)
+
+    assert own.time_s == 60.0 and own.field_id == "gh_001_cfd"
+    assert resampled.grid == coarse and resampled.source == SOURCE
+    # Each of its cells holds the solution at its centre.
+    xs, ys, zs = coarse.centres()
+    i, j, k = 0, 5, 1
+    centre = Vector3(x=float(xs[i]), y=float(ys[j]), z=float(zs[k]))
+    for quantity, values in resampled.channels.items():
+        assert np.isfinite(values).all()
+        expected = own.sample(quantity, centre)
+        if isinstance(expected, Vector3):
+            assert values[k, j, i].tolist() == pytest.approx(
+                [expected.x, expected.y, expected.z], abs=1e-9
+            )
+        else:
+            assert values[k, j, i] == pytest.approx(expected, abs=1e-9)
+
+
+def test_a_scenario_offers_its_kept_solution_among_its_fields() -> None:
+    _kept_001()
+
+    assert "cfd" in fields.field_names("gh_001")
+    assert fields.field("gh_001", "cfd").source == SOURCE
+    assert "cfd" not in fields.field_names("gh_002")
+    assert all(
+        kept_result(sid, config, fields.grid(sid)) is None or sid == "gh_001"
+        for sid, config in SCENARIO_REGISTRY.items()
+    )
+
+
+@pytest.mark.cfd
+def test_openfoam_solves_gh_001_as_its_kept_solution_says(tmp_path: Path) -> None:
+    kept = _kept_001()
+
+    # Solved beside the kept result, not in its place.
+    solved = solve(cfd.geometry("gh_001"), GH_001.cfd, tmp_path)
+
+    assert solved.converged
+    assert solved.key == kept.key
+    fresh = EnvironmentField.from_document(solved.field)
+    before = EnvironmentField.from_document(kept.field)
+    for quantity, values in fresh.channels.items():
+        scale = float(np.abs(before.channels[quantity]).max())
+        assert np.allclose(values, before.channels[quantity], atol=0.02 * scale), quantity
