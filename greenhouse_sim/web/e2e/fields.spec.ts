@@ -48,3 +48,24 @@ test("a field is drawn as arrows, streamlines or a slice, with a legend to match
   await page.getByRole("button", { name: "The field's own range" }).click();
   await expect(page.getByRole("spinbutton", { name: "Lowest colour" })).toHaveValue("0.06");
 });
+
+test("the prescribed airflow patterns switch at once, the scenario's own first", async ({
+  page,
+}) => {
+  await page.goto("/?scenario=gh_001");
+  const fieldChoice = page.getByRole("combobox", { name: "Air field" });
+  await expect(fieldChoice.locator("option")).toHaveText([
+    "none",
+    "vortex, the scenario's airflow",
+    "uniform",
+    "buoyancy",
+    "shear",
+  ]);
+
+  for (const pattern of ["vortex", "uniform", "buoyancy"]) {
+    await fieldChoice.selectOption(pattern);
+    await expect(page.getByTestId("field-status")).toContainText(
+      `gh_001_${pattern} (prescribed:${pattern}): 16 × 20 × 7 cells`,
+    );
+  }
+});

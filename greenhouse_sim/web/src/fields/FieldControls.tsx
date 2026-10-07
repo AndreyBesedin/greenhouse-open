@@ -11,17 +11,26 @@ const NO_FIELD = "";
 // A slice moves in steps of this many metres.
 const SLICE_STEP_M = 0.05;
 
-/** The fields a scenario offers (`GET /api/scenarios/{id}/fields`), or none
- * if they cannot be read. */
-async function loadFieldNames(scenarioId: string, fetchFn: typeof fetch = fetch) {
+/** The fields a scenario offers, and which is its own airflow
+ * (`GET /api/scenarios/{id}/fields`), or none if they cannot be read. */
+export async function loadFieldNames(
+  scenarioId: string,
+  fetchFn: typeof fetch = fetch,
+): Promise<{ names: string[]; configured: string | null }> {
   try {
     const response = await fetchFn(`/api/scenarios/${encodeURIComponent(scenarioId)}/fields`);
     const body: unknown = response.ok ? await response.json() : null;
-    const names =
-      typeof body === "object" && body !== null && "fields" in body ? body.fields : null;
-    return Array.isArray(names) ? names.filter((name) => typeof name === "string") : [];
+    if (typeof body !== "object" || body === null) {
+      return { names: [], configured: null };
+    }
+    const names = "fields" in body && Array.isArray(body.fields) ? body.fields : [];
+    const configured = "configured" in body ? body.configured : null;
+    return {
+      names: names.filter((name) => typeof name === "string"),
+      configured: typeof configured === "string" ? configured : null,
+    };
   } catch {
-    return [];
+    return { names: [], configured: null };
   }
 }
 
@@ -48,12 +57,14 @@ export function FieldControls({
   onSlice: (slice: Slice) => void;
 }) {
   const [names, setNames] = useState<string[]>([]);
+  const [configured, setConfigured] = useState<string | null>(null);
 
   useEffect(() => {
     let current = true;
     void loadFieldNames(scenarioId).then((loaded) => {
       if (current) {
-        setNames(loaded);
+        setNames(loaded.names);
+        setConfigured(loaded.configured);
       }
     });
     return () => {
@@ -79,7 +90,7 @@ export function FieldControls({
           <option value={NO_FIELD}>none</option>
           {names.map((name) => (
             <option key={name} value={name}>
-              {name}
+              {name === configured ? `${name}, the scenario's airflow` : name}
             </option>
           ))}
         </select>

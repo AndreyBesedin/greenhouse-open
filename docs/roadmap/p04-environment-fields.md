@@ -34,7 +34,7 @@ obstacles realistic, but the first steps don't need them.
 | --- | --- | --- |
 | P04.1 | `feat(fields): define regular 3D vector/scalar field format` | Done |
 | P04.2 | `feat(viewer): add airflow arrows, streamlines and scalar slices` | Done |
-| P04.3 | `feat(airflow): add lightweight prescribed airflow backend` | Planned |
+| P04.3 | `feat(airflow): add lightweight prescribed airflow backend` | Done |
 | P04.4 | `feat(cfd): export greenhouse envelope and obstacles as CFD case geometry` | Planned |
 | P04.5 | `feat(cfd): run a minimal OpenFOAM adapter and import its velocity field` | Planned |
 | P04.6 | `feat(cfd): add an obstacle and wake QA case` | Planned |
@@ -148,6 +148,46 @@ A uniform field, a vertical buoyancy-like gradient, and a simple vortex, chosen
 in a scenario's configuration. Visible result: a dropdown switches between
 the known patterns at once. Tests: every backend satisfies the same field
 contract.
+
+As implemented:
+
+- **The interface:** `greenhouse_sim.airflow.contract.AirflowModel` is
+  anything that produces the air over a grid at a moment, as an environment
+  field.
+- **`airflow.prescribed`:** three patterns, each set by a few numbers:
+  - `UniformAirflow`: one breeze, at one temperature;
+  - `BuoyancyAirflow`: convection, two rolls side by side, rising up the
+    middle and sinking along the side walls, over air warming with height
+    and towards the middle;
+  - `VortexAirflow`: one roll across the house, turning about its length.
+
+  The rolls follow stream functions in the y-z plane, so they are
+  divergence-free and never flow through the walls, floor or roof.
+- **Scenarios:** each names its airflow in its configuration
+  (`ScenarioConfig.airflow`): gh_001 a vortex, gh_demo convection, gh_002 a
+  uniform breeze. A scenario offers every pattern: its own, as configured,
+  first, and the others with their typical numbers. `GET
+  /api/scenarios/{id}/fields` says which is its own.
+- **Viewer:** "Air field" marks the scenario's own airflow, and switches
+  between the patterns at once. Streamlines' and slices' colours are now
+  converted to the linear colours the renderer works in, as the arrows'
+  are, so they match the legend.
+- Tests:
+  - Python:
+    - **every pattern satisfies the field contract:** it covers the grid
+      asked for, at the time asked for, with velocity and temperature,
+      finite, repeatable, and published and read back;
+    - both roll patterns are divergence-free, run along the walls, floor
+      and roof, peak at their configured speed and have no flow along the
+      house;
+    - convection rises up the middle and sinks by the walls, warmer high and
+      in the middle;
+    - the vortex turns one way;
+    - the breeze is the same everywhere;
+    - each scenario's own airflow, offered first.
+  - Viewer: the fields listed with the scenario's own.
+  - Browser: the options in order, and switching between the three
+    patterns.
 
 ### P04.4: CFD case geometry from the envelope and obstacles
 

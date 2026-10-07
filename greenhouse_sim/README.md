@@ -60,6 +60,8 @@ greenhouse_sim/
     evaluation/    scoring against ground truth, its only reader
     fields/        environment fields: the greenhouse's air, cell by cell,
                    and the format they are exchanged in
+    airflow/       airflow models, which produce fields: prescribed
+                   patterns today
     scene/         the world as a renderable scene for a viewer
     services/      what the simulator does for a client: scenarios, scenes,
                    layouts, live runs and the plant lab, independent of any

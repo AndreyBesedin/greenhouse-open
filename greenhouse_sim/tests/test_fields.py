@@ -159,11 +159,14 @@ def test_a_scenario_offers_its_fields_over_its_greenhouses_air() -> None:
     assert max(document.grid.cell_size.x, document.grid.cell_size.y) <= fields.CELL_M
     assert (missing.status, missing.body) == (
         HTTPStatus.NOT_FOUND,
-        {"error": "scenario 'gh_001' has no field 'wind'; it has shear"},
+        {"error": "scenario 'gh_001' has no field 'wind'; it has vortex, uniform, buoyancy, shear"},
     )
     assert nowhere.status == HTTPStatus.NOT_FOUND
     listed = respond("GET", "/api/scenarios/gh_001/fields")
-    assert (listed.status, listed.body) == (HTTPStatus.OK, {"fields": ["shear"]})
+    assert (listed.status, listed.body) == (
+        HTTPStatus.OK,
+        {"fields": ["vortex", "uniform", "buoyancy", "shear"], "configured": "vortex"},
+    )
     assert respond("GET", "/api/scenarios/gh_999/fields").status == HTTPStatus.NOT_FOUND
 
 
