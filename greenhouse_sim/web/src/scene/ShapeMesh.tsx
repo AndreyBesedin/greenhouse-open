@@ -31,6 +31,10 @@ const CYLINDER_SIDES = 24;
 // Enough facets for a fruit to read as round at a plant's distance.
 const SPHERE_WIDTH_SEGMENTS = 16;
 const SPHERE_HEIGHT_SEGMENTS = 12;
+// A leaflet is flat and drawn by the thousand: enough facets for its outline
+// to read as rounded, few enough for a row of plants to draw quickly.
+const ELLIPSOID_WIDTH_SEGMENTS = 12;
+const ELLIPSOID_HEIGHT_SEGMENTS = 6;
 // A quarter turn about x stands Three.js's y-aligned cylinder up along z.
 const STAND_UP: [number, number, number] = [Math.PI / 2, 0, 0];
 // Structural metal: somewhat shiny, without the environment map that full
@@ -68,7 +72,7 @@ export function solidGeometry(shape: Solid): BufferGeometry {
     case "sphere":
       return new SphereGeometry(shape.radius, SPHERE_WIDTH_SEGMENTS, SPHERE_HEIGHT_SEGMENTS);
     case "ellipsoid":
-      return new SphereGeometry(1 / 2, SPHERE_WIDTH_SEGMENTS, SPHERE_HEIGHT_SEGMENTS).scale(
+      return new SphereGeometry(1 / 2, ELLIPSOID_WIDTH_SEGMENTS, ELLIPSOID_HEIGHT_SEGMENTS).scale(
         shape.size_x,
         shape.size_y,
         shape.size_z,

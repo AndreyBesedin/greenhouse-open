@@ -1,13 +1,19 @@
 import type { CameraPose } from "../camera";
 
-// The plant lab opens on its plant, which stands at the world's origin and
-// grows from about 20 cm on day 0 to about one and a half metres by its last
-// day: from the front right, far enough to see it whole on that day.
+// The plant lab opens on its row, which runs along +y from its first plant at
+// the world's origin, its plants growing from about 20 cm on day 0 to about
+// one and a half metres by its last day: from in front and to the left of the
+// first plant, looking along the row, so that the nearest plants, close enough
+// to inspect, stand right of the middle, clear of the info panel, and the row
+// recedes towards it.
 export const PLANT_LAB_POSE: CameraPose = {
-  position: { x: 2.0, y: -2.0, z: 1.2 },
-  target: { x: 0, y: 0, z: 0.75 },
+  position: { x: -1.3, y: -1.7, z: 1.3 },
+  target: { x: 0.6, y: 2.5, z: 0.6 },
 };
 
-// The plant lab's run, from its transplant on day 0 to this day, as the
-// simulator's lab runs it (`services/plants.py`).
+// The plant lab's run, from its transplant on day 0 to this day, the seed it
+// first draws its row from, and the plant whose structure it shows first, as
+// the simulator's lab has them (`services/plants.py`).
 export const PLANT_LAB_LAST_DAY = 60;
+export const PLANT_LAB_SEED = 1;
+export const PLANT_LAB_FIRST_PLANT = "p01";

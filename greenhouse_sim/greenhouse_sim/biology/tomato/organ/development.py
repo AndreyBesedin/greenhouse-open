@@ -10,6 +10,11 @@ is expanding until then, and mature after. Final sizes grow up the stem, from
 the first phytomer's, a share of the full sizes, to the full sizes themselves
 from a set rank up.
 
+A plant develops by its crop's parameters as its traits change them
+(`plant_params`): its own phyllochron and full sizes. Each organ's final size
+also varies around its plant's, drawn from the organ's own generator when it
+appears, so one plant's leaves are not all alike.
+
 Development depends on thermal time alone here, so a plant grown in one step
 or day by day is the same plant. Trusses, flowers and fruits are carried as
 they are, until P03.5 grows them.
@@ -20,6 +25,7 @@ from typing import Annotated, Final
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt
 
+from greenhouse_sim.biology.tomato.organ.seeds import organ_rng
 from greenhouse_sim.biology.tomato.organ.topology import (
     Axis,
     Internode,
@@ -27,6 +33,7 @@ from greenhouse_sim.biology.tomato.organ.topology import (
     LeafStage,
     Phytomer,
     Plant,
+    PlantTraits,
     internode_id,
     leaf_id,
     phytomer_id,
@@ -38,6 +45,8 @@ type Fraction = Annotated[float, Field(gt=0, lt=1)]
 # The smoothstep curve, 3p² - 2p³: flat at both ends, steepest halfway.
 SMOOTHSTEP_SQUARE: Final = 3
 SMOOTHSTEP_CUBE: Final = 2
+# An organ's own variation is held within this many standard deviations.
+ORGAN_LIMIT_SD: Final = 2.5
 
 
 class DevelopmentParams(BaseModel):
@@ -64,6 +73,30 @@ class DevelopmentParams(BaseModel):
     leaf_length_cm: PositiveFloat = 45.0
     first_phytomer_fraction: Fraction = 0.35
     full_size_rank: PositiveInt = 10
+    # Each organ's final size varies around its plant's by this coefficient
+    # of variation; none unless asked.
+    organ_size_cv: Annotated[float, Field(ge=0, lt=1 / ORGAN_LIMIT_SD)] = 0.0
+
+
+def plant_params(params: DevelopmentParams, traits: PlantTraits) -> DevelopmentParams:
+    """The crop's parameters as a plant of these traits develops by them."""
+    return params.model_copy(
+        update={
+            "phyllochron_cd": params.phyllochron_cd * traits.phyllochron_scale,
+            "internode_length_cm": params.internode_length_cm * traits.internode_length_scale,
+            "internode_diameter_mm": params.internode_diameter_mm * traits.stem_diameter_scale,
+            "leaf_length_cm": params.leaf_length_cm * traits.leaf_length_scale,
+        }
+    )
+
+
+def organ_factor(plant: Plant, organ_id: str, process: str, params: DevelopmentParams) -> float:
+    """How far an organ's final size departs from its plant's, as a factor:
+    drawn from the organ's own generator, or 1 if organs do not vary."""
+    if params.organ_size_cv == 0:
+        return 1.0
+    draw = float(organ_rng(plant.seed, plant.plant_id, organ_id, process).standard_normal())
+    return 1 + params.organ_size_cv * min(ORGAN_LIMIT_SD, max(-ORGAN_LIMIT_SD, draw))
 
 
 def daily_thermal_time(mean_temperature_c: float, params: DevelopmentParams) -> float:
@@ -89,18 +122,25 @@ def final_size_fraction(rank: int, params: DevelopmentParams) -> float:
     return params.first_phytomer_fraction + (1 - params.first_phytomer_fraction) * ramp
 
 
-def _new_phytomer(plant_id: str, rank: int, born_tt: float, params: DevelopmentParams) -> Phytomer:
-    """A phytomer as it appears, its organs at their initial sizes."""
+def _new_phytomer(plant: Plant, rank: int, born_tt: float, params: DevelopmentParams) -> Phytomer:
+    """A phytomer as it appears on the plant, which develops by `params`, its
+    organs at their initial sizes."""
+    plant_id = plant.plant_id
+    internode, leaf = internode_id(plant_id, rank), leaf_id(plant_id, rank)
     scale = final_size_fraction(rank, params)
-    internode_length = params.internode_length_cm * scale
-    internode_diameter = params.internode_diameter_mm * scale
-    leaf_length = params.leaf_length_cm * scale
+    internode_length = (
+        params.internode_length_cm * scale * organ_factor(plant, internode, "length", params)
+    )
+    internode_diameter = (
+        params.internode_diameter_mm * scale * organ_factor(plant, internode, "diameter", params)
+    )
+    leaf_length = params.leaf_length_cm * scale * organ_factor(plant, leaf, "length", params)
     return Phytomer(
         phytomer_id=phytomer_id(plant_id, rank),
         rank=rank,
         born_tt=born_tt,
         internode=Internode(
-            internode_id=internode_id(plant_id, rank),
+            internode_id=internode,
             born_tt=born_tt,
             length_cm=internode_length * params.initial_fraction,
             diameter_mm=internode_diameter * params.initial_diameter_fraction,
@@ -108,7 +148,7 @@ def _new_phytomer(plant_id: str, rank: int, born_tt: float, params: DevelopmentP
             final_diameter_mm=internode_diameter,
         ),
         leaf=Leaf(
-            leaf_id=leaf_id(plant_id, rank),
+            leaf_id=leaf,
             born_tt=born_tt,
             length_cm=leaf_length * params.initial_fraction,
             final_length_cm=leaf_length,
@@ -144,31 +184,40 @@ def _grown(phytomer: Phytomer, thermal_time: float, params: DevelopmentParams) -
     )
 
 
-def emerged(plant_id: str, params: DevelopmentParams) -> Plant:
-    """A plant as it emerges: no thermal time yet, and its first phytomer."""
-    return Plant(
+def emerged(
+    plant_id: str,
+    params: DevelopmentParams,
+    seed: int = 0,
+    traits: PlantTraits | None = None,
+) -> Plant:
+    """A plant as it emerges, with these traits (by default a typical
+    plant's) and drawing from this seed: no thermal time yet, and its first
+    phytomer."""
+    bare = Plant(
         plant_id=plant_id,
         born_tt=0.0,
         thermal_time=0.0,
-        stem=Axis(
-            axis_id=stem_id(plant_id),
-            born_tt=0.0,
-            phytomers=(_new_phytomer(plant_id, 1, 0.0, params),),
-        ),
+        stem=Axis(axis_id=stem_id(plant_id), born_tt=0.0),
+        seed=seed,
+        traits=PlantTraits() if traits is None else traits,
     )
+    first = _new_phytomer(bare, 1, 0.0, plant_params(params, bare.traits))
+    return bare.model_copy(update={"stem": bare.stem.model_copy(update={"phytomers": (first,)})})
 
 
 def develop(plant: Plant, thermal_time_cd: float, params: DevelopmentParams) -> Plant:
-    """The plant after this much more thermal time: its organs grown, and a
-    phytomer for every phyllochron that has passed since the youngest
-    appeared, each appearing when its phyllochron is up."""
+    """The plant after this much more thermal time, developing by its crop's
+    `params` as its traits change them: its organs grown, and a phytomer for
+    every phyllochron that has passed since the youngest appeared, each
+    appearing when its phyllochron is up."""
+    own = plant_params(params, plant.traits)
     thermal_time = plant.thermal_time + thermal_time_cd
     phytomers = list(plant.stem.phytomers)
-    born = phytomers[-1].born_tt + params.phyllochron_cd if phytomers else plant.born_tt
+    born = phytomers[-1].born_tt + own.phyllochron_cd if phytomers else plant.born_tt
     while born <= thermal_time:
-        phytomers.append(_new_phytomer(plant.plant_id, len(phytomers) + 1, born, params))
-        born += params.phyllochron_cd
-    grown = tuple(_grown(phytomer, thermal_time, params) for phytomer in phytomers)
+        phytomers.append(_new_phytomer(plant, len(phytomers) + 1, born, own))
+        born += own.phyllochron_cd
+    grown = tuple(_grown(phytomer, thermal_time, own) for phytomer in phytomers)
     return plant.model_copy(
         update={
             "thermal_time": thermal_time,

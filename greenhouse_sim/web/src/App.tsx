@@ -13,8 +13,8 @@ import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
 import { OpeningControls } from "./OpeningControls";
-import { PLANT_LAB_POSE } from "./plants/lab";
-import { PlantDay } from "./plants/PlantDay";
+import { LabControls } from "./plants/LabControls";
+import { PLANT_LAB_FIRST_PLANT, PLANT_LAB_POSE } from "./plants/lab";
 import { PlantStructure } from "./plants/PlantStructure";
 import type { ViewSample } from "./readouts";
 import { loadScenarios, type ScenariosState } from "./scenarios";
@@ -27,7 +27,7 @@ import {
   sourceFromSearch,
 } from "./scene/source";
 import { useLiveScene } from "./scene/useLiveScene";
-import { entityOfOrgan, organOf, selectedEntity } from "./selection";
+import { entityOfOrgan, organOf, plantOf, selectedEntity } from "./selection";
 import { Viewport } from "./Viewport";
 import type { Point3 } from "./world";
 
@@ -114,12 +114,13 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     setSource(next);
   }
 
-  // A selection is kept from one day to the next: its organ is the same organ.
-  function setPlantDay(day: number): void {
+  // A selection is kept from one day to the next, and from one seed to the
+  // next: its organ is the same organ, of the plant in the same place.
+  function setLabRun(change: { day?: number; seed?: number }): void {
     if (source.kind !== "plants") {
       return;
     }
-    const next: SceneSource = { ...source, day };
+    const next: SceneSource = { ...source, ...change };
     history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
     setSource(next);
   }
@@ -216,15 +217,21 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
               />
             )}
             {source.kind === "plants" && (
-              <PlantDay
+              <LabControls
                 day={source.day}
                 shownDay={snapshot === null ? null : snapshot.simulated_day}
-                onDay={setPlantDay}
+                seed={source.seed}
+                onDay={(day) => setLabRun({ day })}
+                onSeed={(seed) => setLabRun({ seed })}
               />
             )}
             {source.kind === "plants" && (
               <PlantStructure
-                day={source.day}
+                plant={{
+                  plantId: plantOf(selected) ?? PLANT_LAB_FIRST_PLANT,
+                  day: source.day,
+                  seed: source.seed,
+                }}
                 selectedOrgan={selected === null ? null : organOf(selected)}
                 onSelect={(organId) => setSelectedId(entityOfOrgan(snapshot, organId))}
               />

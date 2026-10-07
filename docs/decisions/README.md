@@ -34,6 +34,7 @@ changes course is a new record that supersedes the old one.
 | [0020](0020-scenario-layouts-are-declarative-json-files.md) | Scenario layouts are declarative JSON files | Accepted |
 | [0021](0021-routes-are-the-interface-services-hold-the-logic.md) | Routes are the interface; services hold the logic | Accepted |
 | [0022](0022-plant-organs-are-named-by-where-they-sit.md) | Plant organs are named by where they sit, and draw from a seed hierarchy | Accepted |
+| [0023](0023-plants-vary-through-a-shared-vigour-and-keep-their-draws.md) | Plants vary through a shared vigour, and keep what they drew | Accepted |
 
 ## Template
 

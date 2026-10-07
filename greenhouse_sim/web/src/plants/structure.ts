@@ -104,14 +104,23 @@ export function organTree(body: unknown): OrganNode {
   return node(plant, text(plant, "plant_id"), "plant", false, [stemNode]);
 }
 
-/** Asks the plant lab for its plant's structure on a day; any failure
- * becomes `unavailable`. */
+/** Which of the plant lab's plants, on which day of its run, drawn from
+ * which seed. */
+export interface LabPlant {
+  plantId: string;
+  day: number;
+  seed: number;
+}
+
+/** Asks the plant lab for one of its plant's structure; any failure becomes
+ * `unavailable`. */
 export async function loadPlantStructure(
-  day: number,
+  { plantId, day, seed }: LabPlant,
   fetchFn: typeof fetch = fetch,
 ): Promise<StructureState> {
   try {
-    const response = await fetchFn(`${PLANT_LAB_STRUCTURE_URL}?day=${day}`);
+    const query = `day=${day}&seed=${seed}&plant=${encodeURIComponent(plantId)}`;
+    const response = await fetchFn(`${PLANT_LAB_STRUCTURE_URL}?${query}`);
     if (!response.ok) {
       return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
     }

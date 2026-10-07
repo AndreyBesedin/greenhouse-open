@@ -210,7 +210,7 @@ body {
 }
 
 .opening-controls,
-.lab-day {
+.lab-controls {
   display: grid;
   gap: 2px;
   margin: 0 0 8px;
@@ -219,7 +219,7 @@ body {
 }
 
 .opening-control,
-.lab-day-control {
+.lab-control {
   display: grid;
   grid-template-columns: 7em 1fr 7em;
   gap: 6px;
@@ -380,12 +380,12 @@ body {
   }
 
   .opening-control,
-  .lab-day-control {
+  .lab-control {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
   }
 
   .opening-control input,
-  .lab-day-control input {
+  .lab-control input {
     min-width: 0;
     width: 100%;
   }

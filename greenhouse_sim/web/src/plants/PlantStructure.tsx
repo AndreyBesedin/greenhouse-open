@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 
-import { loadPlantStructure, type OrganNode, type StructureState } from "./structure";
+import {
+  type LabPlant,
+  loadPlantStructure,
+  type OrganNode,
+  type StructureState,
+} from "./structure";
 
 function Organ({
   organ,
@@ -40,26 +45,26 @@ function Organ({
   );
 }
 
-/** The plant lab's plant, organ by organ, as a debug tree: every organ with
- * its kind, thermal age and stage. An organ the view draws can be selected
- * from here, as it can by clicking any part of it. */
+/** One of the plant lab's plants, organ by organ, as a debug tree: every
+ * organ with its kind, thermal age and stage. An organ the view draws can be
+ * selected from here, as it can by clicking any part of it. */
 export function PlantStructure({
-  day,
+  plant: { plantId, day, seed },
   selectedOrgan,
   onSelect,
 }: {
-  /** The day of the lab's run whose plant it shows. */
-  day: number;
+  /** The plant it shows, on a day of the lab's run, from a seed. */
+  plant: LabPlant;
   /** The organ the selected entity draws part of. */
   selectedOrgan: string | null;
   onSelect: (organId: string) => void;
 }) {
   const [state, setState] = useState<StructureState>({ status: "loading" });
 
-  // Another day's tree stays on show until this day's arrives.
+  // Another day's or plant's tree stays on show until this one's arrives.
   useEffect(() => {
     let current = true;
-    void loadPlantStructure(day).then((loaded) => {
+    void loadPlantStructure({ plantId, day, seed }).then((loaded) => {
       if (current) {
         setState(loaded);
       }
@@ -67,7 +72,7 @@ export function PlantStructure({
     return () => {
       current = false;
     };
-  }, [day]);
+  }, [plantId, day, seed]);
 
   switch (state.status) {
     case "loading":
@@ -77,7 +82,7 @@ export function PlantStructure({
     case "loaded":
       return (
         <details className="plant-structure" open>
-          <summary>Plant structure</summary>
+          <summary>Plant structure: {plantId}</summary>
           <ul>
             <Organ organ={state.tree} selectedOrgan={selectedOrgan} onSelect={onSelect} />
           </ul>
