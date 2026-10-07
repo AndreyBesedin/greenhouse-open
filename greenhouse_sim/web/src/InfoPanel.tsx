@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { BuildInfo } from "./buildInfo";
-import { PLANT_LAB_SEED } from "./plants/lab";
+import { FIRST_LAB_RUN } from "./plants/lab";
 import { DEFAULT_STRESS_PLANTS } from "./qa/stressScene";
 import { ScenarioList } from "./ScenarioList";
 import { SceneStatus } from "./SceneStatus";
@@ -44,10 +44,7 @@ export function InfoPanel({
         <button type="button" onClick={() => onSource({ kind: "fixtures" })}>
           Fixture gallery
         </button>{" "}
-        <button
-          type="button"
-          onClick={() => onSource({ kind: "plants", day: 0, seed: PLANT_LAB_SEED })}
-        >
+        <button type="button" onClick={() => onSource({ kind: "plants", ...FIRST_LAB_RUN })}>
           Plant lab
         </button>{" "}
         <button

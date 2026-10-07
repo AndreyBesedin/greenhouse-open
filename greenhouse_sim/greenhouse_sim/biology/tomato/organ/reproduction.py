@@ -97,7 +97,12 @@ def _decided(plant: Plant, organ_id: str, process: str, chance: float) -> bool:
 
 
 def _fruit_at(
-    plant: Plant, fruit: Fruit, previous_tt: float, thermal_time: float, params: TrussParams
+    plant: Plant,
+    fruit: Fruit,
+    previous_tt: float,
+    thermal_time: float,
+    params: TrussParams,
+    growth: float,
 ) -> Fruit:
     """The fruit at the plant's thermal time: grown and ripened while it is on
     the plant. One whose moment to abort comes on the way aborts, or not, by
@@ -108,9 +113,9 @@ def _fruit_at(
     if previous_tt < decided_at <= thermal_time and _decided(
         plant, fruit.fruit_id, "abortion", params.fruit_abortion_probability
     ):
-        aborted = grown_fruit(fruit, decided_at, params.fruits)
+        aborted = grown_fruit(fruit, previous_tt, decided_at, params.fruits, growth)
         return aborted.model_copy(update={"stage": FruitStage.ABORTED})
-    return grown_fruit(fruit, thermal_time, params.fruits)
+    return grown_fruit(fruit, previous_tt, thermal_time, params.fruits, growth)
 
 
 def _flower_at(
@@ -120,13 +125,14 @@ def _flower_at(
     previous_tt: float,
     thermal_time: float,
     params: TrussParams,
+    growth: float,
 ) -> Flower:
     """The flower at the plant's thermal time: a bud, open, or once its
     moment has come, set as its fruit or aborted."""
     if flower.stage == FlowerStage.ABORTED:
         return flower
     if flower.stage == FlowerStage.SET and flower.fruit is not None:
-        fruit = _fruit_at(plant, flower.fruit, previous_tt, thermal_time, params)
+        fruit = _fruit_at(plant, flower.fruit, previous_tt, thermal_time, params, growth)
         return flower.model_copy(update={"fruit": fruit})
     opens_at = flower.born_tt + params.anthesis_cd
     decided_at = opens_at + params.set_decision_cd
@@ -144,16 +150,21 @@ def _flower_at(
         params.fruits,
     )
     # A fruit set within this step may already have reached its own moment.
-    fruit = _fruit_at(plant, fruit, decided_at, thermal_time, params)
+    fruit = _fruit_at(plant, fruit, decided_at, thermal_time, params, growth)
     return flower.model_copy(update={"stage": FlowerStage.SET, "fruit": fruit})
 
 
 def grown_truss(
-    plant: Plant, truss: Truss, previous_tt: float, thermal_time: float, params: TrussParams
+    plant: Plant,
+    truss: Truss,
+    previous_tt: float,
+    thermal_time: float,
+    params: TrussParams,
+    growth: float = 1.0,
 ) -> Truss:
     """The truss as the plant's thermal time moves on from `previous_tt`: its
     flowers appeared up to its count, each when its time is up, and each
-    developed."""
+    developed, its fruits making `growth` of their potential growth."""
     flowers = list(truss.flowers)
     while len(flowers) < truss.final_flower_count:
         rank = len(flowers) + 1
@@ -164,6 +175,7 @@ def grown_truss(
             Flower(flower_id=flower_id(plant.plant_id, truss.number, rank), rank=rank, born_tt=born)
         )
     grown = tuple(
-        _flower_at(plant, truss, flower, previous_tt, thermal_time, params) for flower in flowers
+        _flower_at(plant, truss, flower, previous_tt, thermal_time, params, growth)
+        for flower in flowers
     )
     return truss.model_copy(update={"flowers": grown})

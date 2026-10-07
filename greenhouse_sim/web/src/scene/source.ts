@@ -1,4 +1,10 @@
-import { PLANT_LAB_LAST_DAY, PLANT_LAB_SEED } from "../plants/lab";
+import {
+  FIRST_LAB_RUN,
+  type LabRun,
+  labRunQuery,
+  PLANT_LAB_LAST_DAY,
+  PLANT_LAB_SEED,
+} from "../plants/lab";
 import { stressPlants, stressScene } from "../qa/stressScene";
 import { checkScene } from "./checkScene";
 import type { SceneSnapshot } from "./generated/snapshotTypes";
@@ -10,8 +16,8 @@ export type SceneSource =
   /** One fixture of each primitive, side by side, as the simulator draws them. */
   | { kind: "fixtures" }
   /** The plant lab: a row of tomato plants from the organ-level model, on a
-   * day of the lab's run, drawn from a seed. */
-  | { kind: "plants"; day: number; seed: number }
+   * run of the lab. */
+  | ({ kind: "plants" } & LabRun)
   /** A dense field of plants built in the viewer, for measuring the renderer. */
   | { kind: "stress"; plants: number }
   /** A scenario's scene from the simulator, with another of its layouts if
@@ -64,6 +70,8 @@ export function sourceFromSearch(search: string): SceneSource {
       kind: "plants",
       day: labDay(parameters.get("day")),
       seed: labSeed(parameters.get("seed")),
+      environment: parameters.get("environment") || FIRST_LAB_RUN.environment,
+      versus: parameters.get("versus") || null,
     };
   }
   switch (parameters.get("scene")) {
@@ -92,12 +100,16 @@ function labSeed(text: string | null): number {
   return text !== null && Number.isSafeInteger(seed) && seed >= 0 ? seed : PLANT_LAB_SEED;
 }
 
-/** The plant lab's day and seed as a query, leaving out what is as the lab
- * starts. */
-function labQuery(source: { day: number; seed: number }, separator: "?" | "&"): string {
+/** A run of the plant lab as the address bar writes it, leaving out what is
+ * as the lab starts. */
+function labQuery(run: LabRun, separator: "?" | "&"): string {
   const parts = [
-    ...(source.day === 0 ? [] : [`day=${source.day}`]),
-    ...(source.seed === PLANT_LAB_SEED ? [] : [`seed=${source.seed}`]),
+    ...(run.day === FIRST_LAB_RUN.day ? [] : [`day=${run.day}`]),
+    ...(run.seed === FIRST_LAB_RUN.seed ? [] : [`seed=${run.seed}`]),
+    ...(run.environment === FIRST_LAB_RUN.environment
+      ? []
+      : [`environment=${encodeURIComponent(run.environment)}`]),
+    ...(run.versus === null ? [] : [`versus=${encodeURIComponent(run.versus)}`]),
   ];
   return parts.length === 0 ? "" : `${separator}${parts.join("&")}`;
 }
@@ -181,7 +193,7 @@ function sceneUrl(source: SceneSource): string | null {
     case "fixtures":
       return FIXTURE_GALLERY_URL;
     case "plants":
-      return `${PLANT_LAB_SCENE_URL}?day=${source.day}&seed=${source.seed}`;
+      return `${PLANT_LAB_SCENE_URL}?${labRunQuery(source)}`;
     case "scenario":
       return `/api/scenarios/${encodeURIComponent(source.scenarioId)}/scene${changesQuery(source, "?")}`;
   }

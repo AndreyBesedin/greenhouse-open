@@ -4,11 +4,15 @@ A client asks for a plant's structure, organ by organ, and for the scene a
 viewer draws of the lab: its row of plants on a patch of ground, every organ
 an entity that says which organ, and which plant, it is. The lab's plants are
 transplants of one crop, each with traits drawn from the lab's seed, grown by
-the development model at a constant temperature from day 0 to `LAST_DAY`. The
-same seed gives the same row on every run; another seed, another row.
+the development model day by day from day 0 to `LAST_DAY`, in one of the
+lab's environments; with another beside it, every second plant lives in that
+instead, so the two can be compared side by side. The same seed gives the same
+row on every run; another seed, another row.
 """
 
 from typing import Final
+
+from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.biology.tomato.organ.development import (
     DevelopmentParams,
@@ -16,6 +20,7 @@ from greenhouse_sim.biology.tomato.organ.development import (
     emerged,
     grow,
 )
+from greenhouse_sim.biology.tomato.organ.environment import Environment, LocalEnvironment
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.biology.tomato.organ.variation import VariationParams, draw_traits
 from greenhouse_sim.scene.plants import plant_entities
@@ -42,16 +47,40 @@ LAB_SEED: Final = 1
 GROUND_MARGIN_M: Final = 1.5
 GROUND_COLOR: Final = Color(r=0.45, g=0.36, b=0.27)
 # The lab's plants are transplants this far into their development on day 0,
-# kept at this daily mean temperature, and shown up to this day.
+# shown up to this day.
 TRANSPLANT_CD: Final = 230.0
-LAB_TEMPERATURE_C: Final = 21.0
 LAST_DAY: Final = 90
 # The crop: how its plants develop, their organs varying around each plant's
 # sizes, and how its plants vary.
 DEVELOPMENT: Final = DevelopmentParams(organ_size_cv=0.08)
 VARIATION: Final = VariationParams()
+# The environments the lab can keep its plants in, the same every day; the
+# reference one is the conditions under which plants make all their
+# potential growth.
+REFERENCE: Final = "reference"
+ENVIRONMENTS: Final = {
+    REFERENCE: LocalEnvironment(mean_temperature_c=21.0, par_mol_m2_day=25.0, co2_ppm=800.0),
+    "warm_bright": LocalEnvironment(mean_temperature_c=25.0, par_mol_m2_day=32.0, co2_ppm=1000.0),
+    "cool_dim": LocalEnvironment(mean_temperature_c=17.0, par_mol_m2_day=8.0, co2_ppm=400.0),
+    "dry": LocalEnvironment(
+        mean_temperature_c=21.0, par_mol_m2_day=25.0, co2_ppm=800.0, water_status=0.5
+    ),
+}
 
 _ORIGIN: Final = Transform(position=Vector3(x=0.0, y=0.0, z=0.0))
+
+
+class LabRun(BaseModel):
+    """Which run of the lab: the day shown, the seed its row is drawn from,
+    the environment its plants live in and, if `versus` names another, the
+    environment every second plant lives in instead, beside the first."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    day: int = 0
+    seed: int = LAB_SEED
+    environment: str = REFERENCE
+    versus: str | None = None
 
 
 def plant_ids() -> list[str]:
@@ -59,30 +88,63 @@ def plant_ids() -> list[str]:
     return [f"p{place:02d}" for place in range(1, ROW_PLANTS + 1)]
 
 
-def _checked(day: int, seed: int) -> None:
-    if not 0 <= day <= LAST_DAY:
-        raise InvalidRequest(f"the plant lab runs from day 0 to day {LAST_DAY}, not day {day}")
-    if seed < 0:
-        raise InvalidRequest(f"a seed is a whole number from 0, not {seed}")
+def environments() -> dict[str, LocalEnvironment]:
+    """The environments the lab can keep its plants in, by name."""
+    return dict(ENVIRONMENTS)
 
 
-def _grown(plant_id: str, day: int, seed: int) -> Plant:
-    traits = draw_traits(seed, plant_id, VARIATION)
-    transplant = develop(emerged(plant_id, DEVELOPMENT, seed, traits), TRANSPLANT_CD, DEVELOPMENT)
-    return grow(transplant, [LAB_TEMPERATURE_C] * day, DEVELOPMENT)
+class LabEnvironment:
+    """The lab's plants' environment on a run: each plant in its run's
+    environment, or every second one, from the row's second, in `versus`."""
+
+    def __init__(self, run: LabRun) -> None:
+        self._run = run
+
+    def name(self, plant_id: str) -> str:
+        """The name of the environment the plant lives in."""
+        second = plant_ids().index(plant_id) % 2 == 1
+        if second and self._run.versus is not None:
+            return self._run.versus
+        return self._run.environment
+
+    def local(self, plant_id: str, day: int) -> LocalEnvironment:
+        return ENVIRONMENTS[self.name(plant_id)]
 
 
-def structure(day: int = 0, seed: int = LAB_SEED, plant_id: str = LAB_PLANT_ID) -> Plant:
-    """One of the lab's plants on this day, organ by organ."""
-    _checked(day, seed)
+def _checked(run: LabRun) -> None:
+    if not 0 <= run.day <= LAST_DAY:
+        raise InvalidRequest(f"the plant lab runs from day 0 to day {LAST_DAY}, not day {run.day}")
+    if run.seed < 0:
+        raise InvalidRequest(f"a seed is a whole number from 0, not {run.seed}")
+    for name in (run.environment, run.versus):
+        if name is not None and name not in ENVIRONMENTS:
+            known = ", ".join(ENVIRONMENTS)
+            raise InvalidRequest(f"the plant lab has no environment {name!r}, only {known}")
+
+
+def _grown(plant_id: str, run: LabRun, environment: Environment) -> Plant:
+    traits = draw_traits(run.seed, plant_id, VARIATION)
+    plant = emerged(plant_id, DEVELOPMENT, run.seed, traits)
+    transplant = develop(plant, TRANSPLANT_CD, DEVELOPMENT)
+    days = (environment.local(plant_id, day) for day in range(run.day))
+    return grow(transplant, days, DEVELOPMENT)
+
+
+def structure(run: LabRun | None = None, plant_id: str = LAB_PLANT_ID) -> Plant:
+    """One of the lab's plants on its run's day, organ by organ."""
+    run = LabRun() if run is None else run
+    _checked(run)
     if plant_id not in plant_ids():
         raise NotFound(f"the plant lab has no plant {plant_id!r}")
-    return _grown(plant_id, day, seed)
+    return _grown(plant_id, run, LabEnvironment(run))
 
 
-def scene(day: int = 0, seed: int = LAB_SEED) -> SceneSnapshot:
-    """The lab's row on this day, on its ground, as a viewer draws it."""
-    _checked(day, seed)
+def scene(run: LabRun | None = None) -> SceneSnapshot:
+    """The lab's row on its run's day, on its ground, as a viewer draws it,
+    each plant's entities naming the environment it lives in."""
+    run = LabRun() if run is None else run
+    _checked(run)
+    environment = LabEnvironment(run)
     row_length = (ROW_PLANTS - 1) * PLANT_SPACING_M
     ground = SceneEntity(
         entity_id=f"{LAB_ID}_ground",
@@ -104,8 +166,11 @@ def scene(day: int = 0, seed: int = LAB_SEED) -> SceneSnapshot:
         entity
         for place, plant_id in enumerate(plant_ids())
         for entity in plant_entities(
-            _grown(plant_id, day, seed),
+            _grown(plant_id, run, environment),
             Transform(position=Vector3(x=0.0, y=place * PLANT_SPACING_M, z=0.0)),
+            {"environment": environment.name(plant_id)},
         )
     ]
-    return SceneSnapshot(greenhouse_id=LAB_ID, simulated_day=day, entities=[ground, *plants, axes])
+    return SceneSnapshot(
+        greenhouse_id=LAB_ID, simulated_day=run.day, entities=[ground, *plants, axes]
+    )

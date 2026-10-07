@@ -7,7 +7,8 @@ typical fruit it starts to ripen. It grows from the diameter it set at to
 its final one along a smooth S-curve over its growth time. It starts to
 ripen, at breaker, a set thermal age after it set, scaled by its offset, and
 ripens from green to red over its ripening time: its ripeness runs from 0 to
-1 and never goes back. Its fresh mass follows from its volume, and its
+1 and never goes back. Each step, a fruit makes the growth its curve gives,
+times the step's growth factor (`environment`). Its fresh mass follows from its volume, and its
 maturity class, from green through breaker, turning, pink and light red to
 red, from its ripeness.
 
@@ -119,10 +120,20 @@ def set_fruit(
     )
 
 
-def grown_fruit(fruit: Fruit, thermal_time: float, params: FruitParams) -> Fruit:
-    """The fruit grown and ripened to the plant's thermal time."""
-    growth = smoothstep((thermal_time - fruit.born_tt) / params.growth_cd)
-    diameter = params.set_diameter_mm + (fruit.final_diameter_mm - params.set_diameter_mm) * growth
+def grown_fruit(
+    fruit: Fruit,
+    previous_tt: float,
+    thermal_time: float,
+    params: FruitParams,
+    growth: float = 1.0,
+) -> Fruit:
+    """The fruit grown and ripened as the plant's thermal time moves on from
+    `previous_tt`, making `growth` of its potential growth (all of it unless
+    said)."""
+    before = smoothstep((max(previous_tt, fruit.born_tt) - fruit.born_tt) / params.growth_cd)
+    after = smoothstep((thermal_time - fruit.born_tt) / params.growth_cd)
+    gain = (fruit.final_diameter_mm - params.set_diameter_mm) * (after - before) * growth
+    diameter = min(fruit.final_diameter_mm, fruit.diameter_mm + gain)
     ripeness = min(1.0, max(0.0, (thermal_time - fruit.breaker_tt) / params.ripening_cd))
     return fruit.model_copy(
         update={

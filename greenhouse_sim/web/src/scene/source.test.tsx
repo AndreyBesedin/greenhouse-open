@@ -25,10 +25,23 @@ describe("choosing a scene in the address bar", () => {
     ["", { kind: "reference" }],
     ["?scene=example", { kind: "example" }],
     ["?scene=fixtures", { kind: "fixtures" }],
-    ["?plants=lab", { kind: "plants", day: 0, seed: 1 }],
-    ["?plants=lab&day=12", { kind: "plants", day: 12, seed: 1 }],
-    ["?plants=lab&day=12&seed=7", { kind: "plants", day: 12, seed: 7 }],
-    ["?plants=lab&seed=0", { kind: "plants", day: 0, seed: 0 }],
+    ["?plants=lab", { kind: "plants", day: 0, seed: 1, environment: "reference", versus: null }],
+    [
+      "?plants=lab&day=12",
+      { kind: "plants", day: 12, seed: 1, environment: "reference", versus: null },
+    ],
+    [
+      "?plants=lab&day=12&seed=7",
+      { kind: "plants", day: 12, seed: 7, environment: "reference", versus: null },
+    ],
+    [
+      "?plants=lab&seed=0",
+      { kind: "plants", day: 0, seed: 0, environment: "reference", versus: null },
+    ],
+    [
+      "?plants=lab&environment=cool_dim&versus=warm_bright",
+      { kind: "plants", day: 0, seed: 1, environment: "cool_dim", versus: "warm_bright" },
+    ],
     ["?scenario=gh_demo", { kind: "scenario", scenarioId: "gh_demo" }],
     [
       "?scenario=gh_001&layout=benches",

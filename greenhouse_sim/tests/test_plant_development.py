@@ -23,6 +23,19 @@ from greenhouse_sim.services import plants
 from greenhouse_sim.services.errors import InvalidRequest
 
 PARAMS = DevelopmentParams()
+REFERENCE = plants.ENVIRONMENTS[plants.REFERENCE]
+
+
+def _rounded(value: object) -> object:
+    """A plant's description with its numbers to nine decimals: growth adds
+    up step by step, so one step and many agree only to rounding."""
+    if isinstance(value, float):
+        return round(value, 9)
+    if isinstance(value, dict):
+        return {key: _rounded(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_rounded(item) for item in value]
+    return value
 
 
 def _transplant() -> Plant:
@@ -74,7 +87,7 @@ def test_the_labs_plant_has_exact_organ_counts_on_reference_days() -> None:
     21 °C, 11 °Cd a day after a transplant of 230 °Cd."""
     counts = {}
     for day in (0, 10, 30, 60):
-        plant = plants.structure(day)
+        plant = plants.structure(plants.LabRun(day=day))
         leaves = [p.leaf for p in plant.stem.phytomers]
         mature = sum(leaf.stage == LeafStage.MATURE for leaf in leaves)
         counts[day] = (plant.thermal_time, len(plant.stem.phytomers), mature)
@@ -88,17 +101,23 @@ def test_the_labs_plant_has_exact_organ_counts_on_reference_days() -> None:
 
 
 def test_a_plant_grown_in_one_step_or_day_by_day_is_the_same_plant() -> None:
-    days = [21.0, 18.0, 25.0, 9.0, 31.0, 22.0] * 5
-    total = sum(daily_thermal_time(temperature, PARAMS) for temperature in days)
+    """In light, CO₂ and water that hold nothing back, whatever the days'
+    temperatures."""
+    temperatures = [21.0, 18.0, 25.0, 9.0, 31.0, 22.0] * 5
+    days = [REFERENCE.model_copy(update={"mean_temperature_c": t}) for t in temperatures]
+    total = sum(daily_thermal_time(temperature, PARAMS) for temperature in temperatures)
+    daily = grow(_transplant(), days, PARAMS)
 
-    assert grow(_transplant(), days, PARAMS) == develop(_transplant(), total, PARAMS)
+    assert _rounded(daily.model_dump(mode="json")) == _rounded(
+        develop(_transplant(), total, PARAMS).model_dump(mode="json")
+    )
 
 
 def test_organs_grow_and_mature_but_never_shrink_or_grow_young() -> None:
     plant = _transplant()
     for _ in range(40):
         before = plant
-        plant = grow(plant, [21.0], PARAMS)
+        plant = grow(plant, [REFERENCE], PARAMS)
         old, new = _leaves(before), _leaves(plant)
         for leaf_id, (length, stage) in old.items():
             assert new[leaf_id][0] >= length
@@ -160,7 +179,10 @@ def test_a_removed_leaf_stays_removed() -> None:
 
 
 def test_an_organ_keeps_its_identity_from_one_day_to_the_next() -> None:
-    earlier, later = plants.structure(10), plants.structure(20)
+    earlier, later = (
+        plants.structure(plants.LabRun(day=10)),
+        plants.structure(plants.LabRun(day=20)),
+    )
     born_earlier = {p.phytomer_id: p.born_tt for p in earlier.stem.phytomers}
     born_later = {p.phytomer_id: p.born_tt for p in later.stem.phytomers}
 
@@ -176,7 +198,7 @@ def test_the_lab_shows_its_plant_on_any_day_of_its_run() -> None:
     assert scene.status == structure.status == first_day.status == HTTPStatus.OK
     assert SceneSnapshot.model_validate(scene.body).simulated_day == 12
     assert SceneSnapshot.model_validate(first_day.body).simulated_day == 0
-    assert Plant.model_validate(structure.body) == plants.structure(12)
+    assert Plant.model_validate(structure.body) == plants.structure(plants.LabRun(day=12))
 
 
 @pytest.mark.parametrize(
@@ -193,4 +215,4 @@ def test_a_day_outside_the_labs_run_is_refused(query: str, reason: str) -> None:
         assert response.status == HTTPStatus.BAD_REQUEST
         assert response.body == {"error": reason}
     with pytest.raises(InvalidRequest):
-        plants.structure(plants.LAST_DAY + 1)
+        plants.structure(plants.LabRun(day=plants.LAST_DAY + 1))

@@ -8,6 +8,7 @@ inspect any organ and rebuild the plant's structure from what it draws. A
 fruit's colour is its ripeness's: green, through yellow and orange, to red.
 """
 
+from collections.abc import Mapping
 from typing import Final
 
 from greenhouse_sim.biology.tomato.organ.fruit import maturity
@@ -67,10 +68,14 @@ _KINDS: Final = {
 }
 
 
-def plant_entities(plant: Plant, at: Transform) -> list[SceneEntity]:
-    """Every shape of the plant as an entity, the plant standing at `at`."""
+def plant_entities(
+    plant: Plant, at: Transform, context: Mapping[str, str] | None = None
+) -> list[SceneEntity]:
+    """Every shape of the plant as an entity, the plant standing at `at`, each
+    also carrying `context`'s properties, such as the plant's environment."""
     organs = {organ_id: (kind, parent, organ) for kind, organ_id, parent, organ in plant.organs()}
-    return [_entity(plant, shape, at, organs) for shape in organ_geometry(plant)]
+    shared = {} if context is None else dict(context)
+    return [_entity(plant, shape, at, organs, shared) for shape in organ_geometry(plant)]
 
 
 def _entity(
@@ -78,6 +83,7 @@ def _entity(
     shape: OrganShape,
     at: Transform,
     organs: dict[str, tuple[OrganKind, str | None, Organ]],
+    context: dict[str, str],
 ) -> SceneEntity:
     kind, color = _KINDS[shape.kind]
     if shape.part in {"petiole", "rachis"}:
@@ -90,6 +96,7 @@ def _entity(
         "plant_id": plant.plant_id,
         "parent_id": parent or "",
         "thermal_age_cd": round(plant.thermal_age(organ), 1),
+        **context,
     }
     stage = getattr(organ, "stage", None)
     if stage is not None:

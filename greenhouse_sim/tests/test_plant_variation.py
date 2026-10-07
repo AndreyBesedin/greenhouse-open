@@ -43,19 +43,24 @@ def _grown(traits: PlantTraits, thermal_time: float = 400.0, seed: int = 0) -> P
 
 
 def test_the_same_seed_gives_the_same_plants_and_geometry() -> None:
-    first, again = plants.structure(20, 7, "p04"), plants.structure(20, 7, "p04")
+    first, again = (
+        plants.structure(plants.LabRun(day=20, seed=7), "p04"),
+        plants.structure(plants.LabRun(day=20, seed=7), "p04"),
+    )
 
     assert first == again
     assert organ_geometry(first) == organ_geometry(again)
-    assert plants.scene(5, 7) == plants.scene(5, 7)
+    assert plants.scene(plants.LabRun(day=5, seed=7)) == plants.scene(plants.LabRun(day=5, seed=7))
 
 
 def test_another_seed_or_another_plant_differs() -> None:
-    plant = plants.structure(20, 7, "p04")
+    plant = plants.structure(plants.LabRun(day=20, seed=7), "p04")
 
-    assert plants.structure(20, 8, "p04").traits != plant.traits
-    assert plants.structure(20, 7, "p05").traits != plant.traits
-    assert organ_geometry(plants.structure(20, 8, "p04")) != organ_geometry(plant)
+    assert plants.structure(plants.LabRun(day=20, seed=8), "p04").traits != plant.traits
+    assert plants.structure(plants.LabRun(day=20, seed=7), "p05").traits != plant.traits
+    assert organ_geometry(plants.structure(plants.LabRun(day=20, seed=8), "p04")) != organ_geometry(
+        plant
+    )
 
 
 def test_a_plants_draws_do_not_depend_on_which_other_plants_exist() -> None:
@@ -147,7 +152,9 @@ def test_a_plants_traits_turn_it_and_change_how_it_holds_its_leaves() -> None:
 
 def test_the_labs_row_varies_and_keeps_every_rule() -> None:
     for day in (0, 30, 60):
-        row = [plants.structure(day, plants.LAB_SEED, plant_id) for plant_id in plants.plant_ids()]
+        row = [
+            plants.structure(plants.LabRun(day=day), plant_id) for plant_id in plants.plant_ids()
+        ]
         assert all(topology_problems(plant) == [] for plant in row)
     heights = [sum(p.internode.length_cm for p in plant.stem.phytomers) for plant in row]
     counts = {len(plant.stem.phytomers) for plant in row}
@@ -168,7 +175,7 @@ def test_the_labs_scene_stands_its_row_along_y() -> None:
     assert sorted(bases) == plants.plant_ids()
     for place, plant_id in enumerate(plants.plant_ids()):
         assert bases[plant_id] == Vector3(x=0.0, y=place * plants.PLANT_SPACING_M, z=0.0)
-    assert scene == plants.scene(0, 7)
+    assert scene == plants.scene(plants.LabRun(day=0, seed=7))
 
 
 def test_the_lab_answers_for_any_seed_and_plant_and_refuses_what_it_cannot() -> None:
@@ -178,7 +185,9 @@ def test_the_lab_answers_for_any_seed_and_plant_and_refuses_what_it_cannot() -> 
     wordy = respond("GET", "/api/plants/scene?seed=lucky")
 
     assert structure.status == HTTPStatus.OK
-    assert Plant.model_validate(structure.body) == plants.structure(3, 7, "p12")
+    assert Plant.model_validate(structure.body) == plants.structure(
+        plants.LabRun(day=3, seed=7), "p12"
+    )
     assert (unknown.status, unknown.body) == (
         HTTPStatus.NOT_FOUND,
         {"error": "the plant lab has no plant 'p21'"},

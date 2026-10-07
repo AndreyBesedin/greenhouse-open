@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { FIRST_LAB_RUN } from "./lab";
 import { loadPlantStructure, type OrganNode, organTree } from "./structure";
 
 // A plant of one phytomer with a truss of two flowers, one set as a fruit, as
@@ -118,19 +119,22 @@ describe("a plant's structure", () => {
     );
   });
 
-  it("is loaded from the plant lab by plant, day and seed, and an error becomes unavailable", async () => {
+  it("is loaded from the plant lab by plant and run, and an error becomes unavailable", async () => {
     const asked: string[] = [];
     const recording: typeof fetch = async (input) => {
       asked.push(String(input));
       return new Response(JSON.stringify(PLANT), { status: 200 });
     };
-    const loaded = await loadPlantStructure({ plantId: "p07", day: 12, seed: 3 }, recording);
+    const run = { day: 12, seed: 3, environment: "cool_dim", versus: "dry" };
+    const loaded = await loadPlantStructure({ plantId: "p07", ...run }, recording);
     const refused = await loadPlantStructure(
-      { plantId: "p01", day: 0, seed: 1 },
+      { plantId: "p01", ...FIRST_LAB_RUN },
       answering(502, { error: "bad gateway" }),
     );
 
-    expect(asked).toEqual(["/api/plants/structure?day=12&seed=3&plant=p07"]);
+    expect(asked).toEqual([
+      "/api/plants/structure?day=12&seed=3&environment=cool_dim&versus=dry&plant=p07",
+    ]);
     expect(loaded.status).toBe("loaded");
     expect(refused).toEqual({ status: "unavailable", reason: "the simulator API answered 502" });
   });
