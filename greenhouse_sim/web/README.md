@@ -62,9 +62,12 @@ A scenario's air field, one of the environment fields the simulator publishes
 for it (`greenhouse_sim/fields/`), can be drawn over its scene: "Air field"
 chooses it, and the address keeps it (`?scenario=gh_001&field=shear`). The
 viewer checks it against the field schema the simulator publishes
-(`npm run generate` writes the viewer's side of both contracts), and draws its
-air velocity as an arrow at every cell, as long and as warm in colour as the
-air there is fast.
+(`npm run generate` writes the viewer's side of both contracts), and draws it
+as arrows at every cell, as long and as warm in colour as the air there is
+fast; as streamlines, traced through it from seeds every few cells; or as a
+slice through it, horizontal or vertical, coloured by any of its scalars or
+the air's speed (`&fieldView=slice&slice=temperature:z:1.75`). A legend says
+what its colours mean, and its lowest and highest colours can be moved.
 The inspector says what the selected entity is in words, and names its
 dimensions. On a scenario's view, a slider per door and vent sets how far
 it stands open: the viewer asks the simulator for the scene with it so

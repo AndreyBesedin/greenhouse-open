@@ -33,7 +33,7 @@ obstacles realistic, but the first steps don't need them.
 | Step | Commit summary | Status |
 | --- | --- | --- |
 | P04.1 | `feat(fields): define regular 3D vector/scalar field format` | Done |
-| P04.2 | `feat(viewer): add airflow arrows, streamlines and scalar slices` | Planned |
+| P04.2 | `feat(viewer): add airflow arrows, streamlines and scalar slices` | Done |
 | P04.3 | `feat(airflow): add lightweight prescribed airflow backend` | Planned |
 | P04.4 | `feat(cfd): export greenhouse envelope and obstacles as CFD case geometry` | Planned |
 | P04.5 | `feat(cfd): run a minimal OpenFOAM adapter and import its velocity field` | Planned |
@@ -104,6 +104,43 @@ A vector-arrow layer, streamline seeding, horizontal and vertical scalar
 slices, and a legend with minimum and maximum controls. Visible result: the
 user switches among arrows, streamlines and a temperature heat-map slice.
 Tests: a known synthetic vortex or laminar field is recognisable.
+
+As implemented:
+
+- **Drawn as:** "Air field" adds a choice of how the field is drawn, kept in
+  the address (`&fieldView=arrows|streamlines|slice`).
+- **Streamlines** (`src/fields/streamlines.ts`):
+  - **Seeds:** at every third cell's centre along each axis.
+  - **Tracing:** both ways from each seed, by fourth-order Runge-Kutta steps
+    of half a cell along the flow's direction. A streamline stops where the
+    air leaves the field or stands still, after 400 steps, or when it
+    returns to its seed, closing a loop, which is then traced only once.
+  - **Drawing:** as screen-space lines 2.5 pixels wide, coloured by speed, in
+    one draw call.
+- **A slice** (`src/fields/slice.ts`):
+  - **Placement:** a plane square to x, y or z, anywhere along it within the
+    field, kept in the address (`&slice=temperature:z:1.75`).
+  - **Colouring:** by any of the field's scalars or by the air's speed,
+    sampled at the corners of the cells across it, and blended between
+    them. It is grey where the field says nothing.
+  - **Default:** the field's first scalar, across its middle height.
+- **A legend** names the quantity the colours show and its unit: air speed
+  for arrows and streamlines, the slice's quantity for a slice. Its lowest
+  and highest colours can be typed in, and given back to the field's own
+  range.
+- Tests:
+  - Viewer:
+    - **a vortex's streamlines are closed circles, level and round to within
+      2%;**
+    - **a breeze's streamlines run straight from one face of the field to the
+      other at its speed;**
+    - a linear field's slice holds its exact values;
+    - slices span the right axes and lie within the field;
+    - the default slice and the quantities' scales;
+    - slices are kept in the address.
+  - Browser: switching between arrows, streamlines and a slice; the default
+    slice and moving it; changing its quantity; and moving the legend's
+    colours and giving them back.
 
 ### P04.3: Lightweight prescribed airflow backend
 

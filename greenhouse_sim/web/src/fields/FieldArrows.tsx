@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { ConeGeometry, CylinderGeometry, type InstancedMesh } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
+import type { ScalarRange } from "../debug/scalar";
 import { threeColor } from "../scene/ShapeMesh";
 import { fieldArrows, MATRIX_SIZE } from "./arrows";
 import type { EnvironmentField } from "./field";
@@ -27,15 +28,16 @@ function unitArrow() {
   return arrow;
 }
 
-/** A field's air velocity as arrows, one at every cell, in one draw call. */
-export function FieldArrows({ field }: { field: EnvironmentField }) {
+/** A field's air velocity as arrows, one at every cell, coloured by speed
+ * over `range`, in one draw call. */
+export function FieldArrows({ field, range }: { field: EnvironmentField; range: ScalarRange }) {
   const mesh = useRef<InstancedMesh>(null);
   const geometry = useMemo(unitArrow, []);
   useEffect(() => () => geometry.dispose(), [geometry]);
   const velocity = field.channels.velocity;
   const arrows = useMemo(
-    () => (velocity === undefined ? null : fieldArrows(field, velocity)),
-    [field, velocity],
+    () => (velocity === undefined ? null : fieldArrows(field, velocity, range)),
+    [field, velocity, range],
   );
   const count = arrows === null ? 0 : arrows.matrices.length / MATRIX_SIZE;
 

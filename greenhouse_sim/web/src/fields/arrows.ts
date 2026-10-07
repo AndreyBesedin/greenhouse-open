@@ -30,8 +30,13 @@ export interface FieldArrowInstances {
  * speed. Each places the unit arrow, which stands on its frame's origin along
  * +z, one long and one wide.
  */
-export function fieldArrows(field: EnvironmentField, channel: Channel): FieldArrowInstances {
+export function fieldArrows(
+  field: EnvironmentField,
+  channel: Channel,
+  colours: ScalarRange = { min: channel.minimum, max: channel.maximum },
+): FieldArrowInstances {
   const { grid } = field;
+  // Lengths always follow the field's own speeds; colours follow `colours`.
   const range = { min: channel.minimum, max: channel.maximum };
   const longest =
     LONGEST_SHARE_OF_CELL * Math.min(grid.cell_size.x, grid.cell_size.y, grid.cell_size.z);
@@ -62,11 +67,11 @@ export function fieldArrows(field: EnvironmentField, channel: Channel): FieldArr
         turn.setFromUnitVectors(UP, direction);
         matrix.compose(position, turn, scale.set(ARROW_WIDTH_M, ARROW_WIDTH_M, length));
         matrices.push(...matrix.toArray());
-        colors.push(scalarColor(speed, range));
+        colors.push(scalarColor(speed, colours));
       }
     }
   }
-  return { matrices: Float32Array.from(matrices), colors, range };
+  return { matrices: Float32Array.from(matrices), colors, range: colours };
 }
 
 export { MATRIX_SIZE };

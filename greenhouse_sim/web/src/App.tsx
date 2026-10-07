@@ -8,9 +8,15 @@ import { categoriesIn } from "./debug/categories";
 import { sceneDimensionOverlays } from "./debug/dimensions";
 import { ALL_OVERLAYS, type OverlayToggles, selectionOverlays } from "./debug/overlays";
 import { ScalarLegend } from "./debug/ScalarLegend";
+import type { ScalarRange } from "./debug/scalar";
 import { colouringBy, scalarProperties } from "./debug/scalar";
+import type { FieldView, Slice } from "./fields/display";
+import { defaultSlice, quantityScale } from "./fields/drawing";
 import { FieldArrows } from "./fields/FieldArrows";
 import { FieldControls } from "./fields/FieldControls";
+import { FieldLegend } from "./fields/FieldLegend";
+import { FieldSlice } from "./fields/FieldSlice";
+import { FieldStreamlines } from "./fields/FieldStreamlines";
 import { type FieldState, loadField } from "./fields/source";
 import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
@@ -49,6 +55,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [source, setSource] = useState<SceneSource>(() => sourceFromSearch(location.search));
   const [scene, setScene] = useState<SceneState>({ status: "none" });
   const [field, setField] = useState<FieldState>({ status: "none" });
+  // A range the viewer chose for the field's colours, in place of its own.
+  const [fieldRange, setFieldRange] = useState<ScalarRange | null>(null);
   const [presetRequest, setPresetRequest] = useState<PresetRequest | null>(null);
   const [sample, setSample] = useState<ViewSample | null>(null);
   const [pointer, setPointer] = useState<Point3 | null>(null);
@@ -144,14 +152,40 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     };
   }, [fieldScenario, fieldName]);
 
+  function setScenarioSource(next: SceneSource): void {
+    history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
+    setSource(next);
+  }
+
   function chooseField(name: string | null): void {
     if (source.kind !== "scenario") {
       return;
     }
-    const { field: _, ...rest } = source;
-    const next: SceneSource = name === null ? rest : { ...rest, field: name };
-    history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
-    setSource(next);
+    const { field: _, fieldView: __, slice: ___, ...rest } = source;
+    setFieldRange(null);
+    setScenarioSource(name === null ? rest : { ...rest, field: name });
+  }
+
+  function chooseFieldView(view: FieldView): void {
+    if (source.kind !== "scenario" || field.status !== "loaded") {
+      return;
+    }
+    const { slice, ...rest } = source;
+    setFieldRange(null);
+    setScenarioSource(
+      view === "slice"
+        ? { ...rest, fieldView: view, slice: slice ?? defaultSlice(field.field) }
+        : { ...rest, fieldView: view },
+    );
+  }
+
+  function chooseSlice(slice: Slice): void {
+    if (source.kind === "scenario") {
+      if (source.slice?.quantity !== slice.quantity) {
+        setFieldRange(null);
+      }
+      setScenarioSource({ ...source, slice });
+    }
   }
 
   function setOpenings(openings: Record<string, number>): void {
@@ -242,6 +276,29 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     () => (snapshot === null || colourBy === null ? null : colouringBy(snapshot, colourBy)),
     [snapshot, colourBy],
   );
+  // How the field is drawn, and the scale its colours run over: air speed for
+  // arrows and streamlines, the slice's quantity for a slice.
+  const fieldView: FieldView =
+    source.kind === "scenario" ? (source.fieldView ?? "arrows") : "arrows";
+  const loadedField = field.status === "loaded" ? field.field : null;
+  const fieldSlice =
+    source.kind === "scenario" && fieldView === "slice" && loadedField !== null
+      ? (source.slice ?? defaultSlice(loadedField))
+      : null;
+  const fieldScale =
+    loadedField === null
+      ? null
+      : quantityScale(loadedField, fieldSlice === null ? "speed" : fieldSlice.quantity);
+  const fieldColours = fieldScale === null ? null : (fieldRange ?? fieldScale.range);
+  const fieldLayer =
+    loadedField === null || fieldColours === null ? null : fieldView === "streamlines" ? (
+      <FieldStreamlines field={loadedField} range={fieldColours} />
+    ) : fieldSlice !== null ? (
+      <FieldSlice field={loadedField} slice={fieldSlice} range={fieldColours} />
+    ) : (
+      <FieldArrows field={loadedField} range={fieldColours} />
+    );
+
   const liveStatus: LiveStatus | null =
     source.kind === "live"
       ? { connection: live.connection, frame: live.frame, problem: commandProblem }
@@ -266,7 +323,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         onPointer={setPointer}
         onSelect={setSelectedId}
       >
-        {field.status === "loaded" && <FieldArrows field={field.field} />}
+        {fieldLayer}
       </Viewport>
       <div className="viewer-panels">
         <div className="panel-column">
@@ -293,7 +350,11 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 scenarioId={source.scenarioId}
                 chosen={source.field ?? null}
                 state={field}
+                view={fieldView}
+                slice={fieldSlice}
                 onChoose={chooseField}
+                onView={chooseFieldView}
+                onSlice={chooseSlice}
               />
             )}
             {snapshot !== null && source.kind === "scenario" && (
@@ -357,6 +418,15 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
               <CategoryLegend categories={categoriesIn(snapshot)} />
             )}
             {colouring && <ScalarLegend colouring={colouring} />}
+            {fieldScale !== null && (
+              <FieldLegend
+                title={fieldScale.title}
+                unit={fieldScale.unit}
+                range={fieldColours ?? fieldScale.range}
+                own={fieldScale.range}
+                onRange={setFieldRange}
+              />
+            )}
           </div>
         </div>
       </div>
