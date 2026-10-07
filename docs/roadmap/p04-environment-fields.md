@@ -37,7 +37,7 @@ obstacles realistic, but the first steps don't need them.
 | P04.3 | `feat(airflow): add lightweight prescribed airflow backend` | Done |
 | P04.4 | `feat(cfd): export greenhouse envelope and obstacles as CFD case geometry` | Done |
 | P04.5 | `feat(cfd): run a minimal OpenFOAM adapter and import its velocity field` | Done |
-| P04.6 | `feat(cfd): add an obstacle and wake QA case` | Planned |
+| P04.6 | `feat(cfd): add an obstacle and wake QA case` | Done |
 | P04.7 | `test(airflow): add a field probe and comparison panel` | Planned |
 
 ### P04.1: Regular 3D vector and scalar field format
@@ -341,6 +341,49 @@ One simple block or row obstacle inside, with an inlet and an outlet, and its
 imported solution. Visible result: streamlines visibly deflect around the
 obstacle and show a wake. Tests: qualitative field checks, and numeric probes
 stored at fixed positions.
+
+As implemented:
+
+- **The QA scenario, `airflow_box`** (`scenarios/airflow_box.py`):
+  - **The house:** single-span, 12 m long and 6.4 m wide, with a 2 m by
+    2.2 m door open at each end, face to face.
+  - **The block:** on the floor halfway between the doors, 1 m along the
+    house, 2 m across and 1.5 m high, a fixture that obstructs airflow. Its
+    `open` layout is the same house without it.
+  - **Driving the air:** blown in through the front door at 0.5 m/s, out
+    through the back one. Its prescribed airflow is a uniform 0.5 m/s breeze
+    along the house, to compare with (P04.7).
+  - **Its one plant** stands in a back corner, out of the way.
+- **Kept per layout:** a scenario's CFD results are kept for each of its
+  layouts (`results/<id>@<layout>.json`). A scenario's fields are asked for
+  with its layout (`?layout=open`), which only its CFD solution depends on,
+  and the viewer asks with the layout it shows. The CFD workflow solves both
+  of airflow_box's layouts.
+- **The solutions** (24 × 13 × 6 cells; the block removes 2 × 5 × 3). Both
+  converged in 81 to 86 iterations. With the block, the air:
+  - rises over it in front, at 0.11 m/s against 0.03 m/s without it;
+  - squeezes past beside it, at 0.19 m/s against 0.06 m/s;
+  - leaves a wake behind it, which near the floor runs back towards it, at
+    −0.01 m/s, where the open house's air runs on at 0.29 m/s.
+- **Probes:** the velocity and pressure at six fixed points, for both
+  layouts, are kept in `tests/golden/airflow_box_probes.json`, so a change
+  to the solutions shows as numbers in review. `python
+  tests/test_cfd_wake.py --update` writes them from the kept solutions.
+- **Viewer:** a long scenario identifier now wraps in the scenarios table,
+  rather than pushing its buttons out of the panel.
+- Tests:
+  - Python:
+    - **the kept solutions turn the air around and over the block and leave
+      a wake behind it, against the house without it**: it rises in front,
+      is faster beside and over it, and is less than 30% as fast 1 m
+      behind it, where it turns back towards the block low down;
+    - the probes hold the kept solutions' values;
+    - the scenario offers each layout's solution, still inside the block
+      only with it;
+    - with `pytest -m cfd`, **OpenFOAM's fresh solutions pass the same
+      checks**, and match the probes to 0.01 m/s and 0.005 Pa.
+  - Browser: airflow_box's solution with and without its block, and its
+    fields listed with its own breeze first.
 
 ### P04.7: Field probe and comparison panel
 

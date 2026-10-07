@@ -354,10 +354,11 @@ def test_a_scenario_offers_its_kept_solution_among_its_fields() -> None:
     assert "cfd" in fields.field_names("gh_001")
     assert fields.field("gh_001", "cfd").source == SOURCE
     assert "cfd" not in fields.field_names("gh_002")
-    assert all(
-        kept_result(sid, config, fields.grid(sid)) is None or sid == "gh_001"
+    assert {
+        sid
         for sid, config in SCENARIO_REGISTRY.items()
-    )
+        if kept_result(sid, config, fields.grid(sid)) is not None
+    } == {"gh_001", "airflow_box"}
 
 
 @pytest.mark.cfd

@@ -70,6 +70,10 @@ fast; as streamlines, traced through it from seeds every few cells; or as a
 slice through it, horizontal or vertical, coloured by any of its scalars or
 the air's speed (`&fieldView=slice&slice=temperature:z:1.75`). A legend says
 what its colours mean, and its lowest and highest colours can be moved.
+A scenario's `cfd` field is its air as OpenFOAM solved it, with the layout
+shown: `?scenario=airflow_box&field=cfd&fieldView=streamlines` is the
+airflow QA case, air blown past a block, and `&layout=open` the same house
+without it.
 "CFD boundaries" (`&cfd=boundaries`) draws what a CFD solver is given of the
 scenario's air (`GET /api/scenarios/{id}/cfd/geometry`): its floor, walls
 and ceiling at the eaves lightly tinted, its open doors and vents and the

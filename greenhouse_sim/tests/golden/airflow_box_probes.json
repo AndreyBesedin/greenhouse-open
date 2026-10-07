@@ -1,0 +1,102 @@
+{
+  "default": {
+    "upstream": {
+      "velocity_m_s": [
+        0.4243,
+        0.0,
+        0.0595
+      ],
+      "pressure_pa": 0.2092
+    },
+    "in_front_high": {
+      "velocity_m_s": [
+        0.2673,
+        0.0,
+        0.1052
+      ],
+      "pressure_pa": 0.2624
+    },
+    "beside": {
+      "velocity_m_s": [
+        0.1882,
+        -0.0858,
+        0.0195
+      ],
+      "pressure_pa": 0.1935
+    },
+    "over": {
+      "velocity_m_s": [
+        0.3938,
+        0.0,
+        0.0856
+      ],
+      "pressure_pa": 0.1939
+    },
+    "wake": {
+      "velocity_m_s": [
+        -0.0123,
+        -0.0,
+        0.0147
+      ],
+      "pressure_pa": 0.1859
+    },
+    "far_wake": {
+      "velocity_m_s": [
+        0.1641,
+        -0.0,
+        -0.0199
+      ],
+      "pressure_pa": 0.1799
+    }
+  },
+  "open": {
+    "upstream": {
+      "velocity_m_s": [
+        0.4739,
+        0.0,
+        0.042
+      ],
+      "pressure_pa": 0.1479
+    },
+    "in_front_high": {
+      "velocity_m_s": [
+        0.4763,
+        0.0,
+        0.0322
+      ],
+      "pressure_pa": 0.1527
+    },
+    "beside": {
+      "velocity_m_s": [
+        0.0629,
+        -0.0158,
+        0.007
+      ],
+      "pressure_pa": 0.1566
+    },
+    "over": {
+      "velocity_m_s": [
+        0.2701,
+        0.0,
+        0.0179
+      ],
+      "pressure_pa": 0.1582
+    },
+    "wake": {
+      "velocity_m_s": [
+        0.2864,
+        0.0,
+        0.0105
+      ],
+      "pressure_pa": 0.1589
+    },
+    "far_wake": {
+      "velocity_m_s": [
+        0.2831,
+        -0.0,
+        -0.0123
+      ],
+      "pressure_pa": 0.1499
+    }
+  }
+}
