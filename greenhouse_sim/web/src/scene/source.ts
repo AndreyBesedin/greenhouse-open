@@ -31,6 +31,8 @@ export type SceneSource =
       kind: "scenario";
       scenarioId: string;
       layout?: string;
+      /** One of its environment fields, drawn over its scene. */
+      field?: string;
       envelope?: Readonly<Record<string, number>>;
       openings?: Readonly<Record<string, number>>;
     }
@@ -59,10 +61,12 @@ export function sourceFromSearch(search: string): SceneSource {
     const layout = parameters.get("layout");
     const envelope = pairsFrom(parameters.get("envelope"));
     const openings = pairsFrom(parameters.get("open"));
+    const field = parameters.get("field");
     return {
       kind: "scenario",
       scenarioId,
       ...(layout ? { layout } : {}),
+      ...(field ? { field } : {}),
       ...(envelope === null ? {} : { envelope }),
       ...(openings === null ? {} : { openings }),
     };
@@ -134,7 +138,9 @@ export function searchFor(source: SceneSource): string {
     case "stress":
       return `?scene=stress&plants=${source.plants}`;
     case "scenario":
-      return `?scenario=${encodeURIComponent(source.scenarioId)}${changesQuery(source, "&")}`;
+      return `?scenario=${encodeURIComponent(source.scenarioId)}${changesQuery(source, "&")}${
+        source.field === undefined ? "" : `&field=${encodeURIComponent(source.field)}`
+      }`;
     case "live":
       return `?live=${encodeURIComponent(source.scenarioId)}`;
   }

@@ -209,6 +209,16 @@ body {
   font-size: 13px;
 }
 
+.field-controls {
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+}
+
+.field-controls p {
+  margin: 2px 0 0;
+}
+
 .opening-controls,
 .lab-controls {
   display: grid;
