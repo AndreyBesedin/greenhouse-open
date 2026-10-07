@@ -32,33 +32,31 @@ from typing import Annotated, Final
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt
 
-from greenhouse_sim.biology.tomato.organ.curves import smoothstep
-from greenhouse_sim.biology.tomato.organ.environment import (
+from greenhouse_sim.biology.plant.curves import smoothstep
+from greenhouse_sim.biology.plant.environment import (
     LocalEnvironment,
     ResponseParams,
     growth_factor,
 )
+from greenhouse_sim.biology.plant.organs import (
+    Internode,
+    Leaf,
+    PlantTraits,
+    internode_id,
+    leaf_id,
+    phytomer_id,
+    stem_id,
+)
+from greenhouse_sim.biology.plant.seeds import organ_rng
+from greenhouse_sim.biology.tomato.organ.parameters import TOMATO_RESPONSES
 from greenhouse_sim.biology.tomato.organ.reproduction import (
     TrussParams,
     bears_truss,
     grown_truss,
     new_truss,
 )
-from greenhouse_sim.biology.tomato.organ.seeds import organ_rng
-from greenhouse_sim.biology.tomato.organ.topology import (
-    Axis,
-    Internode,
-    Leaf,
-    LeafStage,
-    Phytomer,
-    Plant,
-    PlantTraits,
-    Truss,
-    internode_id,
-    leaf_id,
-    phytomer_id,
-    stem_id,
-)
+from greenhouse_sim.biology.tomato.organ.topology import Axis, Phytomer, Plant, Truss
+from greenhouse_sim.domain.organs import LeafStage
 
 type Fraction = Annotated[float, Field(gt=0, lt=1)]
 
@@ -96,7 +94,7 @@ class DevelopmentParams(BaseModel):
     # When trusses appear and how their flowers develop.
     trusses: TrussParams = TrussParams()
     # How growth responds to light and CO₂.
-    responses: ResponseParams = ResponseParams()
+    responses: ResponseParams = TOMATO_RESPONSES
 
 
 def plant_params(params: DevelopmentParams, traits: PlantTraits) -> DevelopmentParams:

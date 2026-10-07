@@ -9,6 +9,12 @@ import pytest
 from pydantic import ValidationError
 
 from greenhouse_sim.api.routes import respond
+from greenhouse_sim.biology.plant.organs import PlantTraits
+from greenhouse_sim.biology.plant.variation import (
+    TraitSpread,
+    VariationParams,
+    draw_traits,
+)
 from greenhouse_sim.biology.tomato.organ.development import (
     DevelopmentParams,
     develop,
@@ -16,17 +22,13 @@ from greenhouse_sim.biology.tomato.organ.development import (
     final_size_fraction,
 )
 from greenhouse_sim.biology.tomato.organ.geometry import GOLDEN_ANGLE_RAD, PlantForm, organ_geometry
-from greenhouse_sim.biology.tomato.organ.topology import Plant, PlantTraits
-from greenhouse_sim.biology.tomato.organ.variation import (
-    TraitSpread,
-    VariationParams,
-    draw_traits,
-)
+from greenhouse_sim.biology.tomato.organ.parameters import TOMATO_VARIATION
+from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services import plants
 from greenhouse_sim.world.geometry import Vector3
 
-VARIATION = VariationParams()
+VARIATION = TOMATO_VARIATION
 CROP = DevelopmentParams()
 # Enough plants for their spread to show, few enough for a quick test.
 POPULATION = 400
@@ -102,7 +104,9 @@ def test_traits_follow_vigour_as_their_loadings_say() -> None:
 
 def test_a_spread_that_could_vary_a_trait_to_nothing_is_refused() -> None:
     with pytest.raises(ValidationError, match="leaf_length could vary to nothing"):
-        VariationParams(leaf_length=TraitSpread(cv=0.5))
+        VariationParams.model_validate(
+            {**VARIATION.model_dump(), "leaf_length": TraitSpread(cv=0.5).model_dump()}
+        )
 
 
 def test_a_plants_traits_drive_its_development() -> None:

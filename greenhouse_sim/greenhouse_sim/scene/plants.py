@@ -11,15 +11,11 @@ fruit's colour is its ripeness's: green, through yellow and orange, to red.
 from collections.abc import Mapping
 from typing import Final
 
+from greenhouse_sim.biology.plant.organs import Fruit, Organ
 from greenhouse_sim.biology.tomato.organ.fruit import maturity
 from greenhouse_sim.biology.tomato.organ.geometry import OrganShape, organ_geometry
-from greenhouse_sim.biology.tomato.organ.topology import (
-    FlowerStage,
-    Fruit,
-    Organ,
-    OrganKind,
-    Plant,
-)
+from greenhouse_sim.biology.tomato.organ.topology import Plant
+from greenhouse_sim.domain.organs import FlowerStage, OrganKind
 from greenhouse_sim.scene.snapshot import Color, SceneEntity, SceneEntityKind
 from greenhouse_sim.world.geometry import Transform
 

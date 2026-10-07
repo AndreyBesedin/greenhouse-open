@@ -6,25 +6,26 @@ from http import HTTPStatus
 import pytest
 
 from greenhouse_sim.api.routes import respond
+from greenhouse_sim.biology.plant.environment import (
+    LocalEnvironment,
+    co2_response,
+    growth_factor,
+    light_response,
+)
 from greenhouse_sim.biology.tomato.organ.development import (
     DevelopmentParams,
     develop,
     emerged,
     grow,
 )
-from greenhouse_sim.biology.tomato.organ.environment import (
-    LocalEnvironment,
-    ResponseParams,
-    co2_response,
-    growth_factor,
-    light_response,
-)
-from greenhouse_sim.biology.tomato.organ.topology import FruitStage, Plant
+from greenhouse_sim.biology.tomato.organ.parameters import TOMATO_RESPONSES
+from greenhouse_sim.biology.tomato.organ.topology import Plant
+from greenhouse_sim.domain.organs import FruitStage
 from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services import plants
 
 PARAMS = DevelopmentParams()
-RESPONSES = ResponseParams()
+RESPONSES = TOMATO_RESPONSES
 REFERENCE = plants.ENVIRONMENTS[plants.REFERENCE]
 # Long enough for leaves to finish growing and the first fruits to ripen.
 DAYS = 70

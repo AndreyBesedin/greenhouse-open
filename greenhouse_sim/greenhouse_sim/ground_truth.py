@@ -28,7 +28,8 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
+from greenhouse_sim.domain.crop import FruitStatus
+from greenhouse_sim.world.state import GreenhouseWorld, PlantWorld
 
 
 class PlantTruth(BaseModel):

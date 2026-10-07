@@ -11,8 +11,9 @@ import math
 import pytest
 
 from greenhouse_sim.api.routes import respond
+from greenhouse_sim.domain.envelope import OpeningKind, SurfaceCategory
 from greenhouse_sim.scene.snapshot import SceneEntityKind, SceneSnapshot
-from greenhouse_sim.world.envelope import Envelope, Opening, OpeningKind, SurfaceCategory
+from greenhouse_sim.world.envelope import Envelope, Opening
 from greenhouse_sim.world.envelope_checks import inverted_surfaces, outline, shared_edges
 from greenhouse_sim.world.geometry import Point2
 

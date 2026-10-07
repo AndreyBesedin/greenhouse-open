@@ -22,6 +22,8 @@ import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from greenhouse_sim.domain.envelope import OpeningKind
+from greenhouse_sim.domain.layout import Material, ZoneKind
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scene.snapshot import (
@@ -31,11 +33,10 @@ from greenhouse_sim.scene.snapshot import (
     snapshot_json_schema,
 )
 from greenhouse_sim.services import plants
-from greenhouse_sim.world.envelope import Envelope, Opening, OpeningKind
+from greenhouse_sim.world.envelope import Envelope, Opening
 from greenhouse_sim.world.fixtures import (
     BoxPrimitive,
     CylinderPrimitive,
-    Material,
     PipePrimitive,
     PipeRunPrimitive,
     RailPrimitive,
@@ -45,7 +46,7 @@ from greenhouse_sim.world.fixtures import (
 from greenhouse_sim.world.geometry import Point2, Transform, Vector3
 from greenhouse_sim.world.layout import Layout
 from greenhouse_sim.world.rows import PIPE_RAIL, TOMATO_GUTTER, CropRows, CropWires
-from greenhouse_sim.world.zones import Strip, Zone, ZoneKind
+from greenhouse_sim.world.zones import Strip, Zone
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_FILE = ROOT / "greenhouse_sim" / "scene" / "snapshot.schema.json"

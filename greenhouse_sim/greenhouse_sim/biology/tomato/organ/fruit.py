@@ -21,9 +21,10 @@ from typing import Annotated, Final
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat
 
-from greenhouse_sim.biology.tomato.organ.curves import smoothstep
-from greenhouse_sim.biology.tomato.organ.seeds import organ_rng
-from greenhouse_sim.biology.tomato.organ.topology import Fruit, Plant
+from greenhouse_sim.biology.plant.curves import smoothstep
+from greenhouse_sim.biology.plant.organs import Fruit
+from greenhouse_sim.biology.plant.seeds import organ_rng
+from greenhouse_sim.biology.tomato.organ.topology import Plant
 
 MM_PER_CM: Final = 10
 # A sphere's volume is this fraction of its diameter cubed: π/6.

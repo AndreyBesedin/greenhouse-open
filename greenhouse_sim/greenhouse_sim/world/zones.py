@@ -9,11 +9,11 @@ walkway, so walkways stay clear.
 """
 
 import math
-from enum import StrEnum
 from typing import Final, Self
 
 from pydantic import BaseModel, ConfigDict, PositiveFloat, model_validator
 
+from greenhouse_sim.domain.layout import ZoneKind
 from greenhouse_sim.world.geometry import Point2, Vector3
 
 # Things that only touch an area's edge are not inside it: a tenth of a
@@ -121,15 +121,6 @@ class Strip(BaseModel):
             first, second = (-half - offset) / step, (half - offset) / step
             low, high = max(low, min(first, second)), min(high, max(first, second))
         return (low, high) if low < high else None
-
-
-class ZoneKind(StrEnum):
-    """What an area of the floor is kept for."""
-
-    # Room for service: carts, harvest trolleys, irrigation and climate units.
-    SERVICE = "service"
-    # Where robots and trolleys must not go.
-    KEEP_OUT = "keep_out"
 
 
 class Zone(BaseModel):

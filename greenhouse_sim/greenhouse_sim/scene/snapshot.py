@@ -24,18 +24,12 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
+from greenhouse_sim.domain.crop import FruitStatus
+from greenhouse_sim.domain.envelope import MemberKind, OpeningKind, SurfaceCategory
+from greenhouse_sim.domain.layout import FixtureKind, Material, Obstruction, ZoneKind
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.world.envelope import (
-    Envelope,
-    Gutter,
-    Member,
-    MemberKind,
-    OpeningKind,
-    OpeningPanel,
-    Surface,
-    SurfaceCategory,
-)
-from greenhouse_sim.world.fixtures import Fixture, FixtureKind, Material, Obstruction
+from greenhouse_sim.world.envelope import Envelope, Gutter, Member, OpeningPanel, Surface
+from greenhouse_sim.world.fixtures import Fixture
 from greenhouse_sim.world.geometry import (
     Axes,
     Box,
@@ -47,8 +41,8 @@ from greenhouse_sim.world.geometry import (
 )
 from greenhouse_sim.world.layout import Layout
 from greenhouse_sim.world.rows import PlantingPosition
-from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
-from greenhouse_sim.world.zones import Zone, ZoneKind
+from greenhouse_sim.world.state import GreenhouseWorld, PlantWorld
+from greenhouse_sim.world.zones import Zone
 
 # Bumped when a change to these types would break an existing viewer, as a new
 # kind or shape does: a viewer that does not know it refuses the scene.

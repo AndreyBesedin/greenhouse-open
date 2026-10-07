@@ -6,6 +6,7 @@ from collections import Counter
 import numpy as np
 import pytest
 
+from greenhouse_sim.biology.plant.organs import Fruit
 from greenhouse_sim.biology.tomato.organ.development import DevelopmentParams, develop, emerged
 from greenhouse_sim.biology.tomato.organ.fruit import (
     FruitParams,
@@ -15,11 +16,8 @@ from greenhouse_sim.biology.tomato.organ.fruit import (
     maturity,
     set_fruit,
 )
-from greenhouse_sim.biology.tomato.organ.topology import (
-    Fruit,
-    FruitStage,
-    Plant,
-)
+from greenhouse_sim.biology.tomato.organ.topology import Plant
+from greenhouse_sim.domain.organs import FruitStage
 from greenhouse_sim.scene.plants import FRUIT_COLOR, RIPENING_COLORS, fruit_color, plant_entities
 from greenhouse_sim.scene.snapshot import SceneEntityKind
 from greenhouse_sim.services import plants

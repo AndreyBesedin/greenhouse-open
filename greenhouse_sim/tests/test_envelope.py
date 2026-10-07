@@ -7,10 +7,11 @@ import math
 import pytest
 from pydantic import ValidationError
 
+from greenhouse_sim.domain.envelope import MemberKind, SurfaceCategory
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scene.snapshot import SceneEntityKind, scene_snapshot
-from greenhouse_sim.world.envelope import Envelope, MemberKind, Surface, SurfaceCategory
+from greenhouse_sim.world.envelope import Envelope, Surface
 from greenhouse_sim.world.envelope_checks import Point, inverted_surfaces, outline, shared_edges
 from greenhouse_sim.world.geometry import Quaternion, Transform, Vector3
 

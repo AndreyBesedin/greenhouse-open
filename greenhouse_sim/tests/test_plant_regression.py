@@ -15,12 +15,8 @@ from collections import Counter
 from pathlib import Path
 
 from greenhouse_sim.biology.tomato.organ.fruit import maturity
-from greenhouse_sim.biology.tomato.organ.topology import (
-    FlowerStage,
-    FruitStage,
-    LeafStage,
-    Plant,
-)
+from greenhouse_sim.biology.tomato.organ.topology import Plant
+from greenhouse_sim.domain.organs import FlowerStage, FruitStage, LeafStage
 from greenhouse_sim.services import plants
 from greenhouse_sim.services.plants import LabAction, LabRun
 

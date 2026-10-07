@@ -53,11 +53,12 @@ from greenhouse_protocol.action import (
 from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
 
+from greenhouse_sim.domain.crop import FruitStatus
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.evaluation.observation_accuracy import observation_accuracy
 from greenhouse_sim.ground_truth import GroundTruth, ground_truth
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
-from greenhouse_sim.world import FruitStatus, GreenhouseWorld
+from greenhouse_sim.world import GreenhouseWorld
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "reference_baseline.json"
 SCENARIOS = sorted(SCENARIO_REGISTRY)

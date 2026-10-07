@@ -8,6 +8,7 @@ import pytest
 from greenhouse_protocol.action import LowerPlantAction
 from pydantic import ValidationError
 
+from greenhouse_sim.domain.envelope import OpeningKind, SurfaceCategory
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scene.snapshot import (
@@ -17,7 +18,7 @@ from greenhouse_sim.scene.snapshot import (
     scene_snapshot,
 )
 from greenhouse_sim.world import GreenhouseWorld
-from greenhouse_sim.world.envelope import Envelope, OpeningKind, SurfaceCategory
+from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.geometry import Box, Cylinder, Quaternion, Transform, Vector3
 
 CONFIG = SCENARIO_REGISTRY["gh_001"]

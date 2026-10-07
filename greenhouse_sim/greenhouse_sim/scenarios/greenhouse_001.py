@@ -1,8 +1,9 @@
 from datetime import date
 
+from greenhouse_sim.domain.envelope import OpeningKind
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import load_layout
-from greenhouse_sim.world.envelope import Envelope, Opening, OpeningKind
+from greenhouse_sim.world.envelope import Envelope, Opening
 from greenhouse_sim.world.geometry import Point2
 
 GREENHOUSE_001 = ScenarioConfig(

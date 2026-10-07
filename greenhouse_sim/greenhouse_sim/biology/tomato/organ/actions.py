@@ -17,13 +17,10 @@ always name them.
   down: their leaves removed and their trusses bearing nothing.
 """
 
+from greenhouse_sim.biology.plant.organs import Flower
 from greenhouse_sim.biology.tomato.organ.topology import (
-    Flower,
-    FlowerStage,
-    FruitStage,
     HarvestFruit,
     HarvestTruss,
-    LeafStage,
     LowerStem,
     Phytomer,
     Plant,
@@ -33,6 +30,7 @@ from greenhouse_sim.biology.tomato.organ.topology import (
     Truss,
     bears_anything,
 )
+from greenhouse_sim.domain.organs import FlowerStage, FruitStage, LeafStage
 
 
 def _event(plant: Plant, action: PlantAction, note: str, **outcome: object) -> PlantEvent:

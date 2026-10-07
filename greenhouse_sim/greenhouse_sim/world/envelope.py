@@ -37,11 +37,11 @@ an opening lies on it.
 """
 
 import math
-from enum import StrEnum
 from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt, model_validator
 
+from greenhouse_sim.domain.envelope import MemberKind, OpeningKind, SurfaceCategory
 from greenhouse_sim.world.geometry import Plane, Point2, Polygon, Quaternion, Transform, Vector3
 
 # Where a greenhouse stands unless a scenario says otherwise: its floor corner
@@ -58,14 +58,6 @@ _BACK_ALONG = Vector3(x=-1.0, y=0.0, z=0.0)
 _ACROSS = Vector3(x=0.0, y=1.0, z=0.0)
 _BACK_ACROSS = Vector3(x=0.0, y=-1.0, z=0.0)
 _UP = Vector3(x=0.0, y=0.0, z=1.0)
-
-
-class SurfaceCategory(StrEnum):
-    """What a surface of the envelope is, for every consumer of its geometry."""
-
-    FLOOR = "floor"
-    WALL = "wall"
-    ROOF = "roof"
 
 
 class Surface(BaseModel):
@@ -88,19 +80,6 @@ class Gutter(BaseModel):
     gutter_id: str
     start: Vector3
     end: Vector3
-
-
-class MemberKind(StrEnum):
-    """What a structural member is."""
-
-    POST = "post"
-    RAFTER = "rafter"
-
-
-class OpeningKind(StrEnum):
-    DOOR = "door"
-    ROOF_VENT = "roof_vent"
-    SIDE_VENT = "side_vent"
 
 
 class Opening(BaseModel):

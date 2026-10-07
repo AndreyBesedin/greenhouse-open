@@ -16,11 +16,11 @@ material and obstructions of its own unless the description says otherwise.
 """
 
 import math
-from enum import StrEnum
 from typing import Annotated, Final, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt, model_validator
 
+from greenhouse_sim.domain.layout import FixtureKind, Material, Obstruction
 from greenhouse_sim.world.geometry import Box, Cylinder, Point2, Quaternion, Transform, Vector3
 from greenhouse_sim.world.zones import Strip
 
@@ -31,50 +31,7 @@ WALKWAY_THICKNESS_M: Final = 0.02
 _UP: Final = Vector3(x=0.0, y=0.0, z=1.0)
 
 
-class FixtureKind(StrEnum):
-    """What a fixture is, for every consumer of its geometry."""
-
-    # A trough the crop grows in, on stands or hung from the structure.
-    CROP_GUTTER = "crop_gutter"
-    # A bench or table that plants stand on, in pots or trays.
-    BENCH = "bench"
-    # Substrate the crop roots in, such as a stone wool or coir slab.
-    SLAB = "slab"
-    # A path on the floor, kept clear for people, trolleys and robots.
-    WALKWAY = "walkway"
-    # A rail that trolleys and robots run on.
-    RAIL = "rail"
-    # A pipe, such as a heating pipe.
-    PIPE = "pipe"
-    # A wire overhead, such as a crop wire the plants are trained up to.
-    WIRE = "wire"
-    # Anything else in the way: a column, a tank, a cabinet.
-    OBSTACLE = "obstacle"
-
-
-class Material(StrEnum):
-    """What a fixture, or a part of the envelope, is made of."""
-
-    STEEL = "steel"
-    ALUMINIUM = "aluminium"
-    PLASTIC = "plastic"
-    CONCRETE = "concrete"
-    # A growing medium, such as stone wool or coir.
-    SUBSTRATE = "substrate"
-
-
 METALS: Final = frozenset({Material.STEEL, Material.ALUMINIUM})
-
-
-class Obstruction(StrEnum):
-    """What a fixture stands in the way of."""
-
-    # Robots, trolleys and people cannot pass through it.
-    MOVEMENT = "movement"
-    # Air cannot flow through it.
-    AIRFLOW = "airflow"
-    # It casts a shadow.
-    LIGHT = "light"
 
 
 EVERYTHING: Final = frozenset(Obstruction)

@@ -5,6 +5,7 @@ import math
 
 import pytest
 
+from greenhouse_sim.biology.plant.organs import Leaf
 from greenhouse_sim.biology.tomato.organ import reference
 from greenhouse_sim.biology.tomato.organ.geometry import (
     GOLDEN_ANGLE_RAD,
@@ -16,7 +17,8 @@ from greenhouse_sim.biology.tomato.organ.geometry import (
     organ_geometry,
 )
 from greenhouse_sim.biology.tomato.organ.reference import young_plant
-from greenhouse_sim.biology.tomato.organ.topology import Leaf, OrganKind, Plant
+from greenhouse_sim.biology.tomato.organ.topology import Plant
+from greenhouse_sim.domain.organs import OrganKind
 from greenhouse_sim.world.geometry import Cylinder, Ellipsoid, Sphere, Vector3
 
 PLANT = young_plant("p01")

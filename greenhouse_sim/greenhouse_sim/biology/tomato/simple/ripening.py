@@ -8,7 +8,8 @@ from greenhouse_sim.biology.tomato.simple.parameters import (
     TURNING_FROM_PROGRESS,
 )
 from greenhouse_sim.biology.tomato.simple.state import SimpleFruitState
-from greenhouse_sim.world.state import Fruit, FruitStatus, GreenhouseEnvironment, RipenessStage
+from greenhouse_sim.domain.crop import FruitStatus, RipenessStage
+from greenhouse_sim.world.state import Fruit, GreenhouseEnvironment
 
 
 def effective_ripening_day(

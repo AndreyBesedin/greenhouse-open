@@ -9,8 +9,9 @@ from greenhouse_sim.biology.tomato.simple.parameters import (
 )
 from greenhouse_sim.biology.tomato.simple.state import SimpleFruitState, SimplePlantState
 from greenhouse_sim.core.rng import seeded_rng
+from greenhouse_sim.domain.crop import TrussStage
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.world.state import Fruit, GreenhouseEnvironment, PlantWorld, Truss, TrussStage
+from greenhouse_sim.world.state import Fruit, GreenhouseEnvironment, PlantWorld, Truss
 
 
 def advance_stem(

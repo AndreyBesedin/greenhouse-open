@@ -6,14 +6,11 @@ these tests are slow."""
 import numpy as np
 import pytest
 
+from greenhouse_sim.biology.plant.variation import draw_traits
 from greenhouse_sim.biology.tomato.organ.development import develop, emerged, grow
 from greenhouse_sim.biology.tomato.organ.fruit import Maturity, maturity
-from greenhouse_sim.biology.tomato.organ.topology import (
-    FlowerStage,
-    FruitStage,
-    Plant,
-)
-from greenhouse_sim.biology.tomato.organ.variation import draw_traits
+from greenhouse_sim.biology.tomato.organ.topology import Plant
+from greenhouse_sim.domain.organs import FlowerStage, FruitStage
 from greenhouse_sim.services import plants
 
 pytestmark = pytest.mark.slow

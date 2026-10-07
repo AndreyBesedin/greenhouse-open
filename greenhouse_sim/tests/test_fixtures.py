@@ -6,6 +6,7 @@ import math
 import pytest
 from pydantic import ValidationError
 
+from greenhouse_sim.domain.layout import FixtureKind, Material, Obstruction
 from greenhouse_sim.world.fixtures import (
     DEFAULT_MATERIALS,
     DEFAULT_OBSTRUCTIONS,
@@ -13,9 +14,6 @@ from greenhouse_sim.world.fixtures import (
     BoxPrimitive,
     CylinderPrimitive,
     Fixture,
-    FixtureKind,
-    Material,
-    Obstruction,
     PipePrimitive,
     RailPrimitive,
     TrayPrimitive,

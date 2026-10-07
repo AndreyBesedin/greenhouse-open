@@ -7,15 +7,12 @@ from http import HTTPStatus
 import pytest
 
 from greenhouse_sim.api.routes import respond
+from greenhouse_sim.biology.plant.organs import Flower, Fruit
+from greenhouse_sim.biology.plant.seeds import organ_rng, plant_rng
 from greenhouse_sim.biology.tomato.organ import reference
 from greenhouse_sim.biology.tomato.organ.reference import young_plant
-from greenhouse_sim.biology.tomato.organ.seeds import organ_rng, plant_rng
-from greenhouse_sim.biology.tomato.organ.topology import (
-    Flower,
-    FlowerStage,
-    Fruit,
-    Plant,
-)
+from greenhouse_sim.biology.tomato.organ.topology import Plant
+from greenhouse_sim.domain.organs import FlowerStage
 from greenhouse_sim.scene.plants import plant_entities
 from greenhouse_sim.scene.snapshot import SceneEntityKind, SceneSnapshot
 from greenhouse_sim.services import plants
