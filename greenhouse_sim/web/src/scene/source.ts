@@ -1,4 +1,5 @@
 import { type FieldView, fieldViewFrom, type Slice, sliceFrom, sliceText } from "../fields/display";
+import { probesFrom, probesText } from "../fields/probes";
 import {
   actionFrom,
   actionsQuery,
@@ -9,6 +10,7 @@ import {
   PLANT_LAB_SEED,
 } from "../plants/lab";
 import { stressPlants, stressScene } from "../qa/stressScene";
+import type { Point3 } from "../world";
 import { checkScene } from "./checkScene";
 import type { SceneSnapshot } from "./generated/snapshotTypes";
 
@@ -37,6 +39,10 @@ export type SceneSource =
       field?: string;
       fieldView?: FieldView;
       slice?: Slice;
+      /** Another of its fields, compared with the drawn one at the probes. */
+      compare?: string;
+      /** Points the drawn field is read at. */
+      probes?: Point3[];
       /** Whether the boundaries a CFD solver is given are drawn over it. */
       cfdBoundaries?: true;
       envelope?: Readonly<Record<string, number>>;
@@ -72,6 +78,8 @@ export function sourceFromSearch(search: string): SceneSource {
     const field = parameters.get("field");
     const fieldView = fieldViewFrom(parameters.get("fieldView"));
     const slice = sliceFrom(parameters.get("slice"));
+    const compare = parameters.get("compare");
+    const probes = probesFrom(parameters.get("probes"));
     return {
       kind: "scenario",
       scenarioId,
@@ -79,6 +87,8 @@ export function sourceFromSearch(search: string): SceneSource {
       ...(field ? { field } : {}),
       ...(field && fieldView ? { fieldView } : {}),
       ...(field && slice ? { slice } : {}),
+      ...(field && compare && compare !== field ? { compare } : {}),
+      ...(field && probes ? { probes } : {}),
       ...(parameters.get("cfd") === CFD_BOUNDARIES ? { cfdBoundaries: true as const } : {}),
       ...(envelope === null ? {} : { envelope }),
       ...(openings === null ? {} : { openings }),
@@ -157,8 +167,15 @@ export function searchFor(source: SceneSource): string {
   }
 }
 
-/** How a scenario's field is drawn, as the address bar writes it. */
-function fieldQuery(source: { field?: string; fieldView?: FieldView; slice?: Slice }): string {
+/** How a scenario's field is drawn, compared and probed, as the address bar
+ * writes it. */
+function fieldQuery(source: {
+  field?: string;
+  fieldView?: FieldView;
+  slice?: Slice;
+  compare?: string;
+  probes?: Point3[];
+}): string {
   if (source.field === undefined) {
     return "";
   }
@@ -166,6 +183,10 @@ function fieldQuery(source: { field?: string; fieldView?: FieldView; slice?: Sli
     `&field=${encodeURIComponent(source.field)}`,
     source.fieldView === undefined ? "" : `&fieldView=${source.fieldView}`,
     source.slice === undefined ? "" : `&slice=${sliceText(source.slice)}`,
+    source.compare === undefined ? "" : `&compare=${encodeURIComponent(source.compare)}`,
+    source.probes === undefined || source.probes.length === 0
+      ? ""
+      : `&probes=${probesText(source.probes)}`,
   ].join("");
 }
 

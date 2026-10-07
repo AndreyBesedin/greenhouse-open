@@ -225,6 +225,34 @@ body {
   margin: 2px 0 0;
 }
 
+.field-probes {
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+}
+
+.field-probes p {
+  margin: 2px 0 4px;
+}
+
+.field-probes input[type="number"] {
+  width: 4.5em;
+}
+
+.field-probes table {
+  margin-top: 4px;
+  border-collapse: collapse;
+}
+
+.field-probes th {
+  padding-right: 6px;
+  vertical-align: top;
+}
+
+.field-probes td {
+  padding-bottom: 4px;
+}
+
 .cfd-controls {
   margin: 0 0 8px;
   padding: 0;
