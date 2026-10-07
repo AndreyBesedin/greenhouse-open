@@ -1,0 +1,332 @@
+# P05: Climate actuators: fans, heaters, dehumidification and vents
+
+**Status:** design reviewed; P05.0's scenario design next. Part of the [simulator roadmap](README.md).
+
+## Goal
+
+Make greenhouse equipment change the simulated air in visible, testable ways,
+while keeping each device's model independent of the airflow backend.
+
+## Dependencies
+
+P01 (the envelope and its openings) and P04 (environment fields and
+airflow). P02's fixtures make obstacles and placement realistic.
+
+## Direction
+
+- **Equipment is represented twice:** as a semantic, visual entity in the
+  world (where it stands, what it is, what it is commanded to do), and as
+  the source terms it supplies to whatever computes the air.
+- **Useful approximations over equipment CFD:** a fan is a jet, a heater a
+  heat source, a dehumidifier a moisture sink. No device needs a particular
+  solver.
+- **Commands are explicit and replayable:** what a device is told to do,
+  and when, is data. The same commands always give the same air.
+
+## Design
+
+Today the air is a steady snapshot. A field is either a prescribed pattern
+or a kept CFD solution, with no time in it beyond a label. The crop's
+climate is one greenhouse-wide temperature and humidity, a day at a time
+(`environment.simple`). Equipment acts in seconds to minutes, and its
+effects build up and spread. So P05 needs air that evolves. Each choice
+below gives what it was weighed against. The review's decisions are at the
+end.
+
+### 1. A climate model that steps the air on the field's grid
+
+A new backend, `climate.transport`, holds the air's state on a scenario's
+field grid (decision 0026): temperature, humidity and velocity in every
+cell. It advances that state through time. This is the "spatial
+approximation" rung of the fidelity ladder, between the prescribed patterns
+and CFD.
+
+- **Velocity** is the scenario's base airflow plus each running fan's jet
+  (section 3). The base airflow is its prescribed pattern or its kept CFD
+  solution, whichever the run names.
+- **Temperature and humidity** are carried by that velocity and mixed by an
+  effective diffusivity: advection–diffusion, by finite volumes on the
+  grid. Heaters add heat, dehumidifiers remove moisture, open vents
+  exchange air with the outside, and the envelope exchanges heat with it
+  through its glass.
+- **Humidity is transported as absolute humidity** (grams of water per
+  kilogram of air), which mixing conserves. Relative humidity is derived
+  from it and the temperature when published.
+- **Numerics:**
+  - first-order upwind advection, which keeps values within their range;
+  - explicit diffusion;
+  - a time step held within both stability limits (the air crossing at
+    most half a cell per step, and the diffusion limit);
+  - obstacles' cells (P04.4) blocked;
+  - no flux through walls, the floor and the ceiling, except heat exchange
+    and open vents.
+- **Conservation:** the base airflow plus fans is not exactly mass
+  conserving. Advection is written so that uniform air stays uniform
+  wherever the flow converges or diverges. With exchange and vents off, the
+  energy and moisture budgets close exactly, which the tests check. The
+  approximation is tracked under "Known approximations".
+- **Cost:** a greenhouse of a few thousand cells steps in well under a
+  millisecond with NumPy. Ten simulated minutes near a fast fan take a few
+  thousand steps, about a second.
+
+*Alternatives:*
+- **A single well-mixed volume per zone** (a zonal energy and moisture
+  balance): cheap, but it can't show a heater warming its corner or a
+  fan's plume, which this project's visible results are about.
+- **Running OpenFOAM in time** (`buoyantPimpleFoam`): faithful, but it
+  makes every actuator change wait on an external solver, and contradicts
+  "no actuator requires a specific CFD engine".
+- **Projecting the velocity to be divergence-free** (a pressure solve on
+  the grid each time the fans change): left for later. It's cheap at this
+  size, but adds a solver to own before its benefit is visible.
+
+### 2. A clock for the air, separate from the crop's days
+
+The air runs on its own clock, in seconds, for a **climate run**. A run is
+a scenario's air from a starting state, over minutes to hours, under a
+command schedule. The engine's day step is unchanged. Plants keep reading
+their daily climate as now. Feeding them the air where they stand (a daily
+summary of the local air) is P07/P09's, once weather drives the outside.
+
+- **The starting state:** the scenario's base airflow, and uniform
+  temperature and humidity from its configuration.
+- **The outside:** a fixed temperature and humidity in the scenario's
+  configuration, until P07 brings weather.
+- **Serving a run:** the service recomputes it from its start for the time
+  asked, and keeps recent runs in a small in-memory cache. A run is cheap
+  and deterministic, so there is nothing to persist.
+
+*Alternatives:*
+- **A full multi-rate orchestrator now**, advancing crop days and air
+  seconds together: the plan's eventual design, but it would turn P05 into
+  P09.
+- **Advancing the air one day at a time like the crop:** too coarse for
+  equipment that acts in minutes.
+
+### 3. Equipment: kinds, placement, commands and source terms
+
+- **Vocabulary:** `domain.equipment.ActuatorKind`: fan, heater,
+  dehumidifier. Vents stay the envelope's openings (P01), with the opening
+  fraction they already have.
+- **Placement:** an actuator is placed in a scenario's layout file, beside
+  the fixtures. It has an identifier, a kind, a pose (position, and for a
+  fan the direction it blows), a size, and its rated capacity:
+  - a fan's airflow, in m³/s, and its diameter;
+  - a heater's power, in W;
+  - a dehumidifier's water removal, in kg/h, and the heat it gives off, in W.
+
+  A heater or dehumidifier obstructs airflow like any fixture, so the CFD
+  geometry sees it.
+- **Commands:** each actuator has a level from 0 (off) to 1 (full).
+  - **A schedule** is a list of `(time_s, actuator, level)` commands.
+  - **Manual overrides** from the viewer are commands too, at the moment
+    they are made.
+  - **Logging:** the run records every command it applied, in order.
+  - **In the address**, as a scene change like `?open=`:
+    `?set=fan_1:1,heater_1:0.5` for levels from the start of the run, and
+    `&schedule=60:fan_1:1,300:heater_1:0` for the schedule.
+- **Source terms, the device contract:** an actuator at a level supplies
+  its effect as backend-independent terms over the grid:
+  - **velocity added**, for a fan: a jet along its axis, with its core
+    speed set by flow over area, decaying and spreading with distance;
+  - **heat added**, in W per cell, for a heater and a dehumidifier's waste
+    heat;
+  - **moisture removed**, in kg/s per cell, for a dehumidifier, never more
+    than the air holds.
+
+  The transport model consumes these terms. A later CFD adapter could map
+  them to `fvOptions` sources without the devices changing.
+
+*Alternatives:*
+- **Actuators as a field of `ScenarioConfig`:** possible, but equipment is
+  placed like fixtures and belongs to the layout, so another layout can
+  equip the house differently.
+- **Devices that write into the field directly:** simpler for one backend,
+  but it ties every device to the transport model.
+
+### 4. Vents
+
+An open vent's aperture area (P01.5, decision 0018) sets how much air it
+exchanges with the outside. Absent wind (P07), the exchange is a fixed
+exchange speed times the aperture area, mixing outside air into the vent's
+cells. It also adds a small draught there, so the arrows respond. Its
+direction is out of the vent when the air inside is warmer, and in when it
+is cooler, as the stack effect would have it. A closed vent exchanges
+nothing. The CFD geometry already treats an open vent as an opening (P04.4).
+
+### 5. Heat exchange through the envelope
+
+Each wall, roof and floor cell face exchanges heat with the outside: in
+proportion to its area and the glazing's heat transfer coefficient (about
+6 W/m²K for single glass), times the outside's temperature less the
+inside's. When the outside is cooler the house loses heat; when it is
+warmer it gains it. This lets the house settle at a temperature rather than
+heating or cooling without end. The tests switch it off to check the
+heater's energy budget exactly. Sunlight through the glass is P08's.
+
+### 6. Viewer
+
+- **Equipment in the scene:**
+  - a fan as a short cylinder with an arrow along its axis; heaters and
+    dehumidifiers as boxes;
+  - each coloured as off or running, selectable, and described in the
+    inspector (kind, capacity, level);
+  - "Equipment" lists every actuator with an on/off switch and a level
+    slider, like "Openings".
+- **The air as the equipment drives it:** a `climate` field among the
+  scenario's fields. It is drawn like any other (arrows, streamlines,
+  slices, probes), at a time on the run's clock, with a time slider and
+  play (`&t=300`).
+- **The schedule:** a timeline under the time slider marks each scheduled
+  command (05.6).
+- **Probes over time:** each probe charts temperature, relative humidity
+  and air speed through the run. A second run, with all equipment off, can
+  be charted beside it (05.7). The charts are plain SVG; no chart library.
+
+### 7. Scenarios
+
+The review decided to retire the original reference scenarios, gh_001 and
+gh_demo, and build new ones that matter to what the simulator is now. They
+come before the equipment, so that P05's equipment, QA and baselines are
+built on them rather than moved later; their design is reviewed before
+they are built. The airflow QA case, `airflow_box`, stays. P05's own QA
+scenario, `climate_box`, is one of the new scenarios, or a variant of one:
+a house with a fan, a heater, a dehumidifier, a roof vent and plants.
+
+## Steps
+
+| Step | Commit summary | Status |
+| --- | --- | --- |
+| P05.0 | `feat(scenarios): replace the original reference scenarios` | Planned: design first |
+| P05.1 | `feat(actuators): define climate actuator contract and controls` | Planned |
+| P05.2 | `feat(fans): add fan airflow source model` | Planned |
+| P05.3 | `feat(heating): add heater sensible-heat source` | Planned |
+| P05.4 | `feat(humidity): add dehumidifier moisture sink` | Planned |
+| P05.5 | `feat(vents): connect vent opening state to airflow boundaries` | Planned |
+| P05.6 | `feat(control): add actuator schedule timeline` | Planned |
+| P05.7 | `test(climate): add actuator comparison dashboard` | Planned |
+
+### P05.0: New reference scenarios
+
+Retire gh_001 and gh_demo for new scenarios that matter to the simulator as
+it is now (section 7). This includes `climate_box`, and moves everything
+that rests on the old ones: tests, reference baselines, kept CFD results,
+QA pages and their screenshots, and the documentation's examples. Their
+design is drafted and reviewed before they are built.
+
+### P05.1: Climate actuator contract and controls
+
+Actuator kinds, placement in layout files, rated capacities, levels and the
+command log; the source-term contract; `climate_box`. Visible result: a
+device can be selected, inspected and switched on and off in the browser.
+Tests: commands are logged in order and replay deterministically, and a
+device's source terms scale with its level and vanish when it is off.
+
+### P05.2: Fan airflow source model
+
+The fan's jet: core speed from flow and diameter, decay and spread with
+distance, superposed on the base airflow in the `climate` field. Visible
+result: turning a fan on visibly changes the arrows and streamlines near
+it. Tests: velocity probes downstream speed up along the fan's axis, the
+jet's flow through a plane across it matches the fan's flow near the fan,
+and nothing changes behind it or with it off.
+
+### P05.3: Heater sensible-heat source
+
+The transport model's first scalar: temperature, carried and mixed over the
+run's clock, with heat exchange through the envelope; the heater's heat source;
+the `climate` field's time slider. Visible result: a temperature slice warms
+around a running heater and spreads with time. Tests: with exchange off,
+the energy the air gains matches the heater's power times the time, to
+within 1%. With exchange on, the house settles where the heater's power
+balances what the envelope loses, and with the outside warmer and the
+heater off, the house warms towards it.
+
+### P05.4: Dehumidifier moisture sink
+
+Absolute humidity transported beside temperature; relative humidity derived
+from both and published; the dehumidifier's moisture sink and waste heat.
+Visible result: a humidity slice dries around a running dehumidifier.
+Tests: the water the air loses matches the commanded removal rate, never
+more than the air holds. The relative humidity is right against
+psychrometric tables.
+
+### P05.5: Vents and the airflow boundaries
+
+An open vent's exchange with the outside, from its aperture area, and its
+draught, by the stack effect's direction. Visible result: moving a roof
+vent's slider changes the air at the vent, in the arrows and in the slices.
+Tests: a closed vent exchanges nothing, and the exchange grows with the
+aperture area the geometry gives. With the outside cooler, an open vent
+cools the house towards it.
+
+### P05.6: Actuator schedule timeline
+
+Scheduled commands and manual overrides in one log; a timeline of markers
+under the time slider. Visible result: a short run where the fan, heater and
+dehumidifier switch on their own, and the field maps respond. Tests: a
+schedule replays to the same air, and an override takes effect from its
+moment on.
+
+### P05.7: Actuator comparison dashboard
+
+Fixed probes, time-series charts of temperature, relative humidity and air
+speed, and the same run with all equipment off, side by side. Visible
+result: the controlled and uncontrolled runs diverge where the equipment
+acts. Tests: the charts' values are the probes' values at each time.
+
+## Final QA: `climate-actuators`
+
+At runtime:
+
+- toggle the fan;
+- vary the heater's power;
+- toggle the dehumidifier;
+- open and close the roof vent;
+- watch the vector field, and the temperature and humidity slices;
+- inspect fixed probes and their time-series charts.
+
+Expected:
+
+- the fan changes the air's direction and speed near it;
+- the heater warms the air;
+- the dehumidifier dries it;
+- the vent changes the air at its boundary;
+- replaying the same schedule reproduces the run exactly.
+
+## Acceptance criteria
+
+- [ ] Device state is visible and inspectable.
+- [ ] Device effects reach the air only through the source-term contract.
+- [ ] No actuator requires a specific CFD engine.
+- [ ] Visual and numerical probes agree on the direction of change.
+
+## Known approximations
+
+What P05 simplifies on purpose, kept here until a later step removes it:
+
+- **Fan jets are added to the base airflow without a divergence-free
+  projection**, so the combined velocity is not exactly mass conserving.
+  The scalars' budgets are checked instead. A pressure projection on the
+  grid would remove it.
+- **The outside is fixed**: one temperature and humidity for a run, until
+  P07 brings weather.
+- **Vents exchange air at a constant speed through their aperture**, its
+  direction by the stack effect only, until P07 brings wind.
+- **Plants don't feel the air yet:** they keep their daily, greenhouse-wide
+  climate until P07/P09 feed them the air where they stand.
+
+## Review decisions (7 October 2026)
+
+1. **The air's own clock:** agreed. The crop keeps its daily climate in
+   P05, and feeding it the local air is deferred to P07/P09.
+2. **Fan jets by superposition:** acceptable for v1, and tracked under
+   "Known approximations" until a projection replaces it.
+3. **Scenarios:** retire gh_001 and gh_demo, and build new, more relevant
+   scenarios, `climate_box` among them (section 7). Their design comes
+   first, for review.
+4. **Equipment in layout files:** agreed.
+5. **A fixed outside and a constant vent exchange speed until P07:**
+   agreed.
+6. **The envelope exchanges heat both ways** (section 5): it loses heat
+   when the outside is cooler, and gains it when the outside is warmer.
