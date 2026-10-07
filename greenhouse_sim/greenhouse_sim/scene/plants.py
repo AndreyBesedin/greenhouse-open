@@ -2,9 +2,9 @@
 
 Each shape of a plant's geometry (`greenhouse_sim.biology.tomato.organ.geometry`)
 becomes an entity of its organ's kind, placed where the plant stands. Its
-properties say which organ it is, where that organ sits in the plant, and how
-far it has developed, so a viewer can inspect any organ and rebuild the
-plant's structure from what it draws.
+properties say which organ it is and which part of it, where that organ sits
+in the plant, and how far it has developed, so a viewer can inspect any organ
+and rebuild the plant's structure from what it draws.
 """
 
 from typing import Final
@@ -16,6 +16,8 @@ from greenhouse_sim.world.geometry import Transform
 
 STEM_COLOR: Final = Color(r=0.36, g=0.56, b=0.24)
 LEAF_COLOR: Final = Color(r=0.18, g=0.5, b=0.2)
+# A leaf's petiole and rachis are paler than its leaflets.
+RACHIS_COLOR: Final = Color(r=0.4, g=0.62, b=0.26)
 TRUSS_COLOR: Final = Color(r=0.42, g=0.6, b=0.28)
 FLOWER_COLOR: Final = Color(r=0.96, g=0.84, b=0.18)
 FRUIT_COLOR: Final = Color(r=0.3, g=0.62, b=0.2)
@@ -42,10 +44,13 @@ def _entity(
     organs: dict[str, tuple[OrganKind, str | None, Organ]],
 ) -> SceneEntity:
     kind, color = _KINDS[shape.kind]
+    if shape.part in {"petiole", "rachis"}:
+        color = RACHIS_COLOR
     _, parent, organ = organs[shape.organ_id]
     properties: dict[str, str | int | float | bool] = {
         "organ_id": shape.organ_id,
         "organ_kind": shape.kind.value,
+        "part": shape.part,
         "plant_id": plant.plant_id,
         "parent_id": parent or "",
         "thermal_age_cd": round(plant.thermal_age(organ), 1),
@@ -59,6 +64,6 @@ def _entity(
         transform=at.after(shape.transform),
         shape=shape.shape,
         color=color,
-        label=shape.organ_id.replace("_", " "),
+        label=shape.shape_id.replace("_", " "),
         properties=properties,
     )

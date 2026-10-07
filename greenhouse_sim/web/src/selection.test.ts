@@ -4,7 +4,7 @@ import { Group, InstancedMesh, Mesh } from "three";
 import { describe, expect, it } from "vitest";
 
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
-import { pickEntity, selectedEntity } from "./selection";
+import { entityOfOrgan, highlighted, organOf, pickEntity, selectedEntity } from "./selection";
 
 const EXAMPLE: SceneSnapshot = JSON.parse(
   readFileSync(new URL("../public/scenes/example.json", import.meta.url), "utf8"),
@@ -102,5 +102,40 @@ describe("a selection", () => {
     expect(selectedEntity(null, "gh_demo_plant_002")).toBeNull();
     expect(selectedEntity(EXAMPLE, null)).toBeNull();
     expect(selectedEntity(EXAMPLE, "gh_demo_plant_999")).toBeNull();
+  });
+});
+
+describe("selecting part of an organ", () => {
+  // Two parts of one leaf, and an internode, as the plant lab draws them.
+  const [plant] = EXAMPLE.entities.filter((entity) => entity.kind === "PLANT");
+  const part = (entityId: string, organId: string) => ({
+    ...(plant as SceneSnapshot["entities"][number]),
+    entity_id: entityId,
+    properties: { organ_id: organId },
+  });
+  const LAB: SceneSnapshot = {
+    ...EXAMPLE,
+    entities: [
+      part("p01_n01_internode", "p01_n01_internode"),
+      part("p01_n01_leaf_petiole", "p01_n01_leaf"),
+      part("p01_n01_leaf_terminal", "p01_n01_leaf"),
+    ],
+  };
+
+  it("highlights every part of the organ, and only the entity otherwise", () => {
+    expect(highlighted(LAB, "p01_n01_leaf_terminal")).toEqual(
+      new Set(["p01_n01_leaf_petiole", "p01_n01_leaf_terminal"]),
+    );
+    expect(highlighted(LAB, "p01_n01_internode")).toEqual(new Set(["p01_n01_internode"]));
+    expect(highlighted(EXAMPLE, "gh_demo_plant_002")).toEqual(new Set(["gh_demo_plant_002"]));
+    expect(highlighted(LAB, null)).toEqual(new Set());
+  });
+
+  it("names the organ an entity draws, and finds an organ's first part", () => {
+    expect(organOf(LAB.entities[2] as SceneSnapshot["entities"][number])).toBe("p01_n01_leaf");
+    expect(organOf(plant as SceneSnapshot["entities"][number])).toBeNull();
+    expect(entityOfOrgan(LAB, "p01_n01_leaf")).toBe("p01_n01_leaf_petiole");
+    expect(entityOfOrgan(LAB, "p01_n09_leaf")).toBeNull();
+    expect(entityOfOrgan(null, "p01_n01_leaf")).toBeNull();
   });
 });

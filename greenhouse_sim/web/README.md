@@ -73,8 +73,9 @@ Tests on both sides fail while either is stale.
 
 ## Performance
 
-Repeated shapes, plants' stems today, are drawn in instanced batches: a field
-of 100,000 plants takes four draw calls. The HUD reports the frame rate and
+Repeated shapes are drawn in instanced batches, one per kind of entity,
+shape (cylinder, sphere or ellipsoid) and finish: a field of 100,000 plants
+takes four draw calls, and the plant lab's plant, organ by organ, eight. The HUD reports the frame rate and
 time, draw calls and triangles, and memory.
 
 `npm run bench` measures the stress scene at 1,000 to 100,000 plants while

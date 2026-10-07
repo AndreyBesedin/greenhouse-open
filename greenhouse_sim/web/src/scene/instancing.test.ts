@@ -4,7 +4,7 @@ import { Matrix4, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 
 import type { SceneEntity, SceneSnapshot } from "./generated/snapshotTypes";
-import { cylinderBatches, cylinderMatrices, MATRIX_SIZE } from "./instancing";
+import { MATRIX_SIZE, shapeBatches, shapeMatrices } from "./instancing";
 
 const EXAMPLE: SceneSnapshot = JSON.parse(
   readFileSync(new URL("../../public/scenes/example.json", import.meta.url), "utf8"),
@@ -19,13 +19,13 @@ function placed(matrices: Float32Array, index: number, point: Vector3): Vector3 
   return point.clone().applyMatrix4(matrix);
 }
 
-describe("instancing cylinders", () => {
+describe("instancing shapes", () => {
   it("gives each cylinder one matrix, in order", () => {
-    expect(cylinderMatrices(PLANTS)).toHaveLength(PLANTS.length * MATRIX_SIZE);
+    expect(shapeMatrices(PLANTS)).toHaveLength(PLANTS.length * MATRIX_SIZE);
   });
 
   it("stands the unit cylinder where the entity stands, as wide and as tall", () => {
-    const matrices = cylinderMatrices([PLANT]);
+    const matrices = shapeMatrices([PLANT]);
     const top = placed(matrices, 0, new Vector3(0, 0, 1));
     const rim = placed(matrices, 0, new Vector3(1, 0, 0));
     const shape = PLANT.shape as { radius: number; height: number };
@@ -42,7 +42,7 @@ describe("instancing cylinders", () => {
       ...PLANT,
       transform: { ...PLANT.transform, rotation: { w: QUARTER_TURN, x: QUARTER_TURN, y: 0, z: 0 } },
     };
-    const top = placed(cylinderMatrices([tipped]), 0, new Vector3(0, 0, 1));
+    const top = placed(shapeMatrices([tipped]), 0, new Vector3(0, 0, 1));
     const shape = PLANT.shape as { height: number };
 
     expect(top.y).toBeCloseTo(1.6 - shape.height);
@@ -51,7 +51,7 @@ describe("instancing cylinders", () => {
 
   it("keeps a cylinder of zero height drawable", () => {
     const flat: SceneEntity = { ...PLANT, shape: { shape: "cylinder", radius: 0.02, height: 0 } };
-    const matrix = new Matrix4().fromArray(cylinderMatrices([flat]));
+    const matrix = new Matrix4().fromArray(shapeMatrices([flat]));
 
     expect(matrix.determinant()).not.toBe(0);
   });
@@ -59,7 +59,45 @@ describe("instancing cylinders", () => {
   it("refuses an entity that is not a cylinder", () => {
     const floor = EXAMPLE.entities.find((entity) => entity.kind === "FLOOR") as SceneEntity;
 
-    expect(() => cylinderMatrices([floor])).toThrow("gh_demo_floor is a plane, not a cylinder");
+    expect(() => shapeMatrices([floor])).toThrow(
+      "gh_demo_floor is a plane, which is not drawn in batches",
+    );
+  });
+
+  it("centres a sphere where the entity is, as wide as its radius", () => {
+    const flower: SceneEntity = { ...PLANT, shape: { shape: "sphere", radius: 0.006 } };
+    const matrices = shapeMatrices([flower]);
+    const centre = placed(matrices, 0, new Vector3(0, 0, 0));
+    const top = placed(matrices, 0, new Vector3(0, 0, 1));
+
+    expect(centre.z).toBeCloseTo(0);
+    expect(top.z).toBeCloseTo(0.006);
+  });
+
+  it("stretches an ellipsoid to its length, width and thickness", () => {
+    const leaflet: SceneEntity = {
+      ...PLANT,
+      shape: { shape: "ellipsoid", size_x: 0.09, size_y: 0.045, size_z: 0.002 },
+    };
+    const matrices = shapeMatrices([leaflet]);
+    // The unit ellipsoid is a sphere of diameter 1, so its tips are half a unit out.
+    const tip = placed(matrices, 0, new Vector3(0.5, 0, 0));
+    const edge = placed(matrices, 0, new Vector3(0, 0.5, 0));
+    const face = placed(matrices, 0, new Vector3(0, 0, 0.5));
+
+    expect(tip.x - 0.5).toBeCloseTo(0.045);
+    expect(edge.y - 1.6).toBeCloseTo(0.0225);
+    expect(face.z).toBeCloseTo(0.001);
+  });
+
+  it("batches by shape as well as by kind and finish", () => {
+    const flower: SceneEntity = { ...PLANT, shape: { shape: "sphere", radius: 0.006 } };
+    const batches = shapeBatches([PLANT, flower, PLANT]);
+
+    expect(batches.map((batch) => [batch.batch, batch.shape, batch.entities.length])).toEqual([
+      ["PLANT-cylinder-matt", "cylinder", 2],
+      ["PLANT-sphere-matt", "sphere", 1],
+    ]);
   });
 });
 
@@ -71,18 +109,18 @@ describe("batching a layout's repeated fixtures", () => {
 
   it("draws every cylinder in one batch per kind and finish", () => {
     const cylinders = QA_LAYOUT.entities.filter((entity) => entity.shape.shape === "cylinder");
-    const batches = cylinderBatches(QA_LAYOUT.entities);
+    const batches = shapeBatches(QA_LAYOUT.entities);
 
     // Planting positions, structural members, gutter legs, rail tubes,
     // heating pipes and crop wires: hundreds of cylinders, six draw calls.
     expect(new Set(batches.map((batch) => batch.batch))).toEqual(
       new Set([
-        "PLANTING_POSITION-matt",
-        "FRAME-metal",
-        "CROP_GUTTER-metal",
-        "RAIL-metal",
-        "PIPE-metal",
-        "WIRE-metal",
+        "PLANTING_POSITION-cylinder-matt",
+        "FRAME-cylinder-metal",
+        "CROP_GUTTER-cylinder-metal",
+        "RAIL-cylinder-metal",
+        "PIPE-cylinder-metal",
+        "WIRE-cylinder-metal",
       ]),
     );
     expect(batches).toHaveLength(6);

@@ -1,33 +1,26 @@
 """The organ-level tomato model's structure: organs, identities, the seed
-hierarchy, the geometry derived from them, and the plant lab that shows
-them."""
+hierarchy, and the plant lab that shows them. Their geometry is tested in
+`test_plant_geometry.py`."""
 
-import math
 from http import HTTPStatus
 
 import pytest
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.biology.tomato.organ import reference
-from greenhouse_sim.biology.tomato.organ.geometry import (
-    LEAF_STICK_RADIUS_M,
-    METRES_PER_CM,
-    organ_geometry,
-)
 from greenhouse_sim.biology.tomato.organ.reference import young_plant
 from greenhouse_sim.biology.tomato.organ.seeds import organ_rng, plant_rng
 from greenhouse_sim.biology.tomato.organ.topology import (
     Flower,
     FlowerStage,
     Fruit,
-    OrganKind,
     Plant,
     topology_problems,
 )
 from greenhouse_sim.scene.plants import plant_entities
 from greenhouse_sim.scene.snapshot import SceneEntityKind, SceneSnapshot
 from greenhouse_sim.services import plants
-from greenhouse_sim.world.geometry import Cylinder, Sphere, Transform, Vector3
+from greenhouse_sim.world.geometry import Transform, Vector3
 
 PLANT = young_plant("p01")
 
@@ -163,57 +156,12 @@ def test_draws_follow_the_seed_hierarchy() -> None:
     assert organ_rng(7, "p01", "p01_t01_fl02", "fruit_set").uniform() != fruit_set
 
 
-def _top(shape: Cylinder, transform: Transform) -> Vector3:
-    return transform.apply(Vector3(x=0.0, y=0.0, z=shape.height))
-
-
-def test_internodes_stack_up_the_stem_at_their_lengths() -> None:
-    shapes = [s for s in organ_geometry(PLANT) if s.kind == OrganKind.INTERNODE]
-    length_m = reference.INTERNODE_LENGTH_CM * METRES_PER_CM
-
-    assert [s.organ_id for s in shapes] == [f"p01_n{rank:02d}_internode" for rank in range(1, 10)]
-    for below, above in zip(shapes, shapes[1:], strict=False):
-        assert isinstance(below.shape, Cylinder)
-        assert _top(below.shape, below.transform).z == pytest.approx(above.transform.position.z)
-        assert below.shape.height == pytest.approx(length_m)
-
-
-def test_each_leaf_reaches_from_its_node_as_long_as_the_leaf() -> None:
-    shapes = {s.organ_id: s for s in organ_geometry(PLANT)}
-    leaf, internode = shapes["p01_n04_leaf"], shapes["p01_n04_internode"]
-    assert isinstance(leaf.shape, Cylinder) and isinstance(internode.shape, Cylinder)
-    node = _top(internode.shape, internode.transform)
-
-    assert leaf.shape.height == pytest.approx(reference.LEAF_LENGTH_CM * METRES_PER_CM)
-    assert leaf.shape.radius == LEAF_STICK_RADIUS_M
-    assert leaf.transform.position == node
-    tip = _top(leaf.shape, leaf.transform)
-    assert math.hypot(tip.x, tip.y) > 0 and tip.z > node.z
-
-
-def test_a_trusss_flowers_hang_along_it() -> None:
-    shapes = {s.organ_id: s for s in organ_geometry(PLANT)}
-    flowers = [shapes[f"p01_t01_fl{rank:02d}"] for rank in range(1, 7)]
-
-    assert all(isinstance(f.shape, Sphere) and f.kind == OrganKind.FLOWER for f in flowers)
-    # Further from the stem, and lower, the further along the truss.
-    reach = [math.hypot(f.transform.position.x, f.transform.position.y) for f in flowers]
-    assert reach == sorted(reach)
-
-
-def test_every_shape_belongs_to_an_organ_of_the_plant() -> None:
-    organs = {organ_id for _, organ_id, _, _ in PLANT.organs()}
-    shapes = organ_geometry(PLANT)
-
-    assert {s.organ_id for s in shapes} <= organs
-    assert len({s.shape_id for s in shapes}) == len(shapes)
-
-
 def test_the_scene_draws_each_organ_where_the_plant_stands_and_says_what_it_is() -> None:
     at = Transform(position=Vector3(x=2.0, y=1.0, z=0.5))
     entities = {e.entity_id: e for e in plant_entities(PLANT, at)}
     first = entities["p01_n01_internode"]
     flower = entities["p01_t01_fl02"]
+    leaflet = entities["p01_n03_leaf_leaflet2_left"]
 
     assert first.kind == SceneEntityKind.INTERNODE
     assert first.transform.position == Vector3(x=2.0, y=1.0, z=0.5)
@@ -222,6 +170,11 @@ def test_the_scene_draws_each_organ_where_the_plant_stands_and_says_what_it_is()
     assert flower.properties["organ_kind"] == "flower"
     assert flower.properties["stage"] == "bud"
     assert first.properties["thermal_age_cd"] == pytest.approx(264.0)
+    assert first.properties["part"] == "internode"
+    assert leaflet.kind == SceneEntityKind.LEAF
+    assert leaflet.properties["organ_id"] == "p01_n03_leaf"
+    assert leaflet.properties["part"] == "leaflet"
+    assert leaflet.properties["stage"] == "mature"
 
 
 def test_the_plant_lab_answers_with_its_scene_and_structure() -> None:

@@ -6,6 +6,7 @@ import {
   formatMemory,
   formatMetres,
   formatPoint,
+  formatSize,
   framesPerSecond,
 } from "./readouts";
 
@@ -26,6 +27,13 @@ describe("HUD readouts", () => {
   it("never writes a negative zero", () => {
     expect(formatMetres(-0.001)).toBe("0.00");
     expect(formatMetres(-0)).toBe("0.00");
+  });
+
+  it("writes a size to the centimetre, or finer if it is under one", () => {
+    expect(formatSize(0.0018)).toBe("0.0018");
+    expect(formatSize(0.002)).toBe("0.0020");
+    expect(formatSize(0.02)).toBe("0.02");
+    expect(formatSize(12.5)).toBe("12.50");
   });
 });
 

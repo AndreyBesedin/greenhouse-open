@@ -78,6 +78,11 @@ function shapeExtent(shape: Shape): Bounds {
         min: { x: -shape.radius, y: -shape.radius, z: -shape.radius },
         max: { x: shape.radius, y: shape.radius, z: shape.radius },
       };
+    case "ellipsoid":
+      return {
+        min: { x: -shape.size_x / 2, y: -shape.size_y / 2, z: -shape.size_z / 2 },
+        max: { x: shape.size_x / 2, y: shape.size_y / 2, z: shape.size_z / 2 },
+      };
     case "axes":
       return {
         min: { x: 0, y: 0, z: 0 },

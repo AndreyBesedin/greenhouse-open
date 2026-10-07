@@ -4,7 +4,7 @@ import { Box3, type BufferGeometry, Matrix4, Quaternion, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 
 import type { SceneEntity, SceneSnapshot } from "./generated/snapshotTypes";
-import { cylinderMatrices } from "./instancing";
+import { shapeMatrices } from "./instancing";
 import { solidGeometry } from "./ShapeMesh";
 
 // The fixture gallery, as `tests/test_scene_schema.py` configures it, in its
@@ -31,7 +31,7 @@ function drawn(entity: SceneEntity): BufferGeometry {
   const { shape, transform } = entity;
   if (shape.shape === "cylinder") {
     const unit = solidGeometry({ shape: "cylinder", radius: 1, height: 1 });
-    return unit.applyMatrix4(new Matrix4().fromArray(cylinderMatrices([entity])));
+    return unit.applyMatrix4(new Matrix4().fromArray(shapeMatrices([entity])));
   }
   if (shape.shape !== "box") {
     throw new Error(`${entity.entity_id} is a ${shape.shape}`);
@@ -57,7 +57,7 @@ function lowest(geometry: BufferGeometry): number {
 
 /** Where a drawn cylinder's axis starts and ends, from its matrix. */
 function axis(entity: SceneEntity): [Vector3, Vector3] {
-  const matrix = new Matrix4().fromArray(cylinderMatrices([entity]));
+  const matrix = new Matrix4().fromArray(shapeMatrices([entity]));
   return [new Vector3(0, 0, 0).applyMatrix4(matrix), new Vector3(0, 0, 1).applyMatrix4(matrix)];
 }
 
@@ -94,7 +94,7 @@ describe("the fixture gallery, as drawn", () => {
     expectNear(end, inWorld(3.4, 4.2, 0.9));
     // Its rim stays one radius from its axis.
     const rim = new Vector3(1, 0, 0).applyMatrix4(
-      new Matrix4().fromArray(cylinderMatrices([fixture("heating_pipe")])),
+      new Matrix4().fromArray(shapeMatrices([fixture("heating_pipe")])),
     );
     expect(rim.distanceTo(start)).toBeCloseTo(PIPE_RADIUS_M, 6);
   });

@@ -64,7 +64,8 @@ from greenhouse_sim.world.zones import Zone, ZoneKind
 # 11: crop wires.
 # 12: plants organ by organ (internodes, leaves, trusses, flowers, fruits),
 #     and the sphere shape.
-SCHEMA_VERSION: Final = 12
+# 13: plants' compound leaves, their leaflets drawn with the ellipsoid shape.
+SCHEMA_VERSION: Final = 13
 # The JSON Schema dialect Pydantic generates, stated in the published schema.
 JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 

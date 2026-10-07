@@ -84,3 +84,39 @@ export function selectedEntity(
   }
   return snapshot.entities.find((entity) => entity.entity_id === entityId) ?? null;
 }
+
+/** The organ an entity draws a part of, if it draws one: a plant's organs
+ * may each be drawn with several entities, such as a leaf's petiole, rachis
+ * and leaflets. */
+export function organOf(entity: SceneEntity): string | null {
+  const organ = entity.properties.organ_id;
+  return typeof organ === "string" ? organ : null;
+}
+
+/** The entity that stands for an organ when it is chosen by name: the first
+ * part of it the scene draws. */
+export function entityOfOrgan(snapshot: SceneSnapshot | null, organId: string): string | null {
+  const entity = snapshot?.entities.find((candidate) => organOf(candidate) === organId);
+  return entity?.entity_id ?? null;
+}
+
+/** What a selection highlights: the selected entity and, if it draws part of
+ * an organ, every other part of that organ. */
+export function highlighted(
+  snapshot: SceneSnapshot | null,
+  entityId: string | null,
+): ReadonlySet<string> {
+  const entity = selectedEntity(snapshot, entityId);
+  if (snapshot === null || entity === null) {
+    return new Set();
+  }
+  const organ = organOf(entity);
+  if (organ === null) {
+    return new Set([entity.entity_id]);
+  }
+  return new Set(
+    snapshot.entities
+      .filter((candidate) => organOf(candidate) === organ)
+      .map((candidate) => candidate.entity_id),
+  );
+}

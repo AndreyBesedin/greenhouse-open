@@ -4,18 +4,18 @@ import { loadPlantStructure, type OrganNode, type StructureState } from "./struc
 
 function Organ({
   organ,
-  selectedId,
+  selectedOrgan,
   onSelect,
 }: {
   organ: OrganNode;
-  selectedId: string | null;
+  selectedOrgan: string | null;
   onSelect: (organId: string) => void;
 }) {
   const name = organ.drawn ? (
     <button
       type="button"
       className="organ-link"
-      aria-pressed={organ.id === selectedId}
+      aria-pressed={organ.id === selectedOrgan}
       onClick={() => onSelect(organ.id)}
     >
       {organ.id}
@@ -32,7 +32,7 @@ function Organ({
       {organ.children.length > 0 && (
         <ul>
           {organ.children.map((child) => (
-            <Organ key={child.id} organ={child} selectedId={selectedId} onSelect={onSelect} />
+            <Organ key={child.id} organ={child} selectedOrgan={selectedOrgan} onSelect={onSelect} />
           ))}
         </ul>
       )}
@@ -42,12 +42,13 @@ function Organ({
 
 /** The plant lab's plant, organ by organ, as a debug tree: every organ with
  * its kind, thermal age and stage. An organ the view draws can be selected
- * from here, as it can by clicking it. */
+ * from here, as it can by clicking any part of it. */
 export function PlantStructure({
-  selectedId,
+  selectedOrgan,
   onSelect,
 }: {
-  selectedId: string | null;
+  /** The organ the selected entity draws part of. */
+  selectedOrgan: string | null;
   onSelect: (organId: string) => void;
 }) {
   const [state, setState] = useState<StructureState>({ status: "loading" });
@@ -74,7 +75,7 @@ export function PlantStructure({
         <details className="plant-structure" open>
           <summary>Plant structure</summary>
           <ul>
-            <Organ organ={state.tree} selectedId={selectedId} onSelect={onSelect} />
+            <Organ organ={state.tree} selectedOrgan={selectedOrgan} onSelect={onSelect} />
           </ul>
         </details>
       );

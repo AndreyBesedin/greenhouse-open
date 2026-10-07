@@ -1,25 +1,26 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import type { InstancedMesh } from "three";
 
-import type { Color, Cylinder, SceneEntity } from "./generated/snapshotTypes";
-import { cylinderMatrices } from "./instancing";
+import type { Color, SceneEntity } from "./generated/snapshotTypes";
+import { type InstancedShapeName, shapeMatrices, UNIT_SHAPES } from "./instancing";
 import { METAL, solidGeometry, threeColor } from "./ShapeMesh";
 
-const UNIT_CYLINDER: Cylinder = { shape: "cylinder", radius: 1, height: 1 };
-
 /**
- * Many cylinders in one draw call: one mesh, drawn once per entity with that
- * entity's matrix and colour. The mesh lists the entities in drawing order
- * (`userData.entityIds`), so a click on an instance can tell which entity it
- * landed on (`pickEntity`). It holds up to `capacity` cylinders, so the batch
- * can shrink and grow, as a selection leaves and rejoins it, without a new mesh.
+ * Many cylinders, spheres or ellipsoids in one draw call: one mesh of the unit
+ * shape, drawn once per entity with that entity's matrix and colour. The mesh
+ * lists the entities in drawing order (`userData.entityIds`), so a click on an
+ * instance can tell which entity it landed on (`pickEntity`). It holds up to
+ * `capacity` shapes, so the batch can shrink and grow, as a selection leaves
+ * and rejoins it, without a new mesh.
  */
-export function InstancedCylinders({
+export function InstancedShapes({
+  shape,
   entities,
   colors,
   capacity,
   metallic = false,
 }: {
+  shape: InstancedShapeName;
   entities: readonly SceneEntity[];
   colors: readonly Color[];
   capacity: number;
@@ -27,10 +28,10 @@ export function InstancedCylinders({
   metallic?: boolean;
 }) {
   const mesh = useRef<InstancedMesh>(null);
-  // A unit cylinder standing on the origin along +z, as `cylinderMatrices` expects.
-  const geometry = useMemo(() => solidGeometry(UNIT_CYLINDER), []);
+  // The unit shape, placed as `shapeMatrices` expects.
+  const geometry = useMemo(() => solidGeometry(UNIT_SHAPES[shape]), [shape]);
   useEffect(() => () => geometry.dispose(), [geometry]);
-  const matrices = useMemo(() => cylinderMatrices(entities), [entities]);
+  const matrices = useMemo(() => shapeMatrices(entities), [entities]);
 
   useLayoutEffect(() => {
     const instanced = mesh.current;
