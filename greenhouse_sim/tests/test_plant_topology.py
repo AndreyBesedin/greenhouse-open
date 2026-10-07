@@ -131,6 +131,23 @@ def test_a_structure_that_breaks_a_rule_is_found_out(broken: Plant, problem: str
     assert any(problem in found for found in problems), problems
 
 
+def test_an_organ_larger_than_it_grows_is_found_out() -> None:
+    first = PLANT.stem.phytomers[0]
+    overgrown = first.model_copy(
+        update={
+            "internode": first.internode.model_copy(update={"length_cm": 7.0, "diameter_mm": 10.0}),
+            "leaf": first.leaf.model_copy(update={"length_cm": 31.0}),
+        }
+    )
+    stem = PLANT.stem.model_copy(update={"phytomers": (overgrown, *PLANT.stem.phytomers[1:])})
+
+    assert topology_problems(PLANT.model_copy(update={"stem": stem})) == [
+        "p01_n01_internode is longer than it grows",
+        "p01_n01_internode is thicker than it grows",
+        "p01_n01_leaf is longer than it grows",
+    ]
+
+
 def test_phytomers_out_of_order_or_repeated_are_found_out() -> None:
     phytomers = PLANT.stem.phytomers
     swapped = (phytomers[1], phytomers[0], *phytomers[2:])
@@ -183,4 +200,4 @@ def test_the_plant_lab_answers_with_its_scene_and_structure() -> None:
     assert scene.status == structure.status == HTTPStatus.OK
     assert Plant.model_validate(structure.body) == plants.structure()
     kinds = {entity.kind for entity in SceneSnapshot.model_validate(scene.body).entities}
-    assert {"GROUND", "INTERNODE", "LEAF", "TRUSS", "FLOWER"} <= kinds
+    assert {"GROUND", "INTERNODE", "LEAF", "AXES"} == kinds

@@ -25,7 +25,8 @@ describe("choosing a scene in the address bar", () => {
     ["", { kind: "reference" }],
     ["?scene=example", { kind: "example" }],
     ["?scene=fixtures", { kind: "fixtures" }],
-    ["?plants=lab", { kind: "plants" }],
+    ["?plants=lab", { kind: "plants", day: 0 }],
+    ["?plants=lab&day=12", { kind: "plants", day: 12 }],
     ["?scenario=gh_demo", { kind: "scenario", scenarioId: "gh_demo" }],
     [
       "?scenario=gh_001&layout=benches",

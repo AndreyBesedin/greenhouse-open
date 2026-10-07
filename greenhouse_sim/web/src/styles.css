@@ -209,7 +209,8 @@ body {
   font-size: 13px;
 }
 
-.opening-controls {
+.opening-controls,
+.lab-day {
   display: grid;
   gap: 2px;
   margin: 0 0 8px;
@@ -217,7 +218,8 @@ body {
   border: 0;
 }
 
-.opening-control {
+.opening-control,
+.lab-day-control {
   display: grid;
   grid-template-columns: 7em 1fr 7em;
   gap: 6px;
@@ -377,11 +379,13 @@ body {
     flex-wrap: wrap;
   }
 
-  .opening-control {
+  .opening-control,
+  .lab-day-control {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
   }
 
-  .opening-control input {
+  .opening-control input,
+  .lab-day-control input {
     min-width: 0;
     width: 100%;
   }

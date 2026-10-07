@@ -112,11 +112,16 @@ class Internode(Organ):
     internode_id: str
     length_cm: NonNegativeFloat
     diameter_mm: NonNegativeFloat
+    # The sizes it grows towards, fixed when it appears.
+    final_length_cm: NonNegativeFloat
+    final_diameter_mm: NonNegativeFloat
 
 
 class Leaf(Organ):
     leaf_id: str
     length_cm: NonNegativeFloat
+    # The length it grows towards, fixed when it appears.
+    final_length_cm: NonNegativeFloat
     stage: LeafStage = LeafStage.EXPANDING
 
 
@@ -223,6 +228,13 @@ def topology_problems(plant: Plant) -> list[str]:
         for child in (phytomer.internode, phytomer.leaf, phytomer.truss):
             if child is not None and child.born_tt < phytomer.born_tt:
                 problems.append(f"{phytomer.phytomer_id} has an organ older than itself")
+        internode, leaf = phytomer.internode, phytomer.leaf
+        if internode.length_cm > internode.final_length_cm:
+            problems.append(f"{internode.internode_id} is longer than it grows")
+        if internode.diameter_mm > internode.final_diameter_mm:
+            problems.append(f"{internode.internode_id} is thicker than it grows")
+        if leaf.length_cm > leaf.final_length_cm:
+            problems.append(f"{leaf.leaf_id} is longer than it grows")
         if phytomer.truss is None:
             continue
         trusses += 1
