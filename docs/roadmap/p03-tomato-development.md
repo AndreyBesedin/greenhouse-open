@@ -1,6 +1,6 @@
 # P03: Stochastic tomato development and procedural plant geometry
 
-**Status:** in progress. Part of the [simulator roadmap](README.md).
+**Status:** done. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -82,7 +82,7 @@ As implemented (see [decision 0022](../decisions/0022-plant-organs-are-named-by-
   truss, whose flowers become fruits when they set. Identifiers say where an
   organ sits (`p01_n05_leaf`, `p01_t02_fl04`, `p01_t02_fr04`), every organ
   records the plant's thermal time when it appeared, and leaves, flowers and
-  fruits have stages. `topology_problems` lists whatever breaks the
+  fruits have stages. `Plant.problems()` lists whatever breaks the
   structure's rules: identifiers used twice or named for another place,
   phytomers out of order, organs older than what bears them or appearing
   after the plant's thermal time, and a flower with a fruit unless it set.
@@ -325,7 +325,7 @@ As implemented:
     flowers it bears.
   - **Changes:** each kind's allowed stage changes are stated
     (`LEAF_CHANGES`, `FLOWER_CHANGES`, `FRUIT_CHANGES`).
-  - **`change_problems(before, after)`:** lists whatever is wrong with a
+  - **`after.problems_since(before)`:** lists whatever is wrong with a
     later moment of a plant. Time must run forward, every organ must still be
     there, of the same kind and appearing when it did, and every stage must
     change only as allowed.
@@ -387,7 +387,7 @@ As implemented:
   time and ripeness. The fruit stage `growing` becomes `attached`: on the
   plant, growing and ripening.
 - **Rules:** the topology gains two, that no fruit is larger than it grows
-  and none ripens before it sets. `change_problems` adds that no organ
+  and none ripens before it sets. `problems_since` adds that no organ
   shrinks and no fruit unripens.
 - **Scene:**
   - **Colour:** a fruit's colour is its ripeness's, blended from green
@@ -506,7 +506,7 @@ As implemented:
     the stem rises from where they end, so everything above comes down and
     along by their length.
 - **Rules:** the topology holds that laid-down internodes are bare, and
-  `change_problems` that the history only grows and nothing laid down
+  `problems_since` that the history only grows and nothing laid down
   stands up again.
 - **The lab schedules actions in its run.** `act=day:plant:action:organ` is
   repeatable, and each action is applied at the start of its day, before
@@ -596,11 +596,63 @@ variation; check warm, bright conditions and cool, dim ones visibly diverge;
 check fruit ripeness matches the state inspected; and check no impossible
 topology appears.
 
+As implemented, the plant lab (`/?plants=lab`) holds every control:
+
+| Control | In the lab |
+| --- | --- |
+| The day | a slider over the 90-day run, and "Play the run" at 1, 2 or 5 days a second, a day at a time as each arrives |
+| The seed | a seed field and "Another seed" |
+| Temperature, PAR and CO₂ presets | an environment, and another beside it for every second plant |
+| Showing identifiers | "Plant names" over every plant; every organ named in the tree and the inspector |
+| Pruning and harvesting | remove a leaf, harvest a fruit or a truss, lower the stem, take any back |
+| No impossible topology | a panel saying whether every plant keeps the structure's rules on the day shown, and changed since the day before only as a plant may (`GET /api/plants/checks`) |
+
+The walkthrough, on 6 October 2026:
+
+1. **Watch a row grow.**
+   - Played from day 0 to 90 at 5 days a second, the row grows from
+     transplants of 15 to 28 cm to stems of 1.8 to 3.1 m, which a grower
+     would be lowering by then.
+   - Trusses flower from about day 15, and the first fruit set by day 30.
+   - The lower trusses are red by day 80.
+2. **Same seed, other seeds.**
+   - The same seed's scene is identical, entity for entity, on every request.
+   - Another seed redraws the row: heights, leaf sizes and angles, and fruit
+     loads change, and no two plants of 400 are alike. Height varies by about
+     15% around 155 cm on day 60.
+3. **Warm and bright against cool and dim.** With `cool_dim` and
+   `warm_bright` beside it, the warm plants are all taller and riper than
+   every cool one. By day 80, the warm ones fruit red to 2 m while their
+   cool neighbours stand short, small-leaved and fruitless.
+4. **Ripeness against state.** A fruit's colour is derived from its ripeness.
+   Followed from day 60 to 90, a fruit turns from green to red in the view
+   while the inspector's `ripeness` reaches 1 and its `maturity` reads `red`.
+5. **No impossible topology.** The panel finds every plant keeping the rules
+   on every day checked, including:
+   - with environments beside each other;
+   - with pruning, harvesting and lowering;
+   - on another seed.
+
+   The tests hold three plants to the rules and to allowed changes on every
+   day of the run, and 400 plants on days 60 and 90.
+
+The walkthrough's checks are also browser tests (`e2e/tomato-season.spec.ts`
+and `e2e/plant-lab.spec.ts`), so they repeat on every change.
+
 ## Acceptance criteria
 
-- [ ] Plants are our own implementation.
-- [ ] Development is longitudinal and stochastic.
-- [ ] Every visible organ has a persistent simulation identity where
-  appropriate.
-- [ ] Biological state drives geometry and appearance.
-- [ ] Environmental coupling exists through an explicit interface.
+- [x] Plants are our own implementation: `biology/tomato/organ`, with no
+  plant-modelling framework at runtime.
+- [x] Development is longitudinal and stochastic. A plant lives its days one
+  after another, keeping its organs and its history. Its traits and its
+  organs' sizes, fruit set, abortion and ripening are drawn from a seed
+  hierarchy (decisions 0022 and 0023).
+- [x] Every visible organ has a persistent simulation identity where
+  appropriate. Identifiers say where an organ sits, and an organ keeps its
+  identifier, birth and place through growth, ripening, pruning and harvest.
+  `problems_since` holds this from day to day.
+- [x] Biological state drives geometry and appearance: every shape, size,
+  angle and colour drawn is derived from the organs' state and the plant's
+  form and traits.
+- [x] Environmental coupling exists through an explicit interface:
+  `Environment` and `LocalEnvironment` (decision 0024).

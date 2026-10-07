@@ -28,8 +28,6 @@ from greenhouse_sim.biology.tomato.organ.topology import (
     LeafStage,
     Plant,
     Truss,
-    change_problems,
-    topology_problems,
 )
 from greenhouse_sim.scene.plants import BUD_COLOR, FLOWER_COLOR, plant_entities
 from greenhouse_sim.scene.snapshot import SceneEntityKind
@@ -93,7 +91,7 @@ def test_trusses_appear_on_their_phytomers_and_are_numbered_from_the_bottom() ->
     for phytomer in plant.stem.phytomers:
         if phytomer.truss is not None:
             assert phytomer.truss.born_tt == phytomer.born_tt
-    assert topology_problems(plant) == []
+    assert plant.problems() == []
 
 
 def test_a_truss_bears_its_drawn_number_of_flowers_one_after_another() -> None:
@@ -179,8 +177,8 @@ def test_every_organ_keeps_its_identity_and_changes_stage_only_as_allowed() -> N
         previous = plants.structure(plants.LabRun(), plant_id)
         for day in range(1, plants.LAST_DAY + 1):
             current = grow(previous, [plants.ENVIRONMENTS[plants.REFERENCE]], plants.DEVELOPMENT)
-            assert change_problems(previous, current) == [], (plant_id, day)
-            assert topology_problems(current) == [], (plant_id, day)
+            assert current.problems_since(previous) == [], (plant_id, day)
+            assert current.problems() == [], (plant_id, day)
             previous = current
         assert previous == plants.structure(plants.LabRun(day=plants.LAST_DAY), plant_id)
 
@@ -213,18 +211,18 @@ def test_a_change_that_is_not_allowed_is_found_out() -> None:
     unexpanded = after.stem.phytomers[0].leaf.model_copy(update={"stage": LeafStage.EXPANDING})
     reborn = after.stem.phytomers[1].model_copy(update={"born_tt": 1.0})
 
-    assert change_problems(before, _with_stage(after, rank, {"truss": back_to_bud})) == [
+    assert _with_stage(after, rank, {"truss": back_to_bud}).problems_since(before) == [
         f"{flower.flower_id} went from set to bud",
         f"{flower.fruit.fruit_id if flower.fruit else ''} is gone",
     ]
-    assert change_problems(before, _with_stage(after, 1, {"leaf": unexpanded})) == [
+    assert _with_stage(after, 1, {"leaf": unexpanded}).problems_since(before) == [
         "p01_n01_leaf went from mature to expanding"
     ]
-    assert change_problems(before, _with_stage(after, 2, {"born_tt": reborn.born_tt})) == [
+    assert _with_stage(after, 2, {"born_tt": reborn.born_tt}).problems_since(before) == [
         "p01_n02 is not the organ it was"
     ]
-    assert change_problems(after, before) != []
-    assert "the plant's thermal time went back" in change_problems(after, before)
+    assert before.problems_since(after) != []
+    assert "the plant's thermal time went back" in before.problems_since(after)
 
 
 def test_a_plant_sets_the_same_fruit_grown_in_one_step_or_day_by_day() -> None:
@@ -293,6 +291,6 @@ def test_a_truss_with_fewer_flowers_than_it_bears_is_found_out() -> None:
     assert truss is not None
     crowded = truss.model_copy(update={"final_flower_count": len(truss.flowers) - 1})
 
-    assert topology_problems(_with_stage(plant, rank, {"truss": crowded})) == [
+    assert _with_stage(plant, rank, {"truss": crowded}).problems() == [
         f"{truss.truss_id} has more flowers than it bears"
     ]

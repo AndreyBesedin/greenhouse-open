@@ -19,7 +19,6 @@ from greenhouse_sim.biology.tomato.organ.topology import (
     Fruit,
     FruitStage,
     Plant,
-    change_problems,
 )
 from greenhouse_sim.scene.plants import FRUIT_COLOR, RIPENING_COLORS, fruit_color, plant_entities
 from greenhouse_sim.scene.snapshot import SceneEntityKind
@@ -226,7 +225,7 @@ def test_shrinking_or_unripening_is_found_out() -> None:
                 )
             }
         )
-        return change_problems(before, before.model_copy(update={"stem": stem}))
+        return before.model_copy(update={"stem": stem}).problems_since(before)
 
     assert changed({"ripeness": fruit.ripeness / 2}) == [f"{fruit.fruit_id}'s ripeness went down"]
     assert changed({"diameter_mm": fruit.diameter_mm - 1}) == [

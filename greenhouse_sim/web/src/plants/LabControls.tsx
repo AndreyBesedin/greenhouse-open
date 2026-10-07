@@ -5,6 +5,17 @@ import { type LabRun, PLANT_LAB_LAST_DAY } from "./lab";
 
 // The choice of no second environment beside the first.
 const NOTHING_BESIDE = "";
+// How fast the lab can play its run, in days a second at most: each day is
+// shown once the simulator has grown it, so a slow answer slows the play.
+const SLOW_DAYS_A_SECOND = 1;
+const MEDIUM_DAYS_A_SECOND = 2;
+const FAST_DAYS_A_SECOND = 5;
+export const GROWTH_SPEEDS = [
+  SLOW_DAYS_A_SECOND,
+  MEDIUM_DAYS_A_SECOND,
+  FAST_DAYS_A_SECOND,
+] as const;
+export type GrowthSpeed = (typeof GROWTH_SPEEDS)[number];
 
 /**
  * The plant lab's run: its day, its seed and its plants' environments.
@@ -19,11 +30,25 @@ export function LabControls({
   run,
   shownDay,
   onChange,
+  playing,
+  speed,
+  showNames,
+  onPlaying,
+  onSpeed,
+  onShowNames,
 }: {
   run: LabRun;
   /** The day of the scene on show, if one is. */
   shownDay: number | null;
   onChange: (change: Partial<LabRun>) => void;
+  /** Whether the run plays, a day after another, and how fast. */
+  playing: boolean;
+  speed: GrowthSpeed;
+  /** Whether each plant's name floats above it. */
+  showNames: boolean;
+  onPlaying: (playing: boolean) => void;
+  onSpeed: (speed: GrowthSpeed) => void;
+  onShowNames: (showNames: boolean) => void;
 }) {
   const [environments, setEnvironments] = useState<EnvironmentsState>({ status: "loading" });
 
@@ -60,6 +85,36 @@ export function LabControls({
         />
         <span data-testid="plant-day">{shownDay === null ? "…" : `day ${shownDay}`}</span>
       </label>
+      <div className="lab-control">
+        <button
+          type="button"
+          onClick={() => onPlaying(!playing)}
+          disabled={!playing && run.day >= PLANT_LAB_LAST_DAY}
+        >
+          {playing ? "Pause the run" : "Play the run"}
+        </button>
+        <label>
+          Growth speed{" "}
+          <select
+            value={speed}
+            onChange={(event) => onSpeed(Number(event.target.value) as GrowthSpeed)}
+          >
+            {GROWTH_SPEEDS.map((daysPerSecond) => (
+              <option key={daysPerSecond} value={daysPerSecond}>
+                {daysPerSecond} {daysPerSecond === 1 ? "day" : "days"} a second
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={showNames}
+            onChange={(event) => onShowNames(event.target.checked)}
+          />{" "}
+          Plant names
+        </label>
+      </div>
       <label className="lab-control">
         <span>Seed</span>
         <input

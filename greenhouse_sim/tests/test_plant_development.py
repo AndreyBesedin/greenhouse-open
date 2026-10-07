@@ -17,7 +17,7 @@ from greenhouse_sim.biology.tomato.organ.development import (
     grow,
     growth_fraction,
 )
-from greenhouse_sim.biology.tomato.organ.topology import LeafStage, Plant, topology_problems
+from greenhouse_sim.biology.tomato.organ.topology import LeafStage, Plant
 from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services import plants
 from greenhouse_sim.services.errors import InvalidRequest
@@ -69,7 +69,7 @@ def test_a_plant_emerges_with_its_first_phytomer_at_its_initial_size() -> None:
         first.internode.final_diameter_mm * PARAMS.initial_diameter_fraction
     )
     assert first.leaf.stage == LeafStage.EXPANDING
-    assert topology_problems(plant) == []
+    assert plant.problems() == []
 
 
 @pytest.mark.parametrize("thermal_time", [0.0, 32.9, 33.0, 100.0, 230.0, 891.0])
@@ -126,7 +126,7 @@ def test_organs_grow_and_mature_but_never_shrink_or_grow_young() -> None:
             assert above.internode.length_cm >= below.internode.length_cm
             assert above.internode.diameter_mm >= below.internode.diameter_mm
             assert above.born_tt == below.born_tt
-        assert topology_problems(plant) == []
+        assert plant.problems() == []
 
 
 def test_an_organ_grows_along_an_s_curve_to_its_final_size() -> None:
@@ -175,7 +175,7 @@ def test_a_removed_leaf_stays_removed() -> None:
     grown = develop(plant.model_copy(update={"stem": stem}), 100.0, PARAMS)
 
     assert grown.stem.phytomers[0].leaf == removed.leaf
-    assert topology_problems(grown) == []
+    assert grown.problems() == []
 
 
 def test_an_organ_keeps_its_identity_from_one_day_to_the_next() -> None:

@@ -21,8 +21,6 @@ from greenhouse_sim.biology.tomato.organ.topology import (
     Plant,
     RemoveLeaf,
     Truss,
-    change_problems,
-    topology_problems,
 )
 from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services import plants
@@ -87,7 +85,7 @@ def test_removing_a_leaf_prunes_it_off_and_keeps_it_in_the_history() -> None:
     assert again.history[-1].applied is False
     assert again.history[-1].note == "p01_n02_leaf is already removed"
     assert again.stem == pruned.stem
-    assert change_problems(PLANT, again) == [] and topology_problems(again) == []
+    assert again.problems_since(PLANT) == [] and again.problems() == []
 
 
 def test_a_harvested_fruit_leaves_the_attached_crop_but_not_the_history() -> None:
@@ -101,7 +99,7 @@ def test_a_harvested_fruit_leaves_the_attached_crop_but_not_the_history() -> Non
     assert event.organs == ("p01_t01_fr01",)
     assert event.harvested_g == pytest.approx(fruit.mass_g)
     assert event.note == f"harvested p01_t01_fr01, {fruit.mass_g:.0f} g"
-    assert change_problems(PLANT, picked) == []
+    assert picked.problems_since(PLANT) == []
 
 
 def test_a_fruit_not_on_the_plant_cannot_be_harvested() -> None:
@@ -154,7 +152,7 @@ def test_the_stem_is_lowered_only_where_it_is_bare() -> None:
     drop = sum(p.internode.length_cm for p in PLANT.stem.phytomers[:2])
     assert lowered.history[-1].note == f"laid 2 internodes down, lowering the top by {drop:.0f} cm"
     assert too_far.history[-1].note == "p01_n03_leaf is still on the stem"
-    assert topology_problems(lowered) == [] and change_problems(bare, lowered) == []
+    assert lowered.problems() == [] and lowered.problems_since(bare) == []
 
 
 def test_a_lowered_stem_lies_along_the_row_and_rises_from_where_it_ends() -> None:
@@ -203,7 +201,7 @@ def test_scheduled_actions_last_through_the_days_after_and_not_before() -> None:
         assert fruit_id not in _attached(after)
     still_growing = _fruits(plants.structure(_run(90)))["p01_t05_fr01"]
     assert still_growing.mass_g > _fruits(after)["p01_t05_fr01"].mass_g
-    assert change_problems(on, after) == []
+    assert after.problems_since(on) == []
 
 
 def test_the_lab_schedules_actions_from_its_query_and_shows_them() -> None:
@@ -245,13 +243,13 @@ def test_a_rewritten_history_or_a_stem_stood_up_again_is_found_out() -> None:
     pruned = act(PLANT, RemoveLeaf(leaf_id="p01_n01_leaf"))
     lowered = act(pruned, LowerStem(internodes=1))
 
-    assert change_problems(pruned, PLANT) == [
+    assert PLANT.problems_since(pruned) == [
         "the plant's history was rewritten",
         "p01_n01_leaf went from removed to mature",
     ]
-    assert change_problems(lowered, pruned.model_copy(update={"history": lowered.history})) == [
+    assert pruned.model_copy(update={"history": lowered.history}).problems_since(lowered) == [
         "laid-down internodes stood up again"
     ]
-    assert topology_problems(PLANT.model_copy(update={"laid_internodes": 1})) == [
+    assert PLANT.model_copy(update={"laid_internodes": 1}).problems() == [
         "p01_n01_leaf is laid down with its internode"
     ]

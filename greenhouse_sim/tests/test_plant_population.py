@@ -12,7 +12,6 @@ from greenhouse_sim.biology.tomato.organ.topology import (
     FlowerStage,
     FruitStage,
     Plant,
-    topology_problems,
 )
 from greenhouse_sim.biology.tomato.organ.variation import draw_traits
 from greenhouse_sim.services import plants
@@ -47,7 +46,7 @@ CROP = _crop()
 
 def test_every_plant_keeps_every_rule() -> None:
     for _, day_60, day_90 in CROP:
-        assert topology_problems(day_60) == [] and topology_problems(day_90) == []
+        assert day_60.problems() == [] and day_90.problems() == []
 
 
 def test_plants_vary_in_height_but_stay_one_crop_and_are_never_clones() -> None:

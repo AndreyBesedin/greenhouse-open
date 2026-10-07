@@ -19,7 +19,7 @@ from greenhouse_sim.biology.tomato.organ.environment import (
     growth_factor,
     light_response,
 )
-from greenhouse_sim.biology.tomato.organ.topology import FruitStage, Plant, topology_problems
+from greenhouse_sim.biology.tomato.organ.topology import FruitStage, Plant
 from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services import plants
 
@@ -99,7 +99,7 @@ def test_dimmer_days_grow_smaller_organs_at_the_same_pace() -> None:
     assert len(dim.stem.phytomers) == len(bright.stem.phytomers)
     assert _leaf_length(dim) < _leaf_length(bright)
     assert _fruit_mass(dim) < _fruit_mass(bright)
-    assert topology_problems(dim) == []
+    assert dim.problems() == []
 
 
 def test_less_co2_or_water_grows_less() -> None:

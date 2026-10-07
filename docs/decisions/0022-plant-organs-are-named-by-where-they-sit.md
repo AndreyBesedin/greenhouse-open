@@ -26,7 +26,7 @@ stand.
   `p01_t02_fr04` the fruit that flower set. A pruned leaf or harvested fruit
   keeps its place, so identifiers are never reused.
 - Every organ records when it appeared as the plant's accumulated thermal
-  time then; its thermal age follows. `topology_problems` states the
+  time then; its thermal age follows. `Plant.problems` states the
   structure's rules, and tests hold every plant to them.
 - Randomness follows a hierarchy of identifiers under one seed. There is one
   seed, the simulation's, and each draw's generator is derived from it and a
