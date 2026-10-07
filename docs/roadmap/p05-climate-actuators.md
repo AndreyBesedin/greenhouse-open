@@ -1,6 +1,6 @@
 # P05: Climate actuators: fans, heaters, dehumidification and vents
 
-**Status:** design reviewed; P05.0's scenario design next. Part of the [simulator roadmap](README.md).
+**Status:** design reviewed, P05.0's included; P05.0 next. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -185,19 +185,20 @@ heater's energy budget exactly. Sunlight through the glass is P08's.
 
 ### 7. Scenarios
 
-The review decided to retire the original reference scenarios, gh_001 and
-gh_demo, and build new ones that matter to what the simulator is now. They
+The review decided to retire the original scenarios, gh_001, gh_demo and
+gh_002, and build new ones that matter to what the simulator is now. They
 come before the equipment, so that P05's equipment, QA and baselines are
-built on them rather than moved later; their design is reviewed before
-they are built. The airflow QA case, `airflow_box`, stays. P05's own QA
-scenario, `climate_box`, is one of the new scenarios, or a variant of one:
-a house with a fan, a heater, a dehumidifier, a roof vent and plants.
+built on them rather than moved later. Scenarios exist to test and QA what
+each project adds and to catch regressions; demonstration scenarios will be
+built through the interface once it can build them. The airflow QA case,
+`airflow_box`, stays. P05's own QA scenario, `climate_box`, is one of the
+new scenarios (P05.0).
 
 ## Steps
 
 | Step | Commit summary | Status |
 | --- | --- | --- |
-| P05.0 | `feat(scenarios): replace the original reference scenarios` | Planned: design first |
+| P05.0 | `feat(scenarios): replace the original reference scenarios` | Planned |
 | P05.1 | `feat(actuators): define climate actuator contract and controls` | Planned |
 | P05.2 | `feat(fans): add fan airflow source model` | Planned |
 | P05.3 | `feat(heating): add heater sensible-heat source` | Planned |
@@ -208,11 +209,128 @@ a house with a fan, a heater, a dehumidifier, a roof vent and plants.
 
 ### P05.0: New reference scenarios
 
-Retire gh_001 and gh_demo for new scenarios that matter to the simulator as
-it is now (section 7). This includes `climate_box`, and moves everything
-that rests on the old ones: tests, reference baselines, kept CFD results,
-QA pages and their screenshots, and the documentation's examples. Their
-design is drafted and reviewed before they are built.
+Retire gh_001, gh_demo and gh_002 for new scenarios that matter to the
+simulator as it is now (section 7), and move everything that rests on them.
+Their design, below, was reviewed before they are built.
+
+**What the scenarios are for.** Today, the original scenarios carry most of
+the simulator's tests and examples:
+
+| Role | Today | After P05.0 |
+| --- | --- | --- |
+| The reference: a full house of crop rows, with every kind of fixture and zone, a second layout, a kept CFD result; the examples, the conformance tests and the reference baseline | gh_001: 8 × 9.6 m, two spans, 40 plants, 28 days | `tomato_compartment` |
+| Small and quick: the example scene, live play, the viewer's bounds and command tests, every kind of opening | gh_demo: 4 × 6.4 m, two spans, 6 plants, 15 days | `climate_box` |
+| One plant, followed for a season: examples 01 and 03, the controls and renderer smoke tests, a scenario with no openings | gh_002: 4 × 3.2 m, one plant, 40 days | `climate_box` |
+| The airflow QA case | `airflow_box` | unchanged |
+
+Both new scenarios run the simple tomato model, as every scenario does now;
+the organ-level model joins the engine in P09.
+
+#### `tomato_compartment`: a production compartment
+
+A modern glasshouse compartment for high-wire tomato, the scale and shape
+the simulator's later projects (sensors, weather, sun, the integrated
+scenario) are about.
+
+- **The house:** 24 m long (six 4 m bays) and 16 m wide (four 4 m spans),
+  with 6 m to the gutters and 6.8 m to the ridges: a Venlo-style
+  multi-span roof. Its field grid is 48 × 32 × 12 cells.
+- **Openings:** a roof vent on each span's right slope, 6 m by 1 m, standing
+  20% open; a 3 by 3 m sliding door in the front gable for trolleys,
+  closed.
+- **The crop:** eight rows along the house, 1.6 m apart, of 40 plants each
+  at 0.5 m: 320 plants, on hanging gutters under crop wires, for 28 days. A
+  season takes about a second with the simple model.
+- **The layout:**
+  - a main path across the front, past the door, and side paths along both
+    side walls;
+  - a pipe rail between each pair of rows, which heats and carries
+    trolleys;
+  - heating pipes along both side walls;
+  - a service area at the back, with an irrigation unit that obstructs the
+    air and is kept clear of robots.
+- **Its second layout, `propagation`:** the same house set up for raising
+  young plants, on benches. It keeps today's coverage of benches, which
+  gh_001's `benches` layout gives.
+- **Its air:** convection as its prescribed airflow. A CFD result is kept,
+  solved by the CFD workflow, with the first vent as the inlet and the
+  others as outlets, as now.
+- **No equipment until the end of the roadmap (P09)**, unless a test, a
+  regression check or a QA scenario needs it sooner.
+
+#### `climate_box`: a small house to equip
+
+A single-span house, small enough to follow its air closely, where P05's
+equipment is placed and its final QA is run. It also takes over gh_demo's
+and gh_002's small and quick roles.
+
+- **The house:** 12 m long and 6.4 m wide, with 4 m to the gutters and
+  4.8 m to the ridge. Its field grid is 24 × 13 × 8 cells.
+- **Openings:** every kind, so that their tests keep a home:
+  - a roof vent, 4 m by 1 m, on the right slope;
+  - a side vent, 3 m by 0.6 m, in the right side wall;
+  - a door in the front gable.
+
+  All are closed to start, so that the equipment acts on still, closed air.
+- **The crop:** two rows on gutters, 1.6 m apart, of 16 plants each: 32
+  plants, for 14 days.
+- **Its air:** still to start: a uniform breeze of 0 m/s, so that a fan's
+  jet stands out. No CFD result: closed, it has no way in or out.
+- **Equipment, from P05.1 on:**
+  - a fan at the front, 2.8 m up, blowing along the house;
+  - a heater in a back corner;
+  - a dehumidifier by the left side wall.
+
+  The run's outside (8 °C, 90%) and starting air (16 °C, 85%) come with
+  P05.3 and P05.4: a cold, damp night, when heating and drying matter.
+
+#### What moves
+
+- **The simulator's tests:** 29 files name an original scenario. Each moves
+  to whichever new scenario serves the same role, with its expected numbers
+  worked out afresh: cells, mesh faces, field ranges, plant counts.
+- **The viewer:**
+  - 19 browser specs and 10 unit test files;
+  - the example scene, regenerated from `climate_box`, with the bounds test
+    following its size.
+- **The reference baseline:** regenerated. The original scenarios' entries
+  go, the new ones' come, and `airflow_box`'s stays as it is.
+- **Kept CFD results:** gh_001's goes; `tomato_compartment`'s is solved by
+  the CFD workflow, with its solve list following.
+- **The four examples, the conformance tests and the READMEs** move to the
+  new scenarios: the examples that follow one plant, or close the loop with
+  a policy, to `climate_box`; those that store, query and score a full
+  house, to `tomato_compartment`.
+- **Unchanged:**
+  - finished projects' roadmap pages, which record what was built then;
+  - the protocol package's tests, which use "gh_001" only as a sample
+    identifier;
+  - the screenshot QA pages, which draw their own scenes.
+
+#### Delivery
+
+Two stacked pull requests:
+
+1. **Adding:** `feat(scenarios): add the tomato compartment and the climate
+   box`. The new scenarios, their layouts, their tests, their baseline
+   entries, and the compartment's CFD result, which CI solves (two commits,
+   as before).
+2. **Retiring:** `refactor(scenarios): move to the new scenarios and retire
+   the original ones`. Every dependent moves, gh_001, gh_demo and gh_002
+   and their layouts and results go, and the examples and READMEs follow.
+
+#### Review decisions (7 October 2026)
+
+1. **The set:** `tomato_compartment` and `climate_box`, with `airflow_box`
+   staying, as proposed.
+2. **gh_002 is retired too.** Scenarios are for testing and QA of what each
+   project adds and for catching regressions. Demonstration scenarios will
+   be built through the interface later.
+3. **The compartment's scale,** 24 × 16 m with 6 m to the gutters and 320
+   plants: agreed.
+4. **The compartment's equipment** waits for the end of the roadmap, unless
+   a test, a regression check or a QA scenario needs it sooner.
+5. **The names,** `tomato_compartment` and `climate_box`: agreed.
 
 ### P05.1: Climate actuator contract and controls
 
@@ -322,9 +440,9 @@ What P05 simplifies on purpose, kept here until a later step removes it:
    P05, and feeding it the local air is deferred to P07/P09.
 2. **Fan jets by superposition:** acceptable for v1, and tracked under
    "Known approximations" until a projection replaces it.
-3. **Scenarios:** retire gh_001 and gh_demo, and build new, more relevant
-   scenarios, `climate_box` among them (section 7). Their design comes
-   first, for review.
+3. **Scenarios:** retire the original scenarios and build new, more
+   relevant ones, `climate_box` among them (section 7). Their design comes
+   first, for review (P05.0, reviewed).
 4. **Equipment in layout files:** agreed.
 5. **A fixed outside and a constant vent exchange speed until P07:**
    agreed.
