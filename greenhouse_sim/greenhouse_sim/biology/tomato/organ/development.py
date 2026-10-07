@@ -15,9 +15,11 @@ A plant develops by its crop's parameters as its traits change them
 also varies around its plant's, drawn from the organ's own generator when it
 appears, so one plant's leaves are not all alike.
 
+Trusses appear with their phytomers and develop their flowers and fruits as
+`reproduction` says.
+
 Development depends on thermal time alone here, so a plant grown in one step
-or day by day is the same plant. Trusses, flowers and fruits are carried as
-they are, until P03.5 grows them.
+or day by day is the same plant.
 """
 
 from collections.abc import Iterable
@@ -25,6 +27,12 @@ from typing import Annotated, Final
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt
 
+from greenhouse_sim.biology.tomato.organ.reproduction import (
+    TrussParams,
+    bears_truss,
+    grown_truss,
+    new_truss,
+)
 from greenhouse_sim.biology.tomato.organ.seeds import organ_rng
 from greenhouse_sim.biology.tomato.organ.topology import (
     Axis,
@@ -34,6 +42,7 @@ from greenhouse_sim.biology.tomato.organ.topology import (
     Phytomer,
     Plant,
     PlantTraits,
+    Truss,
     internode_id,
     leaf_id,
     phytomer_id,
@@ -76,6 +85,8 @@ class DevelopmentParams(BaseModel):
     # Each organ's final size varies around its plant's by this coefficient
     # of variation; none unless asked.
     organ_size_cv: Annotated[float, Field(ge=0, lt=1 / ORGAN_LIMIT_SD)] = 0.0
+    # When trusses appear and how their flowers develop.
+    trusses: TrussParams = TrussParams()
 
 
 def plant_params(params: DevelopmentParams, traits: PlantTraits) -> DevelopmentParams:
@@ -122,9 +133,11 @@ def final_size_fraction(rank: int, params: DevelopmentParams) -> float:
     return params.first_phytomer_fraction + (1 - params.first_phytomer_fraction) * ramp
 
 
-def _new_phytomer(plant: Plant, rank: int, born_tt: float, params: DevelopmentParams) -> Phytomer:
+def _new_phytomer(
+    plant: Plant, rank: int, born_tt: float, params: DevelopmentParams, truss: Truss | None
+) -> Phytomer:
     """A phytomer as it appears on the plant, which develops by `params`, its
-    organs at their initial sizes."""
+    organs at their initial sizes, with this truss if it bears one."""
     plant_id = plant.plant_id
     internode, leaf = internode_id(plant_id, rank), leaf_id(plant_id, rank)
     scale = final_size_fraction(rank, params)
@@ -153,12 +166,19 @@ def _new_phytomer(plant: Plant, rank: int, born_tt: float, params: DevelopmentPa
             length_cm=leaf_length * params.initial_fraction,
             final_length_cm=leaf_length,
         ),
+        truss=truss,
     )
 
 
-def _grown(phytomer: Phytomer, thermal_time: float, params: DevelopmentParams) -> Phytomer:
-    """The phytomer's internode and leaf at the plant's thermal time. A leaf
-    that has been removed stays removed."""
+def _grown(
+    plant: Plant,
+    phytomer: Phytomer,
+    previous_tt: float,
+    thermal_time: float,
+    params: DevelopmentParams,
+) -> Phytomer:
+    """The phytomer's internode, leaf and truss as the plant's thermal time
+    moves on from `previous_tt`. A leaf that has been removed stays removed."""
     age = thermal_time - phytomer.born_tt
     length = growth_fraction(age, params.initial_fraction, params)
     diameter = growth_fraction(age, params.initial_diameter_fraction, params)
@@ -180,6 +200,9 @@ def _grown(phytomer: Phytomer, thermal_time: float, params: DevelopmentParams) -
                 }
             ),
             "leaf": leaf,
+            "truss": None
+            if phytomer.truss is None
+            else grown_truss(plant, phytomer.truss, previous_tt, thermal_time, params.trusses),
         }
     )
 
@@ -201,7 +224,9 @@ def emerged(
         seed=seed,
         traits=PlantTraits() if traits is None else traits,
     )
-    first = _new_phytomer(bare, 1, 0.0, plant_params(params, bare.traits))
+    own = plant_params(params, bare.traits)
+    truss = new_truss(bare, 1, 0.0, own.trusses) if bears_truss(1, own.trusses) else None
+    first = _new_phytomer(bare, 1, 0.0, own, truss)
     return bare.model_copy(update={"stem": bare.stem.model_copy(update={"phytomers": (first,)})})
 
 
@@ -213,11 +238,19 @@ def develop(plant: Plant, thermal_time_cd: float, params: DevelopmentParams) -> 
     own = plant_params(params, plant.traits)
     thermal_time = plant.thermal_time + thermal_time_cd
     phytomers = list(plant.stem.phytomers)
+    trusses = sum(phytomer.truss is not None for phytomer in phytomers)
     born = phytomers[-1].born_tt + own.phyllochron_cd if phytomers else plant.born_tt
     while born <= thermal_time:
-        phytomers.append(_new_phytomer(plant, len(phytomers) + 1, born, own))
+        rank = len(phytomers) + 1
+        truss = None
+        if bears_truss(rank, own.trusses):
+            trusses += 1
+            truss = new_truss(plant, trusses, born, own.trusses)
+        phytomers.append(_new_phytomer(plant, rank, born, own, truss))
         born += own.phyllochron_cd
-    grown = tuple(_grown(phytomer, thermal_time, own) for phytomer in phytomers)
+    grown = tuple(
+        _grown(plant, phytomer, plant.thermal_time, thermal_time, own) for phytomer in phytomers
+    )
     return plant.model_copy(
         update={
             "thermal_time": thermal_time,

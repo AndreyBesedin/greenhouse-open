@@ -10,7 +10,7 @@ and rebuild the plant's structure from what it draws.
 from typing import Final
 
 from greenhouse_sim.biology.tomato.organ.geometry import OrganShape, organ_geometry
-from greenhouse_sim.biology.tomato.organ.topology import Organ, OrganKind, Plant
+from greenhouse_sim.biology.tomato.organ.topology import FlowerStage, Organ, OrganKind, Plant
 from greenhouse_sim.scene.snapshot import Color, SceneEntity, SceneEntityKind
 from greenhouse_sim.world.geometry import Transform
 
@@ -20,6 +20,8 @@ LEAF_COLOR: Final = Color(r=0.18, g=0.5, b=0.2)
 RACHIS_COLOR: Final = Color(r=0.4, g=0.62, b=0.26)
 TRUSS_COLOR: Final = Color(r=0.42, g=0.6, b=0.28)
 FLOWER_COLOR: Final = Color(r=0.96, g=0.84, b=0.18)
+# A bud is still green, turning yellow as it opens.
+BUD_COLOR: Final = Color(r=0.62, g=0.72, b=0.24)
 FRUIT_COLOR: Final = Color(r=0.3, g=0.62, b=0.2)
 
 _KINDS: Final = {
@@ -58,6 +60,8 @@ def _entity(
     stage = getattr(organ, "stage", None)
     if stage is not None:
         properties["stage"] = str(stage)
+    if stage == FlowerStage.BUD:
+        color = BUD_COLOR
     return SceneEntity(
         entity_id=shape.shape_id,
         kind=kind,

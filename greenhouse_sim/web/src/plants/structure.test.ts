@@ -22,6 +22,7 @@ const PLANT = {
           born_tt: 40,
           truss_id: "p01_t01",
           number: 1,
+          final_flower_count: 3,
           flowers: [
             {
               born_tt: 40,
@@ -36,6 +37,13 @@ const PLANT = {
               },
             },
             { born_tt: 45, flower_id: "p01_t01_fl02", rank: 2, stage: "bud", fruit: null },
+            {
+              born_tt: 50,
+              flower_id: "p01_t01_fl03",
+              rank: 3,
+              stage: "set",
+              fruit: { born_tt: 80, fruit_id: "p01_t01_fr03", diameter_mm: 6, stage: "aborted" },
+            },
           ],
         },
       },
@@ -65,6 +73,8 @@ describe("a plant's structure", () => {
       "flower p01_t01_fl01",
       "fruit p01_t01_fr01",
       "flower p01_t01_fl02",
+      "flower p01_t01_fl03",
+      "fruit p01_t01_fr03",
     ]);
   });
 
@@ -76,12 +86,14 @@ describe("a plant's structure", () => {
     expect(organs.p01_n01?.detail).toBe("100 °Cd");
   });
 
-  it("marks the organs the view draws: not a set flower, but its fruit", () => {
+  it("marks the organs the view draws: not a set flower, but its fruit, unless it aborted", () => {
     const organs = Object.fromEntries(flatten(organTree(PLANT)).map((node) => [node.id, node]));
 
     expect(organs.p01_t01_fl01?.drawn).toBe(false);
     expect(organs.p01_t01_fr01?.drawn).toBe(true);
     expect(organs.p01_t01_fl02?.drawn).toBe(true);
+    expect(organs.p01_t01_fl03?.drawn).toBe(false);
+    expect(organs.p01_t01_fr03?.drawn).toBe(false);
     expect(organs.p01_stem?.drawn).toBe(false);
   });
 

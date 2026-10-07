@@ -200,4 +200,4 @@ def test_the_plant_lab_answers_with_its_scene_and_structure() -> None:
     assert scene.status == structure.status == HTTPStatus.OK
     assert Plant.model_validate(structure.body) == plants.structure()
     kinds = {entity.kind for entity in SceneSnapshot.model_validate(scene.body).entities}
-    assert {"GROUND", "INTERNODE", "LEAF", "AXES"} == kinds
+    assert {"GROUND", "INTERNODE", "LEAF", "AXES"} <= kinds

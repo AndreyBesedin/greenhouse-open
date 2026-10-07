@@ -146,7 +146,7 @@ def test_final_sizes_grow_up_the_stem_to_the_full_ones() -> None:
     assert top.internode.final_length_cm == pytest.approx(PARAMS.internode_length_cm)
 
 
-def test_a_removed_leaf_stays_removed_and_trusses_are_carried_as_they_are() -> None:
+def test_a_removed_leaf_stays_removed() -> None:
     plant = reference.young_plant("p01")
     first = plant.stem.phytomers[0]
     removed = first.model_copy(
@@ -156,8 +156,6 @@ def test_a_removed_leaf_stays_removed_and_trusses_are_carried_as_they_are() -> N
     grown = develop(plant.model_copy(update={"stem": stem}), 100.0, PARAMS)
 
     assert grown.stem.phytomers[0].leaf == removed.leaf
-    truss = reference.FIRST_TRUSS_RANK - 1
-    assert grown.stem.phytomers[truss].truss == plant.stem.phytomers[truss].truss
     assert topology_problems(grown) == []
 
 

@@ -80,7 +80,29 @@ class FruitStage(StrEnum):
     """Where a fruit is in its life, from set to picked."""
 
     GROWING = "growing"
+    # Dropped while young; it keeps its place, as a removed leaf does.
+    ABORTED = "aborted"
     HARVESTED = "harvested"
+
+
+# How each kind of organ's stage may change from one moment to a later one;
+# a stage may always stay as it is.
+LEAF_CHANGES: dict[LeafStage, frozenset[LeafStage]] = {
+    LeafStage.EXPANDING: frozenset({LeafStage.MATURE, LeafStage.REMOVED}),
+    LeafStage.MATURE: frozenset({LeafStage.REMOVED}),
+    LeafStage.REMOVED: frozenset(),
+}
+FLOWER_CHANGES: dict[FlowerStage, frozenset[FlowerStage]] = {
+    FlowerStage.BUD: frozenset({FlowerStage.OPEN, FlowerStage.SET, FlowerStage.ABORTED}),
+    FlowerStage.OPEN: frozenset({FlowerStage.SET, FlowerStage.ABORTED}),
+    FlowerStage.SET: frozenset(),
+    FlowerStage.ABORTED: frozenset(),
+}
+FRUIT_CHANGES: dict[FruitStage, frozenset[FruitStage]] = {
+    FruitStage.GROWING: frozenset({FruitStage.ABORTED, FruitStage.HARVESTED}),
+    FruitStage.ABORTED: frozenset(),
+    FruitStage.HARVESTED: frozenset(),
+}
 
 
 def stem_id(plant_id: str) -> str:
@@ -155,6 +177,9 @@ class Truss(Organ):
     truss_id: str
     # Its place among the plant's trusses, in the order they appeared.
     number: PositiveInt
+    # How many flowers it bears in all, fixed when it appears; they appear
+    # one after another from its base.
+    final_flower_count: PositiveInt
     flowers: tuple[Flower, ...] = ()
 
 
@@ -275,6 +300,8 @@ def topology_problems(plant: Plant) -> list[str]:
         truss = phytomer.truss
         if (truss.number, truss.truss_id) != (trusses, truss_id(pid, trusses)):
             problems.append(f"{truss.truss_id} is truss {trusses}, numbered from the bottom")
+        if len(truss.flowers) > truss.final_flower_count:
+            problems.append(f"{truss.truss_id} has more flowers than it bears")
         for expected_flower, flower in enumerate(truss.flowers, start=1):
             due = flower_id(pid, truss.number, expected_flower)
             if (flower.rank, flower.flower_id) != (expected_flower, due):
@@ -286,4 +313,45 @@ def topology_problems(plant: Plant) -> list[str]:
                 problems.append(f"{fruit.fruit_id} should take its flower's place")
             if fruit is not None and fruit.born_tt < flower.born_tt:
                 problems.append(f"{fruit.fruit_id} is older than its flower")
+    return problems
+
+
+def _stage(organ: Organ) -> StrEnum | None:
+    stage = getattr(organ, "stage", None)
+    return stage if isinstance(stage, StrEnum) else None
+
+
+def _allowed(before: StrEnum, after: StrEnum) -> bool:
+    if before == after:
+        return True
+    if isinstance(before, LeafStage) and isinstance(after, LeafStage):
+        return after in LEAF_CHANGES[before]
+    if isinstance(before, FlowerStage) and isinstance(after, FlowerStage):
+        return after in FLOWER_CHANGES[before]
+    if isinstance(before, FruitStage) and isinstance(after, FruitStage):
+        return after in FRUIT_CHANGES[before]
+    return False
+
+
+def change_problems(before: Plant, after: Plant) -> list[str]:
+    """Everything wrong with `after` as a later moment of the plant `before`
+    was, or nothing: time runs forward, every organ is still there, of the
+    same kind and appearing when it did, and every stage has changed only as
+    its kind's stages may (`LEAF_CHANGES`, `FLOWER_CHANGES`, `FRUIT_CHANGES`)."""
+    problems: list[str] = []
+    if after.plant_id != before.plant_id:
+        problems.append(f"{after.plant_id} is not {before.plant_id}")
+    if after.thermal_time < before.thermal_time:
+        problems.append("the plant's thermal time went back")
+    later = {organ_id: (kind, organ) for kind, organ_id, _, organ in after.organs()}
+    for kind, organ_id, _, organ in before.organs():
+        if organ_id not in later:
+            problems.append(f"{organ_id} is gone")
+            continue
+        later_kind, later_organ = later[organ_id]
+        if later_kind != kind or later_organ.born_tt != organ.born_tt:
+            problems.append(f"{organ_id} is not the organ it was")
+        stage, later_stage = _stage(organ), _stage(later_organ)
+        if stage is not None and later_stage is not None and not _allowed(stage, later_stage):
+            problems.append(f"{organ_id} went from {stage} to {later_stage}")
     return problems

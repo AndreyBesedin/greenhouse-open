@@ -65,6 +65,7 @@ def young_plant(plant_id: str) -> Plant:
                 truss_id=truss_id(plant_id, trusses),
                 number=trusses,
                 born_tt=born,
+                final_flower_count=FLOWERS_PER_TRUSS,
                 flowers=tuple(
                     Flower(flower_id=flower_id(plant_id, trusses, place), rank=place, born_tt=born)
                     for place in range(1, FLOWERS_PER_TRUSS + 1)

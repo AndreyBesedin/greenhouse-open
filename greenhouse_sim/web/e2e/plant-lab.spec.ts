@@ -11,10 +11,33 @@ test.beforeEach(() => {
   test.slow();
 });
 
-// The plant, its stem, and per phytomer the phytomer, its internode and its
-// leaf: the lab's plants bear no trusses yet.
-const ORGANS_BESIDE_PHYTOMERS = 2;
-const ORGANS_PER_PHYTOMER = 3;
+interface Structure {
+  stem: {
+    phytomers: {
+      truss: {
+        flowers: { flower_id: string; fruit: { fruit_id: string; stage: string } | null }[];
+      } | null;
+    }[];
+  };
+}
+
+/** One of the lab's plants on a day, as the simulator describes it. */
+async function labPlant(page: Page, plantId: string, day: number, seed = 1): Promise<Structure> {
+  const response = await page.request.get(
+    `/api/plants/structure?day=${day}&seed=${seed}&plant=${plantId}`,
+  );
+  return response.json();
+}
+
+/** How many organs a plant has: itself and its stem, each phytomer with its
+ * internode and leaf, and each truss with its flowers and their fruits. */
+function organsOf(plant: Structure): number {
+  return plant.stem.phytomers.reduce((count, { truss }) => {
+    const flowers = truss?.flowers ?? [];
+    const fruits = flowers.filter((flower) => flower.fruit !== null).length;
+    return count + 3 + (truss === null ? 0 : 1 + flowers.length + fruits);
+  }, 2);
+}
 
 /** The lab's row on a day, from a seed, as the simulator draws it. */
 async function labScene(page: Page, day: number, seed = 1): Promise<SceneSnapshot> {
@@ -24,11 +47,7 @@ async function labScene(page: Page, day: number, seed = 1): Promise<SceneSnapsho
 
 /** How many organs one of the lab's plants has on a day, from the simulator. */
 async function organCount(page: Page, plantId: string, day: number, seed = 1): Promise<number> {
-  const response = await page.request.get(
-    `/api/plants/structure?day=${day}&seed=${seed}&plant=${plantId}`,
-  );
-  const plant = await response.json();
-  return ORGANS_BESIDE_PHYTOMERS + plant.stem.phytomers.length * ORGANS_PER_PHYTOMER;
+  return organsOf(await labPlant(page, plantId, day, seed));
 }
 
 function centreOf(scene: SceneSnapshot, entityId: string): Point3 {
@@ -122,6 +141,31 @@ test("another seed draws another row, and the tree follows the plant selected", 
     "aria-pressed",
     "true",
   );
+});
+
+test("a plant flowers and sets fruit, and a fruit is selected from the tree", async ({ page }) => {
+  const plant = await labPlant(page, "p01", 45);
+  const fruit = plant.stem.phytomers
+    .flatMap(({ truss }) => truss?.flowers ?? [])
+    .map((flower) => ({ flowerId: flower.flower_id, fruit: flower.fruit }))
+    .find(({ fruit }) => fruit?.stage === "growing");
+  if (fruit === undefined || fruit.fruit === null) {
+    throw new Error("the lab's first plant has no growing fruit on day 45");
+  }
+  await page.goto("/?plants=lab&day=45");
+  // The tree and the scene arrive separately; an organ is selected in the scene.
+  await expect(page.getByTestId("scene-status")).toContainText("day 45");
+  await expect(page.getByTestId("organ")).toHaveCount(organsOf(plant));
+  await expect(page.locator('[data-organ-kind="truss"]').first()).toBeVisible();
+
+  await page.getByRole("button", { name: fruit.fruit.fruit_id }).click();
+
+  await expect(page.getByTestId("selected-entity")).toHaveText(fruit.fruit.fruit_id);
+  await expect(page.getByTestId("property-organ_kind")).toHaveText("fruit");
+  await expect(page.getByTestId("property-parent_id")).toHaveText(fruit.flowerId);
+  await expect(page.getByTestId("property-stage")).toHaveText("growing");
+  // A set flower is drawn as its fruit, so it is not a link of its own.
+  await expect(page.getByRole("button", { name: fruit.flowerId, exact: true })).toHaveCount(0);
 });
 
 test("the slider runs as far as the simulator's lab does, and no further", async ({ page }) => {
