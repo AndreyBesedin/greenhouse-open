@@ -1,4 +1,30 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
+
+// The HUD samples the scene a few times a second, and counts its objects.
+const SAMPLE_WAIT_MS = 1_000;
+// Drawing in software on CI can take a while.
+const DRAWN_TIMEOUT_MS = 30_000;
+
+async function objectCount(page: Page): Promise<number> {
+  return Number(await page.getByTestId("object-count").textContent());
+}
+
+/** The scene's object count once it has stopped changing. */
+async function settledObjectCount(page: Page): Promise<number> {
+  let last = Number.NaN;
+  await expect
+    .poll(
+      async () => {
+        const now = await objectCount(page);
+        const settled = now === last;
+        last = now;
+        return settled;
+      },
+      { intervals: [SAMPLE_WAIT_MS], timeout: DRAWN_TIMEOUT_MS },
+    )
+    .toBe(true);
+  return last;
+}
 
 test("a scenario's CFD boundaries are drawn by category, and follow its openings", async ({
   page,
@@ -11,8 +37,6 @@ test("a scenario's CFD boundaries are drawn by category, and follow its openings
   });
   await page.goto("/?scenario=gh_001");
   await expect(page.getByTestId("scene-status")).toContainText("gh_001");
-  const canvas = page.locator("canvas");
-  const before = await canvas.screenshot();
   const legend = page.getByRole("figure", { name: "CFD boundaries" });
 
   await page.getByRole("checkbox", { name: "CFD boundaries" }).check();
@@ -31,7 +55,6 @@ test("a scenario's CFD boundaries are drawn by category, and follow its openings
     "opening ×2: 24 faces",
     "obstacle: 6 cells",
   ]);
-  await expect.poll(async () => (await canvas.screenshot()).equals(before)).toBe(false);
 
   // Opening the door makes it a third opening, 2 faces wide and 4 high.
   const door = page.getByTestId("opening-door_1").locator("..").getByRole("slider");
@@ -40,8 +63,11 @@ test("a scenario's CFD boundaries are drawn by category, and follow its openings
   await expect(legend.getByTestId("cfd-category").nth(3)).toHaveText("opening ×3: 32 faces");
   expect(asked).toEqual(["", "?open=door_1:1"]);
 
+  // Drawn, the boundaries are a group of their ten fills and their outlines.
+  const drawn = await settledObjectCount(page);
   await page.getByRole("checkbox", { name: "CFD boundaries" }).uncheck();
   await expect(page).toHaveURL(/\?scenario=gh_001&open=door_1:1$/);
+  await expect.poll(() => objectCount(page), { timeout: DRAWN_TIMEOUT_MS }).toBe(drawn - 12);
   await expect(legend).toHaveCount(0);
   await expect(page.getByTestId("cfd-status")).toHaveCount(0);
 });
