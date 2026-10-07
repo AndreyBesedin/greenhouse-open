@@ -1,3 +1,4 @@
+import { type FieldView, fieldViewFrom, type Slice, sliceFrom, sliceText } from "../fields/display";
 import {
   actionFrom,
   actionsQuery,
@@ -31,8 +32,11 @@ export type SceneSource =
       kind: "scenario";
       scenarioId: string;
       layout?: string;
-      /** One of its environment fields, drawn over its scene. */
+      /** One of its environment fields, drawn over its scene, as arrows by
+       * default, and where a slice through it lies, if one is drawn. */
       field?: string;
+      fieldView?: FieldView;
+      slice?: Slice;
       envelope?: Readonly<Record<string, number>>;
       openings?: Readonly<Record<string, number>>;
     }
@@ -62,11 +66,15 @@ export function sourceFromSearch(search: string): SceneSource {
     const envelope = pairsFrom(parameters.get("envelope"));
     const openings = pairsFrom(parameters.get("open"));
     const field = parameters.get("field");
+    const fieldView = fieldViewFrom(parameters.get("fieldView"));
+    const slice = sliceFrom(parameters.get("slice"));
     return {
       kind: "scenario",
       scenarioId,
       ...(layout ? { layout } : {}),
       ...(field ? { field } : {}),
+      ...(field && fieldView ? { fieldView } : {}),
+      ...(field && slice ? { slice } : {}),
       ...(envelope === null ? {} : { envelope }),
       ...(openings === null ? {} : { openings }),
     };
@@ -138,12 +146,22 @@ export function searchFor(source: SceneSource): string {
     case "stress":
       return `?scene=stress&plants=${source.plants}`;
     case "scenario":
-      return `?scenario=${encodeURIComponent(source.scenarioId)}${changesQuery(source, "&")}${
-        source.field === undefined ? "" : `&field=${encodeURIComponent(source.field)}`
-      }`;
+      return `?scenario=${encodeURIComponent(source.scenarioId)}${changesQuery(source, "&")}${fieldQuery(source)}`;
     case "live":
       return `?live=${encodeURIComponent(source.scenarioId)}`;
   }
+}
+
+/** How a scenario's field is drawn, as the address bar writes it. */
+function fieldQuery(source: { field?: string; fieldView?: FieldView; slice?: Slice }): string {
+  if (source.field === undefined) {
+    return "";
+  }
+  return [
+    `&field=${encodeURIComponent(source.field)}`,
+    source.fieldView === undefined ? "" : `&fieldView=${source.fieldView}`,
+    source.slice === undefined ? "" : `&slice=${sliceText(source.slice)}`,
+  ].join("");
 }
 
 /** `key:number` pairs, sorted by key, as the address bar and the simulator's

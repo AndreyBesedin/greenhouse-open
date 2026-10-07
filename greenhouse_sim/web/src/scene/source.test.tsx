@@ -72,6 +72,16 @@ describe("choosing a scene in the address bar", () => {
       { kind: "scenario", scenarioId: "gh_001", layout: "benches" },
     ],
     ["?scenario=gh_001&field=shear", { kind: "scenario", scenarioId: "gh_001", field: "shear" }],
+    [
+      "?scenario=gh_001&field=shear&fieldView=slice&slice=temperature:z:1.75",
+      {
+        kind: "scenario",
+        scenarioId: "gh_001",
+        field: "shear",
+        fieldView: "slice",
+        slice: { quantity: "temperature", axis: "z", position: 1.75 },
+      },
+    ],
   ])("%s", (search, source) => {
     expect(sourceFromSearch(search)).toEqual(source);
     expect(searchFor(source)).toBe(search);
