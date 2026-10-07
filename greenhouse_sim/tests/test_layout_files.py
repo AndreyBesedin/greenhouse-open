@@ -67,13 +67,13 @@ def test_a_layout_file_is_exactly_what_its_layout_writes(scenario_id: str, name:
 
 
 def test_a_layout_name_cannot_reach_outside_its_scenario() -> None:
-    for name in ("../gh_002/default", "DEFAULT", "nothing", ""):
+    for name in ("../climate_box/default", "DEFAULT", "nothing", ""):
         with pytest.raises(KeyError):
-            load_layout("gh_001", name)
+            load_layout("tomato_compartment", name)
 
 
 def test_a_layout_with_a_field_it_does_not_have_is_refused() -> None:
-    document = layout_document(load_layout("gh_001"))
+    document = layout_document(load_layout("tomato_compartment"))
     document["crop_row"] = document.pop("crop_rows")
     document.pop("$schema")
 
@@ -81,8 +81,11 @@ def test_a_layout_with_a_field_it_does_not_have_is_refused() -> None:
         Layout.model_validate(document)
 
 
-def test_gh_001s_bench_layout_carries_the_same_rows_on_benches() -> None:
-    default, benches = load_layout("gh_001"), load_layout("gh_001", "benches")
+def test_the_compartments_propagation_layout_carries_the_same_rows_on_benches() -> None:
+    default, benches = (
+        load_layout("tomato_compartment"),
+        load_layout("tomato_compartment", "propagation"),
+    )
     kinds = {fixture.kind.value for fixture in benches.fixtures()}
 
     assert "bench" in kinds and "crop_gutter" not in kinds
@@ -93,7 +96,7 @@ def test_gh_001s_bench_layout_carries_the_same_rows_on_benches() -> None:
 
 
 def test_the_api_shows_a_scenario_with_another_of_its_layouts() -> None:
-    response = respond("GET", "/api/scenarios/gh_001/scene?layout=benches")
+    response = respond("GET", "/api/scenarios/tomato_compartment/scene?layout=propagation")
     snapshot = SceneSnapshot.model_validate(response.body)
     kinds = {entity.kind for entity in snapshot.entities}
 
@@ -103,26 +106,36 @@ def test_the_api_shows_a_scenario_with_another_of_its_layouts() -> None:
 
 
 def test_the_api_writes_a_scenarios_layout_as_its_file_holds_it() -> None:
-    response = respond("GET", "/api/scenarios/gh_001/layout?layout=benches")
+    response = respond("GET", "/api/scenarios/tomato_compartment/layout?layout=propagation")
 
     assert response.status == HTTPStatus.OK
-    assert response.body == json.loads((LAYOUTS_DIR / "gh_001" / "benches.json").read_text())
+    assert response.body == json.loads(
+        (LAYOUTS_DIR / "tomato_compartment" / "propagation.json").read_text()
+    )
 
 
 @pytest.mark.parametrize(
     ("path", "status", "reason"),
     [
-        ("/api/scenarios/gh_001/scene?layout=hydroponic", HTTPStatus.NOT_FOUND, "no layout"),
-        ("/api/scenarios/gh_001/layout?layout=..%2Fgh_002", HTTPStatus.NOT_FOUND, "no layout"),
-        ("/api/scenarios/gh_002/scene?layout=benches", HTTPStatus.NOT_FOUND, "no layout"),
+        (
+            "/api/scenarios/tomato_compartment/scene?layout=hydroponic",
+            HTTPStatus.NOT_FOUND,
+            "no layout",
+        ),
+        (
+            "/api/scenarios/tomato_compartment/layout?layout=..%2Fclimate_box",
+            HTTPStatus.NOT_FOUND,
+            "no layout",
+        ),
+        ("/api/scenarios/climate_box/scene?layout=propagation", HTTPStatus.NOT_FOUND, "no layout"),
         # Shrunk, the greenhouse no longer holds its layout.
         (
-            "/api/scenarios/gh_001/scene?envelope=length:5",
+            "/api/scenarios/tomato_compartment/scene?envelope=length:12",
             HTTPStatus.BAD_REQUEST,
             "outside the greenhouse",
         ),
         (
-            "/api/scenarios/gh_001/scene?layout=benches&envelope=length:7",
+            "/api/scenarios/tomato_compartment/scene?layout=propagation&envelope=length:12",
             HTTPStatus.BAD_REQUEST,
             "outside the greenhouse",
         ),

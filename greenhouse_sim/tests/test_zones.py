@@ -228,13 +228,14 @@ def test_a_turned_zone_is_drawn_turned() -> None:
     assert math.isclose(entity.transform.position.y, 3.0)
 
 
-def test_gh_001_keeps_its_aisles_and_zones_clear_and_plants_every_position() -> None:
-    config = SCENARIO_REGISTRY["gh_001"]
+def test_the_compartment_keeps_its_paths_and_zones_clear_and_plants_every_position() -> None:
+    config = SCENARIO_REGISTRY["tomato_compartment"]
     layout = config.layout
 
     assert len(layout.planting_positions()) == config.rows * config.columns
     assert [walkway_id for walkway_id, _ in layout.walkways()] == [
-        "front_aisle",
-        "side_aisle_right",
+        "main_path",
+        "side_path_right",
+        "side_path_left",
     ]
     assert {zone.kind for zone in layout.zones} == {ZoneKind.SERVICE, ZoneKind.KEEP_OUT}

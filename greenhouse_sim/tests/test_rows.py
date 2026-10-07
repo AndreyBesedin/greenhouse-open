@@ -87,22 +87,26 @@ def test_a_layout_without_rows_has_no_planting_positions() -> None:
 
 
 def test_a_scenario_needs_a_planting_position_for_every_plant() -> None:
-    config = SCENARIO_REGISTRY["gh_001"]
-    too_few = Layout(crop_rows=ROWS.model_copy(update={"rows": 3, "positions_per_row": 13}))
+    config = SCENARIO_REGISTRY["tomato_compartment"]
+    too_few = Layout(crop_rows=ROWS.model_copy(update={"rows": 8, "positions_per_row": 39}))
 
-    with pytest.raises(ValidationError, match="40 plants, but only 39 planting positions"):
+    with pytest.raises(ValidationError, match="320 plants, but only 312 planting positions"):
         config.model_validate({**config.model_dump(), "layout": too_few})
 
 
 def test_a_scenario_refuses_planting_positions_outside_its_greenhouse() -> None:
-    config = SCENARIO_REGISTRY["gh_001"]
-    # Ten rows 1.6 m apart from y = 2.4 reach far beyond its 9.6 m width.
-    wide = Layout(crop_rows=ROWS.model_copy(update={"origin": Point2(x=1.5, y=2.4), "rows": 10}))
+    config = SCENARIO_REGISTRY["tomato_compartment"]
+    # Twelve rows 1.6 m apart from y = 2.4 reach beyond its 16 m width.
+    wide = Layout(
+        crop_rows=ROWS.model_copy(
+            update={"origin": Point2(x=1.5, y=2.4), "rows": 12, "positions_per_row": 40}
+        )
+    )
 
     with pytest.raises(
         ValidationError,
-        match="outside the greenhouse: row_6_position_1, row_6_position_2, row_6_position_3 "
-        "and 27 more",
+        match="outside the greenhouse: row_10_position_1, row_10_position_2, row_10_position_3 "
+        "and 117 more",
     ):
         config.model_validate({**config.model_dump(), "layout": wide})
 

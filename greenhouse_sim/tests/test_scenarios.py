@@ -2,38 +2,22 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 
 
 def test_registry_contains_exactly_the_configured_greenhouses() -> None:
-    assert set(SCENARIO_REGISTRY) == {
-        "gh_001",
-        "gh_002",
-        "gh_demo",
-        "airflow_box",
-        "tomato_compartment",
-        "climate_box",
-    }
+    assert list(SCENARIO_REGISTRY) == ["tomato_compartment", "climate_box", "airflow_box"]
 
 
-def test_greenhouse_001_is_the_forty_plant_primary_scenario() -> None:
-    config = SCENARIO_REGISTRY["gh_001"]
+def test_the_tomato_compartment_is_the_full_house_reference() -> None:
+    config = SCENARIO_REGISTRY["tomato_compartment"]
 
-    assert config.greenhouse_id == "gh_001"
-    assert config.rows * config.columns == 40
-    assert config.rows == 4
-    assert config.columns == 10
+    assert config.greenhouse_id == "tomato_compartment"
+    assert (config.rows, config.columns) == (8, 40)
     assert config.duration_days == 28
 
 
-def test_greenhouse_002_is_the_single_plant_longitudinal_scenario() -> None:
-    config = SCENARIO_REGISTRY["gh_002"]
+def test_the_climate_box_is_the_small_quick_house() -> None:
+    config = SCENARIO_REGISTRY["climate_box"]
 
-    assert config.greenhouse_id == "gh_002"
-    assert config.rows * config.columns == 1
-    assert config.duration_days == 40
-
-
-def test_greenhouse_demo_is_the_short_walkthrough_scenario() -> None:
-    config = SCENARIO_REGISTRY["gh_demo"]
-
-    assert config.greenhouse_id == "gh_demo"
+    assert config.greenhouse_id == "climate_box"
+    assert config.rows * config.columns == 32
     assert config.duration_days <= 15
 
 
@@ -46,7 +30,7 @@ def test_scenario_configs_have_distinct_random_seeds() -> None:
 def test_a_scenario_describes_the_world_and_no_policy() -> None:
     """Which policy runs, and its thresholds, are the caller's choice about
     a run, not part of the simulated world."""
-    fields = set(SCENARIO_REGISTRY["gh_001"].model_dump())
+    fields = set(SCENARIO_REGISTRY["tomato_compartment"].model_dump())
 
     assert "management_policy" not in fields
     assert not fields & {

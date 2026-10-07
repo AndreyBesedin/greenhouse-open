@@ -10,7 +10,7 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.world import GreenhouseWorld
 from greenhouse_sim.world_builder import initialize_world
 
-CONFIG = SCENARIO_REGISTRY["gh_001"]
+CONFIG = SCENARIO_REGISTRY["tomato_compartment"]
 
 
 def _world(greenhouse_id: str, simulated_day: int = 0) -> GreenhouseWorld:
@@ -50,10 +50,12 @@ def test_a_world_saved_as_json_loads_back_unchanged() -> None:
     """A store that persists worlds outside the process, such as a database,
     keeps them as JSON. Everything a run needs to continue, including the
     values a model keeps for itself, must survive the round trip."""
-    config = SCENARIO_REGISTRY["gh_demo"]
+    # The compartment's season is long enough for fruit to ripen and be
+    # harvested.
+    config = SCENARIO_REGISTRY["tomato_compartment"]
     engine = SimulationEngine(config)
-    plant_ids = ["gh_demo_plant_001", "gh_demo_plant_002"]
-    world = engine.initialize(plant_ids, greenhouse_id="gh_demo")
+    plant_ids = ["tomato_compartment_plant_001", "tomato_compartment_plant_002"]
+    world = engine.initialize(plant_ids, greenhouse_id="tomato_compartment")
     start = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
     for day in range(1, config.duration_days + 1):
         timestamp = start + timedelta(days=day - 1)

@@ -3,8 +3,8 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.world import GreenhouseWorld
 from greenhouse_sim.world_builder import advance_world, initialize_world
 
-CONFIG = SCENARIO_REGISTRY["gh_001"]
-PLANT_IDS = ["gh_001_plant_001", "gh_001_plant_002"]
+CONFIG = SCENARIO_REGISTRY["tomato_compartment"]
+PLANT_IDS = ["tomato_compartment_plant_001", "tomato_compartment_plant_002"]
 
 
 def _run_days(num_days: int) -> list[GreenhouseWorld]:
@@ -29,13 +29,17 @@ def test_a_plant_develops_the_same_whatever_else_is_in_the_greenhouse() -> None:
     """A plant's randomness is keyed by its own identity, never drawn from a
     shared stream, so adding, removing or reordering other plants leaves its
     trajectory unchanged. Batching and parallel runs depend on that."""
-    alone = initialize_world(CONFIG, ["gh_001_plant_007"])
-    crowded = initialize_world(CONFIG, ["gh_001_plant_009", "gh_001_plant_007", *PLANT_IDS])
+    alone = initialize_world(CONFIG, ["tomato_compartment_plant_007"])
+    crowded = initialize_world(
+        CONFIG, ["tomato_compartment_plant_009", "tomato_compartment_plant_007", *PLANT_IDS]
+    )
     for day in range(1, 31):
         alone = advance_world(alone, CONFIG, day)
         crowded = advance_world(crowded, CONFIG, day)
 
-    assert crowded.plant("gh_001_plant_007") == alone.plant("gh_001_plant_007")
+    assert crowded.plant("tomato_compartment_plant_007") == alone.plant(
+        "tomato_compartment_plant_007"
+    )
     assert crowded.environment == alone.environment
 
 

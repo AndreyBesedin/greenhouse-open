@@ -5,8 +5,8 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.world import GreenhouseWorld
 from greenhouse_sim.world_builder import advance_world, initialize_world
 
-CONFIG = SCENARIO_REGISTRY["gh_001"]
-PLANT_ID = "gh_001_plant_001"
+CONFIG = SCENARIO_REGISTRY["tomato_compartment"]
+PLANT_ID = "tomato_compartment_plant_001"
 
 
 def _grown_world(days: int = 60) -> GreenhouseWorld:

@@ -225,15 +225,15 @@ QA_LAYOUT = Layout(
         ),
     ],
 )
-# Long enough in gh_demo for the plants to differ in height.
+# Long enough in climate_box for the plants to differ in height.
 EXAMPLE_DAYS = 9
 
 
 def _example_scene() -> object:
-    config = SCENARIO_REGISTRY["gh_demo"]
+    config = SCENARIO_REGISTRY["climate_box"]
     engine = SimulationEngine(config)
-    plant_ids = [f"gh_demo_plant_{i:03d}" for i in range(1, config.rows * config.columns + 1)]
-    world = engine.initialize(plant_ids, greenhouse_id="gh_demo")
+    plant_ids = [f"climate_box_plant_{i:03d}" for i in range(1, config.rows * config.columns + 1)]
+    world = engine.initialize(plant_ids, greenhouse_id="climate_box")
     start = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
     for day in range(1, EXAMPLE_DAYS + 1):
         timestamp = start + timedelta(days=day - 1)

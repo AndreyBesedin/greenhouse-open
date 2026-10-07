@@ -17,7 +17,7 @@ from greenhouse_protocol.contracts.memory import InMemoryObservations
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 
-SCENARIO = SCENARIO_REGISTRY["gh_001"]  # 40 plants
+SCENARIO = SCENARIO_REGISTRY["tomato_compartment"]  # 320 plants
 START = datetime(2026, 3, 1, 12, 0, tzinfo=UTC)
 
 

@@ -49,10 +49,10 @@ from greenhouse_sim.world.geometry import Vector3
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_FILE = ROOT / "greenhouse_sim" / "cfd" / "geometry.schema.json"
-GH_001 = cfd.geometry("gh_001")
-# gh_001 with its door open, and one vent shut.
-OPENED = SceneChanges(openings={"door_1": 1.0, "roof_vent_2": 0.0})
-SCENARIOS = ("gh_001", "gh_demo", "gh_002")
+COMPARTMENT = cfd.geometry("tomato_compartment")
+# The compartment with its door open, and one vent shut.
+OPENED = SceneChanges(openings={"door_front": 1.0, "roof_vent_2": 0.0})
+SCENARIOS = ("tomato_compartment", "climate_box", "airflow_box")
 WHOLE_FACES = (Face.FLOOR, Face.CEILING, Face.FRONT, Face.BACK, Face.RIGHT, Face.LEFT)
 _BOX = r"box\s+\(([^)]*)\)\s+\(([^)]*)\)"
 
@@ -104,11 +104,11 @@ def _footprint(obstacle: Boundary, grid: FieldGrid, face: Face) -> int:
 
 
 def test_the_domain_is_the_fields_box_bounded_by_its_floor_walls_and_ceiling() -> None:
-    grid = fields.grid("gh_001")
+    grid = fields.grid("tomato_compartment")
     nx, ny, nz = grid.shape
-    sides = [b for b in GH_001.boundaries if b.category != BoundaryCategory.OPENING and b.face]
+    sides = [b for b in COMPARTMENT.boundaries if b.category != BoundaryCategory.OPENING and b.face]
 
-    assert GH_001.grid == grid
+    assert COMPARTMENT.grid == grid
     assert [(b.name, b.category, b.face) for b in sides] == [
         ("floor", BoundaryCategory.FLOOR, Face.FLOOR),
         ("ceiling", BoundaryCategory.CEILING, Face.CEILING),
@@ -118,8 +118,8 @@ def test_the_domain_is_the_fields_box_bounded_by_its_floor_walls_and_ceiling() -
         ("wall_left", BoundaryCategory.WALL, Face.LEFT),
     ]
     assert [b.mesh_faces for b in sides] == [nx * ny, nx * ny, ny * nz, ny * nz, nx * nz, nx * nz]
-    # The ceiling at the eaves, 3.5 m up.
-    assert sides[1].box.minimum.z == sides[1].box.maximum.z == pytest.approx(3.5)
+    # The ceiling at the gutters, 6 m up.
+    assert sides[1].box.minimum.z == sides[1].box.maximum.z == pytest.approx(6.0)
 
 
 @pytest.mark.parametrize("scenario_id", SCENARIOS)
@@ -139,24 +139,24 @@ def test_every_boundary_is_one_the_greenhouse_has_by_its_category(scenario_id: s
 
 
 def test_only_open_doors_and_vents_are_openings_each_on_the_face_it_opens_in() -> None:
-    opened = cfd.geometry("gh_001", OPENED)
+    opened = cfd.geometry("tomato_compartment", OPENED)
 
-    assert [(b.name, b.opening_kind, b.face) for b in GH_001.of(BoundaryCategory.OPENING)] == [
-        ("roof_vent_1", OpeningKind.ROOF_VENT, Face.CEILING),
-        ("roof_vent_2", OpeningKind.ROOF_VENT, Face.CEILING),
+    vents = [f"roof_vent_{span}" for span in range(1, 5)]
+    assert [(b.name, b.opening_kind, b.face) for b in COMPARTMENT.of(BoundaryCategory.OPENING)] == [
+        (vent, OpeningKind.ROOF_VENT, Face.CEILING) for vent in vents
     ]
     assert [(b.name, b.opening_kind, b.face) for b in opened.of(BoundaryCategory.OPENING)] == [
-        ("roof_vent_1", OpeningKind.ROOF_VENT, Face.CEILING),
-        ("door_1", OpeningKind.DOOR, Face.FRONT),
+        *((vent, OpeningKind.ROOF_VENT, Face.CEILING) for vent in vents if vent != "roof_vent_2"),
+        ("door_front", OpeningKind.DOOR, Face.FRONT),
     ]
-    # The door, about 1 m by 2 m, is 2 faces wide and 4 high.
-    door = opened.of(BoundaryCategory.OPENING)[1]
-    assert door.mesh_faces == 8
+    # The 3 m square door is 6 faces wide and 6 high.
+    door = opened.of(BoundaryCategory.OPENING)[-1]
+    assert door.mesh_faces == 36
     assert door.box.minimum.z == 0.0
 
 
 def test_an_opening_covers_whole_faces_of_the_mesh_the_selection_finds_exactly() -> None:
-    geometry = cfd.geometry("gh_001", OPENED)
+    geometry = cfd.geometry("tomato_compartment", OPENED)
     selections = topo_set_dict(geometry)
 
     for opening in geometry.of(BoundaryCategory.OPENING):
@@ -170,16 +170,18 @@ def test_an_opening_covers_whole_faces_of_the_mesh_the_selection_finds_exactly()
 
 def test_an_obstacle_removes_the_cells_its_fixture_holds_and_the_selection_finds_them() -> None:
     fixture = next(
-        f for f in scenario("gh_001").layout.fixtures() if f.fixture_id == "irrigation_unit"
+        f
+        for f in scenario("tomato_compartment").layout.fixtures()
+        if f.fixture_id == "irrigation_unit"
     )
     low, high = fixture.bounds()
-    centres = _cell_centres(GH_001.grid)
+    centres = _cell_centres(COMPARTMENT.grid)
     held = [p for p in centres if _inside(p, low, high)]
-    (obstacle,) = GH_001.of(BoundaryCategory.OBSTACLE)
+    (obstacle,) = COMPARTMENT.of(BoundaryCategory.OBSTACLE)
     selected = [
         p
         for p in centres
-        if _inside(p, *_selection(obstacles_topo_set_dict(GH_001), OBSTACLES_PATCH))
+        if _inside(p, *_selection(obstacles_topo_set_dict(COMPARTMENT), OBSTACLES_PATCH))
     ]
 
     assert obstacle.name == "obstacle_irrigation_unit"
@@ -187,36 +189,36 @@ def test_an_obstacle_removes_the_cells_its_fixture_holds_and_the_selection_finds
     assert [p for p in centres if _inside(p, obstacle.box.minimum, obstacle.box.maximum)] == held
     assert selected == held
     # The crop's slabs and supports are narrower than a cell.
-    assert "row_1_slab_1" in GH_001.too_small
+    assert "row_1_slab_1" in COMPARTMENT.too_small
 
 
 def test_at_a_coarser_resolution_openings_crowd_and_obstacles_vanish() -> None:
-    config = scenario("gh_001")
+    config = scenario("tomato_compartment")
     envelope = config.envelope
     top = Vector3(x=envelope.length, y=envelope.width, z=envelope.eave_height)
-    # One cell across the house: both vents would open in the ceiling's one
-    # face across it, so the first takes it.
+    # One cell across the house: all four vents would open in the ceiling's
+    # one face across it, so the first takes it.
     coarse = FieldGrid.over(Vector3(x=0, y=0, z=0), top, max(top.x, top.y, top.z))
-    geometry = cfd_geometry("gh_001", config, coarse)
+    geometry = cfd_geometry("tomato_compartment", config, coarse)
 
     assert coarse.shape == (1, 1, 1)
     assert [b.mesh_faces for b in geometry.of(BoundaryCategory.OPENING)] == [1]
-    assert geometry.unplaced == ["roof_vent_2"]
+    assert geometry.unplaced == ["roof_vent_2", "roof_vent_3", "roof_vent_4"]
     assert geometry.of(BoundaryCategory.OBSTACLE) == []
     assert "irrigation_unit" in geometry.too_small
 
 
 def test_the_case_meshes_the_grid_and_takes_only_the_steps_it_needs() -> None:
-    nx, ny, nz = GH_001.grid.shape
-    blocks = block_mesh_dict(GH_001)
-    gh_002 = cfd.geometry("gh_002")
+    nx, ny, nz = COMPARTMENT.grid.shape
+    blocks = block_mesh_dict(COMPARTMENT)
+    climate_box = cfd.geometry("climate_box")
 
     assert f"hex (0 1 2 3 4 5 6 7) ({nx} {ny} {nz})" in blocks
     assert re.findall(r"\n    (\w+)\n    \{\n        type wall;", blocks) == [
         face.value for face in WHOLE_FACES
     ]
-    assert "(8 9.6 3.5)" in blocks
-    assert [line.split()[0] for line in allmesh_script(GH_001).splitlines()[4:]] == [
+    assert "(24 16 6)" in blocks
+    assert [line.split()[0] for line in allmesh_script(COMPARTMENT).splitlines()[4:]] == [
         "blockMesh",
         "topoSet",
         "createPatch",
@@ -225,22 +227,24 @@ def test_the_case_meshes_the_grid_and_takes_only_the_steps_it_needs() -> None:
         "foamDictionary",
         "foamDictionary",
     ]
-    assert [line.split()[0] for line in allmesh_script(gh_002).splitlines()[4:]] == [
+    assert [line.split()[0] for line in allmesh_script(climate_box).splitlines()[4:]] == [
         "blockMesh",
         "topoSet",
     ]
 
 
 def test_a_scenarios_cfd_geometry_is_served_changed_as_its_scene_is() -> None:
-    answer = respond("GET", "/api/scenarios/gh_001/cfd/geometry")
-    opened = respond("GET", "/api/scenarios/gh_001/cfd/geometry?open=door_1:1,roof_vent_2:0")
+    answer = respond("GET", "/api/scenarios/tomato_compartment/cfd/geometry")
+    opened = respond(
+        "GET", "/api/scenarios/tomato_compartment/cfd/geometry?open=door_front:1,roof_vent_2:0"
+    )
 
     assert answer.status == HTTPStatus.OK
-    assert CfdGeometry.model_validate(answer.body) == GH_001
-    assert CfdGeometry.model_validate(opened.body) == cfd.geometry("gh_001", OPENED)
+    assert CfdGeometry.model_validate(answer.body) == COMPARTMENT
+    assert CfdGeometry.model_validate(opened.body) == cfd.geometry("tomato_compartment", OPENED)
     assert respond("GET", "/api/scenarios/gh_999/cfd/geometry").status == HTTPStatus.NOT_FOUND
     assert (
-        respond("GET", "/api/scenarios/gh_001/cfd/geometry?open=hatch:1").status
+        respond("GET", "/api/scenarios/tomato_compartment/cfd/geometry?open=hatch:1").status
         == HTTPStatus.BAD_REQUEST
     )
 
@@ -250,21 +254,21 @@ def test_the_published_schema_matches_the_cfd_geometry() -> None:
 
 
 def test_the_command_line_writes_a_case_described_as_the_api_describes_it(tmp_path: Path) -> None:
-    case = tmp_path / "gh_001"
+    case = tmp_path / "tomato_compartment"
 
-    assert main(["gh_001", str(case), "--open", "door_1:1,roof_vent_2:0"]) == 0
+    assert main(["tomato_compartment", str(case), "--open", "door_front:1,roof_vent_2:0"]) == 0
     assert (case / "Allmesh").stat().st_mode & 0o111
     written = CfdGeometry.model_validate_json((case / "geometry.json").read_text())
-    assert written == cfd.geometry("gh_001", OPENED)
+    assert written == cfd.geometry("tomato_compartment", OPENED)
     with pytest.raises(SystemExit):
-        main(["gh_001", str(tmp_path / "other"), "--open", "hatch:1"])
+        main(["tomato_compartment", str(tmp_path / "other"), "--open", "hatch:1"])
     assert not (tmp_path / "other").exists()
 
 
 @pytest.mark.cfd
 def test_openfoam_meshes_exactly_the_boundaries_the_geometry_describes(tmp_path: Path) -> None:
-    geometry = cfd.geometry("gh_001", OPENED)
-    cfd.write_case("gh_001", tmp_path, OPENED)
+    geometry = cfd.geometry("tomato_compartment", OPENED)
+    cfd.write_case("tomato_compartment", tmp_path, OPENED)
     grid = geometry.grid
     obstacles = geometry.of(BoundaryCategory.OBSTACLE)
 

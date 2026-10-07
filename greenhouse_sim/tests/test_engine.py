@@ -23,8 +23,8 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY, ScenarioConfig
 from greenhouse_sim.sensors.generation import SimpleSensorModel
 from greenhouse_sim.world import GreenhouseEnvironment
 
-CONFIG = SCENARIO_REGISTRY["gh_001"]
-PLANT_IDS = ["gh_001_plant_001", "gh_001_plant_002"]
+CONFIG = SCENARIO_REGISTRY["tomato_compartment"]
+PLANT_IDS = ["tomato_compartment_plant_001", "tomato_compartment_plant_002"]
 TIMESTAMP = datetime(2026, 4, 1, 9, 0, tzinfo=UTC)
 
 
@@ -34,7 +34,7 @@ def _engine() -> SimulationEngine:
 
 def test_advancing_a_day_observes_the_world_it_produced() -> None:
     engine = _engine()
-    world = engine.initialize(PLANT_IDS, greenhouse_id="gh_001")
+    world = engine.initialize(PLANT_IDS, greenhouse_id="tomato_compartment")
 
     step = engine.advance(world, day=1, timestamp=TIMESTAMP, simulation_id="sim_1")
 
@@ -50,13 +50,13 @@ def test_advancing_a_day_observes_the_world_it_produced() -> None:
 
 def test_the_same_day_advances_the_same_way_twice() -> None:
     first = _engine().advance(
-        _engine().initialize(PLANT_IDS, greenhouse_id="gh_001"),
+        _engine().initialize(PLANT_IDS, greenhouse_id="tomato_compartment"),
         day=1,
         timestamp=TIMESTAMP,
         simulation_id="sim_1",
     )
     second = _engine().advance(
-        _engine().initialize(PLANT_IDS, greenhouse_id="gh_001"),
+        _engine().initialize(PLANT_IDS, greenhouse_id="tomato_compartment"),
         day=1,
         timestamp=TIMESTAMP,
         simulation_id="sim_1",
@@ -67,7 +67,7 @@ def test_the_same_day_advances_the_same_way_twice() -> None:
 
 def test_an_accepted_action_changes_the_world_and_reports_an_event() -> None:
     engine = _engine()
-    world = engine.initialize(PLANT_IDS, greenhouse_id="gh_001")
+    world = engine.initialize(PLANT_IDS, greenhouse_id="tomato_compartment")
     step = engine.advance(world, day=1, timestamp=TIMESTAMP, simulation_id="sim_1")
     before = step.world.plant(PLANT_IDS[0]).water_reservoir_ml
 
@@ -87,7 +87,7 @@ def test_a_rejected_action_keeps_its_place_and_produces_no_event() -> None:
     """A request is not evidence that anything happened."""
     engine = _engine()
     step = engine.advance(
-        engine.initialize(PLANT_IDS, greenhouse_id="gh_001"),
+        engine.initialize(PLANT_IDS, greenhouse_id="tomato_compartment"),
         day=1,
         timestamp=TIMESTAMP,
         simulation_id="sim_1",
@@ -112,7 +112,7 @@ def test_a_rejected_action_keeps_its_place_and_produces_no_event() -> None:
 def test_actions_are_applied_in_order_against_one_world() -> None:
     engine = _engine()
     step = engine.advance(
-        engine.initialize(PLANT_IDS, greenhouse_id="gh_001"),
+        engine.initialize(PLANT_IDS, greenhouse_id="tomato_compartment"),
         day=1,
         timestamp=TIMESTAMP,
         simulation_id="sim_1",
@@ -144,7 +144,8 @@ def test_by_default_the_engine_runs_the_simple_models() -> None:
     )
     by_default = _engine()
     worlds = [
-        engine.initialize(PLANT_IDS, greenhouse_id="gh_001") for engine in (explicit, by_default)
+        engine.initialize(PLANT_IDS, greenhouse_id="tomato_compartment")
+        for engine in (explicit, by_default)
     ]
 
     for day in range(1, 8):
@@ -176,7 +177,7 @@ def test_the_engine_runs_the_environment_model_it_is_given() -> None:
     sensors report, with no change to the engine."""
     climate: EnvironmentModel = _ConstantClimate()
     engine = SimulationEngine(CONFIG, environment_model=climate)
-    world = engine.initialize(PLANT_IDS, greenhouse_id="gh_001")
+    world = engine.initialize(PLANT_IDS, greenhouse_id="tomato_compartment")
 
     for day in range(1, 8):
         step = engine.advance(
@@ -217,9 +218,9 @@ def test_a_whole_run_loads_no_database_web_framework_or_api() -> None:
         from greenhouse_sim.engine import SimulationEngine
         from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 
-        config = SCENARIO_REGISTRY["gh_001"]
+        config = SCENARIO_REGISTRY["tomato_compartment"]
         engine = SimulationEngine(config)
-        world = engine.initialize(["p1", "p2"], greenhouse_id="gh_001")
+        world = engine.initialize(["p1", "p2"], greenhouse_id="tomato_compartment")
         timestamp = datetime(2026, 4, 1, tzinfo=UTC)
         for day in range(1, 4):
             step = engine.advance(

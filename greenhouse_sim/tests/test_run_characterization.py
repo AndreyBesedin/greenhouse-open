@@ -27,8 +27,8 @@ from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.world import GreenhouseWorld
 
-CONFIG = SCENARIO_REGISTRY["gh_001"]
-PLANT_IDS = ["gh_001_plant_001", "gh_001_plant_002"]
+CONFIG = SCENARIO_REGISTRY["tomato_compartment"]
+PLANT_IDS = ["tomato_compartment_plant_001", "tomato_compartment_plant_002"]
 START = datetime(2026, 3, 1, 12, 0, tzinfo=UTC)
 DAYS = 30
 # Water the first plant on these days, so the action/event path is exercised
@@ -100,7 +100,7 @@ def test_the_run_reaches_the_recorded_growth_and_ripening_state() -> None:
 
     # The watered plant ends taller: three irrigations are visible in the
     # hidden state even though no policy is attached to this run.
-    assert [round(plant.stem_length_cm, 2) for plant in world.plants] == [58.25, 54.82]
+    assert [round(plant.stem_length_cm, 2) for plant in world.plants] == [57.08, 54.05]
     assert [len(plant.trusses) for plant in world.plants] == [5, 5]
     assert watered.stem_length_cm > unwatered.stem_length_cm
     # Three manual waterings over thirty days do not keep either plant out
@@ -109,7 +109,7 @@ def test_the_run_reaches_the_recorded_growth_and_ripening_state() -> None:
     assert [round(plant.water_reservoir_ml, 3) for plant in world.plants] == [0.0, 0.0]
     stress = [world.plant_model.plants[plant.plant_id].water_stress for plant in world.plants]
     assert [round(value, 3) for value in stress] == [1.0, 1.0]
-    assert _fruit_counts(world) == {FruitStatus.RIPE: 12, FruitStatus.GROWING: 34}
+    assert _fruit_counts(world) == {FruitStatus.RIPE: 9, FruitStatus.GROWING: 31}
 
 
 def _fruit_counts(world: GreenhouseWorld) -> dict[FruitStatus, int]:

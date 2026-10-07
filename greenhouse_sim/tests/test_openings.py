@@ -162,15 +162,19 @@ def test_a_door_slides_along_its_wall_just_outside_it() -> None:
 
 def test_the_api_opens_a_scenarios_vent_and_refuses_what_cannot_open() -> None:
     def vent(query: str) -> dict[str, str | int | float | bool]:
-        response = respond("GET", f"/api/scenarios/gh_demo/scene{query}")
+        response = respond("GET", f"/api/scenarios/climate_box/scene{query}")
         scene = SceneSnapshot.model_validate(response.body)
-        [entity] = [e for e in scene.entities if e.entity_id == "gh_demo_roof_vent_1"]
+        [entity] = [e for e in scene.entities if e.entity_id == "climate_box_roof_vent"]
         return entity.properties
 
-    assert vent("")["open_fraction"] == 0.25
-    assert vent("?open=roof_vent_1:1")["open_fraction"] == 1.0
-    assert vent("?open=roof_vent_1:1")["aperture_m2"] == pytest.approx(1.6 * 0.6)
-    for query in ["?open=roof_vent_1:2", "?open=nope:1", "?open=roof_vent_1:wide"]:
-        response = respond("GET", f"/api/scenarios/gh_demo/scene{query}")
+    # Shut to start. Wide open, at 45°, the 4 by 1 m vent's curtain: the gap
+    # along its free edge and the two triangles at its sides.
+    widest = math.radians(45)
+    curtain = 4.0 * 2 * 1.0 * math.sin(widest / 2) + 1.0**2 * math.sin(widest)
+    assert vent("")["open_fraction"] == 0.0
+    assert vent("?open=roof_vent:1")["open_fraction"] == 1.0
+    assert vent("?open=roof_vent:1")["aperture_m2"] == pytest.approx(curtain)
+    for query in ["?open=roof_vent:2", "?open=nope:1", "?open=roof_vent:wide"]:
+        response = respond("GET", f"/api/scenarios/climate_box/scene{query}")
         assert response.status == 400
         assert isinstance(response.body, dict) and response.body["error"]

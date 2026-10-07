@@ -7,8 +7,8 @@ from greenhouse_sim.executor import ActionExecutor, SimulatedOperatorExecutor
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.world_builder import initialize_world
 
-CONFIG = SCENARIO_REGISTRY["gh_001"]
-PLANT_ID = "gh_001_plant_001"
+CONFIG = SCENARIO_REGISTRY["tomato_compartment"]
+PLANT_ID = "tomato_compartment_plant_001"
 TIMESTAMP = datetime(2026, 1, 9, tzinfo=UTC)
 
 

@@ -169,10 +169,10 @@ def test_the_scene_draws_each_part_of_a_support_as_its_kind() -> None:
     }
 
 
-def test_gh_001s_plants_grow_in_tomato_gutters() -> None:
-    config = SCENARIO_REGISTRY["gh_001"]
+def test_the_compartments_plants_grow_in_tomato_gutters() -> None:
+    config = SCENARIO_REGISTRY["tomato_compartment"]
     rows = config.layout.crop_rows
 
     assert rows is not None
     assert rows.support == TOMATO_GUTTER
-    assert len([f for f in config.layout.fixtures() if f.kind == FixtureKind.SLAB]) == 4
+    assert len([f for f in config.layout.fixtures() if f.kind == FixtureKind.SLAB]) == 8

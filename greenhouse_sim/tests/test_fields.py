@@ -147,28 +147,28 @@ def test_the_published_schema_matches_the_field_document() -> None:
 
 
 def test_a_scenario_offers_its_fields_over_its_greenhouses_air() -> None:
-    answer = respond("GET", "/api/scenarios/gh_001/fields/shear")
-    missing = respond("GET", "/api/scenarios/gh_001/fields/wind")
+    answer = respond("GET", "/api/scenarios/tomato_compartment/fields/shear")
+    missing = respond("GET", "/api/scenarios/tomato_compartment/fields/wind")
     nowhere = respond("GET", "/api/scenarios/gh_999/fields/shear")
     document = FieldDocument.model_validate(answer.body)
 
     assert answer.status == HTTPStatus.OK
-    assert document.grid == fields.grid("gh_001")
-    # Up to gh_001's eaves, 3.5 m above its floor.
-    assert document.grid.maximum.z == pytest.approx(3.5)
+    assert document.grid == fields.grid("tomato_compartment")
+    # Up to the compartment's gutters, 6 m above its floor.
+    assert document.grid.maximum.z == pytest.approx(6.0)
     assert max(document.grid.cell_size.x, document.grid.cell_size.y) <= fields.CELL_M
     assert (missing.status, missing.body) == (
         HTTPStatus.NOT_FOUND,
         {
-            "error": "scenario 'gh_001' has no field 'wind'; "
-            "it has vortex, uniform, buoyancy, cfd, shear"
+            "error": "scenario 'tomato_compartment' has no field 'wind'; "
+            "it has buoyancy, uniform, vortex, cfd, shear"
         },
     )
     assert nowhere.status == HTTPStatus.NOT_FOUND
-    listed = respond("GET", "/api/scenarios/gh_001/fields")
+    listed = respond("GET", "/api/scenarios/tomato_compartment/fields")
     assert (listed.status, listed.body) == (
         HTTPStatus.OK,
-        {"fields": ["vortex", "uniform", "buoyancy", "cfd", "shear"], "configured": "vortex"},
+        {"fields": ["buoyancy", "uniform", "vortex", "cfd", "shear"], "configured": "buoyancy"},
     )
     assert respond("GET", "/api/scenarios/gh_999/fields").status == HTTPStatus.NOT_FOUND
 
