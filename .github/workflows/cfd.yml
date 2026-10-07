@@ -1,0 +1,68 @@
+name: CFD
+
+# Runs OpenFOAM, in its container, on changes that can change what it is
+# given or how its solution is read (decision 0027). The tests that need it
+# compare a fresh solve with the result kept in the repository; the result
+# solved here is kept as an artifact, from which a kept result that went
+# stale is taken.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "greenhouse_sim/greenhouse_sim/cfd/**"
+      - "greenhouse_sim/greenhouse_sim/fields/**"
+      - "greenhouse_sim/greenhouse_sim/scenarios/**"
+      - "greenhouse_sim/greenhouse_sim/world/**"
+      - "greenhouse_sim/tests/conftest.py"
+      - "greenhouse_sim/tests/test_cfd_*.py"
+      - ".github/workflows/cfd.yml"
+  pull_request:
+    paths:
+      - "greenhouse_sim/greenhouse_sim/cfd/**"
+      - "greenhouse_sim/greenhouse_sim/fields/**"
+      - "greenhouse_sim/greenhouse_sim/scenarios/**"
+      - "greenhouse_sim/greenhouse_sim/world/**"
+      - "greenhouse_sim/tests/conftest.py"
+      - "greenhouse_sim/tests/test_cfd_*.py"
+      - ".github/workflows/cfd.yml"
+  workflow_dispatch:
+
+jobs:
+  openfoam:
+    name: OpenFOAM meshes and solves the reference case
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      # Editable, so that a solve keeps its result where the repository does.
+      - name: Install the simulator and its tests' tools
+        run: >-
+          python -m pip install
+          -e ./greenhouse_protocol -e ./greenhouse_sim
+          -r requirements-dev.txt
+
+      - name: Pull OpenFOAM's container
+        run: docker pull opencfd/openfoam-default:2412
+
+      - name: Run the tests that run OpenFOAM
+        working-directory: greenhouse_sim
+        run: python -m pytest -m cfd -v -rs
+
+      - name: Solve the reference case, keeping its result
+        if: always()
+        working-directory: greenhouse_sim
+        run: python -m greenhouse_sim.cfd gh_001 "$RUNNER_TEMP/cases/gh_001" --solve
+
+      - name: Keep the solved results and the solver's logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cfd-results
+          path: |
+            greenhouse_sim/greenhouse_sim/cfd/results/
+            ${{ runner.temp }}/cases/*/log.*
+          retention-days: 14

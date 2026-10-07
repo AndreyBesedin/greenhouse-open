@@ -8,6 +8,7 @@ Nothing in the simulator needs OpenFOAM. What does use it asks whether it is
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Final
 
@@ -17,6 +18,11 @@ DEFAULT_IMAGE: Final = "opencfd/openfoam-default:2412"
 IMAGE_VARIABLE: Final = "GREENHOUSE_OPENFOAM_IMAGE"
 # Where the case is mounted inside the container.
 CASE_MOUNT: Final = "/case"
+# OpenFOAM's environment in its container, set up for whichever user runs
+# it, before the case's script.
+CONTAINER_ENVIRONMENT: Final = (
+    "f=/usr/lib/openfoam/openfoam2412/etc/bashrc; if [ -f $f ]; then . $f; fi; "
+)
 # How long a command may run, and how long Docker may take to say whether it
 # is running, in seconds.
 TIMEOUT_S: Final = 600
@@ -60,10 +66,18 @@ def run(case: Path, script: str) -> subprocess.CompletedProcess[str]:
         cwd: Path | None = case
     elif _docker():
         image = os.environ.get(IMAGE_VARIABLE, DEFAULT_IMAGE)
+        # On Linux the case's files keep their owners inside the container,
+        # so OpenFOAM runs as the case's owner, to write beside them.
+        user = (
+            ["--user", f"{os.getuid()}:{os.getgid()}", "--env", "HOME=/tmp"]
+            if sys.platform == "linux"
+            else []
+        )
         command = [
             "docker",
             "run",
             "--rm",
+            *user,
             "--volume",
             f"{case.resolve()}:{CASE_MOUNT}",
             "--workdir",
@@ -72,7 +86,7 @@ def run(case: Path, script: str) -> subprocess.CompletedProcess[str]:
             "bash",
             image,
             "-lc",
-            script,
+            CONTAINER_ENVIRONMENT + script,
         ]
         cwd = None
     else:

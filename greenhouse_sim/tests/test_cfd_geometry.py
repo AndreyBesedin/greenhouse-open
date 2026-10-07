@@ -223,6 +223,7 @@ def test_the_case_meshes_the_grid_and_takes_only_the_steps_it_needs() -> None:
         "topoSet",
         "subsetMesh",
         "foamDictionary",
+        "foamDictionary",
     ]
     assert [line.split()[0] for line in allmesh_script(gh_002).splitlines()[4:]] == [
         "blockMesh",

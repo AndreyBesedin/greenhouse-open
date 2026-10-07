@@ -59,6 +59,7 @@ test("the prescribed airflow patterns switch at once, the scenario's own first",
     "vortex, the scenario's airflow",
     "uniform",
     "buoyancy",
+    "cfd",
     "shear",
   ]);
 
@@ -68,4 +69,21 @@ test("the prescribed airflow patterns switch at once, the scenario's own first",
       `gh_001_${pattern} (prescribed:${pattern}): 16 × 20 × 7 cells`,
     );
   }
+});
+
+test("gh_001's air as OpenFOAM solved it is drawn as any field is", async ({ page }) => {
+  await page.goto("/?scenario=gh_001&field=cfd");
+
+  // Blown in through one roof vent at 0.5 m/s and out through the other, on
+  // the field's own cells: still inside the irrigation unit, and nearly as
+  // fast as it came in below the vent. It is isothermal: its scalar is the
+  // pressure.
+  await expect(page.getByTestId("field-status")).toHaveText(
+    "gh_001_cfd (openfoam:simpleFoam v2412): 16 × 20 × 7 cells, air speed 0 to 0.49 m/s.",
+  );
+  await page.getByRole("radio", { name: "streamlines" }).check();
+  await expect(page.getByTestId("field-legend-quantity")).toHaveText("air speed (m/s)");
+  await page.getByRole("radio", { name: "slice" }).check();
+  await expect(page).toHaveURL(/&field=cfd&fieldView=slice&slice=pressure:z:1\.75$/);
+  await expect(page.getByTestId("field-legend-quantity")).toHaveText("pressure (Pa)");
 });

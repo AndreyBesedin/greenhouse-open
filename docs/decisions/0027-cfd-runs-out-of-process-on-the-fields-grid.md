@@ -47,4 +47,10 @@ result is only as good as the boundaries it was solved with.
   sloping roof above it. Air in the roof's spans waits for a domain that
   includes them.
 - The container image is about 2 GB, pulled the first time a `cfd` test or
-  `--mesh` runs without OpenFOAM installed.
+  `--mesh` runs without OpenFOAM installed. A CFD workflow in CI runs the
+  `cfd` tests on changes that can affect them, so they need not run
+  anywhere else.
+- A solved result is kept in the repository, keyed by everything OpenFOAM
+  was given, so the viewer and the tests read a CFD field without OpenFOAM.
+  A change to what it is given makes the result stale until it is solved
+  again, and the tests say so.

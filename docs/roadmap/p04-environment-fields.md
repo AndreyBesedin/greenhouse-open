@@ -36,7 +36,7 @@ obstacles realistic, but the first steps don't need them.
 | P04.2 | `feat(viewer): add airflow arrows, streamlines and scalar slices` | Done |
 | P04.3 | `feat(airflow): add lightweight prescribed airflow backend` | Done |
 | P04.4 | `feat(cfd): export greenhouse envelope and obstacles as CFD case geometry` | Done |
-| P04.5 | `feat(cfd): run a minimal OpenFOAM adapter and import its velocity field` | Planned |
+| P04.5 | `feat(cfd): run a minimal OpenFOAM adapter and import its velocity field` | Done |
 | P04.6 | `feat(cfd): add an obstacle and wake QA case` | Planned |
 | P04.7 | `test(airflow): add a field probe and comparison panel` | Planned |
 
@@ -272,6 +272,68 @@ sampled onto the canonical field grid, and results cached by the scenario's
 hash. Visible result: the browser draws velocity vectors from an actual CFD
 run rather than a synthetic field. Tests: the reference case completes and
 gives finite values on the expected grid.
+
+As implemented:
+
+- **What drives the air** (`cfd.setup.CfdSetup`, `ScenarioConfig.cfd`): air
+  blown in square to the scenario's inlets, by default its first open door
+  or vent, at 0.5 m/s, and out through every other open one. A scenario
+  with fewer than two open openings cannot be solved, and says so.
+- **The solve:** steady, laminar `simpleFoam`, with an effective viscosity
+  of 0.01 m²/s in place of the air's own. Half-metre cells cannot resolve
+  turbulence, so its mixing is folded in as a constant eddy viscosity. The
+  air is isothermal.
+  - **Boundaries:** the inlets at a fixed normal speed; the outlets at the
+    outside's pressure, letting air out and back in freely; no slip on
+    every wall, the floor, the ceiling and the obstacles.
+  - **`Allrun`:** meshes the case, copies the starting fields from `0.orig`
+    (meshing would change them), solves, and writes the cells' centres.
+- **Reading it back** (`cfd.solve`): each solver cell's velocity and
+  pressure go to the grid cell its centre lies in, so nothing is
+  interpolated. The pressure is in pascals, from the kinematic pressure
+  times the air's density, 1.2 kg/m³. Inside an obstacle the air is still,
+  and its pressure is its neighbours' mean, so the field says something
+  everywhere. The reader takes OpenFOAM's lists one entry a line or, when
+  short, on one line.
+- **Kept by what was solved** (`cfd.results`): a result is keyed by a hash
+  of every file written for OpenFOAM. Any change to the greenhouse, its
+  openings, its obstacles, the setup or the OpenFOAM version is a new key.
+  Each scenario's result is kept in `cfd/results/<id>.json` and offered as
+  its `cfd` field only while its key is the scenario's current one.
+  `CfdAirflow` serves it as an airflow model: steady at any time, on its own
+  grid, or sampled onto another.
+- **Command line:** `python -m greenhouse_sim.cfd gh_001 cases/gh_001 --solve`
+  solves the scenario and keeps the result. A changed scenario's solve is
+  written to `field.json` in its case only.
+- **CI:** a CFD workflow runs OpenFOAM's container on changes that can
+  change what it is given. It runs `pytest -m cfd`, solves the reference
+  case, and keeps the results and the solver's logs as the `cfd-results`
+  artifact. gh_001's kept result came from it, solved on Linux.
+- **Viewer:** nothing new. "Air field" lists `cfd` among gh_001's fields,
+  and draws it as arrows, streamlines or a slice like any other field.
+- Tests:
+  - Python:
+    - flow roles, and the setups refused;
+    - the case's boundary conditions;
+    - **the key changes with everything OpenFOAM is given and nothing
+      else;**
+    - values read whether uniform or listed either way;
+    - **a solution written in OpenFOAM's format, its cells shuffled and one
+      removed, read onto the grid by its centres**, and the removed cell
+      still, at its neighbours' pressure;
+    - solutions that don't fit the grid refused;
+    - convergence read from the log;
+    - results kept while current;
+    - **every airflow model, prescribed or solved, satisfies the same field
+      contract;**
+    - gh_001's kept solution is current and converged, and its air falls
+      from the inlet vent at about its speed and rises to the outlet;
+    - its solution as a field on another grid;
+    - the scenario offers it;
+    - with `pytest -m cfd`, **OpenFOAM solves gh_001 again, as its kept
+      result says**, within 2% of each quantity's scale.
+  - Browser: gh_001's `cfd` field listed, described and drawn as
+    streamlines and a pressure slice.
 
 ### P04.6: Obstacle and wake QA case
 
