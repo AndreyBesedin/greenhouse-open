@@ -18,6 +18,7 @@ compare parsed JSON, so formatting does not count.
 """
 
 import json
+import math
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -227,6 +228,10 @@ QA_LAYOUT = Layout(
 )
 # Long enough in climate_box for the plants to differ in height.
 EXAMPLE_DAYS = 9
+# How closely the example scene's numbers must match: its plants grow through
+# exponentials whose last bit differs from one platform's maths library to
+# another's.
+EXAMPLE_RELATIVE_TOLERANCE = 1e-12
 
 
 def _example_scene() -> object:
@@ -253,8 +258,31 @@ def test_the_published_schema_is_plain_json_schema() -> None:
     assert '"discriminator"' not in text
 
 
+def _matches(kept: object, drawn: object) -> bool:
+    """Whether two parsed scenes are the same but for their numbers' last
+    bits."""
+    if isinstance(kept, float) and isinstance(drawn, float):
+        return math.isclose(kept, drawn, rel_tol=EXAMPLE_RELATIVE_TOLERANCE)
+    if isinstance(kept, dict) and isinstance(drawn, dict):
+        return kept.keys() == drawn.keys() and all(_matches(kept[k], drawn[k]) for k in kept)
+    if isinstance(kept, list) and isinstance(drawn, list):
+        return len(kept) == len(drawn) and all(map(_matches, kept, drawn, strict=True))
+    return kept == drawn
+
+
 def test_the_example_scene_is_what_the_simulator_draws() -> None:
-    assert json.loads(EXAMPLE_FILE.read_text()) == _example_scene()
+    kept = json.loads(EXAMPLE_FILE.read_text())
+    drawn = _example_scene()
+
+    assert _matches(kept, drawn), (
+        "the example scene drifted: python tests/test_scene_schema.py --update"
+    )
+
+
+def test_the_example_scene_comparison_tells_a_last_bit_from_a_change() -> None:
+    assert _matches({"height": [0.3513939135305729]}, {"height": [0.35139391353057287]})
+    assert not _matches({"height": [0.35139]}, {"height": [0.35140]})
+    assert not _matches({"height": 0.35}, {"width": 0.35})
 
 
 def _qa_greenhouse() -> object:
