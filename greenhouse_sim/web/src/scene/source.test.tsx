@@ -66,30 +66,41 @@ describe("choosing a scene in the address bar", () => {
         actions: [],
       },
     ],
-    ["?scenario=gh_demo", { kind: "scenario", scenarioId: "gh_demo" }],
+    ["?scenario=climate_box", { kind: "scenario", scenarioId: "climate_box" }],
     [
-      "?scenario=gh_001&layout=benches",
-      { kind: "scenario", scenarioId: "gh_001", layout: "benches" },
+      "?scenario=tomato_compartment&layout=benches",
+      { kind: "scenario", scenarioId: "tomato_compartment", layout: "benches" },
     ],
-    ["?scenario=gh_001&field=shear", { kind: "scenario", scenarioId: "gh_001", field: "shear" }],
     [
-      "?scenario=gh_001&field=shear&fieldView=slice&slice=temperature:z:1.75",
+      "?scenario=tomato_compartment&field=shear",
+      { kind: "scenario", scenarioId: "tomato_compartment", field: "shear" },
+    ],
+    [
+      "?scenario=tomato_compartment&field=shear&fieldView=slice&slice=temperature:z:1.75",
       {
         kind: "scenario",
-        scenarioId: "gh_001",
+        scenarioId: "tomato_compartment",
         field: "shear",
         fieldView: "slice",
         slice: { quantity: "temperature", axis: "z", position: 1.75 },
       },
     ],
     [
-      "?scenario=gh_001&open=door_1:1&field=vortex&cfd=boundaries",
+      "?scenario=tomato_compartment&open=door_1:1&field=vortex&cfd=boundaries",
       {
         kind: "scenario",
-        scenarioId: "gh_001",
+        scenarioId: "tomato_compartment",
         openings: { door_1: 1 },
         field: "vortex",
         cfdBoundaries: true,
+      },
+    ],
+    [
+      "?scenario=tomato_compartment&camera=30:-2:3,23.3:6:1",
+      {
+        kind: "scenario",
+        scenarioId: "tomato_compartment",
+        camera: { position: { x: 30, y: -2, z: 3 }, target: { x: 23.3, y: 6, z: 1 } },
       },
     ],
     [
@@ -122,9 +133,9 @@ describe("choosing another source", () => {
     expect(searchFor(withItsAir(shown, open))).toBe(
       "?scenario=airflow_box&layout=open&field=cfd&fieldView=streamlines&compare=uniform&probes=7:3.2:0.75&cfd=boundaries",
     );
-    expect(withItsAir(shown, sourceFromSearch("?scenario=gh_001"))).toEqual({
+    expect(withItsAir(shown, sourceFromSearch("?scenario=tomato_compartment"))).toEqual({
       kind: "scenario",
-      scenarioId: "gh_001",
+      scenarioId: "tomato_compartment",
     });
     expect(withItsAir(sourceFromSearch("?plants=lab"), open)).toEqual(open);
   });
@@ -170,13 +181,17 @@ describe("loading a scene", () => {
       asked.push(String(url));
       return new Response("{}", { status: 500 });
     };
-    const source = sourceFromSearch("?scenario=gh_demo&envelope=spans:3,length:12&open=door_1:1");
+    const source = sourceFromSearch(
+      "?scenario=climate_box&envelope=spans:3,length:12&open=door_1:1",
+    );
 
     await loadScene(source, recording);
 
-    expect(searchFor(source)).toBe("?scenario=gh_demo&envelope=length:12,spans:3&open=door_1:1");
+    expect(searchFor(source)).toBe(
+      "?scenario=climate_box&envelope=length:12,spans:3&open=door_1:1",
+    );
     expect(asked).toEqual([
-      "/api/scenarios/gh_demo/scene?envelope=length:12,spans:3&open=door_1:1",
+      "/api/scenarios/climate_box/scene?envelope=length:12,spans:3&open=door_1:1",
     ]);
   });
 });
@@ -207,7 +222,7 @@ describe("drawing a checked scene", () => {
     );
     const rejected = renderToStaticMarkup(
       <SceneStatus
-        source={{ kind: "scenario", scenarioId: "gh_demo" }}
+        source={{ kind: "scenario", scenarioId: "climate_box" }}
         state={{
           status: "rejected",
           problems: ["/entities/0/kind must be equal to one of the allowed values"],
@@ -215,7 +230,7 @@ describe("drawing a checked scene", () => {
       />,
     );
 
-    expect(loaded).toContain(`gh_demo, day 9, ${EXAMPLE.entities.length} entities`);
+    expect(loaded).toContain(`climate_box, day 9, ${EXAMPLE.entities.length} entities`);
     expect(rejected).toContain('role="alert"');
     expect(rejected).toContain("/entities/0/kind must be equal to one of the allowed values");
   });

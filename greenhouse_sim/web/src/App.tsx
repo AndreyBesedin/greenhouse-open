@@ -430,7 +430,13 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         overlays={overlays}
         showBounds={showDimensions}
         byCategory={byCategory}
-        initialPose={source.kind === "plants" ? PLANT_LAB_POSE : null}
+        initialPose={
+          source.kind === "plants"
+            ? PLANT_LAB_POSE
+            : source.kind === "scenario"
+              ? (source.camera ?? null)
+              : null
+        }
         onSample={setSample}
         onPointer={setPointer}
         onSelect={setSelectedId}
