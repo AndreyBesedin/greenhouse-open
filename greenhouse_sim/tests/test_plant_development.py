@@ -182,8 +182,8 @@ def test_the_lab_shows_its_plant_on_any_day_of_its_run() -> None:
 @pytest.mark.parametrize(
     ("query", "reason"),
     [
-        ("day=61", "the plant lab runs from day 0 to day 60, not day 61"),
-        ("day=-1", "the plant lab runs from day 0 to day 60, not day -1"),
+        ("day=91", "the plant lab runs from day 0 to day 90, not day 91"),
+        ("day=-1", "the plant lab runs from day 0 to day 90, not day -1"),
         ("day=soon", "day wants a whole number, not 'soon'"),
     ],
 )

@@ -61,7 +61,7 @@ FLOWER_RADIUS_M: Final = 0.007
 LEAFLET_THICKNESS_M: Final = 0.002
 
 # The fruits still on the plant, and so drawn.
-ATTACHED_FRUIT: Final = frozenset({FruitStage.GROWING})
+ATTACHED_FRUIT: Final = frozenset({FruitStage.ATTACHED})
 
 _UP: Final = Vector3(x=0.0, y=0.0, z=1.0)
 

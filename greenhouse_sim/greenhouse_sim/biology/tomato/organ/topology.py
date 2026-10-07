@@ -79,11 +79,15 @@ class FlowerStage(StrEnum):
 class FruitStage(StrEnum):
     """Where a fruit is in its life, from set to picked."""
 
-    GROWING = "growing"
+    # On the plant, growing and ripening.
+    ATTACHED = "attached"
     # Dropped while young; it keeps its place, as a removed leaf does.
     ABORTED = "aborted"
     HARVESTED = "harvested"
 
+
+# What an organ never loses from one moment to a later one.
+NEVER_DECREASE: tuple[str, ...] = ("length_cm", "diameter_mm", "mass_g", "ripeness")
 
 # How each kind of organ's stage may change from one moment to a later one;
 # a stage may always stay as it is.
@@ -99,7 +103,7 @@ FLOWER_CHANGES: dict[FlowerStage, frozenset[FlowerStage]] = {
     FlowerStage.ABORTED: frozenset(),
 }
 FRUIT_CHANGES: dict[FruitStage, frozenset[FruitStage]] = {
-    FruitStage.GROWING: frozenset({FruitStage.ABORTED, FruitStage.HARVESTED}),
+    FruitStage.ATTACHED: frozenset({FruitStage.ABORTED, FruitStage.HARVESTED}),
     FruitStage.ABORTED: frozenset(),
     FruitStage.HARVESTED: frozenset(),
 }
@@ -162,7 +166,15 @@ class Leaf(Organ):
 class Fruit(Organ):
     fruit_id: str
     diameter_mm: NonNegativeFloat
-    stage: FruitStage = FruitStage.GROWING
+    # The diameter it grows towards, fixed when it sets.
+    final_diameter_mm: NonNegativeFloat
+    # Its fresh mass, in grams.
+    mass_g: NonNegativeFloat
+    # The plant's thermal time when it starts to ripen, fixed when it sets.
+    breaker_tt: NonNegativeFloat
+    # How far it has ripened, from 0, green, to 1, red.
+    ripeness: Annotated[float, Field(ge=0, le=1)] = 0.0
+    stage: FruitStage = FruitStage.ATTACHED
 
 
 class Flower(Organ):
@@ -313,6 +325,10 @@ def topology_problems(plant: Plant) -> list[str]:
                 problems.append(f"{fruit.fruit_id} should take its flower's place")
             if fruit is not None and fruit.born_tt < flower.born_tt:
                 problems.append(f"{fruit.fruit_id} is older than its flower")
+            if fruit is not None and fruit.diameter_mm > fruit.final_diameter_mm:
+                problems.append(f"{fruit.fruit_id} is larger than it grows")
+            if fruit is not None and fruit.breaker_tt < fruit.born_tt:
+                problems.append(f"{fruit.fruit_id} ripens before it sets")
     return problems
 
 
@@ -337,7 +353,8 @@ def change_problems(before: Plant, after: Plant) -> list[str]:
     """Everything wrong with `after` as a later moment of the plant `before`
     was, or nothing: time runs forward, every organ is still there, of the
     same kind and appearing when it did, and every stage has changed only as
-    its kind's stages may (`LEAF_CHANGES`, `FLOWER_CHANGES`, `FRUIT_CHANGES`)."""
+    its kind's stages may (`LEAF_CHANGES`, `FLOWER_CHANGES`, `FRUIT_CHANGES`),
+    and no organ has shrunk, nor any fruit unripened."""
     problems: list[str] = []
     if after.plant_id != before.plant_id:
         problems.append(f"{after.plant_id} is not {before.plant_id}")
@@ -354,4 +371,8 @@ def change_problems(before: Plant, after: Plant) -> list[str]:
         stage, later_stage = _stage(organ), _stage(later_organ)
         if stage is not None and later_stage is not None and not _allowed(stage, later_stage):
             problems.append(f"{organ_id} went from {stage} to {later_stage}")
+        for measure in NEVER_DECREASE:
+            earlier, now = getattr(organ, measure, None), getattr(later_organ, measure, None)
+            if isinstance(earlier, float) and isinstance(now, float) and now < earlier:
+                problems.append(f"{organ_id}'s {measure} went down")
     return problems

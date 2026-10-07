@@ -6,19 +6,20 @@ truss bears a number of flowers drawn when it appears, which appear one
 after another from its base. A flower is a bud until its anthesis, open
 after, and some time later it either sets fruit or aborts, by its own draw:
 flowers near the truss's base set more often than those at its tip. A fruit
-takes its flower's place, appearing when the flower set, and while young it
-may still abort, by the fruit's own draw.
+takes its flower's place, appearing when the flower set, and grows and
+ripens as `fruit` says; while young it may still abort, by the fruit's own
+draw.
 
 Every event happens at a set thermal age, and every chance is drawn from the
 organ's own generator once, when its moment comes, so a plant grown in one
-step or day by day sets the same fruit. A fruit keeps the size it set at
-until P03.6 grows it.
+step or day by day sets the same fruit.
 """
 
 from typing import Annotated, Self
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt, model_validator
 
+from greenhouse_sim.biology.tomato.organ.fruit import FruitParams, grown_fruit, set_fruit
 from greenhouse_sim.biology.tomato.organ.seeds import organ_rng
 from greenhouse_sim.biology.tomato.organ.topology import (
     Flower,
@@ -61,8 +62,8 @@ class TrussParams(BaseModel):
     # The chance that a young fruit aborts, decided this long after it set.
     fruit_abortion_probability: Probability = 0.05
     fruit_abortion_cd: PositiveFloat = 100.0
-    # A fruit's diameter when it sets, in millimetres.
-    set_fruit_diameter_mm: PositiveFloat = 6.0
+    # How fruits grow and ripen.
+    fruits: FruitParams = FruitParams()
 
     @model_validator(mode="after")
     def _flowers_in_order(self) -> Self:
@@ -98,14 +99,18 @@ def _decided(plant: Plant, organ_id: str, process: str, chance: float) -> bool:
 def _fruit_at(
     plant: Plant, fruit: Fruit, previous_tt: float, thermal_time: float, params: TrussParams
 ) -> Fruit:
-    """The fruit at the plant's thermal time: a growing fruit whose moment to
-    abort has just come aborts, or not, by its draw."""
-    decided_at = fruit.born_tt + params.fruit_abortion_cd
-    if fruit.stage != FruitStage.GROWING or not previous_tt < decided_at <= thermal_time:
+    """The fruit at the plant's thermal time: grown and ripened while it is on
+    the plant. One whose moment to abort comes on the way aborts, or not, by
+    its draw, and if it does, stays as it was then."""
+    if fruit.stage != FruitStage.ATTACHED:
         return fruit
-    if _decided(plant, fruit.fruit_id, "abortion", params.fruit_abortion_probability):
-        return fruit.model_copy(update={"stage": FruitStage.ABORTED})
-    return fruit
+    decided_at = fruit.born_tt + params.fruit_abortion_cd
+    if previous_tt < decided_at <= thermal_time and _decided(
+        plant, fruit.fruit_id, "abortion", params.fruit_abortion_probability
+    ):
+        aborted = grown_fruit(fruit, decided_at, params.fruits)
+        return aborted.model_copy(update={"stage": FruitStage.ABORTED})
+    return grown_fruit(fruit, thermal_time, params.fruits)
 
 
 def _flower_at(
@@ -131,10 +136,12 @@ def _flower_at(
         return flower.model_copy(update={"stage": FlowerStage.OPEN})
     if not _decided(plant, flower.flower_id, "fruit_set", params.set_probability(flower.rank)):
         return flower.model_copy(update={"stage": FlowerStage.ABORTED})
-    fruit = Fruit(
-        fruit_id=fruit_id(plant.plant_id, truss.number, flower.rank),
-        born_tt=decided_at,
-        diameter_mm=params.set_fruit_diameter_mm,
+    fruit = set_fruit(
+        plant,
+        fruit_id(plant.plant_id, truss.number, flower.rank),
+        flower.rank,
+        decided_at,
+        params.fruits,
     )
     # A fruit set within this step may already have reached its own moment.
     fruit = _fruit_at(plant, fruit, decided_at, thermal_time, params)

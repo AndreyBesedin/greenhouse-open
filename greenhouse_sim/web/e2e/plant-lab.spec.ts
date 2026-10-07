@@ -1,22 +1,29 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect as baseExpect, type Page, test } from "@playwright/test";
 
 import { PLANT_LAB_LAST_DAY, PLANT_LAB_POSE } from "../src/plants/lab.ts";
 import type { SceneSnapshot } from "../src/scene/generated/snapshotTypes.ts";
 import type { Point3 } from "../src/world.ts";
 import { selectAt } from "./view";
 
-// The lab's row is thousands of entities, which CI's software renderer draws
-// slowly: its tests have three times the usual time.
+// The lab's row is thousands of entities, which the simulator takes a while
+// to grow on its later days and CI's software renderer to draw: its tests have
+// three times the usual time, and wait this long for what they expect.
+const LAB_EXPECT_TIMEOUT_MS = 30_000;
+const expect = baseExpect.configure({ timeout: LAB_EXPECT_TIMEOUT_MS });
 test.beforeEach(() => {
   test.slow();
 });
 
+interface StructureFruit {
+  fruit_id: string;
+  stage: string;
+  ripeness: number;
+}
+
 interface Structure {
   stem: {
     phytomers: {
-      truss: {
-        flowers: { flower_id: string; fruit: { fruit_id: string; stage: string } | null }[];
-      } | null;
+      truss: { flowers: { flower_id: string; fruit: StructureFruit | null }[] } | null;
     }[];
   };
 }
@@ -148,9 +155,9 @@ test("a plant flowers and sets fruit, and a fruit is selected from the tree", as
   const fruit = plant.stem.phytomers
     .flatMap(({ truss }) => truss?.flowers ?? [])
     .map((flower) => ({ flowerId: flower.flower_id, fruit: flower.fruit }))
-    .find(({ fruit }) => fruit?.stage === "growing");
+    .find(({ fruit }) => fruit?.stage === "attached");
   if (fruit === undefined || fruit.fruit === null) {
-    throw new Error("the lab's first plant has no growing fruit on day 45");
+    throw new Error("the lab's first plant has no fruit on day 45");
   }
   await page.goto("/?plants=lab&day=45");
   // The tree and the scene arrive separately; an organ is selected in the scene.
@@ -163,9 +170,35 @@ test("a plant flowers and sets fruit, and a fruit is selected from the tree", as
   await expect(page.getByTestId("selected-entity")).toHaveText(fruit.fruit.fruit_id);
   await expect(page.getByTestId("property-organ_kind")).toHaveText("fruit");
   await expect(page.getByTestId("property-parent_id")).toHaveText(fruit.flowerId);
-  await expect(page.getByTestId("property-stage")).toHaveText("growing");
+  await expect(page.getByTestId("property-stage")).toHaveText("attached");
   // A set flower is drawn as its fruit, so it is not a link of its own.
   await expect(page.getByRole("button", { name: fruit.flowerId, exact: true })).toHaveCount(0);
+});
+
+test("a fruit followed through the days grows and ripens from green to red", async ({ page }) => {
+  // A fruit that is red by the end of the lab's run.
+  const end = await labPlant(page, "p01", PLANT_LAB_LAST_DAY);
+  const ripe = end.stem.phytomers
+    .flatMap(({ truss }) => truss?.flowers ?? [])
+    .map(({ fruit }) => fruit)
+    .find((fruit) => fruit !== null && fruit.stage === "attached" && fruit.ripeness === 1);
+  if (ripe === undefined || ripe === null) {
+    throw new Error("the lab's first plant has no red fruit by the end of its run");
+  }
+  await page.goto("/?plants=lab&day=60");
+  await expect(page.getByTestId("scene-status")).toContainText("day 60");
+  await page.getByRole("button", { name: ripe.fruit_id }).click();
+  await expect(page.getByTestId("property-maturity")).toHaveText("green");
+  const green = Number(await page.getByTestId("property-mass_g").textContent());
+
+  await page.getByRole("slider").fill(String(PLANT_LAB_LAST_DAY));
+
+  await expect(page.getByTestId("scene-status")).toContainText(`day ${PLANT_LAB_LAST_DAY}`);
+  await expect(page.getByTestId("selected-entity")).toHaveText(ripe.fruit_id);
+  await expect(page.getByTestId("property-maturity")).toHaveText("red");
+  await expect(page.getByTestId("property-ripeness")).toHaveText("1");
+  const red = Number(await page.getByTestId("property-mass_g").textContent());
+  expect(red).toBeGreaterThan(green);
 });
 
 test("the slider runs as far as the simulator's lab does, and no further", async ({ page }) => {

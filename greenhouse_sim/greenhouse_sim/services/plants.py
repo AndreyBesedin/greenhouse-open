@@ -45,7 +45,7 @@ GROUND_COLOR: Final = Color(r=0.45, g=0.36, b=0.27)
 # kept at this daily mean temperature, and shown up to this day.
 TRANSPLANT_CD: Final = 230.0
 LAB_TEMPERATURE_C: Final = 21.0
-LAST_DAY: Final = 60
+LAST_DAY: Final = 90
 # The crop: how its plants develop, their organs varying around each plant's
 # sizes, and how its plants vary.
 DEVELOPMENT: Final = DevelopmentParams(organ_size_cv=0.08)
