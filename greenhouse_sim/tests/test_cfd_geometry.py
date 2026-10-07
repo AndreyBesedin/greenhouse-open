@@ -227,7 +227,26 @@ def test_the_case_meshes_the_grid_and_takes_only_the_steps_it_needs() -> None:
         "foamDictionary",
         "foamDictionary",
     ]
+    # Shut, the climate box patches no openings, but cuts out its units.
     assert [line.split()[0] for line in allmesh_script(climate_box).splitlines()[4:]] == [
+        "blockMesh",
+        "topoSet",
+        "topoSet",
+        "subsetMesh",
+        "foamDictionary",
+        "foamDictionary",
+    ]
+    # Without them, it is meshed as its grid is.
+    empty = climate_box.model_copy(
+        update={
+            "boundaries": [
+                boundary
+                for boundary in climate_box.boundaries
+                if boundary.category is not BoundaryCategory.OBSTACLE
+            ]
+        }
+    )
+    assert [line.split()[0] for line in allmesh_script(empty).splitlines()[4:]] == [
         "blockMesh",
         "topoSet",
     ]

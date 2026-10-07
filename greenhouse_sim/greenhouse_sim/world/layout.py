@@ -11,6 +11,10 @@ Its crop rows (`greenhouse_sim.world.rows`) give the planting positions, where
 plants can stand. A scenario's plants stand at them in order: the first plant
 at the first row's first position, filling each row before the next.
 
+Its climate equipment (`greenhouse_sim.world.equipment`), fans, heaters and
+dehumidifiers, stands among the fixtures: what of it is in the way of air or
+robots is among the layout's obstructions, and kept off its walkways.
+
 Walkways, service zones and keep-out volumes (`greenhouse_sim.world.zones`)
 are kept clear of planting: no position lies inside one, and the rows'
 supports stop short of them. Walkways stay clear of anything that obstructs
@@ -26,6 +30,7 @@ from pydantic import BaseModel, ConfigDict, model_validator
 from greenhouse_sim.domain.layout import Obstruction
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.envelope_checks import encloses, encloses_hull
+from greenhouse_sim.world.equipment import Equipment
 from greenhouse_sim.world.fixtures import Fixture, Primitive, WalkwayPrimitive
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.rows import CropRows, PlantingPosition
@@ -47,23 +52,28 @@ class Layout(BaseModel):
     placed: list[Primitive] = []
     # Service zones and keep-out volumes.
     zones: list[Zone] = []
+    # Climate equipment: fans, heaters and dehumidifiers.
+    equipment: list[Equipment] = []
 
     @model_validator(mode="after")
     def _every_fixture_and_zone_has_its_own_identifier(self) -> Self:
         names = Counter(
             [fixture.fixture_id for fixture in self.fixtures()]
             + [zone.zone_id for zone in self.zones]
+            + [piece.actuator_id for piece in self.equipment]
         )
         repeated = sorted(name for name, count in names.items() if count > 1)
         if repeated:
-            raise ValueError(f"fixtures or zones share an identifier: {', '.join(repeated)}")
+            raise ValueError(
+                f"fixtures, zones or equipment share an identifier: {', '.join(repeated)}"
+            )
         return self
 
     @model_validator(mode="after")
     def _walkways_stay_clear(self) -> Self:
         in_the_way = [
             fixture
-            for fixture in self.fixtures()
+            for fixture in self.fixtures() + self.equipment_fixtures()
             if Obstruction.MOVEMENT in fixture.obstructs
             and fixture.bounds()[0].z < WALKWAY_HEADROOM_M
         ]
@@ -92,11 +102,20 @@ class Layout(BaseModel):
         rows = [] if self.crop_rows is None else self.crop_rows.fixtures(self.kept_clear())
         return rows + [fixture for primitive in self.placed for fixture in primitive.fixtures()]
 
+    def equipment_fixtures(self) -> list[Fixture]:
+        """Its equipment, each piece as a fixture of its shape (`fixture`)."""
+        return [piece.fixture() for piece in self.equipment]
+
     def obstructing(self, obstruction: Obstruction) -> list[Fixture]:
-        """The fixtures that stand in the way of `obstruction`, in the
-        greenhouse's frame: the obstacles robots (movement), airflow or
-        radiation (light) take from the layout (decision 0019)."""
-        return [fixture for fixture in self.fixtures() if obstruction in fixture.obstructs]
+        """The fixtures, and the equipment, that stand in the way of
+        `obstruction`, in the greenhouse's frame: the obstacles robots
+        (movement), airflow or radiation (light) take from the layout
+        (decision 0019)."""
+        return [
+            fixture
+            for fixture in self.fixtures() + self.equipment_fixtures()
+            if obstruction in fixture.obstructs
+        ]
 
     def planting_positions(self) -> list[PlantingPosition]:
         """Every planting position outside the areas kept clear, row by row, in
@@ -112,7 +131,7 @@ def outside_the_greenhouse(layout: Layout, envelope: Envelope) -> list[str]:
     it."""
     fixtures = [
         fixture.fixture_id
-        for fixture in layout.fixtures()
+        for fixture in layout.fixtures() + layout.equipment_fixtures()
         if not encloses_hull(envelope, [(c.x, c.y, c.z) for c in fixture.corners()])
     ]
     positions = [

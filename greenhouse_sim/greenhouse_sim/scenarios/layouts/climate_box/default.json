@@ -46,5 +46,48 @@
       "width": 1.2
     }
   ],
-  "zones": []
+  "zones": [],
+  "equipment": [
+    {
+      "actuator_id": "fan",
+      "heading": 0.0,
+      "kind": "fan",
+      "position": {
+        "x": 1.0,
+        "y": 3.2,
+        "z": 2.8
+      },
+      "diameter_m": 0.5,
+      "flow_m3_s": 1.0
+    },
+    {
+      "actuator_id": "heater",
+      "heading": 3.141592653589793,
+      "base": {
+        "x": 11.2,
+        "y": 0.7,
+        "z": 0.0
+      },
+      "size_x": 0.6,
+      "size_y": 0.8,
+      "size_z": 1.2,
+      "kind": "heater",
+      "power_w": 10000.0
+    },
+    {
+      "actuator_id": "dehumidifier",
+      "heading": -1.5707963267948966,
+      "base": {
+        "x": 6.0,
+        "y": 5.9,
+        "z": 0.0
+      },
+      "size_x": 0.6,
+      "size_y": 1.0,
+      "size_z": 1.4,
+      "kind": "dehumidifier",
+      "removal_kg_h": 5.0,
+      "heat_w": 4500.0
+    }
+  ]
 }
