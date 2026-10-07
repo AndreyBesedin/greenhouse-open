@@ -37,9 +37,12 @@ function controls(frame: LiveFrame | null, connected = true): string {
 
 describe("following a scenario live", () => {
   it("is chosen with ?live= and streams from the scenario's live endpoint", () => {
-    expect(sourceFromSearch("?live=gh_demo")).toEqual({ kind: "live", scenarioId: "gh_demo" });
-    expect(searchFor({ kind: "live", scenarioId: "gh_demo" })).toBe("?live=gh_demo");
-    expect(liveUrl("gh_demo")).toBe("/api/scenarios/gh_demo/live");
+    expect(sourceFromSearch("?live=climate_box")).toEqual({
+      kind: "live",
+      scenarioId: "climate_box",
+    });
+    expect(searchFor({ kind: "live", scenarioId: "climate_box" })).toBe("?live=climate_box");
+    expect(liveUrl("climate_box")).toBe("/api/scenarios/climate_box/live");
   });
 
   it("accepts a frame whose scene passes the check", () => {
@@ -111,10 +114,10 @@ describe("following a scenario live", () => {
 
 describe("controlling a live run", () => {
   it("sends each command to the run's own endpoint", () => {
-    expect(commandUrl("gh_demo", "pause")).toBe("/api/scenarios/gh_demo/live/pause");
-    expect(commandUrl("gh_demo", "step")).toBe("/api/scenarios/gh_demo/live/step");
-    expect(commandUrl("gh_demo", { speed: 0.25 })).toBe(
-      "/api/scenarios/gh_demo/live/speed?multiplier=0.25",
+    expect(commandUrl("climate_box", "pause")).toBe("/api/scenarios/climate_box/live/pause");
+    expect(commandUrl("climate_box", "step")).toBe("/api/scenarios/climate_box/live/step");
+    expect(commandUrl("climate_box", { speed: 0.25 })).toBe(
+      "/api/scenarios/climate_box/live/speed?multiplier=0.25",
     );
   });
 
@@ -123,15 +126,19 @@ describe("controlling a live run", () => {
       throw new TypeError("Failed to fetch");
     };
 
-    expect(await sendLiveCommand("gh_demo", "reset", answering(200, {}))).toEqual({ ok: true });
+    expect(await sendLiveCommand("climate_box", "reset", answering(200, {}))).toEqual({ ok: true });
     expect(
-      await sendLiveCommand("gh_demo", { speed: 3 }, answering(400, { error: "no such speed" })),
+      await sendLiveCommand(
+        "climate_box",
+        { speed: 3 },
+        answering(400, { error: "no such speed" }),
+      ),
     ).toEqual({ ok: false, problem: "the simulator answered 400: no such speed" });
-    expect(await sendLiveCommand("gh_demo", "play", answering(502, "Bad Gateway"))).toEqual({
+    expect(await sendLiveCommand("climate_box", "play", answering(502, "Bad Gateway"))).toEqual({
       ok: false,
       problem: "the simulator answered 502",
     });
-    expect(await sendLiveCommand("gh_demo", "play", unreachable)).toEqual({
+    expect(await sendLiveCommand("climate_box", "play", unreachable)).toEqual({
       ok: false,
       problem: "the simulator could not be reached",
     });

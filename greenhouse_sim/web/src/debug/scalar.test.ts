@@ -39,9 +39,10 @@ describe("shading entities by a property", () => {
   });
 
   it("spans the values the scene holds", () => {
+    // The example's 32 plants carry 3 to 6 fruit each on day 9.
     expect(colouringBy(EXAMPLE, "fruits_on_plant")).toEqual({
       property: "fruits_on_plant",
-      range: { min: 10, max: 15 },
+      range: { min: 3, max: 6 },
     });
     expect(colouringBy(EXAMPLE, "no_such_property")).toBeNull();
   });

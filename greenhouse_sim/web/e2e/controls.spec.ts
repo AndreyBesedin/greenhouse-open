@@ -2,10 +2,10 @@ import { expect, type Page, test } from "@playwright/test";
 
 import { simulatedDay } from "./hud";
 
-// live.spec.ts follows gh_demo and needs it playing, so these tests take
+// live.spec.ts follows climate_box and needs it playing, so these tests take
 // another scenario. Every viewer shares a scenario's run, and it outlives a
 // test, so each test starts it from a known state.
-const SCENARIO = "gh_002";
+const SCENARIO = "airflow_box";
 const LIVE = `/api/scenarios/${SCENARIO}/live`;
 // Eight days' worth at the fastest speed, had the run not been paused.
 const HOLD_MS = 1000;

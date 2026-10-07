@@ -27,9 +27,9 @@ describe("measuring a scene", () => {
       "x",
       "y",
       "z",
-      "length 4.00 m",
+      "length 12.00 m",
       "width 6.40 m",
-      "height 3.65 m",
+      "height 4.80 m",
     ]);
   });
 
@@ -39,7 +39,7 @@ describe("measuring a scene", () => {
     expect(lines.map((line) => line.kind === "line" && [line.from, line.to])).toEqual([
       [
         { x: 0, y: expect.closeTo(0), z: 0 },
-        { x: 4, y: expect.closeTo(0), z: 0 },
+        { x: 12, y: expect.closeTo(0), z: 0 },
       ],
       [
         { x: 0, y: expect.closeTo(0), z: 0 },
@@ -47,7 +47,7 @@ describe("measuring a scene", () => {
       ],
       [
         { x: 0, y: expect.closeTo(0), z: 0 },
-        { x: 0, y: expect.closeTo(0), z: 3.65 },
+        { x: 0, y: expect.closeTo(0), z: 4.8 },
       ],
     ]);
   });
@@ -67,7 +67,7 @@ describe("measuring a scene", () => {
     };
     const [length] = sceneDimensionOverlays(turned);
 
-    expect(length?.kind === "line" && length.to.y - length.from.y).toBeCloseTo(4);
+    expect(length?.kind === "line" && length.to.y - length.from.y).toBeCloseTo(12);
     expect(length?.kind === "line" && length.to.x - length.from.x).toBeCloseTo(0);
   });
 
@@ -80,7 +80,7 @@ describe("measuring a scene", () => {
   it("finds a box's bounds from its base up", () => {
     expect(entityBounds(BOUNDS)).toEqual({
       min: { x: 0, y: expect.closeTo(0), z: 0 },
-      max: { x: 4, y: expect.closeTo(6.4), z: 3.65 },
+      max: { x: 12, y: expect.closeTo(6.4), z: 4.8 },
     });
   });
 });

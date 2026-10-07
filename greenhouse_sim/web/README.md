@@ -32,8 +32,8 @@ history; it plays its run at a chosen speed, names its plants, and says
 whether every plant keeps the structure's rules, `?scene=fixtures` is a gallery of the layout's
 fixture primitives (`public/scenes/qa-fixtures.json`), one of each, drawn in
 its material, `?scene=stress&plants=10000` is a dense field of
-plants for measuring the renderer, `?scenario=gh_demo` is that scenario before
-day one, from the simulator's API, and `?live=gh_demo` follows it live as the
+plants for measuring the renderer, `?scenario=climate_box` is that scenario before
+day one, from the simulator's API, and `?live=climate_box` follows it live as the
 API plays it one simulated day per second (`python -m greenhouse_sim.api
 --seconds-per-day 0.2` plays faster). The HUD then shows the stream's state
 and the simulated day; if the API goes away the viewer says so and reconnects
@@ -60,7 +60,7 @@ one shows the scenario with it, and the address keeps it (`&layout=benches`).
 
 A scenario's air field, one of the environment fields the simulator publishes
 for it (`greenhouse_sim/fields/`), can be drawn over its scene: "Air field"
-chooses it, and the address keeps it (`?scenario=gh_001&field=vortex`). Every
+chooses it, and the address keeps it (`?scenario=tomato_compartment&field=buoyancy`). Every
 scenario offers the prescribed airflow patterns, uniform, buoyancy and vortex,
 its own first, and the synthetic shear the format is checked against. The
 viewer checks it against the field schema the simulator publishes
@@ -92,9 +92,12 @@ The inspector says what the selected entity is in words, and names its
 dimensions. On a scenario's view, a slider per door and vent sets how far
 it stands open: the viewer asks the simulator for the scene with it so
 (`?open=roof_vent_1:0.5`), and the address bar keeps it. The address can
-change the greenhouse itself too (`?scenario=gh_demo&envelope=length:12,spans:3`:
+change the greenhouse itself too (`?scenario=climate_box&envelope=length:16,bays:4`:
 length, width, spans, bays, eave_height, ridge_height); the simulator checks
-it, and the viewer shows why when it refuses.
+it, and the viewer shows why when it refuses. It can also place the camera,
+for a part of a big greenhouse no preset frames
+(`?scenario=tomato_compartment&camera=26:6:8,23.3:6:1`, its position, then the
+point it looks at).
 Overlays are data in world coordinates, drawn by `src/debug`
 ([decision 0013](../../docs/decisions/0013-describe-debug-overlays-as-data-in-world-coordinates.md)),
 and they only ever read the scene.

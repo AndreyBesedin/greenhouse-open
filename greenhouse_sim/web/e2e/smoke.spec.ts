@@ -21,7 +21,7 @@ test("the viewer lists the simulator's scenarios, without console errors", async
 
   await expect(page.getByRole("heading", { name: "greenhouse-sim viewer" })).toBeVisible();
   const scenarios = page.getByRole("table", { name: "Scenarios" });
-  for (const scenario of ["gh_001", "gh_002", "gh_demo"]) {
+  for (const scenario of ["tomato_compartment", "climate_box", "airflow_box"]) {
     await expect(scenarios).toContainText(scenario);
   }
   expect(errors).toEqual([]);

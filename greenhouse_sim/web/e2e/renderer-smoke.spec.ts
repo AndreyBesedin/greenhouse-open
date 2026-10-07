@@ -20,11 +20,12 @@ import { selectAt } from "./view";
  * CI's visual checks job, in its pinned container.
  */
 
-const SCENARIO = "gh_002";
+const SCENARIO = "climate_box";
 const LIVE = `/api/scenarios/${SCENARIO}/live`;
-const PLANT = "gh_002_plant_001";
-// Low on the plant's stem, which is at least 20 cm tall on any day.
-const PLANT_POINT = { x: 0.5, y: 1.6, z: 0.1 };
+const PLANT = "climate_box_plant_001";
+// Low on the plant's stem, which is at least 20 cm tall on any day, above its
+// gutter's slab.
+const PLANT_POINT = { x: 2.25, y: 2.4, z: 0.775 };
 const REPLAY_DAYS = 3;
 const PRESET_LABELS: Record<PresetName, string> = {
   top: "Top",
@@ -93,7 +94,7 @@ test("renderer-smoke: the renderer, end to end", async ({ page }) => {
   let firstReplay: string[] = [];
   await test.step("a plant is selected, and the inspector follows it", async () => {
     await selectAt(page, PLANT_POINT, PLANT);
-    await expect(page.getByTestId("selected-position")).toHaveText("x 0.50, y 1.60, z 0.00");
+    await expect(page.getByTestId("selected-position")).toHaveText("x 2.25, y 2.40, z 0.67");
     firstReplay = await replayFromReset(page);
     expect(firstReplay.length).toBeGreaterThan(0);
   });

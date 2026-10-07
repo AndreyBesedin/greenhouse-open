@@ -39,6 +39,10 @@ describe("the envelope's categories", () => {
       "GUTTER",
       "FRAME",
       "PLANTING_POSITION",
+      "CROP_GUTTER",
+      "SLAB",
+      "WALKWAY",
+      "WIRE",
     ]);
     const others = EXAMPLE.entities.filter((entity) => categoryColor(entity.kind) === null);
     expect(new Set(others.map((entity) => entity.kind))).toEqual(
