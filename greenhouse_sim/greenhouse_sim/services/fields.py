@@ -7,9 +7,9 @@ is left out until a solver needs it. Its cells are at most `CELL_M` wide.
 A scenario offers every prescribed airflow pattern
 (`greenhouse_sim.airflow.prescribed`): its own, as its configuration sets
 it, first, and the others with their typical numbers. Then its CFD solution
-(`cfd`), if one is kept that is still its solution
-(`greenhouse_sim.cfd.results`), and the synthetic shear the field format is
-checked against.
+(`cfd`) with the layout asked for, if one is kept that is still its
+solution (`greenhouse_sim.cfd.results`), and the synthetic shear the field
+format is checked against.
 """
 
 from typing import Final
@@ -20,8 +20,9 @@ from greenhouse_sim.cfd.results import CfdAirflow, kept_result
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument, FieldGrid
 from greenhouse_sim.fields.synthetic import shear_field
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.errors import NotFound
-from greenhouse_sim.services.scenarios import scenario
+from greenhouse_sim.services.scenarios import SceneChanges, changed, scenario
 from greenhouse_sim.world.geometry import Vector3
 
 # The widest a field's cell may be, in metres.
@@ -37,23 +38,26 @@ class _Shear:
         return shear_field(field_id, grid)
 
 
-def _models(scenario_id: str) -> dict[str, AirflowModel]:
-    """A scenario's fields by name: its own airflow first."""
-    config = scenario(scenario_id)
+def _models(scenario_id: str, layout: str) -> dict[str, AirflowModel]:
+    """A scenario's fields by name, with one of its layouts: its own airflow
+    first."""
+    config = changed(scenario(scenario_id), SceneChanges(layout=layout))
     own = config.airflow
     models: dict[str, AirflowModel] = {own.kind: own}
     for name, pattern in PATTERNS.items():
         models.setdefault(name, pattern)
-    solved = kept_result(scenario_id, config, air_grid(config))
+    solved = kept_result(scenario_id, config, air_grid(config), layout)
     if solved is not None:
         models[CFD] = CfdAirflow(solved)
     models[SHEAR] = _Shear()
     return models
 
 
-def field_names(scenario_id: str) -> list[str]:
-    """The fields a scenario offers, its own airflow first."""
-    return list(_models(scenario_id))
+def field_names(scenario_id: str, layout: str | None = None) -> list[str]:
+    """The fields a scenario offers with one of its layouts, by default its
+    own, its own airflow first. Only its CFD solution depends on the
+    layout."""
+    return list(_models(scenario_id, layout or DEFAULT_LAYOUT))
 
 
 def configured(scenario_id: str) -> str:
@@ -78,9 +82,10 @@ def air_grid(config: ScenarioConfig) -> FieldGrid:
     )
 
 
-def field(scenario_id: str, name: str) -> FieldDocument:
-    """One of a scenario's fields, as it is published."""
-    models = _models(scenario_id)
+def field(scenario_id: str, name: str, layout: str | None = None) -> FieldDocument:
+    """One of a scenario's fields with one of its layouts, by default its
+    own, as it is published."""
+    models = _models(scenario_id, layout or DEFAULT_LAYOUT)
     model = models.get(name)
     if model is None:
         known = ", ".join(models)

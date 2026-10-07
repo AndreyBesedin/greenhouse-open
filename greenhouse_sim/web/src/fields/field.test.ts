@@ -114,23 +114,32 @@ describe("a published field", () => {
 
   it("is loaded from the simulator for a scenario, and an error becomes a state", async () => {
     const asked: string[] = [];
-    const state = await loadField("gh_001", "shear", async (input) => {
+    const answer = async (input: RequestInfo | URL) => {
       asked.push(String(input));
       return new Response(JSON.stringify(shearDocument()), { status: 200 });
-    });
+    };
+    const state = await loadField("gh_001", "shear", undefined, answer);
+    await loadField("airflow_box", "cfd", "open", answer);
     const missing = await loadField(
       "gh_001",
       "wind",
+      undefined,
       async () => new Response("", { status: 404 }),
     );
     const newer = await loadField(
       "gh_001",
       "shear",
+      undefined,
       async () =>
         new Response(JSON.stringify({ ...shearDocument(), schema_version: 2 }), { status: 200 }),
     );
 
-    expect(asked).toEqual([fieldUrl("gh_001", "shear")]);
+    // With another of its layouts, which its CFD solution depends on.
+    expect(asked).toEqual([
+      "/api/scenarios/gh_001/fields/shear",
+      "/api/scenarios/airflow_box/fields/cfd?layout=open",
+    ]);
+    expect(fieldUrl("gh_001", "shear")).toBe(asked[0]);
     expect(state.status).toBe("loaded");
     expect(missing).toEqual({ status: "unavailable", reason: "the simulator API answered 404" });
     expect(newer.status).toBe("rejected");

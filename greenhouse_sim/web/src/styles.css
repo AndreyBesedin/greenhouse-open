@@ -42,6 +42,12 @@ body {
   margin: 0;
 }
 
+/* A long scenario identifier wraps rather than pushing the table past the
+   panel. */
+.info-panel table code {
+  overflow-wrap: anywhere;
+}
+
 .info-panel table {
   border-collapse: collapse;
 }

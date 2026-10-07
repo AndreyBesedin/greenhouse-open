@@ -141,6 +141,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // chosen; the last one stays on show until the next arrives.
   const fieldScenario = source.kind === "scenario" ? source.scenarioId : null;
   const fieldName = source.kind === "scenario" ? (source.field ?? null) : null;
+  // A scenario's CFD solution depends on its layout.
+  const fieldLayout = source.kind === "scenario" ? source.layout : undefined;
   useEffect(() => {
     if (fieldScenario === null || fieldName === null) {
       setField({ status: "none" });
@@ -148,7 +150,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     }
     let current = true;
     setField((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
-    void loadField(fieldScenario, fieldName).then((state) => {
+    void loadField(fieldScenario, fieldName, fieldLayout).then((state) => {
       if (current) {
         setField(state);
       }
@@ -156,7 +158,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     return () => {
       current = false;
     };
-  }, [fieldScenario, fieldName]);
+  }, [fieldScenario, fieldName, fieldLayout]);
 
   // The boundaries a CFD solver is given, changed as the scene is, drawn
   // over it when asked for; the last stays on show until the next arrives.
@@ -385,6 +387,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             {source.kind === "scenario" && (
               <FieldControls
                 scenarioId={source.scenarioId}
+                layout={source.layout}
                 chosen={source.field ?? null}
                 state={field}
                 view={fieldView}

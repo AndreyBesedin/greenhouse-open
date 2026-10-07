@@ -41,6 +41,10 @@ def test_the_version_names_the_simulator_and_the_scene_schema() -> None:
     assert isinstance(body["version"], str) and body["version"]
 
 
+# The scenarios with more than their default layout, and their others.
+OTHER_LAYOUTS = {"gh_001": ["benches"], "airflow_box": ["open"]}
+
+
 def test_the_scenario_list_is_the_registry() -> None:
     body = respond("GET", "/api/scenarios").body
 
@@ -54,7 +58,7 @@ def test_the_scenario_list_is_the_registry() -> None:
             "description": config.description,
             "plants": config.rows * config.columns,
             "duration_days": config.duration_days,
-            "layouts": ["default", "benches"] if scenario_id == "gh_001" else ["default"],
+            "layouts": ["default", *OTHER_LAYOUTS.get(scenario_id, [])],
         }
 
 

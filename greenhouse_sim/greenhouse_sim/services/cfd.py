@@ -8,9 +8,10 @@ greenhouse, or its doors and vents opened, so that what a viewer draws of
 it matches the scene beside it.
 
 Solving needs OpenFOAM (`greenhouse_sim.cfd.runner`). A solve of a scenario
-as it is configured is kept (`greenhouse_sim.cfd.results`), and offered as
-one of its fields for as long as it is still that scenario's solution; a
-solve of a changed scenario is only returned.
+as it is configured, with any of its layouts, is kept
+(`greenhouse_sim.cfd.results`), and offered as one of its fields with that
+layout for as long as it is still that scenario's solution; a solve of a
+scenario with its greenhouse or its openings changed is only returned.
 """
 
 from dataclasses import dataclass
@@ -50,12 +51,14 @@ class Solved:
 
 def solve(scenario_id: str, directory: Path, changes: SceneChanges | None = None) -> Solved:
     """Solve a scenario's air with OpenFOAM in `directory`, as its
-    configuration's setup drives it, and keep the result if the scenario is
-    unchanged. A scenario its setup cannot drive is refused."""
-    unchanged = changes is None or changes == SceneChanges()
-    config = changed(scenario(scenario_id), changes or SceneChanges())
+    configuration's setup drives it, and keep the result if only its layout
+    was changed, if anything. A scenario its setup cannot drive is
+    refused."""
+    changes = changes or SceneChanges()
+    as_configured = not changes.envelope and not changes.openings
+    config = changed(scenario(scenario_id), changes)
     try:
-        result = solve_case(geometry(scenario_id, changes), config.cfd, directory)
+        result = solve_case(geometry(scenario_id, changes), config.cfd, directory, changes.layout)
     except SetupRefused as refusal:
         raise InvalidRequest(str(refusal)) from None
-    return Solved(result=result, kept=keep(result) if unchanged else None)
+    return Solved(result=result, kept=keep(result) if as_configured else None)

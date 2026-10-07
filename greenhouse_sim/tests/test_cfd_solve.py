@@ -257,10 +257,10 @@ def test_a_result_is_kept_while_it_is_the_scenarios_solution(tmp_path: Path) -> 
 
     keep(result, tmp_path)
 
-    assert kept_result("gh_001", GH_001, GRID_001, tmp_path) == result
+    assert kept_result("gh_001", GH_001, GRID_001, directory=tmp_path) == result
     faster = GH_001.model_copy(update={"cfd": _with(inlet_speed_m_s=0.6)})
-    assert kept_result("gh_001", faster, GRID_001, tmp_path) is None
-    assert kept_result("gh_demo", scenario("gh_demo"), GRID_001, tmp_path) is None
+    assert kept_result("gh_001", faster, GRID_001, directory=tmp_path) is None
+    assert kept_result("gh_demo", scenario("gh_demo"), GRID_001, directory=tmp_path) is None
 
 
 @pytest.mark.cfd
@@ -354,10 +354,11 @@ def test_a_scenario_offers_its_kept_solution_among_its_fields() -> None:
     assert "cfd" in fields.field_names("gh_001")
     assert fields.field("gh_001", "cfd").source == SOURCE
     assert "cfd" not in fields.field_names("gh_002")
-    assert all(
-        kept_result(sid, config, fields.grid(sid)) is None or sid == "gh_001"
+    assert {
+        sid
         for sid, config in SCENARIO_REGISTRY.items()
-    )
+        if kept_result(sid, config, fields.grid(sid)) is not None
+    } == {"gh_001", "airflow_box"}
 
 
 @pytest.mark.cfd
