@@ -20,14 +20,20 @@ export function layoutQuery(layout: string | undefined): string {
 }
 
 /** Fetches and checks a scenario's field; every failure becomes a state to show. */
-export async function loadField(
+export function loadField(
   scenarioId: string,
   name: string,
   layout?: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<FieldState> {
+  return fetchField(fieldUrl(scenarioId, name, layout), fetchFn);
+}
+
+/** Fetches and checks the field at `url`, from the simulator or a file it
+ * wrote; every failure becomes a state to show. */
+export async function fetchField(url: string, fetchFn: typeof fetch = fetch): Promise<FieldState> {
   try {
-    const response = await fetchFn(fieldUrl(scenarioId, name, layout));
+    const response = await fetchFn(url);
     if (!response.ok) {
       return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
     }

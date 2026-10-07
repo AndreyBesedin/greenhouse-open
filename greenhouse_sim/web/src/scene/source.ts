@@ -298,3 +298,26 @@ export async function fetchScene(url: string, fetchFn: typeof fetch = fetch): Pr
     return { status: "unavailable", reason };
   }
 }
+
+/** The scenario on show with another of its layouts keeps how its air is
+ * drawn, probed and compared, so that the two layouts' air can be compared;
+ * any other choice starts afresh. */
+export function withItsAir(shown: SceneSource, chosen: SceneSource): SceneSource {
+  if (
+    shown.kind !== "scenario" ||
+    chosen.kind !== "scenario" ||
+    shown.scenarioId !== chosen.scenarioId
+  ) {
+    return chosen;
+  }
+  const { field, fieldView, slice, compare, probes, cfdBoundaries } = shown;
+  return {
+    ...chosen,
+    ...(field === undefined ? {} : { field }),
+    ...(fieldView === undefined ? {} : { fieldView }),
+    ...(slice === undefined ? {} : { slice }),
+    ...(compare === undefined ? {} : { compare }),
+    ...(probes === undefined ? {} : { probes }),
+    ...(cfdBoundaries === undefined ? {} : { cfdBoundaries }),
+  };
+}

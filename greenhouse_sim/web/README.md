@@ -74,6 +74,10 @@ A scenario's `cfd` field is its air as OpenFOAM solved it, with the layout
 shown: `?scenario=airflow_box&field=cfd&fieldView=streamlines` is the
 airflow QA case, air blown past a block, and `&layout=open` the same house
 without it.
+`/qa/airflow-box?view=vectors` and `?view=slice` draw the airflow QA case's
+solution from the simulator's files (`tests/test_airflow_qa.py --update`),
+for its screenshot tests; switching a scenario's layout keeps its field, probes
+and comparison, so that its air can be compared with and without a fixture.
 Probes read the drawn field at points in it (`&probes=3:3.2:0.75`): "Add a
 probe", or check "place by clicking" and click the view to place one above
 the ground there. "Compare with" reads another of the scenario's fields at

@@ -49,6 +49,7 @@ import {
   type SceneState,
   searchFor,
   sourceFromSearch,
+  withItsAir,
 } from "./scene/source";
 import { useLiveScene } from "./scene/useLiveScene";
 import { entityOfOrgan, organOf, plantOf, selectedEntity } from "./selection";
@@ -305,7 +306,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     setSource(next);
   }
 
-  function chooseSource(next: SceneSource): void {
+  function chooseSource(chosen: SceneSource): void {
+    const next = withItsAir(source, chosen);
     commandGeneration.current += 1;
     history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
     setSource(next);
@@ -313,7 +315,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     setSelectedId(null);
     setPlaying(false);
     setColourBy(null);
-    setPlacingProbes(false);
+    if (next.kind !== "scenario" || next.probes === undefined) {
+      setPlacingProbes(false);
+    }
   }
 
   function command(next: LiveCommand): void {
