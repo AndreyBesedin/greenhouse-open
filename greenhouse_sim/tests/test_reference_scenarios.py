@@ -13,11 +13,16 @@ import pytest
 
 from greenhouse_sim.cfd.geometry import BoundaryCategory
 from greenhouse_sim.cfd.openfoam import SetupRefused, flow_roles
+from greenhouse_sim.cfd.results import kept_result
+from greenhouse_sim.cfd.solve import SOURCE
+from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.domain.envelope import OpeningKind
 from greenhouse_sim.domain.layout import FixtureKind, Obstruction, ZoneKind
+from greenhouse_sim.fields.field import EnvironmentField
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services import cfd, fields
 from greenhouse_sim.services.scenarios import SceneChanges, changed, scenario
+from greenhouse_sim.world.geometry import Vector3
 
 COMPARTMENT = scenario("tomato_compartment")
 BOX = scenario("climate_box")
@@ -83,6 +88,35 @@ def test_the_compartments_irrigation_unit_stands_in_a_kept_service_area() -> Non
     }
     (obstacle,) = cfd.geometry("tomato_compartment").of(BoundaryCategory.OBSTACLE)
     assert obstacle.name == "obstacle_irrigation_unit"
+
+
+def test_the_compartments_kept_cfd_solution_is_current_and_blows_in_and_out_at_its_vents() -> None:
+    grid = fields.grid("tomato_compartment")
+    result = kept_result("tomato_compartment", COMPARTMENT, grid)
+    assert result is not None, (
+        "tomato_compartment's kept CFD result is missing or stale: take it from the CFD "
+        "workflow's cfd-results artifact"
+    )
+    field = EnvironmentField.from_document(result.field)
+    vents = {b.name: b for b in cfd.geometry("tomato_compartment").of(BoundaryCategory.OPENING)}
+
+    def below(name: str) -> Vector3:
+        box = vents[name].box
+        return Vector3(
+            x=(box.minimum.x + box.maximum.x) / 2,
+            y=(box.minimum.y + box.maximum.y) / 2,
+            z=box.minimum.z - grid.cell_size.z / 2,
+        )
+
+    assert result.converged and field.grid == grid and field.source == SOURCE
+    assert fields.field("tomato_compartment", "cfd").source == SOURCE
+    # In through the first vent, at about the setup's speed, and out through
+    # the others.
+    falling = field.sample(AirQuantity.VELOCITY, below("roof_vent_1"))
+    assert isinstance(falling, Vector3) and -0.6 < falling.z < -0.3
+    for outlet in ("roof_vent_2", "roof_vent_3", "roof_vent_4"):
+        rising = field.sample(AirQuantity.VELOCITY, below(outlet))
+        assert isinstance(rising, Vector3) and rising.z > 0
 
 
 def test_the_compartments_propagation_layout_raises_the_same_rows_on_benches() -> None:

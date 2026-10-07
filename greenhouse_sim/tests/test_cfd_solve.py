@@ -358,7 +358,7 @@ def test_a_scenario_offers_its_kept_solution_among_its_fields() -> None:
         sid
         for sid, config in SCENARIO_REGISTRY.items()
         if kept_result(sid, config, fields.grid(sid)) is not None
-    } == {"gh_001", "airflow_box"}
+    } == {"gh_001", "airflow_box", "tomato_compartment"}
 
 
 @pytest.mark.cfd
