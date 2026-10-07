@@ -37,6 +37,11 @@ const SUN = { x: 5, y: 10, z: 7 };
 // it. Three.js's default of a metre would let the axes take clicks meant for
 // the ground around them.
 const LINE_PICK_TOLERANCE_M = 0.05;
+// The undrawn ground plane that reports where the pointer meets the ground,
+// by name, and how far it reaches: well past the drawn grid, so that a
+// probe can be placed anywhere in a long greenhouse.
+const GROUND = "ground";
+const GROUND_SIZE_M = 200;
 
 export function Viewport({
   snapshot,
@@ -51,6 +56,7 @@ export function Viewport({
   onSample,
   onPointer,
   onSelect,
+  onProbe = null,
   children = null,
 }: {
   snapshot: SceneSnapshot | null;
@@ -68,6 +74,9 @@ export function Viewport({
   onPointer: (point: Point3 | null) => void;
   /** A click picked an entity, or nothing (null). Drags orbit and pick nothing. */
   onSelect: (entityId: string | null) => void;
+  /** While set, a click picks the point on the ground under it instead, to
+   * place a probe there. */
+  onProbe?: ((ground: Point3) => void) | null;
   /** More to draw in the world's frame, such as an environment field, which
    * clicks pass through. */
   children?: ReactNode;
@@ -75,9 +84,17 @@ export function Viewport({
   function pick(event: ThreeEvent<MouseEvent>): void {
     // Every hit along the ray reaches this group; the nearest entity decides.
     event.stopPropagation();
-    if (event.delta <= CLICK_TOLERANCE_PX) {
-      onSelect(pickEntity(event.intersections));
+    if (event.delta > CLICK_TOLERANCE_PX) {
+      return;
     }
+    if (onProbe !== null) {
+      const ground = event.intersections.find((hit) => hit.object.name === GROUND);
+      if (ground !== undefined) {
+        onProbe(viewerToWorld(ground.point));
+      }
+      return;
+    }
+    onSelect(pickEntity(event.intersections));
   }
 
   return (
@@ -86,7 +103,11 @@ export function Viewport({
       onCreated={({ raycaster }) => {
         raycaster.params.Line = { threshold: LINE_PICK_TOLERANCE_M };
       }}
-      onPointerMissed={() => onSelect(null)}
+      onPointerMissed={() => {
+        if (onProbe === null) {
+          onSelect(null);
+        }
+      }}
       aria-label="3D view"
     >
       <CameraRig request={presetRequest} initialPose={initialPose} />
@@ -119,10 +140,11 @@ export function Viewport({
           )}
           {/* An undrawn ground plane that reports where the pointer meets the ground. */}
           <mesh
+            name={GROUND}
             onPointerMove={(event) => onPointer(viewerToWorld(event.point))}
             onPointerOut={() => onPointer(null)}
           >
-            <planeGeometry args={[GRID_SIZE_M, GRID_SIZE_M]} />
+            <planeGeometry args={[GROUND_SIZE_M, GROUND_SIZE_M]} />
             <meshBasicMaterial visible={false} />
           </mesh>
         </group>

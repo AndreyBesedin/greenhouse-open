@@ -19,8 +19,10 @@ import { defaultSlice, quantityScale } from "./fields/drawing";
 import { FieldArrows } from "./fields/FieldArrows";
 import { FieldControls } from "./fields/FieldControls";
 import { FieldLegend } from "./fields/FieldLegend";
+import { FieldProbes } from "./fields/FieldProbes";
 import { FieldSlice } from "./fields/FieldSlice";
 import { FieldStreamlines } from "./fields/FieldStreamlines";
+import { MAX_PROBES, probeOverlays } from "./fields/probes";
 import { type FieldState, loadField } from "./fields/source";
 import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
@@ -54,6 +56,10 @@ import { Viewport } from "./Viewport";
 import type { Point3 } from "./world";
 
 const MILLISECONDS_PER_SECOND = 1000;
+// A clicked probe is placed this high above the ground, until changed: about
+// a crop's height.
+const DEFAULT_PROBE_HEIGHT_M = 1;
+const EMPTY_PROBES: Point3[] = [];
 
 export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [scenarios, setScenarios] = useState<ScenariosState>({ status: "loading" });
@@ -61,6 +67,11 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [scene, setScene] = useState<SceneState>({ status: "none" });
   const [field, setField] = useState<FieldState>({ status: "none" });
   const [cfd, setCfd] = useState<CfdGeometryState>({ status: "none" });
+  // Another field, compared with the drawn one at the probes; and whether a
+  // click places a probe, and how high.
+  const [compared, setCompared] = useState<FieldState>({ status: "none" });
+  const [placingProbes, setPlacingProbes] = useState(false);
+  const [probeHeight, setProbeHeight] = useState(DEFAULT_PROBE_HEIGHT_M);
   // A range the viewer chose for the field's colours, in place of its own.
   const [fieldRange, setFieldRange] = useState<ScalarRange | null>(null);
   const [presetRequest, setPresetRequest] = useState<PresetRequest | null>(null);
@@ -160,6 +171,25 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     };
   }, [fieldScenario, fieldName, fieldLayout]);
 
+  // The field compared with the drawn one, loaded as the drawn one is.
+  const compareName = source.kind === "scenario" ? (source.compare ?? null) : null;
+  useEffect(() => {
+    if (fieldScenario === null || compareName === null) {
+      setCompared({ status: "none" });
+      return;
+    }
+    let current = true;
+    setCompared((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
+    void loadField(fieldScenario, compareName, fieldLayout).then((state) => {
+      if (current) {
+        setCompared(state);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [fieldScenario, compareName, fieldLayout]);
+
   // The boundaries a CFD solver is given, changed as the scene is, drawn
   // over it when asked for; the last stays on show until the next arrives.
   const cfdUrl =
@@ -192,9 +222,38 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     if (source.kind !== "scenario") {
       return;
     }
-    const { field: _, fieldView: __, slice: ___, ...rest } = source;
+    const { field: _, fieldView: __, slice: ___, compare, probes, ...rest } = source;
     setFieldRange(null);
-    setScenarioSource(name === null ? rest : { ...rest, field: name });
+    if (name === null) {
+      setPlacingProbes(false);
+      setScenarioSource(rest);
+      return;
+    }
+    // Its probes stay where they are, and so does what it is compared with,
+    // unless that is the field now drawn.
+    setScenarioSource({
+      ...rest,
+      field: name,
+      ...(probes === undefined ? {} : { probes }),
+      ...(compare === undefined || compare === name ? {} : { compare }),
+    });
+  }
+
+  function setProbes(probes: Point3[]): void {
+    if (source.kind === "scenario") {
+      const { probes: _, ...rest } = source;
+      setScenarioSource(probes.length === 0 ? rest : { ...rest, probes });
+      if (probes.length >= MAX_PROBES) {
+        setPlacingProbes(false);
+      }
+    }
+  }
+
+  function compareWith(name: string | null): void {
+    if (source.kind === "scenario") {
+      const { compare: _, ...rest } = source;
+      setScenarioSource(name === null ? rest : { ...rest, compare: name });
+    }
   }
 
   function chooseFieldView(view: FieldView): void {
@@ -254,6 +313,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     setSelectedId(null);
     setPlaying(false);
     setColourBy(null);
+    setPlacingProbes(false);
   }
 
   function command(next: LiveCommand): void {
@@ -273,13 +333,16 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // Overlays and colours are worked out from the scene, which they only read.
   const selected = selectedEntity(snapshot, selectedId);
   const showingNames = source.kind === "plants" && showPlantNames;
+  const probes = source.kind === "scenario" ? (source.probes ?? EMPTY_PROBES) : EMPTY_PROBES;
+  const probedField = field.status === "loaded" ? field.field : null;
   const overlays = useMemo(
     () => [
       ...(selected === null ? [] : selectionOverlays(selected, overlayToggles)),
       ...(snapshot !== null && showDimensions ? sceneDimensionOverlays(snapshot) : []),
       ...(snapshot !== null && showingNames ? plantNameOverlays(snapshot) : []),
+      ...(probedField === null ? [] : probeOverlays(probes, probedField)),
     ],
-    [selected, overlayToggles, snapshot, showDimensions, showingNames],
+    [selected, overlayToggles, snapshot, showDimensions, showingNames, probes, probedField],
   );
 
   // Playing, the lab moves on a day once the day asked for is on show, at
@@ -360,6 +423,11 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         onSample={setSample}
         onPointer={setPointer}
         onSelect={setSelectedId}
+        onProbe={
+          placingProbes && probedField !== null
+            ? (ground) => setProbes([...probes, { ...ground, z: probeHeight }])
+            : null
+        }
       >
         {fieldLayer}
         {cfd.status === "loaded" && <CfdBoundaries geometry={cfd.geometry} />}
@@ -395,6 +463,23 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 onChoose={chooseField}
                 onView={chooseFieldView}
                 onSlice={chooseSlice}
+              />
+            )}
+            {source.kind === "scenario" && source.field !== undefined && probedField !== null && (
+              <FieldProbes
+                scenarioId={source.scenarioId}
+                layout={source.layout}
+                fieldName={source.field}
+                field={probedField}
+                compareName={source.compare ?? null}
+                compareState={compared}
+                probes={probes}
+                placing={placingProbes}
+                height={probeHeight}
+                onProbes={setProbes}
+                onCompare={compareWith}
+                onPlacing={setPlacingProbes}
+                onHeight={setProbeHeight}
               />
             )}
             {source.kind === "scenario" && (

@@ -74,6 +74,11 @@ A scenario's `cfd` field is its air as OpenFOAM solved it, with the layout
 shown: `?scenario=airflow_box&field=cfd&fieldView=streamlines` is the
 airflow QA case, air blown past a block, and `&layout=open` the same house
 without it.
+Probes read the drawn field at points in it (`&probes=3:3.2:0.75`): "Add a
+probe", or check "place by clicking" and click the view to place one above
+the ground there. "Compare with" reads another of the scenario's fields at
+the same points, and says how the drawn one differs
+(`?scenario=airflow_box&field=cfd&compare=uniform`).
 "CFD boundaries" (`&cfd=boundaries`) draws what a CFD solver is given of the
 scenario's air (`GET /api/scenarios/{id}/cfd/geometry`): its floor, walls
 and ceiling at the eaves lightly tinted, its open doors and vents and the

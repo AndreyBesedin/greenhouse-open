@@ -38,7 +38,7 @@ obstacles realistic, but the first steps don't need them.
 | P04.4 | `feat(cfd): export greenhouse envelope and obstacles as CFD case geometry` | Done |
 | P04.5 | `feat(cfd): run a minimal OpenFOAM adapter and import its velocity field` | Done |
 | P04.6 | `feat(cfd): add an obstacle and wake QA case` | Done |
-| P04.7 | `test(airflow): add a field probe and comparison panel` | Planned |
+| P04.7 | `test(airflow): add a field probe and comparison panel` | Done |
 
 ### P04.1: Regular 3D vector and scalar field format
 
@@ -390,6 +390,44 @@ As implemented:
 Clicking in the 3D view inspects the field's vector and scalar values there,
 and the prescribed backend and the CFD result can be compared at selected
 points.
+
+As implemented (all in the viewer, which reads a field as the simulator
+samples it):
+
+- **Probes** (`src/fields/probes.ts`, `FieldProbes.tsx`): up to eight
+  points in the drawn field, kept in the address
+  (`&probes=3:3.2:0.75,7:3.2:0.75`).
+  - **Placing one:** "Add a probe" adds one in the field's middle. With
+    "place by clicking" checked, a click in the view places one above the
+    ground under the cursor, at the height chosen (1 m to start), and selects
+    nothing. Each probe's coordinates can be typed in, and it can be
+    removed.
+  - **Reading it:** each probe says what the drawn field holds there: the
+    air's speed and velocity, and each scalar with its unit, or that it lies
+    outside the field.
+  - **Marking it:** in the view, by name, on a leader up from the ground,
+    with an arrow along the air there, a metre long where the air is the
+    field's fastest.
+- **Comparison:** "Compare with" chooses another of the scenario's fields
+  (`&compare=uniform`). Each probe then says what that field holds too, and
+  how the drawn one differs: how much faster, how far its air is turned, in
+  degrees, and the difference in each scalar both hold.
+- **Clicking:** the view's undrawn ground plane now reaches 100 m each way,
+  so the pointer is found on the ground anywhere in a long greenhouse.
+- Tests:
+  - Viewer:
+    - probes kept in the address, and refused when malformed;
+    - read as the simulator samples, and nothing outside the field;
+    - **two fields compared: the difference in speed, the turn between
+      directions, and the scalars both hold;**
+    - written out with their units, and marked in the view.
+  - Browser:
+    - **airflow_box's CFD solution against its uniform breeze, at two
+      probes:** upstream, 0.07 m/s slower and turned 8° upwards; in the
+      wake, nearly still and turned back 130°;
+    - comparing with nothing;
+    - a probe added, placed by a click that selects nothing, moved and
+      removed.
 
 ## Final QA: `airflow-box`
 
