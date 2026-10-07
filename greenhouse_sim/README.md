@@ -125,12 +125,19 @@ See [web/README.md](web/README.md) for the viewer's own checks.
 The simulator writes a scenario's air as an OpenFOAM case, and runs OpenFOAM
 out of process if it is installed or Docker is running
 ([decision 0027](../docs/decisions/0027-cfd-runs-out-of-process-on-the-fields-grid.md)).
-Nothing else needs either.
+A solved result is kept in `greenhouse_sim/cfd/results/`, keyed by what was
+solved, and offered as the scenario's `cfd` field while it is current. So
+nothing else needs OpenFOAM or Docker.
 
 ```bash
 python -m greenhouse_sim.cfd gh_001 cases/gh_001 --open door_1:1 --mesh
+python -m greenhouse_sim.cfd gh_001 cases/gh_001 --solve  # keeps the result
 pytest -m cfd   # the tests that run OpenFOAM; skipped without it
 ```
+
+The CFD workflow in CI runs them on changes that can affect them, and keeps
+what it solved as its `cfd-results` artifact: a kept result that went stale
+can be taken from there.
 
 ## Where it is going
 

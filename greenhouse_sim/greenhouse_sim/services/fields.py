@@ -6,14 +6,17 @@ is left out until a solver needs it. Its cells are at most `CELL_M` wide.
 
 A scenario offers every prescribed airflow pattern
 (`greenhouse_sim.airflow.prescribed`): its own, as its configuration sets
-it, first, and the others with their typical numbers. It also offers the
-synthetic shear the field format is checked against.
+it, first, and the others with their typical numbers. Then its CFD solution
+(`cfd`), if one is kept that is still its solution
+(`greenhouse_sim.cfd.results`), and the synthetic shear the field format is
+checked against.
 """
 
 from typing import Final
 
 from greenhouse_sim.airflow.contract import AirflowModel
 from greenhouse_sim.airflow.prescribed import PATTERNS
+from greenhouse_sim.cfd.results import CfdAirflow, kept_result
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument, FieldGrid
 from greenhouse_sim.fields.synthetic import shear_field
 from greenhouse_sim.scenarios.config import ScenarioConfig
@@ -24,6 +27,7 @@ from greenhouse_sim.world.geometry import Vector3
 # The widest a field's cell may be, in metres.
 CELL_M: Final = 0.5
 SHEAR: Final = "shear"
+CFD: Final = "cfd"
 
 
 class _Shear:
@@ -33,19 +37,23 @@ class _Shear:
         return shear_field(field_id, grid)
 
 
-def _models(config: ScenarioConfig) -> dict[str, AirflowModel]:
+def _models(scenario_id: str) -> dict[str, AirflowModel]:
     """A scenario's fields by name: its own airflow first."""
+    config = scenario(scenario_id)
     own = config.airflow
     models: dict[str, AirflowModel] = {own.kind: own}
     for name, pattern in PATTERNS.items():
         models.setdefault(name, pattern)
+    solved = kept_result(scenario_id, config, air_grid(config))
+    if solved is not None:
+        models[CFD] = CfdAirflow(solved)
     models[SHEAR] = _Shear()
     return models
 
 
 def field_names(scenario_id: str) -> list[str]:
     """The fields a scenario offers, its own airflow first."""
-    return list(_models(scenario(scenario_id)))
+    return list(_models(scenario_id))
 
 
 def configured(scenario_id: str) -> str:
@@ -72,7 +80,7 @@ def air_grid(config: ScenarioConfig) -> FieldGrid:
 
 def field(scenario_id: str, name: str) -> FieldDocument:
     """One of a scenario's fields, as it is published."""
-    models = _models(scenario(scenario_id))
+    models = _models(scenario_id)
     model = models.get(name)
     if model is None:
         known = ", ".join(models)
