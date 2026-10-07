@@ -32,12 +32,17 @@ DEFAULT_PORT: Final = 8765
 KEEPALIVE_SECONDS: Final = 15.0
 # How soon a viewer's browser should try again after losing the stream.
 RECONNECT_AFTER_MS: Final = 1000
+# How many connections may wait to be accepted. A viewer asks for a scene,
+# its fields and its CFD boundaries at once, and its browser tests open
+# several viewers together; past this, macOS refuses a connection outright.
+PENDING_CONNECTIONS: Final = 64
 
 
 class SimulatorServer(ThreadingHTTPServer):
     """The API's server, holding the scenarios being played live."""
 
     daemon_threads = True
+    request_queue_size = PENDING_CONNECTIONS
 
     def __init__(self, port: int, *, seconds_per_day: float) -> None:
         super().__init__((LOOPBACK, port), _Handler)
