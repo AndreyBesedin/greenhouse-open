@@ -1,5 +1,6 @@
 from datetime import date
 
+from greenhouse_sim.airflow.prescribed import VortexAirflow
 from greenhouse_sim.domain.envelope import OpeningKind
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import load_layout
@@ -56,4 +57,6 @@ GREENHOUSE_001 = ScenarioConfig(
     # service, with an irrigation unit that robots keep out of. Its other
     # layout, benches.json, puts the same rows on benches.
     layout=load_layout("gh_001"),
+    # A roll across the house, as a draught along its roof vents drives.
+    airflow=VortexAirflow(),
 )

@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { BufferAttribute, BufferGeometry, DoubleSide } from "three";
 
 import { type ScalarRange, scalarColor } from "../debug/scalar";
+import { threeColor } from "../scene/ShapeMesh";
 import type { Slice } from "./display";
 import type { EnvironmentField } from "./field";
 import { sliceValues } from "./slice";
@@ -30,7 +31,10 @@ export function sliceGeometry(
   points.forEach((point, index) => {
     positions.set([point.x, point.y, point.z], index * XYZ);
     const value = values[index];
-    const color = value === null || value === undefined ? NOTHING : scalarColor(value, range);
+    // Vertex colours are linear, as the renderer works in.
+    const color = threeColor(
+      value === null || value === undefined ? NOTHING : scalarColor(value, range),
+    );
     colors.set([color.r, color.g, color.b], index * XYZ);
   });
   const triangles: number[] = [];

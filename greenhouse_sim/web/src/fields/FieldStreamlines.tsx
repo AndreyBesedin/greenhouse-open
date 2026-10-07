@@ -6,6 +6,7 @@ import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 
 import { type ScalarRange, scalarColor } from "../debug/scalar";
+import { threeColor } from "../scene/ShapeMesh";
 import type { Channel, EnvironmentField } from "./field";
 import { streamlines } from "./streamlines";
 
@@ -26,7 +27,8 @@ export function streamlineGeometry(
     for (let index = 1; index < line.points.length; index += 1) {
       for (const end of [index - 1, index]) {
         const point = line.points[end];
-        const color = scalarColor(line.speeds[end] ?? 0, range);
+        // Vertex colours are linear, as the renderer works in.
+        const color = threeColor(scalarColor(line.speeds[end] ?? 0, range));
         if (point !== undefined) {
           positions.push(point.x, point.y, point.z);
           colors.push(color.r, color.g, color.b);

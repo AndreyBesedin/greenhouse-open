@@ -60,7 +60,9 @@ one shows the scenario with it, and the address keeps it (`&layout=benches`).
 
 A scenario's air field, one of the environment fields the simulator publishes
 for it (`greenhouse_sim/fields/`), can be drawn over its scene: "Air field"
-chooses it, and the address keeps it (`?scenario=gh_001&field=shear`). The
+chooses it, and the address keeps it (`?scenario=gh_001&field=vortex`). Every
+scenario offers the prescribed airflow patterns, uniform, buoyancy and vortex,
+its own first, and the synthetic shear the format is checked against. The
 viewer checks it against the field schema the simulator publishes
 (`npm run generate` writes the viewer's side of both contracts), and draws it
 as arrows at every cell, as long and as warm in colour as the air there is

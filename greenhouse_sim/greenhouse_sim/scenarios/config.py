@@ -3,6 +3,7 @@ from typing import Self
 
 from pydantic import BaseModel, model_validator
 
+from greenhouse_sim.airflow.prescribed import PrescribedAirflow, UniformAirflow
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.layout import Layout, outside_the_greenhouse
 
@@ -32,6 +33,8 @@ class ScenarioConfig(BaseModel):
     envelope: Envelope
     # What stands inside it, in its frame, including where the plants stand.
     layout: Layout = Layout()
+    # How its air moves: a prescribed pattern, until a solver says otherwise.
+    airflow: PrescribedAirflow = UniformAirflow()
 
     # Environment: bounds the smooth day-to-day drift stays within.
     air_temperature_bounds: tuple[float, float] = (18.0, 32.0)
