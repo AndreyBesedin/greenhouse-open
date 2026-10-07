@@ -99,6 +99,11 @@ greenhouse (`public/scenes/qa-greenhouse.json`, written by the simulator's
 `tests/test_scene_schema.py --update`) from four fixed views, which CI compares
 with `e2e/visual/__screenshots__/greenhouse-<view>-linux.png` in the same way.
 
+`/qa/plants` shows the plant lab's first plant on days 0, 30, 60 and 90, side
+by side (`public/scenes/qa-plants.json`, written by the same test), which CI
+compares with `e2e/visual/__screenshots__/plants-time-lapse-linux.png`: a
+change to how plants develop or are drawn shows as a change of pixels.
+
 `/qa/layout?view=top|between-rows|occluded` shows the canonical layout
 (`public/scenes/qa-layout.json`, written by the same test) in the QA
 greenhouse: from above, coloured by category and cut just below the eaves so

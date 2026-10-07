@@ -238,3 +238,44 @@ def scene(run: LabRun | None = None) -> SceneSnapshot:
     return SceneSnapshot(
         greenhouse_id=LAB_ID, simulated_day=run.day, entities=[ground, *plants, axes]
     )
+
+
+# The time lapse the screenshot tests draw: the lab's first plant, as the lab
+# first shows it, at these ages, side by side along +x this far apart.
+TIME_LAPSE_ID: Final = "plant_time_lapse"
+TIME_LAPSE_DAYS: Final = (0, 30, 60, 90)
+TIME_LAPSE_SPACING_M: Final = 1.0
+
+
+def time_lapse() -> SceneSnapshot:
+    """The lab's first plant on each of the time lapse's days, youngest
+    first, standing side by side: each entity named for its day and saying
+    which it is."""
+    run = LabRun()
+    width = (len(TIME_LAPSE_DAYS) - 1) * TIME_LAPSE_SPACING_M
+    ground = SceneEntity(
+        entity_id=f"{TIME_LAPSE_ID}_ground",
+        kind=SceneEntityKind.GROUND,
+        transform=Transform(position=Vector3(x=width / 2, y=0.0, z=0.0)),
+        shape=Plane(size_x=width + 2 * GROUND_MARGIN_M, size_y=2 * GROUND_MARGIN_M),
+        color=GROUND_COLOR,
+        label="ground",
+    )
+    ages = [
+        entity.model_copy(
+            update={
+                "entity_id": f"day{day:02d}_{entity.entity_id}",
+                "properties": {**entity.properties, "day": day},
+            }
+        )
+        for place, day in enumerate(TIME_LAPSE_DAYS)
+        for entity in plant_entities(
+            structure(run.model_copy(update={"day": day})),
+            Transform(position=Vector3(x=place * TIME_LAPSE_SPACING_M, y=0.0, z=0.0)),
+        )
+    ]
+    return SceneSnapshot(
+        greenhouse_id=TIME_LAPSE_ID,
+        simulated_day=TIME_LAPSE_DAYS[-1],
+        entities=[ground, *ages],
+    )
