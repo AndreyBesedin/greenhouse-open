@@ -5,17 +5,11 @@ overhead where they cross a walkway."""
 import pytest
 from pydantic import ValidationError
 
+from greenhouse_sim.domain.layout import FixtureKind, Obstruction
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scene.snapshot import SceneEntityKind, greenhouse_scene
 from greenhouse_sim.world.envelope import Envelope
-from greenhouse_sim.world.fixtures import (
-    Fixture,
-    FixtureKind,
-    Obstruction,
-    PipePrimitive,
-    PipeRunPrimitive,
-    WalkwayPrimitive,
-)
+from greenhouse_sim.world.fixtures import Fixture, PipePrimitive, PipeRunPrimitive, WalkwayPrimitive
 from greenhouse_sim.world.geometry import Cylinder, Point2, Vector3
 from greenhouse_sim.world.layout import WALKWAY_HEADROOM_M, Layout
 from greenhouse_sim.world.rows import (

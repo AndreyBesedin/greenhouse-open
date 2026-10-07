@@ -3,9 +3,11 @@ identities.
 
 A plant has one main stem, its axis, made of phytomers stacked from the
 bottom up and numbered from 1, the rank. Each phytomer is a node with the
-internode below it and a leaf; some also carry a truss, numbered from 1 in
-the order trusses appear. A truss carries flowers, numbered from 1 from its
-base; a flower that sets becomes a fruit, which keeps its flower's place.
+internode below it and a leaf, the organs fruiting crops share
+(`greenhouse_sim.biology.plant.organs`); some also carry a truss, the
+tomato's own, numbered from 1 in the order trusses appear. A truss carries
+flowers, numbered from 1 from its base; a flower that sets becomes a fruit,
+which keeps its flower's place.
 
 Identifiers say where an organ sits, so they never depend on anything else:
 
@@ -27,7 +29,6 @@ whatever is wrong with a later moment of a plant, so tests, and the plant
 lab's checks, can hold every plant to them.
 """
 
-import math
 from collections import Counter
 from collections.abc import Iterator
 from enum import StrEnum
@@ -39,91 +40,32 @@ from pydantic import (
     Field,
     NonNegativeFloat,
     NonNegativeInt,
-    PositiveFloat,
     PositiveInt,
 )
 
-
-# The organs' kinds and stages, and the structure below, are partly generic
-# to fruiting crops and partly the tomato's. Where they go once P03 is done,
-# shared domain descriptors and a generic plant with tomato as one kind, is
-# planned in docs/roadmap/p03-cleanup.md.
-class OrganKind(StrEnum):
-    PLANT = "plant"
-    AXIS = "axis"
-    PHYTOMER = "phytomer"
-    INTERNODE = "internode"
-    LEAF = "leaf"
-    TRUSS = "truss"
-    FLOWER = "flower"
-    FRUIT = "fruit"
-
-
-class LeafStage(StrEnum):
-    """Where a leaf is in its life."""
-
-    EXPANDING = "expanding"
-    MATURE = "mature"
-    # Pruned off the plant; it keeps its place, so the history stays whole.
-    REMOVED = "removed"
-
-
-class FlowerStage(StrEnum):
-    BUD = "bud"
-    OPEN = "open"
-    # Set fruit: the flower is now its fruit.
-    SET = "set"
-    # Dropped without setting fruit.
-    ABORTED = "aborted"
-
-
-class FruitStage(StrEnum):
-    """Where a fruit is in its life, from set to picked."""
-
-    # On the plant, growing and ripening.
-    ATTACHED = "attached"
-    # Dropped while young; it keeps its place, as a removed leaf does.
-    ABORTED = "aborted"
-    HARVESTED = "harvested"
-
+from greenhouse_sim.biology.plant.organs import (
+    Flower,
+    Internode,
+    Leaf,
+    Organ,
+    PlantTraits,
+    internode_id,
+    leaf_id,
+    phytomer_id,
+    stem_id,
+)
+from greenhouse_sim.domain.organs import (
+    FLOWER_CHANGES,
+    FRUIT_CHANGES,
+    LEAF_CHANGES,
+    FlowerStage,
+    FruitStage,
+    LeafStage,
+    OrganKind,
+)
 
 # What an organ never loses from one moment to a later one.
 NEVER_DECREASE: tuple[str, ...] = ("length_cm", "diameter_mm", "mass_g", "ripeness")
-
-# How each kind of organ's stage may change from one moment to a later one;
-# a stage may always stay as it is.
-LEAF_CHANGES: dict[LeafStage, frozenset[LeafStage]] = {
-    LeafStage.EXPANDING: frozenset({LeafStage.MATURE, LeafStage.REMOVED}),
-    LeafStage.MATURE: frozenset({LeafStage.REMOVED}),
-    LeafStage.REMOVED: frozenset(),
-}
-FLOWER_CHANGES: dict[FlowerStage, frozenset[FlowerStage]] = {
-    FlowerStage.BUD: frozenset({FlowerStage.OPEN, FlowerStage.SET, FlowerStage.ABORTED}),
-    FlowerStage.OPEN: frozenset({FlowerStage.SET, FlowerStage.ABORTED}),
-    FlowerStage.SET: frozenset(),
-    FlowerStage.ABORTED: frozenset(),
-}
-FRUIT_CHANGES: dict[FruitStage, frozenset[FruitStage]] = {
-    FruitStage.ATTACHED: frozenset({FruitStage.ABORTED, FruitStage.HARVESTED}),
-    FruitStage.ABORTED: frozenset(),
-    FruitStage.HARVESTED: frozenset(),
-}
-
-
-def stem_id(plant_id: str) -> str:
-    return f"{plant_id}_stem"
-
-
-def phytomer_id(plant_id: str, rank: int) -> str:
-    return f"{plant_id}_n{rank:02d}"
-
-
-def internode_id(plant_id: str, rank: int) -> str:
-    return f"{phytomer_id(plant_id, rank)}_internode"
-
-
-def leaf_id(plant_id: str, rank: int) -> str:
-    return f"{phytomer_id(plant_id, rank)}_leaf"
 
 
 def truss_id(plant_id: str, number: int) -> str:
@@ -136,54 +78,6 @@ def flower_id(plant_id: str, truss: int, rank: int) -> str:
 
 def fruit_id(plant_id: str, truss: int, rank: int) -> str:
     return f"{truss_id(plant_id, truss)}_fr{rank:02d}"
-
-
-class Organ(BaseModel):
-    """What every organ has: when it appeared."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    # The plant's accumulated thermal time when the organ appeared, in °Cd.
-    born_tt: NonNegativeFloat
-
-
-class Internode(Organ):
-    internode_id: str
-    length_cm: NonNegativeFloat
-    diameter_mm: NonNegativeFloat
-    # The sizes it grows towards, fixed when it appears.
-    final_length_cm: NonNegativeFloat
-    final_diameter_mm: NonNegativeFloat
-
-
-class Leaf(Organ):
-    leaf_id: str
-    length_cm: NonNegativeFloat
-    # The length it grows towards, fixed when it appears.
-    final_length_cm: NonNegativeFloat
-    stage: LeafStage = LeafStage.EXPANDING
-
-
-class Fruit(Organ):
-    fruit_id: str
-    diameter_mm: NonNegativeFloat
-    # The diameter it grows towards, fixed when it sets.
-    final_diameter_mm: NonNegativeFloat
-    # Its fresh mass, in grams.
-    mass_g: NonNegativeFloat
-    # The plant's thermal time when it starts to ripen, fixed when it sets.
-    breaker_tt: NonNegativeFloat
-    # How far it has ripened, from 0, green, to 1, red.
-    ripeness: Annotated[float, Field(ge=0, le=1)] = 0.0
-    stage: FruitStage = FruitStage.ATTACHED
-
-
-class Flower(Organ):
-    flower_id: str
-    # Its place on the truss, from the truss's base.
-    rank: PositiveInt
-    stage: FlowerStage = FlowerStage.BUD
-    fruit: Fruit | None = None
 
 
 class Truss(Organ):
@@ -207,25 +101,6 @@ class Phytomer(Organ):
 class Axis(Organ):
     axis_id: str
     phytomers: tuple[Phytomer, ...] = ()
-
-
-class PlantTraits(BaseModel):
-    """How one plant differs from its crop's typical plant: a factor on each
-    of the crop's values (1 for a typical plant), its turn about its stem,
-    and the latent vigour its factors share."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    # In standard deviations from the crop's mean; 0 for a typical plant.
-    vigour: float = 0.0
-    phyllochron_scale: PositiveFloat = 1.0
-    internode_length_scale: PositiveFloat = 1.0
-    stem_diameter_scale: PositiveFloat = 1.0
-    leaf_length_scale: PositiveFloat = 1.0
-    leaf_insertion_scale: PositiveFloat = 1.0
-    leaf_droop_scale: PositiveFloat = 1.0
-    # Where its first leaf points about its stem, from +x.
-    rotation_rad: Annotated[float, Field(ge=0, lt=2 * math.pi)] = 0.0
 
 
 class RemoveLeaf(BaseModel):

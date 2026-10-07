@@ -4,6 +4,7 @@ inside the greenhouse, and in the scene a viewer draws."""
 import pytest
 from pydantic import ValidationError
 
+from greenhouse_sim.domain.layout import FixtureKind, Material
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scene.snapshot import (
     _FIXTURE_KINDS,
@@ -17,8 +18,6 @@ from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.fixtures import (
     BoxPrimitive,
     CylinderPrimitive,
-    FixtureKind,
-    Material,
     PipePrimitive,
     RailPrimitive,
 )

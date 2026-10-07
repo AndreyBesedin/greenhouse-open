@@ -51,7 +51,11 @@ P00 gives the viewer, P02 the planting positions plants stand at.
 
 What the reviews of P03's pull requests leave for the end of P03 is collected
 in [the P03 clean-up](p03-cleanup.md), done in one pass once its steps are
-merged.
+merged. Since the clean-up, the shared vocabulary (organ kinds, stages and
+their allowed changes) is in `greenhouse_sim.domain`, and what fruiting crops
+share, among it the seed hierarchy (`seeds`), the environment interface
+(`environment`) and variation (`variation`) named below, is in
+`greenhouse_sim.biology.plant` ([decision 0025](../decisions/0025-shared-vocabulary-in-a-domain-package-and-a-generic-plant.md)).
 
 ## Steps
 

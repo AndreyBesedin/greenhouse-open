@@ -6,10 +6,11 @@ import math
 import pytest
 from pydantic import ValidationError
 
+from greenhouse_sim.domain.layout import FixtureKind, Material
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scene.snapshot import SceneEntityKind, greenhouse_scene
 from greenhouse_sim.world.envelope import Envelope
-from greenhouse_sim.world.fixtures import Fixture, FixtureKind, Material
+from greenhouse_sim.world.fixtures import Fixture
 from greenhouse_sim.world.geometry import Box, Cylinder, Point2, Vector3
 from greenhouse_sim.world.layout import Layout, outside_the_greenhouse
 from greenhouse_sim.world.rows import BENCH, SLAB_INSET_M, TOMATO_GUTTER, CropRows, RowSupport

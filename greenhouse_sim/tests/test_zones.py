@@ -8,20 +8,15 @@ import math
 import pytest
 from pydantic import ValidationError
 
+from greenhouse_sim.domain.layout import FixtureKind, Obstruction, ZoneKind
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scene.snapshot import KEEP_OUT_COLOR, SceneEntityKind, greenhouse_scene
 from greenhouse_sim.world.envelope import Envelope
-from greenhouse_sim.world.fixtures import (
-    BoxPrimitive,
-    FixtureKind,
-    Obstruction,
-    PipePrimitive,
-    WalkwayPrimitive,
-)
+from greenhouse_sim.world.fixtures import BoxPrimitive, PipePrimitive, WalkwayPrimitive
 from greenhouse_sim.world.geometry import Box, Point2, Vector3
 from greenhouse_sim.world.layout import Layout, outside_the_greenhouse
 from greenhouse_sim.world.rows import SLAB_INSET_M, TOMATO_GUTTER, CropRows
-from greenhouse_sim.world.zones import Strip, Zone, ZoneKind
+from greenhouse_sim.world.zones import Strip, Zone
 
 HOUSE = Envelope(length=16.0, width=9.6, eave_height=4.0, ridge_height=4.65, spans=3)
 # Five rows of 26 along the length, from x = 1.75 to 14.25 m.

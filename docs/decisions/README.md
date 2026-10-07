@@ -36,6 +36,7 @@ changes course is a new record that supersedes the old one.
 | [0022](0022-plant-organs-are-named-by-where-they-sit.md) | Plant organs are named by where they sit, and draw from a seed hierarchy | Accepted |
 | [0023](0023-plants-vary-through-a-shared-vigour-and-keep-their-draws.md) | Plants vary through a shared vigour, and keep what they drew | Accepted |
 | [0024](0024-plants-take-their-environment-a-day-at-a-time.md) | Plants take their environment a day at a time, and it only holds growth back | Accepted |
+| [0025](0025-shared-vocabulary-in-a-domain-package-and-a-generic-plant.md) | Shared vocabulary lives in a domain package, and a crop builds on a generic plant | Accepted |
 
 ## Template
 

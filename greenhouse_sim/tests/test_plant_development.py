@@ -17,7 +17,8 @@ from greenhouse_sim.biology.tomato.organ.development import (
     grow,
     growth_fraction,
 )
-from greenhouse_sim.biology.tomato.organ.topology import LeafStage, Plant
+from greenhouse_sim.biology.tomato.organ.topology import Plant
+from greenhouse_sim.domain.organs import LeafStage
 from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services import plants
 from greenhouse_sim.services.errors import InvalidRequest

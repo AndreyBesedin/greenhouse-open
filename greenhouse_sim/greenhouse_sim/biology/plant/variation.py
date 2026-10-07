@@ -4,11 +4,11 @@ Each plant draws a latent vigour, then a factor for each of its traits, from
 the seed hierarchy (`seeds`). A trait's factor is 1 plus its coefficient of
 variation times a standard normal draw, which loads on the plant's vigour as
 the trait's correlation with it says, and on the trait's own draw for the
-rest. Vigorous plants develop faster and grow longer internodes, thicker
-stems and longer leaves; how a plant holds its leaves varies on its own. Every
-draw is held within a set number of standard deviations, so every factor
-stays within its configured range, and each plant is also turned about its
-stem by a uniform draw.
+rest. Every draw is held within a set number of standard deviations, so
+every factor stays within its configured range, and each plant is also
+turned about its stem by a uniform draw. How much each trait varies, and how
+it follows vigour, is each crop's own (for the tomato,
+`greenhouse_sim.biology.tomato.organ.parameters`).
 
 A plant's draws depend only on the seed and the plant's identifier, never on
 which other plants exist.
@@ -19,8 +19,8 @@ from typing import Annotated, Final, Self
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, model_validator
 
-from greenhouse_sim.biology.tomato.organ.seeds import plant_rng
-from greenhouse_sim.biology.tomato.organ.topology import PlantTraits
+from greenhouse_sim.biology.plant.organs import PlantTraits
+from greenhouse_sim.biology.plant.seeds import plant_rng
 
 FULL_TURN_RAD: Final = 2 * math.pi
 
@@ -37,16 +37,16 @@ class TraitSpread(BaseModel):
 
 
 class VariationParams(BaseModel):
-    """How the plants of a crop vary, with a tomato crop's typical spreads."""
+    """How the plants of a crop vary: each trait's spread."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    phyllochron: TraitSpread = TraitSpread(cv=0.06, vigour_loading=-0.6)
-    internode_length: TraitSpread = TraitSpread(cv=0.12, vigour_loading=0.6)
-    stem_diameter: TraitSpread = TraitSpread(cv=0.1, vigour_loading=0.8)
-    leaf_length: TraitSpread = TraitSpread(cv=0.1, vigour_loading=0.8)
-    leaf_insertion: TraitSpread = TraitSpread(cv=0.12)
-    leaf_droop: TraitSpread = TraitSpread(cv=0.15, vigour_loading=-0.3)
+    phyllochron: TraitSpread
+    internode_length: TraitSpread
+    stem_diameter: TraitSpread
+    leaf_length: TraitSpread
+    leaf_insertion: TraitSpread
+    leaf_droop: TraitSpread
     # Every draw is held within this many standard deviations of its mean.
     limit_sd: PositiveFloat = 2.5
 

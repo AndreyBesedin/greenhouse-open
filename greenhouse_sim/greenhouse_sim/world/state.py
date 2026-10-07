@@ -15,37 +15,14 @@ What leaves the simulator on the normal path is `SimulationStep.observations`;
 this is what those observations are noisy measurements *of*.
 """
 
-from enum import StrEnum
-
 from pydantic import BaseModel
 
 from greenhouse_sim.biology.tomato.simple.state import SimpleTomatoState
+from greenhouse_sim.domain.crop import FruitStatus, RipenessStage, TrussStage
 
 # The state of the plant models a world can carry in `plant_model`. Only the
 # simple tomato model's today; a second plant model makes this a union.
 type PlantModelState = SimpleTomatoState
-
-
-class FruitStatus(StrEnum):
-    GROWING = "GROWING"
-    RIPE = "RIPE"
-    HARVESTED = "HARVESTED"
-
-
-class RipenessStage(StrEnum):
-    FRUIT_SET = "FRUIT_SET"
-    IMMATURE_GREEN = "IMMATURE_GREEN"
-    MATURE_GREEN = "MATURE_GREEN"
-    TURNING = "TURNING"
-    RIPE = "RIPE"
-    OVERRIPE = "OVERRIPE"
-
-
-class TrussStage(StrEnum):
-    INITIATED = "INITIATED"
-    FRUITING = "FRUITING"
-    HARVESTABLE = "HARVESTABLE"
-    INACTIVE = "INACTIVE"
 
 
 class Fruit(BaseModel):

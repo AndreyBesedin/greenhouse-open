@@ -16,12 +16,11 @@ from typing import NamedTuple
 import pytest
 from pydantic import ValidationError
 
+from greenhouse_sim.domain.layout import FixtureKind, Obstruction, ZoneKind
 from greenhouse_sim.scenarios.layout_files import layout_document
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.fixtures import (
     BoxPrimitive,
-    FixtureKind,
-    Obstruction,
     PipeRunPrimitive,
     Primitive,
     WalkwayPrimitive,
@@ -36,7 +35,7 @@ from greenhouse_sim.world.rows import (
     CropWires,
     RowSupport,
 )
-from greenhouse_sim.world.zones import Strip, Zone, ZoneKind
+from greenhouse_sim.world.zones import Strip, Zone
 
 HOUSES = (
     Envelope(length=24.0, width=9.6, eave_height=4.0, ridge_height=4.65, spans=3, bays=6),

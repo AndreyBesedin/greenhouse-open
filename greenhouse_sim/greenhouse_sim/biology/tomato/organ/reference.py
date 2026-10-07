@@ -10,22 +10,24 @@ grown, and its youngest still growing, each in proportion to its thermal age.
 
 from typing import Final
 
-from greenhouse_sim.biology.tomato.organ.topology import (
-    Axis,
+from greenhouse_sim.biology.plant.organs import (
     Flower,
     Internode,
     Leaf,
-    LeafStage,
-    Phytomer,
-    Plant,
-    Truss,
-    flower_id,
     internode_id,
     leaf_id,
     phytomer_id,
     stem_id,
+)
+from greenhouse_sim.biology.tomato.organ.topology import (
+    Axis,
+    Phytomer,
+    Plant,
+    Truss,
+    flower_id,
     truss_id,
 )
+from greenhouse_sim.domain.organs import LeafStage
 
 PHYTOMERS: Final = 9
 # Thermal time between one phytomer's appearance and the next's, in °Cd.

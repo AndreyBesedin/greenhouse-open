@@ -8,20 +8,18 @@ from http import HTTPStatus
 import pytest
 
 from greenhouse_sim.api.routes import respond
+from greenhouse_sim.biology.plant.organs import Fruit
 from greenhouse_sim.biology.tomato.organ.actions import act
 from greenhouse_sim.biology.tomato.organ.geometry import METRES_PER_CM, organ_geometry
 from greenhouse_sim.biology.tomato.organ.topology import (
-    FlowerStage,
-    Fruit,
-    FruitStage,
     HarvestFruit,
     HarvestTruss,
-    LeafStage,
     LowerStem,
     Plant,
     RemoveLeaf,
     Truss,
 )
+from greenhouse_sim.domain.organs import FlowerStage, FruitStage, LeafStage
 from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services import plants
 from greenhouse_sim.services.plants import LabAction, LabRun

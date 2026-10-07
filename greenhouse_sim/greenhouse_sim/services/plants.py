@@ -17,6 +17,8 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict
 
+from greenhouse_sim.biology.plant.environment import Environment, LocalEnvironment
+from greenhouse_sim.biology.plant.variation import draw_traits
 from greenhouse_sim.biology.tomato.organ.actions import act
 from greenhouse_sim.biology.tomato.organ.development import (
     DevelopmentParams,
@@ -24,7 +26,7 @@ from greenhouse_sim.biology.tomato.organ.development import (
     emerged,
     live_day,
 )
-from greenhouse_sim.biology.tomato.organ.environment import Environment, LocalEnvironment
+from greenhouse_sim.biology.tomato.organ.parameters import TOMATO_VARIATION
 from greenhouse_sim.biology.tomato.organ.topology import (
     HarvestFruit,
     HarvestTruss,
@@ -33,7 +35,6 @@ from greenhouse_sim.biology.tomato.organ.topology import (
     PlantAction,
     RemoveLeaf,
 )
-from greenhouse_sim.biology.tomato.organ.variation import VariationParams, draw_traits
 from greenhouse_sim.scene.plants import plant_entities
 from greenhouse_sim.scene.snapshot import (
     AXES_COLOR,
@@ -64,7 +65,7 @@ LAST_DAY: Final = 90
 # The crop: how its plants develop, their organs varying around each plant's
 # sizes, and how its plants vary.
 DEVELOPMENT: Final = DevelopmentParams(organ_size_cv=0.08)
-VARIATION: Final = VariationParams()
+VARIATION: Final = TOMATO_VARIATION
 # The environments the lab can keep its plants in, the same every day; the
 # reference one is the conditions under which plants make all their
 # potential growth.

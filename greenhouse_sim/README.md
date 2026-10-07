@@ -46,9 +46,13 @@ the services, and nothing depends on the API or the viewer.
 ```text
 greenhouse_sim/
   greenhouse_sim/
+    domain/        the shared vocabulary: kinds, categories and stages that
+                   more than one package uses; depends on nothing else
     core/          the engine, world checkpoints and seeded randomness
     world/         the hidden world's state, and geometry conventions
-    biology/       plant models; tomato/simple is the reference model
+    biology/       plant models; tomato/simple is the reference model,
+                   plant/ what fruiting crops' organ-level models share,
+                   tomato/organ the tomato's organ-level model
     environment/   environment models; simple.py is the reference model
     sensors/       sensor models: what instruments report of the world
     actions/       validating and carrying out semantic actions

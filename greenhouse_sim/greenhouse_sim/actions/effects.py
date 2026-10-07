@@ -10,9 +10,10 @@ from greenhouse_protocol.action import (
 from greenhouse_protocol.enums import EventSource, EventType
 from greenhouse_protocol.event import Event
 
+from greenhouse_sim.domain.crop import FruitStatus
 from greenhouse_sim.records import event_id
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.world.state import FruitStatus, GreenhouseWorld, PlantWorld
+from greenhouse_sim.world.state import GreenhouseWorld, PlantWorld
 
 
 def apply_action(

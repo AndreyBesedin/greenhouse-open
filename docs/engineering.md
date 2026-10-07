@@ -161,7 +161,12 @@ For the simulator specifically:
 - hidden simulated truth and sensor observations remain separate paths;
 - stochastic behavior must be reproducible from explicit seeds;
 - new physics/biology fidelity should arrive behind narrow contracts rather
-  than spreading engine-specific concepts through the world model.
+  than spreading engine-specific concepts through the world model;
+- a kind, category or stage that more than one package uses lives in
+  `greenhouse_sim.domain`, which depends on nothing else of the simulator,
+  while a contract's own vocabulary stays with its contract
+  ([decision 0025](decisions/0025-shared-vocabulary-in-a-domain-package-and-a-generic-plant.md),
+  enforced by `tests/test_domain.py`).
 
 ## APIs
 

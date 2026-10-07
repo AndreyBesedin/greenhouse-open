@@ -6,8 +6,8 @@ from http import HTTPStatus
 import pytest
 
 from greenhouse_sim.api.routes import respond
+from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.biology.tomato.organ.development import DevelopmentParams
-from greenhouse_sim.biology.tomato.organ.environment import LocalEnvironment
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.services import plants
 from greenhouse_sim.services.plants import LabAction, LabChecks, LabRun

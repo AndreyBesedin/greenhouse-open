@@ -31,16 +31,9 @@ from typing import Annotated, Final
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt
 
-from greenhouse_sim.biology.tomato.organ.topology import (
-    FlowerStage,
-    FruitStage,
-    Leaf,
-    LeafStage,
-    OrganKind,
-    Plant,
-    PlantTraits,
-    bears_anything,
-)
+from greenhouse_sim.biology.plant.organs import Leaf, PlantTraits
+from greenhouse_sim.biology.tomato.organ.topology import Plant, bears_anything
+from greenhouse_sim.domain.organs import FlowerStage, FruitStage, LeafStage, OrganKind
 from greenhouse_sim.world.geometry import (
     Cylinder,
     Ellipsoid,

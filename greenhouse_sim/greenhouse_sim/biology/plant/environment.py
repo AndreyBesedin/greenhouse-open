@@ -44,16 +44,18 @@ class Environment(Protocol):
 
 
 class ResponseParams(BaseModel):
-    """How growth responds to light and CO₂, saturating towards the reference
-    conditions, at which a plant makes all of its potential growth."""
+    """How a crop's growth responds to light and CO₂, saturating towards the
+    reference conditions, at which a plant makes all of its potential
+    growth. Each crop's are its own (for the tomato,
+    `greenhouse_sim.biology.tomato.organ.parameters`)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    reference_par_mol_m2_day: PositiveFloat = 25.0
-    reference_co2_ppm: PositiveFloat = 800.0
+    reference_par_mol_m2_day: PositiveFloat
+    reference_co2_ppm: PositiveFloat
     # The light and CO₂ at which each response is half its saturated value.
-    par_half_saturation_mol_m2_day: PositiveFloat = 10.0
-    co2_half_saturation_ppm: PositiveFloat = 300.0
+    par_half_saturation_mol_m2_day: PositiveFloat
+    co2_half_saturation_ppm: PositiveFloat
 
 
 def _saturating(value: float, half: float) -> float:

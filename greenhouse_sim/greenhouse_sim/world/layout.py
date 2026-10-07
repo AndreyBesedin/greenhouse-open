@@ -23,9 +23,10 @@ from typing import Final, Self
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
+from greenhouse_sim.domain.layout import Obstruction
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.envelope_checks import encloses, encloses_hull
-from greenhouse_sim.world.fixtures import Fixture, Obstruction, Primitive, WalkwayPrimitive
+from greenhouse_sim.world.fixtures import Fixture, Primitive, WalkwayPrimitive
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.rows import CropRows, PlantingPosition
 from greenhouse_sim.world.zones import Strip, Zone

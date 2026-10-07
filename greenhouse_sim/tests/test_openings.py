@@ -7,8 +7,9 @@ import pytest
 from pydantic import ValidationError
 
 from greenhouse_sim.api.routes import respond
+from greenhouse_sim.domain.envelope import OpeningKind
 from greenhouse_sim.scene.snapshot import SceneSnapshot
-from greenhouse_sim.world.envelope import Envelope, Opening, OpeningKind
+from greenhouse_sim.world.envelope import Envelope, Opening
 from greenhouse_sim.world.geometry import Point2, Vector3
 
 HOUSE = Envelope(length=24.0, width=12.8, eave_height=5.5, ridge_height=7.9, spans=2, bays=4)

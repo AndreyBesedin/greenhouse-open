@@ -19,19 +19,11 @@ from typing import Annotated, Self
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt, model_validator
 
+from greenhouse_sim.biology.plant.organs import Flower, Fruit
+from greenhouse_sim.biology.plant.seeds import organ_rng
 from greenhouse_sim.biology.tomato.organ.fruit import FruitParams, grown_fruit, set_fruit
-from greenhouse_sim.biology.tomato.organ.seeds import organ_rng
-from greenhouse_sim.biology.tomato.organ.topology import (
-    Flower,
-    FlowerStage,
-    Fruit,
-    FruitStage,
-    Plant,
-    Truss,
-    flower_id,
-    fruit_id,
-    truss_id,
-)
+from greenhouse_sim.biology.tomato.organ.topology import Plant, Truss, flower_id, fruit_id, truss_id
+from greenhouse_sim.domain.organs import FlowerStage, FruitStage
 
 type Probability = Annotated[float, Field(ge=0, le=1)]
 

@@ -43,11 +43,10 @@ from pydantic import (
     model_validator,
 )
 
+from greenhouse_sim.domain.layout import FixtureKind, Material
 from greenhouse_sim.world.fixtures import (
     CylinderPrimitive,
     Fixture,
-    FixtureKind,
-    Material,
     PipePrimitive,
     RailPrimitive,
     TrayPrimitive,

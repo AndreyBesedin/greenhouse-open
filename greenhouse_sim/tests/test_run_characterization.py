@@ -22,9 +22,10 @@ from greenhouse_protocol.action import RequestedAction, WaterPlantAction
 from greenhouse_protocol.enums import EventType
 from greenhouse_protocol.observation import Observation
 
+from greenhouse_sim.domain.crop import FruitStatus
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
-from greenhouse_sim.world import FruitStatus, GreenhouseWorld
+from greenhouse_sim.world import GreenhouseWorld
 
 CONFIG = SCENARIO_REGISTRY["gh_001"]
 PLANT_IDS = ["gh_001_plant_001", "gh_001_plant_002"]

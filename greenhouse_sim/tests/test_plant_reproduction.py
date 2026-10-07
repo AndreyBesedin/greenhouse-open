@@ -6,6 +6,7 @@ from collections import Counter
 import pytest
 from pydantic import ValidationError
 
+from greenhouse_sim.biology.plant.organs import Flower, Fruit
 from greenhouse_sim.biology.tomato.organ.development import (
     DevelopmentParams,
     develop,
@@ -20,15 +21,8 @@ from greenhouse_sim.biology.tomato.organ.geometry import (
     organ_geometry,
 )
 from greenhouse_sim.biology.tomato.organ.reproduction import TrussParams, bears_truss
-from greenhouse_sim.biology.tomato.organ.topology import (
-    Flower,
-    FlowerStage,
-    Fruit,
-    FruitStage,
-    LeafStage,
-    Plant,
-    Truss,
-)
+from greenhouse_sim.biology.tomato.organ.topology import Plant, Truss
+from greenhouse_sim.domain.organs import FlowerStage, FruitStage, LeafStage
 from greenhouse_sim.scene.plants import BUD_COLOR, FLOWER_COLOR, plant_entities
 from greenhouse_sim.scene.snapshot import SceneEntityKind
 from greenhouse_sim.services import plants
