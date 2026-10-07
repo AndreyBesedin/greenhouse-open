@@ -219,6 +219,16 @@ body {
   margin: 2px 0 0;
 }
 
+.cfd-controls {
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+}
+
+.cfd-controls p {
+  margin: 2px 0 0;
+}
+
 .field-views {
   display: flex;
   gap: 10px;

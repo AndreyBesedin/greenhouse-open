@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { type BuildInfo, buildInfo } from "./buildInfo";
 import type { PresetName, PresetRequest } from "./camera";
+import { CfdBoundaries } from "./cfd/CfdBoundaries";
+import { CfdControls } from "./cfd/CfdControls";
+import { CfdLegend } from "./cfd/CfdLegend";
+import { type CfdGeometryState, cfdGeometryUrl, loadCfdGeometry } from "./cfd/geometry";
 import { DisplayOptions } from "./DisplayOptions";
 import { CategoryLegend } from "./debug/CategoryLegend";
 import { categoriesIn } from "./debug/categories";
@@ -37,6 +41,7 @@ import type { ViewSample } from "./readouts";
 import { loadScenarios, type ScenariosState } from "./scenarios";
 import { type LiveCommand, sendLiveCommand } from "./scene/live";
 import {
+  changesQuery,
   loadScene,
   type SceneSource,
   type SceneState,
@@ -55,6 +60,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [source, setSource] = useState<SceneSource>(() => sourceFromSearch(location.search));
   const [scene, setScene] = useState<SceneState>({ status: "none" });
   const [field, setField] = useState<FieldState>({ status: "none" });
+  const [cfd, setCfd] = useState<CfdGeometryState>({ status: "none" });
   // A range the viewer chose for the field's colours, in place of its own.
   const [fieldRange, setFieldRange] = useState<ScalarRange | null>(null);
   const [presetRequest, setPresetRequest] = useState<PresetRequest | null>(null);
@@ -152,6 +158,29 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     };
   }, [fieldScenario, fieldName]);
 
+  // The boundaries a CFD solver is given, changed as the scene is, drawn
+  // over it when asked for; the last stays on show until the next arrives.
+  const cfdUrl =
+    source.kind === "scenario" && source.cfdBoundaries
+      ? cfdGeometryUrl(source.scenarioId, changesQuery(source, "?"))
+      : null;
+  useEffect(() => {
+    if (cfdUrl === null) {
+      setCfd({ status: "none" });
+      return;
+    }
+    let current = true;
+    setCfd((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
+    void loadCfdGeometry(cfdUrl).then((state) => {
+      if (current) {
+        setCfd(state);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [cfdUrl]);
+
   function setScenarioSource(next: SceneSource): void {
     history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
     setSource(next);
@@ -177,6 +206,13 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         ? { ...rest, fieldView: view, slice: slice ?? defaultSlice(field.field) }
         : { ...rest, fieldView: view },
     );
+  }
+
+  function showCfdBoundaries(show: boolean): void {
+    if (source.kind === "scenario") {
+      const { cfdBoundaries: _, ...rest } = source;
+      setScenarioSource(show ? { ...rest, cfdBoundaries: true } : rest);
+    }
   }
 
   function chooseSlice(slice: Slice): void {
@@ -324,6 +360,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         onSelect={setSelectedId}
       >
         {fieldLayer}
+        {cfd.status === "loaded" && <CfdBoundaries geometry={cfd.geometry} />}
       </Viewport>
       <div className="viewer-panels">
         <div className="panel-column">
@@ -355,6 +392,13 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 onChoose={chooseField}
                 onView={chooseFieldView}
                 onSlice={chooseSlice}
+              />
+            )}
+            {source.kind === "scenario" && (
+              <CfdControls
+                shown={source.cfdBoundaries === true}
+                state={cfd}
+                onShow={showCfdBoundaries}
               />
             )}
             {snapshot !== null && source.kind === "scenario" && (
@@ -418,6 +462,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
               <CategoryLegend categories={categoriesIn(snapshot)} />
             )}
             {colouring && <ScalarLegend colouring={colouring} />}
+            {cfd.status === "loaded" && <CfdLegend geometry={cfd.geometry} />}
             {fieldScale !== null && (
               <FieldLegend
                 title={fieldScale.title}

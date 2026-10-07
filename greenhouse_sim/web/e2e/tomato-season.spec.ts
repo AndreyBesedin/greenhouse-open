@@ -13,6 +13,8 @@ test.beforeEach(() => {
 });
 // The lab's row.
 const ROW_PLANTS = 20;
+// Long enough for a day the run had already asked for to arrive.
+const PAUSE_SETTLES_MS = 1_500;
 
 test("the season plays day after day, and stops when paused", async ({ page }) => {
   await page.goto("/?plants=lab");
@@ -23,10 +25,13 @@ test("the season plays day after day, and stops when paused", async ({ page }) =
 
   await expect(page.getByTestId("plant-day")).toHaveText(/^day ([3-9]|\d\d)$/);
   await page.getByRole("button", { name: "Pause the run" }).click();
-  const paused = await page.getByTestId("plant-day").textContent();
-  await page.waitForTimeout(1500);
-  await expect(page.getByTestId("plant-day")).toHaveText(paused ?? "");
-  await expect(page).toHaveURL(new RegExp(`day=${paused?.replace("day ", "")}$`));
+  // A day already on its way still arrives; then the run stays on it.
+  await page.waitForTimeout(PAUSE_SETTLES_MS);
+  const paused = new URL(page.url()).searchParams.get("day");
+  await expect(page.getByTestId("plant-day")).toHaveText(`day ${paused}`);
+  await page.waitForTimeout(PAUSE_SETTLES_MS);
+  await expect(page).toHaveURL(new RegExp(`day=${paused}$`));
+  await expect(page.getByTestId("plant-day")).toHaveText(`day ${paused}`);
 });
 
 test("every plant is named, and keeps the structure's rules all season", async ({ page }) => {

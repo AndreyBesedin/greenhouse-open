@@ -82,6 +82,16 @@ describe("choosing a scene in the address bar", () => {
         slice: { quantity: "temperature", axis: "z", position: 1.75 },
       },
     ],
+    [
+      "?scenario=gh_001&open=door_1:1&field=vortex&cfd=boundaries",
+      {
+        kind: "scenario",
+        scenarioId: "gh_001",
+        openings: { door_1: 1 },
+        field: "vortex",
+        cfdBoundaries: true,
+      },
+    ],
   ])("%s", (search, source) => {
     expect(sourceFromSearch(search)).toEqual(source);
     expect(searchFor(source)).toBe(search);

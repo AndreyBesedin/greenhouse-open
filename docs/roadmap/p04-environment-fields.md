@@ -35,7 +35,7 @@ obstacles realistic, but the first steps don't need them.
 | P04.1 | `feat(fields): define regular 3D vector/scalar field format` | Done |
 | P04.2 | `feat(viewer): add airflow arrows, streamlines and scalar slices` | Done |
 | P04.3 | `feat(airflow): add lightweight prescribed airflow backend` | Done |
-| P04.4 | `feat(cfd): export greenhouse envelope and obstacles as CFD case geometry` | Planned |
+| P04.4 | `feat(cfd): export greenhouse envelope and obstacles as CFD case geometry` | Done |
 | P04.5 | `feat(cfd): run a minimal OpenFOAM adapter and import its velocity field` | Planned |
 | P04.6 | `feat(cfd): add an obstacle and wake QA case` | Planned |
 | P04.7 | `test(airflow): add a field probe and comparison panel` | Planned |
@@ -196,6 +196,74 @@ obstacles to CFD boundaries, and writes a CFD case folder independent of the
 browser. Visible result: a debug mode colours exactly the surfaces that
 become CFD boundaries. Tests: the exported surfaces' count and categories
 match the simulator's semantics.
+
+As implemented (see [decision 0027](../decisions/0027-cfd-runs-out-of-process-on-the-fields-grid.md)):
+
+- **The domain** (`greenhouse_sim.cfd.geometry`) is a scenario's field box,
+  the air under its gutters, on the field's own grid, so a solver's cells
+  are the field's cells. `cfd_geometry` describes its boundaries as they
+  will be meshed, each snapped to the grid:
+  - **faces:** the floor, four walls, and the ceiling at the eaves, standing
+    for the roof;
+  - **openings:** each open door or vent, however far open, on the face it
+    opens in; a roof vent projected onto the ceiling. It takes the mesh
+    faces whose centres its frame covers, or the one nearest its centre. A
+    face is one opening's at most; an opening left with none is listed as
+    `unplaced`;
+  - **obstacles:** each fixture that obstructs airflow removes the cells
+    whose centres it holds. One too small to hold any is listed as
+    `too_small`: in gh_001, the irrigation unit removes 6 cells, and the
+    crop's 24 slabs, supports and legs are too narrow for half-metre cells.
+- **The OpenFOAM case** (`cfd.openfoam`, for v2412): `blockMesh` fills the
+  box with the grid's cells, its faces walls; `topoSet` and `createPatch`
+  move each opening's faces into a patch named for it; `topoSet` and
+  `subsetMesh` remove the obstacles' cells, whose exposed faces become the
+  `obstacles` wall. Each selection is the snapped box, padded or shrunk by a
+  quarter of a cell, so it chooses exactly the faces and cells the
+  geometry does. The case's `Allmesh` script runs only the steps it needs,
+  and the dictionaries for a laminar `simpleFoam` run are written beside
+  it, for P04.5.
+- **Running OpenFOAM** (`cfd.runner`) out of process: natively if it is
+  installed, or else in its container (`opencfd/openfoam-default:2412`, or
+  `GREENHOUSE_OPENFOAM_IMAGE`) through Docker. Nothing else needs it.
+- **Command line:** `python -m greenhouse_sim.cfd gh_001 cases/gh_001` writes
+  a scenario's case, changed as its scene can be (`--layout`, `--envelope`,
+  `--open door_1:1`); `--mesh` meshes it and says what OpenFOAM made.
+- **API:** `GET /api/scenarios/{id}/cfd/geometry` describes the boundaries,
+  with the scene's changes (`?open=door_1:1`), as `CfdGeometry`, versioned
+  and described by `cfd/geometry.schema.json`.
+- **Viewer:** "CFD boundaries" (`&cfd=boundaries`) draws them over the
+  scene, following its openings: the floor, walls and ceiling lightly
+  tinted, the openings and obstacles strongly, each outlined, in colours by
+  category from Okabe-Ito's palette, with a legend of how many mesh faces
+  each category takes. `npm run generate` now writes the viewer's side of
+  three contracts, and a test checks every one is up to date; the field's
+  had not been.
+- Tests:
+  - Python:
+    - the domain is the field box, its six faces of the right sizes and
+      categories;
+    - **for every scenario, every boundary is one the greenhouse has, by its
+      category:** one floor, one ceiling, four walls, an opening for each
+      open door or vent, and an obstacle or a too-small entry for each
+      fixture in the air's way;
+    - only open doors and vents are openings, on the faces they open in;
+    - each opening's and obstacle's OpenFOAM selection chooses exactly the
+      faces and cells the geometry describes, checked against the grid's
+      own centres;
+    - at a coarser grid, openings crowd each other out and obstacles become
+      too small, and both are listed;
+    - the case takes only the steps it needs;
+    - the route and its 404 and 400, the published schema, and the command
+      line;
+    - with `pytest -m cfd`, skipped without OpenFOAM: **OpenFOAM meshes
+      gh_001 with its door open into exactly the patches the geometry
+      describes,** face for face, and its cells less the obstacle's.
+  - Viewer: the geometry checked and loaded, its failures; faces drawn just
+    inside the domain and openings just outside it; outlines; the legend's
+    sums and the status; the address keeps the toggle.
+  - Browser: gh_001's boundaries drawn and described, then its door opened
+    and drawn as a third opening, then hidden.
 
 ### P04.5: Minimal OpenFOAM adapter
 

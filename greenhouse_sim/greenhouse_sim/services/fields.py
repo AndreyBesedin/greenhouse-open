@@ -56,7 +56,13 @@ def configured(scenario_id: str) -> str:
 def grid(scenario_id: str) -> FieldGrid:
     """The grid a scenario's fields cover: its greenhouse's air under the
     gutters."""
-    envelope = scenario(scenario_id).envelope
+    return air_grid(scenario(scenario_id))
+
+
+def air_grid(config: ScenarioConfig) -> FieldGrid:
+    """The grid over a scenario's greenhouse's air under the gutters, as it
+    is configured."""
+    envelope = config.envelope
     return FieldGrid.over(
         Vector3(x=0.0, y=0.0, z=0.0),
         Vector3(x=envelope.length, y=envelope.width, z=envelope.eave_height),

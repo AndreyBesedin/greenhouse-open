@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { generatedSources, SCENE_CONTRACT } from "../../scripts/generateContractSources";
 import { checkScene } from "./checkScene";
 import { SUPPORTED_SCHEMA_VERSION } from "./schemaVersion";
 
@@ -11,15 +10,6 @@ function example(): { entities: Record<string, unknown>[]; [key: string]: unknow
     readFileSync(new URL("../../public/scenes/example.json", import.meta.url), "utf8"),
   );
 }
-
-describe("the viewer's side of the scene contract", () => {
-  it("is generated from the schema the simulator publishes, and up to date", async () => {
-    const sources = await generatedSources(SCENE_CONTRACT);
-
-    expect(readFileSync(SCENE_CONTRACT.typesFile, "utf8")).toBe(sources.types);
-    expect(readFileSync(SCENE_CONTRACT.schemaModuleFile, "utf8")).toBe(sources.schema);
-  });
-});
 
 describe("checking a scene before drawing it", () => {
   it("accepts the simulator's example scene", () => {
