@@ -33,4 +33,5 @@ testpaths = ["tests"]
 addopts = "--import-mode=importlib"
 markers = [
     "slow: slower tests excluded from the pre-commit fast pass",
+    "cfd: runs OpenFOAM, natively or in Docker; only with -m cfd, and skipped without it",
 ]

@@ -26,6 +26,9 @@ check; a route that comes to need one checks it first.
                                           which is its own airflow
     GET /api/scenarios/{id}/fields/{name} one of a scenario's environment fields:
                                           its greenhouse's air, cell by cell
+    GET /api/scenarios/{id}/cfd/geometry  the boundaries of a scenario's air as
+                                          a CFD solver is given them, snapped
+                                          to its mesh; changed as for its scene
     GET /api/scenarios/{id}/layout        a scenario's layout, as its file holds
                                           it; ?layout=benches another of them
     GET /api/plants/scene                 the plant lab's scene: a row of tomato
@@ -62,7 +65,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from pydantic import BaseModel
 
-from greenhouse_sim.services import fields, plants, scenarios, system
+from greenhouse_sim.services import cfd, fields, plants, scenarios, system
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.live import InvalidSpeed, LiveCommand, LiveRun, LiveRuns
 
@@ -119,6 +122,8 @@ def respond(method: str, path: str) -> Response:
             )
         case ["api", "scenarios", scenario_id, "fields", field_name]:
             return _answer(lambda: fields.field(scenario_id, field_name))
+        case ["api", "scenarios", scenario_id, "cfd", "geometry"]:
+            return _answer(lambda: cfd.geometry(scenario_id, _scene_changes(query)))
         case ["api", "scenarios", scenario_id, "layout"]:
             name = _last(query, "layout")
             if name is None:

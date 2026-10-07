@@ -37,6 +37,8 @@ export type SceneSource =
       field?: string;
       fieldView?: FieldView;
       slice?: Slice;
+      /** Whether the boundaries a CFD solver is given are drawn over it. */
+      cfdBoundaries?: true;
       envelope?: Readonly<Record<string, number>>;
       openings?: Readonly<Record<string, number>>;
     }
@@ -53,6 +55,8 @@ const EXAMPLE_SCENE_URL = "/scenes/example.json";
 // The simulator writes it (`tests/test_scene_schema.py --update`).
 export const FIXTURE_GALLERY_URL = "/scenes/qa-fixtures.json";
 export const PLANT_LAB_SCENE_URL = "/api/plants/scene";
+// The address's `cfd=` when a scenario's CFD boundaries are drawn.
+const CFD_BOUNDARIES = "boundaries";
 
 export function sourceFromSearch(search: string): SceneSource {
   const parameters = new URLSearchParams(search);
@@ -75,6 +79,7 @@ export function sourceFromSearch(search: string): SceneSource {
       ...(field ? { field } : {}),
       ...(field && fieldView ? { fieldView } : {}),
       ...(field && slice ? { slice } : {}),
+      ...(parameters.get("cfd") === CFD_BOUNDARIES ? { cfdBoundaries: true as const } : {}),
       ...(envelope === null ? {} : { envelope }),
       ...(openings === null ? {} : { openings }),
     };
@@ -146,7 +151,7 @@ export function searchFor(source: SceneSource): string {
     case "stress":
       return `?scene=stress&plants=${source.plants}`;
     case "scenario":
-      return `?scenario=${encodeURIComponent(source.scenarioId)}${changesQuery(source, "&")}${fieldQuery(source)}`;
+      return `?scenario=${encodeURIComponent(source.scenarioId)}${changesQuery(source, "&")}${fieldQuery(source)}${source.cfdBoundaries ? `&cfd=${CFD_BOUNDARIES}` : ""}`;
     case "live":
       return `?live=${encodeURIComponent(source.scenarioId)}`;
   }
@@ -175,8 +180,8 @@ function pairsText(pairs: Readonly<Record<string, number>> | undefined): string 
 
 /** The changes a scenario's scene asks the simulator for: another of its
  * layouts (`layout=`), its greenhouse's dimensions (`envelope=`) and its
- * openings (`open=`), or nothing. */
-function changesQuery(
+ * openings (`open=`), or nothing. The address bar writes them the same way. */
+export function changesQuery(
   source: {
     layout?: string;
     envelope?: Readonly<Record<string, number>>;

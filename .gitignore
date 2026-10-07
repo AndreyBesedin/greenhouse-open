@@ -13,3 +13,5 @@ playwright-report/
 build/
 .coverage
 htmlcov/
+# OpenFOAM cases written by `python -m greenhouse_sim.cfd`, as its README suggests.
+cases/

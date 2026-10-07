@@ -64,12 +64,17 @@ chooses it, and the address keeps it (`?scenario=gh_001&field=vortex`). Every
 scenario offers the prescribed airflow patterns, uniform, buoyancy and vortex,
 its own first, and the synthetic shear the format is checked against. The
 viewer checks it against the field schema the simulator publishes
-(`npm run generate` writes the viewer's side of both contracts), and draws it
+(`npm run generate` writes the viewer's side of every contract), and draws it
 as arrows at every cell, as long and as warm in colour as the air there is
 fast; as streamlines, traced through it from seeds every few cells; or as a
 slice through it, horizontal or vertical, coloured by any of its scalars or
 the air's speed (`&fieldView=slice&slice=temperature:z:1.75`). A legend says
 what its colours mean, and its lowest and highest colours can be moved.
+"CFD boundaries" (`&cfd=boundaries`) draws what a CFD solver is given of the
+scenario's air (`GET /api/scenarios/{id}/cfd/geometry`): its floor, walls
+and ceiling at the eaves lightly tinted, its open doors and vents and the
+fixtures in the air's way strongly, all snapped to the solver's mesh, with a
+legend by category; it follows the openings' sliders.
 The inspector says what the selected entity is in words, and names its
 dimensions. On a scenario's view, a slider per door and vent sets how far
 it stands open: the viewer asks the simulator for the scene with it so

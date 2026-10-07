@@ -38,6 +38,7 @@ changes course is a new record that supersedes the old one.
 | [0024](0024-plants-take-their-environment-a-day-at-a-time.md) | Plants take their environment a day at a time, and it only holds growth back | Accepted |
 | [0025](0025-shared-vocabulary-in-a-domain-package-and-a-generic-plant.md) | Shared vocabulary lives in a domain package, and a crop builds on a generic plant | Accepted |
 | [0026](0026-environment-fields-are-cell-centred-grids-of-packed-floats.md) | Environment fields are cell-centred grids, published as packed floats | Accepted |
+| [0027](0027-cfd-runs-out-of-process-on-the-fields-grid.md) | CFD runs out of process, on the environment field's own grid | Accepted |
 
 ## Template
 

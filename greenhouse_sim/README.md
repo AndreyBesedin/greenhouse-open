@@ -62,10 +62,12 @@ greenhouse_sim/
                    and the format they are exchanged in
     airflow/       airflow models, which produce fields: prescribed
                    patterns today
+    cfd/           the air's geometry as a CFD solver is given it, written
+                   as an OpenFOAM case, and OpenFOAM run out of process
     scene/         the world as a renderable scene for a viewer
     services/      what the simulator does for a client: scenarios, scenes,
-                   layouts, live runs and the plant lab, independent of any
-                   transport
+                   layouts, fields, CFD geometry, live runs and the plant
+                   lab, independent of any transport
     api/           a thin local HTTP API for the viewer (adapter): the
                    interface to the services
   web/             the browser viewer (adapter, not part of the wheel)
@@ -117,6 +119,18 @@ cd greenhouse_sim/web && npm ci && npm run dev  # Node 24
 ```
 
 See [web/README.md](web/README.md) for the viewer's own checks.
+
+## CFD, optionally
+
+The simulator writes a scenario's air as an OpenFOAM case, and runs OpenFOAM
+out of process if it is installed or Docker is running
+([decision 0027](../docs/decisions/0027-cfd-runs-out-of-process-on-the-fields-grid.md)).
+Nothing else needs either.
+
+```bash
+python -m greenhouse_sim.cfd gh_001 cases/gh_001 --open door_1:1 --mesh
+pytest -m cfd   # the tests that run OpenFOAM; skipped without it
+```
 
 ## Where it is going
 

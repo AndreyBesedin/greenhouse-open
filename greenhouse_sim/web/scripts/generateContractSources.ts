@@ -1,6 +1,7 @@
 // Generates the viewer's side of the simulator's contracts from the schemas
-// it publishes: the scene (greenhouse_sim/scene/snapshot.schema.json) and the
-// environment field (greenhouse_sim/fields/field.schema.json). For each, the
+// it publishes: the scene (greenhouse_sim/scene/snapshot.schema.json), the
+// environment field (greenhouse_sim/fields/field.schema.json) and the CFD
+// geometry (greenhouse_sim/cfd/geometry.schema.json). For each, the
 // TypeScript types, and the schema itself as a module for validation.
 //
 //     npm run generate
@@ -43,7 +44,20 @@ export const FIELD_CONTRACT: Contract = {
   schemaConstant: "FIELD_SCHEMA",
 };
 
-export const CONTRACTS: readonly Contract[] = [SCENE_CONTRACT, FIELD_CONTRACT];
+export const CFD_GEOMETRY_CONTRACT: Contract = {
+  schemaFile: new URL("../../greenhouse_sim/cfd/geometry.schema.json", import.meta.url),
+  schemaPath: "greenhouse_sim/cfd/geometry.schema.json",
+  rootType: "CfdGeometry",
+  typesFile: new URL("../src/cfd/generated/geometryTypes.ts", import.meta.url),
+  schemaModuleFile: new URL("../src/cfd/generated/geometrySchema.ts", import.meta.url),
+  schemaConstant: "CFD_GEOMETRY_SCHEMA",
+};
+
+export const CONTRACTS: readonly Contract[] = [
+  SCENE_CONTRACT,
+  FIELD_CONTRACT,
+  CFD_GEOMETRY_CONTRACT,
+];
 
 export async function generatedSources(
   contract: Contract,
