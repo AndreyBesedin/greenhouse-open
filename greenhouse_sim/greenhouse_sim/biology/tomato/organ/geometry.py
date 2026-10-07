@@ -14,8 +14,11 @@ and bends down along its length, the more the longer it has grown, and
 successive leaves turn about the stem by the golden angle. A truss is a stick
 hanging opposite its phytomer's leaf, as long as its flowers need, each
 flower at its place along it: a bud as a small sphere, an open flower a
-larger one, a set flower as its fruit, of its diameter. An aborted flower or
-fruit has dropped, and is not drawn.
+larger one, a set flower as its fruit, of its diameter. What is no longer on
+the plant is not drawn: a removed leaf, an aborted or picked fruit, a dropped
+flower, and a truss that bears nothing. A lowered stem's laid-down
+internodes lie along the row, +y in the plant's frame, from its base, and the
+stem rises from where they end.
 
 How a plant's organs are proportioned and held comes from its crop's form
 (`PlantForm`), the parameters its geometry is generated from, as the plant's
@@ -32,9 +35,11 @@ from greenhouse_sim.biology.tomato.organ.topology import (
     FlowerStage,
     FruitStage,
     Leaf,
+    LeafStage,
     OrganKind,
     Plant,
     PlantTraits,
+    bears_anything,
 )
 from greenhouse_sim.world.geometry import (
     Cylinder,
@@ -64,6 +69,8 @@ LEAFLET_THICKNESS_M: Final = 0.002
 ATTACHED_FRUIT: Final = frozenset({FruitStage.ATTACHED})
 
 _UP: Final = Vector3(x=0.0, y=0.0, z=1.0)
+# A lowered stem is laid down along the row.
+_ALONG_ROW: Final = Vector3(x=0.0, y=1.0, z=0.0)
 
 type Fraction = Annotated[float, Field(gt=0, lt=1)]
 type Angle = Annotated[float, Field(ge=0, le=math.pi / 2)]
@@ -245,25 +252,27 @@ def organ_geometry(plant: Plant, form: PlantForm | None = None) -> list[OrganSha
     change it."""
     form = plant_form(PlantForm() if form is None else form, plant.traits)
     shapes: list[OrganShape] = []
-    height = 0.0
-    for phytomer in plant.stem.phytomers:
+    base = Vector3(x=0.0, y=0.0, z=0.0)
+    for index, phytomer in enumerate(plant.stem.phytomers):
         internode = phytomer.internode
         length = internode.length_cm * METRES_PER_CM
+        laid = index < plant.laid_internodes
         shapes.append(
             OrganShape(
                 shape_id=internode.internode_id,
                 organ_id=internode.internode_id,
                 kind=OrganKind.INTERNODE,
                 part="internode",
-                transform=Transform(position=Vector3(x=0.0, y=0.0, z=height)),
+                transform=_pointing(base, _ALONG_ROW) if laid else Transform(position=base),
                 shape=Cylinder(radius=internode.diameter_mm * METRES_PER_MM / 2, height=length),
             )
         )
-        height += length
-        node = Vector3(x=0.0, y=0.0, z=height)
+        node = _along(base, _ALONG_ROW if laid else _UP, length)
+        base = node
         azimuth = plant.traits.rotation_rad + (phytomer.rank - 1) * GOLDEN_ANGLE_RAD
-        shapes.extend(leaf_shapes(phytomer.leaf, node, azimuth, form))
-        if phytomer.truss is None:
+        if phytomer.leaf.stage != LeafStage.REMOVED:
+            shapes.extend(leaf_shapes(phytomer.leaf, node, azimuth, form))
+        if phytomer.truss is None or not bears_anything(phytomer.truss):
             continue
         truss = phytomer.truss
         hanging = _direction(azimuth + math.pi, TRUSS_ELEVATION_RAD)

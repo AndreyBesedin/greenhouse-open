@@ -1,4 +1,6 @@
 import {
+  actionFrom,
+  actionsQuery,
   FIRST_LAB_RUN,
   type LabRun,
   labRunQuery,
@@ -72,6 +74,10 @@ export function sourceFromSearch(search: string): SceneSource {
       seed: labSeed(parameters.get("seed")),
       environment: parameters.get("environment") || FIRST_LAB_RUN.environment,
       versus: parameters.get("versus") || null,
+      actions: parameters
+        .getAll("act")
+        .map(actionFrom)
+        .filter((action) => action !== null),
     };
   }
   switch (parameters.get("scene")) {
@@ -110,6 +116,7 @@ function labQuery(run: LabRun, separator: "?" | "&"): string {
       ? []
       : [`environment=${encodeURIComponent(run.environment)}`]),
     ...(run.versus === null ? [] : [`versus=${encodeURIComponent(run.versus)}`]),
+    ...actionsQuery(run.actions),
   ];
   return parts.length === 0 ? "" : `${separator}${parts.join("&")}`;
 }

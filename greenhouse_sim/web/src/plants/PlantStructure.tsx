@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { labRunQuery } from "./lab";
 import {
   type LabPlant,
   loadPlantStructure,
@@ -49,7 +50,7 @@ function Organ({
  * organ with its kind, thermal age and stage. An organ the view draws can be
  * selected from here, as it can by clicking any part of it. */
 export function PlantStructure({
-  plant: { plantId, day, seed, environment, versus },
+  plant: { plantId, ...run },
   selectedOrgan,
   onSelect,
 }: {
@@ -61,10 +62,12 @@ export function PlantStructure({
 }) {
   const [state, setState] = useState<StructureState>({ status: "loading" });
 
-  // Another day's or plant's tree stays on show until this one's arrives.
+  // Asked for by its query, which changes only when the run does.
+  const query = labRunQuery(run);
+  // Another run's or plant's tree stays on show until this one's arrives.
   useEffect(() => {
     let current = true;
-    void loadPlantStructure({ plantId, day, seed, environment, versus }).then((loaded) => {
+    void loadPlantStructure(plantId, query).then((loaded) => {
       if (current) {
         setState(loaded);
       }
@@ -72,7 +75,7 @@ export function PlantStructure({
     return () => {
       current = false;
     };
-  }, [plantId, day, seed, environment, versus]);
+  }, [plantId, query]);
 
   switch (state.status) {
     case "loading":
@@ -81,12 +84,33 @@ export function PlantStructure({
       return <p role="alert">The plant's structure is not available: {state.reason}.</p>;
     case "loaded":
       return (
-        <details className="plant-structure" open>
-          <summary>Plant structure: {plantId}</summary>
-          <ul>
-            <Organ organ={state.tree} selectedOrgan={selectedOrgan} onSelect={onSelect} />
-          </ul>
-        </details>
+        <>
+          <details className="plant-structure" open>
+            <summary>Plant structure: {plantId}</summary>
+            <ul>
+              <Organ organ={state.tree} selectedOrgan={selectedOrgan} onSelect={onSelect} />
+            </ul>
+          </details>
+          {state.history.length > 0 && (
+            <details className="plant-history" open>
+              <summary>History: {plantId}</summary>
+              <ol>
+                {state.history.map((event, index) => (
+                  <li
+                    // The history only grows, so an event keeps its place.
+                    // biome-ignore lint/suspicious/noArrayIndexKey: see above
+                    key={index}
+                    data-testid="plant-event"
+                    className={event.applied ? undefined : "refused"}
+                  >
+                    at {Math.round(event.thermalTime)} °Cd: {event.applied ? "" : "refused, "}
+                    {event.note}
+                  </li>
+                ))}
+              </ol>
+            </details>
+          )}
+        </>
       );
   }
 }

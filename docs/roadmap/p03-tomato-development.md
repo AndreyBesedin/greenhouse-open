@@ -64,7 +64,7 @@ merged.
 | P03.5 | `feat(plants): add trusses, flowers and fruit set` | Done |
 | P03.6 | `feat(plants): add fruit growth, ripeness and colour` | Done |
 | P03.7 | `feat(plants): consume local environment inputs` | Done |
-| P03.8 | `feat(plants): add pruning, harvest and lowering actions` | Planned |
+| P03.8 | `feat(plants): add pruning, harvest and lowering actions` | Done |
 | P03.9 | `test(plants): add biological and visual regression scenarios` | Planned |
 
 ### P03.1: Plant topology and organ state schema
@@ -481,6 +481,64 @@ re-anchoring its geometry, with an event log. Visible result: actions in the
 browser visibly change the plant and persist through the days that follow.
 Tests: harvested organs leave the attached crop but remain in the event
 history.
+
+As implemented:
+
+- **Actions are part of a plant's state.** `RemoveLeaf`, `HarvestFruit`,
+  `HarvestTruss` and `LowerStem` are recorded in the plant's `history` as
+  `PlantEvent`s, each with its thermal time, the organs it changed and the
+  grams it picked, or refused with the reason.
+- **Nothing leaves the structure.** A pruned leaf, a picked fruit and a
+  dropped flower keep their places and identifiers, their stages saying they
+  are off the plant, so the history can always name them.
+- `organ.actions.act` applies one action:
+  - **Removing a leaf** prunes it, unless it already is.
+  - **Harvesting a fruit** picks it while it is on the plant, as it is then.
+    It grows and ripens no more.
+  - **Harvesting a truss** picks its fruits and drops the flowers it still
+    bears.
+  - **Lowering the stem** lays its lowest standing internodes down along the
+    row, only where they are bare, and records how many in `laid_internodes`.
+- **Geometry:**
+  - **Not drawn:** a removed leaf, a truss that bears nothing, and picked or
+    dropped organs.
+  - **Laid-down internodes** lie along the row, +y in the plant's frame, and
+    the stem rises from where they end, so everything above comes down and
+    along by their length.
+- **Rules:** the topology holds that laid-down internodes are bare, and
+  `change_problems` that the history only grows and nothing laid down
+  stands up again.
+- **The lab schedules actions in its run.** `act=day:plant:action:organ` is
+  repeatable, and each action is applied at the start of its day, before
+  that day's growth. Its effect lasts through every day after and is absent
+  from every day before, so a run replays exactly. Flowers' and fruits'
+  entities name their truss.
+- **Viewer:**
+  - **Buttons** on the selected organ's plant: remove this leaf, harvest this
+    fruit, harvest its truss, lower the stem. Each schedules the action on
+    the day on show.
+  - **Taking back:** the last action, or all of them.
+  - **The plant's history** is shown under its tree.
+- Tests:
+  - Python:
+    - pruning, re-pruning refused;
+    - a harvested fruit leaves the attached crop but stays in the history
+      with its mass;
+    - fruits not on the plant can't be harvested;
+    - a truss's fruits are picked and its flowers dropped, and it grows
+      nothing more;
+    - lowering only where bare, and the lowered stem's geometry;
+    - scheduled actions last through the days after and not before, picked
+      fruits stay as they were;
+    - the lab schedules actions from its query and refuses six kinds of bad
+      one;
+    - a rewritten history or a re-stood stem is found out.
+  - Viewer: actions' text read and written, the choices offered per organ,
+    the history read, and pruned leaves and bare trusses not drawn.
+  - Browser:
+    - a leaf pruned on day 30 is gone then and on day 40, and back on day 20;
+    - a red fruit harvested on day 85 leaves the view and enters the history
+      with its grams, until taken back.
 
 ### P03.9: Biological and visual regression scenarios
 

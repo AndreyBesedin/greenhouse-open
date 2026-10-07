@@ -6,22 +6,32 @@ an entity that says which organ, and which plant, it is. The lab's plants are
 transplants of one crop, each with traits drawn from the lab's seed, grown by
 the development model day by day from day 0 to `LAST_DAY`, in one of the
 lab's environments; with another beside it, every second plant lives in that
-instead, so the two can be compared side by side. The same seed gives the same
-row on every run; another seed, another row.
+instead, so the two can be compared side by side. A run may also schedule
+actions, pruning, harvesting or lowering a plant at the start of a day, which
+then shape that plant on every day after. The same seed and schedule give the
+same row on every run; another seed, another row.
 """
 
 from typing import Final
 
 from pydantic import BaseModel, ConfigDict
 
+from greenhouse_sim.biology.tomato.organ.actions import act
 from greenhouse_sim.biology.tomato.organ.development import (
     DevelopmentParams,
     develop,
     emerged,
-    grow,
+    live_day,
 )
 from greenhouse_sim.biology.tomato.organ.environment import Environment, LocalEnvironment
-from greenhouse_sim.biology.tomato.organ.topology import Plant
+from greenhouse_sim.biology.tomato.organ.topology import (
+    HarvestFruit,
+    HarvestTruss,
+    LowerStem,
+    Plant,
+    PlantAction,
+    RemoveLeaf,
+)
 from greenhouse_sim.biology.tomato.organ.variation import VariationParams, draw_traits
 from greenhouse_sim.scene.plants import plant_entities
 from greenhouse_sim.scene.snapshot import (
@@ -70,10 +80,33 @@ ENVIRONMENTS: Final = {
 _ORIGIN: Final = Transform(position=Vector3(x=0.0, y=0.0, z=0.0))
 
 
+# The actions a run can schedule, by name, with what each acts on.
+ACTIONS: Final = {
+    "remove_leaf": "a leaf",
+    "harvest_fruit": "a fruit",
+    "harvest_truss": "a truss",
+    "lower_stem": "how many internodes",
+}
+
+
+class LabAction(BaseModel):
+    """An action a run asks of one of its plants at the start of a day: its
+    kind (`ACTIONS`) and the organ it acts on, or for lowering, by how many
+    internodes."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    day: int
+    plant_id: str
+    kind: str
+    target: str
+
+
 class LabRun(BaseModel):
     """Which run of the lab: the day shown, the seed its row is drawn from,
     the environment its plants live in and, if `versus` names another, the
-    environment every second plant lives in instead, beside the first."""
+    environment every second plant lives in instead, beside the first; and
+    the actions it schedules, in the order they are asked."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -81,6 +114,7 @@ class LabRun(BaseModel):
     seed: int = LAB_SEED
     environment: str = REFERENCE
     versus: str | None = None
+    actions: tuple[LabAction, ...] = ()
 
 
 def plant_ids() -> list[str]:
@@ -120,14 +154,44 @@ def _checked(run: LabRun) -> None:
         if name is not None and name not in ENVIRONMENTS:
             known = ", ".join(ENVIRONMENTS)
             raise InvalidRequest(f"the plant lab has no environment {name!r}, only {known}")
+    for action in run.actions:
+        _plant_action(action)
+        if action.plant_id not in plant_ids():
+            raise InvalidRequest(f"the plant lab has no plant {action.plant_id!r} to act on")
+        if not 0 <= action.day <= LAST_DAY:
+            raise InvalidRequest(
+                f"the plant lab runs from day 0 to day {LAST_DAY}, not day {action.day}"
+            )
+
+
+def _plant_action(action: LabAction) -> PlantAction:
+    """The plant action a scheduled one asks for."""
+    match action.kind:
+        case "remove_leaf":
+            return RemoveLeaf(leaf_id=action.target)
+        case "harvest_fruit":
+            return HarvestFruit(fruit_id=action.target)
+        case "harvest_truss":
+            return HarvestTruss(truss_id=action.target)
+        case "lower_stem":
+            if not action.target.isdigit() or int(action.target) < 1:
+                raise InvalidRequest(f"lower_stem wants how many internodes, not {action.target!r}")
+            return LowerStem(internodes=int(action.target))
+        case _:
+            known = ", ".join(ACTIONS)
+            raise InvalidRequest(f"the plant lab has no action {action.kind!r}, only {known}")
 
 
 def _grown(plant_id: str, run: LabRun, environment: Environment) -> Plant:
     traits = draw_traits(run.seed, plant_id, VARIATION)
-    plant = emerged(plant_id, DEVELOPMENT, run.seed, traits)
-    transplant = develop(plant, TRANSPLANT_CD, DEVELOPMENT)
-    days = (environment.local(plant_id, day) for day in range(run.day))
-    return grow(transplant, days, DEVELOPMENT)
+    plant = develop(emerged(plant_id, DEVELOPMENT, run.seed, traits), TRANSPLANT_CD, DEVELOPMENT)
+    for day in range(run.day + 1):
+        for action in run.actions:
+            if action.day == day and action.plant_id == plant_id:
+                plant = act(plant, _plant_action(action))
+        if day < run.day:
+            plant = live_day(plant, environment.local(plant_id, day), DEVELOPMENT)
+    return plant
 
 
 def structure(run: LabRun | None = None, plant_id: str = LAB_PLANT_ID) -> Plant:
