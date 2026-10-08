@@ -39,7 +39,7 @@ from greenhouse_sim.domain.sensors import SensorKind
 from greenhouse_sim.fields.field import EnvironmentField
 from greenhouse_sim.records import observation_id
 from greenhouse_sim.world.geometry import Vector3
-from greenhouse_sim.world.sensors import Imperfections, PointSensor
+from greenhouse_sim.world.sensors import Camera, Imperfections, PointSensor
 
 # What each kind of point sensor reads of a field.
 QUANTITIES: Final = {
@@ -84,9 +84,10 @@ def reads(sensor: PointSensor, field: EnvironmentField) -> float | None:
     return value
 
 
-def samples(sensor: PointSensor, until_s: float) -> list[float]:
-    """The moments a sensor takes its samples up to `until_s`, in seconds
-    from the run's start: every `cadence_s`, from the start."""
+def samples(sensor: PointSensor | Camera, until_s: float) -> list[float]:
+    """The moments a sensor takes its samples, or a camera its frames, up to
+    `until_s`, in seconds from the run's start: every `cadence_s`, from the
+    start."""
     return [index * sensor.cadence_s for index in range(int(until_s // sensor.cadence_s) + 1)]
 
 

@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { type SensorReadings, sensorsUrl } from "./readings";
+import { CameraFrames } from "./CameraFrames";
+import { loadSensorReadings, type SensorReadings, sensorsUrl } from "./readings";
 import { SensorPanel } from "./SensorPanel";
 
 const START = "2026-01-01T00:00:00Z";
@@ -15,7 +16,33 @@ const READINGS: SensorReadings = {
       timestamp: "2026-01-01T00:10:00Z",
       value: 14.9611,
     },
+    {
+      sensor_id: "rh",
+      observation_type: "relative_humidity_pct",
+      timestamp: START,
+      value: 100,
+      quality: ["CLIPPED"],
+    },
   ],
+  freshness: [
+    {
+      sensor_id: "t",
+      due_at: "2026-01-01T00:10:00Z",
+      latest_at: "2026-01-01T00:10:00Z",
+      stale: false,
+    },
+    { sensor_id: "rh", due_at: "2026-01-01T00:10:00Z", latest_at: START, stale: true },
+    { sensor_id: "co2", due_at: null, latest_at: null, stale: false },
+  ],
+  frames: [0, 1].map((minute) => ({
+    frame_id: `sim_camera_20260101T000${minute}00Z_frame`,
+    sensor_id: "camera",
+    timestamp: `2026-01-01T00:0${minute}:00Z`,
+    position: { x: 0.6, y: 3.2, z: 2.2 },
+    target: { x: 11, y: 3.2, z: 0.6 },
+    intrinsics: { width: 640, height: 480, fx: 457.007, fy: 457.007 },
+    modalities: ["RGB", "DEPTH"],
+  })),
   truths: [
     {
       sensor_id: "t",
@@ -90,5 +117,85 @@ describe("a selected sensor", () => {
 
     expect(html).toContain("No reading: nothing gives this quantity yet.");
     expect(html).toContain('data-testid="sensor-truth">none<');
+  });
+
+  it("says whether its latest reading due has come", () => {
+    const panel = (sensorId: string) =>
+      renderToStaticMarkup(
+        <SensorPanel
+          sensorId={sensorId}
+          unit="%"
+          state={{ status: "loaded", readings: READINGS }}
+          until={600}
+          imperfect={true}
+          onImperfect={() => undefined}
+        />,
+      );
+
+    expect(panel("t")).toContain(
+      'data-testid="sensor-freshness">Fresh: its reading of 10 min has come.<',
+    );
+    expect(panel("rh")).toContain(
+      'class="stale" data-testid="sensor-freshness">Stale: its reading of 10 min, due by now, has not come.<',
+    );
+    expect(panel("co2")).toContain("Its first reading is not due yet.");
+  });
+
+  it("says when its reading was held at its instrument's range", () => {
+    const html = renderToStaticMarkup(
+      <SensorPanel
+        sensorId="rh"
+        unit="%"
+        state={{ status: "loaded", readings: READINGS }}
+        until={600}
+        imperfect={true}
+        onImperfect={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("100 % at 0 min, clipped at its instrument&#x27;s range<");
+  });
+
+  it("reads the log's freshness and frames with its observations", async () => {
+    const answers: Record<string, unknown> = {
+      observations: {
+        run_id: READINGS.runId,
+        start: START,
+        observations: READINGS.observations,
+        freshness: READINGS.freshness,
+        frames: READINGS.frames,
+      },
+      truth: { run_id: READINGS.runId, sensors: READINGS.truths },
+    };
+    const fetchFn = (async (url: string) =>
+      new Response(
+        JSON.stringify(answers[url.includes("/truth") ? "truth" : "observations"]),
+      )) as typeof fetch;
+    const state = await loadSensorReadings("climate_box", {}, fetchFn);
+
+    expect(state).toEqual({ status: "loaded", readings: READINGS });
+  });
+});
+
+describe("a selected camera's frames", () => {
+  it("are counted, the latest one's metadata shown, and each one's moment", () => {
+    const html = renderToStaticMarkup(
+      <CameraFrames cameraId="camera" state={{ status: "loaded", readings: READINGS }} />,
+    );
+
+    expect(html).toContain('data-testid="camera-frames">2 frames by 1 min, each RGB and depth.<');
+    expect(html).toContain('data-testid="camera-frame-from">x 0.60, y 3.20, z 2.20<');
+    expect(html).toContain(
+      'data-testid="camera-frame-picture">640 × 480 px, fx 457.01 px, fy 457.01 px<',
+    );
+    expect(html).toContain("<li>1 min</li><li>0 min</li>");
+  });
+
+  it("are none before the camera has taken one", () => {
+    const html = renderToStaticMarkup(
+      <CameraFrames cameraId="other" state={{ status: "loaded", readings: READINGS }} />,
+    );
+
+    expect(html).toContain("No frames yet.");
   });
 });

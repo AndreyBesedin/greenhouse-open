@@ -1,4 +1,5 @@
 import { pairsText, type ScheduledCommand, scheduleText } from "../scene/source";
+import type { Point3 } from "../world";
 
 /** An observation as the simulator sends it: what a sensor reported, when it
  * took it and when it was delivered. */
@@ -8,6 +9,29 @@ export interface SensorObservation {
   timestamp: string;
   delivered_at?: string;
   value: number;
+  /** What is known of the reading, such as "CLIPPED"; absent if nothing. */
+  quality?: string[];
+}
+
+/** Whether a sensor's latest reading due by the moment drawn has come: the
+ * moments its due and latest readings were taken, as instants. */
+export interface SensorFreshness {
+  sensor_id: string;
+  due_at: string | null;
+  latest_at: string | null;
+  stale: boolean;
+}
+
+/** A frame a camera took, as the log records it: when, from where, looking
+ * where, with what intrinsics, and what it holds; not its pixels. */
+export interface CameraFrame {
+  frame_id: string;
+  sensor_id: string;
+  timestamp: string;
+  position: Point3;
+  target: Point3;
+  intrinsics: { width: number; height: number; fx: number; fy: number };
+  modalities: string[];
 }
 
 /** What a sensor truly sampled at each of its moments, in seconds from the
@@ -20,13 +44,16 @@ export interface SensorTruth {
   values: (number | null)[];
 }
 
-/** What a run's sensors observed up to a moment, and, for QA, what they
- * truly sampled. */
+/** A run's observation log up to a moment, what its sensors observed, each
+ * one's freshness and its cameras' frames; and, for QA, what they truly
+ * sampled. */
 export interface SensorReadings {
   runId: string;
   /** When the run started, as an instant. */
   start: string;
   observations: SensorObservation[];
+  freshness: SensorFreshness[];
+  frames: CameraFrame[];
   truths: SensorTruth[];
 }
 
@@ -80,6 +107,40 @@ function isObservation(value: unknown): value is SensorObservation {
   );
 }
 
+function isFreshness(value: unknown): value is SensorFreshness {
+  return (
+    isObject(value) &&
+    typeof value.sensor_id === "string" &&
+    (value.due_at === null || typeof value.due_at === "string") &&
+    (value.latest_at === null || typeof value.latest_at === "string") &&
+    typeof value.stale === "boolean"
+  );
+}
+
+function isPoint(value: unknown): value is Point3 {
+  return (
+    isObject(value) &&
+    typeof value.x === "number" &&
+    typeof value.y === "number" &&
+    typeof value.z === "number"
+  );
+}
+
+function isFrame(value: unknown): value is CameraFrame {
+  return (
+    isObject(value) &&
+    typeof value.frame_id === "string" &&
+    typeof value.sensor_id === "string" &&
+    typeof value.timestamp === "string" &&
+    isPoint(value.position) &&
+    isPoint(value.target) &&
+    isObject(value.intrinsics) &&
+    typeof value.intrinsics.width === "number" &&
+    typeof value.intrinsics.height === "number" &&
+    Array.isArray(value.modalities)
+  );
+}
+
 function isTruth(value: unknown): value is SensorTruth {
   return (
     isObject(value) &&
@@ -113,6 +174,10 @@ export async function loadSensorReadings(
       !isObject(observations) ||
       !Array.isArray(observations.observations) ||
       !observations.observations.every(isObservation) ||
+      !Array.isArray(observations.freshness) ||
+      !observations.freshness.every(isFreshness) ||
+      !Array.isArray(observations.frames) ||
+      !observations.frames.every(isFrame) ||
       !isObject(truths) ||
       !Array.isArray(truths.sensors) ||
       !truths.sensors.every(isTruth)
@@ -125,6 +190,8 @@ export async function loadSensorReadings(
         runId: typeof observations.run_id === "string" ? observations.run_id : "",
         start: typeof observations.start === "string" ? observations.start : "",
         observations: observations.observations,
+        freshness: observations.freshness,
+        frames: observations.frames,
         truths: truths.sensors,
       },
     };
@@ -134,6 +201,24 @@ export async function loadSensorReadings(
       reason: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+/** Seconds from a run's start to an instant, as the simulator stamps both. */
+export function secondsInto(start: string, instant: string): number {
+  return (Date.parse(instant) - Date.parse(start)) / MS_PER_SECOND;
+}
+
+/** A sensor's freshness at the moment drawn, if the log says. */
+export function freshnessOf(
+  readings: SensorReadings,
+  sensorId: string,
+): SensorFreshness | undefined {
+  return readings.freshness.find((f) => f.sensor_id === sensorId);
+}
+
+/** A camera's frames up to the moment drawn, in the order taken. */
+export function framesOf(readings: SensorReadings, cameraId: string): CameraFrame[] {
+  return readings.frames.filter((frame) => frame.sensor_id === cameraId);
 }
 
 /** A sensor's latest reading delivered by the moment drawn, if any. */

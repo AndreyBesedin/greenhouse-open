@@ -2,23 +2,20 @@ import { describeTime } from "../fields/ClimateTime";
 import { chartRange } from "../fields/ProbeCharts";
 import { formatValue } from "../readouts";
 import {
+  freshnessOf,
   latestReading,
   latestTruth,
+  type SensorFreshness,
   type SensorReadings,
   type SensorReadingsState,
+  secondsInto,
   sensorSeries,
 } from "./readings";
 
-const MS_PER_SECOND = 1000;
 // The chart's size in its own units, and its readings' dots.
 const WIDTH = 240;
 const HEIGHT = 70;
 const DOT_RADIUS = 2;
-
-/** Seconds from a run's start to an instant, as the simulator stamps both. */
-function secondsInto(start: string, instant: string): number {
-  return (Date.parse(instant) - Date.parse(start)) / MS_PER_SECOND;
-}
 
 /** The truth as a line, and the readings as dots, across the run so far. */
 function SensorChart({
@@ -68,8 +65,27 @@ function SensorChart({
   );
 }
 
+/** Whether a sensor's latest reading due by the moment drawn has come, in
+ * words; null if the log does not say. */
+export function describeFreshness(
+  freshness: SensorFreshness | undefined,
+  start: string,
+): string | null {
+  if (freshness === undefined) {
+    return null;
+  }
+  if (freshness.due_at === null) {
+    return "Its first reading is not due yet.";
+  }
+  const due = describeTime(secondsInto(start, freshness.due_at));
+  return freshness.stale
+    ? `Stale: its reading of ${due}, due by now, has not come.`
+    : `Fresh: its reading of ${due} has come.`;
+}
+
 /**
- * A selected sensor's latest reading at the moment drawn, a chart of its
+ * A selected sensor's latest reading at the moment drawn, whether it is
+ * fresh, a chart of its
  * readings against the truth through the run so far, and, apart, in a panel
  * marked as QA's, what it truly sampled: the truth a policy never sees, and
  * a switch to see its readings as a clean sensor's.
@@ -108,6 +124,9 @@ export function SensorPanel({
   const { readings } = state;
   const reading = latestReading(readings, sensorId);
   const truth = latestTruth(readings, sensorId);
+  const freshness = freshnessOf(readings, sensorId);
+  const freshnessText = describeFreshness(freshness, readings.start);
+  const clipped = reading?.quality?.includes("CLIPPED") === true;
   return (
     <section className="sensor-panel" aria-label="Sensor">
       <p data-testid="sensor-reading">
@@ -115,8 +134,16 @@ export function SensorPanel({
           ? "No reading: nothing gives this quantity yet."
           : `${formatValue(reading.value)} ${unit} at ${describeTime(
               secondsInto(readings.start, reading.timestamp),
-            )}`}
+            )}${clipped ? ", clipped at its instrument's range" : ""}`}
       </p>
+      {freshnessText !== null && (
+        <p
+          className={freshness?.stale === true ? "stale" : undefined}
+          data-testid="sensor-freshness"
+        >
+          {freshnessText}
+        </p>
+      )}
       <SensorChart readings={readings} sensorId={sensorId} until={until} />
       <aside className="sensor-truth" aria-label="Truth, for QA only">
         <span>Truth, for QA only:</span>{" "}

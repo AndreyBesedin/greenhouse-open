@@ -41,10 +41,12 @@ check; a route that comes to need one checks it first.
                                           &t=600, and of the same run with all
                                           its equipment off; asked as its
                                           climate field is
-    GET /api/scenarios/{id}/climate/observations what its point sensors observed up
-                                          to &t=600 of its run, asked as its
-                                          climate field is; &clean=1 as clean
-                                          sensors would have, for QA
+    GET /api/scenarios/{id}/climate/observations its run's observation log up to
+                                          &t=600: what its point sensors
+                                          observed, whether each is fresh,
+                                          and its cameras' frames; asked as
+                                          its climate field is; &clean=1 as
+                                          clean sensors would have, for QA
     GET /api/scenarios/{id}/climate/truth what its point sensors truly sampled,
                                           for evaluation and QA only
     GET /api/scenarios/{id}/cfd/geometry  the boundaries of a scenario's air as
