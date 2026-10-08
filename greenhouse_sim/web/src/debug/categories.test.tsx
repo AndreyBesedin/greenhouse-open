@@ -13,6 +13,7 @@ import {
   EQUIPMENT_CATEGORIES,
   isEnvelopeCategory,
   LAYOUT_CATEGORIES,
+  SENSOR_CATEGORIES,
 } from "./categories";
 
 const EXAMPLE: SceneSnapshot = JSON.parse(
@@ -47,6 +48,7 @@ describe("the envelope's categories", () => {
       "FAN",
       "HEATER",
       "DEHUMIDIFIER",
+      "SENSOR",
     ]);
     const others = EXAMPLE.entities.filter((entity) => categoryColor(entity.kind) === null);
     expect(new Set(others.map((entity) => entity.kind))).toEqual(
@@ -66,7 +68,12 @@ describe("the envelope's categories", () => {
 
 describe("the layout's categories", () => {
   it("each have a colour of their own, apart from the envelope's and the equipment's", () => {
-    const categories = [...ENVELOPE_CATEGORIES, ...LAYOUT_CATEGORIES, ...EQUIPMENT_CATEGORIES];
+    const categories = [
+      ...ENVELOPE_CATEGORIES,
+      ...LAYOUT_CATEGORIES,
+      ...EQUIPMENT_CATEGORIES,
+      ...SENSOR_CATEGORIES,
+    ];
     const colours = categories.map((category) => CATEGORY_COLORS[category]);
 
     expect(new Set(colours).size).toBe(categories.length);
@@ -111,6 +118,15 @@ describe("the layout's categories", () => {
     expect(html.match(/data-testid="equipment-category"/g)).toHaveLength(2);
     expect(html).toContain(`background:${CATEGORY_COLORS.HEATER}`);
     expect(html).toContain(">fan</li>");
+  });
+
+  it("list the sensors in a legend of their own", () => {
+    const html = renderToStaticMarkup(<CategoryLegend categories={["FAN", "SENSOR", "CAMERA"]} />);
+
+    expect(html).toContain('aria-label="Equipment categories"');
+    expect(html).toContain('aria-label="Sensor categories"');
+    expect(html.match(/data-testid="sensor-category"/g)).toHaveLength(2);
+    expect(html).toContain(`background:${CATEGORY_COLORS.CAMERA}`);
   });
 
   it("leave a scene with no envelope its layout's legend alone", () => {

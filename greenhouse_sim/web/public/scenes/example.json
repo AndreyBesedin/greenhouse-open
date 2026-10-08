@@ -1,5 +1,5 @@
 {
-  "schema_version": 14,
+  "schema_version": 15,
   "greenhouse_id": "climate_box",
   "simulated_day": 9,
   "entities": [
@@ -2646,6 +2646,300 @@
         "level": 0.0,
         "removal_kg_h": 1.0,
         "heat_w": 1200.0
+      }
+    },
+    {
+      "entity_id": "climate_box_temperature_front",
+      "kind": "SENSOR",
+      "transform": {
+        "position": {
+          "x": 3.0,
+          "y": 3.1,
+          "z": 1.46
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 0.08,
+        "size_y": 0.08,
+        "size_z": 0.08
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.73,
+        "b": 0.27
+      },
+      "material": "plastic",
+      "label": "temperature front",
+      "properties": {
+        "sensor_id": "temperature_front",
+        "sensor_kind": "temperature",
+        "cadence_s": 60.0,
+        "unit": "\u00b0C",
+        "noise_sd": 0.0,
+        "quantization": 0.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_humidity_front",
+      "kind": "SENSOR",
+      "transform": {
+        "position": {
+          "x": 3.0,
+          "y": 3.3,
+          "z": 1.46
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 0.08,
+        "size_y": 0.08,
+        "size_z": 0.08
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.73,
+        "b": 0.27
+      },
+      "material": "plastic",
+      "label": "humidity front",
+      "properties": {
+        "sensor_id": "humidity_front",
+        "sensor_kind": "humidity",
+        "cadence_s": 60.0,
+        "unit": "%",
+        "noise_sd": 0.0,
+        "quantization": 0.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_temperature_back",
+      "kind": "SENSOR",
+      "transform": {
+        "position": {
+          "x": 9.0,
+          "y": 3.1,
+          "z": 1.46
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 0.08,
+        "size_y": 0.08,
+        "size_z": 0.08
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.73,
+        "b": 0.27
+      },
+      "material": "plastic",
+      "label": "temperature back",
+      "properties": {
+        "sensor_id": "temperature_back",
+        "sensor_kind": "temperature",
+        "cadence_s": 60.0,
+        "unit": "\u00b0C",
+        "noise_sd": 0.0,
+        "quantization": 0.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_humidity_back",
+      "kind": "SENSOR",
+      "transform": {
+        "position": {
+          "x": 9.0,
+          "y": 3.3,
+          "z": 1.46
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 0.08,
+        "size_y": 0.08,
+        "size_z": 0.08
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.73,
+        "b": 0.27
+      },
+      "material": "plastic",
+      "label": "humidity back",
+      "properties": {
+        "sensor_id": "humidity_back",
+        "sensor_kind": "humidity",
+        "cadence_s": 60.0,
+        "unit": "%",
+        "noise_sd": 0.0,
+        "quantization": 0.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_anemometer",
+      "kind": "SENSOR",
+      "transform": {
+        "position": {
+          "x": 3.0,
+          "y": 3.2,
+          "z": 2.76
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 0.08,
+        "size_y": 0.08,
+        "size_z": 0.08
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.73,
+        "b": 0.27
+      },
+      "material": "plastic",
+      "label": "anemometer",
+      "properties": {
+        "sensor_id": "anemometer",
+        "sensor_kind": "air_speed",
+        "cadence_s": 60.0,
+        "unit": "m/s",
+        "noise_sd": 0.0,
+        "quantization": 0.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_co2",
+      "kind": "SENSOR",
+      "transform": {
+        "position": {
+          "x": 6.0,
+          "y": 3.2,
+          "z": 1.46
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 0.08,
+        "size_y": 0.08,
+        "size_z": 0.08
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.73,
+        "b": 0.27
+      },
+      "material": "plastic",
+      "label": "co2",
+      "properties": {
+        "sensor_id": "co2",
+        "sensor_kind": "co2",
+        "cadence_s": 60.0,
+        "unit": "ppm",
+        "noise_sd": 0.0,
+        "quantization": 0.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_par",
+      "kind": "SENSOR",
+      "transform": {
+        "position": {
+          "x": 6.0,
+          "y": 3.2,
+          "z": 3.56
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 0.08,
+        "size_y": 0.08,
+        "size_z": 0.08
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.73,
+        "b": 0.27
+      },
+      "material": "plastic",
+      "label": "par",
+      "properties": {
+        "sensor_id": "par",
+        "sensor_kind": "par",
+        "cadence_s": 60.0,
+        "unit": "\u00b5mol/m\u00b2/s",
+        "noise_sd": 0.0,
+        "quantization": 0.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
       }
     },
     {

@@ -10,6 +10,12 @@ from pydantic import TypeAdapter, ValidationError
 from greenhouse_sim.domain.layout import Obstruction
 from greenhouse_sim.domain.sensors import SensorKind
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scene.snapshot import (
+    CAMERA_COLOR,
+    SENSOR_COLOR,
+    SceneEntityKind,
+    greenhouse_scene,
+)
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.layout import Layout, outside_the_greenhouse
@@ -122,3 +128,25 @@ def test_the_climate_box_is_instrumented() -> None:
         ("co2", SensorKind.CO2),
         ("par", SensorKind.PAR),
     ]
+
+
+def test_the_scene_draws_sensors_and_cameras_with_their_configuration() -> None:
+    noisy = THERMOMETER.model_copy(update={"imperfections": Imperfections(noise_sd=0.2)})
+    scene = greenhouse_scene("box", HOUSE, layout=Layout(sensors=[noisy, CAMERA]))
+    sensor, camera = [
+        e for e in scene.entities if e.kind in (SceneEntityKind.SENSOR, SceneEntityKind.CAMERA)
+    ]
+
+    assert (sensor.entity_id, sensor.kind, sensor.color) == (
+        "box_t_1",
+        SceneEntityKind.SENSOR,
+        SENSOR_COLOR,
+    )
+    assert sensor.properties["sensor_kind"] == "temperature"
+    assert sensor.properties["unit"] == "°C"
+    assert sensor.properties["noise_sd"] == 0.2
+    assert sensor.properties["latency_s"] == 0.0
+    assert (camera.kind, camera.color) == (SceneEntityKind.CAMERA, CAMERA_COLOR)
+    assert camera.properties["image_width_px"] == 640
+    assert camera.properties["target_x"] == 6.0
+    assert camera.transform.rotation == CAMERA.rotation()

@@ -100,6 +100,9 @@ export const RENDERERS: Record<
   ),
   HEATER: solid,
   DEHUMIDIFIER: solid,
+  // A sensor's housing and a camera's body.
+  SENSOR: solid,
+  CAMERA: solid,
   // A plant organ by organ: stems and leaves are cylinders, drawn in
   // instanced batches; flowers and fruits are spheres.
   INTERNODE: solid,

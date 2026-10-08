@@ -44,6 +44,7 @@ from greenhouse_sim.world.geometry import (
 )
 from greenhouse_sim.world.layout import Layout
 from greenhouse_sim.world.rows import PlantingPosition
+from greenhouse_sim.world.sensors import Camera, Sensor
 from greenhouse_sim.world.state import GreenhouseWorld, PlantWorld
 from greenhouse_sim.world.zones import Zone
 
@@ -63,7 +64,8 @@ from greenhouse_sim.world.zones import Zone
 #     and the sphere shape.
 # 13: plants' compound leaves, their leaflets drawn with the ellipsoid shape.
 # 14: climate equipment: fans, heaters and dehumidifiers.
-SCHEMA_VERSION: Final = 14
+# 15: sensors and cameras.
+SCHEMA_VERSION: Final = 15
 # The JSON Schema dialect Pydantic generates, stated in the published schema.
 JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 
@@ -108,6 +110,9 @@ KEEP_OUT_COLOR: Final = Color(r=0.9, g=0.35, b=0.3)
 GREENHOUSE_BOUNDS_COLOR: Final = Color(r=0.62, g=0.78, b=0.88)
 # Equipment that is off is grey; running, it shows its kind's colour.
 EQUIPMENT_OFF_COLOR: Final = Color(r=0.55, g=0.55, b=0.55)
+# Sensors in Tol's bright yellow, cameras in its purple.
+SENSOR_COLOR: Final = Color(r=0.8, g=0.73, b=0.27)
+CAMERA_COLOR: Final = Color(r=0.67, g=0.2, b=0.47)
 EQUIPMENT_COLORS: Final = {
     ActuatorKind.FAN: Color(r=0.27, g=0.47, b=0.67),
     ActuatorKind.HEATER: Color(r=0.93, g=0.4, b=0.47),
@@ -156,6 +161,9 @@ class SceneEntityKind(StrEnum):
     FAN = "FAN"
     HEATER = "HEATER"
     DEHUMIDIFIER = "DEHUMIDIFIER"
+    # A point sensor, of any kind, and a camera.
+    SENSOR = "SENSOR"
+    CAMERA = "CAMERA"
     PLANT = "PLANT"
     # A plant organ by organ, as the organ-level model grows it.
     INTERNODE = "INTERNODE"
@@ -251,6 +259,7 @@ def greenhouse_scene(
             *_fixture_entities(greenhouse_id, envelope, layout or Layout()),
             *_zone_entities(greenhouse_id, envelope, layout or Layout()),
             *_equipment_entities(greenhouse_id, envelope, layout or Layout(), levels or {}),
+            *_sensor_entities(greenhouse_id, envelope, layout or Layout()),
             axes,
             _bounds_entity(greenhouse_id, envelope),
         ],
@@ -452,6 +461,48 @@ def _equipment_entity(
         material=Material.STEEL,
         label=piece.actuator_id.replace("_", " "),
         properties={"actuator_id": piece.actuator_id, "level": level, **piece.rated()},
+    )
+
+
+def _sensor_entities(greenhouse_id: str, envelope: Envelope, layout: Layout) -> list[SceneEntity]:
+    return [_sensor_entity(greenhouse_id, envelope, sensor) for sensor in layout.sensors]
+
+
+def _sensor_entity(greenhouse_id: str, envelope: Envelope, sensor: Sensor) -> SceneEntity:
+    """A sensor's housing or a camera's body, placed in the world, with its
+    configuration as properties."""
+    properties: dict[str, JsonValue] = {
+        "sensor_id": sensor.sensor_id,
+        "sensor_kind": sensor.kind.value,
+        "cadence_s": sensor.cadence_s,
+    }
+    kind, color = SceneEntityKind.SENSOR, SENSOR_COLOR
+    if isinstance(sensor, Camera):
+        kind, color = SceneEntityKind.CAMERA, CAMERA_COLOR
+        intrinsics = sensor.intrinsics
+        properties |= {
+            "image_width_px": intrinsics.width,
+            "image_height_px": intrinsics.height,
+            "fx_px": intrinsics.fx,
+            "fy_px": intrinsics.fy,
+            "ppx_px": intrinsics.ppx,
+            "ppy_px": intrinsics.ppy,
+            "target_x": sensor.target.x,
+            "target_y": sensor.target.y,
+            "target_z": sensor.target.z,
+        }
+    else:
+        properties |= {"unit": sensor.unit(), **sensor.imperfections.model_dump()}
+    fixture = sensor.fixture()
+    return SceneEntity(
+        entity_id=f"{greenhouse_id}_{sensor.sensor_id}",
+        kind=kind,
+        transform=envelope.origin.after(fixture.transform),
+        shape=fixture.shape,
+        color=color,
+        material=Material.PLASTIC,
+        label=sensor.sensor_id.replace("_", " "),
+        properties=properties,
     )
 
 
