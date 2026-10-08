@@ -24,11 +24,12 @@ from greenhouse_sim.world.sensors import PointSensor
 
 class SensorObservations(BaseModel):
     """What a scenario's point sensors observed up to a moment of a run, in
-    the order delivered, and the run that produced them."""
+    the order delivered, the run that produced them, and when it started."""
 
     model_config = ConfigDict(frozen=True)
 
     run_id: str
+    start: datetime
     observations: list[Observation]
 
 
@@ -72,6 +73,7 @@ def observations(
     air_at, run_id = air_through_a_run(scenario_id, name, levels, openings, commands)
     return SensorObservations(
         run_id=run_id,
+        start=run_start(scenario_id),
         observations=observe(
             _point_sensors(scenario_id, name),
             air_at,

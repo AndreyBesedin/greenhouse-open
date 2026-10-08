@@ -392,6 +392,18 @@ body {
   vector-effect: non-scaling-stroke;
 }
 
+/* A selected sensor: its reading, and the truth beside it, marked as QA's. */
+.sensor-panel p {
+  margin: 0 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sensor-truth {
+  padding: 2px 6px;
+  border: 1px dashed #aa3377;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Room for a switch beside each piece's name, kept on one line, and the
  * openings' sliders lined up with the equipment's. */
 .opening-control,
