@@ -88,6 +88,11 @@ export const RENDERERS: Record<
   PIPE: solid,
   WIRE: solid,
   OBSTACLE: solid,
+  // Climate equipment: a fan's housing, a heater's and a dehumidifier's body,
+  // grey while off and in its kind's colour while it runs.
+  FAN: solid,
+  HEATER: solid,
+  DEHUMIDIFIER: solid,
   // A plant organ by organ: stems and leaves are cylinders, drawn in
   // instanced batches; flowers and fruits are spheres.
   INTERNODE: solid,

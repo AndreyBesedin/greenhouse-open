@@ -1,4 +1,10 @@
-import { CATEGORY_COLORS, CATEGORY_LABELS, type Category, isEnvelopeCategory } from "./categories";
+import {
+  CATEGORY_COLORS,
+  CATEGORY_LABELS,
+  type Category,
+  isEnvelopeCategory,
+  isEquipmentCategory,
+} from "./categories";
 
 function Legend({
   name,
@@ -25,11 +31,14 @@ function Legend({
 }
 
 /** What each colour means in the categories' debug view: one legend for the
- * envelope's surfaces and one for the layout, each shown when the scene has
- * any of its categories. */
+ * envelope's surfaces, one for the layout and one for the equipment, each
+ * shown when the scene has any of its categories. */
 export function CategoryLegend({ categories }: { categories: readonly Category[] }) {
   const envelope = categories.filter(isEnvelopeCategory);
-  const layout = categories.filter((category) => !isEnvelopeCategory(category));
+  const equipment = categories.filter(isEquipmentCategory);
+  const layout = categories.filter(
+    (category) => !isEnvelopeCategory(category) && !isEquipmentCategory(category),
+  );
   return (
     <>
       {envelope.length > 0 && (
@@ -37,6 +46,9 @@ export function CategoryLegend({ categories }: { categories: readonly Category[]
       )}
       {layout.length > 0 && (
         <Legend name="Layout categories" categories={layout} testId="layout-category" />
+      )}
+      {equipment.length > 0 && (
+        <Legend name="Equipment categories" categories={equipment} testId="equipment-category" />
       )}
     </>
   );

@@ -21,7 +21,9 @@ check; a route that comes to need one checks it first.
                                           layouts, ?envelope=length:12,spans:3
                                           changes its greenhouse's dimensions,
                                           and ?open=roof_vent_1:0.5,door_1:1 how
-                                          far its doors and vents stand open
+                                          far its doors and vents stand open, and
+                                          ?set=fan:1,heater:0.5 how hard its
+                                          equipment runs
     GET /api/scenarios/{id}/fields        the names of a scenario's fields, and
                                           which is its own airflow
     GET /api/scenarios/{id}/fields/{name} one of a scenario's environment fields:
@@ -207,6 +209,7 @@ def _scene_changes(query: Query) -> scenarios.SceneChanges:
     changes: dict[str, object] = {
         "envelope": _pairs(query.get("envelope", []), "envelope"),
         "openings": _pairs(query.get("open", []), "open"),
+        "levels": _pairs(query.get("set", []), "set"),
     }
     name = _last(query, "layout")
     if name is not None:

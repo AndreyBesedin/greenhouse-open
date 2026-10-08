@@ -32,11 +32,20 @@ export const LAYOUT_CATEGORIES = [
 ] as const satisfies readonly SceneEntityKind[];
 export type LayoutCategory = (typeof LAYOUT_CATEGORIES)[number];
 
-export type Category = EnvelopeCategory | LayoutCategory;
+/** The greenhouse's climate equipment, by kind. */
+export const EQUIPMENT_CATEGORIES = [
+  "FAN",
+  "HEATER",
+  "DEHUMIDIFIER",
+] as const satisfies readonly SceneEntityKind[];
+export type EquipmentCategory = (typeof EQUIPMENT_CATEGORIES)[number];
+
+export type Category = EnvelopeCategory | LayoutCategory | EquipmentCategory;
 
 /** A colour per category, each group from a palette that stays distinct for
  * most colour-blind viewers: the envelope's from Okabe-Ito, the layout's from
- * Paul Tol's muted scheme, and wires in Okabe-Ito's black. */
+ * Paul Tol's muted scheme, wires in Okabe-Ito's black, and the equipment's
+ * from Tol's bright scheme, as the simulator colours it running. */
 export const CATEGORY_COLORS: Record<Category, string> = {
   FLOOR: "#e69f00",
   WALL: "#56b4e9",
@@ -56,6 +65,9 @@ export const CATEGORY_COLORS: Record<Category, string> = {
   PIPE: "#aa4499",
   WIRE: "#000000",
   OBSTACLE: "#dddddd",
+  FAN: "#4477aa",
+  HEATER: "#ee6677",
+  DEHUMIDIFIER: "#66ccee",
 };
 
 export const CATEGORY_LABELS: Record<Category, string> = {
@@ -77,9 +89,16 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   PIPE: "pipe",
   WIRE: "wire",
   OBSTACLE: "obstacle",
+  FAN: "fan",
+  HEATER: "heater",
+  DEHUMIDIFIER: "dehumidifier",
 };
 
-const CATEGORIES: readonly Category[] = [...ENVELOPE_CATEGORIES, ...LAYOUT_CATEGORIES];
+const CATEGORIES: readonly Category[] = [
+  ...ENVELOPE_CATEGORIES,
+  ...LAYOUT_CATEGORIES,
+  ...EQUIPMENT_CATEGORIES,
+];
 
 function isCategory(kind: SceneEntityKind): kind is Category {
   return (CATEGORIES as readonly SceneEntityKind[]).includes(kind);
@@ -89,9 +108,13 @@ export function isEnvelopeCategory(category: Category): category is EnvelopeCate
   return (ENVELOPE_CATEGORIES as readonly Category[]).includes(category);
 }
 
+export function isEquipmentCategory(category: Category): category is EquipmentCategory {
+  return (EQUIPMENT_CATEGORIES as readonly Category[]).includes(category);
+}
+
 /** The colour a kind takes in the categories' debug view, or null for a kind
- * that is not part of the envelope or layout, such as a plant, which keeps
- * its own. */
+ * that is not part of the envelope, layout or equipment, such as a plant,
+ * which keeps its own. */
 export function categoryColor(kind: SceneEntityKind): Color | null {
   if (!isCategory(kind)) {
     return null;
@@ -108,8 +131,8 @@ export function semanticType(kind: SceneEntityKind): string {
   return isCategory(kind) ? CATEGORY_LABELS[kind] : kind.toLowerCase().replaceAll("_", " ");
 }
 
-/** The categories a scene holds, in the legends' order: the envelope's, then
- * the layout's. */
+/** The categories a scene holds, in the legends' order: the envelope's, the
+ * layout's, then the equipment's. */
 export function categoriesIn(snapshot: SceneSnapshot): Category[] {
   const kinds = new Set(snapshot.entities.map((entity) => entity.kind));
   return CATEGORIES.filter((category) => kinds.has(category));
