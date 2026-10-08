@@ -744,7 +744,8 @@ What P05 simplifies on purpose, kept here until a later step removes it:
   is as much in as out, so the flow inside is not driven by it; the draught
   is drawn, not carried.
 - **Plants don't feel the air yet:** they keep their daily, greenhouse-wide
-  climate until P07/P09 feed them the air where they stand.
+  climate until P07/P09 feed them the air where they stand. Nor do they
+  give it water: the crop's transpiration is not a source of humidity.
 
 ## Review decisions (7 October 2026)
 
@@ -760,3 +761,15 @@ What P05 simplifies on purpose, kept here until a later step removes it:
    agreed.
 6. **The envelope exchanges heat both ways** (section 5): it loses heat
    when the outside is cooler, and gains it when the outside is warmer.
+
+## After the build (8 October 2026)
+
+The final report's open questions, as decided:
+
+- **The CI's time** is left for after P09 (see the
+  [roadmap](README.md#projects)).
+- **A climate run's colours** keep the range its moments have reached as it
+  plays, rather than rescaling at every moment.
+- **The approximations** above (no buoyancy, no transpiration, condensation's
+  latent heat, a dehumidifier's fixed output) stand for now.
+- **The compartment's default camera,** which frames only its corner, stays.

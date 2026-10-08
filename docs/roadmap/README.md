@@ -119,6 +119,23 @@ before P09's release QA, a second frontend audit is followed by those
 findings and general clean-up together. They do not block the simulator's
 P02–P07 project steps.
 
+**Test suite and CI time** (recorded 2026-10-08, scheduled after P09). A
+pull request's checks take 7 to 9 minutes:
+
+- **The viewer's browser tests** take 5.6 minutes on CI's two workers.
+  Locally, on one worker, they take 275 s, of which the plant lab's
+  journeys are 75 s and the renderer's end-to-end check 24 s.
+- **The simulator's tests** take 2.7 minutes, about twice their local time.
+  The rest of the repository checks take under a minute, mypy without a
+  cache 34 s of it.
+
+The options to weigh then:
+
+- a pull request subset of browser tests, one quick check per area, with
+  the full suite run nightly on a schedule and on demand;
+- the simulator's tests run in parallel (pytest-xdist);
+- mypy's cache, and the browser install, kept between runs.
+
 ```mermaid
 flowchart LR
     PM1["P-1 Restructure greenhouse_sim"] --> P00["P00 Browser renderer"]
