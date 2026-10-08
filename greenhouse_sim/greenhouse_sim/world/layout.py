@@ -13,7 +13,9 @@ at the first row's first position, filling each row before the next.
 
 Its climate equipment (`greenhouse_sim.world.equipment`), fans, heaters and
 dehumidifiers, stands among the fixtures: what of it is in the way of air or
-robots is among the layout's obstructions, and kept off its walkways.
+robots is among the layout's obstructions, and kept off its walkways. Its
+sensors and cameras (`greenhouse_sim.world.sensors`) stand there too, in the
+way of nothing.
 
 Walkways, service zones and keep-out volumes (`greenhouse_sim.world.zones`)
 are kept clear of planting: no position lies inside one, and the rows'
@@ -34,6 +36,7 @@ from greenhouse_sim.world.equipment import Equipment
 from greenhouse_sim.world.fixtures import Fixture, Primitive, WalkwayPrimitive
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.rows import CropRows, PlantingPosition
+from greenhouse_sim.world.sensors import Sensor
 from greenhouse_sim.world.zones import Strip, Zone
 
 # Walkways stay clear up to this height: a doorway's.
@@ -54,6 +57,8 @@ class Layout(BaseModel):
     zones: list[Zone] = []
     # Climate equipment: fans, heaters and dehumidifiers.
     equipment: list[Equipment] = []
+    # Sensors and cameras.
+    sensors: list[Sensor] = []
 
     @model_validator(mode="after")
     def _every_fixture_and_zone_has_its_own_identifier(self) -> Self:
@@ -61,11 +66,12 @@ class Layout(BaseModel):
             [fixture.fixture_id for fixture in self.fixtures()]
             + [zone.zone_id for zone in self.zones]
             + [piece.actuator_id for piece in self.equipment]
+            + [sensor.sensor_id for sensor in self.sensors]
         )
         repeated = sorted(name for name, count in names.items() if count > 1)
         if repeated:
             raise ValueError(
-                f"fixtures, zones or equipment share an identifier: {', '.join(repeated)}"
+                f"fixtures, zones, equipment or sensors share an identifier: {', '.join(repeated)}"
             )
         return self
 
@@ -106,6 +112,10 @@ class Layout(BaseModel):
         """Its equipment, each piece as a fixture of its shape (`fixture`)."""
         return [piece.fixture() for piece in self.equipment]
 
+    def sensor_fixtures(self) -> list[Fixture]:
+        """Its sensors and cameras, each as a fixture of its housing."""
+        return [sensor.fixture() for sensor in self.sensors]
+
     def obstructing(self, obstruction: Obstruction) -> list[Fixture]:
         """The fixtures, and the equipment, that stand in the way of
         `obstruction`, in the greenhouse's frame: the obstacles robots
@@ -131,7 +141,7 @@ def outside_the_greenhouse(layout: Layout, envelope: Envelope) -> list[str]:
     it."""
     fixtures = [
         fixture.fixture_id
-        for fixture in layout.fixtures() + layout.equipment_fixtures()
+        for fixture in layout.fixtures() + layout.equipment_fixtures() + layout.sensor_fixtures()
         if not encloses_hull(envelope, [(c.x, c.y, c.z) for c in fixture.corners()])
     ]
     positions = [

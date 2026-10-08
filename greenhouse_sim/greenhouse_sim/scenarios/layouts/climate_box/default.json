@@ -89,5 +89,133 @@
       "removal_kg_h": 1.0,
       "heat_w": 1200.0
     }
+  ],
+  "sensors": [
+    {
+      "sensor_id": "temperature_front",
+      "position": {
+        "x": 3.0,
+        "y": 3.1,
+        "z": 1.5
+      },
+      "cadence_s": 60.0,
+      "kind": "temperature",
+      "imperfections": {
+        "noise_sd": 0.0,
+        "quantization": 0.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "sensor_id": "humidity_front",
+      "position": {
+        "x": 3.0,
+        "y": 3.3,
+        "z": 1.5
+      },
+      "cadence_s": 60.0,
+      "kind": "humidity",
+      "imperfections": {
+        "noise_sd": 0.0,
+        "quantization": 0.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "sensor_id": "temperature_back",
+      "position": {
+        "x": 9.0,
+        "y": 3.1,
+        "z": 1.5
+      },
+      "cadence_s": 60.0,
+      "kind": "temperature",
+      "imperfections": {
+        "noise_sd": 0.0,
+        "quantization": 0.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "sensor_id": "humidity_back",
+      "position": {
+        "x": 9.0,
+        "y": 3.3,
+        "z": 1.5
+      },
+      "cadence_s": 60.0,
+      "kind": "humidity",
+      "imperfections": {
+        "noise_sd": 0.0,
+        "quantization": 0.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "sensor_id": "anemometer",
+      "position": {
+        "x": 3.0,
+        "y": 3.2,
+        "z": 2.8
+      },
+      "cadence_s": 60.0,
+      "kind": "air_speed",
+      "imperfections": {
+        "noise_sd": 0.0,
+        "quantization": 0.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "sensor_id": "co2",
+      "position": {
+        "x": 6.0,
+        "y": 3.2,
+        "z": 1.5
+      },
+      "cadence_s": 60.0,
+      "kind": "co2",
+      "imperfections": {
+        "noise_sd": 0.0,
+        "quantization": 0.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "sensor_id": "par",
+      "position": {
+        "x": 6.0,
+        "y": 3.2,
+        "z": 3.6
+      },
+      "cadence_s": 60.0,
+      "kind": "par",
+      "imperfections": {
+        "noise_sd": 0.0,
+        "quantization": 0.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    }
   ]
 }
