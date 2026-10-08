@@ -1,0 +1,169 @@
+"""The air's temperature, carried and mixed over a field's grid (P05.3).
+
+The air's temperature in every cell is advanced through time by finite
+volumes: what flows in through each face of a cell, what mixing brings
+across it, what equipment adds in it, and, for a cell against the walls or
+the roof, what the glazing passes to or from the outside.
+
+- **Advection** is first-order upwind, by the flow through each face, made
+  to conserve mass (`climate.projection`); none crosses the grid's faces, or
+  into a cell an obstacle fills. A cell takes on the temperature of the air
+  flowing in, F (T_upwind − T), so that uniform air stays uniform, and every
+  new temperature lies between the old ones around it.
+- **Mixing** between neighbouring air cells: the scenario's effective
+  diffusivity times the face's area over the cells' distance, κ A / h.
+- **Heat added** by equipment, its source terms (`climate.sources`), warms
+  its cells by what their air can hold: ρ c_p V.
+- **The envelope:** a cell against a wall or the roof exchanges U A (T_out −
+  T) with the outside through the face it lies against, both ways. The floor
+  is not glass, and passes nothing.
+- **The time step** keeps every cell's new temperature a weighted mean of the
+  old ones: the air flowing in, the mixing and the exchange take at most
+  half a cell's temperature away per step, which holds both the air crossing
+  at most half a cell and explicit mixing's limit.
+
+With the envelope shut (U = 0), the heat the air gains is what equipment
+adds: exactly in still air, and to the projection's tolerance in a flow.
+
+Cells obstacles fill are not air: they are left at the temperature they start
+at, and count for nothing.
+"""
+
+import math
+from dataclasses import dataclass
+from typing import Final
+
+import numpy as np
+
+from greenhouse_sim.climate.projection import FaceFlows
+from greenhouse_sim.climate.settings import ClimateSettings
+from greenhouse_sim.fields.field import FieldGrid
+
+AIR_DENSITY_KG_M3: Final = 1.2
+AIR_HEAT_CAPACITY_J_KG_K: Final = 1005.0
+# Each step takes at most this share of a cell's temperature away.
+STEP_SHARE: Final = 0.5
+# The longest step, when nothing moves or mixes fast enough to need shorter.
+LONGEST_STEP_S: Final = 10.0
+
+
+@dataclass(frozen=True, eq=False)
+class Transport:
+    """How heat moves over a grid, whose `solid` cells obstacles fill, in a
+    steady flow through its faces (`greenhouse_sim.climate.projection`),
+    between equipment's changes."""
+
+    grid: FieldGrid
+    flows: FaceFlows
+    solid: np.ndarray
+    settings: ClimateSettings
+
+    def __post_init__(self) -> None:
+        nx, ny, nz = self.grid.shape
+        if self.solid.shape != (nz, ny, nx) or self.flows.grid != self.grid:
+            raise ValueError("the flow and the solid cells must cover the grid")
+
+    def cell_volume_m3(self) -> float:
+        size = self.grid.cell_size
+        return size.x * size.y * size.z
+
+    def _face_area(self, axis: int) -> float:
+        size = self.grid.cell_size
+        sides = {2: size.y * size.z, 1: size.x * size.z, 0: size.x * size.y}
+        return sides[axis]
+
+    def _spacing(self, axis: int) -> float:
+        size = self.grid.cell_size
+        return {2: size.x, 1: size.y, 0: size.z}[axis]
+
+    def _takes(
+        self,
+    ) -> list[tuple[int, tuple[slice, ...], tuple[slice, ...], np.ndarray, np.ndarray]]:
+        """For each axis, where its faces' lower and upper cells lie, and what
+        each takes in per kelvin across the face, m³/s: the air flowing into
+        it, and the mixing, nothing where either cell is solid."""
+        air = ~self.solid
+        takes = []
+        for axis, low, high, flow in self.flows.faces():
+            mixing = np.where(
+                air[low] & air[high],
+                self.settings.mixing_m2_s * self._face_area(axis) / self._spacing(axis),
+                0.0,
+            )
+            # Into the lower cell when the flow is negative, the upper when
+            # positive; mixing takes from both.
+            takes.append(
+                (axis, low, high, np.maximum(-flow, 0.0) + mixing, np.maximum(flow, 0.0) + mixing)
+            )
+        return takes
+
+    def exchange_m3_s(self) -> np.ndarray:
+        """Each cell's exchange with the outside through the walls and roof it
+        lies against, U A / (ρ c_p), in m³/s of air brought to the outside's
+        temperature each second; nothing for a solid cell."""
+        nx, ny, nz = self.grid.shape
+        exchange = np.zeros((nz, ny, nx))
+        u = self.settings.glazing_u_w_m2k / (AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K)
+        exchange[:, :, 0] += u * self._face_area(2)
+        exchange[:, :, -1] += u * self._face_area(2)
+        exchange[:, 0, :] += u * self._face_area(1)
+        exchange[:, -1, :] += u * self._face_area(1)
+        # The roof, over the top layer; the floor passes nothing.
+        exchange[-1, :, :] += u * self._face_area(0)
+        exchange[self.solid] = 0.0
+        return exchange
+
+    def step_s(self) -> float:
+        """The longest step that keeps every new temperature a weighted mean
+        of the old ones, within `STEP_SHARE`."""
+        taken = self.exchange_m3_s()
+        for _, low, high, into_low, into_high in self._takes():
+            taken[low] += into_low
+            taken[high] += into_high
+        fastest = float(taken.max()) / self.cell_volume_m3()
+        return LONGEST_STEP_S if fastest <= 0 else min(LONGEST_STEP_S, STEP_SHARE / fastest)
+
+    def advance(self, temperature: np.ndarray, heat_w: np.ndarray, duration_s: float) -> np.ndarray:
+        """The temperature after `duration_s` from `temperature`, with
+        equipment adding `heat_w` in each cell, in equal steps no longer than
+        `step_s`."""
+        if duration_s <= 0:
+            return temperature.copy()
+        steps = math.ceil(duration_s / self.step_s())
+        dt = duration_s / steps
+        share = dt / self.cell_volume_m3()
+        takes = [
+            (axis, low, high, share * into_low, share * into_high)
+            for axis, low, high, into_low, into_high in self._takes()
+        ]
+        exchange = share * self.exchange_m3_s()
+        outside = self.settings.outside_temperature_c
+        added = (
+            share
+            * np.where(self.solid, 0.0, heat_w)
+            / (AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K)
+        )
+        solid = self.solid
+        held = temperature[solid]
+        current = temperature.copy()
+        for _ in range(steps):
+            change = added + exchange * (outside - current)
+            for axis, low, high, into_low, into_high in takes:
+                difference = np.diff(current, axis=axis)
+                change[low] += into_low * difference
+                change[high] -= into_high * difference
+            current += change
+            current[solid] = held
+        return current
+
+    def heat_j(self, temperature: np.ndarray, reference_c: float = 0.0) -> float:
+        """The heat the air holds above `reference_c`, in joules."""
+        air = ~self.solid
+        excess = float((temperature[air] - reference_c).sum())
+        return excess * AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K * self.cell_volume_m3()
+
+    def envelope_loss_w(self, temperature: np.ndarray) -> float:
+        """The heat the air loses through the walls and roof, in watts:
+        negative when it gains it from a warmer outside."""
+        exchange = self.exchange_m3_s() * AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K
+        return float((exchange * (temperature - self.settings.outside_temperature_c)).sum())

@@ -31,7 +31,8 @@ check; a route that comes to need one checks it first.
                                           both ?layout=open with another of its
                                           layouts, for its CFD solution, and
                                           ?set=fan:1 with its equipment
-                                          running, for its climate
+                                          running and &t=600 that many seconds
+                                          into the run, for its climate
     GET /api/scenarios/{id}/cfd/geometry  the boundaries of a scenario's air as
                                           a CFD solver is given them, snapped
                                           to its mesh; changed as for its scene
@@ -131,7 +132,11 @@ def respond(method: str, path: str) -> Response:
             layout = _last(query, "layout")
             return _answer(
                 lambda: fields.field(
-                    scenario_id, field_name, layout, _pairs(query.get("set", []), "set")
+                    scenario_id,
+                    field_name,
+                    layout,
+                    _pairs(query.get("set", []), "set"),
+                    _seconds(query),
                 )
             )
         case ["api", "scenarios", scenario_id, "cfd", "geometry"]:
@@ -235,6 +240,17 @@ def _pairs(requests: list[str], name: str) -> dict[str, float]:
         except ValueError:
             raise InvalidRequest(f"{name} wants key:number pairs, not {request!r}") from None
     return pairs
+
+
+def _seconds(query: Query) -> float:
+    """The moment a query asks for, `t`, in seconds: the start if none."""
+    text = _last(query, "t")
+    if text is None:
+        return 0.0
+    try:
+        return float(text)
+    except ValueError:
+        raise InvalidRequest(f"t wants seconds, not {text!r}") from None
 
 
 def _multiplier(query: Query) -> float:

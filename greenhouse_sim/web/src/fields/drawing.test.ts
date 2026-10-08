@@ -49,6 +49,7 @@ function analytic(
   return {
     fieldId: "test",
     source: "test",
+    timeS: 0,
     grid: { origin: { x: 0, y: 0, z: 0 }, cell_size: { x: SIZE, y: SIZE, z: SIZE }, cells },
     channels: { velocity: velocityChannel, temperature: temperatureChannel },
   };

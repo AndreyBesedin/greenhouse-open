@@ -5,6 +5,7 @@ from pydantic import BaseModel, model_validator
 
 from greenhouse_sim.airflow.prescribed import PrescribedAirflow, UniformAirflow
 from greenhouse_sim.cfd.setup import CfdSetup
+from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.layout import Layout, outside_the_greenhouse
 
@@ -39,6 +40,9 @@ class ScenarioConfig(BaseModel):
     # How a CFD solver drives its air: by default, in through its first open
     # door or vent and out through the others.
     cfd: CfdSetup = CfdSetup()
+    # What its air starts from and exchanges with in a climate run, when its
+    # equipment drives it.
+    climate: ClimateSettings = ClimateSettings()
 
     # Environment: bounds the smooth day-to-day drift stays within.
     air_temperature_bounds: tuple[float, float] = (18.0, 32.0)
