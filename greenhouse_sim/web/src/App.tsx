@@ -92,6 +92,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [playingClimate, setPlayingClimate] = useState(false);
   const [probeCharts, setProbeCharts] = useState<ProbeChartsState>({ status: "none" });
   const [sensorReadings, setSensorReadings] = useState<SensorReadingsState>({ status: "none" });
+  // Whether sensors' readings are shown as they err, or as clean ones', for QA.
+  const [sensorsImperfect, setSensorsImperfect] = useState(true);
   const [probeHeight, setProbeHeight] = useState(DEFAULT_PROBE_HEIGHT_M);
   // A range the viewer chose for the field's colours, in place of its own.
   const [fieldRange, setFieldRange] = useState<ScalarRange | null>(null);
@@ -494,6 +496,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       openings: pairsFrom(fieldOpenings) ?? {},
       schedule: scheduleFrom(fieldSchedule) ?? [],
       time: fieldTime,
+      clean: !sensorsImperfect,
     }).then((state) => {
       if (current) {
         setSensorReadings(state);
@@ -510,6 +513,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     fieldOpenings,
     fieldSchedule,
     fieldTime,
+    sensorsImperfect,
   ]);
 
   const showingNames = source.kind === "plants" && showPlantNames;
@@ -765,6 +769,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
               sensorId={String(selected.properties.sensor_id)}
               unit={String(selected.properties.unit)}
               state={sensorReadings}
+              until={fieldTime}
+              imperfect={sensorsImperfect}
+              onImperfect={setSensorsImperfect}
             />
           )}
         </div>

@@ -43,6 +43,8 @@ export interface RunChanges {
   openings?: Readonly<Record<string, number>> | undefined;
   schedule?: readonly ScheduledCommand[] | undefined;
   time?: number | undefined;
+  /** Observations as clean sensors would have made them, for QA. */
+  clean?: boolean | undefined;
 }
 
 /** Where a run's sensors' observations, or their truth, are published,
@@ -58,6 +60,7 @@ export function sensorsUrl(
     ...(pairsText(run.openings) === "" ? [] : [`open=${pairsText(run.openings)}`]),
     ...(scheduleText(run.schedule) === "" ? [] : [`schedule=${scheduleText(run.schedule)}`]),
     ...(run.time === undefined || run.time === 0 ? [] : [`t=${run.time}`]),
+    ...(what === "observations" && run.clean === true ? ["clean=1"] : []),
   ];
   const query = parts.length === 0 ? "" : `?${parts.join("&")}`;
   return `/api/scenarios/${encodeURIComponent(scenarioId)}/climate/${what}${query}`;
@@ -153,3 +156,26 @@ export function latestTruth(
   }
   return { timeS: truth.times_s[last] ?? 0, value: truth.values[last] ?? null, unit: truth.unit };
 }
+
+/** A sensor's readings and truth through the run so far, as points in
+ * seconds from its start. */
+export function sensorSeries(
+  readings: SensorReadings,
+  sensorId: string,
+): { observed: [number, number][]; truth: [number, number][] } {
+  const start = Date.parse(readings.start);
+  const observed = readings.observations
+    .filter((o) => o.sensor_id === sensorId)
+    .map((o): [number, number] => [(Date.parse(o.timestamp) - start) / MS_PER_SECOND, o.value]);
+  const known = readings.truths.find((t) => t.sensor_id === sensorId);
+  const truth: [number, number][] = [];
+  known?.times_s.forEach((time, index) => {
+    const value = known.values[index];
+    if (value !== null && value !== undefined) {
+      truth.push([time, value]);
+    }
+  });
+  return { observed, truth };
+}
+
+const MS_PER_SECOND = 1000;

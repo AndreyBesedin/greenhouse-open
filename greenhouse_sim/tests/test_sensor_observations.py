@@ -29,8 +29,10 @@ MOMENTS = [0.0, 60.0, 120.0, 180.0, 240.0, 300.0]
 HEATED = {"heater": 1.0, "fan": 1.0}
 
 
-def _observed(sensor_id: str | None = None) -> list[Observation]:
-    observed = sensors.observations("climate_box", levels=HEATED, until_s=300).observations
+def _observed(sensor_id: str | None = None, *, clean: bool = False) -> list[Observation]:
+    observed = sensors.observations(
+        "climate_box", levels=HEATED, until_s=300, clean=clean
+    ).observations
     return [o for o in observed if sensor_id is None or o.sensor_id == sensor_id]
 
 
@@ -48,15 +50,16 @@ def _sensor(sensor_id: str) -> PointSensor:
 
 
 def test_a_clean_sensor_reports_the_air_where_it_stands_at_each_of_its_samples() -> None:
-    observed = _observed("temperature_back")
-    position = _sensor("temperature_back").position
+    # The climate box's front temperature sensor is clean.
+    observed = _observed("temperature_front")
+    position = _sensor("temperature_front").position
 
     # The published field is in 32-bit floats; a sensor reads the run's own.
     assert [o.value for o in observed] == pytest.approx(
         [_climate(moment).sample(AirQuantity.TEMPERATURE, position) for moment in MOMENTS], rel=1e-6
     )
     assert [o.timestamp for o in observed] == [START + timedelta(seconds=m) for m in MOMENTS]
-    assert observed[-1].value > observed[0].value
+    assert [o.delivered_at for o in observed] == [o.timestamp for o in observed]
 
 
 def test_each_kind_reports_its_own_quantity() -> None:
@@ -64,7 +67,7 @@ def test_each_kind_reports_its_own_quantity() -> None:
 
     assert latest["humidity_front"].observation_type == ObservationType.RELATIVE_HUMIDITY_PCT
     assert latest["co2"].observation_type == ObservationType.CO2_PPM
-    assert latest["co2"].value == pytest.approx(420.0)
+    assert latest["co2"].value == pytest.approx(420.0, abs=40)
     # In the fan's jet, its anemometer reads the jet's speed.
     assert latest["anemometer"].observation_type == ObservationType.AIR_SPEED_M_S
     assert latest["anemometer"].value > 3.0
@@ -92,7 +95,6 @@ def test_observations_conform_to_the_protocol_and_name_their_sensor_and_run() ->
         "co2",
     }
     assert {o.source.source_id for o in observed.observations} == {observed.run_id}
-    assert all(o.delivered_at == o.timestamp for o in observed.observations)
     delivered = [o.delivered_at or o.timestamp for o in observed.observations]
     assert delivered == sorted(delivered)
 
@@ -106,7 +108,7 @@ def test_another_run_is_another_source() -> None:
 
 
 def test_the_truth_is_what_a_clean_sensor_observed() -> None:
-    observed = _observed()
+    observed = _observed(clean=True)
 
     for truth in sensors.truth("climate_box", levels=HEATED, until_s=300).sensors:
         readings = [o.value for o in observed if o.sensor_id == truth.sensor_id]
@@ -135,7 +137,9 @@ def test_a_sensor_in_steady_air_reads_it_the_same_at_every_sample() -> None:
 
 
 def test_the_api_serves_the_observations_and_the_truth() -> None:
-    observed = respond("GET", "/api/scenarios/climate_box/climate/observations?set=heater:1&t=120")
+    observed = respond(
+        "GET", "/api/scenarios/climate_box/climate/observations?set=heater:1&t=120&clean=1"
+    )
     truth = respond("GET", "/api/scenarios/climate_box/climate/truth?set=heater:1&t=120")
 
     assert (observed.status, truth.status) == (200, 200)
