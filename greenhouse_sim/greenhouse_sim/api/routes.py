@@ -43,7 +43,8 @@ check; a route that comes to need one checks it first.
                                           climate field is
     GET /api/scenarios/{id}/climate/observations what its point sensors observed up
                                           to &t=600 of its run, asked as its
-                                          climate field is
+                                          climate field is; &clean=1 as clean
+                                          sensors would have, for QA
     GET /api/scenarios/{id}/climate/truth what its point sensors truly sampled,
                                           for evaluation and QA only
     GET /api/scenarios/{id}/cfd/geometry  the boundaries of a scenario's air as
@@ -167,10 +168,21 @@ def respond(method: str, path: str) -> Response:
                     _seconds(query),
                 )
             )
-        case ["api", "scenarios", scenario_id, "climate", ("observations" | "truth") as asked]:
-            serve = sensors.observations if asked == "observations" else sensors.truth
+        case ["api", "scenarios", scenario_id, "climate", "observations"]:
             return _answer(
-                lambda: serve(
+                lambda: sensors.observations(
+                    scenario_id,
+                    _last(query, "layout"),
+                    _pairs(query.get("set", []), "set"),
+                    _pairs(query.get("open", []), "open"),
+                    _commands(query.get("schedule", [])),
+                    _seconds(query),
+                    clean=_last(query, "clean") == "1",
+                )
+            )
+        case ["api", "scenarios", scenario_id, "climate", "truth"]:
+            return _answer(
+                lambda: sensors.truth(
                     scenario_id,
                     _last(query, "layout"),
                     _pairs(query.get("set", []), "set"),

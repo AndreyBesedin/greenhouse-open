@@ -66,8 +66,10 @@ def observations(
     openings: Mapping[str, float] | None = None,
     commands: Sequence[Commanded] = (),
     until_s: float = 0.0,
+    clean: bool = False,
 ) -> SensorObservations:
-    """What a scenario's point sensors observed up to `until_s` of a run."""
+    """What a scenario's point sensors observed up to `until_s` of a run; as
+    clean sensors would have, if `clean`, for QA."""
     until = _checked_until(until_s)
     name = layout or DEFAULT_LAYOUT
     air_at, run_id = air_through_a_run(scenario_id, name, levels, openings, commands)
@@ -81,6 +83,8 @@ def observations(
             start=run_start(scenario_id),
             greenhouse_id=scenario(scenario_id).greenhouse_id,
             run_id=run_id,
+            seed=scenario(scenario_id).random_seed,
+            clean=clean,
         ),
     )
 

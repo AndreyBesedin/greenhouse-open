@@ -1,6 +1,6 @@
 # P06: Virtual sensors and the observation layer
 
-**Status:** in progress: P06.1 and P06.2 done, P06.3 next. Part of the
+**Status:** in progress: P06.1 to P06.3 done, P06.4 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -227,7 +227,7 @@ gradient needs its own base airflow, which is a scenario's.
 | --- | --- | --- |
 | P06.1 | `feat(sensors): define sensor and observation contracts` | Done |
 | P06.2 | `feat(sensors): add point environment sensors` | Done |
-| P06.3 | `feat(sensors): add noise, bias, drift, dropout and latency` | Planned |
+| P06.3 | `feat(sensors): add noise, bias, drift, dropout and latency` | Done |
 | P06.4 | `feat(cameras): add a virtual RGB camera and its frustum` | Planned |
 | P06.5 | `feat(cameras): add depth and instance passes` | Planned |
 | P06.6 | `feat(observations): add the observation log and history charts` | Planned |
@@ -322,6 +322,36 @@ and sample. Visible result: a chart shows the truth and the imperfect
 reading diverging over the run. Tests: the same seed gives the same
 readings in any order; a sensor's noise has the configured mean and spread;
 dropout's rate and latency's delay are as configured.
+
+#### As implemented
+
+- **How a sample errs,** in order:
+  1. it drops out with its probability, and is then no reading;
+  2. otherwise the truth gets its bias, its linear drift so far and
+     Gaussian noise;
+  3. it is rounded to its quantization step, written to the step's
+     decimals;
+  4. it is held within its instrument's range, flagged `CLIPPED` where held:
+     temperature −40 to 80 °C, humidity 0 to 100%, CO₂ to 10 000 ppm, air
+     speed to 30 m/s, PAR to 3000 µmol/m²/s;
+  5. it is delivered its latency later. A run's observations up to a
+     moment are those delivered by then.
+- **Seeded:** each sample's draws come from the scenario's seed, the
+  sensor's identifier and the sample's index, in a fixed order. So:
+  - a reading is the same however a run is asked for;
+  - sensors never share their noise, and adding one changes no other's;
+  - turning noise on moves no dropout.
+- **For QA:** `clean=1` shows the observations as clean sensors would have
+  made them.
+- **The climate box's sensors** err like instruments, but for its front
+  temperature sensor, kept clean. Its back temperature sensor errs on
+  purpose: noise 0.2 °C to 0.1 °C steps, a 0.5 °C bias, 0.6 °C an hour of
+  drift, 10% dropout, 30 s late. Its CO₂ sensor is a minute late.
+- **The viewer:** the sensor panel charts the readings as dots against the
+  truth's dashed line through the run so far. A QA switch,
+  "Imperfections", shows the readings as a clean sensor's. Ten minutes into
+  a heated run, the back sensor's latest reading is 19.20 °C, taken at nine
+  minutes, against a truth of 18.59 °C; two of its samples dropped out.
 
 ### P06.4: A virtual RGB camera and its frustum
 

@@ -46,16 +46,34 @@ describe("a selected sensor", () => {
     expect(sensorsUrl("climate_box", "observations", {})).toBe(
       "/api/scenarios/climate_box/climate/observations",
     );
+    // As clean sensors would have read, for QA: the truth is the same.
+    expect(sensorsUrl("climate_box", "observations", { clean: true })).toBe(
+      "/api/scenarios/climate_box/climate/observations?clean=1",
+    );
+    expect(sensorsUrl("climate_box", "truth", { clean: true })).toBe(
+      "/api/scenarios/climate_box/climate/truth",
+    );
   });
 
   it("shows its latest reading, and the truth beside it, for QA", () => {
     const html = renderToStaticMarkup(
-      <SensorPanel sensorId="t" unit="°C" state={{ status: "loaded", readings: READINGS }} />,
+      <SensorPanel
+        sensorId="t"
+        unit="°C"
+        state={{ status: "loaded", readings: READINGS }}
+        until={600}
+        imperfect={true}
+        onImperfect={() => undefined}
+      />,
     );
 
     expect(html).toContain('data-testid="sensor-reading">14.96 °C at 10 min<');
     expect(html).toContain('aria-label="Truth, for QA only"');
     expect(html).toContain('data-testid="sensor-truth">14.96 °C at 10 min<');
+    // Its readings as dots against the truth's line, and the QA switch.
+    expect(html.match(/<circle/g)).toHaveLength(2);
+    expect(html).toContain('class="sensor-chart-truth"');
+    expect(html).toContain('<input type="checkbox" checked=""/> Imperfections');
   });
 
   it("says when nothing gives its quantity", () => {
@@ -64,6 +82,9 @@ describe("a selected sensor", () => {
         sensorId="par"
         unit="µmol/m²/s"
         state={{ status: "loaded", readings: READINGS }}
+        until={600}
+        imperfect={true}
+        onImperfect={() => undefined}
       />,
     );
 

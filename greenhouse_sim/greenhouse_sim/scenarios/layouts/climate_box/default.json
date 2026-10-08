@@ -119,8 +119,8 @@
       "cadence_s": 60.0,
       "kind": "humidity",
       "imperfections": {
-        "noise_sd": 0.0,
-        "quantization": 0.0,
+        "noise_sd": 1.0,
+        "quantization": 0.1,
         "bias": 0.0,
         "drift_per_hour": 0.0,
         "dropout": 0.0,
@@ -137,12 +137,12 @@
       "cadence_s": 60.0,
       "kind": "temperature",
       "imperfections": {
-        "noise_sd": 0.0,
-        "quantization": 0.0,
-        "bias": 0.0,
-        "drift_per_hour": 0.0,
-        "dropout": 0.0,
-        "latency_s": 0.0
+        "noise_sd": 0.2,
+        "quantization": 0.1,
+        "bias": 0.5,
+        "drift_per_hour": 0.6,
+        "dropout": 0.1,
+        "latency_s": 30.0
       }
     },
     {
@@ -155,9 +155,9 @@
       "cadence_s": 60.0,
       "kind": "humidity",
       "imperfections": {
-        "noise_sd": 0.0,
-        "quantization": 0.0,
-        "bias": 0.0,
+        "noise_sd": 1.5,
+        "quantization": 0.1,
+        "bias": -2.0,
         "drift_per_hour": 0.0,
         "dropout": 0.0,
         "latency_s": 0.0
@@ -173,8 +173,8 @@
       "cadence_s": 60.0,
       "kind": "air_speed",
       "imperfections": {
-        "noise_sd": 0.0,
-        "quantization": 0.0,
+        "noise_sd": 0.05,
+        "quantization": 0.01,
         "bias": 0.0,
         "drift_per_hour": 0.0,
         "dropout": 0.0,
@@ -191,12 +191,12 @@
       "cadence_s": 60.0,
       "kind": "co2",
       "imperfections": {
-        "noise_sd": 0.0,
-        "quantization": 0.0,
+        "noise_sd": 10.0,
+        "quantization": 1.0,
         "bias": 0.0,
         "drift_per_hour": 0.0,
         "dropout": 0.0,
-        "latency_s": 0.0
+        "latency_s": 60.0
       }
     },
     {
