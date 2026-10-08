@@ -26,10 +26,10 @@ test("probe charts: a heated run diverges from the same run all off, where the h
 
   await test.step("the charts read what the probes read", async () => {
     await expect(page.getByTestId("probe-1-reading")).toHaveText(
-      /temperature 31\.88 °C, humidity 31\.58 %$/,
+      /temperature 31\.88 °C, humidity 31\.58 %, co2 420\.00 ppm$/,
     );
     await expect(page.getByTestId("probe-2-reading")).toHaveText(
-      /temperature 14\.96 °C, humidity 84\.80 %$/,
+      /temperature 14\.96 °C, humidity 84\.80 %, co2 420\.00 ppm$/,
     );
   });
 

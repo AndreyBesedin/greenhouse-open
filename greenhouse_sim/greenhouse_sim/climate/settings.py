@@ -1,9 +1,9 @@
 """What a scenario's air starts from and exchanges with in a climate run
-(P05.3, P05.4): the outside, the air inside at the start, how much heat its
-glazing passes, and how fast the air mixes.
+(P05.3, P05.4, P06.2): the outside, the air inside at the start, how much
+heat its glazing passes, and how fast the air mixes.
 
-Until weather comes (P07), the outside is one temperature and humidity for a
-whole run.
+Until weather comes (P07), the outside is one temperature, humidity and CO2
+for a whole run.
 """
 
 from typing import Annotated
@@ -21,10 +21,12 @@ class ClimateSettings(BaseModel):
     # The outside air's temperature and relative humidity, for the whole run.
     outside_temperature_c: float = 10.0
     outside_humidity_pct: Percent = 80.0
+    outside_co2_ppm: PositiveFloat = 420.0
     # The air's temperature and relative humidity everywhere inside when the
     # run starts.
     start_temperature_c: float = 18.0
     start_humidity_pct: Percent = 75.0
+    start_co2_ppm: PositiveFloat = 420.0
     # How much heat the walls' and roof's glazing passes, per square metre and
     # per kelvin between inside and out: about 6 W/m²K for single glass. Zero
     # shuts the house off from the outside.

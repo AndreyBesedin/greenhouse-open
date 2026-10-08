@@ -1,8 +1,8 @@
-"""The air's temperature and water, carried and mixed over a field's grid
-(P05.3, P05.4).
+"""The air's temperature, water and CO2, carried and mixed over a field's
+grid (P05.3, P05.4, P06.2).
 
-The air's temperature and humidity ratio in every cell are advanced through
-time by finite volumes: what flows in through each face of a cell, what
+The air's temperature, humidity ratio and CO2 in every cell are advanced
+through time by finite volumes: what flows in through each face of a cell, what
 mixing brings across it, what equipment adds or takes in it, and, for a
 cell against the walls or the roof, the heat the glazing passes to or from
 the outside.
@@ -26,7 +26,8 @@ the outside.
   T) with the outside through the face it lies against, both ways. The floor
   is not glass, and passes nothing. Glass passes no water.
 - **Open doors and vents** (`climate.vents`) exchange the air against them
-  with the outside's, its heat and its water.
+  with the outside's, its heat, its water and its CO2. Nothing else adds or
+  takes CO2 yet.
 - **The time step** keeps every cell's new temperature a weighted mean of the
   old ones: the air flowing in, the mixing and the exchange take at most
   half a cell's temperature away per step, which holds both the air crossing
@@ -69,11 +70,13 @@ CONDENSING_S: Final = 10.0
 @dataclass(frozen=True, eq=False)
 class AirState:
     """The air in every cell of a grid, in its order (z, y, x): its
-    temperature (°C) and humidity ratio (g of water per kg of air), with the
-    water it has lost so far to equipment and to condensation, in kg."""
+    temperature (°C), humidity ratio (g of water per kg of air) and CO2
+    (ppm), with the water it has lost so far to equipment and to
+    condensation, in kg."""
 
     temperature: np.ndarray
     humidity: np.ndarray
+    co2: np.ndarray
     removed_kg: float = 0.0
     condensed_kg: float = 0.0
 
@@ -183,6 +186,7 @@ class Transport:
         venting = share * self.vents_m3_s()
         outside = self.settings.outside_temperature_c
         outside_water = float(humidity_ratio_g_kg(outside, self.settings.outside_humidity_pct))
+        outside_co2 = self.settings.outside_co2_ppm
         air_kg = AIR_DENSITY_KG_M3 * self.cell_volume_m3()
         solid = self.solid
         added = (
@@ -193,9 +197,9 @@ class Transport:
         # What equipment would take each step, in grams per kilogram.
         drying = dt * np.where(solid, 0.0, terms.water_removed_kg_s) * GRAMS_PER_KG / air_kg
         condensing_every = max(1, round(CONDENSING_S / dt))
-        # Temperature and water, carried together: one pass over the faces.
-        carried = np.stack([air.temperature, air.humidity])
-        temperature, humidity = carried[0], carried[1]
+        # Temperature, water and CO2, carried together: one pass over the faces.
+        carried = np.stack([air.temperature, air.humidity, air.co2])
+        temperature, humidity, co2 = carried[0], carried[1], carried[2]
         # A solid cell's change is nothing: no face of it carries or mixes,
         # and nothing is added to it, taken from it or exchanged with it.
         drying_any = bool(drying.any())
@@ -210,6 +214,7 @@ class Transport:
             np.multiply(exchange, outside - temperature, out=change[0])
             change[0] += added
             np.multiply(venting, outside_water - humidity, out=change[1])
+            np.multiply(venting, outside_co2 - co2, out=change[2])
             for axis, low, high, into_low, into_high in faces:
                 difference = np.diff(carried, axis=axis)
                 change[low] += into_low * difference
@@ -229,6 +234,7 @@ class Transport:
         return AirState(
             temperature=temperature.copy(),
             humidity=humidity.copy(),
+            co2=co2.copy(),
             removed_kg=air.removed_kg + float(removed.sum()) * air_kg / GRAMS_PER_KG,
             condensed_kg=air.condensed_kg + float(condensed.sum()) * air_kg / GRAMS_PER_KG,
         )

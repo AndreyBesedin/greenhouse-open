@@ -68,6 +68,8 @@ import {
 } from "./scene/source";
 import { useLiveScene } from "./scene/useLiveScene";
 import { entityOfOrgan, organOf, plantOf, selectedEntity } from "./selection";
+import { loadSensorReadings, type SensorReadingsState } from "./sensors/readings";
+import { SensorPanel } from "./sensors/SensorPanel";
 import { Viewport } from "./Viewport";
 import type { Point3 } from "./world";
 
@@ -89,6 +91,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [placingProbes, setPlacingProbes] = useState(false);
   const [playingClimate, setPlayingClimate] = useState(false);
   const [probeCharts, setProbeCharts] = useState<ProbeChartsState>({ status: "none" });
+  const [sensorReadings, setSensorReadings] = useState<SensorReadingsState>({ status: "none" });
   const [probeHeight, setProbeHeight] = useState(DEFAULT_PROBE_HEIGHT_M);
   // A range the viewer chose for the field's colours, in place of its own.
   const [fieldRange, setFieldRange] = useState<ScalarRange | null>(null);
@@ -472,6 +475,43 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const snapshot = shown.status === "loaded" ? shown.snapshot : null;
   // Overlays and colours are worked out from the scene, which they only read.
   const selected = selectedEntity(snapshot, selectedId);
+
+  // What the scenario's sensors observed up to the moment drawn, and what
+  // they truly sampled, while a sensor is selected.
+  const sensorSelected = selected?.kind === "SENSOR";
+  useEffect(() => {
+    if (!sensorSelected || fieldScenario === null) {
+      setSensorReadings({ status: "none" });
+      return;
+    }
+    let current = true;
+    setSensorReadings((previous) =>
+      previous.status === "loaded" ? previous : { status: "loading" },
+    );
+    void loadSensorReadings(fieldScenario, {
+      layout: fieldLayout,
+      levels: pairsFrom(fieldLevels) ?? {},
+      openings: pairsFrom(fieldOpenings) ?? {},
+      schedule: scheduleFrom(fieldSchedule) ?? [],
+      time: fieldTime,
+    }).then((state) => {
+      if (current) {
+        setSensorReadings(state);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [
+    sensorSelected,
+    fieldScenario,
+    fieldLayout,
+    fieldLevels,
+    fieldOpenings,
+    fieldSchedule,
+    fieldTime,
+  ]);
+
   const showingNames = source.kind === "plants" && showPlantNames;
   const probes = source.kind === "scenario" ? (source.probes ?? EMPTY_PROBES) : EMPTY_PROBES;
   const probedField = field.status === "loaded" ? field.field : null;
@@ -718,6 +758,13 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
               overlays={overlayToggles}
               onOverlays={setOverlayToggles}
               onClear={() => setSelectedId(null)}
+            />
+          )}
+          {selected?.kind === "SENSOR" && (
+            <SensorPanel
+              sensorId={String(selected.properties.sensor_id)}
+              unit={String(selected.properties.unit)}
+              state={sensorReadings}
             />
           )}
         </div>

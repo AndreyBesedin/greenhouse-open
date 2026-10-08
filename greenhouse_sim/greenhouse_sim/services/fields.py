@@ -22,9 +22,10 @@ Probes read a climate run every minute up to a moment, beside the same run
 with everything off (`greenhouse_sim.climate.probes`).
 """
 
+import hashlib
 import threading
 from collections import OrderedDict
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Final
 
 from greenhouse_sim.airflow.contract import AirflowModel
@@ -54,6 +55,8 @@ LONGEST_RUN_S: Final = 3600.0
 KEPT_RUNS: Final = 8
 # Probes read a climate run this often, in seconds.
 PROBE_EVERY_S: Final = 60.0
+# How many hexadecimal digits of its digest name a climate run.
+RUN_DIGEST_LENGTH: Final = 8
 
 
 class _Shear:
@@ -309,3 +312,29 @@ def climate_probes(
         probed,
         times,
     )
+
+
+def air_through_a_run(
+    scenario_id: str,
+    layout: str | None = None,
+    levels: Mapping[str, float] | None = None,
+    openings: Mapping[str, float] | None = None,
+    commands: Sequence[Commanded] = (),
+) -> tuple[Callable[[float], EnvironmentField], str]:
+    """A scenario's air at each moment of a run, asked as its climate field
+    is, and refused as it is, with the run's identity: its climate run's, if
+    its layout places equipment; otherwise its own airflow, the same at
+    every moment."""
+    name = layout or DEFAULT_LAYOUT
+    models = _models(scenario_id, name, levels, openings, commands)
+    air = grid(scenario_id)
+    climate = models.get(CLIMATE)
+    if isinstance(climate, _Climate):
+        run = _climate_run(*climate.key)
+        digest = hashlib.sha256(repr(climate.key).encode()).hexdigest()[:RUN_DIGEST_LENGTH]
+        return (lambda time_s: run.field(f"{scenario_id}_{CLIMATE}", air, time_s)), (
+            f"{scenario_id}-climate-{digest}"
+        )
+    config = changed(scenario(scenario_id), SceneChanges(layout=name))
+    own = config.airflow.field(f"{scenario_id}_{config.airflow.kind}", air)
+    return (lambda _: own), f"{scenario_id}-{config.airflow.kind}"

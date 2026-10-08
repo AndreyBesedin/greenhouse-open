@@ -17,8 +17,8 @@ the latest before it, and an earlier one, or a probe's reading every
 minute, is found kept. One request at a time works a run on; others wait
 for it, and find what it kept.
 
-As a field (`field`), the air at a moment is its velocity, temperature and
-relative humidity there (`climate.psychrometrics`). A cell an obstacle fills
+As a field (`field`), the air at a moment is its velocity, temperature,
+relative humidity (`climate.psychrometrics`) and CO2 there. A cell an obstacle fills
 is still, and shows the mean temperature and water of the cells beside it,
 so that a slice or a legend shows the air's.
 """
@@ -113,6 +113,7 @@ class ClimateRun:
             0.0: AirState(
                 temperature=np.full((nz, ny, nx), settings.start_temperature_c),
                 humidity=np.full((nz, ny, nx), float(start)),
+                co2=np.full((nz, ny, nx), settings.start_co2_ppm),
             )
         }
 
@@ -219,7 +220,8 @@ class ClimateRun:
 
     def field(self, field_id: str, grid: FieldGrid, time_s: float = 0.0) -> EnvironmentField:
         """The air at `time_s`: its velocity, with the draughts through open
-        doors and vents, its temperature and its relative humidity."""
+        doors and vents, its temperature, its relative humidity and its
+        CO2."""
         if grid != self.grid:
             raise ValueError("a climate run is drawn on its own grid")
         air = self.air_at(time_s)
@@ -234,5 +236,6 @@ class ClimateRun:
                 AirQuantity.VELOCITY: self.flows_at(time_s).velocity() + self._draughts(air),
                 AirQuantity.TEMPERATURE: temperature,
                 AirQuantity.HUMIDITY: relative_humidity_pct(temperature, humidity),
+                AirQuantity.CO2: _filled(air.co2, self.solid),
             },
         )

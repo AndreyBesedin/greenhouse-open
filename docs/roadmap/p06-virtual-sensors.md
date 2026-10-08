@@ -1,6 +1,6 @@
 # P06: Virtual sensors and the observation layer
 
-**Status:** in progress: P06.1 done, P06.2 next. Part of the
+**Status:** in progress: P06.1 and P06.2 done, P06.3 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -226,7 +226,7 @@ gradient needs its own base airflow, which is a scenario's.
 | Step | Commit summary | Status |
 | --- | --- | --- |
 | P06.1 | `feat(sensors): define sensor and observation contracts` | Done |
-| P06.2 | `feat(sensors): add point environment sensors` | Planned |
+| P06.2 | `feat(sensors): add point environment sensors` | Done |
 | P06.3 | `feat(sensors): add noise, bias, drift, dropout and latency` | Planned |
 | P06.4 | `feat(cameras): add a virtual RGB camera and its frustum` | Planned |
 | P06.5 | `feat(cameras): add depth and instance passes` | Planned |
@@ -280,6 +280,40 @@ own air. Visible result: selecting a sensor shows its reading beside the
 air's true value, in a QA-only panel. Tests: a noise-free sensor matches the
 interpolated field within tolerance; CO₂ stays uniform with nothing to
 change it, and its budget closes.
+
+#### As implemented
+
+- **CO₂ in the climate run:**
+  - **carried** as its third scalar, beside temperature and water, in the
+    same pass;
+  - **starts** uniform at the scenario's starting CO₂, the outside having
+    its own, both 420 ppm unless set;
+  - **exchanged** through open doors and vents.
+
+  The climate field publishes it as `co2`; every probe shows it.
+- **Point sensors** (`sensors.air`): each takes a sample every cadence from
+  a run's start, of its quantity where it stands, as the field samples it
+  there:
+  - temperature, relative humidity, CO₂, or an anemometer's speed;
+  - PAR, which no model gives, is no reading at all.
+  - **The air sampled:** a climate run's, for a scenario with equipment;
+    otherwise its own airflow, the same at every moment.
+  - **The run's clock:** it starts at its scenario's start date's midnight,
+    UTC, until P09 joins the clocks.
+- **Observations:** each reading is a protocol `Observation` naming its
+  sensor and its run, in the order delivered.
+  `GET /api/scenarios/{id}/climate/observations?…&t=600` serves them,
+  asked as the climate field is.
+- **The truth, apart** (`evaluation.sensor_truth`): what each sensor truly
+  sampled, served by `GET /api/scenarios/{id}/climate/truth?…`.
+  - **Guarded:** a test checks that only evaluation and the services
+    serving it import the truth, this one and the daily one alike.
+  - **A stale note fixed:** the daily ground truth's note had said such a
+    test existed; it didn't, until now.
+- **The viewer:** a selected point sensor shows its latest reading at the
+  moment drawn, and, in a panel marked "Truth, for QA only", what it truly
+  sampled then. In the climate box, ten minutes into a heated run, the back
+  temperature sensor reads 18.59 °C, as the truth is.
 
 ### P06.3: Imperfections
 

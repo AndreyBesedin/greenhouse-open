@@ -41,6 +41,11 @@ check; a route that comes to need one checks it first.
                                           &t=600, and of the same run with all
                                           its equipment off; asked as its
                                           climate field is
+    GET /api/scenarios/{id}/climate/observations what its point sensors observed up
+                                          to &t=600 of its run, asked as its
+                                          climate field is
+    GET /api/scenarios/{id}/climate/truth what its point sensors truly sampled,
+                                          for evaluation and QA only
     GET /api/scenarios/{id}/cfd/geometry  the boundaries of a scenario's air as
                                           a CFD solver is given them, snapped
                                           to its mesh; changed as for its scene
@@ -80,7 +85,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from pydantic import BaseModel
 
-from greenhouse_sim.services import cfd, fields, plants, scenarios, system
+from greenhouse_sim.services import cfd, fields, plants, scenarios, sensors, system
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.live import InvalidSpeed, LiveCommand, LiveRun, LiveRuns
 
@@ -156,6 +161,18 @@ def respond(method: str, path: str) -> Response:
                     scenario_id,
                     _points(query.get("probes", [])),
                     layout,
+                    _pairs(query.get("set", []), "set"),
+                    _pairs(query.get("open", []), "open"),
+                    _commands(query.get("schedule", [])),
+                    _seconds(query),
+                )
+            )
+        case ["api", "scenarios", scenario_id, "climate", ("observations" | "truth") as asked]:
+            serve = sensors.observations if asked == "observations" else sensors.truth
+            return _answer(
+                lambda: serve(
+                    scenario_id,
+                    _last(query, "layout"),
                     _pairs(query.get("set", []), "set"),
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
