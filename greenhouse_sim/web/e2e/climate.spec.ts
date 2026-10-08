@@ -77,6 +77,18 @@ test("climate: a running heater warms its corner and the house through the run",
     await expect(middle).toHaveText(/temperature 14\.96 °C, humidity 84\.80 %$/);
   });
 
+  await test.step("back at the start, the slice keeps the colours the run reached", async () => {
+    const highest = page.getByRole("spinbutton", { name: "Highest colour" });
+    const reached = await highest.inputValue();
+    expect(Number(reached)).toBeGreaterThan(40);
+    await run.getByRole("slider", { name: "Time into the run" }).fill("0");
+    await expect(moment).toHaveText("0 min");
+    await expect(corner).toHaveText(/temperature 16\.00 °C/);
+    await expect(highest).toHaveValue(reached);
+    await run.getByRole("slider", { name: "Time into the run" }).fill("600");
+    await expect(moment).toHaveText("10 min");
+  });
+
   await test.step("played, the run moves on a minute at a time, until paused", async () => {
     await run.getByRole("button", { name: "Play" }).click();
     await expect(moment).toHaveText("11 min");

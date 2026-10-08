@@ -40,3 +40,32 @@ export function quantityScale(
     range: { min: channel.minimum, max: channel.maximum },
   };
 }
+
+/** The colour ranges held through a climate run, by quantity, for the run
+ * they were reached in. */
+export interface HeldRanges {
+  run: string;
+  ranges: Partial<Record<SliceQuantity, ScalarRange>>;
+}
+
+/** The ranges held through a run once a moment of it has arrived: each
+ * quantity's widened to take in the moment's, or, for another run, the
+ * moment's own. */
+export function heldThrough(
+  held: HeldRanges | null,
+  run: string,
+  field: EnvironmentField,
+): HeldRanges {
+  const ranges: Partial<Record<SliceQuantity, ScalarRange>> = {};
+  for (const quantity of sliceQuantities(field)) {
+    const own = quantityScale(field, quantity)?.range;
+    const before = held?.run === run ? held.ranges[quantity] : undefined;
+    if (own !== undefined) {
+      ranges[quantity] =
+        before === undefined
+          ? own
+          : { min: Math.min(before.min, own.min), max: Math.max(before.max, own.max) };
+    }
+  }
+  return { run, ranges };
+}

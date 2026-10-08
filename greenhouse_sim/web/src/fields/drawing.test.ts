@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { arrowSpacing, fieldArrows, MATRIX_SIZE, MAX_ARROWS } from "./arrows";
 import { sliceFrom, sliceText } from "./display";
-import { defaultSlice, quantityScale, sliceQuantities } from "./drawing";
+import { defaultSlice, heldThrough, quantityScale, sliceQuantities } from "./drawing";
 import { drawnPoints, STEPS_PER_SEGMENT, streamlineGeometry } from "./FieldStreamlines";
 import type { Channel, EnvironmentField } from "./field";
 import { sliceExtent, sliceSpans, sliceValues } from "./slice";
@@ -215,5 +215,37 @@ describe("a slice through a field", () => {
     expect(sliceFrom("temperature:w:1")).toBeUndefined();
     expect(sliceFrom("wind:z:1")).toBeUndefined();
     expect(sliceFrom("speed:z:")).toBeUndefined();
+  });
+});
+
+describe("a climate run's colours", () => {
+  /** A moment of a run whose air ranges from `low` to `high` °C. */
+  const warm = (low: number, high: number): EnvironmentField => {
+    const field = analytic(
+      { x: 4, y: 2, z: 2 },
+      () => [0.5, 0, 0],
+      () => low,
+    );
+    const temperature = field.channels.temperature as Channel;
+    return {
+      ...field,
+      channels: { ...field.channels, temperature: { ...temperature, minimum: low, maximum: high } },
+    };
+  };
+
+  it("hold the widest range the run's moments have reached", () => {
+    const start = heldThrough(null, "run", warm(16, 16));
+    const later = heldThrough(start, "run", warm(12, 30));
+    const back = heldThrough(later, "run", warm(16, 17));
+
+    expect(back.ranges.temperature).toEqual({ min: 12, max: 30 });
+    expect(back.ranges.speed).toEqual({ min: 0, max: 1 });
+  });
+
+  it("start afresh for another run", () => {
+    const first = heldThrough(null, "run", warm(12, 30));
+    const other = heldThrough(first, "another run", warm(16, 17));
+
+    expect(other.ranges.temperature).toEqual({ min: 16, max: 17 });
   });
 });
