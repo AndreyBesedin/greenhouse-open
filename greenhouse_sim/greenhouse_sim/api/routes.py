@@ -36,6 +36,11 @@ check; a route that comes to need one checks it first.
                                           &open=roof_vent:1 with its vents
                                           open, and &t=600 that many seconds
                                           into the run, for its climate
+    GET /api/scenarios/{id}/climate/probes what probes at ?probes=3:3.2:0.75,… read
+                                          of its climate run every minute up to
+                                          &t=600, and of the same run with all
+                                          its equipment off; asked as its
+                                          climate field is
     GET /api/scenarios/{id}/cfd/geometry  the boundaries of a scenario's air as
                                           a CFD solver is given them, snapped
                                           to its mesh; changed as for its scene
@@ -142,6 +147,19 @@ def respond(method: str, path: str) -> Response:
                     _seconds(query),
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
+                )
+            )
+        case ["api", "scenarios", scenario_id, "climate", "probes"]:
+            layout = _last(query, "layout")
+            return _answer(
+                lambda: fields.climate_probes(
+                    scenario_id,
+                    _points(query.get("probes", [])),
+                    layout,
+                    _pairs(query.get("set", []), "set"),
+                    _pairs(query.get("open", []), "open"),
+                    _commands(query.get("schedule", [])),
+                    _seconds(query),
                 )
             )
         case ["api", "scenarios", scenario_id, "cfd", "geometry"]:
@@ -262,6 +280,20 @@ def _commands(requests: list[str]) -> list[tuple[float, str, float]]:
                 f"schedule wants seconds:actuator:level commands, not {request!r}"
             ) from None
     return commands
+
+
+def _points(requests: list[str]) -> list[tuple[float, float, float]]:
+    """`probes=x:y:z,…` as points, in the order given."""
+    points = []
+    for request in ",".join(requests).split(","):
+        if not request:
+            continue
+        try:
+            x, y, z = (float(part) for part in request.split(":"))
+        except ValueError:
+            raise InvalidRequest(f"probes wants x:y:z points, not {request!r}") from None
+        points.append((x, y, z))
+    return points
 
 
 def _seconds(query: Query) -> float:
