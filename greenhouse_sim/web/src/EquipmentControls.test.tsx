@@ -18,7 +18,7 @@ describe("a scene's equipment", () => {
     expect(equipmentIn(EXAMPLE)).toEqual([
       { actuatorId: "fan", label: "fan", level: 0, rated: 1, unit: "m³/s" },
       { actuatorId: "heater", label: "heater", level: 0, rated: 10, unit: "kW" },
-      { actuatorId: "dehumidifier", label: "dehumidifier", level: 0, rated: 5, unit: "kg/h" },
+      { actuatorId: "dehumidifier", label: "dehumidifier", level: 0, rated: 1, unit: "kg/h" },
     ]);
   });
 

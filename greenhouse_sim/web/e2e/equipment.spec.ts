@@ -42,7 +42,7 @@ test("equipment: a device is picked, switched on, set to a level and off, and th
     await expect(page.getByTestId("equipment-dehumidifier")).toHaveText("off");
     await selectAt(page, DEHUMIDIFIER_FRONT, "climate_box_dehumidifier", ACROSS);
     await expect(page.getByTestId("selected-type")).toHaveText("dehumidifier");
-    await expect(page.getByTestId("property-removal_kg_h")).toHaveText("5");
+    await expect(page.getByTestId("property-removal_kg_h")).toHaveText("1");
     await selectAt(page, HEATER_SIDE, "climate_box_heater", ACROSS);
     await expect(page.getByTestId("selected-type")).toHaveText("heater");
     await expect(page.getByTestId("property-power_w")).toHaveText("10000");
@@ -74,7 +74,7 @@ test("equipment: a device is picked, switched on, set to a level and off, and th
   await test.step("the address alone sets the levels it names", async () => {
     await page.goto("/?scenario=climate_box&set=fan:1,dehumidifier:0.25");
     await expect(page.getByTestId("equipment-fan")).toHaveText("100%, 1 m³/s");
-    await expect(page.getByTestId("equipment-dehumidifier")).toHaveText("25%, 1.25 kg/h");
+    await expect(page.getByTestId("equipment-dehumidifier")).toHaveText("25%, 0.25 kg/h");
     await expect(heater).toHaveText("off");
   });
 });

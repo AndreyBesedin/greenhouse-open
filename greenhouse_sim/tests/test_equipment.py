@@ -44,8 +44,8 @@ DEHUMIDIFIER = Dehumidifier(
     size_x=0.6,
     size_y=1.0,
     size_z=1.4,
-    removal_kg_h=5.0,
-    heat_w=4_500.0,
+    removal_kg_h=1.0,
+    heat_w=1_200.0,
 )
 EQUIPMENT: TypeAdapter[Equipment] = TypeAdapter(Equipment)
 
@@ -87,7 +87,7 @@ def test_a_unit_stands_on_its_base_its_depth_along_its_heading() -> None:
 def test_each_piece_states_its_rated_capacity() -> None:
     assert FAN.rated() == {"diameter_m": 0.5, "flow_m3_s": 1.0}
     assert HEATER.rated() == {"power_w": 10_000.0}
-    assert DEHUMIDIFIER.rated() == {"removal_kg_h": 5.0, "heat_w": 4_500.0}
+    assert DEHUMIDIFIER.rated() == {"removal_kg_h": 1.0, "heat_w": 1_200.0}
 
 
 def test_equipment_is_read_by_its_kind() -> None:
