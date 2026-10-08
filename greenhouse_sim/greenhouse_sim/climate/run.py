@@ -10,8 +10,9 @@ warmed and dried by the equipment, and its heat exchanged with the outside
 (`climate.transport`).
 
 The same schedule always gives the same air at the same moments. A run keeps
-the air at every moment it was asked for, so that a later moment carries on
-from the latest before it.
+the air at every moment it was asked for, and every minute on the way to
+one, so that a later moment carries on from the latest before it, and an
+earlier one, or a probe's reading every minute, is found kept.
 
 As a field (`field`), the air at a moment is its velocity, temperature and
 relative humidity there (`climate.psychrometrics`). A cell an obstacle fills
@@ -37,6 +38,8 @@ from greenhouse_sim.fields.field import VECTOR_COMPONENTS, EnvironmentField, Fie
 from greenhouse_sim.world.equipment import Equipment
 
 type _Levels = tuple[tuple[str, float], ...]
+# A run keeps its air this often on the way to a moment, in seconds.
+KEEP_EVERY_S: Final = 60.0
 # How many times solid cells take their neighbours' mean: enough to reach the
 # middle of an obstacle eight cells thick.
 _FILLING_PASSES: Final = 4
@@ -148,13 +151,19 @@ class ClimateRun:
             raise ValueError("a climate run starts at 0 s")
         start = max(moment for moment in self._kept if moment <= time_s)
         air = self._kept[start]
-        changes = [moment for moment in self.schedule.moments() if start < moment <= time_s]
+        changes = {moment for moment in self.schedule.moments() if start < moment <= time_s}
+        minutes = int(time_s // KEEP_EVERY_S) - int(start // KEEP_EVERY_S)
+        kept = {
+            (int(start // KEEP_EVERY_S) + step) * KEEP_EVERY_S for step in range(1, minutes + 1)
+        }
         now = start
-        for until in [*changes, time_s]:
+        for until in sorted(changes | kept | {time_s}):
             if until > now:
                 terms, _, transport = self._held(self.levels_at(now))
                 air = transport.advance(air, terms, until - now)
                 now = until
+                if until in kept:
+                    self._kept[until] = air
         self._kept[time_s] = air
         return air
 
