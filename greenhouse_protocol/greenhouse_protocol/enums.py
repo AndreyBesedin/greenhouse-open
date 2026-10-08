@@ -44,6 +44,8 @@ class ObservationType(StrEnum):
     HUMIDITY_DEFICIT_G_M3 = "humidity_deficit_g_m3"
     CO2_PPM = "co2_ppm"
     PAR_UMOL_M2_S = "par_umol_m2_s"
+    # the air's speed where an anemometer stands
+    AIR_SPEED_M_S = "air_speed_m_s"
     HEATING_PIPE_TEMPERATURE_C = "heating_pipe_temperature_c"
 
     # greenhouse-level actuator state
@@ -124,6 +126,14 @@ class ObservationType(StrEnum):
     # site weather forecast, as known at the observation's timestamp: the
     # forecast total radiation for the current local day, revised during it
     FORECAST_RADIATION_SUM_TODAY_J_CM2 = "forecast_radiation_sum_today_j_cm2"
+
+
+class ObservationQuality(StrEnum):
+    """What is known of an observation's quality, beyond its value."""
+
+    # The reading reached the end of its instrument's range, and was held
+    # there: the quantity may lie beyond it.
+    CLIPPED = "CLIPPED"
 
 
 class EventType(StrEnum):
