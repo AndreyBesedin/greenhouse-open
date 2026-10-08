@@ -47,7 +47,11 @@ def _advance(
 ) -> np.ndarray:
     """The temperature after `duration_s`, in dry air, where nothing
     condenses."""
-    dry = AirState(temperature=temperature, humidity=np.zeros_like(temperature))
+    dry = AirState(
+        temperature=temperature,
+        humidity=np.zeros_like(temperature),
+        co2=np.full_like(temperature, 420.0),
+    )
     heating = SourceTerms(grid=GRID, velocity=STILL, heat_w=heat_w, water_removed_kg_s=NO_HEAT)
     return transport.advance(dry, heating, duration_s).temperature
 

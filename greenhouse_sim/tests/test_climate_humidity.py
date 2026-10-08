@@ -35,6 +35,7 @@ STILL = np.zeros((NZ, NY, NX, 3))
 START = AirState(
     temperature=np.full((NZ, NY, NX), 16.0),
     humidity=np.full((NZ, NY, NX), float(humidity_ratio_g_kg(16.0, 85.0))),
+    co2=np.full((NZ, NY, NX), 420.0),
 )
 SHUT = CONFIG.climate.model_copy(update={"glazing_u_w_m2k": 0.0})
 
