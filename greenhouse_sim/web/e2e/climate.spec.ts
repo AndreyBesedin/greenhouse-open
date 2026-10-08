@@ -122,3 +122,29 @@ test("climate: a running dehumidifier dries the air around it", async ({ page })
     await expect(far).toHaveText(/temperature 12\.87 °C, humidity 95\.72 %$/);
   });
 });
+
+// Under the climate box's roof vent, in the top layer of its air.
+const UNDER_THE_ROOF_VENT = "6:2.5:3.75";
+
+test("climate: opening the roof vent lets the heated air out, and the cold in", async ({
+  page,
+}) => {
+  await page.goto(
+    `/?scenario=climate_box&set=heater:1&field=climate&t=600&probes=${UNDER_THE_ROOF_VENT}`,
+  );
+  const reading = page.getByTestId("probe-1-reading");
+
+  await test.step("shut, the air under it is still, and warm from the heater", async () => {
+    await expect(reading).toHaveText(
+      "climate: 0.00 m/s (0.00, 0.00, 0.00), temperature 14.42 °C, humidity 87.77 %",
+    );
+  });
+
+  await test.step("open, the warmer air goes out through it, and the house cools", async () => {
+    await page.getByRole("group", { name: "Openings" }).getByRole("slider").first().fill("100");
+    await expect(page).toHaveURL(/open=roof_vent:1(&|$)/);
+    await expect(reading).toHaveText(
+      "climate: 0.29 m/s (0.00, 0.00, 0.29), temperature 9.66 °C, humidity 86.87 %",
+    );
+  });
+});

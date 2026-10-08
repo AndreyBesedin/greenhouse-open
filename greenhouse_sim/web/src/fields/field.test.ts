@@ -157,6 +157,13 @@ describe("a published field", () => {
     expect(fieldUrl("climate_box", "shear", { levels })).toBe(
       "/api/scenarios/climate_box/fields/shear",
     );
+    // And with its doors and vents as they stand, which its climate depends on.
+    expect(fieldUrl("climate_box", "climate", { levels, openings: { roof_vent: 0.5 } })).toBe(
+      "/api/scenarios/climate_box/fields/climate?set=fan:1,heater:0.5&open=roof_vent:0.5",
+    );
+    expect(fieldUrl("climate_box", "uniform", { openings: { roof_vent: 0.5 } })).toBe(
+      "/api/scenarios/climate_box/fields/uniform",
+    );
   });
 });
 
