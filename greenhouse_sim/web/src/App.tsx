@@ -68,6 +68,8 @@ import {
 } from "./scene/source";
 import { useLiveScene } from "./scene/useLiveScene";
 import { entityOfOrgan, organOf, plantOf, selectedEntity } from "./selection";
+import { CameraView } from "./sensors/CameraView";
+import { cameraOf, frustumOverlays } from "./sensors/camera";
 import { loadSensorReadings, type SensorReadingsState } from "./sensors/readings";
 import { SensorPanel } from "./sensors/SensorPanel";
 import { Viewport } from "./Viewport";
@@ -477,6 +479,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const snapshot = shown.status === "loaded" ? shown.snapshot : null;
   // Overlays and colours are worked out from the scene, which they only read.
   const selected = selectedEntity(snapshot, selectedId);
+  const selectedCamera = selected === null ? null : cameraOf(selected);
 
   // What the scenario's sensors observed up to the moment drawn, and what
   // they truly sampled, while a sensor is selected.
@@ -525,6 +528,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       ...(snapshot !== null && showDimensions ? sceneDimensionOverlays(snapshot) : []),
       ...(snapshot !== null && showingNames ? plantNameOverlays(snapshot) : []),
       ...(probedField === null ? [] : probeOverlays(probes, probedField)),
+      ...(snapshot === null ? [] : frustumOverlays(snapshot)),
     ],
     [selected, overlayToggles, snapshot, showDimensions, showingNames, probes, probedField],
   );
@@ -762,17 +766,21 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
               overlays={overlayToggles}
               onOverlays={setOverlayToggles}
               onClear={() => setSelectedId(null)}
-            />
-          )}
-          {selected?.kind === "SENSOR" && (
-            <SensorPanel
-              sensorId={String(selected.properties.sensor_id)}
-              unit={String(selected.properties.unit)}
-              state={sensorReadings}
-              until={fieldTime}
-              imperfect={sensorsImperfect}
-              onImperfect={setSensorsImperfect}
-            />
+            >
+              {snapshot !== null && selectedCamera !== null && (
+                <CameraView snapshot={snapshot} spec={selectedCamera} />
+              )}
+              {selected.kind === "SENSOR" && (
+                <SensorPanel
+                  sensorId={String(selected.properties.sensor_id)}
+                  unit={String(selected.properties.unit)}
+                  state={sensorReadings}
+                  until={fieldTime}
+                  imperfect={sensorsImperfect}
+                  onImperfect={setSensorsImperfect}
+                />
+              )}
+            </Inspector>
           )}
         </div>
         <div className="panel-column at-the-end">

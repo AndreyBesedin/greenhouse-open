@@ -392,6 +392,23 @@ body {
   vector-effect: non-scaling-stroke;
 }
 
+/* A selected sensor's reading, or a camera's picture, leads the inspector,
+ * set off from its details below. */
+.sensor-panel,
+.camera-panel {
+  margin: 0 0 8px;
+  padding: 0 0 8px;
+  border-bottom: 1px solid #cccccc;
+}
+
+.camera-panel p {
+  margin: 0 0 4px;
+}
+
+.camera-panel canvas {
+  display: block;
+}
+
 /* A selected sensor: its reading, and the truth beside it, marked as QA's. */
 .sensor-panel p {
   margin: 0 0 4px;

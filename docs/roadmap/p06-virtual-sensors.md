@@ -1,6 +1,6 @@
 # P06: Virtual sensors and the observation layer
 
-**Status:** in progress: P06.1 to P06.3 done, P06.4 next. Part of the
+**Status:** in progress: P06.1 to P06.4 done, P06.5 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -228,7 +228,7 @@ gradient needs its own base airflow, which is a scenario's.
 | P06.1 | `feat(sensors): define sensor and observation contracts` | Done |
 | P06.2 | `feat(sensors): add point environment sensors` | Done |
 | P06.3 | `feat(sensors): add noise, bias, drift, dropout and latency` | Done |
-| P06.4 | `feat(cameras): add a virtual RGB camera and its frustum` | Planned |
+| P06.4 | `feat(cameras): add a virtual RGB camera and its frustum` | Done |
 | P06.5 | `feat(cameras): add depth and instance passes` | Planned |
 | P06.6 | `feat(observations): add the observation log and history charts` | Planned |
 | P06.7 | `test(sensors): add the sensor lab, its occlusion and noise` | Planned |
@@ -360,6 +360,33 @@ drawing what it sees. Visible result: the main view shows the camera and
 its cone; the panel shows exactly what it sees. Tests: a known object at a
 known place projects to the expected pixels, in Python and in the viewer
 alike.
+
+#### As implemented
+
+- **The projection:** a camera's frame has x along the way it looks, y to
+  its left and z up, its sideways axis kept level. A point at (x, y, z)
+  lands on pixel (ppx − fx·y/x, ppy − fy·z/x), u to the right and v down
+  the picture; a point behind it lands nowhere. `Camera.project` and
+  `Camera.sees` in Python, and `project` and `pixelAt` in
+  `src/sensors/camera.ts`, are tested on the same level camera and the
+  same points.
+- **The browser camera** is a second canvas, drawn by the same renderer
+  with the main view's lights and background. Its projection matrix is set
+  from the intrinsics, principal point included, rather than from a field
+  of view, so it draws the simulator's pinhole exactly. It keeps its
+  drawing, so a test can read its pixels.
+- **The climate box's camera,** `front_camera`, stands at the front of the
+  house, 2.2 m up, looking down it at the heater: 640 × 480 pixels, 70°
+  across. It sees the heater and the dehumidifier, and not the fan
+  hanging above and just ahead of it.
+- **Scene:** a camera's entity carries its eye as well as its target, so
+  the viewer can draw it without inverting its rotation.
+- **The viewer:** every camera's frustum is drawn in the main view, to
+  1.5 m out. Selecting a camera leads the inspector with its picture and
+  its intrinsics; a selected sensor's reading moved there too, from the
+  top of the column. A browser test reads the picture's pixels where the
+  simulator projects the heater and the dehumidifier: grey while both are
+  off, the heater red once it runs.
 
 ### P06.5: Depth and instance passes
 

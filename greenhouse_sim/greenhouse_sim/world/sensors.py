@@ -9,6 +9,12 @@ at and its intrinsics, as the protocol describes a real camera's
 
 Each sensor is also a fixture (`fixture`), for what checks a layout's
 geometry: a small housing, in the way of nothing.
+
+A camera projects a point by plain pinhole geometry (`project`): in its own
+frame, x along the way it looks, y to its left and z up, a point at
+(x, y, z) lands on pixel (ppx − fx y / x, ppy − fy z / x), u to the right
+and v down its picture, as image pixels are counted. The viewer draws its
+picture with the same projection.
 """
 
 import math
@@ -130,6 +136,41 @@ class Camera(_Sensor):
         pitch = math.atan2(dz, math.hypot(dx, dy))
         # Pitching x up towards +z is a negative turn about y.
         return Quaternion.about(_UP, heading).after(Quaternion.about(_ACROSS, -pitch))
+
+    def in_frame(self, point: Vector3) -> Vector3:
+        """A point of the world in the camera's own frame: x along the way it
+        looks, y to its left, z up."""
+        q = self.rotation()
+        back = Quaternion(w=q.w, x=-q.x, y=-q.y, z=-q.z)
+        return back.rotate(
+            Vector3(
+                x=point.x - self.position.x,
+                y=point.y - self.position.y,
+                z=point.z - self.position.z,
+            )
+        )
+
+    def project(self, point: Vector3) -> tuple[float, float] | None:
+        """Where a point lands on the camera's picture, in pixels from its
+        top left corner, u to the right and v down; None if it lies behind
+        the camera. A point may land outside the picture (`sees`)."""
+        seen = self.in_frame(point)
+        if seen.x <= 0:
+            return None
+        intrinsics = self.intrinsics
+        return (
+            intrinsics.ppx - intrinsics.fx * seen.y / seen.x,
+            intrinsics.ppy - intrinsics.fy * seen.z / seen.x,
+        )
+
+    def sees(self, point: Vector3) -> bool:
+        """Whether a point lands on the camera's picture, ignoring what may
+        hide it."""
+        pixel = self.project(point)
+        if pixel is None:
+            return False
+        u, v = pixel
+        return 0 <= u < self.intrinsics.width and 0 <= v < self.intrinsics.height
 
     def transform(self) -> Transform:
         """Its body's frame: its base centred under its position."""

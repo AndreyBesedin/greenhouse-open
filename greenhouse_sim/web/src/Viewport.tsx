@@ -28,11 +28,11 @@ const CUBE_CENTRE: [number, number, number] = [
 ];
 const CUBE_COLOR = "#4f8a5b";
 const GRID_COLORS = { centre: "#888888", cells: "#cccccc" };
-const BACKGROUND_COLOR = "#f4f4f2";
+export const BACKGROUND_COLOR = "#f4f4f2";
 
-const AMBIENT_LIGHT_INTENSITY = 0.6;
-const SUN_INTENSITY = 1.2;
-const SUN = { x: 5, y: 10, z: 7 };
+export const AMBIENT_LIGHT_INTENSITY = 0.6;
+export const SUN_INTENSITY = 1.2;
+export const SUN = { x: 5, y: 10, z: 7 };
 // How near a click must pass to a line, such as the world axes, to land on
 // it. Three.js's default of a metre would let the axes take clicks meant for
 // the ground around them.
@@ -100,6 +100,7 @@ export function Viewport({
   return (
     <Canvas
       camera={{ fov: CAMERA_FIELD_OF_VIEW_DEG }}
+      data-testid="main-view"
       onCreated={({ raycaster }) => {
         raycaster.params.Line = { threshold: LINE_PICK_TOLERANCE_M };
       }}
