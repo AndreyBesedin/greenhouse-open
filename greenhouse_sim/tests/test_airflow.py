@@ -153,6 +153,7 @@ def test_each_scenario_names_its_own_airflow_which_it_offers_first() -> None:
         "airflow_box": "uniform",
         "tomato_compartment": "buoyancy",
         "climate_box": "uniform",
+        "sensor_lab": "gradient",
     }
     for scenario_id, kind in kinds.items():
         assert fields.field_names(scenario_id)[0] == kind

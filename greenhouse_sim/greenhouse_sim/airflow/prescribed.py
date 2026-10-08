@@ -1,7 +1,7 @@
 """Prescribed airflow: known patterns of flow, set by a few numbers.
 
 Three patterns, each a function of position over the grid's box (its width
-along y, its height along z):
+along y, its height along z), and a known field for checking sensors:
 
 - **uniform:** one breeze everywhere, at one temperature.
 - **buoyancy:** convection, as warm air over a warm middle makes it. Air
@@ -10,6 +10,10 @@ along y, its height along z):
   middle.
 - **vortex:** one roll across the house, turning about its length, as a
   draught along the roof might drive, at one temperature.
+- **gradient:** still air whose temperature rises linearly along the house.
+  A field's samples interpolate linearly between its cells' centres, so a
+  sensor between them reads the line exactly. It is a scenario's own
+  airflow, never offered to another.
 
 The rolls follow stream functions in the y-z plane, ψ = A sin(m π y/W)
 sin(π z/H) for m rolls. So they are divergence-free, as moving air is, and
@@ -113,9 +117,40 @@ class VortexAirflow(BaseModel):
         )
 
 
+class GradientAirflow(BaseModel):
+    """Still air whose temperature rises linearly along the house: a known
+    field to check sensors against."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["gradient"] = "gradient"
+    # The air's temperature at the house's front, x = 0, and how much warmer
+    # it is each metre along the house.
+    front_temperature_c: float = 16.0
+    rise_c_per_m: float = 0.5
+
+    def temperature_at(self, x: float) -> float:
+        """The air's temperature `x` metres along the house."""
+        return self.front_temperature_c + self.rise_c_per_m * x
+
+    def field(self, field_id: str, grid: FieldGrid, time_s: float = 0.0) -> EnvironmentField:
+        z, _, x = _coordinates(grid)
+        return EnvironmentField(
+            field_id=field_id,
+            source="prescribed:gradient",
+            grid=grid,
+            time_s=time_s,
+            channels={
+                AirQuantity.VELOCITY: np.zeros((*z.shape, VECTOR_COMPONENTS)),
+                AirQuantity.TEMPERATURE: self.front_temperature_c + self.rise_c_per_m * x,
+            },
+        )
+
+
 # A scenario's airflow: one of the prescribed patterns, with its numbers.
 type PrescribedAirflow = Annotated[
-    UniformAirflow | BuoyancyAirflow | VortexAirflow, Field(discriminator="kind")
+    UniformAirflow | BuoyancyAirflow | VortexAirflow | GradientAirflow,
+    Field(discriminator="kind"),
 ]
 
 # Each pattern by name, as its typical numbers set it.

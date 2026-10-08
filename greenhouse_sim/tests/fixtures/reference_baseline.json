@@ -147,6 +147,77 @@
       "day 14: state=e4b391af5c88 observations=de317b05be35 ground_truth=a592531f8503 actions=1789e4b76fcd"
     ]
   },
+  "sensor_lab": {
+    "summary": {
+      "plants": 1,
+      "days": 10,
+      "air_temperature_c": 24.204,
+      "humidity_pct": 62.603,
+      "stem_length_cm": {
+        "min": 39.1,
+        "mean": 39.1,
+        "max": 39.1
+      },
+      "lowered_length_cm": 20.0,
+      "water_reservoir_ml_mean": 905.53,
+      "fully_water_stressed_plants": 0,
+      "trusses": 1,
+      "fruits_by_status": {
+        "GROWING": 3
+      },
+      "fruits_by_ripeness": {
+        "IMMATURE_GREEN": 3
+      },
+      "fruit_mass_on_plants_g": 0.16,
+      "cumulative_harvest_g": 0.0,
+      "actions": {
+        "accepted": 8,
+        "refused": 4
+      },
+      "events_by_type": {
+        "HARVEST": 2,
+        "LOWERING": 2,
+        "MANUAL_INSPECTION": 1,
+        "WATERING": 3
+      },
+      "observations_by_type": {
+        "air_temperature_c": 10,
+        "estimated_ripe_mass_g": 10,
+        "ripe_fruit_count": 10,
+        "soil_moisture_pct": 10,
+        "visible_fruit_count": 10,
+        "visible_height_cm": 10
+      },
+      "observation_value_sums": {
+        "air_temperature_c": 253.7,
+        "estimated_ripe_mass_g": 0.0,
+        "ripe_fruit_count": 1.0,
+        "soil_moisture_pct": 459.2,
+        "visible_fruit_count": 16.0,
+        "visible_height_cm": 253.3
+      },
+      "observation_mean_absolute_error": {
+        "air_temperature_c": 0.37,
+        "estimated_ripe_mass_g": 0.0,
+        "ripe_fruit_count": 0.1,
+        "soil_moisture_pct": 1.664,
+        "visible_fruit_count": 0.1,
+        "visible_height_cm": 0.764
+      }
+    },
+    "days": [
+      "day 01: state=21bc7c1a6004 observations=765b28086797 ground_truth=caa91c6a3180 actions=f92da432258e",
+      "day 02: state=0b7545fe3a93 observations=307f53d46a71 ground_truth=21632bc8f639 actions=5ead270af919",
+      "day 03: state=2d72e6f8925e observations=8d7bc06cdbd8 ground_truth=dfc8d589703b actions=5ab7d49e6c2d",
+      "day 04: state=f6aeb81732f3 observations=660eb4ecdc43 ground_truth=b50849e4bfcc actions=29e9e4d73728",
+      "day 05: state=47a449b26632 observations=c9baeb269872 ground_truth=be84be8a3b39 actions=805c19bf031b",
+      "day 06: state=251869f2c364 observations=f819dcfca11f ground_truth=dc30121ed87d actions=b9b8a6cb1438",
+      "day 07: state=de4951223cd4 observations=fcd7bceac30e ground_truth=9ec574362402 actions=39d2416d1ef1",
+      "day 08: state=0e485c306223 observations=ee7f53149d35 ground_truth=50d1b43c6a71 actions=d6816a333a07",
+      "day 09: state=d9f35831a444 observations=63449455731e ground_truth=551f433d4d18 actions=67962d8d6808",
+      "day 10: state=fabc8c4a340c observations=a46663943f6f ground_truth=b149201ea787 actions=2fc3000db1a8"
+    ]
+  },
   "tomato_compartment": {
     "summary": {
       "plants": 320,

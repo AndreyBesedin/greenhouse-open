@@ -1,0 +1,140 @@
+{
+  "$schema": "../../layout.schema.json",
+  "crop_rows": {
+    "origin": {
+      "x": 0.4,
+      "y": 0.6
+    },
+    "heading": 0.0,
+    "rows": 1,
+    "positions_per_row": 1,
+    "plant_pitch": 0.5,
+    "row_spacing": 1.6
+  },
+  "placed": [
+    {
+      "fixture_id": "box_near",
+      "primitive": "box",
+      "kind": "obstacle",
+      "base": {
+        "x": 3.0,
+        "y": 3.4,
+        "z": 0.0
+      },
+      "size_x": 0.6,
+      "size_y": 0.8,
+      "size_z": 1.8,
+      "heading": 0.0
+    },
+    {
+      "fixture_id": "box_middle",
+      "primitive": "box",
+      "kind": "obstacle",
+      "base": {
+        "x": 7.0,
+        "y": 3.4,
+        "z": 0.0
+      },
+      "size_x": 0.6,
+      "size_y": 1.0,
+      "size_z": 1.4,
+      "heading": 0.0
+    },
+    {
+      "fixture_id": "box_far",
+      "primitive": "box",
+      "kind": "obstacle",
+      "base": {
+        "x": 10.0,
+        "y": 4.0,
+        "z": 0.0
+      },
+      "size_x": 0.6,
+      "size_y": 1.2,
+      "size_z": 1.8,
+      "heading": 0.0
+    }
+  ],
+  "zones": [],
+  "equipment": [],
+  "sensors": [
+    {
+      "sensor_id": "clean_front",
+      "position": {
+        "x": 3.0,
+        "y": 1.2,
+        "z": 1.5
+      },
+      "cadence_s": 60.0,
+      "kind": "temperature",
+      "imperfections": {
+        "noise_sd": 0.0,
+        "quantization": 0.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "sensor_id": "imperfect_front",
+      "position": {
+        "x": 3.0,
+        "y": 1.5,
+        "z": 1.5
+      },
+      "cadence_s": 60.0,
+      "kind": "temperature",
+      "imperfections": {
+        "noise_sd": 0.3,
+        "quantization": 0.1,
+        "bias": 0.5,
+        "drift_per_hour": 1.2,
+        "dropout": 0.1,
+        "latency_s": 30.0
+      }
+    },
+    {
+      "sensor_id": "clean_back",
+      "position": {
+        "x": 9.0,
+        "y": 1.2,
+        "z": 1.5
+      },
+      "cadence_s": 60.0,
+      "kind": "temperature",
+      "imperfections": {
+        "noise_sd": 0.0,
+        "quantization": 0.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "sensor_id": "lab_camera",
+      "position": {
+        "x": 0.6,
+        "y": 3.2,
+        "z": 1.6
+      },
+      "cadence_s": 60.0,
+      "kind": "camera",
+      "target": {
+        "x": 11.0,
+        "y": 3.2,
+        "z": 0.8
+      },
+      "intrinsics": {
+        "width": 640,
+        "height": 480,
+        "fx": 457.007,
+        "fy": 457.007,
+        "ppx": 320.0,
+        "ppy": 240.0,
+        "distortion": []
+      }
+    }
+  ]
+}
