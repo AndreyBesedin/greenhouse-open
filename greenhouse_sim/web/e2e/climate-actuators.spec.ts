@@ -13,6 +13,9 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 // In the fan's core, beside the heater, beside the dehumidifier, and under
 // the roof vent.
 const PROBES = "3:3.2:2.8,10.5:1:0.75,6:5.3:0.75,6:2.5:3.75";
+// A moment of a run can take CI's simulator a while, behind the scene and
+// the charts it is asked for beside it.
+const ARRIVES_MS = 20_000;
 
 /** A number a probe's reading gives, after its name. */
 async function reads(reading: Locator, name: "temperature" | "humidity"): Promise<number> {
@@ -32,7 +35,10 @@ async function speedOf(reading: Locator): Promise<number> {
 async function moveTo(page: Page, seconds: number): Promise<void> {
   await page.getByRole("slider", { name: "Time into the run" }).fill(String(seconds));
   await expect(page).toHaveURL(seconds === 0 ? /^(?!.*&t=)/ : new RegExp(`&t=${seconds}(&|$)`));
-  await expect(page.getByTestId("climate-time")).toHaveText(`${seconds / 60} min`);
+  // Shown once that moment's field has arrived.
+  await expect(page.getByTestId("climate-time")).toHaveText(`${seconds / 60} min`, {
+    timeout: ARRIVES_MS,
+  });
 }
 
 test("climate-actuators: the box's equipment and vent change its air, visibly and measurably", async ({
