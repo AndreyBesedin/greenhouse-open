@@ -13,22 +13,30 @@ export type FieldState =
   | { status: "loaded"; field: EnvironmentField };
 
 /** What a scenario's field is asked for with: another of its layouts, which
- * its CFD solution depends on, and its equipment's levels, which its climate
- * depends on. */
+ * its CFD solution depends on, and its equipment's levels and a moment of
+ * its climate run, which its climate depends on. */
 export interface FieldChanges {
   layout?: string | undefined;
   levels?: Readonly<Record<string, number>> | undefined;
+  /** Seconds into the climate run. */
+  time?: number | undefined;
 }
+
+/** How long a climate run lasts, in seconds, as the simulator runs it. */
+export const CLIMATE_RUN_S = 3600;
 
 /** Where a scenario's field is published (`GET /api/scenarios/{id}/fields/{name}`),
  * with another of its layouts if one is named, and, for its climate, its
- * equipment at the levels set. */
+ * equipment at the levels set, at a moment of its run. */
 export function fieldUrl(scenarioId: string, name: string, changes: FieldChanges = {}): string {
   const base = `/api/scenarios/${encodeURIComponent(scenarioId)}/fields/${encodeURIComponent(name)}`;
-  const levels = name === CLIMATE_FIELD ? pairsText(changes.levels) : "";
+  const climate = name === CLIMATE_FIELD;
+  const levels = climate ? pairsText(changes.levels) : "";
+  const time = climate && changes.time !== undefined && changes.time > 0 ? changes.time : null;
   const parts = [
     ...(changes.layout === undefined ? [] : [`layout=${encodeURIComponent(changes.layout)}`]),
     ...(levels === "" ? [] : [`set=${levels}`]),
+    ...(time === null ? [] : [`t=${time}`]),
   ];
   return parts.length === 0 ? base : `${base}?${parts.join("&")}`;
 }

@@ -40,6 +40,9 @@ export type SceneSource =
       field?: string;
       fieldView?: FieldView;
       slice?: Slice;
+      /** How far into its climate run the drawn field is, in seconds, for
+       * its climate. */
+      time?: number;
       /** Another of its fields, compared with the drawn one at the probes. */
       compare?: string;
       /** Points the drawn field is read at. */
@@ -85,6 +88,7 @@ export function sourceFromSearch(search: string): SceneSource {
     const fieldView = fieldViewFrom(parameters.get("fieldView"));
     const slice = sliceFrom(parameters.get("slice"));
     const compare = parameters.get("compare");
+    const time = timeFrom(parameters.get("t"));
     const probes = probesFrom(parameters.get("probes"));
     const camera = cameraFrom(parameters.get("camera"));
     return {
@@ -94,6 +98,7 @@ export function sourceFromSearch(search: string): SceneSource {
       ...(field ? { field } : {}),
       ...(field && fieldView ? { fieldView } : {}),
       ...(field && slice ? { slice } : {}),
+      ...(field && time !== null ? { time } : {}),
       ...(field && compare && compare !== field ? { compare } : {}),
       ...(field && probes ? { probes } : {}),
       ...(parameters.get("cfd") === CFD_BOUNDARIES ? { cfdBoundaries: true as const } : {}),
@@ -182,6 +187,7 @@ function fieldQuery(source: {
   field?: string;
   fieldView?: FieldView;
   slice?: Slice;
+  time?: number;
   compare?: string;
   probes?: Point3[];
 }): string {
@@ -192,6 +198,7 @@ function fieldQuery(source: {
     `&field=${encodeURIComponent(source.field)}`,
     source.fieldView === undefined ? "" : `&fieldView=${source.fieldView}`,
     source.slice === undefined ? "" : `&slice=${sliceText(source.slice)}`,
+    source.time === undefined ? "" : `&t=${source.time}`,
     source.compare === undefined ? "" : `&compare=${encodeURIComponent(source.compare)}`,
     source.probes === undefined || source.probes.length === 0
       ? ""
@@ -230,6 +237,12 @@ export function changesQuery(
   return parts.length === 0
     ? ""
     : `${separator}${parts.map(([name, text]) => `${name}=${text}`).join("&")}`;
+}
+
+/** The moment an address asks for, in seconds from 0, or null. */
+function timeFrom(value: string | null): number | null {
+  const time = Number(value ?? "");
+  return value !== null && value !== "" && Number.isFinite(time) && time >= 0 ? time : null;
 }
 
 /** The pairs an address sets, or null when it sets none or says nothing

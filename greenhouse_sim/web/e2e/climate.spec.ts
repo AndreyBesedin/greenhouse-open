@@ -46,3 +46,50 @@ test("climate: a running fan drives the air along its axis, and its level sets h
     await expect(status).toContainText("air speed 0 to 0 m/s.");
   });
 });
+
+// Beside the climate box's heater, in its back right corner, and in the
+// middle of the house, both 0.75 m up, on a slice of its temperature there.
+const BY_THE_HEATER = "10.5:1:0.75,6:3.2:0.75";
+
+test("climate: a running heater warms its corner and the house through the run", async ({
+  page,
+}) => {
+  await page.goto(
+    `/?scenario=climate_box&set=heater:1&field=climate&fieldView=slice&slice=temperature:z:0.75&probes=${BY_THE_HEATER}`,
+  );
+  const run = page.getByRole("group", { name: "Climate run" });
+  const moment = page.getByTestId("climate-time");
+  const corner = page.getByTestId("probe-1-reading");
+  const middle = page.getByTestId("probe-2-reading");
+
+  await test.step("at the run's start, the air is 16 °C everywhere", async () => {
+    await expect(moment).toHaveText("0 min");
+    await expect(corner).toHaveText(/temperature 16\.00 °C$/);
+    await expect(middle).toHaveText(/temperature 16\.00 °C$/);
+  });
+
+  await test.step("ten minutes in, its corner is warm, and the cold glass cools the rest", async () => {
+    await run.getByRole("slider", { name: "Time into the run" }).fill("600");
+    await expect(page).toHaveURL(/&t=600(&|$)/);
+    await expect(moment).toHaveText("10 min");
+    await expect(corner).toHaveText(/temperature 31\.88 °C$/);
+    await expect(middle).toHaveText(/temperature 14\.96 °C$/);
+  });
+
+  await test.step("played, the run moves on a minute at a time, until paused", async () => {
+    await run.getByRole("button", { name: "Play" }).click();
+    await expect(moment).toHaveText("11 min");
+    await expect(moment).toHaveText("12 min");
+    await run.getByRole("button", { name: "Pause" }).click();
+    await expect(run.getByRole("button", { name: "Play" })).toBeVisible();
+  });
+
+  await test.step("without the heater, the house has cooled towards the 8 °C outside", async () => {
+    await page.getByRole("slider", { name: "Time into the run" }).fill("600");
+    await page
+      .getByRole("group", { name: "Equipment" })
+      .getByRole("checkbox", { name: "heater" })
+      .uncheck();
+    await expect(middle).toHaveText(/temperature 9\.13 °C$/);
+  });
+});

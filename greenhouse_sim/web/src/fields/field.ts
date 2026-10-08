@@ -34,6 +34,8 @@ export interface Channel {
 export interface EnvironmentField {
   fieldId: string;
   source: string;
+  /** The moment it describes, in seconds: into a climate run, for a climate. */
+  timeS: number;
   grid: FieldGrid;
   channels: Partial<Record<AirQuantity, Channel>>;
 }
@@ -76,7 +78,13 @@ export function checkField(body: unknown): FieldCheck {
     }
     return {
       ok: true,
-      field: { fieldId: body.field_id, source: body.source, grid: body.grid, channels },
+      field: {
+        fieldId: body.field_id,
+        source: body.source,
+        timeS: body.time_s,
+        grid: body.grid,
+        channels,
+      },
     };
   } catch (error) {
     return { ok: false, problems: [error instanceof Error ? error.message : String(error)] };

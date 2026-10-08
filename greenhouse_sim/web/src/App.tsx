@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { type BuildInfo, buildInfo } from "./buildInfo";
 import type { PresetName, PresetRequest } from "./camera";
@@ -15,6 +15,7 @@ import { ScalarLegend } from "./debug/ScalarLegend";
 import type { ScalarRange } from "./debug/scalar";
 import { colouringBy, scalarProperties } from "./debug/scalar";
 import { EquipmentControls } from "./EquipmentControls";
+import { ClimateTime } from "./fields/ClimateTime";
 import type { FieldView, Slice } from "./fields/display";
 import { defaultSlice, quantityScale } from "./fields/drawing";
 import { FieldArrows } from "./fields/FieldArrows";
@@ -24,7 +25,7 @@ import { FieldProbes } from "./fields/FieldProbes";
 import { FieldSlice } from "./fields/FieldSlice";
 import { FieldStreamlines } from "./fields/FieldStreamlines";
 import { MAX_PROBES, probeOverlays } from "./fields/probes";
-import { type FieldState, loadField } from "./fields/source";
+import { CLIMATE_FIELD, type FieldState, loadField } from "./fields/source";
 import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
@@ -75,6 +76,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // click places a probe, and how high.
   const [compared, setCompared] = useState<FieldState>({ status: "none" });
   const [placingProbes, setPlacingProbes] = useState(false);
+  const [playingClimate, setPlayingClimate] = useState(false);
   const [probeHeight, setProbeHeight] = useState(DEFAULT_PROBE_HEIGHT_M);
   // A range the viewer chose for the field's colours, in place of its own.
   const [fieldRange, setFieldRange] = useState<ScalarRange | null>(null);
@@ -161,6 +163,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // field is loaded again only when they change.
   const fieldLayout = source.kind === "scenario" ? source.layout : undefined;
   const fieldLevels = source.kind === "scenario" ? pairsText(source.levels) : "";
+  const fieldTime = source.kind === "scenario" ? (source.time ?? 0) : 0;
   useEffect(() => {
     if (fieldScenario === null || fieldName === null) {
       setField({ status: "none" });
@@ -168,7 +171,11 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     }
     let current = true;
     setField((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
-    const changes = { layout: fieldLayout, levels: pairsFrom(fieldLevels) ?? {} };
+    const changes = {
+      layout: fieldLayout,
+      levels: pairsFrom(fieldLevels) ?? {},
+      time: fieldTime,
+    };
     void loadField(fieldScenario, fieldName, changes).then((state) => {
       if (current) {
         setField(state);
@@ -177,7 +184,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     return () => {
       current = false;
     };
-  }, [fieldScenario, fieldName, fieldLayout, fieldLevels]);
+  }, [fieldScenario, fieldName, fieldLayout, fieldLevels, fieldTime]);
 
   // The field compared with the drawn one, loaded as the drawn one is.
   const compareName = source.kind === "scenario" ? (source.compare ?? null) : null;
@@ -188,7 +195,11 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     }
     let current = true;
     setCompared((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
-    const changes = { layout: fieldLayout, levels: pairsFrom(fieldLevels) ?? {} };
+    const changes = {
+      layout: fieldLayout,
+      levels: pairsFrom(fieldLevels) ?? {},
+      time: fieldTime,
+    };
     void loadField(fieldScenario, compareName, changes).then((state) => {
       if (current) {
         setCompared(state);
@@ -197,7 +208,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     return () => {
       current = false;
     };
-  }, [fieldScenario, compareName, fieldLayout, fieldLevels]);
+  }, [fieldScenario, compareName, fieldLayout, fieldLevels, fieldTime]);
 
   // The boundaries a CFD solver is given, changed as the scene is, drawn
   // over it when asked for; the last stays on show until the next arrives.
@@ -303,6 +314,19 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
     setSource(next);
   }
+
+  // A moment of the climate run, kept in the address; 0, its start, is left out.
+  const setClimateTime = useCallback((seconds: number): void => {
+    setSource((current) => {
+      if (current.kind !== "scenario") {
+        return current;
+      }
+      const { time: _, ...rest } = current;
+      const next: SceneSource = seconds > 0 ? { ...rest, time: seconds } : rest;
+      history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
+      return next;
+    });
+  }, []);
 
   function setLevels(levels: Record<string, number>): void {
     if (source.kind !== "scenario") {
@@ -498,6 +522,15 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 onChoose={chooseField}
                 onView={chooseFieldView}
                 onSlice={chooseSlice}
+              />
+            )}
+            {source.kind === "scenario" && source.field === CLIMATE_FIELD && (
+              <ClimateTime
+                time={fieldTime}
+                shown={field.status === "loaded" ? field.field.timeS : null}
+                playing={playingClimate}
+                onTime={setClimateTime}
+                onPlaying={setPlayingClimate}
               />
             )}
             {source.kind === "scenario" && source.field !== undefined && probedField !== null && (

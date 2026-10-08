@@ -305,6 +305,22 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* A climate run's moment: play, a slider over the run, and the moment shown. */
+.climate-time {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.climate-time-slider {
+  flex: 1;
+  min-width: 0;
+}
+
 /* Room for a switch beside each piece's name, kept on one line, and the
  * openings' sliders lined up with the equipment's. */
 .opening-control,
