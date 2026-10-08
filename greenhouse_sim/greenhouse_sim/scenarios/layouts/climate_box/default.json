@@ -86,8 +86,8 @@
       "size_y": 1.0,
       "size_z": 1.4,
       "kind": "dehumidifier",
-      "removal_kg_h": 5.0,
-      "heat_w": 4500.0
+      "removal_kg_h": 1.0,
+      "heat_w": 1200.0
     }
   ]
 }

@@ -136,7 +136,7 @@ def test_a_unit_gives_its_rated_effect_times_its_level_to_the_air_around_it(
 def test_a_dehumidifier_takes_its_rated_water_times_its_level_from_the_same_air() -> None:
     terms = source_terms(DEHUMIDIFIER, 0.5, GRID, SOLID)
 
-    assert terms.total_water_removed_kg_s() == pytest.approx(5.0 / SECONDS_PER_HOUR / 2)
+    assert terms.total_water_removed_kg_s() == pytest.approx(1.0 / SECONDS_PER_HOUR / 2)
     np.testing.assert_array_equal(terms.water_removed_kg_s > 0, terms.heat_w > 0)
     assert source_terms(HEATER, 1.0, GRID, SOLID).total_water_removed_kg_s() == 0.0
 

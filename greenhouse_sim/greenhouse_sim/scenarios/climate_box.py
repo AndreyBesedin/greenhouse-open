@@ -69,7 +69,12 @@ CLIMATE_BOX = ScenarioConfig(
     layout=load_layout("climate_box"),
     # Still air, so that a fan's jet stands out.
     airflow=UniformAirflow(velocity_m_s=Vector3(x=0.0, y=0.0, z=0.0)),
-    # A cold night, when heating matters: 8 °C outside, 16 °C inside to
-    # start, through single glass.
-    climate=ClimateSettings(outside_temperature_c=8.0, start_temperature_c=16.0),
+    # A cold, damp night, when heating and drying matter: 8 °C and 90%
+    # outside, 16 °C and 85% inside to start, through single glass.
+    climate=ClimateSettings(
+        outside_temperature_c=8.0,
+        outside_humidity_pct=90.0,
+        start_temperature_c=16.0,
+        start_humidity_pct=85.0,
+    ),
 )

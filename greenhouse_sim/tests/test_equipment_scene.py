@@ -50,8 +50,8 @@ def test_the_climate_box_draws_its_equipment_off_with_its_rated_capacity() -> No
     assert dehumidifier.properties == {
         "actuator_id": "dehumidifier",
         "level": 0.0,
-        "removal_kg_h": 5.0,
-        "heat_w": 4_500.0,
+        "removal_kg_h": 1.0,
+        "heat_w": 1_200.0,
     }
     assert fan.label == "fan"
 

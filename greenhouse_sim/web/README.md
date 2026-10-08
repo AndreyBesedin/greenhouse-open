@@ -80,7 +80,9 @@ jet blowing down the house). A fan carries an arrow the way it blows. The
 climate is its air through a climate run, an hour long: "Climate run" moves
 through it a minute at a time, or plays it (`&t=600`, ten minutes in), and a
 temperature slice shows a heater warming its corner and the house
-(`&set=heater:1&fieldView=slice&slice=temperature:z:0.75`).
+(`&set=heater:1&fieldView=slice&slice=temperature:z:0.75`), and a humidity
+slice a dehumidifier drying the air around it
+(`&set=dehumidifier:1&fieldView=slice&slice=humidity:z:0.75`).
 `/qa/airflow-box?view=vectors` and `?view=slice` draw the airflow QA case's
 solution from the simulator's files (`tests/test_airflow_qa.py --update`),
 for its screenshot tests; switching a scenario's layout keeps its field, probes

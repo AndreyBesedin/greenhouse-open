@@ -20,7 +20,7 @@ test("climate: a running fan drives the air along its axis, and its level sets h
       "climate_box_climate (climate:prescribed:uniform): 24 × 13 × 8 cells, air speed 0 to 0 m/s.",
     );
     await expect(inTheCore).toHaveText(
-      "climate: 0.00 m/s (0.00, 0.00, 0.00), temperature 16.00 °C",
+      "climate: 0.00 m/s (0.00, 0.00, 0.00), temperature 16.00 °C, humidity 85.00 %",
     );
   });
 
@@ -64,16 +64,17 @@ test("climate: a running heater warms its corner and the house through the run",
 
   await test.step("at the run's start, the air is 16 °C everywhere", async () => {
     await expect(moment).toHaveText("0 min");
-    await expect(corner).toHaveText(/temperature 16\.00 °C$/);
-    await expect(middle).toHaveText(/temperature 16\.00 °C$/);
+    await expect(corner).toHaveText(/temperature 16\.00 °C, humidity 85\.00 %$/);
+    await expect(middle).toHaveText(/temperature 16\.00 °C, humidity 85\.00 %$/);
   });
 
   await test.step("ten minutes in, its corner is warm, and the cold glass cools the rest", async () => {
     await run.getByRole("slider", { name: "Time into the run" }).fill("600");
     await expect(page).toHaveURL(/&t=600(&|$)/);
     await expect(moment).toHaveText("10 min");
-    await expect(corner).toHaveText(/temperature 31\.88 °C$/);
-    await expect(middle).toHaveText(/temperature 14\.96 °C$/);
+    // Warmed, the corner's air is far from saturated.
+    await expect(corner).toHaveText(/temperature 31\.88 °C, humidity 31\.58 %$/);
+    await expect(middle).toHaveText(/temperature 14\.96 °C, humidity 84\.80 %$/);
   });
 
   await test.step("played, the run moves on a minute at a time, until paused", async () => {
@@ -84,12 +85,40 @@ test("climate: a running heater warms its corner and the house through the run",
     await expect(run.getByRole("button", { name: "Play" })).toBeVisible();
   });
 
-  await test.step("without the heater, the house has cooled towards the 8 °C outside", async () => {
+  await test.step("without the heater, the house has cooled to 9 °C, its air saturated", async () => {
     await page.getByRole("slider", { name: "Time into the run" }).fill("600");
     await page
       .getByRole("group", { name: "Equipment" })
       .getByRole("checkbox", { name: "heater" })
       .uncheck();
-    await expect(middle).toHaveText(/temperature 9\.13 °C$/);
+    await expect(middle).toHaveText(/temperature 9\.13 °C, humidity 100\.00 %$/);
+  });
+});
+
+// Beside the climate box's dehumidifier, halfway along its left wall, and in
+// its front right corner, both 0.75 m up, on a slice of the relative humidity.
+const BY_THE_DEHUMIDIFIER = "6:5.3:0.75,2:1:0.75";
+
+test("climate: a running dehumidifier dries the air around it", async ({ page }) => {
+  await page.goto(
+    `/?scenario=climate_box&set=dehumidifier:1&field=climate&fieldView=slice&slice=humidity:z:0.75&t=600&probes=${BY_THE_DEHUMIDIFIER}`,
+  );
+  const beside = page.getByTestId("probe-1-reading");
+  const far = page.getByTestId("probe-2-reading");
+  await expect(page.getByTestId("field-legend-quantity")).toHaveText("humidity (%)");
+
+  await test.step("ten minutes in, it has dried and warmed its side of the cooling house", async () => {
+    await expect(beside).toHaveText(/temperature 11\.26 °C, humidity 87\.38 %$/);
+    // Unheated, the far corner has cooled to saturation.
+    await expect(far).toHaveText(/temperature 9\.70 °C, humidity 99\.93 %$/);
+  });
+
+  await test.step("with the heater on too, the whole house is drier", async () => {
+    await page
+      .getByRole("group", { name: "Equipment" })
+      .getByRole("checkbox", { name: "heater" })
+      .check();
+    await expect(beside).toHaveText(/temperature 16\.59 °C, humidity 73\.19 %$/);
+    await expect(far).toHaveText(/temperature 12\.87 °C, humidity 95\.72 %$/);
   });
 });

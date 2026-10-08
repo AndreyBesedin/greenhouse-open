@@ -1,9 +1,11 @@
-"""The air's temperature, carried and mixed over a field's grid (P05.3).
+"""The air's temperature and water, carried and mixed over a field's grid
+(P05.3, P05.4).
 
-The air's temperature in every cell is advanced through time by finite
-volumes: what flows in through each face of a cell, what mixing brings
-across it, what equipment adds in it, and, for a cell against the walls or
-the roof, what the glazing passes to or from the outside.
+The air's temperature and humidity ratio in every cell are advanced through
+time by finite volumes: what flows in through each face of a cell, what
+mixing brings across it, what equipment adds or takes in it, and, for a
+cell against the walls or the roof, the heat the glazing passes to or from
+the outside.
 
 - **Advection** is first-order upwind, by the flow through each face, made
   to conserve mass (`climate.projection`); none crosses the grid's faces, or
@@ -14,19 +16,26 @@ the roof, what the glazing passes to or from the outside.
   diffusivity times the face's area over the cells' distance, κ A / h.
 - **Heat added** by equipment, its source terms (`climate.sources`), warms
   its cells by what their air can hold: ρ c_p V.
+- **Water removed** by equipment dries its cells, never by more than a
+  cell's air holds.
+- **Condensation:** air holds no more water than saturates it at its
+  temperature (`climate.psychrometrics`), checked every `CONDENSING_S` and
+  at the end; what it would hold beyond condenses, on the cold glass, and is
+  counted. Its latent heat is not.
 - **The envelope:** a cell against a wall or the roof exchanges U A (T_out −
   T) with the outside through the face it lies against, both ways. The floor
-  is not glass, and passes nothing.
+  is not glass, and passes nothing. Glass passes no water.
 - **The time step** keeps every cell's new temperature a weighted mean of the
   old ones: the air flowing in, the mixing and the exchange take at most
   half a cell's temperature away per step, which holds both the air crossing
   at most half a cell and explicit mixing's limit.
 
 With the envelope shut (U = 0), the heat the air gains is what equipment
-adds: exactly in still air, and to the projection's tolerance in a flow.
+adds, and the water it loses what equipment removes and what condenses:
+exactly in still air, and to the projection's tolerance in a flow.
 
-Cells obstacles fill are not air: they are left at the temperature they start
-at, and count for nothing.
+Cells obstacles fill are not air: they are left as they start, and count for
+nothing.
 """
 
 import math
@@ -36,7 +45,9 @@ from typing import Final
 import numpy as np
 
 from greenhouse_sim.climate.projection import FaceFlows
+from greenhouse_sim.climate.psychrometrics import saturation_ratio_g_kg
 from greenhouse_sim.climate.settings import ClimateSettings
+from greenhouse_sim.climate.sources import SourceTerms
 from greenhouse_sim.fields.field import FieldGrid
 
 AIR_DENSITY_KG_M3: Final = 1.2
@@ -45,6 +56,23 @@ AIR_HEAT_CAPACITY_J_KG_K: Final = 1005.0
 STEP_SHARE: Final = 0.5
 # The longest step, when nothing moves or mixes fast enough to need shorter.
 LONGEST_STEP_S: Final = 10.0
+GRAMS_PER_KG: Final = 1000.0
+# How often air beyond saturation condenses, in simulated seconds: often
+# enough that little supersaturated air is carried, and far less often than
+# a fan's steps, a twentieth of a second.
+CONDENSING_S: Final = 10.0
+
+
+@dataclass(frozen=True, eq=False)
+class AirState:
+    """The air in every cell of a grid, in its order (z, y, x): its
+    temperature (°C) and humidity ratio (g of water per kg of air), with the
+    water it has lost so far to equipment and to condensation, in kg."""
+
+    temperature: np.ndarray
+    humidity: np.ndarray
+    removed_kg: float = 0.0
+    condensed_kg: float = 0.0
 
 
 @dataclass(frozen=True, eq=False)
@@ -123,12 +151,12 @@ class Transport:
         fastest = float(taken.max()) / self.cell_volume_m3()
         return LONGEST_STEP_S if fastest <= 0 else min(LONGEST_STEP_S, STEP_SHARE / fastest)
 
-    def advance(self, temperature: np.ndarray, heat_w: np.ndarray, duration_s: float) -> np.ndarray:
-        """The temperature after `duration_s` from `temperature`, with
-        equipment adding `heat_w` in each cell, in equal steps no longer than
+    def advance(self, air: AirState, terms: SourceTerms, duration_s: float) -> AirState:
+        """The air after `duration_s`, with equipment adding and taking what
+        its source terms say in each cell, in equal steps no longer than
         `step_s`."""
         if duration_s <= 0:
-            return temperature.copy()
+            return air
         steps = math.ceil(duration_s / self.step_s())
         dt = duration_s / steps
         share = dt / self.cell_volume_m3()
@@ -138,23 +166,56 @@ class Transport:
         ]
         exchange = share * self.exchange_m3_s()
         outside = self.settings.outside_temperature_c
+        air_kg = AIR_DENSITY_KG_M3 * self.cell_volume_m3()
+        solid = self.solid
         added = (
             share
-            * np.where(self.solid, 0.0, heat_w)
+            * np.where(solid, 0.0, terms.heat_w)
             / (AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K)
         )
-        solid = self.solid
-        held = temperature[solid]
-        current = temperature.copy()
-        for _ in range(steps):
-            change = added + exchange * (outside - current)
-            for axis, low, high, into_low, into_high in takes:
-                difference = np.diff(current, axis=axis)
+        # What equipment would take each step, in grams per kilogram.
+        drying = dt * np.where(solid, 0.0, terms.water_removed_kg_s) * GRAMS_PER_KG / air_kg
+        condensing_every = max(1, round(CONDENSING_S / dt))
+        # Temperature and water, carried together: one pass over the faces.
+        carried = np.stack([air.temperature, air.humidity])
+        temperature, humidity = carried[0], carried[1]
+        held = carried[:, solid]
+        faces = [
+            (axis + 1, (slice(None), *low), (slice(None), *high), into_low, into_high)
+            for axis, low, high, into_low, into_high in takes
+        ]
+        removed = np.zeros_like(humidity)
+        condensed = np.zeros_like(humidity)
+        for step in range(1, steps + 1):
+            change = np.zeros_like(carried)
+            change[0] = added + exchange * (outside - temperature)
+            for axis, low, high, into_low, into_high in faces:
+                difference = np.diff(carried, axis=axis)
                 change[low] += into_low * difference
                 change[high] -= into_high * difference
-            current += change
-            current[solid] = held
-        return current
+            carried += change
+            # Equipment dries what the air then holds, never more.
+            taken = np.minimum(drying, humidity)
+            humidity -= taken
+            removed += taken
+            if step % condensing_every == 0 or step == steps:
+                beyond = np.where(
+                    solid, 0.0, np.maximum(humidity - saturation_ratio_g_kg(temperature), 0.0)
+                )
+                humidity -= beyond
+                condensed += beyond
+            carried[:, solid] = held
+        return AirState(
+            temperature=temperature.copy(),
+            humidity=humidity.copy(),
+            removed_kg=air.removed_kg + float(removed.sum()) * air_kg / GRAMS_PER_KG,
+            condensed_kg=air.condensed_kg + float(condensed.sum()) * air_kg / GRAMS_PER_KG,
+        )
+
+    def water_kg(self, humidity: np.ndarray) -> float:
+        """The water the air holds, in kilograms."""
+        air_kg = AIR_DENSITY_KG_M3 * self.cell_volume_m3()
+        return float(humidity[~self.solid].sum()) * air_kg / GRAMS_PER_KG
 
     def heat_j(self, temperature: np.ndarray, reference_c: float = 0.0) -> float:
         """The heat the air holds above `reference_c`, in joules."""
