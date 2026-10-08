@@ -17,7 +17,7 @@ from greenhouse_protocol.observation import Observation
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 
-SCENARIO = SCENARIO_REGISTRY["gh_002"]
+SCENARIO = SCENARIO_REGISTRY["climate_box"]
 START = datetime(2026, 3, 1, 12, 0, tzinfo=UTC)
 DRY_BELOW_PCT = 40.0
 

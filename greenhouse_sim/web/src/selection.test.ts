@@ -28,18 +28,24 @@ function drawnEntity(entityId: string, kind = "PLANT"): { group: Group; mesh: Me
 
 describe("picking an entity", () => {
   it("takes the nearest hit that is part of an entity", () => {
-    const plant = drawnEntity("gh_demo_plant_001");
-    const ground = drawnEntity("gh_demo_ground");
+    const plant = drawnEntity("climate_box_plant_001");
+    const ground = drawnEntity("climate_box_ground");
 
-    expect(pickEntity([{ object: plant.mesh }, { object: ground.mesh }])).toBe("gh_demo_plant_001");
-    expect(pickEntity([{ object: ground.mesh }, { object: plant.mesh }])).toBe("gh_demo_ground");
+    expect(pickEntity([{ object: plant.mesh }, { object: ground.mesh }])).toBe(
+      "climate_box_plant_001",
+    );
+    expect(pickEntity([{ object: ground.mesh }, { object: plant.mesh }])).toBe(
+      "climate_box_ground",
+    );
   });
 
   it("looks past hits that belong to no entity, and finds none without one", () => {
-    const ground = drawnEntity("gh_demo_ground");
+    const ground = drawnEntity("climate_box_ground");
     const pointerPlane = new Mesh();
 
-    expect(pickEntity([{ object: pointerPlane }, { object: ground.mesh }])).toBe("gh_demo_ground");
+    expect(pickEntity([{ object: pointerPlane }, { object: ground.mesh }])).toBe(
+      "climate_box_ground",
+    );
     expect(pickEntity([{ object: pointerPlane }])).toBeNull();
     expect(pickEntity([])).toBeNull();
   });
@@ -47,41 +53,49 @@ describe("picking an entity", () => {
 
 describe("picking through glass", () => {
   it("reaches a solid entity behind it, and picks the glass only with nothing behind", () => {
-    const wall = drawnEntity("gh_demo_side_wall_right");
+    const wall = drawnEntity("climate_box_side_wall_right");
     wall.mesh.userData.seeThrough = true;
-    const plant = drawnEntity("gh_demo_plant_001");
+    const plant = drawnEntity("climate_box_plant_001");
 
-    expect(pickEntity([{ object: wall.mesh }, { object: plant.mesh }])).toBe("gh_demo_plant_001");
-    expect(pickEntity([{ object: wall.mesh }])).toBe("gh_demo_side_wall_right");
+    expect(pickEntity([{ object: wall.mesh }, { object: plant.mesh }])).toBe(
+      "climate_box_plant_001",
+    );
+    expect(pickEntity([{ object: wall.mesh }])).toBe("climate_box_side_wall_right");
   });
 });
 
 describe("picking a zone", () => {
   it("picks the zone over the floor it stands on, but not over what stands in it", () => {
-    const zone = drawnEntity("gh_001_keep_out_irrigation", "KEEP_OUT");
+    const zone = drawnEntity("tomato_compartment_keep_out_irrigation", "KEEP_OUT");
     zone.mesh.userData.seeThrough = true;
-    const floor = drawnEntity("gh_001_floor", "FLOOR");
-    const unit = drawnEntity("gh_001_irrigation_unit", "OBSTACLE");
-    const roof = drawnEntity("gh_001_roof_2_right", "ROOF");
+    const floor = drawnEntity("tomato_compartment_floor", "FLOOR");
+    const unit = drawnEntity("tomato_compartment_irrigation_unit", "OBSTACLE");
+    const roof = drawnEntity("tomato_compartment_roof_2_right", "ROOF");
     roof.mesh.userData.seeThrough = true;
 
     expect(pickEntity([{ object: roof.mesh }, { object: zone.mesh }, { object: floor.mesh }])).toBe(
-      "gh_001_keep_out_irrigation",
+      "tomato_compartment_keep_out_irrigation",
     );
     expect(pickEntity([{ object: zone.mesh }, { object: unit.mesh }, { object: floor.mesh }])).toBe(
-      "gh_001_irrigation_unit",
+      "tomato_compartment_irrigation_unit",
     );
     // Through the glass, without a zone, the floor.
-    expect(pickEntity([{ object: roof.mesh }, { object: floor.mesh }])).toBe("gh_001_floor");
+    expect(pickEntity([{ object: roof.mesh }, { object: floor.mesh }])).toBe(
+      "tomato_compartment_floor",
+    );
   });
 });
 
 describe("picking an instance of a batch", () => {
   it("names the entity drawn as that instance", () => {
     const batch = new InstancedMesh(undefined, undefined, 3);
-    batch.userData.entityIds = ["gh_demo_plant_001", "gh_demo_plant_002", "gh_demo_plant_003"];
+    batch.userData.entityIds = [
+      "climate_box_plant_001",
+      "climate_box_plant_002",
+      "climate_box_plant_003",
+    ];
 
-    expect(pickEntity([{ object: batch, instanceId: 1 }])).toBe("gh_demo_plant_002");
+    expect(pickEntity([{ object: batch, instanceId: 1 }])).toBe("climate_box_plant_002");
     expect(pickEntity([{ object: batch, instanceId: 7 }])).toBeNull();
   });
 });
@@ -97,18 +111,18 @@ describe("a selection", () => {
       })),
     };
 
-    const before = selectedEntity(EXAMPLE, "gh_demo_plant_002");
-    const after = selectedEntity(nextDay, "gh_demo_plant_002");
+    const before = selectedEntity(EXAMPLE, "climate_box_plant_002");
+    const after = selectedEntity(nextDay, "climate_box_plant_002");
 
     expect(before?.properties.age_days).toBe(EXAMPLE.simulated_day);
-    expect(after?.entity_id).toBe("gh_demo_plant_002");
+    expect(after?.entity_id).toBe("climate_box_plant_002");
     expect(after?.properties.age_days).toBe(EXAMPLE.simulated_day + 1);
   });
 
   it("is nothing without a scene, or when the scene has no such entity", () => {
-    expect(selectedEntity(null, "gh_demo_plant_002")).toBeNull();
+    expect(selectedEntity(null, "climate_box_plant_002")).toBeNull();
     expect(selectedEntity(EXAMPLE, null)).toBeNull();
-    expect(selectedEntity(EXAMPLE, "gh_demo_plant_999")).toBeNull();
+    expect(selectedEntity(EXAMPLE, "climate_box_plant_999")).toBeNull();
   });
 });
 
@@ -134,7 +148,9 @@ describe("selecting part of an organ", () => {
       new Set(["p01_n01_leaf_petiole", "p01_n01_leaf_terminal"]),
     );
     expect(highlighted(LAB, "p01_n01_internode")).toEqual(new Set(["p01_n01_internode"]));
-    expect(highlighted(EXAMPLE, "gh_demo_plant_002")).toEqual(new Set(["gh_demo_plant_002"]));
+    expect(highlighted(EXAMPLE, "climate_box_plant_002")).toEqual(
+      new Set(["climate_box_plant_002"]),
+    );
     expect(highlighted(LAB, null)).toEqual(new Set());
   });
 

@@ -31,8 +31,8 @@ from greenhouse_protocol.provenance import RecordSource
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 
-CONFIG = SCENARIO_REGISTRY["gh_001"]
-PLANT_IDS = ["gh_001_plant_001", "gh_001_plant_002"]
+CONFIG = SCENARIO_REGISTRY["tomato_compartment"]
+PLANT_IDS = ["tomato_compartment_plant_001", "tomato_compartment_plant_002"]
 START = datetime(2026, 7, 1, 12, 0, tzinfo=UTC)
 
 # The same slice of a WUR compartment export the adapter's own tests use:
@@ -47,7 +47,7 @@ time,compartment/air_temperature,compartment/relative_humidity,compartment/heati
 
 def _simulated() -> tuple[list[Observation], list[Event]]:
     engine = SimulationEngine(CONFIG)
-    world = engine.initialize(PLANT_IDS, greenhouse_id="gh_001")
+    world = engine.initialize(PLANT_IDS, greenhouse_id="tomato_compartment")
     observations: list[Observation] = []
     events: list[Event] = []
 
@@ -96,7 +96,7 @@ def test_both_producers_pass_the_same_checks_on_one_combined_batch() -> None:
 def _observation(**overrides: object) -> Observation:
     fields: dict[str, object] = {
         "observation_id": "obs_1",
-        "greenhouse_id": "gh_001",
+        "greenhouse_id": "tomato_compartment",
         "plant_id": None,
         "timestamp": START,
         "observation_type": "air_temperature_c",
@@ -142,7 +142,7 @@ def test_an_unscoped_record_is_refused() -> None:
 def test_an_impossible_event_confidence_is_refused() -> None:
     event = Event(
         event_id="evt_1",
-        greenhouse_id="gh_001",
+        greenhouse_id="tomato_compartment",
         plant_id=None,
         timestamp=START,
         event_type=EventType.HARVEST,
@@ -158,7 +158,7 @@ def test_an_impossible_event_confidence_is_refused() -> None:
 def test_a_capture_without_bytes_behind_it_is_refused() -> None:
     capture = MediaCapture(
         capture_id="cap_1",
-        greenhouse_id="gh_001",
+        greenhouse_id="tomato_compartment",
         sensor_id="cam_1",
         timestamp=START,
         modality=CaptureModality.RGB,

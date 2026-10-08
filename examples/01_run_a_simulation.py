@@ -14,7 +14,7 @@ from greenhouse_protocol.observation import Observation
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 
-SCENARIO = SCENARIO_REGISTRY["gh_002"]  # one plant, followed for 40 days
+SCENARIO = SCENARIO_REGISTRY["climate_box"]  # a small house; one of its plants
 START = datetime(2026, 3, 1, 12, 0, tzinfo=UTC)
 
 

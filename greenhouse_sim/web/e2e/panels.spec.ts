@@ -16,8 +16,9 @@ for (const size of [
     await expect(page.getByTestId("scene-status")).toContainText("Showing the example scene");
     await page.getByLabel("Colour by").selectOption("visible_height_cm");
     await page.getByRole("button", { name: "Isometric", exact: true }).click();
-    // The upper part of the canvas stays available even above the narrow dock.
-    await selectAt(page, { x: 0.5, y: 1.6, z: 0.15 }, "gh_demo_plant_001");
+    // The upper part of the canvas stays available even above the narrow dock:
+    // the example's front path, near the corner the camera looks at.
+    await selectAt(page, { x: 0.9, y: 1.6, z: 0 }, "climate_box_front_path");
 
     const panels = page.locator(".viewer-panels");
     const boxes = await panels
@@ -66,8 +67,10 @@ test("at the usual window size, the info panel shows all of itself beside a tall
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto("/?scenario=gh_001");
-  await expect(page.getByTestId("scene-status")).toContainText("Showing the scenario gh_001");
+  await page.goto("/?scenario=tomato_compartment");
+  await expect(page.getByTestId("scene-status")).toContainText(
+    "Showing the scenario tomato_compartment",
+  );
   // The tallest legend there is, on the other side of the view.
   // "Surface categories", or "Categories" once the layout has some too.
   await page.getByRole("checkbox", { name: /categories$/i }).check();
@@ -79,7 +82,7 @@ test("at the usual window size, the info panel shows all of itself beside a tall
     clientHeight: element.clientHeight,
   }));
   expect(scrollHeight).toBeLessThanOrEqual(clientHeight);
-  await expect(page.getByRole("button", { name: "Show gh_002" })).toBeInViewport({ ratio: 1 });
+  await expect(page.getByRole("button", { name: "Show climate_box" })).toBeInViewport({ ratio: 1 });
   // The HUD keeps its width, so that its readings stay on one line each.
   expect((await page.locator(".hud").boundingBox())?.width).toBe(324);
 });

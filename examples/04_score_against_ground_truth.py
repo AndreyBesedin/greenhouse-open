@@ -17,7 +17,7 @@ from greenhouse_sim.evaluation.observation_accuracy import observation_accuracy
 from greenhouse_sim.ground_truth import GroundTruth, ground_truth
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 
-SCENARIO = SCENARIO_REGISTRY["gh_001"]
+SCENARIO = SCENARIO_REGISTRY["tomato_compartment"]
 START = datetime(2026, 3, 1, 12, 0, tzinfo=UTC)
 
 

@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-
+import { arrowSpacing, fieldArrows, MATRIX_SIZE, MAX_ARROWS } from "./arrows";
 import { sliceFrom, sliceText } from "./display";
 import { defaultSlice, quantityScale, sliceQuantities } from "./drawing";
+import { drawnPoints, STEPS_PER_SEGMENT, streamlineGeometry } from "./FieldStreamlines";
 import type { Channel, EnvironmentField } from "./field";
 import { sliceExtent, sliceSpans, sliceValues } from "./slice";
-import { streamlines } from "./streamlines";
+import { MAX_SEEDS, SEED_EVERY_CELLS, seedSpacing, streamlines } from "./streamlines";
 
 const SIZE = 0.5;
 
@@ -105,6 +106,68 @@ describe("streamlines", () => {
     expect(Math.min(...xs)).toBeLessThan(0.3);
     expect(Math.max(...xs)).toBeGreaterThan(12 * SIZE - 0.3);
     expect(line.speeds.every((speed) => Math.abs(speed - 0.5) < 1e-6)).toBe(true);
+  });
+});
+
+describe("streamlines as they are drawn", () => {
+  it("run through every second step, and the last", () => {
+    expect(drawnPoints(0)).toEqual([]);
+    expect(drawnPoints(1)).toEqual([0]);
+    expect(drawnPoints(5)).toEqual([0, 2, 4]);
+    expect(drawnPoints(6)).toEqual([0, 2, 4, 5]);
+  });
+
+  it("make a segment of every second step, from one end of the line to the other", () => {
+    const channel = BREEZE.channels.velocity as Channel;
+    const lines = streamlines(BREEZE, channel);
+    const geometry = streamlineGeometry(BREEZE, channel, { min: 0, max: 1 });
+    const segments = lines.reduce(
+      (sum, line) => sum + Math.ceil((line.points.length - 1) / STEPS_PER_SEGMENT),
+      0,
+    );
+    const xs = Array.from(geometry.getAttribute("position").array).filter((_, i) => i % 3 === 0);
+
+    expect(geometry.getAttribute("position").count).toBe(2 * segments);
+    expect(Math.min(...xs)).toBeLessThan(0.3);
+    expect(Math.max(...xs)).toBeGreaterThan(12 * SIZE - 0.3);
+  });
+});
+
+describe("a field's arrows on a big field", () => {
+  it("stand every cell on a small one, and every few along x and y on a big one", () => {
+    // The airflow box's and the climate box's fields: every cell.
+    expect(arrowSpacing({ x: 24, y: 13, z: 6 })).toBe(1);
+    expect(arrowSpacing({ x: 24, y: 13, z: 8 })).toBe(1);
+    // The tomato compartment's, 48 by 32 by 12 cells: every second, 4608.
+    expect(arrowSpacing({ x: 48, y: 32, z: 12 })).toBe(2);
+    // However tall, it stops at one arrow a layer.
+    expect(arrowSpacing({ x: 2, y: 2, z: MAX_ARROWS + 1 })).toBe(2);
+  });
+
+  it("are no more than the most a field draws", () => {
+    const big = analytic(
+      { x: 48, y: 32, z: 12 },
+      () => [0.5, 0, 0],
+      () => 20,
+    );
+    const arrows = fieldArrows(big, big.channels.velocity as Channel);
+
+    expect(arrows.matrices.length / MATRIX_SIZE).toBe(24 * 16 * 12);
+    expect(arrows.matrices.length / MATRIX_SIZE).toBeLessThanOrEqual(MAX_ARROWS);
+  });
+});
+
+describe("streamlines' seeds", () => {
+  it("start every few cells, and spread out in a field too big for more", () => {
+    // gh_001's old field: every third cell.
+    expect(seedSpacing({ x: 16, y: 20, z: 7 })).toBe(SEED_EVERY_CELLS);
+    // The tomato compartment's, 48 by 32 by 12 cells: every fourth, 288 seeds.
+    expect(seedSpacing({ x: 48, y: 32, z: 12 })).toBe(4);
+    const big = { x: 200, y: 100, z: 20 };
+    const every = seedSpacing(big);
+    expect(
+      Math.ceil(big.x / every) * Math.ceil(big.y / every) * Math.ceil(big.z / every),
+    ).toBeLessThanOrEqual(MAX_SEEDS);
   });
 });
 

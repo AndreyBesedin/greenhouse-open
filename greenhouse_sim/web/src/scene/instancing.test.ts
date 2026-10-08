@@ -11,6 +11,8 @@ const EXAMPLE: SceneSnapshot = JSON.parse(
 );
 const PLANTS = EXAMPLE.entities.filter((entity) => entity.kind === "PLANT");
 const [PLANT] = PLANTS as [SceneEntity];
+// Where the example's first plant stands: on its gutter's slab.
+const AT = PLANT.transform.position;
 const QUARTER_TURN = Math.SQRT1_2;
 
 /** Where a point of the unit cylinder lands under instance `index`'s matrix. */
@@ -30,11 +32,11 @@ describe("instancing shapes", () => {
     const rim = placed(matrices, 0, new Vector3(1, 0, 0));
     const shape = PLANT.shape as { radius: number; height: number };
 
-    expect(top.x).toBeCloseTo(0.5);
-    expect(top.y).toBeCloseTo(1.6);
-    expect(top.z).toBeCloseTo(shape.height);
-    expect(rim.x).toBeCloseTo(0.5 + shape.radius);
-    expect(rim.z).toBeCloseTo(0);
+    expect(top.x).toBeCloseTo(AT.x);
+    expect(top.y).toBeCloseTo(AT.y);
+    expect(top.z).toBeCloseTo(AT.z + shape.height);
+    expect(rim.x).toBeCloseTo(AT.x + shape.radius);
+    expect(rim.z).toBeCloseTo(AT.z);
   });
 
   it("turns it as the entity is turned", () => {
@@ -45,8 +47,8 @@ describe("instancing shapes", () => {
     const top = placed(shapeMatrices([tipped]), 0, new Vector3(0, 0, 1));
     const shape = PLANT.shape as { height: number };
 
-    expect(top.y).toBeCloseTo(1.6 - shape.height);
-    expect(top.z).toBeCloseTo(0);
+    expect(top.y).toBeCloseTo(AT.y - shape.height);
+    expect(top.z).toBeCloseTo(AT.z);
   });
 
   it("keeps a cylinder of zero height drawable", () => {
@@ -60,7 +62,7 @@ describe("instancing shapes", () => {
     const floor = EXAMPLE.entities.find((entity) => entity.kind === "FLOOR") as SceneEntity;
 
     expect(() => shapeMatrices([floor])).toThrow(
-      "gh_demo_floor is a plane, which is not drawn in batches",
+      "climate_box_floor is a plane, which is not drawn in batches",
     );
   });
 
@@ -70,8 +72,8 @@ describe("instancing shapes", () => {
     const centre = placed(matrices, 0, new Vector3(0, 0, 0));
     const top = placed(matrices, 0, new Vector3(0, 0, 1));
 
-    expect(centre.z).toBeCloseTo(0);
-    expect(top.z).toBeCloseTo(0.006);
+    expect(centre.z).toBeCloseTo(AT.z);
+    expect(top.z).toBeCloseTo(AT.z + 0.006);
   });
 
   it("stretches an ellipsoid to its length, width and thickness", () => {
@@ -85,9 +87,9 @@ describe("instancing shapes", () => {
     const edge = placed(matrices, 0, new Vector3(0, 0.5, 0));
     const face = placed(matrices, 0, new Vector3(0, 0, 0.5));
 
-    expect(tip.x - 0.5).toBeCloseTo(0.045);
-    expect(edge.y - 1.6).toBeCloseTo(0.0225);
-    expect(face.z).toBeCloseTo(0.001);
+    expect(tip.x - AT.x).toBeCloseTo(0.045);
+    expect(edge.y - AT.y).toBeCloseTo(0.0225);
+    expect(face.z - AT.z).toBeCloseTo(0.001);
   });
 
   it("batches by shape as well as by kind and finish", () => {

@@ -27,7 +27,7 @@ test("the example scene is drawn from its JSON file", async ({ page }) => {
   await page.goto("/?scene=example");
 
   await expect(page.getByTestId("scene-status")).toHaveText(
-    "Showing the example scene: gh_demo, day 9, 51 entities.",
+    "Showing the example scene: climate_box, day 9, 111 entities.",
   );
   await expect.poll(() => objectCount(page)).toBeGreaterThan(referenceObjects);
   expect(errors).toEqual([]);
@@ -39,29 +39,29 @@ test("a scenario's scene comes from the simulator and stays chosen on refresh", 
   const errors = collectErrors(page);
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Show gh_001" }).click();
+  await page.getByRole("button", { name: "Show tomato_compartment" }).click();
 
   const status = page.getByTestId("scene-status");
   await expect(status).toHaveText(
-    "Showing the scenario gh_001, before day one: gh_001, day 0, 165 entities.",
+    "Showing the scenario tomato_compartment, before day one: tomato_compartment, day 0, 896 entities.",
   );
-  await expect(page).toHaveURL(/\?scenario=gh_001$/);
+  await expect(page).toHaveURL(/\?scenario=tomato_compartment$/);
   await page.reload();
   await expect(status).toHaveText(
-    "Showing the scenario gh_001, before day one: gh_001, day 0, 165 entities.",
+    "Showing the scenario tomato_compartment, before day one: tomato_compartment, day 0, 896 entities.",
   );
   expect(errors).toEqual([]);
 });
 
 test("a scene with a kind the viewer does not know is refused visibly", async ({ page }) => {
-  await page.route("**/api/scenarios/gh_demo/scene", async (route) => {
+  await page.route("**/api/scenarios/climate_box/scene", async (route) => {
     const response = await route.fetch();
     const scene = await response.json();
     scene.entities[0].kind = "TREE";
     await route.fulfill({ response, json: scene });
   });
 
-  await page.goto("/?scenario=gh_demo");
+  await page.goto("/?scenario=climate_box");
 
   const status = page.getByTestId("scene-status");
   await expect(status).toContainText("was rejected");

@@ -15,7 +15,7 @@ from greenhouse_sim.api.server import SimulatorServer, create_server
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services.live import SPEEDS, LiveFrame, LiveRun, LiveRuns
 
-CONFIG = SCENARIO_REGISTRY["gh_demo"]
+CONFIG = SCENARIO_REGISTRY["climate_box"]
 NOON_ON_DAY_ZERO = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
 
 
@@ -220,7 +220,7 @@ def _frames(lines: Iterator[bytes], count: int) -> list[LiveFrame]:
 
 def test_a_live_scenario_streams_a_frame_per_simulated_day(server: SimulatorServer) -> None:
     host, port = server.server_address[:2]
-    url = f"http://{host!s}:{port}/api/scenarios/gh_demo/live"
+    url = f"http://{host!s}:{port}/api/scenarios/climate_box/live"
 
     with urllib.request.urlopen(url, timeout=5) as stream:
         assert stream.headers["Content-Type"] == "text/event-stream"
@@ -229,7 +229,7 @@ def test_a_live_scenario_streams_a_frame_per_simulated_day(server: SimulatorServ
 
     sequences = [frame.sequence for frame in frames]
     assert sequences == sorted(sequences) and len(set(sequences)) == len(sequences)
-    assert all(frame.snapshot.greenhouse_id == "gh_demo" for frame in frames)
+    assert all(frame.snapshot.greenhouse_id == "climate_box" for frame in frames)
 
 
 def test_an_unknown_scenario_has_no_live_stream(server: SimulatorServer) -> None:
@@ -263,7 +263,7 @@ def runs() -> Iterator[LiveRuns]:
 def test_a_command_answers_with_the_runs_new_state(
     runs: LiveRuns, command: str, day: int, playing: bool, speed: float
 ) -> None:
-    response = control(f"/api/scenarios/gh_demo/live/{command}", runs)
+    response = control(f"/api/scenarios/climate_box/live/{command}", runs)
 
     assert response is not None and response.status == HTTPStatus.OK
     assert isinstance(response.body, dict)
@@ -279,11 +279,11 @@ def test_a_command_answers_with_the_runs_new_state(
     ("path", "status"),
     [
         ("/api/scenarios/nope/live/pause", HTTPStatus.NOT_FOUND),
-        ("/api/scenarios/gh_demo/live/rewind", HTTPStatus.NOT_FOUND),
-        ("/api/scenarios/gh_demo/live/speed", HTTPStatus.BAD_REQUEST),
-        ("/api/scenarios/gh_demo/live/speed?multiplier=3", HTTPStatus.BAD_REQUEST),
-        ("/api/scenarios/gh_demo/live/speed?multiplier=fast", HTTPStatus.BAD_REQUEST),
-        ("/api/scenarios/gh_demo/live/speed?multiplier=1&multiplier=2", HTTPStatus.BAD_REQUEST),
+        ("/api/scenarios/climate_box/live/rewind", HTTPStatus.NOT_FOUND),
+        ("/api/scenarios/climate_box/live/speed", HTTPStatus.BAD_REQUEST),
+        ("/api/scenarios/climate_box/live/speed?multiplier=3", HTTPStatus.BAD_REQUEST),
+        ("/api/scenarios/climate_box/live/speed?multiplier=fast", HTTPStatus.BAD_REQUEST),
+        ("/api/scenarios/climate_box/live/speed?multiplier=1&multiplier=2", HTTPStatus.BAD_REQUEST),
     ],
 )
 def test_a_command_that_cannot_be_applied_is_refused_with_a_reason(
@@ -296,13 +296,13 @@ def test_a_command_that_cannot_be_applied_is_refused_with_a_reason(
 
 
 def test_other_paths_are_not_commands(runs: LiveRuns) -> None:
-    assert control("/api/scenarios/gh_demo/live", runs) is None
+    assert control("/api/scenarios/climate_box/live", runs) is None
     assert control("/api/health", runs) is None
 
 
 def test_a_command_over_http_reaches_the_stream(server: SimulatorServer) -> None:
     host, port = server.server_address[:2]
-    live = f"http://{host!s}:{port}/api/scenarios/gh_demo/live"
+    live = f"http://{host!s}:{port}/api/scenarios/climate_box/live"
 
     pause = urllib.request.Request(f"{live}/pause", method="POST")
     with urllib.request.urlopen(pause, timeout=5) as answer:

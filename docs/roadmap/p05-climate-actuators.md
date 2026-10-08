@@ -1,6 +1,6 @@
 # P05: Climate actuators: fans, heaters, dehumidification and vents
 
-**Status:** design reviewed, P05.0's included; P05.0 next. Part of the [simulator roadmap](README.md).
+**Status:** in progress: P05.0 done, P05.1 next. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -198,7 +198,7 @@ new scenarios (P05.0).
 
 | Step | Commit summary | Status |
 | --- | --- | --- |
-| P05.0 | `feat(scenarios): replace the original reference scenarios` | Planned |
+| P05.0 | `feat(scenarios): replace the original reference scenarios` | Done |
 | P05.1 | `feat(actuators): define climate actuator contract and controls` | Planned |
 | P05.2 | `feat(fans): add fan airflow source model` | Planned |
 | P05.3 | `feat(heating): add heater sensible-heat source` | Planned |
@@ -318,6 +318,52 @@ Two stacked pull requests:
 2. **Retiring:** `refactor(scenarios): move to the new scenarios and retire
    the original ones`. Every dependent moves, gh_001, gh_demo and gh_002
    and their layouts and results go, and the examples and READMEs follow.
+
+#### As implemented
+
+- **`tomato_compartment` and `climate_box`** are as designed. In numbers:
+  - **the compartment:**
+    - field grid: 48 × 32 × 12 cells;
+    - four roof vents of 1.1 m² each at 20% open, and a 3 m door, shut;
+    - eight rows of forty plants;
+    - a pipe rail in each of the seven paths between rows;
+    - its scene: 896 entities;
+    - its kept CFD solution: solved by the CFD workflow, converged in 79
+      iterations, air in through the first vent at up to 0.49 m/s and out
+      through the other three.
+  - **the box:** field grid 24 × 13 × 8 cells; 32 plants; its scene: 111
+    entities.
+- **Retired:** gh_001, gh_demo and gh_002, their layouts, and gh_001's kept
+  CFD result.
+- **What moved:**
+  - **the simulator's tests:** 29 files, by role:
+    - tests of a full house, its layouts or its CFD solution, to the
+      compartment;
+    - tests of a small, quick house, to the box.
+  - **Re-pinned numbers:** those that follow a scenario's seed, such as
+    the characterization run's heights and fruit, now follow the
+    compartment's.
+  - **The model contracts and the checkpoint round trip:** the model
+    contracts run 28 days in the box, so that fruit ripens; the
+    checkpoint round trip runs in the compartment. gh_demo's crop had been
+    tuned to fruit fast.
+  - **The viewer's tests:** 19 browser specs and 10 unit test files, their
+    picks worked out afresh.
+    - **New picks:** the compartment's heating pipes are picked from the
+      front right, since its roof gutter hides them from above; its
+      service area from a camera beyond its back wall.
+    - **Separate live runs:** the time controls play `airflow_box`, so
+      that the box's live run is left alone.
+  - **The example scene** is drawn from the box.
+  - **The examples, the conformance tests and the READMEs** follow.
+- **Fixed on the way:** the viewer had worked out a drawn field's colour
+  scale afresh on every render, so its streamlines were traced again four
+  times a second. On the compartment's field, nine times gh_001's, that
+  took seconds; it is now worked out once per field. Streamlines also start
+  from at most 300 seeds.
+- **New:** the address can place a scenario's camera
+  (`&camera=26:6:8,23.3:6:1`, its position then the point it looks at).
+  The presets frame only the corner of a 24 m house.
 
 #### Review decisions (7 October 2026)
 

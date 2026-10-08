@@ -9,16 +9,16 @@ from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.records import event_id, observation_id
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 
-CONFIG = SCENARIO_REGISTRY["gh_001"]
+CONFIG = SCENARIO_REGISTRY["tomato_compartment"]
 TIMESTAMP = datetime(2026, 10, 14, 12, 0, tzinfo=UTC)
 
 
 def test_identifiers_key_records_by_the_instant_they_describe() -> None:
-    assert observation_id("gh_001_plant_001", TIMESTAMP, "soil_moisture_pct") == (
-        "sim_gh_001_plant_001_20261014T120000Z_soil_moisture_pct"
+    assert observation_id("tomato_compartment_plant_001", TIMESTAMP, "soil_moisture_pct") == (
+        "sim_tomato_compartment_plant_001_20261014T120000Z_soil_moisture_pct"
     )
-    assert event_id("gh_001_plant_001", TIMESTAMP, "watering") == (
-        "sim_gh_001_plant_001_20261014T120000Z_watering"
+    assert event_id("tomato_compartment_plant_001", TIMESTAMP, "watering") == (
+        "sim_tomato_compartment_plant_001_20261014T120000Z_watering"
     )
 
 
@@ -36,7 +36,7 @@ def test_published_records_carry_no_simulator_day_counter() -> None:
     describing different instants.
     """
     engine = SimulationEngine(CONFIG)
-    world = engine.initialize(["gh_001_plant_001"], greenhouse_id="gh_001")
+    world = engine.initialize(["tomato_compartment_plant_001"], greenhouse_id="tomato_compartment")
     day_counter = re.compile(r"_d\d+_")
 
     for day in (1, 2, 3):
@@ -44,7 +44,7 @@ def test_published_records_carry_no_simulator_day_counter() -> None:
         step = engine.advance(world, day=day, timestamp=timestamp, simulation_id="sim")
         execution = engine.apply_actions(
             step.world,
-            [WaterPlantAction(plant_id="gh_001_plant_001", amount_ml=100.0)],
+            [WaterPlantAction(plant_id="tomato_compartment_plant_001", amount_ml=100.0)],
             day=day,
             timestamp=timestamp,
         )

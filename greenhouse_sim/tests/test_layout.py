@@ -86,7 +86,7 @@ def test_a_fixture_must_fit_inside_the_greenhouse(
 
 
 def test_a_scenario_refuses_a_layout_that_does_not_fit() -> None:
-    config = SCENARIO_REGISTRY["gh_demo"]
+    config = SCENARIO_REGISTRY["climate_box"]
     outside = TANK.model_copy(update={"base": Vector3(x=50.0, y=2.0, z=0.0)})
 
     with pytest.raises(ValidationError, match="outside the greenhouse: tank"):

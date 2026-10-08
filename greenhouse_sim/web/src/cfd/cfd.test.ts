@@ -60,7 +60,7 @@ describe("a CFD geometry from the simulator", () => {
   });
 
   it("is asked for changed as the scene is, and its failures are states to show", async () => {
-    const url = cfdGeometryUrl("gh_001", "?open=door_1:1");
+    const url = cfdGeometryUrl("tomato_compartment", "?open=door_1:1");
     const asked: string[] = [];
     const loaded = await loadCfdGeometry(url, async (input) => {
       asked.push(String(input));
@@ -72,7 +72,7 @@ describe("a CFD geometry from the simulator", () => {
       async () => new Response(JSON.stringify({ ...GEOMETRY, boundaries: 3 }), { status: 200 }),
     );
 
-    expect(asked).toEqual(["/api/scenarios/gh_001/cfd/geometry?open=door_1:1"]);
+    expect(asked).toEqual(["/api/scenarios/tomato_compartment/cfd/geometry?open=door_1:1"]);
     expect(loaded).toEqual({ status: "loaded", geometry: GEOMETRY });
     expect(missing).toEqual({
       status: "unavailable",

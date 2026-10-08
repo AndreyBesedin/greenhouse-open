@@ -2,47 +2,48 @@ import { expect, test } from "@playwright/test";
 
 import { selectAt } from "./view";
 
-// The example scene's greenhouse (gh_demo) is 4 m long and 6.4 m wide, of two
-// spans and two bays, its eaves at 3 m and its ridges at 3.65 m, with its
-// floor corner at the world's origin.
-// Inside the greenhouse, over the floor and clear of the plants.
-const INSIDE_OVER_THE_FLOOR = { x: 1, y: 1, z: 1 };
-// Low on the back gable, which the side view looks at from floor level: the
-// click rises through it over the plants, past glass, to the sky.
-const BACK_GABLE = { x: 4, y: 1.5, z: 1.2 };
+// The example scene's greenhouse (the climate box) is 12 m long and 6.4 m
+// wide, of one span and three bays, its eaves at 4 m and its ridge at 4.8 m,
+// with its floor corner at the world's origin.
+// Inside the greenhouse, over the floor between its right side wall and its
+// first row, clear of the plants and of the path across its front.
+const INSIDE_OVER_THE_FLOOR = { x: 3, y: 0.6, z: 0.6 };
+// Low on the right side wall, which the front view looks at from floor level:
+// the click rises through it over the young plants, between their gutters
+// and their wires, past the glass on the far side, to the sky.
+const SIDE_WALL = { x: 3, y: 0, z: 1.2 };
 
 test("the greenhouse is measured and labelled, and its glass yields to what it encloses", async ({
   page,
 }) => {
   await page.goto("/?scene=example");
-  await expect(page.getByTestId("scene-status")).toContainText("51 entities");
+  await expect(page.getByTestId("scene-status")).toContainText("111 entities");
 
   await page.getByLabel("Dimensions and axis labels").check();
   await expect(page.getByTestId("debug-label")).toHaveText([
     "x",
     "y",
     "z",
-    "length 4.00 m",
+    "length 12.00 m",
     "width 6.40 m",
-    "height 3.65 m",
+    "height 4.80 m",
   ]);
   await page.getByLabel("Dimensions and axis labels").uncheck();
   await expect(page.getByTestId("debug-label")).toHaveCount(0);
 
   // A click through the glass reaches the floor inside.
-  await selectAt(page, INSIDE_OVER_THE_FLOOR, "gh_demo_floor");
+  await selectAt(page, INSIDE_OVER_THE_FLOOR, "climate_box_floor");
 
   // With nothing solid behind it, the glass itself is picked.
-  await page.getByRole("button", { name: "Side" }).click();
-  await selectAt(page, BACK_GABLE, "gh_demo_end_wall_back", "side");
-  // A gable of two spans: two peaks and the valley between them.
-  await expect(page.getByTestId("selected-shape")).toHaveText("polygon, 7 corners");
-  await expect(page.getByTestId("selected-position")).toHaveText("x 4.00, y 6.40, z 0.00");
+  await page.getByRole("button", { name: "Front" }).click();
+  await selectAt(page, SIDE_WALL, "climate_box_side_wall_right", "front");
+  await expect(page.getByTestId("selected-shape")).toHaveText("plane, 12.00 × 4.00 m");
+  await expect(page.getByTestId("selected-position")).toHaveText("x 6.00, y 0.00, z 2.00");
 });
 
 test("the surface categories colour the envelope by what each part is", async ({ page }) => {
   await page.goto("/?scene=example");
-  await expect(page.getByTestId("scene-status")).toContainText("51 entities");
+  await expect(page.getByTestId("scene-status")).toContainText("111 entities");
 
   await page.getByRole("checkbox", { name: "Categories" }).check();
   await expect(page.getByTestId("category")).toHaveText([

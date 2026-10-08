@@ -42,11 +42,7 @@ def test_the_version_names_the_simulator_and_the_scene_schema() -> None:
 
 
 # The scenarios with more than their default layout, and their others.
-OTHER_LAYOUTS = {
-    "gh_001": ["benches"],
-    "airflow_box": ["open"],
-    "tomato_compartment": ["propagation"],
-}
+OTHER_LAYOUTS = {"airflow_box": ["open"], "tomato_compartment": ["propagation"]}
 
 
 def test_the_scenario_list_is_the_registry() -> None:

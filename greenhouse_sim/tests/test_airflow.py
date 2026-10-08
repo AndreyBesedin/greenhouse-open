@@ -27,9 +27,13 @@ GRID = FieldGrid.over(Vector3(x=0, y=0, z=0), Vector3(x=8, y=6, z=3), 0.25)
 
 
 def _solved() -> CfdAirflow:
-    """gh_001's kept CFD solution (see `tests/test_cfd_solve.py`)."""
-    result = kept_result("gh_001", SCENARIO_REGISTRY["gh_001"], fields.grid("gh_001"))
-    assert result is not None, "gh_001's kept CFD result is missing or stale"
+    """tomato_compartment's kept CFD solution (see `tests/test_cfd_solve.py`)."""
+    result = kept_result(
+        "tomato_compartment",
+        SCENARIO_REGISTRY["tomato_compartment"],
+        fields.grid("tomato_compartment"),
+    )
+    assert result is not None, "tomato_compartment's kept CFD result is missing or stale"
     return CfdAirflow(result)
 
 
@@ -146,9 +150,6 @@ def test_each_scenario_names_its_own_airflow_which_it_offers_first() -> None:
     kinds = {scenario_id: config.airflow.kind for scenario_id, config in SCENARIO_REGISTRY.items()}
 
     assert kinds == {
-        "gh_001": "vortex",
-        "gh_002": "uniform",
-        "gh_demo": "buoyancy",
         "airflow_box": "uniform",
         "tomato_compartment": "buoyancy",
         "climate_box": "uniform",

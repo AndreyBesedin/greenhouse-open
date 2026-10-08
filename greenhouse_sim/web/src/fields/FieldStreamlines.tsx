@@ -13,9 +13,24 @@ import { streamlines } from "./streamlines";
 const RGB = 3;
 // Streamlines are this wide on screen, whatever their distance.
 const STREAMLINE_WIDTH_PX = 2.5;
+// A streamline is traced in half-cell steps, and drawn a cell at a time: a
+// segment for every second step, which halves what a software renderer, such
+// as a browser test's, draws on a big house's field.
+export const STEPS_PER_SEGMENT = 2;
 
-/** The geometry of a field's streamlines, every streamline's steps as line
- * segments, each end coloured by the air's speed there. */
+/** The points a streamline is drawn through, by index: every
+ * `STEPS_PER_SEGMENT`th from its first, and its last. */
+export function drawnPoints(count: number): number[] {
+  const drawn: number[] = [];
+  for (let index = 0; index < count - 1; index += STEPS_PER_SEGMENT) {
+    drawn.push(index);
+  }
+  return count === 0 ? drawn : [...drawn, count - 1];
+}
+
+/** The geometry of a field's streamlines, each streamline as line segments
+ * through every few of its steps (`drawnPoints`), each end coloured by the
+ * air's speed there. */
 export function streamlineGeometry(
   field: EnvironmentField,
   channel: Channel,
@@ -24,8 +39,9 @@ export function streamlineGeometry(
   const positions: number[] = [];
   const colors: number[] = [];
   for (const line of streamlines(field, channel)) {
-    for (let index = 1; index < line.points.length; index += 1) {
-      for (const end of [index - 1, index]) {
+    const drawn = drawnPoints(line.points.length);
+    for (let index = 1; index < drawn.length; index += 1) {
+      for (const end of [drawn[index - 1] ?? 0, drawn[index] ?? 0]) {
         const point = line.points[end];
         // Vertex colours are linear, as the renderer works in.
         const color = threeColor(scalarColor(line.speeds[end] ?? 0, range));

@@ -21,15 +21,16 @@ from greenhouse_sim.world import GreenhouseWorld
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.geometry import Box, Cylinder, Quaternion, Transform, Vector3
 
-CONFIG = SCENARIO_REGISTRY["gh_001"]
-# More plants than one scenario row holds (10 columns), so the grid wraps.
-PLANT_IDS = [f"gh_001_plant_{i:03d}" for i in range(1, 14)]
+CONFIG = SCENARIO_REGISTRY["tomato_compartment"]
+# More plants than one of the compartment's rows holds (40), so they wrap
+# onto a second.
+PLANT_IDS = [f"tomato_compartment_plant_{i:03d}" for i in range(1, 44)]
 TIMESTAMP = datetime(2026, 1, 9, 12, 0, tzinfo=UTC)
 
 
 def _world(days: int = 8) -> GreenhouseWorld:
     engine = SimulationEngine(CONFIG)
-    world = engine.initialize(PLANT_IDS, greenhouse_id="gh_001")
+    world = engine.initialize(PLANT_IDS, greenhouse_id="tomato_compartment")
     for day in range(1, days + 1):
         world = engine.advance(world, day=day, timestamp=TIMESTAMP, simulation_id="sim").world
     return world
@@ -77,7 +78,7 @@ def test_a_scene_holds_the_greenhouse_the_axes_and_every_plant() -> None:
     assert SceneEntityKind.GROUND not in kinds
     assert list(_plants(snapshot)) == [plant.plant_id for plant in world.plants]
     assert len({entity.entity_id for entity in snapshot.entities}) == len(snapshot.entities)
-    assert (snapshot.greenhouse_id, snapshot.simulated_day) == ("gh_001", 8)
+    assert (snapshot.greenhouse_id, snapshot.simulated_day) == ("tomato_compartment", 8)
 
 
 def test_a_plant_is_as_tall_as_its_visible_stem_in_metres() -> None:
@@ -93,26 +94,26 @@ def test_a_plant_is_as_tall_as_its_visible_stem_in_metres() -> None:
 
 
 def test_plants_stand_at_their_planting_positions_in_order() -> None:
-    """The first plant at the first row's first position, and so on: with 13
-    plants and rows of ten, the eleventh starts the second row."""
+    """The first plant at the first row's first position, and so on: with 43
+    plants and rows of 40, the 41st starts the second row."""
     snapshot = scene_snapshot(_world(), CONFIG)
     by_id = {entity.entity_id: entity for entity in snapshot.entities}
     positions = CONFIG.layout.planting_positions()
 
     for plant_id, position in zip(PLANT_IDS, positions, strict=False):
         plant = by_id[plant_id]
-        marker = by_id[f"gh_001_{position.position_id}"]
+        marker = by_id[f"tomato_compartment_{position.position_id}"]
         assert plant.transform.position == position.point
         assert plant.properties["planting_position"] == position.position_id
         assert marker.transform.position == plant.transform.position
-    assert by_id[PLANT_IDS[10]].properties["planting_position"] == "row_2_position_1"
+    assert by_id[PLANT_IDS[40]].properties["planting_position"] == "row_2_position_1"
 
 
 def test_a_scene_refuses_more_plants_than_planting_positions() -> None:
     world = _world(days=0)
-    crowded = world.model_copy(update={"plants": world.plants * 4})
+    crowded = world.model_copy(update={"plants": world.plants * 8})
 
-    with pytest.raises(ValueError, match="52 plants, but only 40 planting positions"):
+    with pytest.raises(ValueError, match="344 plants, but only 320 planting positions"):
         scene_snapshot(crowded, CONFIG)
 
 
@@ -167,7 +168,7 @@ def test_the_greenhouse_bounds_are_a_box_standing_on_the_middle_of_its_floor() -
         if entity.kind == SceneEntityKind.GREENHOUSE_BOUNDS
     ]
 
-    assert bounds.entity_id == "gh_001_bounds"
+    assert bounds.entity_id == "tomato_compartment_bounds"
     assert bounds.shape == Box(
         size_x=envelope.length, size_y=envelope.width, size_z=envelope.ridge_height
     )
@@ -210,17 +211,17 @@ def test_the_floor_and_walls_are_the_envelopes_surfaces_in_the_world() -> None:
     entities = {entity.entity_id: entity for entity in scene_snapshot(_world(), placed).entities}
 
     for surface in placed.envelope.surfaces_in_world():
-        entity = entities[f"gh_001_{surface.surface_id}"]
+        entity = entities[f"tomato_compartment_{surface.surface_id}"]
         assert (entity.transform, entity.shape) == (surface.transform, surface.shape)
-    assert entities["gh_001_floor"].kind == SceneEntityKind.FLOOR
-    assert entities["gh_001_side_wall_right"].kind == SceneEntityKind.WALL
-    assert entities["gh_001_side_wall_right"].label == "side wall right"
+    assert entities["tomato_compartment_floor"].kind == SceneEntityKind.FLOOR
+    assert entities["tomato_compartment_side_wall_right"].kind == SceneEntityKind.WALL
+    assert entities["tomato_compartment_side_wall_right"].label == "side wall right"
 
 
 def test_a_gutter_is_a_channel_along_its_eave_with_its_top_at_the_eave() -> None:
     envelope = CONFIG.envelope
     entities = {entity.entity_id: entity for entity in scene_snapshot(_world(), CONFIG).entities}
-    gutter = entities[f"gh_001_gutter_{envelope.spans}"]
+    gutter = entities[f"tomato_compartment_gutter_{envelope.spans}"]
 
     assert gutter.kind == SceneEntityKind.GUTTER
     assert isinstance(gutter.shape, Box)
@@ -235,7 +236,7 @@ def test_a_structural_member_is_a_cylinder_from_its_foot_to_its_head() -> None:
     entities = {entity.entity_id: entity for entity in scene_snapshot(_world(), CONFIG).entities}
 
     for member in envelope.members():
-        entity = entities[f"gh_001_{member.member_id}"]
+        entity = entities[f"tomato_compartment_{member.member_id}"]
         assert entity.kind == SceneEntityKind.FRAME
         assert isinstance(entity.shape, Cylinder)
         head = entity.transform.apply(Vector3(x=0.0, y=0.0, z=entity.shape.height))

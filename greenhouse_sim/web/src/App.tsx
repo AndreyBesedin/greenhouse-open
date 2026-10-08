@@ -386,14 +386,21 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const fieldView: FieldView =
     source.kind === "scenario" ? (source.fieldView ?? "arrows") : "arrows";
   const loadedField = field.status === "loaded" ? field.field : null;
-  const fieldSlice =
-    source.kind === "scenario" && fieldView === "slice" && loadedField !== null
-      ? (source.slice ?? defaultSlice(loadedField))
-      : null;
-  const fieldScale =
-    loadedField === null
-      ? null
-      : quantityScale(loadedField, fieldSlice === null ? "speed" : fieldSlice.quantity);
+  // Worked out once for each field and choice, not on every render: the
+  // layers redraw, and trace streamlines afresh, whenever these change.
+  const askedSlice = source.kind === "scenario" ? source.slice : undefined;
+  const fieldSlice = useMemo(
+    () =>
+      fieldView === "slice" && loadedField !== null
+        ? (askedSlice ?? defaultSlice(loadedField))
+        : null,
+    [fieldView, loadedField, askedSlice],
+  );
+  const scaleQuantity = fieldSlice === null ? "speed" : fieldSlice.quantity;
+  const fieldScale = useMemo(
+    () => (loadedField === null ? null : quantityScale(loadedField, scaleQuantity)),
+    [loadedField, scaleQuantity],
+  );
   const fieldColours = fieldScale === null ? null : (fieldRange ?? fieldScale.range);
   const fieldLayer =
     loadedField === null || fieldColours === null ? null : fieldView === "streamlines" ? (
@@ -423,7 +430,13 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         overlays={overlays}
         showBounds={showDimensions}
         byCategory={byCategory}
-        initialPose={source.kind === "plants" ? PLANT_LAB_POSE : null}
+        initialPose={
+          source.kind === "plants"
+            ? PLANT_LAB_POSE
+            : source.kind === "scenario"
+              ? (source.camera ?? null)
+              : null
+        }
         onSample={setSample}
         onPointer={setPointer}
         onSelect={setSelectedId}

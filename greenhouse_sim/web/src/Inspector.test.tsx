@@ -11,7 +11,7 @@ const EXAMPLE: SceneSnapshot = JSON.parse(
   readFileSync(new URL("../public/scenes/example.json", import.meta.url), "utf8"),
 );
 const PLANT = EXAMPLE.entities.find(
-  (entity) => entity.entity_id === "gh_demo_plant_001",
+  (entity) => entity.entity_id === "climate_box_plant_001",
 ) as SceneEntity;
 const ignore = () => undefined;
 // The canonical layout (`tests/test_scene_schema.py`).
@@ -38,12 +38,13 @@ describe("the inspector", () => {
       />,
     );
 
-    expect(html).toContain('data-testid="selected-entity">gh_demo_plant_001<');
-    expect(html).toContain('data-testid="selected-position">x 0.50, y 1.60, z 0.00<');
+    expect(html).toContain('data-testid="selected-entity">climate_box_plant_001<');
+    // On its gutter's slab, at the first row's first place.
+    expect(html).toContain('data-testid="selected-position">x 2.25, y 2.40, z 0.67<');
     expect(html).toContain('data-testid="selected-rotation">w 1.000, x 0.000, y 0.000, z 0.000<');
     expect(html).toContain('data-testid="selected-shape">cylinder, radius 0.02 m, height 0.35 m<');
-    expect(html).toContain('data-testid="property-visible_height_cm">35.15<');
-    expect(html).toContain('data-testid="property-fruits_on_plant">12<');
+    expect(html).toContain('data-testid="property-visible_height_cm">34.99<');
+    expect(html).toContain('data-testid="property-fruits_on_plant">4<');
   });
 
   it("shows which overlays are drawn", () => {

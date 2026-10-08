@@ -176,11 +176,12 @@ def test_the_scene_draws_wires_rails_and_pipes_as_their_kinds() -> None:
     } == {"cylinder"}
 
 
-def test_gh_001_has_rails_between_its_rows_wires_above_them_and_heating_pipes() -> None:
-    fixtures = SCENARIO_REGISTRY["gh_001"].layout.fixtures()
+def test_the_compartment_has_rails_between_its_rows_wires_above_them_and_heating_pipes() -> None:
+    fixtures = SCENARIO_REGISTRY["tomato_compartment"].layout.fixtures()
     count = {kind: sum(f.kind == kind for f in fixtures) for kind in FixtureKind}
 
-    assert count[FixtureKind.RAIL] == 3 * 2
-    assert count[FixtureKind.WIRE] == 4
+    # A rail of two tubes in each of the seven paths between its eight rows.
+    assert count[FixtureKind.RAIL] == 7 * 2
+    assert count[FixtureKind.WIRE] == 8
     assert count[FixtureKind.PIPE] == 2 * 4
     assert all(Obstruction.MOVEMENT in f.obstructs for f in fixtures if f.kind == FixtureKind.RAIL)

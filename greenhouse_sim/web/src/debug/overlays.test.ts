@@ -21,7 +21,12 @@ function entity(entityId: string): SceneEntity {
   return found;
 }
 
-const PLANT = entity("gh_demo_plant_001");
+const PLANT = entity("climate_box_plant_001");
+// The example scene's first plant stands on its gutter's slab, 0.675 m up, at
+// the first row's first place; its stem is 0.35 m tall and 0.02 m in radius.
+const BASE = { x: 2.25, y: 2.4, z: 0.675 };
+const STEM_M = 0.3499;
+const RADIUS_M = 0.02;
 // A quarter turn about +x tips the plant's +z over onto -y.
 const QUARTER_TURN = Math.SQRT1_2;
 const TIPPED: SceneEntity = {
@@ -46,38 +51,38 @@ describe("an entity's bounding box", () => {
   it("holds an upright stem from its base to its top", () => {
     const { min, max } = entityBounds(PLANT);
 
-    expect(min.x).toBeCloseTo(0.48);
-    expect(max.x).toBeCloseTo(0.52);
-    expect(min.y).toBeCloseTo(1.58);
-    expect(max.y).toBeCloseTo(1.62);
-    expect(min.z).toBeCloseTo(0);
-    expect(max.z).toBeCloseTo(0.3515);
+    expect(min.x).toBeCloseTo(BASE.x - RADIUS_M);
+    expect(max.x).toBeCloseTo(BASE.x + RADIUS_M);
+    expect(min.y).toBeCloseTo(BASE.y - RADIUS_M);
+    expect(max.y).toBeCloseTo(BASE.y + RADIUS_M);
+    expect(min.z).toBeCloseTo(BASE.z);
+    expect(max.z).toBeCloseTo(BASE.z + STEM_M);
   });
 
   it("follows the entity's rotation", () => {
     const { min, max } = entityBounds(TIPPED);
 
     // The stem now lies along -y, and its radius spans z.
-    expect(min.y).toBeCloseTo(1.6 - 0.3515);
-    expect(max.y).toBeCloseTo(1.6);
-    expect(min.z).toBeCloseTo(-0.02);
-    expect(max.z).toBeCloseTo(0.02);
+    expect(min.y).toBeCloseTo(BASE.y - STEM_M);
+    expect(max.y).toBeCloseTo(BASE.y);
+    expect(min.z).toBeCloseTo(BASE.z - RADIUS_M);
+    expect(max.z).toBeCloseTo(BASE.z + RADIUS_M);
   });
 
   it("is flat for the floor and a wall, follows a gable's corners, and spans the axes marker", () => {
-    expect(entityBounds(entity("gh_demo_end_wall_front"))).toEqual({
+    expect(entityBounds(entity("climate_box_end_wall_front"))).toEqual({
       min: { x: expect.closeTo(0), y: expect.closeTo(0), z: expect.closeTo(0) },
-      max: { x: expect.closeTo(0), y: expect.closeTo(6.4), z: expect.closeTo(3.65) },
+      max: { x: expect.closeTo(0), y: expect.closeTo(6.4), z: expect.closeTo(4.8) },
     });
-    expect(entityBounds(entity("gh_demo_floor"))).toEqual({
+    expect(entityBounds(entity("climate_box_floor"))).toEqual({
       min: { x: 0, y: expect.closeTo(0), z: 0 },
-      max: { x: 4, y: expect.closeTo(6.4), z: 0 },
+      max: { x: 12, y: expect.closeTo(6.4), z: 0 },
     });
-    expect(entityBounds(entity("gh_demo_side_wall_right"))).toEqual({
+    expect(entityBounds(entity("climate_box_side_wall_right"))).toEqual({
       min: { x: 0, y: expect.closeTo(0), z: expect.closeTo(0) },
-      max: { x: 4, y: expect.closeTo(0), z: expect.closeTo(3) },
+      max: { x: 12, y: expect.closeTo(0), z: expect.closeTo(4) },
     });
-    expect(entityBounds(entity("gh_demo_axes"))).toEqual({
+    expect(entityBounds(entity("climate_box_axes"))).toEqual({
       min: { x: 0, y: 0, z: 0 },
       max: { x: 1, y: 1, z: 1 },
     });
@@ -111,7 +116,10 @@ describe("the overlays around a selection", () => {
       (primitive) => primitive.id === "axis-z",
     );
 
-    expect(axisZ).toMatchObject({ kind: "arrow", origin: { x: 0.5, y: 1.6, z: 0 } });
+    expect(axisZ).toMatchObject({
+      kind: "arrow",
+      origin: { x: BASE.x, y: BASE.y, z: expect.closeTo(BASE.z) },
+    });
     expect(axisZ?.kind === "arrow" && axisZ.direction).toEqual({
       x: 0,
       y: expect.closeTo(-1),
@@ -122,9 +130,9 @@ describe("the overlays around a selection", () => {
   it("label the entity above its top, on a leader line", () => {
     const [leader, label] = selectionOverlays(PLANT, { box: false, axes: false, label: true });
 
-    expect(leader).toMatchObject({ kind: "line", from: { z: expect.closeTo(0.3515) } });
-    expect(label).toMatchObject({ kind: "label", text: "gh_demo_plant_001" });
-    expect(label?.kind === "label" && label.position.z).toBeGreaterThan(0.3515);
+    expect(leader).toMatchObject({ kind: "line", from: { z: expect.closeTo(BASE.z + STEM_M) } });
+    expect(label).toMatchObject({ kind: "label", text: "climate_box_plant_001" });
+    expect(label?.kind === "label" && label.position.z).toBeGreaterThan(BASE.z + STEM_M);
   });
 
   it("never change the scene they explain, nor do dimensions or colourings", () => {

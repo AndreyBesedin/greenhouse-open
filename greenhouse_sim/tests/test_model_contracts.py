@@ -27,12 +27,12 @@ PLANT_MODELS: list[PlantModel[SimpleTomatoState]] = [SimpleTomatoModel()]
 ENVIRONMENT_MODELS: list[EnvironmentModel] = [SimpleEnvironmentModel()]
 SENSOR_MODELS: list[SensorModel] = [SimpleSensorModel()]
 
-CONFIG = SCENARIO_REGISTRY["gh_demo"]
+CONFIG = SCENARIO_REGISTRY["climate_box"]
 # Deliberately unsorted, so preserving order is not the same as sorting.
-PLANT_IDS = ["gh_demo_plant_003", "gh_demo_plant_001", "gh_demo_plant_002"]
-# Long enough in gh_demo for trusses, fruit and ripe fruit to appear.
-DAYS = 12
-TIMESTAMP = datetime(2026, 1, 12, 12, 0, tzinfo=UTC)
+PLANT_IDS = ["climate_box_plant_003", "climate_box_plant_001", "climate_box_plant_002"]
+# Long enough in the climate box for trusses, fruit and ripe fruit to appear.
+DAYS = 28
+TIMESTAMP = datetime(2026, 1, 28, 12, 0, tzinfo=UTC)
 SIMULATION_ID = "sim_contract"
 
 
@@ -105,10 +105,10 @@ def test_a_plant_model_leaves_its_arguments_unmodified(
 def test_a_plant_model_advances_each_plant_whatever_else_is_in_the_crop(
     model: PlantModel[SimpleTomatoState],
 ) -> None:
-    alone, _ = _grow(model, ["gh_demo_plant_002"])
+    alone, _ = _grow(model, ["climate_box_plant_002"])
     crowded, _ = _grow(model, PLANT_IDS)
 
-    assert crowded[PLANT_IDS.index("gh_demo_plant_002")] == alone[0]
+    assert crowded[PLANT_IDS.index("climate_box_plant_002")] == alone[0]
 
 
 @pytest.mark.parametrize("model", PLANT_MODELS, ids=_name)

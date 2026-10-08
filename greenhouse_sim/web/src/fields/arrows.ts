@@ -12,6 +12,11 @@ const LONGEST_SHARE_OF_CELL = 0.9;
 export const ARROW_WIDTH_M = 0.03;
 // Slower than this, air is drawn as still: no arrow.
 const STILL_M_S = 1e-6;
+// On a field of more cells than this, arrows stand only every second cell,
+// or third, along x and y, so that there are at most this many: a big
+// house's arrows at every cell, nearly a million triangles, would take a
+// software renderer, such as a browser test's, seconds a frame.
+export const MAX_ARROWS = 6000;
 const UP = new Vector3(0, 0, 1);
 
 /** Arrows over a field, one batch of instances: each instance's placement as
@@ -23,9 +28,22 @@ export interface FieldArrowInstances {
   range: ScalarRange;
 }
 
+/** How many cells apart arrows stand along x and y: every cell, unless that
+ * makes more than `MAX_ARROWS`. */
+export function arrowSpacing(cells: { x: number; y: number; z: number }): number {
+  const arrows = (every: number) =>
+    Math.ceil(cells.x / every) * Math.ceil(cells.y / every) * cells.z;
+  let spacing = 1;
+  while (arrows(spacing) > MAX_ARROWS && spacing < Math.max(cells.x, cells.y)) {
+    spacing += 1;
+  }
+  return spacing;
+}
+
 /**
- * An arrow at every cell's centre of a vector channel, pointing where the air
- * goes there, centred on the centre, as long as its speed says, up to
+ * An arrow at every cell's centre of a vector channel, or every few cells'
+ * along x and y on a big field (`arrowSpacing`), pointing where the air goes
+ * there, centred on the centre, as long as its speed says, up to
  * `LONGEST_SHARE_OF_CELL` of the cell for the fastest, and coloured by its
  * speed. Each places the unit arrow, which stands on its frame's origin along
  * +z, one long and one wide.
@@ -47,9 +65,10 @@ export function fieldArrows(
   const direction = new Vector3();
   const position = new Vector3();
   const scale = new Vector3();
+  const spacing = arrowSpacing(grid.cells);
   for (let k = 0; k < grid.cells.z; k += 1) {
-    for (let j = 0; j < grid.cells.y; j += 1) {
-      for (let i = 0; i < grid.cells.x; i += 1) {
+    for (let j = 0; j < grid.cells.y; j += spacing) {
+      for (let i = 0; i < grid.cells.x; i += spacing) {
         const offset = cellOffset(grid, channel, i, j, k);
         direction.set(
           channel.values[offset] ?? 0,

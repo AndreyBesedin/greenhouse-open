@@ -10,15 +10,15 @@ from greenhouse_sim.evaluation.observation_accuracy import observation_accuracy
 from greenhouse_sim.ground_truth import GroundTruth, ground_truth
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 
-CONFIG = SCENARIO_REGISTRY["gh_001"]
-PLANT_IDS = ["gh_001_plant_001", "gh_001_plant_002"]
+CONFIG = SCENARIO_REGISTRY["tomato_compartment"]
+PLANT_IDS = ["tomato_compartment_plant_001", "tomato_compartment_plant_002"]
 START = datetime(2026, 5, 1, 12, 0, tzinfo=UTC)
 DAYS = 25
 
 
 def _run() -> tuple[list[Observation], list[GroundTruth]]:
     engine = SimulationEngine(CONFIG)
-    world = engine.initialize(PLANT_IDS, greenhouse_id="gh_001")
+    world = engine.initialize(PLANT_IDS, greenhouse_id="tomato_compartment")
     observations: list[Observation] = []
     truth: list[GroundTruth] = []
 
@@ -39,7 +39,7 @@ def test_every_reading_is_scored_against_the_instant_it_describes() -> None:
 
     report = observation_accuracy(observations, truth)
 
-    assert report.greenhouse_id == "gh_001"
+    assert report.greenhouse_id == "tomato_compartment"
     assert report.readings == len(observations)
     assert {entry.observation_type for entry in report.by_type} == {
         ObservationType.AIR_TEMPERATURE_C,

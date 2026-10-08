@@ -8,8 +8,8 @@ from greenhouse_sim.sensors.generation import generate_observations
 from greenhouse_sim.world import GreenhouseWorld
 from greenhouse_sim.world_builder import advance_world, initialize_world
 
-CONFIG = SCENARIO_REGISTRY["gh_001"]
-PLANT_IDS = ["gh_001_plant_001", "gh_001_plant_002"]
+CONFIG = SCENARIO_REGISTRY["tomato_compartment"]
+PLANT_IDS = ["tomato_compartment_plant_001", "tomato_compartment_plant_002"]
 TIMESTAMP = datetime(2026, 1, 9, tzinfo=UTC)
 SIMULATION_ID = "sim_test"
 

@@ -27,8 +27,8 @@ from datetime import UTC, datetime
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 
-engine = SimulationEngine(SCENARIO_REGISTRY["gh_002"])
-world = engine.initialize(["gh_002_plant_001"], greenhouse_id="gh_002")
+engine = SimulationEngine(SCENARIO_REGISTRY["climate_box"])
+world = engine.initialize(["climate_box_plant_001"], greenhouse_id="climate_box")
 step = engine.advance(world, day=1, timestamp=datetime(2026, 3, 1, tzinfo=UTC), simulation_id="run")
 print(step.observations)
 ```
@@ -130,8 +130,8 @@ solved, and offered as the scenario's `cfd` field while it is current. So
 nothing else needs OpenFOAM or Docker.
 
 ```bash
-python -m greenhouse_sim.cfd gh_001 cases/gh_001 --open door_1:1 --mesh
-python -m greenhouse_sim.cfd gh_001 cases/gh_001 --solve  # keeps the result
+python -m greenhouse_sim.cfd tomato_compartment cases/tomato_compartment --open door_front:1 --mesh
+python -m greenhouse_sim.cfd tomato_compartment cases/tomato_compartment --solve  # keeps the result
 pytest -m cfd   # the tests that run OpenFOAM; skipped without it
 ```
 

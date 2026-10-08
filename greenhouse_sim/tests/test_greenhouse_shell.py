@@ -100,13 +100,19 @@ def test_the_shells_vent_opens_no_more_than_its_frame(envelope: Envelope) -> Non
 
 def test_the_api_changes_the_shell_of_a_scenarios_greenhouse() -> None:
     """The browser walkthrough's greenhouse, as the API draws it."""
-    query = "envelope=length:12,width:9.6,spans:3,bays:4,eave_height:4,ridge_height:4.8"
-    response = respond("GET", f"/api/scenarios/gh_demo/scene?{query}&open=roof_vent_1:1")
+    # The climate box made three of its 6.4 m spans wide, in four bays.
+    query = "envelope=length:12,width:19.2,spans:3,bays:4,eave_height:4,ridge_height:4.8"
+    response = respond("GET", f"/api/scenarios/climate_box/scene?{query}&open=roof_vent:1")
     scene = SceneSnapshot.model_validate(response.body)
     kinds = [entity.kind for entity in scene.entities]
     [bounds] = [e for e in scene.entities if e.kind == SceneEntityKind.GREENHOUSE_BOUNDS]
 
     assert response.status == 200
-    assert bounds.shape.model_dump() == {"shape": "box", "size_x": 12, "size_y": 9.6, "size_z": 4.8}
+    assert bounds.shape.model_dump() == {
+        "shape": "box",
+        "size_x": 12,
+        "size_y": 19.2,
+        "size_z": 4.8,
+    }
     assert kinds.count(SceneEntityKind.ROOF) == 6
     assert kinds.count(SceneEntityKind.FRAME) == 5 * (4 + 6)

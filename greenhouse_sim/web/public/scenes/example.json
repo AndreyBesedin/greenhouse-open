@@ -1,14 +1,14 @@
 {
   "schema_version": 13,
-  "greenhouse_id": "gh_demo",
+  "greenhouse_id": "climate_box",
   "simulated_day": 9,
   "entities": [
     {
-      "entity_id": "gh_demo_floor",
+      "entity_id": "climate_box_floor",
       "kind": "FLOOR",
       "transform": {
         "position": {
-          "x": 2.0,
+          "x": 6.0,
           "y": 3.2,
           "z": 0.0
         },
@@ -21,7 +21,7 @@
       },
       "shape": {
         "shape": "plane",
-        "size_x": 4.0,
+        "size_x": 12.0,
         "size_y": 6.4
       },
       "color": {
@@ -34,13 +34,13 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_side_wall_right",
+      "entity_id": "climate_box_side_wall_right",
       "kind": "WALL",
       "transform": {
         "position": {
-          "x": 2.0,
+          "x": 6.0,
           "y": 0.0,
-          "z": 1.5
+          "z": 2.0
         },
         "rotation": {
           "w": 0.0,
@@ -51,8 +51,8 @@
       },
       "shape": {
         "shape": "plane",
-        "size_x": 4.0,
-        "size_y": 3.0
+        "size_x": 12.0,
+        "size_y": 4.0
       },
       "color": {
         "r": 0.74,
@@ -64,13 +64,13 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_side_wall_left",
+      "entity_id": "climate_box_side_wall_left",
       "kind": "WALL",
       "transform": {
         "position": {
-          "x": 2.0,
+          "x": 6.0,
           "y": 6.4,
-          "z": 1.5
+          "z": 2.0
         },
         "rotation": {
           "w": 0.7071067811865476,
@@ -81,8 +81,8 @@
       },
       "shape": {
         "shape": "plane",
-        "size_x": 4.0,
-        "size_y": 3.0
+        "size_x": 12.0,
+        "size_y": 4.0
       },
       "color": {
         "r": 0.74,
@@ -94,7 +94,7 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_end_wall_front",
+      "entity_id": "climate_box_end_wall_front",
       "kind": "WALL",
       "transform": {
         "position": {
@@ -122,23 +122,15 @@
           },
           {
             "x": 6.4,
-            "y": 3.0
-          },
-          {
-            "x": 4.800000000000001,
-            "y": 3.65
+            "y": 4.0
           },
           {
             "x": 3.2,
-            "y": 3.0
-          },
-          {
-            "x": 1.6,
-            "y": 3.65
+            "y": 4.8
           },
           {
             "x": 0.0,
-            "y": 3.0
+            "y": 4.0
           }
         ]
       },
@@ -152,11 +144,11 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_end_wall_back",
+      "entity_id": "climate_box_end_wall_back",
       "kind": "WALL",
       "transform": {
         "position": {
-          "x": 4.0,
+          "x": 12.0,
           "y": 6.4,
           "z": 0.0
         },
@@ -180,23 +172,15 @@
           },
           {
             "x": 6.4,
-            "y": 3.0
-          },
-          {
-            "x": 4.800000000000001,
-            "y": 3.65
+            "y": 4.0
           },
           {
             "x": 3.2,
-            "y": 3.0
-          },
-          {
-            "x": 1.6,
-            "y": 3.65
+            "y": 4.8
           },
           {
             "x": 0.0,
-            "y": 3.0
+            "y": 4.0
           }
         ]
       },
@@ -210,25 +194,25 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_roof_1_right",
+      "entity_id": "climate_box_roof_1_right",
       "kind": "ROOF",
       "transform": {
         "position": {
-          "x": 2.0,
-          "y": 0.8,
-          "z": 3.325
+          "x": 6.0,
+          "y": 1.6,
+          "z": 4.4
         },
         "rotation": {
           "w": 0.0,
           "x": 0.0,
-          "y": 0.9814444908201149,
-          "z": 0.1917464769920048
+          "y": 0.992507556682903,
+          "z": 0.12218326369570444
         }
       },
       "shape": {
         "shape": "plane",
-        "size_x": 4.0,
-        "size_y": 1.7269916039170543
+        "size_x": 12.0,
+        "size_y": 3.2984845004941286
       },
       "color": {
         "r": 0.7,
@@ -240,25 +224,25 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_roof_1_left",
+      "entity_id": "climate_box_roof_1_left",
       "kind": "ROOF",
       "transform": {
         "position": {
-          "x": 2.0,
-          "y": 2.4000000000000004,
-          "z": 3.325
+          "x": 6.0,
+          "y": 4.800000000000001,
+          "z": 4.4
         },
         "rotation": {
-          "w": 0.1917464769920048,
-          "x": 0.9814444908201149,
+          "w": 0.12218326369570444,
+          "x": 0.992507556682903,
           "y": 0.0,
           "z": 0.0
         }
       },
       "shape": {
         "shape": "plane",
-        "size_x": 4.0,
-        "size_y": 1.7269916039170543
+        "size_x": 12.0,
+        "size_y": 3.2984845004941286
       },
       "color": {
         "r": 0.7,
@@ -270,85 +254,25 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_roof_2_right",
-      "kind": "ROOF",
-      "transform": {
-        "position": {
-          "x": 2.0,
-          "y": 4.0,
-          "z": 3.325
-        },
-        "rotation": {
-          "w": 0.0,
-          "x": 0.0,
-          "y": 0.9814444908201149,
-          "z": 0.1917464769920048
-        }
-      },
-      "shape": {
-        "shape": "plane",
-        "size_x": 4.0,
-        "size_y": 1.7269916039170543
-      },
-      "color": {
-        "r": 0.7,
-        "g": 0.83,
-        "b": 0.9
-      },
-      "material": null,
-      "label": "roof 2 right",
-      "properties": {}
-    },
-    {
-      "entity_id": "gh_demo_roof_2_left",
-      "kind": "ROOF",
-      "transform": {
-        "position": {
-          "x": 2.0,
-          "y": 5.6000000000000005,
-          "z": 3.325
-        },
-        "rotation": {
-          "w": 0.1917464769920048,
-          "x": 0.9814444908201149,
-          "y": 0.0,
-          "z": 0.0
-        }
-      },
-      "shape": {
-        "shape": "plane",
-        "size_x": 4.0,
-        "size_y": 1.7269916039170543
-      },
-      "color": {
-        "r": 0.7,
-        "g": 0.83,
-        "b": 0.9
-      },
-      "material": null,
-      "label": "roof 2 left",
-      "properties": {}
-    },
-    {
-      "entity_id": "gh_demo_roof_vent_1",
+      "entity_id": "climate_box_roof_vent",
       "kind": "VENT",
       "transform": {
         "position": {
-          "x": 2.0,
-          "y": 1.2465455714226759,
-          "z": 3.569581516164336
+          "x": 6.0,
+          "y": 2.3761140001162655,
+          "z": 4.594028500029067
         },
         "rotation": {
           "w": 0.0,
           "x": 0.0,
-          "y": 0.9955130086837737,
-          "z": 0.09462478291325564
+          "y": 0.992507556682903,
+          "z": 0.12218326369570444
         }
       },
       "shape": {
         "shape": "plane",
-        "size_x": 1.6,
-        "size_y": 0.6
+        "size_x": 4.0,
+        "size_y": 1.0
       },
       "color": {
         "r": 0.55,
@@ -356,58 +280,22 @@
         "b": 0.86
       },
       "material": null,
-      "label": "roof vent 1",
+      "label": "roof vent",
       "properties": {
-        "opening_id": "roof_vent_1",
+        "opening_id": "roof_vent",
         "opening_kind": "roof_vent",
         "on_surface": "roof_1_right",
-        "open_fraction": 0.25,
-        "aperture_m2": 0.2584254253585625
+        "open_fraction": 0.0,
+        "aperture_m2": 0.0
       }
     },
     {
-      "entity_id": "gh_demo_roof_vent_2",
+      "entity_id": "climate_box_side_vent",
       "kind": "VENT",
       "transform": {
         "position": {
-          "x": 2.0,
-          "y": 4.446545571422676,
-          "z": 3.569581516164336
-        },
-        "rotation": {
-          "w": 0.0,
-          "x": 0.0,
-          "y": 0.9955130086837737,
-          "z": 0.09462478291325564
-        }
-      },
-      "shape": {
-        "shape": "plane",
-        "size_x": 1.6,
-        "size_y": 0.6
-      },
-      "color": {
-        "r": 0.55,
-        "g": 0.74,
-        "b": 0.86
-      },
-      "material": null,
-      "label": "roof vent 2",
-      "properties": {
-        "opening_id": "roof_vent_2",
-        "opening_kind": "roof_vent",
-        "on_surface": "roof_2_right",
-        "open_fraction": 0.25,
-        "aperture_m2": 0.2584254253585625
-      }
-    },
-    {
-      "entity_id": "gh_demo_side_vent_1",
-      "kind": "VENT",
-      "transform": {
-        "position": {
-          "x": 2.0,
-          "y": -2.220446049250313e-16,
+          "x": 6.0,
+          "y": -1.1102230246251565e-16,
           "z": 2.5
         },
         "rotation": {
@@ -419,8 +307,8 @@
       },
       "shape": {
         "shape": "plane",
-        "size_x": 2.0,
-        "size_y": 0.5
+        "size_x": 3.0,
+        "size_y": 0.6
       },
       "color": {
         "r": 0.55,
@@ -428,9 +316,9 @@
         "b": 0.86
       },
       "material": null,
-      "label": "side vent 1",
+      "label": "side vent",
       "properties": {
-        "opening_id": "side_vent_1",
+        "opening_id": "side_vent",
         "opening_kind": "side_vent",
         "on_surface": "side_wall_right",
         "open_fraction": 0.0,
@@ -438,17 +326,17 @@
       }
     },
     {
-      "entity_id": "gh_demo_door_1",
+      "entity_id": "climate_box_door",
       "kind": "DOOR",
       "transform": {
         "position": {
-          "x": 4.0200000000000005,
-          "y": 5.4,
+          "x": -0.019999999999999574,
+          "y": 5.0,
           "z": 1.0499999999999998
         },
         "rotation": {
-          "w": -0.5,
-          "x": -0.5,
+          "w": 0.5,
+          "x": 0.5,
           "y": 0.5,
           "z": 0.5
         }
@@ -464,23 +352,23 @@
         "b": 0.56
       },
       "material": null,
-      "label": "door 1",
+      "label": "door",
       "properties": {
-        "opening_id": "door_1",
+        "opening_id": "door",
         "opening_kind": "door",
-        "on_surface": "end_wall_back",
+        "on_surface": "end_wall_front",
         "open_fraction": 0.0,
         "aperture_m2": 0.0
       }
     },
     {
-      "entity_id": "gh_demo_gutter_0",
+      "entity_id": "climate_box_gutter_0",
       "kind": "GUTTER",
       "transform": {
         "position": {
-          "x": 2.0,
+          "x": 6.0,
           "y": 0.0,
-          "z": 2.85
+          "z": 3.85
         },
         "rotation": {
           "w": 1.0,
@@ -491,7 +379,7 @@
       },
       "shape": {
         "shape": "box",
-        "size_x": 4.0,
+        "size_x": 12.0,
         "size_y": 0.2,
         "size_z": 0.15
       },
@@ -505,13 +393,13 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_gutter_1",
+      "entity_id": "climate_box_gutter_1",
       "kind": "GUTTER",
       "transform": {
         "position": {
-          "x": 2.0,
-          "y": 3.2,
-          "z": 2.85
+          "x": 6.0,
+          "y": 6.4,
+          "z": 3.85
         },
         "rotation": {
           "w": 1.0,
@@ -522,7 +410,7 @@
       },
       "shape": {
         "shape": "box",
-        "size_x": 4.0,
+        "size_x": 12.0,
         "size_y": 0.2,
         "size_z": 0.15
       },
@@ -536,38 +424,7 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_gutter_2",
-      "kind": "GUTTER",
-      "transform": {
-        "position": {
-          "x": 2.0,
-          "y": 6.4,
-          "z": 2.85
-        },
-        "rotation": {
-          "w": 1.0,
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
-        }
-      },
-      "shape": {
-        "shape": "box",
-        "size_x": 4.0,
-        "size_y": 0.2,
-        "size_z": 0.15
-      },
-      "color": {
-        "r": 0.55,
-        "g": 0.57,
-        "b": 0.6
-      },
-      "material": "aluminium",
-      "label": "gutter 2",
-      "properties": {}
-    },
-    {
-      "entity_id": "gh_demo_frame_0_post_0",
+      "entity_id": "climate_box_frame_0_post_0",
       "kind": "FRAME",
       "transform": {
         "position": {
@@ -585,7 +442,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.05,
-        "height": 3.0
+        "height": 4.0
       },
       "color": {
         "r": 0.66,
@@ -597,12 +454,12 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_frame_0_post_1",
+      "entity_id": "climate_box_frame_0_post_1",
       "kind": "FRAME",
       "transform": {
         "position": {
           "x": 0.0,
-          "y": 3.2,
+          "y": 6.4,
           "z": 0.0
         },
         "rotation": {
@@ -615,7 +472,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.05,
-        "height": 3.0
+        "height": 4.0
       },
       "color": {
         "r": 0.66,
@@ -627,47 +484,17 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_frame_0_post_2",
-      "kind": "FRAME",
-      "transform": {
-        "position": {
-          "x": 0.0,
-          "y": 6.4,
-          "z": 0.0
-        },
-        "rotation": {
-          "w": 1.0,
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
-        }
-      },
-      "shape": {
-        "shape": "cylinder",
-        "radius": 0.05,
-        "height": 3.0
-      },
-      "color": {
-        "r": 0.66,
-        "g": 0.68,
-        "b": 0.7
-      },
-      "material": "steel",
-      "label": "frame 0 post 2",
-      "properties": {}
-    },
-    {
-      "entity_id": "gh_demo_frame_0_rafter_1_right",
+      "entity_id": "climate_box_frame_0_rafter_1_right",
       "kind": "FRAME",
       "transform": {
         "position": {
           "x": 0.0,
           "y": 0.0,
-          "z": 3.0
+          "z": 4.0
         },
         "rotation": {
-          "w": 0.8295712889667585,
-          "x": -0.5584008206674046,
+          "w": 0.7882054380161091,
+          "x": -0.6154122094026357,
           "y": 0.0,
           "z": 0.0
         }
@@ -675,7 +502,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.03,
-        "height": 1.7269916039170543
+        "height": 3.2984845004941286
       },
       "color": {
         "r": 0.66,
@@ -687,17 +514,17 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_frame_0_rafter_1_left",
+      "entity_id": "climate_box_frame_0_rafter_1_left",
       "kind": "FRAME",
       "transform": {
         "position": {
           "x": 0.0,
-          "y": 3.2,
-          "z": 3.0
+          "y": 6.4,
+          "z": 4.0
         },
         "rotation": {
-          "w": 0.8295712889667585,
-          "x": 0.5584008206674046,
+          "w": 0.7882054380161091,
+          "x": 0.6154122094026357,
           "y": 0.0,
           "z": 0.0
         }
@@ -705,7 +532,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.03,
-        "height": 1.7269916039170543
+        "height": 3.2984845004941286
       },
       "color": {
         "r": 0.66,
@@ -717,71 +544,11 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_frame_0_rafter_2_right",
+      "entity_id": "climate_box_frame_1_post_0",
       "kind": "FRAME",
       "transform": {
         "position": {
-          "x": 0.0,
-          "y": 3.2,
-          "z": 3.0
-        },
-        "rotation": {
-          "w": 0.8295712889667585,
-          "x": -0.5584008206674047,
-          "y": 0.0,
-          "z": 0.0
-        }
-      },
-      "shape": {
-        "shape": "cylinder",
-        "radius": 0.03,
-        "height": 1.7269916039170548
-      },
-      "color": {
-        "r": 0.66,
-        "g": 0.68,
-        "b": 0.7
-      },
-      "material": "steel",
-      "label": "frame 0 rafter 2 right",
-      "properties": {}
-    },
-    {
-      "entity_id": "gh_demo_frame_0_rafter_2_left",
-      "kind": "FRAME",
-      "transform": {
-        "position": {
-          "x": 0.0,
-          "y": 6.4,
-          "z": 3.0
-        },
-        "rotation": {
-          "w": 0.8295712889667585,
-          "x": 0.5584008206674046,
-          "y": 0.0,
-          "z": 0.0
-        }
-      },
-      "shape": {
-        "shape": "cylinder",
-        "radius": 0.03,
-        "height": 1.726991603917054
-      },
-      "color": {
-        "r": 0.66,
-        "g": 0.68,
-        "b": 0.7
-      },
-      "material": "steel",
-      "label": "frame 0 rafter 2 left",
-      "properties": {}
-    },
-    {
-      "entity_id": "gh_demo_frame_1_post_0",
-      "kind": "FRAME",
-      "transform": {
-        "position": {
-          "x": 2.0,
+          "x": 4.0,
           "y": 0.0,
           "z": 0.0
         },
@@ -795,7 +562,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.05,
-        "height": 3.0
+        "height": 4.0
       },
       "color": {
         "r": 0.66,
@@ -807,12 +574,12 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_frame_1_post_1",
+      "entity_id": "climate_box_frame_1_post_1",
       "kind": "FRAME",
       "transform": {
         "position": {
-          "x": 2.0,
-          "y": 3.2,
+          "x": 4.0,
+          "y": 6.4,
           "z": 0.0
         },
         "rotation": {
@@ -825,7 +592,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.05,
-        "height": 3.0
+        "height": 4.0
       },
       "color": {
         "r": 0.66,
@@ -837,47 +604,17 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_frame_1_post_2",
+      "entity_id": "climate_box_frame_1_rafter_1_right",
       "kind": "FRAME",
       "transform": {
         "position": {
-          "x": 2.0,
-          "y": 6.4,
-          "z": 0.0
+          "x": 4.0,
+          "y": 0.0,
+          "z": 4.0
         },
         "rotation": {
-          "w": 1.0,
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
-        }
-      },
-      "shape": {
-        "shape": "cylinder",
-        "radius": 0.05,
-        "height": 3.0
-      },
-      "color": {
-        "r": 0.66,
-        "g": 0.68,
-        "b": 0.7
-      },
-      "material": "steel",
-      "label": "frame 1 post 2",
-      "properties": {}
-    },
-    {
-      "entity_id": "gh_demo_frame_1_rafter_1_right",
-      "kind": "FRAME",
-      "transform": {
-        "position": {
-          "x": 2.0,
-          "y": 0.0,
-          "z": 3.0
-        },
-        "rotation": {
-          "w": 0.8295712889667585,
-          "x": -0.5584008206674046,
+          "w": 0.7882054380161091,
+          "x": -0.6154122094026357,
           "y": 0.0,
           "z": 0.0
         }
@@ -885,7 +622,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.03,
-        "height": 1.7269916039170543
+        "height": 3.2984845004941286
       },
       "color": {
         "r": 0.66,
@@ -897,17 +634,17 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_frame_1_rafter_1_left",
+      "entity_id": "climate_box_frame_1_rafter_1_left",
       "kind": "FRAME",
       "transform": {
         "position": {
-          "x": 2.0,
-          "y": 3.2,
-          "z": 3.0
+          "x": 4.0,
+          "y": 6.4,
+          "z": 4.0
         },
         "rotation": {
-          "w": 0.8295712889667585,
-          "x": 0.5584008206674046,
+          "w": 0.7882054380161091,
+          "x": 0.6154122094026357,
           "y": 0.0,
           "z": 0.0
         }
@@ -915,7 +652,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.03,
-        "height": 1.7269916039170543
+        "height": 3.2984845004941286
       },
       "color": {
         "r": 0.66,
@@ -927,71 +664,11 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_frame_1_rafter_2_right",
+      "entity_id": "climate_box_frame_2_post_0",
       "kind": "FRAME",
       "transform": {
         "position": {
-          "x": 2.0,
-          "y": 3.2,
-          "z": 3.0
-        },
-        "rotation": {
-          "w": 0.8295712889667585,
-          "x": -0.5584008206674047,
-          "y": 0.0,
-          "z": 0.0
-        }
-      },
-      "shape": {
-        "shape": "cylinder",
-        "radius": 0.03,
-        "height": 1.7269916039170548
-      },
-      "color": {
-        "r": 0.66,
-        "g": 0.68,
-        "b": 0.7
-      },
-      "material": "steel",
-      "label": "frame 1 rafter 2 right",
-      "properties": {}
-    },
-    {
-      "entity_id": "gh_demo_frame_1_rafter_2_left",
-      "kind": "FRAME",
-      "transform": {
-        "position": {
-          "x": 2.0,
-          "y": 6.4,
-          "z": 3.0
-        },
-        "rotation": {
-          "w": 0.8295712889667585,
-          "x": 0.5584008206674046,
-          "y": 0.0,
-          "z": 0.0
-        }
-      },
-      "shape": {
-        "shape": "cylinder",
-        "radius": 0.03,
-        "height": 1.726991603917054
-      },
-      "color": {
-        "r": 0.66,
-        "g": 0.68,
-        "b": 0.7
-      },
-      "material": "steel",
-      "label": "frame 1 rafter 2 left",
-      "properties": {}
-    },
-    {
-      "entity_id": "gh_demo_frame_2_post_0",
-      "kind": "FRAME",
-      "transform": {
-        "position": {
-          "x": 4.0,
+          "x": 8.0,
           "y": 0.0,
           "z": 0.0
         },
@@ -1005,7 +682,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.05,
-        "height": 3.0
+        "height": 4.0
       },
       "color": {
         "r": 0.66,
@@ -1017,12 +694,12 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_frame_2_post_1",
+      "entity_id": "climate_box_frame_2_post_1",
       "kind": "FRAME",
       "transform": {
         "position": {
-          "x": 4.0,
-          "y": 3.2,
+          "x": 8.0,
+          "y": 6.4,
           "z": 0.0
         },
         "rotation": {
@@ -1035,7 +712,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.05,
-        "height": 3.0
+        "height": 4.0
       },
       "color": {
         "r": 0.66,
@@ -1047,11 +724,101 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_frame_2_post_2",
+      "entity_id": "climate_box_frame_2_rafter_1_right",
       "kind": "FRAME",
       "transform": {
         "position": {
-          "x": 4.0,
+          "x": 8.0,
+          "y": 0.0,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.7882054380161091,
+          "x": -0.6154122094026357,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 3.2984845004941286
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 2 rafter 1 right",
+      "properties": {}
+    },
+    {
+      "entity_id": "climate_box_frame_2_rafter_1_left",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 8.0,
+          "y": 6.4,
+          "z": 4.0
+        },
+        "rotation": {
+          "w": 0.7882054380161091,
+          "x": 0.6154122094026357,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.03,
+        "height": 3.2984845004941286
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 2 rafter 1 left",
+      "properties": {}
+    },
+    {
+      "entity_id": "climate_box_frame_3_post_0",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.05,
+        "height": 4.0
+      },
+      "color": {
+        "r": 0.66,
+        "g": 0.68,
+        "b": 0.7
+      },
+      "material": "steel",
+      "label": "frame 3 post 0",
+      "properties": {}
+    },
+    {
+      "entity_id": "climate_box_frame_3_post_1",
+      "kind": "FRAME",
+      "transform": {
+        "position": {
+          "x": 12.0,
           "y": 6.4,
           "z": 0.0
         },
@@ -1065,7 +832,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.05,
-        "height": 3.0
+        "height": 4.0
       },
       "color": {
         "r": 0.66,
@@ -1073,21 +840,21 @@
         "b": 0.7
       },
       "material": "steel",
-      "label": "frame 2 post 2",
+      "label": "frame 3 post 1",
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_frame_2_rafter_1_right",
+      "entity_id": "climate_box_frame_3_rafter_1_right",
       "kind": "FRAME",
       "transform": {
         "position": {
-          "x": 4.0,
+          "x": 12.0,
           "y": 0.0,
-          "z": 3.0
+          "z": 4.0
         },
         "rotation": {
-          "w": 0.8295712889667585,
-          "x": -0.5584008206674046,
+          "w": 0.7882054380161091,
+          "x": -0.6154122094026357,
           "y": 0.0,
           "z": 0.0
         }
@@ -1095,7 +862,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.03,
-        "height": 1.7269916039170543
+        "height": 3.2984845004941286
       },
       "color": {
         "r": 0.66,
@@ -1103,81 +870,21 @@
         "b": 0.7
       },
       "material": "steel",
-      "label": "frame 2 rafter 1 right",
+      "label": "frame 3 rafter 1 right",
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_frame_2_rafter_1_left",
+      "entity_id": "climate_box_frame_3_rafter_1_left",
       "kind": "FRAME",
       "transform": {
         "position": {
-          "x": 4.0,
-          "y": 3.2,
-          "z": 3.0
-        },
-        "rotation": {
-          "w": 0.8295712889667585,
-          "x": 0.5584008206674046,
-          "y": 0.0,
-          "z": 0.0
-        }
-      },
-      "shape": {
-        "shape": "cylinder",
-        "radius": 0.03,
-        "height": 1.7269916039170543
-      },
-      "color": {
-        "r": 0.66,
-        "g": 0.68,
-        "b": 0.7
-      },
-      "material": "steel",
-      "label": "frame 2 rafter 1 left",
-      "properties": {}
-    },
-    {
-      "entity_id": "gh_demo_frame_2_rafter_2_right",
-      "kind": "FRAME",
-      "transform": {
-        "position": {
-          "x": 4.0,
-          "y": 3.2,
-          "z": 3.0
-        },
-        "rotation": {
-          "w": 0.8295712889667585,
-          "x": -0.5584008206674047,
-          "y": 0.0,
-          "z": 0.0
-        }
-      },
-      "shape": {
-        "shape": "cylinder",
-        "radius": 0.03,
-        "height": 1.7269916039170548
-      },
-      "color": {
-        "r": 0.66,
-        "g": 0.68,
-        "b": 0.7
-      },
-      "material": "steel",
-      "label": "frame 2 rafter 2 right",
-      "properties": {}
-    },
-    {
-      "entity_id": "gh_demo_frame_2_rafter_2_left",
-      "kind": "FRAME",
-      "transform": {
-        "position": {
-          "x": 4.0,
+          "x": 12.0,
           "y": 6.4,
-          "z": 3.0
+          "z": 4.0
         },
         "rotation": {
-          "w": 0.8295712889667585,
-          "x": 0.5584008206674046,
+          "w": 0.7882054380161091,
+          "x": 0.6154122094026357,
           "y": 0.0,
           "z": 0.0
         }
@@ -1185,7 +892,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.03,
-        "height": 1.726991603917054
+        "height": 3.2984845004941286
       },
       "color": {
         "r": 0.66,
@@ -1193,17 +900,17 @@
         "b": 0.7
       },
       "material": "steel",
-      "label": "frame 2 rafter 2 left",
+      "label": "frame 3 rafter 1 left",
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_row_1_position_1",
+      "entity_id": "climate_box_row_1_position_1",
       "kind": "PLANTING_POSITION",
       "transform": {
         "position": {
-          "x": 0.5,
-          "y": 1.6,
-          "z": 0.0
+          "x": 2.25,
+          "y": 2.4,
+          "z": 0.6749999999999999
         },
         "rotation": {
           "w": 1.0,
@@ -1230,13 +937,13 @@
       }
     },
     {
-      "entity_id": "gh_demo_row_1_position_2",
+      "entity_id": "climate_box_row_1_position_2",
       "kind": "PLANTING_POSITION",
       "transform": {
         "position": {
-          "x": 1.0,
-          "y": 1.6,
-          "z": 0.0
+          "x": 2.75,
+          "y": 2.4,
+          "z": 0.6749999999999999
         },
         "rotation": {
           "w": 1.0,
@@ -1263,13 +970,13 @@
       }
     },
     {
-      "entity_id": "gh_demo_row_1_position_3",
+      "entity_id": "climate_box_row_1_position_3",
       "kind": "PLANTING_POSITION",
       "transform": {
         "position": {
-          "x": 1.5,
-          "y": 1.6,
-          "z": 0.0
+          "x": 3.25,
+          "y": 2.4,
+          "z": 0.6749999999999999
         },
         "rotation": {
           "w": 1.0,
@@ -1296,13 +1003,442 @@
       }
     },
     {
-      "entity_id": "gh_demo_row_2_position_1",
+      "entity_id": "climate_box_row_1_position_4",
       "kind": "PLANTING_POSITION",
       "transform": {
         "position": {
-          "x": 0.5,
-          "y": 3.2,
+          "x": 3.75,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
           "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 4",
+      "properties": {
+        "row": 1,
+        "position_in_row": 4
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_position_5",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 4.25,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 5",
+      "properties": {
+        "row": 1,
+        "position_in_row": 5
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_position_6",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 4.75,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 6",
+      "properties": {
+        "row": 1,
+        "position_in_row": 6
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_position_7",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 5.25,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 7",
+      "properties": {
+        "row": 1,
+        "position_in_row": 7
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_position_8",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 5.75,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 8",
+      "properties": {
+        "row": 1,
+        "position_in_row": 8
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_position_9",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 6.25,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 9",
+      "properties": {
+        "row": 1,
+        "position_in_row": 9
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_position_10",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 6.75,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 10",
+      "properties": {
+        "row": 1,
+        "position_in_row": 10
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_position_11",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 7.25,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 11",
+      "properties": {
+        "row": 1,
+        "position_in_row": 11
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_position_12",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 7.75,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 12",
+      "properties": {
+        "row": 1,
+        "position_in_row": 12
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_position_13",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 8.25,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 13",
+      "properties": {
+        "row": 1,
+        "position_in_row": 13
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_position_14",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 8.75,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 14",
+      "properties": {
+        "row": 1,
+        "position_in_row": 14
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_position_15",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 9.25,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 15",
+      "properties": {
+        "row": 1,
+        "position_in_row": 15
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_position_16",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 9.75,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 1 position 16",
+      "properties": {
+        "row": 1,
+        "position_in_row": 16
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_position_1",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 2.25,
+          "y": 4.0,
+          "z": 0.6749999999999999
         },
         "rotation": {
           "w": 1.0,
@@ -1329,13 +1465,13 @@
       }
     },
     {
-      "entity_id": "gh_demo_row_2_position_2",
+      "entity_id": "climate_box_row_2_position_2",
       "kind": "PLANTING_POSITION",
       "transform": {
         "position": {
-          "x": 1.0,
-          "y": 3.2,
-          "z": 0.0
+          "x": 2.75,
+          "y": 4.0,
+          "z": 0.6749999999999999
         },
         "rotation": {
           "w": 1.0,
@@ -1362,13 +1498,13 @@
       }
     },
     {
-      "entity_id": "gh_demo_row_2_position_3",
+      "entity_id": "climate_box_row_2_position_3",
       "kind": "PLANTING_POSITION",
       "transform": {
         "position": {
-          "x": 1.5,
-          "y": 3.2,
-          "z": 0.0
+          "x": 3.25,
+          "y": 4.0,
+          "z": 0.6749999999999999
         },
         "rotation": {
           "w": 1.0,
@@ -1395,7 +1531,1019 @@
       }
     },
     {
-      "entity_id": "gh_demo_axes",
+      "entity_id": "climate_box_row_2_position_4",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 3.75,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 4",
+      "properties": {
+        "row": 2,
+        "position_in_row": 4
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_position_5",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 4.25,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 5",
+      "properties": {
+        "row": 2,
+        "position_in_row": 5
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_position_6",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 4.75,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 6",
+      "properties": {
+        "row": 2,
+        "position_in_row": 6
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_position_7",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 5.25,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 7",
+      "properties": {
+        "row": 2,
+        "position_in_row": 7
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_position_8",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 5.75,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 8",
+      "properties": {
+        "row": 2,
+        "position_in_row": 8
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_position_9",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 6.25,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 9",
+      "properties": {
+        "row": 2,
+        "position_in_row": 9
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_position_10",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 6.75,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 10",
+      "properties": {
+        "row": 2,
+        "position_in_row": 10
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_position_11",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 7.25,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 11",
+      "properties": {
+        "row": 2,
+        "position_in_row": 11
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_position_12",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 7.75,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 12",
+      "properties": {
+        "row": 2,
+        "position_in_row": 12
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_position_13",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 8.25,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 13",
+      "properties": {
+        "row": 2,
+        "position_in_row": 13
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_position_14",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 8.75,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 14",
+      "properties": {
+        "row": 2,
+        "position_in_row": 14
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_position_15",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 9.25,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 15",
+      "properties": {
+        "row": 2,
+        "position_in_row": 15
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_position_16",
+      "kind": "PLANTING_POSITION",
+      "transform": {
+        "position": {
+          "x": 9.75,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.06,
+        "height": 0.01
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.6,
+        "b": 0.25
+      },
+      "material": null,
+      "label": "row 2 position 16",
+      "properties": {
+        "row": 2,
+        "position_in_row": 16
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_support_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 6.0,
+          "y": 2.4,
+          "z": 0.48
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 8.0,
+        "size_y": 0.3,
+        "size_z": 0.12
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 support 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_support_1_leg_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 2.02,
+          "y": 2.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 support 1 leg 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_support_1_leg_2",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 4.01,
+          "y": 2.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 support 1 leg 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_support_1_leg_3",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 6.0,
+          "y": 2.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 support 1 leg 3",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_support_1_leg_4",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 7.99,
+          "y": 2.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 support 1 leg 4",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_support_1_leg_5",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 9.98,
+          "y": 2.4,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 support 1 leg 5",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_slab_1",
+      "kind": "SLAB",
+      "transform": {
+        "position": {
+          "x": 6.0,
+          "y": 2.4,
+          "z": 0.6
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 7.8999999999999995,
+        "size_y": 0.2,
+        "size_z": 0.075
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.72,
+        "b": 0.58
+      },
+      "material": "substrate",
+      "label": "row 1 slab 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "climate_box_row_1_wire_1",
+      "kind": "WIRE",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 2.4,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0025,
+        "height": 8.0
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 1 wire 1",
+      "properties": {
+        "obstructs_movement": false,
+        "obstructs_airflow": false,
+        "obstructs_light": false
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_support_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 6.0,
+          "y": 4.0,
+          "z": 0.48
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 8.0,
+        "size_y": 0.3,
+        "size_z": 0.12
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 support 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_support_1_leg_1",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 2.02,
+          "y": 4.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 support 1 leg 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_support_1_leg_2",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 4.01,
+          "y": 4.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 support 1 leg 2",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_support_1_leg_3",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 6.0,
+          "y": 4.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 support 1 leg 3",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_support_1_leg_4",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 7.99,
+          "y": 4.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 support 1 leg 4",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_support_1_leg_5",
+      "kind": "CROP_GUTTER",
+      "transform": {
+        "position": {
+          "x": 9.98,
+          "y": 4.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.48
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 support 1 leg 5",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_slab_1",
+      "kind": "SLAB",
+      "transform": {
+        "position": {
+          "x": 6.0,
+          "y": 4.0,
+          "z": 0.6
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 7.8999999999999995,
+        "size_y": 0.2,
+        "size_z": 0.075
+      },
+      "color": {
+        "r": 0.8,
+        "g": 0.72,
+        "b": 0.58
+      },
+      "material": "substrate",
+      "label": "row 2 slab 1",
+      "properties": {
+        "obstructs_movement": true,
+        "obstructs_airflow": true,
+        "obstructs_light": true
+      }
+    },
+    {
+      "entity_id": "climate_box_row_2_wire_1",
+      "kind": "WIRE",
+      "transform": {
+        "position": {
+          "x": 2.0,
+          "y": 4.0,
+          "z": 3.0
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.7071067811865475,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.0025,
+        "height": 8.0
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.7,
+        "b": 0.72
+      },
+      "material": "steel",
+      "label": "row 2 wire 1",
+      "properties": {
+        "obstructs_movement": false,
+        "obstructs_airflow": false,
+        "obstructs_light": false
+      }
+    },
+    {
+      "entity_id": "climate_box_front_path",
+      "kind": "WALKWAY",
+      "transform": {
+        "position": {
+          "x": 0.9,
+          "y": 3.1999999999999997,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.7071067811865475
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 5.8,
+        "size_y": 1.2,
+        "size_z": 0.02
+      },
+      "color": {
+        "r": 0.64,
+        "g": 0.63,
+        "b": 0.6
+      },
+      "material": "concrete",
+      "label": "front path",
+      "properties": {
+        "obstructs_movement": false,
+        "obstructs_airflow": false,
+        "obstructs_light": false
+      }
+    },
+    {
+      "entity_id": "climate_box_axes",
       "kind": "AXES",
       "transform": {
         "position": {
@@ -1424,11 +2572,11 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_bounds",
+      "entity_id": "climate_box_bounds",
       "kind": "GREENHOUSE_BOUNDS",
       "transform": {
         "position": {
-          "x": 2.0,
+          "x": 6.0,
           "y": 3.2,
           "z": 0.0
         },
@@ -1441,9 +2589,9 @@
       },
       "shape": {
         "shape": "box",
-        "size_x": 4.0,
+        "size_x": 12.0,
         "size_y": 6.4,
-        "size_z": 3.65
+        "size_z": 4.8
       },
       "color": {
         "r": 0.62,
@@ -1455,13 +2603,13 @@
       "properties": {}
     },
     {
-      "entity_id": "gh_demo_plant_001",
+      "entity_id": "climate_box_plant_001",
       "kind": "PLANT",
       "transform": {
         "position": {
-          "x": 0.5,
-          "y": 1.6,
-          "z": 0.0
+          "x": 2.25,
+          "y": 2.4,
+          "z": 0.6749999999999999
         },
         "rotation": {
           "w": 1.0,
@@ -1473,7 +2621,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.3515088043875913
+        "height": 0.34993436676149303
       },
       "color": {
         "r": 0.2,
@@ -1481,25 +2629,25 @@
         "b": 0.24
       },
       "material": null,
-      "label": "gh_demo_plant_001",
+      "label": "climate_box_plant_001",
       "properties": {
         "planting_position": "row_1_position_1",
         "age_days": 9,
-        "visible_height_cm": 35.15088043875913,
-        "trusses": 3,
-        "fruits_on_plant": 12,
-        "ripe_fruits": 1,
+        "visible_height_cm": 34.9934366761493,
+        "trusses": 1,
+        "fruits_on_plant": 4,
+        "ripe_fruits": 0,
         "cumulative_harvest_g": 0.0
       }
     },
     {
-      "entity_id": "gh_demo_plant_002",
+      "entity_id": "climate_box_plant_002",
       "kind": "PLANT",
       "transform": {
         "position": {
-          "x": 1.0,
-          "y": 1.6,
-          "z": 0.0
+          "x": 2.75,
+          "y": 2.4,
+          "z": 0.6749999999999999
         },
         "rotation": {
           "w": 1.0,
@@ -1511,7 +2659,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.34998978599305425
+        "height": 0.3484014626754485
       },
       "color": {
         "r": 0.2,
@@ -1519,25 +2667,25 @@
         "b": 0.24
       },
       "material": null,
-      "label": "gh_demo_plant_002",
+      "label": "climate_box_plant_002",
       "properties": {
         "planting_position": "row_1_position_2",
         "age_days": 9,
-        "visible_height_cm": 34.998978599305424,
-        "trusses": 3,
-        "fruits_on_plant": 13,
-        "ripe_fruits": 2,
+        "visible_height_cm": 34.84014626754485,
+        "trusses": 1,
+        "fruits_on_plant": 6,
+        "ripe_fruits": 0,
         "cumulative_harvest_g": 0.0
       }
     },
     {
-      "entity_id": "gh_demo_plant_003",
+      "entity_id": "climate_box_plant_003",
       "kind": "PLANT",
       "transform": {
         "position": {
-          "x": 1.5,
-          "y": 1.6,
-          "z": 0.0
+          "x": 3.25,
+          "y": 2.4,
+          "z": 0.6749999999999999
         },
         "rotation": {
           "w": 1.0,
@@ -1549,7 +2697,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.331110771338165
+        "height": 0.36177795779899974
       },
       "color": {
         "r": 0.2,
@@ -1557,25 +2705,25 @@
         "b": 0.24
       },
       "material": null,
-      "label": "gh_demo_plant_003",
+      "label": "climate_box_plant_003",
       "properties": {
         "planting_position": "row_1_position_3",
         "age_days": 9,
-        "visible_height_cm": 33.1110771338165,
-        "trusses": 3,
-        "fruits_on_plant": 10,
-        "ripe_fruits": 3,
+        "visible_height_cm": 36.177795779899974,
+        "trusses": 1,
+        "fruits_on_plant": 5,
+        "ripe_fruits": 0,
         "cumulative_harvest_g": 0.0
       }
     },
     {
-      "entity_id": "gh_demo_plant_004",
+      "entity_id": "climate_box_plant_004",
       "kind": "PLANT",
       "transform": {
         "position": {
-          "x": 0.5,
-          "y": 3.2,
-          "z": 0.0
+          "x": 3.75,
+          "y": 2.4,
+          "z": 0.6749999999999999
         },
         "rotation": {
           "w": 1.0,
@@ -1587,7 +2735,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.360068218503963
+        "height": 0.35161666943112246
       },
       "color": {
         "r": 0.2,
@@ -1595,25 +2743,519 @@
         "b": 0.24
       },
       "material": null,
-      "label": "gh_demo_plant_004",
+      "label": "climate_box_plant_004",
+      "properties": {
+        "planting_position": "row_1_position_4",
+        "age_days": 9,
+        "visible_height_cm": 35.161666943112245,
+        "trusses": 1,
+        "fruits_on_plant": 5,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_005",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 4.25,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.3370523774630393
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_005",
+      "properties": {
+        "planting_position": "row_1_position_5",
+        "age_days": 9,
+        "visible_height_cm": 33.70523774630393,
+        "trusses": 1,
+        "fruits_on_plant": 3,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_006",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 4.75,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.3525201190496858
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_006",
+      "properties": {
+        "planting_position": "row_1_position_6",
+        "age_days": 9,
+        "visible_height_cm": 35.252011904968576,
+        "trusses": 1,
+        "fruits_on_plant": 3,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_007",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 5.25,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.32335297098001015
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_007",
+      "properties": {
+        "planting_position": "row_1_position_7",
+        "age_days": 9,
+        "visible_height_cm": 32.335297098001014,
+        "trusses": 1,
+        "fruits_on_plant": 6,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_008",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 5.75,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.3499101772566126
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_008",
+      "properties": {
+        "planting_position": "row_1_position_8",
+        "age_days": 9,
+        "visible_height_cm": 34.99101772566126,
+        "trusses": 1,
+        "fruits_on_plant": 3,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_009",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 6.25,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.3595762213947684
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_009",
+      "properties": {
+        "planting_position": "row_1_position_9",
+        "age_days": 9,
+        "visible_height_cm": 35.95762213947684,
+        "trusses": 1,
+        "fruits_on_plant": 4,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_010",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 6.75,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.35159671651436747
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_010",
+      "properties": {
+        "planting_position": "row_1_position_10",
+        "age_days": 9,
+        "visible_height_cm": 35.159671651436746,
+        "trusses": 1,
+        "fruits_on_plant": 3,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_011",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 7.25,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.3517911678853465
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_011",
+      "properties": {
+        "planting_position": "row_1_position_11",
+        "age_days": 9,
+        "visible_height_cm": 35.17911678853465,
+        "trusses": 1,
+        "fruits_on_plant": 6,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_012",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 7.75,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.32940907102317435
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_012",
+      "properties": {
+        "planting_position": "row_1_position_12",
+        "age_days": 9,
+        "visible_height_cm": 32.94090710231743,
+        "trusses": 1,
+        "fruits_on_plant": 3,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_013",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 8.25,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.36120510987562887
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_013",
+      "properties": {
+        "planting_position": "row_1_position_13",
+        "age_days": 9,
+        "visible_height_cm": 36.12051098756289,
+        "trusses": 1,
+        "fruits_on_plant": 4,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_014",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 8.75,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.35022507036184536
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_014",
+      "properties": {
+        "planting_position": "row_1_position_14",
+        "age_days": 9,
+        "visible_height_cm": 35.022507036184535,
+        "trusses": 1,
+        "fruits_on_plant": 5,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_015",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 9.25,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.3362600870735137
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_015",
+      "properties": {
+        "planting_position": "row_1_position_15",
+        "age_days": 9,
+        "visible_height_cm": 33.62600870735137,
+        "trusses": 1,
+        "fruits_on_plant": 4,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_016",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 9.75,
+          "y": 2.4,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.3483880592214893
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_016",
+      "properties": {
+        "planting_position": "row_1_position_16",
+        "age_days": 9,
+        "visible_height_cm": 34.83880592214893,
+        "trusses": 1,
+        "fruits_on_plant": 3,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_017",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 2.25,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.3519971681939413
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_017",
       "properties": {
         "planting_position": "row_2_position_1",
         "age_days": 9,
-        "visible_height_cm": 36.0068218503963,
-        "trusses": 3,
-        "fruits_on_plant": 12,
-        "ripe_fruits": 3,
+        "visible_height_cm": 35.199716819394126,
+        "trusses": 1,
+        "fruits_on_plant": 3,
+        "ripe_fruits": 0,
         "cumulative_harvest_g": 0.0
       }
     },
     {
-      "entity_id": "gh_demo_plant_005",
+      "entity_id": "climate_box_plant_018",
       "kind": "PLANT",
       "transform": {
         "position": {
-          "x": 1.0,
-          "y": 3.2,
-          "z": 0.0
+          "x": 2.75,
+          "y": 4.0,
+          "z": 0.6749999999999999
         },
         "rotation": {
           "w": 1.0,
@@ -1625,7 +3267,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.3417821237234413
+        "height": 0.335711104686631
       },
       "color": {
         "r": 0.2,
@@ -1633,25 +3275,25 @@
         "b": 0.24
       },
       "material": null,
-      "label": "gh_demo_plant_005",
+      "label": "climate_box_plant_018",
       "properties": {
         "planting_position": "row_2_position_2",
         "age_days": 9,
-        "visible_height_cm": 34.17821237234413,
-        "trusses": 3,
-        "fruits_on_plant": 15,
-        "ripe_fruits": 3,
+        "visible_height_cm": 33.5711104686631,
+        "trusses": 1,
+        "fruits_on_plant": 6,
+        "ripe_fruits": 0,
         "cumulative_harvest_g": 0.0
       }
     },
     {
-      "entity_id": "gh_demo_plant_006",
+      "entity_id": "climate_box_plant_019",
       "kind": "PLANT",
       "transform": {
         "position": {
-          "x": 1.5,
-          "y": 3.2,
-          "z": 0.0
+          "x": 3.25,
+          "y": 4.0,
+          "z": 0.6749999999999999
         },
         "rotation": {
           "w": 1.0,
@@ -1663,7 +3305,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.36010976318018906
+        "height": 0.35139391353057287
       },
       "color": {
         "r": 0.2,
@@ -1671,14 +3313,508 @@
         "b": 0.24
       },
       "material": null,
-      "label": "gh_demo_plant_006",
+      "label": "climate_box_plant_019",
       "properties": {
         "planting_position": "row_2_position_3",
         "age_days": 9,
-        "visible_height_cm": 36.010976318018905,
-        "trusses": 3,
-        "fruits_on_plant": 14,
-        "ripe_fruits": 5,
+        "visible_height_cm": 35.139391353057285,
+        "trusses": 1,
+        "fruits_on_plant": 4,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_020",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 3.75,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.35768013602220805
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_020",
+      "properties": {
+        "planting_position": "row_2_position_4",
+        "age_days": 9,
+        "visible_height_cm": 35.768013602220805,
+        "trusses": 1,
+        "fruits_on_plant": 3,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_021",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 4.25,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.3299374663713676
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_021",
+      "properties": {
+        "planting_position": "row_2_position_5",
+        "age_days": 9,
+        "visible_height_cm": 32.99374663713676,
+        "trusses": 1,
+        "fruits_on_plant": 5,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_022",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 4.75,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.33398428192815055
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_022",
+      "properties": {
+        "planting_position": "row_2_position_6",
+        "age_days": 9,
+        "visible_height_cm": 33.398428192815054,
+        "trusses": 1,
+        "fruits_on_plant": 4,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_023",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 5.25,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.3549855043960512
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_023",
+      "properties": {
+        "planting_position": "row_2_position_7",
+        "age_days": 9,
+        "visible_height_cm": 35.49855043960512,
+        "trusses": 1,
+        "fruits_on_plant": 4,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_024",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 5.75,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.3608701448377085
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_024",
+      "properties": {
+        "planting_position": "row_2_position_8",
+        "age_days": 9,
+        "visible_height_cm": 36.08701448377085,
+        "trusses": 1,
+        "fruits_on_plant": 5,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_025",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 6.25,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.34163739054188663
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_025",
+      "properties": {
+        "planting_position": "row_2_position_9",
+        "age_days": 9,
+        "visible_height_cm": 34.16373905418866,
+        "trusses": 1,
+        "fruits_on_plant": 4,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_026",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 6.75,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.3566802840604793
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_026",
+      "properties": {
+        "planting_position": "row_2_position_10",
+        "age_days": 9,
+        "visible_height_cm": 35.66802840604793,
+        "trusses": 1,
+        "fruits_on_plant": 6,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_027",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 7.25,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.34209198113031286
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_027",
+      "properties": {
+        "planting_position": "row_2_position_11",
+        "age_days": 9,
+        "visible_height_cm": 34.209198113031285,
+        "trusses": 1,
+        "fruits_on_plant": 5,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_028",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 7.75,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.3440739937622906
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_028",
+      "properties": {
+        "planting_position": "row_2_position_12",
+        "age_days": 9,
+        "visible_height_cm": 34.40739937622906,
+        "trusses": 1,
+        "fruits_on_plant": 5,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_029",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 8.25,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.33874251707203584
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_029",
+      "properties": {
+        "planting_position": "row_2_position_13",
+        "age_days": 9,
+        "visible_height_cm": 33.874251707203584,
+        "trusses": 1,
+        "fruits_on_plant": 4,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_030",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 8.75,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.3572662914175112
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_030",
+      "properties": {
+        "planting_position": "row_2_position_14",
+        "age_days": 9,
+        "visible_height_cm": 35.72662914175112,
+        "trusses": 1,
+        "fruits_on_plant": 3,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_031",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 9.25,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.36042964353228185
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_031",
+      "properties": {
+        "planting_position": "row_2_position_15",
+        "age_days": 9,
+        "visible_height_cm": 36.042964353228186,
+        "trusses": 1,
+        "fruits_on_plant": 3,
+        "ripe_fruits": 0,
+        "cumulative_harvest_g": 0.0
+      }
+    },
+    {
+      "entity_id": "climate_box_plant_032",
+      "kind": "PLANT",
+      "transform": {
+        "position": {
+          "x": 9.75,
+          "y": 4.0,
+          "z": 0.6749999999999999
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "cylinder",
+        "radius": 0.02,
+        "height": 0.34867410971368523
+      },
+      "color": {
+        "r": 0.2,
+        "g": 0.55,
+        "b": 0.24
+      },
+      "material": null,
+      "label": "climate_box_plant_032",
+      "properties": {
+        "planting_position": "row_2_position_16",
+        "age_days": 9,
+        "visible_height_cm": 34.86741097136852,
+        "trusses": 1,
+        "fruits_on_plant": 6,
+        "ripe_fruits": 0,
         "cumulative_harvest_g": 0.0
       }
     }

@@ -1,3 +1,4 @@
+import type { CameraPose } from "../camera";
 import { type FieldView, fieldViewFrom, type Slice, sliceFrom, sliceText } from "../fields/display";
 import { probesFrom, probesText } from "../fields/probes";
 import {
@@ -45,6 +46,9 @@ export type SceneSource =
       probes?: Point3[];
       /** Whether the boundaries a CFD solver is given are drawn over it. */
       cfdBoundaries?: true;
+      /** Where the camera starts, rather than the default preset: for a part
+       * of a big greenhouse no preset frames. */
+      camera?: CameraPose;
       envelope?: Readonly<Record<string, number>>;
       openings?: Readonly<Record<string, number>>;
     }
@@ -80,6 +84,7 @@ export function sourceFromSearch(search: string): SceneSource {
     const slice = sliceFrom(parameters.get("slice"));
     const compare = parameters.get("compare");
     const probes = probesFrom(parameters.get("probes"));
+    const camera = cameraFrom(parameters.get("camera"));
     return {
       kind: "scenario",
       scenarioId,
@@ -90,6 +95,7 @@ export function sourceFromSearch(search: string): SceneSource {
       ...(field && compare && compare !== field ? { compare } : {}),
       ...(field && probes ? { probes } : {}),
       ...(parameters.get("cfd") === CFD_BOUNDARIES ? { cfdBoundaries: true as const } : {}),
+      ...(camera === undefined ? {} : { camera }),
       ...(envelope === null ? {} : { envelope }),
       ...(openings === null ? {} : { openings }),
     };
@@ -161,7 +167,7 @@ export function searchFor(source: SceneSource): string {
     case "stress":
       return `?scene=stress&plants=${source.plants}`;
     case "scenario":
-      return `?scenario=${encodeURIComponent(source.scenarioId)}${changesQuery(source, "&")}${fieldQuery(source)}${source.cfdBoundaries ? `&cfd=${CFD_BOUNDARIES}` : ""}`;
+      return `?scenario=${encodeURIComponent(source.scenarioId)}${changesQuery(source, "&")}${fieldQuery(source)}${source.cfdBoundaries ? `&cfd=${CFD_BOUNDARIES}` : ""}${source.camera === undefined ? "" : `&camera=${cameraText(source.camera)}`}`;
     case "live":
       return `?live=${encodeURIComponent(source.scenarioId)}`;
   }
@@ -320,4 +326,19 @@ export function withItsAir(shown: SceneSource, chosen: SceneSource): SceneSource
     ...(probes === undefined ? {} : { probes }),
     ...(cfdBoundaries === undefined ? {} : { cfdBoundaries }),
   };
+}
+
+/** A camera pose as the address writes it: its position, then the point it
+ * looks at, `x:y:z,x:y:z`. Probes are written the same way. */
+export function cameraFrom(text: string | null): CameraPose | undefined {
+  const points = probesFrom(text);
+  if (points === undefined || points.length !== 2) {
+    return undefined;
+  }
+  const [position, target] = points as [CameraPose["position"], CameraPose["target"]];
+  return { position, target };
+}
+
+export function cameraText(pose: CameraPose): string {
+  return probesText([pose.position, pose.target]);
 }

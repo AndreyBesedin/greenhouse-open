@@ -30,8 +30,8 @@ def test_every_registered_scenario_is_summarised_with_its_layouts() -> None:
     summaries = {summary.id: summary for summary in scenarios.scenario_summaries()}
 
     assert set(summaries) == set(SCENARIO_REGISTRY)
-    assert summaries["gh_001"].layouts == ["default", "benches"]
-    assert summaries["gh_001"].plants == 40
+    assert summaries["tomato_compartment"].layouts == ["default", "propagation"]
+    assert summaries["tomato_compartment"].plants == 320
 
 
 def test_an_unregistered_scenario_is_not_found() -> None:
@@ -44,46 +44,54 @@ def test_an_unregistered_scenario_is_not_found() -> None:
 
 
 def test_a_crop_is_named_by_its_scenario_and_place() -> None:
-    names = scenarios.plant_ids(SCENARIO_REGISTRY["gh_demo"])
+    names = scenarios.plant_ids(SCENARIO_REGISTRY["climate_box"])
 
-    assert names == [f"gh_demo_plant_{i:03d}" for i in range(1, 7)]
+    assert names == [f"climate_box_plant_{i:03d}" for i in range(1, 33)]
 
 
 def test_a_scene_without_changes_is_the_scenario_as_registered() -> None:
-    config = SCENARIO_REGISTRY["gh_001"]
-    scene = scenarios.initial_scene("gh_001")
+    config = SCENARIO_REGISTRY["tomato_compartment"]
+    scene = scenarios.initial_scene("tomato_compartment")
     plants = [e for e in scene.entities if e.kind == SceneEntityKind.PLANT]
 
     assert scenarios.changed(config, SceneChanges()) is config
-    assert (scene.greenhouse_id, scene.simulated_day, len(plants)) == ("gh_001", 0, 40)
+    assert (scene.greenhouse_id, scene.simulated_day, len(plants)) == (
+        "tomato_compartment",
+        0,
+        320,
+    )
 
 
 def test_a_scene_shows_the_scenario_changed_as_asked() -> None:
     changes = SceneChanges(
-        layout="benches", envelope={"length": 12.0}, openings={"roof_vent_1": 1.0}
+        layout="propagation", envelope={"length": 30.0}, openings={"roof_vent_1": 1.0}
     )
-    scene = scenarios.initial_scene("gh_001", changes)
+    scene = scenarios.initial_scene("tomato_compartment", changes)
     kinds = {entity.kind for entity in scene.entities}
-    vent = next(e for e in scene.entities if e.entity_id == "gh_001_roof_vent_1")
+    vent = next(e for e in scene.entities if e.entity_id == "tomato_compartment_roof_vent_1")
     bounds = next(e for e in scene.entities if e.kind == SceneEntityKind.GREENHOUSE_BOUNDS)
 
     assert SceneEntityKind.BENCH in kinds and SceneEntityKind.CROP_GUTTER not in kinds
     assert vent.properties["open_fraction"] == 1.0
-    assert bounds.shape.shape == "box" and bounds.shape.size_x == 12.0
+    assert bounds.shape.shape == "box" and bounds.shape.size_x == 30.0
 
 
 @pytest.mark.parametrize(
     ("changes", "error", "reason"),
     [
-        (SceneChanges(layout="hydroponic"), NotFound, "gh_001 has no layout 'hydroponic'"),
-        (SceneChanges(layout="../gh_002/default"), NotFound, "has no layout"),
+        (
+            SceneChanges(layout="hydroponic"),
+            NotFound,
+            "tomato_compartment has no layout 'hydroponic'",
+        ),
+        (SceneChanges(layout="../climate_box/default"), NotFound, "has no layout"),
         (SceneChanges(envelope={"height": 4.0}), InvalidRequest, "the envelope has no 'height'"),
         (SceneChanges(openings={"skylight": 1.0}), InvalidRequest, "has no opening 'skylight'"),
         (SceneChanges(envelope={"ridge_height": 2.0}), InvalidRequest, "no such greenhouse"),
         # Shrunk, the greenhouse no longer holds its layout.
-        (SceneChanges(envelope={"length": 5.0}), InvalidRequest, "outside the greenhouse"),
+        (SceneChanges(envelope={"length": 12.0}), InvalidRequest, "outside the greenhouse"),
         (
-            SceneChanges(layout="benches", envelope={"length": 7.0}),
+            SceneChanges(layout="propagation", envelope={"length": 12.0}),
             InvalidRequest,
             "outside the greenhouse",
         ),
@@ -94,13 +102,16 @@ def test_a_change_that_cannot_be_made_is_refused_with_its_reason(
     changes: SceneChanges, error: type[ServiceError], reason: str
 ) -> None:
     with pytest.raises(error, match=reason) as refused:
-        scenarios.initial_scene("gh_001", changes)
+        scenarios.initial_scene("tomato_compartment", changes)
 
     assert reason in refused.value.message
 
 
 def test_a_layout_is_given_as_its_file_holds_it() -> None:
-    default, benches = scenarios.layout("gh_001"), scenarios.layout("gh_001", "benches")
+    default, benches = (
+        scenarios.layout("tomato_compartment"),
+        scenarios.layout("tomato_compartment", "propagation"),
+    )
 
     rows = benches["crop_rows"]
     assert isinstance(rows, dict)
@@ -129,16 +140,16 @@ def runs() -> Iterator[LiveRuns]:
 def test_a_live_command_answers_with_the_runs_new_state(
     runs: LiveRuns, command: LiveCommand, day: int, playing: bool
 ) -> None:
-    state = runs.command("gh_demo", command)
+    state = runs.command("climate_box", command)
 
     assert type(state) is LiveState
     assert (state.day, state.playing) == (day, playing)
 
 
 def test_a_live_run_plays_at_the_speeds_it_offers_and_no_other(runs: LiveRuns) -> None:
-    assert [runs.set_speed("gh_demo", speed).speed for speed in SPEEDS] == list(SPEEDS)
+    assert [runs.set_speed("climate_box", speed).speed for speed in SPEEDS] == list(SPEEDS)
     with pytest.raises(InvalidSpeed, match="multiplier must be one of 0.25, 0.5, 1, 2, 4, 8"):
-        runs.set_speed("gh_demo", 3.0)
+        runs.set_speed("climate_box", 3.0)
     assert issubclass(InvalidSpeed, InvalidRequest)
 
 
@@ -152,6 +163,6 @@ def test_an_unregistered_scenario_has_no_live_run(runs: LiveRuns) -> None:
 
 
 def test_a_frame_states_its_run_without_its_scene(runs: LiveRuns) -> None:
-    frame = runs.run("gh_demo").latest()
+    frame = runs.run("climate_box").latest()
 
     assert frame.state().model_dump() == frame.model_dump(exclude={"snapshot"})

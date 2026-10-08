@@ -1,7 +1,7 @@
 import { expect, type Page, type Route, test } from "@playwright/test";
 
 async function openLive(page: Page): Promise<void> {
-  await page.goto("/?live=gh_demo");
+  await page.goto("/?live=climate_box");
   await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeEnabled();
 }
 
@@ -10,7 +10,7 @@ async function holdCommand(page: Page, command: string): Promise<{ received: Pro
   const received = new Promise<Route>((resolve) => {
     receive = resolve;
   });
-  await page.route(`**/api/scenarios/gh_demo/live/${command}`, (route) => receive(route));
+  await page.route(`**/api/scenarios/climate_box/live/${command}`, (route) => receive(route));
   return { received };
 }
 
@@ -35,12 +35,14 @@ for (const returnToOriginal of [false, true]) {
     await page.getByRole("button", { name: "Pause", exact: true }).click();
     const route = await pending.received;
 
-    await page.getByRole("button", { name: "Play gh_002 live", exact: true }).click();
-    await expect(page.getByTestId("scene-status")).toContainText("scenario gh_002, live: gh_002");
+    await page.getByRole("button", { name: "Play airflow_box live", exact: true }).click();
+    await expect(page.getByTestId("scene-status")).toContainText(
+      "scenario airflow_box, live: airflow_box",
+    );
     if (returnToOriginal) {
-      await page.getByRole("button", { name: "Play gh_demo live", exact: true }).click();
+      await page.getByRole("button", { name: "Play climate_box live", exact: true }).click();
       await expect(page.getByTestId("scene-status")).toContainText(
-        "scenario gh_demo, live: gh_demo",
+        "scenario climate_box, live: climate_box",
       );
     }
 
@@ -54,7 +56,7 @@ for (const olderProblem of [null, "older failure"]) {
     page,
   }) => {
     const pending = await holdCommand(page, "pause");
-    await page.route("**/api/scenarios/gh_demo/live/reset", (route) =>
+    await page.route("**/api/scenarios/climate_box/live/reset", (route) =>
       route.fulfill({ status: 400, json: { error: "latest failure" } }),
     );
     await openLive(page);

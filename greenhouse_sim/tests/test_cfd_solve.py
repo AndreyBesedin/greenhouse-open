@@ -2,15 +2,15 @@
 field, and keeping it by what was solved.
 
 What OpenFOAM writes is read here from cases written in its format, so the
-reading is checked without it. With `pytest -m cfd`, gh_001 is solved, and
+reading is checked without it. With `pytest -m cfd`, tomato_compartment is solved, and
 its solution compared with the one kept in `greenhouse_sim/cfd/results/`.
 
 A kept result goes stale when anything OpenFOAM is given changes. Solve it
 again, where OpenFOAM or Docker runs, from `greenhouse_sim/`:
 
-    python -m greenhouse_sim.cfd gh_001 cases/gh_001 --solve
+    python -m greenhouse_sim.cfd tomato_compartment cases/tomato_compartment --solve
 
-or take `gh_001.json` from the `cfd-results` artifact of the CFD workflow.
+or take `tomato_compartment.json` from the `cfd-results` artifact of the CFD workflow.
 """
 
 import itertools
@@ -54,12 +54,12 @@ from greenhouse_sim.services import cfd, fields
 from greenhouse_sim.services.scenarios import SceneChanges, changed, scenario
 from greenhouse_sim.world.geometry import Vector3
 
-GH_001 = scenario("gh_001")
-GRID_001 = fields.grid("gh_001")
+COMPARTMENT = scenario("tomato_compartment")
+GRID = fields.grid("tomato_compartment")
 STALE = (
-    "gh_001's kept CFD result is missing or stale: solve it again with "
-    "`python -m greenhouse_sim.cfd gh_001 cases/gh_001 --solve`, or take gh_001.json "
-    "from the CFD workflow's cfd-results artifact"
+    "tomato_compartment's kept CFD result is missing or stale: solve it again with "
+    "`python -m greenhouse_sim.cfd tomato_compartment cases/tomato_compartment --solve`, "
+    "or take tomato_compartment.json from the CFD workflow's cfd-results artifact"
 )
 # A box 2 by 1.5 by 1 m in half-metre cells, 4 by 3 by 2, as a solver meshed
 # it with one cell removed.
@@ -119,21 +119,27 @@ def _solved_case(directory: Path) -> dict[tuple[int, int, int], tuple[float, flo
 def test_air_comes_in_through_the_first_open_opening_or_those_named_and_leaves_by_the_rest() -> (
     None
 ):
-    geometry = cfd.geometry("gh_001")
-    opened = cfd.geometry("gh_001", SceneChanges(openings={"door_1": 1.0}))
+    geometry = cfd.geometry("tomato_compartment")
+    opened = cfd.geometry("tomato_compartment", SceneChanges(openings={"door_front": 1.0}))
+
+    vents = [f"roof_vent_{span}" for span in range(1, 5)]
 
     assert flow_roles(geometry, CfdSetup()).inlets == ["roof_vent_1"]
-    assert flow_roles(geometry, CfdSetup()).outlets == ["roof_vent_2"]
-    roles = flow_roles(opened, _with(inlets=["door_1"]))
-    assert (roles.inlets, roles.outlets) == (["door_1"], ["roof_vent_1", "roof_vent_2"])
+    assert flow_roles(geometry, CfdSetup()).outlets == vents[1:]
+    roles = flow_roles(opened, _with(inlets=["door_front"]))
+    assert (roles.inlets, roles.outlets) == (["door_front"], vents)
 
 
 @pytest.mark.parametrize(
     ("scenario_id", "setup", "refusal"),
     [
-        ("gh_002", CfdSetup(), "needs two open doors or vents"),
-        ("gh_001", _with(inlets=["door_1"]), "not door_1"),
-        ("gh_001", _with(inlets=["roof_vent_1", "roof_vent_2"]), "no open door or vent left"),
+        ("climate_box", CfdSetup(), "needs two open doors or vents"),
+        ("tomato_compartment", _with(inlets=["door_front"]), "not door_front"),
+        (
+            "tomato_compartment",
+            _with(inlets=[f"roof_vent_{span}" for span in range(1, 5)]),
+            "no open door or vent left",
+        ),
     ],
 )
 def test_a_setup_without_a_way_in_and_a_way_out_is_refused(
@@ -144,7 +150,9 @@ def test_a_setup_without_a_way_in_and_a_way_out_is_refused(
 
 
 def test_the_solve_case_drives_the_air_as_its_setup_says() -> None:
-    files = solve_case_files(cfd.geometry("gh_001"), _with(inlet_speed_m_s=0.8, iterations=300))
+    files = solve_case_files(
+        cfd.geometry("tomato_compartment"), _with(inlet_speed_m_s=0.8, iterations=300)
+    )
     velocity = files[f"{INITIAL_FIELDS}/U"]
     pressure = files[f"{INITIAL_FIELDS}/p"]
 
@@ -167,17 +175,17 @@ def test_the_solve_case_drives_the_air_as_its_setup_says() -> None:
 
 def test_a_result_is_keyed_by_everything_openfoam_is_given_and_nothing_else() -> None:
     def key(config: ScenarioConfig) -> str | None:
-        return scenario_key("gh_001", config, GRID_001)
+        return scenario_key("tomato_compartment", config, GRID)
 
-    as_configured = key(GH_001)
-    longer_run = GH_001.model_copy(update={"duration_days": 99})
-    faster = GH_001.model_copy(update={"cfd": _with(inlet_speed_m_s=0.6)})
-    vents = changed(GH_001, SceneChanges(openings={"roof_vent_1": 0.5, "door_1": 1.0}))
+    as_configured = key(COMPARTMENT)
+    longer_run = COMPARTMENT.model_copy(update={"duration_days": 99})
+    faster = COMPARTMENT.model_copy(update={"cfd": _with(inlet_speed_m_s=0.6)})
+    vents = changed(COMPARTMENT, SceneChanges(openings={"roof_vent_1": 0.5, "door_front": 1.0}))
 
     assert as_configured == key(longer_run)
     assert len({as_configured, key(faster), key(vents)}) == 3
-    assert scenario_key("gh_002", scenario("gh_002"), fields.grid("gh_002")) is None
-    files = solve_case_files(cfd.geometry("gh_001"), CfdSetup())
+    assert scenario_key("climate_box", scenario("climate_box"), fields.grid("climate_box")) is None
+    files = solve_case_files(cfd.geometry("tomato_compartment"), CfdSetup())
     assert case_key(files) == as_configured
     assert case_key(files | {"system/fvSchemes": "changed"}) != as_configured
 
@@ -238,18 +246,18 @@ def test_a_solves_log_says_how_long_it_took_and_whether_it_converged() -> None:
 
 def test_a_result_is_kept_while_it_is_the_scenarios_solution(tmp_path: Path) -> None:
     field = EnvironmentField(
-        "gh_001_cfd",
+        "tomato_compartment_cfd",
         SOURCE,
-        GRID_001,
+        GRID,
         0.0,
-        {AirQuantity.VELOCITY: np.zeros((*reversed(GRID_001.shape), 3))},
+        {AirQuantity.VELOCITY: np.zeros((*reversed(GRID.shape), 3))},
     )
-    key = scenario_key("gh_001", GH_001, GRID_001)
+    key = scenario_key("tomato_compartment", COMPARTMENT, GRID)
     assert key is not None
     result = CfdResult(
         key=key,
-        scenario_id="gh_001",
-        setup=GH_001.cfd,
+        scenario_id="tomato_compartment",
+        setup=COMPARTMENT.cfd,
         iterations=10,
         converged=True,
         field=field.document(),
@@ -257,44 +265,46 @@ def test_a_result_is_kept_while_it_is_the_scenarios_solution(tmp_path: Path) -> 
 
     keep(result, tmp_path)
 
-    assert kept_result("gh_001", GH_001, GRID_001, directory=tmp_path) == result
-    faster = GH_001.model_copy(update={"cfd": _with(inlet_speed_m_s=0.6)})
-    assert kept_result("gh_001", faster, GRID_001, directory=tmp_path) is None
-    assert kept_result("gh_demo", scenario("gh_demo"), GRID_001, directory=tmp_path) is None
+    assert kept_result("tomato_compartment", COMPARTMENT, GRID, directory=tmp_path) == result
+    faster = COMPARTMENT.model_copy(update={"cfd": _with(inlet_speed_m_s=0.6)})
+    assert kept_result("tomato_compartment", faster, GRID, directory=tmp_path) is None
+    assert kept_result("climate_box", scenario("climate_box"), GRID, directory=tmp_path) is None
 
 
 @pytest.mark.cfd
-def test_openfoam_solves_gh_001_to_a_converged_field_on_its_grid(tmp_path: Path) -> None:
-    result = solve(cfd.geometry("gh_001"), GH_001.cfd, tmp_path)
+def test_openfoam_solves_tomato_compartment_to_a_converged_field_on_its_grid(
+    tmp_path: Path,
+) -> None:
+    result = solve(cfd.geometry("tomato_compartment"), COMPARTMENT.cfd, tmp_path)
     field = EnvironmentField.from_document(result.field)
 
-    assert result.converged and 0 < result.iterations < GH_001.cfd.iterations
-    assert result.key == scenario_key("gh_001", GH_001, GRID_001)
-    assert field.grid == GRID_001 and field.source == SOURCE
+    assert result.converged and 0 < result.iterations < COMPARTMENT.cfd.iterations
+    assert result.key == scenario_key("tomato_compartment", COMPARTMENT, GRID)
+    assert field.grid == GRID and field.source == SOURCE
     assert set(field.channels) == {AirQuantity.VELOCITY, AirQuantity.PRESSURE}
     speeds = np.linalg.norm(field.channels[AirQuantity.VELOCITY], axis=-1)
     assert 0.3 < speeds.max() < 1.0
 
 
-def _kept_001() -> CfdResult:
-    result = kept_result("gh_001", GH_001, GRID_001)
+def _kept_compartment() -> CfdResult:
+    result = kept_result("tomato_compartment", COMPARTMENT, GRID)
     assert result is not None, STALE
     return result
 
 
-def test_gh_001s_kept_solution_is_its_current_one_and_converged() -> None:
-    result = _kept_001()
+def test_tomato_compartments_kept_solution_is_its_current_one_and_converged() -> None:
+    result = _kept_compartment()
     field = EnvironmentField.from_document(result.field)
 
-    assert result.converged and result.setup == GH_001.cfd
-    assert field.grid == GRID_001 and field.source == SOURCE
+    assert result.converged and result.setup == COMPARTMENT.cfd
+    assert field.grid == GRID and field.source == SOURCE
     assert set(field.channels) == {AirQuantity.VELOCITY, AirQuantity.PRESSURE}
 
 
-def test_gh_001s_air_falls_from_its_inlet_vent_and_rises_to_its_outlet_vent() -> None:
-    field = EnvironmentField.from_document(_kept_001().field)
+def test_tomato_compartments_air_falls_from_its_inlet_vent_and_rises_to_its_outlet_vent() -> None:
+    field = EnvironmentField.from_document(_kept_compartment().field)
     velocity = field.channels[AirQuantity.VELOCITY]
-    geometry = cfd_geometry("gh_001", GH_001, GRID_001)
+    geometry = cfd_geometry("tomato_compartment", COMPARTMENT, GRID)
     (obstacle,) = geometry.of(BoundaryCategory.OBSTACLE)
 
     def below(name: str) -> Vector3:
@@ -303,7 +313,7 @@ def test_gh_001s_air_falls_from_its_inlet_vent_and_rises_to_its_outlet_vent() ->
         return Vector3(
             x=(box.minimum.x + box.maximum.x) / 2,
             y=(box.minimum.y + box.maximum.y) / 2,
-            z=box.minimum.z - GRID_001.cell_size.z / 2,
+            z=box.minimum.z - GRID.cell_size.z / 2,
         )
 
     falling = field.sample(AirQuantity.VELOCITY, below("roof_vent_1"))
@@ -325,13 +335,13 @@ def test_gh_001s_air_falls_from_its_inlet_vent_and_rises_to_its_outlet_vent() ->
 
 
 def test_a_kept_solution_is_an_airflow_on_any_grid_at_any_time() -> None:
-    airflow = CfdAirflow(_kept_001())
-    coarse = FieldGrid.over(GRID_001.origin, GRID_001.maximum, 1.0)
+    airflow = CfdAirflow(_kept_compartment())
+    coarse = FieldGrid.over(GRID.origin, GRID.maximum, 1.0)
 
-    own = airflow.field("gh_001_cfd", GRID_001, time_s=60.0)
+    own = airflow.field("tomato_compartment_cfd", GRID, time_s=60.0)
     resampled = airflow.field("coarse", coarse)
 
-    assert own.time_s == 60.0 and own.field_id == "gh_001_cfd"
+    assert own.time_s == 60.0 and own.field_id == "tomato_compartment_cfd"
     assert resampled.grid == coarse and resampled.source == SOURCE
     # Each of its cells holds the solution at its centre.
     xs, ys, zs = coarse.centres()
@@ -349,24 +359,24 @@ def test_a_kept_solution_is_an_airflow_on_any_grid_at_any_time() -> None:
 
 
 def test_a_scenario_offers_its_kept_solution_among_its_fields() -> None:
-    _kept_001()
+    _kept_compartment()
 
-    assert "cfd" in fields.field_names("gh_001")
-    assert fields.field("gh_001", "cfd").source == SOURCE
-    assert "cfd" not in fields.field_names("gh_002")
+    assert "cfd" in fields.field_names("tomato_compartment")
+    assert fields.field("tomato_compartment", "cfd").source == SOURCE
+    assert "cfd" not in fields.field_names("climate_box")
     assert {
         sid
         for sid, config in SCENARIO_REGISTRY.items()
         if kept_result(sid, config, fields.grid(sid)) is not None
-    } == {"gh_001", "airflow_box", "tomato_compartment"}
+    } == {"tomato_compartment", "airflow_box"}
 
 
 @pytest.mark.cfd
-def test_openfoam_solves_gh_001_as_its_kept_solution_says(tmp_path: Path) -> None:
-    kept = _kept_001()
+def test_openfoam_solves_tomato_compartment_as_its_kept_solution_says(tmp_path: Path) -> None:
+    kept = _kept_compartment()
 
     # Solved beside the kept result, not in its place.
-    solved = solve(cfd.geometry("gh_001"), GH_001.cfd, tmp_path)
+    solved = solve(cfd.geometry("tomato_compartment"), COMPARTMENT.cfd, tmp_path)
 
     assert solved.converged
     assert solved.key == kept.key

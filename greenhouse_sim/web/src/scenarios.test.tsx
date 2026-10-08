@@ -5,7 +5,7 @@ import { ScenarioList } from "./ScenarioList";
 import { loadScenarios, parseScenarios, type ScenarioSummary } from "./scenarios";
 
 const DEMO: ScenarioSummary = {
-  id: "gh_demo",
+  id: "climate_box",
   name: "Agentic Demo Greenhouse",
   description: "A short walkthrough greenhouse",
   plants: 6,
@@ -13,7 +13,7 @@ const DEMO: ScenarioSummary = {
   layouts: ["default"],
 };
 const SIMULATION: ScenarioSummary = {
-  id: "gh_001",
+  id: "tomato_compartment",
   name: "Simulation Greenhouse 001",
   description: "Forty plants",
   plants: 40,
@@ -34,7 +34,7 @@ describe("reading the simulator's scenario list", () => {
     ["not a list", { scenarios: [DEMO] }],
     ["a summary without a plant count", [{ ...DEMO, plants: undefined }]],
     ["a fractional plant count", [{ ...DEMO, plants: 6.5 }]],
-    ["a summary that is not an object", ["gh_demo"]],
+    ["a summary that is not an object", ["climate_box"]],
     ["a summary without its layouts", [{ ...DEMO, layouts: undefined }]],
     ["a layout that is not a name", [{ ...DEMO, layouts: [1] }]],
   ])("refuses %s", (_, body) => {
@@ -73,7 +73,7 @@ describe("the scenario list", () => {
       <ScenarioList state={{ status: "loaded", scenarios: [DEMO] }} />,
     );
 
-    expect(html).toContain("<code>gh_demo</code>");
+    expect(html).toContain("<code>climate_box</code>");
     expect(html).toContain("Agentic Demo Greenhouse");
     expect(html).toContain("<td>6</td><td>15</td>");
   });
@@ -82,14 +82,14 @@ describe("the scenario list", () => {
     const html = renderToStaticMarkup(
       <ScenarioList
         state={{ status: "loaded", scenarios: [DEMO, SIMULATION] }}
-        shownLayout={{ scenarioId: "gh_001", layout: "benches" }}
+        shownLayout={{ scenarioId: "tomato_compartment", layout: "benches" }}
         onShow={() => undefined}
       />,
     );
 
     expect(html).toContain("<th>Layout</th>");
-    expect(html).toContain('aria-label="Layout of gh_001"');
-    expect(html).not.toContain('aria-label="Layout of gh_demo"');
+    expect(html).toContain('aria-label="Layout of tomato_compartment"');
+    expect(html).not.toContain('aria-label="Layout of climate_box"');
     expect(html).toContain('<option value="benches" selected="">benches</option>');
   });
 
