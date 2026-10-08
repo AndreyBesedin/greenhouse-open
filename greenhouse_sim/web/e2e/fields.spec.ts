@@ -64,6 +64,7 @@ test("the prescribed airflow patterns switch at once, the scenario's own first",
     "uniform, the scenario's airflow",
     "buoyancy",
     "vortex",
+    "climate",
     "shear",
   ]);
 

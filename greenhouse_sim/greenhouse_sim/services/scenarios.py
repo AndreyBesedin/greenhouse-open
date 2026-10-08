@@ -9,6 +9,7 @@ openings no longer fit, a ridge below the eaves, or a level for equipment
 it does not have, is refused with the reason.
 """
 
+from collections.abc import Mapping
 from typing import Final
 
 from pydantic import BaseModel, JsonValue, ValidationError
@@ -97,7 +98,7 @@ def layout(scenario_id: str, name: str = DEFAULT_LAYOUT) -> dict[str, JsonValue]
     return layout_document(_with_layout(scenario(scenario_id), name).layout)
 
 
-def equipment_levels(config: ScenarioConfig, levels: dict[str, float]) -> dict[str, float]:
+def equipment_levels(config: ScenarioConfig, levels: Mapping[str, float]) -> dict[str, float]:
     """The levels asked for a scenario's equipment, checked: a level for
     equipment it does not have, or outside 0 to 1, is refused."""
     known = {piece.actuator_id for piece in config.layout.equipment}

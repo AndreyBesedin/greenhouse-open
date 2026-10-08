@@ -8,27 +8,33 @@ A scenario offers every prescribed airflow pattern
 (`greenhouse_sim.airflow.prescribed`): its own, as its configuration sets
 it, first, and the others with their typical numbers. Then its CFD solution
 (`cfd`) with the layout asked for, if one is kept that is still its
-solution (`greenhouse_sim.cfd.results`), and the synthetic shear the field
-format is checked against.
+solution (`greenhouse_sim.cfd.results`). Then, if its layout places
+equipment, its `climate`: its own airflow with its equipment running at the
+levels asked, all off unless asked (`greenhouse_sim.climate.field`). And
+last the synthetic shear the field format is checked against.
 """
 
+from collections.abc import Mapping
 from typing import Final
 
 from greenhouse_sim.airflow.contract import AirflowModel
 from greenhouse_sim.airflow.prescribed import PATTERNS
+from greenhouse_sim.cfd.geometry import cfd_geometry
 from greenhouse_sim.cfd.results import CfdAirflow, kept_result
+from greenhouse_sim.climate.field import ClimateAirflow
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument, FieldGrid
 from greenhouse_sim.fields.synthetic import shear_field
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.errors import NotFound
-from greenhouse_sim.services.scenarios import SceneChanges, changed, scenario
+from greenhouse_sim.services.scenarios import SceneChanges, changed, equipment_levels, scenario
 from greenhouse_sim.world.geometry import Vector3
 
 # The widest a field's cell may be, in metres.
 CELL_M: Final = 0.5
 SHEAR: Final = "shear"
 CFD: Final = "cfd"
+CLIMATE: Final = "climate"
 
 
 class _Shear:
@@ -38,10 +44,33 @@ class _Shear:
         return shear_field(field_id, grid)
 
 
-def _models(scenario_id: str, layout: str) -> dict[str, AirflowModel]:
-    """A scenario's fields by name, with one of its layouts: its own airflow
-    first."""
+class _Climate:
+    """A scenario's climate, as an airflow model: its solid cells are found
+    only when it is drawn."""
+
+    def __init__(self, scenario_id: str, config: ScenarioConfig, levels: Mapping[str, float]):
+        self._scenario_id = scenario_id
+        self._config = config
+        self._levels = levels
+
+    def field(self, field_id: str, grid: FieldGrid, time_s: float = 0.0) -> EnvironmentField:
+        solid = cfd_geometry(self._scenario_id, self._config, grid).solid()
+        climate = ClimateAirflow(
+            base=self._config.airflow,
+            equipment=self._config.layout.equipment,
+            levels=self._levels,
+            solid=solid,
+        )
+        return climate.field(field_id, grid, time_s)
+
+
+def _models(
+    scenario_id: str, layout: str, levels: Mapping[str, float] | None = None
+) -> dict[str, AirflowModel]:
+    """A scenario's fields by name, with one of its layouts and its equipment
+    at `levels`: its own airflow first."""
     config = changed(scenario(scenario_id), SceneChanges(layout=layout))
+    running = equipment_levels(config, levels or {})
     own = config.airflow
     models: dict[str, AirflowModel] = {own.kind: own}
     for name, pattern in PATTERNS.items():
@@ -49,6 +78,8 @@ def _models(scenario_id: str, layout: str) -> dict[str, AirflowModel]:
     solved = kept_result(scenario_id, config, air_grid(config), layout)
     if solved is not None:
         models[CFD] = CfdAirflow(solved)
+    if config.layout.equipment:
+        models[CLIMATE] = _Climate(scenario_id, config, running)
     models[SHEAR] = _Shear()
     return models
 
@@ -82,10 +113,16 @@ def air_grid(config: ScenarioConfig) -> FieldGrid:
     )
 
 
-def field(scenario_id: str, name: str, layout: str | None = None) -> FieldDocument:
+def field(
+    scenario_id: str,
+    name: str,
+    layout: str | None = None,
+    levels: Mapping[str, float] | None = None,
+) -> FieldDocument:
     """One of a scenario's fields with one of its layouts, by default its
-    own, as it is published."""
-    models = _models(scenario_id, layout or DEFAULT_LAYOUT)
+    own, and its equipment at `levels`, as it is published. A level for
+    equipment it does not have, or outside 0 to 1, is refused."""
+    models = _models(scenario_id, layout or DEFAULT_LAYOUT, levels)
     model = models.get(name)
     if model is None:
         known = ", ".join(models)
