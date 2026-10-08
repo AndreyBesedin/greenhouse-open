@@ -31,8 +31,9 @@ from greenhouse_sim.climate.psychrometrics import humidity_ratio_g_kg, relative_
 from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.climate.sources import SourceTerms, source_terms
 from greenhouse_sim.climate.transport import AirState, Transport
+from greenhouse_sim.climate.vents import Vent
 from greenhouse_sim.domain.air import AirQuantity
-from greenhouse_sim.fields.field import EnvironmentField, FieldGrid
+from greenhouse_sim.fields.field import VECTOR_COMPONENTS, EnvironmentField, FieldGrid
 from greenhouse_sim.world.equipment import Equipment
 
 type _Levels = tuple[tuple[str, float], ...]
@@ -84,6 +85,7 @@ class ClimateRun:
         settings: ClimateSettings,
         grid: FieldGrid,
         solid: np.ndarray,
+        vents: Sequence[Vent] = (),
     ) -> None:
         nx, ny, nz = grid.shape
         if solid.shape != (nz, ny, nx):
@@ -94,6 +96,7 @@ class ClimateRun:
         self.settings = settings
         self.grid = grid
         self.solid = solid
+        self.vents = tuple(vents)
         self._base_velocity = base.field("base", grid).channels[AirQuantity.VELOCITY]
         self._steady: dict[_Levels, tuple[SourceTerms, FaceFlows, Transport]] = {}
         start = humidity_ratio_g_kg(settings.start_temperature_c, settings.start_humidity_pct)
@@ -122,7 +125,7 @@ class ClimateRun:
                 face_flows(self.grid, self._base_velocity + terms.velocity, self.solid),
                 self.solid,
             )
-            transport = Transport(self.grid, flows, self.solid, self.settings)
+            transport = Transport(self.grid, flows, self.solid, self.settings, self.vents)
             self._steady[key] = (terms, flows, transport)
         return self._steady[key]
 
@@ -159,9 +162,23 @@ class ClimateRun:
         """The air's temperature in every cell at `time_s`."""
         return self.air_at(time_s).temperature
 
+    def _draughts(self, air: AirState) -> np.ndarray:
+        """The draughts through the open doors and vents, as the air against
+        each is warmer or cooler than the outside's."""
+        nx, ny, nz = self.grid.shape
+        draughts = np.zeros((nz, ny, nx, VECTOR_COMPONENTS))
+        for vent in self.vents:
+            draughts += vent.draught(
+                self.grid,
+                air.temperature,
+                self.settings.outside_temperature_c,
+                self.settings.vent_exchange_m_s,
+            )
+        return draughts
+
     def field(self, field_id: str, grid: FieldGrid, time_s: float = 0.0) -> EnvironmentField:
-        """The air at `time_s`: its velocity, temperature and relative
-        humidity."""
+        """The air at `time_s`: its velocity, with the draughts through open
+        doors and vents, its temperature and its relative humidity."""
         if grid != self.grid:
             raise ValueError("a climate run is drawn on its own grid")
         air = self.air_at(time_s)
@@ -173,7 +190,7 @@ class ClimateRun:
             grid=grid,
             time_s=time_s,
             channels={
-                AirQuantity.VELOCITY: self.flows_at(time_s).velocity(),
+                AirQuantity.VELOCITY: self.flows_at(time_s).velocity() + self._draughts(air),
                 AirQuantity.TEMPERATURE: temperature,
                 AirQuantity.HUMIDITY: relative_humidity_pct(temperature, humidity),
             },

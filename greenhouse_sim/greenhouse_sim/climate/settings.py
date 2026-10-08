@@ -35,3 +35,7 @@ class ClimateSettings(BaseModel):
     # across in minutes, as heating's own convection mixes it, and a heater's
     # corner stays some tens of degrees warmer, not a hundred.
     mixing_m2_s: PositiveFloat = 0.1
+    # How fast the air an open door or vent exchanges with the outside moves
+    # through its aperture, in each way: a stack effect's few tenths of a
+    # metre a second, until wind comes (P07).
+    vent_exchange_m_s: NonNegativeFloat = 0.3

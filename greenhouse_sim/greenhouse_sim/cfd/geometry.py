@@ -128,6 +128,32 @@ class CfdGeometry(BaseModel):
         """Its boundaries of one category, in order."""
         return [b for b in self.boundaries if b.category == category]
 
+    def opening_cells(self) -> dict[str, tuple[np.ndarray, int, int]]:
+        """Each open door and vent, by identifier: the cells against it, in the
+        grid's order (z, y, x), the array axis square to the face it lies on,
+        and which way out of the domain is along that axis, +1 or -1."""
+        xs, ys, zs = self.grid.centres()
+        centres = {"x": xs, "y": ys, "z": zs}
+        array_axis = {"z": 0, "y": 1, "x": 2}
+        cells = {}
+        for opening in self.of(BoundaryCategory.OPENING):
+            if opening.face is None or opening.opening_id is None:
+                continue
+            square, far, across = FACES[opening.face]
+            low, high = opening.box.minimum, opening.box.maximum
+            within = {
+                axis: (centres[axis] >= _axis(low, axis)) & (centres[axis] <= _axis(high, axis))
+                for axis in across
+            }
+            layer = np.zeros(centres[square].size, dtype=bool)
+            layer[-1 if far else 0] = True
+            within[square] = layer
+            mask = (
+                within["z"][:, None, None] & within["y"][None, :, None] & within["x"][None, None, :]
+            )
+            cells[opening.opening_id] = (mask, array_axis[square], 1 if far else -1)
+        return cells
+
     def solid(self) -> np.ndarray:
         """The cells of its grid that obstacles remove, as they are meshed, in
         the grid's order (z, y, x)."""
