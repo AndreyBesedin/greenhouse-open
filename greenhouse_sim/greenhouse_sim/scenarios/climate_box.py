@@ -1,6 +1,7 @@
 from datetime import date
 
 from greenhouse_sim.airflow.prescribed import UniformAirflow
+from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.domain.envelope import OpeningKind
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import load_layout
@@ -68,4 +69,7 @@ CLIMATE_BOX = ScenarioConfig(
     layout=load_layout("climate_box"),
     # Still air, so that a fan's jet stands out.
     airflow=UniformAirflow(velocity_m_s=Vector3(x=0.0, y=0.0, z=0.0)),
+    # A cold night, when heating matters: 8 °C outside, 16 °C inside to
+    # start, through single glass.
+    climate=ClimateSettings(outside_temperature_c=8.0, start_temperature_c=16.0),
 )
