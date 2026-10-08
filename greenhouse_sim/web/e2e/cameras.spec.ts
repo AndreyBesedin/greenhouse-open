@@ -1,12 +1,9 @@
 import { expect, type Page, test } from "@playwright/test";
 
 import type { CameraPose } from "../src/camera.ts";
-import { type CameraSpec, pixelAt } from "../src/sensors/camera.ts";
+import type { CameraSpec } from "../src/sensors/camera.ts";
+import { aheadAt, cameraText, pointAtPixel, shownDepth } from "./cameraView";
 import { selectAt } from "./view";
-
-function cameraText({ position, target }: CameraPose): string {
-  return [position, target].map(({ x, y, z }) => `${x}:${y}:${z}`).join(",");
-}
 
 // The climate box's camera, at the front of the house, 2.2 m up, looking down
 // it at the heater, as its layout places it; a point on its body, seen from
@@ -78,18 +75,6 @@ function isGrey([r, g, b]: [number, number, number]): boolean {
   return Math.max(r, g, b) - Math.min(r, g, b) <= GREY_WITHIN;
 }
 
-/** Points at the middle of the camera's picture's pixel (u, v). */
-async function pointAtPixel(page: Page, u: number, v: number): Promise<void> {
-  const box = await page.getByTestId("camera-view").boundingBox();
-  if (box === null) {
-    throw new Error("the camera's picture is not on the page");
-  }
-  await page.mouse.move(
-    box.x + ((u + 0.5) * box.width) / FRONT_CAMERA.width,
-    box.y + ((v + 0.5) * box.height) / FRONT_CAMERA.height,
-  );
-}
-
 test("cameras: a camera's picture is the scene as its intrinsics project it", async ({ page }) => {
   await selectTheCamera(page);
   await expect(page.getByTestId("selected-type")).toHaveText("camera");
@@ -123,13 +108,6 @@ const HEATER_FRONT_X = 10.9;
 // A depth is shown to the centimetre.
 const CENTIMETRE = 0.01;
 
-/** How far ahead of the camera, along the way it looks, the ray through the
- * middle of pixel (u, v) meets the plane across the house at `x`. */
-function aheadAt(u: number, v: number, x: number): number {
-  const metreAhead = pixelAt(FRONT_CAMERA, u + 0.5, v + 0.5, 1);
-  return (x - FRONT_CAMERA.eye.x) / (metreAhead.x - FRONT_CAMERA.eye.x);
-}
-
 test("cameras: the instance pass names what the main view picks, and depth is a surface's distance", async ({
   page,
 }) => {
@@ -150,12 +128,11 @@ test("cameras: the instance pass names what the main view picks, and depth is a 
     const pixel = panel.getByTestId("camera-pixel");
     await expect(pixel).toHaveText("Point at the picture to read what each pixel shows.");
 
-    await pointAtPixel(page, u, v);
+    await pointAtPixel(page, FRONT_CAMERA, u, v);
     await expect(pixel).toContainText(`Pixel (${u}, ${v}): climate_box_heater, `);
-    const shown = /, ([\d.]+) m ahead$/.exec((await pixel.textContent()) ?? "");
     // Its front face's distance ahead, to the centimetre shown.
-    const ahead = aheadAt(u, v, HEATER_FRONT_X);
-    expect(Math.abs(Number(shown?.[1]) - ahead)).toBeLessThanOrEqual(CENTIMETRE);
+    const ahead = aheadAt(FRONT_CAMERA, u, v, HEATER_FRONT_X);
+    expect(Math.abs(shownDepth(await pixel.textContent()) - ahead)).toBeLessThanOrEqual(CENTIMETRE);
   });
 
   await test.step("the passes are pictures of their own, apart from the camera's", async () => {

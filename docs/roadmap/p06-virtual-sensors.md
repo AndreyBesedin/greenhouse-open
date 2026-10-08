@@ -1,6 +1,6 @@
 # P06: Virtual sensors and the observation layer
 
-**Status:** in progress: P06.1 to P06.7 done, the final QA next. Part of the
+**Status:** done: P06.1 to P06.7 and the final QA. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -529,13 +529,58 @@ Expected:
 - the camera's views agree with one another and with the main view;
 - what is hidden from the camera is missing from its instance pass.
 
+### As run
+
+The browser test `e2e/sensor-lab.spec.ts` runs it in the sensor lab, ten
+minutes into a run. Every expectation holds:
+
+- **Placement:** each thermometer is selectable where its layout places
+  it, and the inspector shows its configuration: none for the clean one,
+  and noise, drift and dropout for the imperfect one.
+- **Clean sensors read the truth:** 17.50 °C at 3 m and 20.50 °C at 9 m,
+  the gradient's values there. Each has a reading a minute from the start,
+  on time, 11 by ten minutes, and is fresh.
+- **Imperfections, off and on:**
+  - the imperfect sensor reads 18.20 °C, taken at 9 min and 30 s late,
+    against a truth of 17.50 °C;
+  - its samples at 3 and 4 min dropped out, so it has 8 readings by ten
+    minutes;
+  - with imperfections off, it reads the truth, with all 11 readings;
+  - on again, and again on a fresh load, it reads 18.20 °C once more.
+- **The camera:** its frustum is drawn in the main view, checked by eye. It
+  is 640 × 480 pixels, 70° across, and has taken 11 frames by ten minutes,
+  each RGB and depth.
+- **The views agree:** the main view picks the middle box at its front
+  face. In the camera's passes, each box is named where it shows past the
+  box in front of it. The depth there is the distance ahead of the box's
+  front face, worked out from the camera's geometry, to the centimetre
+  shown. All three boxes are in view, each partly.
+- **Hidden is missing:** with the `blocked` layout chosen, the camera stays
+  selected, and the near box hides the middle and far boxes. Neither is in
+  the instance pass's entities in view any more.
+
 ## Acceptance criteria
 
-- [ ] Sensors emit observations, not references to the world's state.
-- [ ] Environmental sensors sample spatial fields.
-- [ ] The browser camera produces at least RGB, depth and instance identity.
-- [ ] Noise and timing imperfections are reproducible.
-- [ ] The observation history is usable by later policies.
+- [x] **Sensors emit observations, not references to the world's state:**
+  - point sensors emit the protocol's `Observation` records, conforming to
+    its checks;
+  - what was truly there leaves by an evaluation path that a test keeps
+    off the observation path (`tests/test_sensor_observations.py`).
+- [x] **Environmental sensors sample spatial fields:** a sensor reads the
+  air's field where it stands. In the sensor lab, the clean sensors read
+  the known gradient exactly (`tests/test_sensor_lab.py`).
+- [x] **The browser camera produces at least RGB, depth and instance
+  identity,** each drawn at its own size and agreeing with the main view
+  (`e2e/cameras.spec.ts`, `e2e/sensor-lab.spec.ts`).
+- [x] **Noise and timing imperfections are reproducible:** each sample's
+  draws are seeded by the scenario, the sensor and the sample. A reading is
+  the same however and however often a run is asked for
+  (`tests/test_sensor_imperfections.py`).
+- [x] **The observation history is usable by later policies:**
+  - the log is append-only and in delivery order;
+  - it holds each reading once it is delivered, says which sensors are
+    stale, and records the cameras' frames;
+  - it is served through the API (`tests/test_observation_log.py`).
 
 ## Known approximations
 

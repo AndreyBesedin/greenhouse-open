@@ -456,7 +456,17 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
     setSource(next);
     setCommandProblem(null);
-    setSelectedId(null);
+    // Another layout of the same scenario keeps the selection, while what is
+    // selected is still there; anything else starts afresh.
+    if (
+      !(
+        chosen.kind === "scenario" &&
+        source.kind === "scenario" &&
+        chosen.scenarioId === source.scenarioId
+      )
+    ) {
+      setSelectedId(null);
+    }
     setPlaying(false);
     setColourBy(null);
     if (next.kind !== "scenario" || next.probes === undefined) {
