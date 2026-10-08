@@ -1,6 +1,6 @@
 # P06: Virtual sensors and the observation layer
 
-**Status:** in progress: P06.1 to P06.4 done, P06.5 next. Part of the
+**Status:** in progress: P06.1 to P06.5 done, P06.6 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -229,7 +229,7 @@ gradient needs its own base airflow, which is a scenario's.
 | P06.2 | `feat(sensors): add point environment sensors` | Done |
 | P06.3 | `feat(sensors): add noise, bias, drift, dropout and latency` | Done |
 | P06.4 | `feat(cameras): add a virtual RGB camera and its frustum` | Done |
-| P06.5 | `feat(cameras): add depth and instance passes` | Planned |
+| P06.5 | `feat(cameras): add depth and instance passes` | Done |
 | P06.6 | `feat(observations): add the observation log and history charts` | Planned |
 | P06.7 | `test(sensors): add the sensor lab, its occlusion and noise` | Planned |
 
@@ -396,6 +396,35 @@ RGB, depth and instance views from one camera. Tests: an entity selected in
 the main view is the one the instance pass names at its pixels; depth at a
 known surface is its distance.
 
+#### As implemented
+
+- **Drawn apart from the picture,** offscreen, at the camera's own size, so
+  that a pass's pixel is the picture's pixel. For each pass, every surface
+  is drawn with a flat material that writes what the pass holds. The scene
+  is then put back as it was, and the picture never sees them:
+  - **instance:** one more than the entity's index, in base 256 in red,
+    green and blue. An instanced batch's entities take successive indices,
+    read from `gl_InstanceID`, so the many posts and stems of a batch are
+    told apart;
+  - **depth:** how far ahead of the camera the surface lies, along the way
+    it looks, as depth cameras report it, in millimetres.
+- **Read again** whenever the scene or the camera changes.
+- **What the passes see:** opaque surfaces only. Lines, points and
+  see-through surfaces, glazing and zones, are left out, as a click in the
+  main view leaves them out.
+- **The viewer:** tabs show the RGB picture, the depth pass and the instance
+  pass. Depth is grey on a log scale, white at the nearest depth in view
+  and black at the farthest, so that what is near keeps its detail beside
+  the ground seen far beyond the glass. Instances are each in a colour of
+  their own. Pointing at the picture, on any tab, reads the pixel: the
+  entity it shows and how far ahead it is. The instance tab lists the
+  entities in view, those covering the most pixels first.
+- **Tests:** the passes' decoding in Vitest. In the browser, the main view
+  picks the heater, and the passes name the same entity where the
+  simulator projects the heater's middle. Its depth there is the distance
+  ahead of its front face, worked out from the camera's geometry, to the
+  centimetre shown. The fan, above the camera, is not in view.
+
 ### P06.6: The observation log and history charts
 
 The log, freshness and history, through the API and the viewer. Visible
@@ -449,6 +478,9 @@ What P06 simplifies on purpose, kept here until a later step removes it:
 - **PAR is unavailable** until P08 models the light.
 - **Cameras are drawn in the browser:** a headless renderer that writes
   images for datasets comes later, behind the same camera contract.
+- **The depth and instance passes see through glass:** a real depth camera
+  often reads glazing badly or not at all. The passes leave see-through
+  surfaces out, as the main view's picking does.
 
 ## Review decisions (8 October 2026)
 

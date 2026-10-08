@@ -409,6 +409,45 @@ body {
   display: block;
 }
 
+/* The camera's passes, as tabs over its picture. */
+.camera-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 4px;
+}
+
+.camera-tabs [aria-selected="true"] {
+  font-weight: 600;
+}
+
+/* A depth or instance pass lies over the picture, at its size. */
+.camera-picture {
+  position: relative;
+}
+
+.camera-picture .camera-pass {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.camera-entities {
+  max-height: 8em;
+  margin: 0;
+  padding-left: 20px;
+  overflow: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.camera-swatch {
+  display: inline-block;
+  width: 0.8em;
+  height: 0.8em;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
 /* A selected sensor: its reading, and the truth beside it, marked as QA's. */
 .sensor-panel p {
   margin: 0 0 4px;
