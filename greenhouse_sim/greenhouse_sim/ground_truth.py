@@ -16,7 +16,8 @@ Truth leaves the simulator by a separate path from observations:
 So this is a separate interface, not a richer observation. Decision-making
 code must never read it, or a policy would be scored on a shortcut that
 disappears the moment it meets a real greenhouse. Within this package only
-`greenhouse_sim.evaluation` imports it, and a test enforces that.
+`greenhouse_sim.evaluation` and the services that serve evaluation import it,
+and `tests/test_sensor_observations.py` enforces that.
 
 The quantities here are deliberately the ones the simulator's sensors
 report, so an evaluation can compare a reading against the truth it was
