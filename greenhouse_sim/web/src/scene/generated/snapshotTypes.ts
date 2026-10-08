@@ -26,6 +26,8 @@ export type SceneEntityKind =
   | "FAN"
   | "HEATER"
   | "DEHUMIDIFIER"
+  | "SENSOR"
+  | "CAMERA"
   | "PLANT"
   | "INTERNODE"
   | "LEAF"

@@ -59,6 +59,9 @@ def check_observations(observations: Iterable[Observation]) -> list[str]:
             )
         if not observation.source.type.strip():
             violations.append(f"observation {observation.observation_id!r} has no source type")
+        if observation.sensor_id is not None and not observation.sensor_id.strip():
+            violations.append(f"observation {observation.observation_id!r} names an empty sensor")
+        violations += _check_delivery(observation)
     return violations
 
 
@@ -108,6 +111,25 @@ def _check_timestamps_are_unambiguous(records: Sequence[CanonicalRecord], kind: 
         if timestamp.tzinfo is None or timestamp.utcoffset() is None:
             violations.append(f"a {kind} has a timestamp with no timezone: {timestamp!r}")
     return violations
+
+
+def _check_delivery(observation: Observation) -> list[str]:
+    """A reading is delivered when it is taken or after, at an instant."""
+    delivered = observation.delivered_at
+    if delivered is None:
+        return []
+    if delivered.tzinfo is None or delivered.utcoffset() is None:
+        return [
+            f"observation {observation.observation_id!r} has a delivery time with no timezone: "
+            f"{delivered!r}"
+        ]
+    taken = observation.timestamp
+    if taken.tzinfo is not None and taken.utcoffset() is not None and delivered < taken:
+        return [
+            f"observation {observation.observation_id!r} was delivered "
+            f"({delivered.isoformat()}) before it was taken ({taken.isoformat()})"
+        ]
+    return []
 
 
 def _check_identities_are_unique(

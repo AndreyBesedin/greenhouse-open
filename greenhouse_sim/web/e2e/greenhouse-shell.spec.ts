@@ -19,7 +19,7 @@ test("greenhouse-shell: a changed greenhouse is drawn to its dimensions, open an
     await page.goto(`/?scenario=climate_box&${SHELL}`);
     // Three spans and four bays: 6 roof slopes, 5 frames of 4 posts and 6 rafters.
     await expect(page.getByTestId("scene-status")).toContainText(
-      "climate_box, day 0, 154 entities",
+      "climate_box, day 0, 161 entities",
     );
   });
 

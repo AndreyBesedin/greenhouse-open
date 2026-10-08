@@ -1,6 +1,6 @@
 # P06: Virtual sensors and the observation layer
 
-**Status:** in progress: design reviewed, P06.1 next. Part of the
+**Status:** in progress: P06.1 done, P06.2 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -124,9 +124,9 @@ that gives away the truth:
 - **which instrument:** the sensor's identifier;
 - **when:** the moment it was sampled, and the moment it was delivered;
 - **what:** the quantity, its unit, and its value, or none if missing;
-- **its quality:** flags such as `missing` (dropped out), `unavailable` (no
-  model gives the quantity) or `stale` (no fresh sample for longer than its
-  cadence);
+- **its quality:** what is known of the reading, such as being clipped at
+  its instrument's range. A dropped sample, or a quantity no model gives,
+  is no reading at all, and staleness is the log's to say (section 5);
 - **provenance:** the run that produced it.
 
 The protocol's `Observation` has the time, the quantity, the value and the
@@ -225,7 +225,7 @@ gradient needs its own base airflow, which is a scenario's.
 
 | Step | Commit summary | Status |
 | --- | --- | --- |
-| P06.1 | `feat(sensors): define sensor and observation contracts` | Planned |
+| P06.1 | `feat(sensors): define sensor and observation contracts` | Done |
 | P06.2 | `feat(sensors): add point environment sensors` | Planned |
 | P06.3 | `feat(sensors): add noise, bias, drift, dropout and latency` | Planned |
 | P06.4 | `feat(cameras): add a virtual RGB camera and its frustum` | Planned |
@@ -241,6 +241,36 @@ imperfections, a camera's intrinsics); the observation contract (section
 and the inspector shows a selected one's configuration. Tests: layouts
 refuse sensors outside the house or sharing an identifier; observations
 pass the protocol's conformance checks.
+
+#### As implemented
+
+- **The protocol's `Observation`** gains optional `sensor_id`,
+  `delivered_at` and `quality`. Records that leave them unset are written
+  exactly as before: an unset field is left out of the JSON.
+  - **A gap is an absent record,** as the protocol already rules. A
+    dropped sample is no observation, and a PAR sensor with no light to
+    read reports none. So `quality` marks readings that exist: so far
+    `CLIPPED`, a reading held at the end of its instrument's range.
+  - **The conformance checks** refuse a delivery before the reading or
+    without a timezone, and an empty sensor identifier.
+  - **A new observation type,** `AIR_SPEED_M_S`, is an anemometer's
+    reading.
+- **Sensors in a layout** (`world.sensors`):
+  - **a point sensor:** its kind, position, cadence (60 s by default) and
+    imperfections, all nothing for a clean one, in its unit;
+  - **a camera:** its position, target and the protocol's
+    `CameraIntrinsics`, its frame turned so that its picture is upright.
+
+  Housings are in the way of nothing; sensors must stand inside the house,
+  with identifiers of their own.
+- **The climate box is instrumented,** clean for now:
+  - temperature and humidity in each half of the house, side by side
+    1.5 m up;
+  - an anemometer in the fan's jet;
+  - CO₂ in the middle and PAR under the roof.
+- **The scene** (schema 15): `SENSOR` and `CAMERA` entities, their
+  configuration in their properties, a legend of their own in the
+  categories view. The box's scene: 121 entities.
 
 ### P06.2: Point environment sensors
 

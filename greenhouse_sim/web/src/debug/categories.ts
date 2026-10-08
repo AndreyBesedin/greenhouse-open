@@ -40,12 +40,16 @@ export const EQUIPMENT_CATEGORIES = [
 ] as const satisfies readonly SceneEntityKind[];
 export type EquipmentCategory = (typeof EQUIPMENT_CATEGORIES)[number];
 
-export type Category = EnvelopeCategory | LayoutCategory | EquipmentCategory;
+/** The greenhouse's sensors: point sensors of every kind, and cameras. */
+export const SENSOR_CATEGORIES = ["SENSOR", "CAMERA"] as const satisfies readonly SceneEntityKind[];
+export type SensorCategory = (typeof SENSOR_CATEGORIES)[number];
+
+export type Category = EnvelopeCategory | LayoutCategory | EquipmentCategory | SensorCategory;
 
 /** A colour per category, each group from a palette that stays distinct for
  * most colour-blind viewers: the envelope's from Okabe-Ito, the layout's from
  * Paul Tol's muted scheme, wires in Okabe-Ito's black, and the equipment's
- * from Tol's bright scheme, as the simulator colours it running. */
+ * and the sensors' from Tol's bright scheme, as the simulator colours them. */
 export const CATEGORY_COLORS: Record<Category, string> = {
   FLOOR: "#e69f00",
   WALL: "#56b4e9",
@@ -68,6 +72,8 @@ export const CATEGORY_COLORS: Record<Category, string> = {
   FAN: "#4477aa",
   HEATER: "#ee6677",
   DEHUMIDIFIER: "#66ccee",
+  SENSOR: "#ccbb44",
+  CAMERA: "#aa3377",
 };
 
 export const CATEGORY_LABELS: Record<Category, string> = {
@@ -92,12 +98,15 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   FAN: "fan",
   HEATER: "heater",
   DEHUMIDIFIER: "dehumidifier",
+  SENSOR: "sensor",
+  CAMERA: "camera",
 };
 
 const CATEGORIES: readonly Category[] = [
   ...ENVELOPE_CATEGORIES,
   ...LAYOUT_CATEGORIES,
   ...EQUIPMENT_CATEGORIES,
+  ...SENSOR_CATEGORIES,
 ];
 
 function isCategory(kind: SceneEntityKind): kind is Category {
@@ -112,9 +121,13 @@ export function isEquipmentCategory(category: Category): category is EquipmentCa
   return (EQUIPMENT_CATEGORIES as readonly Category[]).includes(category);
 }
 
+export function isSensorCategory(category: Category): category is SensorCategory {
+  return (SENSOR_CATEGORIES as readonly Category[]).includes(category);
+}
+
 /** The colour a kind takes in the categories' debug view, or null for a kind
- * that is not part of the envelope, layout or equipment, such as a plant,
- * which keeps its own. */
+ * that is not part of the envelope, layout, equipment or sensors, such as a
+ * plant, which keeps its own. */
 export function categoryColor(kind: SceneEntityKind): Color | null {
   if (!isCategory(kind)) {
     return null;
@@ -132,7 +145,7 @@ export function semanticType(kind: SceneEntityKind): string {
 }
 
 /** The categories a scene holds, in the legends' order: the envelope's, the
- * layout's, then the equipment's. */
+ * layout's, the equipment's, then the sensors'. */
 export function categoriesIn(snapshot: SceneSnapshot): Category[] {
   const kinds = new Set(snapshot.entities.map((entity) => entity.kind));
   return CATEGORIES.filter((category) => kinds.has(category));

@@ -79,6 +79,96 @@
       "title": "BoxPrimitive",
       "type": "object"
     },
+    "Camera": {
+      "additionalProperties": false,
+      "description": "A camera at its position, looking at `target`, with its intrinsics.",
+      "properties": {
+        "sensor_id": {
+          "title": "Sensor Id",
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "cadence_s": {
+          "default": 60.0,
+          "exclusiveMinimum": 0,
+          "title": "Cadence S",
+          "type": "number"
+        },
+        "kind": {
+          "const": "camera",
+          "default": "camera",
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "intrinsics": {
+          "$ref": "#/$defs/CameraIntrinsics"
+        }
+      },
+      "required": [
+        "sensor_id",
+        "position",
+        "target",
+        "intrinsics"
+      ],
+      "title": "Camera",
+      "type": "object"
+    },
+    "CameraIntrinsics": {
+      "description": "Pinhole intrinsics of one image stream, in pixels, with the\ncalibration's distortion coefficients exactly as given.",
+      "properties": {
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "integer"
+        },
+        "fx": {
+          "exclusiveMinimum": 0,
+          "title": "Fx",
+          "type": "number"
+        },
+        "fy": {
+          "exclusiveMinimum": 0,
+          "title": "Fy",
+          "type": "number"
+        },
+        "ppx": {
+          "title": "Ppx",
+          "type": "number"
+        },
+        "ppy": {
+          "title": "Ppy",
+          "type": "number"
+        },
+        "distortion": {
+          "default": [],
+          "items": {
+            "type": "number"
+          },
+          "title": "Distortion",
+          "type": "array"
+        }
+      },
+      "required": [
+        "width",
+        "height",
+        "fx",
+        "fy",
+        "ppx",
+        "ppy"
+      ],
+      "title": "CameraIntrinsics",
+      "type": "object"
+    },
     "CropRows": {
       "additionalProperties": false,
       "description": "Parallel rows of planting positions, in metres and radians.",
@@ -449,6 +539,49 @@
       "title": "Heater",
       "type": "object"
     },
+    "Imperfections": {
+      "additionalProperties": false,
+      "description": "How a sensor errs, each in its own unit; all nothing for a clean one.\n\nNoise is Gaussian, of a standard deviation; a reading is rounded to the\nquantization step; a fixed bias is added, and a drift that grows linearly\nwith time since the run's start; a sample drops out with a probability;\nand a reading is delivered a fixed time after its sample.",
+      "properties": {
+        "noise_sd": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Noise Sd",
+          "type": "number"
+        },
+        "quantization": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Quantization",
+          "type": "number"
+        },
+        "bias": {
+          "default": 0.0,
+          "title": "Bias",
+          "type": "number"
+        },
+        "drift_per_hour": {
+          "default": 0.0,
+          "title": "Drift Per Hour",
+          "type": "number"
+        },
+        "dropout": {
+          "default": 0.0,
+          "exclusiveMaximum": 1.0,
+          "minimum": 0.0,
+          "title": "Dropout",
+          "type": "number"
+        },
+        "latency_s": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Latency S",
+          "type": "number"
+        }
+      },
+      "title": "Imperfections",
+      "type": "object"
+    },
     "Material": {
       "description": "What a fixture, or a part of the envelope, is made of.",
       "enum": [
@@ -628,6 +761,56 @@
         "y"
       ],
       "title": "Point2",
+      "type": "object"
+    },
+    "PointKind": {
+      "enum": [
+        "temperature",
+        "humidity",
+        "co2",
+        "air_speed",
+        "par"
+      ],
+      "type": "string"
+    },
+    "PointSensor": {
+      "additionalProperties": false,
+      "description": "A sensor reading one quantity of the air at its position.",
+      "properties": {
+        "sensor_id": {
+          "title": "Sensor Id",
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "cadence_s": {
+          "default": 60.0,
+          "exclusiveMinimum": 0,
+          "title": "Cadence S",
+          "type": "number"
+        },
+        "kind": {
+          "$ref": "#/$defs/PointKind"
+        },
+        "imperfections": {
+          "$ref": "#/$defs/Imperfections",
+          "default": {
+            "noise_sd": 0.0,
+            "quantization": 0.0,
+            "bias": 0.0,
+            "drift_per_hour": 0.0,
+            "dropout": 0.0,
+            "latency_s": 0.0
+          }
+        }
+      },
+      "required": [
+        "sensor_id",
+        "position",
+        "kind"
+      ],
+      "title": "PointSensor",
       "type": "object"
     },
     "Primitive": {
@@ -865,6 +1048,27 @@
       ],
       "title": "RowSupport",
       "type": "object"
+    },
+    "Sensor": {
+      "discriminator": {
+        "mapping": {
+          "air_speed": "#/$defs/PointSensor",
+          "camera": "#/$defs/Camera",
+          "co2": "#/$defs/PointSensor",
+          "humidity": "#/$defs/PointSensor",
+          "par": "#/$defs/PointSensor",
+          "temperature": "#/$defs/PointSensor"
+        },
+        "propertyName": "kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/PointSensor"
+        },
+        {
+          "$ref": "#/$defs/Camera"
+        }
+      ]
     },
     "Slab": {
       "additionalProperties": false,
@@ -1150,6 +1354,14 @@
         "$ref": "#/$defs/Equipment"
       },
       "title": "Equipment",
+      "type": "array"
+    },
+    "sensors": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Sensor"
+      },
+      "title": "Sensors",
       "type": "array"
     },
     "$schema": {
