@@ -196,33 +196,36 @@ class Transport:
         # Temperature and water, carried together: one pass over the faces.
         carried = np.stack([air.temperature, air.humidity])
         temperature, humidity = carried[0], carried[1]
-        held = carried[:, solid]
+        # A solid cell's change is nothing: no face of it carries or mixes,
+        # and nothing is added to it, taken from it or exchanged with it.
+        drying_any = bool(drying.any())
         faces = [
             (axis + 1, (slice(None), *low), (slice(None), *high), into_low, into_high)
             for axis, low, high, into_low, into_high in takes
         ]
         removed = np.zeros_like(humidity)
         condensed = np.zeros_like(humidity)
+        change = np.empty_like(carried)
         for step in range(1, steps + 1):
-            change = np.zeros_like(carried)
-            change[0] = added + exchange * (outside - temperature)
-            change[1] = venting * (outside_water - humidity)
+            np.multiply(exchange, outside - temperature, out=change[0])
+            change[0] += added
+            np.multiply(venting, outside_water - humidity, out=change[1])
             for axis, low, high, into_low, into_high in faces:
                 difference = np.diff(carried, axis=axis)
                 change[low] += into_low * difference
                 change[high] -= into_high * difference
             carried += change
-            # Equipment dries what the air then holds, never more.
-            taken = np.minimum(drying, humidity)
-            humidity -= taken
-            removed += taken
+            if drying_any:
+                # Equipment dries what the air then holds, never more.
+                taken = np.minimum(drying, humidity)
+                humidity -= taken
+                removed += taken
             if step % condensing_every == 0 or step == steps:
                 beyond = np.where(
                     solid, 0.0, np.maximum(humidity - saturation_ratio_g_kg(temperature), 0.0)
                 )
                 humidity -= beyond
                 condensed += beyond
-            carried[:, solid] = held
         return AirState(
             temperature=temperature.copy(),
             humidity=humidity.copy(),
