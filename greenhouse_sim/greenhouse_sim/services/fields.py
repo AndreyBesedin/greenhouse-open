@@ -19,7 +19,8 @@ A few recent climate runs are kept, each with the moments asked of it, so
 that a later moment carries on from the latest before it.
 """
 
-import functools
+import threading
+from collections import OrderedDict
 from collections.abc import Mapping, Sequence
 from typing import Final
 
@@ -76,7 +77,18 @@ def _checked(config: ScenarioConfig, commands: Sequence[Commanded]) -> tuple[Com
     return tuple(commands)
 
 
-@functools.lru_cache(maxsize=KEPT_RUNS)
+type _RunKey = tuple[str, str, _Pairs, _Pairs, tuple[Commanded, ...]]
+_KEPT: OrderedDict[_RunKey, ClimateRun] = OrderedDict()
+_KEEPING = threading.Lock()
+
+
+def forget_climate_runs() -> None:
+    """Forget the kept climate runs, so that the next one asked for is run
+    afresh."""
+    with _KEEPING:
+        _KEPT.clear()
+
+
 def _climate_run(
     scenario_id: str,
     layout: str,
@@ -86,7 +98,33 @@ def _climate_run(
 ) -> ClimateRun:
     """A scenario's climate run with one of its layouts, its equipment set to
     `levels` from the start and then as `commands` set it, and its doors and
-    vents open as `openings` say."""
+    vents open as `openings` say: one of the `KEPT_RUNS` kept, or a new one,
+    carrying on from those kept for the same house up to where their
+    schedules differ, as an override's does."""
+    key = (scenario_id, layout, levels, openings, commands)
+    with _KEEPING:
+        run = _KEPT.get(key)
+        if run is not None:
+            _KEPT.move_to_end(key)
+            return run
+        run = _new_climate_run(*key)
+        for (other_id, other_layout, _, other_openings, _), other in _KEPT.items():
+            if (other_id, other_layout, other_openings) == (scenario_id, layout, openings):
+                run.carry_on_from(other)
+        _KEPT[key] = run
+        if len(_KEPT) > KEPT_RUNS:
+            _KEPT.popitem(last=False)
+        return run
+
+
+def _new_climate_run(
+    scenario_id: str,
+    layout: str,
+    levels: _Pairs,
+    openings: _Pairs,
+    commands: tuple[Commanded, ...],
+) -> ClimateRun:
+    """A scenario's climate run, from its start."""
     config = changed(scenario(scenario_id), SceneChanges(layout=layout, openings=dict(openings)))
     grid = air_grid(config)
     geometry = cfd_geometry(scenario_id, config, grid)

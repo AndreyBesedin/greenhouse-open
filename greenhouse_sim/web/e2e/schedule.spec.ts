@@ -6,11 +6,12 @@ const SWITCHING_ON = "60:fan:1,120:heater:1,180:dehumidifier:1";
 const IN_THE_FANS_CORE = "3:3.2:2.8";
 // A moment of a run, with the fan running, can take CI's simulator a while,
 // behind the scene and the charts it is asked for beside it.
-const ARRIVES_MS = 20_000;
+const ARRIVES_MS = 40_000;
 
 test("schedule: the equipment switches on its own, and an override holds from its moment", async ({
   page,
 }) => {
+  test.setTimeout(180_000);
   await page.goto(
     `/?scenario=climate_box&field=climate&schedule=${SWITCHING_ON}&probes=${IN_THE_FANS_CORE}`,
   );

@@ -67,7 +67,7 @@ def test_the_same_schedule_replays_to_the_same_air() -> None:
         commands=[(120, "heater", 1), (240, "dehumidifier", 1), (360, "fan", 0)],
     )
     # Run afresh, not found among the kept runs.
-    fields._climate_run.cache_clear()
+    fields.forget_climate_runs()
     again = _climate(query)
 
     for quantity in (AirQuantity.VELOCITY, AirQuantity.TEMPERATURE, AirQuantity.HUMIDITY):

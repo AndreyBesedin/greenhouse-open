@@ -9,7 +9,10 @@ does the flow: the base airflow plus the fans' jets, made to conserve mass
 warmed and dried by the equipment, and its heat exchanged with the outside
 (`climate.transport`).
 
-The same schedule always gives the same air at the same moments. A run keeps
+The same schedule always gives the same air at the same moments, so a run
+may take over another's air up to the first moment their schedules differ
+(`carry_on_from`). One request at a time works a run on; others wait for
+it, and find what it kept. A run keeps
 the air at every moment it was asked for, so that a later moment carries on
 from the latest before it.
 
@@ -19,6 +22,8 @@ is still, and shows the mean temperature and water of the cells beside it,
 so that a slice or a legend shows the air's.
 """
 
+import math
+import threading
 from collections.abc import Mapping, Sequence
 from typing import Final
 
@@ -99,6 +104,7 @@ class ClimateRun:
         self.vents = tuple(vents)
         self._base_velocity = base.field("base", grid).channels[AirQuantity.VELOCITY]
         self._steady: dict[_Levels, tuple[SourceTerms, FaceFlows, Transport]] = {}
+        self._working = threading.RLock()
         start = humidity_ratio_g_kg(settings.start_temperature_c, settings.start_humidity_pct)
         self._kept: dict[float, AirState] = {
             0.0: AirState(
@@ -115,6 +121,12 @@ class ClimateRun:
         """What the equipment does at steady levels: its source terms, the
         flow it makes with the base airflow, and how that moves heat."""
         key = tuple(sorted(levels.items()))
+        with self._working:
+            return self._steady_at(key, levels)
+
+    def _steady_at(
+        self, key: _Levels, levels: Mapping[str, float]
+    ) -> tuple[SourceTerms, FaceFlows, Transport]:
         if key not in self._steady:
             terms = SourceTerms.none(self.grid)
             for piece in self.equipment:
@@ -141,11 +153,31 @@ class ClimateRun:
         """How heat moves at `time_s`."""
         return self._held(self.levels_at(time_s))[2]
 
+    def carry_on_from(self, other: ClimateRun) -> None:
+        """Take over the air `other` has kept up to the first moment its
+        schedule and this run's differ: until then, both runs are the same
+        air."""
+        mine, theirs = self.schedule.commands, other.schedule.commands
+        differing = next(
+            (index for index, (a, b) in enumerate(zip(mine, theirs, strict=False)) if a != b),
+            min(len(mine), len(theirs)),
+        )
+        moments = [command.time_s for command in (*mine[differing:], *theirs[differing:])]
+        until = min(moments, default=math.inf)
+        with self._working, other._working:
+            for moment, air in other._kept.items():
+                if moment <= until:
+                    self._kept.setdefault(moment, air)
+
     def air_at(self, time_s: float) -> AirState:
         """The air in every cell at `time_s`, from the latest moment kept
         before it."""
         if time_s < 0:
             raise ValueError("a climate run starts at 0 s")
+        with self._working:
+            return self._worked_to(time_s)
+
+    def _worked_to(self, time_s: float) -> AirState:
         start = max(moment for moment in self._kept if moment <= time_s)
         air = self._kept[start]
         changes = [moment for moment in self.schedule.moments() if start < moment <= time_s]
