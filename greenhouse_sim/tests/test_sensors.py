@@ -127,6 +127,7 @@ def test_the_climate_box_is_instrumented() -> None:
         ("anemometer", SensorKind.AIR_SPEED),
         ("co2", SensorKind.CO2),
         ("par", SensorKind.PAR),
+        ("front_camera", SensorKind.CAMERA),
     ]
 
 
@@ -150,3 +151,47 @@ def test_the_scene_draws_sensors_and_cameras_with_their_configuration() -> None:
     assert camera.properties["image_width_px"] == 640
     assert camera.properties["target_x"] == 6.0
     assert camera.transform.rotation == CAMERA.rotation()
+
+
+# Level at 1 m, looking along x: 640 by 480 pixels, a 60° horizontal field.
+LEVEL = Camera(
+    sensor_id="level",
+    position=Vector3(x=0.0, y=0.0, z=1.0),
+    target=Vector3(x=10.0, y=0.0, z=1.0),
+    intrinsics=INTRINSICS,
+)
+
+
+def test_a_camera_projects_a_known_point_onto_its_known_pixel() -> None:
+    fx = INTRINSICS.fx
+
+    assert LEVEL.project(Vector3(x=10, y=0, z=1)) == pytest.approx((320, 240))
+    # A metre to its left at 10 m: a tenth of its focal length left of the
+    # middle; a metre up: a tenth up.
+    assert LEVEL.project(Vector3(x=10, y=1, z=1)) == pytest.approx((320 - fx / 10, 240))
+    assert LEVEL.project(Vector3(x=10, y=0, z=2)) == pytest.approx((320, 240 - fx / 10))
+    assert CAMERA.project(CAMERA.target) == pytest.approx((320, 240))
+
+
+def test_a_camera_sees_only_what_lands_on_its_picture() -> None:
+    assert LEVEL.sees(Vector3(x=10, y=-3, z=0))
+    assert LEVEL.project(Vector3(x=-1, y=0, z=1)) is None
+    assert not LEVEL.sees(Vector3(x=-1, y=0, z=1))
+    # 45° to its side: beyond its 30° half field.
+    assert not LEVEL.sees(Vector3(x=10, y=10, z=1))
+
+
+def test_the_climate_boxs_camera_looks_down_the_house_at_its_units() -> None:
+    layout = SCENARIO_REGISTRY["climate_box"].layout
+    (camera,) = [s for s in layout.sensors if isinstance(s, Camera)]
+    bodies = {piece.actuator_id: piece.fixture().bounds() for piece in layout.equipment}
+
+    def middle(name: str) -> Vector3:
+        low, high = bodies[name]
+        return Vector3(x=(low.x + high.x) / 2, y=(low.y + high.y) / 2, z=(low.z + high.z) / 2)
+
+    # The heater and the dehumidifier on the floor; the fan hangs above and
+    # just ahead of it, out of its view.
+    assert camera.sees(middle("heater"))
+    assert camera.sees(middle("dehumidifier"))
+    assert not camera.sees(middle("fan"))

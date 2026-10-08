@@ -216,6 +216,30 @@
         "dropout": 0.0,
         "latency_s": 0.0
       }
+    },
+    {
+      "sensor_id": "front_camera",
+      "position": {
+        "x": 0.6,
+        "y": 3.2,
+        "z": 2.2
+      },
+      "cadence_s": 60.0,
+      "kind": "camera",
+      "target": {
+        "x": 11.0,
+        "y": 3.2,
+        "z": 0.6
+      },
+      "intrinsics": {
+        "width": 640,
+        "height": 480,
+        "fx": 457.007,
+        "fy": 457.007,
+        "ppx": 320.0,
+        "ppy": 240.0,
+        "distortion": []
+      }
     }
   ]
 }

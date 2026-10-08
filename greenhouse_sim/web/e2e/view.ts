@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { PerspectiveCamera, Vector3 } from "three";
 
 import {
@@ -10,6 +10,11 @@ import {
 } from "../src/camera.ts";
 import { type Point3, worldToViewer } from "../src/world.ts";
 
+/** The 3D view's canvas: a selected camera's picture is another. */
+export function mainView(page: Page): Locator {
+  return page.getByTestId("main-view").locator("canvas");
+}
+
 /** Where a world point appears on the page, seen from a camera preset or
  * pose, worked out as the viewer's own camera works it out. */
 export async function onScreen(
@@ -17,7 +22,7 @@ export async function onScreen(
   point: Point3,
   preset: PresetName | CameraPose = DEFAULT_PRESET,
 ): Promise<{ x: number; y: number }> {
-  const box = await page.locator("canvas").boundingBox();
+  const box = await mainView(page).boundingBox();
   if (box === null) {
     throw new Error("the 3D view is not on the page");
   }
@@ -54,7 +59,7 @@ export async function clickAt(
 
 /** Clicks the sky, where there is nothing to select. */
 export async function clickSky(page: Page): Promise<void> {
-  const box = await page.locator("canvas").boundingBox();
+  const box = await mainView(page).boundingBox();
   if (box === null) {
     throw new Error("the 3D view is not on the page");
   }

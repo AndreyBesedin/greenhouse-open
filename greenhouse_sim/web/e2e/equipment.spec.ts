@@ -31,14 +31,14 @@ test("equipment: a device is picked, switched on, set to a level and off, and th
 
   await test.step("each piece is drawn where it stands, as what it is, off", async () => {
     await page.goto(`/?scenario=climate_box&camera=${cameraText(AT_THE_FAN)}`);
-    await expect(status).toContainText("climate_box, day 0, 121 entities");
+    await expect(status).toContainText("climate_box, day 0, 122 entities");
     await expect(page.getByTestId("equipment-fan")).toHaveText("off");
     await selectAt(page, FAN_FACE, "climate_box_fan", AT_THE_FAN);
     await expect(page.getByTestId("selected-type")).toHaveText("fan");
     await expect(page.getByTestId("property-flow_m3_s")).toHaveText("1");
 
     await page.goto(`/?scenario=climate_box&camera=${cameraText(ACROSS)}`);
-    await expect(status).toContainText("climate_box, day 0, 121 entities");
+    await expect(status).toContainText("climate_box, day 0, 122 entities");
     await expect(page.getByTestId("equipment-dehumidifier")).toHaveText("off");
     await selectAt(page, DEHUMIDIFIER_FRONT, "climate_box_dehumidifier", ACROSS);
     await expect(page.getByTestId("selected-type")).toHaveText("dehumidifier");

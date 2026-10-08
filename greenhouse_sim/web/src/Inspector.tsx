@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import { Quaternion, Vector3 } from "three";
 
 import { semanticType } from "./debug/categories";
@@ -61,21 +61,25 @@ export function describeDimensions(entity: SceneEntity): string | null {
 }
 
 /** The selected entity's identity, what it is, its transform, shape, size and
- * properties, and the overlays drawn around it. */
+ * properties, and the overlays drawn around it; led by what it senses, for a
+ * sensor or a camera. */
 export function Inspector({
   entity,
   overlays,
   onOverlays,
   onClear,
+  children,
 }: {
   entity: SceneEntity;
   overlays: OverlayToggles;
   onOverlays: (overlays: OverlayToggles) => void;
   onClear: () => void;
+  children?: ReactNode;
 }) {
   const dimensions = describeDimensions(entity);
   return (
     <section className="inspector" aria-label="Inspector">
+      {children}
       <dl>
         <dt>Entity</dt>
         <dd data-testid="selected-entity">{entity.entity_id}</dd>

@@ -2943,6 +2943,53 @@
       }
     },
     {
+      "entity_id": "climate_box_front_camera",
+      "kind": "CAMERA",
+      "transform": {
+        "position": {
+          "x": 0.6,
+          "y": 3.2,
+          "z": 2.16
+        },
+        "rotation": {
+          "w": 0.997088686539622,
+          "x": 0.0,
+          "y": 0.07625058147116921,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "box",
+        "size_x": 0.12,
+        "size_y": 0.08,
+        "size_z": 0.08
+      },
+      "color": {
+        "r": 0.67,
+        "g": 0.2,
+        "b": 0.47
+      },
+      "material": "plastic",
+      "label": "front camera",
+      "properties": {
+        "sensor_id": "front_camera",
+        "sensor_kind": "camera",
+        "cadence_s": 60.0,
+        "image_width_px": 640,
+        "image_height_px": 480,
+        "fx_px": 457.007,
+        "fy_px": 457.007,
+        "ppx_px": 320.0,
+        "ppy_px": 240.0,
+        "eye_x": 0.6,
+        "eye_y": 3.2,
+        "eye_z": 2.2,
+        "target_x": 11.0,
+        "target_y": 3.2,
+        "target_z": 0.6
+      }
+    },
+    {
       "entity_id": "climate_box_axes",
       "kind": "AXES",
       "transform": {
