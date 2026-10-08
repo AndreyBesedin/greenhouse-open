@@ -1,6 +1,6 @@
 # P05: Climate actuators: fans, heaters, dehumidification and vents
 
-**Status:** in progress: P05.0 to P05.5 done, P05.6 next. Part of the [simulator roadmap](README.md).
+**Status:** in progress: P05.0 to P05.6 done, P05.7 next. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -204,7 +204,7 @@ new scenarios (P05.0).
 | P05.3 | `feat(heating): add heater sensible-heat source` | Done |
 | P05.4 | `feat(humidity): add dehumidifier moisture sink` | Done |
 | P05.5 | `feat(vents): connect vent opening state to airflow boundaries` | Done |
-| P05.6 | `feat(control): add actuator schedule timeline` | Planned |
+| P05.6 | `feat(control): add actuator schedule timeline` | Done |
 | P05.7 | `test(climate): add actuator comparison dashboard` | Planned |
 
 ### P05.0: New reference scenarios
@@ -610,6 +610,26 @@ under the time slider. Visible result: a short run where the fan, heater and
 dehumidifier switch on their own, and the field maps respond. Tests: a
 schedule replays to the same air, and an override takes effect from its
 moment on.
+
+#### As implemented
+
+- **The schedule in a request:** `fields/climate?set=heater:1&schedule=300:heater:0`
+  carries commands at their moments after the levels set from the start,
+  the later winning at a moment.
+  - **Refused, with the reason:** equipment the scenario lacks, a level
+    outside 0 to 1, a moment outside the run's hour, or a command not
+    written seconds:actuator:level.
+  - **Kept runs** are found by their schedule too.
+- **Overrides are commands:** in the viewer, equipment switched while the
+  run stands past its start becomes a command at that moment. It replaces
+  any command to the same equipment then. At the start, switching sets the
+  levels from the start.
+- **The moment drawn:** the Equipment panel and the scene show the levels
+  then.
+- **"Schedule"** lists the commands under the time slider, marked on a bar
+  over the run and filled once applied, each to go to or take out. The
+  log is the schedule: what a run has applied by a moment is its commands
+  up to then.
 
 ### P05.7: Actuator comparison dashboard
 
