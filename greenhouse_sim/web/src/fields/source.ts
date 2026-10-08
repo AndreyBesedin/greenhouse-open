@@ -1,4 +1,4 @@
-import { pairsText } from "../scene/source";
+import { pairsText, type ScheduledCommand, scheduleText } from "../scene/source";
 import { checkField, type EnvironmentField, SUPPORTED_FIELD_VERSION } from "./field";
 
 /** The air as a scenario's equipment drives it: the one field that depends on
@@ -19,6 +19,8 @@ export interface FieldChanges {
   layout?: string | undefined;
   levels?: Readonly<Record<string, number>> | undefined;
   openings?: Readonly<Record<string, number>> | undefined;
+  /** Commands to its equipment after the start. */
+  schedule?: readonly ScheduledCommand[] | undefined;
   /** Seconds into the climate run. */
   time?: number | undefined;
 }
@@ -35,11 +37,13 @@ export function fieldUrl(scenarioId: string, name: string, changes: FieldChanges
   const climate = name === CLIMATE_FIELD;
   const levels = climate ? pairsText(changes.levels) : "";
   const openings = climate ? pairsText(changes.openings) : "";
+  const schedule = climate ? scheduleText(changes.schedule) : "";
   const time = climate && changes.time !== undefined && changes.time > 0 ? changes.time : null;
   const parts = [
     ...(changes.layout === undefined ? [] : [`layout=${encodeURIComponent(changes.layout)}`]),
     ...(levels === "" ? [] : [`set=${levels}`]),
     ...(openings === "" ? [] : [`open=${openings}`]),
+    ...(schedule === "" ? [] : [`schedule=${schedule}`]),
     ...(time === null ? [] : [`t=${time}`]),
   ];
   return parts.length === 0 ? base : `${base}?${parts.join("&")}`;

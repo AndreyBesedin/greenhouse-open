@@ -15,6 +15,7 @@ import { ScalarLegend } from "./debug/ScalarLegend";
 import type { ScalarRange } from "./debug/scalar";
 import { colouringBy, scalarProperties } from "./debug/scalar";
 import { EquipmentControls } from "./EquipmentControls";
+import { ClimateSchedule } from "./fields/ClimateSchedule";
 import { ClimateTime } from "./fields/ClimateTime";
 import type { FieldView, Slice } from "./fields/display";
 import { defaultSlice, quantityScale } from "./fields/drawing";
@@ -46,14 +47,18 @@ import { loadScenarios, type ScenariosState } from "./scenarios";
 import { type LiveCommand, sendLiveCommand } from "./scene/live";
 import {
   changesQuery,
+  levelsAt,
   loadScene,
   pairsFrom,
   pairsText,
   type SceneSource,
   type SceneState,
+  scheduleFrom,
+  scheduleText,
   searchFor,
   sourceFromSearch,
   withItsAir,
+  withOverride,
 } from "./scene/source";
 import { useLiveScene } from "./scene/useLiveScene";
 import { entityOfOrgan, organOf, plantOf, selectedEntity } from "./selection";
@@ -165,6 +170,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const fieldLayout = source.kind === "scenario" ? source.layout : undefined;
   const fieldLevels = source.kind === "scenario" ? pairsText(source.levels) : "";
   const fieldOpenings = source.kind === "scenario" ? pairsText(source.openings) : "";
+  const fieldSchedule = source.kind === "scenario" ? scheduleText(source.schedule) : "";
   const fieldTime = source.kind === "scenario" ? (source.time ?? 0) : 0;
   useEffect(() => {
     if (fieldScenario === null || fieldName === null) {
@@ -177,6 +183,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       layout: fieldLayout,
       levels: pairsFrom(fieldLevels) ?? {},
       openings: pairsFrom(fieldOpenings) ?? {},
+      schedule: scheduleFrom(fieldSchedule) ?? [],
       time: fieldTime,
     };
     void loadField(fieldScenario, fieldName, changes).then((state) => {
@@ -187,7 +194,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     return () => {
       current = false;
     };
-  }, [fieldScenario, fieldName, fieldLayout, fieldLevels, fieldOpenings, fieldTime]);
+  }, [fieldScenario, fieldName, fieldLayout, fieldLevels, fieldOpenings, fieldSchedule, fieldTime]);
 
   // The field compared with the drawn one, loaded as the drawn one is.
   const compareName = source.kind === "scenario" ? (source.compare ?? null) : null;
@@ -202,6 +209,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       layout: fieldLayout,
       levels: pairsFrom(fieldLevels) ?? {},
       openings: pairsFrom(fieldOpenings) ?? {},
+      schedule: scheduleFrom(fieldSchedule) ?? [],
       time: fieldTime,
     };
     void loadField(fieldScenario, compareName, changes).then((state) => {
@@ -212,7 +220,15 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     return () => {
       current = false;
     };
-  }, [fieldScenario, compareName, fieldLayout, fieldLevels, fieldOpenings, fieldTime]);
+  }, [
+    fieldScenario,
+    compareName,
+    fieldLayout,
+    fieldLevels,
+    fieldOpenings,
+    fieldSchedule,
+    fieldTime,
+  ]);
 
   // The boundaries a CFD solver is given, changed as the scene is, drawn
   // over it when asked for; the last stays on show until the next arrives.
@@ -332,13 +348,31 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     });
   }, []);
 
+  // Equipment switched while a climate run is drawn past its start is an
+  // override at that moment; otherwise it is set from the start.
   function setLevels(levels: Record<string, number>): void {
     if (source.kind !== "scenario") {
       return;
     }
-    const next: SceneSource = { ...source, levels };
-    history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
-    setSource(next);
+    const now = source.time ?? 0;
+    if (source.field === CLIMATE_FIELD && now > 0) {
+      const standing = levelsAt(source);
+      const changed = Object.fromEntries(
+        Object.entries(levels).filter(([actuatorId, level]) => standing[actuatorId] !== level),
+      );
+      setScenarioSource({ ...source, schedule: withOverride(source.schedule ?? [], now, changed) });
+      return;
+    }
+    setScenarioSource({ ...source, levels });
+  }
+
+  function removeCommand(index: number): void {
+    if (source.kind !== "scenario") {
+      return;
+    }
+    const { schedule: _, ...rest } = source;
+    const schedule = (source.schedule ?? []).filter((__, at) => at !== index);
+    setScenarioSource(schedule.length === 0 ? rest : { ...rest, schedule });
   }
 
   // A selection is kept from one run of the lab to the next: its organ is the
@@ -537,6 +571,14 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 onPlaying={setPlayingClimate}
               />
             )}
+            {source.kind === "scenario" && source.field === CLIMATE_FIELD && (
+              <ClimateSchedule
+                schedule={source.schedule ?? []}
+                time={fieldTime}
+                onTime={setClimateTime}
+                onRemove={removeCommand}
+              />
+            )}
             {source.kind === "scenario" && source.field !== undefined && probedField !== null && (
               <FieldProbes
                 scenarioId={source.scenarioId}
@@ -571,7 +613,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             {snapshot !== null && source.kind === "scenario" && (
               <EquipmentControls
                 snapshot={snapshot}
-                requested={source.levels ?? {}}
+                requested={levelsAt(source)}
                 onChange={setLevels}
               />
             )}

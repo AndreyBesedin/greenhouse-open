@@ -84,7 +84,12 @@ temperature slice shows a heater warming its corner and the house
 slice a dehumidifier drying the air around it
 (`&set=dehumidifier:1&fieldView=slice&slice=humidity:z:0.75`). The climate
 follows the Openings sliders too: an open vent exchanges the air against it
-with the outside's, and shows its draught.
+with the outside's, and shows its draught. A run can switch its equipment on
+its own (`&schedule=60:fan:1,300:heater:0`, seconds:actuator:level), and
+equipment switched while the run stands past its start is an override from
+that moment. "Schedule" lists the commands under the time slider, marked on
+a bar over the run, each to go to or take out; the Equipment panel and the
+scene show the levels at the moment drawn.
 `/qa/airflow-box?view=vectors` and `?view=slice` draw the airflow QA case's
 solution from the simulator's files (`tests/test_airflow_qa.py --update`),
 for its screenshot tests; switching a scenario's layout keeps its field, probes
