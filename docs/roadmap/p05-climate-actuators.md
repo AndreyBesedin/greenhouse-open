@@ -1,6 +1,6 @@
 # P05: Climate actuators: fans, heaters, dehumidification and vents
 
-**Status:** in progress: P05.0 to P05.2 done, P05.3 next. Part of the [simulator roadmap](README.md).
+**Status:** in progress: P05.0 to P05.3 done, P05.4 next. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -201,7 +201,7 @@ new scenarios (P05.0).
 | P05.0 | `feat(scenarios): replace the original reference scenarios` | Done |
 | P05.1 | `feat(actuators): define climate actuator contract and controls` | Done |
 | P05.2 | `feat(fans): add fan airflow source model` | Done |
-| P05.3 | `feat(heating): add heater sensible-heat source` | Planned |
+| P05.3 | `feat(heating): add heater sensible-heat source` | Done |
 | P05.4 | `feat(humidity): add dehumidifier moisture sink` | Planned |
 | P05.5 | `feat(vents): connect vent opening state to airflow boundaries` | Planned |
 | P05.6 | `feat(control): add actuator schedule timeline` | Planned |
@@ -490,6 +490,52 @@ within 1%. With exchange on, the house settles where the heater's power
 balances what the envelope loses, and with the outside warmer and the
 heater off, the house warms towards it.
 
+#### As implemented
+
+- **A scenario's climate settings** (`climate.settings`): the outside's
+  temperature, the air's at the start, the glazing's U-value, and the air's
+  effective mixing. The climate box: 8 °C outside, 16 °C to start, single
+  glass at 6 W/m²K.
+- **The flow is projected after all** (`climate.projection`), though the
+  design had left it for later.
+  - **Why:** carried by the unprojected jet, the climate box kept only 29%
+    of a heater's energy with the fan on. The jet appears at its rotor and
+    dead-ends at the far wall, right where the heater stands, so a running
+    fan would have cooled a heated house.
+  - **How:** a potential over the air cells, solved by Jacobi-preconditioned
+    conjugate gradients in NumPy (4.5 ms for the box, no new dependency),
+    takes the flow's divergence out of every face, to 1e-10 of it.
+  - **What it shows:** the fan now draws the air it blows from behind it,
+    0.75 m/s at its back, and the house returns it along the floor. Its
+    core keeps most of its speed: 4.34 m/s 2 m from the fan, where the
+    unprojected jet had 4.42.
+- **The transport** (`climate.transport`), by finite volumes:
+  - upwind advection in the conserving flow;
+  - mixing at κ = 0.1 m²/s. At 0.01, a heater's corner reached 150 °C; at
+    0.1 it holds about 40 °C, as a heater's own convection would keep it;
+  - the heaters' source terms;
+  - exchange through the walls and roof, both ways. The floor isn't glass,
+    and passes nothing.
+
+  Every step keeps each new temperature a weighted mean of the old ones,
+  at most half taken away. Shut, the air gains exactly the heater's energy,
+  still or with the fan on (to 1e-8).
+- **The climate run** (`climate.run`): from the starting air, with the
+  schedule's commands applied at their moments. A run keeps every moment
+  asked of it, so a later moment carries on from there, and the service
+  keeps eight recent runs. An hour with the fan on takes about 3 s.
+  `GET .../fields/climate?set=heater:1&t=600` serves the air ten minutes
+  in. Obstacle cells show the mean of the air beside them.
+- **In the climate box:**
+  - **unheated,** the house cools from 16 °C towards the 8 °C outside, to
+    9 °C in ten minutes;
+  - **heated,** its corner is at 32 °C and its middle at 15 °C ten minutes
+    in, and it settles where the 10 kW balance what its 224 m² of glass
+    loses, about 15.4 °C.
+- **The viewer:** with the climate drawn, "Climate run" moves through the
+  hour a minute at a time, or plays it, once each moment has arrived
+  (`&t=600`).
+
 ### P05.4: Dehumidifier moisture sink
 
 Absolute humidity transported beside temperature; relative humidity derived
@@ -553,10 +599,14 @@ Expected:
 
 What P05 simplifies on purpose, kept here until a later step removes it:
 
-- **Fan jets are added to the base airflow without a divergence-free
-  projection**, so the combined velocity is not exactly mass conserving.
-  The scalars' budgets are checked instead. A pressure projection on the
-  grid would remove it.
+- **The flow is the nearest conserving one, not a solved one:** the base
+  airflow plus the fans' jets, with their divergence projected out
+  (P05.3). It has no momentum of its own, so the air does not accelerate
+  or decay in time, and a fan's jet takes effect at once.
+- **No buoyancy:** warm air does not rise. The run's effective mixing,
+  0.1 m²/s, folds in the convection it does not carry.
+- **The floor passes no heat:** it is not glass, and the ground's heat is
+  P08's.
 - **A fan's jet is a free jet:** it does not turn at walls or flow around
   obstacles. It stops at the grid's faces and adds nothing inside an
   obstacle's cells, but nothing in its wake is shadowed.
