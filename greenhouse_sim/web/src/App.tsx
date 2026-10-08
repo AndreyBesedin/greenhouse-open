@@ -68,6 +68,7 @@ import {
 } from "./scene/source";
 import { useLiveScene } from "./scene/useLiveScene";
 import { entityOfOrgan, organOf, plantOf, selectedEntity } from "./selection";
+import { CameraFrames } from "./sensors/CameraFrames";
 import { CameraView } from "./sensors/CameraView";
 import { cameraOf, frustumOverlays } from "./sensors/camera";
 import { loadSensorReadings, type SensorReadingsState } from "./sensors/readings";
@@ -481,9 +482,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const selected = selectedEntity(snapshot, selectedId);
   const selectedCamera = selected === null ? null : cameraOf(selected);
 
-  // What the scenario's sensors observed up to the moment drawn, and what
-  // they truly sampled, while a sensor is selected.
-  const sensorSelected = selected?.kind === "SENSOR";
+  // The run's observation log up to the moment drawn, and what its sensors
+  // truly sampled, while a sensor or a camera is selected.
+  const sensorSelected = selected?.kind === "SENSOR" || selected?.kind === "CAMERA";
   useEffect(() => {
     if (!sensorSelected || fieldScenario === null) {
       setSensorReadings({ status: "none" });
@@ -768,7 +769,10 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
               onClear={() => setSelectedId(null)}
             >
               {snapshot !== null && selectedCamera !== null && (
-                <CameraView snapshot={snapshot} spec={selectedCamera} />
+                <>
+                  <CameraView snapshot={snapshot} spec={selectedCamera} />
+                  <CameraFrames cameraId={selectedCamera.cameraId} state={sensorReadings} />
+                </>
               )}
               {selected.kind === "SENSOR" && (
                 <SensorPanel

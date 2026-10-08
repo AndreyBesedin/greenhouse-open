@@ -1,6 +1,6 @@
 # P06: Virtual sensors and the observation layer
 
-**Status:** in progress: P06.1 to P06.5 done, P06.6 next. Part of the
+**Status:** in progress: P06.1 to P06.6 done, P06.7 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -230,7 +230,7 @@ gradient needs its own base airflow, which is a scenario's.
 | P06.3 | `feat(sensors): add noise, bias, drift, dropout and latency` | Done |
 | P06.4 | `feat(cameras): add a virtual RGB camera and its frustum` | Done |
 | P06.5 | `feat(cameras): add depth and instance passes` | Done |
-| P06.6 | `feat(observations): add the observation log and history charts` | Planned |
+| P06.6 | `feat(observations): add the observation log and history charts` | Done |
 | P06.7 | `test(sensors): add the sensor lab, its occlusion and noise` | Planned |
 
 ### P06.1: Sensor and observation contracts
@@ -432,6 +432,45 @@ result: selecting a point sensor shows its chart through the run;
 selecting a camera shows its frames' metadata. Tests: the log is
 append-only and in delivery order; a reading appears only once delivered;
 a sensor is stale exactly when it should be.
+
+#### As implemented
+
+- **The log** is `/climate/observations`, now with each point sensor's
+  freshness and the cameras' frames beside its readings
+  (`greenhouse_sim/sensors/log.py`). Tests check what P06.2 built it to
+  be:
+  - it is append-only: up to ten minutes, it starts with all of the log up
+    to five, in the same order;
+  - a reading enters it only once delivered: the CO₂ sensor's first
+    reading, a minute late, is absent at 59 s and present at 60 s.
+- **Freshness:** a sensor is stale exactly while the latest reading due
+  from it has not come. A reading is due its latency after its sample
+  moment. Before its first reading is due, a sensor is neither fresh nor
+  stale. The climate box's back temperature sensor drops its sample at
+  19 min. It is fresh at 19 min 29 s, stale from 19 min 30 s, and fresh
+  again at 20 min 30 s. A clean sensor is never stale. PAR, which no model
+  gives yet, always is. Staleness is the log's to say, not a quality of a
+  reading.
+- **Frames:** a camera takes one every `cadence_s` from the run's start.
+  The log records each frame's metadata:
+  - its identifier, shaped like an observation's;
+  - its moment;
+  - its position, target and rotation;
+  - its intrinsics;
+  - what it holds, RGB and depth.
+
+  A frame's instance pass is the simulator's truth, which no camera
+  records, so it stays out of the log as point sensors' truth does. The
+  frames are the simulator's own records, not the protocol's
+  `MediaCapture`, which points to stored bytes. A frame is drawn on demand
+  and stored nowhere. `MediaCapture` records come with the headless
+  renderer that writes images for datasets.
+- **The viewer:**
+  - a sensor's panel says whether it is fresh or stale, and marks a reading
+    held at its instrument's range as clipped;
+  - its chart through the run is P06.3's;
+  - a camera's panel adds its frames: how many, the latest one's metadata,
+    and when each was taken.
 
 ### P06.7: The sensor lab
 

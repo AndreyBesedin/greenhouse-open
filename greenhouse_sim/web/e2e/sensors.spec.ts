@@ -77,7 +77,40 @@ test("sensors: an imperfect sensor errs as configured, and the QA switch cleans 
   await expect(panel.getByTestId("sensor-truth")).toHaveText("18.59 °C at 10 min");
   await expect(panel.locator(".sensor-chart-reading")).toHaveCount(8);
 
+  await expect(panel.getByTestId("sensor-freshness")).toHaveText(
+    "Fresh: its reading of 9 min has come.",
+  );
+
   await panel.getByRole("checkbox", { name: "Imperfections" }).uncheck();
   await expect(panel.getByTestId("sensor-reading")).toHaveText("18.59 °C at 10 min");
   await expect(panel.locator(".sensor-chart-reading")).toHaveCount(11);
+  await expect(panel.getByTestId("sensor-freshness")).toHaveText(
+    "Fresh: its reading of 10 min has come.",
+  );
+});
+
+test("sensors: a sensor is stale exactly while a reading due from it has not come", async ({
+  page,
+}) => {
+  await page.goto(`${HEATED_RUN}&camera=${cameraText(BEFORE_THE_BACK)}`);
+  await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
+  await selectAt(page, BACK_FACE, "climate_box_temperature_back", BEFORE_THE_BACK);
+  const panel = page.getByRole("region", { name: "Sensor" });
+  const freshness = panel.getByTestId("sensor-freshness");
+  const time = page.getByRole("slider", { name: "Time into the run" });
+
+  // Its sample at 19 min drops out: due half a minute later, it never comes,
+  // and its latest reading is the one taken at 18.
+  await time.fill("1200");
+  await expect(freshness).toHaveText("Stale: its reading of 19 min, due by now, has not come.", {
+    timeout: 20_000,
+  });
+  await expect(freshness).toHaveClass("stale");
+  await expect(panel.getByTestId("sensor-reading")).toHaveText(/ at 18 min$/);
+
+  // The next one comes.
+  await time.fill("1260");
+  await expect(freshness).toHaveText("Fresh: its reading of 20 min has come.", {
+    timeout: 20_000,
+  });
 });

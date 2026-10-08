@@ -1,5 +1,6 @@
 """A scenario's sensors through a run (P06.2): what they observe, on the
-normal path, and, for evaluation and QA only, what was truly there.
+normal path, with each one's freshness and its cameras' frames (P06.6),
+and, for evaluation and QA only, what was truly there.
 
 A run's moments are seconds from its start, which is its scenario's start
 date at midnight, UTC, until the crop's days and the air's seconds share a
@@ -16,21 +17,25 @@ from pydantic import BaseModel, ConfigDict
 from greenhouse_sim.evaluation.sensor_truth import SensorTruth, sensor_truth
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.sensors.air import observe
+from greenhouse_sim.sensors.log import CameraFrame, SensorFreshness, frames, freshness
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import LONGEST_RUN_S, Commanded, air_through_a_run
 from greenhouse_sim.services.scenarios import SceneChanges, changed, scenario
-from greenhouse_sim.world.sensors import PointSensor
+from greenhouse_sim.world.sensors import Camera, PointSensor
 
 
 class SensorObservations(BaseModel):
-    """What a scenario's point sensors observed up to a moment of a run, in
-    the order delivered, the run that produced them, and when it started."""
+    """A run's observation log up to a moment: what its point sensors
+    observed, in the order delivered, whether each is fresh, and the frames
+    its cameras took; the run that produced them, and when it started."""
 
     model_config = ConfigDict(frozen=True)
 
     run_id: str
     start: datetime
     observations: list[Observation]
+    freshness: list[SensorFreshness]
+    frames: list[CameraFrame]
 
 
 class SensorTruths(BaseModel):
@@ -53,6 +58,11 @@ def _point_sensors(scenario_id: str, layout: str) -> list[PointSensor]:
     return [sensor for sensor in config.layout.sensors if isinstance(sensor, PointSensor)]
 
 
+def _cameras(scenario_id: str, layout: str) -> list[Camera]:
+    config = changed(scenario(scenario_id), SceneChanges(layout=layout))
+    return [sensor for sensor in config.layout.sensors if isinstance(sensor, Camera)]
+
+
 def _checked_until(until_s: float) -> float:
     if not 0.0 <= until_s <= LONGEST_RUN_S:
         raise InvalidRequest(f"a run lasts from 0 to {LONGEST_RUN_S:g} s, not {until_s:g}")
@@ -68,24 +78,29 @@ def observations(
     until_s: float = 0.0,
     clean: bool = False,
 ) -> SensorObservations:
-    """What a scenario's point sensors observed up to `until_s` of a run; as
-    clean sensors would have, if `clean`, for QA."""
+    """A run's observation log up to `until_s`; as clean sensors would have
+    made it, if `clean`, for QA."""
     until = _checked_until(until_s)
     name = layout or DEFAULT_LAYOUT
     air_at, run_id = air_through_a_run(scenario_id, name, levels, openings, commands)
+    start = run_start(scenario_id)
+    point_sensors = _point_sensors(scenario_id, name)
+    observed = observe(
+        point_sensors,
+        air_at,
+        until,
+        start=start,
+        greenhouse_id=scenario(scenario_id).greenhouse_id,
+        run_id=run_id,
+        seed=scenario(scenario_id).random_seed,
+        clean=clean,
+    )
     return SensorObservations(
         run_id=run_id,
-        start=run_start(scenario_id),
-        observations=observe(
-            _point_sensors(scenario_id, name),
-            air_at,
-            until,
-            start=run_start(scenario_id),
-            greenhouse_id=scenario(scenario_id).greenhouse_id,
-            run_id=run_id,
-            seed=scenario(scenario_id).random_seed,
-            clean=clean,
-        ),
+        start=start,
+        observations=observed,
+        freshness=freshness(point_sensors, observed, until, start=start, clean=clean),
+        frames=frames(_cameras(scenario_id, name), until, start=start),
     )
 
 

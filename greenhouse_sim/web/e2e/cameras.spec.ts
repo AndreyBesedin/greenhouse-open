@@ -179,3 +179,26 @@ test("cameras: the instance pass names what the main view picks, and depth is a 
     await expect(panel.getByTestId("camera-pass")).toHaveCount(0);
   });
 });
+
+test("cameras: the run's log records each frame a camera takes", async ({ page }) => {
+  await page.goto(`${AT_THE_CAMERA}&field=climate&t=600`);
+  await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
+  await selectAt(page, CAMERA_BODY, "climate_box_front_camera", BEHIND_THE_CAMERA);
+  const frames = page.getByRole("region", { name: "Frames" });
+
+  // A frame a minute, from the run's start.
+  await expect(frames.getByTestId("camera-frames")).toHaveText(
+    "11 frames by 10 min, each RGB and depth.",
+  );
+  await expect(frames.getByTestId("camera-frame-id")).toHaveText(
+    "sim_front_camera_20260101T001000Z_frame",
+  );
+  await expect(frames.getByTestId("camera-frame-from")).toHaveText("x 0.60, y 3.20, z 2.20");
+  await expect(frames.getByTestId("camera-frame-towards")).toHaveText("x 11.00, y 3.20, z 0.60");
+  await expect(frames.getByTestId("camera-frame-picture")).toHaveText(
+    "640 × 480 px, fx 457.01 px, fy 457.01 px",
+  );
+  await expect(
+    frames.getByRole("list", { name: "Frames taken" }).getByRole("listitem"),
+  ).toHaveCount(11);
+});
