@@ -18,7 +18,7 @@ import { EquipmentControls } from "./EquipmentControls";
 import { ClimateSchedule } from "./fields/ClimateSchedule";
 import { ClimateTime } from "./fields/ClimateTime";
 import type { FieldView, Slice } from "./fields/display";
-import { defaultSlice, quantityScale } from "./fields/drawing";
+import { defaultSlice, type HeldRanges, heldThrough, quantityScale } from "./fields/drawing";
 import { FieldArrows } from "./fields/FieldArrows";
 import { FieldControls } from "./fields/FieldControls";
 import { FieldLegend } from "./fields/FieldLegend";
@@ -92,6 +92,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [probeHeight, setProbeHeight] = useState(DEFAULT_PROBE_HEIGHT_M);
   // A range the viewer chose for the field's colours, in place of its own.
   const [fieldRange, setFieldRange] = useState<ScalarRange | null>(null);
+  // The colour ranges a climate run's moments have reached, so far.
+  const [heldRanges, setHeldRanges] = useState<HeldRanges | null>(null);
   const [presetRequest, setPresetRequest] = useState<PresetRequest | null>(null);
   const [sample, setSample] = useState<ViewSample | null>(null);
   const [pointer, setPointer] = useState<Point3 | null>(null);
@@ -179,11 +181,19 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const fieldOpenings = source.kind === "scenario" ? pairsText(source.openings) : "";
   const fieldSchedule = source.kind === "scenario" ? scheduleText(source.schedule) : "";
   const fieldTime = source.kind === "scenario" ? (source.time ?? 0) : 0;
+  // A climate run, apart from its moments: its colours keep the widest range
+  // its moments have reached, so that a slice keeps its colours as the run
+  // plays and goes back. Another run starts afresh.
+  const climateRun =
+    fieldScenario !== null && fieldName === CLIMATE_FIELD
+      ? [fieldScenario, fieldLayout ?? "", fieldLevels, fieldOpenings, fieldSchedule].join("|")
+      : null;
   useEffect(() => {
     if (fieldScenario === null || fieldName === null) {
       setField({ status: "none" });
       return;
     }
+    const run = climateRun;
     let current = true;
     setField((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
     const changes = {
@@ -196,12 +206,24 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     void loadField(fieldScenario, fieldName, changes).then((state) => {
       if (current) {
         setField(state);
+        if (run !== null && state.status === "loaded") {
+          setHeldRanges((held) => heldThrough(held, run, state.field));
+        }
       }
     });
     return () => {
       current = false;
     };
-  }, [fieldScenario, fieldName, fieldLayout, fieldLevels, fieldOpenings, fieldSchedule, fieldTime]);
+  }, [
+    fieldScenario,
+    fieldName,
+    fieldLayout,
+    fieldLevels,
+    fieldOpenings,
+    fieldSchedule,
+    fieldTime,
+    climateRun,
+  ]);
 
   // The field compared with the drawn one, loaded as the drawn one is.
   const compareName = source.kind === "scenario" ? (source.compare ?? null) : null;
@@ -515,7 +537,11 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     () => (loadedField === null ? null : quantityScale(loadedField, scaleQuantity)),
     [loadedField, scaleQuantity],
   );
-  const fieldColours = fieldScale === null ? null : (fieldRange ?? fieldScale.range);
+  const heldRange =
+    heldRanges !== null && heldRanges.run === climateRun
+      ? heldRanges.ranges[scaleQuantity]
+      : undefined;
+  const fieldColours = fieldScale === null ? null : (fieldRange ?? heldRange ?? fieldScale.range);
   const fieldLayer =
     loadedField === null || fieldColours === null ? null : fieldView === "streamlines" ? (
       <FieldStreamlines field={loadedField} range={fieldColours} />

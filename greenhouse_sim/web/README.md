@@ -78,7 +78,8 @@ with its equipment running at the levels the Equipment panel sets, reloaded
 as they change (`?scenario=climate_box&field=climate&set=fan:1`, its fan's
 jet blowing down the house). A fan carries an arrow the way it blows. The
 climate is its air through a climate run, an hour long: "Climate run" moves
-through it a minute at a time, or plays it (`&t=600`, ten minutes in), and a
+through it a minute at a time, or plays it (`&t=600`, ten minutes in), its
+colours keeping the widest range its moments have reached, and a
 temperature slice shows a heater warming its corner and the house
 (`&set=heater:1&fieldView=slice&slice=temperature:z:0.75`), and a humidity
 slice a dehumidifier drying the air around it
