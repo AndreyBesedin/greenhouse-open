@@ -54,21 +54,23 @@ test("a field is drawn as arrows, streamlines or a slice, with a legend to match
 test("the prescribed airflow patterns switch at once, the scenario's own first", async ({
   page,
 }) => {
-  await page.goto("/?scenario=tomato_compartment");
+  // In the climate box, whose own air is still and uniform: the compartment's
+  // fields are seven times larger, and drawing one after another in
+  // software outlasts a check.
+  await page.goto("/?scenario=climate_box");
   const fieldChoice = page.getByRole("combobox", { name: "Air field" });
   await expect(fieldChoice.locator("option")).toHaveText([
     "none",
-    "buoyancy, the scenario's airflow",
-    "uniform",
+    "uniform, the scenario's airflow",
+    "buoyancy",
     "vortex",
-    "cfd",
     "shear",
   ]);
 
-  for (const pattern of ["buoyancy", "uniform", "vortex"]) {
+  for (const pattern of ["uniform", "buoyancy", "vortex"]) {
     await fieldChoice.selectOption(pattern);
     await expect(page.getByTestId("field-status")).toContainText(
-      `tomato_compartment_${pattern} (prescribed:${pattern}): 48 × 32 × 12 cells`,
+      `climate_box_${pattern} (prescribed:${pattern}): 24 × 13 × 8 cells`,
     );
   }
 });
