@@ -1,6 +1,6 @@
 # P05: Climate actuators: fans, heaters, dehumidification and vents
 
-**Status:** in progress: P05.0 to P05.7 done, the final QA next. Part of the [simulator roadmap](README.md).
+**Status:** done: P05.0 to P05.7 and the final QA. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -678,12 +678,45 @@ Expected:
 - the vent changes the air at its boundary;
 - replaying the same schedule reproduces the run exactly.
 
+### As run
+
+The browser test `e2e/climate-actuators.spec.ts` runs it in the climate box
+(8 °C outside, 16 °C to start), with probes in the fan's core, beside the
+heater, beside the dehumidifier and under the roof vent. Every expectation
+holds:
+
+- **The fan:** switched on, the air moves at up to 4.81 m/s, 4.34 m/s along
+  the fan's axis in its core; switched off, it is still again.
+- **The heater:** ten minutes in, beside it the air is at 31.88 °C at full
+  power, cooler at half, and below 10 °C unheated.
+- **The dehumidifier:** switched on too, it dries the air beside it by more
+  than 5 points of relative humidity in ten minutes.
+- **The roof vent:** opened, a draught of over 0.2 m/s goes out through it
+  and the air under it cools; closed again, the air is as it was.
+- **The views:** the arrows, then the temperature and humidity slices, each
+  with its legend.
+- **Probes and charts:** four probes, three charts each, a line for the run
+  and one for the run all off; the charts read what the probes read.
+- **Replay:** reloading the same address gives every probe's reading again,
+  digit for digit.
+
 ## Acceptance criteria
 
-- [ ] Device state is visible and inspectable.
-- [ ] Device effects reach the air only through the source-term contract.
-- [ ] No actuator requires a specific CFD engine.
-- [ ] Visual and numerical probes agree on the direction of change.
+- [x] **Device state is visible and inspectable:**
+  - each piece of equipment is drawn grey when off and in its kind's colour
+    when running;
+  - it is selectable, and the inspector shows its level and rating;
+  - the Equipment panel and the schedule show every level at the moment
+    drawn.
+- [x] **Device effects reach the air only through the source-term
+  contract:** a climate run's flow, heat and water come from
+  `climate.sources` and nothing else (`tests/test_climate_field.py`).
+- [x] **No actuator requires a specific CFD engine:** the climate run is
+  NumPy on the field's grid. The CFD geometry only says where obstacles and
+  vents lie.
+- [x] **Visual and numerical probes agree on the direction of change:** the
+  charts read what the probes read, at every minute
+  (`tests/test_climate_probes.py`, `e2e/probe-charts.spec.ts`).
 
 ## Known approximations
 
