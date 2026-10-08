@@ -25,6 +25,8 @@ the outside.
 - **The envelope:** a cell against a wall or the roof exchanges U A (T_out −
   T) with the outside through the face it lies against, both ways. The floor
   is not glass, and passes nothing. Glass passes no water.
+- **Open doors and vents** (`climate.vents`) exchange the air against them
+  with the outside's, its heat and its water.
 - **The time step** keeps every cell's new temperature a weighted mean of the
   old ones: the air flowing in, the mixing and the exchange take at most
   half a cell's temperature away per step, which holds both the air crossing
@@ -45,9 +47,10 @@ from typing import Final
 import numpy as np
 
 from greenhouse_sim.climate.projection import FaceFlows
-from greenhouse_sim.climate.psychrometrics import saturation_ratio_g_kg
+from greenhouse_sim.climate.psychrometrics import humidity_ratio_g_kg, saturation_ratio_g_kg
 from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.climate.sources import SourceTerms
+from greenhouse_sim.climate.vents import Vent
 from greenhouse_sim.fields.field import FieldGrid
 
 AIR_DENSITY_KG_M3: Final = 1.2
@@ -85,6 +88,7 @@ class Transport:
     flows: FaceFlows
     solid: np.ndarray
     settings: ClimateSettings
+    vents: tuple[Vent, ...] = ()
 
     def __post_init__(self) -> None:
         nx, ny, nz = self.grid.shape
@@ -138,6 +142,17 @@ class Transport:
         exchange[:, -1, :] += u * self._face_area(1)
         # The roof, over the top layer; the floor passes nothing.
         exchange[-1, :, :] += u * self._face_area(0)
+        exchange += self.vents_m3_s()
+        exchange[self.solid] = 0.0
+        return exchange
+
+    def vents_m3_s(self) -> np.ndarray:
+        """The outside air each cell takes in through open doors and vents,
+        and gives out, in m³/s; nothing for a solid cell."""
+        nx, ny, nz = self.grid.shape
+        exchange = np.zeros((nz, ny, nx))
+        for vent in self.vents:
+            exchange += vent.exchange_m3_s(self.settings.vent_exchange_m_s)
         exchange[self.solid] = 0.0
         return exchange
 
@@ -165,7 +180,9 @@ class Transport:
             for axis, low, high, into_low, into_high in self._takes()
         ]
         exchange = share * self.exchange_m3_s()
+        venting = share * self.vents_m3_s()
         outside = self.settings.outside_temperature_c
+        outside_water = float(humidity_ratio_g_kg(outside, self.settings.outside_humidity_pct))
         air_kg = AIR_DENSITY_KG_M3 * self.cell_volume_m3()
         solid = self.solid
         added = (
@@ -189,6 +206,7 @@ class Transport:
         for step in range(1, steps + 1):
             change = np.zeros_like(carried)
             change[0] = added + exchange * (outside - temperature)
+            change[1] = venting * (outside_water - humidity)
             for axis, low, high, into_low, into_high in faces:
                 difference = np.diff(carried, axis=axis)
                 change[low] += into_low * difference

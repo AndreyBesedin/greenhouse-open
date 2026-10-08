@@ -1,6 +1,6 @@
 # P05: Climate actuators: fans, heaters, dehumidification and vents
 
-**Status:** in progress: P05.0 to P05.4 done, P05.5 next. Part of the [simulator roadmap](README.md).
+**Status:** in progress: P05.0 to P05.5 done, P05.6 next. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -203,7 +203,7 @@ new scenarios (P05.0).
 | P05.2 | `feat(fans): add fan airflow source model` | Done |
 | P05.3 | `feat(heating): add heater sensible-heat source` | Done |
 | P05.4 | `feat(humidity): add dehumidifier moisture sink` | Done |
-| P05.5 | `feat(vents): connect vent opening state to airflow boundaries` | Planned |
+| P05.5 | `feat(vents): connect vent opening state to airflow boundaries` | Done |
 | P05.6 | `feat(control): add actuator schedule timeline` | Planned |
 | P05.7 | `test(climate): add actuator comparison dashboard` | Planned |
 
@@ -583,6 +583,26 @@ Tests: a closed vent exchanges nothing, and the exchange grows with the
 aperture area the geometry gives. With the outside cooler, an open vent
 cools the house towards it.
 
+#### As implemented
+
+- **A vent's cells:** those against the face of the grid the CFD geometry
+  puts it on (`CfdGeometry.opening_cells`), with which way is out. A roof
+  vent's are under the ceiling at the eaves.
+- **The exchange** (`climate.vents`): 0.3 m/s through its aperture, as much
+  in as out. It mixes the outside's temperature and water into those
+  cells, shared evenly. Closed, it exchanges nothing; part open, its
+  aperture's share.
+- **The draught** shows in the climate's velocity, so the arrows respond.
+  It goes through the cells' faces at the speed that carries the exchange:
+  out when the air against it is warmer than the outside's, in when it is
+  cooler. It is drawn, not carried: the exchange already mixes the air.
+- **Field requests** take the openings as scene requests do
+  (`fields/climate?open=roof_vent:1`). The viewer asks for the climate
+  with the Openings sliders' values.
+- **In the climate box,** heated, ten minutes in: opening the roof vent
+  cools the house's mean from 15.5 to 13.6 °C, and 0.29 m/s goes out
+  through it. Unheated, it lets the outside's drier air in.
+
 ### P05.6: Actuator schedule timeline
 
 Scheduled commands and manual overrides in one log; a timeline of markers
@@ -646,7 +666,9 @@ What P05 simplifies on purpose, kept here until a later step removes it:
 - **The outside is fixed**: one temperature and humidity for a run, until
   P07 brings weather.
 - **Vents exchange air at a constant speed through their aperture**, its
-  direction by the stack effect only, until P07 brings wind.
+  direction by the stack effect only, until P07 brings wind. The exchange
+  is as much in as out, so the flow inside is not driven by it; the draught
+  is drawn, not carried.
 - **Plants don't feel the air yet:** they keep their daily, greenhouse-wide
   climate until P07/P09 feed them the air where they stand.
 

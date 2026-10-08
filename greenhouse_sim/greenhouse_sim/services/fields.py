@@ -10,8 +10,9 @@ it, first, and the others with their typical numbers. Then its CFD solution
 (`cfd`) with the layout asked for, if one is kept that is still its
 solution (`greenhouse_sim.cfd.results`). Then, if its layout places
 equipment, its `climate`: its air through a climate run, with its equipment
-running at the levels asked from the start, all off unless asked, at a
-moment of the run (`greenhouse_sim.climate.run`). And last the synthetic
+running at the levels asked from the start, all off unless asked, and its
+doors and vents open as asked, at a moment of the run
+(`greenhouse_sim.climate.run`). And last the synthetic
 shear the field format is checked against.
 
 A few recent climate runs are kept, each with the moments asked of it, so
@@ -28,6 +29,7 @@ from greenhouse_sim.cfd.geometry import cfd_geometry
 from greenhouse_sim.cfd.results import CfdAirflow, kept_result
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.run import ClimateRun
+from greenhouse_sim.climate.vents import Vent
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument, FieldGrid
 from greenhouse_sim.fields.synthetic import shear_field
 from greenhouse_sim.scenarios.config import ScenarioConfig
@@ -54,21 +56,37 @@ class _Shear:
         return shear_field(field_id, grid)
 
 
+type _Pairs = tuple[tuple[str, float], ...]
+
+
 @functools.lru_cache(maxsize=KEPT_RUNS)
-def _climate_run(
-    scenario_id: str, layout: str, levels: tuple[tuple[str, float], ...]
-) -> ClimateRun:
+def _climate_run(scenario_id: str, layout: str, levels: _Pairs, openings: _Pairs) -> ClimateRun:
     """A scenario's climate run with one of its layouts, its equipment set to
-    `levels` from the start."""
-    config = changed(scenario(scenario_id), SceneChanges(layout=layout))
+    `levels` from the start, and its doors and vents open as `openings` say."""
+    config = changed(scenario(scenario_id), SceneChanges(layout=layout, openings=dict(openings)))
     grid = air_grid(config)
+    geometry = cfd_geometry(scenario_id, config, grid)
+    apertures = {
+        opening.opening_id: opening.aperture_area() for opening in config.envelope.openings
+    }
+    vents = [
+        Vent(
+            opening_id=opening_id,
+            aperture_m2=apertures[opening_id],
+            cells=cells,
+            axis=axis,
+            outward=outward,
+        )
+        for opening_id, (cells, axis, outward) in geometry.opening_cells().items()
+    ]
     return ClimateRun(
         base=config.airflow,
         equipment=config.layout.equipment,
         schedule=Schedule.from_start(dict(levels)),
         settings=config.climate,
         grid=grid,
-        solid=cfd_geometry(scenario_id, config, grid).solid(),
+        solid=geometry.solid(),
+        vents=vents,
     )
 
 
@@ -76,19 +94,36 @@ class _Climate:
     """A scenario's climate, as an airflow model: its run is made, or found
     among the kept ones, only when it is drawn."""
 
-    def __init__(self, scenario_id: str, layout: str, levels: Mapping[str, float]):
-        self._key = (scenario_id, layout, tuple(sorted(levels.items())))
+    def __init__(
+        self,
+        scenario_id: str,
+        layout: str,
+        levels: Mapping[str, float],
+        openings: Mapping[str, float],
+    ):
+        self._key = (
+            scenario_id,
+            layout,
+            tuple(sorted(levels.items())),
+            tuple(sorted(openings.items())),
+        )
 
     def field(self, field_id: str, grid: FieldGrid, time_s: float = 0.0) -> EnvironmentField:
         return _climate_run(*self._key).field(field_id, grid, time_s)
 
 
 def _models(
-    scenario_id: str, layout: str, levels: Mapping[str, float] | None = None
+    scenario_id: str,
+    layout: str,
+    levels: Mapping[str, float] | None = None,
+    openings: Mapping[str, float] | None = None,
 ) -> dict[str, AirflowModel]:
-    """A scenario's fields by name, with one of its layouts and its equipment
-    at `levels`: its own airflow first."""
-    config = changed(scenario(scenario_id), SceneChanges(layout=layout))
+    """A scenario's fields by name, with one of its layouts, its equipment at
+    `levels` and its doors and vents open as `openings` say: its own airflow
+    first."""
+    config = changed(
+        scenario(scenario_id), SceneChanges(layout=layout, openings=dict(openings or {}))
+    )
     running = equipment_levels(config, levels or {})
     own = config.airflow
     models: dict[str, AirflowModel] = {own.kind: own}
@@ -98,7 +133,7 @@ def _models(
     if solved is not None:
         models[CFD] = CfdAirflow(solved)
     if config.layout.equipment:
-        models[CLIMATE] = _Climate(scenario_id, layout, running)
+        models[CLIMATE] = _Climate(scenario_id, layout, running, openings or {})
     models[SHEAR] = _Shear()
     return models
 
@@ -138,14 +173,16 @@ def field(
     layout: str | None = None,
     levels: Mapping[str, float] | None = None,
     time_s: float = 0.0,
+    openings: Mapping[str, float] | None = None,
 ) -> FieldDocument:
     """One of a scenario's fields with one of its layouts, by default its
-    own, and its equipment at `levels`, at `time_s` into a climate run, as it
-    is published. A level for equipment it does not have, or outside 0 to 1,
-    is refused, as is a moment outside a run."""
+    own, its equipment at `levels` and its doors and vents open as `openings`
+    say, at `time_s` into a climate run, as it is published. A level for
+    equipment it does not have, or outside 0 to 1, is refused, as are an
+    opening it does not have and a moment outside a run."""
     if not 0.0 <= time_s <= LONGEST_RUN_S:
         raise InvalidRequest(f"a climate run lasts from 0 to {LONGEST_RUN_S:g} s, not {time_s:g}")
-    models = _models(scenario_id, layout or DEFAULT_LAYOUT, levels)
+    models = _models(scenario_id, layout or DEFAULT_LAYOUT, levels, openings)
     model = models.get(name)
     if model is None:
         known = ", ".join(models)

@@ -159,10 +159,12 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const fieldScenario = source.kind === "scenario" ? source.scenarioId : null;
   const fieldName = source.kind === "scenario" ? (source.field ?? null) : null;
   // A scenario's CFD solution depends on its layout, and its climate on how
-  // hard its equipment runs: kept as the address writes them, so that the
-  // field is loaded again only when they change.
+  // hard its equipment runs and how far its doors and vents stand open: kept
+  // as the address writes them, so that the field is loaded again only when
+  // they change.
   const fieldLayout = source.kind === "scenario" ? source.layout : undefined;
   const fieldLevels = source.kind === "scenario" ? pairsText(source.levels) : "";
+  const fieldOpenings = source.kind === "scenario" ? pairsText(source.openings) : "";
   const fieldTime = source.kind === "scenario" ? (source.time ?? 0) : 0;
   useEffect(() => {
     if (fieldScenario === null || fieldName === null) {
@@ -174,6 +176,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     const changes = {
       layout: fieldLayout,
       levels: pairsFrom(fieldLevels) ?? {},
+      openings: pairsFrom(fieldOpenings) ?? {},
       time: fieldTime,
     };
     void loadField(fieldScenario, fieldName, changes).then((state) => {
@@ -184,7 +187,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     return () => {
       current = false;
     };
-  }, [fieldScenario, fieldName, fieldLayout, fieldLevels, fieldTime]);
+  }, [fieldScenario, fieldName, fieldLayout, fieldLevels, fieldOpenings, fieldTime]);
 
   // The field compared with the drawn one, loaded as the drawn one is.
   const compareName = source.kind === "scenario" ? (source.compare ?? null) : null;
@@ -198,6 +201,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     const changes = {
       layout: fieldLayout,
       levels: pairsFrom(fieldLevels) ?? {},
+      openings: pairsFrom(fieldOpenings) ?? {},
       time: fieldTime,
     };
     void loadField(fieldScenario, compareName, changes).then((state) => {
@@ -208,7 +212,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     return () => {
       current = false;
     };
-  }, [fieldScenario, compareName, fieldLayout, fieldLevels, fieldTime]);
+  }, [fieldScenario, compareName, fieldLayout, fieldLevels, fieldOpenings, fieldTime]);
 
   // The boundaries a CFD solver is given, changed as the scene is, drawn
   // over it when asked for; the last stays on show until the next arrives.

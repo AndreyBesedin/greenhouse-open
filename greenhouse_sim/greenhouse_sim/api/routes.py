@@ -31,8 +31,10 @@ check; a route that comes to need one checks it first.
                                           both ?layout=open with another of its
                                           layouts, for its CFD solution, and
                                           ?set=fan:1 with its equipment
-                                          running and &t=600 that many seconds
-                                          into the run, for its climate
+                                          running, &open=roof_vent:1 with its
+                                          vents open, and &t=600 that many
+                                          seconds into the run, for its
+                                          climate
     GET /api/scenarios/{id}/cfd/geometry  the boundaries of a scenario's air as
                                           a CFD solver is given them, snapped
                                           to its mesh; changed as for its scene
@@ -137,6 +139,7 @@ def respond(method: str, path: str) -> Response:
                     layout,
                     _pairs(query.get("set", []), "set"),
                     _seconds(query),
+                    _pairs(query.get("open", []), "open"),
                 )
             )
         case ["api", "scenarios", scenario_id, "cfd", "geometry"]:
