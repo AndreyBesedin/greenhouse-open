@@ -257,6 +257,129 @@
       "title": "CylinderPrimitive",
       "type": "object"
     },
+    "Dehumidifier": {
+      "additionalProperties": false,
+      "description": "A dehumidifier: the water it takes out of the air at full power, and\nthe heat it gives the air while it does.",
+      "properties": {
+        "actuator_id": {
+          "title": "Actuator Id",
+          "type": "string"
+        },
+        "heading": {
+          "default": 0.0,
+          "title": "Heading",
+          "type": "number"
+        },
+        "base": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "size_x": {
+          "exclusiveMinimum": 0,
+          "title": "Size X",
+          "type": "number"
+        },
+        "size_y": {
+          "exclusiveMinimum": 0,
+          "title": "Size Y",
+          "type": "number"
+        },
+        "size_z": {
+          "exclusiveMinimum": 0,
+          "title": "Size Z",
+          "type": "number"
+        },
+        "kind": {
+          "const": "dehumidifier",
+          "default": "dehumidifier",
+          "title": "Kind",
+          "type": "string"
+        },
+        "removal_kg_h": {
+          "exclusiveMinimum": 0,
+          "title": "Removal Kg H",
+          "type": "number"
+        },
+        "heat_w": {
+          "exclusiveMinimum": 0,
+          "title": "Heat W",
+          "type": "number"
+        }
+      },
+      "required": [
+        "actuator_id",
+        "base",
+        "size_x",
+        "size_y",
+        "size_z",
+        "removal_kg_h",
+        "heat_w"
+      ],
+      "title": "Dehumidifier",
+      "type": "object"
+    },
+    "Equipment": {
+      "discriminator": {
+        "mapping": {
+          "dehumidifier": "#/$defs/Dehumidifier",
+          "fan": "#/$defs/Fan",
+          "heater": "#/$defs/Heater"
+        },
+        "propertyName": "kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Fan"
+        },
+        {
+          "$ref": "#/$defs/Heater"
+        },
+        {
+          "$ref": "#/$defs/Dehumidifier"
+        }
+      ]
+    },
+    "Fan": {
+      "additionalProperties": false,
+      "description": "A fan: a rotor of a diameter, centred on `position`, blowing its rated\nflow of air along its heading.",
+      "properties": {
+        "actuator_id": {
+          "title": "Actuator Id",
+          "type": "string"
+        },
+        "heading": {
+          "default": 0.0,
+          "title": "Heading",
+          "type": "number"
+        },
+        "kind": {
+          "const": "fan",
+          "default": "fan",
+          "title": "Kind",
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "diameter_m": {
+          "exclusiveMinimum": 0,
+          "title": "Diameter M",
+          "type": "number"
+        },
+        "flow_m3_s": {
+          "exclusiveMinimum": 0,
+          "title": "Flow M3 S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "actuator_id",
+        "position",
+        "diameter_m",
+        "flow_m3_s"
+      ],
+      "title": "Fan",
+      "type": "object"
+    },
     "FixtureKind": {
       "description": "What a fixture is, for every consumer of its geometry.",
       "enum": [
@@ -271,6 +394,60 @@
       ],
       "title": "FixtureKind",
       "type": "string"
+    },
+    "Heater": {
+      "additionalProperties": false,
+      "description": "A unit heater: its rated power, all of it given to the air as heat.",
+      "properties": {
+        "actuator_id": {
+          "title": "Actuator Id",
+          "type": "string"
+        },
+        "heading": {
+          "default": 0.0,
+          "title": "Heading",
+          "type": "number"
+        },
+        "base": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "size_x": {
+          "exclusiveMinimum": 0,
+          "title": "Size X",
+          "type": "number"
+        },
+        "size_y": {
+          "exclusiveMinimum": 0,
+          "title": "Size Y",
+          "type": "number"
+        },
+        "size_z": {
+          "exclusiveMinimum": 0,
+          "title": "Size Z",
+          "type": "number"
+        },
+        "kind": {
+          "const": "heater",
+          "default": "heater",
+          "title": "Kind",
+          "type": "string"
+        },
+        "power_w": {
+          "exclusiveMinimum": 0,
+          "title": "Power W",
+          "type": "number"
+        }
+      },
+      "required": [
+        "actuator_id",
+        "base",
+        "size_x",
+        "size_y",
+        "size_z",
+        "power_w"
+      ],
+      "title": "Heater",
+      "type": "object"
     },
     "Material": {
       "description": "What a fixture, or a part of the envelope, is made of.",
@@ -965,6 +1142,14 @@
         "$ref": "#/$defs/Zone"
       },
       "title": "Zones",
+      "type": "array"
+    },
+    "equipment": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Equipment"
+      },
+      "title": "Equipment",
       "type": "array"
     },
     "$schema": {

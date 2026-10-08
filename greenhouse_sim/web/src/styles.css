@@ -286,6 +286,7 @@ body {
 }
 
 .opening-controls,
+.equipment-controls,
 .lab-controls {
   display: grid;
   gap: 2px;
@@ -295,12 +296,24 @@ body {
 }
 
 .opening-control,
+.equipment-control,
 .lab-control {
   display: grid;
   grid-template-columns: 7em 1fr 7em;
   gap: 6px;
   align-items: center;
   font-variant-numeric: tabular-nums;
+}
+
+/* Room for a switch beside each piece's name, kept on one line, and the
+ * openings' sliders lined up with the equipment's. */
+.opening-control,
+.equipment-control {
+  grid-template-columns: 8em 1fr 7em;
+}
+
+.equipment-switch {
+  white-space: nowrap;
 }
 
 /* The plant lab's actions on the selected organ's plant. */
@@ -477,11 +490,13 @@ body {
   }
 
   .opening-control,
+  .equipment-control,
   .lab-control {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
   }
 
   .opening-control input,
+  .equipment-control input[type="range"],
   .lab-control input {
     min-width: 0;
     width: 100%;

@@ -61,7 +61,10 @@ CLIMATE_BOX = ScenarioConfig(
     ),
     # Its layout (scenarios/layouts/climate_box/default.json): two rows of 16
     # plants along the house, 1.6 m apart about its middle, on gutters under
-    # crop wires, behind a path across the front.
+    # crop wires, behind a path across the front; and its equipment, all off
+    # until commanded: a fan high over the front path blowing down the house,
+    # a 10 kW heater in the back right corner, and a dehumidifier against the
+    # left side wall, halfway along.
     layout=load_layout("climate_box"),
     # Still air, so that a fan's jet stands out.
     airflow=UniformAirflow(velocity_m_s=Vector3(x=0.0, y=0.0, z=0.0)),

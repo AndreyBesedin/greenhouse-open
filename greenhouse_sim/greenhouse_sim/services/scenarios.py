@@ -2,10 +2,11 @@
 it looks like before its first day, changed as a client asks.
 
 A client may see a scenario with another of its layouts, its greenhouse's
-dimensions changed, and its doors and vents standing open. Every change is
-checked as the scenario's own description is: a layout it does not have is
-not found, and a greenhouse its layout or openings no longer fit, or a ridge
-below the eaves, is refused with the reason.
+dimensions changed, its doors and vents standing open, and its equipment
+running. Every change is checked as the scenario's own description is: a
+layout it does not have is not found, and a greenhouse its layout or
+openings no longer fit, a ridge below the eaves, or a level for equipment
+it does not have, is refused with the reason.
 """
 
 from typing import Final
@@ -40,12 +41,14 @@ class ScenarioSummary(BaseModel):
 
 class SceneChanges(BaseModel):
     """How a client asks to see a scenario changed: with another of its
-    layouts, its greenhouse's dimensions set by name, and its doors and vents
-    open by a fraction from 0 to 1, by identifier."""
+    layouts, its greenhouse's dimensions set by name, its doors and vents
+    open by a fraction from 0 to 1, and its equipment run at a level from 0
+    to 1, each by identifier."""
 
     layout: str = DEFAULT_LAYOUT
     envelope: dict[str, float] = {}
     openings: dict[str, float] = {}
+    levels: dict[str, float] = {}
 
 
 def scenario_summaries() -> list[ScenarioSummary]:
@@ -80,17 +83,32 @@ def plant_ids(config: ScenarioConfig) -> list[str]:
 def initial_scene(scenario_id: str, changes: SceneChanges | None = None) -> SceneSnapshot:
     """A scenario's full crop before its first day, as a viewer draws it,
     with the changes a client asks for."""
-    config = changed(scenario(scenario_id), changes or SceneChanges())
+    changes = changes or SceneChanges()
+    config = changed(scenario(scenario_id), changes)
     world = SimulationEngine(config).initialize(
         plant_ids(config), greenhouse_id=config.greenhouse_id
     )
-    return scene_snapshot(world, config)
+    return scene_snapshot(world, config, equipment_levels(config, changes.levels))
 
 
 def layout(scenario_id: str, name: str = DEFAULT_LAYOUT) -> dict[str, JsonValue]:
     """One of a scenario's layouts, as its file holds it, once it is checked
     to fit the scenario."""
     return layout_document(_with_layout(scenario(scenario_id), name).layout)
+
+
+def equipment_levels(config: ScenarioConfig, levels: dict[str, float]) -> dict[str, float]:
+    """The levels asked for a scenario's equipment, checked: a level for
+    equipment it does not have, or outside 0 to 1, is refused."""
+    known = {piece.actuator_id for piece in config.layout.equipment}
+    unknown = sorted(set(levels) - known)
+    if unknown:
+        named = ", ".join(map(repr, unknown))
+        raise InvalidRequest(f"{config.greenhouse_id} has no equipment {named}")
+    outside = sorted(name for name, level in levels.items() if not 0.0 <= level <= 1.0)
+    if outside:
+        raise InvalidRequest(f"a level runs from 0 to 1: {', '.join(outside)}")
+    return dict(levels)
 
 
 def changed(config: ScenarioConfig, changes: SceneChanges) -> ScenarioConfig:

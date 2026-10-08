@@ -19,6 +19,7 @@ cylinder per plant, as tall as its visible stem, at its planting position.
 """
 
 import math
+from collections.abc import Mapping
 from enum import StrEnum
 from typing import Final
 
@@ -26,9 +27,11 @@ from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 from greenhouse_sim.domain.crop import FruitStatus
 from greenhouse_sim.domain.envelope import MemberKind, OpeningKind, SurfaceCategory
+from greenhouse_sim.domain.equipment import ActuatorKind
 from greenhouse_sim.domain.layout import FixtureKind, Material, Obstruction, ZoneKind
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.world.envelope import Envelope, Gutter, Member, OpeningPanel, Surface
+from greenhouse_sim.world.equipment import Equipment
 from greenhouse_sim.world.fixtures import Fixture
 from greenhouse_sim.world.geometry import (
     Axes,
@@ -59,7 +62,8 @@ from greenhouse_sim.world.zones import Zone
 # 12: plants organ by organ (internodes, leaves, trusses, flowers, fruits),
 #     and the sphere shape.
 # 13: plants' compound leaves, their leaflets drawn with the ellipsoid shape.
-SCHEMA_VERSION: Final = 13
+# 14: climate equipment: fans, heaters and dehumidifiers.
+SCHEMA_VERSION: Final = 14
 # The JSON Schema dialect Pydantic generates, stated in the published schema.
 JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 
@@ -102,6 +106,13 @@ PLANTING_POSITION_COLOR: Final = Color(r=0.85, g=0.6, b=0.25)
 SERVICE_ZONE_COLOR: Final = Color(r=0.45, g=0.7, b=0.85)
 KEEP_OUT_COLOR: Final = Color(r=0.9, g=0.35, b=0.3)
 GREENHOUSE_BOUNDS_COLOR: Final = Color(r=0.62, g=0.78, b=0.88)
+# Equipment that is off is grey; running, it shows its kind's colour.
+EQUIPMENT_OFF_COLOR: Final = Color(r=0.55, g=0.55, b=0.55)
+EQUIPMENT_COLORS: Final = {
+    ActuatorKind.FAN: Color(r=0.27, g=0.47, b=0.67),
+    ActuatorKind.HEATER: Color(r=0.93, g=0.4, b=0.47),
+    ActuatorKind.DEHUMIDIFIER: Color(r=0.4, g=0.8, b=0.93),
+}
 # What the envelope's metal parts are made of.
 GUTTER_MATERIAL: Final = Material.ALUMINIUM
 FRAME_MATERIAL: Final = Material.STEEL
@@ -141,6 +152,10 @@ class SceneEntityKind(StrEnum):
     PIPE = "PIPE"
     WIRE = "WIRE"
     OBSTACLE = "OBSTACLE"
+    # Climate equipment, one kind for each kind of equipment.
+    FAN = "FAN"
+    HEATER = "HEATER"
+    DEHUMIDIFIER = "DEHUMIDIFIER"
     PLANT = "PLANT"
     # A plant organ by organ, as the organ-level model grows it.
     INTERNODE = "INTERNODE"
@@ -176,12 +191,21 @@ class SceneSnapshot(BaseModel):
     entities: list[SceneEntity]
 
 
-def scene_snapshot(world: GreenhouseWorld, config: ScenarioConfig) -> SceneSnapshot:
+def scene_snapshot(
+    world: GreenhouseWorld,
+    config: ScenarioConfig,
+    levels: Mapping[str, float] | None = None,
+) -> SceneSnapshot:
     """The scene a viewer draws for `world`: its greenhouse and layout, as
-    `greenhouse_scene` draws them, and one entity per plant, each at its
-    planting position: the first plant at the first, and so on."""
+    `greenhouse_scene` draws them, with its equipment at `levels`, and one
+    entity per plant, each at its planting position: the first plant at the
+    first, and so on."""
     greenhouse = greenhouse_scene(
-        world.greenhouse_id, config.envelope, world.simulated_day, layout=config.layout
+        world.greenhouse_id,
+        config.envelope,
+        world.simulated_day,
+        layout=config.layout,
+        levels=levels,
     )
     positions = config.layout.planting_positions()
     if len(world.plants) > len(positions):
@@ -201,10 +225,12 @@ def greenhouse_scene(
     simulated_day: int = 0,
     *,
     layout: Layout | None = None,
+    levels: Mapping[str, float] | None = None,
 ) -> SceneSnapshot:
     """A greenhouse on its own, without a crop: the world's axes, its floor,
-    walls, roof, openings, gutters, frames and bounds, and the fixtures of its
-    layout, if it has one."""
+    walls, roof, openings, gutters, frames and bounds, and the fixtures and
+    equipment of its layout, if it has one, the equipment at `levels` (off
+    unless given)."""
     axes = SceneEntity(
         entity_id=f"{greenhouse_id}_axes",
         kind=SceneEntityKind.AXES,
@@ -224,6 +250,7 @@ def greenhouse_scene(
             *_planting_position_entities(greenhouse_id, envelope, layout or Layout()),
             *_fixture_entities(greenhouse_id, envelope, layout or Layout()),
             *_zone_entities(greenhouse_id, envelope, layout or Layout()),
+            *_equipment_entities(greenhouse_id, envelope, layout or Layout(), levels or {}),
             axes,
             _bounds_entity(greenhouse_id, envelope),
         ],
@@ -392,6 +419,39 @@ def _fixture_entity(greenhouse_id: str, envelope: Envelope, fixture: Fixture) ->
             f"obstructs_{obstruction.value}": obstruction in fixture.obstructs
             for obstruction in Obstruction
         },
+    )
+
+
+_EQUIPMENT_KINDS: Final = {
+    ActuatorKind.FAN: SceneEntityKind.FAN,
+    ActuatorKind.HEATER: SceneEntityKind.HEATER,
+    ActuatorKind.DEHUMIDIFIER: SceneEntityKind.DEHUMIDIFIER,
+}
+
+
+def _equipment_entities(
+    greenhouse_id: str, envelope: Envelope, layout: Layout, levels: Mapping[str, float]
+) -> list[SceneEntity]:
+    return [
+        _equipment_entity(greenhouse_id, envelope, piece, levels.get(piece.actuator_id, 0.0))
+        for piece in layout.equipment
+    ]
+
+
+def _equipment_entity(
+    greenhouse_id: str, envelope: Envelope, piece: Equipment, level: float
+) -> SceneEntity:
+    """A piece of equipment, placed in the world: grey while it is off, in its
+    kind's colour while it runs, with its rated capacity and its level."""
+    return SceneEntity(
+        entity_id=f"{greenhouse_id}_{piece.actuator_id}",
+        kind=_EQUIPMENT_KINDS[piece.kind],
+        transform=envelope.origin.after(piece.transform()),
+        shape=piece.shape(),
+        color=EQUIPMENT_COLORS[piece.kind] if level > 0 else EQUIPMENT_OFF_COLOR,
+        material=Material.STEEL,
+        label=piece.actuator_id.replace("_", " "),
+        properties={"actuator_id": piece.actuator_id, "level": level, **piece.rated()},
     )
 
 
