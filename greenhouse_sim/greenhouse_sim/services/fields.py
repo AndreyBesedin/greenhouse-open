@@ -17,6 +17,9 @@ shear the field format is checked against.
 
 A few recent climate runs are kept, each with the moments asked of it, so
 that a later moment carries on from the latest before it.
+
+Probes read a climate run every minute up to a moment, beside the same run
+with everything off (`greenhouse_sim.climate.probes`).
 """
 
 import threading
@@ -29,6 +32,7 @@ from greenhouse_sim.airflow.prescribed import PATTERNS
 from greenhouse_sim.cfd.geometry import cfd_geometry
 from greenhouse_sim.cfd.results import CfdAirflow, kept_result
 from greenhouse_sim.climate.commands import Command, Schedule
+from greenhouse_sim.climate.probes import ClimateProbes, probe_series
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.vents import Vent
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument, FieldGrid
@@ -48,6 +52,8 @@ CLIMATE: Final = "climate"
 LONGEST_RUN_S: Final = 3600.0
 # How many recent climate runs are kept.
 KEPT_RUNS: Final = 8
+# Probes read a climate run this often, in seconds.
+PROBE_EVERY_S: Final = 60.0
 
 
 class _Shear:
@@ -172,7 +178,7 @@ class _Climate:
         openings: Mapping[str, float],
         commands: tuple[Commanded, ...],
     ):
-        self._key = (
+        self.key = (
             scenario_id,
             layout,
             tuple(sorted(levels.items())),
@@ -181,7 +187,7 @@ class _Climate:
         )
 
     def field(self, field_id: str, grid: FieldGrid, time_s: float = 0.0) -> EnvironmentField:
-        return _climate_run(*self._key).field(field_id, grid, time_s)
+        return _climate_run(*self.key).field(field_id, grid, time_s)
 
 
 def _models(
@@ -264,3 +270,42 @@ def field(
         known = ", ".join(models)
         raise NotFound(f"scenario {scenario_id!r} has no field {name!r}; it has {known}")
     return model.field(f"{scenario_id}_{name}", grid(scenario_id), time_s).document()
+
+
+def climate_probes(
+    scenario_id: str,
+    points: Sequence[tuple[float, float, float]],
+    layout: str | None = None,
+    levels: Mapping[str, float] | None = None,
+    openings: Mapping[str, float] | None = None,
+    commands: Sequence[Commanded] = (),
+    until_s: float = 0.0,
+) -> ClimateProbes:
+    """What probes at `points` read of a scenario's climate run every
+    `PROBE_EVERY_S` up to `until_s`, and of the same run with everything off,
+    its doors and vents as asked. Asked as its climate field is, and refused
+    as it is; a probe outside the house's air is refused too."""
+    if not 0.0 <= until_s <= LONGEST_RUN_S:
+        raise InvalidRequest(f"a climate run lasts from 0 to {LONGEST_RUN_S:g} s, not {until_s:g}")
+    name = layout or DEFAULT_LAYOUT
+    models = _models(scenario_id, name, levels, openings, commands)
+    climate = models.get(CLIMATE)
+    if not isinstance(climate, _Climate):
+        raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
+    air = grid(scenario_id)
+    probed = [Vector3(x=x, y=y, z=z) for x, y, z in points]
+    outside = [point for point in probed if not air.contains(point)]
+    if outside:
+        named = ", ".join(f"({p.x:g}, {p.y:g}, {p.z:g})" for p in outside)
+        raise InvalidRequest(f"a probe stands in the house's air, not at {named}")
+    steps = int(until_s // PROBE_EVERY_S)
+    times = [step * PROBE_EVERY_S for step in range(steps + 1)]
+    if times[-1] < until_s:
+        times.append(until_s)
+    key_scenario, key_layout, _, key_openings, _ = climate.key
+    return probe_series(
+        _climate_run(*climate.key),
+        _climate_run(key_scenario, key_layout, (), key_openings, ()),
+        probed,
+        times,
+    )

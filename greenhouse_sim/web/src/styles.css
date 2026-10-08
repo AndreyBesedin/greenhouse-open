@@ -355,6 +355,43 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Probes' charts through a climate run: this run's line solid, the run
+ * with everything off dashed, and the moment drawn a faint line. */
+.probe-charts figure {
+  margin: 0 0 6px;
+}
+
+.probe-chart svg {
+  display: block;
+  width: 100%;
+  height: 52px;
+  border: 1px solid #cccccc;
+}
+
+.probe-chart polyline {
+  fill: none;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.probe-chart .probe-charts-controlled,
+.probe-charts-key .probe-charts-controlled {
+  stroke: #0072b2;
+  color: #0072b2;
+}
+
+.probe-chart .probe-charts-off,
+.probe-charts-key .probe-charts-off {
+  stroke: #888888;
+  stroke-dasharray: 4 3;
+  color: #888888;
+}
+
+.probe-chart-cursor {
+  stroke: #bbbbbb;
+  vector-effect: non-scaling-stroke;
+}
+
 /* Room for a switch beside each piece's name, kept on one line, and the
  * openings' sliders lined up with the equipment's. */
 .opening-control,
