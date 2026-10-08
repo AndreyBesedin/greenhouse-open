@@ -1,6 +1,6 @@
 # P06: Virtual sensors and the observation layer
 
-**Status:** in progress: P06.1 to P06.6 done, P06.7 next. Part of the
+**Status:** in progress: P06.1 to P06.7 done, the final QA next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -231,7 +231,7 @@ gradient needs its own base airflow, which is a scenario's.
 | P06.4 | `feat(cameras): add a virtual RGB camera and its frustum` | Done |
 | P06.5 | `feat(cameras): add depth and instance passes` | Done |
 | P06.6 | `feat(observations): add the observation log and history charts` | Done |
-| P06.7 | `test(sensors): add the sensor lab, its occlusion and noise` | Planned |
+| P06.7 | `test(sensors): add the sensor lab, its occlusion and noise` | Done |
 
 ### P06.1: Sensor and observation contracts
 
@@ -478,6 +478,37 @@ The `sensor_lab` scenario (section 8): a known gradient, a clean and an
 imperfect sensor, a camera and occluders. Visible result: the final QA's
 scene. Tests: the clean sensors read the gradient exactly; the imperfect
 one's errors are what its configuration says.
+
+#### As implemented
+
+- **The house:** the climate box's, shut, with no equipment. A run's air is
+  then the scenario's own airflow, the same at every moment.
+- **The known gradient:** a new prescribed airflow, `gradient`. The air is
+  still and warms linearly along the house: 16 °C at its front, 0.5 °C
+  more each metre, 22 °C at its back. A field's samples interpolate
+  linearly between its cells' centres, so a sensor between them reads the
+  line exactly. It is the lab's own airflow, not offered to other
+  scenarios.
+- **The sensors:**
+  - a clean thermometer 3 m along the house, reading 17.5 °C;
+  - an imperfect one beside it, with noise 0.3 °C to 0.1 °C steps, a
+    0.5 °C bias, 1.2 °C an hour of drift, 10% dropout, and 30 s late;
+  - a clean one 9 m along, reading 20.5 °C.
+- **The camera** stands at the front, 1.6 m up, looking down the house at
+  three boxes on the floor. Each box partly hides the one behind it. The
+  lab's second layout, `blocked`, moves the nearest box in front of the
+  camera, hiding the other two. Its one plant stands in a front corner,
+  behind the camera.
+- **Tests** (`tests/test_sensor_lab.py`):
+  - the clean sensors read the line at every sample, on time, and their
+    truth is the same;
+  - the imperfect sensor's errors are fitted with a line through the run.
+    The fit's intercept is its bias and its slope its drift, within three
+    standard errors. The residuals' spread is its noise, every reading is
+    in tenths, every one is 30 s late, and 6 of its 61 samples drop out;
+  - the run is the same each time;
+  - by projection, each box's picture overlaps the one behind it without
+    covering it. In `blocked`, the near box covers the other two.
 
 ## Final QA: `sensor-lab`
 

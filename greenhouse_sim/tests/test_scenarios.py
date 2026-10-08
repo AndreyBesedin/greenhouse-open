@@ -2,7 +2,12 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 
 
 def test_registry_contains_exactly_the_configured_greenhouses() -> None:
-    assert list(SCENARIO_REGISTRY) == ["tomato_compartment", "climate_box", "airflow_box"]
+    assert list(SCENARIO_REGISTRY) == [
+        "tomato_compartment",
+        "climate_box",
+        "airflow_box",
+        "sensor_lab",
+    ]
 
 
 def test_the_tomato_compartment_is_the_full_house_reference() -> None:
