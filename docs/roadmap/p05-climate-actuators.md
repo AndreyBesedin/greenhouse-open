@@ -1,6 +1,6 @@
 # P05: Climate actuators: fans, heaters, dehumidification and vents
 
-**Status:** in progress: P05.0 to P05.6 done, P05.7 next. Part of the [simulator roadmap](README.md).
+**Status:** in progress: P05.0 to P05.7 done, the final QA next. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -205,7 +205,7 @@ new scenarios (P05.0).
 | P05.4 | `feat(humidity): add dehumidifier moisture sink` | Done |
 | P05.5 | `feat(vents): connect vent opening state to airflow boundaries` | Done |
 | P05.6 | `feat(control): add actuator schedule timeline` | Done |
-| P05.7 | `test(climate): add actuator comparison dashboard` | Planned |
+| P05.7 | `test(climate): add actuator comparison dashboard` | Done |
 
 ### P05.0: New reference scenarios
 
@@ -637,6 +637,27 @@ Fixed probes, time-series charts of temperature, relative humidity and air
 speed, and the same run with all equipment off, side by side. Visible
 result: the controlled and uncontrolled runs diverge where the equipment
 acts. Tests: the charts' values are the probes' values at each time.
+
+#### As implemented
+
+- **The readings** (`climate.probes`):
+  `GET /api/scenarios/{id}/climate/probes?probes=10.5:1:0.75,…&set=heater:1&t=600`.
+  - **What:** each probe's temperature, relative humidity and air speed,
+    every minute up to the moment asked, as the run's published field
+    samples them, so a chart reads exactly what a probe does.
+  - **Against what:** the same run with all its equipment off, its doors
+    and vents as asked.
+  - **Asked and refused** as the climate field is. A probe outside the
+    house's air is refused too.
+- **The charts:** "Probe charts", plain SVG, three a probe:
+  - this run's line solid, the all-off run's dashed, across the run's hour;
+  - a faint line at the moment drawn, and what both read then.
+- **A run keeps its air every minute** on the way to any moment, so the
+  charts, and moving back along the time slider, find each minute kept:
+  reading two probes for twenty minutes with the fan on takes 0.4 s after
+  the field. Where water condenses is checked at each minute's end too.
+- **In the climate box,** heated, ten minutes in: 31.88 °C beside the
+  heater against 9.01 °C all off, and 14.96 against 9.13 across the house.
 
 ## Final QA: `climate-actuators`
 
