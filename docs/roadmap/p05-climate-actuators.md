@@ -1,6 +1,6 @@
 # P05: Climate actuators: fans, heaters, dehumidification and vents
 
-**Status:** in progress: P05.0 to P05.3 done, P05.4 next. Part of the [simulator roadmap](README.md).
+**Status:** in progress: P05.0 to P05.4 done, P05.5 next. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -202,7 +202,7 @@ new scenarios (P05.0).
 | P05.1 | `feat(actuators): define climate actuator contract and controls` | Done |
 | P05.2 | `feat(fans): add fan airflow source model` | Done |
 | P05.3 | `feat(heating): add heater sensible-heat source` | Done |
-| P05.4 | `feat(humidity): add dehumidifier moisture sink` | Planned |
+| P05.4 | `feat(humidity): add dehumidifier moisture sink` | Done |
 | P05.5 | `feat(vents): connect vent opening state to airflow boundaries` | Planned |
 | P05.6 | `feat(control): add actuator schedule timeline` | Planned |
 | P05.7 | `test(climate): add actuator comparison dashboard` | Planned |
@@ -406,7 +406,8 @@ device's source terms scale with its level and vanish when it is off.
   - a 10 kW heater, 0.6 × 0.8 × 1.2 m, in the back right corner, facing
     into the house;
   - a dehumidifier of 5 kg/h giving 4.5 kW, 0.6 × 1.0 × 1.4 m, halfway
-    along the left wall, facing across.
+    along the left wall, facing across; re-rated in P05.4 to 1 kg/h and
+    1.2 kW.
 
   The CFD mesh loses 2 cells to the heater and 12 to the dehumidifier. The
   box's scene: 114 entities.
@@ -545,6 +546,34 @@ Tests: the water the air loses matches the commanded removal rate, never
 more than the air holds. The relative humidity is right against
 psychrometric tables.
 
+#### As implemented
+
+- **Psychrometrics** (`climate.psychrometrics`): Buck's saturation pressure
+  over water, within 0.1% of the ASHRAE tables, and the humidity ratio
+  and relative humidity from one another, at standard pressure.
+- **The air's water** is carried beside its temperature, as its humidity
+  ratio (g/kg), in one array, one pass over the faces per step.
+  - **The dehumidifier** dries its cells by its rating times its level.
+    It never takes more than their air then holds, and its waste heat
+    warms them.
+  - **Condensation:** air holds no more than saturates it. Beyond that,
+    the water condenses, on the cold glass, and is counted. This is
+    checked every 10 simulated seconds rather than every step.
+  - **Glass passes no water.**
+- **The climate field** publishes the relative humidity (`humidity`, %).
+- **The climate box:** its settings gain a damp night, 90% outside and 85%
+  inside to start.
+- **The dehumidifier re-rated:** at 5 kg/h, it dried the box's 368 kg of
+  air, holding 3.5 kg of water, to nothing within the hour. It now takes
+  1 kg/h and gives 1.2 kW: the latent heat of the water it condenses,
+  0.7 kW, plus its compressor's.
+- **In the climate box,** ten minutes in:
+  - unheated, the house cools to 9 °C and saturates;
+  - beside the running dehumidifier the air is at 87%, at 73% with the
+    heater on too, against 96% in the far corner.
+
+  An hour with the fan, heater and dehumidifier on takes about 4.5 s.
+
 ### P05.5: Vents and the airflow boundaries
 
 An open vent's exchange with the outside, from its aperture area, and its
@@ -607,6 +636,10 @@ What P05 simplifies on purpose, kept here until a later step removes it:
   0.1 m²/s, folds in the convection it does not carry.
 - **The floor passes no heat:** it is not glass, and the ground's heat is
   P08's.
+- **Condensation's latent heat is not counted,** and the glass passes no
+  water. Condensed water is counted and gone.
+- **A dehumidifier takes its rating whatever the air:** only the water
+  there caps it, where a real one takes less as the air dries and cools.
 - **A fan's jet is a free jet:** it does not turn at walls or flow around
   obstacles. It stops at the grid's faces and adds nothing inside an
   obstacle's cells, but nothing in its wake is shadowed.
