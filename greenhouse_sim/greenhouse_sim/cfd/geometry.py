@@ -26,6 +26,7 @@ import math
 from enum import StrEnum
 from typing import Final, Literal
 
+import numpy as np
 from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.domain.envelope import OpeningKind, SurfaceCategory
@@ -126,6 +127,20 @@ class CfdGeometry(BaseModel):
     def of(self, category: BoundaryCategory) -> list[Boundary]:
         """Its boundaries of one category, in order."""
         return [b for b in self.boundaries if b.category == category]
+
+    def solid(self) -> np.ndarray:
+        """The cells of its grid that obstacles remove, as they are meshed, in
+        the grid's order (z, y, x)."""
+        xs, ys, zs = self.grid.centres()
+        solid = np.zeros((zs.size, ys.size, xs.size), dtype=bool)
+        for obstacle in self.of(BoundaryCategory.OBSTACLE):
+            low, high = obstacle.box.minimum, obstacle.box.maximum
+            solid |= (
+                ((zs >= low.z) & (zs <= high.z))[:, None, None]
+                & ((ys >= low.y) & (ys <= high.y))[None, :, None]
+                & ((xs >= low.x) & (xs <= high.x))[None, None, :]
+            )
+        return solid
 
 
 def _axis(point: Vector3, axis: str) -> float:
