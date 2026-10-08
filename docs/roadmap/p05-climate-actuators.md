@@ -1,6 +1,6 @@
 # P05: Climate actuators: fans, heaters, dehumidification and vents
 
-**Status:** in progress: P05.0 done, P05.1 next. Part of the [simulator roadmap](README.md).
+**Status:** in progress: P05.0 and P05.1 done, P05.2 next. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -385,6 +385,61 @@ command log; the source-term contract; `climate_box`. Visible result: a
 device can be selected, inspected and switched on and off in the browser.
 Tests: commands are logged in order and replay deterministically, and a
 device's source terms scale with its level and vanish when it is off.
+
+#### As implemented
+
+- **Equipment in a layout** (`world.equipment`), listed in a layout file
+  beside its fixtures, by kind:
+  - **a fan:** the centre of its rotor, its heading (the way it blows), its
+    diameter and its flow; drawn as a 0.3 m deep housing along its heading;
+  - **a heater or a dehumidifier:** a box on a base, turned by its heading,
+    its depth along it, with its power, or its water removal and waste
+    heat.
+- **In the way:** a unit's body is in the way of air and of robots, as an
+  obstacle is. So it is kept off walkways and inside the house, and the CFD
+  mesh cuts it out. A fan is in the way of nothing. Identifiers are unique
+  across fixtures, zones and equipment. Every layout file lists its
+  equipment, if only as none.
+- **The climate box's equipment,** all off until commanded:
+  - a fan of 1 m³/s and 0.5 m across, 2.8 m up over the front path,
+    blowing down the house;
+  - a 10 kW heater, 0.6 × 0.8 × 1.2 m, in the back right corner, facing
+    into the house;
+  - a dehumidifier of 5 kg/h giving 4.5 kW, 0.6 × 1.0 × 1.4 m, halfway
+    along the left wall, facing across.
+
+  The CFD mesh loses 2 cells to the heater and 12 to the dehumidifier. The
+  box's scene: 114 entities.
+- **Commands** (`climate.commands`): a command sets an actuator to a level
+  at a moment of a run. A schedule holds them in time order, keeping the
+  given order at a moment, so the later one wins. Everything starts off.
+  What a run applied up to a moment is its log, and a schedule replays the
+  same from its record. The run that keeps that log comes with the air's
+  clock (P05.3).
+- **Source terms** (`climate.sources`): velocity added, heat added and
+  water removed, cell by cell, each the rating times the level.
+  - **Where:** a unit gives its heat to, and takes its water from, the air
+    cells within a cell of its body, beside it or above it, shared evenly.
+    It never uses the cells its body fills, as the CFD mesh removes them
+    (`CfdGeometry.solid`). A unit hemmed in by other solids uses the
+    nearest air cell.
+  - **Not yet:** a fan adds nothing until its jet (P05.2), and water
+    removal is capped by what the air holds once the air holds water
+    (P05.4).
+- **The scene** (schema 14): each piece is an entity of its kind, `FAN`,
+  `HEATER` or `DEHUMIDIFIER`, with its actuator, level and rated capacity.
+  It is grey while off and in its kind's colour while it runs: blue, red
+  and cyan from Paul Tol's bright scheme, which the categories view uses
+  too, in a legend of their own.
+- **Levels in the address:** a scene request takes `?set=heater:0.5`.
+  Equipment the scenario lacks, or a level outside 0 to 1, is refused with
+  the reason. The CFD geometry ignores levels.
+- **The viewer's Equipment panel:** a switch and a slider per piece, in
+  steps of 5%. Switched on, a piece runs at full power. The panel reads
+  what the scene's level gives: off, or `50%, 5 kW`.
+- **Fixed on the way:** CI on Linux drew one of the example scene's plants
+  a last bit taller than macOS had. The example scene is now compared to
+  a relative 1e-12, as rounding it would also round its rotations.
 
 ### P05.2: Fan airflow source model
 
