@@ -4,7 +4,7 @@ import { Matrix4, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 
 import type { SceneEntity, SceneSnapshot } from "./generated/snapshotTypes";
-import { MATRIX_SIZE, shapeBatches, shapeMatrices } from "./instancing";
+import { isInstanced, MATRIX_SIZE, shapeBatches, shapeMatrices } from "./instancing";
 
 const EXAMPLE: SceneSnapshot = JSON.parse(
   readFileSync(new URL("../../public/scenes/example.json", import.meta.url), "utf8"),
@@ -22,6 +22,16 @@ function placed(matrices: Float32Array, index: number, point: Vector3): Vector3 
 }
 
 describe("instancing shapes", () => {
+  it("leaves a fan, a cylinder, to be drawn on its own, with its arrow", () => {
+    const fan = EXAMPLE.entities.find((entity) => entity.kind === "FAN") as SceneEntity;
+    const batches = shapeBatches(EXAMPLE.entities).map(({ batch }) => batch);
+
+    expect(fan.shape.shape).toBe("cylinder");
+    expect(isInstanced(fan)).toBe(false);
+    expect(batches.some((batch) => batch.startsWith("FAN"))).toBe(false);
+    expect(isInstanced(PLANT)).toBe(true);
+  });
+
   it("gives each cylinder one matrix, in order", () => {
     expect(shapeMatrices(PLANTS)).toHaveLength(PLANTS.length * MATRIX_SIZE);
   });

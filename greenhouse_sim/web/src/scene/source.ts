@@ -201,7 +201,7 @@ function fieldQuery(source: {
 
 /** `key:number` pairs, sorted by key, as the address bar and the simulator's
  * API both take them: `length:12,spans:3`. */
-function pairsText(pairs: Readonly<Record<string, number>> | undefined): string {
+export function pairsText(pairs: Readonly<Record<string, number>> | undefined): string {
   return Object.entries(pairs ?? {})
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, number]) => `${encodeURIComponent(key)}:${number}`)
@@ -234,7 +234,7 @@ export function changesQuery(
 
 /** The pairs an address sets, or null when it sets none or says nothing
  * readable. The simulator checks the numbers themselves. */
-function pairsFrom(value: string | null): Record<string, number> | null {
+export function pairsFrom(value: string | null): Record<string, number> | null {
   if (!value) {
     return null;
   }

@@ -73,7 +73,10 @@ what its colours mean, and its lowest and highest colours can be moved.
 A scenario's `cfd` field is its air as OpenFOAM solved it, with the layout
 shown: `?scenario=airflow_box&field=cfd&fieldView=streamlines` is the
 airflow QA case, air blown past a block, and `&layout=open` the same house
-without it.
+without it. A scenario with equipment offers its `climate` too: its own air
+with its equipment running at the levels the Equipment panel sets, reloaded
+as they change (`?scenario=climate_box&field=climate&set=fan:1`, its fan's
+jet blowing down the house). A fan carries an arrow the way it blows.
 `/qa/airflow-box?view=vectors` and `?view=slice` draw the airflow QA case's
 solution from the simulator's files (`tests/test_airflow_qa.py --update`),
 for its screenshot tests; switching a scenario's layout keeps its field, probes

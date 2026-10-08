@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { FanArrow } from "./FanArrow";
 import type { Color, SceneEntity, SceneEntityKind } from "./generated/snapshotTypes";
 import { isMetal } from "./materials";
 import { SeeThrough } from "./SeeThrough";
@@ -88,9 +89,15 @@ export const RENDERERS: Record<
   PIPE: solid,
   WIRE: solid,
   OBSTACLE: solid,
-  // Climate equipment: a fan's housing, a heater's and a dehumidifier's body,
-  // grey while off and in its kind's colour while it runs.
-  FAN: solid,
+  // Climate equipment: a fan's housing, with an arrow the way it blows, and a
+  // heater's and a dehumidifier's body, grey while off and in its kind's
+  // colour while it runs. A fan is drawn on its own, never batched.
+  FAN: (entity, look) => (
+    <>
+      {solid(entity, look)}
+      {entity.shape.shape === "cylinder" && <FanArrow housing={entity.shape} color={look.color} />}
+    </>
+  ),
   HEATER: solid,
   DEHUMIDIFIER: solid,
   // A plant organ by organ: stems and leaves are cylinders, drawn in
