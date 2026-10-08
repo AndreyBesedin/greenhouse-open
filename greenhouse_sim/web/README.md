@@ -91,7 +91,11 @@ legend by category; it follows the openings' sliders.
 The inspector says what the selected entity is in words, and names its
 dimensions. On a scenario's view, a slider per door and vent sets how far
 it stands open: the viewer asks the simulator for the scene with it so
-(`?open=roof_vent_1:0.5`), and the address bar keeps it. The address can
+(`?open=roof_vent_1:0.5`), and the address bar keeps it. Its climate
+equipment gets a switch and a slider each, the same way: a fan, heater or
+dehumidifier runs at the level set (`?set=heater:0.5`), drawn grey while it
+is off and in its kind's colour while it runs, and the panel says what that
+level gives (`50%, 5 kW`). The address can
 change the greenhouse itself too (`?scenario=climate_box&envelope=length:16,bays:4`:
 length, width, spans, bays, eave_height, ridge_height); the simulator checks
 it, and the viewer shows why when it refuses. It can also place the camera,

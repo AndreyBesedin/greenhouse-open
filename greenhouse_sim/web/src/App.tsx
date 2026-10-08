@@ -14,6 +14,7 @@ import { ALL_OVERLAYS, type OverlayToggles, selectionOverlays } from "./debug/ov
 import { ScalarLegend } from "./debug/ScalarLegend";
 import type { ScalarRange } from "./debug/scalar";
 import { colouringBy, scalarProperties } from "./debug/scalar";
+import { EquipmentControls } from "./EquipmentControls";
 import type { FieldView, Slice } from "./fields/display";
 import { defaultSlice, quantityScale } from "./fields/drawing";
 import { FieldArrows } from "./fields/FieldArrows";
@@ -193,9 +194,10 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
 
   // The boundaries a CFD solver is given, changed as the scene is, drawn
   // over it when asked for; the last stays on show until the next arrives.
+  // How hard its equipment runs does not change them.
   const cfdUrl =
     source.kind === "scenario" && source.cfdBoundaries
-      ? cfdGeometryUrl(source.scenarioId, changesQuery(source, "?"))
+      ? cfdGeometryUrl(source.scenarioId, changesQuery({ ...source, levels: {} }, "?"))
       : null;
   useEffect(() => {
     if (cfdUrl === null) {
@@ -291,6 +293,15 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       return;
     }
     const next: SceneSource = { ...source, openings };
+    history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
+    setSource(next);
+  }
+
+  function setLevels(levels: Record<string, number>): void {
+    if (source.kind !== "scenario") {
+      return;
+    }
+    const next: SceneSource = { ...source, levels };
     history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
     setSource(next);
   }
@@ -511,6 +522,13 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 snapshot={snapshot}
                 requested={source.openings ?? {}}
                 onChange={setOpenings}
+              />
+            )}
+            {snapshot !== null && source.kind === "scenario" && (
+              <EquipmentControls
+                snapshot={snapshot}
+                requested={source.levels ?? {}}
+                onChange={setLevels}
               />
             )}
             {source.kind === "plants" && (

@@ -28,9 +28,9 @@ export type SceneSource =
   | { kind: "stress"; plants: number }
   /** A scenario's scene from the simulator, with another of its layouts if
    * `layout` names one, its greenhouse's dimensions changed as `envelope`
-   * asks (length, width, spans, bays, eave_height, ridge_height), and its
-   * doors and vents opened as `openings` asks (by opening identifier, from 0
-   * to 1). */
+   * asks (length, width, spans, bays, eave_height, ridge_height), its doors
+   * and vents opened as `openings` asks (by opening identifier, from 0 to 1),
+   * and its equipment run as `levels` asks (by actuator, from 0 to 1). */
   | {
       kind: "scenario";
       scenarioId: string;
@@ -51,6 +51,7 @@ export type SceneSource =
       camera?: CameraPose;
       envelope?: Readonly<Record<string, number>>;
       openings?: Readonly<Record<string, number>>;
+      levels?: Readonly<Record<string, number>>;
     }
   | { kind: "live"; scenarioId: string };
 
@@ -79,6 +80,7 @@ export function sourceFromSearch(search: string): SceneSource {
     const layout = parameters.get("layout");
     const envelope = pairsFrom(parameters.get("envelope"));
     const openings = pairsFrom(parameters.get("open"));
+    const levels = pairsFrom(parameters.get("set"));
     const field = parameters.get("field");
     const fieldView = fieldViewFrom(parameters.get("fieldView"));
     const slice = sliceFrom(parameters.get("slice"));
@@ -98,6 +100,7 @@ export function sourceFromSearch(search: string): SceneSource {
       ...(camera === undefined ? {} : { camera }),
       ...(envelope === null ? {} : { envelope }),
       ...(openings === null ? {} : { openings }),
+      ...(levels === null ? {} : { levels }),
     };
   }
   if (parameters.get("plants") === "lab") {
@@ -206,13 +209,15 @@ function pairsText(pairs: Readonly<Record<string, number>> | undefined): string 
 }
 
 /** The changes a scenario's scene asks the simulator for: another of its
- * layouts (`layout=`), its greenhouse's dimensions (`envelope=`) and its
- * openings (`open=`), or nothing. The address bar writes them the same way. */
+ * layouts (`layout=`), its greenhouse's dimensions (`envelope=`), its
+ * openings (`open=`) and its equipment's levels (`set=`), or nothing. The
+ * address bar writes them the same way. */
 export function changesQuery(
   source: {
     layout?: string;
     envelope?: Readonly<Record<string, number>>;
     openings?: Readonly<Record<string, number>>;
+    levels?: Readonly<Record<string, number>>;
   },
   separator: "?" | "&",
 ): string {
@@ -220,6 +225,7 @@ export function changesQuery(
     ["layout", encodeURIComponent(source.layout ?? "")],
     ["envelope", pairsText(source.envelope)],
     ["open", pairsText(source.openings)],
+    ["set", pairsText(source.levels)],
   ].filter(([, text]) => text !== "");
   return parts.length === 0
     ? ""
