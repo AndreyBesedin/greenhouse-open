@@ -89,7 +89,10 @@ its own (`&schedule=60:fan:1,300:heater:0`, seconds:actuator:level), and
 equipment switched while the run stands past its start is an override from
 that moment. "Schedule" lists the commands under the time slider, marked on
 a bar over the run, each to go to or take out; the Equipment panel and the
-scene show the levels at the moment drawn.
+scene show the levels at the moment drawn. With probes placed, "Probe
+charts" draws each probe's temperature, relative humidity and air speed
+through the run up to the moment drawn, beside the same run with all its
+equipment off, in plain SVG (`GET /api/scenarios/{id}/climate/probes`).
 `/qa/airflow-box?view=vectors` and `?view=slice` draw the airflow QA case's
 solution from the simulator's files (`tests/test_airflow_qa.py --update`),
 for its screenshot tests; switching a scenario's layout keeps its field, probes

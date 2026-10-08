@@ -25,6 +25,12 @@ import { FieldLegend } from "./fields/FieldLegend";
 import { FieldProbes } from "./fields/FieldProbes";
 import { FieldSlice } from "./fields/FieldSlice";
 import { FieldStreamlines } from "./fields/FieldStreamlines";
+import {
+  loadProbeCharts,
+  ProbeCharts,
+  type ProbeChartsState,
+  probeChartsUrl,
+} from "./fields/ProbeCharts";
 import { MAX_PROBES, probeOverlays } from "./fields/probes";
 import { CLIMATE_FIELD, type FieldState, loadField } from "./fields/source";
 import { Hud, type LiveStatus } from "./Hud";
@@ -82,6 +88,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [compared, setCompared] = useState<FieldState>({ status: "none" });
   const [placingProbes, setPlacingProbes] = useState(false);
   const [playingClimate, setPlayingClimate] = useState(false);
+  const [probeCharts, setProbeCharts] = useState<ProbeChartsState>({ status: "none" });
   const [probeHeight, setProbeHeight] = useState(DEFAULT_PROBE_HEIGHT_M);
   // A range the viewer chose for the field's colours, in place of its own.
   const [fieldRange, setFieldRange] = useState<ScalarRange | null>(null);
@@ -229,6 +236,33 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     fieldSchedule,
     fieldTime,
   ]);
+
+  // What the probes read through the climate run drawn, and through the
+  // same run all off, up to the moment drawn; the last stays on show until
+  // the next arrives.
+  const chartsUrl =
+    source.kind === "scenario" &&
+    source.field === CLIMATE_FIELD &&
+    source.probes !== undefined &&
+    source.probes.length > 0
+      ? probeChartsUrl(source.scenarioId, { ...source, probes: source.probes })
+      : null;
+  useEffect(() => {
+    if (chartsUrl === null) {
+      setProbeCharts({ status: "none" });
+      return;
+    }
+    let current = true;
+    setProbeCharts((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
+    void loadProbeCharts(chartsUrl).then((state) => {
+      if (current) {
+        setProbeCharts(state);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [chartsUrl]);
 
   // The boundaries a CFD solver is given, changed as the scene is, drawn
   // over it when asked for; the last stays on show until the next arrives.
@@ -595,6 +629,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 onPlacing={setPlacingProbes}
                 onHeight={setProbeHeight}
               />
+            )}
+            {source.kind === "scenario" && source.field === CLIMATE_FIELD && (
+              <ProbeCharts state={probeCharts} time={fieldTime} />
             )}
             {source.kind === "scenario" && (
               <CfdControls
