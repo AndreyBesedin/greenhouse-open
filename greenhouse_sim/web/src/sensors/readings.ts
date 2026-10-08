@@ -13,26 +13,43 @@ export interface SensorObservation {
   quality?: string[];
 }
 
-/** Whether a sensor's latest reading due by the moment drawn has come: the
- * moments its due and latest readings were taken, as instants. */
+/** Where a sensor stands with its readings at the moment drawn: waiting for
+ * its first, fresh, stale, or unavailable, if nothing in the run gives its
+ * quantity; and the moments its due and latest readings were taken, as
+ * instants. */
 export interface SensorFreshness {
   sensor_id: string;
+  state: "waiting" | "fresh" | "stale" | "unavailable";
   due_at: string | null;
   latest_at: string | null;
-  stale: boolean;
 }
 
-/** A frame a camera took, as the log records it: when, from where, looking
- * where, with what intrinsics, and what it holds; not its pixels. */
+/** Where a camera stood, in its greenhouse's frame, and the unit quaternion
+ * that turns its own frame (x along the way it looks, y to its left, z up)
+ * into the greenhouse's. */
+export interface CameraPose {
+  x_m: number;
+  y_m: number;
+  z_m: number;
+  qw: number;
+  qx: number;
+  qy: number;
+  qz: number;
+}
+
+/** A frame a camera took, as the log records it: when, from where, turned
+ * how, with what intrinsics, and what it holds; not its pixels. */
 export interface CameraFrame {
   frame_id: string;
   sensor_id: string;
   timestamp: string;
-  position: Point3;
-  target: Point3;
+  pose: CameraPose;
   intrinsics: { width: number; height: number; fx: number; fy: number };
   modalities: string[];
 }
+
+const FRESHNESS_STATES: readonly string[] = ["waiting", "fresh", "stale", "unavailable"];
+const POSE_NUMBERS = ["x_m", "y_m", "z_m", "qw", "qx", "qy", "qz"] as const;
 
 /** What a sensor truly sampled at each of its moments, in seconds from the
  * run's start: for QA only. */
@@ -111,19 +128,15 @@ function isFreshness(value: unknown): value is SensorFreshness {
   return (
     isObject(value) &&
     typeof value.sensor_id === "string" &&
+    typeof value.state === "string" &&
+    FRESHNESS_STATES.includes(value.state) &&
     (value.due_at === null || typeof value.due_at === "string") &&
-    (value.latest_at === null || typeof value.latest_at === "string") &&
-    typeof value.stale === "boolean"
+    (value.latest_at === null || typeof value.latest_at === "string")
   );
 }
 
-function isPoint(value: unknown): value is Point3 {
-  return (
-    isObject(value) &&
-    typeof value.x === "number" &&
-    typeof value.y === "number" &&
-    typeof value.z === "number"
-  );
+function isPose(value: unknown): value is CameraPose {
+  return isObject(value) && POSE_NUMBERS.every((name) => typeof value[name] === "number");
 }
 
 function isFrame(value: unknown): value is CameraFrame {
@@ -132,8 +145,7 @@ function isFrame(value: unknown): value is CameraFrame {
     typeof value.frame_id === "string" &&
     typeof value.sensor_id === "string" &&
     typeof value.timestamp === "string" &&
-    isPoint(value.position) &&
-    isPoint(value.target) &&
+    isPose(value.pose) &&
     isObject(value.intrinsics) &&
     typeof value.intrinsics.width === "number" &&
     typeof value.intrinsics.height === "number" &&
@@ -214,6 +226,16 @@ export function freshnessOf(
   sensorId: string,
 ): SensorFreshness | undefined {
   return readings.freshness.find((f) => f.sensor_id === sensorId);
+}
+
+/** Where a pose's camera looks, in its greenhouse's frame: the unit vector
+ * its quaternion turns the camera's x axis into. */
+export function lookingAlong({ qw, qx, qy, qz }: CameraPose): Point3 {
+  return {
+    x: 1 - 2 * (qy * qy + qz * qz),
+    y: 2 * (qx * qy + qw * qz),
+    z: 2 * (qx * qz - qw * qy),
+  };
 }
 
 /** A camera's frames up to the moment drawn, in the order taken. */

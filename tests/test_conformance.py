@@ -15,6 +15,7 @@ from greenhouse_adapters.wur.agc4_challenge_2024.timeseries import parse_timeser
 from greenhouse_protocol.action import WaterPlantAction
 from greenhouse_protocol.contracts.conformance import (
     check_events,
+    check_frames,
     check_media,
     check_observations,
 )
@@ -25,11 +26,13 @@ from greenhouse_protocol.enums import (
     SourceType,
 )
 from greenhouse_protocol.event import Event
-from greenhouse_protocol.media import MediaCapture
+from greenhouse_protocol.media import CameraFrame, CameraPose, MediaCapture
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.provenance import RecordSource
+from greenhouse_protocol.sensor import CameraIntrinsics
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.services import sensors
 
 CONFIG = SCENARIO_REGISTRY["tomato_compartment"]
 PLANT_IDS = ["tomato_compartment_plant_001", "tomato_compartment_plant_002"]
@@ -169,3 +172,42 @@ def test_a_capture_without_bytes_behind_it_is_refused() -> None:
     violations = check_media([capture])
 
     assert any("empty artifact reference" in v for v in violations)
+
+
+def _frame(**overrides: object) -> CameraFrame:
+    defaults: dict[str, object] = dict(
+        frame_id="frame_1",
+        greenhouse_id="climate_box",
+        sensor_id="cam_1",
+        timestamp=START,
+        pose=CameraPose(x_m=0.6, y_m=3.2, z_m=2.2, qw=1.0, qx=0.0, qy=0.0, qz=0.0),
+        intrinsics=CameraIntrinsics(width=640, height=480, fx=457.0, fy=457.0, ppx=320, ppy=240),
+        modalities=(CaptureModality.RGB, CaptureModality.DEPTH),
+        source=RecordSource(type=SourceType.SIMULATION, source_id="run"),
+    )
+    defaults.update(overrides)
+    return CameraFrame(**defaults)
+
+
+def test_the_simulators_camera_frames_conform() -> None:
+    log = sensors.observations("climate_box", until_s=300)
+
+    assert len(log.frames) == 6
+    assert check_frames(log.frames) == []
+
+
+def test_a_frame_must_be_unambiguous_named_and_delivered_after_it_was_taken() -> None:
+    naive = _frame(frame_id="naive", timestamp=START.replace(tzinfo=None))
+    nameless = _frame(frame_id="nameless", sensor_id=" ", timestamp=START + timedelta(minutes=1))
+    early = _frame(
+        frame_id="early",
+        timestamp=START + timedelta(minutes=2),
+        delivered_at=START + timedelta(minutes=1),
+    )
+
+    violations = check_frames([naive, nameless, early, _frame(frame_id="naive")])
+
+    assert any("no timezone" in v for v in violations)
+    assert any("names no camera" in v for v in violations)
+    assert any("delivered" in v and "before it was taken" in v for v in violations)
+    assert any("appear more than once" in v for v in violations)

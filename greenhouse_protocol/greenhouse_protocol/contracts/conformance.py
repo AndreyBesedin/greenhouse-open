@@ -24,15 +24,15 @@ from datetime import datetime
 from typing import Protocol
 
 from greenhouse_protocol.event import Event
-from greenhouse_protocol.media import MediaCapture
+from greenhouse_protocol.media import CameraFrame, MediaCapture
 from greenhouse_protocol.observation import Observation
 
 
 class CanonicalRecord(Protocol):
     """What every canonical record has: a greenhouse and an instant.
 
-    Observations, events and captures share this much, which is what the
-    shared checks below are written against.
+    Observations, events, captures and frames share this much, which is
+    what the shared checks below are written against.
     """
 
     @property
@@ -99,6 +99,24 @@ def check_media(captures: Iterable[MediaCapture]) -> list[str]:
     return violations
 
 
+def check_frames(frames: Iterable[CameraFrame]) -> list[str]:
+    records = list(frames)
+    violations: list[str] = []
+    violations += _check_timestamps_are_unambiguous(records, "frame")
+    violations += _check_identities_are_unique(
+        [(f.frame_id, f.timestamp) for f in records], "frame"
+    )
+    violations += _check_scoping(records, "frame")
+
+    for frame in records:
+        if not frame.sensor_id.strip():
+            violations.append(f"frame {frame.frame_id!r} names no camera")
+        violations += _delivered_in_time(
+            f"frame {frame.frame_id!r}", frame.timestamp, frame.delivered_at
+        )
+    return violations
+
+
 def _check_timestamps_are_unambiguous(records: Sequence[CanonicalRecord], kind: str) -> list[str]:
     """Canonical chronology is an instant, not a wall-clock reading.
 
@@ -115,19 +133,23 @@ def _check_timestamps_are_unambiguous(records: Sequence[CanonicalRecord], kind: 
 
 def _check_delivery(observation: Observation) -> list[str]:
     """A reading is delivered when it is taken or after, at an instant."""
-    delivered = observation.delivered_at
+    return _delivered_in_time(
+        f"observation {observation.observation_id!r}",
+        observation.timestamp,
+        observation.delivered_at,
+    )
+
+
+def _delivered_in_time(record: str, taken: datetime, delivered: datetime | None) -> list[str]:
+    """A record is delivered when it is taken or after, at an instant."""
     if delivered is None:
         return []
     if delivered.tzinfo is None or delivered.utcoffset() is None:
-        return [
-            f"observation {observation.observation_id!r} has a delivery time with no timezone: "
-            f"{delivered!r}"
-        ]
-    taken = observation.timestamp
+        return [f"{record} has a delivery time with no timezone: {delivered!r}"]
     if taken.tzinfo is not None and taken.utcoffset() is not None and delivered < taken:
         return [
-            f"observation {observation.observation_id!r} was delivered "
-            f"({delivered.isoformat()}) before it was taken ({taken.isoformat()})"
+            f"{record} was delivered ({delivered.isoformat()}) "
+            f"before it was taken ({taken.isoformat()})"
         ]
     return []
 

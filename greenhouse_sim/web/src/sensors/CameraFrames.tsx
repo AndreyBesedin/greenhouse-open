@@ -1,9 +1,41 @@
+import { MathUtils } from "three";
+
 import { describeTime } from "../fields/ClimateTime";
 import { formatPoint, formatValue } from "../readouts";
-import { type CameraFrame, framesOf, type SensorReadingsState, secondsInto } from "./readings";
+import {
+  type CameraFrame,
+  type CameraPose,
+  framesOf,
+  lookingAlong,
+  type SensorReadingsState,
+  secondsInto,
+} from "./readings";
 
+// Angles to a tenth of a degree.
+const ANGLE_DECIMALS = 1;
 // What a frame holds, in words.
 const MODALITY_NAMES: Readonly<Record<string, string>> = { RGB: "RGB", DEPTH: "depth" };
+
+/** Which way a camera looks, in words: turned from along the house, left
+ * or right, and tilted up or down. */
+export function describeLooking(pose: CameraPose): string {
+  const { x, y, z } = lookingAlong(pose);
+  const turn = MathUtils.radToDeg(Math.atan2(y, x));
+  const tilt = MathUtils.radToDeg(Math.atan2(z, Math.hypot(x, y)));
+  const across =
+    formatAngle(turn) === formatAngle(0)
+      ? "along the house"
+      : `${formatAngle(turn)}° ${turn < 0 ? "right" : "left"} of along the house`;
+  const upwards =
+    formatAngle(tilt) === formatAngle(0)
+      ? "level"
+      : `${formatAngle(tilt)}° ${tilt < 0 ? "down" : "up"}`;
+  return `${across}, ${upwards}`;
+}
+
+function formatAngle(degrees: number): string {
+  return Math.abs(degrees).toFixed(ANGLE_DECIMALS);
+}
 
 function describeModalities(frame: CameraFrame): string {
   return frame.modalities.map((modality) => MODALITY_NAMES[modality] ?? modality).join(" and ");
@@ -59,9 +91,11 @@ export function CameraFrames({
         <dt>Taken at</dt>
         <dd data-testid="camera-frame-time">{at(latest)}</dd>
         <dt>From (m)</dt>
-        <dd data-testid="camera-frame-from">{formatPoint(latest.position)}</dd>
-        <dt>Towards (m)</dt>
-        <dd data-testid="camera-frame-towards">{formatPoint(latest.target)}</dd>
+        <dd data-testid="camera-frame-from">
+          {formatPoint({ x: latest.pose.x_m, y: latest.pose.y_m, z: latest.pose.z_m })}
+        </dd>
+        <dt>Looking</dt>
+        <dd data-testid="camera-frame-looking">{describeLooking(latest.pose)}</dd>
         <dt>Picture</dt>
         <dd data-testid="camera-frame-picture">
           {width} × {height} px, fx {formatValue(fx)} px, fy {formatValue(fy)} px

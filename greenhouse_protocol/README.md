@@ -11,6 +11,9 @@ implement. Part of [greenhouse-open](../README.md). Apache-2.0.
   destructive sample), with a confidence and parameters.
 - `MediaCapture`: an image by reference - sensor, instant, modality and
   where its bytes live. Pixels never go into a record.
+- `CameraFrame`: a frame a camera took - instant, pose in the greenhouse's
+  frame, intrinsics and the modalities it holds, with the captures holding
+  its images when they are stored.
 - `Sensor`: hardware, device id and calibrated intrinsics, and only what the
   source states about mounting.
 - `GreenhouseDescription`, `Compartment`, `Plant`: what a producer states

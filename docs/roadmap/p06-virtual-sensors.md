@@ -448,23 +448,25 @@ a sensor is stale exactly when it should be.
   moment. Before its first reading is due, a sensor is neither fresh nor
   stale. The climate box's back temperature sensor drops its sample at
   19 min. It is fresh at 19 min 29 s, stale from 19 min 30 s, and fresh
-  again at 20 min 30 s. A clean sensor is never stale. PAR, which no model
-  gives yet, always is. Staleness is the log's to say, not a quality of a
-  reading.
+  again at 20 min 30 s. A clean sensor is never stale. A sensor whose
+  quantity nothing in the run gives, as PAR until P08, is unavailable
+  rather than stale: it will never read, which is not having missed a
+  reading (after the build). Freshness is the log's to say, not a quality
+  of a reading.
 - **Frames:** a camera takes one every `cadence_s` from the run's start.
   The log records each frame's metadata:
   - its identifier, shaped like an observation's;
   - its moment;
-  - its position, target and rotation;
+  - its pose: its position and rotation;
   - its intrinsics;
   - what it holds, RGB and depth.
 
   A frame's instance pass is the simulator's truth, which no camera
-  records, so it stays out of the log as point sensors' truth does. The
-  frames are the simulator's own records, not the protocol's
-  `MediaCapture`, which points to stored bytes. A frame is drawn on demand
-  and stored nowhere. `MediaCapture` records come with the headless
-  renderer that writes images for datasets.
+  records, so it stays out of the log as point sensors' truth does. A frame
+  is the protocol's `CameraFrame` (after the build), not a `MediaCapture`,
+  which points to stored bytes: a simulated frame is drawn on demand and
+  stored nowhere. `MediaCapture` records of its images come with the
+  headless renderer that writes images for datasets.
 - **The viewer:**
   - a sensor's panel says whether it is fresh or stale, and marks a reading
     held at its instrument's range as clipped;
@@ -596,6 +598,11 @@ What P06 simplifies on purpose, kept here until a later step removes it:
 - **The depth and instance passes see through glass:** a real depth camera
   often reads glazing badly or not at all. The passes leave see-through
   surfaces out, as the main view's picking does.
+- **A camera's frames are perfect in time:** taken at every cadence, on
+  time, none dropped, unlike point sensors. Their images are perfect too:
+  no exposure, noise, blur or lens distortion. Both are planned with the
+  headless renderer (see the [roadmap](README.md#projects)); the protocol's
+  `CameraFrame` already has a delivery time for frames that come late.
 
 ## Review decisions (8 October 2026)
 
@@ -608,3 +615,24 @@ What P06 simplifies on purpose, kept here until a later step removes it:
 4. **The QA scenario:** a new `sensor_lab` scenario.
 5. **Drift:** linear. A random walk is recorded as a possible improvement
    (Known approximations).
+
+## After the build (8 October 2026)
+
+The final report's open questions, as decided:
+
+- **A quantity nothing gives** is shown apart from a stale sensor. The log's
+  freshness has four states: waiting for a first reading, fresh, stale,
+  and unavailable, when nothing in the run gives the sensor's quantity, as
+  PAR until P08.
+- **Camera frames in the protocol:** `greenhouse_protocol` gains
+  `CameraFrame`, a frame's instant, its camera's pose in the greenhouse's
+  frame, its intrinsics and its modalities, with the captures holding its
+  images when they are stored. `CameraPose` fixes the convention: the
+  camera's own frame, x along the way it looks, y to its left and z up,
+  turned into the greenhouse's by a unit quaternion. `check_frames` checks
+  them as the other records are checked. The simulator's log records its
+  frames as these.
+- **Frames without latency or dropouts** are fine for now. The decision is
+  recorded under Known approximations, and camera imperfections are
+  planned in the roadmap.
+- **The frustum,** checked by eye rather than by a test, is fine.

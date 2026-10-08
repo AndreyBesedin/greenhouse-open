@@ -65,8 +65,8 @@ function SensorChart({
   );
 }
 
-/** Whether a sensor's latest reading due by the moment drawn has come, in
- * words; null if the log does not say. */
+/** Where a sensor stands with its readings at the moment drawn, in words;
+ * null if the log does not say. */
 export function describeFreshness(
   freshness: SensorFreshness | undefined,
   start: string,
@@ -74,13 +74,17 @@ export function describeFreshness(
   if (freshness === undefined) {
     return null;
   }
-  if (freshness.due_at === null) {
-    return "Its first reading is not due yet.";
+  const due = freshness.due_at === null ? "" : describeTime(secondsInto(start, freshness.due_at));
+  switch (freshness.state) {
+    case "unavailable":
+      return "Unavailable: nothing in this run gives its quantity.";
+    case "waiting":
+      return "Its first reading is not due yet.";
+    case "stale":
+      return `Stale: its reading of ${due}, due by now, has not come.`;
+    case "fresh":
+      return `Fresh: its reading of ${due} has come.`;
   }
-  const due = describeTime(secondsInto(start, freshness.due_at));
-  return freshness.stale
-    ? `Stale: its reading of ${due}, due by now, has not come.`
-    : `Fresh: its reading of ${due} has come.`;
 }
 
 /**
@@ -138,7 +142,7 @@ export function SensorPanel({
       </p>
       {freshnessText !== null && (
         <p
-          className={freshness?.stale === true ? "stale" : undefined}
+          className={freshness?.state === "stale" ? "stale" : undefined}
           data-testid="sensor-freshness"
         >
           {freshnessText}

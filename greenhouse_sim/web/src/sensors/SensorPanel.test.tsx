@@ -27,19 +27,28 @@ const READINGS: SensorReadings = {
   freshness: [
     {
       sensor_id: "t",
+      state: "fresh",
       due_at: "2026-01-01T00:10:00Z",
       latest_at: "2026-01-01T00:10:00Z",
-      stale: false,
     },
-    { sensor_id: "rh", due_at: "2026-01-01T00:10:00Z", latest_at: START, stale: true },
-    { sensor_id: "co2", due_at: null, latest_at: null, stale: false },
+    { sensor_id: "rh", state: "stale", due_at: "2026-01-01T00:10:00Z", latest_at: START },
+    { sensor_id: "co2", state: "waiting", due_at: null, latest_at: null },
+    { sensor_id: "par", state: "unavailable", due_at: START, latest_at: null },
   ],
   frames: [0, 1].map((minute) => ({
     frame_id: `sim_camera_20260101T000${minute}00Z_frame`,
     sensor_id: "camera",
     timestamp: `2026-01-01T00:0${minute}:00Z`,
-    position: { x: 0.6, y: 3.2, z: 2.2 },
-    target: { x: 11, y: 3.2, z: 0.6 },
+    // Turned 30° to its left about the vertical.
+    pose: {
+      x_m: 0.6,
+      y_m: 3.2,
+      z_m: 2.2,
+      qw: Math.cos(Math.PI / 12),
+      qx: 0,
+      qy: 0,
+      qz: Math.sin(Math.PI / 12),
+    },
     intrinsics: { width: 640, height: 480, fx: 457.007, fy: 457.007 },
     modalities: ["RGB", "DEPTH"],
   })),
@@ -139,6 +148,11 @@ describe("a selected sensor", () => {
       'class="stale" data-testid="sensor-freshness">Stale: its reading of 10 min, due by now, has not come.<',
     );
     expect(panel("co2")).toContain("Its first reading is not due yet.");
+    // Nothing gives PAR: it will never read, which is not having missed a
+    // reading.
+    expect(panel("par")).toContain(
+      'data-testid="sensor-freshness">Unavailable: nothing in this run gives its quantity.<',
+    );
   });
 
   it("says when its reading was held at its instrument's range", () => {
@@ -185,6 +199,9 @@ describe("a selected camera's frames", () => {
 
     expect(html).toContain('data-testid="camera-frames">2 frames by 1 min, each RGB and depth.<');
     expect(html).toContain('data-testid="camera-frame-from">x 0.60, y 3.20, z 2.20<');
+    expect(html).toContain(
+      'data-testid="camera-frame-looking">30.0° left of along the house, level<',
+    );
     expect(html).toContain(
       'data-testid="camera-frame-picture">640 × 480 px, fx 457.01 px, fy 457.01 px<',
     );
