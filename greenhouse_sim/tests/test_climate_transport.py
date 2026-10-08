@@ -6,8 +6,8 @@ import pytest
 
 from greenhouse_sim.climate.projection import FaceFlows, conserving, face_flows
 from greenhouse_sim.climate.settings import ClimateSettings
-from greenhouse_sim.climate.sources import source_terms
-from greenhouse_sim.climate.transport import Transport
+from greenhouse_sim.climate.sources import SourceTerms, source_terms
+from greenhouse_sim.climate.transport import AirState, Transport
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import air_grid
@@ -40,6 +40,16 @@ def _flows(velocity: np.ndarray) -> FaceFlows:
 
 def _transport(velocity: np.ndarray, settings: ClimateSettings = SETTINGS) -> Transport:
     return Transport(GRID, _flows(velocity), SOLID, settings)
+
+
+def _advance(
+    transport: Transport, temperature: np.ndarray, heat_w: np.ndarray, duration_s: float
+) -> np.ndarray:
+    """The temperature after `duration_s`, in dry air, where nothing
+    condenses."""
+    dry = AirState(temperature=temperature, humidity=np.zeros_like(temperature))
+    heating = SourceTerms(grid=GRID, velocity=STILL, heat_w=heat_w, water_removed_kg_s=NO_HEAT)
+    return transport.advance(dry, heating, duration_s).temperature
 
 
 def _cell(x: float, y: float, z: float) -> tuple[int, int, int]:
@@ -89,7 +99,7 @@ def test_the_fan_draws_the_air_it_blows_from_behind_it_and_the_house_returns_it(
 
 
 def test_uniform_air_stays_uniform_however_the_air_flows() -> None:
-    temperature = _transport(JET, SHUT).advance(START, NO_HEAT, 600)
+    temperature = _advance(_transport(JET, SHUT), START, NO_HEAT, 600)
 
     assert np.abs(temperature - 16.0).max() == 0.0
 
@@ -98,7 +108,7 @@ def test_carried_and_mixed_temperatures_stay_within_those_around_them() -> None:
     rng = np.random.default_rng(5)
     start = np.where(AIR, rng.uniform(10.0, 20.0, size=START.shape), 16.0)
 
-    temperature = _transport(JET, SHUT).advance(start, NO_HEAT, 300)
+    temperature = _advance(_transport(JET, SHUT), start, NO_HEAT, 300)
 
     assert temperature[AIR].min() >= start[AIR].min()
     assert temperature[AIR].max() <= start[AIR].max()
@@ -112,7 +122,7 @@ def test_shut_off_from_the_outside_the_air_gains_the_heaters_energy(
     velocity: np.ndarray, tolerance: float
 ) -> None:
     transport = _transport(velocity, SHUT)
-    temperature = transport.advance(START, HEAT_W, 600)
+    temperature = _advance(transport, START, HEAT_W, 600)
 
     gained = transport.heat_j(temperature) - transport.heat_j(START)
     assert gained == pytest.approx(HEATER.power_w * 600, rel=tolerance)
@@ -120,8 +130,8 @@ def test_shut_off_from_the_outside_the_air_gains_the_heaters_energy(
 
 def test_the_house_settles_where_the_heater_balances_what_the_glass_loses() -> None:
     transport = _transport(STILL)
-    temperature = transport.advance(START, HEAT_W, 2 * 3600)
-    later = transport.advance(temperature, HEAT_W, 600)
+    temperature = _advance(transport, START, HEAT_W, 2 * 3600)
+    later = _advance(transport, temperature, HEAT_W, 600)
 
     assert transport.envelope_loss_w(later) == pytest.approx(HEATER.power_w, rel=0.01)
     np.testing.assert_allclose(later, temperature, atol=1e-3)
@@ -136,12 +146,12 @@ def test_with_the_outside_warmer_and_nothing_running_the_house_warms_towards_it(
     means = []
     temperature = START
     for _ in range(6):
-        temperature = transport.advance(temperature, NO_HEAT, 300)
+        temperature = _advance(transport, temperature, NO_HEAT, 300)
         means.append(float(temperature[AIR].mean()))
 
     assert means == sorted(means)
     assert 16.0 < means[0] < means[-1] < 25.0
-    final = transport.advance(temperature, NO_HEAT, 3 * 3600)
+    final = _advance(transport, temperature, NO_HEAT, 3 * 3600)
     assert final[AIR].mean() == pytest.approx(25.0, abs=0.01)
 
 
@@ -150,8 +160,8 @@ def test_a_heaters_warmth_spreads_out_from_it_with_time() -> None:
     beside = _cell(10.25, 0.75, 0.75)
     across = _cell(8.25, 3.25, 0.75)
     far = _cell(6.25, 3.25, 0.75)
-    early = transport.advance(START, HEAT_W, 30)
-    later = transport.advance(early, HEAT_W, 270)
+    early = _advance(transport, START, HEAT_W, 30)
+    later = _advance(transport, early, HEAT_W, 270)
 
     # Half a minute in, its corner is warm, and 3 m away barely.
     assert early[beside] > 25.0
@@ -177,7 +187,7 @@ def test_each_step_keeps_within_the_air_crossing_half_a_cell_and_the_mixing_limi
 
 
 def test_cells_obstacles_fill_keep_their_temperature() -> None:
-    temperature = _transport(JET).advance(START, HEAT_W, 120)
+    temperature = _advance(_transport(JET), START, HEAT_W, 120)
 
     np.testing.assert_array_equal(temperature[SOLID], START[SOLID])
     assert SOLID.any()
