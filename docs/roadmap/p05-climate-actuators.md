@@ -1,6 +1,6 @@
 # P05: Climate actuators: fans, heaters, dehumidification and vents
 
-**Status:** in progress: P05.0 and P05.1 done, P05.2 next. Part of the [simulator roadmap](README.md).
+**Status:** in progress: P05.0 to P05.2 done, P05.3 next. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -199,8 +199,8 @@ new scenarios (P05.0).
 | Step | Commit summary | Status |
 | --- | --- | --- |
 | P05.0 | `feat(scenarios): replace the original reference scenarios` | Done |
-| P05.1 | `feat(actuators): define climate actuator contract and controls` | Planned |
-| P05.2 | `feat(fans): add fan airflow source model` | Planned |
+| P05.1 | `feat(actuators): define climate actuator contract and controls` | Done |
+| P05.2 | `feat(fans): add fan airflow source model` | Done |
 | P05.3 | `feat(heating): add heater sensible-heat source` | Planned |
 | P05.4 | `feat(humidity): add dehumidifier moisture sink` | Planned |
 | P05.5 | `feat(vents): connect vent opening state to airflow boundaries` | Planned |
@@ -450,6 +450,35 @@ it. Tests: velocity probes downstream speed up along the fan's axis, the
 jet's flow through a plane across it matches the fan's flow near the fan,
 and nothing changes behind it or with it off.
 
+#### As implemented
+
+- **The jet** (`climate.jets`): a round free jet along the fan's heading,
+  its speed a Gaussian of the distance from its axis.
+  - **Its core:** for six rotor diameters it keeps the rotor's radius and
+    the fan's core speed, its flow over its swept area: 5.1 m/s over 3 m
+    for the climate box's 1 m³/s through 0.5 m.
+  - **Beyond:** it widens linearly and slows as it widens, keeping its
+    momentum: its speed on the axis falls as 6 U₀ D / x, the classic decay
+    of a round jet, and the air it carries grows as it draws in the air
+    around it.
+  - **Where it adds nothing:** behind the rotor, in the cells obstacles
+    fill, and beyond three widths from its axis, where it is under a
+    ten-thousandth of its speed on the axis.
+  - At a level, it blows that share of its flow.
+- **The `climate` field:** a scenario whose layout places equipment offers
+  it, between its CFD solution and the shear. It is the scenario's own
+  airflow plus every running piece's source terms (`climate.field`), for
+  now the fans' jets; its temperature is its own airflow's until P05.3
+  carries it. `GET .../fields/climate?set=fan:1` serves it with the fan on.
+  Every field request's levels are checked as a scene's are.
+- **In the climate box,** with the fan on, the air along its axis moves at
+  4.4 m/s 2 m from the fan, 1.8 m/s 8 m from it, and is still behind it.
+  The field's fastest cell: 4.89 m/s.
+- **The viewer** loads the climate again whenever the Equipment panel
+  changes a level; other fields are not reloaded. A fan is drawn on its
+  own rather than in a batch of cylinders, with an arrow out of its
+  housing the way it blows.
+
 ### P05.3: Heater sensible-heat source
 
 The transport model's first scalar: temperature, carried and mixed over the
@@ -528,6 +557,9 @@ What P05 simplifies on purpose, kept here until a later step removes it:
   projection**, so the combined velocity is not exactly mass conserving.
   The scalars' budgets are checked instead. A pressure projection on the
   grid would remove it.
+- **A fan's jet is a free jet:** it does not turn at walls or flow around
+  obstacles. It stops at the grid's faces and adds nothing inside an
+  obstacle's cells, but nothing in its wake is shadowed.
 - **The outside is fixed**: one temperature and humidity for a run, until
   P07 brings weather.
 - **Vents exchange air at a constant speed through their aperture**, its

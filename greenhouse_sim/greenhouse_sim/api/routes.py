@@ -29,7 +29,9 @@ check; a route that comes to need one checks it first.
     GET /api/scenarios/{id}/fields/{name} one of a scenario's environment fields:
                                           its greenhouse's air, cell by cell;
                                           both ?layout=open with another of its
-                                          layouts, for its CFD solution
+                                          layouts, for its CFD solution, and
+                                          ?set=fan:1 with its equipment
+                                          running, for its climate
     GET /api/scenarios/{id}/cfd/geometry  the boundaries of a scenario's air as
                                           a CFD solver is given them, snapped
                                           to its mesh; changed as for its scene
@@ -127,7 +129,11 @@ def respond(method: str, path: str) -> Response:
             )
         case ["api", "scenarios", scenario_id, "fields", field_name]:
             layout = _last(query, "layout")
-            return _answer(lambda: fields.field(scenario_id, field_name, layout))
+            return _answer(
+                lambda: fields.field(
+                    scenario_id, field_name, layout, _pairs(query.get("set", []), "set")
+                )
+            )
         case ["api", "scenarios", scenario_id, "cfd", "geometry"]:
             return _answer(lambda: cfd.geometry(scenario_id, _scene_changes(query)))
         case ["api", "scenarios", scenario_id, "layout"]:

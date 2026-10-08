@@ -1,4 +1,9 @@
+import { pairsText } from "../scene/source";
 import { checkField, type EnvironmentField, SUPPORTED_FIELD_VERSION } from "./field";
+
+/** The air as a scenario's equipment drives it: the one field that depends on
+ * how hard its equipment runs. */
+export const CLIMATE_FIELD = "climate";
 
 export type FieldState =
   | { status: "none" }
@@ -7,11 +12,25 @@ export type FieldState =
   | { status: "rejected"; problems: string[] }
   | { status: "loaded"; field: EnvironmentField };
 
+/** What a scenario's field is asked for with: another of its layouts, which
+ * its CFD solution depends on, and its equipment's levels, which its climate
+ * depends on. */
+export interface FieldChanges {
+  layout?: string | undefined;
+  levels?: Readonly<Record<string, number>> | undefined;
+}
+
 /** Where a scenario's field is published (`GET /api/scenarios/{id}/fields/{name}`),
- * with another of its layouts if one is named: its CFD solution depends on it. */
-export function fieldUrl(scenarioId: string, name: string, layout?: string): string {
+ * with another of its layouts if one is named, and, for its climate, its
+ * equipment at the levels set. */
+export function fieldUrl(scenarioId: string, name: string, changes: FieldChanges = {}): string {
   const base = `/api/scenarios/${encodeURIComponent(scenarioId)}/fields/${encodeURIComponent(name)}`;
-  return `${base}${layoutQuery(layout)}`;
+  const levels = name === CLIMATE_FIELD ? pairsText(changes.levels) : "";
+  const parts = [
+    ...(changes.layout === undefined ? [] : [`layout=${encodeURIComponent(changes.layout)}`]),
+    ...(levels === "" ? [] : [`set=${levels}`]),
+  ];
+  return parts.length === 0 ? base : `${base}?${parts.join("&")}`;
 }
 
 /** `?layout=` for another of a scenario's layouts, or nothing for its own. */
@@ -23,10 +42,10 @@ export function layoutQuery(layout: string | undefined): string {
 export function loadField(
   scenarioId: string,
   name: string,
-  layout?: string,
+  changes: FieldChanges = {},
   fetchFn: typeof fetch = fetch,
 ): Promise<FieldState> {
-  return fetchField(fieldUrl(scenarioId, name, layout), fetchFn);
+  return fetchField(fieldUrl(scenarioId, name, changes), fetchFn);
 }
 
 /** Fetches and checks the field at `url`, from the simulator or a file it

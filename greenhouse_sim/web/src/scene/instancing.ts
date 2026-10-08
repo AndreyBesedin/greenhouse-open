@@ -1,6 +1,12 @@
 import { Matrix4, Quaternion, Vector3 } from "three";
 
-import type { Cylinder, Ellipsoid, SceneEntity, Sphere } from "./generated/snapshotTypes";
+import type {
+  Cylinder,
+  Ellipsoid,
+  SceneEntity,
+  SceneEntityKind,
+  Sphere,
+} from "./generated/snapshotTypes";
 import { isMetal } from "./materials";
 
 export const MATRIX_SIZE = 16;
@@ -26,8 +32,12 @@ export const UNIT_SHAPES: Record<InstancedShapeName, InstancedShape> = {
   ellipsoid: { shape: "ellipsoid", size_x: 1, size_y: 1, size_z: 1 },
 };
 
+/** Kinds drawn on their own whatever their shape: a fan, with the arrow its
+ * renderer adds along its axis. */
+const DRAWN_ALONE: ReadonlySet<SceneEntityKind> = new Set<SceneEntityKind>(["FAN"]);
+
 export function isInstanced(entity: SceneEntity): boolean {
-  return INSTANCED.has(entity.shape.shape);
+  return INSTANCED.has(entity.shape.shape) && !DRAWN_ALONE.has(entity.kind);
 }
 
 /** Shapes drawn in one instanced batch: of one kind, one shape, and one

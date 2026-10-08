@@ -46,6 +46,8 @@ import { type LiveCommand, sendLiveCommand } from "./scene/live";
 import {
   changesQuery,
   loadScene,
+  pairsFrom,
+  pairsText,
   type SceneSource,
   type SceneState,
   searchFor,
@@ -154,8 +156,11 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // chosen; the last one stays on show until the next arrives.
   const fieldScenario = source.kind === "scenario" ? source.scenarioId : null;
   const fieldName = source.kind === "scenario" ? (source.field ?? null) : null;
-  // A scenario's CFD solution depends on its layout.
+  // A scenario's CFD solution depends on its layout, and its climate on how
+  // hard its equipment runs: kept as the address writes them, so that the
+  // field is loaded again only when they change.
   const fieldLayout = source.kind === "scenario" ? source.layout : undefined;
+  const fieldLevels = source.kind === "scenario" ? pairsText(source.levels) : "";
   useEffect(() => {
     if (fieldScenario === null || fieldName === null) {
       setField({ status: "none" });
@@ -163,7 +168,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     }
     let current = true;
     setField((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
-    void loadField(fieldScenario, fieldName, fieldLayout).then((state) => {
+    const changes = { layout: fieldLayout, levels: pairsFrom(fieldLevels) ?? {} };
+    void loadField(fieldScenario, fieldName, changes).then((state) => {
       if (current) {
         setField(state);
       }
@@ -171,7 +177,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     return () => {
       current = false;
     };
-  }, [fieldScenario, fieldName, fieldLayout]);
+  }, [fieldScenario, fieldName, fieldLayout, fieldLevels]);
 
   // The field compared with the drawn one, loaded as the drawn one is.
   const compareName = source.kind === "scenario" ? (source.compare ?? null) : null;
@@ -182,7 +188,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     }
     let current = true;
     setCompared((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
-    void loadField(fieldScenario, compareName, fieldLayout).then((state) => {
+    const changes = { layout: fieldLayout, levels: pairsFrom(fieldLevels) ?? {} };
+    void loadField(fieldScenario, compareName, changes).then((state) => {
       if (current) {
         setCompared(state);
       }
@@ -190,7 +197,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     return () => {
       current = false;
     };
-  }, [fieldScenario, compareName, fieldLayout]);
+  }, [fieldScenario, compareName, fieldLayout, fieldLevels]);
 
   // The boundaries a CFD solver is given, changed as the scene is, drawn
   // over it when asked for; the last stays on show until the next arrives.

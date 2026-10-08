@@ -118,18 +118,18 @@ describe("a published field", () => {
       asked.push(String(input));
       return new Response(JSON.stringify(shearDocument()), { status: 200 });
     };
-    const state = await loadField("tomato_compartment", "shear", undefined, answer);
-    await loadField("airflow_box", "cfd", "open", answer);
+    const state = await loadField("tomato_compartment", "shear", {}, answer);
+    await loadField("airflow_box", "cfd", { layout: "open" }, answer);
     const missing = await loadField(
       "tomato_compartment",
       "wind",
-      undefined,
+      {},
       async () => new Response("", { status: 404 }),
     );
     const newer = await loadField(
       "tomato_compartment",
       "shear",
-      undefined,
+      {},
       async () =>
         new Response(JSON.stringify({ ...shearDocument(), schema_version: 2 }), { status: 200 }),
     );
@@ -143,6 +143,20 @@ describe("a published field", () => {
     expect(state.status).toBe("loaded");
     expect(missing).toEqual({ status: "unavailable", reason: "the simulator API answered 404" });
     expect(newer.status).toBe("rejected");
+  });
+
+  it("asks for a climate with its equipment's levels, and any other field without them", () => {
+    const levels = { heater: 0.5, fan: 1 };
+
+    expect(fieldUrl("climate_box", "climate", { levels })).toBe(
+      "/api/scenarios/climate_box/fields/climate?set=fan:1,heater:0.5",
+    );
+    expect(fieldUrl("climate_box", "climate", { layout: "other", levels: {} })).toBe(
+      "/api/scenarios/climate_box/fields/climate?layout=other",
+    );
+    expect(fieldUrl("climate_box", "shear", { levels })).toBe(
+      "/api/scenarios/climate_box/fields/shear",
+    );
   });
 });
 

@@ -3,7 +3,7 @@
 Whatever computes the air takes a piece of equipment's effect in the same
 terms, cell by cell, so that no device depends on how the air is computed:
 
-- **velocity added**, in m/s, for a fan's jet (P05.2);
+- **velocity added**, in m/s, for a fan's jet (`greenhouse_sim.climate.jets`);
 - **heat added**, in watts per cell, for a heater, and for a dehumidifier's
   waste heat;
 - **water removed**, in kg/s per cell, for a dehumidifier.
@@ -21,6 +21,7 @@ from typing import Final, Self
 
 import numpy as np
 
+from greenhouse_sim.climate.jets import jet_velocity
 from greenhouse_sim.fields.field import VECTOR_COMPONENTS, FieldGrid
 from greenhouse_sim.world.equipment import Dehumidifier, Equipment, Fan, Heater
 from greenhouse_sim.world.geometry import Vector3
@@ -97,9 +98,15 @@ def source_terms(piece: Equipment, level: float, grid: FieldGrid, solid: np.ndar
     """What a piece of equipment does to the air at a level, on a grid whose
     `solid` cells its obstacles fill."""
     terms = SourceTerms.none(grid)
-    if level <= 0.0 or isinstance(piece, Fan):
-        # A fan's jet comes with P05.2.
+    if level <= 0.0:
         return terms
+    if isinstance(piece, Fan):
+        return SourceTerms(
+            grid=grid,
+            velocity=jet_velocity(piece, level, grid, solid),
+            heat_w=terms.heat_w,
+            water_removed_kg_s=terms.water_removed_kg_s,
+        )
     region = _around(piece, grid, solid)
     share = region / region.sum()
     if isinstance(piece, Heater):
