@@ -136,6 +136,15 @@ The options to weigh then:
 - the simulator's tests run in parallel (pytest-xdist);
 - mypy's cache, and the browser install, kept between runs.
 
+**Camera imperfections** (recorded 2026-10-08, with the headless renderer
+for datasets, after P09 unless a policy needs them sooner). P06's cameras
+take every frame on time, and draw perfect images. Planned then:
+
+- frames that come late, or not at all, seeded as point sensors' readings
+  are, using the protocol's `CameraFrame.delivered_at`;
+- images as cameras make them: exposure, noise, motion blur and lens
+  distortion, with the distortion in the camera's intrinsics.
+
 ```mermaid
 flowchart LR
     PM1["P-1 Restructure greenhouse_sim"] --> P00["P00 Browser renderer"]

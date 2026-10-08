@@ -11,13 +11,14 @@ clock (P09). The run is asked for as its climate field is
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime, time
 
+from greenhouse_protocol.media import CameraFrame
 from greenhouse_protocol.observation import Observation
 from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.evaluation.sensor_truth import SensorTruth, sensor_truth
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
-from greenhouse_sim.sensors.air import observe
-from greenhouse_sim.sensors.log import CameraFrame, SensorFreshness, frames, freshness
+from greenhouse_sim.sensors.air import observe, reads
+from greenhouse_sim.sensors.log import SensorFreshness, frames, freshness
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import LONGEST_RUN_S, Commanded, air_through_a_run
 from greenhouse_sim.services.scenarios import SceneChanges, changed, scenario
@@ -84,23 +85,34 @@ def observations(
     name = layout or DEFAULT_LAYOUT
     air_at, run_id = air_through_a_run(scenario_id, name, levels, openings, commands)
     start = run_start(scenario_id)
+    greenhouse_id = scenario(scenario_id).greenhouse_id
     point_sensors = _point_sensors(scenario_id, name)
     observed = observe(
         point_sensors,
         air_at,
         until,
         start=start,
-        greenhouse_id=scenario(scenario_id).greenhouse_id,
+        greenhouse_id=greenhouse_id,
         run_id=run_id,
         seed=scenario(scenario_id).random_seed,
         clean=clean,
     )
+    # A quantity the run's air does not give, it never gives.
+    unavailable = {s.sensor_id for s in point_sensors if reads(s, air_at(0.0)) is None}
     return SensorObservations(
         run_id=run_id,
         start=start,
         observations=observed,
-        freshness=freshness(point_sensors, observed, until, start=start, clean=clean),
-        frames=frames(_cameras(scenario_id, name), until, start=start),
+        freshness=freshness(
+            point_sensors, observed, until, start=start, unavailable=unavailable, clean=clean
+        ),
+        frames=frames(
+            _cameras(scenario_id, name),
+            until,
+            start=start,
+            greenhouse_id=greenhouse_id,
+            run_id=run_id,
+        ),
     )
 
 

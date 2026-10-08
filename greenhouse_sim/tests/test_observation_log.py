@@ -6,11 +6,12 @@ import json
 from datetime import timedelta
 
 import pytest
+from greenhouse_protocol.contracts.conformance import check_frames
 from greenhouse_protocol.enums import CaptureModality
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
-from greenhouse_sim.sensors.log import SensorFreshness
+from greenhouse_sim.sensors.log import Freshness, SensorFreshness
 from greenhouse_sim.services import sensors
 from greenhouse_sim.services.sensors import SensorObservations
 from greenhouse_sim.world.sensors import Camera
@@ -68,42 +69,43 @@ def test_the_dropped_sample_is_the_one_the_test_expects() -> None:
 
 
 @pytest.mark.parametrize(
-    ("until_s", "due_s", "stale"),
+    ("until_s", "due_s", "state"),
     [
         # Just before the dropped reading is due, the one before it has come.
-        (DROPPED_AT_S + LATENCY_S - 1, DROPPED_AT_S - 60, False),
+        (DROPPED_AT_S + LATENCY_S - 1, DROPPED_AT_S - 60, Freshness.FRESH),
         # Due, and not come, until the next is due.
-        (DROPPED_AT_S + LATENCY_S, DROPPED_AT_S, True),
-        (DROPPED_AT_S + 60 + LATENCY_S - 1, DROPPED_AT_S, True),
+        (DROPPED_AT_S + LATENCY_S, DROPPED_AT_S, Freshness.STALE),
+        (DROPPED_AT_S + 60 + LATENCY_S - 1, DROPPED_AT_S, Freshness.STALE),
         # The next has come.
-        (DROPPED_AT_S + 60 + LATENCY_S, DROPPED_AT_S + 60, False),
+        (DROPPED_AT_S + 60 + LATENCY_S, DROPPED_AT_S + 60, Freshness.FRESH),
     ],
     ids=["before it is due", "once due", "until the next", "the next come"],
 )
 def test_a_sensor_is_stale_exactly_while_a_due_reading_has_not_come(
-    until_s: float, due_s: float, stale: bool
+    until_s: float, due_s: float, state: Freshness
 ) -> None:
     log = _log(until_s)
-    state = next(f for f in log.freshness if f.sensor_id == "temperature_back")
+    freshness = next(f for f in log.freshness if f.sensor_id == "temperature_back")
 
-    assert state.stale is stale
-    assert state.due_at == log.start + timedelta(seconds=due_s)
+    assert freshness.state == state
+    assert freshness.due_at == log.start + timedelta(seconds=due_s)
 
 
-def test_a_sensor_is_neither_fresh_nor_stale_before_its_first_reading_is_due() -> None:
+def test_a_sensor_waits_until_its_first_reading_is_due() -> None:
     state = _freshness(59, "co2")
 
-    assert (state.due_at, state.latest_at, state.stale) == (None, None, False)
-    assert not _freshness(60, "co2").stale
+    assert (state.state, state.due_at, state.latest_at) == (Freshness.WAITING, None, None)
+    assert _freshness(60, "co2").state == Freshness.FRESH
 
 
-def test_a_clean_sensor_is_never_stale_and_a_sensor_of_nothing_always_is() -> None:
+def test_a_clean_sensor_is_never_stale_and_a_sensor_of_nothing_is_unavailable() -> None:
     for until_s in (0, 600, DROPPED_AT_S + LATENCY_S):
-        assert not _freshness(until_s, "temperature_front").stale
+        assert _freshness(until_s, "temperature_front").state == Freshness.FRESH
         # Clean, the back sensor drops nothing and is on time.
-        assert not _freshness(until_s, "temperature_back", clean=True).stale
-        # No model gives PAR yet.
-        assert _freshness(until_s, "par").stale
+        assert _freshness(until_s, "temperature_back", clean=True).state == Freshness.FRESH
+        # No model gives PAR yet: it will never read, which is not having
+        # missed a reading.
+        assert _freshness(until_s, "par").state == Freshness.UNAVAILABLE
 
 
 def test_a_camera_takes_a_frame_every_cadence_and_the_log_records_its_metadata() -> None:
@@ -118,9 +120,18 @@ def test_a_camera_takes_a_frame_every_cadence_and_the_log_records_its_metadata()
     latest = log.frames[-1]
     assert latest.sensor_id == "front_camera"
     assert latest.frame_id == "sim_front_camera_20260101T001000Z_frame"
-    assert (latest.position, latest.target) == (camera.position, camera.target)
-    assert latest.rotation == camera.rotation()
+    # Its pose: where the camera stands, turned as it is.
+    turn = camera.rotation()
+    pose = latest.pose
+    assert (pose.x_m, pose.y_m, pose.z_m) == (
+        camera.position.x,
+        camera.position.y,
+        camera.position.z,
+    )
+    assert (pose.qw, pose.qx, pose.qy, pose.qz) == (turn.w, turn.x, turn.y, turn.z)
     assert latest.intrinsics == camera.intrinsics
+    assert (latest.greenhouse_id, latest.source.source_id) == ("climate_box", log.run_id)
+    assert check_frames(log.frames) == []
     # A frame holds what a camera records; its instance pass is the
     # simulator's truth, and is not one of them.
     assert latest.modalities == (CaptureModality.RGB, CaptureModality.DEPTH)

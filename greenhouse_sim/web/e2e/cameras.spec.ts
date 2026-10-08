@@ -171,7 +171,8 @@ test("cameras: the run's log records each frame a camera takes", async ({ page }
     "sim_front_camera_20260101T001000Z_frame",
   );
   await expect(frames.getByTestId("camera-frame-from")).toHaveText("x 0.60, y 3.20, z 2.20");
-  await expect(frames.getByTestId("camera-frame-towards")).toHaveText("x 11.00, y 3.20, z 0.60");
+  // Down the house, and down at the heater.
+  await expect(frames.getByTestId("camera-frame-looking")).toHaveText("along the house, 8.7° down");
   await expect(frames.getByTestId("camera-frame-picture")).toHaveText(
     "640 × 480 px, fx 457.01 px, fy 457.01 px",
   );

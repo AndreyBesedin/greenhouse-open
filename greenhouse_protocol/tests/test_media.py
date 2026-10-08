@@ -4,8 +4,9 @@ import pytest
 from pydantic import ValidationError
 
 from greenhouse_protocol.enums import CaptureModality, SourceType
-from greenhouse_protocol.media import MediaCapture
+from greenhouse_protocol.media import CameraFrame, CameraPose, MediaCapture
 from greenhouse_protocol.provenance import RecordSource
+from greenhouse_protocol.sensor import CameraIntrinsics
 
 
 def _capture(**overrides: object) -> MediaCapture:
@@ -62,3 +63,46 @@ def test_capture_modalities_match_what_the_canopy_cameras_write() -> None:
         "INFRARED_LEFT",
         "INFRARED_RIGHT",
     }
+
+
+LEVEL = CameraPose(x_m=0.6, y_m=3.2, z_m=2.2, qw=1.0, qx=0.0, qy=0.0, qz=0.0)
+INTRINSICS = CameraIntrinsics(width=640, height=480, fx=457.0, fy=457.0, ppx=320, ppy=240)
+
+
+def test_a_pose_turns_by_a_unit_quaternion() -> None:
+    half_turn = CameraPose(x_m=0, y_m=0, z_m=1, qw=0.0, qx=0.0, qy=0.0, qz=1.0)
+
+    assert half_turn.qz == 1.0
+    with pytest.raises(ValidationError, match="unit quaternion"):
+        CameraPose(x_m=0, y_m=0, z_m=1, qw=1.0, qx=0.0, qy=0.0, qz=1.0)
+
+
+def test_a_frame_holds_a_pose_intrinsics_and_its_modalities_not_pixels() -> None:
+    frame = CameraFrame(
+        frame_id="sim_front_camera_20260101T001000Z_frame",
+        greenhouse_id="climate_box",
+        sensor_id="front_camera",
+        timestamp=datetime(2026, 1, 1, 0, 10, tzinfo=UTC),
+        pose=LEVEL,
+        intrinsics=INTRINSICS,
+        modalities=(CaptureModality.RGB, CaptureModality.DEPTH),
+        source=RecordSource(type=SourceType.SIMULATION, source_id="climate_box-climate-run"),
+    )
+
+    assert frame.capture_ids == ()
+    assert frame.delivered_at is None
+    assert CameraFrame.model_validate_json(frame.model_dump_json()) == frame
+
+
+def test_a_frame_holds_something() -> None:
+    with pytest.raises(ValidationError):
+        CameraFrame(
+            frame_id="empty",
+            greenhouse_id="climate_box",
+            sensor_id="front_camera",
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+            pose=LEVEL,
+            intrinsics=INTRINSICS,
+            modalities=(),
+            source=RecordSource(type=SourceType.SIMULATION, source_id="run"),
+        )
