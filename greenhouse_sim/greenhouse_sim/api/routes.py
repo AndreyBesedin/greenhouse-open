@@ -31,10 +31,11 @@ check; a route that comes to need one checks it first.
                                           both ?layout=open with another of its
                                           layouts, for its CFD solution, and
                                           ?set=fan:1 with its equipment
-                                          running, &open=roof_vent:1 with its
-                                          vents open, and &t=600 that many
-                                          seconds into the run, for its
-                                          climate
+                                          running, &schedule=60:fan:1,300:fan:0
+                                          switching it at those moments,
+                                          &open=roof_vent:1 with its vents
+                                          open, and &t=600 that many seconds
+                                          into the run, for its climate
     GET /api/scenarios/{id}/cfd/geometry  the boundaries of a scenario's air as
                                           a CFD solver is given them, snapped
                                           to its mesh; changed as for its scene
@@ -140,6 +141,7 @@ def respond(method: str, path: str) -> Response:
                     _pairs(query.get("set", []), "set"),
                     _seconds(query),
                     _pairs(query.get("open", []), "open"),
+                    _commands(query.get("schedule", [])),
                 )
             )
         case ["api", "scenarios", scenario_id, "cfd", "geometry"]:
@@ -243,6 +245,23 @@ def _pairs(requests: list[str], name: str) -> dict[str, float]:
         except ValueError:
             raise InvalidRequest(f"{name} wants key:number pairs, not {request!r}") from None
     return pairs
+
+
+def _commands(requests: list[str]) -> list[tuple[float, str, float]]:
+    """`schedule=seconds:actuator:level,…` as commands, in the order given."""
+    commands = []
+    for request in ",".join(requests).split(","):
+        if not request:
+            continue
+        time, _, rest = request.partition(":")
+        actuator, _, level = rest.partition(":")
+        try:
+            commands.append((float(time), actuator, float(level)))
+        except ValueError:
+            raise InvalidRequest(
+                f"schedule wants seconds:actuator:level commands, not {request!r}"
+            ) from None
+    return commands
 
 
 def _seconds(query: Query) -> float:

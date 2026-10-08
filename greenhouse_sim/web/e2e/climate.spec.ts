@@ -85,13 +85,18 @@ test("climate: a running heater warms its corner and the house through the run",
     await expect(run.getByRole("button", { name: "Play" })).toBeVisible();
   });
 
-  await test.step("without the heater, the house has cooled to 9 °C, its air saturated", async () => {
-    await page.getByRole("slider", { name: "Time into the run" }).fill("600");
+  await test.step("switched off ten minutes in, the house cools to 9 °C and saturates", async () => {
+    const slider = page.getByRole("slider", { name: "Time into the run" });
+    await slider.fill("600");
     await page
       .getByRole("group", { name: "Equipment" })
       .getByRole("checkbox", { name: "heater" })
       .uncheck();
-    await expect(middle).toHaveText(/temperature 9\.13 °C, humidity 100\.00 %$/);
+    // An override at its moment: the air then is as it was.
+    await expect(page).toHaveURL(/&schedule=600:heater:0(&|$)/);
+    await expect(middle).toHaveText(/temperature 14\.96 °C, humidity 84\.80 %$/);
+    await slider.fill("1200");
+    await expect(middle).toHaveText(/temperature 9\.06 °C, humidity 100\.00 %$/);
   });
 });
 
@@ -113,11 +118,16 @@ test("climate: a running dehumidifier dries the air around it", async ({ page })
     await expect(far).toHaveText(/temperature 9\.70 °C, humidity 99\.93 %$/);
   });
 
-  await test.step("with the heater on too, the whole house is drier", async () => {
+  await test.step("with the heater on too from the start, the whole house is drier", async () => {
+    const slider = page.getByRole("slider", { name: "Time into the run" });
+    // Set at the start, not overridden ten minutes in.
+    await slider.fill("0");
     await page
       .getByRole("group", { name: "Equipment" })
       .getByRole("checkbox", { name: "heater" })
       .check();
+    await expect(page).toHaveURL(/set=dehumidifier:1,heater:1(&|$)/);
+    await slider.fill("600");
     await expect(beside).toHaveText(/temperature 16\.59 °C, humidity 73\.19 %$/);
     await expect(far).toHaveText(/temperature 12\.87 °C, humidity 95\.72 %$/);
   });

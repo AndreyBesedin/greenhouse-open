@@ -321,6 +321,40 @@ body {
   min-width: 0;
 }
 
+/* A climate run's schedule: a marker on a bar over the run at each
+ * command's moment, filled once applied, and the commands listed. */
+.climate-schedule {
+  margin: 0 0 8px;
+}
+
+.climate-schedule-bar {
+  position: relative;
+  height: 10px;
+  margin: 0 6px 4px;
+  border-bottom: 1px solid #888888;
+}
+
+.climate-schedule-bar span {
+  position: absolute;
+  bottom: -4px;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border: 1px solid #333333;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.climate-schedule-bar span.applied {
+  background: #333333;
+}
+
+.climate-schedule ol {
+  margin: 0;
+  padding-left: 1.5em;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Room for a switch beside each piece's name, kept on one line, and the
  * openings' sliders lined up with the equipment's. */
 .opening-control,

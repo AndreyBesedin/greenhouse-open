@@ -43,6 +43,9 @@ export type SceneSource =
       /** How far into its climate run the drawn field is, in seconds, for
        * its climate. */
       time?: number;
+      /** Commands to its equipment after the start of its climate run, in
+       * the order given: its schedule and the overrides made. */
+      schedule?: ScheduledCommand[];
       /** Another of its fields, compared with the drawn one at the probes. */
       compare?: string;
       /** Points the drawn field is read at. */
@@ -57,6 +60,13 @@ export type SceneSource =
       levels?: Readonly<Record<string, number>>;
     }
   | { kind: "live"; scenarioId: string };
+
+/** A command to a piece of equipment at a moment of a climate run. */
+export interface ScheduledCommand {
+  timeS: number;
+  actuatorId: string;
+  level: number;
+}
 
 export type SceneState =
   | { status: "none" }
@@ -89,6 +99,7 @@ export function sourceFromSearch(search: string): SceneSource {
     const slice = sliceFrom(parameters.get("slice"));
     const compare = parameters.get("compare");
     const time = timeFrom(parameters.get("t"));
+    const schedule = scheduleFrom(parameters.get("schedule"));
     const probes = probesFrom(parameters.get("probes"));
     const camera = cameraFrom(parameters.get("camera"));
     return {
@@ -99,6 +110,7 @@ export function sourceFromSearch(search: string): SceneSource {
       ...(field && fieldView ? { fieldView } : {}),
       ...(field && slice ? { slice } : {}),
       ...(field && time !== null ? { time } : {}),
+      ...(field && schedule !== null ? { schedule } : {}),
       ...(field && compare && compare !== field ? { compare } : {}),
       ...(field && probes ? { probes } : {}),
       ...(parameters.get("cfd") === CFD_BOUNDARIES ? { cfdBoundaries: true as const } : {}),
@@ -188,6 +200,7 @@ function fieldQuery(source: {
   fieldView?: FieldView;
   slice?: Slice;
   time?: number;
+  schedule?: ScheduledCommand[];
   compare?: string;
   probes?: Point3[];
 }): string {
@@ -199,6 +212,9 @@ function fieldQuery(source: {
     source.fieldView === undefined ? "" : `&fieldView=${source.fieldView}`,
     source.slice === undefined ? "" : `&slice=${sliceText(source.slice)}`,
     source.time === undefined ? "" : `&t=${source.time}`,
+    source.schedule === undefined || source.schedule.length === 0
+      ? ""
+      : `&schedule=${scheduleText(source.schedule)}`,
     source.compare === undefined ? "" : `&compare=${encodeURIComponent(source.compare)}`,
     source.probes === undefined || source.probes.length === 0
       ? ""
@@ -239,6 +255,70 @@ export function changesQuery(
     : `${separator}${parts.map(([name, text]) => `${name}=${text}`).join("&")}`;
 }
 
+/** Commands as the address bar and the simulator's API both write them:
+ * `60:fan:1,300:heater:0`, in the order given. */
+export function scheduleText(commands: readonly ScheduledCommand[] | undefined): string {
+  return (commands ?? [])
+    .map(({ timeS, actuatorId, level }) => `${timeS}:${encodeURIComponent(actuatorId)}:${level}`)
+    .join(",");
+}
+
+/** The commands an address sets, or null when it sets none or says nothing
+ * readable. The simulator checks them itself. */
+export function scheduleFrom(value: string | null): ScheduledCommand[] | null {
+  if (!value) {
+    return null;
+  }
+  const commands: ScheduledCommand[] = [];
+  for (const command of value.split(",")) {
+    const [time, actuatorId, level] = command.split(":");
+    const timeS = Number(time);
+    const shown = Number(level);
+    if (!actuatorId || level === undefined || !Number.isFinite(timeS) || !Number.isFinite(shown)) {
+      return null;
+    }
+    commands.push({ timeS, actuatorId: decodeURIComponent(actuatorId), level: shown });
+  }
+  return commands;
+}
+
+/** A scenario's equipment's levels at the moment of its climate run drawn:
+ * those set from the start, then its commands up to that moment, in time
+ * order, the later winning at a moment. */
+export function levelsAt(source: {
+  levels?: Readonly<Record<string, number>>;
+  schedule?: readonly ScheduledCommand[];
+  time?: number;
+}): Record<string, number> {
+  const now = source.time ?? 0;
+  const levels: Record<string, number> = { ...(source.levels ?? {}) };
+  const applied = (source.schedule ?? [])
+    .map((command, order) => ({ command, order }))
+    .filter(({ command }) => command.timeS <= now)
+    .sort((a, b) => a.command.timeS - b.command.timeS || a.order - b.order);
+  for (const { command } of applied) {
+    levels[command.actuatorId] = command.level;
+  }
+  return levels;
+}
+
+/** The schedule with an override at a moment: each actuator's command at
+ * that moment replaced by the level it is set to, kept in time order. */
+export function withOverride(
+  schedule: readonly ScheduledCommand[],
+  timeS: number,
+  levels: Readonly<Record<string, number>>,
+): ScheduledCommand[] {
+  const kept = schedule.filter(
+    (command) => !(command.timeS === timeS && command.actuatorId in levels),
+  );
+  const added = Object.entries(levels).map(([actuatorId, level]) => ({ timeS, actuatorId, level }));
+  return [...kept, ...added]
+    .map((command, order) => ({ command, order }))
+    .sort((a, b) => a.command.timeS - b.command.timeS || a.order - b.order)
+    .map(({ command }) => command);
+}
+
 /** The moment an address asks for, in seconds from 0, or null. */
 function timeFrom(value: string | null): number | null {
   const time = Number(value ?? "");
@@ -277,7 +357,8 @@ function sceneUrl(source: SceneSource): string | null {
     case "plants":
       return `${PLANT_LAB_SCENE_URL}?${labRunQuery(source)}`;
     case "scenario":
-      return `/api/scenarios/${encodeURIComponent(source.scenarioId)}/scene${changesQuery(source, "?")}`;
+      // Its equipment as it stands at the moment of its climate run drawn.
+      return `/api/scenarios/${encodeURIComponent(source.scenarioId)}/scene${changesQuery({ ...source, levels: levelsAt(source) }, "?")}`;
   }
 }
 
