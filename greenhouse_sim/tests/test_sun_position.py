@@ -112,3 +112,18 @@ def test_the_api_serves_the_sun_with_the_weather() -> None:
     assert body["sun"]["azimuth_deg"] == pytest.approx(180.0, abs=2.0)
     assert body["sun_direction"]["z"] > 0
     assert json.loads(json.dumps(midnight.body))["sun"]["elevation_deg"] < 0
+
+
+def test_the_api_serves_the_suns_path_through_the_day() -> None:
+    body = json.loads(json.dumps(respond("GET", "/api/scenarios/climate_box/weather/day").body))
+    up = [
+        (time, sun)
+        for time, sun in zip(body["times_s"], body["sun"], strict=True)
+        if sun["elevation_deg"] > 0
+    ]
+
+    assert len(body["sun_directions"]) == len(body["times_s"]) == 145
+    # A short January day: up from about half past eight to half past four.
+    assert 8 * 3600 < up[0][0] < 9.5 * 3600
+    assert 16 * 3600 < up[-1][0] < 17.5 * 3600
+    assert up[0][1]["azimuth_deg"] < 180.0 < up[-1][1]["azimuth_deg"]

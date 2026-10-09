@@ -47,7 +47,8 @@ class WeatherAtAMoment(BaseModel):
 class WeatherThroughADay(BaseModel):
     """A scenario's weather through its runs' first day: when the day
     starts, and the weather every `every_s`, at those seconds from its
-    start."""
+    start, with where the sun stands and the direction towards it (P08.2),
+    for its path across the sky."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -55,6 +56,8 @@ class WeatherThroughADay(BaseModel):
     every_s: float
     times_s: list[float]
     weather: list[WeatherState]
+    sun: list[SunPosition]
+    sun_directions: list[Vector3]
 
 
 def _under(scenario_id: str, weather: str | None) -> ScenarioConfig:
@@ -98,6 +101,13 @@ def through_the_day(scenario_id: str, weather: str | None = None) -> WeatherThro
         states = [run.at(time) for time in times]
     except ValueError as unknown:
         raise InvalidRequest(str(unknown)) from unknown
+    start = config.run_start()
+    suns = [sun_position(start + timedelta(seconds=time), config.site) for time in times]
     return WeatherThroughADay(
-        start=config.run_start(), every_s=DAY_EVERY_S, times_s=times, weather=states
+        start=start,
+        every_s=DAY_EVERY_S,
+        times_s=times,
+        weather=states,
+        sun=suns,
+        sun_directions=[sun.direction(config.site) for sun in suns],
     )

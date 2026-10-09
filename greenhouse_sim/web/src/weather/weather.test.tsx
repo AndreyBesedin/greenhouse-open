@@ -65,6 +65,12 @@ const DAY_BODY = {
     ...WESTERLY_BODY.weather,
     air_temperature_c,
   })),
+  // Up only at noon.
+  sun: [-60, -15, 14.6, -15, -60].map((elevation_deg) => ({
+    ...WESTERLY_BODY.sun,
+    elevation_deg,
+  })),
+  sun_directions: [-60, -15, 14.6, -15, -60].map(() => WESTERLY_BODY.sun_direction),
 };
 const CALM: WeatherAtAMoment = {
   ...WESTERLY,
@@ -93,6 +99,9 @@ describe("the weather", () => {
       day: parseWeatherDay(DAY_BODY),
     });
     expect(() => parseWeatherDay({ ...DAY_BODY, times_s: [0] })).toThrow(
+      "not what the viewer expects",
+    );
+    expect(() => parseWeatherDay({ ...DAY_BODY, sun_directions: [] })).toThrow(
       "not what the viewer expects",
     );
   });
@@ -318,7 +327,7 @@ describe("the sun", () => {
       expect(marker.position.y).toBeCloseTo(3.2 - 18 * Math.cos((14.6 * Math.PI) / 180));
       expect(marker.position.z).toBeGreaterThan(2.4);
       expect(arrow.direction.y).toBeGreaterThan(0);
-      expect(arrow.length).toBeCloseTo(18 - 6);
+      expect(arrow.length).toBe(2);
     }
     expect(label).toMatchObject({ kind: "label", text: "sun 14.6° up, at 180° (S)" });
   });
