@@ -159,7 +159,7 @@ def test_the_api_serves_the_observations_and_the_truth() -> None:
 @pytest.mark.parametrize(
     ("query", "error"),
     [
-        ("?t=4000", "a run lasts from 0 to 3600 s, not 4000"),
+        ("?t=90000", "a run lasts from 0 to 86400 s, not 90000"),
         ("?set=boiler:1", "climate_box has no equipment 'boiler'"),
     ],
     ids=["after the run", "unknown equipment"],

@@ -184,3 +184,22 @@ test("climate: the house's air as one volume follows the run, beside it all off"
   await expect(house.getByTestId("house-air-°C")).toHaveText("Air 15.5 °C, all off 8.9 °C");
   await expect(house.getByTestId("house-air-ppm")).toHaveText("CO₂ 420.0 ppm, all off 420.0 ppm");
 });
+
+test("climate: a run lasts a day, its later field drawn from the whole house", async ({ page }) => {
+  await page.goto("/?scenario=climate_box&set=heater:1&field=climate&t=18000&probes=6:3.2:1.5");
+  const run = page.getByRole("group", { name: "Climate run" });
+  await expect(page.getByTestId("climate-time")).toHaveText("5 h 00 min", { timeout: 30_000 });
+
+  // The slider spans the day.
+  await expect(run.getByRole("slider", { name: "Time into the run" })).toHaveAttribute(
+    "max",
+    "86400",
+  );
+  // The house has long settled, heated, and all off at the night's 8 °C.
+  await expect(page.getByTestId("house-air-°C")).toHaveText("Air 15.5 °C, all off 8.0 °C");
+  // The probe reads the grid run started at four hours, from the whole house.
+  await expect(page.getByTestId("chart-P1-temperature_c")).toHaveText(
+    "temperature 14.78 °C, all off 8.00 °C",
+    { timeout: 30_000 },
+  );
+});

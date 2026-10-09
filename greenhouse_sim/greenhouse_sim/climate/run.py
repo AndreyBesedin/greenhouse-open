@@ -111,6 +111,9 @@ class ClimateRun:
         self.vents = tuple(vents)
         self._base_velocity = base.field("base", grid).channels[AirQuantity.VELOCITY]
         self._steady: dict[_Levels, tuple[SourceTerms, FaceFlows, Transport]] = {}
+        # When its air starts: at the start of the scenario's runs, unless it
+        # is started later (`started_at`).
+        self.start_s = 0.0
         self._working = threading.RLock()
         start = humidity_ratio_g_kg(settings.start_temperature_c, settings.start_humidity_pct)
         self._kept: dict[float, AirState] = {
@@ -120,6 +123,26 @@ class ClimateRun:
                 co2=np.full((nz, ny, nx), settings.start_co2_ppm),
             )
         }
+
+    def started_at(self, start_s: float, air: AirState) -> ClimateRun:
+        """The same run, under the same schedule and weather, but with its air
+        starting at `start_s` as `air`: the grid run for a later part of a
+        day (`greenhouse_sim.climate.day`). What its equipment does at steady
+        levels is shared with this run, as it is the same."""
+        later = ClimateRun(
+            self.base,
+            self.equipment,
+            self.schedule,
+            self.settings,
+            self.grid,
+            self.solid,
+            self.weather,
+            self.vents,
+        )
+        later._steady = self._steady
+        later.start_s = start_s
+        later._kept = {start_s: air}
+        return later
 
     def levels_at(self, time_s: float) -> dict[str, float]:
         """Each piece of equipment's level at `time_s`."""
@@ -180,8 +203,8 @@ class ClimateRun:
     def air_at(self, time_s: float) -> AirState:
         """The air in every cell at `time_s`, from the latest moment kept
         before it."""
-        if time_s < 0:
-            raise ValueError("a climate run starts at 0 s")
+        if time_s < self.start_s:
+            raise ValueError(f"this climate run starts at {self.start_s:g} s")
         with self._working:
             return self._worked_to(time_s)
 
@@ -227,14 +250,17 @@ class ClimateRun:
         CO2."""
         if grid != self.grid:
             raise ValueError("a climate run is drawn on its own grid")
-        air = self.air_at(time_s)
+        return self.field_of(self.air_at(time_s), field_id, time_s)
+
+    def field_of(self, air: AirState, field_id: str, time_s: float) -> EnvironmentField:
+        """`air` as the field at `time_s`, in this run's flow then."""
         velocity = self.flows_at(time_s).velocity() + self._draughts(air, time_s)
         temperature = _filled(air.temperature, self.solid)
         humidity = _filled(air.humidity, self.solid)
         return EnvironmentField(
             field_id=field_id,
-            source=f"climate:{self.base.field(field_id, grid).source}",
-            grid=grid,
+            source=f"climate:{self.base.field(field_id, self.grid).source}",
+            grid=self.grid,
             time_s=time_s,
             channels={
                 AirQuantity.VELOCITY: velocity,

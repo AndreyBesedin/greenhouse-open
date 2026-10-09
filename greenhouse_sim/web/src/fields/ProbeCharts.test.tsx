@@ -52,7 +52,9 @@ describe("probes' charts through a climate run", () => {
 
     expect(range).toEqual({ min: 12, max: 30 });
     expect(chartRange([0, 0], [0])).toEqual({ min: -1, max: 1 });
-    expect(chartPoints([0, 1800, 3600], [12, 21, 30], range)).toBe("0.0,70.0 120.0,35.0 240.0,0.0");
+    expect(chartPoints([0, 3600, 7200], [12, 21, 30], range)).toBe("0.0,70.0 120.0,35.0 240.0,0.0");
+    // Later in the day, from the start of the grid run that drew them.
+    expect(chartPoints([10800, 14400], [12, 21], range)).toBe("0.0,70.0 120.0,35.0");
   });
 
   it("draw a line for each run, and say what both read at the moment drawn", () => {

@@ -27,8 +27,13 @@ export interface FieldChanges {
   weather?: string | undefined;
 }
 
-/** How long a climate run lasts, in seconds, as the simulator runs it. */
-export const CLIMATE_RUN_S = 3600;
+/** How long a climate run lasts, in seconds, as the simulator runs it: a
+ * day. */
+export const CLIMATE_RUN_S = 86_400;
+/** How long a grid run draws the field for, at most: through the first two
+ * hours from the start, and from an hour before the moment's hour after
+ * them. */
+export const GRID_RUN_S = 7200;
 
 /** Where a scenario's field is published (`GET /api/scenarios/{id}/fields/{name}`),
  * with another of its layouts if one is named, and, for its climate, its

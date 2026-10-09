@@ -77,8 +77,11 @@ without it. A scenario with equipment offers its `climate` too: its own air
 with its equipment running at the levels the Equipment panel sets, reloaded
 as they change (`?scenario=climate_box&field=climate&set=fan:1`, its fan's
 jet blowing down the house). A fan carries an arrow the way it blows. The
-climate is its air through a climate run, an hour long: "Climate run" moves
-through it a minute at a time, or plays it (`&t=600`, ten minutes in), its
+climate is its air through a climate run, a day long: "Climate run" moves
+through it a minute at a time, or plays it, a minute at a time through its
+first hour and five minutes at a time after it (`&t=600`, ten minutes in;
+`&t=18000`, five hours), "House air" charts the house's air as one volume
+through it (`GET /api/scenarios/{id}/climate/house`), its
 colours keeping the widest range its moments have reached, and a
 temperature slice shows a heater warming its corner and the house
 (`&set=heater:1&fieldView=slice&slice=temperature:z:0.75`), and a humidity

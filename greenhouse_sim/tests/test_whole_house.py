@@ -14,7 +14,7 @@ from greenhouse_sim.climate.house import WholeHouse, grid_mean
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
-from greenhouse_sim.services.fields import _climate_run, air_grid
+from greenhouse_sim.services.fields import _climate_day, air_grid
 from greenhouse_sim.weather.presets import COLD_SPRING_DAY
 from greenhouse_sim.world.equipment import Heater
 
@@ -34,7 +34,7 @@ VENTING_TEMPERATURE_C = 2.0
 def _run(
     levels: tuple[tuple[str, float], ...] = (), openings: tuple[tuple[str, float], ...] = ()
 ) -> ClimateRun:
-    return _climate_run("climate_box", "default", "default", levels, openings, ())
+    return _climate_day("climate_box", "default", "default", levels, openings, ()).run
 
 
 @pytest.mark.parametrize(
@@ -100,7 +100,7 @@ def test_shut_off_from_the_outside_the_water_it_loses_is_removed_or_condensed() 
 
 
 def test_it_follows_the_weather_through_a_day() -> None:
-    house = WholeHouse(_climate_run("climate_box", "default", "cold_spring_day", (), (), ()))
+    house = _climate_day("climate_box", "default", "cold_spring_day", (), (), ()).house
     dawn, afternoon = house.air_at(6.5 * 3600), house.air_at(15.5 * 3600)
 
     # Shut and unheated, the house follows the outside through its glass.
@@ -133,7 +133,7 @@ def test_the_api_serves_the_houses_air_beside_the_run_all_off() -> None:
 @pytest.mark.parametrize(
     ("path", "status"),
     [
-        ("/api/scenarios/climate_box/climate/house?t=4000", HTTPStatus.BAD_REQUEST),
+        ("/api/scenarios/climate_box/climate/house?t=90000", HTTPStatus.BAD_REQUEST),
         ("/api/scenarios/sensor_lab/climate/house", HTTPStatus.NOT_FOUND),
         ("/api/scenarios/climate_box/climate/house?weather=foggy", HTTPStatus.NOT_FOUND),
     ],
