@@ -52,9 +52,9 @@ test("sensors: a clean sensor's reading through a run is the truth beside it", a
   const panel = page.getByRole("region", { name: "Sensor" });
   // Ten minutes in, the heater's warmth has reached the front half of the
   // house, through glass that passes little in the night's still air.
-  await expect(panel.getByTestId("sensor-reading")).toHaveText("16.12 °C at 10 min");
+  await expect(panel.getByTestId("sensor-reading")).toHaveText("15.91 °C at 10 min");
   await expect(panel.getByRole("complementary", { name: "Truth, for QA only" })).toBeVisible();
-  await expect(panel.getByTestId("sensor-truth")).toHaveText("16.12 °C at 10 min");
+  await expect(panel.getByTestId("sensor-truth")).toHaveText("15.91 °C at 10 min");
   // A reading a minute, on the truth's line.
   await expect(panel.locator(".sensor-chart-reading")).toHaveCount(11);
 
@@ -74,8 +74,8 @@ test("sensors: an imperfect sensor errs as configured, and the QA switch cleans 
   // Biased, drifting and noisy, to a tenth of a degree, and 30 s late: by
   // ten minutes, its latest reading is the one taken at nine. Two of its
   // samples dropped out.
-  await expect(panel.getByTestId("sensor-reading")).toHaveText("23.60 °C at 9 min");
-  await expect(panel.getByTestId("sensor-truth")).toHaveText("23.24 °C at 10 min");
+  await expect(panel.getByTestId("sensor-reading")).toHaveText("23.30 °C at 9 min");
+  await expect(panel.getByTestId("sensor-truth")).toHaveText("22.96 °C at 10 min");
   await expect(panel.locator(".sensor-chart-reading")).toHaveCount(8);
 
   await expect(panel.getByTestId("sensor-freshness")).toHaveText(
@@ -83,7 +83,7 @@ test("sensors: an imperfect sensor errs as configured, and the QA switch cleans 
   );
 
   await panel.getByRole("checkbox", { name: "Imperfections" }).uncheck();
-  await expect(panel.getByTestId("sensor-reading")).toHaveText("23.24 °C at 10 min");
+  await expect(panel.getByTestId("sensor-reading")).toHaveText("22.96 °C at 10 min");
   await expect(panel.locator(".sensor-chart-reading")).toHaveCount(11);
   await expect(panel.getByTestId("sensor-freshness")).toHaveText(
     "Fresh: its reading of 10 min has come.",

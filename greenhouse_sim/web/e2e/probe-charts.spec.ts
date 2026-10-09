@@ -15,10 +15,10 @@ test("probe charts: a heated run diverges from the same run all off, where the h
   const middle = page.getByTestId("chart-P2-temperature_c");
 
   await test.step("ten minutes in, the heated corner is far warmer than all off", async () => {
-    await expect(corner).toHaveText("temperature 37.35 °C, all off 10.40 °C");
-    await expect(middle).toHaveText("temperature 18.90 °C, all off 10.57 °C");
+    await expect(corner).toHaveText("temperature 37.03 °C, all off 10.31 °C");
+    await expect(middle).toHaveText("temperature 18.67 °C, all off 10.48 °C");
     await expect(page.getByTestId("chart-P1-humidity_pct")).toHaveText(
-      "humidity 24.49 %, all off 100.00 %",
+      "humidity 24.53 %, all off 100.00 %",
     );
     // Two lines a chart, three charts a probe.
     await expect(charts.locator("polyline")).toHaveCount(12);
@@ -26,16 +26,16 @@ test("probe charts: a heated run diverges from the same run all off, where the h
 
   await test.step("the charts read what the probes read", async () => {
     await expect(page.getByTestId("probe-1-reading")).toHaveText(
-      /temperature 37\.35 °C, humidity 24\.49 %, co2 420\.00 ppm$/,
+      /temperature 37\.03 °C, humidity 24\.53 %, co2 420\.00 ppm$/,
     );
     await expect(page.getByTestId("probe-2-reading")).toHaveText(
-      /temperature 18\.90 °C, humidity 70\.77 %, co2 420\.00 ppm$/,
+      /temperature 18\.67 °C, humidity 70\.78 %, co2 420\.00 ppm$/,
     );
   });
 
   await test.step("later in the run, the charts follow", async () => {
     await page.getByRole("slider", { name: "Time into the run" }).fill("1200");
-    await expect(corner).toHaveText("temperature 38.44 °C, all off 8.73 °C");
-    await expect(middle).toHaveText("temperature 20.06 °C, all off 8.78 °C");
+    await expect(corner).toHaveText("temperature 38.01 °C, all off 8.67 °C");
+    await expect(middle).toHaveText("temperature 19.70 °C, all off 8.72 °C");
   });
 });

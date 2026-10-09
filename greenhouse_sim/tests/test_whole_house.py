@@ -19,6 +19,8 @@ from greenhouse_sim.weather.presets import COLD_SPRING_DAY
 from greenhouse_sim.world.equipment import Heater
 
 BOX = SCENARIO_REGISTRY["climate_box"]
+# Its glass passing nothing, and its gaps leaking nothing.
+SEALED = {"glazing_u_w_m2k": 0.0, "infiltration_per_h": 0.0, "infiltration_per_h_per_m_s": 0.0}
 DAY_S = 86_400.0
 # How closely the whole house follows the grid run's mean, as measured on
 # the climate box: in a shut house its temperature to a few tenths of a
@@ -74,7 +76,7 @@ def _shut(levels: dict[str, float], weather: object = None) -> WholeHouse:
             base=config.airflow,
             equipment=config.layout.equipment,
             schedule=Schedule.from_start(levels),
-            settings=config.climate.model_copy(update={"glazing_u_w_m2k": 0.0}),
+            settings=config.climate.model_copy(update=SEALED),
             grid=air_grid(config),
             solid=cfd.geometry("climate_box").solid(),
             weather=config.run_weather(),

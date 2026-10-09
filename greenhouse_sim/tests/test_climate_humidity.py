@@ -37,7 +37,10 @@ START = AirState(
     humidity=np.full((NZ, NY, NX), float(humidity_ratio_g_kg(16.0, 85.0))),
     co2=np.full((NZ, NY, NX), 420.0),
 )
-SHUT = CONFIG.climate.model_copy(update={"glazing_u_w_m2k": 0.0})
+# Sealed: its glass passes nothing, and it leaks nothing.
+SHUT = CONFIG.climate.model_copy(
+    update={"glazing_u_w_m2k": 0.0, "infiltration_per_h": 0.0, "infiltration_per_h_per_m_s": 0.0}
+)
 OUTSIDE = CONFIG.run_weather().at(0.0)
 
 
@@ -107,7 +110,9 @@ def test_a_dehumidifier_never_takes_more_than_the_air_holds() -> None:
 
 
 def test_cooling_air_condenses_what_it_can_no_longer_hold() -> None:
-    transport = _transport(STILL, CONFIG.climate)
+    # Through its glass, its gaps sealed so that its water stays.
+    unleaking = {"infiltration_per_h": 0.0, "infiltration_per_h_per_m_s": 0.0}
+    transport = _transport(STILL, CONFIG.climate.model_copy(update=unleaking))
     nothing = source_terms(DEHUMIDIFIER, 0.0, GRID, SOLID)
 
     after = transport.advance(START, nothing, 600, OUTSIDE)

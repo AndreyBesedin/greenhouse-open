@@ -1,6 +1,6 @@
 # P07: External weather and greenhouse boundary coupling
 
-**Status:** in progress: P07.1 to P07.4 done, P07.5 next. Part of the
+**Status:** in progress: P07.1 to P07.5 done, P07.6 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -247,7 +247,7 @@ station's readings, never the weather source itself.
 | P07.2 | `feat(weather): add synthetic day and night weather presets` | Done |
 | P07.3 | `feat(climate): run a whole day` | Done |
 | P07.4 | `feat(boundary): couple the glazing to the changing outside` | Done |
-| P07.5 | `feat(boundary): add infiltration and the outside's water and CO₂` | Planned |
+| P07.5 | `feat(boundary): add infiltration and the outside's water and CO₂` | Done |
 | P07.6 | `feat(wind): drive the openings by wind and stack pressure` | Planned |
 | P07.7 | `feat(weather): import recorded weather` | Planned |
 | P07.8 | `test(weather): compare a controlled and an uncontrolled day` | Planned |
@@ -510,6 +510,28 @@ Infiltration growing with wind, and the outside's water and CO₂ at each
 moment through every path. Visible result: opening a vent under dry outside
 air dries the house; a windy night cools a shut house faster than a calm
 one. Tests: no exchange path, no exchange; the house's water budget closes.
+
+#### As implemented
+
+- **A shut house leaks** (`ClimateSettings.infiltration_per_h`, 0.25, and
+  `infiltration_per_h_per_m_s`, 0.1): ACH = 0.25 + 0.1 v of its air an
+  hour. On the grid (`Transport.leaks_m3_s`), the leak is spread over the
+  air cells against the walls and roof, each by its share of their area.
+  It carries the outside's heat, water and CO₂, as an open vent does. The
+  whole house takes the same total. Zero for both seals a house.
+- **The outside's water and CO₂ at each moment** reach the house by every
+  path that exchanges air: the gaps and the open doors and vents. The
+  glass passes heat alone.
+- **Checked:** sealed, the house keeps its water and CO₂ to rounding under
+  a dry outside. Leaking, the whole house's CO₂ and water relax towards
+  the outside's as e^(−0.25) an hour, exactly. The grid's CO₂ follows the
+  whole house's within 5 ppm, and in an 8 m/s wind it leaks faster. Under
+  the cold spring day's dry night air, an open roof vent dries the house.
+- **The recorded numbers move a little again:** the climate box's leaks
+  take about 25 W/K, beside its still glass's 750. Ten minutes in, heated:
+  37.03 °C beside the heater (37.35) against 10.31 all off (10.40); it
+  settles at 20.8 °C (21.2). The browser tests carry them. Tests that
+  seal a house (P05's budget tests) now seal its gaps too.
 
 ### P07.6: Wind and stack pressure at the openings
 

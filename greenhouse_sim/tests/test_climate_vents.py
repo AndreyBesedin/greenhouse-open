@@ -23,8 +23,11 @@ CONFIG = SCENARIO_REGISTRY["climate_box"]
 GRID = air_grid(CONFIG)
 SOLID = cfd.geometry("climate_box").solid()
 AIR = ~SOLID
-# The glass shut, so that only the vents exchange anything with the outside.
-SHUT = CONFIG.climate.model_copy(update={"glazing_u_w_m2k": 0.0})
+# The glass shut, and the gaps sealed, so that only the vents exchange
+# anything with the outside.
+SHUT = CONFIG.climate.model_copy(
+    update={"glazing_u_w_m2k": 0.0, "infiltration_per_h": 0.0, "infiltration_per_h_per_m_s": 0.0}
+)
 SPEED_M_S = CONFIG.climate.vent_exchange_m_s
 # Under the roof vent, in the top layer of the house's air.
 UNDER_THE_VENT = Vector3(x=6.0, y=2.5, z=3.75)
