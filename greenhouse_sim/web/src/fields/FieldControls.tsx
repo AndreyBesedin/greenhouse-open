@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 
 import { formatValue } from "../readouts";
-import { FIELD_VIEWS, type FieldView, SLICE_AXES, type Slice, type SliceQuantity } from "./display";
+import {
+  FIELD_VIEWS,
+  type FieldView,
+  quantityTitle,
+  SLICE_AXES,
+  type Slice,
+  type SliceQuantity,
+} from "./display";
 import { sliceQuantities } from "./drawing";
 import { sliceExtent } from "./slice";
 import { type FieldState, layoutQuery } from "./source";
@@ -128,7 +135,7 @@ export function FieldControls({
             >
               {sliceQuantities(field).map((quantity) => (
                 <option key={quantity} value={quantity}>
-                  {quantity === "speed" ? "air speed" : quantity}
+                  {quantityTitle(quantity)}
                 </option>
               ))}
             </select>

@@ -15,9 +15,10 @@ The day follows the site's clock (`greenhouse_sim.world.site`):
   drawn afresh every `GUST_EVERY_S`, and in between linearly, seeded by the
   scenario's seed and the moment, so that the same seed always gives the
   same gusts;
+- **radiation:** a clear sky's under the sun where it stands at the site
+  (`greenhouse_sim.solar.sky`), nothing while it is down;
 - **the rest:** CO2, cloud cover and pressure (the standard atmosphere's at
-  the site's elevation, unless given) hold all day. Radiation is the sun's
-  (P08), and nothing until then.
+  the site's elevation, unless given) hold all day.
 """
 
 import math
@@ -37,6 +38,8 @@ from pydantic import (
 
 from greenhouse_sim.climate.psychrometrics import humidity_ratio_g_kg, relative_humidity_pct
 from greenhouse_sim.core.rng import seeded_rng
+from greenhouse_sim.solar.position import sun_position
+from greenhouse_sim.solar.sky import clear_sky_ghi_w_m2
 from greenhouse_sim.weather.sources import WeatherSource
 from greenhouse_sim.weather.state import OUTSIDE_CO2_PPM, Percent, WeatherState
 from greenhouse_sim.world.site import Bearing, Site, bearing
@@ -155,5 +158,6 @@ class _Synthetic:
                 weather.wind_from_deg + weather.veer_deg * hour / HOURS_IN_A_DAY
             ),
             barometric_pressure_hpa=self.pressure_hpa,
+            global_radiation_w_m2=clear_sky_ghi_w_m2(sun_position(moment, self.site)),
             cloud_cover_pct=weather.cloud_cover_pct,
         )

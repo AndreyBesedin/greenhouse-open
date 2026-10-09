@@ -11,7 +11,9 @@ export const FIELD_SCHEMA = {
         "temperature",
         "humidity",
         "co2",
-        "pressure"
+        "pressure",
+        "par",
+        "irradiance"
       ],
       "title": "AirQuantity",
       "type": "string"

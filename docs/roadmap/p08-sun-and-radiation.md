@@ -1,6 +1,6 @@
 # P08: Sun position, glazing and radiation propagation
 
-**Status:** in progress: P08.1 and P08.2 done, P08.3 next. Part of the
+**Status:** in progress: P08.1 to P08.3 done, P08.4 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -177,7 +177,7 @@ to here.
 | --- | --- | --- |
 | P08.1 | `feat(solar): implement deterministic sun position model` | Done |
 | P08.2 | `feat(viewer): add sun lighting and visible shadows` | Done |
-| P08.3 | `feat(radiation): define the radiation field and its units` | Planned |
+| P08.3 | `feat(radiation): define the radiation field and its units` | Done |
 | P08.4 | `feat(glazing): add transmission and incidence-angle attenuation` | Planned |
 | P08.5 | `feat(radiation): add geometric shadow and occlusion tracing` | Planned |
 | P08.6 | `feat(radiation): add plant canopy interception hooks` | Planned |
@@ -256,6 +256,41 @@ its beam as DNI, PAR from it, and the radiation at a point or surface
 inside, the beam alone and unshaded for now; the `radiation` field.
 Visible result: a false-colour floor of PAR. Tests: a level surface takes
 DNI cos Z; a surface facing the sun takes DNI; the units' conversions.
+
+#### As implemented
+
+- **`solar.sky`:** Haurwitz's clear sky; the sun's irradiance above the
+  atmosphere, 1361 W/m² by 1 ± 0.033 through the year, greatest on
+  3 January; `OutsideLight`, the GHI split into the beam's DNI and the
+  diffuse DHI. Until P08.7 the light is all beam, as far as the beam can
+  carry it: never more than the sun gives above the atmosphere, the rest
+  diffuse, so that DNI cos Z + DHI is always the GHI. PAR is
+  0.47 × 4.57 = 2.148 µmol/m²/s per W/m².
+- **The weather's radiation:** a synthetic day's is now a clear sky's
+  under the sun where it stands, nothing while it is down; the clouds
+  dim it from P08.7. Constant weather's radiation is only while the sun
+  is up. Nothing used the radiation yet, so no number of a climate run
+  moves; the sun's heat comes in P08.8.
+- **`solar.inside.Sunlight`:** the light at a point inside on a surface
+  facing a given way, `on(normal, time_s, point)`: the beam by its cosine
+  with the sun, the diffuse by the surface's view of the sky; and `at`,
+  on a level surface at each of the climate grid's cells' centres. For
+  now every point takes the light as it is outside.
+- **The radiation field rides on the climate field:** rather than a field
+  of its own, the climate run's field at a moment carries two more
+  channels, `par` (µmol/m²/s) and `irradiance` (W/m²), so that one
+  request gives the air and its light at the same moment, under the
+  sunlight the view is drawn in, and a probe reads both.
+  `AirQuantity` gains them. The field schema's version is unchanged:
+  its quantities grew, but its shape did not.
+- **Served with the weather:** `GET /api/scenarios/{id}/weather` gains
+  `light`: GHI, DNI, DHI and PAR.
+- **The viewer:** a slice can be of `par` or `irradiance`
+  (`&fieldView=slice&slice=par:z:0.25`), its legend "PAR (µmol/m²/s)"; a
+  probe reads both, after the air; the Weather panel adds the light
+  ("229 W/m², PAR 493 µmol/m²/s", or "dark"); the day's chart adds the
+  sunshine. Under a clear spring day at 12:45 on 1 January the climate
+  box's floor takes 229.5 W/m², 492.9 µmol/m²/s of PAR.
 
 ### P08.4: The glass
 

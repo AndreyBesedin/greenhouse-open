@@ -38,7 +38,8 @@ class OutsideConditions(BaseModel):
     # None when it is not known, as in a recording without a wind vane's:
     # such a wind drives nothing that needs its direction.
     wind_direction_deg: Bearing | None = 0.0
-    # Carried for the sun (P08), and unused until then.
+    # The sun's and the sky's light on a level surface, its global
+    # horizontal irradiance (`greenhouse_sim.solar.sky`).
     global_radiation_w_m2: NonNegativeFloat = 0.0
     cloud_cover_pct: Percent = 0.0
 

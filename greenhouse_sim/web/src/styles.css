@@ -384,6 +384,10 @@ body {
   stroke: #555555;
 }
 
+.weather-day-chart .day-sunshine {
+  stroke: #e6a800;
+}
+
 .weather-day-now {
   stroke: #ff8c1a;
   stroke-width: 1;

@@ -25,7 +25,16 @@ const SLICE_QUANTITIES: ReadonlySet<string> = new Set<SliceQuantity>([
   "humidity",
   "co2",
   "pressure",
+  "par",
+  "irradiance",
 ]);
+// The quantities named otherwise than the field names them.
+const TITLES: Partial<Record<SliceQuantity, string>> = { speed: "air speed", par: "PAR" };
+
+/** A quantity as the viewer names it: "air speed", "PAR", "temperature". */
+export function quantityTitle(quantity: SliceQuantity): string {
+  return TITLES[quantity] ?? quantity;
+}
 // A slice is written quantity:axis:position, as `temperature:z:1.75`.
 const SLICE_PARTS = 3;
 

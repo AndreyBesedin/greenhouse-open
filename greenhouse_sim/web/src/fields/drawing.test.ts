@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { arrowSpacing, fieldArrows, MATRIX_SIZE, MAX_ARROWS } from "./arrows";
-import { sliceFrom, sliceText } from "./display";
+import { quantityTitle, sliceFrom, sliceText } from "./display";
 import { defaultSlice, heldThrough, quantityScale, sliceQuantities } from "./drawing";
 import { drawnPoints, STEPS_PER_SEGMENT, streamlineGeometry } from "./FieldStreamlines";
 import type { Channel, EnvironmentField } from "./field";
@@ -215,6 +215,14 @@ describe("a slice through a field", () => {
     expect(sliceFrom("temperature:w:1")).toBeUndefined();
     expect(sliceFrom("wind:z:1")).toBeUndefined();
     expect(sliceFrom("speed:z:")).toBeUndefined();
+  });
+
+  it("can be of the light: its PAR, or its irradiance", () => {
+    expect(sliceFrom("par:z:0.25")).toEqual({ quantity: "par", axis: "z", position: 0.25 });
+    expect(sliceFrom("irradiance:x:6")).toEqual({ quantity: "irradiance", axis: "x", position: 6 });
+    expect(quantityTitle("par")).toBe("PAR");
+    expect(quantityTitle("speed")).toBe("air speed");
+    expect(quantityTitle("irradiance")).toBe("irradiance");
   });
 });
 

@@ -4,7 +4,7 @@
 /**
  * One thing a field says about the air at a point.
  */
-export type AirQuantity = "velocity" | "temperature" | "humidity" | "co2" | "pressure";
+export type AirQuantity = "velocity" | "temperature" | "humidity" | "co2" | "pressure" | "par" | "irradiance";
 
 /**
  * An environment field as it is published to a viewer: its grid, and

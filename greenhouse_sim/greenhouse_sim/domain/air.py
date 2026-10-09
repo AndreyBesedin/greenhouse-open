@@ -15,6 +15,10 @@ class AirQuantity(StrEnum):
     CO2 = "co2"
     # Relative to the outside air's.
     PRESSURE = "pressure"
+    # The sun's and the sky's light on a level surface (P08): its
+    # photosynthetically active photons, and its shortwave energy.
+    PAR = "par"
+    IRRADIANCE = "irradiance"
 
 
 # Each quantity's unit, as its values are given.
@@ -24,6 +28,8 @@ AIR_UNITS: Final = {
     AirQuantity.HUMIDITY: "%",
     AirQuantity.CO2: "ppm",
     AirQuantity.PRESSURE: "Pa",
+    AirQuantity.PAR: "µmol/m²/s",
+    AirQuantity.IRRADIANCE: "W/m²",
 }
 # The quantities with a direction: three components, along x, y and z.
 VECTOR_QUANTITIES: Final = frozenset({AirQuantity.VELOCITY})
