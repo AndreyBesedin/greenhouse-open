@@ -38,6 +38,7 @@ from greenhouse_sim.cfd.geometry import cfd_geometry
 from greenhouse_sim.cfd.results import CfdAirflow, kept_result
 from greenhouse_sim.climate.commands import Command, Schedule
 from greenhouse_sim.climate.day import ClimateDay, window_start
+from greenhouse_sim.climate.glazing import GlazingAt, glazed_cells
 from greenhouse_sim.climate.house import HouseTrace, house_trace
 from greenhouse_sim.climate.probes import ClimateProbes, probe_series
 from greenhouse_sim.climate.run import ClimateRun
@@ -191,6 +192,7 @@ def _new_climate_run(
         solid=geometry.solid(),
         weather=config.run_weather(),
         vents=vents,
+        glazed=glazed_cells(config.envelope, grid, geometry.solid()),
     )
 
 
@@ -389,6 +391,29 @@ def house_air(
         _climate_day(key_scenario, key_layout, key_weather, (), key_openings, ()).house,
         _moments(until_s),
     )
+
+
+def glazing(
+    scenario_id: str,
+    layout: str | None = None,
+    levels: Mapping[str, float] | None = None,
+    openings: Mapping[str, float] | None = None,
+    commands: Sequence[Commanded] = (),
+    time_s: float = 0.0,
+    weather: str | None = None,
+) -> GlazingAt:
+    """A scenario's glazing at `time_s` into its climate run
+    (`greenhouse_sim.climate.glazing`): each wall's and roof slope's air,
+    temperature and heat passed. Asked as its climate field is, and refused
+    as it is."""
+    if not 0.0 <= time_s <= LONGEST_RUN_S:
+        raise InvalidRequest(f"a climate run lasts from 0 to {LONGEST_RUN_S:g} s, not {time_s:g}")
+    name = layout or DEFAULT_LAYOUT
+    models = _models(scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER)
+    climate = models.get(CLIMATE)
+    if not isinstance(climate, _Climate):
+        raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
+    return _climate_day(*climate.key).glazing_at(time_s)
 
 
 def air_through_a_run(

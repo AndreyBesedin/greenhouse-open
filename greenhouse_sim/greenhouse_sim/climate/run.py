@@ -33,6 +33,7 @@ import numpy as np
 
 from greenhouse_sim.airflow.contract import AirflowModel
 from greenhouse_sim.climate.commands import Schedule
+from greenhouse_sim.climate.glazing import GlazedCells, GlazingAt, glazing_at
 from greenhouse_sim.climate.projection import FaceFlows, conserving, face_flows
 from greenhouse_sim.climate.psychrometrics import humidity_ratio_g_kg, relative_humidity_pct
 from greenhouse_sim.climate.settings import ClimateSettings
@@ -97,6 +98,7 @@ class ClimateRun:
         solid: np.ndarray,
         weather: RunWeather,
         vents: Sequence[Vent] = (),
+        glazed: Mapping[str, GlazedCells] | None = None,
     ) -> None:
         nx, ny, nz = grid.shape
         if solid.shape != (nz, ny, nx):
@@ -109,6 +111,7 @@ class ClimateRun:
         self.grid = grid
         self.solid = solid
         self.vents = tuple(vents)
+        self.glazed = dict(glazed or {})
         self._base_velocity = base.field("base", grid).channels[AirQuantity.VELOCITY]
         self._steady: dict[_Levels, tuple[SourceTerms, FaceFlows, Transport]] = {}
         # When its air starts: at the start of the scenario's runs, unless it
@@ -138,6 +141,7 @@ class ClimateRun:
             self.solid,
             self.weather,
             self.vents,
+            self.glazed,
         )
         later._steady = self._steady
         later.start_s = start_s
@@ -243,6 +247,17 @@ class ClimateRun:
                 self.grid, air.temperature, outside_c, self.settings.vent_exchange_m_s
             )
         return draughts
+
+    def glazing_at(self, time_s: float) -> GlazingAt:
+        """Each glazed surface at `time_s`: the air against it, its own
+        temperature, and the heat it passes (`climate.glazing`)."""
+        return glazing_at(
+            self.glazed,
+            self.air_at(time_s).temperature,
+            self.weather.at(time_s),
+            self.settings.glazing_u_w_m2k,
+            time_s,
+        )
 
     def field(self, field_id: str, grid: FieldGrid, time_s: float = 0.0) -> EnvironmentField:
         """The air at `time_s`: its velocity, with the draughts through open

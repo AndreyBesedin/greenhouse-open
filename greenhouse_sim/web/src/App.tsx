@@ -25,6 +25,7 @@ import { FieldLegend } from "./fields/FieldLegend";
 import { FieldProbes } from "./fields/FieldProbes";
 import { FieldSlice } from "./fields/FieldSlice";
 import { FieldStreamlines } from "./fields/FieldStreamlines";
+import { type GlazingState, glazingUrl, loadGlazing, withGlazing } from "./fields/glazing";
 import { HouseAir, type HouseAirState, houseAirUrl, loadHouseAir } from "./fields/HouseAir";
 import {
   loadProbeCharts,
@@ -104,6 +105,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [playingClimate, setPlayingClimate] = useState(false);
   const [probeCharts, setProbeCharts] = useState<ProbeChartsState>({ status: "none" });
   const [houseAir, setHouseAir] = useState<HouseAirState>({ status: "none" });
+  const [glazing, setGlazing] = useState<GlazingState>({ status: "none" });
   const [sensorReadings, setSensorReadings] = useState<SensorReadingsState>({ status: "none" });
   const [weather, setWeather] = useState<WeatherStateOfLoad>({ status: "none" });
   const [weatherDay, setWeatherDay] = useState<WeatherDayState>({ status: "none" });
@@ -380,6 +382,30 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     };
   }, [houseUrl]);
 
+  // The glazing at the moment drawn, each wall's and roof slope's
+  // temperature, for "Colour by"; the last stays on show until the next
+  // arrives.
+  const glassUrl =
+    source.kind === "scenario" && source.field === CLIMATE_FIELD
+      ? glazingUrl(source.scenarioId, source)
+      : null;
+  useEffect(() => {
+    if (glassUrl === null) {
+      setGlazing({ status: "none" });
+      return;
+    }
+    let current = true;
+    setGlazing((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
+    void loadGlazing(glassUrl).then((state) => {
+      if (current) {
+        setGlazing(state);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [glassUrl]);
+
   // The boundaries a CFD solver is given, changed as the scene is, drawn
   // over it when asked for; the last stays on show until the next arrives.
   // How hard its equipment runs does not change them.
@@ -582,7 +608,16 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   }
 
   const shown = source.kind === "live" ? live.scene : scene;
-  const snapshot = shown.status === "loaded" ? shown.snapshot : null;
+  const shownSnapshot = shown.status === "loaded" ? shown.snapshot : null;
+  // The scene, its glazed surfaces carrying their temperatures while a
+  // climate run is drawn.
+  const snapshot = useMemo(
+    () =>
+      shownSnapshot !== null && glazing.status === "loaded"
+        ? withGlazing(shownSnapshot, glazing.glazing)
+        : shownSnapshot,
+    [shownSnapshot, glazing],
+  );
   // Overlays and colours are worked out from the scene, which they only read.
   const selected = selectedEntity(snapshot, selectedId);
   const selectedCamera = selected === null ? null : cameraOf(selected);

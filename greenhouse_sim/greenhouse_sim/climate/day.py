@@ -25,6 +25,7 @@ from typing import Final
 
 import numpy as np
 
+from greenhouse_sim.climate.glazing import GlazingAt
 from greenhouse_sim.climate.house import HouseAir, WholeHouse
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.transport import AirState
@@ -83,6 +84,11 @@ class ClimateDay:
     def field(self, field_id: str, time_s: float) -> EnvironmentField:
         """The air at `time_s`, cell by cell, as its grid run draws it."""
         return self.window(time_s).field(field_id, self.run.grid, time_s)
+
+    def glazing_at(self, time_s: float) -> GlazingAt:
+        """Each glazed surface at `time_s`, as the grid run that draws the
+        field then has it."""
+        return self.window(time_s).glazing_at(time_s)
 
     def sampled(self, field_id: str, time_s: float) -> EnvironmentField:
         """The air sensors sample at `time_s`: the grid run's from the start

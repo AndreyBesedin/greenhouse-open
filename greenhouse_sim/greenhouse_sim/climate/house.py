@@ -4,9 +4,10 @@ a second.
 
 It takes what its climate run's grid takes, summed over the house's air
 (`climate.run`, `climate.transport`): the air's volume, its exchange with
-the outside through the glass and the open doors and vents, U A and the
-vents' flows, the heat its equipment adds and the water it takes, and the
-weather at the middle of each stretch. Between two moments those hold, so
+the outside through the glass and the open doors and vents, U A, U the
+glass's in the wind (`climate.glazing`), and the vents' flows, the heat its
+equipment adds and the water it takes, and the weather at the middle of
+each stretch. Between two moments those hold, so
 the air is advanced exactly, as the linear equations they make solve:
 
 - **temperature:** dT/dt = (E (T_out − T) + Q / (ρ c_p)) / V, for the
@@ -29,6 +30,7 @@ from typing import Final
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
+from greenhouse_sim.climate.glazing import glazing_u_w_m2k
 from greenhouse_sim.climate.psychrometrics import (
     humidity_ratio_g_kg,
     relative_humidity_pct,
@@ -66,10 +68,10 @@ class HouseAir:
 @dataclass(frozen=True)
 class _Steady:
     """What the house exchanges and is given at steady levels: its exchange
-    with the outside through the glass and openings (m³/s), through the
-    openings alone, the heat added (W) and the water taken (kg/s)."""
+    with the outside through the glass, for each W/m²K of U (m³/s), through
+    the openings, the heat added (W) and the water taken (kg/s)."""
 
-    exchange_m3_s: float
+    glass_m3_s_per_u: float
     venting_m3_s: float
     heat_w: float
     water_removed_kg_s: float
@@ -108,8 +110,10 @@ class WholeHouse:
             terms = self.run.terms_at(time_s)
             transport = self.run.transport_at(time_s)
             air = self._air
+            configured_u = self.run.settings.glazing_u_w_m2k
+            glass = float(transport.glass_m3_s()[air].sum())
             self._steady[key] = _Steady(
-                exchange_m3_s=float(transport.exchange_m3_s()[air].sum()),
+                glass_m3_s_per_u=glass / configured_u if configured_u > 0 else 0.0,
                 venting_m3_s=float(transport.vents_m3_s()[air].sum()),
                 heat_w=float(terms.heat_w[air].sum()),
                 water_removed_kg_s=float(terms.water_removed_kg_s[air].sum()),
@@ -122,13 +126,11 @@ class WholeHouse:
         volume = self.volume_m3
         heat_per_k = AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K
         warming_c_s = steady.heat_w / (heat_per_k * volume)
-        if steady.exchange_m3_s > 0:
-            settled = outside.air_temperature_c + steady.heat_w / (
-                heat_per_k * steady.exchange_m3_s
-            )
-            temperature = _towards(
-                air.temperature_c, settled, steady.exchange_m3_s / volume, duration_s
-            )
+        u = glazing_u_w_m2k(self.run.settings.glazing_u_w_m2k, outside.wind_speed_m_s)
+        exchange = u * steady.glass_m3_s_per_u + steady.venting_m3_s
+        if exchange > 0:
+            settled = outside.air_temperature_c + steady.heat_w / (heat_per_k * exchange)
+            temperature = _towards(air.temperature_c, settled, exchange / volume, duration_s)
         else:
             temperature = air.temperature_c + warming_c_s * duration_s
         air_kg = AIR_DENSITY_KG_M3 * volume

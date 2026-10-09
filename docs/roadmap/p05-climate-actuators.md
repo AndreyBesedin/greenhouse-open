@@ -688,7 +688,10 @@ holds:
 - **The fan:** switched on, the air moves at up to 4.81 m/s, 4.34 m/s along
   the fan's axis in its core; switched off, it is still again.
 - **The heater:** ten minutes in, beside it the air is at 31.88 °C at full
-  power, cooler at half, and below 10 °C unheated.
+  power, cooler at half, and below 10 °C unheated. (Since P07.4 the glass's
+  U changes with the wind, and in the box's still night it passes less heat:
+  these numbers are recorded again in
+  [P07's document](p07-external-weather.md#p074-the-glazing-and-the-changing-outside).)
 - **The dehumidifier:** switched on too, it dries the air beside it by more
   than 5 points of relative humidity in ten minutes.
 - **The roof vent:** opened, a draught of over 0.2 m/s goes out through it

@@ -121,8 +121,9 @@ def test_through_the_run_the_heater_warms_its_corner_and_the_unheated_house_cool
     corner = (10.5, 1.0, 0.75)
 
     assert heated.time_s == unheated.time_s == 600.0
-    # 8 °C outside: unheated, the house has cooled most of the way to it.
-    assert _temperature(unheated, 6.0, 3.2, 1.5) < 10.0
+    # 8 °C outside, still: unheated, the house has cooled most of the way to
+    # it through its glass.
+    assert _temperature(unheated, 6.0, 3.2, 1.5) < 11.0
     assert _temperature(heated, *corner) > 25.0
     assert _temperature(heated, 6.0, 3.2, 1.5) > _temperature(unheated, 6.0, 3.2, 1.5) + 3.0
 
