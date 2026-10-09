@@ -30,6 +30,9 @@ the outside.
 - **Open doors and vents** (`climate.vents`) exchange the air against them
   with the outside's, its heat, its water and its CO2. Nothing else adds or
   takes CO2 yet.
+- **A shut house leaks** (P07.5): a share of its air each hour, more in a
+  wind, is exchanged with the outside's through the cells against the walls
+  and roof, each by its share of their area, with its heat, water and CO2.
 - **The time step** keeps every cell's new temperature a weighted mean of the
   old ones: the air flowing in, the mixing and the exchange take at most
   half a cell's temperature away per step, which holds both the air crossing
@@ -136,29 +139,54 @@ class Transport:
             )
         return takes
 
+    def envelope_m2(self) -> np.ndarray:
+        """Each air cell's faces against the walls and roof, in m²: the floor
+        is not envelope."""
+        nx, ny, nz = self.grid.shape
+        area = np.zeros((nz, ny, nx))
+        area[:, :, 0] += self._face_area(2)
+        area[:, :, -1] += self._face_area(2)
+        area[:, 0, :] += self._face_area(1)
+        area[:, -1, :] += self._face_area(1)
+        # The roof, over the top layer.
+        area[-1, :, :] += self._face_area(0)
+        area[self.solid] = 0.0
+        return area
+
     def glass_m3_s(self, wind_m_s: float = REFERENCE_WIND_M_S) -> np.ndarray:
         """Each cell's exchange with the outside through the walls and roof it
         lies against, U A / (ρ c_p), in m³/s of air brought to the outside's
         temperature each second, U the glass's in a wind; nothing for a
         solid cell."""
-        nx, ny, nz = self.grid.shape
-        exchange = np.zeros((nz, ny, nx))
-        u = glazing_u_w_m2k(self.settings.glazing_u_w_m2k, wind_m_s) / (
-            AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K
-        )
-        exchange[:, :, 0] += u * self._face_area(2)
-        exchange[:, :, -1] += u * self._face_area(2)
-        exchange[:, 0, :] += u * self._face_area(1)
-        exchange[:, -1, :] += u * self._face_area(1)
-        # The roof, over the top layer; the floor passes nothing.
-        exchange[-1, :, :] += u * self._face_area(0)
-        exchange[self.solid] = 0.0
-        return exchange
+        u = glazing_u_w_m2k(self.settings.glazing_u_w_m2k, wind_m_s)
+        glass: np.ndarray = u / (AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K) * self.envelope_m2()
+        return glass
+
+    def leaks_m3_s(self, wind_m_s: float = REFERENCE_WIND_M_S) -> np.ndarray:
+        """The outside air each cell takes in through the house's gaps in a
+        wind, and gives out, in m³/s: the house's infiltration, spread over
+        the cells against the walls and roof by their share of its area."""
+        area = self.envelope_m2()
+        total = float(area.sum())
+        if total == 0:
+            return area
+        air_m3 = float((~self.solid).sum()) * self.cell_volume_m3()
+        leaking = self.settings.infiltration_per_s(wind_m_s) * air_m3
+        leaks: np.ndarray = leaking * area / total
+        return leaks
+
+    def openings_m3_s(self, wind_m_s: float = REFERENCE_WIND_M_S) -> np.ndarray:
+        """Each cell's exchange of air with the outside, through open doors
+        and vents and the house's gaps, in m³/s: what brings the outside's
+        water and CO2 in."""
+        openings: np.ndarray = self.vents_m3_s() + self.leaks_m3_s(wind_m_s)
+        return openings
 
     def exchange_m3_s(self, wind_m_s: float = REFERENCE_WIND_M_S) -> np.ndarray:
         """Each cell's exchange with the outside through the glass, in a
-        wind, and through the open doors and vents, in m³/s."""
-        exchange: np.ndarray = self.glass_m3_s(wind_m_s) + self.vents_m3_s()
+        wind, and of its air, through open doors and vents and gaps, in
+        m³/s."""
+        exchange: np.ndarray = self.glass_m3_s(wind_m_s) + self.openings_m3_s(wind_m_s)
         return exchange
 
     def vents_m3_s(self) -> np.ndarray:
@@ -198,7 +226,7 @@ class Transport:
             for axis, low, high, into_low, into_high in self._takes()
         ]
         exchange = share * self.exchange_m3_s(wind)
-        venting = share * self.vents_m3_s()
+        venting = share * self.openings_m3_s(wind)
         outside_c = outside.air_temperature_c
         outside_water = float(humidity_ratio_g_kg(outside_c, outside.relative_humidity_pct))
         outside_co2 = outside.co2_ppm
@@ -266,9 +294,9 @@ class Transport:
         return excess * AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K * self.cell_volume_m3()
 
     def envelope_loss_w(self, temperature: np.ndarray, outside: WeatherState) -> float:
-        """The heat the air loses through the walls and roof, and the open
-        doors and vents, to the weather `outside`, in watts: negative when it
-        gains it from a warmer outside."""
+        """The heat the air loses through the walls and roof, the open doors
+        and vents and the gaps, to the weather `outside`, in watts: negative
+        when it gains it from a warmer outside."""
         exchange = (
             self.exchange_m3_s(outside.wind_speed_m_s)
             * AIR_DENSITY_KG_M3

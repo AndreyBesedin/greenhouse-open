@@ -12,10 +12,11 @@ the air is advanced exactly, as the linear equations they make solve:
 
 - **temperature:** dT/dt = (E (T_out − T) + Q / (ρ c_p)) / V, for the
   exchange E in m³/s and the heat added Q, settling where they balance;
-- **water:** dw/dt = (W (w_out − w) − R / ρ) / V, for the vents' exchange
+- **water:** dw/dt = (W (w_out − w) − R / ρ) / V, for the air's exchange
   W and the water taken R, never below dry air; what the air would then
   hold beyond saturation condenses, and is counted;
-- **CO₂:** exchanged through the doors and vents alone, as on the grid.
+- **CO₂:** exchanged through the doors and vents and the gaps the house
+  leaks through, as on the grid, as are its heat and water.
 
 It knows the house's mean, not its gradients: a heater's warm corner loses
 more through the glass beside it than the mean would, so the grid run's
@@ -126,8 +127,11 @@ class WholeHouse:
         volume = self.volume_m3
         heat_per_k = AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K
         warming_c_s = steady.heat_w / (heat_per_k * volume)
-        u = glazing_u_w_m2k(self.run.settings.glazing_u_w_m2k, outside.wind_speed_m_s)
-        exchange = u * steady.glass_m3_s_per_u + steady.venting_m3_s
+        settings = self.run.settings
+        u = glazing_u_w_m2k(settings.glazing_u_w_m2k, outside.wind_speed_m_s)
+        leaks_m3_s = settings.infiltration_per_s(outside.wind_speed_m_s) * volume
+        venting_m3_s = steady.venting_m3_s + leaks_m3_s
+        exchange = u * steady.glass_m3_s_per_u + venting_m3_s
         if exchange > 0:
             settled = outside.air_temperature_c + steady.heat_w / (heat_per_k * exchange)
             temperature = _towards(air.temperature_c, settled, exchange / volume, duration_s)
@@ -138,7 +142,7 @@ class WholeHouse:
             humidity_ratio_g_kg(outside.air_temperature_c, outside.relative_humidity_pct)
         )
         drying_g_kg_s = steady.water_removed_kg_s * GRAMS_PER_KG / air_kg
-        venting_s = steady.venting_m3_s / volume
+        venting_s = venting_m3_s / volume
         if venting_s > 0:
             water = _towards(
                 air.humidity_g_kg,

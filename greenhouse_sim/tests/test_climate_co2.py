@@ -35,8 +35,16 @@ def _vents(openings: dict[str, float]) -> list[Vent]:
     ]
 
 
-def _run(start_co2_ppm: float, openings: dict[str, float], levels: dict[str, float]) -> ClimateRun:
-    settings = CONFIG.climate.model_copy(update={"start_co2_ppm": start_co2_ppm})
+def _run(
+    start_co2_ppm: float,
+    openings: dict[str, float],
+    levels: dict[str, float],
+    *,
+    sealed: bool = False,
+) -> ClimateRun:
+    # Sealed, nothing leaks through its gaps.
+    leaks = {"infiltration_per_h": 0.0, "infiltration_per_h_per_m_s": 0.0} if sealed else {}
+    settings = CONFIG.climate.model_copy(update={"start_co2_ppm": start_co2_ppm} | leaks)
     return ClimateRun(
         base=changed(CONFIG, SceneChanges(openings=openings)).airflow,
         equipment=CONFIG.layout.equipment,
@@ -55,8 +63,8 @@ def test_with_nothing_to_change_it_the_air_keeps_its_co2_everywhere() -> None:
     np.testing.assert_allclose(run.air_at(600).co2[AIR], 420.0)
 
 
-def test_shut_the_house_keeps_its_co2_however_the_fan_stirs_it() -> None:
-    run = _run(800.0, {}, {"fan": 1.0})
+def test_sealed_the_house_keeps_its_co2_however_the_fan_stirs_it() -> None:
+    run = _run(800.0, {}, {"fan": 1.0}, sealed=True)
 
     assert run.air_at(600).co2[AIR].sum() == pytest.approx(800.0 * AIR.sum(), rel=1e-9)
 

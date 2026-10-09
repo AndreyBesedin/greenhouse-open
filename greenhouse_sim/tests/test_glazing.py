@@ -128,7 +128,8 @@ def test_the_surfaces_pass_what_the_glass_passes() -> None:
     air = run.air_at(600.0)
 
     passed = sum(surface.loss_w for surface in glazing.surfaces)
-    assert passed == pytest.approx(run.transport_at(600.0).envelope_loss_w(air.temperature, NIGHT))
+    glass = run.transport_at(600.0).glass_m3_s(NIGHT.wind_speed_m_s) * 1.2 * 1005.0
+    assert passed == pytest.approx(float((glass * (air.temperature - 8.0)).sum()))
 
 
 def test_a_windy_night_cools_a_shut_house_faster_than_a_calm_one() -> None:

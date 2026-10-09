@@ -31,7 +31,10 @@ START = np.full((NZ, NY, NX), 16.0)
 # The climate box's: 8 °C outside, 16 °C to start, single glass.
 SETTINGS = CONFIG.climate
 OUTSIDE = CONFIG.run_weather().at(0.0)
-SHUT = SETTINGS.model_copy(update={"glazing_u_w_m2k": 0.0})
+# Sealed: its glass passes nothing, and it leaks nothing.
+SHUT = SETTINGS.model_copy(
+    update={"glazing_u_w_m2k": 0.0, "infiltration_per_h": 0.0, "infiltration_per_h_per_m_s": 0.0}
+)
 # The glazing's walls and roof: two 12 by 4 m sides, two 6.4 by 4 m ends,
 # and the 12 by 6.4 m top of the grid.
 GLASS_M2 = 2 * 12 * 4 + 2 * 6.4 * 4 + 12 * 6.4
