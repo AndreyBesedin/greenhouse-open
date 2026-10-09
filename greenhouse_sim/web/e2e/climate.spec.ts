@@ -163,11 +163,13 @@ test("climate: opening the roof vent lets the heated air out, and the cold in", 
     );
   });
 
+  // Alone, the vent exchanges by the stack over its height: the warmer air
+  // goes out at its top and the cold in at its foot (P07.6).
   await test.step("open, the warmer air goes out through it, and the house cools", async () => {
     await page.getByRole("group", { name: "Openings" }).getByRole("slider").first().fill("100");
     await expect(page).toHaveURL(/open=roof_vent:1(&|$)/);
     await expect(reading).toHaveText(
-      "climate: 0.29 m/s (0.00, 0.00, 0.29), temperature 10.42 °C, humidity 82.91 %, co2 420.00 ppm",
+      "climate: 0.05 m/s (0.00, 0.00, 0.05), temperature 14.57 °C, humidity 76.67 %, co2 420.00 ppm",
     );
   });
 });

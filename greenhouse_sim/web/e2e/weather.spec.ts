@@ -95,3 +95,35 @@ test("weather: the weather station reads the weather outside", async ({ page }) 
   await expect(page.getByTestId("sensor-reading")).toHaveText("8.10 °C at 10 min");
   await expect(page.getByTestId("sensor-truth")).toHaveText("7.95 °C at 10 min");
 });
+
+const ACROSS =
+  "/?scenario=climate_box&weather=cold_spring_day&field=climate&open=side_vent:1,side_vent_left:1";
+
+test("weather: turning the wind turns which side vent takes the air in", async ({ page }) => {
+  test.setTimeout(90_000);
+  const flows = async (seconds: number) => {
+    const response = await page.request.get(
+      `/api/scenarios/climate_box/climate/openings?open=side_vent:1,side_vent_left:1&weather=cold_spring_day&t=${seconds}`,
+    );
+    const body = (await response.json()) as {
+      openings: { opening_id: string; net_m3_s: number }[];
+    };
+    return Object.fromEntries(body.openings.map((o) => [o.opening_id, o.net_m3_s]));
+  };
+
+  // Ten past midnight the wind comes from the south-west: in through the
+  // south side's vent, out through the north's.
+  await page.goto(`${ACROSS}&t=600`);
+  await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 30_000 });
+  await expect(page.getByTestId("debug-label")).toContainText(["2.06 m³/s in", "2.06 m³/s out"]);
+  expect((await flows(600)).side_vent).toBeGreaterThan(0);
+
+  // By eight in the evening it has veered to the west-north-west: in
+  // through the north side's vent, out through the south's.
+  await page.goto(`${ACROSS}&t=72000`);
+  await expect(page.getByTestId("climate-time")).toHaveText("20 h 00 min", { timeout: 60_000 });
+  await expect(page.getByTestId("debug-label")).toContainText(["2.24 m³/s out", "2.24 m³/s in"], {
+    timeout: 60_000,
+  });
+  expect((await flows(72000)).side_vent_left).toBeGreaterThan(0);
+});

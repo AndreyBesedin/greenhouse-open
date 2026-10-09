@@ -13,7 +13,7 @@ from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
-from greenhouse_sim.services.fields import air_grid
+from greenhouse_sim.services.fields import air_grid, climate_vents
 from greenhouse_sim.services.scenarios import SceneChanges, changed
 from greenhouse_sim.world.geometry import Vector3
 
@@ -25,14 +25,7 @@ AIR = ~SOLID
 
 def _vents(openings: dict[str, float]) -> list[Vent]:
     config = changed(CONFIG, SceneChanges(openings=openings))
-    geometry = cfd.geometry("climate_box", SceneChanges(openings=openings))
-    apertures = {
-        opening.opening_id: opening.aperture_area() for opening in config.envelope.openings
-    }
-    return [
-        Vent(opening_id, apertures[opening_id], cells, axis, outward)
-        for opening_id, (cells, axis, outward) in geometry.opening_cells().items()
-    ]
+    return climate_vents(config, cfd.geometry("climate_box", SceneChanges(openings=openings)))
 
 
 def _run(

@@ -34,6 +34,7 @@ import numpy as np
 from greenhouse_sim.airflow.contract import AirflowModel
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.glazing import GlazedCells, GlazingAt, glazing_at
+from greenhouse_sim.climate.openings import OpeningFlow, opening_flows
 from greenhouse_sim.climate.projection import FaceFlows, conserving, face_flows
 from greenhouse_sim.climate.psychrometrics import humidity_ratio_g_kg, relative_humidity_pct
 from greenhouse_sim.climate.settings import ClimateSettings
@@ -43,6 +44,7 @@ from greenhouse_sim.climate.vents import Vent
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import VECTOR_COMPONENTS, EnvironmentField, FieldGrid
 from greenhouse_sim.weather.sources import RunWeather
+from greenhouse_sim.weather.state import WeatherState
 from greenhouse_sim.world.equipment import Equipment
 
 type _Levels = tuple[tuple[str, float], ...]
@@ -113,7 +115,8 @@ class ClimateRun:
         self.vents = tuple(vents)
         self.glazed = dict(glazed or {})
         self._base_velocity = base.field("base", grid).channels[AirQuantity.VELOCITY]
-        self._steady: dict[_Levels, tuple[SourceTerms, FaceFlows, Transport]] = {}
+        self._steady: dict[_Levels, tuple[SourceTerms, FaceFlows]] = {}
+        self._through_flows: dict[str, FaceFlows] | None = None
         # When its air starts: at the start of the scenario's runs, unless it
         # is started later (`started_at`).
         self.start_s = 0.0
@@ -144,6 +147,7 @@ class ClimateRun:
             self.glazed,
         )
         later._steady = self._steady
+        later._through_flows = self._through_flows
         later.start_s = start_s
         later._kept = {start_s: air}
         return later
@@ -152,16 +156,16 @@ class ClimateRun:
         """Each piece of equipment's level at `time_s`."""
         return self.schedule.levels_at([piece.actuator_id for piece in self.equipment], time_s)
 
-    def _held(self, levels: Mapping[str, float]) -> tuple[SourceTerms, FaceFlows, Transport]:
-        """What the equipment does at steady levels: its source terms, the
-        flow it makes with the base airflow, and how that moves heat."""
+    def _held(self, levels: Mapping[str, float]) -> tuple[SourceTerms, FaceFlows]:
+        """What the equipment does at steady levels: its source terms, and the
+        flow it makes with the base airflow."""
         key = tuple(sorted(levels.items()))
         with self._working:
             return self._steady_at(key, levels)
 
     def _steady_at(
         self, key: _Levels, levels: Mapping[str, float]
-    ) -> tuple[SourceTerms, FaceFlows, Transport]:
+    ) -> tuple[SourceTerms, FaceFlows]:
         if key not in self._steady:
             terms = SourceTerms.none(self.grid)
             for piece in self.equipment:
@@ -172,21 +176,79 @@ class ClimateRun:
                 face_flows(self.grid, self._base_velocity + terms.velocity, self.solid),
                 self.solid,
             )
-            transport = Transport(self.grid, flows, self.solid, self.settings, self.vents)
-            self._steady[key] = (terms, flows, transport)
+            self._steady[key] = (terms, flows)
         return self._steady[key]
+
+    def _through(self) -> dict[str, FaceFlows]:
+        """The flow across the house of a cubic metre a second in through
+        each open door or vent but the first, and out through the first: what
+        the openings' net flows add to the flow, in proportion."""
+        if self._through_flows is None:
+            vents = [vent for vent in self.vents if vent.cells.any()]
+            nx, ny, nz = self.grid.shape
+            still = face_flows(self.grid, np.zeros((nz, ny, nx, VECTOR_COMPONENTS)), self.solid)
+            self._through_flows = {
+                vent.opening_id: conserving(
+                    still, self.solid, inflow=vent.spread(1.0) - vents[0].spread(1.0)
+                )
+                for vent in vents[1:]
+            }
+        return self._through_flows
+
+    def openings_for(self, air: AirState, outside: WeatherState) -> dict[str, OpeningFlow]:
+        """What each open door and vent passes for `air`, by its mean
+        temperature, under the weather `outside`."""
+        if not self.vents:
+            return {}
+        inside_c = float(air.temperature[~self.solid].mean())
+        flows = opening_flows([vent.site for vent in self.vents], inside_c, outside)
+        return {flow.opening_id: flow for flow in flows}
+
+    def _flowing(self, flows: FaceFlows, openings: Mapping[str, OpeningFlow]) -> FaceFlows:
+        """The equipment's flow with the openings' net flows across the
+        house added."""
+        through = self._through()
+        added = [flow.copy() for flow in flows.flows]
+        for opening_id, response in through.items():
+            net = openings[opening_id].net_m3_s if opening_id in openings else 0.0
+            if net != 0:
+                for axis in (0, 1, 2):
+                    added[axis] += net * response.flows[axis]
+        return FaceFlows(grid=flows.grid, flows=(added[0], added[1], added[2]))
+
+    def _transport(
+        self, time_s: float, openings: Mapping[str, OpeningFlow]
+    ) -> tuple[SourceTerms, Transport]:
+        terms, flows = self._held(self.levels_at(time_s))
+        transport = Transport(
+            self.grid,
+            self._flowing(flows, openings),
+            self.solid,
+            self.settings,
+            self.vents,
+            openings,
+        )
+        return terms, transport
 
     def terms_at(self, time_s: float) -> SourceTerms:
         """What the equipment adds to the air at `time_s`."""
         return self._held(self.levels_at(time_s))[0]
 
-    def flows_at(self, time_s: float) -> FaceFlows:
-        """The air's flow through the grid's faces at `time_s`."""
-        return self._held(self.levels_at(time_s))[1]
+    def flows_at(
+        self, time_s: float, openings: Mapping[str, OpeningFlow] | None = None
+    ) -> FaceFlows:
+        """The air's flow through the grid's faces at `time_s`, with what the
+        doors and vents pass, as the air then drives them unless given."""
+        return self.transport_at(time_s, openings).flows
 
-    def transport_at(self, time_s: float) -> Transport:
-        """How heat moves at `time_s`."""
-        return self._held(self.levels_at(time_s))[2]
+    def transport_at(
+        self, time_s: float, openings: Mapping[str, OpeningFlow] | None = None
+    ) -> Transport:
+        """How heat moves at `time_s`, with what the doors and vents pass, as
+        the air then drives them unless given."""
+        if openings is None:
+            openings = self.openings_for(self.air_at(time_s), self.weather.at(time_s))
+        return self._transport(time_s, openings)[1]
 
     def carry_on_from(self, other: ClimateRun) -> None:
         """Take over the air `other` has kept up to the first moment its
@@ -223,8 +285,8 @@ class ClimateRun:
         now = start
         for until in sorted(changes | kept | {time_s}):
             if until > now:
-                terms, _, transport = self._held(self.levels_at(now))
                 outside = self.weather.at((now + until) / 2)
+                terms, transport = self._transport(now, self.openings_for(air, outside))
                 air = transport.advance(air, terms, until - now, outside)
                 now = until
                 if until in kept:
@@ -236,16 +298,18 @@ class ClimateRun:
         """The air's temperature in every cell at `time_s`."""
         return self.air_at(time_s).temperature
 
-    def _draughts(self, air: AirState, time_s: float) -> np.ndarray:
-        """The draughts through the open doors and vents at `time_s`, as the
-        air against each is warmer or cooler than the outside's."""
+    def _draughts(
+        self, air: AirState, outside: WeatherState, openings: Mapping[str, OpeningFlow]
+    ) -> np.ndarray:
+        """The draughts through the open doors and vents (`Vent.draught`)."""
         nx, ny, nz = self.grid.shape
         draughts = np.zeros((nz, ny, nx, VECTOR_COMPONENTS))
-        outside_c = self.weather.at(time_s).air_temperature_c
         for vent in self.vents:
-            draughts += vent.draught(
-                self.grid, air.temperature, outside_c, self.settings.vent_exchange_m_s
-            )
+            flow = openings.get(vent.opening_id)
+            if flow is not None:
+                draughts += vent.draught(
+                    self.grid, flow, air.temperature, outside.air_temperature_c
+                )
         return draughts
 
     def glazing_at(self, time_s: float) -> GlazingAt:
@@ -269,7 +333,11 @@ class ClimateRun:
 
     def field_of(self, air: AirState, field_id: str, time_s: float) -> EnvironmentField:
         """`air` as the field at `time_s`, in this run's flow then."""
-        velocity = self.flows_at(time_s).velocity() + self._draughts(air, time_s)
+        outside = self.weather.at(time_s)
+        openings = self.openings_for(air, outside)
+        velocity = self.flows_at(time_s, openings).velocity() + self._draughts(
+            air, outside, openings
+        )
         temperature = _filled(air.temperature, self.solid)
         humidity = _filled(air.humidity, self.solid)
         return EnvironmentField(

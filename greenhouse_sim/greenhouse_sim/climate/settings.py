@@ -43,10 +43,6 @@ class ClimateSettings(BaseModel):
     # well-kept glasshouse (P07.5). Zero for both seals it.
     infiltration_per_h: NonNegativeFloat = 0.25
     infiltration_per_h_per_m_s: NonNegativeFloat = 0.1
-    # How fast the air an open door or vent exchanges with the outside moves
-    # through its aperture, in each way: a stack effect's few tenths of a
-    # metre a second, until wind comes (P07).
-    vent_exchange_m_s: NonNegativeFloat = 0.3
 
     def infiltration_per_s(self, wind_m_s: float) -> float:
         """The share of the house's air that leaks out each second in a wind,

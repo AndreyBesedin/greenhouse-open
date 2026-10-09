@@ -18,6 +18,7 @@ describe("a scene's openings", () => {
     expect(openingsIn(EXAMPLE)).toEqual([
       { openingId: "roof_vent", label: "roof vent", fraction: 0, apertureM2: 0 },
       { openingId: "side_vent", label: "side vent", fraction: 0, apertureM2: 0 },
+      { openingId: "side_vent_left", label: "side vent left", fraction: 0, apertureM2: 0 },
       { openingId: "door", label: "door", fraction: 0, apertureM2: 0 },
     ]);
   });

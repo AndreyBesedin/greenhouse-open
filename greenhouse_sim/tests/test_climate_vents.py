@@ -7,6 +7,7 @@ import pytest
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.climate.commands import Schedule
+from greenhouse_sim.climate.openings import opening_flows
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.climate.vents import Vent
@@ -14,7 +15,7 @@ from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
-from greenhouse_sim.services.fields import air_grid
+from greenhouse_sim.services.fields import air_grid, climate_vents
 from greenhouse_sim.services.scenarios import SceneChanges, changed
 from greenhouse_sim.weather.sources import ConstantWeather
 from greenhouse_sim.world.geometry import Vector3
@@ -28,21 +29,13 @@ AIR = ~SOLID
 SHUT = CONFIG.climate.model_copy(
     update={"glazing_u_w_m2k": 0.0, "infiltration_per_h": 0.0, "infiltration_per_h_per_m_s": 0.0}
 )
-SPEED_M_S = CONFIG.climate.vent_exchange_m_s
 # Under the roof vent, in the top layer of the house's air.
 UNDER_THE_VENT = Vector3(x=6.0, y=2.5, z=3.75)
 
 
 def _vents(openings: dict[str, float]) -> list[Vent]:
     config = changed(CONFIG, SceneChanges(openings=openings))
-    geometry = cfd.geometry("climate_box", SceneChanges(openings=openings))
-    apertures = {
-        opening.opening_id: opening.aperture_area() for opening in config.envelope.openings
-    }
-    return [
-        Vent(opening_id, apertures[opening_id], cells, axis, outward)
-        for opening_id, (cells, axis, outward) in geometry.opening_cells().items()
-    ]
+    return climate_vents(config, cfd.geometry("climate_box", SceneChanges(openings=openings)))
 
 
 def _run(
@@ -77,13 +70,19 @@ def test_the_exchange_grows_with_the_aperture_the_geometry_gives(opening: str) -
     half, full = _vents({opening: 0.5}), _vents({opening: 1.0})
     config = changed(CONFIG, SceneChanges(openings={opening: 1.0}))
     (aperture,) = [o.aperture_area() for o in config.envelope.openings if o.opening_id == opening]
+    night = CONFIG.run_weather().at(0.0)
 
-    full_m3_s = float(full[0].exchange_m3_s(SPEED_M_S).sum())
-    half_m3_s = float(half[0].exchange_m3_s(SPEED_M_S).sum())
+    (full_flow,) = opening_flows([full[0].site], 16.0, night)
+    (half_flow,) = opening_flows([half[0].site], 16.0, night)
 
-    assert full_m3_s == pytest.approx(SPEED_M_S * aperture)
-    assert 0.0 < half_m3_s < full_m3_s
-    assert half_m3_s / full_m3_s == pytest.approx(half[0].aperture_m2 / full[0].aperture_m2)
+    # Alone, it exchanges by the stack over its height, and passes nothing
+    # net.
+    assert full[0].aperture_m2 == pytest.approx(aperture)
+    assert full_flow.net_m3_s == half_flow.net_m3_s == 0.0
+    assert 0.0 < half_flow.exchange_m3_s < full_flow.exchange_m3_s
+    assert half_flow.exchange_m3_s / full_flow.exchange_m3_s == pytest.approx(
+        half[0].aperture_m2 / full[0].aperture_m2
+    )
 
 
 def test_with_the_outside_cooler_an_open_vent_cools_the_house_towards_it() -> None:
@@ -121,9 +120,14 @@ def test_the_draught_goes_out_of_a_warmer_house_and_into_a_cooler_one() -> None:
     cooler = _run({"roof_vent": 1.0}, SHUT, weather=warm_outside)
     (vent,) = heated.vents
     face_m2 = GRID.cell_size.x * GRID.cell_size.y * int(vent.cells.sum())
+    air = heated.air_at(600)
+    (flow,) = heated.openings_for(air, heated.weather.at(600)).values()
 
-    assert _draught(heated) == pytest.approx(SPEED_M_S * vent.aperture_m2 / face_m2)
-    assert _draught(cooler) == pytest.approx(-_draught(heated))
+    # Alone, the roof vent exchanges both ways; its draught shows the warm
+    # air going out, and the warm outside's coming in.
+    assert _draught(heated) == pytest.approx(flow.exchange_m3_s / face_m2)
+    assert _draught(heated) > 0
+    assert _draught(cooler) < 0
     assert _draught(_run({})) == 0.0
 
 

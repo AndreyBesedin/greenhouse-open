@@ -695,7 +695,10 @@ holds:
 - **The dehumidifier:** switched on too, it dries the air beside it by more
   than 5 points of relative humidity in ten minutes.
 - **The roof vent:** opened, a draught of over 0.2 m/s goes out through it
-  and the air under it cools; closed again, the air is as it was.
+  and the air under it cools; closed again, the air is as it was. (Since
+  P07.6 the wind and the stack drive the openings, and the roof vent alone
+  exchanges less: see
+  [P07's document](p07-external-weather.md#p076-wind-and-stack-pressure-at-the-openings).)
 - **The views:** the arrows, then the temperature and humidity slices, each
   with its legend.
 - **Probes and charts:** four probes, three charts each, a line for the run

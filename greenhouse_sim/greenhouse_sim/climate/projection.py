@@ -13,6 +13,12 @@ takes its gradient out of every face's flow: F′ = F − (A / h)(φ_upper −
 φ_lower). What flows into each cell then flows out of it. The fan now draws
 the air it blows from behind it, and its jet turns back along the house
 where it meets a wall.
+
+Air may also cross the grid's faces where doors and vents open (P07.6):
+given what enters each cell from outside, `inflow`, the projection makes
+what flows out of each cell through its interior faces that much more than
+flows in, and the air entering at one opening crosses the house to leave by
+another.
 """
 
 from dataclasses import dataclass
@@ -102,9 +108,10 @@ def face_flows(grid: FieldGrid, velocity: np.ndarray, solid: np.ndarray) -> Face
     return FaceFlows(grid=grid, flows=(flows[0], flows[1], flows[2]))
 
 
-def conserving(flows: FaceFlows, solid: np.ndarray) -> FaceFlows:
+def conserving(flows: FaceFlows, solid: np.ndarray, inflow: np.ndarray | None = None) -> FaceFlows:
     """The flow with what makes air appear or vanish taken out: what flows
-    into each air cell flows out of it, to `TOLERANCE`."""
+    into each air cell flows out of it, to `TOLERANCE`, but for what enters
+    it from outside, `inflow` (m³/s, negative leaving), which must balance."""
     grid = flows.grid
     air = ~solid
     sides = _areas_and_spacings(grid)
@@ -131,7 +138,8 @@ def conserving(flows: FaceFlows, solid: np.ndarray) -> FaceFlows:
 
     # Solve L φ = −∇·F over the linked air cells: their total is zero, as
     # nothing crosses the grid's faces; what rounding leaves is spread out.
-    divergence = np.where(linked, flows.divergence(), 0.0)
+    entering = np.zeros(diagonal.shape) if inflow is None else inflow
+    divergence = np.where(linked, flows.divergence() - entering, 0.0)
     target = (
         np.where(linked, divergence - divergence[linked].mean(), 0.0)
         if linked.any()

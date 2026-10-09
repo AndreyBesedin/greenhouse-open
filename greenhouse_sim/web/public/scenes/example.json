@@ -326,6 +326,42 @@
       }
     },
     {
+      "entity_id": "climate_box_side_vent_left",
+      "kind": "VENT",
+      "transform": {
+        "position": {
+          "x": 6.0,
+          "y": 6.4,
+          "z": 2.5
+        },
+        "rotation": {
+          "w": 0.7071067811865476,
+          "x": 0.7071067811865475,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "shape": {
+        "shape": "plane",
+        "size_x": 3.0,
+        "size_y": 0.6
+      },
+      "color": {
+        "r": 0.55,
+        "g": 0.74,
+        "b": 0.86
+      },
+      "material": null,
+      "label": "side vent left",
+      "properties": {
+        "opening_id": "side_vent_left",
+        "opening_kind": "side_vent",
+        "on_surface": "side_wall_left",
+        "open_fraction": 0.0,
+        "aperture_m2": 0.0
+      }
+    },
+    {
       "entity_id": "climate_box_door",
       "kind": "DOOR",
       "transform": {
