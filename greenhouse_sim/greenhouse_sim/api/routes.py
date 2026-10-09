@@ -47,6 +47,10 @@ check; a route that comes to need one checks it first.
                                           volume every minute up to &t=600, and
                                           of the same run all off; asked as its
                                           climate field is
+    GET /api/scenarios/{id}/climate/glazing its walls' and roof slopes' air,
+                                          temperature and heat passed &t=600
+                                          seconds into its climate run; asked
+                                          as its climate field is
     GET /api/scenarios/{id}/climate/observations its run's observation log up to
                                           &t=600: what its point sensors
                                           observed, whether each is fresh,
@@ -187,6 +191,18 @@ def respond(method: str, path: str) -> Response:
         case ["api", "scenarios", scenario_id, "climate", "house"]:
             return _answer(
                 lambda: fields.house_air(
+                    scenario_id,
+                    _last(query, "layout"),
+                    _pairs(query.get("set", []), "set"),
+                    _pairs(query.get("open", []), "open"),
+                    _commands(query.get("schedule", [])),
+                    _seconds(query),
+                    weather=_last(query, "weather"),
+                )
+            )
+        case ["api", "scenarios", scenario_id, "climate", "glazing"]:
+            return _answer(
+                lambda: fields.glazing(
                     scenario_id,
                     _last(query, "layout"),
                     _pairs(query.get("set", []), "set"),

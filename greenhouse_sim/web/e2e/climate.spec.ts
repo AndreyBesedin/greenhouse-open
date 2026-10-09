@@ -73,8 +73,8 @@ test("climate: a running heater warms its corner and the house through the run",
     await expect(page).toHaveURL(/&t=600(&|$)/);
     await expect(moment).toHaveText("10 min");
     // Warmed, the corner's air is far from saturated.
-    await expect(corner).toHaveText(/temperature 31\.88 °C, humidity 31\.58 %, co2 420\.00 ppm$/);
-    await expect(middle).toHaveText(/temperature 14\.96 °C, humidity 84\.80 %, co2 420\.00 ppm$/);
+    await expect(corner).toHaveText(/temperature 37\.35 °C, humidity 24\.49 %, co2 420\.00 ppm$/);
+    await expect(middle).toHaveText(/temperature 18\.90 °C, humidity 70\.77 %, co2 420\.00 ppm$/);
   });
 
   await test.step("back at the start, the slice keeps the colours the run reached", async () => {
@@ -97,7 +97,7 @@ test("climate: a running heater warms its corner and the house through the run",
     await expect(run.getByRole("button", { name: "Play" })).toBeVisible();
   });
 
-  await test.step("switched off ten minutes in, the house cools to 9 °C and saturates", async () => {
+  await test.step("switched off ten minutes in, the house cools to 12 °C and saturates", async () => {
     const slider = page.getByRole("slider", { name: "Time into the run" });
     await slider.fill("600");
     await page
@@ -106,9 +106,9 @@ test("climate: a running heater warms its corner and the house through the run",
       .uncheck();
     // An override at its moment: the air then is as it was.
     await expect(page).toHaveURL(/&schedule=600:heater:0(&|$)/);
-    await expect(middle).toHaveText(/temperature 14\.96 °C, humidity 84\.80 %, co2 420\.00 ppm$/);
+    await expect(middle).toHaveText(/temperature 18\.90 °C, humidity 70\.77 %, co2 420\.00 ppm$/);
     await slider.fill("1200");
-    await expect(middle).toHaveText(/temperature 9\.06 °C, humidity 100\.00 %, co2 420\.00 ppm$/);
+    await expect(middle).toHaveText(/temperature 11\.72 °C, humidity 100\.00 %, co2 420\.00 ppm$/);
   });
 });
 
@@ -125,10 +125,10 @@ test("climate: a running dehumidifier dries the air around it", async ({ page })
   await expect(page.getByTestId("field-legend-quantity")).toHaveText("humidity (%)");
 
   await test.step("ten minutes in, it has dried and warmed its side of the cooling house", async () => {
-    await expect(beside).toHaveText(/temperature 11\.26 °C, humidity 87\.38 %, co2 420\.00 ppm$/);
+    await expect(beside).toHaveText(/temperature 13\.01 °C, humidity 87\.95 %, co2 420\.00 ppm$/);
     // Unheated, the far corner has cooled to saturation, give or take when
     // its water last condensed.
-    await expect(far).toHaveText(/temperature 9\.70 °C, humidity 99\.9\d %, co2 420\.00 ppm$/);
+    await expect(far).toHaveText(/temperature 11\.40 °C, humidity 99\.9\d %, co2 420\.00 ppm$/);
   });
 
   await test.step("with the heater on too from the start, the whole house is drier", async () => {
@@ -141,8 +141,8 @@ test("climate: a running dehumidifier dries the air around it", async ({ page })
       .check();
     await expect(page).toHaveURL(/set=dehumidifier:1,heater:1(&|$)/);
     await slider.fill("600");
-    await expect(beside).toHaveText(/temperature 16\.59 °C, humidity 73\.19 %, co2 420\.00 ppm$/);
-    await expect(far).toHaveText(/temperature 12\.87 °C, humidity 95\.71 %, co2 420\.00 ppm$/);
+    await expect(beside).toHaveText(/temperature 20\.80 °C, humidity 58\.08 %, co2 420\.00 ppm$/);
+    await expect(far).toHaveText(/temperature 16\.51 °C, humidity 78\.91 %, co2 420\.00 ppm$/);
   });
 });
 
@@ -159,7 +159,7 @@ test("climate: opening the roof vent lets the heated air out, and the cold in", 
 
   await test.step("shut, the air under it is still, and warm from the heater", async () => {
     await expect(reading).toHaveText(
-      "climate: 0.00 m/s (0.00, 0.00, 0.00), temperature 14.42 °C, humidity 87.77 %, co2 420.00 ppm",
+      "climate: 0.00 m/s (0.00, 0.00, 0.00), temperature 18.43 °C, humidity 72.90 %, co2 420.00 ppm",
     );
   });
 
@@ -167,7 +167,7 @@ test("climate: opening the roof vent lets the heated air out, and the cold in", 
     await page.getByRole("group", { name: "Openings" }).getByRole("slider").first().fill("100");
     await expect(page).toHaveURL(/open=roof_vent:1(&|$)/);
     await expect(reading).toHaveText(
-      "climate: 0.29 m/s (0.00, 0.00, 0.29), temperature 9.66 °C, humidity 86.87 %, co2 420.00 ppm",
+      "climate: 0.29 m/s (0.00, 0.00, 0.29), temperature 10.47 °C, humidity 82.92 %, co2 420.00 ppm",
     );
   });
 });
@@ -179,9 +179,9 @@ test("climate: the house's air as one volume follows the run, beside it all off"
   await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
   const house = page.getByRole("figure", { name: "House air" });
 
-  // Heated, the house holds near 15.5 °C; all off, it cools towards the
+  // Heated, the house warms towards 21 °C; all off, it cools towards the
   // night's 8 °C.
-  await expect(house.getByTestId("house-air-°C")).toHaveText("Air 15.5 °C, all off 8.9 °C");
+  await expect(house.getByTestId("house-air-°C")).toHaveText("Air 19.7 °C, all off 10.3 °C");
   await expect(house.getByTestId("house-air-ppm")).toHaveText("CO₂ 420.0 ppm, all off 420.0 ppm");
 });
 
@@ -196,10 +196,24 @@ test("climate: a run lasts a day, its later field drawn from the whole house", a
     "86400",
   );
   // The house has long settled, heated, and all off at the night's 8 °C.
-  await expect(page.getByTestId("house-air-°C")).toHaveText("Air 15.5 °C, all off 8.0 °C");
+  await expect(page.getByTestId("house-air-°C")).toHaveText("Air 21.2 °C, all off 8.0 °C");
   // The probe reads the grid run started at four hours, from the whole house.
   await expect(page.getByTestId("chart-P1-temperature_c")).toHaveText(
-    "temperature 14.78 °C, all off 8.00 °C",
+    "temperature 20.45 °C, all off 8.00 °C",
     { timeout: 30_000 },
   );
+});
+
+test("climate: the envelope is coloured by its glass's temperature through the run", async ({
+  page,
+}) => {
+  await page.goto("/?scenario=climate_box&set=heater:1&field=climate&t=600");
+  await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
+
+  await page.getByLabel("Colour by").selectOption("surface_temperature_c");
+  await expect(page.getByTestId("legend-property")).toHaveText("surface_temperature_c");
+  // The front wall's glass, far from the heater, the coolest; the back
+  // wall's, beside it, the warmest; all between the air and the night's 8 °C.
+  await expect(page.getByTestId("legend-min")).toHaveText("12.06");
+  await expect(page.getByTestId("legend-max")).toHaveText("19.64");
 });

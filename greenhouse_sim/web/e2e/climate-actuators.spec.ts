@@ -68,15 +68,15 @@ test("climate-actuators: the box's equipment and vent change its air, visibly an
     await moveTo(page, 0);
     await equipment.getByRole("checkbox", { name: "heater" }).check();
     await moveTo(page, 600);
-    await expect(byHeater).toHaveText(/temperature 31\.88 °C/);
+    await expect(byHeater).toHaveText(/temperature 37\.35 °C/);
     await moveTo(page, 0);
     await equipment.getByRole("slider", { name: "heater level" }).fill("50");
     await expect(page.getByTestId("equipment-heater")).toHaveText("50%, 5 kW");
     await moveTo(page, 600);
     const half = await reads(byHeater, "temperature");
-    expect(unheated).toBeLessThan(10);
+    expect(unheated).toBeLessThan(11);
     expect(half).toBeGreaterThan(unheated + 5);
-    expect(half).toBeLessThan(31.88);
+    expect(half).toBeLessThan(37.35);
   });
 
   await test.step("the dehumidifier dries the air around it", async () => {

@@ -50,10 +50,11 @@ test("sensors: a clean sensor's reading through a run is the truth beside it", a
 
   await selectAt(page, FRONT_FACE, "climate_box_temperature_front", BESIDE_THE_FRONT);
   const panel = page.getByRole("region", { name: "Sensor" });
-  // Ten minutes in, the unheated half of the house has cooled.
-  await expect(panel.getByTestId("sensor-reading")).toHaveText("12.69 °C at 10 min");
+  // Ten minutes in, the heater's warmth has reached the front half of the
+  // house, through glass that passes little in the night's still air.
+  await expect(panel.getByTestId("sensor-reading")).toHaveText("16.12 °C at 10 min");
   await expect(panel.getByRole("complementary", { name: "Truth, for QA only" })).toBeVisible();
-  await expect(panel.getByTestId("sensor-truth")).toHaveText("12.69 °C at 10 min");
+  await expect(panel.getByTestId("sensor-truth")).toHaveText("16.12 °C at 10 min");
   // A reading a minute, on the truth's line.
   await expect(panel.locator(".sensor-chart-reading")).toHaveCount(11);
 
@@ -73,8 +74,8 @@ test("sensors: an imperfect sensor errs as configured, and the QA switch cleans 
   // Biased, drifting and noisy, to a tenth of a degree, and 30 s late: by
   // ten minutes, its latest reading is the one taken at nine. Two of its
   // samples dropped out.
-  await expect(panel.getByTestId("sensor-reading")).toHaveText("19.20 °C at 9 min");
-  await expect(panel.getByTestId("sensor-truth")).toHaveText("18.59 °C at 10 min");
+  await expect(panel.getByTestId("sensor-reading")).toHaveText("23.60 °C at 9 min");
+  await expect(panel.getByTestId("sensor-truth")).toHaveText("23.24 °C at 10 min");
   await expect(panel.locator(".sensor-chart-reading")).toHaveCount(8);
 
   await expect(panel.getByTestId("sensor-freshness")).toHaveText(
@@ -82,7 +83,7 @@ test("sensors: an imperfect sensor errs as configured, and the QA switch cleans 
   );
 
   await panel.getByRole("checkbox", { name: "Imperfections" }).uncheck();
-  await expect(panel.getByTestId("sensor-reading")).toHaveText("18.59 °C at 10 min");
+  await expect(panel.getByTestId("sensor-reading")).toHaveText("23.24 °C at 10 min");
   await expect(panel.locator(".sensor-chart-reading")).toHaveCount(11);
   await expect(panel.getByTestId("sensor-freshness")).toHaveText(
     "Fresh: its reading of 10 min has come.",

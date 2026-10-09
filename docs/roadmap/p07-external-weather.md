@@ -1,6 +1,6 @@
 # P07: External weather and greenhouse boundary coupling
 
-**Status:** in progress: P07.1 to P07.3 done, P07.4 next. Part of the
+**Status:** in progress: P07.1 to P07.4 done, P07.5 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -246,7 +246,7 @@ station's readings, never the weather source itself.
 | P07.1 | `feat(weather): define the site, the weather state and its sources` | Done |
 | P07.2 | `feat(weather): add synthetic day and night weather presets` | Done |
 | P07.3 | `feat(climate): run a whole day` | Done |
-| P07.4 | `feat(boundary): couple the glazing to the changing outside` | Planned |
+| P07.4 | `feat(boundary): couple the glazing to the changing outside` | Done |
 | P07.5 | `feat(boundary): add infiltration and the outside's water and CO₂` | Planned |
 | P07.6 | `feat(wind): drive the openings by wind and stack pressure` | Planned |
 | P07.7 | `feat(weather): import recorded weather` | Planned |
@@ -473,6 +473,36 @@ recorded again. Visible result: a cold night cools the glass, and then,
 more slowly, the air. Tests: no difference passes no heat; reversing it
 reverses the flux; U is the configured one at 4 m/s, and rises with
 wind.
+
+#### As implemented
+
+- **The changing outside temperature** came with P07.1: the climate run
+  already takes the weather at the middle of each minute.
+- **U with the wind** (`climate.glazing`): 1/U = 1/h_in + R_glass + 1/h_out,
+  h_out = 5.8 + 4.1 v, R_glass 0.004 m²K/W for 4 mm of float glass. A
+  configured U is the glass's at 4 m/s; its inner film then follows (8.5
+  W/m²K for single glass). Single glass passes 3.4 W/m²K in still air and
+  7.3 in a 15 m/s gale. A U above what the glass and the outside film alone
+  pass is refused. The grid run and the whole house both take U in the
+  weather's wind at each stretch.
+- **Glazed surfaces:** each wall's air cells against the grid's side, up to
+  the eaves, and each roof slope's under its half of its span, as the
+  grid's top. Each surface's mean air, its temperature between the air and
+  the outside, and the heat it passes; together they pass what the run's
+  glass passes. The whole house's would all be its mean.
+- **The API:** `GET /api/scenarios/{id}/climate/glazing?…&t=600`, asked as
+  the climate field is, from the grid run that draws the moment.
+- **The viewer:** while the climate is drawn, each wall and roof slope
+  carries `surface_temperature_c` and `glass_loss_w`, so "Colour by" shades
+  the envelope by its glass's temperature and the inspector shows both.
+- **P05's numbers, recorded again.** The climate box's night is still, so
+  its glass passes 3.4 W/m²K, not 6, and its heater warms it more. Ten
+  minutes in, heated: 37.35 °C beside the heater (31.88 before) against
+  10.40 all off (9.01), and 18.90 across the house (14.96) against 10.57
+  (9.13); settled, 21.2 °C rather than 15.5. The browser tests and the
+  climate tests carry the new numbers. With the heater on and the roof
+  vent open, the whole house now runs 3.2 °C below the grid's mean, as the
+  vent is most of what the house loses.
 
 ### P07.5: Infiltration, water and CO₂
 

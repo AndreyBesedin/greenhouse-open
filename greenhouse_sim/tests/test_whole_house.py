@@ -24,11 +24,12 @@ DAY_S = 86_400.0
 # the climate box: in a shut house its temperature to a few tenths of a
 # degree; with condensation on the cold glass, which only the grid has
 # beside the glass, its water to a gram and a half a kilogram; with a vent
-# open, which on the grid exchanges the cooler air beside it, to two
-# degrees.
+# open, which on the grid exchanges the cooler air beside it, to three and a
+# half degrees, on a still night, when the vent is most of what the heater
+# loses.
 SHUT_TEMPERATURE_C = 0.3
 CONDENSING_WATER_G_KG = 1.5
-VENTING_TEMPERATURE_C = 2.0
+VENTING_TEMPERATURE_C = 3.5
 
 
 def _run(

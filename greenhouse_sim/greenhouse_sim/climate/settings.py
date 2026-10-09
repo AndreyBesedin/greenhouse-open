@@ -8,6 +8,8 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, PositiveFloat
 
+from greenhouse_sim.climate.glazing import most_u_w_m2k
+
 type Percent = Annotated[float, Field(ge=0.0, le=100.0)]
 
 
@@ -22,9 +24,10 @@ class ClimateSettings(BaseModel):
     start_humidity_pct: Percent = 75.0
     start_co2_ppm: PositiveFloat = 420.0
     # How much heat the walls' and roof's glazing passes, per square metre and
-    # per kelvin between inside and out: about 6 W/m²K for single glass. Zero
-    # shuts the house off from the outside.
-    glazing_u_w_m2k: NonNegativeFloat = 6.0
+    # per kelvin between inside and out, in a 4 m/s wind: about 6 W/m²K for
+    # single glass. The wind sets it at every other moment
+    # (`climate.glazing`). Zero shuts the house off from the outside.
+    glazing_u_w_m2k: Annotated[float, Field(ge=0.0, lt=most_u_w_m2k())] = 6.0
     # The air's effective diffusivity: its own, about 2e-5 m²/s, with the
     # mixing its half-metre cells cannot resolve and the convection a climate
     # run does not carry folded in. At 0.1 m²/s a small house's air mixes

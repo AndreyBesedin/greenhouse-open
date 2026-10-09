@@ -4,6 +4,7 @@ heated and exchanged with the outside (P05.3)."""
 import numpy as np
 import pytest
 
+from greenhouse_sim.climate.glazing import glazing_u_w_m2k
 from greenhouse_sim.climate.projection import FaceFlows, conserving, face_flows
 from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.climate.sources import SourceTerms, source_terms
@@ -143,11 +144,13 @@ def test_the_house_settles_where_the_heater_balances_what_the_glass_loses() -> N
     temperature = _advance(transport, START, HEAT_W, 2 * 3600)
     later = _advance(transport, temperature, HEAT_W, 600)
 
-    loss_w = transport.envelope_loss_w(later, OUTSIDE.air_temperature_c)
+    loss_w = transport.envelope_loss_w(later, OUTSIDE)
     assert loss_w == pytest.approx(HEATER.power_w, rel=0.01)
     np.testing.assert_allclose(later, temperature, atol=1e-3)
-    # About where 10 kW keeps 224 m² of single glass above 8 °C outside.
-    balance = OUTSIDE.air_temperature_c + HEATER.power_w / (6.0 * GLASS_M2)
+    # About where 10 kW keeps 224 m² of single glass above 8 °C outside, its
+    # U the glass's in the night's still air (P07.4).
+    still_u = glazing_u_w_m2k(SETTINGS.glazing_u_w_m2k, OUTSIDE.wind_speed_m_s)
+    balance = OUTSIDE.air_temperature_c + HEATER.power_w / (still_u * GLASS_M2)
     assert later[AIR].mean() == pytest.approx(balance, abs=0.5)
 
 
@@ -177,10 +180,11 @@ def test_a_heaters_warmth_spreads_out_from_it_with_time() -> None:
     # Half a minute in, its corner is warm, and 3 m away barely.
     assert early[beside] > 25.0
     assert early[across] < 17.0
-    # Five minutes in, its warmth has reached 3 m away, but not 5 m, where the
-    # cold glass still cools the air.
+    # Five minutes in, its warmth has reached 3 m away, and less of it 5 m
+    # away, where the cold glass still cools the air.
     assert later[across] > early[across] + 1.0
-    assert later[far] < early[far] < START[far]
+    assert early[far] < START[far]
+    assert later[far] - early[far] < later[across] - early[across]
     assert later[beside] > later[across] > later[far]
 
 
