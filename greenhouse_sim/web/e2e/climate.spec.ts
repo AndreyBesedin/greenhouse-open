@@ -171,3 +171,16 @@ test("climate: opening the roof vent lets the heated air out, and the cold in", 
     );
   });
 });
+
+test("climate: the house's air as one volume follows the run, beside it all off", async ({
+  page,
+}) => {
+  await page.goto("/?scenario=climate_box&set=heater:1&field=climate&t=600");
+  await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
+  const house = page.getByRole("figure", { name: "House air" });
+
+  // Heated, the house holds near 15.5 °C; all off, it cools towards the
+  // night's 8 °C.
+  await expect(house.getByTestId("house-air-°C")).toHaveText("Air 15.5 °C, all off 8.9 °C");
+  await expect(house.getByTestId("house-air-ppm")).toHaveText("CO₂ 420.0 ppm, all off 420.0 ppm");
+});

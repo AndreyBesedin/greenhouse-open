@@ -1,7 +1,7 @@
 # P07: External weather and greenhouse boundary coupling
 
-**Status:** in progress: P07.1 and P07.2 done, P07.3 next. Part of the
-[simulator roadmap](README.md).
+**Status:** in progress: P07.1 and P07.2 done, P07.3's whole-house model
+done, its day-long runs next. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -245,7 +245,7 @@ station's readings, never the weather source itself.
 | --- | --- | --- |
 | P07.1 | `feat(weather): define the site, the weather state and its sources` | Done |
 | P07.2 | `feat(weather): add synthetic day and night weather presets` | Done |
-| P07.3 | `feat(climate): run a whole day` | Planned |
+| P07.3 | `feat(climate): run a whole day` | In progress |
 | P07.4 | `feat(boundary): couple the glazing to the changing outside` | Planned |
 | P07.5 | `feat(boundary): add infiltration and the outside's water and CO₂` | Planned |
 | P07.6 | `feat(wind): drive the openings by wind and stack pressure` | Planned |
@@ -398,6 +398,42 @@ it for the field at a moment. Visible result: the time slider spans a day,
 and the field and the probes follow it. Tests: the whole-house model follows
 the grid run's mean; both close their energy and water budgets.
 
+#### As implemented
+
+P07.3 lands in two pull requests: the whole-house model first, the
+day-long runs after it.
+
+- **The whole house** (`climate.house`, `WholeHouse`) is the reduction of
+  a climate run's grid to one volume: the grid's air cells' volume, its
+  exchange with the outside through the glass and the open doors and
+  vents, summed, the heat its equipment adds and the water it takes, and
+  the weather at the middle of each minute.
+  - **Exact between moments:** with those held, temperature, water and
+    CO₂ each relax towards where their sources balance, and are advanced
+    by the equations' own solution, not by small steps. A minute's
+    stretch, and an hour in about a millisecond.
+  - **Water** is taken never beyond what the air holds, and what the air
+    holds beyond saturation condenses and is counted, as on the grid.
+- **Against the grid run's mean** on the climate box, measured and kept as
+  the tests' tolerances:
+  - **shut, whatever runs:** temperature within 0.3 °C, CO₂ and the water
+    equipment takes alike;
+  - **condensing:** the grid's air condenses first in the cells against
+    the cold glass, the well-mixed air only when its mean saturates, so
+    while heating the whole house holds up to 1.3 g/kg more water;
+  - **a vent open:** the grid exchanges the cooler air beside the vent,
+    the well-mixed air the mean, so with the heater on the whole house runs
+    1.7 °C cooler.
+- **Budgets:** shut off from the outside, the heat it gains is the
+  heater's and the water it loses is what is taken or condenses, to
+  rounding.
+- **The API:** `GET /api/scenarios/{id}/climate/house?…&t=600` gives the
+  house's air every minute up to the moment, and the same run's all off,
+  asked as the climate field is.
+- **The viewer:** "House air", under the climate run's time slider: the
+  house's temperature, humidity and CO₂ through the run up to the moment
+  drawn, the run all off dashed beside it.
+
 ### P07.4: The glazing and the changing outside
 
 A changing outside temperature, the wind's film coefficient, surface
@@ -473,7 +509,10 @@ What P07 simplifies on purpose, kept here until a later step removes it:
   at gaps, vents' edges and doors.
 - **The whole-house model is well mixed:** it knows the house's mean, not
   its gradients. The field at a moment comes from the grid run, which takes
-  its shape within the hour before it.
+  its shape within the hour before it. It condenses only when its mean
+  air saturates, not first against the cold glass, and an open vent
+  exchanges its mean air, not the cooler air beside the vent (P07.3's
+  measured differences).
 - **Plants still take their daily climate,** not the air where they stand,
   and transpire nothing, until P09.
 
