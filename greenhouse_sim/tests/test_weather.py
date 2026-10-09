@@ -16,9 +16,10 @@ from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
-from greenhouse_sim.services.fields import air_grid
+from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.weather.sources import ConstantWeather, RunWeather, WeatherSeries
 from greenhouse_sim.weather.state import WeatherState
+from greenhouse_sim.weather.synthetic import SyntheticWeather
 from greenhouse_sim.world.site import DEFAULT_SITE
 
 DAWN = datetime(2026, 4, 1, 4, tzinfo=UTC)
@@ -67,11 +68,16 @@ def test_constant_weathers_pressure_is_the_sites_unless_given() -> None:
     assert given.state(high).barometric_pressure_hpa == 990.0
 
 
-def test_every_scenario_keeps_its_outside_as_constant_weather() -> None:
-    # The climate box's cold, damp night; the others' mild default.
+def test_every_scenario_but_the_solar_lab_keeps_its_outside_as_constant_weather() -> None:
+    # The climate box's cold, damp night; the others' mild default; and the
+    # solar lab's clear spring day (P08.6).
     assert BOX.weather == ConstantWeather(air_temperature_c=8.0, relative_humidity_pct=90.0)
-    for config in SCENARIO_REGISTRY.values():
-        assert isinstance(config.weather, ConstantWeather)
+    for name, config in SCENARIO_REGISTRY.items():
+        if name == "solar_lab":
+            assert isinstance(config.weather, SyntheticWeather)
+            assert config.weather.cloud_cover_pct == 0.0
+        else:
+            assert isinstance(config.weather, ConstantWeather)
         assert config.weather.co2_ppm == 420.0
 
 

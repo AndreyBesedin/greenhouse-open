@@ -16,7 +16,7 @@ from greenhouse_sim.climate.transport import AirState
 from greenhouse_sim.domain.air import AIR_UNITS, AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
-from greenhouse_sim.services.fields import air_grid
+from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.solar.glass import NORMAL_TRANSMITTANCE
 from greenhouse_sim.solar.inside import Sunlight
 from greenhouse_sim.solar.position import SunPosition, sun_position
@@ -201,7 +201,9 @@ def test_the_api_serves_the_climates_light_and_the_skys() -> None:
         )
     )
     light = weather["light"]
-    par = field.sample(AirQuantity.PAR, Vector3(x=6.0, y=3.2, z=0.5))
+    # In the open south of the first row: the plants' crowns and the crop
+    # gutters shade the middle of the floor from a low sun.
+    par = field.sample(AirQuantity.PAR, Vector3(x=5.75, y=1.2, z=0.25))
 
     # About 9° up, so a little over 100 W/m².
     assert 80.0 < light["ghi_w_m2"] < 150.0

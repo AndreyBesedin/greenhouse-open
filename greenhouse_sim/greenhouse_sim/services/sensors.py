@@ -16,12 +16,13 @@ from greenhouse_protocol.media import CameraFrame
 from greenhouse_protocol.observation import Observation
 from pydantic import BaseModel, ConfigDict
 
+from greenhouse_sim.climate.day import LONGEST_RUN_S
 from greenhouse_sim.evaluation.sensor_truth import SensorTruth, sensor_truth
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.sensors.air import WeatherAt, observe, reads
 from greenhouse_sim.sensors.log import SensorFreshness, frames, freshness
 from greenhouse_sim.services.errors import InvalidRequest
-from greenhouse_sim.services.fields import LONGEST_RUN_S, Commanded, air_through_a_run
+from greenhouse_sim.services.fields import Commanded, air_through_a_run
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, SceneChanges, changed, scenario
 from greenhouse_sim.world.sensors import Camera, PointSensor
 

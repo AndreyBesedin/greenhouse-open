@@ -1,0 +1,100 @@
+{
+  "$schema": "../../layout.schema.json",
+  "crop_rows": {
+    "origin": {
+      "x": 2.25,
+      "y": 3.2
+    },
+    "heading": 0.0,
+    "rows": 1,
+    "positions_per_row": 16,
+    "plant_pitch": 0.5,
+    "row_spacing": 1.6,
+    "support": {
+      "kind": "crop_gutter",
+      "height": 0.6,
+      "width": 0.3,
+      "depth": 0.12,
+      "overhang": 0.25,
+      "offset": 0.0,
+      "leg_spacing": 2.0,
+      "leg_radius": 0.02,
+      "slab": {
+        "width": 0.2,
+        "height": 0.075,
+        "material": "substrate"
+      }
+    }
+  },
+  "placed": [
+    {
+      "fixture_id": "crates",
+      "primitive": "box",
+      "kind": "obstacle",
+      "base": {
+        "x": 3.05,
+        "y": 2.5,
+        "z": 0.0
+      },
+      "size_x": 2.2,
+      "size_y": 0.6,
+      "size_z": 1.5,
+      "heading": 0.0
+    }
+  ],
+  "zones": [],
+  "equipment": [
+    {
+      "actuator_id": "heater",
+      "heading": 3.141592653589793,
+      "base": {
+        "x": 11.2,
+        "y": 0.7,
+        "z": 0.0
+      },
+      "size_x": 0.6,
+      "size_y": 0.8,
+      "size_z": 1.2,
+      "kind": "heater",
+      "power_w": 10000.0
+    }
+  ],
+  "sensors": [
+    {
+      "sensor_id": "par_open",
+      "position": {
+        "x": 3.05,
+        "y": 1.5,
+        "z": 0.3
+      },
+      "cadence_s": 60.0,
+      "kind": "par",
+      "imperfections": {
+        "noise_sd": 0.0,
+        "quantization": 0.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "sensor_id": "par_shade",
+      "position": {
+        "x": 3.05,
+        "y": 3.9,
+        "z": 0.3
+      },
+      "cadence_s": 60.0,
+      "kind": "par",
+      "imperfections": {
+        "noise_sd": 0.0,
+        "quantization": 0.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    }
+  ]
+}

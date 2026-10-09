@@ -33,6 +33,8 @@ from greenhouse_sim.climate.transport import AirState
 from greenhouse_sim.fields.field import EnvironmentField
 
 HOUR_S: Final = 3600.0
+# How long a climate run lasts, at most, in seconds: a day.
+LONGEST_RUN_S: Final = 86_400.0
 # How long the grid run from the start is drawn, in seconds: its first two
 # hours, after which the field comes from a later grid run.
 FROM_THE_START_S: Final = 2 * HOUR_S

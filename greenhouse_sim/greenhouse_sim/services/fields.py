@@ -2,7 +2,7 @@
 
 A field covers the air under the greenhouse's gutters: its floor, from its
 front right corner, up to its eaves. The air in the roof's spans above them
-is left out until a solver needs it. Its cells are at most `CELL_M` wide.
+is left out until a solver needs it (`greenhouse_sim.services.grid`).
 
 A scenario offers every prescribed airflow pattern
 (`greenhouse_sim.airflow.prescribed`): its own, as its configuration sets
@@ -39,7 +39,7 @@ from greenhouse_sim.airflow.prescribed import PATTERNS
 from greenhouse_sim.cfd.geometry import CfdGeometry, cfd_geometry
 from greenhouse_sim.cfd.results import CfdAirflow, kept_result
 from greenhouse_sim.climate.commands import Command, Schedule
-from greenhouse_sim.climate.day import ClimateDay, window_start
+from greenhouse_sim.climate.day import LONGEST_RUN_S, ClimateDay, window_start
 from greenhouse_sim.climate.glazing import GlazingAt, glazed_cells
 from greenhouse_sim.climate.house import HouseTrace, house_trace
 from greenhouse_sim.climate.openings import OpeningsAt, opening_sites
@@ -51,6 +51,7 @@ from greenhouse_sim.fields.synthetic import shear_field
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
+from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.scenarios import (
     DEFAULT_WEATHER,
     SceneChanges,
@@ -58,18 +59,13 @@ from greenhouse_sim.services.scenarios import (
     equipment_levels,
     scenario,
 )
-from greenhouse_sim.solar.inside import Sunlight
-from greenhouse_sim.solar.shadows import Shadows
+from greenhouse_sim.services.sunlight import plant_light
 from greenhouse_sim.weather.recorded import RecordedWeather
 from greenhouse_sim.world.geometry import Vector3
 
-# The widest a field's cell may be, in metres.
-CELL_M: Final = 0.5
 SHEAR: Final = "shear"
 CFD: Final = "cfd"
 CLIMATE: Final = "climate"
-# How long a climate run lasts, at most, in seconds: a day.
-LONGEST_RUN_S: Final = 86_400.0
 # How many recent climate runs are kept.
 KEPT_RUNS: Final = 8
 # Probes read a climate run this often, in seconds.
@@ -225,13 +221,7 @@ def _new_climate_run(
         weather=outside,
         vents=vents,
         glazed=glazed_cells(config.envelope, grid, geometry.solid()),
-        sunlight=Sunlight(
-            config.site,
-            outside,
-            grid,
-            config.envelope,
-            Shadows.of(config.envelope, config.layout),
-        ),
+        sunlight=plant_light(scenario_id, layout, weather).sunlight,
     )
 
 
@@ -310,17 +300,6 @@ def grid(scenario_id: str) -> FieldGrid:
     """The grid a scenario's fields cover: its greenhouse's air under the
     gutters."""
     return air_grid(scenario(scenario_id))
-
-
-def air_grid(config: ScenarioConfig) -> FieldGrid:
-    """The grid over a scenario's greenhouse's air under the gutters, as it
-    is configured."""
-    envelope = config.envelope
-    return FieldGrid.over(
-        Vector3(x=0.0, y=0.0, z=0.0),
-        Vector3(x=envelope.length, y=envelope.width, z=envelope.eave_height),
-        CELL_M,
-    )
 
 
 def field(

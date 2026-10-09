@@ -13,7 +13,8 @@ from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
-from greenhouse_sim.services.fields import air_grid, climate_vents
+from greenhouse_sim.services.fields import climate_vents
+from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.scenarios import SceneChanges, changed
 from greenhouse_sim.world.geometry import Vector3
 

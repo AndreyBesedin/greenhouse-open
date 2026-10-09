@@ -11,8 +11,9 @@ start, and each is due its latency after it was taken. A sensor is fresh
 while the latest reading due from it by then has come, and stale once one
 has not: a sample that dropped out leaves it stale until the next comes.
 Before its first reading is due, it is waiting. A sensor whose quantity
-nothing in the run gives, as no model gives PAR yet, is unavailable: it
-will never read, which is not the same as having missed a reading.
+nothing in the run gives, as a run without the sun's light gives no PAR, is
+unavailable: it will never read, which is not the same as having missed a
+reading.
 Freshness is the log's to say, not a quality of any reading.
 
 **Frames.** A camera takes a frame every `cadence_s` from the run's start.

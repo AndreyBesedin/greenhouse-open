@@ -7,7 +7,7 @@ from greenhouse_sim.climate.commands import Command, Schedule
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
-from greenhouse_sim.services.fields import air_grid
+from greenhouse_sim.services.grid import air_grid
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
 GRID = air_grid(CONFIG)

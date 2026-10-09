@@ -22,7 +22,7 @@ from greenhouse_sim.cfd.openfoam import SetupRefused, write_mesh_case
 from greenhouse_sim.cfd.results import CfdResult, keep
 from greenhouse_sim.cfd.solve import solve as solve_case
 from greenhouse_sim.services.errors import InvalidRequest
-from greenhouse_sim.services.fields import air_grid
+from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.scenarios import SceneChanges, changed, scenario
 
 

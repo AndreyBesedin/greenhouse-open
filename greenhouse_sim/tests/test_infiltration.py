@@ -16,7 +16,8 @@ from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.climate.transport import Transport
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
-from greenhouse_sim.services.fields import _climate_day, air_grid
+from greenhouse_sim.services.fields import _climate_day
+from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.weather.sources import ConstantWeather, RunWeather
 
 BOX = SCENARIO_REGISTRY["climate_box"]

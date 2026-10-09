@@ -14,9 +14,9 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict
 
+from greenhouse_sim.climate.day import LONGEST_RUN_S
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services.errors import InvalidRequest
-from greenhouse_sim.services.fields import LONGEST_RUN_S
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, SceneChanges, changed, scenario
 from greenhouse_sim.solar.position import SunPosition, sun_position
 from greenhouse_sim.solar.sky import OutsideLight, outside_light

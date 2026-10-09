@@ -4,8 +4,9 @@ A point sensor takes a sample every `cadence_s` of a run, from its start,
 of one quantity of the air at its position, as the air's field samples it
 there (`EnvironmentField.sample`): a temperature sensor its temperature, a
 humidity sensor its relative humidity, a CO2 sensor its CO2, an anemometer
-its speed. A quantity the field does not carry, as no model gives PAR yet,
-is no reading at all: a gap is an absent record.
+its speed, a PAR sensor the light on a level surface there (P08.6). A
+quantity the field does not carry, as a field without the sun's light has
+no PAR, is no reading at all: a gap is an absent record.
 
 A weather station's instruments (P07.2) stand outside the house, and read
 the weather instead, as it is at each sample: its air's temperature and
@@ -55,6 +56,7 @@ QUANTITIES: Final = {
     SensorKind.HUMIDITY: AirQuantity.HUMIDITY,
     SensorKind.CO2: AirQuantity.CO2,
     SensorKind.AIR_SPEED: AirQuantity.VELOCITY,
+    SensorKind.PAR: AirQuantity.PAR,
 }
 # What each of a weather station's instruments reads of the weather.
 WEATHER_QUANTITIES: Final = {

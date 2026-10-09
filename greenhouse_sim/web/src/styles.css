@@ -52,9 +52,11 @@ body {
   border-collapse: collapse;
 }
 
+/* Rows sit close, so that the panel keeps every scenario in the usual
+   window. */
 .info-panel th,
 .info-panel td {
-  padding: 1px 8px 1px 0;
+  padding: 0 8px 0 0;
   text-align: left;
 }
 

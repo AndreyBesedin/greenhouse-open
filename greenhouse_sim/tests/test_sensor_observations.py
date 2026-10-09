@@ -73,12 +73,13 @@ def test_each_kind_reports_its_own_quantity() -> None:
     assert latest["anemometer"].value > 3.0
 
 
-def test_a_quantity_no_model_gives_is_no_reading_at_all() -> None:
+def test_a_par_sensor_reads_the_suns_light_and_none_at_night() -> None:
     truth = sensors.truth("climate_box", levels=HEATED, until_s=300)
     par = next(s for s in truth.sensors if s.sensor_id == "par")
 
-    assert _observed("par") == []
-    assert par.values == [None] * len(MOMENTS)
+    # The climate box's runs start at midnight.
+    assert par.values == [0.0] * len(MOMENTS)
+    assert [o.value for o in _observed("par")] == [0.0] * len(MOMENTS)
     assert par.observation_type == ObservationType.PAR_UMOL_M2_S
 
 
@@ -93,6 +94,7 @@ def test_observations_conform_to_the_protocol_and_name_their_sensor_and_run() ->
         "humidity_back",
         "anemometer",
         "co2",
+        "par",
         "station_temperature",
         "station_humidity",
         "station_pressure",
@@ -151,9 +153,9 @@ def test_the_api_serves_the_observations_and_the_truth() -> None:
     assert isinstance(observed.body, dict) and isinstance(truth.body, dict)
     assert observed.body["run_id"] == truth.body["run_id"]
     assert isinstance(observed.body["observations"], list)
-    # Six sensors inside and five outside give a reading a minute each; PAR
-    # gives none.
-    assert len(observed.body["observations"]) == 11 * 3
+    # Seven sensors inside, PAR among them, and five outside give a reading
+    # a minute each.
+    assert len(observed.body["observations"]) == 12 * 3
 
 
 @pytest.mark.parametrize(
