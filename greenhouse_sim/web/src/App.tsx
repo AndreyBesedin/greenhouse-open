@@ -25,6 +25,7 @@ import { FieldLegend } from "./fields/FieldLegend";
 import { FieldProbes } from "./fields/FieldProbes";
 import { FieldSlice } from "./fields/FieldSlice";
 import { FieldStreamlines } from "./fields/FieldStreamlines";
+import { HouseAir, type HouseAirState, houseAirUrl, loadHouseAir } from "./fields/HouseAir";
 import {
   loadProbeCharts,
   ProbeCharts,
@@ -102,6 +103,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [placingProbes, setPlacingProbes] = useState(false);
   const [playingClimate, setPlayingClimate] = useState(false);
   const [probeCharts, setProbeCharts] = useState<ProbeChartsState>({ status: "none" });
+  const [houseAir, setHouseAir] = useState<HouseAirState>({ status: "none" });
   const [sensorReadings, setSensorReadings] = useState<SensorReadingsState>({ status: "none" });
   const [weather, setWeather] = useState<WeatherStateOfLoad>({ status: "none" });
   const [weatherDay, setWeatherDay] = useState<WeatherDayState>({ status: "none" });
@@ -353,6 +355,30 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       current = false;
     };
   }, [chartsUrl]);
+
+  // The house's air as one volume through the climate run drawn, and the
+  // same run all off, up to the moment drawn; the last stays on show until
+  // the next arrives.
+  const houseUrl =
+    source.kind === "scenario" && source.field === CLIMATE_FIELD
+      ? houseAirUrl(source.scenarioId, source)
+      : null;
+  useEffect(() => {
+    if (houseUrl === null) {
+      setHouseAir({ status: "none" });
+      return;
+    }
+    let current = true;
+    setHouseAir((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
+    void loadHouseAir(houseUrl).then((state) => {
+      if (current) {
+        setHouseAir(state);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [houseUrl]);
 
   // The boundaries a CFD solver is given, changed as the scene is, drawn
   // over it when asked for; the last stays on show until the next arrives.
@@ -771,6 +797,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 onTime={setClimateTime}
                 onPlaying={setPlayingClimate}
               />
+            )}
+            {source.kind === "scenario" && source.field === CLIMATE_FIELD && (
+              <HouseAir state={houseAir} />
             )}
             {source.kind === "scenario" && source.field === CLIMATE_FIELD && (
               <ClimateSchedule

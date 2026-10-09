@@ -19,7 +19,8 @@ A few recent climate runs are kept, each with the moments asked of it, so
 that a later moment carries on from the latest before it.
 
 Probes read a climate run every minute up to a moment, beside the same run
-with everything off (`greenhouse_sim.climate.probes`).
+with everything off (`greenhouse_sim.climate.probes`), and so does the
+house's air as one well-mixed volume (`greenhouse_sim.climate.house`).
 """
 
 import hashlib
@@ -33,6 +34,7 @@ from greenhouse_sim.airflow.prescribed import PATTERNS
 from greenhouse_sim.cfd.geometry import cfd_geometry
 from greenhouse_sim.cfd.results import CfdAirflow, kept_result
 from greenhouse_sim.climate.commands import Command, Schedule
+from greenhouse_sim.climate.house import HouseTrace, WholeHouse, house_trace
 from greenhouse_sim.climate.probes import ClimateProbes, probe_series
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.vents import Vent
@@ -334,16 +336,50 @@ def climate_probes(
     if outside:
         named = ", ".join(f"({p.x:g}, {p.y:g}, {p.z:g})" for p in outside)
         raise InvalidRequest(f"a probe stands in the house's air, not at {named}")
-    steps = int(until_s // PROBE_EVERY_S)
-    times = [step * PROBE_EVERY_S for step in range(steps + 1)]
-    if times[-1] < until_s:
-        times.append(until_s)
+    times = _moments(until_s)
     key_scenario, key_layout, key_weather, _, key_openings, _ = climate.key
     return probe_series(
         _climate_run(*climate.key),
         _climate_run(key_scenario, key_layout, key_weather, (), key_openings, ()),
         probed,
         times,
+    )
+
+
+def _moments(until_s: float) -> list[float]:
+    """Every `PROBE_EVERY_S` from a run's start to `until_s`, and `until_s`."""
+    steps = int(until_s // PROBE_EVERY_S)
+    times = [step * PROBE_EVERY_S for step in range(steps + 1)]
+    if times[-1] < until_s:
+        times.append(until_s)
+    return times
+
+
+def house_air(
+    scenario_id: str,
+    layout: str | None = None,
+    levels: Mapping[str, float] | None = None,
+    openings: Mapping[str, float] | None = None,
+    commands: Sequence[Commanded] = (),
+    until_s: float = 0.0,
+    weather: str | None = None,
+) -> HouseTrace:
+    """The house's air as one well-mixed volume (`greenhouse_sim.climate.house`)
+    every `PROBE_EVERY_S` up to `until_s` of a scenario's climate run, and of
+    the same run with everything off. Asked as its climate field is, and
+    refused as it is."""
+    if not 0.0 <= until_s <= LONGEST_RUN_S:
+        raise InvalidRequest(f"a climate run lasts from 0 to {LONGEST_RUN_S:g} s, not {until_s:g}")
+    name = layout or DEFAULT_LAYOUT
+    models = _models(scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER)
+    climate = models.get(CLIMATE)
+    if not isinstance(climate, _Climate):
+        raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
+    key_scenario, key_layout, key_weather, _, key_openings, _ = climate.key
+    return house_trace(
+        WholeHouse(_climate_run(*climate.key)),
+        WholeHouse(_climate_run(key_scenario, key_layout, key_weather, (), key_openings, ())),
+        _moments(until_s),
     )
 
 

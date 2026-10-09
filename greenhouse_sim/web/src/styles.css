@@ -415,6 +415,39 @@ body {
   fill: #2b7bb9;
 }
 
+/* The house's air as one volume through the run, the run all off dashed. */
+.house-air {
+  margin: 0 0 8px;
+}
+
+.house-air-row {
+  display: grid;
+  grid-template-columns: 15em 1fr;
+  gap: 6px;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.house-air-chart {
+  width: 100%;
+  height: 18px;
+}
+
+.house-air-chart polyline {
+  fill: none;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.house-air-run {
+  stroke: #c0392b;
+}
+
+.house-air-off {
+  stroke: #7f8c8d;
+  stroke-dasharray: 3 2;
+}
+
 /* A climate run's schedule: a marker on a bar over the run at each
  * command's moment, filled once applied, and the commands listed. */
 .climate-schedule {
