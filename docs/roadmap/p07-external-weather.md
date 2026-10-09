@@ -1,7 +1,6 @@
 # P07: External weather and greenhouse boundary coupling
 
-**Status:** in progress: P07.1 to P07.8 done, its final QA next. Part of the
-[simulator roadmap](README.md).
+**Status:** done. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -680,12 +679,48 @@ At runtime, replay the weather day, accelerated, and check that:
 - the controlled and uncontrolled runs visibly diverge;
 - the replay is the same every time.
 
+### As run
+
+The browser test `e2e/weather-day.spec.ts` runs it in the climate box
+under the cold spring day, at the runtime, on its own once the other
+browser tests pass, as it works the climate through a whole day. Every
+expectation holds:
+
+- **The outside changes through the day:** at 06:00 the Weather panel reads
+  4.0 °C and a 1.9 m/s wind from the WSW, and at 15:00 16.0 °C and
+  5.1 m/s from the WNW; the day's chart runs from 4.0 to 16.0 °C.
+- **The air inside answers it:** with nothing running, the whole house is
+  at 4.0 °C at 06:00 and 16.0 °C at 15:00, close behind the outside through
+  its single glass, and a probe in the middle of the field reads with it.
+- **The vents' flows turn with the wind:** with both side vents open, ten
+  minutes past midnight the south vent takes 2.06 m³/s in and the north one
+  lets it out; at 20:00, the wind veered to the west-north-west, the north
+  vent takes 2.24 m³/s in.
+- **The sensors report the changes:** the front thermometer inside reads
+  4.00 °C at 06:00 and 16.00 °C at 15:00; the weather station's, outside,
+  3.90 and 15.90 °C, within its noise of the day's 4.0 and 16.0.
+- **Controlled and uncontrolled diverge:** heated through the night, the
+  controlled house is at 19.9 °C at 20:00, against 13.1 °C all off.
+- **Played,** the run moves on from 20:00 to 20:05.
+- **The replay is the same:** reloaded, the house's air and the probe read
+  as they did.
+
 ## Acceptance criteria
 
-- [ ] Weather is an explicit external boundary state.
-- [ ] The simulator runs fully offline, with synthetic or recorded weather.
-- [ ] Temperature, moisture and wind can change the air inside.
-- [ ] Each boundary calculation is testable on its own.
+- [x] **Weather is an explicit external boundary state:** a weather source
+  gives the outside at every moment of a run, constant, synthetic or
+  recorded; the climate run, the whole house, the glazing, the leaks and
+  the openings all take it from there.
+- [x] **The simulator runs fully offline, with synthetic or recorded
+  weather:** presets and recorded files in the repository; no weather
+  service is reached for.
+- [x] **Temperature, moisture and wind can change the air inside:** through
+  the glass, U changing with the wind; through the gaps, leaking more in a
+  wind; and through the doors and vents, driven by the wind and the stack.
+- [x] **Each boundary calculation is testable on its own:** the glazing
+  (`tests/test_glazing.py`), the leaks (`tests/test_infiltration.py`) and
+  the openings (`tests/test_wind_openings.py`), each with no flux without a
+  difference and the sign reversing with it.
 
 ## Known approximations
 

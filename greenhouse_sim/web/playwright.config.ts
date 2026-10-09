@@ -12,6 +12,9 @@ const IN_CI = process.env.CI !== undefined;
 const ELSEWHERE = ["visual/**", "bench/**"];
 // P00's final QA drives a shared live run, so it runs once the others pass.
 const RENDERER_SMOKE = "renderer-smoke.spec.ts";
+// P07's final QA works the climate through a whole day, so it runs on its
+// own, once the others pass, and slows none of them.
+const WEATHER_DAY = "weather-day.spec.ts";
 
 export default defineConfig({
   testDir: "e2e",
@@ -22,12 +25,18 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testIgnore: [...ELSEWHERE, RENDERER_SMOKE],
+      testIgnore: [...ELSEWHERE, RENDERER_SMOKE, WEATHER_DAY],
       use: { ...devices["Desktop Chrome"] },
     },
     {
       name: "renderer-smoke",
       testMatch: RENDERER_SMOKE,
+      dependencies: ["chromium"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "weather-day",
+      testMatch: WEATHER_DAY,
       dependencies: ["chromium"],
       use: { ...devices["Desktop Chrome"] },
     },
