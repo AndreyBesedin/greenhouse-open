@@ -36,8 +36,14 @@ test("solar lab: at the equinox's noon a shaded plant takes the sky's light and 
   test.setTimeout(150_000);
   await test.step("behind the crates, a plant takes only the sky's light", async () => {
     await atNoon(page, SHADED_STEM);
-    // The sun 38° up in the south lights the scene.
+    // The sun 38° up in the south lights the scene, and has warmed the shut
+    // house well above the outside, 14.4 °C then (P08.8).
     await expect(page.getByTestId("main-view")).toHaveAttribute("data-light", "sun");
+    await expect(
+      page.getByRole("figure", { name: "House air" }).getByTestId("house-air-°C"),
+    ).toHaveText("Air 29.5 °C, all off 29.5 °C");
+    const weather = page.getByRole("region", { name: "Weather" });
+    await expect(weather.getByTestId("weather-summary")).toContainText("14.4 °C");
     await selectAt(page, SHADED_STEM, "solar_lab_plant_001", fromTheNorth(SHADED_STEM));
     await expect(page.getByTestId("plant-par")).toHaveText("198 µmol/m²/s");
     await expect(page.getByTestId("plant-daily-light")).toHaveText("11.2 mol/m²/d");

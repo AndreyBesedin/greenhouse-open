@@ -7,8 +7,8 @@ It takes what its climate run's grid takes, summed over the house's air
 the outside through the glass and the open doors and vents, U A, U the
 glass's in the wind (`climate.glazing`), and the flows the wind and the
 stack drive through the openings for its mean air (`climate.openings`),
-the heat its equipment adds and the water it takes, and the weather at the
-middle of each stretch. Between two moments those hold, so the air is
+the heat its equipment and the sun add (P08.8) and the water it takes, and
+the weather at the middle of each stretch. Between two moments those hold, so the air is
 advanced exactly, as the linear equations they make solve:
 
 - **temperature:** dT/dt = (E (T_out − T) + Q / (ρ c_p)) / V, for the
@@ -128,10 +128,12 @@ class WholeHouse:
         outside: WeatherState,
         duration_s: float,
         time_s: float,
+        sun_w: float = 0.0,
     ) -> HouseAir:
         volume = self.volume_m3
         heat_per_k = AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K
-        warming_c_s = steady.heat_w / (heat_per_k * volume)
+        heat_w = steady.heat_w + sun_w
+        warming_c_s = heat_w / (heat_per_k * volume)
         settings = self.run.settings
         u = glazing_u_w_m2k(settings.glazing_u_w_m2k, outside.wind_speed_m_s)
         leaks_m3_s = settings.infiltration_per_s(outside.wind_speed_m_s) * volume
@@ -144,7 +146,7 @@ class WholeHouse:
         venting_m3_s = entering + leaks_m3_s
         exchange = u * steady.glass_m3_s_per_u + venting_m3_s
         if exchange > 0:
-            settled = outside.air_temperature_c + steady.heat_w / (heat_per_k * exchange)
+            settled = outside.air_temperature_c + heat_w / (heat_per_k * exchange)
             temperature = _towards(air.temperature_c, settled, exchange / volume, duration_s)
         else:
             temperature = air.temperature_c + warming_c_s * duration_s
@@ -196,8 +198,10 @@ class WholeHouse:
         now = start
         for until in sorted(changes | steps | {time_s}):
             if until > now:
-                outside = self.run.weather.at((now + until) / 2)
-                air = self._advance(air, self._held(now), outside, until - now, now)
+                middle = (now + until) / 2
+                outside = self.run.weather.at(middle)
+                sun = self.run.solar_heat_total_w(middle)
+                air = self._advance(air, self._held(now), outside, until - now, now, sun)
                 now = until
                 if until in steps:
                     self._kept[until] = air

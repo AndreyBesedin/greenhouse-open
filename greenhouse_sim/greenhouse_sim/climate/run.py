@@ -24,11 +24,17 @@ is still, and shows the mean temperature and water of the cells beside it,
 so that a slice or a legend shows the air's. A run under the sun
 (`greenhouse_sim.solar.inside`) adds the light on a level surface at each
 cell's centre: its PAR and its shortwave irradiance.
+
+The sun warms the air (P08.8): of the light reaching the floor under each
+column, the shortwave the glass and the shade let through, the air in the
+column's lowest cell takes `SOLAR_HEAT_SHARE` as heat, at the middle of
+each stretch, as it takes the equipment's.
 """
 
 import math
 import threading
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from typing import Final
 
 import numpy as np
@@ -53,6 +59,9 @@ from greenhouse_sim.world.equipment import Equipment
 type _Levels = tuple[tuple[str, float], ...]
 # A run keeps its air this often on the way to a moment, in seconds.
 KEEP_EVERY_S: Final = 60.0
+# The share of the sun's light reaching the floor that the air above it
+# takes as heat; the ground and the crop's water take the rest (P08.8).
+SOLAR_HEAT_SHARE: Final = 0.7
 # How many times solid cells take their neighbours' mean: enough to reach the
 # middle of an obstacle eight cells thick.
 _FILLING_PASSES: Final = 4
@@ -89,6 +98,16 @@ def _filled(temperature: np.ndarray, solid: np.ndarray) -> np.ndarray:
     return np.where(known, shown, temperature)
 
 
+def _lowest_air(solid: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """The lowest cell of air in each column of the grid that has one, as
+    indices (z, y, x)."""
+    air = ~solid
+    has_air = air.any(axis=0)
+    lowest = air.argmax(axis=0)
+    ys, xs = np.nonzero(has_air)
+    return lowest[ys, xs], ys, xs
+
+
 class ClimateRun:
     """A scenario's air from its start under a schedule and a weather, over a
     grid whose `solid` cells obstacles fill, in its order (z, y, x)."""
@@ -119,6 +138,7 @@ class ClimateRun:
         self.vents = tuple(vents)
         self.glazed = dict(glazed or {})
         self.sunlight = sunlight
+        self._floor_cells = _lowest_air(solid)
         self._base_velocity = base.field("base", grid).channels[AirQuantity.VELOCITY]
         self._steady: dict[_Levels, tuple[SourceTerms, FaceFlows]] = {}
         self._through_flows: dict[str, FaceFlows] | None = None
@@ -254,6 +274,27 @@ class ClimateRun:
         """What the equipment adds to the air at `time_s`."""
         return self._held(self.levels_at(time_s))[0]
 
+    def solar_heat_w(self, time_s: float) -> np.ndarray | None:
+        """The heat the sun's light adds to the air at `time_s`, cell by cell,
+        in W: `SOLAR_HEAT_SHARE` of what reaches the floor under each
+        column, in the column's lowest cell of air; None while it adds
+        none, at night, or without the sun."""
+        if self.sunlight is None:
+            return None
+        floor = self.sunlight.floor_irradiance(time_s)
+        if not floor.any():
+            return None
+        size = self.grid.cell_size
+        zs, ys, xs = self._floor_cells
+        heat = np.zeros(self.solid.shape)
+        heat[zs, ys, xs] = SOLAR_HEAT_SHARE * floor[ys, xs] * size.x * size.y
+        return heat
+
+    def solar_heat_total_w(self, time_s: float) -> float:
+        """All the heat the sun's light adds to the air at `time_s`, in W."""
+        heat = self.solar_heat_w(time_s)
+        return 0.0 if heat is None else float(heat.sum())
+
     def flows_at(
         self, time_s: float, openings: Mapping[str, OpeningFlow] | None = None
     ) -> FaceFlows:
@@ -305,8 +346,12 @@ class ClimateRun:
         now = start
         for until in sorted(changes | kept | {time_s}):
             if until > now:
-                outside = self.weather.at((now + until) / 2)
+                middle = (now + until) / 2
+                outside = self.weather.at(middle)
                 terms, transport = self._transport(now, self.openings_for(air, outside, now))
+                sun = self.solar_heat_w(middle)
+                if sun is not None:
+                    terms = replace(terms, heat_w=terms.heat_w + sun)
                 air = transport.advance(air, terms, until - now, outside)
                 now = until
                 if until in kept:
