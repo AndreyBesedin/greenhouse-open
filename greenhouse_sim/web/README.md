@@ -108,6 +108,12 @@ scenario's air (`GET /api/scenarios/{id}/cfd/geometry`): its floor, walls
 and ceiling at the eaves lightly tinted, its open doors and vents and the
 fixtures in the air's way strongly, all snapped to the solver's mesh, with a
 legend by category; it follows the openings' sliders.
+"Weather" shows a scenario's weather outside at the moment drawn
+(`GET /api/scenarios/{id}/weather?t=600`): when that is at its site, the
+air's temperature, humidity and CO₂, the wind, with a compass needle along
+the way it blows, the pressure, and the site. A wind is drawn as an arrow
+outside the house, a metre long for each metre a second
+(`?scenario=tomato_compartment`).
 The inspector says what the selected entity is in words, and names its
 dimensions. On a scenario's view, a slider per door and vent sets how far
 it stands open: the viewer asks the simulator for the scene with it so

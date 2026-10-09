@@ -23,6 +23,7 @@ def _run(*commands: Command) -> ClimateRun:
         settings=CONFIG.climate,
         grid=GRID,
         solid=SOLID,
+        weather=CONFIG.run_weather(),
     )
 
 

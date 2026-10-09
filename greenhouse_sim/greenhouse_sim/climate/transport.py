@@ -24,7 +24,8 @@ the outside.
   counted. Its latent heat is not.
 - **The envelope:** a cell against a wall or the roof exchanges U A (T_out −
   T) with the outside through the face it lies against, both ways. The floor
-  is not glass, and passes nothing. Glass passes no water.
+  is not glass, and passes nothing. Glass passes no water. The outside is
+  the weather over the stretch advanced (`greenhouse_sim.weather`).
 - **Open doors and vents** (`climate.vents`) exchange the air against them
   with the outside's, its heat, its water and its CO2. Nothing else adds or
   takes CO2 yet.
@@ -53,6 +54,7 @@ from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.climate.sources import SourceTerms
 from greenhouse_sim.climate.vents import Vent
 from greenhouse_sim.fields.field import FieldGrid
+from greenhouse_sim.weather.state import WeatherState
 
 AIR_DENSITY_KG_M3: Final = 1.2
 AIR_HEAT_CAPACITY_J_KG_K: Final = 1005.0
@@ -169,10 +171,12 @@ class Transport:
         fastest = float(taken.max()) / self.cell_volume_m3()
         return LONGEST_STEP_S if fastest <= 0 else min(LONGEST_STEP_S, STEP_SHARE / fastest)
 
-    def advance(self, air: AirState, terms: SourceTerms, duration_s: float) -> AirState:
+    def advance(
+        self, air: AirState, terms: SourceTerms, duration_s: float, outside: WeatherState
+    ) -> AirState:
         """The air after `duration_s`, with equipment adding and taking what
-        its source terms say in each cell, in equal steps no longer than
-        `step_s`."""
+        its source terms say in each cell, and the weather `outside`, in
+        equal steps no longer than `step_s`."""
         if duration_s <= 0:
             return air
         steps = math.ceil(duration_s / self.step_s())
@@ -184,9 +188,9 @@ class Transport:
         ]
         exchange = share * self.exchange_m3_s()
         venting = share * self.vents_m3_s()
-        outside = self.settings.outside_temperature_c
-        outside_water = float(humidity_ratio_g_kg(outside, self.settings.outside_humidity_pct))
-        outside_co2 = self.settings.outside_co2_ppm
+        outside_c = outside.air_temperature_c
+        outside_water = float(humidity_ratio_g_kg(outside_c, outside.relative_humidity_pct))
+        outside_co2 = outside.co2_ppm
         air_kg = AIR_DENSITY_KG_M3 * self.cell_volume_m3()
         solid = self.solid
         added = (
@@ -211,7 +215,7 @@ class Transport:
         condensed = np.zeros_like(humidity)
         change = np.empty_like(carried)
         for step in range(1, steps + 1):
-            np.multiply(exchange, outside - temperature, out=change[0])
+            np.multiply(exchange, outside_c - temperature, out=change[0])
             change[0] += added
             np.multiply(venting, outside_water - humidity, out=change[1])
             np.multiply(venting, outside_co2 - co2, out=change[2])
@@ -250,8 +254,9 @@ class Transport:
         excess = float((temperature[air] - reference_c).sum())
         return excess * AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K * self.cell_volume_m3()
 
-    def envelope_loss_w(self, temperature: np.ndarray) -> float:
-        """The heat the air loses through the walls and roof, in watts:
-        negative when it gains it from a warmer outside."""
+    def envelope_loss_w(self, temperature: np.ndarray, outside_c: float) -> float:
+        """The heat the air loses through the walls and roof to the outside
+        at `outside_c`, in watts: negative when it gains it from a warmer
+        outside."""
         exchange = self.exchange_m3_s() * AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K
-        return float((exchange * (temperature - self.settings.outside_temperature_c)).sum())
+        return float((exchange * (temperature - outside_c)).sum())

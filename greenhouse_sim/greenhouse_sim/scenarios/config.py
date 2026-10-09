@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Self
 
 from pydantic import BaseModel, model_validator
@@ -6,8 +6,10 @@ from pydantic import BaseModel, model_validator
 from greenhouse_sim.airflow.prescribed import PrescribedAirflow, UniformAirflow
 from greenhouse_sim.cfd.setup import CfdSetup
 from greenhouse_sim.climate.settings import ClimateSettings
+from greenhouse_sim.weather.sources import ConstantWeather, RunWeather
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.layout import Layout, outside_the_greenhouse
+from greenhouse_sim.world.site import DEFAULT_SITE, Site
 
 # A refusal names this many of the things it refuses, and counts the rest.
 NAMED_IN_A_REFUSAL = 3
@@ -40,9 +42,12 @@ class ScenarioConfig(BaseModel):
     # How a CFD solver drives its air: by default, in through its first open
     # door or vent and out through the others.
     cfd: CfdSetup = CfdSetup()
-    # What its air starts from and exchanges with in a climate run, when its
-    # equipment drives it.
+    # What its air starts from, and how it exchanges with the outside, in a
+    # climate run, when its equipment drives it.
     climate: ClimateSettings = ClimateSettings()
+    # Where it lies on the Earth, and the weather outside it.
+    site: Site = DEFAULT_SITE
+    weather: ConstantWeather = ConstantWeather()
 
     # Environment: bounds the smooth day-to-day drift stays within.
     air_temperature_bounds: tuple[float, float] = (18.0, 32.0)
@@ -74,6 +79,14 @@ class ScenarioConfig(BaseModel):
     fruit_count_noise_probability: float = 0.1
     ripe_mass_noise_pct: float = 8.0
     height_noise_cm: float = 1.5
+
+    def run_start(self) -> datetime:
+        """The instant its runs start: its start date's midnight at its site."""
+        return self.site.midnight(self.start_date).astimezone(UTC)
+
+    def run_weather(self) -> RunWeather:
+        """Its weather on a run's clock."""
+        return RunWeather(self.weather.source(self.site), self.run_start())
 
     @model_validator(mode="after")
     def _the_layout_fits_in_the_greenhouse(self) -> Self:

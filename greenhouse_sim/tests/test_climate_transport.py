@@ -11,6 +11,7 @@ from greenhouse_sim.climate.transport import AirState, Transport
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import air_grid
+from greenhouse_sim.weather.state import WeatherState
 from greenhouse_sim.world.equipment import Fan, Heater
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
@@ -28,6 +29,7 @@ STILL = np.zeros((NZ, NY, NX, 3))
 START = np.full((NZ, NY, NX), 16.0)
 # The climate box's: 8 °C outside, 16 °C to start, single glass.
 SETTINGS = CONFIG.climate
+OUTSIDE = CONFIG.weather.state(CONFIG.site)
 SHUT = SETTINGS.model_copy(update={"glazing_u_w_m2k": 0.0})
 # The glazing's walls and roof: two 12 by 4 m sides, two 6.4 by 4 m ends,
 # and the 12 by 6.4 m top of the grid.
@@ -43,7 +45,11 @@ def _transport(velocity: np.ndarray, settings: ClimateSettings = SETTINGS) -> Tr
 
 
 def _advance(
-    transport: Transport, temperature: np.ndarray, heat_w: np.ndarray, duration_s: float
+    transport: Transport,
+    temperature: np.ndarray,
+    heat_w: np.ndarray,
+    duration_s: float,
+    outside: WeatherState = OUTSIDE,
 ) -> np.ndarray:
     """The temperature after `duration_s`, in dry air, where nothing
     condenses."""
@@ -53,7 +59,7 @@ def _advance(
         co2=np.full_like(temperature, 420.0),
     )
     heating = SourceTerms(grid=GRID, velocity=STILL, heat_w=heat_w, water_removed_kg_s=NO_HEAT)
-    return transport.advance(dry, heating, duration_s).temperature
+    return transport.advance(dry, heating, duration_s, outside).temperature
 
 
 def _cell(x: float, y: float, z: float) -> tuple[int, int, int]:
@@ -137,25 +143,26 @@ def test_the_house_settles_where_the_heater_balances_what_the_glass_loses() -> N
     temperature = _advance(transport, START, HEAT_W, 2 * 3600)
     later = _advance(transport, temperature, HEAT_W, 600)
 
-    assert transport.envelope_loss_w(later) == pytest.approx(HEATER.power_w, rel=0.01)
+    loss_w = transport.envelope_loss_w(later, OUTSIDE.air_temperature_c)
+    assert loss_w == pytest.approx(HEATER.power_w, rel=0.01)
     np.testing.assert_allclose(later, temperature, atol=1e-3)
     # About where 10 kW keeps 224 m² of single glass above 8 °C outside.
-    balance = SETTINGS.outside_temperature_c + HEATER.power_w / (6.0 * GLASS_M2)
+    balance = OUTSIDE.air_temperature_c + HEATER.power_w / (6.0 * GLASS_M2)
     assert later[AIR].mean() == pytest.approx(balance, abs=0.5)
 
 
 def test_with_the_outside_warmer_and_nothing_running_the_house_warms_towards_it() -> None:
-    warm = SETTINGS.model_copy(update={"outside_temperature_c": 25.0})
-    transport = _transport(STILL, warm)
+    warm = OUTSIDE.model_copy(update={"air_temperature_c": 25.0})
+    transport = _transport(STILL)
     means = []
     temperature = START
     for _ in range(6):
-        temperature = _advance(transport, temperature, NO_HEAT, 300)
+        temperature = _advance(transport, temperature, NO_HEAT, 300, warm)
         means.append(float(temperature[AIR].mean()))
 
     assert means == sorted(means)
     assert 16.0 < means[0] < means[-1] < 25.0
-    final = _advance(transport, temperature, NO_HEAT, 3 * 3600)
+    final = _advance(transport, temperature, NO_HEAT, 3 * 3600, warm)
     assert final[AIR].mean() == pytest.approx(25.0, abs=0.01)
 
 

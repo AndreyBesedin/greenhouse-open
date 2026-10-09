@@ -6,8 +6,9 @@ its schedule sets it at the start, and applies each later command at its
 moment (`climate.commands`). Between two moments the levels hold, and so
 does the flow: the base airflow plus the fans' jets, made to conserve mass
 (`climate.projection`). The air's temperature and water are carried by it,
-warmed and dried by the equipment, and its heat exchanged with the outside
-(`climate.transport`).
+warmed and dried by the equipment, and exchanged with the outside
+(`climate.transport`): the weather at the middle of each stretch advanced,
+at most a minute long (`greenhouse_sim.weather`).
 
 The same schedule always gives the same air at the same moments, so a run
 may take over another's air up to the first moment their schedules differ
@@ -40,6 +41,7 @@ from greenhouse_sim.climate.transport import AirState, Transport
 from greenhouse_sim.climate.vents import Vent
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import VECTOR_COMPONENTS, EnvironmentField, FieldGrid
+from greenhouse_sim.weather.sources import RunWeather
 from greenhouse_sim.world.equipment import Equipment
 
 type _Levels = tuple[tuple[str, float], ...]
@@ -82,8 +84,8 @@ def _filled(temperature: np.ndarray, solid: np.ndarray) -> np.ndarray:
 
 
 class ClimateRun:
-    """A scenario's air from its start under a schedule, over a grid whose
-    `solid` cells obstacles fill, in its order (z, y, x)."""
+    """A scenario's air from its start under a schedule and a weather, over a
+    grid whose `solid` cells obstacles fill, in its order (z, y, x)."""
 
     def __init__(
         self,
@@ -93,6 +95,7 @@ class ClimateRun:
         settings: ClimateSettings,
         grid: FieldGrid,
         solid: np.ndarray,
+        weather: RunWeather,
         vents: Sequence[Vent] = (),
     ) -> None:
         nx, ny, nz = grid.shape
@@ -102,6 +105,7 @@ class ClimateRun:
         self.equipment = list(equipment)
         self.schedule = schedule
         self.settings = settings
+        self.weather = weather
         self.grid = grid
         self.solid = solid
         self.vents = tuple(vents)
@@ -193,7 +197,8 @@ class ClimateRun:
         for until in sorted(changes | kept | {time_s}):
             if until > now:
                 terms, _, transport = self._held(self.levels_at(now))
-                air = transport.advance(air, terms, until - now)
+                outside = self.weather.at((now + until) / 2)
+                air = transport.advance(air, terms, until - now, outside)
                 now = until
                 if until in kept:
                     self._kept[until] = air
@@ -204,17 +209,15 @@ class ClimateRun:
         """The air's temperature in every cell at `time_s`."""
         return self.air_at(time_s).temperature
 
-    def _draughts(self, air: AirState) -> np.ndarray:
-        """The draughts through the open doors and vents, as the air against
-        each is warmer or cooler than the outside's."""
+    def _draughts(self, air: AirState, time_s: float) -> np.ndarray:
+        """The draughts through the open doors and vents at `time_s`, as the
+        air against each is warmer or cooler than the outside's."""
         nx, ny, nz = self.grid.shape
         draughts = np.zeros((nz, ny, nx, VECTOR_COMPONENTS))
+        outside_c = self.weather.at(time_s).air_temperature_c
         for vent in self.vents:
             draughts += vent.draught(
-                self.grid,
-                air.temperature,
-                self.settings.outside_temperature_c,
-                self.settings.vent_exchange_m_s,
+                self.grid, air.temperature, outside_c, self.settings.vent_exchange_m_s
             )
         return draughts
 
@@ -225,6 +228,7 @@ class ClimateRun:
         if grid != self.grid:
             raise ValueError("a climate run is drawn on its own grid")
         air = self.air_at(time_s)
+        velocity = self.flows_at(time_s).velocity() + self._draughts(air, time_s)
         temperature = _filled(air.temperature, self.solid)
         humidity = _filled(air.humidity, self.solid)
         return EnvironmentField(
@@ -233,7 +237,7 @@ class ClimateRun:
             grid=grid,
             time_s=time_s,
             channels={
-                AirQuantity.VELOCITY: self.flows_at(time_s).velocity() + self._draughts(air),
+                AirQuantity.VELOCITY: velocity,
                 AirQuantity.TEMPERATURE: temperature,
                 AirQuantity.HUMIDITY: relative_humidity_pct(temperature, humidity),
                 AirQuantity.CO2: _filled(air.co2, self.solid),

@@ -38,6 +38,7 @@ START = AirState(
     co2=np.full((NZ, NY, NX), 420.0),
 )
 SHUT = CONFIG.climate.model_copy(update={"glazing_u_w_m2k": 0.0})
+OUTSIDE = CONFIG.weather.state(CONFIG.site)
 
 
 def _transport(velocity: np.ndarray, settings: object = SHUT) -> Transport:
@@ -82,7 +83,7 @@ def test_shut_off_the_air_loses_what_the_dehumidifier_takes(velocity: np.ndarray
     transport = _transport(jet if velocity is None else velocity)
     terms = source_terms(DEHUMIDIFIER, 1.0, GRID, SOLID)
 
-    after = transport.advance(START, terms, 600)
+    after = transport.advance(START, terms, 600, OUTSIDE)
 
     rate_kg = DEHUMIDIFIER.removal_kg_h * 600 / SECONDS_PER_HOUR
     lost = transport.water_kg(START.humidity) - transport.water_kg(after.humidity)
@@ -96,7 +97,7 @@ def test_a_dehumidifier_never_takes_more_than_the_air_holds() -> None:
     terms = source_terms(thirsty, 1.0, GRID, SOLID)
     transport = _transport(STILL)
 
-    after = transport.advance(START, terms, 600)
+    after = transport.advance(START, terms, 600, OUTSIDE)
 
     assert after.humidity.min() >= 0.0
     assert after.removed_kg <= transport.water_kg(START.humidity)
@@ -109,7 +110,7 @@ def test_cooling_air_condenses_what_it_can_no_longer_hold() -> None:
     transport = _transport(STILL, CONFIG.climate)
     nothing = source_terms(DEHUMIDIFIER, 0.0, GRID, SOLID)
 
-    after = transport.advance(START, nothing, 600)
+    after = transport.advance(START, nothing, 600, OUTSIDE)
 
     relative = relative_humidity_pct(after.temperature, after.humidity)
     assert relative[AIR].max() <= 100.0 + 1e-9
@@ -122,7 +123,7 @@ def test_uniform_water_stays_uniform_in_the_fans_flow() -> None:
     jet = source_terms(FAN, 1.0, GRID, SOLID).velocity
     nothing = source_terms(DEHUMIDIFIER, 0.0, GRID, SOLID)
 
-    after = _transport(jet).advance(START, nothing, 300)
+    after = _transport(jet).advance(START, nothing, 300, OUTSIDE)
 
     np.testing.assert_array_equal(after.humidity[AIR], START.humidity[AIR])
 

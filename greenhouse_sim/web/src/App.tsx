@@ -74,6 +74,8 @@ import { cameraOf, frustumOverlays } from "./sensors/camera";
 import { loadSensorReadings, type SensorReadingsState } from "./sensors/readings";
 import { SensorPanel } from "./sensors/SensorPanel";
 import { Viewport } from "./Viewport";
+import { WeatherPanel } from "./weather/WeatherPanel";
+import { loadWeather, type WeatherStateOfLoad, windOverlays } from "./weather/weather";
 import type { Point3 } from "./world";
 
 const MILLISECONDS_PER_SECOND = 1000;
@@ -95,6 +97,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [playingClimate, setPlayingClimate] = useState(false);
   const [probeCharts, setProbeCharts] = useState<ProbeChartsState>({ status: "none" });
   const [sensorReadings, setSensorReadings] = useState<SensorReadingsState>({ status: "none" });
+  const [weather, setWeather] = useState<WeatherStateOfLoad>({ status: "none" });
   // Whether sensors' readings are shown as they err, or as clean ones', for QA.
   const [sensorsImperfect, setSensorsImperfect] = useState(true);
   const [probeHeight, setProbeHeight] = useState(DEFAULT_PROBE_HEIGHT_M);
@@ -232,6 +235,26 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     fieldTime,
     climateRun,
   ]);
+
+  // The weather outside a scenario at the moment drawn; the last stays on
+  // show until the next arrives.
+  const weatherScenario = source.kind === "scenario" ? source.scenarioId : null;
+  useEffect(() => {
+    if (weatherScenario === null) {
+      setWeather({ status: "none" });
+      return;
+    }
+    let current = true;
+    setWeather((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
+    void loadWeather(weatherScenario, fieldTime).then((state) => {
+      if (current) {
+        setWeather(state);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [weatherScenario, fieldTime]);
 
   // The field compared with the drawn one, loaded as the drawn one is.
   const compareName = source.kind === "scenario" ? (source.compare ?? null) : null;
@@ -533,6 +556,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const showingNames = source.kind === "plants" && showPlantNames;
   const probes = source.kind === "scenario" ? (source.probes ?? EMPTY_PROBES) : EMPTY_PROBES;
   const probedField = field.status === "loaded" ? field.field : null;
+  const outside = weather.status === "loaded" ? weather.weather : null;
   const overlays = useMemo(
     () => [
       ...(selected === null ? [] : selectionOverlays(selected, overlayToggles)),
@@ -540,8 +564,18 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       ...(snapshot !== null && showingNames ? plantNameOverlays(snapshot) : []),
       ...(probedField === null ? [] : probeOverlays(probes, probedField)),
       ...(snapshot === null ? [] : frustumOverlays(snapshot)),
+      ...(snapshot === null || outside === null ? [] : windOverlays(snapshot, outside)),
     ],
-    [selected, overlayToggles, snapshot, showDimensions, showingNames, probes, probedField],
+    [
+      selected,
+      overlayToggles,
+      snapshot,
+      showDimensions,
+      showingNames,
+      probes,
+      probedField,
+      outside,
+    ],
   );
 
   // Playing, the lab moves on a day once the day asked for is on show, at
@@ -698,6 +732,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 onRemove={removeCommand}
               />
             )}
+            {source.kind === "scenario" && <WeatherPanel state={weather} />}
             {source.kind === "scenario" && source.field !== undefined && probedField !== null && (
               <FieldProbes
                 scenarioId={source.scenarioId}

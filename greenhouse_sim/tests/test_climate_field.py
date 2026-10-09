@@ -20,6 +20,7 @@ from greenhouse_sim.world.geometry import Vector3
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
 GRID = air_grid(CONFIG)
+WEATHER = CONFIG.run_weather()
 # The fan's axis, 2.8 m up along the middle of the house, from its rotor at
 # x = 1 m.
 FAN_AT = Vector3(x=1.0, y=3.2, z=2.8)
@@ -53,6 +54,7 @@ def _run(levels: dict[str, float]) -> ClimateRun:
         settings=CONFIG.climate,
         grid=GRID,
         solid=cfd.geometry("climate_box").solid(),
+        weather=WEATHER,
     )
 
 
@@ -141,6 +143,7 @@ def test_a_run_on_another_grid_or_solid_cells_is_refused() -> None:
             settings=CONFIG.climate,
             grid=GRID,
             solid=np.zeros((1, 1, 1), dtype=bool),
+            weather=WEATHER,
         )
     other = air_grid(SCENARIO_REGISTRY["airflow_box"])
     with pytest.raises(ValueError, match="its own grid"):

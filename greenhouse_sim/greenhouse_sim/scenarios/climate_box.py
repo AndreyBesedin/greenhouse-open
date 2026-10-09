@@ -5,6 +5,7 @@ from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.domain.envelope import OpeningKind
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import load_layout
+from greenhouse_sim.weather.sources import ConstantWeather
 from greenhouse_sim.world.envelope import Envelope, Opening
 from greenhouse_sim.world.geometry import Point2, Vector3
 
@@ -72,11 +73,7 @@ CLIMATE_BOX = ScenarioConfig(
     # Still air, so that a fan's jet stands out.
     airflow=UniformAirflow(velocity_m_s=Vector3(x=0.0, y=0.0, z=0.0)),
     # A cold, damp night, when heating and drying matter: 8 °C and 90%
-    # outside, 16 °C and 85% inside to start, through single glass.
-    climate=ClimateSettings(
-        outside_temperature_c=8.0,
-        outside_humidity_pct=90.0,
-        start_temperature_c=16.0,
-        start_humidity_pct=85.0,
-    ),
+    # outside, still, and 16 °C and 85% inside to start, through single glass.
+    climate=ClimateSettings(start_temperature_c=16.0, start_humidity_pct=85.0),
+    weather=ConstantWeather(air_temperature_c=8.0, relative_humidity_pct=90.0),
 )

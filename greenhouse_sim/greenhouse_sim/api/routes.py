@@ -49,6 +49,9 @@ check; a route that comes to need one checks it first.
                                           clean sensors would have, for QA
     GET /api/scenarios/{id}/climate/truth what its point sensors truly sampled,
                                           for evaluation and QA only
+    GET /api/scenarios/{id}/weather       its site, and the weather outside it &t=600
+                                          seconds into a run, with the wind in
+                                          the world's axes
     GET /api/scenarios/{id}/cfd/geometry  the boundaries of a scenario's air as
                                           a CFD solver is given them, snapped
                                           to its mesh; changed as for its scene
@@ -88,7 +91,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from pydantic import BaseModel
 
-from greenhouse_sim.services import cfd, fields, plants, scenarios, sensors, system
+from greenhouse_sim.services import cfd, fields, plants, scenarios, sensors, system, weather
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.live import InvalidSpeed, LiveCommand, LiveRun, LiveRuns
 
@@ -193,6 +196,8 @@ def respond(method: str, path: str) -> Response:
                     _seconds(query),
                 )
             )
+        case ["api", "scenarios", scenario_id, "weather"]:
+            return _answer(lambda: weather.at_a_moment(scenario_id, _seconds(query)))
         case ["api", "scenarios", scenario_id, "cfd", "geometry"]:
             return _answer(lambda: cfd.geometry(scenario_id, _scene_changes(query)))
         case ["api", "scenarios", scenario_id, "layout"]:
