@@ -1,6 +1,6 @@
 # P08: Sun position, glazing and radiation propagation
 
-**Status:** in progress: P08.1 to P08.4 done, P08.5 next. Part of the
+**Status:** in progress: P08.1 to P08.5 done, P08.6 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -179,7 +179,7 @@ to here.
 | P08.2 | `feat(viewer): add sun lighting and visible shadows` | Done |
 | P08.3 | `feat(radiation): define the radiation field and its units` | Done |
 | P08.4 | `feat(glazing): add transmission and incidence-angle attenuation` | Done |
-| P08.5 | `feat(radiation): add geometric shadow and occlusion tracing` | Planned |
+| P08.5 | `feat(radiation): add geometric shadow and occlusion tracing` | Done |
 | P08.6 | `feat(radiation): add plant canopy interception hooks` | Planned |
 | P08.7 | `feat(radiation): add the diffuse sky and the clouds' attenuation` | Planned |
 | P08.8 | `feat(climate): warm the house with the sun` | Planned |
@@ -330,6 +330,34 @@ bounded and falls with the angle; energy decreases through the glass.
 Ray tests against frames, gutters and light-obstructing fixtures. Visible result: the floor's false colour shows the frames' and
 fixtures' shadows. Tests: an occluded point gets no beam, a clear one all
 of it.
+
+#### As implemented
+
+- **`solar.shadows.Shadows`:** the solids that shade the beam, each a box
+  or a finite cylinder placed in the world: the structure's gutters and
+  members, and the layout's fixtures that obstruct light
+  (`Layout.obstructing(Obstruction.LIGHT)`, which leaves the equipment
+  out). `lit(points, towards)` tests the ray from every point towards the
+  sun against every solid exactly, in each one's own frame: a box by its
+  three slabs, a cylinder by its side and its two ends; vectorised over
+  the points and over batches of 64 solids. A point inside a solid is in
+  its shadow; one on its top face is not.
+- **The structure's solids are the envelope's:** `Gutter.solid()` and
+  `Member.solid()` (`world.envelope`) now give the channel and the round
+  bar the scene draws, at the sizes the scene had for them, so that what
+  is drawn and what shades are the same; the scene's files did not
+  change.
+- **`Sunlight` takes the shadows:** at a point, shaded exactly; over the
+  grid, which cells the beam reaches is worked out for the sun at each
+  five minutes of a run (`SHADOW_EVERY_S`) and kept, so that a probe or a
+  sensor read every minute costs one test in five. The beam is all the
+  light there is until P08.7, so for now what is shaded takes nothing.
+- **What it costs:** 6 ms for the climate box's 2,496 cells and 32
+  solids; 0.3 s for the tomato compartment's 18,432 cells and 223 solids.
+- **What it does:** at 12:45 on 1 January under a clear sky, a fifth of
+  the climate box's floor lies in the crop gutters' shadows, which fall
+  0.9 to 1.6 m north of them under the 15° sun; a probe in the open south
+  of the first row reads 417.5 µmol/m²/s, one in its shadow nothing.
 
 ### P08.6: Plants
 
