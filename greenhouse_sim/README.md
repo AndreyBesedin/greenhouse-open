@@ -49,7 +49,8 @@ greenhouse_sim/
     domain/        the shared vocabulary: kinds, categories and stages that
                    more than one package uses; depends on nothing else
     core/          the engine, world checkpoints and seeded randomness
-    world/         the hidden world's state, and geometry conventions
+    world/         the hidden world's state, geometry conventions, and the
+                   site that places the world on the Earth
     biology/       plant models; tomato/simple is the reference model,
                    plant/ what fruiting crops' organ-level models share,
                    tomato/organ the tomato's organ-level model
@@ -58,6 +59,8 @@ greenhouse_sim/
     actions/       validating and carrying out semantic actions
     scenarios/     ready-made worlds
     evaluation/    scoring against ground truth, its only reader
+    weather/       the weather outside: its state at a moment, and where it
+                   comes from
     fields/        environment fields: the greenhouse's air, cell by cell,
                    and the format they are exchanged in
     airflow/       airflow models, which produce fields: prescribed

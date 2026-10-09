@@ -165,6 +165,7 @@ def _new_climate_run(
         settings=config.climate,
         grid=grid,
         solid=geometry.solid(),
+        weather=config.run_weather(),
         vents=vents,
     )
 

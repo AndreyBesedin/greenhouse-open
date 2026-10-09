@@ -1,9 +1,7 @@
-"""What a scenario's air starts from and exchanges with in a climate run
-(P05.3, P05.4, P06.2): the outside, the air inside at the start, how much
-heat its glazing passes, and how fast the air mixes.
-
-Until weather comes (P07), the outside is one temperature, humidity and CO2
-for a whole run.
+"""What a scenario's air starts from in a climate run, and how it exchanges
+with the outside (P05.3, P05.4, P06.2): the air inside at the start, how
+much heat its glazing passes, and how fast the air mixes. The outside
+itself is the scenario's weather (`greenhouse_sim.weather`, P07.1).
 """
 
 from typing import Annotated
@@ -14,14 +12,10 @@ type Percent = Annotated[float, Field(ge=0.0, le=100.0)]
 
 
 class ClimateSettings(BaseModel):
-    """A scenario's outside, starting air, glazing and mixing."""
+    """A scenario's starting air, glazing and mixing."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    # The outside air's temperature and relative humidity, for the whole run.
-    outside_temperature_c: float = 10.0
-    outside_humidity_pct: Percent = 80.0
-    outside_co2_ppm: PositiveFloat = 420.0
     # The air's temperature and relative humidity everywhere inside when the
     # run starts.
     start_temperature_c: float = 18.0

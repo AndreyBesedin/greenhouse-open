@@ -3,13 +3,13 @@ normal path, with each one's freshness and its cameras' frames (P06.6),
 and, for evaluation and QA only, what was truly there.
 
 A run's moments are seconds from its start, which is its scenario's start
-date at midnight, UTC, until the crop's days and the air's seconds share a
-clock (P09). The run is asked for as its climate field is
+date at midnight at its site (P07.1), until the crop's days and the air's
+seconds share a clock (P09). The run is asked for as its climate field is
 (`greenhouse_sim.services.fields`), and refused as it is.
 """
 
 from collections.abc import Mapping, Sequence
-from datetime import UTC, datetime, time
+from datetime import datetime
 
 from greenhouse_protocol.media import CameraFrame
 from greenhouse_protocol.observation import Observation
@@ -50,8 +50,9 @@ class SensorTruths(BaseModel):
 
 
 def run_start(scenario_id: str) -> datetime:
-    """The instant a scenario's runs start: its start date's midnight, UTC."""
-    return datetime.combine(scenario(scenario_id).start_date, time(0), tzinfo=UTC)
+    """The instant a scenario's runs start: its start date's midnight at its
+    site."""
+    return scenario(scenario_id).run_start()
 
 
 def _point_sensors(scenario_id: str, layout: str) -> list[PointSensor]:

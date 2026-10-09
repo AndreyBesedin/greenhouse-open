@@ -39,6 +39,7 @@ changes course is a new record that supersedes the old one.
 | [0025](0025-shared-vocabulary-in-a-domain-package-and-a-generic-plant.md) | Shared vocabulary lives in a domain package, and a crop builds on a generic plant | Accepted |
 | [0026](0026-environment-fields-are-cell-centred-grids-of-packed-floats.md) | Environment fields are cell-centred grids, published as packed floats | Accepted |
 | [0027](0027-cfd-runs-out-of-process-on-the-fields-grid.md) | CFD runs out of process, on the environment field's own grid | Accepted |
+| [0028](0028-the-world-has-a-site-and-its-x-axis-a-compass-bearing.md) | The world has a site, and its x axis a compass bearing | Accepted |
 
 ## Template
 

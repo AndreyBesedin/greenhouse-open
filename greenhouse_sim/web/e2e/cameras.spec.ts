@@ -168,7 +168,7 @@ test("cameras: the run's log records each frame a camera takes", async ({ page }
     "11 frames by 10 min, each RGB and depth.",
   );
   await expect(frames.getByTestId("camera-frame-id")).toHaveText(
-    "sim_front_camera_20260101T001000Z_frame",
+    "sim_front_camera_20251231T231000Z_frame",
   );
   await expect(frames.getByTestId("camera-frame-from")).toHaveText("x 0.60, y 3.20, z 2.20");
   // Down the house, and down at the heater.

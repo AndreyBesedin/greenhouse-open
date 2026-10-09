@@ -4,7 +4,7 @@ observation; what it truly sampled leaves by an evaluation path that nothing
 on the observation path imports."""
 
 import ast
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -24,7 +24,7 @@ from greenhouse_sim.world.sensors import PointSensor
 
 PACKAGE = Path(__file__).resolve().parents[1] / "greenhouse_sim"
 CONFIG = SCENARIO_REGISTRY["climate_box"]
-START = datetime(2026, 1, 1, tzinfo=UTC)
+START = CONFIG.run_start()
 MOMENTS = [0.0, 60.0, 120.0, 180.0, 240.0, 300.0]
 HEATED = {"heater": 1.0, "fan": 1.0}
 

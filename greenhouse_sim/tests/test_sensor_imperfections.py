@@ -4,7 +4,7 @@ the same way every time it is asked for."""
 
 import math
 import statistics
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 
 import numpy as np
 import pytest
@@ -13,12 +13,13 @@ from greenhouse_protocol.enums import ObservationQuality
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.domain.sensors import SensorKind
 from greenhouse_sim.fields.field import EnvironmentField, FieldGrid
+from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.sensors.air import observe
 from greenhouse_sim.services import sensors
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.sensors import Imperfections, PointSensor
 
-START = datetime(2026, 1, 1, tzinfo=UTC)
+START = SCENARIO_REGISTRY["climate_box"].run_start()
 GRID = FieldGrid.over(Vector3(x=0, y=0, z=0), Vector3(x=2, y=2, z=2), 1.0)
 TRUE_C = 20.0
 HUMID_PCT = 99.0

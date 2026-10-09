@@ -1,6 +1,6 @@
 # P07: External weather and greenhouse boundary coupling
 
-**Status:** in progress: design reviewed, P07.1 next. Part of the
+**Status:** in progress: P07.1 done, P07.2 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -243,7 +243,7 @@ station's readings, never the weather source itself.
 
 | Step | Commit summary | Status |
 | --- | --- | --- |
-| P07.1 | `feat(weather): define the site, the weather state and its sources` | Planned |
+| P07.1 | `feat(weather): define the site, the weather state and its sources` | Done |
 | P07.2 | `feat(weather): add synthetic day and night weather presets` | Planned |
 | P07.3 | `feat(climate): run a whole day` | Planned |
 | P07.4 | `feat(boundary): couple the glazing to the changing outside` | Planned |
@@ -260,6 +260,60 @@ weather panel and wind arrow. Every scenario's outside becomes constant
 weather, so no run changes. Visible result: the weather panel and the wind
 arrow. Tests: a known series interpolates as expected, wind included across
 north; constant weather reproduces every existing run exactly.
+
+#### As implemented
+
+- **The site** (`world.site`, [decision 0028](../decisions/0028-the-world-has-a-site-and-its-x-axis-a-compass-bearing.md)):
+  latitude, longitude, elevation, an IANA time zone, and the bearing of
+  the world's x axis, by default east (x east, y north, z up). Every
+  scenario has the default site, near Bleiswijk, at sea level.
+  - **Bearings** are degrees clockwise from north. A site turns a bearing
+    into a direction in the world's axes, and back.
+  - **The standard atmosphere** at the site's elevation gives the pressure
+    when a weather leaves it out.
+- **The run's clock** starts at its scenario's start date's midnight at its
+  site, published in UTC: for the scenarios' 1 January, 23:00 UTC the day
+  before. P06's runs started at midnight UTC; their air is the same, and
+  only their observations' instants, and so camera frames' identifiers,
+  move.
+- **The weather state** (`weather.state`): the outside air's temperature,
+  relative humidity and CO₂, the wind's speed and the direction it blows
+  from, the barometric pressure, the global radiation and the cloud cover.
+  - **Its names are the protocol's** outside observation types without
+    their `outside_` prefix (`air_temperature_c`, `wind_speed_m_s`, …).
+    Wind direction, pressure and cloud cover have no protocol type yet;
+    they get one with the weather station (P07.2) and recorded weather
+    (P07.7).
+- **Sources** (`weather.sources`):
+  - **constant:** `ConstantWeather`, a scenario's `weather`;
+  - **a series:** `WeatherSeries`, linear in time between its records, the
+    wind as a vector. A record's moment gives the record exactly; a moment
+    before the first or after the last is refused. Two opposite winds of
+    the same speed meet in a calm, which keeps the earlier direction.
+  - A run reads its weather on its own clock (`RunWeather`).
+- **Each scenario's outside is constant weather:** the climate box's cold,
+  damp night (8 °C, 90%, calm), and the others' default (10 °C, 80%,
+  calm). The tomato compartment has the prevailing wind of the Dutch
+  coast, a 4 m/s south-westerly, so that its scene shows one. Nothing uses
+  the wind yet, and it has no climate run.
+- **The climate run takes the weather** at the middle of each stretch it
+  advances, at most a minute long, in place of P05's fixed outside. Under
+  constant weather every run is what it was; a test runs the climate box
+  under a series that warms through the hour, and its air follows. This is
+  the first part of P07.4, the changing outside temperature.
+  `ClimateSettings` keeps the starting air, the glazing, the mixing and
+  the vents' exchange speed.
+- **The API:** `GET /api/scenarios/{id}/weather?t=600` serves the site, the
+  moment, the weather then, and the wind's velocity in the world's axes.
+- **The viewer:**
+  - **a weather panel** for each scenario, at the moment drawn: the
+    moment in the site's own time, the air's temperature, humidity and
+    CO₂, the wind by its speed and compass point, a compass whose needle
+    points the way it blows, the pressure, and the site;
+  - **the wind's arrow** outside the house: along the wind, a metre long
+    for each metre a second, ending a metre short of the house's corners
+    on the side it comes from, at half its height, and labelled. None in a
+    calm.
 
 ### P07.2: Synthetic day and night weather
 

@@ -4,6 +4,7 @@ from greenhouse_sim.airflow.prescribed import BuoyancyAirflow
 from greenhouse_sim.domain.envelope import OpeningKind
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import load_layout
+from greenhouse_sim.weather.sources import ConstantWeather
 from greenhouse_sim.world.envelope import Envelope, Opening
 from greenhouse_sim.world.geometry import Point2
 
@@ -13,6 +14,8 @@ SPANS = 4
 _VENT_LENGTH_M = 6.0
 _VENT_HEIGHT_M = 1.0
 _DOOR_SIDE_M = 3.0
+WIND_SPEED_M_S = 4.0
+SOUTH_WEST_DEG = 225.0
 
 TOMATO_COMPARTMENT = ScenarioConfig(
     greenhouse_id="tomato_compartment",
@@ -71,4 +74,7 @@ TOMATO_COMPARTMENT = ScenarioConfig(
     layout=load_layout("tomato_compartment"),
     # Convection: two rolls across the house, rising up its middle.
     airflow=BuoyancyAirflow(),
+    # A mild winter's day with the prevailing wind of the Dutch coast: a
+    # moderate south-westerly breeze.
+    weather=ConstantWeather(wind_speed_m_s=WIND_SPEED_M_S, wind_direction_deg=SOUTH_WEST_DEG),
 )

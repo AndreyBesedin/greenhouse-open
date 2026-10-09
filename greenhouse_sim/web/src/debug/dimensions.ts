@@ -10,7 +10,7 @@ export const DIMENSION_COLOR = "#1f5fbf";
 const AXIS_LABEL_REACH = 1.1;
 
 /** Where a point given in an entity's own frame lies in the world. */
-function inWorld(transform: Transform, point: Point3): Point3 {
+export function inWorld(transform: Transform, point: Point3): Point3 {
   const { position, rotation } = transform;
   const turn = new Quaternion(rotation.x, rotation.y, rotation.z, rotation.w);
   const placed = new Vector3(point.x, point.y, point.z)

@@ -119,7 +119,7 @@ def test_a_camera_takes_a_frame_every_cadence_and_the_log_records_its_metadata()
     ]
     latest = log.frames[-1]
     assert latest.sensor_id == "front_camera"
-    assert latest.frame_id == "sim_front_camera_20260101T001000Z_frame"
+    assert latest.frame_id == "sim_front_camera_20251231T231000Z_frame"
     # Its pose: where the camera stands, turned as it is.
     turn = camera.rotation()
     pose = latest.pose

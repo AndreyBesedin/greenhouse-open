@@ -321,6 +321,53 @@ body {
   min-width: 0;
 }
 
+/* The weather outside: a line, with a compass beside it, opening on its
+ * details. */
+.weather-panel {
+  margin: 0 0 8px;
+}
+
+.weather-heading {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.weather-heading span {
+  flex: 1;
+}
+
+.weather-panel dl {
+  margin: 4px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.wind-compass {
+  width: 32px;
+  height: 32px;
+  flex: none;
+}
+
+.wind-compass-ring {
+  fill: #ffffff;
+  stroke: #999999;
+}
+
+.wind-compass-north {
+  font-size: 8px;
+  fill: #555555;
+}
+
+.wind-compass-needle {
+  stroke: #2b7bb9;
+  stroke-width: 2;
+}
+
+.wind-compass-head {
+  fill: #2b7bb9;
+}
+
 /* A climate run's schedule: a marker on a bar over the run at each
  * command's moment, filled once applied, and the commands listed. */
 .climate-schedule {
