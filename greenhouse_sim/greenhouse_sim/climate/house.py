@@ -122,7 +122,12 @@ class WholeHouse:
         return self._steady[key]
 
     def _advance(
-        self, air: HouseAir, steady: _Steady, outside: WeatherState, duration_s: float
+        self,
+        air: HouseAir,
+        steady: _Steady,
+        outside: WeatherState,
+        duration_s: float,
+        time_s: float,
     ) -> HouseAir:
         volume = self.volume_m3
         heat_per_k = AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K
@@ -130,7 +135,11 @@ class WholeHouse:
         settings = self.run.settings
         u = glazing_u_w_m2k(settings.glazing_u_w_m2k, outside.wind_speed_m_s)
         leaks_m3_s = settings.infiltration_per_s(outside.wind_speed_m_s) * volume
-        through = opening_flows([vent.site for vent in self.run.vents], air.temperature_c, outside)
+        levels = self.run.opening_levels_at(time_s)
+        sites = [vent.site_at(levels[vent.opening_id]) for vent in self.run.vents]
+        through = opening_flows(
+            [site for site in sites if site.aperture_m2 > 0], air.temperature_c, outside
+        )
         entering = sum(max(flow.net_m3_s, 0.0) + flow.exchange_m3_s for flow in through)
         venting_m3_s = entering + leaks_m3_s
         exchange = u * steady.glass_m3_s_per_u + venting_m3_s
@@ -188,7 +197,7 @@ class WholeHouse:
         for until in sorted(changes | steps | {time_s}):
             if until > now:
                 outside = self.run.weather.at((now + until) / 2)
-                air = self._advance(air, self._held(now), outside, until - now)
+                air = self._advance(air, self._held(now), outside, until - now, now)
                 now = until
                 if until in steps:
                     self._kept[until] = air

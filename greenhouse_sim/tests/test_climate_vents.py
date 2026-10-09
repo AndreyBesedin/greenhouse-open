@@ -121,7 +121,7 @@ def test_the_draught_goes_out_of_a_warmer_house_and_into_a_cooler_one() -> None:
     (vent,) = heated.vents
     face_m2 = GRID.cell_size.x * GRID.cell_size.y * int(vent.cells.sum())
     air = heated.air_at(600)
-    (flow,) = heated.openings_for(air, heated.weather.at(600)).values()
+    (flow,) = heated.openings_for(air, heated.weather.at(600), 600).values()
 
     # Alone, the roof vent exchanges both ways; its draught shows the warm
     # air going out, and the warm outside's coming in.

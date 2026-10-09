@@ -30,6 +30,7 @@ import hashlib
 import threading
 from collections import OrderedDict
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import replace
 from typing import Final
 
 from greenhouse_sim.airflow.contract import AirflowModel
@@ -87,10 +88,15 @@ type Commanded = tuple[float, str, float]
 
 
 def _checked(config: ScenarioConfig, commands: Sequence[Commanded]) -> tuple[Commanded, ...]:
-    """Commands to a scenario's equipment, checked: one to equipment it does
-    not have, to a level outside 0 to 1, or at a moment outside a run, is
-    refused."""
+    """Commands to a scenario's equipment, or its doors and vents (P07.8),
+    checked: one to equipment or an opening it does not have, to a level
+    outside 0 to 1, or at a moment outside a run, is refused."""
+    openings = {opening.opening_id for opening in config.envelope.openings}
     for _, actuator, level in commands:
+        if actuator in openings:
+            if not 0.0 <= level <= 1.0:
+                raise InvalidRequest(f"a level runs from 0 to 1: {actuator}")
+            continue
         equipment_levels(config, {actuator: level})
     outside = sorted({f"{time:g}" for time, _, _ in commands if not 0.0 <= time <= LONGEST_RUN_S})
     if outside:
@@ -150,12 +156,20 @@ def _climate_day(
 
 
 def climate_vents(config: ScenarioConfig, geometry: CfdGeometry) -> list[Vent]:
-    """A scenario's open doors and vents, as its climate run passes air
-    through them: where each is (`greenhouse_sim.climate.openings`), and the
-    cells of its air's grid against it."""
+    """A scenario's doors and vents open in `geometry`, as its climate run
+    passes air through them: where each is (`greenhouse_sim.climate.openings`),
+    the cells of its air's grid against it, and the opening itself, for its
+    aperture at the levels a schedule opens it to."""
     sites = opening_sites(config.envelope, config.site)
+    openings = {opening.opening_id: opening for opening in config.envelope.openings}
     return [
-        Vent(site=sites[opening_id], cells=cells, axis=axis, outward=outward)
+        Vent(
+            site=sites[opening_id],
+            cells=cells,
+            axis=axis,
+            outward=outward,
+            opening=openings[opening_id],
+        )
         for opening_id, (cells, axis, outward) in geometry.opening_cells().items()
         if opening_id in sites
     ]
@@ -169,14 +183,26 @@ def _new_climate_run(
     openings: _Pairs,
     commands: tuple[Commanded, ...],
 ) -> ClimateRun:
-    """A scenario's climate run, from its start."""
+    """A scenario's climate run, from its start. Its doors and vents are those
+    open at the start, or opened by a command at a later moment."""
     config = changed(
         scenario(scenario_id),
         SceneChanges(layout=layout, weather=weather, openings=dict(openings)),
     )
+    known = {opening.opening_id for opening in config.envelope.openings}
+    commanded = {actuator for _, actuator, _ in commands if actuator in known}
+    # Every door or vent the run opens, fully, for the cells against it.
+    opened = changed(
+        config, SceneChanges(openings={**dict(openings), **dict.fromkeys(commanded, 1.0)})
+    )
     grid = air_grid(config)
     geometry = cfd_geometry(scenario_id, config, grid)
-    vents = climate_vents(config, geometry)
+    # Each standing open as far as it does at the start.
+    start = {opening.opening_id: opening for opening in config.envelope.openings}
+    vents = [
+        replace(vent, opening=start[vent.opening_id])
+        for vent in climate_vents(opened, cfd_geometry(scenario_id, opened, grid))
+    ]
     return ClimateRun(
         base=config.airflow,
         equipment=config.layout.equipment,

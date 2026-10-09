@@ -616,6 +616,12 @@ body {
   border: 1px solid #cccccc;
 }
 
+.sensor-chart-off {
+  fill: none;
+  stroke: #7f8c8d;
+  stroke-dasharray: 3 2;
+}
+
 .sensor-chart-truth {
   fill: none;
   stroke: #888888;
