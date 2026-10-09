@@ -129,6 +129,16 @@ describe("the weather", () => {
   it("writes the wind by its speed and the point it comes from", () => {
     expect(describeWind(WESTERLY.weather)).toBe("3.0 m/s from the W");
     expect(describeWind(CALM.weather)).toBe("calm");
+    // Recorded without a wind vane.
+    expect(describeWind({ ...WESTERLY.weather, wind_direction_deg: null })).toBe(
+      "3.0 m/s, its direction not known",
+    );
+    expect(
+      parseWeather({
+        ...WESTERLY_BODY,
+        weather: { ...WESTERLY_BODY.weather, wind_direction_deg: null },
+      }).weather.wind_direction_deg,
+    ).toBeNull();
   });
 });
 

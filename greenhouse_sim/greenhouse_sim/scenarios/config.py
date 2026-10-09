@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 from greenhouse_sim.airflow.prescribed import PrescribedAirflow, UniformAirflow
 from greenhouse_sim.cfd.setup import CfdSetup
 from greenhouse_sim.climate.settings import ClimateSettings
+from greenhouse_sim.weather.recorded import RecordedWeather
 from greenhouse_sim.weather.sources import ConstantWeather, RunWeather
 from greenhouse_sim.weather.synthetic import SyntheticWeather
 from greenhouse_sim.world.envelope import Envelope
@@ -48,9 +49,9 @@ class ScenarioConfig(BaseModel):
     climate: ClimateSettings = ClimateSettings()
     # Where it lies on the Earth, and the weather outside it.
     site: Site = DEFAULT_SITE
-    weather: Annotated[ConstantWeather | SyntheticWeather, Field(discriminator="kind")] = (
-        ConstantWeather()
-    )
+    weather: Annotated[
+        ConstantWeather | SyntheticWeather | RecordedWeather, Field(discriminator="kind")
+    ] = ConstantWeather()
 
     # Environment: bounds the smooth day-to-day drift stays within.
     air_temperature_bounds: tuple[float, float] = (18.0, 32.0)
@@ -89,7 +90,8 @@ class ScenarioConfig(BaseModel):
 
     def run_weather(self) -> RunWeather:
         """Its weather on a run's clock."""
-        return RunWeather(self.weather.source(self.site, self.random_seed), self.run_start())
+        start = self.run_start()
+        return RunWeather(self.weather.source(self.site, self.random_seed, start), start)
 
     @model_validator(mode="after")
     def _the_layout_fits_in_the_greenhouse(self) -> Self:

@@ -56,9 +56,9 @@ class ConstantWeather(OutsideConditions):
             barometric_pressure_hpa=site.standard_pressure_hpa() if pressure is None else pressure,
         )
 
-    def source(self, site: Site, seed: int = 0) -> WeatherSource:
+    def source(self, site: Site, seed: int = 0, start: datetime | None = None) -> WeatherSource:
         """This weather at every moment, at `site`; nothing in it is drawn
-        from `seed`."""
+        from `seed`, or depends on when a run starts."""
         return _Constant(self.state(site))
 
 
@@ -70,22 +70,27 @@ class _Constant:
         return self.state
 
 
-def _blowing(state: WeatherState) -> tuple[float, float]:
+def _blowing(state: WeatherState, direction_deg: float) -> tuple[float, float]:
     """The wind as a vector, east and north, of the way it blows from."""
-    angle = math.radians(state.wind_direction_deg)
+    angle = math.radians(direction_deg)
     return state.wind_speed_m_s * math.sin(angle), state.wind_speed_m_s * math.cos(angle)
 
 
 def interpolated(earlier: WeatherState, later: WeatherState, share: float) -> WeatherState:
     """The weather `share` of the way from `earlier` to `later`, each
     quantity linearly, the wind as a vector. A calm on the way keeps the
-    earlier wind's direction."""
+    earlier wind's direction; a wind whose direction either end does not
+    know is interpolated by its speed alone, its direction unknown."""
     values = {
         name: (1.0 - share) * getattr(earlier, name) + share * getattr(later, name)
         for name in WeatherState.model_fields
         if name not in _WIND
     }
-    (east_0, north_0), (east_1, north_1) = _blowing(earlier), _blowing(later)
+    if earlier.wind_direction_deg is None or later.wind_direction_deg is None:
+        speed = (1.0 - share) * earlier.wind_speed_m_s + share * later.wind_speed_m_s
+        return WeatherState(**values, wind_speed_m_s=speed, wind_direction_deg=None)
+    (east_0, north_0) = _blowing(earlier, earlier.wind_direction_deg)
+    (east_1, north_1) = _blowing(later, later.wind_direction_deg)
     east = (1.0 - share) * east_0 + share * east_1
     north = (1.0 - share) * north_0 + share * north_1
     speed = math.hypot(east, north)

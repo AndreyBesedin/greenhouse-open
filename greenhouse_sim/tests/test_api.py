@@ -63,7 +63,13 @@ def test_the_scenario_list_is_the_registry() -> None:
             "plants": config.rows * config.columns,
             "duration_days": config.duration_days,
             "layouts": ["default", *OTHER_LAYOUTS.get(scenario_id, [])],
-            "weathers": ["default", "cold_spring_day", "hot_dry_summer_day", "windy_autumn_day"],
+            "weathers": [
+                "default",
+                "cold_spring_day",
+                "hot_dry_summer_day",
+                "windy_autumn_day",
+                "example_day",
+            ],
         }
 
 

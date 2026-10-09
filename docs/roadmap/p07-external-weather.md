@@ -1,6 +1,6 @@
 # P07: External weather and greenhouse boundary coupling
 
-**Status:** in progress: P07.1 to P07.6 done, P07.7 next. Part of the
+**Status:** in progress: P07.1 to P07.7 done, P07.8 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -249,7 +249,7 @@ station's readings, never the weather source itself.
 | P07.4 | `feat(boundary): couple the glazing to the changing outside` | Done |
 | P07.5 | `feat(boundary): add infiltration and the outside's water and CO₂` | Done |
 | P07.6 | `feat(wind): drive the openings by wind and stack pressure` | Done |
-| P07.7 | `feat(weather): import recorded weather` | Planned |
+| P07.7 | `feat(weather): import recorded weather` | Done |
 | P07.8 | `test(weather): compare a controlled and an uncontrolled day` | Planned |
 
 ### P07.1: The site, the weather state and its sources
@@ -597,6 +597,45 @@ in the repository for tests and the viewer. Visible result: a recorded day
 replays from the timeline. Tests: each kind of bad file is refused, naming
 its row; a short gap is interpolated and a long one refused; the run's
 identity changes with the file.
+
+#### As implemented
+
+- **The format** (`weather.recorded`): a CSV with a `timestamp` column, an
+  ISO 8601 instant with its time zone, and a column per quantity named
+  after the protocol's outside observation types, whose types P07.2
+  completed. The air's temperature and relative humidity are needed. What
+  a file leaves out takes its default: 420 ppm, no wind, the site's
+  standard pressure, no radiation, a clear sky.
+- **Refused, naming the row:** no `timestamp` column, a column that is no
+  outside quantity, a missing temperature or humidity column, a timestamp
+  that is not ISO 8601, has no time zone, or is not after the one before,
+  and a value that is not a number or lies outside its quantity's physical
+  range.
+- **Gaps:** an empty cell is a missing value. Up to an hour between a
+  quantity's known values is interpolated across; within a longer gap, or
+  beyond the file, a run that reaches the moment is refused.
+- **Wind without a direction:** a file without a wind vane's column has
+  wind whose direction is not known (`WeatherState.wind_direction_deg` is
+  `None`). It presses on no opening, but still exchanges air through each
+  by its turbulence, leaks through the gaps, and thins the glass's outer
+  film. It draws no arrow, and a station's wind vane reads nothing. A
+  direction is interpolated the shorter way round.
+- **Replayed:** a recorded day plays from its first day's midnight at the
+  site at the run's start, so that any scenario can be run under it.
+- **By name, beside the presets:** every CSV in
+  `greenhouse_sim/weather/recorded/` is a weather a scenario can be run
+  under (`&weather=example_day`), listed after the presets.
+- **Provenance:** a run under recorded weather has its file's content's
+  digest in its identity, so that its run id changes with the file.
+- **The example day,** `example_day.csv`, is an example of the format, not
+  a measurement: the repository holds no measured weather, the adapters
+  downloading theirs. It is generated from the windy autumn day on
+  1 October 2026 in Amsterdam, every ten minutes, with seeded noise, a
+  slowly falling pressure and half an hour of humidity left out; its
+  folder's README says so. A measured day can be added beside it.
+- **The viewer:** the example day is in the Weather panel's picker; the
+  panel, the wind arrow, the day's chart and the run follow it, and a wind
+  with no direction is written "its direction not known".
 
 ### P07.8: A controlled and an uncontrolled day
 

@@ -23,7 +23,8 @@ export interface WeatherState {
   relative_humidity_pct: number;
   co2_ppm: number;
   wind_speed_m_s: number;
-  wind_direction_deg: number;
+  /** Null when it is not known, as in a recording without a wind vane's. */
+  wind_direction_deg: number | null;
   barometric_pressure_hpa: number;
   global_radiation_w_m2: number;
   cloud_cover_pct: number;
@@ -68,7 +69,6 @@ const WEATHER_NUMBERS = [
   "relative_humidity_pct",
   "co2_ppm",
   "wind_speed_m_s",
-  "wind_direction_deg",
   "barometric_pressure_hpa",
   "global_radiation_w_m2",
   "cloud_cover_pct",
@@ -128,7 +128,11 @@ function isPoint(value: unknown): value is Point3 {
 }
 
 function isWeatherState(value: unknown): value is WeatherState {
-  return isObject(value) && WEATHER_NUMBERS.every((name) => typeof value[name] === "number");
+  return (
+    isObject(value) &&
+    WEATHER_NUMBERS.every((name) => typeof value[name] === "number") &&
+    (typeof value.wind_direction_deg === "number" || value.wind_direction_deg === null)
+  );
 }
 
 /** A day's weather, checked rather than trusted. */
@@ -226,7 +230,9 @@ export function describeWind(weather: WeatherState): string {
     return "calm";
   }
   const speed = weather.wind_speed_m_s.toFixed(SPEED_DECIMALS);
-  return `${speed} m/s from the ${compassPoint(weather.wind_direction_deg)}`;
+  return weather.wind_direction_deg === null
+    ? `${speed} m/s, its direction not known`
+    : `${speed} m/s from the ${compassPoint(weather.wind_direction_deg)}`;
 }
 
 /**
