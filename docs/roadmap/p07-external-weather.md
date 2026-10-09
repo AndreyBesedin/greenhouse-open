@@ -1,7 +1,7 @@
 # P07: External weather and greenhouse boundary coupling
 
-**Status:** in progress: P07.1 and P07.2 done, P07.3's whole-house model
-done, its day-long runs next. Part of the [simulator roadmap](README.md).
+**Status:** in progress: P07.1 to P07.3 done, P07.4 next. Part of the
+[simulator roadmap](README.md).
 
 ## Goal
 
@@ -245,7 +245,7 @@ station's readings, never the weather source itself.
 | --- | --- | --- |
 | P07.1 | `feat(weather): define the site, the weather state and its sources` | Done |
 | P07.2 | `feat(weather): add synthetic day and night weather presets` | Done |
-| P07.3 | `feat(climate): run a whole day` | In progress |
+| P07.3 | `feat(climate): run a whole day` | Done |
 | P07.4 | `feat(boundary): couple the glazing to the changing outside` | Planned |
 | P07.5 | `feat(boundary): add infiltration and the outside's water and CO₂` | Planned |
 | P07.6 | `feat(wind): drive the openings by wind and stack pressure` | Planned |
@@ -434,6 +434,37 @@ day-long runs after it.
   house's temperature, humidity and CO₂ through the run up to the moment
   drawn, the run all off dashed beside it.
 
+The day-long runs, in the second:
+
+- **A climate run lasts a day** (`climate.day`, `ClimateDay`): commands and
+  moments up to 86 400 s.
+- **The field at a moment** is a grid run's. Through the first two hours it
+  is the grid run from the start, as before. After them it is a grid run
+  started from the whole house's air, the same in every cell, an hour
+  before the moment's hour began: 5:20 is drawn from a run started at
+  4:00, as is every moment to 6:00. After its hour the grid run's mean lies
+  within 0.3 °C of the whole house's, and the heater's corner has taken its
+  shape again.
+  - **Kept:** the three latest of a day's later grid runs. Scrubbing within
+    an hour carries one on; the next hour starts another. An override
+    later in the day carries on from the air before it, as P05's do.
+  - **Measured:** on the climate box, a later moment costs a grid run of
+    one to two hours, 1.5 to 14 s by what runs; the next five minutes
+    within it, a fraction of a second.
+- **What sensors sample** must be the same air however late the run is
+  looked at, and the later grid runs are not kept for every moment of a
+  day. So sensors sample the grid run from the start through its first two
+  hours, and the whole house's air after them, the same in every cell, in
+  the flow the equipment makes then. After two hours, a thermometer by the
+  heater reads what one across the house does.
+- **Probes** read the grid run that draws the moment asked for, every
+  minute from its start, beside the same run all off, and their charts
+  span that run's two hours. The house's air is charted from the run's
+  start, through the day.
+- **The viewer:** the time slider spans the day, a minute at a time;
+  playing moves a minute at a time through the first hour and five minutes
+  at a time after it. A moment after the first hour is written `5 h 05 min`.
+
 ### P07.4: The glazing and the changing outside
 
 A changing outside temperature, the wind's film coefficient, surface
@@ -515,6 +546,9 @@ What P07 simplifies on purpose, kept here until a later step removes it:
   measured differences).
 - **Plants still take their daily climate,** not the air where they stand,
   and transpire nothing, until P09.
+- **After a run's first two hours, sensors read the whole house's air,**
+  the same wherever they stand: the field is drawn when it is looked at,
+  and not kept for every moment of a day (P07.3).
 
 ## Review decisions (9 October 2026)
 

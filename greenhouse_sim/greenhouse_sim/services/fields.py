@@ -12,15 +12,18 @@ solution (`greenhouse_sim.cfd.results`). Then, if its layout places
 equipment, its `climate`: its air through a climate run, with its equipment
 running at the levels asked from the start, all off unless asked, then as
 the commands asked set them at their moments, and its doors and vents open
-as asked, at a moment of the run (`greenhouse_sim.climate.run`). And last the synthetic
-shear the field format is checked against.
+as asked, at a moment of the run, which lasts up to a day
+(`greenhouse_sim.climate.day`). And last the synthetic shear the field
+format is checked against.
 
 A few recent climate runs are kept, each with the moments asked of it, so
 that a later moment carries on from the latest before it.
 
-Probes read a climate run every minute up to a moment, beside the same run
-with everything off (`greenhouse_sim.climate.probes`), and so does the
-house's air as one well-mixed volume (`greenhouse_sim.climate.house`).
+Probes read the grid run that draws the moment asked for, every minute from
+its start, beside the same run with everything off
+(`greenhouse_sim.climate.probes`). The house's air as one well-mixed volume
+(`greenhouse_sim.climate.house`) is read every minute from the run's
+start.
 """
 
 import hashlib
@@ -34,7 +37,8 @@ from greenhouse_sim.airflow.prescribed import PATTERNS
 from greenhouse_sim.cfd.geometry import cfd_geometry
 from greenhouse_sim.cfd.results import CfdAirflow, kept_result
 from greenhouse_sim.climate.commands import Command, Schedule
-from greenhouse_sim.climate.house import HouseTrace, WholeHouse, house_trace
+from greenhouse_sim.climate.day import ClimateDay, window_start
+from greenhouse_sim.climate.house import HouseTrace, house_trace
 from greenhouse_sim.climate.probes import ClimateProbes, probe_series
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.vents import Vent
@@ -57,8 +61,8 @@ CELL_M: Final = 0.5
 SHEAR: Final = "shear"
 CFD: Final = "cfd"
 CLIMATE: Final = "climate"
-# How long a climate run lasts, at most, in seconds: an hour.
-LONGEST_RUN_S: Final = 3600.0
+# How long a climate run lasts, at most, in seconds: a day.
+LONGEST_RUN_S: Final = 86_400.0
 # How many recent climate runs are kept.
 KEPT_RUNS: Final = 8
 # Probes read a climate run this often, in seconds.
@@ -95,7 +99,7 @@ def _checked(config: ScenarioConfig, commands: Sequence[Commanded]) -> tuple[Com
 
 
 type _RunKey = tuple[str, str, str, _Pairs, _Pairs, tuple[Commanded, ...]]
-_KEPT: OrderedDict[_RunKey, ClimateRun] = OrderedDict()
+_KEPT: OrderedDict[_RunKey, ClimateDay] = OrderedDict()
 _KEEPING = threading.Lock()
 
 
@@ -106,15 +110,16 @@ def forget_climate_runs() -> None:
         _KEPT.clear()
 
 
-def _climate_run(
+def _climate_day(
     scenario_id: str,
     layout: str,
     weather: str,
     levels: _Pairs,
     openings: _Pairs,
     commands: tuple[Commanded, ...],
-) -> ClimateRun:
-    """A scenario's climate run with one of its layouts, under a weather, its
+) -> ClimateDay:
+    """A scenario's climate run through a day (`greenhouse_sim.climate.day`),
+    with one of its layouts, under a weather, its
     equipment set to `levels` from the start and then as `commands` set it,
     and its doors and vents open as `openings` say: one of the `KEPT_RUNS`
     kept, or a new one, carrying on from those kept for the same house under
@@ -126,7 +131,7 @@ def _climate_run(
         if run is not None:
             _KEPT.move_to_end(key)
             return run
-        run = _new_climate_run(*key)
+        run = ClimateDay(_new_climate_run(*key))
         for (other_id, other_layout, other_weather, _, other_openings, _), other in _KEPT.items():
             if (other_id, other_layout, other_weather, other_openings) == (
                 scenario_id,
@@ -212,7 +217,9 @@ class _Climate:
         )
 
     def field(self, field_id: str, grid: FieldGrid, time_s: float = 0.0) -> EnvironmentField:
-        return _climate_run(*self.key).field(field_id, grid, time_s)
+        if grid != air_grid(scenario(self.key[0])):
+            raise ValueError("a climate run is drawn on its own grid")
+        return _climate_day(*self.key).field(field_id, time_s)
 
 
 def _models(
@@ -319,8 +326,9 @@ def climate_probes(
     until_s: float = 0.0,
     weather: str | None = None,
 ) -> ClimateProbes:
-    """What probes at `points` read of a scenario's climate run every
-    `PROBE_EVERY_S` up to `until_s`, and of the same run with everything off,
+    """What probes at `points` read of the grid run that draws a scenario's
+    climate at `until_s`, every `PROBE_EVERY_S` from its start to `until_s`,
+    and of the same run with everything off,
     its doors and vents as asked. Asked as its climate field is, and refused
     as it is; a probe outside the house's air is refused too."""
     if not 0.0 <= until_s <= LONGEST_RUN_S:
@@ -336,20 +344,20 @@ def climate_probes(
     if outside:
         named = ", ".join(f"({p.x:g}, {p.y:g}, {p.z:g})" for p in outside)
         raise InvalidRequest(f"a probe stands in the house's air, not at {named}")
-    times = _moments(until_s)
     key_scenario, key_layout, key_weather, _, key_openings, _ = climate.key
+    everything_off = _climate_day(key_scenario, key_layout, key_weather, (), key_openings, ())
     return probe_series(
-        _climate_run(*climate.key),
-        _climate_run(key_scenario, key_layout, key_weather, (), key_openings, ()),
+        _climate_day(*climate.key).window(until_s),
+        everything_off.window(until_s),
         probed,
-        times,
+        _moments(until_s, window_start(until_s)),
     )
 
 
-def _moments(until_s: float) -> list[float]:
-    """Every `PROBE_EVERY_S` from a run's start to `until_s`, and `until_s`."""
-    steps = int(until_s // PROBE_EVERY_S)
-    times = [step * PROBE_EVERY_S for step in range(steps + 1)]
+def _moments(until_s: float, from_s: float = 0.0) -> list[float]:
+    """Every `PROBE_EVERY_S` from `from_s` to `until_s`, and `until_s`."""
+    first = int(from_s // PROBE_EVERY_S)
+    times = [step * PROBE_EVERY_S for step in range(first, int(until_s // PROBE_EVERY_S) + 1)]
     if times[-1] < until_s:
         times.append(until_s)
     return times
@@ -377,8 +385,8 @@ def house_air(
         raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
     key_scenario, key_layout, key_weather, _, key_openings, _ = climate.key
     return house_trace(
-        WholeHouse(_climate_run(*climate.key)),
-        WholeHouse(_climate_run(key_scenario, key_layout, key_weather, (), key_openings, ())),
+        _climate_day(*climate.key).house,
+        _climate_day(key_scenario, key_layout, key_weather, (), key_openings, ()).house,
         _moments(until_s),
     )
 
@@ -400,9 +408,9 @@ def air_through_a_run(
     air = grid(scenario_id)
     climate = models.get(CLIMATE)
     if isinstance(climate, _Climate):
-        run = _climate_run(*climate.key)
+        day = _climate_day(*climate.key)
         digest = hashlib.sha256(repr(climate.key).encode()).hexdigest()[:RUN_DIGEST_LENGTH]
-        return (lambda time_s: run.field(f"{scenario_id}_{CLIMATE}", air, time_s)), (
+        return (lambda time_s: day.sampled(f"{scenario_id}_{CLIMATE}", time_s)), (
             f"{scenario_id}-climate-{digest}"
         )
     config = changed(scenario(scenario_id), SceneChanges(layout=name))

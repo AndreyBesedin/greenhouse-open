@@ -2,7 +2,7 @@ import { pairsText, type ScheduledCommand, scheduleText, weatherParameter } from
 import type { Point3 } from "../world";
 import { describeTime } from "./ClimateTime";
 import { probesText } from "./probes";
-import { CLIMATE_RUN_S } from "./source";
+import { GRID_RUN_S } from "./source";
 
 /** What a probe reads at each moment of a run: temperature (°C), relative
  * humidity (%) and air speed (m/s). */
@@ -131,16 +131,24 @@ export function chartRange(...series: number[][]): { min: number; max: number } 
   return min === max ? { min: min - 1, max: max + 1 } : { min, max };
 }
 
-/** A run's values as an SVG polyline's points: across the run's hour, and
- * up its range, the highest at the top. */
+/** Where a moment lies across a chart that starts at `from`, as wide as a
+ * grid run's longest. */
+function across(time: number, from: number): number {
+  return ((time - from) / GRID_RUN_S) * WIDTH;
+}
+
+/** A run's values as an SVG polyline's points: across the grid run they
+ * were read from, from its start, and up their range, the highest at the
+ * top. */
 export function chartPoints(
   times: readonly number[],
   values: readonly number[],
   range: { min: number; max: number },
 ): string {
+  const from = times[0] ?? 0;
   return values
     .map((value, index) => {
-      const x = ((times[index] ?? 0) / CLIMATE_RUN_S) * WIDTH;
+      const x = across(times[index] ?? 0, from);
       const y = HEIGHT - ((value - range.min) / (range.max - range.min)) * HEIGHT;
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
@@ -152,10 +160,10 @@ function format(value: number | undefined): string {
 }
 
 /**
- * Each probe's temperature, relative humidity and air speed through the run,
- * charted beside the same run with everything off: plain SVG, a line for
- * each run across the run's hour, the moment drawn marked, and what both
- * read then.
+ * Each probe's temperature, relative humidity and air speed through the grid
+ * run that draws the moment, from its start, charted beside the same run
+ * with everything off: plain SVG, a line for each run across the grid run's
+ * two hours, the moment drawn marked, and what both read then.
  */
 export function ProbeCharts({ state, time }: { state: ProbeChartsState; time: number }) {
   if (state.status === "none") {
@@ -172,7 +180,7 @@ export function ProbeCharts({ state, time }: { state: ProbeChartsState; time: nu
   }
   const { times_s: times, probes } = state.probes;
   const last = times.length - 1;
-  const cursor = (time / CLIMATE_RUN_S) * WIDTH;
+  const cursor = across(time, times[0] ?? 0);
   return (
     <section className="probe-charts" aria-label="Probe charts">
       <p className="probe-charts-key">

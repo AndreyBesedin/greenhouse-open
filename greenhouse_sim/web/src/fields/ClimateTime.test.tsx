@@ -2,16 +2,24 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { searchFor, sourceFromSearch } from "../scene/source";
-import { ClimateTime, describeTime } from "./ClimateTime";
+import { ClimateTime, describeTime, playStep } from "./ClimateTime";
 import { CLIMATE_RUN_S, fieldUrl } from "./source";
 
 const ignore = () => undefined;
 
 describe("a climate run's moment", () => {
-  it("is written in minutes", () => {
+  it("is written in minutes, and in hours and minutes after the first hour", () => {
     expect(describeTime(0)).toBe("0 min");
     expect(describeTime(600)).toBe("10 min");
     expect(describeTime(90)).toBe("1.5 min");
+    expect(describeTime(3600)).toBe("1 h 00 min");
+    expect(describeTime(5 * 3600 + 300)).toBe("5 h 05 min");
+    expect(describeTime(86_400)).toBe("24 h 00 min");
+  });
+
+  it("plays a minute at a time through the first hour, and five after it", () => {
+    expect(playStep(600)).toBe(60);
+    expect(playStep(3600)).toBe(300);
   });
 
   it("is chosen on a slider over the run, a minute at a time, and played", () => {

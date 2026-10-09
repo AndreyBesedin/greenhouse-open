@@ -225,7 +225,7 @@ def test_the_api_serves_a_scenarios_site_and_weather_at_a_moment() -> None:
 @pytest.mark.parametrize(
     ("path", "status"),
     [
-        ("/api/scenarios/climate_box/weather?t=4000", HTTPStatus.BAD_REQUEST),
+        ("/api/scenarios/climate_box/weather?t=90000", HTTPStatus.BAD_REQUEST),
         ("/api/scenarios/climate_box/weather?t=soon", HTTPStatus.BAD_REQUEST),
         ("/api/scenarios/nowhere/weather", HTTPStatus.NOT_FOUND),
     ],

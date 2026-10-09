@@ -4,19 +4,35 @@ import { CLIMATE_RUN_S } from "./source";
 
 // The slider moves a minute at a time.
 export const CLIMATE_STEP_S = 60;
+// Playing moves a minute at a time through the first hour, and five minutes
+// at a time after it, so that a day plays in a few minutes.
+export const PLAY_LATER_STEP_S = 300;
 const SECONDS_PER_MINUTE = 60;
+const SECONDS_PER_HOUR = 3600;
+const MINUTE_DIGITS = 2;
 // Playing, the run moves on a step this long after each moment arrives.
 const PLAY_PAUSE_MS = 400;
 
-/** A moment of a climate run, as the viewer writes it: `10 min`. */
+/** A moment of a climate run, as the viewer writes it: `10 min` in its
+ * first hour, `5 h 05 min` after it. */
 export function describeTime(seconds: number): string {
-  return `${Math.round((seconds / SECONDS_PER_MINUTE) * 10) / 10} min`;
+  if (seconds < SECONDS_PER_HOUR) {
+    return `${Math.round((seconds / SECONDS_PER_MINUTE) * 10) / 10} min`;
+  }
+  const hours = Math.floor(seconds / SECONDS_PER_HOUR);
+  const minutes = Math.round((seconds - hours * SECONDS_PER_HOUR) / SECONDS_PER_MINUTE);
+  return `${hours} h ${String(minutes).padStart(MINUTE_DIGITS, "0")} min`;
+}
+
+/** How far play moves on from a moment. */
+export function playStep(seconds: number): number {
+  return seconds < SECONDS_PER_HOUR ? CLIMATE_STEP_S : PLAY_LATER_STEP_S;
 }
 
 /**
  * How far into its climate run a scenario's climate is drawn: a slider over
- * the run, a minute at a time, and play, which moves on a minute once the
- * last moment asked for has arrived, until the run's end.
+ * the run's day, a minute at a time, and play, which moves on once the last
+ * moment asked for has arrived (`playStep`), until the run's end.
  */
 export function ClimateTime({
   time,
@@ -43,7 +59,7 @@ export function ClimateTime({
       return;
     }
     const next = setTimeout(
-      () => onTime(Math.min(time + CLIMATE_STEP_S, CLIMATE_RUN_S)),
+      () => onTime(Math.min(time + playStep(time), CLIMATE_RUN_S)),
       PLAY_PAUSE_MS,
     );
     return () => clearTimeout(next);
