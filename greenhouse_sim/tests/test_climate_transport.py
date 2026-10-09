@@ -29,7 +29,7 @@ STILL = np.zeros((NZ, NY, NX, 3))
 START = np.full((NZ, NY, NX), 16.0)
 # The climate box's: 8 °C outside, 16 °C to start, single glass.
 SETTINGS = CONFIG.climate
-OUTSIDE = CONFIG.weather.state(CONFIG.site)
+OUTSIDE = CONFIG.run_weather().at(0.0)
 SHUT = SETTINGS.model_copy(update={"glazing_u_w_m2k": 0.0})
 # The glazing's walls and roof: two 12 by 4 m sides, two 6.4 by 4 m ends,
 # and the 12 by 6.4 m top of the grid.

@@ -117,6 +117,16 @@ describe("choosing a scene in the address bar", () => {
         ],
       },
     ],
+    [
+      "?scenario=climate_box&weather=cold_spring_day&field=climate&t=600",
+      {
+        kind: "scenario",
+        scenarioId: "climate_box",
+        weather: "cold_spring_day",
+        field: "climate",
+        time: 600,
+      },
+    ],
   ])("%s", (search, source) => {
     expect(sourceFromSearch(search)).toEqual(source);
     expect(searchFor(source)).toBe(search);
@@ -138,6 +148,11 @@ describe("choosing another source", () => {
       scenarioId: "tomato_compartment",
     });
     expect(withItsAir(sourceFromSearch("?plants=lab"), open)).toEqual(open);
+    // And the weather it is run under.
+    const spring = sourceFromSearch("?scenario=sensor_lab&weather=cold_spring_day");
+    expect(
+      searchFor(withItsAir(spring, sourceFromSearch("?scenario=sensor_lab&layout=blocked"))),
+    ).toBe("?scenario=sensor_lab&layout=blocked&weather=cold_spring_day");
   });
 });
 

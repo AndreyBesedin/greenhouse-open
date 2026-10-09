@@ -1,6 +1,7 @@
 import { inWorld } from "../debug/dimensions";
 import type { OverlayPrimitive } from "../debug/overlays";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
+import { weatherParameter } from "../scene/source";
 import type { Point3 } from "../world";
 
 /** Where a scenario's world lies on the Earth: its latitude and longitude in
@@ -46,6 +47,21 @@ export type WeatherStateOfLoad =
   | { status: "unavailable"; reason: string }
   | { status: "loaded"; weather: WeatherAtAMoment };
 
+/** A scenario's weather through its runs' first day, as the simulator sends
+ * it (`GET /api/scenarios/{id}/weather/day`): when the day starts, and the
+ * weather at seconds from then. */
+export interface WeatherDay {
+  start: string;
+  timesS: number[];
+  weather: WeatherState[];
+}
+
+export type WeatherDayState =
+  | { status: "none" }
+  | { status: "loading" }
+  | { status: "unavailable"; reason: string }
+  | { status: "loaded"; day: WeatherDay };
+
 const SITE_NUMBERS = ["latitude_deg", "longitude_deg", "elevation_m", "x_bearing_deg"] as const;
 const WEATHER_NUMBERS = [
   "air_temperature_c",
@@ -84,10 +100,18 @@ const WIND_ARROW_CLEARANCE_M = 1;
 export const WIND_COLOR = "#2b7bb9";
 const SPEED_DECIMALS = 1;
 
-/** Where a scenario's weather at a moment of a run is published. */
-export function weatherUrl(scenarioId: string, time: number): string {
-  const query = time === 0 ? "" : `?t=${time}`;
+/** Where a scenario's weather at a moment of a run is published, under its
+ * own weather or a preset's. */
+export function weatherUrl(scenarioId: string, time: number, weather?: string): string {
+  const parts = [...(time === 0 ? [] : [`t=${time}`]), ...weatherParameter(weather)];
+  const query = parts.length === 0 ? "" : `?${parts.join("&")}`;
   return `/api/scenarios/${encodeURIComponent(scenarioId)}/weather${query}`;
+}
+
+/** Where a scenario's weather through its runs' first day is published. */
+export function weatherDayUrl(scenarioId: string, weather?: string): string {
+  const query = weatherParameter(weather).join("&");
+  return `/api/scenarios/${encodeURIComponent(scenarioId)}/weather/day${query === "" ? "" : `?${query}`}`;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -101,6 +125,26 @@ function isPoint(value: unknown): value is Point3 {
     typeof value.y === "number" &&
     typeof value.z === "number"
   );
+}
+
+function isWeatherState(value: unknown): value is WeatherState {
+  return isObject(value) && WEATHER_NUMBERS.every((name) => typeof value[name] === "number");
+}
+
+/** A day's weather, checked rather than trusted. */
+export function parseWeatherDay(body: unknown): WeatherDay {
+  if (
+    !isObject(body) ||
+    typeof body.start !== "string" ||
+    !Array.isArray(body.times_s) ||
+    !body.times_s.every((time) => typeof time === "number") ||
+    !Array.isArray(body.weather) ||
+    !body.weather.every(isWeatherState) ||
+    body.weather.length !== body.times_s.length
+  ) {
+    throw new Error("the day's weather is not what the viewer expects");
+  }
+  return { start: body.start, timesS: body.times_s, weather: body.weather };
 }
 
 /** A weather response, checked rather than trusted. */
@@ -118,30 +162,47 @@ export function parseWeather(body: unknown): WeatherAtAMoment {
   }
   const site = body.site;
   const weather = body.weather;
-  if (
-    !SITE_NUMBERS.every((name) => typeof site[name] === "number") ||
-    !WEATHER_NUMBERS.every((name) => typeof weather[name] === "number")
-  ) {
+  if (!SITE_NUMBERS.every((name) => typeof site[name] === "number") || !isWeatherState(weather)) {
     throw new Error("the weather is not what the viewer expects");
   }
   return {
     site: site as unknown as Site,
     moment: body.moment,
     timeS: body.time_s,
-    weather: weather as unknown as WeatherState,
+    weather,
     windMS: body.wind_m_s,
   };
 }
 
-/** Fetches a scenario's weather at a moment of a run; every failure becomes
- * `unavailable`. */
+/** Fetches a scenario's weather through its runs' first day; every failure
+ * becomes `unavailable`. */
+export async function loadWeatherDay(
+  scenarioId: string,
+  weather: string | undefined,
+  fetchFn: typeof fetch = fetch,
+): Promise<WeatherDayState> {
+  try {
+    const response = await fetchFn(weatherDayUrl(scenarioId, weather));
+    if (!response.ok) {
+      return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
+    }
+    return { status: "loaded", day: parseWeatherDay(await response.json()) };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return { status: "unavailable", reason };
+  }
+}
+
+/** Fetches a scenario's weather at a moment of a run, under its own weather
+ * or a preset's; every failure becomes `unavailable`. */
 export async function loadWeather(
   scenarioId: string,
   time: number,
+  weather: string | undefined,
   fetchFn: typeof fetch = fetch,
 ): Promise<WeatherStateOfLoad> {
   try {
-    const response = await fetchFn(weatherUrl(scenarioId, time));
+    const response = await fetchFn(weatherUrl(scenarioId, time, weather));
     if (!response.ok) {
       return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
     }

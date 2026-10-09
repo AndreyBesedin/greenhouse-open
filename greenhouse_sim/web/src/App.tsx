@@ -75,7 +75,13 @@ import { loadSensorReadings, type SensorReadingsState } from "./sensors/readings
 import { SensorPanel } from "./sensors/SensorPanel";
 import { Viewport } from "./Viewport";
 import { WeatherPanel } from "./weather/WeatherPanel";
-import { loadWeather, type WeatherStateOfLoad, windOverlays } from "./weather/weather";
+import {
+  loadWeather,
+  loadWeatherDay,
+  type WeatherDayState,
+  type WeatherStateOfLoad,
+  windOverlays,
+} from "./weather/weather";
 import type { Point3 } from "./world";
 
 const MILLISECONDS_PER_SECOND = 1000;
@@ -98,6 +104,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [probeCharts, setProbeCharts] = useState<ProbeChartsState>({ status: "none" });
   const [sensorReadings, setSensorReadings] = useState<SensorReadingsState>({ status: "none" });
   const [weather, setWeather] = useState<WeatherStateOfLoad>({ status: "none" });
+  const [weatherDay, setWeatherDay] = useState<WeatherDayState>({ status: "none" });
   // Whether sensors' readings are shown as they err, or as clean ones', for QA.
   const [sensorsImperfect, setSensorsImperfect] = useState(true);
   const [probeHeight, setProbeHeight] = useState(DEFAULT_PROBE_HEIGHT_M);
@@ -192,12 +199,20 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const fieldOpenings = source.kind === "scenario" ? pairsText(source.openings) : "";
   const fieldSchedule = source.kind === "scenario" ? scheduleText(source.schedule) : "";
   const fieldTime = source.kind === "scenario" ? (source.time ?? 0) : 0;
+  const fieldWeather = source.kind === "scenario" ? source.weather : undefined;
   // A climate run, apart from its moments: its colours keep the widest range
   // its moments have reached, so that a slice keeps its colours as the run
   // plays and goes back. Another run starts afresh.
   const climateRun =
     fieldScenario !== null && fieldName === CLIMATE_FIELD
-      ? [fieldScenario, fieldLayout ?? "", fieldLevels, fieldOpenings, fieldSchedule].join("|")
+      ? [
+          fieldScenario,
+          fieldLayout ?? "",
+          fieldWeather ?? "",
+          fieldLevels,
+          fieldOpenings,
+          fieldSchedule,
+        ].join("|")
       : null;
   useEffect(() => {
     if (fieldScenario === null || fieldName === null) {
@@ -213,6 +228,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       openings: pairsFrom(fieldOpenings) ?? {},
       schedule: scheduleFrom(fieldSchedule) ?? [],
       time: fieldTime,
+      weather: fieldWeather,
     };
     void loadField(fieldScenario, fieldName, changes).then((state) => {
       if (current) {
@@ -233,6 +249,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     fieldOpenings,
     fieldSchedule,
     fieldTime,
+    fieldWeather,
     climateRun,
   ]);
 
@@ -246,7 +263,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     }
     let current = true;
     setWeather((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
-    void loadWeather(weatherScenario, fieldTime).then((state) => {
+    void loadWeather(weatherScenario, fieldTime, fieldWeather).then((state) => {
       if (current) {
         setWeather(state);
       }
@@ -254,7 +271,25 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     return () => {
       current = false;
     };
-  }, [weatherScenario, fieldTime]);
+  }, [weatherScenario, fieldTime, fieldWeather]);
+
+  // The weather through the runs' first day, for its chart.
+  useEffect(() => {
+    if (weatherScenario === null) {
+      setWeatherDay({ status: "none" });
+      return;
+    }
+    let current = true;
+    setWeatherDay((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
+    void loadWeatherDay(weatherScenario, fieldWeather).then((state) => {
+      if (current) {
+        setWeatherDay(state);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [weatherScenario, fieldWeather]);
 
   // The field compared with the drawn one, loaded as the drawn one is.
   const compareName = source.kind === "scenario" ? (source.compare ?? null) : null;
@@ -271,6 +306,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       openings: pairsFrom(fieldOpenings) ?? {},
       schedule: scheduleFrom(fieldSchedule) ?? [],
       time: fieldTime,
+      weather: fieldWeather,
     };
     void loadField(fieldScenario, compareName, changes).then((state) => {
       if (current) {
@@ -288,6 +324,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     fieldOpenings,
     fieldSchedule,
     fieldTime,
+    fieldWeather,
   ]);
 
   // What the probes read through the climate run drawn, and through the
@@ -413,6 +450,15 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     }
   }
 
+  // Another weather to run the scenario under, or its own.
+  function chooseWeather(chosen: string | undefined): void {
+    if (source.kind !== "scenario") {
+      return;
+    }
+    const { weather: _, ...rest } = source;
+    setScenarioSource(chosen === undefined ? rest : { ...rest, weather: chosen });
+  }
+
   function setOpenings(openings: Record<string, number>): void {
     if (source.kind !== "scenario") {
       return;
@@ -534,6 +580,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       schedule: scheduleFrom(fieldSchedule) ?? [],
       time: fieldTime,
       clean: !sensorsImperfect,
+      weather: fieldWeather,
     }).then((state) => {
       if (current) {
         setSensorReadings(state);
@@ -550,6 +597,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     fieldOpenings,
     fieldSchedule,
     fieldTime,
+    fieldWeather,
     sensorsImperfect,
   ]);
 
@@ -732,7 +780,20 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 onRemove={removeCommand}
               />
             )}
-            {source.kind === "scenario" && <WeatherPanel state={weather} />}
+            {source.kind === "scenario" && (
+              <WeatherPanel
+                state={weather}
+                day={weatherDay}
+                weathers={
+                  scenarios.status === "loaded"
+                    ? (scenarios.scenarios.find((s) => s.id === source.scenarioId)?.weathers ?? [])
+                    : []
+                }
+                chosen={source.weather}
+                time={fieldTime}
+                onChoose={chooseWeather}
+              />
+            )}
             {source.kind === "scenario" && source.field !== undefined && probedField !== null && (
               <FieldProbes
                 scenarioId={source.scenarioId}

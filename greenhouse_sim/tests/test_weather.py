@@ -184,7 +184,7 @@ def _box_run(weather: RunWeather) -> ClimateRun:
 
 
 def test_a_run_under_a_steady_series_is_its_run_under_constant_weather() -> None:
-    outside = BOX.weather.state(BOX.site)
+    outside = BOX.run_weather().at(0.0)
     start = BOX.run_start()
     steady = WeatherSeries([(start, outside), (start + HOUR, outside)])
 
@@ -196,7 +196,7 @@ def test_a_run_under_a_steady_series_is_its_run_under_constant_weather() -> None
 
 
 def test_a_run_follows_the_outside_as_it_changes() -> None:
-    outside = BOX.weather.state(BOX.site)
+    outside = BOX.run_weather().at(0.0)
     start = BOX.run_start()
     warming = WeatherSeries(
         [(start, outside), (start + HOUR, outside.model_copy(update={"air_temperature_c": 28.0}))]

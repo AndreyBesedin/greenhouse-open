@@ -56,8 +56,9 @@ class ConstantWeather(OutsideConditions):
             barometric_pressure_hpa=site.standard_pressure_hpa() if pressure is None else pressure,
         )
 
-    def source(self, site: Site) -> WeatherSource:
-        """This weather at every moment, at `site`."""
+    def source(self, site: Site, seed: int = 0) -> WeatherSource:
+        """This weather at every moment, at `site`; nothing in it is drawn
+        from `seed`."""
         return _Constant(self.state(site))
 
 

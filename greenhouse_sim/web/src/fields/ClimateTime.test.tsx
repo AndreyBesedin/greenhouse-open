@@ -57,5 +57,12 @@ describe("a climate run's moment", () => {
     expect(fieldUrl("climate_box", "shear", { time: 600 })).toBe(
       "/api/scenarios/climate_box/fields/shear",
     );
+    // Under another weather, which only its climate depends on.
+    expect(fieldUrl("climate_box", "climate", { time: 600, weather: "cold_spring_day" })).toBe(
+      "/api/scenarios/climate_box/fields/climate?t=600&weather=cold_spring_day",
+    );
+    expect(fieldUrl("climate_box", "uniform", { weather: "cold_spring_day" })).toBe(
+      "/api/scenarios/climate_box/fields/uniform",
+    );
   });
 });

@@ -1,7 +1,10 @@
+import { DEFAULT_WEATHER } from "../scenarios";
+import { WeatherDayChart } from "./WeatherDay";
 import {
   compassPoint,
   describeWind,
   type WeatherAtAMoment,
+  type WeatherDayState,
   type WeatherStateOfLoad,
 } from "./weather";
 
@@ -66,13 +69,36 @@ function WindCompass({ weather }: { weather: WeatherAtAMoment }) {
   );
 }
 
+/** A weather's name in words: a preset's, or "its own" for the scenario's. */
+export function weatherName(name: string): string {
+  return name === DEFAULT_WEATHER ? "its own" : name.replaceAll("_", " ");
+}
+
 /**
  * The weather outside at the moment drawn: a line saying when the moment is
  * at the site, the air's temperature and the wind, with a compass needle
- * along it; and, opened, the air's humidity and CO₂, the wind's bearing, the
- * pressure, and where the site is.
+ * along it; and, opened, which weather the scenario is run under, the air's
+ * humidity and CO₂, the wind's bearing, the pressure, where the site is,
+ * and the weather through the day.
  */
-export function WeatherPanel({ state }: { state: WeatherStateOfLoad }) {
+export function WeatherPanel({
+  state,
+  day = { status: "none" },
+  weathers = [],
+  chosen,
+  time = 0,
+  onChoose,
+}: {
+  state: WeatherStateOfLoad;
+  day?: WeatherDayState;
+  /** The weathers the scenario can be run under, its own first. */
+  weathers?: readonly string[];
+  /** The one it is run under, if not its own. */
+  chosen?: string | undefined;
+  /** The moment drawn, in seconds from the run's start. */
+  time?: number;
+  onChoose?: (weather: string | undefined) => void;
+}) {
   if (state.status === "none") {
     return null;
   }
@@ -101,6 +127,24 @@ export function WeatherPanel({ state }: { state: WeatherStateOfLoad }) {
           </span>
           <WindCompass weather={weather} />
         </summary>
+        {onChoose !== undefined && weathers.length > 1 && (
+          <label className="weather-choice">
+            Run under{" "}
+            <select
+              aria-label="Weather to run under"
+              value={chosen ?? DEFAULT_WEATHER}
+              onChange={(event) =>
+                onChoose(event.target.value === DEFAULT_WEATHER ? undefined : event.target.value)
+              }
+            >
+              {weathers.map((name) => (
+                <option key={name} value={name}>
+                  {weatherName(name)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <dl>
           <dt>Air</dt>
           <dd data-testid="weather-air">
@@ -115,6 +159,7 @@ export function WeatherPanel({ state }: { state: WeatherStateOfLoad }) {
           <dt>Site</dt>
           <dd data-testid="weather-site">{describeSite(weather)}</dd>
         </dl>
+        <WeatherDayChart state={day} time={time} />
       </details>
     </section>
   );

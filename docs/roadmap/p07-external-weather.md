@@ -1,7 +1,7 @@
 # P07: External weather and greenhouse boundary coupling
 
-**Status:** in progress: P07.1 done, P07.2 next. Part of the
-[simulator roadmap](README.md).
+**Status:** in progress: P07.1 done, P07.2's synthetic days done, its weather
+station next. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -244,7 +244,7 @@ station's readings, never the weather source itself.
 | Step | Commit summary | Status |
 | --- | --- | --- |
 | P07.1 | `feat(weather): define the site, the weather state and its sources` | Done |
-| P07.2 | `feat(weather): add synthetic day and night weather presets` | Planned |
+| P07.2 | `feat(weather): add synthetic day and night weather presets` | In progress |
 | P07.3 | `feat(climate): run a whole day` | Planned |
 | P07.4 | `feat(boundary): couple the glazing to the changing outside` | Planned |
 | P07.5 | `feat(boundary): add infiltration and the outside's water and CO₂` | Planned |
@@ -322,6 +322,47 @@ day's weather chart. Visible result: scrubbing a day changes the panel, the
 wind arrow and the station's readings. Tests: a preset's temperature is at
 its minimum and maximum at the stated hours; its air's water is constant;
 the same seed gives the same gusts.
+
+#### As implemented
+
+P07.2 lands in two pull requests: the synthetic days first, the weather
+station after them.
+
+- **A synthetic day** (`weather.synthetic`, `SyntheticWeather`): its
+  coldest and warmest temperatures and their hours on the site's clock,
+  its humidity at the coldest, its calmest and windiest winds, the
+  direction the wind blows from at midnight and how far it veers by the
+  next, its gusts' size, its CO₂, cloud cover and pressure.
+  - **Temperature** follows a half cosine from the coldest hour up to the
+    warmest, and another down to the next day's coldest. On the days the
+    clocks change, the hours are still the clock's.
+  - **The air's water** is the coldest moment's all day, and its relative
+    humidity follows the temperature.
+  - **The wind** rises and falls with the temperature, between its calmest
+    and windiest. It veers steadily, and starts each day again from its
+    midnight direction.
+  - **Gusts and lulls** scale its speed by a share drawn once a minute,
+    seeded by the scenario's seed and the minute, and interpolated
+    between. The same seed gives the same gusts.
+  - Radiation stays nothing until the sun (P08).
+- **Presets** (`weather.presets`): `cold_spring_day` (4 to 16 °C, 95% at
+  dawn, a wind from 1.5 to 6 m/s veering from the south-west to the
+  north-west), `hot_dry_summer_day` (17 to 31 °C, a light easterly) and
+  `windy_autumn_day` (9 to 13 °C, 7 to 13 m/s, gusty).
+- **A scenario's weather** is constant or synthetic. Any scenario can be
+  run under a preset by name, in place of its own, as with its layouts:
+  `&weather=cold_spring_day` on its climate field, probes, observations,
+  truth and weather. A weather there is not is not found. Each scenario
+  lists the weathers it can be run under (`weathers`, its own first,
+  named `default`). The climate runs kept are told apart by their weather.
+- **The day:** `GET /api/scenarios/{id}/weather/day` gives the weather every
+  ten minutes through the runs' first day.
+- **The viewer:** the Weather panel, opened, chooses the weather to run
+  under, kept in the address, and charts the day's temperature, humidity
+  and wind speed, each from its least to its most, with the moment drawn
+  marked across them. Choosing another layout keeps the weather.
+- **Not yet:** the runs still last an hour, so a day is seen in the chart,
+  not yet in the run (P07.3).
 
 ### P07.3: A whole day
 

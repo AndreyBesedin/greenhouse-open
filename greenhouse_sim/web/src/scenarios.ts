@@ -7,10 +7,14 @@ export interface ScenarioSummary {
   duration_days: number;
   /** The names of its layouts, its default first. */
   layouts: string[];
+  /** The names of the weathers it can be run under, its own first. */
+  weathers?: string[];
 }
 
 /** The layout a scenario is defined with. */
 export const DEFAULT_LAYOUT = "default";
+/** The name of a scenario's own weather, beside the presets'. */
+export const DEFAULT_WEATHER = "default";
 
 export type ScenariosState =
   | { status: "loading" }
@@ -42,7 +46,10 @@ function isScenarioSummary(value: unknown): value is ScenarioSummary {
     Number.isInteger(fields.plants) &&
     Number.isInteger(fields.duration_days) &&
     Array.isArray(fields.layouts) &&
-    fields.layouts.every((layout) => typeof layout === "string")
+    fields.layouts.every((layout) => typeof layout === "string") &&
+    (fields.weathers === undefined ||
+      (Array.isArray(fields.weathers) &&
+        fields.weathers.every((weather) => typeof weather === "string")))
   );
 }
 

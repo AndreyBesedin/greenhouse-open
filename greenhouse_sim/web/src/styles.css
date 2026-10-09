@@ -343,6 +343,53 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.weather-choice {
+  display: block;
+  margin: 4px 0 0;
+}
+
+/* The day's weather: a short line per quantity, the moment drawn across. */
+.weather-day {
+  margin: 4px 0 0;
+}
+
+.weather-day-row {
+  display: grid;
+  grid-template-columns: 11em 1fr;
+  gap: 6px;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.weather-day-chart {
+  width: 100%;
+  height: 20px;
+}
+
+.weather-day-chart polyline {
+  fill: none;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.weather-day-chart .day-temperature {
+  stroke: #c0392b;
+}
+
+.weather-day-chart .day-humidity {
+  stroke: #2e86c1;
+}
+
+.weather-day-chart .day-wind {
+  stroke: #555555;
+}
+
+.weather-day-now {
+  stroke: #ff8c1a;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
 .wind-compass {
   width: 32px;
   height: 32px;
