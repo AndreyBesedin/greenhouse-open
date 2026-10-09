@@ -1,6 +1,6 @@
 # P08: Sun position, glazing and radiation propagation
 
-**Status:** in progress: P08.1 to P08.3 done, P08.4 next. Part of the
+**Status:** in progress: P08.1 to P08.4 done, P08.5 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -178,7 +178,7 @@ to here.
 | P08.1 | `feat(solar): implement deterministic sun position model` | Done |
 | P08.2 | `feat(viewer): add sun lighting and visible shadows` | Done |
 | P08.3 | `feat(radiation): define the radiation field and its units` | Done |
-| P08.4 | `feat(glazing): add transmission and incidence-angle attenuation` | Planned |
+| P08.4 | `feat(glazing): add transmission and incidence-angle attenuation` | Done |
 | P08.5 | `feat(radiation): add geometric shadow and occlusion tracing` | Planned |
 | P08.6 | `feat(radiation): add plant canopy interception hooks` | Planned |
 | P08.7 | `feat(radiation): add the diffuse sky and the clouds' attenuation` | Planned |
@@ -299,6 +299,32 @@ the beam crosses. Visible result: the radiation inside is visibly less
 than outside, and changes with the sun's angle. Tests: transmission is
 bounded and falls with the angle; energy decreases through the glass.
 
+#### As implemented
+
+- **`solar.glass`:** `transmittance(cos θ)`, 0.85 × max(0, 1 − 0.1 (1/cos θ − 1)),
+  nothing beyond about 85°; the diffuse sky's, its mean over the
+  hemisphere in closed form, 0.773.
+- **Which surface (`Glazing`):** the envelope's walls and roof slopes, each
+  its own flat polygon facing in, as `world.envelope` generates them, so
+  any envelope it describes, multi-span among them, is traced the same
+  way. For each point, the ray towards the sun leaves through the nearest
+  surface it meets inside that surface's outline (within a micrometre of
+  its edges, so that a ray along a seam leaves too), at that surface's
+  angle; vectorised over all the grid's cells at once.
+- **`Sunlight`** now takes the envelope; the beam on a surface is the
+  DNI by its cosine with the sun times what the glass passes on its way
+  there, the diffuse sky's DHI by the surface's sky view times 0.773.
+  `on(point, normal, time_s)` now needs the point.
+- **What it does:** at 12:45 on 1 January under a clear sky, the climate
+  box's floor takes 194.4 W/m² (417.5 µmol/m²/s of PAR) where the outside
+  takes 229.5: the beam crosses the south wall 15° from square. At the
+  equinox's noon, cells whose beam crosses the south roof slope, 38° from
+  square, take 331 W/m² of 400, and those whose beam crosses the north
+  slope, 66° from it, 290.
+- **Left as they are:** a beam leaving one span's roof and crossing
+  another's is passed once only; an open vent's or door's aperture passes
+  the beam as its glass would.
+
 ### P08.5: Shadows
 
 Ray tests against frames, gutters and light-obstructing fixtures. Visible result: the floor's false colour shows the frames' and
@@ -364,6 +390,9 @@ Accelerate through the solar lab's clear equinox day and check that:
 - **A plant's crown is a cylinder,** not its leaves; the plant lab's
   organ-level leaves do not cast shadows on each other yet.
 - **The glass is clean and dry:** no condensation or dirt on it.
+- **A beam crosses the glass once:** one leaving one span's roof and
+  crossing the next span's is passed as if through one pane; open vents
+  and doors pass the beam as their glass would.
 - **Solar heat goes to the air at the floor** by a fixed share; the ground
   and the crop's transpiration, which take the rest, are not modelled.
 
