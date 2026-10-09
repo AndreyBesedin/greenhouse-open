@@ -17,23 +17,28 @@ const WIDTH = 240;
 const HEIGHT = 70;
 const DOT_RADIUS = 2;
 
-/** The truth as a line, and the readings as dots, across the run so far. */
+/** The truth as a line, and the readings as dots, across the run so far;
+ * and, dashed, what the sensor read through the same run all off. */
 function SensorChart({
   readings,
+  allOff,
   sensorId,
   until,
 }: {
   readings: SensorReadings;
+  allOff: SensorReadings | null;
   sensorId: string;
   until: number;
 }) {
   const { observed, truth } = sensorSeries(readings, sensorId);
+  const off = allOff === null ? [] : sensorSeries(allOff, sensorId).observed;
   if (observed.length === 0 && truth.length === 0) {
     return null;
   }
   const range = chartRange(
     observed.map(([, value]) => value),
     truth.map(([, value]) => value),
+    off.map(([, value]) => value),
   );
   const span = Math.max(until, ...truth.map(([time]) => time), 1);
   const x = (time: number) => (time / span) * WIDTH;
@@ -46,6 +51,15 @@ function SensorChart({
       aria-label={`${sensorId} read against the truth, ${formatValue(range.min)} to ${formatValue(range.max)}`}
       data-testid="sensor-chart"
     >
+      {off.length > 0 && (
+        <polyline
+          className="sensor-chart-off"
+          data-testid="sensor-chart-off"
+          points={off
+            .map(([time, value]) => `${x(time).toFixed(1)},${y(value).toFixed(1)}`)
+            .join(" ")}
+        />
+      )}
       <polyline
         className="sensor-chart-truth"
         points={truth
@@ -89,8 +103,8 @@ export function describeFreshness(
 
 /**
  * A selected sensor's latest reading at the moment drawn, whether it is
- * fresh, a chart of its
- * readings against the truth through the run so far, and, apart, in a panel
+ * fresh, a chart of its readings against the truth through the run so far,
+ * beside what it read through the same run all off, and, apart, in a panel
  * marked as QA's, what it truly sampled: the truth a policy never sees, and
  * a switch to see its readings as a clean sensor's.
  */
@@ -98,6 +112,7 @@ export function SensorPanel({
   sensorId,
   unit,
   state,
+  allOff = { status: "none" },
   until,
   imperfect,
   onImperfect,
@@ -105,6 +120,8 @@ export function SensorPanel({
   sensorId: string;
   unit: string;
   state: SensorReadingsState;
+  /** Its readings through the same run with everything off, to compare. */
+  allOff?: SensorReadingsState;
   /** The moment drawn, in seconds into the run. */
   until: number;
   /** Whether its readings are as it errs, or as a clean sensor's. */
@@ -131,6 +148,8 @@ export function SensorPanel({
   const freshness = freshnessOf(readings, sensorId);
   const freshnessText = describeFreshness(freshness, readings.start);
   const clipped = reading?.quality?.includes("CLIPPED") === true;
+  const offReading =
+    allOff.status === "loaded" ? latestReading(allOff.readings, sensorId) : undefined;
   return (
     <section className="sensor-panel" aria-label="Sensor">
       <p data-testid="sensor-reading">
@@ -148,7 +167,19 @@ export function SensorPanel({
           {freshnessText}
         </p>
       )}
-      <SensorChart readings={readings} sensorId={sensorId} until={until} />
+      <SensorChart
+        readings={readings}
+        allOff={allOff.status === "loaded" ? allOff.readings : null}
+        sensorId={sensorId}
+        until={until}
+      />
+      {offReading !== undefined && (
+        <p data-testid="sensor-all-off">
+          {`All off, it read ${formatValue(offReading.value)} ${unit} at ${describeTime(
+            secondsInto(readings.start, offReading.timestamp),
+          )}`}
+        </p>
+      )}
       <aside className="sensor-truth" aria-label="Truth, for QA only">
         <span>Truth, for QA only:</span>{" "}
         <span data-testid="sensor-truth">

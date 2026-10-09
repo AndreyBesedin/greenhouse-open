@@ -195,13 +195,27 @@ class ClimateRun:
             }
         return self._through_flows
 
-    def openings_for(self, air: AirState, outside: WeatherState) -> dict[str, OpeningFlow]:
-        """What each open door and vent passes for `air`, by its mean
-        temperature, under the weather `outside`."""
-        if not self.vents:
+    def opening_levels_at(self, time_s: float) -> dict[str, float]:
+        """How far each of its doors and vents stands open at `time_s`: as
+        far as it is opened at the start, until a command moves it."""
+        levels = {vent.opening_id: vent.opening.opening for vent in self.vents}
+        for command in self.schedule.applied(time_s):
+            if command.actuator_id in levels:
+                levels[command.actuator_id] = command.level
+        return levels
+
+    def openings_for(
+        self, air: AirState, outside: WeatherState, time_s: float
+    ) -> dict[str, OpeningFlow]:
+        """What each door and vent open at `time_s` passes for `air`, by its
+        mean temperature, under the weather `outside`."""
+        levels = self.opening_levels_at(time_s)
+        sites = [vent.site_at(levels[vent.opening_id]) for vent in self.vents]
+        open_sites = [site for site in sites if site.aperture_m2 > 0]
+        if not open_sites:
             return {}
         inside_c = float(air.temperature[~self.solid].mean())
-        flows = opening_flows([vent.site for vent in self.vents], inside_c, outside)
+        flows = opening_flows(open_sites, inside_c, outside)
         return {flow.opening_id: flow for flow in flows}
 
     def _flowing(self, flows: FaceFlows, openings: Mapping[str, OpeningFlow]) -> FaceFlows:
@@ -247,7 +261,7 @@ class ClimateRun:
         """How heat moves at `time_s`, with what the doors and vents pass, as
         the air then drives them unless given."""
         if openings is None:
-            openings = self.openings_for(self.air_at(time_s), self.weather.at(time_s))
+            openings = self.openings_for(self.air_at(time_s), self.weather.at(time_s), time_s)
         return self._transport(time_s, openings)[1]
 
     def carry_on_from(self, other: ClimateRun) -> None:
@@ -286,7 +300,7 @@ class ClimateRun:
         for until in sorted(changes | kept | {time_s}):
             if until > now:
                 outside = self.weather.at((now + until) / 2)
-                terms, transport = self._transport(now, self.openings_for(air, outside))
+                terms, transport = self._transport(now, self.openings_for(air, outside, now))
                 air = transport.advance(air, terms, until - now, outside)
                 now = until
                 if until in kept:
@@ -334,7 +348,7 @@ class ClimateRun:
     def field_of(self, air: AirState, field_id: str, time_s: float) -> EnvironmentField:
         """`air` as the field at `time_s`, in this run's flow then."""
         outside = self.weather.at(time_s)
-        openings = self.openings_for(air, outside)
+        openings = self.openings_for(air, outside, time_s)
         velocity = self.flows_at(time_s, openings).velocity() + self._draughts(
             air, outside, openings
         )

@@ -1,6 +1,6 @@
 # P07: External weather and greenhouse boundary coupling
 
-**Status:** in progress: P07.1 to P07.7 done, P07.8 next. Part of the
+**Status:** in progress: P07.1 to P07.8 done, its final QA next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -250,7 +250,7 @@ station's readings, never the weather source itself.
 | P07.5 | `feat(boundary): add infiltration and the outside's water and CO₂` | Done |
 | P07.6 | `feat(wind): drive the openings by wind and stack pressure` | Done |
 | P07.7 | `feat(weather): import recorded weather` | Done |
-| P07.8 | `test(weather): compare a controlled and an uncontrolled day` | Planned |
+| P07.8 | `test(weather): compare a controlled and an uncontrolled day` | Done |
 
 ### P07.1: The site, the weather state and its sources
 
@@ -644,6 +644,29 @@ and vent schedule, and the sensors' charts of both overlaid. Visible
 result: the two runs diverge as the night falls. Tests: the controlled run
 is warmer through the night than the uncontrolled one; both replay
 exactly.
+
+#### As implemented
+
+- **Doors and vents are scheduled** as equipment is: a command to an
+  opening's identifier opens it to a level, from 0 to 1, at its moment
+  (`&schedule=39600:roof_vent:0.5`), checked as equipment's commands are.
+  A run's vents are those open at its start or opened by its schedule.
+  Each starts as far open as the scene has it, and its aperture follows
+  its level through the run, on the grid and in the whole house.
+- **The controlled day** (`tests/test_controlled_day.py`): the climate box
+  under the cold spring day, heated until eight and again from six, its
+  roof vent half open with the fan on from eleven to four, beside the same
+  day with nothing running.
+  - Through the night it is more than 3 °C warmer at every hour; vented
+    through the afternoon, less than 3 °C warmer.
+  - The two diverge as the night falls: the gap at eight in the evening is
+    over 3 °C wider than at five.
+  - Both replay exactly, the house's air and the sensors' observations,
+    after the kept runs are forgotten.
+- **The sensors' charts** gain the same run all off, dashed beside the
+  run's readings, with what the sensor read then, whenever equipment
+  runs or a schedule is set. The probes' and the house's charts already
+  had it.
 
 ## Final QA: `weather-day`
 

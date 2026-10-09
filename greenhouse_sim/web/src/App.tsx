@@ -115,6 +115,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [glazing, setGlazing] = useState<GlazingState>({ status: "none" });
   const [openingFlows, setOpeningFlows] = useState<OpeningsState>({ status: "none" });
   const [sensorReadings, setSensorReadings] = useState<SensorReadingsState>({ status: "none" });
+  // The same sensor through the same run with everything off, to compare.
+  const [offReadings, setOffReadings] = useState<SensorReadingsState>({ status: "none" });
   const [weather, setWeather] = useState<WeatherStateOfLoad>({ status: "none" });
   const [weatherDay, setWeatherDay] = useState<WeatherDayState>({ status: "none" });
   // Whether sensors' readings are shown as they err, or as clean ones', for QA.
@@ -699,6 +701,39 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     sensorsImperfect,
   ]);
 
+  // What the sensors read through the same run all off, when something runs.
+  const runsSomething = fieldLevels !== "" || fieldSchedule !== "";
+  useEffect(() => {
+    if (!sensorSelected || fieldScenario === null || !runsSomething) {
+      setOffReadings({ status: "none" });
+      return;
+    }
+    let current = true;
+    void loadSensorReadings(fieldScenario, {
+      layout: fieldLayout,
+      openings: pairsFrom(fieldOpenings) ?? {},
+      time: fieldTime,
+      clean: !sensorsImperfect,
+      weather: fieldWeather,
+    }).then((state) => {
+      if (current) {
+        setOffReadings(state);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [
+    sensorSelected,
+    runsSomething,
+    fieldScenario,
+    fieldLayout,
+    fieldOpenings,
+    fieldTime,
+    fieldWeather,
+    sensorsImperfect,
+  ]);
+
   const showingNames = source.kind === "plants" && showPlantNames;
   const probes = source.kind === "scenario" ? (source.probes ?? EMPTY_PROBES) : EMPTY_PROBES;
   const probedField = field.status === "loaded" ? field.field : null;
@@ -988,6 +1023,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                   sensorId={String(selected.properties.sensor_id)}
                   unit={String(selected.properties.unit)}
                   state={sensorReadings}
+                  allOff={offReadings}
                   until={fieldTime}
                   imperfect={sensorsImperfect}
                   onImperfect={setSensorsImperfect}

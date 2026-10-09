@@ -11,17 +11,19 @@ takes the cells' own.
 It also shows a draught there, so the arrows respond: the net flow through
 the cells' faces, in or out; or, with none, the exchange, out of the house
 when the air against it is warmer than the outside's and in when it is
-cooler, as the stack effect would have it. A closed door or vent passes
-nothing, and is no vent.
+cooler, as the stack effect would have it. A run's doors and vents are
+those open at its start or opened by its schedule (P07.8), each at the
+level the schedule leaves it at; shut, one passes nothing.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Final
 
 import numpy as np
 
 from greenhouse_sim.climate.openings import OpeningFlow, OpeningSite
 from greenhouse_sim.fields.field import VECTOR_COMPONENTS, FieldGrid
+from greenhouse_sim.world.envelope import Opening
 
 # Each array axis, (z, y, x), and the velocity component along it.
 _COMPONENT: Final = {0: 2, 1: 1, 2: 0}
@@ -29,14 +31,21 @@ _COMPONENT: Final = {0: 2, 1: 1, 2: 0}
 
 @dataclass(frozen=True, eq=False)
 class Vent:
-    """An open door or vent: where it is (`OpeningSite`), the cells against
-    it in the grid's order (z, y, x), the array axis square to the face it
-    lies on, and which way along it is out of the house, +1 or -1."""
+    """A door or vent a run may open: where it is (`OpeningSite`), the cells
+    against it in the grid's order (z, y, x), the array axis square to the
+    face it lies on, which way along it is out of the house, +1 or -1, and
+    the opening itself, for its aperture as it is opened."""
 
     site: OpeningSite
     cells: np.ndarray
     axis: int
     outward: int
+    opening: Opening
+
+    def site_at(self, level: float) -> OpeningSite:
+        """Where it is, opened to `level`, from 0 (shut) to 1 (fully)."""
+        aperture = self.opening.model_copy(update={"opening": level}).aperture_area()
+        return replace(self.site, aperture_m2=aperture)
 
     @property
     def opening_id(self) -> str:

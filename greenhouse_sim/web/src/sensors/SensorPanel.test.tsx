@@ -115,6 +115,29 @@ describe("a selected sensor", () => {
     expect(html).toContain('<input type="checkbox" checked=""/> Imperfections');
   });
 
+  it("charts the same run all off beside it, and says what it read then", () => {
+    const allOff = {
+      ...READINGS,
+      observations: READINGS.observations.map((o) =>
+        o.sensor_id === "t" ? { ...o, value: o.value - 4 } : o,
+      ),
+    };
+    const html = renderToStaticMarkup(
+      <SensorPanel
+        sensorId="t"
+        unit="°C"
+        state={{ status: "loaded", readings: READINGS }}
+        allOff={{ status: "loaded", readings: allOff }}
+        until={600}
+        imperfect={true}
+        onImperfect={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('class="sensor-chart-off"');
+    expect(html).toContain('data-testid="sensor-all-off">All off, it read 10.96 °C at 10 min<');
+  });
+
   it("says when nothing gives its quantity", () => {
     const html = renderToStaticMarkup(
       <SensorPanel

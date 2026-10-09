@@ -95,7 +95,7 @@ class ClimateDay:
         """What each open door and vent passes at `time_s`, as the grid run
         that draws the field then drives them."""
         window = self.window(time_s)
-        flows = window.openings_for(window.air_at(time_s), window.weather.at(time_s))
+        flows = window.openings_for(window.air_at(time_s), window.weather.at(time_s), time_s)
         return OpeningsAt(time_s=time_s, openings=list(flows.values()))
 
     def sampled(self, field_id: str, time_s: float) -> EnvironmentField:

@@ -133,7 +133,7 @@ WINDY = ConstantWeather(
 def test_the_flow_through_carries_the_air_across_the_house_and_conserves_it() -> None:
     run = _run(BOTH_SIDES, WINDY)
     air = run.air_at(0.0)
-    openings = run.openings_for(air, run.weather.at(0.0))
+    openings = run.openings_for(air, run.weather.at(0.0), 0.0)
     flows = run.flows_at(0.0, openings)
     entering = sum(vent.spread(openings[vent.opening_id].net_m3_s) for vent in run.vents)
 
