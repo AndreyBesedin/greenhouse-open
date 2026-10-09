@@ -106,7 +106,7 @@ adds a visible or measurable result.
 | [P04](p04-environment-fields.md) | Environmental fields and airflow foundation | Done |
 | [P05](p05-climate-actuators.md) | Climate actuators: fans, heaters, dehumidification and vents | Done |
 | [P06](p06-virtual-sensors.md) | Virtual sensors and the observation layer | Done |
-| [P07](p07-external-weather.md) | External weather and greenhouse boundary coupling | In progress |
+| [P07](p07-external-weather.md) | External weather and greenhouse boundary coupling | Done |
 | P08 | Sun position, glazing and radiation propagation | Planned |
 | P09 | Integrated greenhouse scenario, replay and release QA | Planned |
 
