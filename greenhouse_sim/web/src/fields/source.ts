@@ -1,4 +1,4 @@
-import { pairsText, type ScheduledCommand, scheduleText } from "../scene/source";
+import { pairsText, type ScheduledCommand, scheduleText, weatherParameter } from "../scene/source";
 import { checkField, type EnvironmentField, SUPPORTED_FIELD_VERSION } from "./field";
 
 /** The air as a scenario's equipment drives it: the one field that depends on
@@ -23,6 +23,8 @@ export interface FieldChanges {
   schedule?: readonly ScheduledCommand[] | undefined;
   /** Seconds into the climate run. */
   time?: number | undefined;
+  /** Another weather the climate run is under, a preset's, by name. */
+  weather?: string | undefined;
 }
 
 /** How long a climate run lasts, in seconds, as the simulator runs it. */
@@ -45,6 +47,7 @@ export function fieldUrl(scenarioId: string, name: string, changes: FieldChanges
     ...(openings === "" ? [] : [`open=${openings}`]),
     ...(schedule === "" ? [] : [`schedule=${schedule}`]),
     ...(time === null ? [] : [`t=${time}`]),
+    ...(climate ? weatherParameter(changes.weather) : []),
   ];
   return parts.length === 0 ? base : `${base}?${parts.join("&")}`;
 }

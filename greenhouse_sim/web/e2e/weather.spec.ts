@@ -31,3 +31,39 @@ test("weather: the panel follows a climate run's moment, in a calm", async ({ pa
   );
   await expect(weather.getByTestId("wind-needle")).toHaveCount(0);
 });
+
+test("weather: a scenario runs under a preset day, charted through the day", async ({ page }) => {
+  await page.goto("/?scenario=climate_box&field=climate&t=600");
+  await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
+  const weather = page.getByRole("region", { name: "Weather" });
+  await expect(weather.getByTestId("weather-summary")).toHaveText(
+    "Outside at 1 Jan 2026, 00:10: 8.0 °C, wind calm.",
+  );
+
+  await weather.getByTestId("weather-summary").click();
+  await weather.getByRole("combobox", { name: "Weather to run under" }).selectOption({
+    label: "cold spring day",
+  });
+
+  await expect(page).toHaveURL(/weather=cold_spring_day/);
+  // Ten minutes past midnight on the spring day: cooling towards dawn, the
+  // wind from the south-west, gusting.
+  await expect(weather.getByTestId("weather-summary")).toHaveText(
+    "Outside at 1 Jan 2026, 00:10: 7.9 °C, wind 3.5 m/s from the SW.",
+  );
+  await expect(weather.getByTestId("weather-day-day-temperature")).toHaveText(
+    "Air, 4.0 to 16.0 °C",
+  );
+  await expect(weather.getByTestId("weather-day-day-humidity")).toHaveText(
+    "Humidity, 42.5 to 95.0 %",
+  );
+  await expect(weather.getByTestId("weather-day-now")).toHaveCount(3);
+  // The run carries on at the same moment, under the new weather.
+  await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
+
+  await weather.getByRole("combobox", { name: "Weather to run under" }).selectOption({
+    label: "its own",
+  });
+  await expect(page).not.toHaveURL(/weather=/);
+  await expect(weather.getByTestId("weather-day-day-temperature")).toHaveText("Air, 8.0 °C");
+});

@@ -113,7 +113,10 @@ legend by category; it follows the openings' sliders.
 air's temperature, humidity and CO₂, the wind, with a compass needle along
 the way it blows, the pressure, and the site. A wind is drawn as an arrow
 outside the house, a metre long for each metre a second
-(`?scenario=tomato_compartment`).
+(`?scenario=tomato_compartment`). Opened, it runs the scenario under a
+synthetic day in place of its own weather
+(`?scenario=climate_box&weather=cold_spring_day`), and charts that day's
+temperature, humidity and wind (`GET /api/scenarios/{id}/weather/day`).
 The inspector says what the selected entity is in words, and names its
 dimensions. On a scenario's view, a slider per door and vent sets how far
 it stands open: the viewer asks the simulator for the scene with it so

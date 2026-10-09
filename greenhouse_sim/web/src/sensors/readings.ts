@@ -1,4 +1,4 @@
-import { pairsText, type ScheduledCommand, scheduleText } from "../scene/source";
+import { pairsText, type ScheduledCommand, scheduleText, weatherParameter } from "../scene/source";
 import type { Point3 } from "../world";
 
 /** An observation as the simulator sends it: what a sensor reported, when it
@@ -89,6 +89,8 @@ export interface RunChanges {
   time?: number | undefined;
   /** Observations as clean sensors would have made them, for QA. */
   clean?: boolean | undefined;
+  /** Another weather the run is under, a preset's, by name. */
+  weather?: string | undefined;
 }
 
 /** Where a run's sensors' observations, or their truth, are published,
@@ -105,6 +107,7 @@ export function sensorsUrl(
     ...(scheduleText(run.schedule) === "" ? [] : [`schedule=${scheduleText(run.schedule)}`]),
     ...(run.time === undefined || run.time === 0 ? [] : [`t=${run.time}`]),
     ...(what === "observations" && run.clean === true ? ["clean=1"] : []),
+    ...weatherParameter(run.weather),
   ];
   const query = parts.length === 0 ? "" : `?${parts.join("&")}`;
   return `/api/scenarios/${encodeURIComponent(scenarioId)}/climate/${what}${query}`;

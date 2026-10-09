@@ -4,13 +4,17 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
-import { describeSite, localTime, WeatherPanel } from "./WeatherPanel";
+import { WeatherDayChart } from "./WeatherDay";
+import { describeSite, localTime, WeatherPanel, weatherName } from "./WeatherPanel";
 import {
   compassPoint,
   describeWind,
   loadWeather,
+  loadWeatherDay,
   parseWeather,
+  parseWeatherDay,
   type WeatherAtAMoment,
+  weatherDayUrl,
   weatherUrl,
   windOverlays,
 } from "./weather";
@@ -43,6 +47,16 @@ const WESTERLY_BODY = {
   wind_m_s: { x: 3, y: 0, z: 0 },
 };
 const WESTERLY: WeatherAtAMoment = parseWeather(WESTERLY_BODY);
+// A day warming from 4 °C to 16 °C and back, every six hours.
+const DAY_BODY = {
+  start: "2025-12-31T23:00:00Z",
+  every_s: 21600,
+  times_s: [0, 21600, 43200, 64800, 86400],
+  weather: [8, 4, 12, 16, 8].map((air_temperature_c) => ({
+    ...WESTERLY_BODY.weather,
+    air_temperature_c,
+  })),
+};
 const CALM: WeatherAtAMoment = {
   ...WESTERLY,
   weather: { ...WESTERLY.weather, wind_speed_m_s: 0 },
@@ -50,9 +64,28 @@ const CALM: WeatherAtAMoment = {
 };
 
 describe("the weather", () => {
-  it("is asked for at a moment of a run, the start left out", () => {
+  it("is asked for at a moment of a run, the start left out, under a weather if chosen", () => {
     expect(weatherUrl("climate_box", 0)).toBe("/api/scenarios/climate_box/weather");
     expect(weatherUrl("climate box", 600)).toBe("/api/scenarios/climate%20box/weather?t=600");
+    expect(weatherUrl("climate_box", 600, "cold_spring_day")).toBe(
+      "/api/scenarios/climate_box/weather?t=600&weather=cold_spring_day",
+    );
+    expect(weatherDayUrl("climate_box")).toBe("/api/scenarios/climate_box/weather/day");
+    expect(weatherDayUrl("climate_box", "cold_spring_day")).toBe(
+      "/api/scenarios/climate_box/weather/day?weather=cold_spring_day",
+    );
+  });
+
+  it("through the day is checked rather than trusted", async () => {
+    const answered = (async () => Response.json(DAY_BODY)) as typeof fetch;
+
+    expect(await loadWeatherDay("climate_box", undefined, answered)).toEqual({
+      status: "loaded",
+      day: parseWeatherDay(DAY_BODY),
+    });
+    expect(() => parseWeatherDay({ ...DAY_BODY, times_s: [0] })).toThrow(
+      "not what the viewer expects",
+    );
   });
 
   it("is checked rather than trusted", () => {
@@ -71,15 +104,15 @@ describe("the weather", () => {
     }) as typeof fetch;
     const answered = (async () => Response.json(WESTERLY_BODY)) as typeof fetch;
 
-    expect(await loadWeather("climate_box", 0, refused)).toEqual({
+    expect(await loadWeather("climate_box", 0, undefined, refused)).toEqual({
       status: "unavailable",
       reason: "the simulator API answered 400",
     });
-    expect(await loadWeather("climate_box", 0, unreachable)).toEqual({
+    expect(await loadWeather("climate_box", 0, undefined, unreachable)).toEqual({
       status: "unavailable",
       reason: "connection refused",
     });
-    expect(await loadWeather("climate_box", 600, answered)).toEqual({
+    expect(await loadWeather("climate_box", 600, "cold_spring_day", answered)).toEqual({
       status: "loaded",
       weather: WESTERLY,
     });
@@ -180,5 +213,73 @@ describe("the weather panel", () => {
     expect(
       renderToStaticMarkup(<WeatherPanel state={{ status: "unavailable", reason: "no API" }} />),
     ).toContain("The weather cannot be read: no API.");
+  });
+});
+
+describe("choosing a weather", () => {
+  const weathers = ["default", "cold_spring_day", "windy_autumn_day"];
+
+  it("names the scenario's own weather and the presets in words", () => {
+    expect(weatherName("default")).toBe("its own");
+    expect(weatherName("cold_spring_day")).toBe("cold spring day");
+  });
+
+  it("offers every weather the scenario can be run under, the chosen one selected", () => {
+    const markup = renderToStaticMarkup(
+      <WeatherPanel
+        state={{ status: "loaded", weather: WESTERLY }}
+        weathers={weathers}
+        chosen="cold_spring_day"
+        onChoose={() => undefined}
+      />,
+    );
+
+    expect(markup).toContain('aria-label="Weather to run under"');
+    expect(markup).toContain('<option value="default">its own</option>');
+    expect(markup).toContain(
+      '<option value="cold_spring_day" selected="">cold spring day</option>',
+    );
+  });
+
+  it("offers no choice where there is none to make", () => {
+    const markup = renderToStaticMarkup(
+      <WeatherPanel state={{ status: "loaded", weather: WESTERLY }} weathers={["default"]} />,
+    );
+
+    expect(markup).not.toContain("Weather to run under");
+  });
+});
+
+describe("the day's weather", () => {
+  const day = parseWeatherDay(DAY_BODY);
+
+  it("charts the air, its humidity and the wind from their least to their most", () => {
+    const markup = renderToStaticMarkup(
+      <WeatherDayChart state={{ status: "loaded", day }} time={21600} />,
+    );
+
+    expect(markup).toContain('data-testid="weather-day-day-temperature">Air, 4.0 to 16.0 °C<');
+    // Humidity and wind hold all day here: flat, at one value.
+    expect(markup).toContain('data-testid="weather-day-day-humidity">Humidity, 90.0 %<');
+    expect(markup).toContain('data-testid="weather-day-day-wind">Wind, 3.0 m/s<');
+    // The coldest at six hours in, at the foot of its chart.
+    expect(markup).toContain('points="0.0,18.7 60.0,28.0 120.0,9.3 180.0,0.0 240.0,18.7"');
+  });
+
+  it("marks the moment drawn across each chart", () => {
+    const markup = renderToStaticMarkup(
+      <WeatherDayChart state={{ status: "loaded", day }} time={21600} />,
+    );
+
+    expect(markup.match(/data-testid="weather-day-now" x1="60" x2="60"/g)).toHaveLength(3);
+  });
+
+  it("says when it is on its way or cannot be read", () => {
+    expect(renderToStaticMarkup(<WeatherDayChart state={{ status: "none" }} time={0} />)).toBe("");
+    expect(
+      renderToStaticMarkup(
+        <WeatherDayChart state={{ status: "unavailable", reason: "no API" }} time={0} />,
+      ),
+    ).toContain("weather cannot be read: no API.");
   });
 });

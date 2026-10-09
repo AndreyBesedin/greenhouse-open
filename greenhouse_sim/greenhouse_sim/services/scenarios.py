@@ -1,10 +1,11 @@
 """The simulator's scenarios: which there are, how each is laid out, and what
 it looks like before its first day, changed as a client asks.
 
-A client may see a scenario with another of its layouts, its greenhouse's
-dimensions changed, its doors and vents standing open, and its equipment
-running. Every change is checked as the scenario's own description is: a
-layout it does not have is not found, and a greenhouse its layout or
+A client may see a scenario with another of its layouts, under another
+weather (`greenhouse_sim.weather.presets`), its greenhouse's dimensions
+changed, its doors and vents standing open, and its equipment running.
+Every change is checked as the scenario's own description is: a layout or
+weather it does not have is not found, and a greenhouse its layout or
 openings no longer fit, a ridge below the eaves, or a level for equipment
 it does not have, is refused with the reason.
 """
@@ -25,9 +26,12 @@ from greenhouse_sim.scenarios.layout_files import (
 )
 from greenhouse_sim.scene.snapshot import SceneSnapshot, scene_snapshot
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
+from greenhouse_sim.weather.presets import PRESETS
 
 # The envelope's dimensions a client may change.
 DIMENSIONS: Final = ("length", "width", "spans", "bays", "eave_height", "ridge_height")
+# The name of a scenario's own weather, beside the presets'.
+DEFAULT_WEATHER: Final = "default"
 
 
 class ScenarioSummary(BaseModel):
@@ -38,15 +42,18 @@ class ScenarioSummary(BaseModel):
     duration_days: int
     # Its layouts' names, its default first.
     layouts: list[str]
+    # The weathers it can be run under, by name, its own first.
+    weathers: list[str]
 
 
 class SceneChanges(BaseModel):
     """How a client asks to see a scenario changed: with another of its
-    layouts, its greenhouse's dimensions set by name, its doors and vents
-    open by a fraction from 0 to 1, and its equipment run at a level from 0
-    to 1, each by identifier."""
+    layouts, under another weather, its greenhouse's dimensions set by name,
+    its doors and vents open by a fraction from 0 to 1, and its equipment run
+    at a level from 0 to 1, each by identifier."""
 
     layout: str = DEFAULT_LAYOUT
+    weather: str = DEFAULT_WEATHER
     envelope: dict[str, float] = {}
     openings: dict[str, float] = {}
     levels: dict[str, float] = {}
@@ -62,9 +69,16 @@ def scenario_summaries() -> list[ScenarioSummary]:
             plants=config.rows * config.columns,
             duration_days=config.duration_days,
             layouts=layout_names(config.greenhouse_id),
+            weathers=weather_names(),
         )
         for config in SCENARIO_REGISTRY.values()
     ]
+
+
+def weather_names() -> list[str]:
+    """The weathers any scenario can be run under: its own, then the
+    presets."""
+    return [DEFAULT_WEATHER, *PRESETS]
 
 
 def scenario(scenario_id: str) -> ScenarioConfig:
@@ -113,9 +127,23 @@ def equipment_levels(config: ScenarioConfig, levels: Mapping[str, float]) -> dic
 
 
 def changed(config: ScenarioConfig, changes: SceneChanges) -> ScenarioConfig:
-    """A scenario with the changes a client asks for: another of its layouts,
-    then its greenhouse's dimensions and openings."""
-    return _with_envelope(_with_layout(config, changes.layout), changes)
+    """A scenario with the changes a client asks for: another of its layouts
+    and another weather, then its greenhouse's dimensions and openings."""
+    return _with_envelope(
+        _with_weather(_with_layout(config, changes.layout), changes.weather), changes
+    )
+
+
+def _with_weather(config: ScenarioConfig, name: str) -> ScenarioConfig:
+    """The scenario under a preset weather, or its own; any other is not
+    found."""
+    if name == DEFAULT_WEATHER:
+        return config
+    weather = PRESETS.get(name)
+    if weather is None:
+        known = ", ".join(weather_names())
+        raise NotFound(f"there is no weather {name!r}; there are {known}")
+    return config.model_copy(update={"weather": weather})
 
 
 def _with_layout(config: ScenarioConfig, name: str) -> ScenarioConfig:

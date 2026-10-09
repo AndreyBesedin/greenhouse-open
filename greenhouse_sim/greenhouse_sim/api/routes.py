@@ -35,7 +35,9 @@ check; a route that comes to need one checks it first.
                                           switching it at those moments,
                                           &open=roof_vent:1 with its vents
                                           open, and &t=600 that many seconds
-                                          into the run, for its climate
+                                          into the run, for its climate, and
+                                          &weather=cold_spring_day under a
+                                          preset weather, not its own
     GET /api/scenarios/{id}/climate/probes what probes at ?probes=3:3.2:0.75,… read
                                           of its climate run every minute up to
                                           &t=600, and of the same run with all
@@ -51,7 +53,10 @@ check; a route that comes to need one checks it first.
                                           for evaluation and QA only
     GET /api/scenarios/{id}/weather       its site, and the weather outside it &t=600
                                           seconds into a run, with the wind in
-                                          the world's axes
+                                          the world's axes; &weather=cold_spring_day
+                                          under a preset, as for its climate
+    GET /api/scenarios/{id}/weather/day   its weather through its runs' first
+                                          day, every ten minutes
     GET /api/scenarios/{id}/cfd/geometry  the boundaries of a scenario's air as
                                           a CFD solver is given them, snapped
                                           to its mesh; changed as for its scene
@@ -158,6 +163,7 @@ def respond(method: str, path: str) -> Response:
                     _seconds(query),
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
+                    weather=_last(query, "weather"),
                 )
             )
         case ["api", "scenarios", scenario_id, "climate", "probes"]:
@@ -171,6 +177,7 @@ def respond(method: str, path: str) -> Response:
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
                     _seconds(query),
+                    weather=_last(query, "weather"),
                 )
             )
         case ["api", "scenarios", scenario_id, "climate", "observations"]:
@@ -183,6 +190,7 @@ def respond(method: str, path: str) -> Response:
                     _commands(query.get("schedule", [])),
                     _seconds(query),
                     clean=_last(query, "clean") == "1",
+                    weather=_last(query, "weather"),
                 )
             )
         case ["api", "scenarios", scenario_id, "climate", "truth"]:
@@ -194,10 +202,15 @@ def respond(method: str, path: str) -> Response:
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
                     _seconds(query),
+                    weather=_last(query, "weather"),
                 )
             )
         case ["api", "scenarios", scenario_id, "weather"]:
-            return _answer(lambda: weather.at_a_moment(scenario_id, _seconds(query)))
+            return _answer(
+                lambda: weather.at_a_moment(scenario_id, _seconds(query), _last(query, "weather"))
+            )
+        case ["api", "scenarios", scenario_id, "weather", "day"]:
+            return _answer(lambda: weather.through_the_day(scenario_id, _last(query, "weather")))
         case ["api", "scenarios", scenario_id, "cfd", "geometry"]:
             return _answer(lambda: cfd.geometry(scenario_id, _scene_changes(query)))
         case ["api", "scenarios", scenario_id, "layout"]:

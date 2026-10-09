@@ -38,7 +38,7 @@ START = AirState(
     co2=np.full((NZ, NY, NX), 420.0),
 )
 SHUT = CONFIG.climate.model_copy(update={"glazing_u_w_m2k": 0.0})
-OUTSIDE = CONFIG.weather.state(CONFIG.site)
+OUTSIDE = CONFIG.run_weather().at(0.0)
 
 
 def _transport(velocity: np.ndarray, settings: object = SHUT) -> Transport:

@@ -35,6 +35,9 @@ export type SceneSource =
       kind: "scenario";
       scenarioId: string;
       layout?: string;
+      /** Another weather it is run under, a preset's by name, in place of
+       * its own. */
+      weather?: string;
       /** One of its environment fields, drawn over its scene, as arrows by
        * default, and where a slice through it lies, if one is drawn. */
       field?: string;
@@ -91,6 +94,7 @@ export function sourceFromSearch(search: string): SceneSource {
   const scenarioId = parameters.get("scenario");
   if (scenarioId) {
     const layout = parameters.get("layout");
+    const weather = parameters.get("weather");
     const envelope = pairsFrom(parameters.get("envelope"));
     const openings = pairsFrom(parameters.get("open"));
     const levels = pairsFrom(parameters.get("set"));
@@ -106,6 +110,7 @@ export function sourceFromSearch(search: string): SceneSource {
       kind: "scenario",
       scenarioId,
       ...(layout ? { layout } : {}),
+      ...(weather ? { weather } : {}),
       ...(field ? { field } : {}),
       ...(field && fieldView ? { fieldView } : {}),
       ...(field && slice ? { slice } : {}),
@@ -187,10 +192,22 @@ export function searchFor(source: SceneSource): string {
     case "stress":
       return `?scene=stress&plants=${source.plants}`;
     case "scenario":
-      return `?scenario=${encodeURIComponent(source.scenarioId)}${changesQuery(source, "&")}${fieldQuery(source)}${source.cfdBoundaries ? `&cfd=${CFD_BOUNDARIES}` : ""}${source.camera === undefined ? "" : `&camera=${cameraText(source.camera)}`}`;
+      return `?scenario=${encodeURIComponent(source.scenarioId)}${changesQuery(source, "&")}${weatherParameter(
+        source.weather,
+      )
+        .map((part) => `&${part}`)
+        .join(
+          "",
+        )}${fieldQuery(source)}${source.cfdBoundaries ? `&cfd=${CFD_BOUNDARIES}` : ""}${source.camera === undefined ? "" : `&camera=${cameraText(source.camera)}`}`;
     case "live":
       return `?live=${encodeURIComponent(source.scenarioId)}`;
   }
+}
+
+/** `weather=` for another weather a scenario is run under, or nothing for
+ * its own. The address bar and the simulator's API write it the same way. */
+export function weatherParameter(weather: string | undefined): string[] {
+  return weather === undefined ? [] : [`weather=${encodeURIComponent(weather)}`];
 }
 
 /** How a scenario's field is drawn, compared and probed, as the address bar
@@ -405,9 +422,9 @@ export async function fetchScene(url: string, fetchFn: typeof fetch = fetch): Pr
   }
 }
 
-/** The scenario on show with another of its layouts keeps how its air is
- * drawn, probed and compared, so that the two layouts' air can be compared;
- * any other choice starts afresh. */
+/** The scenario on show with another of its layouts keeps the weather it is
+ * run under, and how its air is drawn, probed and compared, so that the two
+ * layouts' air can be compared; any other choice starts afresh. */
 export function withItsAir(shown: SceneSource, chosen: SceneSource): SceneSource {
   if (
     shown.kind !== "scenario" ||
@@ -416,9 +433,10 @@ export function withItsAir(shown: SceneSource, chosen: SceneSource): SceneSource
   ) {
     return chosen;
   }
-  const { field, fieldView, slice, compare, probes, cfdBoundaries } = shown;
+  const { weather, field, fieldView, slice, compare, probes, cfdBoundaries } = shown;
   return {
     ...chosen,
+    ...(weather === undefined ? {} : { weather }),
     ...(field === undefined ? {} : { field }),
     ...(fieldView === undefined ? {} : { fieldView }),
     ...(slice === undefined ? {} : { slice }),

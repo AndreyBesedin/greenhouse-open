@@ -79,12 +79,13 @@ def observations(
     commands: Sequence[Commanded] = (),
     until_s: float = 0.0,
     clean: bool = False,
+    weather: str | None = None,
 ) -> SensorObservations:
     """A run's observation log up to `until_s`; as clean sensors would have
     made it, if `clean`, for QA."""
     until = _checked_until(until_s)
     name = layout or DEFAULT_LAYOUT
-    air_at, run_id = air_through_a_run(scenario_id, name, levels, openings, commands)
+    air_at, run_id = air_through_a_run(scenario_id, name, levels, openings, commands, weather)
     start = run_start(scenario_id)
     greenhouse_id = scenario(scenario_id).greenhouse_id
     point_sensors = _point_sensors(scenario_id, name)
@@ -124,12 +125,13 @@ def truth(
     openings: Mapping[str, float] | None = None,
     commands: Sequence[Commanded] = (),
     until_s: float = 0.0,
+    weather: str | None = None,
 ) -> SensorTruths:
     """What a scenario's point sensors truly sampled up to `until_s` of a
     run: for evaluation and QA only."""
     until = _checked_until(until_s)
     name = layout or DEFAULT_LAYOUT
-    air_at, run_id = air_through_a_run(scenario_id, name, levels, openings, commands)
+    air_at, run_id = air_through_a_run(scenario_id, name, levels, openings, commands, weather)
     return SensorTruths(
         run_id=run_id,
         sensors=sensor_truth(_point_sensors(scenario_id, name), air_at, until),

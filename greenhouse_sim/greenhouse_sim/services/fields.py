@@ -41,7 +41,13 @@ from greenhouse_sim.fields.synthetic import shear_field
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
-from greenhouse_sim.services.scenarios import SceneChanges, changed, equipment_levels, scenario
+from greenhouse_sim.services.scenarios import (
+    DEFAULT_WEATHER,
+    SceneChanges,
+    changed,
+    equipment_levels,
+    scenario,
+)
 from greenhouse_sim.world.geometry import Vector3
 
 # The widest a field's cell may be, in metres.
@@ -86,7 +92,7 @@ def _checked(config: ScenarioConfig, commands: Sequence[Commanded]) -> tuple[Com
     return tuple(commands)
 
 
-type _RunKey = tuple[str, str, _Pairs, _Pairs, tuple[Commanded, ...]]
+type _RunKey = tuple[str, str, str, _Pairs, _Pairs, tuple[Commanded, ...]]
 _KEPT: OrderedDict[_RunKey, ClimateRun] = OrderedDict()
 _KEEPING = threading.Lock()
 
@@ -101,24 +107,31 @@ def forget_climate_runs() -> None:
 def _climate_run(
     scenario_id: str,
     layout: str,
+    weather: str,
     levels: _Pairs,
     openings: _Pairs,
     commands: tuple[Commanded, ...],
 ) -> ClimateRun:
-    """A scenario's climate run with one of its layouts, its equipment set to
-    `levels` from the start and then as `commands` set it, and its doors and
-    vents open as `openings` say: one of the `KEPT_RUNS` kept, or a new one,
-    carrying on from those kept for the same house up to where their
-    schedules differ, as an override's does."""
-    key = (scenario_id, layout, levels, openings, commands)
+    """A scenario's climate run with one of its layouts, under a weather, its
+    equipment set to `levels` from the start and then as `commands` set it,
+    and its doors and vents open as `openings` say: one of the `KEPT_RUNS`
+    kept, or a new one, carrying on from those kept for the same house under
+    the same weather up to where their schedules differ, as an override's
+    does."""
+    key = (scenario_id, layout, weather, levels, openings, commands)
     with _KEEPING:
         run = _KEPT.get(key)
         if run is not None:
             _KEPT.move_to_end(key)
             return run
         run = _new_climate_run(*key)
-        for (other_id, other_layout, _, other_openings, _), other in _KEPT.items():
-            if (other_id, other_layout, other_openings) == (scenario_id, layout, openings):
+        for (other_id, other_layout, other_weather, _, other_openings, _), other in _KEPT.items():
+            if (other_id, other_layout, other_weather, other_openings) == (
+                scenario_id,
+                layout,
+                weather,
+                openings,
+            ):
                 run.carry_on_from(other)
         _KEPT[key] = run
         if len(_KEPT) > KEPT_RUNS:
@@ -129,12 +142,16 @@ def _climate_run(
 def _new_climate_run(
     scenario_id: str,
     layout: str,
+    weather: str,
     levels: _Pairs,
     openings: _Pairs,
     commands: tuple[Commanded, ...],
 ) -> ClimateRun:
     """A scenario's climate run, from its start."""
-    config = changed(scenario(scenario_id), SceneChanges(layout=layout, openings=dict(openings)))
+    config = changed(
+        scenario(scenario_id),
+        SceneChanges(layout=layout, weather=weather, openings=dict(openings)),
+    )
     grid = air_grid(config)
     geometry = cfd_geometry(scenario_id, config, grid)
     apertures = {
@@ -178,6 +195,7 @@ class _Climate:
         self,
         scenario_id: str,
         layout: str,
+        weather: str,
         levels: Mapping[str, float],
         openings: Mapping[str, float],
         commands: tuple[Commanded, ...],
@@ -185,6 +203,7 @@ class _Climate:
         self.key = (
             scenario_id,
             layout,
+            weather,
             tuple(sorted(levels.items())),
             tuple(sorted(openings.items())),
             commands,
@@ -200,12 +219,15 @@ def _models(
     levels: Mapping[str, float] | None = None,
     openings: Mapping[str, float] | None = None,
     commands: Sequence[Commanded] = (),
+    weather: str = DEFAULT_WEATHER,
 ) -> dict[str, AirflowModel]:
     """A scenario's fields by name, with one of its layouts, its equipment at
-    `levels` and then as `commands` set it, and its doors and vents open as
-    `openings` say: its own airflow first."""
+    `levels` and then as `commands` set it, its doors and vents open as
+    `openings` say, and its climate under a weather: its own airflow
+    first."""
     config = changed(
-        scenario(scenario_id), SceneChanges(layout=layout, openings=dict(openings or {}))
+        scenario(scenario_id),
+        SceneChanges(layout=layout, weather=weather, openings=dict(openings or {})),
     )
     running = equipment_levels(config, levels or {})
     scheduled = _checked(config, commands)
@@ -217,7 +239,7 @@ def _models(
     if solved is not None:
         models[CFD] = CfdAirflow(solved)
     if config.layout.equipment:
-        models[CLIMATE] = _Climate(scenario_id, layout, running, openings or {}, scheduled)
+        models[CLIMATE] = _Climate(scenario_id, layout, weather, running, openings or {}, scheduled)
     models[SHEAR] = _Shear()
     return models
 
@@ -259,16 +281,25 @@ def field(
     time_s: float = 0.0,
     openings: Mapping[str, float] | None = None,
     commands: Sequence[Commanded] = (),
+    weather: str | None = None,
 ) -> FieldDocument:
     """One of a scenario's fields with one of its layouts, by default its
-    own, its equipment at `levels` and then as `commands` set it, and its
-    doors and vents open as `openings` say, at `time_s` into a climate run,
-    as it is published. A level for equipment it does not have, or outside 0
-    to 1, is refused, as are an opening it does not have and a moment outside
-    a run."""
+    own, its equipment at `levels` and then as `commands` set it, its doors
+    and vents open as `openings` say, and under a weather, by default its
+    own, at `time_s` into a climate run, as it is published. A level for
+    equipment it does not have, or outside 0 to 1, is refused, as are an
+    opening it does not have and a moment outside a run; a weather there is
+    not is not found."""
     if not 0.0 <= time_s <= LONGEST_RUN_S:
         raise InvalidRequest(f"a climate run lasts from 0 to {LONGEST_RUN_S:g} s, not {time_s:g}")
-    models = _models(scenario_id, layout or DEFAULT_LAYOUT, levels, openings, commands)
+    models = _models(
+        scenario_id,
+        layout or DEFAULT_LAYOUT,
+        levels,
+        openings,
+        commands,
+        weather or DEFAULT_WEATHER,
+    )
     model = models.get(name)
     if model is None:
         known = ", ".join(models)
@@ -284,6 +315,7 @@ def climate_probes(
     openings: Mapping[str, float] | None = None,
     commands: Sequence[Commanded] = (),
     until_s: float = 0.0,
+    weather: str | None = None,
 ) -> ClimateProbes:
     """What probes at `points` read of a scenario's climate run every
     `PROBE_EVERY_S` up to `until_s`, and of the same run with everything off,
@@ -292,7 +324,7 @@ def climate_probes(
     if not 0.0 <= until_s <= LONGEST_RUN_S:
         raise InvalidRequest(f"a climate run lasts from 0 to {LONGEST_RUN_S:g} s, not {until_s:g}")
     name = layout or DEFAULT_LAYOUT
-    models = _models(scenario_id, name, levels, openings, commands)
+    models = _models(scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER)
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
         raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
@@ -306,10 +338,10 @@ def climate_probes(
     times = [step * PROBE_EVERY_S for step in range(steps + 1)]
     if times[-1] < until_s:
         times.append(until_s)
-    key_scenario, key_layout, _, key_openings, _ = climate.key
+    key_scenario, key_layout, key_weather, _, key_openings, _ = climate.key
     return probe_series(
         _climate_run(*climate.key),
-        _climate_run(key_scenario, key_layout, (), key_openings, ()),
+        _climate_run(key_scenario, key_layout, key_weather, (), key_openings, ()),
         probed,
         times,
     )
@@ -321,13 +353,14 @@ def air_through_a_run(
     levels: Mapping[str, float] | None = None,
     openings: Mapping[str, float] | None = None,
     commands: Sequence[Commanded] = (),
+    weather: str | None = None,
 ) -> tuple[Callable[[float], EnvironmentField], str]:
     """A scenario's air at each moment of a run, asked as its climate field
     is, and refused as it is, with the run's identity: its climate run's, if
     its layout places equipment; otherwise its own airflow, the same at
     every moment."""
     name = layout or DEFAULT_LAYOUT
-    models = _models(scenario_id, name, levels, openings, commands)
+    models = _models(scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER)
     air = grid(scenario_id)
     climate = models.get(CLIMATE)
     if isinstance(climate, _Climate):

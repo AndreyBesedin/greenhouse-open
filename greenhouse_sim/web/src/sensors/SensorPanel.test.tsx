@@ -89,6 +89,9 @@ describe("a selected sensor", () => {
     expect(sensorsUrl("climate_box", "truth", { clean: true })).toBe(
       "/api/scenarios/climate_box/climate/truth",
     );
+    expect(sensorsUrl("climate_box", "observations", { weather: "cold_spring_day" })).toBe(
+      "/api/scenarios/climate_box/climate/observations?weather=cold_spring_day",
+    );
   });
 
   it("shows its latest reading, and the truth beside it, for QA", () => {

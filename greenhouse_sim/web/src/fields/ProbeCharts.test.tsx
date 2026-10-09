@@ -42,6 +42,9 @@ describe("probes' charts through a climate run", () => {
     expect(probeChartsUrl("climate_box", { probes: [{ x: 1, y: 2, z: 3 }] })).toBe(
       "/api/scenarios/climate_box/climate/probes?probes=1:2:3",
     );
+    expect(
+      probeChartsUrl("climate_box", { probes: [{ x: 1, y: 2, z: 3 }], weather: "cold_spring_day" }),
+    ).toBe("/api/scenarios/climate_box/climate/probes?probes=1:2:3&weather=cold_spring_day");
   });
 
   it("span both runs' values, across the run's hour, the highest at the top", () => {

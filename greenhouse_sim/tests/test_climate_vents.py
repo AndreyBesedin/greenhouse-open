@@ -46,7 +46,7 @@ def _run(
     openings: dict[str, float],
     settings: ClimateSettings = SHUT,
     levels: dict[str, float] | None = None,
-    weather: ConstantWeather = CONFIG.weather,
+    weather: ConstantWeather | None = None,
 ) -> ClimateRun:
     return ClimateRun(
         base=CONFIG.airflow,
@@ -55,7 +55,7 @@ def _run(
         settings=settings,
         grid=GRID,
         solid=SOLID,
-        weather=CONFIG.model_copy(update={"weather": weather}).run_weather(),
+        weather=CONFIG.model_copy(update={"weather": weather or CONFIG.weather}).run_weather(),
         vents=_vents(openings),
     )
 
@@ -88,7 +88,12 @@ def test_with_the_outside_cooler_an_open_vent_cools_the_house_towards_it() -> No
     means = [float(venting.temperature_at(moment)[AIR].mean()) for moment in (300, 900, 1800)]
 
     assert means == sorted(means, reverse=True)
-    assert CONFIG.weather.air_temperature_c < means[-1] < means[0] < SHUT.start_temperature_c
+    assert (
+        CONFIG.run_weather().at(0.0).air_temperature_c
+        < means[-1]
+        < means[0]
+        < SHUT.start_temperature_c
+    )
     assert venting.temperature_at(3600)[AIR].mean() < means[-1]
 
 
@@ -109,7 +114,7 @@ def _draught(run: ClimateRun) -> float:
 
 def test_the_draught_goes_out_of_a_warmer_house_and_into_a_cooler_one() -> None:
     heated = _run({"roof_vent": 1.0}, CONFIG.climate, {"heater": 1.0})
-    warm_outside = CONFIG.weather.model_copy(update={"air_temperature_c": 25.0})
+    warm_outside = ConstantWeather(air_temperature_c=25.0, relative_humidity_pct=90.0)
     cooler = _run({"roof_vent": 1.0}, SHUT, weather=warm_outside)
     (vent,) = heated.vents
     face_m2 = GRID.cell_size.x * GRID.cell_size.y * int(vent.cells.sum())

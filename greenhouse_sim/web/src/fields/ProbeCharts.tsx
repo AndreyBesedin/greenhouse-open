@@ -1,4 +1,4 @@
-import { pairsText, type ScheduledCommand, scheduleText } from "../scene/source";
+import { pairsText, type ScheduledCommand, scheduleText, weatherParameter } from "../scene/source";
 import type { Point3 } from "../world";
 import { describeTime } from "./ClimateTime";
 import { probesText } from "./probes";
@@ -74,6 +74,7 @@ export function probeChartsUrl(
     openings?: Readonly<Record<string, number>> | undefined;
     schedule?: readonly ScheduledCommand[] | undefined;
     time?: number | undefined;
+    weather?: string | undefined;
   },
 ): string {
   const parts = [
@@ -82,6 +83,7 @@ export function probeChartsUrl(
     ...(pairsText(run.openings) === "" ? [] : [`open=${pairsText(run.openings)}`]),
     ...(scheduleText(run.schedule) === "" ? [] : [`schedule=${scheduleText(run.schedule)}`]),
     ...(run.time === undefined || run.time === 0 ? [] : [`t=${run.time}`]),
+    ...weatherParameter(run.weather),
   ];
   return `/api/scenarios/${encodeURIComponent(scenarioId)}/climate/probes?${parts.join("&")}`;
 }
