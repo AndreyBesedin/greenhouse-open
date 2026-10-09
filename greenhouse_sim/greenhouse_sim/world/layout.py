@@ -36,7 +36,7 @@ from greenhouse_sim.world.equipment import Equipment
 from greenhouse_sim.world.fixtures import Fixture, Primitive, WalkwayPrimitive
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.rows import CropRows, PlantingPosition
-from greenhouse_sim.world.sensors import Sensor
+from greenhouse_sim.world.sensors import PointSensor, Sensor
 from greenhouse_sim.world.zones import Strip, Zone
 
 # Walkways stay clear up to this height: a doorway's.
@@ -113,8 +113,21 @@ class Layout(BaseModel):
         return [piece.fixture() for piece in self.equipment]
 
     def sensor_fixtures(self) -> list[Fixture]:
-        """Its sensors and cameras, each as a fixture of its housing."""
-        return [sensor.fixture() for sensor in self.sensors]
+        """Its sensors and cameras inside the house, each as a fixture of its
+        housing: all but its weather station's."""
+        return [
+            sensor.fixture()
+            for sensor in self.sensors
+            if not (isinstance(sensor, PointSensor) and sensor.reads_the_weather())
+        ]
+
+    def weather_station(self) -> list[PointSensor]:
+        """Its weather station's instruments, outside the house."""
+        return [
+            sensor
+            for sensor in self.sensors
+            if isinstance(sensor, PointSensor) and sensor.reads_the_weather()
+        ]
 
     def obstructing(self, obstruction: Obstruction) -> list[Fixture]:
         """The fixtures, and the equipment, that stand in the way of
@@ -135,10 +148,20 @@ class Layout(BaseModel):
         return self.crop_rows.planting_positions(self.kept_clear())
 
 
+def inside_the_greenhouse(layout: Layout, envelope: Envelope) -> list[str]:
+    """Its weather station's instruments that stand in the space the envelope
+    encloses, where the weather does not reach."""
+    return [
+        sensor.sensor_id
+        for sensor in layout.weather_station()
+        if encloses(envelope, (sensor.position.x, sensor.position.y, sensor.position.z))
+    ]
+
+
 def outside_the_greenhouse(layout: Layout, envelope: Envelope) -> list[str]:
     """What of the layout does not fit inside the envelope: a fixture whose
     box reaches outside the space it encloses, or a planting position outside
-    it."""
+    it. Its weather station stands outside, and is not counted."""
     fixtures = [
         fixture.fixture_id
         for fixture in layout.fixtures() + layout.equipment_fixtures() + layout.sensor_fixtures()

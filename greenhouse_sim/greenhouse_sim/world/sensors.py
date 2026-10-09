@@ -1,5 +1,7 @@
 """Sensors placed in a greenhouse: point sensors, which read one quantity of
-the air where they stand, and cameras, which see the scene (P06).
+the air where they stand, and cameras, which see the scene (P06); and a
+weather station's instruments, point sensors outside the house that read
+the weather (P07.2).
 
 Sensors are placed in a scenario's layout file, beside its fixtures and
 equipment, each by an identifier, where it stands, how often it takes a
@@ -42,7 +44,22 @@ UNITS: Final = {
     SensorKind.CO2: "ppm",
     SensorKind.AIR_SPEED: "m/s",
     SensorKind.PAR: "µmol/m²/s",
+    SensorKind.OUTSIDE_TEMPERATURE: "°C",
+    SensorKind.OUTSIDE_HUMIDITY: "%",
+    SensorKind.WIND_SPEED: "m/s",
+    SensorKind.WIND_DIRECTION: "°",
+    SensorKind.BAROMETRIC_PRESSURE: "hPa",
 }
+# The kinds that read the weather, and stand outside the house.
+WEATHER_KINDS: Final = frozenset(
+    {
+        SensorKind.OUTSIDE_TEMPERATURE,
+        SensorKind.OUTSIDE_HUMIDITY,
+        SensorKind.WIND_SPEED,
+        SensorKind.WIND_DIRECTION,
+        SensorKind.BAROMETRIC_PRESSURE,
+    }
+)
 
 type PointKind = Literal[
     SensorKind.TEMPERATURE,
@@ -50,6 +67,11 @@ type PointKind = Literal[
     SensorKind.CO2,
     SensorKind.AIR_SPEED,
     SensorKind.PAR,
+    SensorKind.OUTSIDE_TEMPERATURE,
+    SensorKind.OUTSIDE_HUMIDITY,
+    SensorKind.WIND_SPEED,
+    SensorKind.WIND_DIRECTION,
+    SensorKind.BAROMETRIC_PRESSURE,
 ]
 
 
@@ -84,13 +106,18 @@ class _Sensor(BaseModel):
 
 
 class PointSensor(_Sensor):
-    """A sensor reading one quantity of the air at its position."""
+    """A sensor reading one quantity of the air at its position, or, outside
+    the house, of the weather."""
 
     kind: PointKind
     imperfections: Imperfections = Imperfections()
 
     def unit(self) -> str:
         return UNITS[self.kind]
+
+    def reads_the_weather(self) -> bool:
+        """Whether it is a weather station's, standing outside the house."""
+        return self.kind in WEATHER_KINDS
 
     def fixture(self) -> Fixture:
         """Its housing, centred on its position, in the way of nothing."""

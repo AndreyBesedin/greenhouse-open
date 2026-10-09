@@ -128,6 +128,12 @@ def test_the_climate_box_is_instrumented() -> None:
         ("co2", SensorKind.CO2),
         ("par", SensorKind.PAR),
         ("front_camera", SensorKind.CAMERA),
+        # Its weather station, outside.
+        ("station_temperature", SensorKind.OUTSIDE_TEMPERATURE),
+        ("station_humidity", SensorKind.OUTSIDE_HUMIDITY),
+        ("station_pressure", SensorKind.BAROMETRIC_PRESSURE),
+        ("station_wind_speed", SensorKind.WIND_SPEED),
+        ("station_wind_direction", SensorKind.WIND_DIRECTION),
     ]
 
 

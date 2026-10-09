@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
 
+import type { CameraPose } from "../src/camera.ts";
+import { selectAt } from "./view";
+
+function cameraText({ position, target }: CameraPose): string {
+  return [position, target].map(({ x, y, z }) => `${x}:${y}:${z}`).join(",");
+}
+
 test("weather: a scenario's panel shows the weather outside it, and its site", async ({ page }) => {
   await page.goto("/?scenario=tomato_compartment");
   const weather = page.getByRole("region", { name: "Weather" });
@@ -66,4 +73,25 @@ test("weather: a scenario runs under a preset day, charted through the day", asy
   });
   await expect(page).not.toHaveURL(/weather=/);
   await expect(weather.getByTestId("weather-day-day-temperature")).toHaveText("Air, 8.0 °C");
+});
+
+// The climate box's weather station stands on a mast 3 m in front of it: a
+// point on its thermometer's face, seen from 1.5 m in front of it.
+const STATION_FACE = { x: -3.04, y: 3.1, z: 1.5 };
+const BEFORE_THE_STATION: CameraPose = {
+  position: { x: -4.5, y: 3.1, z: 1.7 },
+  target: STATION_FACE,
+};
+
+test("weather: the weather station reads the weather outside", async ({ page }) => {
+  await page.goto(
+    `/?scenario=climate_box&weather=cold_spring_day&field=climate&t=600&camera=${cameraText(BEFORE_THE_STATION)}`,
+  );
+  await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
+
+  await selectAt(page, STATION_FACE, "climate_box_station_temperature", BEFORE_THE_STATION);
+  await expect(page.getByTestId("property-sensor_kind")).toHaveText("outside_temperature");
+  // Its reading errs by its noise about the spring day's 7.95 °C.
+  await expect(page.getByTestId("sensor-reading")).toHaveText("8.10 °C at 10 min");
+  await expect(page.getByTestId("sensor-truth")).toHaveText("7.95 °C at 10 min");
 });

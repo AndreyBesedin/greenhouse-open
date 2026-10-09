@@ -36,7 +36,7 @@ const GREY_WITHIN = 12;
 
 async function selectTheCamera(page: Page): Promise<void> {
   await page.goto(AT_THE_CAMERA);
-  await expect(page.getByTestId("scene-status")).toContainText("climate_box, day 0, 122 entities");
+  await expect(page.getByTestId("scene-status")).toContainText("climate_box, day 0, 127 entities");
   await selectAt(page, CAMERA_BODY, "climate_box_front_camera", BEHIND_THE_CAMERA);
 }
 
@@ -117,7 +117,7 @@ test("cameras: the instance pass names what the main view picks, and depth is a 
   await test.step("the main view picks the heater", async () => {
     await page.goto(`/?scenario=climate_box&camera=${cameraText(ACROSS)}`);
     await expect(page.getByTestId("scene-status")).toContainText(
-      "climate_box, day 0, 122 entities",
+      "climate_box, day 0, 127 entities",
     );
     await selectAt(page, HEATER_SIDE, "climate_box_heater", ACROSS);
   });

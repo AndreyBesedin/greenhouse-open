@@ -118,6 +118,11 @@ class ObservationType(StrEnum):
     # running sum since local midnight
     OUTSIDE_RADIATION_SUM_J_CM2 = "outside_radiation_sum_j_cm2"
     OUTSIDE_WIND_SPEED_M_S = "outside_wind_speed_m_s"
+    # the direction the wind blows from, in degrees clockwise from north
+    OUTSIDE_WIND_DIRECTION_DEG = "outside_wind_direction_deg"
+    OUTSIDE_BAROMETRIC_PRESSURE_HPA = "outside_barometric_pressure_hpa"
+    # the share of the sky that cloud covers
+    OUTSIDE_CLOUD_COVER_PCT = "outside_cloud_cover_pct"
     OUTSIDE_RAIN = "outside_rain"  # 1 raining, 0 dry
     OUTSIDE_PAR_UMOL_M2_S = "outside_par_umol_m2_s"
     OUTSIDE_HEAT_EMISSION_W_M2 = "outside_heat_emission_w_m2"

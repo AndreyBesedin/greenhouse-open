@@ -15,7 +15,7 @@ from collections.abc import Sequence
 from greenhouse_protocol.enums import ObservationType
 from pydantic import BaseModel, ConfigDict
 
-from greenhouse_sim.sensors.air import OBSERVATION_TYPES, AirAt, reads, samples
+from greenhouse_sim.sensors.air import OBSERVATION_TYPES, AirAt, WeatherAt, reads, samples
 from greenhouse_sim.world.sensors import PointSensor
 
 
@@ -34,9 +34,13 @@ class SensorTruth(BaseModel):
 
 
 def sensor_truth(
-    sensors: Sequence[PointSensor], air_at: AirAt, until_s: float
+    sensors: Sequence[PointSensor],
+    air_at: AirAt,
+    until_s: float,
+    weather_at: WeatherAt | None = None,
 ) -> list[SensorTruth]:
-    """What each sensor sampled, truly, up to `until_s`."""
+    """What each sensor sampled, truly, up to `until_s`: of the air, or of
+    the weather, for a weather station's."""
     truths = []
     for sensor in sensors:
         moments = samples(sensor, until_s)
@@ -46,7 +50,12 @@ def sensor_truth(
                 observation_type=OBSERVATION_TYPES[sensor.kind],
                 unit=sensor.unit(),
                 times_s=moments,
-                values=[reads(sensor, air_at(moment)) for moment in moments],
+                values=[
+                    reads(
+                        sensor, air_at(moment), None if weather_at is None else weather_at(moment)
+                    )
+                    for moment in moments
+                ],
             )
         )
     return truths

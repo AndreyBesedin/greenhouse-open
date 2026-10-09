@@ -16,7 +16,7 @@ test("sensors: a sensor stands where it is placed, and the inspector shows its c
   page,
 }) => {
   await page.goto(`/?scenario=climate_box&camera=${cameraText(BEFORE_IT)}`);
-  await expect(page.getByTestId("scene-status")).toContainText("climate_box, day 0, 122 entities");
+  await expect(page.getByTestId("scene-status")).toContainText("climate_box, day 0, 127 entities");
 
   await selectAt(page, CO2_FACE, "climate_box_co2", BEFORE_IT);
   await expect(page.getByTestId("selected-type")).toHaveText("sensor");
