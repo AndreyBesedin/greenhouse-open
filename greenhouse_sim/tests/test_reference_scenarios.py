@@ -138,11 +138,14 @@ def test_the_climate_box_is_a_small_single_span_house_shut_and_still() -> None:
     assert (BOX.airflow.velocity_m_s.x, BOX.airflow.velocity_m_s.y) == (0.0, 0.0)
 
 
-def test_the_climate_box_has_one_opening_of_each_kind_all_shut() -> None:
+def test_the_climate_box_has_an_opening_of_each_kind_all_shut() -> None:
     kinds = sorted(opening.kind for opening in BOX.envelope.openings)
     geometry = cfd.geometry("climate_box")
 
-    assert kinds == sorted(OpeningKind)
+    # A side vent in each side wall, so that a wind across the house has a
+    # vent on either side (P07.6).
+    assert set(kinds) == set(OpeningKind)
+    assert kinds.count(OpeningKind.SIDE_VENT) == 2
     assert all(opening.aperture_area() == 0.0 for opening in BOX.envelope.openings)
     # Shut, its air has no way in or out, so it has no CFD solution.
     assert geometry.of(BoundaryCategory.OPENING) == []

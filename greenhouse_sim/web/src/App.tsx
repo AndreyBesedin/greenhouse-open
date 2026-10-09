@@ -28,6 +28,13 @@ import { FieldStreamlines } from "./fields/FieldStreamlines";
 import { type GlazingState, glazingUrl, loadGlazing, withGlazing } from "./fields/glazing";
 import { HouseAir, type HouseAirState, houseAirUrl, loadHouseAir } from "./fields/HouseAir";
 import {
+  loadOpenings,
+  type OpeningsState,
+  openingFlowOverlays,
+  openingsUrl,
+  withOpeningFlows,
+} from "./fields/openingFlows";
+import {
   loadProbeCharts,
   ProbeCharts,
   type ProbeChartsState,
@@ -106,6 +113,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [probeCharts, setProbeCharts] = useState<ProbeChartsState>({ status: "none" });
   const [houseAir, setHouseAir] = useState<HouseAirState>({ status: "none" });
   const [glazing, setGlazing] = useState<GlazingState>({ status: "none" });
+  const [openingFlows, setOpeningFlows] = useState<OpeningsState>({ status: "none" });
   const [sensorReadings, setSensorReadings] = useState<SensorReadingsState>({ status: "none" });
   const [weather, setWeather] = useState<WeatherStateOfLoad>({ status: "none" });
   const [weatherDay, setWeatherDay] = useState<WeatherDayState>({ status: "none" });
@@ -406,6 +414,31 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     };
   }, [glassUrl]);
 
+  // What the open doors and vents pass at the moment drawn, for "Colour by"
+  // and their arrows; the last stays on show until the next arrives.
+  const flowsUrl =
+    source.kind === "scenario" && source.field === CLIMATE_FIELD
+      ? openingsUrl(source.scenarioId, source)
+      : null;
+  useEffect(() => {
+    if (flowsUrl === null) {
+      setOpeningFlows({ status: "none" });
+      return;
+    }
+    let current = true;
+    setOpeningFlows((previous) =>
+      previous.status === "loaded" ? previous : { status: "loading" },
+    );
+    void loadOpenings(flowsUrl).then((state) => {
+      if (current) {
+        setOpeningFlows(state);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [flowsUrl]);
+
   // The boundaries a CFD solver is given, changed as the scene is, drawn
   // over it when asked for; the last stays on show until the next arrives.
   // How hard its equipment runs does not change them.
@@ -609,15 +642,19 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
 
   const shown = source.kind === "live" ? live.scene : scene;
   const shownSnapshot = shown.status === "loaded" ? shown.snapshot : null;
-  // The scene, its glazed surfaces carrying their temperatures while a
-  // climate run is drawn.
-  const snapshot = useMemo(
-    () =>
-      shownSnapshot !== null && glazing.status === "loaded"
-        ? withGlazing(shownSnapshot, glazing.glazing)
-        : shownSnapshot,
-    [shownSnapshot, glazing],
-  );
+  // The scene, its glazed surfaces carrying their temperatures and its open
+  // doors and vents their flows while a climate run is drawn.
+  const snapshot = useMemo(() => {
+    if (shownSnapshot === null) {
+      return null;
+    }
+    const glazed =
+      glazing.status === "loaded" ? withGlazing(shownSnapshot, glazing.glazing) : shownSnapshot;
+    return openingFlows.status === "loaded"
+      ? withOpeningFlows(glazed, openingFlows.openings)
+      : glazed;
+  }, [shownSnapshot, glazing, openingFlows]);
+  const flowing = openingFlows.status === "loaded" ? openingFlows.openings : null;
   // Overlays and colours are worked out from the scene, which they only read.
   const selected = selectedEntity(snapshot, selectedId);
   const selectedCamera = selected === null ? null : cameraOf(selected);
@@ -674,6 +711,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       ...(probedField === null ? [] : probeOverlays(probes, probedField)),
       ...(snapshot === null ? [] : frustumOverlays(snapshot)),
       ...(snapshot === null || outside === null ? [] : windOverlays(snapshot, outside)),
+      ...(snapshot === null || flowing === null ? [] : openingFlowOverlays(snapshot, flowing)),
     ],
     [
       selected,
@@ -684,6 +722,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       probes,
       probedField,
       outside,
+      flowing,
     ],
   );
 

@@ -87,8 +87,9 @@ temperature slice shows a heater warming its corner and the house
 (`&set=heater:1&fieldView=slice&slice=temperature:z:0.75`), and a humidity
 slice a dehumidifier drying the air around it
 (`&set=dehumidifier:1&fieldView=slice&slice=humidity:z:0.75`). The climate
-follows the Openings sliders too: an open vent exchanges the air against it
-with the outside's, and shows its draught. A run can switch its equipment on
+follows the Openings sliders too: an open door or vent passes what the wind
+and the stack drive through it (`GET /api/scenarios/{id}/climate/openings`),
+marked by an arrow in or out, and shows its draught. A run can switch its equipment on
 its own (`&schedule=60:fan:1,300:heater:0`, seconds:actuator:level), and
 equipment switched while the run stands past its start is an override from
 that moment. "Schedule" lists the commands under the time slider, marked on

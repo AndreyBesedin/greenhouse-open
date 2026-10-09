@@ -1,6 +1,6 @@
 # P07: External weather and greenhouse boundary coupling
 
-**Status:** in progress: P07.1 to P07.5 done, P07.6 next. Part of the
+**Status:** in progress: P07.1 to P07.6 done, P07.7 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -248,7 +248,7 @@ station's readings, never the weather source itself.
 | P07.3 | `feat(climate): run a whole day` | Done |
 | P07.4 | `feat(boundary): couple the glazing to the changing outside` | Done |
 | P07.5 | `feat(boundary): add infiltration and the outside's water and CO₂` | Done |
-| P07.6 | `feat(wind): drive the openings by wind and stack pressure` | Planned |
+| P07.6 | `feat(wind): drive the openings by wind and stack pressure` | Done |
 | P07.7 | `feat(weather): import recorded weather` | Planned |
 | P07.8 | `test(weather): compare a controlled and an uncontrolled day` | Planned |
 
@@ -542,6 +542,54 @@ again. Visible result: turning the wind turns which vents take air in.
 Tests: reversing the wind in a symmetric house reverses the flows; still
 and isothermal, nothing flows; the house's air is conserved.
 
+#### As implemented
+
+- **Where each opening is** (`climate.openings`, `OpeningSite`): its
+  aperture, its centre's height and vertical extent, the compass bearing
+  its surface faces out to (by the site's compass), and whether it is in
+  the roof.
+- **Pressure across it:** the wind's dynamic pressure times a coefficient
+  by the angle between the way the wind comes from and the surface's
+  outward face, every 45° and interpolated between. Walls: +0.7 facing the
+  wind, +0.35, −0.5 along it, −0.4, −0.2 in its lee. A shallow roof: −0.7
+  to −0.4, drawn whichever way the wind blows. The stack: inside and
+  outside air densities from their temperatures and the barometric
+  pressure, over the opening's height.
+- **Flows:** Q = 0.6 A √(2 |Δp| / ρ) through each, the house's pressure
+  bisected until as much air leaves as enters. Each open opening also
+  exchanges both ways by the single-sided formulas, the stack's over its
+  own height or the wind's turbulence, 0.025 A v, whichever is the more. An
+  opening alone has only that.
+- **Across the house:** the projection now takes air entering and leaving
+  at the grid's faces (`conserving(..., inflow=...)`). Being linear, it is
+  solved once per open opening, for a cubic metre a second in through it
+  and out through the first, and the openings' flows at each stretch scale
+  those. The air entering brings the outside's heat, water and CO₂; the
+  air leaving takes the cells' own. Each stretch takes the openings' flows
+  for the air's mean temperature and the weather then.
+- **The whole house** takes the same flows for its mean air.
+- **This replaces P05's fixed exchange speed** (`vent_exchange_m_s` is
+  gone). On the climate box, still air and 8 K warmer inside draw about
+  1 m³/s in at the side vent and out at the roof vent; a 4 m/s southerly
+  drives 4.4 m³/s through. The roof vent alone exchanges 0.19 m³/s by the
+  stack over its 0.24 m, where P05 exchanged 1.1 m³/s. So P05's roof-vent
+  numbers are recorded again: under it ten minutes in, heated, 0.05 m/s and
+  14.57 °C, where P05 had 0.29 m/s and 10.42 °C. With a vent in each side
+  wall and a 4 m/s wind across, the house is at the outside's temperature
+  in ten minutes.
+- **The climate box** gains `side_vent_left`, across the house from its
+  side vent, shut. Its scene has one more entity.
+- **The API:** `GET /api/scenarios/{id}/climate/openings?…&t=600`, what each
+  open opening passes, net and each way, from the grid run that draws the
+  moment.
+- **The viewer:** while the climate is drawn, each open opening carries
+  `flow_in_m3_s` and `exchange_m3_s` for "Colour by" and the inspector,
+  and an arrow, in from outside where air enters and out from inside where
+  it leaves, a metre long for each cubic metre a second, labelled. Under
+  the cold spring day with both side vents open, the south one takes the
+  air in ten minutes past midnight, and the north one by eight in the
+  evening, when the wind has veered to the west-north-west.
+
 ### P07.7: Recorded weather
 
 The CSV format, its validation, gaps, provenance, and a small recorded day
@@ -588,6 +636,12 @@ What P07 simplifies on purpose, kept here until a later step removes it:
 - **Pressure coefficients are tabulated for low-rise buildings,** not
   computed for each house. CFD (P04) could compute them for a particular
   house later.
+- **An opening is a point at its centre's height** for the house's
+  pressure balance, its two-way flow within its own height the
+  single-sided formula's, added to its net flow; the stack takes the
+  house's mean temperature. The flow across the house is the projection's
+  potential flow: an incoming stream spreads at once, carrying no momentum
+  of its own (P07.6).
 - **Infiltration is spread evenly over the envelope,** where real leaks are
   at gaps, vents' edges and doors.
 - **The whole-house model is well mixed:** it knows the house's mean, not

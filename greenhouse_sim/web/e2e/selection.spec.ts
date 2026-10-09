@@ -21,7 +21,7 @@ test("clicking an entity selects it, and the inspector shows what it is and wher
   page,
 }) => {
   await page.goto("/?scene=example");
-  await expect(page.getByTestId("scene-status")).toContainText("127 entities");
+  await expect(page.getByTestId("scene-status")).toContainText("128 entities");
   const selected = page.getByTestId("selected-entity");
 
   await selectAt(page, EXAMPLE_PLANT, "climate_box_plant_001");

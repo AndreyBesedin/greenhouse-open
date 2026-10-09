@@ -34,12 +34,13 @@ from typing import Final
 
 from greenhouse_sim.airflow.contract import AirflowModel
 from greenhouse_sim.airflow.prescribed import PATTERNS
-from greenhouse_sim.cfd.geometry import cfd_geometry
+from greenhouse_sim.cfd.geometry import CfdGeometry, cfd_geometry
 from greenhouse_sim.cfd.results import CfdAirflow, kept_result
 from greenhouse_sim.climate.commands import Command, Schedule
 from greenhouse_sim.climate.day import ClimateDay, window_start
 from greenhouse_sim.climate.glazing import GlazingAt, glazed_cells
 from greenhouse_sim.climate.house import HouseTrace, house_trace
+from greenhouse_sim.climate.openings import OpeningsAt, opening_sites
 from greenhouse_sim.climate.probes import ClimateProbes, probe_series
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.vents import Vent
@@ -147,6 +148,18 @@ def _climate_day(
         return run
 
 
+def climate_vents(config: ScenarioConfig, geometry: CfdGeometry) -> list[Vent]:
+    """A scenario's open doors and vents, as its climate run passes air
+    through them: where each is (`greenhouse_sim.climate.openings`), and the
+    cells of its air's grid against it."""
+    sites = opening_sites(config.envelope, config.site)
+    return [
+        Vent(site=sites[opening_id], cells=cells, axis=axis, outward=outward)
+        for opening_id, (cells, axis, outward) in geometry.opening_cells().items()
+        if opening_id in sites
+    ]
+
+
 def _new_climate_run(
     scenario_id: str,
     layout: str,
@@ -162,19 +175,7 @@ def _new_climate_run(
     )
     grid = air_grid(config)
     geometry = cfd_geometry(scenario_id, config, grid)
-    apertures = {
-        opening.opening_id: opening.aperture_area() for opening in config.envelope.openings
-    }
-    vents = [
-        Vent(
-            opening_id=opening_id,
-            aperture_m2=apertures[opening_id],
-            cells=cells,
-            axis=axis,
-            outward=outward,
-        )
-        for opening_id, (cells, axis, outward) in geometry.opening_cells().items()
-    ]
+    vents = climate_vents(config, geometry)
     return ClimateRun(
         base=config.airflow,
         equipment=config.layout.equipment,
@@ -414,6 +415,29 @@ def glazing(
     if not isinstance(climate, _Climate):
         raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
     return _climate_day(*climate.key).glazing_at(time_s)
+
+
+def openings(
+    scenario_id: str,
+    layout: str | None = None,
+    levels: Mapping[str, float] | None = None,
+    openings: Mapping[str, float] | None = None,
+    commands: Sequence[Commanded] = (),
+    time_s: float = 0.0,
+    weather: str | None = None,
+) -> OpeningsAt:
+    """What a scenario's open doors and vents pass at `time_s` into its
+    climate run, as the wind and the stack drive them
+    (`greenhouse_sim.climate.openings`). Asked as its climate field is, and
+    refused as it is."""
+    if not 0.0 <= time_s <= LONGEST_RUN_S:
+        raise InvalidRequest(f"a climate run lasts from 0 to {LONGEST_RUN_S:g} s, not {time_s:g}")
+    name = layout or DEFAULT_LAYOUT
+    models = _models(scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER)
+    climate = models.get(CLIMATE)
+    if not isinstance(climate, _Climate):
+        raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
+    return _climate_day(*climate.key).openings_at(time_s)
 
 
 def air_through_a_run(

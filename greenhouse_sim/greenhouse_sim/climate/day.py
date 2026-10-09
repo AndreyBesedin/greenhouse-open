@@ -27,6 +27,7 @@ import numpy as np
 
 from greenhouse_sim.climate.glazing import GlazingAt
 from greenhouse_sim.climate.house import HouseAir, WholeHouse
+from greenhouse_sim.climate.openings import OpeningsAt
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.transport import AirState
 from greenhouse_sim.fields.field import EnvironmentField
@@ -89,6 +90,13 @@ class ClimateDay:
         """Each glazed surface at `time_s`, as the grid run that draws the
         field then has it."""
         return self.window(time_s).glazing_at(time_s)
+
+    def openings_at(self, time_s: float) -> OpeningsAt:
+        """What each open door and vent passes at `time_s`, as the grid run
+        that draws the field then drives them."""
+        window = self.window(time_s)
+        flows = window.openings_for(window.air_at(time_s), window.weather.at(time_s))
+        return OpeningsAt(time_s=time_s, openings=list(flows.values()))
 
     def sampled(self, field_id: str, time_s: float) -> EnvironmentField:
         """The air sensors sample at `time_s`: the grid run's from the start

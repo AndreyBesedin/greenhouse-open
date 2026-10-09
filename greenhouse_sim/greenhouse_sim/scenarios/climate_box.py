@@ -10,8 +10,9 @@ from greenhouse_sim.world.envelope import Envelope, Opening
 from greenhouse_sim.world.geometry import Point2, Vector3
 
 # The small house (P05.0): small enough to follow its air closely, where
-# P05's equipment is placed and its QA run. It has one opening of each kind,
-# all shut, so that equipment acts on still, closed air.
+# P05's equipment is placed and its QA run. It has a roof vent, a side vent
+# in each side wall and a door, all shut, so that equipment acts on still,
+# closed air.
 CLIMATE_BOX = ScenarioConfig(
     greenhouse_id="climate_box",
     name="Climate box",
@@ -46,6 +47,17 @@ CLIMATE_BOX = ScenarioConfig(
                 opening_id="side_vent",
                 kind=OpeningKind.SIDE_VENT,
                 surface_id="side_wall_right",
+                centre=Point2(x=0.0, y=0.5),
+                width=3.0,
+                height=0.6,
+                opening=0.0,
+            ),
+            # Across the house from it, so that a wind across the house
+            # has a vent on either side (P07.6).
+            Opening(
+                opening_id="side_vent_left",
+                kind=OpeningKind.SIDE_VENT,
+                surface_id="side_wall_left",
                 centre=Point2(x=0.0, y=0.5),
                 width=3.0,
                 height=0.6,

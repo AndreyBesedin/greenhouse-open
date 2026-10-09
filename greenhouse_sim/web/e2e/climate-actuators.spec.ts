@@ -92,7 +92,8 @@ test("climate-actuators: the box's equipment and vent change its air, visibly an
     const vent = page.getByRole("group", { name: "Openings" }).getByRole("slider").first();
     await vent.fill("100");
     await expect(page.getByTestId("opening-roof_vent")).toHaveText("100%, 3.77 m²");
-    await expect.poll(async () => speedOf(underVent)).toBeGreaterThan(0.2);
+    // Alone, it exchanges by the stack over its height (P07.6).
+    await expect.poll(async () => speedOf(underVent)).toBeGreaterThan(0.02);
     expect(await reads(underVent, "temperature")).toBeLessThan(
       Number(/temperature ([\d.]+)/.exec(shut)?.[1]),
     );

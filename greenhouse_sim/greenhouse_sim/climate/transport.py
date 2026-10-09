@@ -27,9 +27,12 @@ the outside.
   is not glass, and passes nothing. Glass passes no water. The outside is
   the weather over the stretch advanced (`greenhouse_sim.weather`), and U
   is the glass's in its wind (`climate.glazing`, P07.4).
-- **Open doors and vents** (`climate.vents`) exchange the air against them
-  with the outside's, its heat, its water and its CO2. Nothing else adds or
-  takes CO2 yet.
+- **Open doors and vents** (`climate.vents`, `climate.openings`): the air
+  that enters through them brings the outside's heat, water and CO2 to the
+  cells against them, as does what each exchanges both ways; the air that
+  leaves takes the cells' own, carried there by the flow, which takes the
+  openings' net flows in (`climate.projection`). Nothing else adds or takes
+  CO2 yet.
 - **A shut house leaks** (P07.5): a share of its air each hour, more in a
   wind, is exchanged with the outside's through the cells against the walls
   and roof, each by its share of their area, with its heat, water and CO2.
@@ -47,12 +50,14 @@ nothing.
 """
 
 import math
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from typing import Final
 
 import numpy as np
 
 from greenhouse_sim.climate.glazing import REFERENCE_WIND_M_S, glazing_u_w_m2k
+from greenhouse_sim.climate.openings import OpeningFlow
 from greenhouse_sim.climate.projection import FaceFlows
 from greenhouse_sim.climate.psychrometrics import humidity_ratio_g_kg, saturation_ratio_g_kg
 from greenhouse_sim.climate.settings import ClimateSettings
@@ -99,6 +104,8 @@ class Transport:
     solid: np.ndarray
     settings: ClimateSettings
     vents: tuple[Vent, ...] = ()
+    # What each open door and vent passes over the stretch advanced.
+    openings: Mapping[str, OpeningFlow] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         nx, ny, nz = self.grid.shape
@@ -190,12 +197,15 @@ class Transport:
         return exchange
 
     def vents_m3_s(self) -> np.ndarray:
-        """The outside air each cell takes in through open doors and vents,
-        and gives out, in m³/s; nothing for a solid cell."""
+        """The outside air each cell takes in through open doors and vents, in
+        m³/s: what enters through them, and what each exchanges both ways;
+        nothing for a solid cell."""
         nx, ny, nz = self.grid.shape
         exchange = np.zeros((nz, ny, nx))
         for vent in self.vents:
-            exchange += vent.exchange_m3_s(self.settings.vent_exchange_m_s)
+            flow = self.openings.get(vent.opening_id)
+            if flow is not None:
+                exchange += vent.spread(max(flow.net_m3_s, 0.0) + flow.exchange_m3_s)
         exchange[self.solid] = 0.0
         return exchange
 
