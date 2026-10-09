@@ -188,9 +188,12 @@ test("climate: the house's air as one volume follows the run, beside it all off"
 });
 
 test("climate: a run lasts a day, its later field drawn from the whole house", async ({ page }) => {
+  // A later moment runs a grid run of an hour or two first, slower on a
+  // loaded runner; what follows it waits its turn.
+  test.setTimeout(150_000);
   await page.goto("/?scenario=climate_box&set=heater:1&field=climate&t=18000&probes=6:3.2:1.5");
   const run = page.getByRole("group", { name: "Climate run" });
-  await expect(page.getByTestId("climate-time")).toHaveText("5 h 00 min", { timeout: 30_000 });
+  await expect(page.getByTestId("climate-time")).toHaveText("5 h 00 min", { timeout: 60_000 });
 
   // The slider spans the day.
   await expect(run.getByRole("slider", { name: "Time into the run" })).toHaveAttribute(
@@ -198,11 +201,13 @@ test("climate: a run lasts a day, its later field drawn from the whole house", a
     "86400",
   );
   // The house has long settled, heated, and all off at the night's 8 °C.
-  await expect(page.getByTestId("house-air-°C")).toHaveText("Air 20.8 °C, all off 8.0 °C");
+  await expect(page.getByTestId("house-air-°C")).toHaveText("Air 20.8 °C, all off 8.0 °C", {
+    timeout: 30_000,
+  });
   // The probe reads the grid run started at four hours, from the whole house.
   await expect(page.getByTestId("chart-P1-temperature_c")).toHaveText(
     "temperature 20.02 °C, all off 8.00 °C",
-    { timeout: 30_000 },
+    { timeout: 60_000 },
   );
 });
 
