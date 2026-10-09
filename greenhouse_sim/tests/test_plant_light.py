@@ -76,11 +76,12 @@ def test_at_noon_the_crates_shade_the_first_plants_and_the_rest_take_the_sun() -
     light = _light()
     par = light.par_at(NOON_S)
 
-    # The light is all beam for now: what the crates shade takes none.
-    assert all(par[plant] == pytest.approx(0.0) for plant in SHADED)
     # The equinox's clear noon outside, 616 W/m², through the south roof's
-    # glass: about a thousand µmol/m²/s.
-    assert all(900.0 < par[plant] < 1150.0 for plant in EXPOSED)
+    # glass: about a thousand µmol/m²/s; and in the crates' shade only the
+    # sky's light, a fifth of it.
+    assert all(1000.0 < par[plant] < 1150.0 for plant in EXPOSED)
+    assert all(150.0 < par[plant] < 250.0 for plant in SHADED)
+    assert max(par[plant] for plant in SHADED) < 0.25 * min(par[plant] for plant in EXPOSED)
 
 
 def test_a_shaded_plants_day_takes_less_light() -> None:
@@ -137,7 +138,7 @@ def test_the_api_serves_each_plants_light() -> None:
     assert response.status == HTTPStatus.OK
     assert body["time_s"] == NOON_S
     assert set(body["par_umol_m2_s"]) == set(plant_ids(LAB))
-    assert body["par_umol_m2_s"][SHADED[0]] == pytest.approx(0.0)
+    assert 150.0 < body["par_umol_m2_s"][SHADED[0]] < 250.0
     assert body["daily_light_integral_mol_m2_d"][EXPOSED[0]] > 25.0
     refused = respond("GET", "/api/scenarios/solar_lab/climate/plants?t=90000")
     assert refused.status == HTTPStatus.BAD_REQUEST
@@ -149,4 +150,5 @@ def test_par_sensors_read_the_light_in_the_sun_and_in_the_shade() -> None:
 
     assert read["par_open"] is not None and read["par_shade"] is not None
     assert read["par_open"] > 900.0
-    assert read["par_shade"] == pytest.approx(0.0)
+    # In the crates' shade, only the sky's light.
+    assert 0.0 < read["par_shade"] < 0.3 * read["par_open"]

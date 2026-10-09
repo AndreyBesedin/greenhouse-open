@@ -11,6 +11,7 @@ import {
   PLANT_LAB_SEED,
 } from "../plants/lab";
 import { stressPlants, stressScene } from "../qa/stressScene";
+import { DEFAULT_WEATHER } from "../scenarios";
 import type { Point3 } from "../world";
 import { checkScene } from "./checkScene";
 import type { SceneSnapshot } from "./generated/snapshotTypes";
@@ -38,6 +39,9 @@ export type SceneSource =
       /** Another weather it is run under, a preset's by name, in place of
        * its own. */
       weather?: string;
+      /** A QA override of its weather's cloud cover, in %, which dims its
+       * light as such a sky would. */
+      clouds?: number;
       /** One of its environment fields, drawn over its scene, as arrows by
        * default, and where a slice through it lies, if one is drawn. */
       field?: string;
@@ -84,6 +88,10 @@ export const FIXTURE_GALLERY_URL = "/scenes/qa-fixtures.json";
 export const PLANT_LAB_SCENE_URL = "/api/plants/scene";
 // The address's `cfd=` when a scenario's CFD boundaries are drawn.
 const CFD_BOUNDARIES = "boundaries";
+// The most a sky can be clouded, in %, and how the simulator is asked for a
+// weather under other clouds than its own: `cold_spring_day@80`.
+const MOST_CLOUDS_PCT = 100;
+const CLOUDS_MARK = "@";
 
 export function sourceFromSearch(search: string): SceneSource {
   const parameters = new URLSearchParams(search);
@@ -95,6 +103,7 @@ export function sourceFromSearch(search: string): SceneSource {
   if (scenarioId) {
     const layout = parameters.get("layout");
     const weather = parameters.get("weather");
+    const clouds = cloudsFrom(parameters.get("clouds"));
     const envelope = pairsFrom(parameters.get("envelope"));
     const openings = pairsFrom(parameters.get("open"));
     const levels = pairsFrom(parameters.get("set"));
@@ -111,6 +120,7 @@ export function sourceFromSearch(search: string): SceneSource {
       scenarioId,
       ...(layout ? { layout } : {}),
       ...(weather ? { weather } : {}),
+      ...(clouds === null ? {} : { clouds }),
       ...(field ? { field } : {}),
       ...(field && fieldView ? { fieldView } : {}),
       ...(field && slice ? { slice } : {}),
@@ -198,7 +208,7 @@ export function searchFor(source: SceneSource): string {
         .map((part) => `&${part}`)
         .join(
           "",
-        )}${fieldQuery(source)}${source.cfdBoundaries ? `&cfd=${CFD_BOUNDARIES}` : ""}${source.camera === undefined ? "" : `&camera=${cameraText(source.camera)}`}`;
+        )}${source.clouds === undefined ? "" : `&clouds=${source.clouds}`}${fieldQuery(source)}${source.cfdBoundaries ? `&cfd=${CFD_BOUNDARIES}` : ""}${source.camera === undefined ? "" : `&camera=${cameraText(source.camera)}`}`;
     case "live":
       return `?live=${encodeURIComponent(source.scenarioId)}`;
   }
@@ -337,6 +347,22 @@ export function withOverride(
 }
 
 /** The moment an address asks for, in seconds from 0, or null. */
+/** A cloud cover the address overrides the weather's with, from 0 to 100 %,
+ * or null when it says none or nothing readable. */
+function cloudsFrom(value: string | null): number | null {
+  const clouds = Number(value ?? "");
+  return value !== null && value !== "" && clouds >= 0 && clouds <= MOST_CLOUDS_PCT ? clouds : null;
+}
+
+/** The weather the simulator is asked for: another by name, or its own, its
+ * clouds overridden as `@80` asks, for QA. */
+export function apiWeather(
+  weather: string | undefined,
+  clouds: number | undefined,
+): string | undefined {
+  return clouds === undefined ? weather : `${weather ?? DEFAULT_WEATHER}${CLOUDS_MARK}${clouds}`;
+}
+
 function timeFrom(value: string | null): number | null {
   const time = Number(value ?? "");
   return value !== null && value !== "" && Number.isFinite(time) && time >= 0 ? time : null;
@@ -433,10 +459,11 @@ export function withItsAir(shown: SceneSource, chosen: SceneSource): SceneSource
   ) {
     return chosen;
   }
-  const { weather, field, fieldView, slice, compare, probes, cfdBoundaries } = shown;
+  const { weather, clouds, field, fieldView, slice, compare, probes, cfdBoundaries } = shown;
   return {
     ...chosen,
     ...(weather === undefined ? {} : { weather }),
+    ...(clouds === undefined ? {} : { clouds }),
     ...(field === undefined ? {} : { field }),
     ...(fieldView === undefined ? {} : { fieldView }),
     ...(slice === undefined ? {} : { slice }),

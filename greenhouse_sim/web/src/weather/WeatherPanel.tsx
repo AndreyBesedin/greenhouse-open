@@ -20,6 +20,10 @@ const NORTH_MARK_Y = 8;
 const HALF_TURN_DEG = 180;
 // Temperatures to a tenth of a degree, the rest to the unit.
 const TEMPERATURE_DECIMALS = 1;
+// The cloud cover's slider, in %: from a clear sky to a full one, a tenth at
+// a time.
+const MOST_CLOUDS_PCT = 100;
+const CLOUDS_STEP_PCT = 10;
 const LATITUDE_DECIMALS = 2;
 
 /** When a moment is, at the site: "1 Jan 2026, 00:10". */
@@ -91,6 +95,8 @@ export function WeatherPanel({
   chosen,
   time = 0,
   onChoose,
+  clouds,
+  onClouds,
 }: {
   state: WeatherStateOfLoad;
   day?: WeatherDayState;
@@ -101,6 +107,11 @@ export function WeatherPanel({
   /** The moment drawn, in seconds from the run's start. */
   time?: number;
   onChoose?: (weather: string | undefined) => void;
+  /** The QA override of the sky's cloud cover, in %, if one is set. */
+  clouds?: number | undefined;
+  /** Overrides the sky's clouds, or, given nothing, gives the weather its
+   * own back. */
+  onClouds?: (clouds: number | undefined) => void;
 }) {
   if (state.status === "none") {
     return null;
@@ -150,6 +161,30 @@ export function WeatherPanel({
               ))}
             </select>
           </label>
+        )}
+        {onClouds !== undefined && (
+          <div className="weather-clouds">
+            <label>
+              Clouds{" "}
+              <input
+                type="range"
+                aria-label="Cloud cover"
+                min={0}
+                max={MOST_CLOUDS_PCT}
+                step={CLOUDS_STEP_PCT}
+                value={clouds ?? Math.round(outside.cloud_cover_pct)}
+                onChange={(event) => onClouds(Number(event.target.value))}
+              />
+            </label>{" "}
+            <span data-testid="weather-clouds">
+              {`${Math.round(clouds ?? outside.cloud_cover_pct)}%${clouds === undefined ? "" : ", for QA"}`}
+            </span>
+            {clouds !== undefined && (
+              <button type="button" onClick={() => onClouds(undefined)}>
+                Its own
+              </button>
+            )}
+          </div>
         )}
         <dl>
           <dt>Air</dt>

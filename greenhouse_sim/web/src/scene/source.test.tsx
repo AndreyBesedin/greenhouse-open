@@ -8,7 +8,14 @@ import { SNAPSHOT_SCHEMA } from "./generated/snapshotSchema";
 import type { SceneSnapshot } from "./generated/snapshotTypes";
 import { placement } from "./placement";
 import { RENDERERS } from "./renderers";
-import { loadScene, type SceneSource, searchFor, sourceFromSearch, withItsAir } from "./source";
+import {
+  apiWeather,
+  loadScene,
+  type SceneSource,
+  searchFor,
+  sourceFromSearch,
+  withItsAir,
+} from "./source";
 
 const EXAMPLE_TEXT = readFileSync(
   new URL("../../public/scenes/example.json", import.meta.url),
@@ -153,6 +160,22 @@ describe("choosing another source", () => {
     expect(
       searchFor(withItsAir(spring, sourceFromSearch("?scenario=sensor_lab&layout=blocked"))),
     ).toBe("?scenario=sensor_lab&layout=blocked&weather=cold_spring_day");
+  });
+
+  it("keeps a cloud override for QA, and asks the simulator for its weather under it", () => {
+    const clouded = sourceFromSearch("?scenario=solar_lab&weather=cold_spring_day&clouds=80");
+
+    expect(clouded).toMatchObject({ weather: "cold_spring_day", clouds: 80 });
+    expect(searchFor(clouded)).toBe("?scenario=solar_lab&weather=cold_spring_day&clouds=80");
+    expect(sourceFromSearch("?scenario=solar_lab&clouds=120")).not.toHaveProperty("clouds");
+    expect(sourceFromSearch("?scenario=solar_lab&clouds=grey")).not.toHaveProperty("clouds");
+    expect(apiWeather("cold_spring_day", 80)).toBe("cold_spring_day@80");
+    expect(apiWeather(undefined, 0)).toBe("default@0");
+    expect(apiWeather("cold_spring_day", undefined)).toBe("cold_spring_day");
+    // Another layout keeps the clouds.
+    expect(withItsAir(clouded, sourceFromSearch("?scenario=solar_lab&layout=other"))).toMatchObject(
+      { clouds: 80 },
+    );
   });
 });
 

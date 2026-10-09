@@ -1,4 +1,4 @@
-"""The sun's and the sky's light inside the greenhouse (P08.3 to P08.5).
+"""The sun's and the sky's light inside the greenhouse (P08.3 to P08.7).
 
 At a moment of a run, the light outside (`solar.sky`) under the sun where
 it stands (`solar.position`) reaches each point inside through the glass
@@ -8,8 +8,9 @@ it stands (`solar.position`) reaches each point inside through the glass
   with the sun's direction s, max(n · s, 0), times the share the glass it
   crosses on its way passes, if nothing stands in its way; and the diffuse
   sky's DHI times the surface's view of the sky, (1 + n_z) / 2, times the
-  glass's diffuse transmittance. Light reflected from the ground is left
-  out.
+  glass's diffuse transmittance, less the share the roof's structure
+  covers (`solar.shadows.roof_shading`). Light reflected from the ground is
+  left out.
 - **On a level surface** at each of a grid's cells' centres, as the climate
   run's field carries it: its shortwave irradiance in W/m², and its PAR in
   µmol/m²/s. Which cells the beam reaches unshaded is worked out once for
@@ -27,7 +28,7 @@ import numpy as np
 from greenhouse_sim.fields.field import FieldGrid
 from greenhouse_sim.solar.glass import DIFFUSE_TRANSMITTANCE, Glazing
 from greenhouse_sim.solar.position import SunPosition, sun_position
-from greenhouse_sim.solar.shadows import Shadows
+from greenhouse_sim.solar.shadows import Shadows, roof_shading
 from greenhouse_sim.solar.sky import PAR_UMOL_M2_S_PER_W_M2, OutsideLight, outside_light
 from greenhouse_sim.weather.sources import RunWeather
 from greenhouse_sim.world.envelope import Envelope
@@ -77,6 +78,9 @@ class Sunlight:
         self.grid = grid
         self.glazing = Glazing(envelope)
         self.shadows = shadows
+        # The share of the diffuse sky that reaches inside, past the glass
+        # and the roof's structure.
+        self.diffuse_passed = DIFFUSE_TRANSMITTANCE * (1.0 - roof_shading(envelope))
         xs, ys, zs = grid.centres()
         z, y, x = np.meshgrid(zs, ys, xs, indexing="ij")
         self._centres = np.stack([x.ravel(), y.ravel(), z.ravel()], axis=1)
@@ -128,7 +132,7 @@ class Sunlight:
             passed = np.where(reached, self.glazing.beam_transmittance(points, towards), 0.0)
         else:
             passed = np.zeros(len(points))
-        return beam * passed + light.dhi_w_m2 * sky_view(normal) * DIFFUSE_TRANSMITTANCE
+        return beam * passed + light.dhi_w_m2 * sky_view(normal) * self.diffuse_passed
 
     def irradiance(self, points: np.ndarray, normal: Vector3, time_s: float) -> np.ndarray:
         """The shortwave irradiance on surfaces at `points` (rows of x, y, z)

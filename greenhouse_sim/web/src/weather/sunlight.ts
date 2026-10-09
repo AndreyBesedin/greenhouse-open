@@ -19,6 +19,9 @@ export interface SunLightPose {
   target: Point3;
   shadowHalfWidthM: number;
   distanceM: number;
+  /** The beam's share of the light on a level surface, from 0 to 1: under
+   * cloud the sun's light gives way to the sky's. */
+  beamShare: number;
 }
 
 function houseOf(
@@ -42,7 +45,11 @@ function houseOf(
  * middle, its shadows covering the whole house; null for a scene without the
  * house's bounds.
  */
-export function sunLightPose(snapshot: SceneSnapshot, direction: Point3): SunLightPose | null {
+export function sunLightPose(
+  snapshot: SceneSnapshot,
+  direction: Point3,
+  beamShare = 1,
+): SunLightPose | null {
   const house = houseOf(snapshot);
   if (house === null) {
     return null;
@@ -58,10 +65,12 @@ export function sunLightPose(snapshot: SceneSnapshot, direction: Point3): SunLig
     target: middle,
     shadowHalfWidthM: house.across / 2 + SHADOW_MARGIN_M,
     distanceM,
+    beamShare,
   };
 }
 
-/** How the scene is lit at a moment outside: by the sun, while it is up;
+/** How the scene is lit at a moment outside: by the sun, as strongly as its
+ * beam's share of the light, while it is up;
  * by the sky's ambient light alone, while it is down ("night"); or by the
  * viewer's fixed light (null), for a scene without the house's bounds. */
 export function sceneSunlight(
@@ -71,7 +80,14 @@ export function sceneSunlight(
   if (weather.sun.elevation_deg <= 0) {
     return houseOf(snapshot) === null ? null : "night";
   }
-  return sunLightPose(snapshot, weather.sunDirection);
+  return sunLightPose(snapshot, weather.sunDirection, beamShareOf(weather));
+}
+
+/** The beam's share of the light outside on a level surface; all of it for
+ * a weather that gives no light, so that its scene is lit as a clear day's. */
+export function beamShareOf(weather: WeatherAtAMoment): number {
+  const { ghi_w_m2, dhi_w_m2 } = weather.light;
+  return ghi_w_m2 > 0 ? Math.min(Math.max(1 - dhi_w_m2 / ghi_w_m2, 0), 1) : 1;
 }
 
 /** The sun's path across the sky through the day, as lines between its

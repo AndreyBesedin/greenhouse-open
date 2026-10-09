@@ -10,10 +10,13 @@ const IN_THE_SHADE = "5.75:3.2:0.25";
 test("light: under a clear sky the floor takes the sun's PAR through the glass, but in shadows", async ({
   page,
 }) => {
-  // 12:45 on 1 January, about solar noon, the sun 15° up: a clear sky's
-  // 229.5 W/m² on a level surface outside, its PAR 2.15 times that. Inside,
-  // the beam crosses the south wall 15° from square, which passes 84.7% of
-  // it. The sky's light is all beam for now, so the shade takes none.
+  // Its climate run is worked out to noon first.
+  test.setTimeout(90_000);
+  // 12:45 on 1 January, about solar noon, the sun 15° up: the spring day's
+  // half-clouded sky gives 213 W/m² on a level surface outside, its PAR 2.15
+  // times that, half of it the beam's. Inside, the beam crosses the south
+  // wall 15° from square, which passes 84.7% of it; the shade takes the
+  // sky's light alone.
   await page.goto(
     `/?scenario=climate_box&field=climate&weather=cold_spring_day&t=45900&fieldView=slice&slice=par:z:0.25&probes=${IN_THE_OPEN},${IN_THE_SHADE}`,
   );
@@ -23,14 +26,16 @@ test("light: under a clear sky the floor takes the sun's PAR through the glass, 
 
   await expect(page.getByTestId("field-legend-quantity")).toHaveText("PAR (µmol/m²/s)");
   await expect(page.getByTestId("probe-1-reading")).toContainText(
-    "PAR 417.50 µmol/m²/s, irradiance 194.38 W/m²",
+    "PAR 362.93 µmol/m²/s, irradiance 168.97 W/m²",
   );
   await expect(page.getByTestId("probe-2-reading")).toContainText(
-    "PAR 0.00 µmol/m²/s, irradiance 0.00 W/m²",
+    "PAR 160.37 µmol/m²/s, irradiance 74.66 W/m²",
   );
   const weather = page.getByRole("region", { name: "Weather" });
   await weather.getByTestId("weather-summary").click();
-  await expect(weather.getByTestId("weather-light")).toHaveText("229 W/m², PAR 493 µmol/m²/s");
+  await expect(weather.getByTestId("weather-light")).toHaveText(
+    "213 W/m², 48% of it the sky's, PAR 458 µmol/m²/s",
+  );
 });
 
 test("light: at night the floor is dark", async ({ page }) => {

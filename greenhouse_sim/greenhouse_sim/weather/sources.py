@@ -5,6 +5,8 @@ at any moment, as an aware instant.
   scenario's outside was before P07. Its pressure, unless given, is the
   standard atmosphere's at its site's elevation. Its radiation is only
   while the sun is up (`greenhouse_sim.solar.position`): at night, none.
+- **Clouded** (`Clouded`): another source's weather under another sky, for
+  QA (P08.7).
 - **A series** (`WeatherSeries`): records at moments, interpolated linearly
   in time between them. The wind is interpolated as a vector, so that a wind
   turning from 350° to 10° turns through north, not through south, and
@@ -26,6 +28,7 @@ from typing import Final, Literal, Protocol
 from pydantic import PositiveFloat
 
 from greenhouse_sim.solar.position import sun_position
+from greenhouse_sim.solar.sky import cloud_factor
 from greenhouse_sim.weather.state import OutsideConditions, WeatherState
 from greenhouse_sim.world.site import Site, bearing
 
@@ -151,6 +154,29 @@ class WeatherSeries:
         start, end = self._moments[before], self._moments[after]
         share = (moment - start) / (end - start)
         return interpolated(self._states[before], self._states[after], share)
+
+
+@dataclass(frozen=True)
+class Clouded:
+    """Another source's weather under a sky `cloud_cover_pct` clouded: its
+    radiation dimmed or brightened from what its own clouds pass to what
+    these would (`greenhouse_sim.solar.sky.cloud_factor`). A QA override, so
+    that a sky can be dimmed without another weather."""
+
+    source: WeatherSource
+    cloud_cover_pct: float
+
+    def at(self, moment: datetime) -> WeatherState:
+        state = self.source.at(moment)
+        own = cloud_factor(state.cloud_cover_pct)
+        return state.model_copy(
+            update={
+                "cloud_cover_pct": self.cloud_cover_pct,
+                "global_radiation_w_m2": state.global_radiation_w_m2
+                * cloud_factor(self.cloud_cover_pct)
+                / own,
+            }
+        )
 
 
 @dataclass(frozen=True)

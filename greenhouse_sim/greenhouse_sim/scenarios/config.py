@@ -7,7 +7,8 @@ from greenhouse_sim.airflow.prescribed import PrescribedAirflow, UniformAirflow
 from greenhouse_sim.cfd.setup import CfdSetup
 from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.weather.recorded import RecordedWeather
-from greenhouse_sim.weather.sources import ConstantWeather, RunWeather
+from greenhouse_sim.weather.sources import Clouded, ConstantWeather, RunWeather
+from greenhouse_sim.weather.state import Percent
 from greenhouse_sim.weather.synthetic import SyntheticWeather
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.layout import Layout, inside_the_greenhouse, outside_the_greenhouse
@@ -52,6 +53,10 @@ class ScenarioConfig(BaseModel):
     weather: Annotated[
         ConstantWeather | SyntheticWeather | RecordedWeather, Field(discriminator="kind")
     ] = ConstantWeather()
+    # A QA override of its weather's cloud cover, which dims its light as
+    # such a sky would (`greenhouse_sim.weather.sources.Clouded`); none by
+    # default.
+    cloud_cover_pct: Percent | None = None
 
     # Environment: bounds the smooth day-to-day drift stays within.
     air_temperature_bounds: tuple[float, float] = (18.0, 32.0)
@@ -89,9 +94,13 @@ class ScenarioConfig(BaseModel):
         return self.site.midnight(self.start_date).astimezone(UTC)
 
     def run_weather(self) -> RunWeather:
-        """Its weather on a run's clock."""
+        """Its weather on a run's clock, its clouds as overridden, if they
+        are."""
         start = self.run_start()
-        return RunWeather(self.weather.source(self.site, self.random_seed, start), start)
+        source = self.weather.source(self.site, self.random_seed, start)
+        if self.cloud_cover_pct is not None:
+            source = Clouded(source, self.cloud_cover_pct)
+        return RunWeather(source, start)
 
     @model_validator(mode="after")
     def _the_layout_fits_in_the_greenhouse(self) -> Self:
