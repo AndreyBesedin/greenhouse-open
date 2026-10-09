@@ -108,7 +108,8 @@ def reads(
     for a weather station's, the weather `outside`; None if neither carries
     it."""
     if sensor.reads_the_weather():
-        return None if outside is None else float(getattr(outside, WEATHER_QUANTITIES[sensor.kind]))
+        value = None if outside is None else getattr(outside, WEATHER_QUANTITIES[sensor.kind])
+        return None if value is None else float(value)
     quantity = QUANTITIES.get(sensor.kind)
     if quantity is None:
         return None

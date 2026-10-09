@@ -155,7 +155,8 @@ def test_a_day_that_does_not_warm_and_cool_is_refused(
 
 def test_every_scenario_can_be_run_under_any_preset() -> None:
     for summary in scenarios.scenario_summaries():
-        assert summary.weathers == ["default", *PRESETS]
+        # Its own, the presets, then the recorded days (P07.7).
+        assert summary.weathers[: len(PRESETS) + 1] == ["default", *PRESETS]
 
 
 def test_a_climate_run_under_a_preset_is_its_weathers() -> None:

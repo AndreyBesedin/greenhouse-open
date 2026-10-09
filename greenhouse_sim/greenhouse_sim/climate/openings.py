@@ -17,7 +17,9 @@ Each open door or vent passes air according to the pressure across it:
 Each open opening also exchanges air both ways, as much in as out, by the
 single-sided formulas: by the stack effect over its own height,
 Q = C_d A / 3 √(g H ΔT / T), and by the wind's turbulence, Q = 0.025 A v,
-whichever is the more (CIBSE AM10). An opening alone has only this.
+whichever is the more (CIBSE AM10). An opening alone has only this. A wind
+whose direction is not known presses on no opening, but still exchanges
+air through each by its turbulence.
 """
 
 import math
@@ -159,7 +161,11 @@ def opening_flows(
     # The pressure outside each opening, less the inside's at the floor, but
     # for the house's own.
     driving = [
-        pressure_coefficient(opening, outside.wind_direction_deg) * dynamic_pa
+        (
+            0.0
+            if outside.wind_direction_deg is None
+            else pressure_coefficient(opening, outside.wind_direction_deg) * dynamic_pa
+        )
         + (inside_rho - outside_rho) * GRAVITY_M_S2 * opening.height_m
         for opening in openings
     ]

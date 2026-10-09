@@ -35,7 +35,9 @@ class OutsideConditions(BaseModel):
     relative_humidity_pct: Percent = OUTSIDE_HUMIDITY_PCT
     co2_ppm: PositiveFloat = OUTSIDE_CO2_PPM
     wind_speed_m_s: NonNegativeFloat = 0.0
-    wind_direction_deg: Bearing = 0.0
+    # None when it is not known, as in a recording without a wind vane's:
+    # such a wind drives nothing that needs its direction.
+    wind_direction_deg: Bearing | None = 0.0
     # Carried for the sun (P08), and unused until then.
     global_radiation_w_m2: NonNegativeFloat = 0.0
     cloud_cover_pct: Percent = 0.0
@@ -50,6 +52,8 @@ class WeatherState(OutsideConditions):
 
     def wind_m_s(self, site: Site) -> Vector3:
         """The wind's velocity at `site`, in the world's axes: along the way
-        it blows to, at its speed."""
+        it blows to, at its speed; nothing, if its direction is not known."""
+        if self.wind_direction_deg is None:
+            return Vector3(x=0.0, y=0.0, z=0.0)
         towards = site.towards(bearing(self.wind_direction_deg + HALF_TURN_DEG))
         return Vector3(x=self.wind_speed_m_s * towards.x, y=self.wind_speed_m_s * towards.y, z=0.0)

@@ -67,7 +67,7 @@ def test_an_open_vent_draws_the_houses_co2_towards_the_outsides() -> None:
     means = [float(run.air_at(moment).co2[AIR].mean()) for moment in (300, 900, 1800)]
 
     assert means == sorted(means, reverse=True)
-    assert CONFIG.weather.co2_ppm < means[-1] < means[0] < 800.0
+    assert CONFIG.run_weather().at(0.0).co2_ppm < means[-1] < means[0] < 800.0
 
 
 def test_the_climate_publishes_its_co2() -> None:

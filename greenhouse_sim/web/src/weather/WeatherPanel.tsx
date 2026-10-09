@@ -40,8 +40,9 @@ export function describeSite(weather: WeatherAtAMoment): string {
 /** A compass, north up, with a needle along the way the wind blows. */
 function WindCompass({ weather }: { weather: WeatherAtAMoment }) {
   const middle = COMPASS_SIZE / 2;
-  const blowing = weather.weather.wind_speed_m_s > 0;
-  const towards = (weather.weather.wind_direction_deg + HALF_TURN_DEG) % (2 * HALF_TURN_DEG);
+  const from = weather.weather.wind_direction_deg;
+  const blowing = weather.weather.wind_speed_m_s > 0 && from !== null;
+  const towards = ((from ?? 0) + HALF_TURN_DEG) % (2 * HALF_TURN_DEG);
   const tip = middle - NEEDLE_LENGTH / 2;
   const tail = middle + NEEDLE_LENGTH / 2;
   return (
@@ -117,7 +118,10 @@ export function WeatherPanel({
   const outside = weather.weather;
   const temperature = `${outside.air_temperature_c.toFixed(TEMPERATURE_DECIMALS)} °C`;
   const wind = describeWind(outside);
-  const bearing = outside.wind_speed_m_s > 0 ? ` (${Math.round(outside.wind_direction_deg)}°)` : "";
+  const bearing =
+    outside.wind_speed_m_s > 0 && outside.wind_direction_deg !== null
+      ? ` (${Math.round(outside.wind_direction_deg)}°)`
+      : "";
   return (
     <section className="weather-panel" aria-label="Weather">
       <details>

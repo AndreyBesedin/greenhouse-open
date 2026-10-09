@@ -27,6 +27,7 @@ from greenhouse_sim.scenarios.layout_files import (
 from greenhouse_sim.scene.snapshot import SceneSnapshot, scene_snapshot
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.weather.presets import PRESETS
+from greenhouse_sim.weather.recorded import recorded_weathers
 
 # The envelope's dimensions a client may change.
 DIMENSIONS: Final = ("length", "width", "spans", "bays", "eave_height", "ridge_height")
@@ -77,8 +78,8 @@ def scenario_summaries() -> list[ScenarioSummary]:
 
 def weather_names() -> list[str]:
     """The weathers any scenario can be run under: its own, then the
-    presets."""
-    return [DEFAULT_WEATHER, *PRESETS]
+    presets, then the recorded ones."""
+    return [DEFAULT_WEATHER, *PRESETS, *recorded_weathers()]
 
 
 def scenario(scenario_id: str) -> ScenarioConfig:
@@ -135,11 +136,11 @@ def changed(config: ScenarioConfig, changes: SceneChanges) -> ScenarioConfig:
 
 
 def _with_weather(config: ScenarioConfig, name: str) -> ScenarioConfig:
-    """The scenario under a preset weather, or its own; any other is not
-    found."""
+    """The scenario under a preset or a recorded weather, or its own; any
+    other is not found."""
     if name == DEFAULT_WEATHER:
         return config
-    weather = PRESETS.get(name)
+    weather = PRESETS.get(name) or recorded_weathers().get(name)
     if weather is None:
         known = ", ".join(weather_names())
         raise NotFound(f"there is no weather {name!r}; there are {known}")

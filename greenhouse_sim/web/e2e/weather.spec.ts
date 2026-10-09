@@ -127,3 +127,23 @@ test("weather: turning the wind turns which side vent takes the air in", async (
   });
   expect((await flows(72000)).side_vent_left).toBeGreaterThan(0);
 });
+
+test("weather: a recorded day replays from the run's start", async ({ page }) => {
+  await page.goto("/?scenario=climate_box&field=climate&t=600");
+  await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
+  const weather = page.getByRole("region", { name: "Weather" });
+  await weather.getByTestId("weather-summary").click();
+  await weather.getByRole("combobox", { name: "Weather to run under" }).selectOption({
+    label: "example day",
+  });
+
+  // The file's record ten minutes past its midnight, played at the run's.
+  await expect(page).toHaveURL(/weather=example_day/);
+  await expect(weather.getByTestId("weather-summary")).toHaveText(
+    "Outside at 1 Jan 2026, 00:10: 10.3 °C, wind 11.1 m/s from the SSW.",
+  );
+  await expect(weather.getByTestId("weather-pressure")).toHaveText("1008 hPa");
+  await expect(weather.getByTestId("weather-day-day-temperature")).toHaveText(
+    "Air, 8.8 to 13.4 °C",
+  );
+});

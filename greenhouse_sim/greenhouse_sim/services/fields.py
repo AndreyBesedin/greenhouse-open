@@ -56,6 +56,7 @@ from greenhouse_sim.services.scenarios import (
     equipment_levels,
     scenario,
 )
+from greenhouse_sim.weather.recorded import RecordedWeather
 from greenhouse_sim.world.geometry import Vector3
 
 # The widest a field's cell may be, in metres.
@@ -458,7 +459,12 @@ def air_through_a_run(
     climate = models.get(CLIMATE)
     if isinstance(climate, _Climate):
         day = _climate_day(*climate.key)
-        digest = hashlib.sha256(repr(climate.key).encode()).hexdigest()[:RUN_DIGEST_LENGTH]
+        # A run under recorded weather is told apart by its file's content.
+        under = changed(scenario(scenario_id), SceneChanges(weather=climate.key[2])).weather
+        recorded = under.identity() if isinstance(under, RecordedWeather) else ""
+        digest = hashlib.sha256((repr(climate.key) + recorded).encode()).hexdigest()[
+            :RUN_DIGEST_LENGTH
+        ]
         return (lambda time_s: day.sampled(f"{scenario_id}_{CLIMATE}", time_s)), (
             f"{scenario_id}-climate-{digest}"
         )

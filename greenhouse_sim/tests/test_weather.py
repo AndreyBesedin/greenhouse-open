@@ -105,8 +105,10 @@ def test_the_wind_turns_through_north_not_south() -> None:
     series = WeatherSeries([(DAWN, _wind(5.0, 350.0)), (DAWN + HOUR, _wind(5.0, 10.0))])
 
     middle = series.at(DAWN + HOUR / 2)
+    direction = middle.wind_direction_deg
 
-    assert min(middle.wind_direction_deg, 360.0 - middle.wind_direction_deg) < 1e-9
+    assert direction is not None
+    assert min(direction, 360.0 - direction) < 1e-9
     # The mean of the two vectors, a little slacker than either.
     assert middle.wind_speed_m_s == pytest.approx(5.0 * math.cos(math.radians(10.0)))
     assert series.at(DAWN + HOUR / 4).wind_direction_deg == pytest.approx(355.0, abs=0.1)

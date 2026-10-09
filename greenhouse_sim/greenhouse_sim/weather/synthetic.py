@@ -103,8 +103,9 @@ class SyntheticWeather(BaseModel):
         falling = HOURS_IN_A_DAY - (warmest - coldest)
         return (1.0 + math.cos(math.pi * since / falling)) / 2
 
-    def source(self, site: Site, seed: int) -> WeatherSource:
-        """This day's weather at `site`, its gusts drawn from `seed`."""
+    def source(self, site: Site, seed: int, start: datetime | None = None) -> WeatherSource:
+        """This day's weather at `site`, its gusts drawn from `seed`, each
+        day alike whenever a run starts."""
         pressure = self.barometric_pressure_hpa
         return _Synthetic(
             self,
