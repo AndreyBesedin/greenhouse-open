@@ -27,7 +27,7 @@ test("the example scene is drawn from its JSON file", async ({ page }) => {
   await page.goto("/?scene=example");
 
   await expect(page.getByTestId("scene-status")).toHaveText(
-    "Showing the example scene: climate_box, day 9, 122 entities.",
+    "Showing the example scene: climate_box, day 9, 127 entities.",
   );
   await expect.poll(() => objectCount(page)).toBeGreaterThan(referenceObjects);
   expect(errors).toEqual([]);

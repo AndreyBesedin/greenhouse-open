@@ -240,6 +240,96 @@
         "ppy": 240.0,
         "distortion": []
       }
+    },
+    {
+      "sensor_id": "station_temperature",
+      "position": {
+        "x": -3.0,
+        "y": 3.1,
+        "z": 1.5
+      },
+      "cadence_s": 60.0,
+      "kind": "outside_temperature",
+      "imperfections": {
+        "noise_sd": 0.1,
+        "quantization": 0.1,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "sensor_id": "station_humidity",
+      "position": {
+        "x": -3.0,
+        "y": 3.3,
+        "z": 1.5
+      },
+      "cadence_s": 60.0,
+      "kind": "outside_humidity",
+      "imperfections": {
+        "noise_sd": 1.0,
+        "quantization": 0.1,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "sensor_id": "station_pressure",
+      "position": {
+        "x": -3.0,
+        "y": 3.2,
+        "z": 1.2
+      },
+      "cadence_s": 60.0,
+      "kind": "barometric_pressure",
+      "imperfections": {
+        "noise_sd": 0.2,
+        "quantization": 0.1,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "sensor_id": "station_wind_speed",
+      "position": {
+        "x": -3.0,
+        "y": 3.1,
+        "z": 6.0
+      },
+      "cadence_s": 60.0,
+      "kind": "wind_speed",
+      "imperfections": {
+        "noise_sd": 0.2,
+        "quantization": 0.1,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
+    },
+    {
+      "sensor_id": "station_wind_direction",
+      "position": {
+        "x": -3.0,
+        "y": 3.3,
+        "z": 6.0
+      },
+      "cadence_s": 60.0,
+      "kind": "wind_direction",
+      "imperfections": {
+        "noise_sd": 5.0,
+        "quantization": 1.0,
+        "bias": 0.0,
+        "drift_per_hour": 0.0,
+        "dropout": 0.0,
+        "latency_s": 0.0
+      }
     }
   ]
 }

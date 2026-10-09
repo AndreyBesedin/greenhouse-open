@@ -14,5 +14,13 @@ class SensorKind(StrEnum):
     AIR_SPEED = "air_speed"
     # Photosynthetically active radiation.
     PAR = "par"
+    # A weather station's instruments, outside the house, each reading one
+    # quantity of the weather.
+    OUTSIDE_TEMPERATURE = "outside_temperature"
+    OUTSIDE_HUMIDITY = "outside_humidity"
+    WIND_SPEED = "wind_speed"
+    # A wind vane: the direction the wind blows from.
+    WIND_DIRECTION = "wind_direction"
+    BAROMETRIC_PRESSURE = "barometric_pressure"
     # A camera, seeing the scene from where it stands.
     CAMERA = "camera"

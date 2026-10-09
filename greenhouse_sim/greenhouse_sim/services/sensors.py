@@ -1,6 +1,7 @@
 """A scenario's sensors through a run (P06.2): what they observe, on the
 normal path, with each one's freshness and its cameras' frames (P06.6),
-and, for evaluation and QA only, what was truly there.
+and, for evaluation and QA only, what was truly there. A weather station
+reads the weather the run is under (P07.2).
 
 A run's moments are seconds from its start, which is its scenario's start
 date at midnight at its site (P07.1), until the crop's days and the air's
@@ -17,11 +18,11 @@ from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.evaluation.sensor_truth import SensorTruth, sensor_truth
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
-from greenhouse_sim.sensors.air import observe, reads
+from greenhouse_sim.sensors.air import WeatherAt, observe, reads
 from greenhouse_sim.sensors.log import SensorFreshness, frames, freshness
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import LONGEST_RUN_S, Commanded, air_through_a_run
-from greenhouse_sim.services.scenarios import SceneChanges, changed, scenario
+from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, SceneChanges, changed, scenario
 from greenhouse_sim.world.sensors import Camera, PointSensor
 
 
@@ -65,6 +66,13 @@ def _cameras(scenario_id: str, layout: str) -> list[Camera]:
     return [sensor for sensor in config.layout.sensors if isinstance(sensor, Camera)]
 
 
+def _weather_at(scenario_id: str, weather: str | None) -> WeatherAt:
+    """The weather a scenario's run is under, on its clock: its own, or a
+    preset's."""
+    config = changed(scenario(scenario_id), SceneChanges(weather=weather or DEFAULT_WEATHER))
+    return config.run_weather().at
+
+
 def _checked_until(until_s: float) -> float:
     if not 0.0 <= until_s <= LONGEST_RUN_S:
         raise InvalidRequest(f"a run lasts from 0 to {LONGEST_RUN_S:g} s, not {until_s:g}")
@@ -86,6 +94,7 @@ def observations(
     until = _checked_until(until_s)
     name = layout or DEFAULT_LAYOUT
     air_at, run_id = air_through_a_run(scenario_id, name, levels, openings, commands, weather)
+    weather_at = _weather_at(scenario_id, weather)
     start = run_start(scenario_id)
     greenhouse_id = scenario(scenario_id).greenhouse_id
     point_sensors = _point_sensors(scenario_id, name)
@@ -98,9 +107,12 @@ def observations(
         run_id=run_id,
         seed=scenario(scenario_id).random_seed,
         clean=clean,
+        weather_at=weather_at,
     )
-    # A quantity the run's air does not give, it never gives.
-    unavailable = {s.sensor_id for s in point_sensors if reads(s, air_at(0.0)) is None}
+    # A quantity the run's air and weather do not give, they never give.
+    unavailable = {
+        s.sensor_id for s in point_sensors if reads(s, air_at(0.0), weather_at(0.0)) is None
+    }
     return SensorObservations(
         run_id=run_id,
         start=start,
@@ -134,5 +146,7 @@ def truth(
     air_at, run_id = air_through_a_run(scenario_id, name, levels, openings, commands, weather)
     return SensorTruths(
         run_id=run_id,
-        sensors=sensor_truth(_point_sensors(scenario_id, name), air_at, until),
+        sensors=sensor_truth(
+            _point_sensors(scenario_id, name), air_at, until, _weather_at(scenario_id, weather)
+        ),
     )

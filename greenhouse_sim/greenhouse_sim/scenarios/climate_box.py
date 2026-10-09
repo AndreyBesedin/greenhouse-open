@@ -68,7 +68,10 @@ CLIMATE_BOX = ScenarioConfig(
     # a 10 kW heater in the back right corner, and a dehumidifier against the
     # left side wall, halfway along; and its sensors: temperature and humidity
     # in each half of the house, an anemometer in the fan's jet, CO2 in the
-    # middle and PAR under the roof.
+    # middle and PAR under the roof; and a weather station on a mast 3 m in
+    # front of the house: its air's temperature and humidity side by side
+    # 1.5 m up, the pressure below them, and the wind's speed and direction
+    # 6 m up, above the ridge.
     layout=load_layout("climate_box"),
     # Still air, so that a fan's jet stands out.
     airflow=UniformAirflow(velocity_m_s=Vector3(x=0.0, y=0.0, z=0.0)),

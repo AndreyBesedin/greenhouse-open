@@ -769,13 +769,18 @@
         "humidity",
         "co2",
         "air_speed",
-        "par"
+        "par",
+        "outside_temperature",
+        "outside_humidity",
+        "wind_speed",
+        "wind_direction",
+        "barometric_pressure"
       ],
       "type": "string"
     },
     "PointSensor": {
       "additionalProperties": false,
-      "description": "A sensor reading one quantity of the air at its position.",
+      "description": "A sensor reading one quantity of the air at its position, or, outside\nthe house, of the weather.",
       "properties": {
         "sensor_id": {
           "title": "Sensor Id",
@@ -1053,11 +1058,16 @@
       "discriminator": {
         "mapping": {
           "air_speed": "#/$defs/PointSensor",
+          "barometric_pressure": "#/$defs/PointSensor",
           "camera": "#/$defs/Camera",
           "co2": "#/$defs/PointSensor",
           "humidity": "#/$defs/PointSensor",
+          "outside_humidity": "#/$defs/PointSensor",
+          "outside_temperature": "#/$defs/PointSensor",
           "par": "#/$defs/PointSensor",
-          "temperature": "#/$defs/PointSensor"
+          "temperature": "#/$defs/PointSensor",
+          "wind_direction": "#/$defs/PointSensor",
+          "wind_speed": "#/$defs/PointSensor"
         },
         "propertyName": "kind"
       },

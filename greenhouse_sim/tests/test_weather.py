@@ -9,6 +9,7 @@ from http import HTTPStatus
 
 import numpy as np
 import pytest
+from greenhouse_protocol.enums import ObservationType
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.climate.commands import Schedule
@@ -233,3 +234,9 @@ def test_the_api_refuses_a_moment_outside_a_run_or_an_unknown_scenario(
     path: str, status: HTTPStatus
 ) -> None:
     assert respond("GET", path).status == status
+
+
+def test_every_weather_quantity_is_a_protocol_outside_observation_type() -> None:
+    # The names a record, a file and a run share (P07.1).
+    for name in WeatherState.model_fields:
+        assert ObservationType(f"outside_{name}").value == f"outside_{name}"

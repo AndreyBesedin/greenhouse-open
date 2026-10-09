@@ -9,7 +9,7 @@ from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.weather.sources import ConstantWeather, RunWeather
 from greenhouse_sim.weather.synthetic import SyntheticWeather
 from greenhouse_sim.world.envelope import Envelope
-from greenhouse_sim.world.layout import Layout, outside_the_greenhouse
+from greenhouse_sim.world.layout import Layout, inside_the_greenhouse, outside_the_greenhouse
 from greenhouse_sim.world.site import DEFAULT_SITE, Site
 
 # A refusal names this many of the things it refuses, and counts the rest.
@@ -100,6 +100,13 @@ class ScenarioConfig(BaseModel):
             raise ValueError(
                 f"outside the greenhouse: {named}" + (f" and {more} more" if more > 0 else "")
             )
+        return self
+
+    @model_validator(mode="after")
+    def _the_weather_station_stands_outside(self) -> Self:
+        inside = inside_the_greenhouse(self.layout, self.envelope)
+        if inside:
+            raise ValueError(f"a weather station stands outside the house, not {inside[0]}")
         return self
 
     @model_validator(mode="after")

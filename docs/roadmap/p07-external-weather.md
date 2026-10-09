@@ -1,7 +1,7 @@
 # P07: External weather and greenhouse boundary coupling
 
-**Status:** in progress: P07.1 done, P07.2's synthetic days done, its weather
-station next. Part of the [simulator roadmap](README.md).
+**Status:** in progress: P07.1 and P07.2 done, P07.3 next. Part of the
+[simulator roadmap](README.md).
 
 ## Goal
 
@@ -244,7 +244,7 @@ station's readings, never the weather source itself.
 | Step | Commit summary | Status |
 | --- | --- | --- |
 | P07.1 | `feat(weather): define the site, the weather state and its sources` | Done |
-| P07.2 | `feat(weather): add synthetic day and night weather presets` | In progress |
+| P07.2 | `feat(weather): add synthetic day and night weather presets` | Done |
 | P07.3 | `feat(climate): run a whole day` | Planned |
 | P07.4 | `feat(boundary): couple the glazing to the changing outside` | Planned |
 | P07.5 | `feat(boundary): add infiltration and the outside's water and CO₂` | Planned |
@@ -363,6 +363,33 @@ station after them.
   marked across them. Choosing another layout keeps the weather.
 - **Not yet:** the runs still last an hour, so a day is seen in the chart,
   not yet in the run (P07.3).
+
+The weather station, in the second:
+
+- **Its instruments are point sensors** of five new kinds, each reading one
+  quantity of the weather the run is under at its samples: the air's
+  temperature (`outside_temperature`) and humidity (`outside_humidity`),
+  the wind's speed (`wind_speed`) and the direction it blows from
+  (`wind_direction`), and the pressure (`barometric_pressure`). They err as
+  P06's sensors do, in their own units. A wind vane's reading goes round
+  the compass rather than being held at an end; the others are held within
+  their instruments' ranges.
+- **They report the protocol's outside observations,** which gains the
+  types it lacked: `outside_wind_direction_deg`,
+  `outside_barometric_pressure_hpa` and `outside_cloud_cover_pct`. Every
+  quantity of the weather state now has its `outside_*` type, and a test
+  keeps it so.
+- **They stand outside the house,** and a layout that puts one inside is
+  refused; the house's own sensors still stand inside. Their housings are
+  in the way of nothing, as the others' are.
+- **The climate box has one** on a mast 3 m in front of the house: its
+  thermometer and hygrometer 1.5 m up, its barometer below them, and its
+  anemometer and wind vane 6 m up, above the ridge. Its scene has five more
+  entities, and its observation log five more sensors.
+- **Their truth** is the weather itself, by the same evaluation-only path
+  as the others'. Policies see the station's readings, never the weather.
+- **In the viewer** each instrument is a sensor like the others: selected,
+  its reading and the truth beside it, through the run.
 
 ### P07.3: A whole day
 

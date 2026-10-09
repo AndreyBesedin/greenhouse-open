@@ -93,6 +93,11 @@ def test_observations_conform_to_the_protocol_and_name_their_sensor_and_run() ->
         "humidity_back",
         "anemometer",
         "co2",
+        "station_temperature",
+        "station_humidity",
+        "station_pressure",
+        "station_wind_speed",
+        "station_wind_direction",
     }
     assert {o.source.source_id for o in observed.observations} == {observed.run_id}
     delivered = [o.delivered_at or o.timestamp for o in observed.observations]
@@ -146,7 +151,9 @@ def test_the_api_serves_the_observations_and_the_truth() -> None:
     assert isinstance(observed.body, dict) and isinstance(truth.body, dict)
     assert observed.body["run_id"] == truth.body["run_id"]
     assert isinstance(observed.body["observations"], list)
-    assert len(observed.body["observations"]) == 6 * 3
+    # Six sensors inside and five outside give a reading a minute each; PAR
+    # gives none.
+    assert len(observed.body["observations"]) == 11 * 3
 
 
 @pytest.mark.parametrize(

@@ -7,11 +7,17 @@ humidity sensor its relative humidity, a CO2 sensor its CO2, an anemometer
 its speed. A quantity the field does not carry, as no model gives PAR yet,
 is no reading at all: a gap is an absent record.
 
+A weather station's instruments (P07.2) stand outside the house, and read
+the weather instead, as it is at each sample: its air's temperature and
+humidity, the wind's speed and the direction it blows from, and the
+barometric pressure. Policies see their readings, never the weather itself.
+
 A sensor errs as its configuration says (`Imperfections`, P06.3). Its
 sample may drop out, and is then no reading; otherwise the truth there is
 given its bias, its drift so far (linear in time since the run's start) and
 Gaussian noise, rounded to its quantization step, and held within its
-instrument's range, flagged `CLIPPED` where it was held. It is delivered
+instrument's range, flagged `CLIPPED` where it was held; a wind vane's goes
+round the compass instead. It is delivered
 its latency after it was taken. Each sample's draws are seeded by the
 scenario's seed, the sensor's identifier and the sample's index, so a
 reading is the same however a run is asked for, two sensors never share
@@ -38,8 +44,10 @@ from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.domain.sensors import SensorKind
 from greenhouse_sim.fields.field import EnvironmentField
 from greenhouse_sim.records import observation_id
+from greenhouse_sim.weather.state import WeatherState
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.sensors import Camera, Imperfections, PointSensor
+from greenhouse_sim.world.site import DEGREES_IN_A_TURN, bearing
 
 # What each kind of point sensor reads of a field.
 QUANTITIES: Final = {
@@ -48,6 +56,14 @@ QUANTITIES: Final = {
     SensorKind.CO2: AirQuantity.CO2,
     SensorKind.AIR_SPEED: AirQuantity.VELOCITY,
 }
+# What each of a weather station's instruments reads of the weather.
+WEATHER_QUANTITIES: Final = {
+    SensorKind.OUTSIDE_TEMPERATURE: "air_temperature_c",
+    SensorKind.OUTSIDE_HUMIDITY: "relative_humidity_pct",
+    SensorKind.WIND_SPEED: "wind_speed_m_s",
+    SensorKind.WIND_DIRECTION: "wind_direction_deg",
+    SensorKind.BAROMETRIC_PRESSURE: "barometric_pressure_hpa",
+}
 # What each kind of point sensor reports itself as.
 OBSERVATION_TYPES: Final = {
     SensorKind.TEMPERATURE: ObservationType.AIR_TEMPERATURE_C,
@@ -55,6 +71,11 @@ OBSERVATION_TYPES: Final = {
     SensorKind.CO2: ObservationType.CO2_PPM,
     SensorKind.AIR_SPEED: ObservationType.AIR_SPEED_M_S,
     SensorKind.PAR: ObservationType.PAR_UMOL_M2_S,
+    SensorKind.OUTSIDE_TEMPERATURE: ObservationType.OUTSIDE_AIR_TEMPERATURE_C,
+    SensorKind.OUTSIDE_HUMIDITY: ObservationType.OUTSIDE_RELATIVE_HUMIDITY_PCT,
+    SensorKind.WIND_SPEED: ObservationType.OUTSIDE_WIND_SPEED_M_S,
+    SensorKind.WIND_DIRECTION: ObservationType.OUTSIDE_WIND_DIRECTION_DEG,
+    SensorKind.BAROMETRIC_PRESSURE: ObservationType.OUTSIDE_BAROMETRIC_PRESSURE_HPA,
 }
 
 # The range each kind of instrument measures over: a reading beyond it is
@@ -65,16 +86,29 @@ MEASURING_RANGES: Final = {
     SensorKind.CO2: (0.0, 10_000.0),
     SensorKind.AIR_SPEED: (0.0, 30.0),
     SensorKind.PAR: (0.0, 3_000.0),
+    SensorKind.OUTSIDE_TEMPERATURE: (-50.0, 60.0),
+    SensorKind.OUTSIDE_HUMIDITY: (0.0, 100.0),
+    SensorKind.WIND_SPEED: (0.0, 60.0),
+    SensorKind.WIND_DIRECTION: (0.0, DEGREES_IN_A_TURN),
+    SensorKind.BAROMETRIC_PRESSURE: (500.0, 1_100.0),
 }
+# The kinds whose readings go round, rather than end.
+GOING_ROUND: Final = frozenset({SensorKind.WIND_DIRECTION})
 SECONDS_PER_HOUR: Final = 3600.0
 
-# The air at a moment of a run, in seconds from its start.
+# The air at a moment of a run, in seconds from its start, and the weather.
 type AirAt = Callable[[float], EnvironmentField]
+type WeatherAt = Callable[[float], WeatherState]
 
 
-def reads(sensor: PointSensor, field: EnvironmentField) -> float | None:
-    """What the air at a sensor's position is, of the quantity it reads, or
-    None if the field does not carry it."""
+def reads(
+    sensor: PointSensor, field: EnvironmentField, outside: WeatherState | None = None
+) -> float | None:
+    """What the air at a sensor's position is, of the quantity it reads, or,
+    for a weather station's, the weather `outside`; None if neither carries
+    it."""
+    if sensor.reads_the_weather():
+        return None if outside is None else float(getattr(outside, WEATHER_QUANTITIES[sensor.kind]))
     quantity = QUANTITIES.get(sensor.kind)
     if quantity is None:
         return None
@@ -116,6 +150,8 @@ def erred(
         # Rounded to the step, and written to its own decimals.
         decimals = len(format(step, "f").rstrip("0").partition(".")[2])
         value = round(round(value / step) * step, decimals)
+    if sensor.kind in GOING_ROUND:
+        return bearing(value), False
     low, high = MEASURING_RANGES[sensor.kind]
     held = min(max(value, low), high)
     return held, held != value
@@ -131,10 +167,12 @@ def observe(
     run_id: str,
     seed: int = 0,
     clean: bool = False,
+    weather_at: WeatherAt | None = None,
 ) -> list[Observation]:
-    """Every reading `sensors` have delivered of the air by `until_s`, as
-    observations, in the order they were delivered; as clean sensors would
-    have read it, if `clean`."""
+    """Every reading `sensors` have delivered of the air by `until_s`, and of
+    the weather, if a weather station reads it, as observations, in the order
+    they were delivered; as clean sensors would have read them, if
+    `clean`."""
     source = RecordSource(type=SourceType.SIMULATION, source_id=run_id)
     observations = []
     for sensor in sensors:
@@ -143,7 +181,8 @@ def observe(
         for index, moment in enumerate(samples(sensor, until_s)):
             if moment + latency > until_s:
                 break
-            truth = reads(sensor, air_at(moment))
+            outside = weather_at(moment) if weather_at is not None else None
+            truth = reads(sensor, air_at(moment), outside)
             if truth is None:
                 continue
             reported = (truth, False) if clean else erred(sensor, truth, moment, index, seed)
