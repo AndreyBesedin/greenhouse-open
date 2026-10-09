@@ -87,6 +87,7 @@ import { WeatherPanel } from "./weather/WeatherPanel";
 import {
   loadWeather,
   loadWeatherDay,
+  sunOverlays,
   type WeatherDayState,
   type WeatherStateOfLoad,
   windOverlays,
@@ -746,6 +747,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       ...(probedField === null ? [] : probeOverlays(probes, probedField)),
       ...(snapshot === null ? [] : frustumOverlays(snapshot)),
       ...(snapshot === null || outside === null ? [] : windOverlays(snapshot, outside)),
+      ...(snapshot === null || outside === null ? [] : sunOverlays(snapshot, outside)),
       ...(snapshot === null || flowing === null ? [] : openingFlowOverlays(snapshot, flowing)),
     ],
     [

@@ -30,9 +30,16 @@ export interface WeatherState {
   cloud_cover_pct: number;
 }
 
+/** Where the sun stands at a moment: its elevation above the horizon and its
+ * azimuth, clockwise from north, in degrees. */
+export interface SunPosition {
+  elevation_deg: number;
+  azimuth_deg: number;
+}
+
 /** A scenario's weather at a moment of a run, as the simulator sends it
  * (`GET /api/scenarios/{id}/weather`): with the wind's velocity in the
- * world's axes. */
+ * world's axes, and where the sun stands, with the direction towards it. */
 export interface WeatherAtAMoment {
   site: Site;
   /** The moment, as an instant. */
@@ -40,6 +47,8 @@ export interface WeatherAtAMoment {
   timeS: number;
   weather: WeatherState;
   windMS: Point3;
+  sun: SunPosition;
+  sunDirection: Point3;
 }
 
 export type WeatherStateOfLoad =
@@ -160,7 +169,11 @@ export function parseWeather(body: unknown): WeatherAtAMoment {
     !isObject(body.weather) ||
     typeof body.moment !== "string" ||
     typeof body.time_s !== "number" ||
-    !isPoint(body.wind_m_s)
+    !isPoint(body.wind_m_s) ||
+    !isObject(body.sun) ||
+    typeof body.sun.elevation_deg !== "number" ||
+    typeof body.sun.azimuth_deg !== "number" ||
+    !isPoint(body.sun_direction)
   ) {
     throw new Error("the weather is not what the viewer expects");
   }
@@ -175,6 +188,8 @@ export function parseWeather(body: unknown): WeatherAtAMoment {
     timeS: body.time_s,
     weather,
     windMS: body.wind_m_s,
+    sun: { elevation_deg: body.sun.elevation_deg, azimuth_deg: body.sun.azimuth_deg },
+    sunDirection: body.sun_direction,
   };
 }
 
@@ -265,5 +280,56 @@ export function windOverlays(
       position: origin,
       text: `wind ${describeWind(weather.weather)}`,
     },
+  ];
+}
+
+// The sun's marker stands this many times the house's longer side from its
+// middle, in the sun's direction, so that it is in the sky of any view.
+const SUN_REACH = 1.5;
+export const SUN_COLOR = "#e6a800";
+
+/** Where the sun stands, in words: "14.6° up, at 180° (S)". */
+export function describeSun(sun: SunPosition): string {
+  if (sun.elevation_deg <= 0) {
+    return "below the horizon";
+  }
+  return `${sun.elevation_deg.toFixed(SPEED_DECIMALS)}° up, at ${Math.round(sun.azimuth_deg)}° (${compassPoint(sun.azimuth_deg)})`;
+}
+
+/**
+ * The sun in the scene, while it is up: a marker in the sky in its
+ * direction from the house's middle, an arrow from it to the house, along
+ * its light, and a label. Nothing at night, or for a scene without the
+ * house's bounds.
+ */
+export function sunOverlays(
+  snapshot: SceneSnapshot,
+  weather: WeatherAtAMoment,
+): OverlayPrimitive[] {
+  const bounds = snapshot.entities.find((entity) => entity.kind === "GREENHOUSE_BOUNDS");
+  if (bounds?.shape.shape !== "box" || weather.sun.elevation_deg <= 0) {
+    return [];
+  }
+  const { size_x, size_y, size_z } = bounds.shape;
+  const middle = inWorld(bounds.transform, { x: 0, y: 0, z: size_z / 2 });
+  const reach = Math.max(size_x, size_y) * SUN_REACH;
+  const towards = weather.sunDirection;
+  const marker = {
+    x: middle.x + towards.x * reach,
+    y: middle.y + towards.y * reach,
+    z: middle.z + towards.z * reach,
+  };
+  const along = { x: -towards.x, y: -towards.y, z: -towards.z };
+  return [
+    { id: "sun-marker", kind: "point", position: marker, color: SUN_COLOR },
+    {
+      id: "sun-arrow",
+      kind: "arrow",
+      origin: marker,
+      direction: along,
+      length: reach - Math.max(size_x, size_y) / 2,
+      color: SUN_COLOR,
+    },
+    { id: "sun-label", kind: "label", position: marker, text: `sun ${describeSun(weather.sun)}` },
   ];
 }

@@ -2,6 +2,7 @@ import { DEFAULT_WEATHER } from "../scenarios";
 import { WeatherDayChart } from "./WeatherDay";
 import {
   compassPoint,
+  describeSun,
   describeWind,
   type WeatherAtAMoment,
   type WeatherDayState,
@@ -156,6 +157,8 @@ export function WeatherPanel({
           </dd>
           <dt>Wind</dt>
           <dd data-testid="weather-wind">{`${wind}${bearing}`}</dd>
+          <dt>Sun</dt>
+          <dd data-testid="weather-sun">{describeSun(weather.sun)}</dd>
           <dt>Pressure</dt>
           <dd data-testid="weather-pressure">
             {`${Math.round(outside.barometric_pressure_hpa)} hPa`}

@@ -8,11 +8,13 @@ import { WeatherDayChart } from "./WeatherDay";
 import { describeSite, localTime, WeatherPanel, weatherName } from "./WeatherPanel";
 import {
   compassPoint,
+  describeSun,
   describeWind,
   loadWeather,
   loadWeatherDay,
   parseWeather,
   parseWeatherDay,
+  sunOverlays,
   type WeatherAtAMoment,
   weatherDayUrl,
   weatherUrl,
@@ -45,6 +47,13 @@ const WESTERLY_BODY = {
     cloud_cover_pct: 0,
   },
   wind_m_s: { x: 3, y: 0, z: 0 },
+  // A low winter sun at noon, due south: x east, y north.
+  sun: { elevation_deg: 14.6, azimuth_deg: 180, declination_deg: -23, equation_of_time_min: -3 },
+  sun_direction: {
+    x: 0,
+    y: -Math.cos((14.6 * Math.PI) / 180),
+    z: Math.sin((14.6 * Math.PI) / 180),
+  },
 };
 const WESTERLY: WeatherAtAMoment = parseWeather(WESTERLY_BODY);
 // A day warming from 4 °C to 16 °C and back, every six hours.
@@ -291,5 +300,32 @@ describe("the day's weather", () => {
         <WeatherDayChart state={{ status: "unavailable", reason: "no API" }} time={0} />,
       ),
     ).toContain("weather cannot be read: no API.");
+  });
+});
+
+describe("the sun", () => {
+  it("is written by its elevation and bearing, or as below the horizon", () => {
+    expect(describeSun(WESTERLY.sun)).toBe("14.6° up, at 180° (S)");
+    expect(describeSun({ elevation_deg: -5, azimuth_deg: 0 })).toBe("below the horizon");
+  });
+
+  it("stands in the sky in its direction, its arrow pointing at the house", () => {
+    const [marker, arrow, label] = sunOverlays(EXAMPLE, WESTERLY);
+
+    // 1.5 times the house's 12 m from its middle, to the south and up.
+    expect(marker).toMatchObject({ kind: "point" });
+    if (marker?.kind === "point" && arrow?.kind === "arrow") {
+      expect(marker.position.y).toBeCloseTo(3.2 - 18 * Math.cos((14.6 * Math.PI) / 180));
+      expect(marker.position.z).toBeGreaterThan(2.4);
+      expect(arrow.direction.y).toBeGreaterThan(0);
+      expect(arrow.length).toBeCloseTo(18 - 6);
+    }
+    expect(label).toMatchObject({ kind: "label", text: "sun 14.6° up, at 180° (S)" });
+  });
+
+  it("is not drawn at night", () => {
+    const night = { ...WESTERLY, sun: { elevation_deg: -10, azimuth_deg: 0 } };
+
+    expect(sunOverlays(EXAMPLE, night)).toEqual([]);
   });
 });
