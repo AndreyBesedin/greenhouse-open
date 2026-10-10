@@ -108,10 +108,14 @@ def test_it_follows_the_weather_through_a_day() -> None:
     house = _climate_day("climate_box", "default", "cold_spring_day", (), (), ()).house
     dawn, afternoon = house.air_at(6.5 * 3600), house.air_at(15.5 * 3600)
 
-    # Shut and unheated, the house follows the outside through its glass.
+    # Shut and unheated, the house follows the outside through its glass,
+    # before dawn; by day the sun, low in January and half clouded, warms it
+    # a little above (P08.8).
     assert dawn.temperature_c < afternoon.temperature_c
     assert dawn.temperature_c == pytest.approx(COLD_SPRING_DAY.coldest_c, abs=1.0)
-    assert afternoon.temperature_c == pytest.approx(COLD_SPRING_DAY.warmest_c, abs=1.0)
+    assert (
+        COLD_SPRING_DAY.warmest_c + 1.0 < afternoon.temperature_c < COLD_SPRING_DAY.warmest_c + 3.0
+    )
 
 
 def test_requests_at_once_work_the_house_out_one_at_a_time() -> None:

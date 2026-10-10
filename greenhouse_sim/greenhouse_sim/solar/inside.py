@@ -84,7 +84,11 @@ class Sunlight:
         xs, ys, zs = grid.centres()
         z, y, x = np.meshgrid(zs, ys, xs, indexing="ij")
         self._centres = np.stack([x.ravel(), y.ravel(), z.ravel()], axis=1)
+        nx, ny, _ = grid.shape
+        # The lowest layer's centres: the first in the grid's order.
+        self._floor = self._centres[: nx * ny]
         self._lit: dict[int, np.ndarray] = {}
+        self._floor_lit: dict[int, np.ndarray] = {}
 
     def sun_at(self, time_s: float) -> SunPosition:
         """Where the sun stands `time_s` into the run."""
@@ -102,17 +106,34 @@ class Sunlight:
             return np.ones(len(points), dtype=bool)
         return self.shadows.lit(points, towards)
 
+    def _kept_lit(
+        self, kept: dict[int, np.ndarray], points: np.ndarray, time_s: float
+    ) -> np.ndarray:
+        step = round(time_s / SHADOW_EVERY_S)
+        lit = kept.get(step)
+        if lit is None:
+            towards = self.sun_at(step * SHADOW_EVERY_S).direction(self.site)
+            lit = self._unshaded(points, towards)
+            kept[step] = lit
+        return lit
+
     def cells_lit(self, time_s: float) -> np.ndarray:
         """Which of the grid's cells' centres, in the grid's order flattened,
         the beam reaches unshaded, as the sun stands at the `SHADOW_EVERY_S`
         nearest `time_s`."""
-        step = round(time_s / SHADOW_EVERY_S)
-        lit = self._lit.get(step)
-        if lit is None:
-            towards = self.sun_at(step * SHADOW_EVERY_S).direction(self.site)
-            lit = self._unshaded(self._centres, towards)
-            self._lit[step] = lit
-        return lit
+        return self._kept_lit(self._lit, self._centres, time_s)
+
+    def floor_irradiance(self, time_s: float) -> np.ndarray:
+        """The light on a level surface at the centres of the grid's lowest
+        layer of cells, in the grid's order (y, x), `time_s` into the run, in
+        W/m²: what reaches the floor, the solid cells there among them. Its
+        shade is kept apart from the whole grid's, so that a run warmed by
+        the sun works out only its floor's."""
+        nx, ny, _ = self.grid.shape
+        if not self.sun_at(time_s).is_up() or self.outside_at(time_s).ghi_w_m2 <= 0:
+            return np.zeros((ny, nx))
+        lit = self._kept_lit(self._floor_lit, self._floor, time_s)
+        return self._irradiance(self._floor, UP, time_s, lit).reshape((ny, nx))
 
     def _irradiance(
         self,

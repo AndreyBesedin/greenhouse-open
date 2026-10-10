@@ -1,6 +1,6 @@
 # P08: Sun position, glazing and radiation propagation
 
-**Status:** in progress: P08.1 to P08.7 done, P08.8 next. Part of the
+**Status:** in progress: P08.1 to P08.8 done, P08.9 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -184,7 +184,7 @@ to here.
 | P08.5 | `feat(radiation): add geometric shadow and occlusion tracing` | Done |
 | P08.6 | `feat(radiation): add plant canopy interception hooks` | Done |
 | P08.7 | `feat(radiation): add the diffuse sky and the clouds' attenuation` | Done |
-| P08.8 | `feat(climate): warm the house with the sun` | Planned |
+| P08.8 | `feat(climate): warm the house with the sun` | Done |
 | P08.9 | `test(radiation): add equinox day-path visual regression` | Planned |
 
 ### P08.1: The sun's position
@@ -453,6 +453,30 @@ and in the whole house; P07's numbers that move recorded again. Visible
 result: on a clear day the shut house warms well above the outside by
 noon. Tests: the heat gained is η times the radiation absorbed; at night
 nothing changes.
+
+#### As implemented
+
+- **On the grid** (`ClimateRun.solar_heat_w`): the light on a level surface
+  at the centres of the grid's lowest layer of cells, the glass's and the
+  shade's share of it, is taken as what reaches the floor; the air in each
+  column's lowest cell of air takes 70% of it as heat (`SOLAR_HEAT_SHARE`),
+  over the cell's plan, at the middle of each stretch, beside the
+  equipment's. A column a fixture stands in gives its heat to the air
+  above it.
+- **The floor's light alone:** `Sunlight.floor_irradiance` works out the
+  lowest layer's light with its own five-minute shade, so that a run
+  warmed by the sun does not trace the whole grid; nothing at night or
+  under a weather without light.
+- **The whole house** takes the same total, in its heat balance beside the
+  equipment's heat.
+- **What it does:** at the equinox's noon, the solar lab's shut house,
+  given some 25 kW by the sun through its glass, stands at 29.5 °C against
+  14.4 outside. Under the cold spring day in January, low and half
+  clouded, the climate box's shut house stands 3 °C above the outside at
+  15:00 (18.9 °C against 16.0), and by 20:00 has lost it all through its
+  single glass; its numbers at 15:00 are recorded again. Constant weather
+  gives no light, so the climate box's own runs, and every night, keep
+  their numbers.
 
 ### P08.9: Equinox day-path visual regression
 

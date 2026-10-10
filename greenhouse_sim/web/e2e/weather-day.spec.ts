@@ -84,11 +84,19 @@ test("weather-day: the climate box through a cold spring day", async ({ page }) 
 
   await test.step("the air inside answers it, in the field and the whole house", async () => {
     await at(page, DAY, 6 * H, "6 h 00 min");
-    await expect(house.getByTestId("house-air-°C")).toHaveText("Air 4.0 °C, all off 4.0 °C");
+    await expect(house.getByTestId("house-air-°C")).toHaveText(
+      "Air 4.0 °C, all off 4.0 °C",
+      ARRIVES,
+    );
     await expect(probe).toHaveText(/temperature [34]\.\d\d °C/, ARRIVES);
+    // In the afternoon the sun, low and half clouded, warms the shut house
+    // some 3 °C above the outside (P08.8), its floor's air most.
     await at(page, DAY, 15 * H, "15 h 00 min");
-    await expect(house.getByTestId("house-air-°C")).toHaveText("Air 16.0 °C, all off 16.0 °C");
-    await expect(probe).toHaveText(/temperature 1[56]\.\d\d °C/, ARRIVES);
+    await expect(house.getByTestId("house-air-°C")).toHaveText(
+      "Air 18.9 °C, all off 18.9 °C",
+      ARRIVES,
+    );
+    await expect(probe).toHaveText(/temperature 19\.\d\d °C/, ARRIVES);
   });
 
   await test.step("the side vents' flows turn with the wind", async () => {
@@ -125,7 +133,7 @@ test("weather-day: the climate box through a cold spring day", async ({ page }) 
     ).toBe("4.00 °C at 6 h 00 min");
     expect(
       await sensorReads(page, DAY, 15 * H, "15 h 00 min", FRONT_FACE, BESIDE_THE_FRONT, id),
-    ).toBe("16.00 °C at 15 h 00 min");
+    ).toBe("18.95 °C at 15 h 00 min");
     expect(
       await sensorReads(page, DAY, 6 * H, "6 h 00 min", STATION_FACE, BEFORE_THE_STATION, station),
     ).toBe("3.90 °C at 6 h 00 min");
