@@ -224,7 +224,7 @@ def _new_climate_run(
         weather=outside,
         vents=vents,
         glazed=glazed_cells(config.envelope, grid, geometry.solid()),
-        sunlight=Sunlight(config.site, outside, grid),
+        sunlight=Sunlight(config.site, outside, grid, config.envelope),
     )
 
 

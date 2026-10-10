@@ -144,7 +144,11 @@ test("weather-day: the climate box through a cold spring day", async ({ page }) 
 
   await test.step("a controlled run pulls away from the same day all off", async () => {
     await at(page, CONTROLLED, 20 * H, "20 h 00 min");
-    await expect(house.getByTestId("house-air-°C")).toHaveText("Air 19.9 °C, all off 13.1 °C");
+    // The controlled run's house is worked out afresh through the day.
+    await expect(house.getByTestId("house-air-°C")).toHaveText(
+      "Air 19.9 °C, all off 13.1 °C",
+      ARRIVES,
+    );
   });
 
   await test.step("played, it moves on through the day", async () => {

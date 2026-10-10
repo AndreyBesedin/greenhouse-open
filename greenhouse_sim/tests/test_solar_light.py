@@ -1,5 +1,6 @@
 """The sun's and the sky's light (P08.3): the clear sky's, the beam and the
-diffuse, PAR from them, outside and inside, and the climate field's light."""
+diffuse, PAR from them, outside and inside, through the glass (P08.4), and
+the climate field's light."""
 
 import json
 import math
@@ -16,6 +17,7 @@ from greenhouse_sim.domain.air import AIR_UNITS, AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services.fields import air_grid
+from greenhouse_sim.solar.glass import NORMAL_TRANSMITTANCE
 from greenhouse_sim.solar.inside import Sunlight
 from greenhouse_sim.solar.position import SunPosition, sun_position
 from greenhouse_sim.solar.sky import (
@@ -36,6 +38,8 @@ EQUINOX = datetime(2026, 3, 20, tzinfo=UTC)
 EQUINOX_NOON = EQUINOX + timedelta(hours=11, minutes=50)
 NOON_S = 11 * 3600 + 50 * 60
 UP = Vector3(x=0.0, y=0.0, z=1.0)
+# The middle of the climate box's floor, half a metre up.
+MIDDLE = Vector3(x=6.0, y=3.2, z=0.5)
 
 
 def _sun(elevation_deg: float) -> SunPosition:
@@ -49,7 +53,12 @@ def _sun(elevation_deg: float) -> SunPosition:
 
 def _sunlight(weather: ConstantWeather, start: datetime = EQUINOX) -> Sunlight:
     config = SCENARIO_REGISTRY["climate_box"]
-    return Sunlight(DEFAULT_SITE, RunWeather(weather.source(DEFAULT_SITE), start), air_grid(config))
+    return Sunlight(
+        DEFAULT_SITE,
+        RunWeather(weather.source(DEFAULT_SITE), start),
+        air_grid(config),
+        config.envelope,
+    )
 
 
 def test_a_clear_sky_gives_haurwitzs_light_and_none_at_night() -> None:
@@ -104,22 +113,27 @@ def test_a_level_surface_takes_the_beam_by_the_suns_height_and_one_facing_it_all
     sun = sunlight.sun_at(NOON_S)
     towards = sun.direction(DEFAULT_SITE)
     cos_zenith = math.sin(math.radians(sun.elevation_deg))
+    # What the glass passes on the way to the middle of the floor.
+    passed = float(sunlight.glazing.beam_transmittance(np.array([[6.0, 3.2, 0.5]]), towards)[0])
 
-    assert sunlight.on(UP, NOON_S) == pytest.approx(light.dni_w_m2 * cos_zenith)
-    assert sunlight.on(UP, NOON_S) == pytest.approx(400.0)
-    assert sunlight.on(towards, NOON_S) == pytest.approx(light.dni_w_m2)
+    assert sunlight.on(MIDDLE, UP, NOON_S) == pytest.approx(light.dni_w_m2 * cos_zenith * passed)
+    assert sunlight.on(MIDDLE, UP, NOON_S) == pytest.approx(400.0 * passed)
+    assert sunlight.on(MIDDLE, towards, NOON_S) == pytest.approx(light.dni_w_m2 * passed)
     # Facing north, away from the noon sun, a wall takes none of the beam.
-    assert sunlight.on(Vector3(x=0.0, y=1.0, z=0.0), NOON_S) == pytest.approx(0.0)
+    assert sunlight.on(MIDDLE, Vector3(x=0.0, y=1.0, z=0.0), NOON_S) == pytest.approx(0.0)
 
 
-def test_inside_the_light_reaches_every_cell_as_it_is_outside_for_now() -> None:
+def test_inside_the_light_reaches_every_cell_through_the_glass() -> None:
     sunlight = _sunlight(ConstantWeather(global_radiation_w_m2=400.0))
     inside = sunlight.at(NOON_S)
     nx, ny, nz = sunlight.grid.shape
 
     assert inside.irradiance_w_m2.shape == (nz, ny, nx)
-    assert np.allclose(inside.irradiance_w_m2, 400.0)
-    assert np.allclose(inside.par_umol_m2_s, par_umol_m2_s(400.0))
+    # Less than outside, but most of it: more under the south roof slope,
+    # which the noon sun meets at 38°, than the north one, at 66°.
+    assert inside.irradiance_w_m2.max() == pytest.approx(331.0, abs=1.0)
+    assert inside.irradiance_w_m2.min() == pytest.approx(290.0, abs=1.0)
+    assert np.allclose(inside.par_umol_m2_s, inside.irradiance_w_m2 * PAR_UMOL_M2_S_PER_W_M2)
     # Constant weather's light is only while the sun is up.
     assert np.allclose(sunlight.at(0.0).par_umol_m2_s, 0.0)
 
@@ -156,20 +170,20 @@ def test_a_climate_runs_field_carries_the_light() -> None:
         grid=grid,
         solid=np.zeros((nz, ny, nx), dtype=bool),
         weather=weather,
-        sunlight=Sunlight(config.site, weather, grid),
+        sunlight=Sunlight(config.site, weather, grid, config.envelope),
     )
     air = AirState(
         temperature=np.full((nz, ny, nx), 16.0),
         humidity=np.full((nz, ny, nx), 8.0),
         co2=np.full((nz, ny, nx), 420.0),
     )
-    middle = Vector3(x=6.0, y=3.2, z=0.5)
-
     noon = run.field_of(air, "lit", NOON_S)
     night = run.field_of(air, "dark", 0.0)
-    assert noon.sample(AirQuantity.IRRADIANCE, middle) == pytest.approx(400.0)
-    assert noon.sample(AirQuantity.PAR, middle) == pytest.approx(par_umol_m2_s(400.0))
-    assert night.sample(AirQuantity.PAR, middle) == pytest.approx(0.0)
+    level = noon.sample(AirQuantity.IRRADIANCE, MIDDLE)
+    assert isinstance(level, float)
+    assert 0.75 * 400.0 < level < NORMAL_TRANSMITTANCE * 400.0
+    assert noon.sample(AirQuantity.PAR, MIDDLE) == pytest.approx(par_umol_m2_s(level))
+    assert night.sample(AirQuantity.PAR, MIDDLE) == pytest.approx(0.0)
 
 
 def test_the_api_serves_the_climates_light_and_the_skys() -> None:
@@ -192,7 +206,10 @@ def test_the_api_serves_the_climates_light_and_the_skys() -> None:
     # About 9° up, so a little over 100 W/m².
     assert 80.0 < light["ghi_w_m2"] < 150.0
     assert light["par_umol_m2_s"] == pytest.approx(par_umol_m2_s(light["ghi_w_m2"]))
-    assert par == pytest.approx(light["par_umol_m2_s"], rel=1e-5)
+    # Inside, through the south wall's glass, a low sun's beam meets it
+    # squarely enough for the glass to pass nearly all it can.
+    assert isinstance(par, float)
+    assert 0.8 * light["par_umol_m2_s"] < par < NORMAL_TRANSMITTANCE * light["par_umol_m2_s"]
     channels = {channel.quantity: channel.unit for channel in document.channels}
     assert channels[AirQuantity.PAR] == "µmol/m²/s"
     assert channels[AirQuantity.IRRADIANCE] == "W/m²"

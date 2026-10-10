@@ -3,9 +3,13 @@ import { expect, test } from "@playwright/test";
 // The middle of the climate box's floor, a quarter of a metre up.
 const ON_THE_FLOOR = "6:3.2:0.25";
 
-test("light: under a clear sky the floor takes the sun's PAR", async ({ page }) => {
+test("light: under a clear sky the floor takes the sun's PAR through the glass", async ({
+  page,
+}) => {
   // 12:45 on 1 January, about solar noon, the sun 15° up: a clear sky's
-  // 229.5 W/m² on a level surface, its PAR 2.15 times that.
+  // 229.5 W/m² on a level surface outside, its PAR 2.15 times that. Inside,
+  // the beam crosses the south wall 15° from square, which passes 84.7% of
+  // it.
   await page.goto(
     `/?scenario=climate_box&field=climate&weather=cold_spring_day&t=45900&fieldView=slice&slice=par:z:0.25&probes=${ON_THE_FLOOR}`,
   );
@@ -15,7 +19,7 @@ test("light: under a clear sky the floor takes the sun's PAR", async ({ page }) 
 
   await expect(page.getByTestId("field-legend-quantity")).toHaveText("PAR (µmol/m²/s)");
   await expect(page.getByTestId("probe-1-reading")).toContainText(
-    "PAR 492.93 µmol/m²/s, irradiance 229.50 W/m²",
+    "PAR 417.50 µmol/m²/s, irradiance 194.38 W/m²",
   );
   const weather = page.getByRole("region", { name: "Weather" });
   await weather.getByTestId("weather-summary").click();
