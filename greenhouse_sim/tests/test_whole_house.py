@@ -15,7 +15,8 @@ from greenhouse_sim.climate.house import WholeHouse, grid_mean
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
-from greenhouse_sim.services.fields import _climate_day, air_grid
+from greenhouse_sim.services.fields import _climate_day
+from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.weather.presets import COLD_SPRING_DAY
 from greenhouse_sim.world.equipment import Heater
 

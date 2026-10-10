@@ -12,7 +12,7 @@ from greenhouse_sim.fields.synthetic import shear_field
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.sensors.air import erred, observe, reads
 from greenhouse_sim.services import sensors, weather
-from greenhouse_sim.services.fields import air_grid
+from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.weather.state import WeatherState
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.layout import Layout

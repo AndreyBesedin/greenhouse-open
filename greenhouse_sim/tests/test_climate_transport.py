@@ -11,7 +11,7 @@ from greenhouse_sim.climate.sources import SourceTerms, source_terms
 from greenhouse_sim.climate.transport import AirState, Transport
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
-from greenhouse_sim.services.fields import air_grid
+from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.weather.state import WeatherState
 from greenhouse_sim.world.equipment import Fan, Heater
 

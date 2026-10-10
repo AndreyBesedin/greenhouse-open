@@ -1,10 +1,10 @@
-"""What shades the sun's beam inside the greenhouse (P08.5).
+"""What shades the sun's beam inside the greenhouse (P08.5, P08.6).
 
 - **What casts shadows:** the greenhouse's structure, its posts and rafters
-  (round bars) and its gutters (channels, `world.envelope`), and every
-  fixture of its layout that obstructs light (`Obstruction.LIGHT`): crop
-  gutters, benches, slabs, rails, pipes and obstacles. Equipment obstructs
-  no light, and casts none.
+  (round bars) and its gutters (channels, `world.envelope`), every fixture
+  of its layout that obstructs light (`Obstruction.LIGHT`): crop gutters,
+  benches, slabs, rails, pipes and obstacles; and its plants' crowns
+  (`solar.plants`). Equipment obstructs no light, and casts none.
 - **How:** a point is in the beam's shadow if the ray from it towards the
   sun meets any of them on its way: exact ray tests against each box (by
   its slabs) and each finite cylinder (its side and its ends), in each
@@ -178,9 +178,10 @@ class Shadows:
         self.count = len(boxes) + len(cylinders)
 
     @classmethod
-    def of(cls, envelope: Envelope, layout: Layout) -> Shadows:
+    def of(cls, envelope: Envelope, layout: Layout, more: Iterable[Solid] = ()) -> Shadows:
         """What shades the beam in a greenhouse: its structure, and its
-        layout's fixtures that obstruct light."""
+        layout's fixtures that obstruct light; and `more`, such as its
+        plants' crowns (`solar.plants`), already placed in the world."""
         placed: list[Solid] = [
             *(gutter.solid() for gutter in envelope.gutters()),
             *(member.solid() for member in envelope.members()),
@@ -189,7 +190,12 @@ class Shadows:
                 for fixture in layout.obstructing(Obstruction.LIGHT)
             ),
         ]
-        return cls((envelope.origin.after(transform), shape) for transform, shape in placed)
+        return cls(
+            [
+                *((envelope.origin.after(transform), shape) for transform, shape in placed),
+                *more,
+            ]
+        )
 
     def lit(self, points: np.ndarray, towards: Vector3) -> np.ndarray:
         """Whether the sun's beam, from the unit direction `towards` it,

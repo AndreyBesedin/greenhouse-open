@@ -7,6 +7,7 @@ def test_registry_contains_exactly_the_configured_greenhouses() -> None:
         "climate_box",
         "airflow_box",
         "sensor_lab",
+        "solar_lab",
     ]
 
 

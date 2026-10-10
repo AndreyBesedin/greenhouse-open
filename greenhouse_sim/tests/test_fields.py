@@ -31,6 +31,7 @@ from greenhouse_sim.fields.field import (
 )
 from greenhouse_sim.fields.synthetic import shear_field, shear_temperature, shear_velocity
 from greenhouse_sim.services import fields
+from greenhouse_sim.services.grid import CELL_M
 from greenhouse_sim.world.geometry import Vector3
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -156,7 +157,7 @@ def test_a_scenario_offers_its_fields_over_its_greenhouses_air() -> None:
     assert document.grid == fields.grid("tomato_compartment")
     # Up to the compartment's gutters, 6 m above its floor.
     assert document.grid.maximum.z == pytest.approx(6.0)
-    assert max(document.grid.cell_size.x, document.grid.cell_size.y) <= fields.CELL_M
+    assert max(document.grid.cell_size.x, document.grid.cell_size.y) <= CELL_M
     assert (missing.status, missing.body) == (
         HTTPStatus.NOT_FOUND,
         {

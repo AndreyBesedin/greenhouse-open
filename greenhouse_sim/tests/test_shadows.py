@@ -10,7 +10,7 @@ import pytest
 
 from greenhouse_sim.domain.layout import Obstruction
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
-from greenhouse_sim.services.fields import air_grid
+from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.solar.inside import SHADOW_EVERY_S, Sunlight
 from greenhouse_sim.solar.shadows import Shadows
 from greenhouse_sim.weather.sources import ConstantWeather, RunWeather

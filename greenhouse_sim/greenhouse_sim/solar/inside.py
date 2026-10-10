@@ -130,10 +130,16 @@ class Sunlight:
             passed = np.zeros(len(points))
         return beam * passed + light.dhi_w_m2 * sky_view(normal) * DIFFUSE_TRANSMITTANCE
 
+    def irradiance(self, points: np.ndarray, normal: Vector3, time_s: float) -> np.ndarray:
+        """The shortwave irradiance on surfaces at `points` (rows of x, y, z)
+        inside, each facing the unit `normal`, `time_s` into the run, in
+        W/m², each shaded exactly."""
+        return self._irradiance(points, normal, time_s)
+
     def on(self, point: Vector3, normal: Vector3, time_s: float) -> float:
         """The shortwave irradiance on a surface at `point` inside, facing the
         unit `normal`, `time_s` into the run, in W/m²."""
-        return float(self._irradiance(np.array([[point.x, point.y, point.z]]), normal, time_s)[0])
+        return float(self.irradiance(np.array([[point.x, point.y, point.z]]), normal, time_s)[0])
 
     def at(self, time_s: float) -> InsideLight:
         """The light on a level surface at each of the grid's cells' centres,

@@ -11,10 +11,10 @@ from greenhouse_protocol.enums import CaptureModality
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
-from greenhouse_sim.sensors.log import Freshness, SensorFreshness
+from greenhouse_sim.sensors.log import Freshness, SensorFreshness, freshness
 from greenhouse_sim.services import sensors
 from greenhouse_sim.services.sensors import SensorObservations
-from greenhouse_sim.world.sensors import Camera
+from greenhouse_sim.world.sensors import Camera, PointSensor
 
 HEATED = {"heater": 1.0}
 # The back temperature sensor's 20th sample, taken at 19 min, drops out; the
@@ -103,9 +103,18 @@ def test_a_clean_sensor_is_never_stale_and_a_sensor_of_nothing_is_unavailable() 
         assert _freshness(until_s, "temperature_front").state == Freshness.FRESH
         # Clean, the back sensor drops nothing and is on time.
         assert _freshness(until_s, "temperature_back", clean=True).state == Freshness.FRESH
-        # No model gives PAR yet: it will never read, which is not having
-        # missed a reading.
-        assert _freshness(until_s, "par").state == Freshness.UNAVAILABLE
+        # The sun's light gives PAR (P08.6): the PAR sensor reads too.
+        assert _freshness(until_s, "par").state == Freshness.FRESH
+    # A sensor whose quantity nothing in the run gives will never read, which
+    # is not having missed a reading.
+    log = _log(600)
+    par = next(
+        s
+        for s in SCENARIO_REGISTRY["climate_box"].layout.sensors
+        if isinstance(s, PointSensor) and s.sensor_id == "par"
+    )
+    (state,) = freshness([par], log.observations, 600, start=log.start, unavailable=["par"])
+    assert state.state == Freshness.UNAVAILABLE
 
 
 def test_a_camera_takes_a_frame_every_cadence_and_the_log_records_its_metadata() -> None:

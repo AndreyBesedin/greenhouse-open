@@ -1,6 +1,6 @@
 # P08: Sun position, glazing and radiation propagation
 
-**Status:** in progress: P08.1 to P08.5 done, P08.6 next. Part of the
+**Status:** in progress: P08.1 to P08.6 done, P08.7 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -168,7 +168,9 @@ to here.
 - **A solar lab** (`solar_lab`), the final QA's, on 20 March 2026, the
   spring equinox: the climate box's house and frames, a row of plants of
   different heights along it, a bench that shades part of the floor and
-  PAR sensors either side of it, under a clear spring day.
+  PAR sensors either side of it, under a clear spring day. (As built in
+  P08.6: its plants are of one height, and a stack of crates shades them
+  and the floor.)
 - **Every other scenario** keeps its date, so its sun is January's.
 
 ## Steps
@@ -180,7 +182,7 @@ to here.
 | P08.3 | `feat(radiation): define the radiation field and its units` | Done |
 | P08.4 | `feat(glazing): add transmission and incidence-angle attenuation` | Done |
 | P08.5 | `feat(radiation): add geometric shadow and occlusion tracing` | Done |
-| P08.6 | `feat(radiation): add plant canopy interception hooks` | Planned |
+| P08.6 | `feat(radiation): add plant canopy interception hooks` | Done |
 | P08.7 | `feat(radiation): add the diffuse sky and the clouds' attenuation` | Planned |
 | P08.8 | `feat(climate): warm the house with the sun` | Planned |
 | P08.9 | `test(radiation): add equinox day-path visual regression` | Planned |
@@ -367,6 +369,45 @@ Visible result: two plants, one shaded and one exposed, compared in the
 inspector. Tests: a shaded plant's PAR is less; a plant grown in its own
 light grows less where it is shaded.
 
+#### As implemented
+
+- **The solar lab** (`solar_lab`) comes in this step, for its visible
+  result: the climate box's house, shut, on 20 March 2026 under the cold
+  spring day without a cloud; one row of 16 plants along the middle on a
+  crop gutter; a stack of crates 1.5 m high just south of its first four
+  plants; PAR sensors 0.3 m up in the sun south of the crates and in their
+  shade north of them; and a heater, off, so that it has a climate run.
+  Its plants are all of one height: a scenario's crop starts alike, so
+  the crates, not the plants' heights, make the shade. Its reference
+  baseline is recorded.
+- **`solar.plants`:** `Crown`, a cylinder 0.25 m across about each plant's
+  visible stem at its planting position; `crowns(...)` from a scenario's
+  plants; `PlantLight`, each plant's PAR, the mean on a level surface at
+  its crown's top, at its middle and six points halfway out, and its
+  daily light integral, by the trapezoid rule every ten minutes;
+  `SunlitEnvironment`, the plant model's `Environment` with each plant's
+  own daily light integral and the rest of its day from another.
+- **The crowns shade:** `Shadows.of` takes them beside the structure and
+  the fixtures, so that a scenario's climate field, its probes and its
+  sensors are shaded by its plants too.
+- **`services.sunlight`:** a scenario's sunlight and its plants' light,
+  kept for each layout and weather, the same object the climate run's
+  field is lit by; `GET /api/scenarios/{id}/climate/plants?t=` gives each
+  plant's PAR then and its first day's light integral. `air_grid` moves
+  to `services.grid` and `LONGEST_RUN_S` to `climate.day`, for the field
+  service and this one to share.
+- **PAR sensors read the field's PAR,** as the other sensors read theirs;
+  the climate box's reads nothing at night.
+- **The viewer:** with a plant selected in a climate run's view, the
+  inspector gives its PAR now and its day's light. The scenario table's
+  rows lose their 1 px of padding, so that the info panel keeps a fifth
+  scenario in the usual window.
+- **What it does:** at the equinox's noon the crates leave the first four
+  plants none of the beam, which is all the light until P08.7, and the
+  others take 1094 µmol/m²/s; through the day the shaded ones take 2 to
+  7 mol/m²/d against 27 in the open; grown ten days in their own light,
+  a shaded plant's organs grow less than an exposed one's.
+
 ### P08.7: The diffuse sky and the clouds
 
 The Erbs split into beam and diffuse, the diffuse sky's transmission and
@@ -416,7 +457,8 @@ Accelerate through the solar lab's clear equinox day and check that:
 - **The diffuse sky is isotropic,** and shaded by the structure as a whole,
   not traced ray by ray.
 - **A plant's crown is a cylinder,** not its leaves; the plant lab's
-  organ-level leaves do not cast shadows on each other yet.
+  organ-level leaves do not cast shadows on each other yet. The crowns
+  stand as tall as on the run's first day through every later one.
 - **The glass is clean and dry:** no condensation or dirt on it.
 - **A beam crosses the glass once:** one leaving one span's roof and
   crossing the next span's is passed as if through one pane; open vents

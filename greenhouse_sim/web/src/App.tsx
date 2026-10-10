@@ -53,8 +53,10 @@ import {
   PLANT_LAB_LAST_DAY,
   PLANT_LAB_POSE,
 } from "./plants/lab";
+import { loadPlantsLight, type PlantsLightState } from "./plants/light";
 import { plantNameOverlays } from "./plants/names";
 import { PlantActions } from "./plants/PlantActions";
+import { PlantLight } from "./plants/PlantLight";
 import { PlantStructure } from "./plants/PlantStructure";
 import { RuleChecks } from "./plants/RuleChecks";
 import type { ViewSample } from "./readouts";
@@ -121,6 +123,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [offReadings, setOffReadings] = useState<SensorReadingsState>({ status: "none" });
   const [weather, setWeather] = useState<WeatherStateOfLoad>({ status: "none" });
   const [weatherDay, setWeatherDay] = useState<WeatherDayState>({ status: "none" });
+  const [plantsLight, setPlantsLight] = useState<PlantsLightState>({ status: "none" });
   // Whether sensors' readings are shown as they err, or as clean ones', for QA.
   const [sensorsImperfect, setSensorsImperfect] = useState(true);
   const [probeHeight, setProbeHeight] = useState(DEFAULT_PROBE_HEIGHT_M);
@@ -661,6 +664,28 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const flowing = openingFlows.status === "loaded" ? openingFlows.openings : null;
   // Overlays and colours are worked out from the scene, which they only read.
   const selected = selectedEntity(snapshot, selectedId);
+  // The light on the plants at the moment drawn, while a plant is selected
+  // in a climate run's view; the last stays on show until the next arrives.
+  const lightScenario =
+    source.kind === "scenario" && source.field === CLIMATE_FIELD && selected?.kind === "PLANT"
+      ? source.scenarioId
+      : null;
+  useEffect(() => {
+    if (lightScenario === null) {
+      setPlantsLight({ status: "none" });
+      return;
+    }
+    let current = true;
+    setPlantsLight((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
+    void loadPlantsLight(lightScenario, fieldTime, fieldWeather, fieldLayout).then((state) => {
+      if (current) {
+        setPlantsLight(state);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [lightScenario, fieldTime, fieldWeather, fieldLayout]);
   const selectedCamera = selected === null ? null : cameraOf(selected);
 
   // The run's observation log up to the moment drawn, and what its sensors
@@ -1032,6 +1057,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                   <CameraView snapshot={snapshot} spec={selectedCamera} />
                   <CameraFrames cameraId={selectedCamera.cameraId} state={sensorReadings} />
                 </>
+              )}
+              {selected.kind === "PLANT" && (
+                <PlantLight plantId={selected.entity_id} state={plantsLight} />
               )}
               {selected.kind === "SENSOR" && (
                 <SensorPanel

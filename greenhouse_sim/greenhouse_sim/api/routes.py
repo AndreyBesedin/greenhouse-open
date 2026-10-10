@@ -55,6 +55,11 @@ check; a route that comes to need one checks it first.
                                           &t=600 seconds into its climate run,
                                           net and each way; asked as its
                                           climate field is
+    GET /api/scenarios/{id}/climate/plants the light on each of its plants &t=600
+                                          seconds into a run, its PAR then
+                                          and its day's light integral; with
+                                          ?layout= and &weather= as for its
+                                          climate field
     GET /api/scenarios/{id}/climate/observations its run's observation log up to
                                           &t=600: what its point sensors
                                           observed, whether each is fresh,
@@ -108,7 +113,16 @@ from urllib.parse import parse_qs, urlsplit
 
 from pydantic import BaseModel
 
-from greenhouse_sim.services import cfd, fields, plants, scenarios, sensors, system, weather
+from greenhouse_sim.services import (
+    cfd,
+    fields,
+    plants,
+    scenarios,
+    sensors,
+    sunlight,
+    system,
+    weather,
+)
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.live import InvalidSpeed, LiveCommand, LiveRun, LiveRuns
 
@@ -224,6 +238,15 @@ def respond(method: str, path: str) -> Response:
                     _pairs(query.get("set", []), "set"),
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
+                    _seconds(query),
+                    weather=_last(query, "weather"),
+                )
+            )
+        case ["api", "scenarios", scenario_id, "climate", "plants"]:
+            return _answer(
+                lambda: sunlight.plants_light(
+                    scenario_id,
+                    _last(query, "layout"),
                     _seconds(query),
                     weather=_last(query, "weather"),
                 )
