@@ -118,6 +118,11 @@ export function Viewport({
       camera={{ fov: CAMERA_FIELD_OF_VIEW_DEG }}
       data-testid="main-view"
       data-light={sunlight === null ? "fixed" : sunlight === "night" ? "night" : "sun"}
+      data-light-from={
+        sunlight === null || sunlight === "night" || sunlight.fromDeg === null
+          ? undefined
+          : Math.round(sunlight.fromDeg)
+      }
       shadows={sunlight !== null && sunlight !== "night" ? SUN_SHADOWS : false}
       onCreated={({ raycaster }) => {
         raycaster.params.Line = { threshold: LINE_PICK_TOLERANCE_M };

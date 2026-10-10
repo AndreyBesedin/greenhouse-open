@@ -22,6 +22,9 @@ export interface SunLightPose {
   /** The beam's share of the light on a level surface, from 0 to 1: under
    * cloud the sun's light gives way to the sky's. */
   beamShare: number;
+  /** The bearing the light comes from, in degrees clockwise from north,
+   * if it is the sun's. */
+  fromDeg: number | null;
 }
 
 function houseOf(
@@ -49,6 +52,7 @@ export function sunLightPose(
   snapshot: SceneSnapshot,
   direction: Point3,
   beamShare = 1,
+  fromDeg: number | null = null,
 ): SunLightPose | null {
   const house = houseOf(snapshot);
   if (house === null) {
@@ -66,6 +70,7 @@ export function sunLightPose(
     shadowHalfWidthM: house.across / 2 + SHADOW_MARGIN_M,
     distanceM,
     beamShare,
+    fromDeg,
   };
 }
 
@@ -80,7 +85,12 @@ export function sceneSunlight(
   if (weather.sun.elevation_deg <= 0) {
     return houseOf(snapshot) === null ? null : "night";
   }
-  return sunLightPose(snapshot, weather.sunDirection, beamShareOf(weather));
+  return sunLightPose(
+    snapshot,
+    weather.sunDirection,
+    beamShareOf(weather),
+    weather.sun.azimuth_deg,
+  );
 }
 
 /** The beam's share of the light outside on a level surface; all of it for

@@ -1,6 +1,6 @@
 # P08: Sun position, glazing and radiation propagation
 
-**Status:** in progress: P08.1 to P08.9 done, the final QA next. Part of the
+**Status:** done. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -519,13 +519,46 @@ Accelerate through the solar lab's clear equinox day and check that:
 - the inspector shows a plant's local PAR;
 - the cloud control changes the balance of direct and diffuse light.
 
+### As implemented
+
+`e2e/solar-day.spec.ts`, with P08's other checks of the sun's light in the
+browser tests' `sun` project, which runs once the others and P00's walk
+through the renderer pass, and before P07's day. It walks the solar lab
+through its clear equinox day:
+
+- **The sun's path:** at 9:00, 12:50 and 16:30 the Weather panel and the
+  sun's label give it 19.3° up in the east-south-east, 38.0° up due south
+  and 20.7° up in the west-south-west.
+- **The shadows move:** the scene is lit from the sun's bearing each time
+  (the canvas's `data-light-from`: 117°, 180°, 241°).
+- **The glass:** a probe on the open floor takes 60 to 86% of the PAR
+  outside at each moment.
+- **Local shade:** at noon a probe north of the crates takes less than a
+  quarter of the open floor's PAR, the sky's light alone; in the morning,
+  less too.
+- **The heat-map follows the day:** the open floor's PAR, sliced at the
+  floor's cells' level, is 483, 1069 and 525 µmol/m²/s.
+- **The inspector:** the plant behind the crates takes 198 µmol/m²/s at
+  noon, the one at the row's end 1069.
+- **Played,** the run moves on from 12:45 to the noon.
+- **The clouds:** at noon the light outside is a fifth the sky's; the
+  cloud slider at 100% makes it 98% the sky's, and the shaded probe then
+  takes nearly what the open one does (238 against 243 µmol/m²/s).
+
 ## Acceptance criteria
 
-- [ ] Physical radiation has units and is separate from the scene's
-  lighting.
-- [ ] Radiation can be queried locally.
-- [ ] The greenhouse's geometry affects the light it transmits.
-- [ ] The plant model can consume local PAR or radiation.
+- [x] Physical radiation has units and is separate from the scene's
+  lighting: GHI, DNI and DHI in W/m², PAR in µmol/m²/s, in `solar.sky` and
+  `solar.inside`, the climate field's `par` and `irradiance` channels; the
+  viewer's light only follows the sun's direction and the beam's share.
+- [x] Radiation can be queried locally: at a point and on a surface
+  (`Sunlight.on`), at each climate cell (the field), on each plant
+  (`GET /api/scenarios/{id}/climate/plants`), and by PAR sensors.
+- [x] The greenhouse's geometry affects the light it transmits: the glass
+  by its surfaces' angles, the frames, gutters, fixtures and crowns by
+  their shadows, the roof's structure by its share of the sky.
+- [x] The plant model can consume local PAR or radiation: each plant's
+  daily light integral through `SunlitEnvironment`.
 
 ## Known approximations
 
