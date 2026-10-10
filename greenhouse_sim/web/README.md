@@ -237,10 +237,11 @@ as a person would: live play, camera presets, pause, step and reset with a
 deterministic replay, selection and overlays, and the stress scene. The
 plant lab's tests, which grow thousands of entities, run on their own after
 the others too, then the checks of the sun's light (`e2e/light.spec.ts`,
-`e2e/solar-lab.spec.ts`), which work climate runs out to noon, and last P07's
-final QA, `e2e/weather-day.spec.ts`, which works the climate through a whole
-day: each in its own Playwright project, so that none slows another into a
-timeout. Run `npx playwright install chromium` once to get the browser.
+`e2e/solar-lab.spec.ts` and P08's final QA, `e2e/solar-day.spec.ts`), which
+work climate runs out to noon, and last P07's final QA,
+`e2e/weather-day.spec.ts`, which works the climate through a whole day: each
+in its own Playwright project, so that none slows another into a timeout. Run
+`npx playwright install chromium` once to get the browser.
 
 The page shows the simulator version, read from `../pyproject.toml` at build
 time, and the commit it was built from. The viewer has no version of its own:
