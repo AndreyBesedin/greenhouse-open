@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import type { Point3 } from "../world";
-import { sceneSunlight, sunLightPose, sunPathOverlays } from "./sunlight";
+import { beamShareOf, sceneSunlight, sunLightPose, sunPathOverlays } from "./sunlight";
 import type { SunPosition, WeatherAtAMoment, WeatherDay } from "./weather";
 
 const EXAMPLE: SceneSnapshot = JSON.parse(
@@ -101,6 +101,22 @@ describe("the sun's light", () => {
         sunDirections: [],
       }),
     ).toEqual([]);
+  });
+});
+
+describe("the sun's light under cloud", () => {
+  it("is as strong as the beam's share of the light", () => {
+    const clear = weatherWith({ elevation_deg: 30, azimuth_deg: 180 });
+    const cloudy = {
+      ...clear,
+      light: { ghi_w_m2: 400, dni_w_m2: 20, dhi_w_m2: 390, par_umol_m2_s: 859 },
+    };
+
+    // A weather without light lights its scene as a clear day's.
+    expect(beamShareOf(clear)).toBe(1);
+    expect(beamShareOf(cloudy)).toBeCloseTo(0.025);
+    const lit = sceneSunlight(EXAMPLE, cloudy);
+    expect(lit === null || lit === "night" ? null : lit.beamShare).toBeCloseTo(0.025);
   });
 });
 

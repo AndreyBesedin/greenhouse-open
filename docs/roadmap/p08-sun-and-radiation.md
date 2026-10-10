@@ -1,6 +1,6 @@
 # P08: Sun position, glazing and radiation propagation
 
-**Status:** in progress: P08.1 to P08.6 done, P08.7 next. Part of the
+**Status:** in progress: P08.1 to P08.7 done, P08.8 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -183,7 +183,7 @@ to here.
 | P08.4 | `feat(glazing): add transmission and incidence-angle attenuation` | Done |
 | P08.5 | `feat(radiation): add geometric shadow and occlusion tracing` | Done |
 | P08.6 | `feat(radiation): add plant canopy interception hooks` | Done |
-| P08.7 | `feat(radiation): add the diffuse sky and the clouds' attenuation` | Planned |
+| P08.7 | `feat(radiation): add the diffuse sky and the clouds' attenuation` | Done |
 | P08.8 | `feat(climate): warm the house with the sun` | Planned |
 | P08.9 | `test(radiation): add equinox day-path visual regression` | Planned |
 
@@ -416,6 +416,36 @@ Visible result: the cloud slider softens the shadows and dims the whole
 floor. Tests: under full cloud nearly all is diffuse; the total falls with
 cloud.
 
+#### As implemented
+
+- **Erbs's split** (`solar.sky.diffuse_share`) replaces the beam-only one:
+  a clear equinox noon's light is a fifth the sky's, a dark sky's nearly
+  all of it. The beam still never carries more than the sun gives above
+  the atmosphere. Erbs's published polynomial dips 0.0007 below its 0.165
+  floor just short of k_t = 0.8; it is left as published.
+- **Kasten and Czeplak's clouds** (`cloud_factor`) dim a synthetic day's
+  clear sky: half clouded passes 93%, full a quarter. The cold spring
+  day, half clouded, now gives 7% less light than in P08.3 to P08.6.
+- **The clouds' QA override:** a weather's name may end with `@` and a
+  cloud cover, `cold_spring_day@80` or `default@100`, which every service
+  and every kept run then keys by, as it does any weather; the scenario
+  keeps it as `cloud_cover_pct`, and its run's weather is wrapped
+  (`weather.sources.Clouded`) so that its radiation goes from what its own
+  clouds pass to what these would. A cover beyond 0 to 100 % is refused.
+- **The sky's light inside** passes the glass (0.773) and the roof's
+  structure, the share of the house's plan its rafters and gutters cover
+  (`solar.shadows.roof_shading`): 5% for the climate box, 7% for the
+  tomato compartment. It reaches every point inside alike, the shade of
+  fixtures and crowns among them.
+- **The viewer:** the Weather panel gains a cloud slider (`&clouds=80` in
+  the address; "Its own" gives the weather its clouds back), and its light
+  says how much of it is the sky's. The scene's sun is as strong as the
+  beam's share of the light, and the sky's ambient light brightens as it
+  falls, so that under full cloud the shadows all but go.
+- **What it does:** at the equinox's noon in the solar lab, the plants
+  behind the crates take 198 µmol/m²/s, the sky's light, against 1069 in
+  the open; under a full sky of cloud, 238 against 243.
+
 ### P08.8: Solar heat
 
 The floor's absorbed radiation as heat in the air above it, on the grid
@@ -455,7 +485,8 @@ Accelerate through the solar lab's clear equinox day and check that:
 - **No ground-reflected light,** and no light reflected inside the house:
   only the sun's beam and the sky's diffuse light reach a point.
 - **The diffuse sky is isotropic,** and shaded by the structure as a whole,
-  not traced ray by ray.
+  not traced ray by ray: what stands inside, fixtures and crowns, does not
+  shade it.
 - **A plant's crown is a cylinder,** not its leaves; the plant lab's
   organ-level leaves do not cast shadows on each other yet. The crowns
   stand as tall as on the run's first day through every later one.

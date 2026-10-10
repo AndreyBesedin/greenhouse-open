@@ -10,6 +10,7 @@ openings no longer fit, a ridge below the eaves, or a level for equipment
 it does not have, is refused with the reason.
 """
 
+import math
 from collections.abc import Mapping
 from typing import Final
 
@@ -33,6 +34,10 @@ from greenhouse_sim.weather.recorded import recorded_weathers
 DIMENSIONS: Final = ("length", "width", "spans", "bays", "eave_height", "ridge_height")
 # The name of a scenario's own weather, beside the presets'.
 DEFAULT_WEATHER: Final = "default"
+# A weather's name may end with this and a cloud cover in %, which overrides
+# its own, for QA.
+CLOUDS_MARK: Final = "@"
+MOST_CLOUD_PCT: Final = 100.0
 
 
 class ScenarioSummary(BaseModel):
@@ -137,7 +142,18 @@ def changed(config: ScenarioConfig, changes: SceneChanges) -> ScenarioConfig:
 
 def _with_weather(config: ScenarioConfig, name: str) -> ScenarioConfig:
     """The scenario under a preset or a recorded weather, or its own; any
-    other is not found."""
+    other is not found. A name may end with `@` and a cloud cover, from 0 to
+    100 %, which overrides the weather's (`cold_spring_day@80`): a QA
+    override of how clouded its sky is (P08.7); any other is refused."""
+    base, override, clouds = name.partition(CLOUDS_MARK)
+    if override:
+        try:
+            cover = float(clouds)
+        except ValueError:
+            cover = math.nan
+        if not 0.0 <= cover <= MOST_CLOUD_PCT:
+            raise InvalidRequest(f"a cloud cover runs from 0 to 100 %, not {clouds!r}")
+        return _with_weather(config, base).model_copy(update={"cloud_cover_pct": cover})
     if name == DEFAULT_WEATHER:
         return config
     weather = PRESETS.get(name) or recorded_weathers().get(name)

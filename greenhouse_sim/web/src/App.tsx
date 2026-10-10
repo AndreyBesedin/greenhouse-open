@@ -63,6 +63,7 @@ import type { ViewSample } from "./readouts";
 import { loadScenarios, type ScenariosState } from "./scenarios";
 import { type LiveCommand, sendLiveCommand } from "./scene/live";
 import {
+  apiWeather,
   changesQuery,
   levelsAt,
   loadScene,
@@ -218,7 +219,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const fieldOpenings = source.kind === "scenario" ? pairsText(source.openings) : "";
   const fieldSchedule = source.kind === "scenario" ? scheduleText(source.schedule) : "";
   const fieldTime = source.kind === "scenario" ? (source.time ?? 0) : 0;
-  const fieldWeather = source.kind === "scenario" ? source.weather : undefined;
+  const fieldWeather =
+    source.kind === "scenario" ? apiWeather(source.weather, source.clouds) : undefined;
   // A climate run, apart from its moments: its colours keep the widest range
   // its moments have reached, so that a slice keeps its colours as the run
   // plays and goes back. Another run starts afresh.
@@ -549,6 +551,15 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     }
     const { weather: _, ...rest } = source;
     setScenarioSource(chosen === undefined ? rest : { ...rest, weather: chosen });
+  }
+
+  // The sky clouded as the QA override asks, or as its weather's own.
+  function chooseClouds(clouds: number | undefined): void {
+    if (source.kind !== "scenario") {
+      return;
+    }
+    const { clouds: _, ...rest } = source;
+    setScenarioSource(clouds === undefined ? rest : { ...rest, clouds });
   }
 
   function setOpenings(openings: Record<string, number>): void {
@@ -970,6 +981,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 chosen={source.weather}
                 time={fieldTime}
                 onChoose={chooseWeather}
+                clouds={source.clouds}
+                onClouds={chooseClouds}
               />
             )}
             {source.kind === "scenario" && source.field !== undefined && probedField !== null && (

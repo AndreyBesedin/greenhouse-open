@@ -29,22 +29,36 @@ async function atNoon(page: Page, stem: typeof SHADED_STEM): Promise<void> {
   await expect(page.getByTestId("field-status")).toContainText("cells", { timeout: 60_000 });
 }
 
-test("solar lab: at the equinox's noon a shaded plant takes no beam and an exposed one a thousand micromoles", async ({
+test("solar lab: at the equinox's noon a shaded plant takes the sky's light and an exposed one the sun's too", async ({
   page,
 }) => {
-  await test.step("behind the crates, a plant takes none of the beam", async () => {
+  // Its climate run is worked out to noon first, and again under cloud.
+  test.setTimeout(150_000);
+  await test.step("behind the crates, a plant takes only the sky's light", async () => {
     await atNoon(page, SHADED_STEM);
     // The sun 38° up in the south lights the scene.
     await expect(page.getByTestId("main-view")).toHaveAttribute("data-light", "sun");
     await selectAt(page, SHADED_STEM, "solar_lab_plant_001", fromTheNorth(SHADED_STEM));
-    await expect(page.getByTestId("plant-par")).toHaveText("0 µmol/m²/s");
-    await expect(page.getByTestId("plant-daily-light")).toHaveText("7.1 mol/m²/d");
+    await expect(page.getByTestId("plant-par")).toHaveText("198 µmol/m²/s");
+    await expect(page.getByTestId("plant-daily-light")).toHaveText("11.2 mol/m²/d");
   });
 
   await test.step("in the open, a plant takes the noon sun through the roof", async () => {
     await atNoon(page, EXPOSED_STEM);
     await selectAt(page, EXPOSED_STEM, "solar_lab_plant_016", fromTheNorth(EXPOSED_STEM));
-    await expect(page.getByTestId("plant-par")).toHaveText("1094 µmol/m²/s");
-    await expect(page.getByTestId("plant-daily-light")).toHaveText("27.3 mol/m²/d");
+    await expect(page.getByTestId("plant-par")).toHaveText("1069 µmol/m²/s");
+    await expect(page.getByTestId("plant-daily-light")).toHaveText("26.9 mol/m²/d");
+  });
+
+  await test.step("under a full sky of cloud, it takes hardly more than the shaded one", async () => {
+    const weather = page.getByRole("region", { name: "Weather" });
+    await weather.getByTestId("weather-summary").click();
+    await weather.getByRole("slider", { name: "Cloud cover" }).fill("100");
+    await expect(page).toHaveURL(/&clouds=100(&|$)/);
+    await expect(weather.getByTestId("weather-clouds")).toHaveText("100%, for QA");
+    await expect(page.getByTestId("plant-par")).toHaveText("243 µmol/m²/s", { timeout: 60_000 });
+    await expect(weather.getByTestId("weather-light")).toHaveText(
+      "154 W/m², 98% of it the sky's, PAR 331 µmol/m²/s",
+    );
   });
 });

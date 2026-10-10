@@ -102,7 +102,7 @@ export function SunLight({
     <directionalLight
       ref={light}
       position={[position.x, position.y, position.z]}
-      intensity={SUNLIGHT_INTENSITY}
+      intensity={SUNLIGHT_INTENSITY * pose.beamShare}
       castShadow
       shadow-mapSize-width={SHADOW_MAP_SIZE}
       shadow-mapSize-height={SHADOW_MAP_SIZE}

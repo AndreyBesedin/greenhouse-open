@@ -35,7 +35,8 @@ export const BACKGROUND_COLOR = "#f4f4f2";
 
 export const AMBIENT_LIGHT_INTENSITY = 0.6;
 // Under the sun the sky's ambient light is dimmer, so that what the sun
-// lights stands out from what lies in shade.
+// lights stands out from what lies in shade; under cloud, as the beam's share
+// falls, it brightens back.
 export const SUNLIT_AMBIENT_INTENSITY = 0.35;
 export const SUN_INTENSITY = 1.2;
 export const SUN = { x: 5, y: 10, z: 7 };
@@ -136,7 +137,8 @@ export function Viewport({
         intensity={
           sunlight === null || sunlight === "night"
             ? AMBIENT_LIGHT_INTENSITY
-            : SUNLIT_AMBIENT_INTENSITY
+            : SUNLIT_AMBIENT_INTENSITY +
+              (AMBIENT_LIGHT_INTENSITY - SUNLIT_AMBIENT_INTENSITY) * (1 - sunlight.beamShare)
         }
       />
       {sunlight === null ? (

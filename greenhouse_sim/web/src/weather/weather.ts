@@ -345,12 +345,16 @@ export function describeSun(sun: SunPosition): string {
   return `${sun.elevation_deg.toFixed(SPEED_DECIMALS)}° up, at ${Math.round(sun.azimuth_deg)}° (${compassPoint(sun.azimuth_deg)})`;
 }
 
-/** The light outside, in words: "230 W/m², PAR 494 µmol/m²/s", or "dark". */
+const PERCENT = 100;
+
+/** The light outside, in words: "572 W/m², 28% of it the sky's, PAR 1229
+ * µmol/m²/s", or "dark". */
 export function describeLight(light: OutsideLight): string {
   if (light.ghi_w_m2 <= 0) {
     return "dark";
   }
-  return `${Math.round(light.ghi_w_m2)} W/m², PAR ${Math.round(light.par_umol_m2_s)} µmol/m²/s`;
+  const sky = Math.round((light.dhi_w_m2 / light.ghi_w_m2) * PERCENT);
+  return `${Math.round(light.ghi_w_m2)} W/m², ${sky}% of it the sky's, PAR ${Math.round(light.par_umol_m2_s)} µmol/m²/s`;
 }
 
 /**

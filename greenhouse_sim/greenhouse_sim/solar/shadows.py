@@ -10,10 +10,13 @@
   its slabs) and each finite cylinder (its side and its ends), in each
   one's own frame, vectorised over many points at once. A point inside a
   solid is in its shadow.
-- **The diffuse sky** is shaded by the structure as a whole (P08.7), not
-  here.
+- **The diffuse sky** is shaded by the structure as a whole (P08.7): by
+  the share of the house's plan its rafters and gutters cover, seen from
+  above (`roof_shading`), the same everywhere inside. What stands inside,
+  fixtures and crowns, shades the diffuse sky not at all.
 """
 
+import math
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Final
@@ -207,3 +210,22 @@ class Shadows:
         if len(self._cylinders.origins):
             shaded |= self._cylinders.meet(points, direction)
         return ~shaded
+
+
+def roof_shading(envelope: Envelope) -> float:
+    """The share of a house's plan its roof's structure covers, seen from
+    above: each rafter's width along its run across the span, and each
+    gutter's width, as far as it lies over the house, along its length. The
+    posts, upright, cover next to nothing."""
+    low_y, high_y = 0.0, envelope.width
+    covered = 0.0
+    for member in envelope.members():
+        _, bar = member.solid()
+        run = math.hypot(member.end.x - member.start.x, member.end.y - member.start.y)
+        covered += 2 * bar.radius * run
+    for gutter in envelope.gutters():
+        _, channel = gutter.solid()
+        y = gutter.start.y
+        inside = min(y + channel.size_y / 2, high_y) - max(y - channel.size_y / 2, low_y)
+        covered += max(inside, 0.0) * channel.size_x
+    return covered / (envelope.length * envelope.width)

@@ -68,9 +68,9 @@ test("weather: a scenario runs under a preset day, charted through the day", asy
   await expect(weather.getByTestId("weather-day-day-humidity")).toHaveText(
     "Humidity, 42.5 to 95.0 %",
   );
-  // A clear sky's sunshine, under a low January sun.
+  // A half-clouded sky's sunshine, under a low January sun.
   await expect(weather.getByTestId("weather-day-day-sunshine")).toHaveText(
-    "Sunshine, 0.0 to 229.4 W/m²",
+    "Sunshine, 0.0 to 213.1 W/m²",
   );
   await expect(weather.getByTestId("weather-day-now")).toHaveCount(4);
   // The run carries on at the same moment, under the new weather.

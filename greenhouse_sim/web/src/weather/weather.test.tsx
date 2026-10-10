@@ -321,7 +321,10 @@ describe("the day's weather", () => {
 describe("the sun", () => {
   it("is written by its elevation and bearing, or as below the horizon", () => {
     expect(describeSun(WESTERLY.sun)).toBe("14.6° up, at 180° (S)");
-    expect(describeLight(WESTERLY.light)).toBe("223 W/m², PAR 480 µmol/m²/s");
+    expect(describeLight(WESTERLY.light)).toBe("223 W/m², 0% of it the sky's, PAR 480 µmol/m²/s");
+    expect(describeLight({ ghi_w_m2: 400, dni_w_m2: 100, dhi_w_m2: 300, par_umol_m2_s: 859 })).toBe(
+      "400 W/m², 75% of it the sky's, PAR 859 µmol/m²/s",
+    );
     expect(describeLight({ ghi_w_m2: 0, dni_w_m2: 0, dhi_w_m2: 0, par_umol_m2_s: 0 })).toBe("dark");
     expect(describeSun({ elevation_deg: -5, azimuth_deg: 0 })).toBe("below the horizon");
   });

@@ -135,52 +135,58 @@ def test_the_greenhouse_is_shaded_by_its_structure_and_fixtures_but_not_its_equi
     assert shadows.lit(beside, _towards(180.0, 10.0))[0]
 
 
-def test_inside_the_beam_leaves_the_shaded_floor_dark_and_lights_the_rest() -> None:
+def _equinox_sunlight() -> Sunlight:
+    """The climate box at the March equinox under 600 W/m², a clear sky's
+    light at noon: a fifth of it the sky's."""
     equinox = datetime(2026, 3, 20, tzinfo=UTC)
-    weather = RunWeather(ConstantWeather(global_radiation_w_m2=400.0).source(CONFIG.site), equinox)
-    grid = air_grid(CONFIG)
-    sunlight = Sunlight(
-        CONFIG.site, weather, grid, CONFIG.envelope, Shadows.of(CONFIG.envelope, CONFIG.layout)
-    )
-    noon_s = 11 * 3600 + 50 * 60
-
-    floor = sunlight.at(noon_s).irradiance_w_m2[0]
-    # The light is all beam here: what is shaded takes nothing.
-    shaded = floor < 1.0
-
-    assert 0.02 < shaded.mean() < 0.3
-    assert floor[~shaded].min() > 0.7 * 400.0
-    # The crop gutters' shadow lies north of them at noon: on the floor
-    # cells' level, 0.25 m up, from 0.3 to 0.55 m north of the first row,
-    # which spans y = 2.25 to 2.55 m. The cell just north of it is dark, the
-    # one south of it lit.
-    xs, ys, _ = grid.centres()
-    column = int(np.argmin(np.abs(xs - 6.0)))
-    north = int(np.argmin(np.abs(ys - 2.8)))
-    south = int(np.argmin(np.abs(ys - 1.75)))
-    assert floor[north, column] < 1.0
-    assert floor[south, column] > 0.7 * 400.0
-    # The same five minutes of sun shade the same cells.
-    assert sunlight.cells_lit(noon_s) is sunlight.cells_lit(noon_s + SHADOW_EVERY_S / 3)
-
-
-def test_a_point_on_a_surface_is_shaded_exactly() -> None:
-    equinox = datetime(2026, 3, 20, tzinfo=UTC)
-    weather = RunWeather(ConstantWeather(global_radiation_w_m2=400.0).source(CONFIG.site), equinox)
-    sunlight = Sunlight(
+    weather = RunWeather(ConstantWeather(global_radiation_w_m2=600.0).source(CONFIG.site), equinox)
+    return Sunlight(
         CONFIG.site,
         weather,
         air_grid(CONFIG),
         CONFIG.envelope,
         Shadows.of(CONFIG.envelope, CONFIG.layout),
     )
-    noon_s = 11 * 3600 + 50 * 60
+
+
+NOON_S = 11 * 3600 + 50 * 60
+
+
+def test_inside_the_shaded_floor_takes_only_the_skys_light_and_the_rest_the_beam_too() -> None:
+    sunlight = _equinox_sunlight()
+    sky = sunlight.outside_at(NOON_S).dhi_w_m2 * sunlight.diffuse_passed
+
+    floor = sunlight.at(NOON_S).irradiance_w_m2[0]
+    shaded = floor < 0.5 * floor.max()
+
+    assert 0.02 < shaded.mean() < 0.3
+    # In the shade, the sky's light alone; in the sun, the beam besides.
+    assert np.allclose(floor[shaded], sky)
+    assert floor[~shaded].min() > 0.85 * floor.max()
+    # The crop gutters' shadow lies north of them at noon: on the floor
+    # cells' level, 0.25 m up, from 0.3 to 0.55 m north of the first row,
+    # which spans y = 2.25 to 2.55 m. The cell just north of it is shaded,
+    # the one south of it lit.
+    grid = sunlight.grid
+    xs, ys, _ = grid.centres()
+    column = int(np.argmin(np.abs(xs - 6.0)))
+    north = int(np.argmin(np.abs(ys - 2.8)))
+    south = int(np.argmin(np.abs(ys - 1.75)))
+    assert floor[north, column] == pytest.approx(sky)
+    assert floor[south, column] > 0.85 * floor.max()
+    # The same five minutes of sun shade the same cells.
+    assert sunlight.cells_lit(NOON_S) is sunlight.cells_lit(NOON_S + SHADOW_EVERY_S / 3)
+
+
+def test_a_point_on_a_surface_is_shaded_exactly() -> None:
+    sunlight = _equinox_sunlight()
+    sky = sunlight.outside_at(NOON_S).dhi_w_m2 * sunlight.diffuse_passed
 
     # On the first row's slab, and low in its shadow, north of it.
-    on_the_slab = sunlight.on(Vector3(x=6.0, y=2.4, z=0.676), OVERHEAD, noon_s)
-    behind = sunlight.on(Vector3(x=6.0, y=2.8, z=0.25), OVERHEAD, noon_s)
-    beyond = sunlight.on(Vector3(x=6.0, y=3.3, z=0.25), OVERHEAD, noon_s)
+    on_the_slab = sunlight.on(Vector3(x=6.0, y=2.4, z=0.676), OVERHEAD, NOON_S)
+    behind = sunlight.on(Vector3(x=6.0, y=2.8, z=0.25), OVERHEAD, NOON_S)
+    beyond = sunlight.on(Vector3(x=6.0, y=3.3, z=0.25), OVERHEAD, NOON_S)
 
-    assert on_the_slab > 0.7 * 400.0
-    assert behind == pytest.approx(0.0)
-    assert beyond > 0.7 * 400.0
+    assert on_the_slab > 3 * sky
+    assert behind == pytest.approx(sky)
+    assert beyond == pytest.approx(on_the_slab, rel=0.05)
