@@ -1,6 +1,6 @@
 # P08: Sun position, glazing and radiation propagation
 
-**Status:** in progress: P08.1 to P08.8 done, P08.9 next. Part of the
+**Status:** in progress: P08.1 to P08.9 done, the final QA next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -185,7 +185,7 @@ to here.
 | P08.6 | `feat(radiation): add plant canopy interception hooks` | Done |
 | P08.7 | `feat(radiation): add the diffuse sky and the clouds' attenuation` | Done |
 | P08.8 | `feat(climate): warm the house with the sun` | Done |
-| P08.9 | `test(radiation): add equinox day-path visual regression` | Planned |
+| P08.9 | `test(radiation): add equinox day-path visual regression` | Done |
 
 ### P08.1: The sun's position
 
@@ -483,6 +483,29 @@ nothing changes.
 Morning, noon and evening golden views of the solar lab, and radiation
 probes with numeric reference values. Visible result: the three views'
 screenshots. Tests: the screenshots, and the probes' values.
+
+#### As implemented
+
+- **Without the API:** like the airflow QA's, the views are drawn from
+  files the simulator writes (`tests/test_solar_qa.py --update`): the
+  solar lab's scene (`qa-solar-lab.json`), and its light
+  (`qa-solar-lab-light.json`): its weather, the sun's path through its
+  day, and the PAR on a level surface at each of its climate cells, kept
+  to hundredths, at 9:00, the sun's noon (12:50) and 16:30.
+- **The page** (`/qa/solar-lab?view=morning|noon|evening`): the scene lit
+  from the sun where it stands, with its shadows, its marker and its path
+  across the sky, from the south-west and above, and the PAR as a slice a
+  quarter of a metre up, on one scale for all three views, so that the
+  morning's and the evening's floor looks dimmer than the noon's.
+- **The screenshots** (`e2e/visual/solar.spec.ts`), drawn in CI's
+  container as the others are.
+- **The reference values:** the outside's GHI, DNI and DHI, the two PAR
+  sensors' PAR and the first and last plants', at the three moments,
+  recorded to a millionth. At noon the plants and sensors in the crates'
+  shade take 198 µmol/m²/s against 1069 in the open; in the morning the
+  crates shade the row's west end; in the evening the low sun from the
+  west-south-west runs along the row, and its plants' crowns shade its
+  east end (307 against 569 at its west end).
 
 ## Final QA: `solar-day`
 

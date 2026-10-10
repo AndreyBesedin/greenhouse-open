@@ -11,7 +11,9 @@ import { QaGreenhouse } from "./qa/QaGreenhouse";
 import { QaLayout } from "./qa/QaLayout";
 import { QaPlants } from "./qa/QaPlants";
 import { QaRenderer } from "./qa/QaRenderer";
+import { QaSolar } from "./qa/QaSolar";
 import { QA_RENDERER_PATH } from "./qa/qaPage";
+import { QA_SOLAR_PATH } from "./qa/solarViews";
 import "./styles.css";
 
 const root = document.getElementById("root");
@@ -32,6 +34,8 @@ const page =
     <QaPlants />
   ) : path === QA_AIRFLOW_PATH ? (
     <QaAirflow search={location.search} />
+  ) : path === QA_SOLAR_PATH ? (
+    <QaSolar search={location.search} />
   ) : (
     <App />
   );

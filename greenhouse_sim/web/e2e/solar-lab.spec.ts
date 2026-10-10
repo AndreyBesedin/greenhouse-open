@@ -68,3 +68,22 @@ test("solar lab: at the equinox's noon a shaded plant takes the sky's light and 
     );
   });
 });
+
+// P08's equinox views, drawn from the files the simulator writes: the sun
+// where it stands at each moment, lighting the scene. Their screenshots are
+// e2e/visual/solar.spec.ts.
+const EQUINOX_VIEWS = {
+  morning: "19.3° up, at 117° (ESE)",
+  noon: "38.0° up, at 180° (S)",
+  evening: "20.7° up, at 241° (WSW)",
+};
+
+for (const [view, sun] of Object.entries(EQUINOX_VIEWS)) {
+  test(`solar lab: the equinox's ${view} view is lit from the sun at ${sun}`, async ({ page }) => {
+    await page.goto(`/qa/solar-lab?view=${view}`);
+
+    await expect(page.getByTestId("qa-caption")).toHaveText(`Solar QA, ${view} view: sun ${sun}`);
+    await expect(page.getByTestId("main-view")).toHaveAttribute("data-light", "sun");
+    await expect(page.getByTestId("field-legend-quantity")).toHaveText("PAR (µmol/m²/s)");
+  });
+}
