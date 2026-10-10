@@ -12,11 +12,15 @@ const IN_CI = process.env.CI !== undefined;
 const ELSEWHERE = ["visual/**", "bench/**"];
 // P00's final QA drives a shared live run, so it runs once the others pass.
 const RENDERER_SMOKE = "renderer-smoke.spec.ts";
+// The plant lab grows a row of thousands of entities on its later days, and
+// times out when the climate's runs share the simulator with it: it runs on
+// its own, once the others and P00's pass.
+const PLANT_LAB = "plant-lab.spec.ts";
 // P07's final QA works the climate through a whole day, so it runs on its
 // own, last, and slows none of the others.
 const WEATHER_DAY = "weather-day.spec.ts";
 // P08's checks of the sun's light work climate runs out to noon, so they too
-// run on their own, once the others and P00's pass, and P07's after them.
+// run on their own, after the plant lab, and P07's after them.
 const SUN = ["light.spec.ts"];
 
 export default defineConfig({
@@ -28,7 +32,7 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testIgnore: [...ELSEWHERE, RENDERER_SMOKE, WEATHER_DAY, ...SUN],
+      testIgnore: [...ELSEWHERE, RENDERER_SMOKE, PLANT_LAB, WEATHER_DAY, ...SUN],
       use: { ...devices["Desktop Chrome"] },
     },
     {
@@ -38,9 +42,15 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
     {
+      name: "plant-lab",
+      testMatch: PLANT_LAB,
+      dependencies: ["renderer-smoke"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
       name: "sun",
       testMatch: SUN,
-      dependencies: ["renderer-smoke"],
+      dependencies: ["plant-lab"],
       use: { ...devices["Desktop Chrome"] },
     },
     {
