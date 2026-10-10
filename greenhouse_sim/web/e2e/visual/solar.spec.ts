@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { QA_SOLAR_PATH, QA_SOLAR_VIEWS } from "../../src/qa/solarViews.ts";
+import { QA_SOLAR_PATH, QA_SOLAR_VIEWS } from "../../src/qa/solarPage.ts";
 
 test.skip(process.platform !== "linux", "the baselines are drawn on Linux, in CI's container");
 

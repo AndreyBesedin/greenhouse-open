@@ -8,15 +8,15 @@ import {
   type WeatherAtAMoment,
   type WeatherDay,
 } from "../weather/weather";
+import { QA_SOLAR_VIEWS, type QaSolarView } from "./solarPage";
+
+export { QA_SOLAR_PATH, QA_SOLAR_VIEWS, type QaSolarView } from "./solarPage";
 
 // P08's equinox views: the solar lab's scene, and its light at three moments
 // of its clear equinox day, as the simulator writes them
 // (`tests/test_solar_qa.py --update`), drawn from one fixed view.
-export const QA_SOLAR_PATH = "/qa/solar-lab";
 export const QA_SOLAR_SCENE_URL = "/scenes/qa-solar-lab.json";
 export const QA_SOLAR_LIGHT_URL = "/fields/qa-solar-lab-light.json";
-export const QA_SOLAR_VIEWS = ["morning", "noon", "evening"] as const;
-export type QaSolarView = (typeof QA_SOLAR_VIEWS)[number];
 
 // The house is 12 m long and 6.4 m wide. It is seen from the south-west and
 // above, looking at the middle of its floor, so that the shadows the crates
