@@ -20,7 +20,7 @@ test("climate: a running fan drives the air along its axis, and its level sets h
       "climate_box_climate (climate:prescribed:uniform): 24 × 13 × 8 cells, air speed 0 to 0 m/s.",
     );
     await expect(inTheCore).toHaveText(
-      "climate: 0.00 m/s (0.00, 0.00, 0.00), temperature 16.00 °C, humidity 85.00 %, co2 420.00 ppm",
+      "climate: 0.00 m/s (0.00, 0.00, 0.00), temperature 16.00 °C, humidity 85.00 %, co2 420.00 ppm, PAR 0.00 µmol/m²/s, irradiance 0.00 W/m²",
     );
   });
 
@@ -64,8 +64,12 @@ test("climate: a running heater warms its corner and the house through the run",
 
   await test.step("at the run's start, the air is 16 °C everywhere", async () => {
     await expect(moment).toHaveText("0 min");
-    await expect(corner).toHaveText(/temperature 16\.00 °C, humidity 85\.00 %, co2 420\.00 ppm$/);
-    await expect(middle).toHaveText(/temperature 16\.00 °C, humidity 85\.00 %, co2 420\.00 ppm$/);
+    await expect(corner).toHaveText(
+      /temperature 16\.00 °C, humidity 85\.00 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
+    );
+    await expect(middle).toHaveText(
+      /temperature 16\.00 °C, humidity 85\.00 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
+    );
   });
 
   await test.step("ten minutes in, its corner is warm, and the cold glass cools the rest", async () => {
@@ -73,8 +77,12 @@ test("climate: a running heater warms its corner and the house through the run",
     await expect(page).toHaveURL(/&t=600(&|$)/);
     await expect(moment).toHaveText("10 min");
     // Warmed, the corner's air is far from saturated.
-    await expect(corner).toHaveText(/temperature 37\.03 °C, humidity 24\.53 %, co2 420\.00 ppm$/);
-    await expect(middle).toHaveText(/temperature 18\.67 °C, humidity 70\.78 %, co2 420\.00 ppm$/);
+    await expect(corner).toHaveText(
+      /temperature 37\.03 °C, humidity 24\.53 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
+    );
+    await expect(middle).toHaveText(
+      /temperature 18\.67 °C, humidity 70\.78 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
+    );
   });
 
   await test.step("back at the start, the slice keeps the colours the run reached", async () => {
@@ -106,9 +114,13 @@ test("climate: a running heater warms its corner and the house through the run",
       .uncheck();
     // An override at its moment: the air then is as it was.
     await expect(page).toHaveURL(/&schedule=600:heater:0(&|$)/);
-    await expect(middle).toHaveText(/temperature 18\.67 °C, humidity 70\.78 %, co2 420\.00 ppm$/);
+    await expect(middle).toHaveText(
+      /temperature 18\.67 °C, humidity 70\.78 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
+    );
     await slider.fill("1200");
-    await expect(middle).toHaveText(/temperature 11\.51 °C, humidity 100\.00 %, co2 420\.00 ppm$/);
+    await expect(middle).toHaveText(
+      /temperature 11\.51 °C, humidity 100\.00 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
+    );
   });
 });
 
@@ -125,10 +137,14 @@ test("climate: a running dehumidifier dries the air around it", async ({ page })
   await expect(page.getByTestId("field-legend-quantity")).toHaveText("humidity (%)");
 
   await test.step("ten minutes in, it has dried and warmed its side of the cooling house", async () => {
-    await expect(beside).toHaveText(/temperature 12\.89 °C, humidity 87\.83 %, co2 420\.00 ppm$/);
+    await expect(beside).toHaveText(
+      /temperature 12\.89 °C, humidity 87\.83 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
+    );
     // Unheated, the far corner has cooled to saturation, give or take when
     // its water last condensed.
-    await expect(far).toHaveText(/temperature 11\.29 °C, humidity 99\.9\d %, co2 420\.00 ppm$/);
+    await expect(far).toHaveText(
+      /temperature 11\.29 °C, humidity 99\.9\d %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
+    );
   });
 
   await test.step("with the heater on too from the start, the whole house is drier", async () => {
@@ -141,8 +157,12 @@ test("climate: a running dehumidifier dries the air around it", async ({ page })
       .check();
     await expect(page).toHaveURL(/set=dehumidifier:1,heater:1(&|$)/);
     await slider.fill("600");
-    await expect(beside).toHaveText(/temperature 20\.55 °C, humidity 58\.10 %, co2 420\.00 ppm$/);
-    await expect(far).toHaveText(/temperature 16\.28 °C, humidity 78\.84 %, co2 420\.00 ppm$/);
+    await expect(beside).toHaveText(
+      /temperature 20\.55 °C, humidity 58\.10 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
+    );
+    await expect(far).toHaveText(
+      /temperature 16\.28 °C, humidity 78\.84 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
+    );
   });
 });
 
@@ -159,7 +179,7 @@ test("climate: opening the roof vent lets the heated air out, and the cold in", 
 
   await test.step("shut, the air under it is still, and warm from the heater", async () => {
     await expect(reading).toHaveText(
-      "climate: 0.00 m/s (0.00, 0.00, 0.00), temperature 18.19 °C, humidity 72.90 %, co2 420.00 ppm",
+      "climate: 0.00 m/s (0.00, 0.00, 0.00), temperature 18.19 °C, humidity 72.90 %, co2 420.00 ppm, PAR 0.00 µmol/m²/s, irradiance 0.00 W/m²",
     );
   });
 
@@ -169,7 +189,7 @@ test("climate: opening the roof vent lets the heated air out, and the cold in", 
     await page.getByRole("group", { name: "Openings" }).getByRole("slider").first().fill("100");
     await expect(page).toHaveURL(/open=roof_vent:1(&|$)/);
     await expect(reading).toHaveText(
-      "climate: 0.05 m/s (0.00, 0.00, 0.05), temperature 14.57 °C, humidity 76.67 %, co2 420.00 ppm",
+      "climate: 0.05 m/s (0.00, 0.00, 0.05), temperature 14.57 °C, humidity 76.67 %, co2 420.00 ppm, PAR 0.00 µmol/m²/s, irradiance 0.00 W/m²",
     );
   });
 });

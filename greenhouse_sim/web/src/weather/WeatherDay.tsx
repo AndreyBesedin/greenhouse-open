@@ -15,6 +15,7 @@ const CHARTED: readonly {
   { name: "Air", unit: "°C", className: "day-temperature", of: (s) => s.air_temperature_c },
   { name: "Humidity", unit: "%", className: "day-humidity", of: (s) => s.relative_humidity_pct },
   { name: "Wind", unit: "m/s", className: "day-wind", of: (s) => s.wind_speed_m_s },
+  { name: "Sunshine", unit: "W/m²", className: "day-sunshine", of: (s) => s.global_radiation_w_m2 },
 ];
 
 /** One quantity through the day, as a line, with the moment drawn marked
@@ -76,8 +77,8 @@ function DayLine({
 }
 
 /** The weather through the runs' first day: the air's temperature, its
- * humidity and the wind's speed, each from its least to its most, with the
- * moment drawn marked across them. */
+ * humidity, the wind's speed and the sunshine, each from its least to its
+ * most, with the moment drawn marked across them. */
 export function WeatherDayChart({ state, time }: { state: WeatherDayState; time: number }) {
   if (state.status === "none") {
     return null;

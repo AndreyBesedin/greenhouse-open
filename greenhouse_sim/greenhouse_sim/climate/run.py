@@ -21,7 +21,9 @@ for it, and find what it kept.
 As a field (`field`), the air at a moment is its velocity, temperature,
 relative humidity (`climate.psychrometrics`) and CO2 there. A cell an obstacle fills
 is still, and shows the mean temperature and water of the cells beside it,
-so that a slice or a legend shows the air's.
+so that a slice or a legend shows the air's. A run under the sun
+(`greenhouse_sim.solar.inside`) adds the light on a level surface at each
+cell's centre: its PAR and its shortwave irradiance.
 """
 
 import math
@@ -43,6 +45,7 @@ from greenhouse_sim.climate.transport import AirState, Transport
 from greenhouse_sim.climate.vents import Vent
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import VECTOR_COMPONENTS, EnvironmentField, FieldGrid
+from greenhouse_sim.solar.inside import Sunlight
 from greenhouse_sim.weather.sources import RunWeather
 from greenhouse_sim.weather.state import WeatherState
 from greenhouse_sim.world.equipment import Equipment
@@ -101,6 +104,7 @@ class ClimateRun:
         weather: RunWeather,
         vents: Sequence[Vent] = (),
         glazed: Mapping[str, GlazedCells] | None = None,
+        sunlight: Sunlight | None = None,
     ) -> None:
         nx, ny, nz = grid.shape
         if solid.shape != (nz, ny, nx):
@@ -114,6 +118,7 @@ class ClimateRun:
         self.solid = solid
         self.vents = tuple(vents)
         self.glazed = dict(glazed or {})
+        self.sunlight = sunlight
         self._base_velocity = base.field("base", grid).channels[AirQuantity.VELOCITY]
         self._steady: dict[_Levels, tuple[SourceTerms, FaceFlows]] = {}
         self._through_flows: dict[str, FaceFlows] | None = None
@@ -145,6 +150,7 @@ class ClimateRun:
             self.weather,
             self.vents,
             self.glazed,
+            self.sunlight,
         )
         later._steady = self._steady
         later._through_flows = self._through_flows
@@ -354,15 +360,20 @@ class ClimateRun:
         )
         temperature = _filled(air.temperature, self.solid)
         humidity = _filled(air.humidity, self.solid)
+        channels = {
+            AirQuantity.VELOCITY: velocity,
+            AirQuantity.TEMPERATURE: temperature,
+            AirQuantity.HUMIDITY: relative_humidity_pct(temperature, humidity),
+            AirQuantity.CO2: _filled(air.co2, self.solid),
+        }
+        if self.sunlight is not None:
+            light = self.sunlight.at(time_s)
+            channels[AirQuantity.PAR] = light.par_umol_m2_s
+            channels[AirQuantity.IRRADIANCE] = light.irradiance_w_m2
         return EnvironmentField(
             field_id=field_id,
             source=f"climate:{self.base.field(field_id, self.grid).source}",
             grid=self.grid,
             time_s=time_s,
-            channels={
-                AirQuantity.VELOCITY: velocity,
-                AirQuantity.TEMPERATURE: temperature,
-                AirQuantity.HUMIDITY: relative_humidity_pct(temperature, humidity),
-                AirQuantity.CO2: _filled(air.co2, self.solid),
-            },
+            channels=channels,
         )

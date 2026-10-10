@@ -1,6 +1,7 @@
 """A scenario's weather through a run (P07.1, P07.2): where its site lies,
 the weather outside it at a moment of a run, with the wind in the world's
-axes, as a viewer draws it, and the weather through the run's first day.
+axes and the sun and its light, as a viewer draws them, and the weather
+through the run's first day.
 
 A run's moments are seconds from its start (`ScenarioConfig.run_start`), and
 lie within a run, as a climate field's do (`greenhouse_sim.services.fields`).
@@ -18,6 +19,7 @@ from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import LONGEST_RUN_S
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, SceneChanges, changed, scenario
 from greenhouse_sim.solar.position import SunPosition, sun_position
+from greenhouse_sim.solar.sky import OutsideLight, outside_light
 from greenhouse_sim.weather.state import WeatherState
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.site import Site
@@ -30,8 +32,9 @@ DAY_EVERY_S: Final = 600.0
 class WeatherAtAMoment(BaseModel):
     """The weather at a moment of a scenario's run: its site, the moment, as
     an instant and in seconds from the run's start, the weather then, the
-    wind's velocity in the world's axes, and where the sun stands, with the
-    direction towards it in the world's axes (P08.1)."""
+    wind's velocity in the world's axes, where the sun stands, with the
+    direction towards it in the world's axes (P08.1), and its light and the
+    sky's (P08.3)."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -42,6 +45,7 @@ class WeatherAtAMoment(BaseModel):
     wind_m_s: Vector3
     sun: SunPosition
     sun_direction: Vector3
+    light: OutsideLight
 
 
 class WeatherThroughADay(BaseModel):
@@ -87,6 +91,7 @@ def at_a_moment(
         wind_m_s=state.wind_m_s(config.site),
         sun=sun,
         sun_direction=sun.direction(config.site),
+        light=outside_light(state.global_radiation_w_m2, sun, moment),
     )
 
 

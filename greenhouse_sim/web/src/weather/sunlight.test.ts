@@ -47,6 +47,7 @@ function weatherWith(sun: SunPosition): WeatherAtAMoment {
       cloud_cover_pct: 0,
     },
     windMS: { x: 0, y: 0, z: 0 },
+    light: { ghi_w_m2: 0, dni_w_m2: 0, dhi_w_m2: 0, par_umol_m2_s: 0 },
     sun,
     sunDirection: towards(sun.azimuth_deg, sun.elevation_deg),
   };

@@ -1,5 +1,5 @@
 import type { ScalarRange } from "../debug/scalar";
-import type { Slice, SliceQuantity } from "./display";
+import { quantityTitle, type Slice, type SliceQuantity } from "./display";
 import type { EnvironmentField } from "./field";
 import { sliceExtent } from "./slice";
 
@@ -35,7 +35,7 @@ export function quantityScale(
     return null;
   }
   return {
-    title: quantity === "speed" ? "air speed" : quantity,
+    title: quantityTitle(quantity),
     unit: channel.unit,
     range: { min: channel.minimum, max: channel.maximum },
   };

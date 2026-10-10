@@ -37,9 +37,22 @@ export interface SunPosition {
   azimuth_deg: number;
 }
 
+/** The sun's and the sky's light outside at a moment: its global
+ * horizontal irradiance, its beam's direct normal irradiance and the diffuse
+ * sky's on a level surface, in W/m², and its PAR, in µmol/m²/s. */
+export interface OutsideLight {
+  ghi_w_m2: number;
+  dni_w_m2: number;
+  dhi_w_m2: number;
+  par_umol_m2_s: number;
+}
+
+const LIGHT_NUMBERS = ["ghi_w_m2", "dni_w_m2", "dhi_w_m2", "par_umol_m2_s"] as const;
+
 /** A scenario's weather at a moment of a run, as the simulator sends it
  * (`GET /api/scenarios/{id}/weather`): with the wind's velocity in the
- * world's axes, and where the sun stands, with the direction towards it. */
+ * world's axes, where the sun stands, with the direction towards it, and
+ * its light and the sky's. */
 export interface WeatherAtAMoment {
   site: Site;
   /** The moment, as an instant. */
@@ -49,6 +62,7 @@ export interface WeatherAtAMoment {
   windMS: Point3;
   sun: SunPosition;
   sunDirection: Point3;
+  light: OutsideLight;
 }
 
 export type WeatherStateOfLoad =
@@ -199,8 +213,13 @@ export function parseWeather(body: unknown): WeatherAtAMoment {
     !isObject(body.sun) ||
     typeof body.sun.elevation_deg !== "number" ||
     typeof body.sun.azimuth_deg !== "number" ||
-    !isPoint(body.sun_direction)
+    !isPoint(body.sun_direction) ||
+    !isObject(body.light)
   ) {
+    throw new Error("the weather is not what the viewer expects");
+  }
+  const light = body.light;
+  if (!LIGHT_NUMBERS.every((name) => typeof light[name] === "number")) {
     throw new Error("the weather is not what the viewer expects");
   }
   const site = body.site;
@@ -216,6 +235,7 @@ export function parseWeather(body: unknown): WeatherAtAMoment {
     windMS: body.wind_m_s,
     sun: { elevation_deg: body.sun.elevation_deg, azimuth_deg: body.sun.azimuth_deg },
     sunDirection: body.sun_direction,
+    light: light as unknown as OutsideLight,
   };
 }
 
@@ -323,6 +343,14 @@ export function describeSun(sun: SunPosition): string {
     return "below the horizon";
   }
   return `${sun.elevation_deg.toFixed(SPEED_DECIMALS)}° up, at ${Math.round(sun.azimuth_deg)}° (${compassPoint(sun.azimuth_deg)})`;
+}
+
+/** The light outside, in words: "230 W/m², PAR 494 µmol/m²/s", or "dark". */
+export function describeLight(light: OutsideLight): string {
+  if (light.ghi_w_m2 <= 0) {
+    return "dark";
+  }
+  return `${Math.round(light.ghi_w_m2)} W/m², PAR ${Math.round(light.par_umol_m2_s)} µmol/m²/s`;
 }
 
 /**

@@ -13,7 +13,8 @@ equipment, its `climate`: its air through a climate run, with its equipment
 running at the levels asked from the start, all off unless asked, then as
 the commands asked set them at their moments, and its doors and vents open
 as asked, at a moment of the run, which lasts up to a day
-(`greenhouse_sim.climate.day`). And last the synthetic shear the field
+(`greenhouse_sim.climate.day`), with the sun's light at each cell
+(`greenhouse_sim.solar.inside`). And last the synthetic shear the field
 format is checked against.
 
 A few recent climate runs are kept, each with the moments asked of it, so
@@ -57,6 +58,7 @@ from greenhouse_sim.services.scenarios import (
     equipment_levels,
     scenario,
 )
+from greenhouse_sim.solar.inside import Sunlight
 from greenhouse_sim.weather.recorded import RecordedWeather
 from greenhouse_sim.world.geometry import Vector3
 
@@ -203,6 +205,7 @@ def _new_climate_run(
         replace(vent, opening=start[vent.opening_id])
         for vent in climate_vents(opened, cfd_geometry(scenario_id, opened, grid))
     ]
+    outside = config.run_weather()
     return ClimateRun(
         base=config.airflow,
         equipment=config.layout.equipment,
@@ -218,9 +221,10 @@ def _new_climate_run(
         settings=config.climate,
         grid=grid,
         solid=geometry.solid(),
-        weather=config.run_weather(),
+        weather=outside,
         vents=vents,
         glazed=glazed_cells(config.envelope, grid, geometry.solid()),
+        sunlight=Sunlight(config.site, outside, grid),
     )
 
 

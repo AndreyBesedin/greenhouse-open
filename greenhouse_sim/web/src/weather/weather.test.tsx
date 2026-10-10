@@ -8,6 +8,7 @@ import { WeatherDayChart } from "./WeatherDay";
 import { describeSite, localTime, WeatherPanel, weatherName } from "./WeatherPanel";
 import {
   compassPoint,
+  describeLight,
   describeSun,
   describeWind,
   loadWeather,
@@ -54,6 +55,7 @@ const WESTERLY_BODY = {
     y: -Math.cos((14.6 * Math.PI) / 180),
     z: Math.sin((14.6 * Math.PI) / 180),
   },
+  light: { ghi_w_m2: 223.4, dni_w_m2: 886.2, dhi_w_m2: 0, par_umol_m2_s: 479.8 },
 };
 const WESTERLY: WeatherAtAMoment = parseWeather(WESTERLY_BODY);
 // A day warming from 4 °C to 16 °C and back, every six hours.
@@ -113,6 +115,9 @@ describe("the weather", () => {
       "not what the viewer expects",
     );
     expect(() => parseWeather({ ...WESTERLY_BODY, wind_m_s: null })).toThrow();
+    expect(() => parseWeather({ ...WESTERLY_BODY, light: { ghi_w_m2: 1 } })).toThrow(
+      "not what the viewer expects",
+    );
   });
 
   it("is unavailable when the simulator refuses it or cannot be reached", async () => {
@@ -281,7 +286,7 @@ describe("choosing a weather", () => {
 describe("the day's weather", () => {
   const day = parseWeatherDay(DAY_BODY);
 
-  it("charts the air, its humidity and the wind from their least to their most", () => {
+  it("charts the air, its humidity, the wind and the sunshine from least to most", () => {
     const markup = renderToStaticMarkup(
       <WeatherDayChart state={{ status: "loaded", day }} time={21600} />,
     );
@@ -290,6 +295,7 @@ describe("the day's weather", () => {
     // Humidity and wind hold all day here: flat, at one value.
     expect(markup).toContain('data-testid="weather-day-day-humidity">Humidity, 90.0 %<');
     expect(markup).toContain('data-testid="weather-day-day-wind">Wind, 3.0 m/s<');
+    expect(markup).toContain('data-testid="weather-day-day-sunshine">Sunshine, 0.0 W/m²<');
     // The coldest at six hours in, at the foot of its chart.
     expect(markup).toContain('points="0.0,18.7 60.0,28.0 120.0,9.3 180.0,0.0 240.0,18.7"');
   });
@@ -299,7 +305,7 @@ describe("the day's weather", () => {
       <WeatherDayChart state={{ status: "loaded", day }} time={21600} />,
     );
 
-    expect(markup.match(/data-testid="weather-day-now" x1="60" x2="60"/g)).toHaveLength(3);
+    expect(markup.match(/data-testid="weather-day-now" x1="60" x2="60"/g)).toHaveLength(4);
   });
 
   it("says when it is on its way or cannot be read", () => {
@@ -315,6 +321,8 @@ describe("the day's weather", () => {
 describe("the sun", () => {
   it("is written by its elevation and bearing, or as below the horizon", () => {
     expect(describeSun(WESTERLY.sun)).toBe("14.6° up, at 180° (S)");
+    expect(describeLight(WESTERLY.light)).toBe("223 W/m², PAR 480 µmol/m²/s");
+    expect(describeLight({ ghi_w_m2: 0, dni_w_m2: 0, dhi_w_m2: 0, par_umol_m2_s: 0 })).toBe("dark");
     expect(describeSun({ elevation_deg: -5, azimuth_deg: 0 })).toBe("below the horizon");
   });
 

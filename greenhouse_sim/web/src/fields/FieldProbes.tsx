@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { formatValue } from "../readouts";
 import type { Point3 } from "../world";
+import { quantityTitle } from "./display";
 import { loadFieldNames } from "./FieldControls";
 import type { EnvironmentField } from "./field";
 import {
@@ -54,7 +55,7 @@ export function readingText(field: EnvironmentField, reading: Reading): string {
   }
   for (const [quantity, value] of Object.entries(reading.scalars)) {
     parts.push(
-      `${quantity} ${probeValue(value)} ${unitOf(field, quantity as ScalarQuantity)}`.trim(),
+      `${quantityTitle(quantity as ScalarQuantity)} ${probeValue(value)} ${unitOf(field, quantity as ScalarQuantity)}`.trim(),
     );
   }
   return parts.join(", ");

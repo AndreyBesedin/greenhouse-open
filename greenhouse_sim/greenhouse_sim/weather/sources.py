@@ -3,7 +3,8 @@ at any moment, as an aware instant.
 
 - **Constant** (`ConstantWeather`): one weather for the whole of a run, as a
   scenario's outside was before P07. Its pressure, unless given, is the
-  standard atmosphere's at its site's elevation.
+  standard atmosphere's at its site's elevation. Its radiation is only
+  while the sun is up (`greenhouse_sim.solar.position`): at night, none.
 - **A series** (`WeatherSeries`): records at moments, interpolated linearly
   in time between them. The wind is interpolated as a vector, so that a wind
   turning from 350° to 10° turns through north, not through south, and
@@ -24,6 +25,7 @@ from typing import Final, Literal, Protocol
 
 from pydantic import PositiveFloat
 
+from greenhouse_sim.solar.position import sun_position
 from greenhouse_sim.weather.state import OutsideConditions, WeatherState
 from greenhouse_sim.world.site import Site, bearing
 
@@ -57,16 +59,22 @@ class ConstantWeather(OutsideConditions):
         )
 
     def source(self, site: Site, seed: int = 0, start: datetime | None = None) -> WeatherSource:
-        """This weather at every moment, at `site`; nothing in it is drawn
-        from `seed`, or depends on when a run starts."""
-        return _Constant(self.state(site))
+        """This weather at every moment, at `site`, its radiation only while
+        the sun is up; nothing in it is drawn from `seed`, or depends on when
+        a run starts."""
+        state = self.state(site)
+        return _Constant(state, site, state.model_copy(update={"global_radiation_w_m2": 0.0}))
 
 
 @dataclass(frozen=True)
 class _Constant:
     state: WeatherState
+    site: Site
+    night: WeatherState
 
     def at(self, moment: datetime) -> WeatherState:
+        if self.state.global_radiation_w_m2 > 0 and not sun_position(moment, self.site).is_up():
+            return self.night
         return self.state
 
 
