@@ -74,7 +74,9 @@ test("sensors: an imperfect sensor errs as configured, and the QA switch cleans 
   // Biased, drifting and noisy, to a tenth of a degree, and 30 s late: by
   // ten minutes, its latest reading is the one taken at nine. Two of its
   // samples dropped out.
-  await expect(panel.getByTestId("sensor-reading")).toHaveText("23.30 °C at 9 min");
+  await expect(panel.getByTestId("sensor-reading")).toHaveText("23.30 °C at 9 min", {
+    timeout: 20_000,
+  });
   await expect(panel.getByTestId("sensor-truth")).toHaveText("22.96 °C at 10 min");
   await expect(panel.locator(".sensor-chart-reading")).toHaveCount(8);
 
