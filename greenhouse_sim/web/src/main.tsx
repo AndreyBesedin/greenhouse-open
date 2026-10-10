@@ -13,7 +13,7 @@ import { QaPlants } from "./qa/QaPlants";
 import { QaRenderer } from "./qa/QaRenderer";
 import { QaSolar } from "./qa/QaSolar";
 import { QA_RENDERER_PATH } from "./qa/qaPage";
-import { QA_SOLAR_PATH } from "./qa/solarViews";
+import { QA_SOLAR_PATH } from "./qa/solarPage";
 import "./styles.css";
 
 const root = document.getElementById("root");
