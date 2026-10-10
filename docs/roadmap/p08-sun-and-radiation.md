@@ -1,6 +1,6 @@
 # P08: Sun position, glazing and radiation propagation
 
-**Status:** in progress: P08.1 done, P08.2 next. Part of the
+**Status:** in progress: P08.1 and P08.2 done, P08.3 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -176,7 +176,7 @@ to here.
 | Step | Commit summary | Status |
 | --- | --- | --- |
 | P08.1 | `feat(solar): implement deterministic sun position model` | Done |
-| P08.2 | `feat(viewer): add sun lighting and visible shadows` | Planned |
+| P08.2 | `feat(viewer): add sun lighting and visible shadows` | Done |
 | P08.3 | `feat(radiation): define the radiation field and its units` | Planned |
 | P08.4 | `feat(glazing): add transmission and incidence-angle attenuation` | Planned |
 | P08.5 | `feat(radiation): add geometric shadow and occlusion tracing` | Planned |
@@ -221,6 +221,33 @@ sun-path arc. Visible result: the frames and fixtures cast shadows that
 swing through an accelerated day. Tests: the light's direction is the
 sun's, and it points the other way in the evening from the morning; the
 QA pages' light is unchanged.
+
+#### As implemented
+
+- **The day's sun:** `GET /api/scenarios/{id}/weather/day` gains `sun` and
+  `sun_directions`, one for each of its moments, as the weather at a moment
+  has them.
+- **The light (`scene/SunLight`):** in a scenario's view with a climate
+  run, while the sun is up, the fixed light gives way to a directional
+  light from the sun's direction, at twice the house's longer side from
+  its middle and shining at it, its shadow camera covering the house and
+  4 m around it. Everything opaque in the scene casts a shadow and
+  everything takes them; glass and the other see-through faces cast none.
+  At night only the ambient light is left. The sun's light is stronger
+  than the fixed one (2 against 1.2), and the sky's ambient light dimmer
+  beside it (0.35 against 0.6), so that what lies in shade reads as such:
+  a 15° winter sun lights a level floor only faintly. The canvas draws
+  shadows only then, so every other view, the QA pages among them, is lit
+  and drawn as before. The canvas says which light it has (`data-light`:
+  `fixed`, `sun` or `night`) for the browser tests.
+- **The viewer's shadows are the renderer's:** drawn from every opaque
+  part, equipment's bodies among them, while the radiation (P08.5) counts
+  only what obstructs light.
+- **The sun's path:** the day's positions while the sun is up, joined at
+  the sun marker's reach, in the same views as its light.
+- **The sun's arrow** is now a 2 m pointer from its marker towards the
+  house: drawn the whole way, its head, a quarter of its length, filled a
+  view taken near it, and the light and shadows now show the way.
 
 ### P08.3: The radiation field and its units
 

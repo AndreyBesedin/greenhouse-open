@@ -83,6 +83,7 @@ import { cameraOf, frustumOverlays } from "./sensors/camera";
 import { loadSensorReadings, type SensorReadingsState } from "./sensors/readings";
 import { SensorPanel } from "./sensors/SensorPanel";
 import { Viewport } from "./Viewport";
+import { sceneSunlight, sunPathOverlays } from "./weather/sunlight";
 import { WeatherPanel } from "./weather/WeatherPanel";
 import {
   loadWeather,
@@ -739,6 +740,15 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const probes = source.kind === "scenario" ? (source.probes ?? EMPTY_PROBES) : EMPTY_PROBES;
   const probedField = field.status === "loaded" ? field.field : null;
   const outside = weather.status === "loaded" ? weather.weather : null;
+  // A climate run's view is lit by the sun, and shows its path through the
+  // day; every other view keeps the fixed light, so that it draws as before.
+  const sunlit = source.kind === "scenario" && source.field === CLIMATE_FIELD;
+  const sunlight = useMemo(
+    () =>
+      !sunlit || snapshot === null || outside === null ? null : sceneSunlight(snapshot, outside),
+    [sunlit, snapshot, outside],
+  );
+  const sunsDay = sunlit && weatherDay.status === "loaded" ? weatherDay.day : null;
   const overlays = useMemo(
     () => [
       ...(selected === null ? [] : selectionOverlays(selected, overlayToggles)),
@@ -748,6 +758,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       ...(snapshot === null ? [] : frustumOverlays(snapshot)),
       ...(snapshot === null || outside === null ? [] : windOverlays(snapshot, outside)),
       ...(snapshot === null || outside === null ? [] : sunOverlays(snapshot, outside)),
+      ...(snapshot === null || sunsDay === null ? [] : sunPathOverlays(snapshot, sunsDay)),
       ...(snapshot === null || flowing === null ? [] : openingFlowOverlays(snapshot, flowing)),
     ],
     [
@@ -759,6 +770,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       probes,
       probedField,
       outside,
+      sunsDay,
       flowing,
     ],
   );
@@ -848,6 +860,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         overlays={overlays}
         showBounds={showDimensions}
         byCategory={byCategory}
+        sunlight={sunlight}
         initialPose={
           source.kind === "plants"
             ? PLANT_LAB_POSE

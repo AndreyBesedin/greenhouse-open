@@ -19,8 +19,10 @@ test("weather: a scenario's panel shows the weather outside it, and its site", a
   await weather.getByTestId("weather-summary").click();
   await expect(weather.getByTestId("weather-air")).toHaveText("10.0 °C, 80% RH, 420 ppm CO₂");
   await expect(weather.getByTestId("weather-wind")).toHaveText("4.0 m/s from the SW (225°)");
-  // Midnight: the sun is down.
+  // Midnight: the sun is down. Without a climate run the view keeps its
+  // fixed light.
   await expect(weather.getByTestId("weather-sun")).toHaveText("below the horizon");
+  await expect(page.getByTestId("main-view")).toHaveAttribute("data-light", "fixed");
   await expect(weather.getByTestId("weather-pressure")).toBeVisible();
   await expect(weather.getByTestId("weather-pressure")).toHaveText("1013 hPa");
   await expect(weather.getByTestId("weather-site")).toHaveText(
@@ -127,4 +129,13 @@ test("weather: the sun stands where it is at the moment drawn", async ({ page })
 
   await expect(weather.getByTestId("weather-sun")).toHaveText("15.1° up, at 180° (S)");
   await expect(page.getByTestId("debug-label")).toContainText(["sun 15.1° up, at 180° (S)"]);
+  // The climate run's view is lit from the sun, casting shadows.
+  await expect(page.getByTestId("main-view")).toHaveAttribute("data-light", "sun");
+});
+
+test("weather: at night the climate run's view is lit by the sky alone", async ({ page }) => {
+  await page.goto("/?scenario=climate_box&field=climate&t=600");
+  await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 60_000 });
+
+  await expect(page.getByTestId("main-view")).toHaveAttribute("data-light", "night");
 });

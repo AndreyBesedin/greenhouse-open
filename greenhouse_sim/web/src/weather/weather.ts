@@ -64,6 +64,9 @@ export interface WeatherDay {
   start: string;
   timesS: number[];
   weather: WeatherState[];
+  /** Where the sun stands at each moment, and the direction towards it. */
+  sun: SunPosition[];
+  sunDirections: Point3[];
 }
 
 export type WeatherDayState =
@@ -136,6 +139,14 @@ function isPoint(value: unknown): value is Point3 {
   );
 }
 
+function isSun(value: unknown): value is SunPosition {
+  return (
+    isObject(value) &&
+    typeof value.elevation_deg === "number" &&
+    typeof value.azimuth_deg === "number"
+  );
+}
+
 function isWeatherState(value: unknown): value is WeatherState {
   return (
     isObject(value) &&
@@ -153,11 +164,26 @@ export function parseWeatherDay(body: unknown): WeatherDay {
     !body.times_s.every((time) => typeof time === "number") ||
     !Array.isArray(body.weather) ||
     !body.weather.every(isWeatherState) ||
-    body.weather.length !== body.times_s.length
+    body.weather.length !== body.times_s.length ||
+    !Array.isArray(body.sun) ||
+    !body.sun.every(isSun) ||
+    !Array.isArray(body.sun_directions) ||
+    !body.sun_directions.every(isPoint) ||
+    body.sun.length !== body.times_s.length ||
+    body.sun_directions.length !== body.times_s.length
   ) {
     throw new Error("the day's weather is not what the viewer expects");
   }
-  return { start: body.start, timesS: body.times_s, weather: body.weather };
+  return {
+    start: body.start,
+    timesS: body.times_s,
+    weather: body.weather,
+    sun: body.sun.map((sun) => ({
+      elevation_deg: sun.elevation_deg,
+      azimuth_deg: sun.azimuth_deg,
+    })),
+    sunDirections: body.sun_directions,
+  };
 }
 
 /** A weather response, checked rather than trusted. */
@@ -286,6 +312,9 @@ export function windOverlays(
 // The sun's marker stands this many times the house's longer side from its
 // middle, in the sun's direction, so that it is in the sky of any view.
 const SUN_REACH = 1.5;
+// Its arrow, a short pointer along its light: the scene's light and
+// shadows show the rest of the way.
+const SUN_ARROW_LENGTH_M = 2;
 export const SUN_COLOR = "#e6a800";
 
 /** Where the sun stands, in words: "14.6° up, at 180° (S)". */
@@ -298,8 +327,8 @@ export function describeSun(sun: SunPosition): string {
 
 /**
  * The sun in the scene, while it is up: a marker in the sky in its
- * direction from the house's middle, an arrow from it to the house, along
- * its light, and a label. Nothing at night, or for a scene without the
+ * direction from the house's middle, a short arrow from it towards the
+ * house, along its light, and a label. Nothing at night, or for a scene without the
  * house's bounds.
  */
 export function sunOverlays(
@@ -327,7 +356,7 @@ export function sunOverlays(
       kind: "arrow",
       origin: marker,
       direction: along,
-      length: reach - Math.max(size_x, size_y) / 2,
+      length: SUN_ARROW_LENGTH_M,
       color: SUN_COLOR,
     },
     { id: "sun-label", kind: "label", position: marker, text: `sun ${describeSun(weather.sun)}` },

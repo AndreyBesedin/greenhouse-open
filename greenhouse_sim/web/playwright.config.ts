@@ -14,7 +14,7 @@ const ELSEWHERE = ["visual/**", "bench/**"];
 const RENDERER_SMOKE = "renderer-smoke.spec.ts";
 // The plant lab grows a row of thousands of entities on its later days, and
 // times out when the climate's runs share the simulator with it: it runs on
-// its own, once the others pass.
+// its own, once the others and P00's pass.
 const PLANT_LAB = "plant-lab.spec.ts";
 // P07's final QA works the climate through a whole day, so it runs on its
 // own too, after the plant lab, and slows none of them.
@@ -41,7 +41,7 @@ export default defineConfig({
     {
       name: "plant-lab",
       testMatch: PLANT_LAB,
-      dependencies: ["chromium"],
+      dependencies: ["renderer-smoke"],
       use: { ...devices["Desktop Chrome"] },
     },
     {

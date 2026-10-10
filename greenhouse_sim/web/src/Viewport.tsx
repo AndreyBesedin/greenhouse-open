@@ -1,5 +1,6 @@
 import { Canvas, type ThreeEvent } from "@react-three/fiber";
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
+import { type Group, PCFShadowMap } from "three";
 import { CameraRig } from "./CameraRig";
 import { CAMERA_FIELD_OF_VIEW_DEG, type CameraPose, type PresetRequest } from "./camera";
 import { Overlays } from "./debug/DebugPrimitives";
@@ -10,7 +11,9 @@ import type { ViewSample } from "./readouts";
 import { Section, type SectionPlane } from "./Section";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
 import { SceneView } from "./scene/SceneView";
+import { SunLight } from "./scene/SunLight";
 import { CLICK_TOLERANCE_PX, pickEntity } from "./selection";
+import type { SunLightPose } from "./weather/sunlight";
 import { type Point3, viewerToWorld, WORLD_TO_VIEWER_ROTATION } from "./world";
 
 // A 20 m ground grid with 1 m cells is always shown. Without a scene, 2 m world
@@ -31,8 +34,14 @@ const GRID_COLORS = { centre: "#888888", cells: "#cccccc" };
 export const BACKGROUND_COLOR = "#f4f4f2";
 
 export const AMBIENT_LIGHT_INTENSITY = 0.6;
+// Under the sun the sky's ambient light is dimmer, so that what the sun
+// lights stands out from what lies in shade.
+export const SUNLIT_AMBIENT_INTENSITY = 0.35;
 export const SUN_INTENSITY = 1.2;
 export const SUN = { x: 5, y: 10, z: 7 };
+// The sun's shadows: filtered, and drawn only when they change
+// (`scene/SunLight`).
+const SUN_SHADOWS = { enabled: true, type: PCFShadowMap, autoUpdate: false };
 // How near a click must pass to a line, such as the world axes, to land on
 // it. Three.js's default of a metre would let the axes take clicks meant for
 // the ground around them.
@@ -53,6 +62,7 @@ export function Viewport({
   byCategory = false,
   initialPose = null,
   section = null,
+  sunlight = null,
   onSample,
   onPointer,
   onSelect,
@@ -70,6 +80,9 @@ export function Viewport({
   initialPose?: CameraPose | null;
   /** Cuts the view by a plane, keeping what lies behind it. */
   section?: SectionPlane | null;
+  /** Lights the scene from the sun, casting shadows, while it is up; by the
+   * sky's ambient light alone at night; by the fixed light (null) otherwise. */
+  sunlight?: SunLightPose | "night" | null;
   onSample: (sample: ViewSample) => void;
   onPointer: (point: Point3 | null) => void;
   /** A click picked an entity, or nothing (null). Drags orbit and pick nothing. */
@@ -81,6 +94,8 @@ export function Viewport({
    * clicks pass through. */
   children?: ReactNode;
 }) {
+  const casters = useRef<Group>(null);
+
   function pick(event: ThreeEvent<MouseEvent>): void {
     // Every hit along the ray reaches this group; the nearest entity decides.
     event.stopPropagation();
@@ -101,6 +116,8 @@ export function Viewport({
     <Canvas
       camera={{ fov: CAMERA_FIELD_OF_VIEW_DEG }}
       data-testid="main-view"
+      data-light={sunlight === null ? "fixed" : sunlight === "night" ? "night" : "sun"}
+      shadows={sunlight !== null && sunlight !== "night" ? SUN_SHADOWS : false}
       onCreated={({ raycaster }) => {
         raycaster.params.Line = { threshold: LINE_PICK_TOLERANCE_M };
       }}
@@ -115,13 +132,23 @@ export function Viewport({
       <Section plane={section} />
       <HudProbe onSample={onSample} />
       <color attach="background" args={[BACKGROUND_COLOR]} />
-      <ambientLight intensity={AMBIENT_LIGHT_INTENSITY} />
-      <directionalLight position={[SUN.x, SUN.y, SUN.z]} intensity={SUN_INTENSITY} />
+      <ambientLight
+        intensity={
+          sunlight === null || sunlight === "night"
+            ? AMBIENT_LIGHT_INTENSITY
+            : SUNLIT_AMBIENT_INTENSITY
+        }
+      />
+      {sunlight === null ? (
+        <directionalLight position={[SUN.x, SUN.y, SUN.z]} intensity={SUN_INTENSITY} />
+      ) : (
+        sunlight !== "night" && <SunLight pose={sunlight} casters={casters} />
+      )}
       {/* Three.js's grid lies in its own x-z plane, which is the world's ground. */}
       <gridHelper args={[GRID_SIZE_M, GRID_DIVISIONS, GRID_COLORS.centre, GRID_COLORS.cells]} />
       <group rotation={WORLD_TO_VIEWER_ROTATION}>
         {/* biome-ignore lint/a11y/noStaticElementInteractions: a Three.js group in the canvas, not a page element. */}
-        <group onClick={pick}>
+        <group onClick={pick} ref={casters}>
           {snapshot === null ? (
             <>
               <axesHelper args={[AXES_LENGTH_M]} />
