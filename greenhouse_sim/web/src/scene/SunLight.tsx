@@ -48,7 +48,7 @@ export function SunLight({
 }) {
   const light = useRef<DirectionalLight>(null);
   const target = useMemo(() => new Object3D(), []);
-  const { scene } = useThree();
+  const { gl, scene } = useThree();
 
   useEffect(() => {
     scene.add(target);
@@ -76,9 +76,25 @@ export function SunLight({
     camera.updateProjectionMatrix();
   }, [pose, target]);
 
-  // The scene's meshes come and go as it changes, a selection among them:
-  // each frame, those there now cast and take shadows.
-  useFrame(() => shade(casters.current, true));
+  // The shadow map is drawn only when what it shows changes: the sun moves,
+  // or the scene's meshes come and go, a selection among them; those there
+  // then cast and take shadows. Drawn every frame, it costs a software
+  // renderer, CI's, more than the scene itself.
+  const drawn = useRef<{ pose: SunLightPose | null; meshes: number }>({ pose: null, meshes: -1 });
+  useFrame(() => {
+    const group = casters.current;
+    let meshes = 0;
+    group?.traverse((object) => {
+      if (object instanceof Mesh) {
+        meshes += 1;
+      }
+    });
+    if (drawn.current.pose !== pose || drawn.current.meshes !== meshes) {
+      shade(group, true);
+      drawn.current = { pose, meshes };
+      gl.shadowMap.needsUpdate = true;
+    }
+  });
   useEffect(() => () => shade(casters.current, false), [casters]);
 
   const position = worldToViewer(pose.position);
