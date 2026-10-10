@@ -1,6 +1,6 @@
 import { Canvas, type ThreeEvent } from "@react-three/fiber";
 import { type ReactNode, useRef } from "react";
-import type { Group } from "three";
+import { type Group, PCFShadowMap } from "three";
 import { CameraRig } from "./CameraRig";
 import { CAMERA_FIELD_OF_VIEW_DEG, type CameraPose, type PresetRequest } from "./camera";
 import { Overlays } from "./debug/DebugPrimitives";
@@ -39,6 +39,9 @@ export const AMBIENT_LIGHT_INTENSITY = 0.6;
 export const SUNLIT_AMBIENT_INTENSITY = 0.35;
 export const SUN_INTENSITY = 1.2;
 export const SUN = { x: 5, y: 10, z: 7 };
+// The sun's shadows: filtered, and drawn only when they change
+// (`scene/SunLight`).
+const SUN_SHADOWS = { enabled: true, type: PCFShadowMap, autoUpdate: false };
 // How near a click must pass to a line, such as the world axes, to land on
 // it. Three.js's default of a metre would let the axes take clicks meant for
 // the ground around them.
@@ -114,7 +117,7 @@ export function Viewport({
       camera={{ fov: CAMERA_FIELD_OF_VIEW_DEG }}
       data-testid="main-view"
       data-light={sunlight === null ? "fixed" : sunlight === "night" ? "night" : "sun"}
-      shadows={sunlight !== null && sunlight !== "night" ? "percentage" : false}
+      shadows={sunlight !== null && sunlight !== "night" ? SUN_SHADOWS : false}
       onCreated={({ raycaster }) => {
         raycaster.params.Line = { threshold: LINE_PICK_TOLERANCE_M };
       }}
