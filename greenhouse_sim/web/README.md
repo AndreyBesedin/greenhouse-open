@@ -235,7 +235,8 @@ so that interpreter needs greenhouse-sim installed. Once every other browser
 test has passed, `e2e/renderer-smoke.spec.ts` walks through the whole renderer
 as a person would: live play, camera presets, pause, step and reset with a
 deterministic replay, selection and overlays, and the stress scene. The
-checks of the sun's light (`e2e/light.spec.ts`) work climate runs out to noon,
+checks of the sun's light (`e2e/light.spec.ts`, `e2e/solar-lab.spec.ts`) work
+climate runs out to noon,
 so they too run on their own once the others pass, and P07's day
 (`e2e/weather-day.spec.ts`) after them. Run `npx playwright install chromium`
 once to get the browser.

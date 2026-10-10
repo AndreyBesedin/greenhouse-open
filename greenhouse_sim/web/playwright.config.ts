@@ -17,7 +17,7 @@ const RENDERER_SMOKE = "renderer-smoke.spec.ts";
 const WEATHER_DAY = "weather-day.spec.ts";
 // P08's checks of the sun's light work climate runs out to noon, so they too
 // run on their own, once the others pass, and P07's after them.
-const SUN = ["light.spec.ts"];
+const SUN = ["light.spec.ts", "solar-lab.spec.ts"];
 
 export default defineConfig({
   testDir: "e2e",
