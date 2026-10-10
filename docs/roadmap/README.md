@@ -107,7 +107,7 @@ adds a visible or measurable result.
 | [P05](p05-climate-actuators.md) | Climate actuators: fans, heaters, dehumidification and vents | Done |
 | [P06](p06-virtual-sensors.md) | Virtual sensors and the observation layer | Done |
 | [P07](p07-external-weather.md) | External weather and greenhouse boundary coupling | Done |
-| P08 | Sun position, glazing and radiation propagation | Planned |
+| [P08](p08-sun-and-radiation.md) | Sun position, glazing and radiation propagation | In progress |
 | P09 | Integrated greenhouse scenario, replay and release QA | Planned |
 
 A project's document is added when its first pull request lands.
