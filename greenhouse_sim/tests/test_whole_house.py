@@ -4,6 +4,7 @@ runs a day in well under a second."""
 
 import json
 import time
+from concurrent.futures import ThreadPoolExecutor
 from http import HTTPStatus
 
 import pytest
@@ -111,6 +112,19 @@ def test_it_follows_the_weather_through_a_day() -> None:
     assert dawn.temperature_c < afternoon.temperature_c
     assert dawn.temperature_c == pytest.approx(COLD_SPRING_DAY.coldest_c, abs=1.0)
     assert afternoon.temperature_c == pytest.approx(COLD_SPRING_DAY.warmest_c, abs=1.0)
+
+
+def test_requests_at_once_work_the_house_out_one_at_a_time() -> None:
+    # A viewer asks for several moments of one kept run at once: each waits
+    # for the others, and all find the air a single request would.
+    house = WholeHouse(_run((("heater", 1.0),)))
+    times = [3600.0 * hour for hour in range(1, 9)]
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        together = list(pool.map(house.air_at, times))
+
+    alone = WholeHouse(_run((("heater", 1.0),)))
+    assert together == [alone.air_at(time_s) for time_s in times]
 
 
 def test_it_runs_a_day_in_well_under_a_second() -> None:

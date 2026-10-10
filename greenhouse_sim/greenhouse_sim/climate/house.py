@@ -25,6 +25,7 @@ mean lies a little below this model's while a heater runs.
 """
 
 import math
+import threading
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final
@@ -104,6 +105,9 @@ class WholeHouse:
             co2_ppm=settings.start_co2_ppm,
         )
         self._kept: dict[float, HouseAir] = {0.0: start}
+        # One request at a time works the house's air on; others wait for
+        # it, and find what it kept.
+        self._working = threading.RLock()
 
     def _held(self, time_s: float) -> _Steady:
         levels = self.run.levels_at(time_s)
@@ -186,6 +190,10 @@ class WholeHouse:
         its schedule's changes."""
         if time_s < 0:
             raise ValueError("a climate run starts at 0 s")
+        with self._working:
+            return self._worked_to(time_s)
+
+    def _worked_to(self, time_s: float) -> HouseAir:
         start = max(moment for moment in self._kept if moment <= time_s)
         air = self._kept[start]
         changes = {m for m in self.run.schedule.moments() if start < m <= time_s}
