@@ -20,6 +20,7 @@ A few of a day's later grid runs are kept, the latest asked for.
 """
 
 import math
+import threading
 from collections import OrderedDict
 from typing import Final
 
@@ -55,6 +56,8 @@ class ClimateDay:
         self.run = run
         self.house = WholeHouse(run)
         self._windows: OrderedDict[float, ClimateRun] = OrderedDict()
+        # The later grid runs are kept and dropped one request at a time.
+        self._keeping = threading.RLock()
 
     def _uniform(self, air: HouseAir) -> AirState:
         shape = self.run.solid.shape
@@ -67,15 +70,16 @@ class ClimateDay:
         )
 
     def _started(self, start_s: float) -> ClimateRun:
-        window = self._windows.get(start_s)
-        if window is None:
-            window = self.run.started_at(start_s, self._uniform(self.house.air_at(start_s)))
-            self._windows[start_s] = window
-            if len(self._windows) > KEPT_WINDOWS:
-                self._windows.popitem(last=False)
-        else:
-            self._windows.move_to_end(start_s)
-        return window
+        with self._keeping:
+            window = self._windows.get(start_s)
+            if window is None:
+                window = self.run.started_at(start_s, self._uniform(self.house.air_at(start_s)))
+                self._windows[start_s] = window
+                if len(self._windows) > KEPT_WINDOWS:
+                    self._windows.popitem(last=False)
+            else:
+                self._windows.move_to_end(start_s)
+            return window
 
     def window(self, time_s: float) -> ClimateRun:
         """The grid run that draws the field at `time_s`."""
@@ -110,5 +114,7 @@ class ClimateDay:
         schedule and this day's differ: its grid run from the start, and its
         later grid runs, each from the same start."""
         self.run.carry_on_from(other.run)
-        for start, theirs in other._windows.items():
-            self._started(start).carry_on_from(theirs)
+        with other._keeping:
+            theirs = list(other._windows.items())
+        for start, window in theirs:
+            self._started(start).carry_on_from(window)
