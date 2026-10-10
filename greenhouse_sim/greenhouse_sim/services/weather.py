@@ -17,6 +17,7 @@ from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import LONGEST_RUN_S
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, SceneChanges, changed, scenario
+from greenhouse_sim.solar.position import SunPosition, sun_position
 from greenhouse_sim.weather.state import WeatherState
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.site import Site
@@ -28,8 +29,9 @@ DAY_EVERY_S: Final = 600.0
 
 class WeatherAtAMoment(BaseModel):
     """The weather at a moment of a scenario's run: its site, the moment, as
-    an instant and in seconds from the run's start, the weather then, and
-    the wind's velocity in the world's axes."""
+    an instant and in seconds from the run's start, the weather then, the
+    wind's velocity in the world's axes, and where the sun stands, with the
+    direction towards it in the world's axes (P08.1)."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -38,6 +40,8 @@ class WeatherAtAMoment(BaseModel):
     time_s: float
     weather: WeatherState
     wind_m_s: Vector3
+    sun: SunPosition
+    sun_direction: Vector3
 
 
 class WeatherThroughADay(BaseModel):
@@ -70,12 +74,16 @@ def at_a_moment(
         state = config.run_weather().at(time_s)
     except ValueError as unknown:
         raise InvalidRequest(str(unknown)) from unknown
+    moment = config.run_start() + timedelta(seconds=time_s)
+    sun = sun_position(moment, config.site)
     return WeatherAtAMoment(
         site=config.site,
-        moment=config.run_start() + timedelta(seconds=time_s),
+        moment=moment,
         time_s=time_s,
         weather=state,
         wind_m_s=state.wind_m_s(config.site),
+        sun=sun,
+        sun_direction=sun.direction(config.site),
     )
 
 

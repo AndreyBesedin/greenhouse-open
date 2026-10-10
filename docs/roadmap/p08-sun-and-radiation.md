@@ -1,6 +1,6 @@
 # P08: Sun position, glazing and radiation propagation
 
-**Status:** in progress: design written, P08.1 next. Part of the
+**Status:** in progress: P08.1 done, P08.2 next. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -175,7 +175,7 @@ to here.
 
 | Step | Commit summary | Status |
 | --- | --- | --- |
-| P08.1 | `feat(solar): implement deterministic sun position model` | Planned |
+| P08.1 | `feat(solar): implement deterministic sun position model` | Done |
 | P08.2 | `feat(viewer): add sun lighting and visible shadows` | Planned |
 | P08.3 | `feat(radiation): define the radiation field and its units` | Planned |
 | P08.4 | `feat(glazing): add transmission and incidence-angle attenuation` | Planned |
@@ -192,6 +192,27 @@ run and its direction in the world's axes, served with the weather, and the
 viewer's sun marker and arrow. Visible result: the sun's marker and arrow
 move across the sky as the time slider scrubs. Tests: the reference values
 of section 1.
+
+#### As implemented
+
+- **`solar.position`:** NOAA's equations, `sun_position(moment, site)` giving
+  the elevation (refraction included), the azimuth, the declination and the
+  equation of time; `SunPosition.direction(site)` the unit vector towards
+  the sun in the world's axes.
+- **Against references:** NREL's SPA example to 0.003° in zenith angle and
+  0.002° in azimuth; at the default site (52° N) the equinox's noon sun
+  stands 38.0° high, June's 61.4° and December's 14.6°; the declination
+  turns at ±23.44°; the equation of time is 14 minutes slow in mid-February
+  and 16 fast in early November; the sun rises in the east, stands south
+  at solar noon (11:50 UTC at the March equinox, at 4.5° east) and sets in
+  the west.
+- **Served with the weather:** `GET /api/scenarios/{id}/weather` gains `sun`
+  and `sun_direction`. The scenarios' runs start on 1 January, so their
+  noon sun stands about 15° high in the south.
+- **The viewer:** the Weather panel, opened, gives the sun's elevation and
+  bearing, or that it is below the horizon; the scene draws the sun as a
+  marker in the sky, at 1.5 times the house's longer side from its middle,
+  with an arrow along its light to the house and a label, while it is up.
 
 ### P08.2: Sunlight and shadows in the viewer
 
