@@ -13,10 +13,10 @@ const ELSEWHERE = ["visual/**", "bench/**"];
 // P00's final QA drives a shared live run, so it runs once the others pass.
 const RENDERER_SMOKE = "renderer-smoke.spec.ts";
 // P07's final QA works the climate through a whole day, so it runs on its
-// own, once the others pass, and slows none of them.
+// own, last, and slows none of the others.
 const WEATHER_DAY = "weather-day.spec.ts";
 // P08's checks of the sun's light work climate runs out to noon, so they too
-// run on their own, once the others pass, and P07's after them.
+// run on their own, once the others and P00's pass, and P07's after them.
 const SUN = ["light.spec.ts"];
 
 export default defineConfig({
@@ -40,7 +40,7 @@ export default defineConfig({
     {
       name: "sun",
       testMatch: SUN,
-      dependencies: ["chromium"],
+      dependencies: ["renderer-smoke"],
       use: { ...devices["Desktop Chrome"] },
     },
     {
