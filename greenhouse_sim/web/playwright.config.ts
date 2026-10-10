@@ -15,6 +15,9 @@ const RENDERER_SMOKE = "renderer-smoke.spec.ts";
 // P07's final QA works the climate through a whole day, so it runs on its
 // own, once the others pass, and slows none of them.
 const WEATHER_DAY = "weather-day.spec.ts";
+// P08's checks of the sun's light work climate runs out to noon, so they too
+// run on their own, once the others pass, and P07's after them.
+const SUN = ["light.spec.ts", "solar-lab.spec.ts"];
 
 export default defineConfig({
   testDir: "e2e",
@@ -25,7 +28,7 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testIgnore: [...ELSEWHERE, RENDERER_SMOKE, WEATHER_DAY],
+      testIgnore: [...ELSEWHERE, RENDERER_SMOKE, WEATHER_DAY, ...SUN],
       use: { ...devices["Desktop Chrome"] },
     },
     {
@@ -35,9 +38,15 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
     {
+      name: "sun",
+      testMatch: SUN,
+      dependencies: ["chromium"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
       name: "weather-day",
       testMatch: WEATHER_DAY,
-      dependencies: ["chromium"],
+      dependencies: ["sun"],
       use: { ...devices["Desktop Chrome"] },
     },
   ],
