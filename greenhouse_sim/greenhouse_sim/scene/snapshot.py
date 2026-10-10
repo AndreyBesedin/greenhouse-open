@@ -18,7 +18,6 @@ service zones and keep-out volumes, as the boxes they keep, and an upright
 cylinder per plant, as tall as its visible stem, at its planting position.
 """
 
-import math
 from collections.abc import Mapping
 from enum import StrEnum
 from typing import Final
@@ -26,7 +25,7 @@ from typing import Final
 from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 from greenhouse_sim.domain.crop import FruitStatus
-from greenhouse_sim.domain.envelope import MemberKind, OpeningKind, SurfaceCategory
+from greenhouse_sim.domain.envelope import OpeningKind, SurfaceCategory
 from greenhouse_sim.domain.equipment import ActuatorKind
 from greenhouse_sim.domain.layout import FixtureKind, Material, Obstruction, ZoneKind
 from greenhouse_sim.scenarios.config import ScenarioConfig
@@ -88,16 +87,9 @@ FLOOR_COLOR: Final = Color(r=0.42, g=0.33, b=0.24)
 WALL_COLOR: Final = Color(r=0.74, g=0.86, b=0.92)
 ROOF_COLOR: Final = Color(r=0.7, g=0.83, b=0.9)
 GUTTER_COLOR: Final = Color(r=0.55, g=0.57, b=0.6)
-# A gutter is drawn as a channel of this cross-section, its top at the eaves,
-# until gutters have a profile of their own.
-GUTTER_WIDTH_M: Final = 0.2
-GUTTER_DEPTH_M: Final = 0.15
 FRAME_COLOR: Final = Color(r=0.66, g=0.68, b=0.7)
 VENT_COLOR: Final = Color(r=0.55, g=0.74, b=0.86)
 DOOR_COLOR: Final = Color(r=0.45, g=0.5, b=0.56)
-# Structural members are drawn as round bars of these radii, until they have
-# profiles of their own.
-MEMBER_RADII_M: Final = {MemberKind.POST: 0.05, MemberKind.RAFTER: 0.03}
 AXES_COLOR: Final = Color(r=0.5, g=0.5, b=0.5)
 PLANT_COLOR: Final = Color(r=0.2, g=0.55, b=0.24)
 # A planting position is marked by a disc this wide and thick, wider than a
@@ -322,25 +314,12 @@ def _gutter_entities(greenhouse_id: str, envelope: Envelope) -> list[SceneEntity
 
 def _gutter_entity(greenhouse_id: str, envelope: Envelope, gutter: Gutter) -> SceneEntity:
     """A gutter as a channel along its line, its top at the line."""
-    along = Vector3(
-        x=gutter.end.x - gutter.start.x,
-        y=gutter.end.y - gutter.start.y,
-        z=gutter.end.z - gutter.start.z,
-    )
-    length = math.hypot(along.x, along.y, along.z)
-    direction = Vector3(x=along.x / length, y=along.y / length, z=along.z / length)
-    level = Vector3(x=0.0, y=0.0, z=1.0).cross(direction)
-    base_middle = Vector3(
-        x=(gutter.start.x + gutter.end.x) / 2,
-        y=(gutter.start.y + gutter.end.y) / 2,
-        z=(gutter.start.z + gutter.end.z) / 2 - GUTTER_DEPTH_M,
-    )
-    in_greenhouse = Transform(position=base_middle, rotation=Quaternion.from_axes(direction, level))
+    in_greenhouse, shape = gutter.solid()
     return SceneEntity(
         entity_id=f"{greenhouse_id}_{gutter.gutter_id}",
         kind=SceneEntityKind.GUTTER,
         transform=envelope.origin.after(in_greenhouse),
-        shape=Box(size_x=length, size_y=GUTTER_WIDTH_M, size_z=GUTTER_DEPTH_M),
+        shape=shape,
         color=GUTTER_COLOR,
         material=GUTTER_MATERIAL,
         label=gutter.gutter_id.replace("_", " "),
@@ -352,26 +331,13 @@ def _member_entities(greenhouse_id: str, envelope: Envelope) -> list[SceneEntity
 
 
 def _member_entity(greenhouse_id: str, envelope: Envelope, member: Member) -> SceneEntity:
-    """A structural member as a cylinder from its foot to its head. Members lie
-    across the length, so the length's direction stays square to each."""
-    along = Vector3(
-        x=member.end.x - member.start.x,
-        y=member.end.y - member.start.y,
-        z=member.end.z - member.start.z,
-    )
-    length = math.hypot(along.x, along.y, along.z)
-    direction = Vector3(x=along.x / length, y=along.y / length, z=along.z / length)
-    across = Vector3(x=1.0, y=0.0, z=0.0)
-    # A cylinder rises along its +z: turn that onto the member's direction.
-    in_greenhouse = Transform(
-        position=member.start,
-        rotation=Quaternion.from_axes(across, direction.cross(across)),
-    )
+    """A structural member as a cylinder from its foot to its head."""
+    in_greenhouse, shape = member.solid()
     return SceneEntity(
         entity_id=f"{greenhouse_id}_{member.member_id}",
         kind=SceneEntityKind.FRAME,
         transform=envelope.origin.after(in_greenhouse),
-        shape=Cylinder(radius=MEMBER_RADII_M[member.kind], height=length),
+        shape=shape,
         color=FRAME_COLOR,
         material=FRAME_MATERIAL,
         label=member.member_id.replace("_", " "),

@@ -37,12 +37,21 @@ an opening lies on it.
 """
 
 import math
-from typing import Self
+from typing import Final, Self
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt, model_validator
 
 from greenhouse_sim.domain.envelope import MemberKind, OpeningKind, SurfaceCategory
-from greenhouse_sim.world.geometry import Plane, Point2, Polygon, Quaternion, Transform, Vector3
+from greenhouse_sim.world.geometry import (
+    Box,
+    Cylinder,
+    Plane,
+    Point2,
+    Polygon,
+    Quaternion,
+    Transform,
+    Vector3,
+)
 
 # Where a greenhouse stands unless a scenario says otherwise: its floor corner
 # at the world's origin, its axes along the world's.
@@ -52,6 +61,12 @@ AT_WORLD_ORIGIN = Transform(position=Vector3(x=0.0, y=0.0, z=0.0))
 DEFAULT_LARGEST_VENT_ANGLE_RAD = math.radians(45)
 # A door slides this far outside its wall, so that the two never touch.
 DOOR_CLEARANCE_M = 0.02
+# A gutter is a channel of this cross-section, its top at the eaves, and
+# structural members are round bars of these radii, until they have profiles
+# of their own: the scene draws them so, and they shade the sun so.
+GUTTER_WIDTH_M: Final = 0.2
+GUTTER_DEPTH_M: Final = 0.15
+MEMBER_RADII_M: Final = {MemberKind.POST: 0.05, MemberKind.RAFTER: 0.03}
 
 _ALONG = Vector3(x=1.0, y=0.0, z=0.0)
 _BACK_ALONG = Vector3(x=-1.0, y=0.0, z=0.0)
@@ -72,6 +87,13 @@ class Surface(BaseModel):
     shape: Plane | Polygon
 
 
+def _along(start: Vector3, end: Vector3) -> tuple[Vector3, float]:
+    """The unit direction from `start` to `end`, and the distance."""
+    along = Vector3(x=end.x - start.x, y=end.y - start.y, z=end.z - start.z)
+    length = math.hypot(along.x, along.y, along.z)
+    return Vector3(x=along.x / length, y=along.y / length, z=along.z / length), length
+
+
 class Gutter(BaseModel):
     """A gutter's line, from end to end, in the greenhouse's frame."""
 
@@ -80,6 +102,23 @@ class Gutter(BaseModel):
     gutter_id: str
     start: Vector3
     end: Vector3
+
+    def solid(self) -> tuple[Transform, Box]:
+        """The gutter as a channel along its line, its top at the line, in
+        the greenhouse's frame: the box's own x along it, its base's middle
+        at its frame's origin."""
+        direction, length = _along(self.start, self.end)
+        base_middle = Vector3(
+            x=(self.start.x + self.end.x) / 2,
+            y=(self.start.y + self.end.y) / 2,
+            z=(self.start.z + self.end.z) / 2 - GUTTER_DEPTH_M,
+        )
+        return (
+            Transform(
+                position=base_middle, rotation=Quaternion.from_axes(direction, _UP.cross(direction))
+            ),
+            Box(size_x=length, size_y=GUTTER_WIDTH_M, size_z=GUTTER_DEPTH_M),
+        )
 
 
 class Opening(BaseModel):
@@ -183,6 +222,20 @@ class Member(BaseModel):
     frame: int
     start: Vector3
     end: Vector3
+
+    def solid(self) -> tuple[Transform, Cylinder]:
+        """The member as a round bar from its foot to its head, in the
+        greenhouse's frame. Members lie across the length, so the length's
+        direction stays square to each."""
+        direction, length = _along(self.start, self.end)
+        # A cylinder rises along its +z: turn that onto the member's direction.
+        return (
+            Transform(
+                position=self.start,
+                rotation=Quaternion.from_axes(_ALONG, direction.cross(_ALONG)),
+            ),
+            Cylinder(radius=MEMBER_RADII_M[self.kind], height=length),
+        )
 
 
 def _surface(

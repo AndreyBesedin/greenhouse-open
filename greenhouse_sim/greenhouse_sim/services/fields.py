@@ -59,6 +59,7 @@ from greenhouse_sim.services.scenarios import (
     scenario,
 )
 from greenhouse_sim.solar.inside import Sunlight
+from greenhouse_sim.solar.shadows import Shadows
 from greenhouse_sim.weather.recorded import RecordedWeather
 from greenhouse_sim.world.geometry import Vector3
 
@@ -224,7 +225,13 @@ def _new_climate_run(
         weather=outside,
         vents=vents,
         glazed=glazed_cells(config.envelope, grid, geometry.solid()),
-        sunlight=Sunlight(config.site, outside, grid, config.envelope),
+        sunlight=Sunlight(
+            config.site,
+            outside,
+            grid,
+            config.envelope,
+            Shadows.of(config.envelope, config.layout),
+        ),
     )
 
 
