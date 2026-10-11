@@ -63,12 +63,11 @@ import {
   loadScene,
   type SceneSource,
   sceneRequest,
-  searchFor,
-  sourceFromSearch,
   withItsAir,
   withOverride,
 } from "./scene/source";
 import { useLiveScene } from "./scene/useLiveScene";
+import { useSource } from "./scene/useSource";
 import { entityOfOrgan, organOf, plantOf, selectedEntity } from "./selection";
 import { CameraFrames } from "./sensors/CameraFrames";
 import { CameraView } from "./sensors/CameraView";
@@ -96,7 +95,7 @@ const DEFAULT_PROBE_HEIGHT_M = 1;
 const EMPTY_PROBES: Point3[] = [];
 
 export function App({ build = buildInfo }: { build?: BuildInfo }) {
-  const [source, setSource] = useState<SceneSource>(() => sourceFromSearch(location.search));
+  const [source, setSource] = useSource();
   // Whether a click places a probe, and how high.
   const [placingProbes, setPlacingProbes] = useState(false);
   const [playingClimate, setPlayingClimate] = useState(false);
@@ -227,11 +226,6 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       : null;
   const cfd = useLoad(cfdUrl, loadCfdGeometry);
 
-  function setScenarioSource(next: SceneSource): void {
-    history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
-    setSource(next);
-  }
-
   function chooseField(name: string | null): void {
     if (source.kind !== "scenario") {
       return;
@@ -240,12 +234,12 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     setFieldRange(null);
     if (name === null) {
       setPlacingProbes(false);
-      setScenarioSource(rest);
+      setSource(rest);
       return;
     }
     // Its probes stay where they are, and so does what it is compared with,
     // unless that is the field now drawn.
-    setScenarioSource({
+    setSource({
       ...rest,
       field: name,
       ...(probes === undefined ? {} : { probes }),
@@ -256,7 +250,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   function setProbes(probes: Point3[]): void {
     if (source.kind === "scenario") {
       const { probes: _, ...rest } = source;
-      setScenarioSource(probes.length === 0 ? rest : { ...rest, probes });
+      setSource(probes.length === 0 ? rest : { ...rest, probes });
       if (probes.length >= MAX_PROBES) {
         setPlacingProbes(false);
       }
@@ -266,7 +260,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   function compareWith(name: string | null): void {
     if (source.kind === "scenario") {
       const { compare: _, ...rest } = source;
-      setScenarioSource(name === null ? rest : { ...rest, compare: name });
+      setSource(name === null ? rest : { ...rest, compare: name });
     }
   }
 
@@ -276,7 +270,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     }
     const { slice, ...rest } = source;
     setFieldRange(null);
-    setScenarioSource(
+    setSource(
       view === "slice"
         ? { ...rest, fieldView: view, slice: slice ?? defaultSlice(field.field) }
         : { ...rest, fieldView: view },
@@ -286,7 +280,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   function showCfdBoundaries(show: boolean): void {
     if (source.kind === "scenario") {
       const { cfdBoundaries: _, ...rest } = source;
-      setScenarioSource(show ? { ...rest, cfdBoundaries: true } : rest);
+      setSource(show ? { ...rest, cfdBoundaries: true } : rest);
     }
   }
 
@@ -295,7 +289,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       if (source.slice?.quantity !== slice.quantity) {
         setFieldRange(null);
       }
-      setScenarioSource({ ...source, slice });
+      setSource({ ...source, slice });
     }
   }
 
@@ -305,7 +299,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       return;
     }
     const { weather: _, ...rest } = source;
-    setScenarioSource(chosen === undefined ? rest : { ...rest, weather: chosen });
+    setSource(chosen === undefined ? rest : { ...rest, weather: chosen });
   }
 
   // The sky clouded as the QA override asks, or as its weather's own.
@@ -314,30 +308,29 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       return;
     }
     const { clouds: _, ...rest } = source;
-    setScenarioSource(clouds === undefined ? rest : { ...rest, clouds });
+    setSource(clouds === undefined ? rest : { ...rest, clouds });
   }
 
   function setOpenings(openings: Record<string, number>): void {
     if (source.kind !== "scenario") {
       return;
     }
-    const next: SceneSource = { ...source, openings };
-    history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
-    setSource(next);
+    setSource({ ...source, openings });
   }
 
   // A moment of the climate run, kept in the address; 0, its start, is left out.
-  const setClimateTime = useCallback((seconds: number): void => {
-    setSource((current) => {
-      if (current.kind !== "scenario") {
-        return current;
-      }
-      const { time: _, ...rest } = current;
-      const next: SceneSource = seconds > 0 ? { ...rest, time: seconds } : rest;
-      history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
-      return next;
-    });
-  }, []);
+  const setClimateTime = useCallback(
+    (seconds: number): void => {
+      setSource((current) => {
+        if (current.kind !== "scenario") {
+          return current;
+        }
+        const { time: _, ...rest } = current;
+        return seconds > 0 ? { ...rest, time: seconds } : rest;
+      });
+    },
+    [setSource],
+  );
 
   // Equipment switched while a climate run is drawn past its start is an
   // override at that moment; otherwise it is set from the start.
@@ -351,10 +344,10 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       const changed = Object.fromEntries(
         Object.entries(levels).filter(([actuatorId, level]) => standing[actuatorId] !== level),
       );
-      setScenarioSource({ ...source, schedule: withOverride(source.schedule ?? [], now, changed) });
+      setSource({ ...source, schedule: withOverride(source.schedule ?? [], now, changed) });
       return;
     }
-    setScenarioSource({ ...source, levels });
+    setSource({ ...source, levels });
   }
 
   function removeCommand(index: number): void {
@@ -363,7 +356,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     }
     const { schedule: _, ...rest } = source;
     const schedule = (source.schedule ?? []).filter((__, at) => at !== index);
-    setScenarioSource(schedule.length === 0 ? rest : { ...rest, schedule });
+    setSource(schedule.length === 0 ? rest : { ...rest, schedule });
   }
 
   // A selection is kept from one run of the lab to the next: its organ is the
@@ -372,15 +365,12 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     if (source.kind !== "plants") {
       return;
     }
-    const next: SceneSource = { ...source, ...change };
-    history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
-    setSource(next);
+    setSource({ ...source, ...change });
   }
 
   function chooseSource(chosen: SceneSource): void {
     const next = withItsAir(source, chosen);
     commandGeneration.current += 1;
-    history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
     setSource(next);
     setCommandProblem(null);
     // Another layout of the same scenario keeps the selection, while what is
@@ -524,13 +514,11 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         if (current.kind !== "plants") {
           return current;
         }
-        const later: SceneSource = { ...current, day: labDay + 1 };
-        history.replaceState(null, "", `${location.pathname}${searchFor(later)}`);
-        return later;
+        return { ...current, day: labDay + 1 };
       });
     }, MILLISECONDS_PER_SECOND / speed);
     return () => window.clearTimeout(next);
-  }, [playing, labDay, shownDay, speed]);
+  }, [playing, labDay, shownDay, speed, setSource]);
   const colourProperties = useMemo(
     () => (snapshot === null ? [] : scalarProperties(snapshot)),
     [snapshot],
