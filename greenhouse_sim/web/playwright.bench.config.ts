@@ -1,5 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
+import { REUSE_TEST_SERVERS } from "./simulatorApi.ts";
+
 // The renderer's performance benchmark: the stress scene, measured on this
 // machine's graphics card. It is a record, not a gate: it never fails on the
 // numbers, and CI, which has no graphics card, does not run it.
@@ -25,6 +27,6 @@ export default defineConfig({
   webServer: {
     command: `npm run build && npx vite preview --port ${PREVIEW_PORT} --strictPort`,
     url: `http://localhost:${PREVIEW_PORT}`,
-    reuseExistingServer: true,
+    reuseExistingServer: REUSE_TEST_SERVERS,
   },
 });

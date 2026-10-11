@@ -63,7 +63,7 @@ architecture and improve specific weaknesses rather than rewrite it.
 | FE-AUDIT.2 | Floating panels overlap in smaller windows | Medium | Addressed in this follow-up |
 | FE-AUDIT.3 | React hook and async lifecycle coverage is thin | Medium | Planned, after P07 |
 | FE-AUDIT.4 | Coverage is neither measured nor enforced | Medium | Planned, after P07 |
-| FE-AUDIT.5 | Local browser tests can reuse stale servers | Medium | Planned, after P07 |
+| FE-AUDIT.5 | Local browser tests can reuse stale servers | Medium | Addressed in the maintenance window, step 2 |
 | FE-AUDIT.6 | API bind failure masks the original exception | Medium | Addressed in the maintenance window, step 1 |
 | FE-AUDIT.7 | Small organizational, test-quality and telemetry improvements | Medium | Planned, general refactoring after P07 |
 | FE-AUDIT.8 | Every load is written out by hand | Medium | Second audit; planned with FE-AUDIT.3 |
@@ -155,6 +155,16 @@ Acceptance:
 - Demonstrate that an unrelated running development server cannot change a
   local test result; document the canonical local command.
 
+Addressed in step 2 of the maintenance window. The browser tests start their
+own API on port 8766 (`TEST_SIMULATOR_API_PORT` in `simulatorApi.ts`) and
+point the preview at it through `SIMULATOR_API_PORT`; the viewer's
+development server keeps the API's default, 8765. No configuration reuses a
+running server unless `REUSE_TEST_SERVERS=1` asks it to, and CI never does.
+On 2026-10-11, with a simulator already listening on 8766, Playwright stopped
+before any test, saying the address was in use; with another API running on
+8765, the tests ran against their own and passed. The canonical local
+command stays `PYTHON=python npm run e2e`, as the viewer's README says.
+
 ### FE-AUDIT.6: Preserve errors during partial API initialization
 
 `SimulatorServer` initialized its superclass before assigning `self.live`.
@@ -240,9 +250,10 @@ extended in place.
   written out fourteen times in `App` and in eight components
   (FE-AUDIT.8).
 - **FE-AUDIT.4** is open: no coverage is configured.
-- **FE-AUDIT.5** is open. The browser and screenshot configurations reuse a
-  running server outside CI, and the benchmark's always does. Local runs
-  work around it by editing `simulatorApi.ts` to another port and back.
+- **FE-AUDIT.5** was open. The browser and screenshot configurations reused
+  a running server outside CI, and the benchmark's always did. Local runs
+  worked around it by editing `simulatorApi.ts` to another port and back.
+  Step 2 addresses it.
 - **FE-AUDIT.6** was open, unchanged in `greenhouse_sim/api/server.py`;
   step 1 addresses it.
 - **FE-AUDIT.7** is open. Most of its `App` work is now FE-AUDIT.8–11.

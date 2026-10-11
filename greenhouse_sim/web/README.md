@@ -231,7 +231,12 @@ npm run bench       # the renderer's benchmark, on this machine's graphics card
 ```
 
 The smoke test starts the simulator's API with `$PYTHON -m greenhouse_sim.api`,
-so that interpreter needs greenhouse-sim installed. Once every other browser
+so that interpreter needs greenhouse-sim installed. The browser tests start
+their own API, on port 8766, and their own build of the viewer, so an API
+kept running on 8765 for development cannot answer for them. They never test
+a server already running on their ports: Playwright stops, saying the port is
+in use. `REUSE_TEST_SERVERS=1` reuses such servers deliberately, to rerun a
+test quickly against ones known to be this checkout's. Once every other browser
 test has passed, `e2e/renderer-smoke.spec.ts` walks through the whole renderer
 as a person would: live play, camera presets, pause, step and reset with a
 deterministic replay, selection and overlays, and the stress scene. The

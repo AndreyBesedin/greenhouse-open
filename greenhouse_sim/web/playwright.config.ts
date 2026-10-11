@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-import { SIMULATOR_API, SIMULATOR_API_PORT } from "./simulatorApi.ts";
+import { REUSE_TEST_SERVERS, simulatorApi, TEST_SIMULATOR_API_PORT } from "./simulatorApi.ts";
 
 // The smoke test runs the real thing: the simulator's local API and the
 // production build of the viewer, in Chromium. PYTHON names an interpreter
@@ -62,14 +62,15 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: `${PYTHON} -m greenhouse_sim.api --port ${SIMULATOR_API_PORT}`,
-      url: `${SIMULATOR_API}/api/health`,
-      reuseExistingServer: !IN_CI,
+      command: `${PYTHON} -m greenhouse_sim.api --port ${TEST_SIMULATOR_API_PORT}`,
+      url: `${simulatorApi(TEST_SIMULATOR_API_PORT)}/api/health`,
+      reuseExistingServer: REUSE_TEST_SERVERS,
     },
     {
       command: `npm run build && npx vite preview --port ${PREVIEW_PORT} --strictPort`,
       url: `http://localhost:${PREVIEW_PORT}`,
-      reuseExistingServer: !IN_CI,
+      env: { SIMULATOR_API_PORT: String(TEST_SIMULATOR_API_PORT) },
+      reuseExistingServer: REUSE_TEST_SERVERS,
     },
   ],
 });

@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-import { SIMULATOR_API } from "./simulatorApi.ts";
+import { DEFAULT_SIMULATOR_API_PORT, simulatorApi } from "./simulatorApi.ts";
 
 // The viewer ships with the simulator, so it reports the simulator's version
 // rather than keeping a second one in step.
@@ -16,6 +16,11 @@ function simulatorVersion(): string {
   }
   return match[1];
 }
+
+// The browser tests point the preview at their own API.
+const SIMULATOR_API = simulatorApi(
+  Number(process.env.SIMULATOR_API_PORT ?? DEFAULT_SIMULATOR_API_PORT),
+);
 
 // Three.js alone is about a megabyte minified. The viewer is a local
 // development tool, so a single chunk of this size is fine.
