@@ -64,7 +64,7 @@ architecture and improve specific weaknesses rather than rewrite it.
 | FE-AUDIT.3 | React hook and async lifecycle coverage is thin | Medium | Planned, after P07 |
 | FE-AUDIT.4 | Coverage is neither measured nor enforced | Medium | Planned, after P07 |
 | FE-AUDIT.5 | Local browser tests can reuse stale servers | Medium | Planned, after P07 |
-| FE-AUDIT.6 | API bind failure masks the original exception | Medium | Planned, after P07 |
+| FE-AUDIT.6 | API bind failure masks the original exception | Medium | Addressed in the maintenance window, step 1 |
 | FE-AUDIT.7 | Small organizational, test-quality and telemetry improvements | Medium | Planned, general refactoring after P07 |
 | FE-AUDIT.8 | Every load is written out by hand | Medium | Second audit; planned with FE-AUDIT.3 |
 | FE-AUDIT.9 | The address is written in six places | Medium | Second audit; planned before P09 |
@@ -170,6 +170,14 @@ Acceptance:
 - Test a bind failure and assert that its original exception is preserved.
 - Keep the existing normal shutdown/live-run cleanup behavior covered.
 
+Addressed in step 1 of the maintenance window. `SimulatorServer` makes its
+live runs before it binds. A run starts only when a viewer first asks for
+one, so a server that fails to bind has none to stop, and raises the bind's
+own error. `test_a_port_already_taken_is_reported_as_such` binds a second
+server to a port in use and expects `EADDRINUSE`; it failed with the
+`AttributeError` before the change. Closing a server still stops its live
+runs, as `test_closing_the_server_stops_its_live_runs` checks.
+
 ### FE-AUDIT.7: General refactoring after P07
 
 Review the frontend as it exists after P07 before choosing the size of these
@@ -235,7 +243,8 @@ extended in place.
 - **FE-AUDIT.5** is open. The browser and screenshot configurations reuse a
   running server outside CI, and the benchmark's always does. Local runs
   work around it by editing `simulatorApi.ts` to another port and back.
-- **FE-AUDIT.6** is open, unchanged in `greenhouse_sim/api/server.py`.
+- **FE-AUDIT.6** was open, unchanged in `greenhouse_sim/api/server.py`;
+  step 1 addresses it.
 - **FE-AUDIT.7** is open. Most of its `App` work is now FE-AUDIT.8–11.
   `gable as never` remains in `Inspector.test.tsx`, with `as unknown as` in
   two more test files and, after validation, twice in `weather/weather.ts`.

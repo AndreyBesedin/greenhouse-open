@@ -45,8 +45,11 @@ class SimulatorServer(ThreadingHTTPServer):
     request_queue_size = PENDING_CONNECTIONS
 
     def __init__(self, port: int, *, seconds_per_day: float) -> None:
-        super().__init__((LOOPBACK, port), _Handler)
+        # Before binding: a server that fails to bind closes itself, which
+        # stops its live runs, and then raises the bind's own error. None has
+        # started yet.
         self.live = LiveRuns(seconds_per_day=seconds_per_day)
+        super().__init__((LOOPBACK, port), _Handler)
 
     def server_close(self) -> None:
         self.live.stop()
