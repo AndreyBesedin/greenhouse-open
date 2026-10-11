@@ -65,7 +65,7 @@ architecture and improve specific weaknesses rather than rewrite it.
 | FE-AUDIT.4 | Coverage is neither measured nor enforced | Medium | Planned, after P07 |
 | FE-AUDIT.5 | Local browser tests can reuse stale servers | Medium | Addressed in the maintenance window, step 2 |
 | FE-AUDIT.6 | API bind failure masks the original exception | Medium | Addressed in the maintenance window, step 1 |
-| FE-AUDIT.7 | Small organizational, test-quality and telemetry improvements | Medium | Planned, general refactoring after P07 |
+| FE-AUDIT.7 | Small organizational, test-quality and telemetry improvements | Medium | Addressed in the maintenance window, step 6 |
 | FE-AUDIT.8 | Every load is written out by hand | Medium | Second audit; addressed in step 3 |
 | FE-AUDIT.9 | The address is written in six places | Medium | Second audit; addressed in step 4 |
 | FE-AUDIT.10 | A climate run's request is assembled three times | Medium | Second audit; addressed in step 4, with two defects it caused |
@@ -221,6 +221,29 @@ migration or a global state library.
   graphics-resource cleanup. Keep behavior changes separate from mechanical
   moves, and rerun browser/visual checks appropriate to each change.
 
+Addressed in step 6, with steps 3 to 5, which took most of `App`'s share:
+
+- **Scene loading** is `useLoad` (step 3), and **command handling**
+  `useLiveCommands`, tested mounted with the guard FE-AUDIT.1 added: an
+  older answer, a change of scenario and back, and a command forgotten.
+- **The panels' shared look** is one rule in `styles.css`, which the info
+  panel, the HUD, the inspector, the legends and the QA caption share; each
+  keeps its own place and size.
+- **Tests:** `Hud.test.tsx`, and the time controls' tests that were in
+  `scene/live.test.tsx`, are mounted (`src/testing/render.tsx`): they press
+  the buttons and choose a speed, and check what the handlers are given,
+  where the markup they replace could not. Other files' static tests keep
+  82 markup-string assertions, in 14 files; they move to mounted tests as
+  their components change. The type escapes are gone: fixtures are whole,
+  and `present()` fails a test that needs one which is missing.
+- **Telemetry, profiled** on 2026-10-11 in a production build with React's
+  profiler, on the climate run's view with two probes (Chromium, headless,
+  an Apple-silicon laptop): at rest, `App` rendered 3.8 times a second, as
+  the HUD's samples came, for a median 0.7 ms each, 2.8 ms a second in all;
+  with the pointer moved over the view 228 times in five seconds, 4 times a
+  second, 2.9 ms. That is not meaningful work, so the telemetry's state was
+  not isolated.
+
 ## Second audit, after P08
 
 The second audit was made on **2026-10-11**, at
@@ -270,7 +293,8 @@ extended in place.
   Step 2 addresses it.
 - **FE-AUDIT.6** was open, unchanged in `greenhouse_sim/api/server.py`;
   step 1 addresses it.
-- **FE-AUDIT.7** is open. Most of its `App` work is now FE-AUDIT.8–11.
+- **FE-AUDIT.7** was open; step 6 addresses it. Most of its `App` work was
+  FE-AUDIT.8–11.
   `gable as never` remains in `Inspector.test.tsx`, with `as unknown as` in
   two more test files and, after validation, twice in `weather/weather.ts`.
   `Hud.test.tsx` still asserts on markup strings.
