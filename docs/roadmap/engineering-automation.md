@@ -58,3 +58,21 @@
 7. Optional stacked-PR tooling and cross-repo contracts.
 
 **Manual setup needed:** reviewer provider credentials, Slack app/channel permissions, and GitHub branch rules. Keep private project/business details out of public repositories.
+
+## Contributor trust and merge authorization
+
+Auto-merge is an explicit privilege, never a consequence of passing CI or receiving an AI PASS.
+
+| PR origin | Low risk | Medium/high risk |
+| --- | --- | --- |
+| Repository maintainer, explicitly allowlisted | Eligible after all gates | Human approval |
+| Trusted collaborator, explicitly allowlisted for autonomous merge | Eligible after all gates | Human approval |
+| Other collaborator or external contributor (including forks) | Maintainer approval | Maintainer approval |
+| Automation or bot | Eligible only with verifiable maintainer-initiated authorization and explicit bot policy | Human approval |
+
+- GitHub write permission alone does not grant autonomous merge authorization.
+- Maintain a small, reviewed allowlist of identities authorized for low-risk autonomous merges; changes to the allowlist require manual approval.
+- Never trust PR labels, descriptions, comments, branch names, or author-supplied workflow metadata as proof of authorization.
+- The merge gate must validate the actual authenticated PR author and trusted initiation provenance where applicable, risk floor, current head SHA, CI, reviewer verdict and protected-branch state at merge time.
+- An external contributor's PR requires maintainer approval even when all tests and AI review pass. Do not let a privileged bot bypass this rule.
+- Audit merge decisions and test contributor-role scenarios, including impersonation through metadata and fork PRs.
