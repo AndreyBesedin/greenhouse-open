@@ -62,17 +62,14 @@ export function parsePlantsLight(body: unknown): PlantsLight {
   return { timeS: time_s, par: par_umol_m2_s, dailyLight: daily_light_integral_mol_m2_d };
 }
 
-/** Fetches the light on a scenario's plants at a moment of a run; every
- * failure becomes `unavailable`. */
+/** Fetches the light on a scenario's plants at a moment of a run, from its
+ * `plantsLightUrl`; every failure becomes `unavailable`. */
 export async function loadPlantsLight(
-  scenarioId: string,
-  time: number,
-  weather: string | undefined,
-  layout: string | undefined,
+  url: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<PlantsLightState> {
   try {
-    const response = await fetchFn(plantsLightUrl(scenarioId, time, weather, layout));
+    const response = await fetchFn(url);
     if (!response.ok) {
       return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
     }

@@ -22,7 +22,7 @@ describe("the plants' light", () => {
   it("is checked rather than trusted", async () => {
     const answered = (async () => Response.json(BODY)) as typeof fetch;
 
-    expect(await loadPlantsLight("solar_lab", 42600, undefined, undefined, answered)).toEqual({
+    expect(await loadPlantsLight(plantsLightUrl("solar_lab", 42600), answered)).toEqual({
       status: "loaded",
       light: parsePlantsLight(BODY),
     });
@@ -30,7 +30,7 @@ describe("the plants' light", () => {
       "not what the viewer expects",
     );
     const refused = (async () => new Response("{}", { status: 400 })) as typeof fetch;
-    expect(await loadPlantsLight("solar_lab", 90000, undefined, undefined, refused)).toEqual({
+    expect(await loadPlantsLight(plantsLightUrl("solar_lab", 90000), refused)).toEqual({
       status: "unavailable",
       reason: "the simulator API answered 400",
     });

@@ -147,14 +147,18 @@ export interface LabPlant extends LabRun {
 
 /** Asks the plant lab for one of its plant's structure on a run, as
  * `labRunQuery` writes it; any failure becomes `unavailable`. */
+/** Where a plant's structure through a run of the lab is published. */
+export function plantStructureUrl(plantId: string, runQuery: string): string {
+  return `${PLANT_LAB_STRUCTURE_URL}?${runQuery}&plant=${encodeURIComponent(plantId)}`;
+}
+
 export async function loadPlantStructure(
   plantId: string,
   runQuery: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<StructureState> {
   try {
-    const query = `${runQuery}&plant=${encodeURIComponent(plantId)}`;
-    const response = await fetchFn(`${PLANT_LAB_STRUCTURE_URL}?${query}`);
+    const response = await fetchFn(plantStructureUrl(plantId, runQuery));
     if (!response.ok) {
       return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
     }

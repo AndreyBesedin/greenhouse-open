@@ -54,9 +54,11 @@ function isScenarioSummary(value: unknown): value is ScenarioSummary {
 }
 
 /** Asks the simulator for its scenarios; any failure becomes `unavailable`. */
+export const SCENARIOS_URL = "/api/scenarios";
+
 export async function loadScenarios(fetchFn: typeof fetch = fetch): Promise<ScenariosState> {
   try {
-    const response = await fetchFn("/api/scenarios");
+    const response = await fetchFn(SCENARIOS_URL);
     if (!response.ok) {
       return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
     }

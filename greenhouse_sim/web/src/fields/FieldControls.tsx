@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
-
 import { formatValue } from "../readouts";
+import { useLoad } from "../useLoad";
 import {
   FIELD_VIEWS,
   type FieldView,
@@ -18,17 +17,25 @@ const NO_FIELD = "";
 // A slice moves in steps of this many metres.
 const SLICE_STEP_M = 0.05;
 
+export interface FieldNames {
+  names: string[];
+  configured: string | null;
+}
+
+/** Where the fields a scenario offers with one of its layouts are listed. */
+function fieldNamesUrl(scenarioId: string, layout?: string): string {
+  return `/api/scenarios/${encodeURIComponent(scenarioId)}/fields${layoutQuery(layout)}`;
+}
+
 /** The fields a scenario offers with one of its layouts, and which is its own
  * airflow (`GET /api/scenarios/{id}/fields`), or none if they cannot be read. */
 export async function loadFieldNames(
   scenarioId: string,
   layout?: string,
   fetchFn: typeof fetch = fetch,
-): Promise<{ names: string[]; configured: string | null }> {
+): Promise<FieldNames> {
   try {
-    const response = await fetchFn(
-      `/api/scenarios/${encodeURIComponent(scenarioId)}/fields${layoutQuery(layout)}`,
-    );
+    const response = await fetchFn(fieldNamesUrl(scenarioId, layout));
     const body: unknown = response.ok ? await response.json() : null;
     if (typeof body !== "object" || body === null) {
       return { names: [], configured: null };
@@ -42,6 +49,18 @@ export async function loadFieldNames(
   } catch {
     return { names: [], configured: null };
   }
+}
+
+const NO_FIELDS: FieldNames = { names: [], configured: null };
+
+/** The fields a scenario offers with one of its layouts: none until they
+ * arrive, and the last scenario's or layout's until the next's do. */
+export function useFieldNames(scenarioId: string, layout?: string): FieldNames {
+  const listed = useLoad(fieldNamesUrl(scenarioId, layout), async () => ({
+    status: "loaded" as const,
+    ...(await loadFieldNames(scenarioId, layout)),
+  }));
+  return listed.status === "loaded" ? listed : NO_FIELDS;
 }
 
 /** Which of the scenario's environment fields is drawn over its scene, how,
@@ -69,21 +88,7 @@ export function FieldControls({
   onView: (view: FieldView) => void;
   onSlice: (slice: Slice) => void;
 }) {
-  const [names, setNames] = useState<string[]>([]);
-  const [configured, setConfigured] = useState<string | null>(null);
-
-  useEffect(() => {
-    let current = true;
-    void loadFieldNames(scenarioId, layout).then((loaded) => {
-      if (current) {
-        setNames(loaded.names);
-        setConfigured(loaded.configured);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, [scenarioId, layout]);
+  const { names, configured } = useFieldNames(scenarioId, layout);
 
   if (names.length === 0 && chosen === null) {
     return null;

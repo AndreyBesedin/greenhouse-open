@@ -1,27 +1,15 @@
-import { useEffect, useState } from "react";
-
-import { type ChecksState, loadLabChecks } from "./checks";
+import { useLoad } from "../useLoad";
+import { labChecksUrl, loadLabChecks } from "./checks";
 import { type LabRun, labRunQuery } from "./lab";
 
 /** Whether every plant of the run keeps the structure's rules on the day on
  * show, and changed since the day before only as a plant may; if not, which
  * plants do not, and why. */
 export function RuleChecks({ run }: { run: LabRun }) {
-  const [state, setState] = useState<ChecksState>({ status: "loading" });
   const query = labRunQuery(run);
 
-  // The last answer stays on show until this run's arrives.
-  useEffect(() => {
-    let current = true;
-    void loadLabChecks(query).then((loaded) => {
-      if (current) {
-        setState(loaded);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, [query]);
+  // The last checks loaded stay on show until this run's arrive.
+  const state = useLoad(labChecksUrl(query), () => loadLabChecks(query));
 
   switch (state.status) {
     case "loading":

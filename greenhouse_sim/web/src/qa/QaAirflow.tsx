@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
-
 import { quantityScale } from "../fields/drawing";
 import { FieldArrows } from "../fields/FieldArrows";
 import { FieldLegend } from "../fields/FieldLegend";
 import { FieldSlice } from "../fields/FieldSlice";
-import { type FieldState, fetchField } from "../fields/source";
+import { fetchField } from "../fields/source";
+import { useLoad } from "../useLoad";
 import { Viewport } from "../Viewport";
 import {
   QA_AIRFLOW_FIELD_URL,
@@ -27,18 +26,7 @@ const ignore = () => undefined;
 export function QaAirflow({ search }: { search: string }) {
   const view = qaAirflowView(search);
   const scene = useSceneFile(QA_AIRFLOW_SCENE_URL);
-  const [field, setField] = useState<FieldState>({ status: "loading" });
-  useEffect(() => {
-    let current = true;
-    void fetchField(QA_AIRFLOW_FIELD_URL).then((state) => {
-      if (current) {
-        setField(state);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, []);
+  const field = useLoad(QA_AIRFLOW_FIELD_URL, () => fetchField(QA_AIRFLOW_FIELD_URL));
 
   if (view === null) {
     return (

@@ -28,12 +28,17 @@ export function labChecks(body: unknown): { day: number; problems: Record<string
 
 /** Asks the lab for its checks on a run, as `labRunQuery` writes it; any
  * failure becomes `unavailable`. */
+/** Where the structure's rules are checked for a run of the lab. */
+export function labChecksUrl(runQuery: string): string {
+  return `${PLANT_LAB_CHECKS_URL}?${runQuery}`;
+}
+
 export async function loadLabChecks(
   runQuery: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<ChecksState> {
   try {
-    const response = await fetchFn(`${PLANT_LAB_CHECKS_URL}?${runQuery}`);
+    const response = await fetchFn(labChecksUrl(runQuery));
     if (!response.ok) {
       return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
     }

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { quantityScale } from "../fields/drawing";
 import { FieldLegend } from "../fields/FieldLegend";
 import { FieldSlice } from "../fields/FieldSlice";
+import { useLoad } from "../useLoad";
 import { Viewport } from "../Viewport";
 import { sceneSunlight, sunPathOverlays } from "../weather/sunlight";
 import { describeSun, sunOverlays } from "../weather/weather";
@@ -25,6 +26,19 @@ type LightState =
   | { status: "missing"; reason: string }
   | { status: "loaded"; light: SolarLight };
 
+/** Fetches the solar lab's light; a failure is the reason it is missing. */
+async function loadSolarLight(): Promise<LightState> {
+  try {
+    const response = await fetch(QA_SOLAR_LIGHT_URL);
+    if (!response.ok) {
+      throw new Error(`the file answered ${response.status}`);
+    }
+    return { status: "loaded", light: parseSolarLight(await response.json()) };
+  } catch (error) {
+    return { status: "missing", reason: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 /**
  * The canonical page for P08's screenshot tests: the solar lab on its clear
  * equinox day, in the morning, at noon or in the evening, lit from the sun
@@ -35,29 +49,7 @@ type LightState =
 export function QaSolar({ search }: { search: string }) {
   const view = qaSolarView(search);
   const scene = useSceneFile(QA_SOLAR_SCENE_URL);
-  const [light, setLight] = useState<LightState>({ status: "loading" });
-  useEffect(() => {
-    let current = true;
-    void fetch(QA_SOLAR_LIGHT_URL)
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`the file answered ${response.status}`);
-        }
-        return parseSolarLight(await response.json());
-      })
-      .then(
-        (parsed) => current && setLight({ status: "loaded", light: parsed }),
-        (error: unknown) =>
-          current &&
-          setLight({
-            status: "missing",
-            reason: error instanceof Error ? error.message : String(error),
-          }),
-      );
-    return () => {
-      current = false;
-    };
-  }, []);
+  const light = useLoad(QA_SOLAR_LIGHT_URL, loadSolarLight);
 
   const snapshot = scene.status === "loaded" ? scene.snapshot : null;
   const loaded = light.status === "loaded" ? light.light : null;

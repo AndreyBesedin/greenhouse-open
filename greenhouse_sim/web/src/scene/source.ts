@@ -405,6 +405,12 @@ function sceneUrl(source: SceneSource): string | null {
   }
 }
 
+/** What a scene is asked for by: its address, or, for a stress scene, which
+ * the viewer builds itself, its size; null for none, or a live one. */
+export function sceneRequest(source: SceneSource): string | null {
+  return source.kind === "stress" ? `stress ${source.plants}` : sceneUrl(source);
+}
+
 /** Fetches and checks the chosen scene; every failure becomes a state to show. */
 export async function loadScene(
   source: SceneSource,
