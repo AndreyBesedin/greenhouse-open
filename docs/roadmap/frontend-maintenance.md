@@ -218,8 +218,8 @@ extended in place.
 - The handwritten source is about 17,200 lines, in folders by area
   (`fields`, `sensors`, `weather`, `plants`, `cfd`, `qa`, `scene`, `debug`),
   which have replaced the flat structure the first audit found.
-- API answers still go through one fetch wrapper, and are checked before
-  use.
+- Each API loader takes `fetch` as a parameter, which its tests replace,
+  and checks what it is answered before use.
 - `App.tsx` is 1,119 lines, with 33 pieces of state; it was 164 lines at the
   first audit.
 - The production bundle is 1,458 kB minified, 406 kB gzip (1,318 kB and
