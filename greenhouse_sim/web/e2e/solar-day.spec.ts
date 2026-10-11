@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
-
 import type { CameraPose } from "../src/camera.ts";
 import { selectAt } from "./view";
+import { openWeather } from "./weather.ts";
 
 /**
  * P08's final QA, `solar-day`: the solar lab through its clear equinox day.
@@ -85,7 +85,7 @@ test("solar-day: the solar lab through its clear equinox day", async ({ page }) 
   await test.step("the sun crosses the sky from the east by the south to the west, and the light turns with it", async () => {
     for (const moment of MOMENTS) {
       await at(page, LAB, moment.seconds, moment.shown);
-      await weather.getByTestId("weather-summary").click();
+      await openWeather(page);
       await expect(weather.getByTestId("weather-sun")).toHaveText(moment.sun);
       await expect(page.getByTestId("debug-label")).toContainText([`sun ${moment.sun}`]);
       // The scene is lit from where the sun stands, so its shadows fall the
@@ -154,7 +154,7 @@ test("solar-day: the solar lab through its clear equinox day", async ({ page }) 
 
   await test.step("the clouds move the light from the sun's beam to the sky's", async () => {
     await at(page, LAB, NOON.seconds, NOON.shown);
-    await weather.getByTestId("weather-summary").click();
+    await openWeather(page);
     await expect(weather.getByTestId("weather-light")).toHaveText(
       "616 W/m², 20% of it the sky's, PAR 1323 µmol/m²/s",
     );

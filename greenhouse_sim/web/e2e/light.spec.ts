@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { openWeather } from "./weather.ts";
+
 // The middle of the climate box's floor, a quarter of a metre up; and two
 // points on the floor's cells' level, in the open south of the first row of
 // crop gutters, and north of it, in its shadow at noon in winter.
@@ -32,7 +34,7 @@ test("light: under a clear sky the floor takes the sun's PAR through the glass, 
     "PAR 160.37 µmol/m²/s, irradiance 74.66 W/m²",
   );
   const weather = page.getByRole("region", { name: "Weather" });
-  await weather.getByTestId("weather-summary").click();
+  await openWeather(page);
   await expect(weather.getByTestId("weather-light")).toHaveText(
     "213 W/m², 48% of it the sky's, PAR 458 µmol/m²/s",
   );
@@ -49,6 +51,6 @@ test("light: at night the floor is dark", async ({ page }) => {
     "PAR 0.00 µmol/m²/s, irradiance 0.00 W/m²",
   );
   const weather = page.getByRole("region", { name: "Weather" });
-  await weather.getByTestId("weather-summary").click();
+  await openWeather(page);
   await expect(weather.getByTestId("weather-light")).toHaveText("dark");
 });
