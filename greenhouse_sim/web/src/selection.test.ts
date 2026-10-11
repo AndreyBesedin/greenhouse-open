@@ -12,6 +12,7 @@ import {
   plantOf,
   selectedEntity,
 } from "./selection";
+import { present } from "./testing/present";
 
 const EXAMPLE: SceneSnapshot = JSON.parse(
   readFileSync(new URL("../public/scenes/example.json", import.meta.url), "utf8"),
@@ -128,9 +129,12 @@ describe("a selection", () => {
 
 describe("selecting part of an organ", () => {
   // Two parts of one leaf, and an internode, as the plant lab draws them.
-  const [plant] = EXAMPLE.entities.filter((entity) => entity.kind === "PLANT");
+  const plant = present(
+    EXAMPLE.entities.find((entity) => entity.kind === "PLANT"),
+    "the example's first plant",
+  );
   const part = (entityId: string, organId: string) => ({
-    ...(plant as SceneSnapshot["entities"][number]),
+    ...plant,
     entity_id: entityId,
     properties: { organ_id: organId, plant_id: "p01" },
   });
@@ -155,8 +159,8 @@ describe("selecting part of an organ", () => {
   });
 
   it("names the organ an entity draws, and finds an organ's first part", () => {
-    expect(organOf(LAB.entities[2] as SceneSnapshot["entities"][number])).toBe("p01_n01_leaf");
-    expect(organOf(plant as SceneSnapshot["entities"][number])).toBeNull();
+    expect(organOf(present(LAB.entities[2], "the leaf's other part"))).toBe("p01_n01_leaf");
+    expect(organOf(plant)).toBeNull();
     expect(entityOfOrgan(LAB, "p01_n01_leaf")).toBe("p01_n01_leaf_petiole");
     expect(entityOfOrgan(LAB, "p01_n09_leaf")).toBeNull();
     expect(entityOfOrgan(null, "p01_n01_leaf")).toBeNull();

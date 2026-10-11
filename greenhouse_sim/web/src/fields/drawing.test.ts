@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { present } from "../testing/present";
 import { arrowSpacing, fieldArrows, MATRIX_SIZE, MAX_ARROWS } from "./arrows";
 import { quantityTitle, sliceFrom, sliceText } from "./display";
 import { defaultSlice, heldThrough, quantityScale, sliceQuantities } from "./drawing";
@@ -71,7 +72,7 @@ const BREEZE = analytic(
 
 describe("streamlines", () => {
   it("circle a vortex's centre at their seed's distance, and close", () => {
-    const lines = streamlines(VORTEX, VORTEX.channels.velocity as Channel);
+    const lines = streamlines(VORTEX, present(VORTEX.channels.velocity, "its velocity"));
     // Circles that fit inside the field, which is 10 by 10 m about (5, 5).
     const around = lines.filter((line) => {
       const [first] = line.points;
@@ -95,7 +96,7 @@ describe("streamlines", () => {
   });
 
   it("run straight down a breeze, from one face of the field to the other", () => {
-    const lines = streamlines(BREEZE, BREEZE.channels.velocity as Channel);
+    const lines = streamlines(BREEZE, present(BREEZE.channels.velocity, "its velocity"));
     const [line] = lines;
     if (line === undefined) {
       throw new Error("the breeze has streamlines");
@@ -119,7 +120,7 @@ describe("streamlines as they are drawn", () => {
   });
 
   it("make a segment of every second step, from one end of the line to the other", () => {
-    const channel = BREEZE.channels.velocity as Channel;
+    const channel = present(BREEZE.channels.velocity, "its velocity");
     const lines = streamlines(BREEZE, channel);
     const geometry = streamlineGeometry(BREEZE, channel, { min: 0, max: 1 });
     const segments = lines.reduce(
@@ -151,7 +152,7 @@ describe("a field's arrows on a big field", () => {
       () => [0.5, 0, 0],
       () => 20,
     );
-    const arrows = fieldArrows(big, big.channels.velocity as Channel);
+    const arrows = fieldArrows(big, present(big.channels.velocity, "its velocity"));
 
     expect(arrows.matrices.length / MATRIX_SIZE).toBe(24 * 16 * 12);
     expect(arrows.matrices.length / MATRIX_SIZE).toBeLessThanOrEqual(MAX_ARROWS);
@@ -234,7 +235,7 @@ describe("a climate run's colours", () => {
       () => [0.5, 0, 0],
       () => low,
     );
-    const temperature = field.channels.temperature as Channel;
+    const temperature = present(field.channels.temperature, "its temperature");
     return {
       ...field,
       channels: { ...field.channels, temperature: { ...temperature, minimum: low, maximum: high } },

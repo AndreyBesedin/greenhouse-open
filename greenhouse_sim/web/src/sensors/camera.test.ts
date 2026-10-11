@@ -56,7 +56,9 @@ describe("a camera's picture", () => {
 
     expect(spec?.cameraId).toBe("front_camera");
     expect(spec === null ? null : project(spec, spec.target)).toEqual({ u: 320, v: 240 });
-    expect(cameraOf(EXAMPLE.entities[0] as never)).toBeNull();
+    const others = EXAMPLE.entities.filter((entity) => entity.kind !== "CAMERA");
+    expect(others.length).toBeGreaterThan(0);
+    expect(others.map(cameraOf).every((other) => other === null)).toBe(true);
   });
 });
 

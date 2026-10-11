@@ -4,13 +4,24 @@ import { describe, expect, it } from "vitest";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import type { Point3 } from "../world";
 import { beamShareOf, sceneSunlight, sunLightPose, sunPathOverlays } from "./sunlight";
-import type { SunPosition, WeatherAtAMoment, WeatherDay } from "./weather";
+import type { SunPosition, WeatherAtAMoment, WeatherDay, WeatherState } from "./weather";
 
 const EXAMPLE: SceneSnapshot = JSON.parse(
   readFileSync(new URL("../../public/scenes/example.json", import.meta.url), "utf8"),
 );
 // The example's house: 12 m by 6.4 m and 4.8 m high, its middle here.
 const MIDDLE = { x: 6, y: 3.2, z: 2.4 };
+// A still, clear hour, for the sun's path, which reads only where the sun is.
+const CALM: WeatherState = {
+  air_temperature_c: 10,
+  relative_humidity_pct: 80,
+  co2_ppm: 420,
+  wind_speed_m_s: 0,
+  wind_direction_deg: null,
+  barometric_pressure_hpa: 1013,
+  global_radiation_w_m2: 0,
+  cloud_cover_pct: 0,
+};
 const HALF_DIAGONAL_M = Math.hypot(12, 6.4, 4.8) / 2;
 
 /** The unit vector towards a sun at a bearing and an elevation, x east and
@@ -128,11 +139,13 @@ describe("the sun's path", () => {
     elevation_deg: hour <= 6 || hour >= 18 ? -5 : 38 - Math.abs(hour - 12) * 6,
     azimuth_deg: 90 + (hour - 6) * 15,
   }));
-  const day = {
+  const day: WeatherDay = {
+    start: "2026-03-20T00:00:00Z",
+    timesS: hours.map((hour) => hour * 3600),
+    weather: hours.map(() => CALM),
     sun,
     sunDirections: sun.map((at) => towards(at.azimuth_deg, at.elevation_deg)),
-    timesS: hours.map((hour) => hour * 3600),
-  } as unknown as WeatherDay;
+  };
 
   it("joins the sun's positions while it is up, at its marker's reach", () => {
     const lines = sunPathOverlays(EXAMPLE, day);

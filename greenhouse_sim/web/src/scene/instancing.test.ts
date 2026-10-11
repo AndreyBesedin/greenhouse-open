@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { Matrix4, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
-
+import { present } from "../testing/present";
 import type { SceneEntity, SceneSnapshot } from "./generated/snapshotTypes";
 import { isInstanced, MATRIX_SIZE, shapeBatches, shapeMatrices } from "./instancing";
 
@@ -23,7 +23,10 @@ function placed(matrices: Float32Array, index: number, point: Vector3): Vector3 
 
 describe("instancing shapes", () => {
   it("leaves a fan, a cylinder, to be drawn on its own, with its arrow", () => {
-    const fan = EXAMPLE.entities.find((entity) => entity.kind === "FAN") as SceneEntity;
+    const fan = present(
+      EXAMPLE.entities.find((entity) => entity.kind === "FAN"),
+      "the example's fan",
+    );
     const batches = shapeBatches(EXAMPLE.entities).map(({ batch }) => batch);
 
     expect(fan.shape.shape).toBe("cylinder");
@@ -69,7 +72,10 @@ describe("instancing shapes", () => {
   });
 
   it("refuses an entity that is not a cylinder", () => {
-    const floor = EXAMPLE.entities.find((entity) => entity.kind === "FLOOR") as SceneEntity;
+    const floor = present(
+      EXAMPLE.entities.find((entity) => entity.kind === "FLOOR"),
+      "the example's floor",
+    );
 
     expect(() => shapeMatrices([floor])).toThrow(
       "climate_box_floor is a plane, which is not drawn in batches",

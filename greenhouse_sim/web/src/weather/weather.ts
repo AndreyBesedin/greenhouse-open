@@ -215,25 +215,33 @@ export function parseWeather(body: unknown): WeatherAtAMoment {
   ) {
     throw new Error("the weather is not what the viewer expects");
   }
-  const light = body.light;
-  if (!LIGHT_NUMBERS.every((name) => typeof light[name] === "number")) {
-    throw new Error("the weather is not what the viewer expects");
-  }
-  const site = body.site;
-  const weather = body.weather;
-  if (!SITE_NUMBERS.every((name) => typeof site[name] === "number") || !isWeatherState(weather)) {
+  const { site, light, weather } = body;
+  if (!isSite(site) || !isOutsideLight(light) || !isWeatherState(weather)) {
     throw new Error("the weather is not what the viewer expects");
   }
   return {
-    site: site as unknown as Site,
+    site,
     moment: body.moment,
     timeS: body.time_s,
     weather,
     windMS: body.wind_m_s,
     sun: { elevation_deg: body.sun.elevation_deg, azimuth_deg: body.sun.azimuth_deg },
     sunDirection: body.sun_direction,
-    light: light as unknown as OutsideLight,
+    light,
   };
+}
+
+function isSite(value: Record<string, unknown>): value is Record<string, unknown> & Site {
+  return (
+    typeof value.time_zone === "string" &&
+    SITE_NUMBERS.every((name) => typeof value[name] === "number")
+  );
+}
+
+function isOutsideLight(
+  value: Record<string, unknown>,
+): value is Record<string, unknown> & OutsideLight {
+  return LIGHT_NUMBERS.every((name) => typeof value[name] === "number");
 }
 
 /** Fetches a scenario's weather through its runs' first day, from its
