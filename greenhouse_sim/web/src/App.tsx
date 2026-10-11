@@ -233,7 +233,11 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     source.field === CLIMATE_FIELD &&
     source.probes !== undefined &&
     source.probes.length > 0
-      ? probeChartsUrl(source.scenarioId, { ...source, probes: source.probes })
+      ? probeChartsUrl(source.scenarioId, {
+          ...source,
+          probes: source.probes,
+          weather: fieldWeather,
+        })
       : null;
   const probeCharts = useLoad(chartsUrl, loadProbeCharts);
 
@@ -242,7 +246,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // the next arrives.
   const houseUrl =
     source.kind === "scenario" && source.field === CLIMATE_FIELD
-      ? houseAirUrl(source.scenarioId, source)
+      ? houseAirUrl(source.scenarioId, { ...source, weather: fieldWeather })
       : null;
   const houseAir = useLoad(houseUrl, loadHouseAir);
 
@@ -251,7 +255,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // arrives.
   const glassUrl =
     source.kind === "scenario" && source.field === CLIMATE_FIELD
-      ? glazingUrl(source.scenarioId, source)
+      ? glazingUrl(source.scenarioId, { ...source, weather: fieldWeather })
       : null;
   const glazing = useLoad(glassUrl, loadGlazing);
 
@@ -259,7 +263,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // and their arrows; the last stays on show until the next arrives.
   const flowsUrl =
     source.kind === "scenario" && source.field === CLIMATE_FIELD
-      ? openingsUrl(source.scenarioId, source)
+      ? openingsUrl(source.scenarioId, { ...source, weather: fieldWeather })
       : null;
   const openingFlows = useLoad(flowsUrl, loadOpenings);
 

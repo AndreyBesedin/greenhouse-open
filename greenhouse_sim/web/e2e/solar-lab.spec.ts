@@ -66,6 +66,10 @@ test("solar lab: at the equinox's noon a shaded plant takes the sky's light and 
     await expect(weather.getByTestId("weather-light")).toHaveText(
       "154 W/m², 98% of it the sky's, PAR 331 µmol/m²/s",
     );
+    // The house's air is the clouded run's too, cooler than under the sun.
+    await expect(
+      page.getByRole("figure", { name: "House air" }).getByTestId("house-air-°C"),
+    ).toHaveText("Air 18.3 °C, all off 18.3 °C");
   });
 });
 

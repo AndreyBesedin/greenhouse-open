@@ -70,6 +70,7 @@ export function probeChartsUrl(
   scenarioId: string,
   run: {
     probes: readonly Point3[];
+    layout?: string | undefined;
     levels?: Readonly<Record<string, number>> | undefined;
     openings?: Readonly<Record<string, number>> | undefined;
     schedule?: readonly ScheduledCommand[] | undefined;
@@ -79,6 +80,7 @@ export function probeChartsUrl(
 ): string {
   const parts = [
     `probes=${probesText(run.probes)}`,
+    ...(run.layout === undefined ? [] : [`layout=${encodeURIComponent(run.layout)}`]),
     ...(pairsText(run.levels) === "" ? [] : [`set=${pairsText(run.levels)}`]),
     ...(pairsText(run.openings) === "" ? [] : [`open=${pairsText(run.openings)}`]),
     ...(scheduleText(run.schedule) === "" ? [] : [`schedule=${scheduleText(run.schedule)}`]),
