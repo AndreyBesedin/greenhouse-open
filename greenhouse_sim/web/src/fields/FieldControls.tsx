@@ -66,8 +66,7 @@ export function useFieldNames(scenarioId: string, layout?: string): FieldNames {
 /** Which of the scenario's environment fields is drawn over its scene, how,
  * and what the drawn one holds. */
 export function FieldControls({
-  scenarioId,
-  layout,
+  fields: { names, configured },
   chosen,
   state,
   view,
@@ -76,9 +75,8 @@ export function FieldControls({
   onView,
   onSlice,
 }: {
-  scenarioId: string;
-  /** Another of its layouts, if one is shown. */
-  layout?: string | undefined;
+  /** The fields the scenario offers, with the layout shown. */
+  fields: FieldNames;
   chosen: string | null;
   state: FieldState;
   view: FieldView;
@@ -88,8 +86,6 @@ export function FieldControls({
   onView: (view: FieldView) => void;
   onSlice: (slice: Slice) => void;
 }) {
-  const { names, configured } = useFieldNames(scenarioId, layout);
-
   if (names.length === 0 && chosen === null) {
     return null;
   }

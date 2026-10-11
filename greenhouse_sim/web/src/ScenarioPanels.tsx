@@ -1,0 +1,207 @@
+import { useCallback } from "react";
+
+import { CfdControls } from "./cfd/CfdControls";
+import type { CfdGeometryState } from "./cfd/geometry";
+import { EquipmentControls } from "./EquipmentControls";
+import { ClimateSchedule } from "./fields/ClimateSchedule";
+import { ClimateTime } from "./fields/ClimateTime";
+import type { FieldView, Slice } from "./fields/display";
+import { FieldControls, useFieldNames } from "./fields/FieldControls";
+import { FieldProbes } from "./fields/FieldProbes";
+import { HouseAir, type HouseAirState } from "./fields/HouseAir";
+import { ProbeCharts, type ProbeChartsState } from "./fields/ProbeCharts";
+import { CLIMATE_FIELD, type FieldState } from "./fields/source";
+import { OpeningControls } from "./OpeningControls";
+import {
+  type ScenarioSource,
+  withCfdBoundaries,
+  withClouds,
+  withCompared,
+  withField,
+  withFieldView,
+  withLevels,
+  withOpenings,
+  withoutCommand,
+  withSlice,
+  withTime,
+  withWeather,
+} from "./scene/edits";
+import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
+import { levelsAt } from "./scene/source";
+import type { SetSource } from "./scene/useSource";
+import { WeatherPanel } from "./weather/WeatherPanel";
+import type { WeatherDayState, WeatherStateOfLoad } from "./weather/weather";
+import type { Point3 } from "./world";
+
+/** What the viewer has loaded of a scenario's run, for its panels. */
+export interface ScenarioLoads {
+  field: FieldState;
+  compared: FieldState;
+  weather: WeatherStateOfLoad;
+  weatherDay: WeatherDayState;
+  houseAir: HouseAirState;
+  probeCharts: ProbeChartsState;
+  cfd: CfdGeometryState;
+}
+
+/**
+ * A scenario's panels, in the info panel's order: its fields, its climate
+ * run's moment, house air and schedule, its weather, the probes and their
+ * charts, its CFD boundaries, and its doors, vents and equipment. Each
+ * changes the scenario's source; what the view around them keeps (how the
+ * field's colours run, whether a click places a probe) is the viewer's.
+ */
+export function ScenarioPanels({
+  source,
+  snapshot,
+  weathers,
+  loads,
+  fieldView,
+  fieldSlice,
+  probes,
+  placing,
+  probeHeight,
+  playingClimate,
+  onSource,
+  onProbes,
+  onPlacing,
+  onProbeHeight,
+  onPlayingClimate,
+  onOwnRange,
+}: {
+  source: ScenarioSource;
+  snapshot: SceneSnapshot | null;
+  /** The preset weathers it can be run under. */
+  weathers: string[];
+  loads: ScenarioLoads;
+  fieldView: FieldView;
+  fieldSlice: Slice | null;
+  probes: Point3[];
+  placing: boolean;
+  probeHeight: number;
+  playingClimate: boolean;
+  onSource: (change: SetSource) => void;
+  onProbes: (probes: Point3[]) => void;
+  onPlacing: (placing: boolean) => void;
+  onProbeHeight: (height: number) => void;
+  onPlayingClimate: (playing: boolean) => void;
+  /** The field's colours go back to its own range. */
+  onOwnRange: () => void;
+}) {
+  const { field, compared, weather, weatherDay, houseAir, probeCharts, cfd } = loads;
+  // Asked for once, for the field's choice and what it is compared with.
+  const fields = useFieldNames(source.scenarioId, source.layout);
+  const climate = source.field === CLIMATE_FIELD;
+  const time = source.time ?? 0;
+  const probed = field.status === "loaded" ? field.field : null;
+
+  // The moment changes from the source as it is then: playing, the climate
+  // run moves on render after render.
+  const setTime = useCallback(
+    (seconds: number) =>
+      onSource((current) => (current.kind === "scenario" ? withTime(current, seconds) : current)),
+    [onSource],
+  );
+
+  function chooseField(name: string | null): void {
+    onOwnRange();
+    if (name === null) {
+      onPlacing(false);
+    }
+    onSource(withField(source, name));
+  }
+
+  function chooseFieldView(view: FieldView): void {
+    if (field.status !== "loaded") {
+      return;
+    }
+    onOwnRange();
+    onSource(withFieldView(source, view, field.field));
+  }
+
+  function chooseSlice(slice: Slice): void {
+    if (source.slice?.quantity !== slice.quantity) {
+      onOwnRange();
+    }
+    onSource(withSlice(source, slice));
+  }
+
+  return (
+    <>
+      <FieldControls
+        fields={fields}
+        chosen={source.field ?? null}
+        state={field}
+        view={fieldView}
+        slice={fieldSlice}
+        onChoose={chooseField}
+        onView={chooseFieldView}
+        onSlice={chooseSlice}
+      />
+      {climate && (
+        <ClimateTime
+          time={time}
+          shown={field.status === "loaded" ? field.field.timeS : null}
+          playing={playingClimate}
+          onTime={setTime}
+          onPlaying={onPlayingClimate}
+        />
+      )}
+      {climate && <HouseAir state={houseAir} />}
+      {climate && (
+        <ClimateSchedule
+          schedule={source.schedule ?? []}
+          time={time}
+          onTime={setTime}
+          onRemove={(index) => onSource(withoutCommand(source, index))}
+        />
+      )}
+      <WeatherPanel
+        state={weather}
+        day={weatherDay}
+        weathers={weathers}
+        chosen={source.weather}
+        time={time}
+        onChoose={(chosen) => onSource(withWeather(source, chosen))}
+        clouds={source.clouds}
+        onClouds={(clouds) => onSource(withClouds(source, clouds))}
+      />
+      {source.field !== undefined && probed !== null && (
+        <FieldProbes
+          names={fields.names}
+          fieldName={source.field}
+          field={probed}
+          compareName={source.compare ?? null}
+          compareState={compared}
+          probes={probes}
+          placing={placing}
+          height={probeHeight}
+          onProbes={onProbes}
+          onCompare={(name) => onSource(withCompared(source, name))}
+          onPlacing={onPlacing}
+          onHeight={onProbeHeight}
+        />
+      )}
+      {climate && <ProbeCharts state={probeCharts} time={time} />}
+      <CfdControls
+        shown={source.cfdBoundaries === true}
+        state={cfd}
+        onShow={(show) => onSource(withCfdBoundaries(source, show))}
+      />
+      {snapshot !== null && (
+        <OpeningControls
+          snapshot={snapshot}
+          requested={source.openings ?? {}}
+          onChange={(openings) => onSource(withOpenings(source, openings))}
+        />
+      )}
+      {snapshot !== null && (
+        <EquipmentControls
+          snapshot={snapshot}
+          requested={levelsAt(source)}
+          onChange={(levels) => onSource(withLevels(source, levels))}
+        />
+      )}
+    </>
+  );
+}

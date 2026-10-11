@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { type BuildInfo, buildInfo } from "./buildInfo";
 import type { PresetName, PresetRequest } from "./camera";
 import { CfdBoundaries } from "./cfd/CfdBoundaries";
-import { CfdControls } from "./cfd/CfdControls";
 import { CfdLegend } from "./cfd/CfdLegend";
 import { cfdGeometryUrl, loadCfdGeometry } from "./cfd/geometry";
 import { DisplayOptions } from "./DisplayOptions";
@@ -14,61 +13,48 @@ import { ALL_OVERLAYS, type OverlayToggles, selectionOverlays } from "./debug/ov
 import { ScalarLegend } from "./debug/ScalarLegend";
 import type { ScalarRange } from "./debug/scalar";
 import { colouringBy, scalarProperties } from "./debug/scalar";
-import { EquipmentControls } from "./EquipmentControls";
-import { ClimateSchedule } from "./fields/ClimateSchedule";
-import { ClimateTime } from "./fields/ClimateTime";
-import type { FieldView, Slice } from "./fields/display";
+import type { FieldView } from "./fields/display";
 import { defaultSlice, type HeldRanges, heldThrough, quantityScale } from "./fields/drawing";
 import { FieldArrows } from "./fields/FieldArrows";
-import { FieldControls } from "./fields/FieldControls";
 import { FieldLegend } from "./fields/FieldLegend";
-import { FieldProbes } from "./fields/FieldProbes";
 import { FieldSlice } from "./fields/FieldSlice";
 import { FieldStreamlines } from "./fields/FieldStreamlines";
 import { glazingUrl, loadGlazing, withGlazing } from "./fields/glazing";
-import { HouseAir, houseAirUrl, loadHouseAir } from "./fields/HouseAir";
+import { houseAirUrl, loadHouseAir } from "./fields/HouseAir";
 import {
   loadOpenings,
   openingFlowOverlays,
   openingsUrl,
   withOpeningFlows,
 } from "./fields/openingFlows";
-import { loadProbeCharts, ProbeCharts, probeChartsUrl } from "./fields/ProbeCharts";
+import { loadProbeCharts, probeChartsUrl } from "./fields/ProbeCharts";
 import { MAX_PROBES, probeOverlays } from "./fields/probes";
 import { CLIMATE_FIELD, fetchField, fieldUrl } from "./fields/source";
 import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
-import { OpeningControls } from "./OpeningControls";
-import { type GrowthSpeed, LabControls } from "./plants/LabControls";
-import {
-  type LabRun,
-  PLANT_LAB_FIRST_PLANT,
-  PLANT_LAB_LAST_DAY,
-  PLANT_LAB_POSE,
-} from "./plants/lab";
+import type { GrowthSpeed } from "./plants/LabControls";
+import { LabPanels } from "./plants/LabPanels";
+import { type LabRun, PLANT_LAB_LAST_DAY, PLANT_LAB_POSE } from "./plants/lab";
 import { loadPlantsLight, plantsLightUrl } from "./plants/light";
 import { plantNameOverlays } from "./plants/names";
-import { PlantActions } from "./plants/PlantActions";
 import { PlantLight } from "./plants/PlantLight";
-import { PlantStructure } from "./plants/PlantStructure";
-import { RuleChecks } from "./plants/RuleChecks";
 import type { ViewSample } from "./readouts";
+import { ScenarioPanels } from "./ScenarioPanels";
 import { loadScenarios, SCENARIOS_URL } from "./scenarios";
+import { withProbes } from "./scene/edits";
 import { type LiveCommand, sendLiveCommand } from "./scene/live";
 import { runApartFromItsMoment, runsSomething, scenarioRun } from "./scene/run";
 import {
   changesQuery,
-  levelsAt,
   loadScene,
   type SceneSource,
   sceneRequest,
   withItsAir,
-  withOverride,
 } from "./scene/source";
 import { useLiveScene } from "./scene/useLiveScene";
 import { useSource } from "./scene/useSource";
-import { entityOfOrgan, organOf, plantOf, selectedEntity } from "./selection";
+import { entityOfOrgan, selectedEntity } from "./selection";
 import { CameraFrames } from "./sensors/CameraFrames";
 import { CameraView } from "./sensors/CameraView";
 import { cameraOf, frustumOverlays } from "./sensors/camera";
@@ -77,7 +63,6 @@ import { SensorPanel } from "./sensors/SensorPanel";
 import { useLoad } from "./useLoad";
 import { Viewport } from "./Viewport";
 import { sceneSunlight, sunPathOverlays } from "./weather/sunlight";
-import { WeatherPanel } from "./weather/WeatherPanel";
 import {
   loadWeather,
   loadWeatherDay,
@@ -226,137 +211,15 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       : null;
   const cfd = useLoad(cfdUrl, loadCfdGeometry);
 
-  function chooseField(name: string | null): void {
+  // A click on the view places probes too: placing stops once all are placed.
+  function setProbes(next: Point3[]): void {
     if (source.kind !== "scenario") {
       return;
     }
-    const { field: _, fieldView: __, slice: ___, compare, probes, ...rest } = source;
-    setFieldRange(null);
-    if (name === null) {
+    setSource(withProbes(source, next));
+    if (next.length >= MAX_PROBES) {
       setPlacingProbes(false);
-      setSource(rest);
-      return;
     }
-    // Its probes stay where they are, and so does what it is compared with,
-    // unless that is the field now drawn.
-    setSource({
-      ...rest,
-      field: name,
-      ...(probes === undefined ? {} : { probes }),
-      ...(compare === undefined || compare === name ? {} : { compare }),
-    });
-  }
-
-  function setProbes(probes: Point3[]): void {
-    if (source.kind === "scenario") {
-      const { probes: _, ...rest } = source;
-      setSource(probes.length === 0 ? rest : { ...rest, probes });
-      if (probes.length >= MAX_PROBES) {
-        setPlacingProbes(false);
-      }
-    }
-  }
-
-  function compareWith(name: string | null): void {
-    if (source.kind === "scenario") {
-      const { compare: _, ...rest } = source;
-      setSource(name === null ? rest : { ...rest, compare: name });
-    }
-  }
-
-  function chooseFieldView(view: FieldView): void {
-    if (source.kind !== "scenario" || field.status !== "loaded") {
-      return;
-    }
-    const { slice, ...rest } = source;
-    setFieldRange(null);
-    setSource(
-      view === "slice"
-        ? { ...rest, fieldView: view, slice: slice ?? defaultSlice(field.field) }
-        : { ...rest, fieldView: view },
-    );
-  }
-
-  function showCfdBoundaries(show: boolean): void {
-    if (source.kind === "scenario") {
-      const { cfdBoundaries: _, ...rest } = source;
-      setSource(show ? { ...rest, cfdBoundaries: true } : rest);
-    }
-  }
-
-  function chooseSlice(slice: Slice): void {
-    if (source.kind === "scenario") {
-      if (source.slice?.quantity !== slice.quantity) {
-        setFieldRange(null);
-      }
-      setSource({ ...source, slice });
-    }
-  }
-
-  // Another weather to run the scenario under, or its own.
-  function chooseWeather(chosen: string | undefined): void {
-    if (source.kind !== "scenario") {
-      return;
-    }
-    const { weather: _, ...rest } = source;
-    setSource(chosen === undefined ? rest : { ...rest, weather: chosen });
-  }
-
-  // The sky clouded as the QA override asks, or as its weather's own.
-  function chooseClouds(clouds: number | undefined): void {
-    if (source.kind !== "scenario") {
-      return;
-    }
-    const { clouds: _, ...rest } = source;
-    setSource(clouds === undefined ? rest : { ...rest, clouds });
-  }
-
-  function setOpenings(openings: Record<string, number>): void {
-    if (source.kind !== "scenario") {
-      return;
-    }
-    setSource({ ...source, openings });
-  }
-
-  // A moment of the climate run, kept in the address; 0, its start, is left out.
-  const setClimateTime = useCallback(
-    (seconds: number): void => {
-      setSource((current) => {
-        if (current.kind !== "scenario") {
-          return current;
-        }
-        const { time: _, ...rest } = current;
-        return seconds > 0 ? { ...rest, time: seconds } : rest;
-      });
-    },
-    [setSource],
-  );
-
-  // Equipment switched while a climate run is drawn past its start is an
-  // override at that moment; otherwise it is set from the start.
-  function setLevels(levels: Record<string, number>): void {
-    if (source.kind !== "scenario") {
-      return;
-    }
-    const now = source.time ?? 0;
-    if (source.field === CLIMATE_FIELD && now > 0) {
-      const standing = levelsAt(source);
-      const changed = Object.fromEntries(
-        Object.entries(levels).filter(([actuatorId, level]) => standing[actuatorId] !== level),
-      );
-      setSource({ ...source, schedule: withOverride(source.schedule ?? [], now, changed) });
-      return;
-    }
-    setSource({ ...source, levels });
-  }
-
-  function removeCommand(index: number): void {
-    if (source.kind !== "scenario") {
-      return;
-    }
-    const { schedule: _, ...rest } = source;
-    const schedule = (source.schedule ?? []).filter((__, at) => at !== index);
-    setSource(schedule.length === 0 ? rest : { ...rest, schedule });
   }
 
   // A selection is kept from one run of the lab to the next: its organ is the
@@ -621,124 +484,42 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
               />
             )}
             {source.kind === "scenario" && (
-              <FieldControls
-                scenarioId={source.scenarioId}
-                layout={source.layout}
-                chosen={source.field ?? null}
-                state={field}
-                view={fieldView}
-                slice={fieldSlice}
-                onChoose={chooseField}
-                onView={chooseFieldView}
-                onSlice={chooseSlice}
-              />
-            )}
-            {source.kind === "scenario" && source.field === CLIMATE_FIELD && (
-              <ClimateTime
-                time={moment}
-                shown={field.status === "loaded" ? field.field.timeS : null}
-                playing={playingClimate}
-                onTime={setClimateTime}
-                onPlaying={setPlayingClimate}
-              />
-            )}
-            {source.kind === "scenario" && source.field === CLIMATE_FIELD && (
-              <HouseAir state={houseAir} />
-            )}
-            {source.kind === "scenario" && source.field === CLIMATE_FIELD && (
-              <ClimateSchedule
-                schedule={source.schedule ?? []}
-                time={moment}
-                onTime={setClimateTime}
-                onRemove={removeCommand}
-              />
-            )}
-            {source.kind === "scenario" && (
-              <WeatherPanel
-                state={weather}
-                day={weatherDay}
+              <ScenarioPanels
+                source={source}
+                snapshot={snapshot}
                 weathers={
                   scenarios.status === "loaded"
                     ? (scenarios.scenarios.find((s) => s.id === source.scenarioId)?.weathers ?? [])
                     : []
                 }
-                chosen={source.weather}
-                time={moment}
-                onChoose={chooseWeather}
-                clouds={source.clouds}
-                onClouds={chooseClouds}
-              />
-            )}
-            {source.kind === "scenario" && source.field !== undefined && probedField !== null && (
-              <FieldProbes
-                scenarioId={source.scenarioId}
-                layout={source.layout}
-                fieldName={source.field}
-                field={probedField}
-                compareName={source.compare ?? null}
-                compareState={compared}
+                loads={{ field, compared, weather, weatherDay, houseAir, probeCharts, cfd }}
+                fieldView={fieldView}
+                fieldSlice={fieldSlice}
                 probes={probes}
                 placing={placingProbes}
-                height={probeHeight}
+                probeHeight={probeHeight}
+                playingClimate={playingClimate}
+                onSource={setSource}
                 onProbes={setProbes}
-                onCompare={compareWith}
                 onPlacing={setPlacingProbes}
-                onHeight={setProbeHeight}
-              />
-            )}
-            {source.kind === "scenario" && source.field === CLIMATE_FIELD && (
-              <ProbeCharts state={probeCharts} time={moment} />
-            )}
-            {source.kind === "scenario" && (
-              <CfdControls
-                shown={source.cfdBoundaries === true}
-                state={cfd}
-                onShow={showCfdBoundaries}
-              />
-            )}
-            {snapshot !== null && source.kind === "scenario" && (
-              <OpeningControls
-                snapshot={snapshot}
-                requested={source.openings ?? {}}
-                onChange={setOpenings}
-              />
-            )}
-            {snapshot !== null && source.kind === "scenario" && (
-              <EquipmentControls
-                snapshot={snapshot}
-                requested={levelsAt(source)}
-                onChange={setLevels}
+                onProbeHeight={setProbeHeight}
+                onPlayingClimate={setPlayingClimate}
+                onOwnRange={() => setFieldRange(null)}
               />
             )}
             {source.kind === "plants" && (
-              <LabControls
+              <LabPanels
                 run={source}
                 shownDay={shownDay}
-                onChange={setLabRun}
+                selected={selected}
                 playing={playing}
                 speed={speed}
                 showNames={showPlantNames}
+                onRun={setLabRun}
                 onPlaying={setPlaying}
                 onSpeed={setSpeed}
                 onShowNames={setShowPlantNames}
-              />
-            )}
-            {source.kind === "plants" && <RuleChecks run={source} />}
-            {source.kind === "plants" && (
-              <PlantActions
-                entity={selected}
-                day={source.day}
-                scheduled={source.actions.length}
-                onAct={(action) => setLabRun({ actions: [...source.actions, action] })}
-                onUndo={() => setLabRun({ actions: source.actions.slice(0, -1) })}
-                onClear={() => setLabRun({ actions: [] })}
-              />
-            )}
-            {source.kind === "plants" && (
-              <PlantStructure
-                plant={{ ...source, plantId: plantOf(selected) ?? PLANT_LAB_FIRST_PLANT }}
-                selectedOrgan={selected === null ? null : organOf(selected)}
-                onSelect={(organId) => setSelectedId(entityOfOrgan(snapshot, organId))}
+                onSelectOrgan={(organId) => setSelectedId(entityOfOrgan(snapshot, organId))}
               />
             )}
           </InfoPanel>
