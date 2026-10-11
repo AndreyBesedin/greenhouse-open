@@ -117,7 +117,8 @@ records the 2026-10-06 findings from P01.3, their commit provenance, and the
 two immediate fixes. The remaining findings have medium priority: after P07,
 before P09's release QA, a second frontend audit is followed by those
 findings and general clean-up together. They do not block the simulator's
-P02–P07 project steps.
+P02–P07 project steps. The second audit was made on 2026-10-11, after P08;
+its findings and the order of work come before P09.
 
 **Test suite and CI time** (recorded 2026-10-08, scheduled after P09). A
 pull request's checks take 7 to 9 minutes:
