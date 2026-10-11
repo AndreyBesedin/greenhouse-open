@@ -1,4 +1,4 @@
-import { weatherParameter } from "../scene/source";
+import { runParameters, scenarioUrl } from "../scene/run";
 
 // PAR is shown to whole micromoles, a day's light to tenths of a mole.
 const PAR_DECIMALS = 0;
@@ -28,13 +28,12 @@ export function plantsLightUrl(
   weather?: string,
   layout?: string,
 ): string {
-  const parts = [
-    ...(layout === undefined ? [] : [`layout=${encodeURIComponent(layout)}`]),
-    ...(time === 0 ? [] : [`t=${time}`]),
-    ...weatherParameter(weather),
-  ];
-  const query = parts.length === 0 ? "" : `?${parts.join("&")}`;
-  return `/api/scenarios/${encodeURIComponent(scenarioId)}/climate/plants${query}`;
+  // The sun's light does not depend on the equipment.
+  return scenarioUrl(
+    scenarioId,
+    "climate/plants",
+    runParameters({ layout, time, weather }, ["layout", "time", "weather"]),
+  );
 }
 
 function isNumbers(value: unknown): value is Record<string, number> {

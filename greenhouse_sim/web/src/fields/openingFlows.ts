@@ -1,7 +1,7 @@
 import { inWorld } from "../debug/dimensions";
 import type { OverlayPrimitive } from "../debug/overlays";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
-import { pairsText, type ScheduledCommand, scheduleText, weatherParameter } from "../scene/source";
+import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 
 /** What an open door or vent passes at a moment: its net flow into the
  * house (m³/s, negative out), and what it exchanges each way besides. */
@@ -40,27 +40,8 @@ export const FLOW_COLOR = "#16a085";
 
 /** Where what the openings pass at a moment of a climate run is published,
  * asked for as the climate is. */
-export function openingsUrl(
-  scenarioId: string,
-  run: {
-    layout?: string | undefined;
-    levels?: Readonly<Record<string, number>> | undefined;
-    openings?: Readonly<Record<string, number>> | undefined;
-    schedule?: readonly ScheduledCommand[] | undefined;
-    time?: number | undefined;
-    weather?: string | undefined;
-  },
-): string {
-  const parts = [
-    ...(run.layout === undefined ? [] : [`layout=${encodeURIComponent(run.layout)}`]),
-    ...(pairsText(run.levels) === "" ? [] : [`set=${pairsText(run.levels)}`]),
-    ...(pairsText(run.openings) === "" ? [] : [`open=${pairsText(run.openings)}`]),
-    ...(scheduleText(run.schedule) === "" ? [] : [`schedule=${scheduleText(run.schedule)}`]),
-    ...(run.time === undefined || run.time === 0 ? [] : [`t=${run.time}`]),
-    ...weatherParameter(run.weather),
-  ];
-  const query = parts.length === 0 ? "" : `?${parts.join("&")}`;
-  return `/api/scenarios/${encodeURIComponent(scenarioId)}/climate/openings${query}`;
+export function openingsUrl(scenarioId: string, run: RunParts): string {
+  return scenarioUrl(scenarioId, "climate/openings", runParameters(run));
 }
 
 function isFlow(value: unknown): value is OpeningFlow {

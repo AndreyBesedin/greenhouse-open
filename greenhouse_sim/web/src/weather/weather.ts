@@ -1,7 +1,7 @@
 import { inWorld } from "../debug/dimensions";
 import type { OverlayPrimitive } from "../debug/overlays";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
-import { weatherParameter } from "../scene/source";
+import { runParameters, scenarioUrl } from "../scene/run";
 import type { Point3 } from "../world";
 
 /** Where a scenario's world lies on the Earth: its latitude and longitude in
@@ -129,15 +129,12 @@ const SPEED_DECIMALS = 1;
 /** Where a scenario's weather at a moment of a run is published, under its
  * own weather or a preset's. */
 export function weatherUrl(scenarioId: string, time: number, weather?: string): string {
-  const parts = [...(time === 0 ? [] : [`t=${time}`]), ...weatherParameter(weather)];
-  const query = parts.length === 0 ? "" : `?${parts.join("&")}`;
-  return `/api/scenarios/${encodeURIComponent(scenarioId)}/weather${query}`;
+  return scenarioUrl(scenarioId, "weather", runParameters({ time, weather }, ["time", "weather"]));
 }
 
 /** Where a scenario's weather through its runs' first day is published. */
 export function weatherDayUrl(scenarioId: string, weather?: string): string {
-  const query = weatherParameter(weather).join("&");
-  return `/api/scenarios/${encodeURIComponent(scenarioId)}/weather/day${query === "" ? "" : `?${query}`}`;
+  return scenarioUrl(scenarioId, "weather/day", runParameters({ weather }, ["weather"]));
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

@@ -1,4 +1,4 @@
-import { pairsText, type ScheduledCommand, scheduleText, weatherParameter } from "../scene/source";
+import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 import type { Point3 } from "../world";
 import { describeTime } from "./ClimateTime";
 import { probesText } from "./probes";
@@ -68,26 +68,12 @@ export function isClimateProbes(body: unknown): body is ClimateProbes {
  * asked for as its climate is, up to the moment drawn. */
 export function probeChartsUrl(
   scenarioId: string,
-  run: {
-    probes: readonly Point3[];
-    layout?: string | undefined;
-    levels?: Readonly<Record<string, number>> | undefined;
-    openings?: Readonly<Record<string, number>> | undefined;
-    schedule?: readonly ScheduledCommand[] | undefined;
-    time?: number | undefined;
-    weather?: string | undefined;
-  },
+  run: RunParts & { probes: readonly Point3[] },
 ): string {
-  const parts = [
+  return scenarioUrl(scenarioId, "climate/probes", [
     `probes=${probesText(run.probes)}`,
-    ...(run.layout === undefined ? [] : [`layout=${encodeURIComponent(run.layout)}`]),
-    ...(pairsText(run.levels) === "" ? [] : [`set=${pairsText(run.levels)}`]),
-    ...(pairsText(run.openings) === "" ? [] : [`open=${pairsText(run.openings)}`]),
-    ...(scheduleText(run.schedule) === "" ? [] : [`schedule=${scheduleText(run.schedule)}`]),
-    ...(run.time === undefined || run.time === 0 ? [] : [`t=${run.time}`]),
-    ...weatherParameter(run.weather),
-  ];
-  return `/api/scenarios/${encodeURIComponent(scenarioId)}/climate/probes?${parts.join("&")}`;
+    ...runParameters(run),
+  ]);
 }
 
 /** Fetches and checks probes' readings; every failure becomes a state. */

@@ -1,5 +1,5 @@
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
-import { pairsText, type ScheduledCommand, scheduleText, weatherParameter } from "../scene/source";
+import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 
 /** A glazed surface at a moment: the mean air against it, its own
  * temperature, and the heat it passes out of the house (negative in). */
@@ -34,27 +34,8 @@ const DECIMALS = 100;
 
 /** Where a scenario's glazing at a moment of its climate run is published,
  * asked for as the climate is. */
-export function glazingUrl(
-  scenarioId: string,
-  run: {
-    layout?: string | undefined;
-    levels?: Readonly<Record<string, number>> | undefined;
-    openings?: Readonly<Record<string, number>> | undefined;
-    schedule?: readonly ScheduledCommand[] | undefined;
-    time?: number | undefined;
-    weather?: string | undefined;
-  },
-): string {
-  const parts = [
-    ...(run.layout === undefined ? [] : [`layout=${encodeURIComponent(run.layout)}`]),
-    ...(pairsText(run.levels) === "" ? [] : [`set=${pairsText(run.levels)}`]),
-    ...(pairsText(run.openings) === "" ? [] : [`open=${pairsText(run.openings)}`]),
-    ...(scheduleText(run.schedule) === "" ? [] : [`schedule=${scheduleText(run.schedule)}`]),
-    ...(run.time === undefined || run.time === 0 ? [] : [`t=${run.time}`]),
-    ...weatherParameter(run.weather),
-  ];
-  const query = parts.length === 0 ? "" : `?${parts.join("&")}`;
-  return `/api/scenarios/${encodeURIComponent(scenarioId)}/climate/glazing${query}`;
+export function glazingUrl(scenarioId: string, run: RunParts): string {
+  return scenarioUrl(scenarioId, "climate/glazing", runParameters(run));
 }
 
 function isSurface(value: unknown): value is SurfaceTemperature {

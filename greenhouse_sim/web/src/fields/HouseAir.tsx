@@ -1,4 +1,4 @@
-import { pairsText, type ScheduledCommand, scheduleText, weatherParameter } from "../scene/source";
+import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 import { CLIMATE_RUN_S } from "./source";
 
 /** The house's air as one well-mixed volume at each moment of a trace. */
@@ -38,27 +38,8 @@ const CHARTED: readonly { name: string; unit: string; of: (s: HouseSeries) => nu
 
 /** Where the house's air through a run is published, asked for as the
  * climate is, up to the moment drawn. */
-export function houseAirUrl(
-  scenarioId: string,
-  run: {
-    layout?: string | undefined;
-    levels?: Readonly<Record<string, number>> | undefined;
-    openings?: Readonly<Record<string, number>> | undefined;
-    schedule?: readonly ScheduledCommand[] | undefined;
-    time?: number | undefined;
-    weather?: string | undefined;
-  },
-): string {
-  const parts = [
-    ...(run.layout === undefined ? [] : [`layout=${encodeURIComponent(run.layout)}`]),
-    ...(pairsText(run.levels) === "" ? [] : [`set=${pairsText(run.levels)}`]),
-    ...(pairsText(run.openings) === "" ? [] : [`open=${pairsText(run.openings)}`]),
-    ...(scheduleText(run.schedule) === "" ? [] : [`schedule=${scheduleText(run.schedule)}`]),
-    ...(run.time === undefined || run.time === 0 ? [] : [`t=${run.time}`]),
-    ...weatherParameter(run.weather),
-  ];
-  const query = parts.length === 0 ? "" : `?${parts.join("&")}`;
-  return `/api/scenarios/${encodeURIComponent(scenarioId)}/climate/house${query}`;
+export function houseAirUrl(scenarioId: string, run: RunParts): string {
+  return scenarioUrl(scenarioId, "climate/house", runParameters(run));
 }
 
 function isSeries(value: unknown, length: number): value is HouseSeries {

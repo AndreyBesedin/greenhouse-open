@@ -56,17 +56,13 @@ import { RuleChecks } from "./plants/RuleChecks";
 import type { ViewSample } from "./readouts";
 import { loadScenarios, SCENARIOS_URL } from "./scenarios";
 import { type LiveCommand, sendLiveCommand } from "./scene/live";
+import { runApartFromItsMoment, runsSomething, scenarioRun } from "./scene/run";
 import {
-  apiWeather,
   changesQuery,
   levelsAt,
   loadScene,
-  pairsFrom,
-  pairsText,
   type SceneSource,
   sceneRequest,
-  scheduleFrom,
-  scheduleText,
   searchFor,
   sourceFromSearch,
   withItsAir,
@@ -151,49 +147,24 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
           : (sceneAsked ?? ""),
   });
 
-  // The scenario's field, drawn over its scene, loaded whenever another is
-  // chosen; the last one stays on show until the next arrives.
-  const fieldScenario = source.kind === "scenario" ? source.scenarioId : null;
-  const fieldName = source.kind === "scenario" ? (source.field ?? null) : null;
-  // A scenario's CFD solution depends on its layout, and its climate on how
-  // hard its equipment runs and how far its doors and vents stand open: kept
-  // as the address writes them, so that the field is loaded again only when
-  // they change.
-  const fieldLayout = source.kind === "scenario" ? source.layout : undefined;
-  const fieldLevels = source.kind === "scenario" ? pairsText(source.levels) : "";
-  const fieldOpenings = source.kind === "scenario" ? pairsText(source.openings) : "";
-  const fieldSchedule = source.kind === "scenario" ? scheduleText(source.schedule) : "";
-  const fieldTime = source.kind === "scenario" ? (source.time ?? 0) : 0;
-  const fieldWeather =
-    source.kind === "scenario" ? apiWeather(source.weather, source.clouds) : undefined;
+  // The scenario's run drawn, every part of which is asked for under its
+  // layout, equipment, openings, schedule, moment and weather; and the same
+  // run as the climate's, while the climate field is drawn.
+  const run = source.kind === "scenario" ? scenarioRun(source) : null;
+  const climate = source.kind === "scenario" && source.field === CLIMATE_FIELD ? run : null;
+  // The moment drawn, in seconds into the climate run.
+  const moment = run?.time ?? 0;
   // A climate run, apart from its moments: its colours keep the widest range
   // its moments have reached, so that a slice keeps its colours as the run
   // plays and goes back. Another run starts afresh.
-  const climateRun =
-    fieldScenario !== null && fieldName === CLIMATE_FIELD
-      ? [
-          fieldScenario,
-          fieldLayout ?? "",
-          fieldWeather ?? "",
-          fieldLevels,
-          fieldOpenings,
-          fieldSchedule,
-        ].join("|")
-      : null;
-  // The run's changes to its scenario, which its fields and sensors are
-  // asked for under.
-  const fieldChanges = {
-    layout: fieldLayout,
-    levels: pairsFrom(fieldLevels) ?? {},
-    openings: pairsFrom(fieldOpenings) ?? {},
-    schedule: scheduleFrom(fieldSchedule) ?? [],
-    time: fieldTime,
-    weather: fieldWeather,
-  };
+  const climateRun = climate === null ? null : runApartFromItsMoment(climate);
+  const probes = source.kind === "scenario" ? (source.probes ?? EMPTY_PROBES) : EMPTY_PROBES;
+
+  // The scenario's field, drawn over its scene, and another compared with it
+  // at the probes; the last of each stays on show until the next arrives.
+  const fieldName = source.kind === "scenario" ? (source.field ?? null) : null;
   const field = useLoad(
-    fieldScenario === null || fieldName === null
-      ? null
-      : fieldUrl(fieldScenario, fieldName, fieldChanges),
+    run === null || fieldName === null ? null : fieldUrl(run.scenarioId, fieldName, run),
     fetchField,
     {
       onAnswer: (state) => {
@@ -203,69 +174,49 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       },
     },
   );
-
-  // The weather outside a scenario at the moment drawn, and through the runs'
-  // first day, for its chart.
-  const weatherScenario = source.kind === "scenario" ? source.scenarioId : null;
-  const weather = useLoad(
-    weatherScenario === null ? null : weatherUrl(weatherScenario, fieldTime, fieldWeather),
-    loadWeather,
-  );
-  const weatherDay = useLoad(
-    weatherScenario === null ? null : weatherDayUrl(weatherScenario, fieldWeather),
-    loadWeatherDay,
-  );
-
-  // The field compared with the drawn one, loaded as the drawn one is.
   const compareName = source.kind === "scenario" ? (source.compare ?? null) : null;
   const compared = useLoad(
-    fieldScenario === null || compareName === null
-      ? null
-      : fieldUrl(fieldScenario, compareName, fieldChanges),
+    run === null || compareName === null ? null : fieldUrl(run.scenarioId, compareName, run),
     fetchField,
   );
 
+  // The weather outside a scenario at the moment drawn, and through the runs'
+  // first day, for its chart.
+  const weather = useLoad(
+    run === null ? null : weatherUrl(run.scenarioId, moment, run.weather),
+    loadWeather,
+  );
+  const weatherDay = useLoad(
+    run === null ? null : weatherDayUrl(run.scenarioId, run.weather),
+    loadWeatherDay,
+  );
+
   // What the probes read through the climate run drawn, and through the
-  // same run all off, up to the moment drawn; the last stays on show until
-  // the next arrives.
-  const chartsUrl =
-    source.kind === "scenario" &&
-    source.field === CLIMATE_FIELD &&
-    source.probes !== undefined &&
-    source.probes.length > 0
-      ? probeChartsUrl(source.scenarioId, {
-          ...source,
-          probes: source.probes,
-          weather: fieldWeather,
-        })
-      : null;
-  const probeCharts = useLoad(chartsUrl, loadProbeCharts);
-
+  // same run all off, up to the moment drawn.
+  const probeCharts = useLoad(
+    climate === null || probes.length === 0
+      ? null
+      : probeChartsUrl(climate.scenarioId, { ...climate, probes }),
+    loadProbeCharts,
+  );
   // The house's air as one volume through the climate run drawn, and the
-  // same run all off, up to the moment drawn; the last stays on show until
-  // the next arrives.
-  const houseUrl =
-    source.kind === "scenario" && source.field === CLIMATE_FIELD
-      ? houseAirUrl(source.scenarioId, { ...source, weather: fieldWeather })
-      : null;
-  const houseAir = useLoad(houseUrl, loadHouseAir);
-
+  // same run all off, up to the moment drawn.
+  const houseAir = useLoad(
+    climate === null ? null : houseAirUrl(climate.scenarioId, climate),
+    loadHouseAir,
+  );
   // The glazing at the moment drawn, each wall's and roof slope's
-  // temperature, for "Colour by"; the last stays on show until the next
-  // arrives.
-  const glassUrl =
-    source.kind === "scenario" && source.field === CLIMATE_FIELD
-      ? glazingUrl(source.scenarioId, { ...source, weather: fieldWeather })
-      : null;
-  const glazing = useLoad(glassUrl, loadGlazing);
-
+  // temperature, for "Colour by".
+  const glazing = useLoad(
+    climate === null ? null : glazingUrl(climate.scenarioId, climate),
+    loadGlazing,
+  );
   // What the open doors and vents pass at the moment drawn, for "Colour by"
-  // and their arrows; the last stays on show until the next arrives.
-  const flowsUrl =
-    source.kind === "scenario" && source.field === CLIMATE_FIELD
-      ? openingsUrl(source.scenarioId, { ...source, weather: fieldWeather })
-      : null;
-  const openingFlows = useLoad(flowsUrl, loadOpenings);
+  // and their arrows.
+  const openingFlows = useLoad(
+    climate === null ? null : openingsUrl(climate.scenarioId, climate),
+    loadOpenings,
+  );
 
   // The boundaries a CFD solver is given, changed as the scene is, drawn
   // over it when asked for; the last stays on show until the next arrives.
@@ -481,14 +432,10 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const selected = selectedEntity(snapshot, selectedId);
   // The light on the plants at the moment drawn, while a plant is selected
   // in a climate run's view; the last stays on show until the next arrives.
-  const lightScenario =
-    source.kind === "scenario" && source.field === CLIMATE_FIELD && selected?.kind === "PLANT"
-      ? source.scenarioId
-      : null;
   const plantsLight = useLoad(
-    lightScenario === null
+    climate === null || selected?.kind !== "PLANT"
       ? null
-      : plantsLightUrl(lightScenario, fieldTime, fieldWeather, fieldLayout),
+      : plantsLightUrl(climate.scenarioId, moment, climate.weather, climate.layout),
     loadPlantsLight,
   );
   const selectedCamera = selected === null ? null : cameraOf(selected);
@@ -496,28 +443,26 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // The run's observation log up to the moment drawn, and what its sensors
   // truly sampled, while a sensor or a camera is selected.
   const sensorSelected = selected?.kind === "SENSOR" || selected?.kind === "CAMERA";
-  const sensorScenario = sensorSelected ? fieldScenario : null;
+  const sensorRun = sensorSelected ? run : null;
   const sensorReadings = useLoad(
-    sensorScenario === null
+    sensorRun === null
       ? null
-      : { scenarioId: sensorScenario, run: { ...fieldChanges, clean: !sensorsImperfect } },
+      : { scenarioId: sensorRun.scenarioId, run: { ...sensorRun, clean: !sensorsImperfect } },
     loadSensorReadings,
     { key: sensorsKey },
   );
 
   // What the sensors read through the same run all off, when something runs.
-  const runsSomething = fieldLevels !== "" || fieldSchedule !== "";
   const offReadings = useLoad(
-    sensorScenario === null || !runsSomething
+    sensorRun === null || !runsSomething(sensorRun)
       ? null
       : {
-          scenarioId: sensorScenario,
+          scenarioId: sensorRun.scenarioId,
           run: {
-            layout: fieldLayout,
-            openings: fieldChanges.openings,
-            time: fieldTime,
+            ...sensorRun,
+            levels: undefined,
+            schedule: undefined,
             clean: !sensorsImperfect,
-            weather: fieldWeather,
           },
         },
     loadSensorReadings,
@@ -525,7 +470,6 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   );
 
   const showingNames = source.kind === "plants" && showPlantNames;
-  const probes = source.kind === "scenario" ? (source.probes ?? EMPTY_PROBES) : EMPTY_PROBES;
   const probedField = field.status === "loaded" ? field.field : null;
   const outside = weather.status === "loaded" ? weather.weather : null;
   // A climate run's view is lit by the sun, and shows its path through the
@@ -703,7 +647,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             )}
             {source.kind === "scenario" && source.field === CLIMATE_FIELD && (
               <ClimateTime
-                time={fieldTime}
+                time={moment}
                 shown={field.status === "loaded" ? field.field.timeS : null}
                 playing={playingClimate}
                 onTime={setClimateTime}
@@ -716,7 +660,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             {source.kind === "scenario" && source.field === CLIMATE_FIELD && (
               <ClimateSchedule
                 schedule={source.schedule ?? []}
-                time={fieldTime}
+                time={moment}
                 onTime={setClimateTime}
                 onRemove={removeCommand}
               />
@@ -731,7 +675,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                     : []
                 }
                 chosen={source.weather}
-                time={fieldTime}
+                time={moment}
                 onChoose={chooseWeather}
                 clouds={source.clouds}
                 onClouds={chooseClouds}
@@ -755,7 +699,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
               />
             )}
             {source.kind === "scenario" && source.field === CLIMATE_FIELD && (
-              <ProbeCharts state={probeCharts} time={fieldTime} />
+              <ProbeCharts state={probeCharts} time={moment} />
             )}
             {source.kind === "scenario" && (
               <CfdControls
@@ -832,7 +776,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                   unit={String(selected.properties.unit)}
                   state={sensorReadings}
                   allOff={offReadings}
-                  until={fieldTime}
+                  until={moment}
                   imperfect={sensorsImperfect}
                   onImperfect={setSensorsImperfect}
                 />

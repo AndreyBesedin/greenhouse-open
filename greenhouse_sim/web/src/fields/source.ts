@@ -1,4 +1,4 @@
-import { pairsText, type ScheduledCommand, scheduleText, weatherParameter } from "../scene/source";
+import { CLIMATE_PARTS, type RunParts, runParameters, scenarioUrl } from "../scene/run";
 import { checkField, type EnvironmentField, SUPPORTED_FIELD_VERSION } from "./field";
 
 /** The air as a scenario's equipment drives it: the one field that depends on
@@ -15,17 +15,8 @@ export type FieldState =
 /** What a scenario's field is asked for with: another of its layouts, which
  * its CFD solution depends on, and its equipment's levels, its doors and
  * vents and a moment of its climate run, which its climate depends on. */
-export interface FieldChanges {
-  layout?: string | undefined;
-  levels?: Readonly<Record<string, number>> | undefined;
-  openings?: Readonly<Record<string, number>> | undefined;
-  /** Commands to its equipment after the start. */
-  schedule?: readonly ScheduledCommand[] | undefined;
-  /** Seconds into the climate run. */
-  time?: number | undefined;
-  /** Another weather the climate run is under, a preset's, by name. */
-  weather?: string | undefined;
-}
+/** How a scenario's run is changed from its own, for its fields. */
+export type FieldChanges = RunParts;
 
 /** How long a climate run lasts, in seconds, as the simulator runs it: a
  * day. */
@@ -40,21 +31,13 @@ export const GRID_RUN_S = 7200;
  * equipment at the levels set and its doors and vents open as set, at a
  * moment of its run. */
 export function fieldUrl(scenarioId: string, name: string, changes: FieldChanges = {}): string {
-  const base = `/api/scenarios/${encodeURIComponent(scenarioId)}/fields/${encodeURIComponent(name)}`;
-  const climate = name === CLIMATE_FIELD;
-  const levels = climate ? pairsText(changes.levels) : "";
-  const openings = climate ? pairsText(changes.openings) : "";
-  const schedule = climate ? scheduleText(changes.schedule) : "";
-  const time = climate && changes.time !== undefined && changes.time > 0 ? changes.time : null;
-  const parts = [
-    ...(changes.layout === undefined ? [] : [`layout=${encodeURIComponent(changes.layout)}`]),
-    ...(levels === "" ? [] : [`set=${levels}`]),
-    ...(openings === "" ? [] : [`open=${openings}`]),
-    ...(schedule === "" ? [] : [`schedule=${schedule}`]),
-    ...(time === null ? [] : [`t=${time}`]),
-    ...(climate ? weatherParameter(changes.weather) : []),
-  ];
-  return parts.length === 0 ? base : `${base}?${parts.join("&")}`;
+  // Another layout changes every field; the rest, the climate's run only.
+  const parts = name === CLIMATE_FIELD ? CLIMATE_PARTS : (["layout"] as const);
+  return scenarioUrl(
+    scenarioId,
+    `fields/${encodeURIComponent(name)}`,
+    runParameters(changes, parts),
+  );
 }
 
 /** `?layout=` for another of a scenario's layouts, or nothing for its own. */
