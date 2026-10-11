@@ -8,7 +8,8 @@ general clean-up together. They do not block P02–P07. A reproduced defect
 affecting those projects can be brought forward as a focused fix. The window
 opened on 2026-10-11, after P08 and before P09: the
 [second audit](#second-audit-after-p08) and its
-[order of work](#order-of-work) are below.
+[order of work](#order-of-work) are below. Its seven steps address every
+finding, FE-AUDIT.3 to .11, and P09 follows them.
 
 Part of the [simulator roadmap](README.md). These maintenance identifiers
 track audit findings separately from the simulator's project steps.
@@ -62,7 +63,7 @@ architecture and improve specific weaknesses rather than rewrite it.
 | FE-AUDIT.1 | Obsolete command responses change another source's feedback | Medium | Addressed in this follow-up |
 | FE-AUDIT.2 | Floating panels overlap in smaller windows | Medium | Addressed in this follow-up |
 | FE-AUDIT.3 | React hook and async lifecycle coverage is thin | Medium | Addressed in the maintenance window, step 3 |
-| FE-AUDIT.4 | Coverage is neither measured nor enforced | Medium | Planned, after P07 |
+| FE-AUDIT.4 | Coverage is neither measured nor enforced | Medium | Addressed in the maintenance window, step 7 |
 | FE-AUDIT.5 | Local browser tests can reuse stale servers | Medium | Addressed in the maintenance window, step 2 |
 | FE-AUDIT.6 | API bind failure masks the original exception | Medium | Addressed in the maintenance window, step 1 |
 | FE-AUDIT.7 | Small organizational, test-quality and telemetry improvements | Medium | Addressed in the maintenance window, step 6 |
@@ -150,6 +151,20 @@ Acceptance:
 - Record the initial baseline, then set justified thresholds in CI.
 - Require tests of observable behavior, not assertions added only to raise a
   percentage. Do not duplicate implementation logic in tests.
+
+Addressed in step 7 (decision 0030). `npm run coverage` measures the unit
+tests with Vitest's V8 coverage, over the handwritten code under `src`: not
+the generated contracts, the tests or `src/testing`. The baseline, on
+2026-10-11 with steps 1 to 6 in: 65.54% of statements, 57.48% of branches,
+60.84% of functions, 66.40% of lines. The thresholds are those rounded down,
+and CI's viewer checks run `npm run coverage`, so a change that lowers them
+fails.
+
+Networking and state, inspected first: the loaders cover 83% to 97% of their
+lines; `useLoad`, `useSource`, `useLiveCommands`, `useLiveScene` and
+`scene/run.ts` all of theirs, and `scene/live.ts` all but two. `App`, `Viewport`, the 3D drawing, the QA
+pages and the panels' shells count as not covered: the browser and
+screenshot tests run them, unmeasured.
 
 ### FE-AUDIT.5: Make local E2E server selection reproducible
 
@@ -286,7 +301,7 @@ extended in place.
   tests, and the guard against a stale answer, tested nowhere, is now
   written out fourteen times in `App` and in eight components
   (FE-AUDIT.8). Step 3 addresses both.
-- **FE-AUDIT.4** is open: no coverage is configured.
+- **FE-AUDIT.4** was open, no coverage configured; step 7 addresses it.
 - **FE-AUDIT.5** was open. The browser and screenshot configurations reused
   a running server outside CI, and the benchmark's always did. Local runs
   worked around it by editing `simulatorApi.ts` to another port and back.

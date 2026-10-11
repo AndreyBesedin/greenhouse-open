@@ -50,8 +50,9 @@ jobs:
       - name: Type-check
         run: npm run typecheck
 
-      - name: Unit tests
-        run: npm test
+      # Their coverage may not fall below its thresholds (decision 0030).
+      - name: Unit tests and their coverage
+        run: npm run coverage
 
       - name: Build
         run: npm run build

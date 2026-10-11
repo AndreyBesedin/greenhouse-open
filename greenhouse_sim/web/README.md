@@ -224,6 +224,7 @@ npm run dev         # local development server
 npm run lint        # Biome: formatting and lint (npm run format applies fixes)
 npm run typecheck   # TypeScript, strict
 npm test            # Vitest
+npm run coverage    # Vitest, and how much of the code it runs, held to a floor
 npm run build       # production build into dist/
 PYTHON=python npm run e2e  # Playwright smoke test against the real simulator API
 npm run e2e:visual  # screenshot comparisons (they run in CI's container only)
