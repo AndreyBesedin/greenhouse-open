@@ -1,6 +1,6 @@
 # 0010: Check the viewer with Biome, Vitest and a Playwright smoke test
 
-**Status:** Accepted
+**Status:** Accepted; its unit tests in Node only are superseded, for files that mount components or hooks, by [0029](0029-test-hooks-mounted-in-a-dom-file-by-file.md)
 **Date:** 2026-10-03
 
 ## Context
