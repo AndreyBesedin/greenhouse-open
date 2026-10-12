@@ -127,6 +127,35 @@ def _checked(
     return (*each_day, *commands)
 
 
+def _schedule(levels: _Pairs, commands: tuple[Commanded, ...]) -> Schedule:
+    """A climate run's schedule: its equipment's levels from the start, then
+    its commands, checked."""
+    return Schedule.of(
+        [
+            *Schedule.from_start(dict(levels)).commands,
+            *(
+                Command(time_s=time, actuator_id=actuator, level=level)
+                for time, actuator, level in commands
+            ),
+        ]
+    )
+
+
+def run_schedule(
+    scenario_id: str,
+    layout: str | None = None,
+    levels: Mapping[str, float] | None = None,
+    commands: Sequence[Commanded] = (),
+    daily: Sequence[Commanded] = (),
+) -> Schedule:
+    """The schedule a scenario's climate run is given, asked for and checked
+    as its climate field is: its equipment at `levels` from the start, then
+    as `daily` and `commands` set it."""
+    config = changed(scenario(scenario_id), SceneChanges(layout=layout or DEFAULT_LAYOUT))
+    running = equipment_levels(config, levels or {})
+    return _schedule(tuple(sorted(running.items())), _checked(config, commands, daily))
+
+
 type _RunKey = tuple[str, str, str, _Pairs, _Pairs, tuple[Commanded, ...]]
 _KEPT: OrderedDict[_RunKey, ClimateDay] = OrderedDict()
 _KEEPING = threading.Lock()
@@ -227,15 +256,7 @@ def _new_climate_run(
     return ClimateRun(
         base=config.airflow,
         equipment=config.layout.equipment,
-        schedule=Schedule.of(
-            [
-                *Schedule.from_start(dict(levels)).commands,
-                *(
-                    Command(time_s=time, actuator_id=actuator, level=level)
-                    for time, actuator, level in commands
-                ),
-            ]
-        ),
+        schedule=_schedule(levels, commands),
         settings=config.climate,
         grid=grid,
         solid=geometry.solid(),
