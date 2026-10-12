@@ -29,8 +29,10 @@ import {
   withWeather,
 } from "./scene/edits";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
+import { scenarioRun } from "./scene/run";
 import { levelsAt } from "./scene/source";
 import type { SetSource } from "./scene/useSource";
+import { TimelinePanel } from "./timeline/TimelinePanel";
 import { WeatherPanel } from "./weather/WeatherPanel";
 import type { WeatherDayState, WeatherStateOfLoad } from "./weather/weather";
 import type { Point3 } from "./world";
@@ -48,7 +50,7 @@ export interface ScenarioLoads {
 
 /**
  * A scenario's panels, in the info panel's order: its fields, its climate
- * run's moment, house air and schedule, its weather, the probes and their
+ * run's moment, house air, schedule and timeline, its weather, the probes and their
  * charts, its CFD boundaries, and its doors, vents and equipment. Each
  * changes the scenario's source; what the view around them keeps (how the
  * field's colours run, whether a click places a probe) is the viewer's.
@@ -164,6 +166,9 @@ export function ScenarioPanels({
           onRepeat={(index) => onSource(withRepeated(source, index))}
           onRemoveDaily={(index) => onSource(withoutDaily(source, index))}
         />
+      )}
+      {climate && (
+        <TimelinePanel scenarioId={source.scenarioId} run={scenarioRun(source)} time={time} />
       )}
       <WeatherPanel
         state={weather}
