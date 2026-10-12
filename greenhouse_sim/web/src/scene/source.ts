@@ -43,6 +43,8 @@ export type SceneSource =
       /** A QA override of its weather's cloud cover, in %, which dims its
        * light as such a sky would. */
       clouds?: number;
+      /** A QA override of the wind's direction, the bearing it blows from. */
+      wind?: number;
       /** One of its environment fields, drawn over its scene, as arrows by
        * default, and where a slice through it lies, if one is drawn. */
       field?: string;
@@ -96,6 +98,9 @@ const CFD_BOUNDARIES = "boundaries";
 // weather under other clouds than its own: `cold_spring_day@80`.
 const MOST_CLOUDS_PCT = 100;
 const CLOUDS_MARK = "@";
+// And then a wind's direction in place of its own: `default~90`.
+const WIND_MARK = "~";
+const FULL_TURN_DEG = 360;
 
 export function sourceFromSearch(search: string): SceneSource {
   const parameters = new URLSearchParams(search);
@@ -108,6 +113,7 @@ export function sourceFromSearch(search: string): SceneSource {
     const layout = parameters.get("layout");
     const weather = parameters.get("weather");
     const clouds = cloudsFrom(parameters.get("clouds"));
+    const wind = windFrom(parameters.get("wind"));
     const envelope = pairsFrom(parameters.get("envelope"));
     const openings = pairsFrom(parameters.get("open"));
     const levels = pairsFrom(parameters.get("set"));
@@ -126,6 +132,7 @@ export function sourceFromSearch(search: string): SceneSource {
       ...(layout ? { layout } : {}),
       ...(weather ? { weather } : {}),
       ...(clouds === null ? {} : { clouds }),
+      ...(wind === null ? {} : { wind }),
       ...(field ? { field } : {}),
       ...(field && fieldView ? { fieldView } : {}),
       ...(field && slice ? { slice } : {}),
@@ -214,7 +221,7 @@ export function searchFor(source: SceneSource): string {
         .map((part) => `&${part}`)
         .join(
           "",
-        )}${source.clouds === undefined ? "" : `&clouds=${source.clouds}`}${fieldQuery(source)}${source.cfdBoundaries ? `&cfd=${CFD_BOUNDARIES}` : ""}${source.camera === undefined ? "" : `&camera=${cameraText(source.camera)}`}`;
+        )}${source.clouds === undefined ? "" : `&clouds=${source.clouds}`}${source.wind === undefined ? "" : `&wind=${source.wind}`}${fieldQuery(source)}${source.cfdBoundaries ? `&cfd=${CFD_BOUNDARIES}` : ""}${source.camera === undefined ? "" : `&camera=${cameraText(source.camera)}`}`;
     case "live":
       return `?live=${encodeURIComponent(source.scenarioId)}`;
   }
@@ -414,13 +421,27 @@ function cloudsFrom(value: string | null): number | null {
   return value !== null && value !== "" && clouds >= 0 && clouds <= MOST_CLOUDS_PCT ? clouds : null;
 }
 
+/** A wind direction the address overrides the weather's with, a bearing
+ * from 0 to 360°, or null when it says none or nothing readable. */
+function windFrom(value: string | null): number | null {
+  const wind = Number(value ?? "");
+  return value !== null && value !== "" && wind >= 0 && wind < FULL_TURN_DEG ? wind : null;
+}
+
 /** The weather the simulator is asked for: another by name, or its own, its
- * clouds overridden as `@80` asks, for QA. */
+ * clouds overridden as `@80` asks, and its wind's direction as `~90` does,
+ * for QA. */
 export function apiWeather(
   weather: string | undefined,
   clouds: number | undefined,
+  wind?: number,
 ): string | undefined {
-  return clouds === undefined ? weather : `${weather ?? DEFAULT_WEATHER}${CLOUDS_MARK}${clouds}`;
+  if (clouds === undefined && wind === undefined) {
+    return weather;
+  }
+  const clouded = clouds === undefined ? "" : `${CLOUDS_MARK}${clouds}`;
+  const winded = wind === undefined ? "" : `${WIND_MARK}${wind}`;
+  return `${weather ?? DEFAULT_WEATHER}${clouded}${winded}`;
 }
 
 function timeFrom(value: string | null): number | null {
@@ -554,11 +575,12 @@ export function withItsAir(shown: SceneSource, chosen: SceneSource): SceneSource
   ) {
     return chosen;
   }
-  const { weather, clouds, field, fieldView, slice, compare, probes, cfdBoundaries } = shown;
+  const { weather, clouds, wind, field, fieldView, slice, compare, probes, cfdBoundaries } = shown;
   return {
     ...chosen,
     ...(weather === undefined ? {} : { weather }),
     ...(clouds === undefined ? {} : { clouds }),
+    ...(wind === undefined ? {} : { wind }),
     ...(field === undefined ? {} : { field }),
     ...(fieldView === undefined ? {} : { fieldView }),
     ...(slice === undefined ? {} : { slice }),

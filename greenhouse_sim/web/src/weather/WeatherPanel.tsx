@@ -24,6 +24,9 @@ const TEMPERATURE_DECIMALS = 1;
 // a time.
 const MOST_CLOUDS_PCT = 100;
 const CLOUDS_STEP_PCT = 10;
+// A wind override turns in steps of this, from north round to the last before it.
+const WIND_STEP_DEG = 15;
+const LAST_BEARING_DEG = 345;
 const LATITUDE_DECIMALS = 2;
 
 /** When a moment is, at the site: "1 Jan 2026, 00:10". */
@@ -97,6 +100,8 @@ export function WeatherPanel({
   onChoose,
   clouds,
   onClouds,
+  windFrom,
+  onWindFrom,
 }: {
   state: WeatherStateOfLoad;
   day?: WeatherDayState;
@@ -112,6 +117,12 @@ export function WeatherPanel({
   /** Overrides the sky's clouds, or, given nothing, gives the weather its
    * own back. */
   onClouds?: (clouds: number | undefined) => void;
+  /** The QA override of the wind's direction, the bearing it blows from,
+   * if one is set. */
+  windFrom?: number | undefined;
+  /** Overrides the wind's direction, or, given nothing, gives the weather
+   * its own back. */
+  onWindFrom?: (bearing: number | undefined) => void;
 }) {
   if (state.status === "none") {
     return null;
@@ -182,6 +193,30 @@ export function WeatherPanel({
             {clouds !== undefined && (
               <button type="button" onClick={() => onClouds(undefined)}>
                 Its own
+              </button>
+            )}
+          </div>
+        )}
+        {onWindFrom !== undefined && (
+          <div className="weather-clouds">
+            <label>
+              Wind from{" "}
+              <input
+                type="range"
+                aria-label="Wind direction"
+                min={0}
+                max={LAST_BEARING_DEG}
+                step={WIND_STEP_DEG}
+                value={windFrom ?? Math.round(outside.wind_direction_deg ?? 0)}
+                onChange={(event) => onWindFrom(Number(event.target.value))}
+              />
+            </label>{" "}
+            <span data-testid="weather-wind-override">
+              {windFrom === undefined ? "its own" : `${windFrom}°, for QA`}
+            </span>
+            {windFrom !== undefined && (
+              <button type="button" onClick={() => onWindFrom(undefined)}>
+                Its own wind
               </button>
             )}
           </div>

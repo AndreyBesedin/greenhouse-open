@@ -140,6 +140,10 @@ outside the house, a metre long for each metre a second
 synthetic day in place of its own weather
 (`?scenario=climate_box&weather=cold_spring_day`), and charts that day's
 temperature, humidity and wind (`GET /api/scenarios/{id}/weather/day`).
+For QA, its sliders override the sky's cloud cover (`&clouds=80`) and the
+wind's direction, the bearing it blows from (`&wind=90`), keeping the rest of
+the weather its own; the API takes them in the weather's name
+(`weather=default@80~90`).
 The inspector says what the selected entity is in words, and names its
 dimensions. In a climate run's view, a selected plant, or any part of one,
 shows its light: its PAR at the moment drawn and its day's light integral

@@ -136,3 +136,36 @@ def test_its_sensors_observe_only_the_run_they_belong_to_through_the_season() ->
         ],
         rel=1e-6,
     )
+
+
+def _door_flow(weather: str) -> float:
+    body = _body(
+        f"/api/scenarios/reference_greenhouse/climate/openings?t=43200&open=door:1&weather={weather}"
+    )
+    return float(next(o["net_m3_s"] for o in body["openings"] if o["opening_id"] == "door"))
+
+
+def test_the_winds_direction_can_be_overridden_for_qa_and_an_open_door_follows_it() -> None:
+    own = _body("/api/scenarios/reference_greenhouse/weather?t=43200")["weather"]
+    east = _body("/api/scenarios/reference_greenhouse/weather?t=43200&weather=default~90")[
+        "weather"
+    ]
+    clouded = _body(
+        "/api/scenarios/reference_greenhouse/weather?t=43200&weather=cold_spring_day@80~0"
+    )["weather"]
+
+    # Only its direction turns: its speed is its own, and so is the rest.
+    assert east["wind_direction_deg"] == 90.0
+    assert east["wind_speed_m_s"] == own["wind_speed_m_s"]
+    assert east["air_temperature_c"] == own["air_temperature_c"]
+    assert (clouded["wind_direction_deg"], clouded["cloud_cover_pct"]) == (0.0, 80.0)
+    # From the west, its own at noon, the wind blows in through the front
+    # door; from the north, the house draws out through it.
+    assert own["wind_direction_deg"] == 270.0
+    assert _door_flow("default") > 10.0
+    assert _door_flow("default~0") < 0.0
+    for refused in ("default~360", "default~-5", "default~east"):
+        response = respond(
+            "GET", f"/api/scenarios/reference_greenhouse/weather?t=0&weather={refused}"
+        )
+        assert response.status == HTTPStatus.BAD_REQUEST

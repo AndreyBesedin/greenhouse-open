@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
+import { apiWeather, searchFor, sourceFromSearch } from "../scene/source";
 import { WeatherDayChart } from "./WeatherDay";
 import { describeSite, localTime, WeatherPanel, weatherName } from "./WeatherPanel";
 import {
@@ -367,5 +368,37 @@ describe("the sun", () => {
     const night = { ...WESTERLY, sun: { elevation_deg: -10, azimuth_deg: 0 } };
 
     expect(sunOverlays(EXAMPLE, night)).toEqual([]);
+  });
+});
+
+describe("a wind override for QA", () => {
+  it("turns the wind from a bearing of its own, until given its own back", () => {
+    const own = renderToStaticMarkup(
+      <WeatherPanel state={{ status: "loaded", weather: WESTERLY }} onWindFrom={() => undefined} />,
+    );
+    const turned = renderToStaticMarkup(
+      <WeatherPanel
+        state={{ status: "loaded", weather: WESTERLY }}
+        windFrom={90}
+        onWindFrom={() => undefined}
+      />,
+    );
+
+    expect(own).toContain('aria-label="Wind direction"');
+    expect(own).toContain("its own");
+    expect(own).not.toContain("Its own wind");
+    expect(turned).toContain("90°, for QA");
+    expect(turned).toContain("Its own wind");
+  });
+
+  it("is kept in the address and asked of the simulator with the weather", () => {
+    const source = sourceFromSearch("?scenario=reference_greenhouse&clouds=80&wind=90");
+
+    expect(source).toMatchObject({ kind: "scenario", clouds: 80, wind: 90 });
+    expect(searchFor(source)).toBe("?scenario=reference_greenhouse&clouds=80&wind=90");
+    expect(sourceFromSearch("?scenario=reference_greenhouse&wind=360")).not.toHaveProperty("wind");
+    expect(apiWeather(undefined, undefined, 90)).toBe("default~90");
+    expect(apiWeather("cold_spring_day", 80, 0)).toBe("cold_spring_day@80~0");
+    expect(apiWeather("cold_spring_day", undefined, undefined)).toBe("cold_spring_day");
   });
 });

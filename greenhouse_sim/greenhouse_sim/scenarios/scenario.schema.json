@@ -916,6 +916,17 @@
       ],
       "default": null
     },
+    "wind_from_deg": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Bearing"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "air_temperature_bounds": {
       "default": [
         18.0,

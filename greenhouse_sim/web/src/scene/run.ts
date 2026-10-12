@@ -46,7 +46,7 @@ export const CLIMATE_PARTS: readonly RunPart[] = [
 ];
 
 /** The run a scenario's source draws: its parts as its address holds them,
- * and its weather with the clouds asked for. */
+ * and its weather with the clouds and the wind asked for. */
 export function scenarioRun(source: Extract<SceneSource, { kind: "scenario" }>): ScenarioRun {
   return {
     scenarioId: source.scenarioId,
@@ -56,7 +56,7 @@ export function scenarioRun(source: Extract<SceneSource, { kind: "scenario" }>):
     schedule: source.schedule,
     daily: source.daily,
     time: source.time,
-    weather: apiWeather(source.weather, source.clouds),
+    weather: apiWeather(source.weather, source.clouds, source.wind),
   };
 }
 

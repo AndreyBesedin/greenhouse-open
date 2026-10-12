@@ -73,6 +73,12 @@ export function withClouds(source: ScenarioSource, clouds: number | undefined): 
   return clouds === undefined ? rest : { ...rest, clouds };
 }
 
+/** Its wind's direction overridden, for QA, or its weather's own. */
+export function withWind(source: ScenarioSource, wind: number | undefined): ScenarioSource {
+  const { wind: _, ...rest } = source;
+  return wind === undefined ? rest : { ...rest, wind };
+}
+
 /** How far its doors and vents stand open. */
 export function withOpenings(
   source: ScenarioSource,

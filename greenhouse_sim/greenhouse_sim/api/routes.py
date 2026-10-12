@@ -42,7 +42,10 @@ check; a route that comes to need one checks it first.
                                           into the run, to its last day's end,
                                           for its climate, and
                                           &weather=cold_spring_day under a
-                                          preset weather, not its own
+                                          preset weather, not its own; @80
+                                          after its name overrides its
+                                          clouds, and ~90 its wind's
+                                          direction, for QA
     GET /api/scenarios/{id}/climate/probes what probes at ?probes=3:3.2:0.75,… read
                                           of its climate run every minute up to
                                           &t=600, and of the same run with all

@@ -27,6 +27,7 @@ import {
   withSlice,
   withTime,
   withWeather,
+  withWind,
 } from "./scene/edits";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
 import { scenarioRun } from "./scene/run";
@@ -179,6 +180,8 @@ export function ScenarioPanels({
         onChoose={(chosen) => onSource(withWeather(source, chosen))}
         clouds={source.clouds}
         onClouds={(clouds) => onSource(withClouds(source, clouds))}
+        windFrom={source.wind}
+        onWindFrom={(wind) => onSource(withWind(source, wind))}
       />
       {source.field !== undefined && probed !== null && (
         <FieldProbes

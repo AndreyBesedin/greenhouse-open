@@ -276,7 +276,7 @@ run in their own Playwright project, as the plant lab's and the sun's do.
 | P09.1 | `feat(scenarios): define versioned integrated scenario manifest` | Done |
 | P09.2 | `feat(sim): unify multi-rate scheduler and visible event timeline` | Done |
 | P09.3 | `feat(coupling): connect radiation/weather/climate to plant environment` | Done |
-| P09.4 | `feat(coupling): connect actuators weather and vents to sensor observations` | Planned |
+| P09.4 | `feat(coupling): connect actuators weather and vents to sensor observations` | Done |
 | P09.5 | `feat(replay): add checkpoint reset branch and replay` | Planned |
 | P09.6 | `feat(qa): add QA mode with truth overlays` | Planned |
 | P09.7 | `test(e2e): add integrated visual regression suite` | Planned |
@@ -564,6 +564,15 @@ path; a heater's night setback shows in the readings.
   into the second and far warmer than unheated; and a clean sensor's
   observations late in the run are the run's own air where it stands.
   Browser test: `reference-schedule.spec.ts`, with the season's.
+- **A wind override for QA** (section 10, the final QA's sixth step):
+  `&wind=90` turns the wind to blow from that bearing at its own speed, the
+  rest of the weather its own, as `&clouds=` overrides the cloud cover; the
+  API takes it in the weather's name, `default~90` or
+  `cold_spring_day@80~90`, and refuses a bearing outside 0 to 360°. The
+  weather panel has a slider for it, in steps of 15°. Only openings in the
+  house's walls turn with it: at noon its own westerly blows 11.6 m³/s in
+  through the open front door, and a northerly draws 2.4 m³/s out; the
+  roof vents' exchange depends on the wind's speed alone (P07.4).
 
 ### P09.5: Checkpoints, branches and replay
 

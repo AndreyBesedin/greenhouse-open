@@ -180,6 +180,19 @@ class Clouded:
 
 
 @dataclass(frozen=True)
+class Winded:
+    """Another source's weather with its wind blowing from `wind_from_deg`,
+    a compass bearing, at its own speed. A QA override, so that the wind's
+    direction can be changed without another weather."""
+
+    source: WeatherSource
+    wind_from_deg: float
+
+    def at(self, moment: datetime) -> WeatherState:
+        return self.source.at(moment).model_copy(update={"wind_direction_deg": self.wind_from_deg})
+
+
+@dataclass(frozen=True)
 class RunWeather:
     """A weather source on a run's clock, from `start`, an aware instant."""
 

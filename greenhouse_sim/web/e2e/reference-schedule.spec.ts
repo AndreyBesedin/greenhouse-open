@@ -44,3 +44,32 @@ test("reference schedule: the run heats by its own clock, set back at night, unl
     await expect(heater).toHaveText("100%, 15 kW", ARRIVES);
   });
 });
+
+// The final QA's sixth step: open a door, and turn the outside wind.
+test("reference wind: an open door's flow turns with the wind, overridden for QA", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const weather = page.getByRole("region", { name: "Weather" });
+  const labels = page.getByTestId("debug-label");
+
+  await page.goto("/?scenario=reference_greenhouse&field=climate&t=43200&open=door:1");
+  await expect(page.getByTestId("climate-time")).toHaveText("12 h 00 min", ARRIVES);
+  // Opened once it has read the weather.
+  await expect(weather.getByTestId("weather-summary")).toContainText("Outside at", ARRIVES);
+  await weather.getByTestId("weather-summary").click();
+  // From the west at noon, its own, the wind blows in through the front door.
+  await expect(weather.getByTestId("weather-wind")).toContainText("(270°)", ARRIVES);
+  await expect(weather.getByTestId("weather-wind-override")).toHaveText("its own");
+  await expect(labels.filter({ hasText: /^11\.\d\d m³\/s in$/ })).toHaveCount(1, ARRIVES);
+
+  // From the north, the house draws out through it.
+  await weather.getByRole("slider", { name: "Wind direction" }).fill("0");
+  await expect(page).toHaveURL(/&wind=0(&|$)/);
+  await expect(weather.getByTestId("weather-wind-override")).toHaveText("0°, for QA");
+  await expect(weather.getByTestId("weather-wind")).toContainText("(0°)", ARRIVES);
+  await expect(labels.filter({ hasText: /^2\.\d\d m³\/s out$/ })).toHaveCount(1, ARRIVES);
+
+  await weather.getByRole("button", { name: "Its own wind" }).click();
+  await expect(page).not.toHaveURL(/&wind=/);
+});
