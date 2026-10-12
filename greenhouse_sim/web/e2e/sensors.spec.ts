@@ -51,8 +51,11 @@ test("sensors: a clean sensor's reading through a run is the truth beside it", a
   await selectAt(page, FRONT_FACE, "climate_box_temperature_front", BESIDE_THE_FRONT);
   const panel = page.getByRole("region", { name: "Sensor" });
   // Ten minutes in, the heater's warmth has reached the front half of the
-  // house, through glass that passes little in the night's still air.
-  await expect(panel.getByTestId("sensor-reading")).toHaveText("15.91 °C at 10 min");
+  // house, through glass that passes little in the night's still air. The
+  // log is read once the sensor is selected, behind the run's other loads.
+  await expect(panel.getByTestId("sensor-reading")).toHaveText("15.91 °C at 10 min", {
+    timeout: 20_000,
+  });
   await expect(panel.getByRole("complementary", { name: "Truth, for QA only" })).toBeVisible();
   await expect(panel.getByTestId("sensor-truth")).toHaveText("15.91 °C at 10 min");
   // A reading a minute, on the truth's line.
