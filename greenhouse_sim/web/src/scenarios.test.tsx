@@ -68,13 +68,13 @@ describe("reading the simulator's scenario list", () => {
 });
 
 describe("the scenario list", () => {
-  it("shows each scenario with its plants and length", () => {
+  it("shows each scenario by name, its identifier on hover, with its plants and length", () => {
     const html = renderToStaticMarkup(
       <ScenarioList state={{ status: "loaded", scenarios: [DEMO] }} />,
     );
 
-    expect(html).toContain("<code>climate_box</code>");
-    expect(html).toContain("Agentic Demo Greenhouse");
+    expect(html).toContain(">Agentic Demo Greenhouse</td>");
+    expect(html).toContain('title="climate_box: ');
     expect(html).toContain("<td>6</td><td>15</td>");
   });
 

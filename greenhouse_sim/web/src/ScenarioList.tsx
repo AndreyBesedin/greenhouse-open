@@ -32,7 +32,6 @@ export function ScenarioList({
           <thead>
             <tr>
               <th>Scenario</th>
-              <th>Name</th>
               <th>Plants</th>
               <th>Days</th>
               {choosing && <th>Layout</th>}
@@ -43,10 +42,9 @@ export function ScenarioList({
           <tbody>
             {state.scenarios.map((scenario) => (
               <tr key={scenario.id}>
-                <td>
-                  <code>{scenario.id}</code>
-                </td>
-                <td title={scenario.description}>{scenario.name}</td>
+                {/* By name, one line each; its identifier, which addresses use, and
+                    its description, on hover. */}
+                <td title={`${scenario.id}: ${scenario.description}`}>{scenario.name}</td>
                 <td>{scenario.plants}</td>
                 <td>{scenario.duration_days}</td>
                 {choosing && (

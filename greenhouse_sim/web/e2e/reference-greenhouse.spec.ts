@@ -8,8 +8,8 @@ test("reference greenhouse: its manifest boots the whole scene, and it is listed
 }) => {
   await page.goto("/");
   const firstRow = page.getByRole("table", { name: "Scenarios" }).locator("tbody tr").first();
-  await expect(firstRow.locator("code")).toHaveText("reference_greenhouse");
-  await expect(firstRow).toContainText("Reference greenhouse");
+  await expect(firstRow.getByRole("cell").first()).toHaveText("Reference greenhouse");
+  await expect(firstRow.getByRole("button", { name: "Show reference_greenhouse" })).toBeVisible();
   await expect(firstRow).toContainText("32");
   await expect(firstRow).toContainText("120");
 
