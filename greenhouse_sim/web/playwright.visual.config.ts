@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { REUSE_TEST_SERVERS } from "./simulatorApi.ts";
+
 // Screenshot regression for the renderer (decision 0014). The baselines are
 // drawn in CI's container, mcr.microsoft.com/playwright:v1.63.0-noble-amd64,
 // whose fonts and software renderer draw the same pixels on every run.
@@ -40,6 +42,6 @@ export default defineConfig({
   webServer: {
     command: `npm run build && npx vite preview --port ${PREVIEW_PORT} --strictPort`,
     url: `http://localhost:${PREVIEW_PORT}`,
-    reuseExistingServer: !IN_CI,
+    reuseExistingServer: REUSE_TEST_SERVERS,
   },
 });
