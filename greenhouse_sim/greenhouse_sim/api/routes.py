@@ -127,12 +127,22 @@ check; a route that comes to need one checks it first.
                                           structure's rules and since the day
                                           before; the run as for its scene
     GET /api/plants/environments          the lab's environments, by name
+    POST /api/scenarios/{id}/checkpoints  a checkpoint of its run at the start
+                                          of the day &t=600 lies in: its
+                                          house's air and its crop then;
+                                          asked as its climate field is
+    GET /api/checkpoints                  the checkpoints kept, the earliest
+                                          first
+    GET /api/checkpoints/{id}             one of them, as JSON to download
+    POST /api/checkpoints                 one uploaded, as the request's JSON
+                                          body, checked and kept
     GET /api/scenarios/{id}/live          the scenario played live, as Server-Sent
                                           Events (served by `server`, found by
                                           `live_stream`)
     POST /api/scenarios/{id}/live/...     commands for that live run (`control`)
 """
 
+import json
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from http import HTTPStatus
@@ -143,6 +153,7 @@ from pydantic import BaseModel
 
 from greenhouse_sim.services import (
     cfd,
+    checkpoints,
     crop,
     fields,
     plants,
@@ -172,10 +183,12 @@ _REFUSALS: Final = (
 )
 
 
-def respond(method: str, path: str) -> Response:
+def respond(method: str, path: str, body: bytes = b"") -> Response:
+    query = parse_qs(urlsplit(path).query)
+    if method == "POST":
+        return _posted(path, query, body)
     if method != "GET":
         return _error(HTTPStatus.METHOD_NOT_ALLOWED, f"{path!r} only answers GET")
-    query = parse_qs(urlsplit(path).query)
 
     match _segments(path):
         case ["api", "health"]:
@@ -370,6 +383,10 @@ def respond(method: str, path: str) -> Response:
             )
         case ["api", "scenarios", scenario_id, "cfd", "geometry"]:
             return _answer(lambda: cfd.geometry(scenario_id, _scene_changes(query)))
+        case ["api", "checkpoints"]:
+            return _answer(checkpoints.checkpoints)
+        case ["api", "checkpoints", checkpoint_id]:
+            return _answer(lambda: checkpoints.checkpoint(checkpoint_id))
         case ["api", "scenarios", scenario_id, "layout"]:
             name = _last(query, "layout")
             if name is None:
@@ -377,6 +394,38 @@ def respond(method: str, path: str) -> Response:
             return _answer(lambda: scenarios.layout(scenario_id, name))
         case _:
             return _error(HTTPStatus.NOT_FOUND, f"nothing at {path!r}")
+
+
+def _posted(path: str, query: Query, body: bytes) -> Response:
+    """What a POST request makes: a checkpoint of a scenario's run, asked for
+    as its climate field is, or one uploaded as the request's JSON body."""
+    match _segments(path):
+        case ["api", "scenarios", scenario_id, "checkpoints"]:
+            return _answer(
+                lambda: checkpoints.save_checkpoint(
+                    scenario_id,
+                    _last(query, "layout"),
+                    _pairs(query.get("set", []), "set"),
+                    _pairs(query.get("open", []), "open"),
+                    _commands(query.get("schedule", [])),
+                    _seconds(query),
+                    weather=_last(query, "weather"),
+                    daily=_daily(query),
+                )
+            )
+        case ["api", "checkpoints"]:
+            return _answer(lambda: checkpoints.upload_checkpoint(_json(body)))
+        case _:
+            return _error(HTTPStatus.METHOD_NOT_ALLOWED, f"{path!r} only answers GET")
+
+
+def _json(body: bytes) -> JsonValue:
+    """A request's body, read as JSON."""
+    try:
+        parsed: JsonValue = json.loads(body)
+    except ValueError:
+        raise InvalidRequest("the body is not JSON") from None
+    return parsed
 
 
 def live_stream(path: str, runs: LiveRuns) -> LiveRun | Response | None:

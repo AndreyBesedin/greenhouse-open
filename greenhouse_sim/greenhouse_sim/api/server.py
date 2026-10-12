@@ -8,7 +8,8 @@ tool for a developer's own machine, not a service.
 
 Live scenarios stream as Server-Sent Events (decision 0012): a `frame` event
 per simulated day, and a comment now and then to keep the connection open.
-Commands for a live run (play, pause, step, reset, speed) are POST requests.
+Commands for a live run (play, pause, step, reset, speed) are POST requests,
+and so are a run's checkpoints, saved or uploaded as a JSON body.
 A request the simulator fails on unexpectedly is answered 500, with the
 failure in the server's log.
 """
@@ -69,7 +70,9 @@ class _Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         response = self._safely(lambda: control(self.path, self._live))
         if response is None:
-            response = self._safely(lambda: respond("POST", self.path))
+            length = int(self.headers.get("Content-Length") or 0)
+            body = self.rfile.read(length) if length > 0 else b""
+            response = self._safely(lambda: respond("POST", self.path, body))
         self._send(response)
 
     @property

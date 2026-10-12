@@ -379,3 +379,19 @@ def test_a_heated_house_develops_its_crop_faster() -> None:
     assert warmer > colder + 3.0
     gained = heated["structure"]["thermal_time"] - cold["structure"]["thermal_time"]
     assert gained == pytest.approx(warmer - colder)
+
+
+def test_a_crop_takes_a_checkpoints_days_only_with_every_day_lived_before() -> None:
+    source = _crop()
+    plants, lived = source.plants_on(5), source.lived_through(5)
+    asked = _Asked()
+    seeded = _crop(asked=asked)
+
+    seeded.seed(5, plants, lived)
+
+    assert seeded.plants_on(5) == plants
+    assert seeded.environments("p1", 5) == source.environments("p1", 5)
+    assert seeded.plants_on(6) == source.plants_on(6)
+    assert asked.air == [5]
+    with pytest.raises(ValueError, match="has lived 5 days, not 4"):
+        _crop().seed(5, plants, lived[:4])

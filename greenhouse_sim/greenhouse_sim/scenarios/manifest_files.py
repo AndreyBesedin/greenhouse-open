@@ -14,6 +14,7 @@ checks it again when it reads it, refusing a field it does not know, at any
 depth, rather than ignoring it.
 """
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Final
@@ -31,6 +32,9 @@ SCHEMA_FROM_A_MANIFEST_FILE: Final = "../scenario.schema.json"
 JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 # The version of the format a manifest is written in.
 SCHEMA_VERSION: Final = 1
+# How many hexadecimal digits of its content's digest name a manifest's
+# version.
+DIGEST_LENGTH: Final = 16
 # The scenario listed first, the reference scenario (P09); the others
 # follow by identifier.
 FIRST_SCENARIO: Final = "reference_greenhouse"
@@ -58,6 +62,14 @@ def load_manifest(scenario_id: str) -> ScenarioConfig:
     """A scenario, read from its manifest and checked."""
     path = MANIFESTS_DIR / f"{scenario_id}.json"
     return scenario_from_manifest(scenario_id, json.loads(path.read_text()))
+
+
+def manifest_digest(scenario_id: str) -> str:
+    """What tells one version of a scenario's manifest from another: a
+    digest of its content, however its file is laid out."""
+    document = json.loads((MANIFESTS_DIR / f"{scenario_id}.json").read_text())
+    canonical = json.dumps(document, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode()).hexdigest()[:DIGEST_LENGTH]
 
 
 def scenario_from_manifest(scenario_id: str, document: dict[str, JsonValue]) -> ScenarioConfig:

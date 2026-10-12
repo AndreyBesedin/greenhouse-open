@@ -38,6 +38,7 @@ from greenhouse_sim.scene.plants import crop_entities
 from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.fields import Commanded, RunKey, climate_run
+from greenhouse_sim.services.kept_states import House, KeptState, agreeing
 from greenhouse_sim.services.runs import checked_moment
 from greenhouse_sim.services.scenarios import SceneChanges, changed, plant_ids, scenario
 from greenhouse_sim.services.sunlight import plant_light
@@ -86,24 +87,37 @@ def run_crop(
                 until = schedule.same_until(other_schedule)
                 shared = config.duration_days if math.isinf(until) else days_ended(until)
                 crop.carry_on_from(other, min(shared, config.duration_days))
+        for state in agreeing(_house(key), schedule):
+            if state.plants:
+                crop.seed(state.day, state.plants, state.lived)
         _KEPT[key] = (crop, schedule)
         if len(_KEPT) > KEPT_CROPS:
             _KEPT.popitem(last=False)
         return crop
 
 
+def seed_kept_crops(state: KeptState) -> None:
+    """Give a kept state's plants to the crops kept that agree with it."""
+    if not state.plants:
+        return
+    with _KEEPING:
+        crops = list(_KEPT.items())
+    for key, (crop, schedule) in crops:
+        if state.agrees(_house(key), schedule):
+            crop.seed(state.day, state.plants, state.lived)
+
+
+def _house(key: RunKey) -> House:
+    """A run's house, as its key names it."""
+    scenario_id, layout, weather, _, openings, _ = key
+    return scenario_id, layout, weather, openings
+
+
 def _same_house(key: RunKey, other: RunKey) -> bool:
     """Whether two runs are of the same house, under the same weather, with
     the same doors and vents open from the start: their air is the same
     until their schedules differ."""
-    scenario_id, layout, weather, _, openings, _ = key
-    other_id, other_layout, other_weather, _, other_openings, _ = other
-    return (scenario_id, layout, weather, openings) == (
-        other_id,
-        other_layout,
-        other_weather,
-        other_openings,
-    )
+    return _house(key) == _house(other)
 
 
 def _new_crop(key: RunKey, climate: ClimateDay) -> RunCrop:
