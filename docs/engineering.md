@@ -303,6 +303,6 @@ in its `viewer checks` job:
 
 ```bash
 npm ci
-npm run lint && npm run typecheck && npm test && npm run build
+npm run lint && npm run typecheck && npm run coverage && npm run build
 PYTHON=python npm run e2e   # needs greenhouse-sim installed for that python
 ```
