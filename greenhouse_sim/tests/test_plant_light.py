@@ -14,11 +14,11 @@ from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.biology.plant.variation import draw_traits
 from greenhouse_sim.biology.tomato.organ.development import develop, emerged, live_day
 from greenhouse_sim.biology.tomato.organ.topology import Plant
+from greenhouse_sim.biology.tomato.organ.transplants import DEVELOPMENT, TRANSPLANT_CD, VARIATION
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services import sensors
-from greenhouse_sim.services.plants import DEVELOPMENT, TRANSPLANT_CD, VARIATION
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids
 from greenhouse_sim.services.sunlight import plant_light
 from greenhouse_sim.solar.plants import (

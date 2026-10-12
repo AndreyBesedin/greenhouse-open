@@ -7,6 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from greenhouse_sim.biology.plant.organs import Flower, Fruit
+from greenhouse_sim.biology.tomato.organ import transplants
 from greenhouse_sim.biology.tomato.organ.development import (
     DevelopmentParams,
     develop,
@@ -170,7 +171,9 @@ def test_every_organ_keeps_its_identity_and_changes_stage_only_as_allowed() -> N
     for plant_id in ("p01", "p02", "p03"):
         previous = plants.structure(plants.LabRun(), plant_id)
         for day in range(1, plants.LAST_DAY + 1):
-            current = grow(previous, [plants.ENVIRONMENTS[plants.REFERENCE]], plants.DEVELOPMENT)
+            current = grow(
+                previous, [plants.ENVIRONMENTS[plants.REFERENCE]], transplants.DEVELOPMENT
+            )
             assert current.problems_since(previous) == [], (plant_id, day)
             assert current.problems() == [], (plant_id, day)
             previous = current
@@ -220,7 +223,7 @@ def test_a_change_that_is_not_allowed_is_found_out() -> None:
 
 
 def test_a_plant_sets_the_same_fruit_grown_in_one_step_or_day_by_day() -> None:
-    transplant = develop(emerged("p01", PARAMS, seed=4), plants.TRANSPLANT_CD, PARAMS)
+    transplant = develop(emerged("p01", PARAMS, seed=4), transplants.TRANSPLANT_CD, PARAMS)
     daily = grow(transplant, [REFERENCE] * 60, PARAMS)
 
     assert _rounded(daily.model_dump(mode="json")) == _rounded(

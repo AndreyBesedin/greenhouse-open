@@ -7,7 +7,7 @@ from http import HTTPStatus
 import pytest
 
 from greenhouse_sim.api.routes import respond
-from greenhouse_sim.biology.tomato.organ import reference
+from greenhouse_sim.biology.tomato.organ import reference, transplants
 from greenhouse_sim.biology.tomato.organ.development import (
     DevelopmentParams,
     daily_thermal_time,
@@ -40,7 +40,7 @@ def _rounded(value: object) -> object:
 
 
 def _transplant() -> Plant:
-    return develop(emerged("p01", PARAMS), plants.TRANSPLANT_CD, PARAMS)
+    return develop(emerged("p01", PARAMS), transplants.TRANSPLANT_CD, PARAMS)
 
 
 def _leaves(plant: Plant) -> dict[str, tuple[float, LeafStage]]:
