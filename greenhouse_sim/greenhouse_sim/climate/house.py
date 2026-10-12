@@ -22,6 +22,10 @@ advanced exactly, as the linear equations they make solve:
 It knows the house's mean, not its gradients: a heater's warm corner loses
 more through the glass beside it than the mean would, so the grid run's
 mean lies a little below this model's while a heater runs.
+
+A house takes over another's air up to the first moment their schedules
+differ, as a grid run does (`carry_on_from`), and averages its air over a
+stretch of its run, such as a day the crop lives in it (`mean_between`).
 """
 
 import math
@@ -189,6 +193,41 @@ class WholeHouse:
             co2_ppm=co2,
             removed_kg=air.removed_kg + removed_kg,
             condensed_kg=air.condensed_kg + condensed_kg,
+        )
+
+    def carry_on_from(self, other: WholeHouse) -> None:
+        """Take over the air `other` has worked out up to the first moment
+        its schedule and this house's differ (`Schedule.same_until`): until
+        then, both are the same air. Only another house under the same
+        weather, with the same doors and vents, is the same air."""
+        until = self.run.schedule.same_until(other.run.schedule)
+        with self._working, other._working:
+            for moment, air in other._kept.items():
+                if moment <= until and moment not in self._kept:
+                    self._keep(moment, air)
+
+    def mean_between(self, from_s: float, until_s: float) -> HouseAir:
+        """The house's mean air from `from_s` to `until_s`: its temperature,
+        humidity ratio and CO₂ every `STEP_S` from `from_s`, and at
+        `until_s`, averaged by the trapezoid rule; with the water it has lost
+        by `until_s`."""
+        if until_s <= from_s:
+            raise ValueError("a mean is taken over a stretch of a run")
+        steps = math.ceil((until_s - from_s) / STEP_S)
+        moments = [min(from_s + step * STEP_S, until_s) for step in range(steps + 1)]
+        airs = [self.air_at(moment) for moment in moments]
+        spans = np.diff(moments)
+
+        def mean(values: Sequence[float]) -> float:
+            pairs = np.asarray(values)
+            return float(((pairs[:-1] + pairs[1:]) / 2 * spans).sum() / (until_s - from_s))
+
+        return HouseAir(
+            temperature_c=mean([air.temperature_c for air in airs]),
+            humidity_g_kg=mean([air.humidity_g_kg for air in airs]),
+            co2_ppm=mean([air.co2_ppm for air in airs]),
+            removed_kg=airs[-1].removed_kg,
+            condensed_kg=airs[-1].condensed_kg,
         )
 
     def air_at(self, time_s: float) -> HouseAir:

@@ -31,7 +31,6 @@ column's lowest cell takes `SOLAR_HEAT_SHARE` as heat, at the middle of
 each stretch, as it takes the equipment's.
 """
 
-import math
 import threading
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
@@ -315,13 +314,7 @@ class ClimateRun:
         """Take over the air `other` has kept up to the first moment its
         schedule and this run's differ: until then, both runs are the same
         air."""
-        mine, theirs = self.schedule.commands, other.schedule.commands
-        differing = next(
-            (index for index, (a, b) in enumerate(zip(mine, theirs, strict=False)) if a != b),
-            min(len(mine), len(theirs)),
-        )
-        moments = [command.time_s for command in (*mine[differing:], *theirs[differing:])]
-        until = min(moments, default=math.inf)
+        until = self.schedule.same_until(other.schedule)
         with self._working, other._working:
             for moment, air in other._kept.items():
                 if moment <= until:

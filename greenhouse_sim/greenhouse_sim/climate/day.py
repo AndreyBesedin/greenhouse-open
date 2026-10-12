@@ -113,9 +113,10 @@ class ClimateDay:
 
     def carry_on_from(self, other: ClimateDay) -> None:
         """Take over what `other` has worked out up to the first moment its
-        schedule and this day's differ: its grid run from the start, and its
-        later grid runs, each from the same start."""
+        schedule and this day's differ: its grid run from the start, its
+        whole house, and its later grid runs, each from the same start."""
         self.run.carry_on_from(other.run)
+        self.house.carry_on_from(other.house)
         with other._keeping:
             theirs = list(other._windows.items())
         for start, window in theirs:

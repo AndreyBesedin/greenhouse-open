@@ -131,6 +131,44 @@ def test_requests_at_once_work_the_house_out_one_at_a_time() -> None:
     assert together == [alone.air_at(time_s) for time_s in times]
 
 
+def test_it_takes_over_anothers_air_up_to_where_their_schedules_differ() -> None:
+    hour = 3600.0
+    heated = ((2 * hour, "heater", 1.0),)
+    first = WholeHouse(_run())
+    first.air_at(4 * hour)
+    second = WholeHouse(_climate_day("climate_box", "default", "default", (), (), heated).run)
+
+    second.carry_on_from(first)
+
+    assert second._kept.keys() == {m for m in first._kept if m <= 2 * hour}
+    assert second.air_at(2 * hour) == first.air_at(2 * hour)
+    assert second.air_at(4 * hour).temperature_c > first.air_at(4 * hour).temperature_c
+    alone = WholeHouse(second.run)
+    assert second.air_at(4 * hour).temperature_c == pytest.approx(
+        alone.air_at(4 * hour).temperature_c, abs=1e-9
+    )
+
+
+def test_its_mean_through_a_stretch_weighs_each_minute_alike() -> None:
+    house = _climate_day("climate_box", "default", "cold_spring_day", (), (), ()).house
+    minutes = [house.air_at(60.0 * minute) for minute in range(1441)]
+    day = house.mean_between(0.0, DAY_S)
+
+    inner = sum(air.temperature_c for air in minutes[1:-1])
+    ends = (minutes[0].temperature_c + minutes[-1].temperature_c) / 2
+    assert day.temperature_c == pytest.approx((inner + ends) / 1440)
+    assert day.co2_ppm == pytest.approx(sum(air.co2_ppm for air in minutes) / 1441, rel=1e-3)
+    assert day.condensed_kg == minutes[-1].condensed_kg
+    # A stretch is read every minute from its start, and at its end.
+    stretch = house.mean_between(30.0, 120.0)
+    readings = [house.air_at(moment).temperature_c for moment in (30.0, 90.0, 120.0)]
+    assert stretch.temperature_c == pytest.approx(
+        ((readings[0] + readings[1]) / 2 * 60 + (readings[1] + readings[2]) / 2 * 30) / 90
+    )
+    with pytest.raises(ValueError, match="a stretch"):
+        house.mean_between(DAY_S, DAY_S)
+
+
 def test_it_runs_a_day_in_well_under_a_second() -> None:
     house = WholeHouse(_run((("heater", 1.0),)))
     house.air_at(60.0)

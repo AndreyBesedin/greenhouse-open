@@ -3,10 +3,13 @@ their moments after the levels set from the start, an override taking
 effect from its moment on, the same schedule replaying to the same air, and
 commands a scenario cannot run refused."""
 
+import math
+
 import numpy as np
 import pytest
 
 from greenhouse_sim.api.routes import respond
+from greenhouse_sim.climate.commands import Command, Schedule
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.services import fields
@@ -100,3 +103,17 @@ def test_commands_a_scenario_cannot_run_are_refused(query: str, error: str) -> N
     response = respond("GET", f"/api/scenarios/climate_box/fields/climate{query}")
 
     assert (response.status, response.body) == (400, {"error": error})
+
+
+def test_two_schedules_are_the_same_until_the_first_command_they_differ_in() -> None:
+    heater_on = Command(time_s=60.0, actuator_id="heater", level=1.0)
+    fan_on = Command(time_s=120.0, actuator_id="fan", level=1.0)
+    fan_half = Command(time_s=120.0, actuator_id="fan", level=0.5)
+    heater_off = Command(time_s=300.0, actuator_id="heater", level=0.0)
+    both = Schedule.of([heater_on, fan_on])
+
+    assert both.same_until(Schedule.of([heater_on, fan_on])) == math.inf
+    assert both.same_until(Schedule.of([heater_on, fan_half])) == 120.0
+    assert both.same_until(Schedule.of([heater_on])) == 120.0
+    assert both.same_until(Schedule.of([heater_on, fan_on, heater_off])) == 300.0
+    assert both.same_until(Schedule()) == 60.0
