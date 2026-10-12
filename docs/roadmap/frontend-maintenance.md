@@ -69,7 +69,7 @@ architecture and improve specific weaknesses rather than rewrite it.
 | FE-AUDIT.8 | Every load is written out by hand | Medium | Second audit; addressed in step 3 |
 | FE-AUDIT.9 | The address is written in six places | Medium | Second audit; addressed in step 4 |
 | FE-AUDIT.10 | A climate run's request is assembled three times | Medium | Second audit; addressed in step 4, with two defects it caused |
-| FE-AUDIT.11 | `App` draws every panel itself | Medium | Second audit; planned with FE-AUDIT.7 |
+| FE-AUDIT.11 | `App` draws every panel itself | Medium | Second audit; addressed in step 5 |
 
 Findings 5 and 6 were low severity in the original audit; their planned work
 has medium priority here. Severity describes impact; priority describes
@@ -251,7 +251,11 @@ extended in place.
   climate run's answer (`0d8ce6c`, `92bf66c`, `6c1e045`, `0441c98`,
   `61b2bd2`). The waits are for the simulator's runs, not the viewer's
   rendering, and belong with the roadmap's test-suite and CI time work after
-  P09.
+  P09. One failure seen during the maintenance window was not slowness but
+  a race: `weather.spec.ts`'s recorded day clicked the weather's summary
+  while the weather was still being read, when the panel is a line of text
+  and a click opens nothing. Six tests opened the panel that way; they now
+  wait for the weather first (`e2e/weather.ts`, step 5).
 
 ### The first audit's findings, now
 
@@ -367,6 +371,17 @@ somewhere other than `App` to go.
 Acceptance: the scenario, climate-run and plant-lab panels are components
 of their own, given what they draw; `App` composes them.
 
+Addressed in step 5. `ScenarioPanels` draws a scenario's panels, the climate
+run's among them, in the order they had, given the source and what was loaded
+of its run; `LabPanels` draws the plant lab's. What a panel changes is a
+change of the source, written once in `scene/edits.ts` as functions from one
+source to the next and tested there; they were closures in `App` and tested
+only through the browser. What the view around the panels keeps, how the
+field's colours run and whether a click places a probe, stays in `App`, which
+the viewport and the legends share. `App` is 584 lines, and tests for the
+climate field twice. The scenario's fields are now asked for once, for both
+panels that list them.
+
 ## Order of work
 
 Each step is a pull request, stacked on the one before, and none changes
@@ -380,7 +395,11 @@ what the viewer shows: the browser tests and screenshots pass unchanged.
    environment depart from decision 0010's Vitest in Node, so this step
    records a decision.
 4. **FE-AUDIT.9 and .10**: the source and its address, and the climate run.
-5. **FE-AUDIT.11 and .7**: `App`'s panels, the telemetry profiled, the
-   panels' shared styles, and the tests' type escapes and markup strings.
-6. **FE-AUDIT.4**: coverage, its baseline and thresholds, last, so that the
+5. **FE-AUDIT.11**: `App`'s panels.
+6. **FE-AUDIT.7**: the telemetry profiled, the panels' shared styles, and
+   the tests' type escapes and markup strings.
+7. **FE-AUDIT.4**: coverage, its baseline and thresholds, last, so that the
    baseline counts the new tests.
+
+Steps 5 and 6 were planned as one, and split when step 5 alone came to a
+pull request's worth.

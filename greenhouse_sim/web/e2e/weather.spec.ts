@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
-
 import type { CameraPose } from "../src/camera.ts";
 import { selectAt } from "./view";
+import { openWeather } from "./weather.ts";
 
 function cameraText({ position, target }: CameraPose): string {
   return [position, target].map(({ x, y, z }) => `${x}:${y}:${z}`).join(",");
@@ -108,7 +108,7 @@ test("weather: a recorded day replays from the run's start", async ({ page }) =>
   await page.goto("/?scenario=climate_box&field=climate&t=600");
   await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
   const weather = page.getByRole("region", { name: "Weather" });
-  await weather.getByTestId("weather-summary").click();
+  await openWeather(page);
   await weather.getByRole("combobox", { name: "Weather to run under" }).selectOption({
     label: "example day",
   });
@@ -129,7 +129,7 @@ test("weather: the sun stands where it is at the moment drawn", async ({ page })
   await page.goto("/?scenario=climate_box&field=climate&t=45900");
   await expect(page.getByTestId("climate-time")).toHaveText("12 h 45 min", { timeout: 60_000 });
   const weather = page.getByRole("region", { name: "Weather" });
-  await weather.getByTestId("weather-summary").click();
+  await openWeather(page);
 
   await expect(weather.getByTestId("weather-sun")).toHaveText("15.1° up, at 180° (S)");
   await expect(page.getByTestId("debug-label")).toContainText(["sun 15.1° up, at 180° (S)"]);

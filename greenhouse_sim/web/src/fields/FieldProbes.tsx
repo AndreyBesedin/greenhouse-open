@@ -1,7 +1,6 @@
 import { formatValue } from "../readouts";
 import type { Point3 } from "../world";
 import { quantityTitle } from "./display";
-import { useFieldNames } from "./FieldControls";
 import type { EnvironmentField } from "./field";
 import {
   type Difference,
@@ -104,8 +103,7 @@ function CoordinateInput({
  * the drawn field differs from it. A probe is added in the field's middle,
  * or where the view is clicked while placing them. */
 export function FieldProbes({
-  scenarioId,
-  layout,
+  names,
   fieldName,
   field,
   compareName,
@@ -118,8 +116,8 @@ export function FieldProbes({
   onPlacing,
   onHeight,
 }: {
-  scenarioId: string;
-  layout?: string | undefined;
+  /** The fields the scenario offers, any of which it can be compared with. */
+  names: readonly string[];
   fieldName: string;
   field: EnvironmentField;
   compareName: string | null;
@@ -134,8 +132,6 @@ export function FieldProbes({
   onPlacing: (placing: boolean) => void;
   onHeight: (height: number) => void;
 }) {
-  const { names } = useFieldNames(scenarioId, layout);
-
   const compared = compareState.status === "loaded" ? compareState.field : null;
   const full = probes.length >= MAX_PROBES;
   const move = (index: number, change: Partial<Point3>) =>
