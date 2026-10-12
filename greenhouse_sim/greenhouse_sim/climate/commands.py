@@ -9,12 +9,19 @@ apply in the order they are given, so a later one wins.
 Commands are data: the same schedule always leaves the same levels at the
 same moments, and the log of a run (`applied`) is the commands it applied,
 in order.
+
+A daily command (P09.2) sets a level at a time of day, every day of a run:
+a heater on every evening, a vent open every afternoon. It is a command at
+that time on each of the run's days, before any other command at the same
+moment, so that one given for that moment alone overrides it.
 """
 
 from collections.abc import Iterable
 from typing import Annotated, Self
 
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, model_validator
+
+from greenhouse_sim.core.clock import DAY_S
 
 type Level = Annotated[float, Field(ge=0.0, le=1.0)]
 
@@ -27,6 +34,28 @@ class Command(BaseModel):
     time_s: NonNegativeFloat
     actuator_id: str
     level: Level
+
+
+class DailyCommand(BaseModel):
+    """Set one piece of equipment to a level at a time of day, every day of
+    a run."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    time_of_day_s: Annotated[float, Field(ge=0.0, lt=DAY_S)]
+    actuator_id: str
+    level: Level
+
+    def through(self, days: int) -> list[Command]:
+        """The command on each of a run's `days`, in order."""
+        return [
+            Command(
+                time_s=day * DAY_S + self.time_of_day_s,
+                actuator_id=self.actuator_id,
+                level=self.level,
+            )
+            for day in range(days)
+        ]
 
 
 class Schedule(BaseModel):

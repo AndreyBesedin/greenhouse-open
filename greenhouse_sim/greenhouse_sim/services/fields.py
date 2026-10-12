@@ -38,7 +38,7 @@ from greenhouse_sim.airflow.contract import AirflowModel
 from greenhouse_sim.airflow.prescribed import PATTERNS
 from greenhouse_sim.cfd.geometry import CfdGeometry, cfd_geometry
 from greenhouse_sim.cfd.results import CfdAirflow, kept_result
-from greenhouse_sim.climate.commands import Command, Schedule
+from greenhouse_sim.climate.commands import Command, DailyCommand, Schedule
 from greenhouse_sim.climate.day import ClimateDay, window_start
 from greenhouse_sim.climate.glazing import GlazingAt, glazed_cells
 from greenhouse_sim.climate.house import HouseTrace, house_trace
@@ -46,6 +46,7 @@ from greenhouse_sim.climate.openings import OpeningsAt, opening_sites
 from greenhouse_sim.climate.probes import ClimateProbes, probe_series
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.vents import Vent
+from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument, FieldGrid
 from greenhouse_sim.fields.synthetic import shear_field
 from greenhouse_sim.scenarios.config import ScenarioConfig
@@ -87,12 +88,18 @@ type _Pairs = tuple[tuple[str, float], ...]
 type Commanded = tuple[float, str, float]
 
 
-def _checked(config: ScenarioConfig, commands: Sequence[Commanded]) -> tuple[Commanded, ...]:
+def _checked(
+    config: ScenarioConfig, commands: Sequence[Commanded], daily: Sequence[Commanded] = ()
+) -> tuple[Commanded, ...]:
     """Commands to a scenario's equipment, or its doors and vents (P07.8),
     checked: one to equipment or an opening it does not have, to a level
-    outside 0 to 1, or at a moment outside a run, is refused."""
+    outside 0 to 1, or at a moment outside a run, is refused. A daily
+    command, its time of day for its moment (P09.2), is checked as the
+    others are, and refused at a time of day outside a day; it becomes a
+    command at that time on each of the run's days, before the others
+    (`greenhouse_sim.climate.commands`)."""
     openings = {opening.opening_id for opening in config.envelope.openings}
-    for _, actuator, level in commands:
+    for _, actuator, level in (*daily, *commands):
         if actuator in openings:
             if not 0.0 <= level <= 1.0:
                 raise InvalidRequest(f"a level runs from 0 to 1: {actuator}")
@@ -104,7 +111,20 @@ def _checked(config: ScenarioConfig, commands: Sequence[Commanded]) -> tuple[Com
         raise InvalidRequest(
             f"a command's moment lies within the run, 0 to {length:.15g} s: " + ", ".join(outside)
         )
-    return tuple(commands)
+    late = sorted({f"{time:.15g}" for time, _, _ in daily if not 0.0 <= time < DAY_S})
+    if late:
+        raise InvalidRequest(
+            f"a daily command's time of day lies from 0 to {DAY_S:.15g} s, before the next "
+            "midnight: " + ", ".join(late)
+        )
+    each_day = tuple(
+        (command.time_s, command.actuator_id, command.level)
+        for time, actuator, level in daily
+        for command in DailyCommand(time_of_day_s=time, actuator_id=actuator, level=level).through(
+            config.duration_days
+        )
+    )
+    return (*each_day, *commands)
 
 
 type _RunKey = tuple[str, str, str, _Pairs, _Pairs, tuple[Commanded, ...]]
@@ -261,17 +281,18 @@ def _models(
     openings: Mapping[str, float] | None = None,
     commands: Sequence[Commanded] = (),
     weather: str = DEFAULT_WEATHER,
+    daily: Sequence[Commanded] = (),
 ) -> dict[str, AirflowModel]:
     """A scenario's fields by name, with one of its layouts, its equipment at
-    `levels` and then as `commands` set it, its doors and vents open as
-    `openings` say, and its climate under a weather: its own airflow
+    `levels` and then as `daily` and `commands` set it, its doors and vents
+    open as `openings` say, and its climate under a weather: its own airflow
     first."""
     config = changed(
         scenario(scenario_id),
         SceneChanges(layout=layout, weather=weather, openings=dict(openings or {})),
     )
     running = equipment_levels(config, levels or {})
-    scheduled = _checked(config, commands)
+    scheduled = _checked(config, commands, daily)
     own = config.airflow
     models: dict[str, AirflowModel] = {own.kind: own}
     for name, pattern in PATTERNS.items():
@@ -312,9 +333,11 @@ def field(
     openings: Mapping[str, float] | None = None,
     commands: Sequence[Commanded] = (),
     weather: str | None = None,
+    daily: Sequence[Commanded] = (),
 ) -> FieldDocument:
     """One of a scenario's fields with one of its layouts, by default its
-    own, its equipment at `levels` and then as `commands` set it, its doors
+    own, its equipment at `levels` and then as `commands` set it, and every
+    day as `daily` sets it, its doors
     and vents open as `openings` say, and under a weather, by default its
     own, at `time_s` into a climate run, as it is published. A level for
     equipment it does not have, or outside 0 to 1, is refused, as are an
@@ -328,6 +351,7 @@ def field(
         openings,
         commands,
         weather or DEFAULT_WEATHER,
+        daily,
     )
     model = models.get(name)
     if model is None:
@@ -345,6 +369,7 @@ def climate_probes(
     commands: Sequence[Commanded] = (),
     until_s: float = 0.0,
     weather: str | None = None,
+    daily: Sequence[Commanded] = (),
 ) -> ClimateProbes:
     """What probes at `points` read of the grid run that draws a scenario's
     climate at `until_s`, every `PROBE_EVERY_S` from its start to `until_s`,
@@ -353,7 +378,9 @@ def climate_probes(
     as it is; a probe outside the house's air is refused too."""
     checked_moment(scenario(scenario_id), until_s)
     name = layout or DEFAULT_LAYOUT
-    models = _models(scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER)
+    models = _models(
+        scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER, daily
+    )
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
         raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
@@ -390,6 +417,7 @@ def house_air(
     commands: Sequence[Commanded] = (),
     until_s: float = 0.0,
     weather: str | None = None,
+    daily: Sequence[Commanded] = (),
     from_s: float | None = None,
 ) -> HouseTrace:
     """The house's air as one well-mixed volume (`greenhouse_sim.climate.house`)
@@ -399,7 +427,9 @@ def house_air(
     climate field is, and refused as it is."""
     first = checked_window(scenario(scenario_id), from_s, until_s)
     name = layout or DEFAULT_LAYOUT
-    models = _models(scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER)
+    models = _models(
+        scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER, daily
+    )
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
         raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
@@ -419,6 +449,7 @@ def glazing(
     commands: Sequence[Commanded] = (),
     time_s: float = 0.0,
     weather: str | None = None,
+    daily: Sequence[Commanded] = (),
 ) -> GlazingAt:
     """A scenario's glazing at `time_s` into its climate run
     (`greenhouse_sim.climate.glazing`): each wall's and roof slope's air,
@@ -426,7 +457,9 @@ def glazing(
     as it is."""
     checked_moment(scenario(scenario_id), time_s)
     name = layout or DEFAULT_LAYOUT
-    models = _models(scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER)
+    models = _models(
+        scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER, daily
+    )
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
         raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
@@ -441,6 +474,7 @@ def openings(
     commands: Sequence[Commanded] = (),
     time_s: float = 0.0,
     weather: str | None = None,
+    daily: Sequence[Commanded] = (),
 ) -> OpeningsAt:
     """What a scenario's open doors and vents pass at `time_s` into its
     climate run, as the wind and the stack drive them
@@ -448,7 +482,9 @@ def openings(
     refused as it is."""
     checked_moment(scenario(scenario_id), time_s)
     name = layout or DEFAULT_LAYOUT
-    models = _models(scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER)
+    models = _models(
+        scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER, daily
+    )
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
         raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
@@ -462,13 +498,16 @@ def air_through_a_run(
     openings: Mapping[str, float] | None = None,
     commands: Sequence[Commanded] = (),
     weather: str | None = None,
+    daily: Sequence[Commanded] = (),
 ) -> tuple[Callable[[float], EnvironmentField], str]:
     """A scenario's air at each moment of a run, asked as its climate field
     is, and refused as it is, with the run's identity: its climate run's, if
     its layout places equipment; otherwise its own airflow, the same at
     every moment."""
     name = layout or DEFAULT_LAYOUT
-    models = _models(scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER)
+    models = _models(
+        scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER, daily
+    )
     air = grid(scenario_id)
     climate = models.get(CLIMATE)
     if isinstance(climate, _Climate):
