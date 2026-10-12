@@ -73,8 +73,12 @@ the sun (P08) each work on their own; P09 runs them together.
 - **Measured on a laptop:** the whole house's air through a day takes 0.1 s
   (climate box) to 0.6 s (solar lab, in sunshine); every plant's light
   through a day, 0.06 s for 16 plants; the plant lab's 20 organ-level
-  plants to day 90, 0.9 s and 10,400 entities. The lab's first plant's
-  fruit starts to ripen between days 60 and 70, and is red by day 80.
+  plants to day 90, 0.9 s and 10,400 entities. In the lab's reference
+  environment, a plant's first fruit starts to ripen between days 60 and
+  70 and is red by day 80; by day 120 it has 17 red fruits and a stem of
+  2.5 m, by day 180, 48 and 3.7 m. Growing one plant to day 180 takes
+  0.08 s. Its structure as JSON is 20 KB at day 60 and 41 KB at day 120;
+  32 plants at day 80 take 960 KB, 162 KB gzipped.
 
 ### 1. The reference scenario, as a manifest (P09.1)
 
@@ -95,10 +99,18 @@ generated from the model that reads it, as the layouts' is:
   them and a path across the front; two fans, a heater and a dehumidifier;
   air, humidity, CO₂ and PAR sensors at crop height; a weather station
   outside; one fixed RGB-D camera along a path. Synthetic weather at the
-  default site from 1 March 2026 for 90 days, so that nights need heat,
-  sunny days need venting, and the crop's first fruits turn red. Seed 42.
-- **The other scenarios** stay as they are; a test reads each through the
-  manifest's model, so that any of them can become a file later.
+  default site from 1 March 2026 for 120 days, so that March nights need
+  heat, June days need venting, and the crop bears red fruit for its last
+  month or more. Seed 42.
+- **Its crop work:** a harvest round once a week, from the first red fruit,
+  picks every red fruit, so that ripe fruit does not pile up and each
+  plant's history records its harvests. By day 120 the stems are still
+  under the crop wires, so the run needs no lowering; a longer one would.
+  Like the commands, the crop work is the run's, not the world's.
+- **Every scenario becomes a manifest,** in one format. Before the
+  conversion, each scenario's configuration is written out by its code, and
+  a test holds the manifest's to it, field by field, so that no scenario
+  changes. Their Python modules go; the registry lists the manifests.
 
 ### 2. One clock, and a timeline (P09.2)
 
@@ -140,7 +152,8 @@ generated from the model that reads it, as the layouts' is:
   served beside its structure, and the inspector charts it.
 - **Visible result:** plants in different places diverge over an
   accelerated season: the row ends, open to more sky, grow ahead of the
-  middle ones.
+  middle ones; and from the first harvest round, each plant's history
+  lists the fruits picked from it.
 
 ### 4. Equipment, weather and sensors through the season (P09.4)
 
@@ -149,9 +162,9 @@ change the air, the weather and the sun change it more, and the sensors
 observe it, every sample through the observation path. A test checks that
 the reference scenario's observations are derived only from the run's
 state, and that nothing on their path reads truth (extending
-`greenhouse_sim/tests/test_sensor_observations.py`). Visible result: a heater, fan and
-vent schedule changes the field overlays and the sensors' charts, day after
-day.
+`greenhouse_sim/tests/test_sensor_observations.py`). Visible result: a
+heater, fan and vent schedule changes the field overlays and the sensors'
+charts, day after day.
 
 ### 5. Checkpoints, branches and replay (P09.5)
 
@@ -161,9 +174,23 @@ day.
   sensors' and cameras' draws are seeded per sample, the weather and the
   sun are functions of the moment, and the air cell by cell is drawn again
   from the house's.
-- **Saved and restored as JSON** through the API, kept in memory by the
-  API process, and downloadable, so that a run can be carried to another
-  machine.
+- **What one is for.** Runs are deterministic, so a checkpoint never
+  holds anything its run could not compute again. It saves the time to get
+  there, about 0.7 s a simulated day, and it lets a run carry on from a
+  state on another machine, or after the code has changed.
+- **Made while viewing, kept in the API's memory.** Saving one returns its
+  identifier; the viewer lists them, restores one and branches from it;
+  any can be downloaded as a JSON file and uploaded again. Restarting the
+  API forgets them, and the API writes no file. The alternative, a folder
+  the API manages, would keep them across restarts, but would make a local
+  server write files on request, and name, clean up and confine them.
+- **Kept in the repository: the reference run's opening day.** The first
+  day with red fruit, expected around day 80, is kept gzipped (about
+  160 KB) beside the manifest, which names it as where the viewer opens.
+  The days before it are not computed again unless asked for; the later
+  ones are computed as the run plays. A test replays the run from day 0 to
+  that day and compares the two, and a command writes it again when the
+  models change on purpose, as the visual baselines are drawn again.
 - **A branch** is a checkpoint and another schedule from its moment. Two
   branches share every day before it, as climate runs already share their
   air up to their first difference.
@@ -209,17 +236,25 @@ run in their own Playwright project, as the plant lab's and the sun's do.
   first, with the machine it ran on, is kept in the repository. The HUD
   shows the simulator's time for the latest request beside the renderer's.
 - **The report names the next bottleneck,** before anything is rewritten in
-  another language. Expected: a season's first run, about a minute for 90
-  days, kept afterwards.
+  another language. Expected: about 1.5 minutes to run the season's 120
+  days from the start, which the kept opening day spares the viewer.
 
 ### 9. A release (P09.9)
 
 - **One command** starts the API and the viewer and opens the reference
   scenario in the browser; stopping it stops both.
-- **A guide,** `demo.md` in the `docs` folder: the command, the reference scenario, the
-  final QA's checkpoints with what each should show, the known
-  approximations gathered from every project, and troubleshooting (a port
-  in use, Node and Python versions).
+- **A guide,** `demo.md` in the `docs` folder: the command, the reference
+  scenario, the final QA's checkpoints with what each should show, the
+  known approximations gathered from every project, and troubleshooting (a
+  port in use, Node and Python versions).
+- **A demo video:** a scripted walk through the final QA, recorded by
+  Playwright from the reference scenario on a machine with a graphics
+  card, so that each release can record it again. GitHub plays a video in
+  the README only if GitHub hosts it: an MP4 or WebM uploaded through an
+  issue or pull request, up to 10 MB on a free plan. A Google Drive file
+  can only be linked. So the README plays a short cut, under 10 MB, and
+  links a longer one on YouTube by its thumbnail. Uploading them is done by
+  hand.
 - **A version:** the release is tagged, with its changelog.
 
 ### 10. Viewer
@@ -247,13 +282,14 @@ run in their own Playwright project, as the plant lab's and the sun's do.
 | P09.8 | `perf(sim): add representative performance benchmark` | Planned |
 | P09.9 | `docs(release): document local demo and QA protocol` | Planned |
 
-### P09.1: The reference scenario's manifest
+### P09.1: Scenarios as manifests
 
-The manifest's model and schema, the reference scenario's file, its layout,
-and the test that reads every scenario through the model. Visible result:
-one file boots the complete scene in the browser. Tests: the manifest
-validates; an unknown `schema_version` is refused; every registered
-scenario round-trips.
+The manifest's model and schema; every scenario converted to one,
+unchanged; then the reference scenario's manifest and layout. Two pull
+requests: the conversion, then the new scenario. Visible result: one file
+boots the complete scene in the browser. Tests: every converted scenario's
+configuration equals its code's, written out before the conversion; the
+manifests validate; an unknown `schema_version` is refused.
 
 ### P09.2: One clock and the timeline
 
@@ -283,7 +319,7 @@ Checkpoints at day starts, saved and restored as JSON, branches, state
 probes' hashes, and the branch comparison. Visible result: branch A and B
 charts from the same state. Tests: a restored run continues as the original
 does; a branch shares every day before its own; the replay's hashes match
-the reference.
+the reference; the kept opening day matches the run's.
 
 ### P09.6: QA mode
 
@@ -305,9 +341,10 @@ measure; the benchmark runs on the reference scenario.
 
 ### P09.9: The release
 
-The one command, the guide, and the tagged release. Visible result: a new
-checkout reaches the reference scenario by following the guide. Tests: the
-command starts both and stops both.
+The one command, the guide, the demo video's script, and the tagged
+release. Visible result: a new checkout reaches the reference scenario by
+following the guide, and the README plays the demo. Tests: the command
+starts both and stops both; the video's script runs as a browser test.
 
 ## Final QA: `reference-greenhouse-v1`
 
@@ -356,28 +393,31 @@ A reviewer should be able to:
 - **The air cell by cell** is drawn for a moment when asked, from an hour
   of air started from the house's (P07.3), not kept through the season.
 
-## Decisions for review
-
-Choices this design makes, each with what it sets aside:
+## Review decisions (12 October 2026)
 
 1. **The organ-level crop in the reference scenario only.** The other
    scenarios keep the simple daily model, so that their numbers and
-   baselines hold. The alternative was to move every scenario to it.
+   baselines hold. Agreed.
 2. **House-wide air for every plant, its own light each.** Local
    temperature from the air cell by cell would need about 24 hours of it per
    simulated day, 36 to 170 s: one to four hours for the season. It can
-   come later as a higher rung of the ladder.
-3. **Only the new scenario as a file.** The others stay as code, read
-   through the same model by a test. The alternative was to convert all of
-   them in P09.1.
-4. **Checkpoints in the API's memory, downloadable as JSON,** rather than a
-   directory of files the API manages.
+   come later as a higher rung of the ladder. Agreed.
+3. **Every scenario becomes a manifest** in P09.1, one format for all,
+   rather than only the new one (section 1). Changed in review.
+4. **Checkpoints made while viewing live in the API's memory,** downloadable
+   as JSON, rather than in a folder the API manages; the reference run's
+   opening day is a file in the repository (section 5). Explained further
+   after review; to confirm.
 5. **One command launches both processes,** the API and the viewer's
    development server, rather than the API serving a built viewer, which
    would spare a release its Node dependency but add a build to every
-   start.
-6. **The world's size and season:** 32 plants in a 12 by 9.6 m house, from
-   1 March for 90 days, so that the first fruits turn red, which they do
-   in the lab around day 80. A shorter run would show no ripe fruit.
+   start. Agreed.
+6. **The season:** 120 days from 1 March rather than 90, with a weekly
+   harvest round, opening on the first day with red fruit, kept in the
+   repository (sections 1 and 5). Changed after review, which asked for a
+   longer run or a saved later start; to confirm.
 7. **`&t=` becomes seconds through the whole run** for every scenario,
    rather than a separate day parameter beside seconds within a day.
+   Agreed.
+8. **A demo video** in the README, as GitHub can host it, with a longer one
+   linked (section 9). Added in review.
