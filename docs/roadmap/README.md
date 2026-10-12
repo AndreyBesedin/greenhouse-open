@@ -218,6 +218,10 @@ the run request and the viewer's contracts, four decisions, and one
 roadmap project, P10, for models chosen by the manifest. The
 [audits](../audits/README.md) folder indexes them all.
 
+The [AI-assisted engineering workflow](engineering-automation.md) proposes,
+for after P09, an advisory reviewer, harder merge gates and, if the
+reviewer's record justifies it, auto-merge for a narrow set of changes.
+
 **Test suite and CI time** (recorded 2026-10-08, scheduled after P09). A
 pull request's checks then took 7 to 9 minutes:
 
