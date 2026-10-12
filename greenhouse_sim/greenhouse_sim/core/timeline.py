@@ -7,7 +7,9 @@ a window of the run, in the order it happens.
   stretches of at most a minute, each ending at a minute's end or at a
   command's moment: an event at the end of each, where the run works a
   climate.
-- **Each plant's day** at each midnight, from that day's air and light.
+- **Each plant's day** at each midnight, from that day's air and light; and
+  then, at the start of a day its crop work does something, what it does
+  to each plant (`greenhouse_sim.core.crop`): a harvest round.
 - **Each sensor's samples** and **each camera's frames**, every
   `cadence_s` from the run's start: the samples taken, whether or not a
   sample drops out or arrives late.
@@ -31,20 +33,23 @@ from typing import Final
 
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.core.crop import CropWork
 from greenhouse_sim.domain.processes import Process
 from greenhouse_sim.world.sensors import Camera, PointSensor
 
 TURNS: Final = {process: turn for turn, process in enumerate(Process)}
 # The house's air, worked on as one subject.
 HOUSE: Final = "house"
+# What a harvest round does to each plant.
+HARVEST_ROUND: Final = "harvest round"
 
 
 @dataclass(frozen=True, slots=True)
 class Event:
     """One thing a process does at a moment, to its subject: a command sets
     a level ("set to 0.5"), the house's air is worked on ("step"), a plant
-    grows a day ("day 3"), a sensor samples ("sample"), a camera takes a
-    frame ("frame")."""
+    grows a day ("day 3") or is harvested ("harvest round"), a sensor
+    samples ("sample"), a camera takes a frame ("frame")."""
 
     time_s: float
     process: Process
@@ -56,13 +61,15 @@ class Event:
 class RunProcesses:
     """What a run's timeline is enumerated from: its commands, how often its
     house's air is worked on at most, or None where the run works no
-    climate, and its plants, sensors and cameras, each in its order."""
+    climate, its plants, sensors and cameras, each in its order, and the
+    work it does on its crop."""
 
     schedule: Schedule
     air_step_s: float | None
     plants: Sequence[str]
     sensors: Sequence[PointSensor]
     cameras: Sequence[Camera]
+    crop_work: CropWork = CropWork()
 
 
 def within(moment: float, from_s: float, until_s: float) -> bool:
@@ -97,8 +104,13 @@ def events(run: RunProcesses, from_s: float, until_s: float) -> list[Event]:
         found.extend(Event(moment, Process.AIR, HOUSE, "step") for moment in sorted(ends))
     for midnight in _every(DAY_S, from_s, until_s):
         if midnight > 0.0:
-            grown = f"day {round(midnight / DAY_S) - 1}"
+            starting = round(midnight / DAY_S)
+            grown = f"day {starting - 1}"
             found.extend(Event(midnight, Process.PLANTS, plant, grown) for plant in run.plants)
+            if run.crop_work.harvests_on(starting):
+                found.extend(
+                    Event(midnight, Process.PLANTS, plant, HARVEST_ROUND) for plant in run.plants
+                )
     for sensor in run.sensors:
         found.extend(
             Event(moment, Process.SENSORS, sensor.sensor_id, "sample")

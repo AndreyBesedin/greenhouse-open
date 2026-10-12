@@ -15,9 +15,13 @@ always name them.
 - Lowering the stem lays its lowest standing internodes down along the row,
   so its top comes down by their length. Only bare internodes can be laid
   down: their leaves removed and their trusses bearing nothing.
+
+A harvest round (`harvest_round`) picks every red fruit on a plant, each
+fruit its own harvest, from its lowest truss up.
 """
 
 from greenhouse_sim.biology.plant.organs import Flower
+from greenhouse_sim.biology.tomato.organ.fruit import Maturity, maturity
 from greenhouse_sim.biology.tomato.organ.topology import (
     HarvestFruit,
     HarvestTruss,
@@ -181,3 +185,21 @@ def act(plant: Plant, action: PlantAction) -> Plant:
             return _harvest_truss(plant, action)
         case LowerStem():
             return _lower_stem(plant, action)
+
+
+def harvest_round(plant: Plant) -> Plant:
+    """The plant after a harvest round: every red fruit on it picked, each a
+    harvest of its own in its history, from its lowest truss up; unchanged
+    if it bears none."""
+    red = [
+        flower.fruit.fruit_id
+        for phytomer in plant.stem.phytomers
+        if phytomer.truss is not None
+        for flower in phytomer.truss.flowers
+        if flower.fruit is not None
+        and flower.fruit.stage == FruitStage.ATTACHED
+        and maturity(flower.fruit.ripeness) == Maturity.RED
+    ]
+    for fruit_id in red:
+        plant = act(plant, HarvestFruit(fruit_id=fruit_id))
+    return plant

@@ -10,7 +10,11 @@ import pytest
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.biology.plant.organs import Fruit
 from greenhouse_sim.biology.tomato.organ.actions import act
-from greenhouse_sim.biology.tomato.organ.geometry import METRES_PER_CM, organ_geometry
+from greenhouse_sim.biology.tomato.organ.geometry import (
+    METRES_PER_CM,
+    organ_geometry,
+    stem_height_m,
+)
 from greenhouse_sim.biology.tomato.organ.topology import (
     HarvestFruit,
     HarvestTruss,
@@ -171,6 +175,15 @@ def test_a_lowered_stem_lies_along_the_row_and_rises_from_where_it_ends() -> Non
     assert top_after.z == pytest.approx(top_before.z - laid)
     assert top_after.y == pytest.approx(top_before.y + laid)
     assert math.isclose(top_after.x, top_before.x, abs_tol=1e-12)
+
+
+def test_a_stem_stands_as_high_as_its_standing_internodes_are_long() -> None:
+    bare = act(act(PLANT, RemoveLeaf(leaf_id="p01_n01_leaf")), RemoveLeaf(leaf_id="p01_n02_leaf"))
+    lowered = act(bare, LowerStem(internodes=2))
+    lengths = [p.internode.length_cm * METRES_PER_CM for p in PLANT.stem.phytomers]
+
+    assert stem_height_m(PLANT) == pytest.approx(sum(lengths))
+    assert stem_height_m(lowered) == pytest.approx(sum(lengths[2:]))
 
 
 def test_scheduled_actions_last_through_the_days_after_and_not_before() -> None:

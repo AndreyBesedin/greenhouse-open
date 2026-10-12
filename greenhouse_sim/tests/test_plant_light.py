@@ -72,6 +72,24 @@ def test_each_plant_has_a_crown_about_its_stem_as_tall_as_it_shows() -> None:
     assert shadows.lit(lab_crowns[0].top(), OVERHEAD).all()
 
 
+def test_the_same_sunlight_can_be_shaded_by_other_crowns() -> None:
+    light = _light()
+    taller = [
+        Crown(plant_id=crown.plant_id, base=crown.base, height_m=1.5) for crown in light.crowns
+    ]
+    shaded = light.sunlight.shaded_by(Shadows([crown.solid() for crown in taller]))
+    base = taller[0].base
+    under = np.array([[base.x + 0.1, base.y, base.z + 1.0]])
+
+    assert (
+        light.sunlight.irradiance(under, OVERHEAD, NOON_S)[0]
+        > 2 * (shaded.irradiance(under, OVERHEAD, NOON_S)[0])
+    )
+    # The light shaded otherwise is still the same light.
+    assert shaded.outside_at(NOON_S) == light.sunlight.outside_at(NOON_S)
+    assert light.sunlight.shadows is not shaded.shadows
+
+
 def test_at_noon_the_crates_shade_the_first_plants_and_the_rest_take_the_sun() -> None:
     light = _light()
     par = light.par_at(NOON_S)

@@ -19,6 +19,7 @@ it stands (`solar.position`) reaches each point inside through the glass
   centimetres for each metre between the solid and the cell.
 """
 
+import copy
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Final
@@ -89,6 +90,15 @@ class Sunlight:
         self._floor = self._centres[: nx * ny]
         self._lit: dict[int, np.ndarray] = {}
         self._floor_lit: dict[int, np.ndarray] = {}
+
+    def shaded_by(self, shadows: Shadows) -> Sunlight:
+        """The same light, its beam shaded by `shadows` instead: a run's
+        crop, say, as tall as it stands on another day."""
+        shaded = copy.copy(self)
+        shaded.shadows = shadows
+        shaded._lit = {}
+        shaded._floor_lit = {}
+        return shaded
 
     def sun_at(self, time_s: float) -> SunPosition:
         """Where the sun stands `time_s` into the run."""

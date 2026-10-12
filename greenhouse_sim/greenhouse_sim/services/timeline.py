@@ -74,6 +74,7 @@ def timeline(
         plants=plant_ids(config),
         sensors=[sensor for sensor in config.layout.sensors if isinstance(sensor, PointSensor)],
         cameras=[sensor for sensor in config.layout.sensors if isinstance(sensor, Camera)],
+        crop_work=config.crop_work,
     )
     found = events(run, first, until_s)
     subjects = list(dict.fromkeys(event.subject for event in found))

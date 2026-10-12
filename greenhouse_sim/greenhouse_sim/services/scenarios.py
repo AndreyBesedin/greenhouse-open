@@ -16,7 +16,9 @@ from typing import Final
 
 from pydantic import BaseModel, JsonValue, ValidationError
 
+from greenhouse_sim.biology.tomato.organ.transplants import transplant
 from greenhouse_sim.core.engine import SimulationEngine
+from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import (
@@ -25,7 +27,8 @@ from greenhouse_sim.scenarios.layout_files import (
     layout_names,
     load_layout,
 )
-from greenhouse_sim.scene.snapshot import SceneSnapshot, scene_snapshot
+from greenhouse_sim.scene.plants import crop_entities
+from greenhouse_sim.scene.snapshot import SceneSnapshot, greenhouse_scene, scene_snapshot
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.weather.presets import PRESETS
 from greenhouse_sim.weather.recorded import recorded_weathers
@@ -46,6 +49,8 @@ class ScenarioSummary(BaseModel):
     description: str
     plants: int
     duration_days: int
+    # How its runs grow its crop: "simple" or "organ" (`CropModel`).
+    crop_model: str
     # Its layouts' names, its default first.
     layouts: list[str]
     # The weathers it can be run under, by name, its own first.
@@ -74,6 +79,7 @@ def scenario_summaries() -> list[ScenarioSummary]:
             description=config.description,
             plants=config.rows * config.columns,
             duration_days=config.duration_days,
+            crop_model=config.crop_model.value,
             layouts=layout_names(config.greenhouse_id),
             weathers=weather_names(),
         )
@@ -103,13 +109,25 @@ def plant_ids(config: ScenarioConfig) -> list[str]:
 
 def initial_scene(scenario_id: str, changes: SceneChanges | None = None) -> SceneSnapshot:
     """A scenario's full crop before its first day, as a viewer draws it,
-    with the changes a client asks for."""
+    with the changes a client asks for: its transplants organ by organ,
+    where it grows its crop so, or else the simple model's plants."""
     changes = changes or SceneChanges()
     config = changed(scenario(scenario_id), changes)
+    levels = equipment_levels(config, changes.levels)
+    if config.crop_model == CropModel.ORGAN:
+        house = greenhouse_scene(
+            config.greenhouse_id, config.envelope, layout=config.layout, levels=levels
+        )
+        crop = crop_entities(
+            [transplant(plant_id, config.random_seed) for plant_id in plant_ids(config)],
+            config.layout.planting_positions(),
+            config.envelope,
+        )
+        return house.model_copy(update={"entities": [*house.entities, *crop]})
     world = SimulationEngine(config).initialize(
         plant_ids(config), greenhouse_id=config.greenhouse_id
     )
-    return scene_snapshot(world, config, equipment_levels(config, changes.levels))
+    return scene_snapshot(world, config, levels)
 
 
 def layout(scenario_id: str, name: str = DEFAULT_LAYOUT) -> dict[str, JsonValue]:

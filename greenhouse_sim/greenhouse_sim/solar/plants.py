@@ -14,13 +14,12 @@
 - **The plant model consumes it** (`SunlitEnvironment`): each plant's own
   daily light integral, in place of a preset's, through the plant model's
   `Environment` contract (decision 0024), the rest of its day as another
-  environment says. The crowns stand as tall as on the run's first day
-  through every later one: joining the crop's days to the climate run's
-  seconds is P09's.
+  environment says. Its crowns stand as tall as the plants it is given;
+  a run's organ-level crop gives it each day's (`greenhouse_sim.core.crop`).
 """
 
 import math
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Final
 
@@ -84,24 +83,30 @@ class Crown:
         )
 
 
+def placed_crowns(
+    heights: Mapping[str, float], positions: Sequence[PlantingPosition], envelope: Envelope
+) -> list[Crown]:
+    """Each plant's crown as tall as `heights` says, in metres, by plant, the
+    first plant at the first planting position, and so on, placed in the
+    world; none for a plant with no stem showing."""
+    return [
+        Crown(plant_id=plant_id, base=envelope.to_world(position.point), height_m=height)
+        for (plant_id, height), position in zip(heights.items(), positions, strict=False)
+        if height > 0
+    ]
+
+
 def crowns(
     plants: Sequence[PlantWorld], positions: Sequence[PlantingPosition], envelope: Envelope
 ) -> list[Crown]:
     """Each plant's crown, the first plant at the first planting position,
     and so on, placed in the world: as tall as its visible stem; none for a
     plant with no stem showing."""
-    placed = []
-    for plant, position in zip(plants, positions, strict=False):
-        height = (plant.stem_length_cm - plant.lowered_length_cm) * METRES_PER_CENTIMETRE
-        if height > 0:
-            placed.append(
-                Crown(
-                    plant_id=plant.plant_id,
-                    base=envelope.to_world(position.point),
-                    height_m=height,
-                )
-            )
-    return placed
+    heights = {
+        plant.plant_id: (plant.stem_length_cm - plant.lowered_length_cm) * METRES_PER_CENTIMETRE
+        for plant in plants
+    }
+    return placed_crowns(heights, positions, envelope)
 
 
 class PlantLight:

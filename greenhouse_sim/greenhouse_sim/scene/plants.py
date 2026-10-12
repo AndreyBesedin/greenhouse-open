@@ -8,7 +8,7 @@ inspect any organ and rebuild the plant's structure from what it draws. A
 fruit's colour is its ripeness's: green, through yellow and orange, to red.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Final
 
 from greenhouse_sim.biology.plant.organs import Fruit, Organ
@@ -17,7 +17,9 @@ from greenhouse_sim.biology.tomato.organ.geometry import OrganShape, organ_geome
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.domain.organs import FlowerStage, OrganKind
 from greenhouse_sim.scene.snapshot import Color, SceneEntity, SceneEntityKind
+from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.geometry import Transform
+from greenhouse_sim.world.rows import PlantingPosition
 
 STEM_COLOR: Final = Color(r=0.36, g=0.56, b=0.24)
 LEAF_COLOR: Final = Color(r=0.18, g=0.5, b=0.2)
@@ -72,6 +74,23 @@ def plant_entities(
     organs = {organ_id: (kind, parent, organ) for kind, organ_id, parent, organ in plant.organs()}
     shared = {} if context is None else dict(context)
     return [_entity(plant, shape, at, organs, shared) for shape in organ_geometry(plant)]
+
+
+def crop_entities(
+    plants: Sequence[Plant], positions: Sequence[PlantingPosition], envelope: Envelope
+) -> list[SceneEntity]:
+    """A greenhouse's crop organ by organ: every shape of each plant as an
+    entity, the first plant at the first planting position, and so on, each
+    saying where it stands."""
+    return [
+        entity
+        for plant, position in zip(plants, positions, strict=False)
+        for entity in plant_entities(
+            plant,
+            envelope.origin.after(Transform(position=position.point)),
+            {"planting_position": position.position_id},
+        )
+    ]
 
 
 def _truss_of(organ_id: str, organs: dict[str, tuple[OrganKind, str | None, Organ]]) -> str | None:
