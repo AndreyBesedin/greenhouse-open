@@ -207,7 +207,9 @@ test("climate: the house's air as one volume follows the run, beside it all off"
   await expect(house.getByTestId("house-air-ppm")).toHaveText("CO₂ 420.0 ppm, all off 420.0 ppm");
 });
 
-test("climate: a run lasts a day, its later field drawn from the whole house", async ({ page }) => {
+test("climate: the time slider spans a day, a later field drawn from the whole house", async ({
+  page,
+}) => {
   // A later moment runs a grid run of an hour or two first, slower on a
   // loaded runner; what follows it waits its turn.
   test.setTimeout(150_000);
