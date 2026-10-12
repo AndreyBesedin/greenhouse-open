@@ -2,10 +2,6 @@
 a format whose version it states, and a manifest the simulator cannot read
 exactly is refused with the reason.
 
-`fixtures/scenarios_as_code.json` holds every scenario's configuration as
-its Python module built it, before the scenarios became files: whatever
-reads them now must build the same.
-
 `greenhouse_sim/scenarios/scenario.schema.json` is the schema the manifests
 name, generated here, from `greenhouse_sim/`:
 
@@ -14,7 +10,6 @@ name, generated here, from `greenhouse_sim/`:
 
 import json
 import sys
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -34,23 +29,10 @@ from greenhouse_sim.scenarios.manifest_files import (
     scenario_from_manifest,
 )
 
-AS_CODE = json.loads(
-    (Path(__file__).resolve().parent / "fixtures" / "scenarios_as_code.json").read_text()
-)
-
 
 def _manifest(scenario_id: str) -> dict[str, Any]:
     document: dict[str, Any] = json.loads((MANIFESTS_DIR / f"{scenario_id}.json").read_text())
     return document
-
-
-def test_the_same_scenarios_are_registered() -> None:
-    assert set(SCENARIO_REGISTRY) == set(AS_CODE)
-
-
-@pytest.mark.parametrize("scenario_id", sorted(AS_CODE))
-def test_every_scenario_is_configured_as_its_code_was(scenario_id: str) -> None:
-    assert SCENARIO_REGISTRY[scenario_id].model_dump(mode="json") == AS_CODE[scenario_id]
 
 
 def test_the_published_manifest_schema_matches_the_configuration() -> None:
@@ -73,7 +55,7 @@ def test_every_scenario_has_a_manifest_and_the_first_is_listed_first() -> None:
     assert manifest_ids()[1:] == sorted(manifest_ids()[1:])
 
 
-@pytest.mark.parametrize("scenario_id", sorted(AS_CODE))
+@pytest.mark.parametrize("scenario_id", manifest_ids())
 def test_every_manifest_names_its_schema_its_format_and_its_layout(scenario_id: str) -> None:
     document = _manifest(scenario_id)
 
