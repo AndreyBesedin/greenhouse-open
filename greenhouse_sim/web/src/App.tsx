@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { type BuildInfo, buildInfo } from "./buildInfo";
 import type { PresetName, PresetRequest } from "./camera";
@@ -43,7 +43,6 @@ import type { ViewSample } from "./readouts";
 import { ScenarioPanels } from "./ScenarioPanels";
 import { loadScenarios, SCENARIOS_URL } from "./scenarios";
 import { withProbes } from "./scene/edits";
-import { type LiveCommand, sendLiveCommand } from "./scene/live";
 import { runApartFromItsMoment, runsSomething, scenarioRun } from "./scene/run";
 import {
   changesQuery,
@@ -52,6 +51,7 @@ import {
   sceneRequest,
   withItsAir,
 } from "./scene/source";
+import { useLiveCommands } from "./scene/useLiveCommands";
 import { useLiveScene } from "./scene/useLiveScene";
 import { useSource } from "./scene/useSource";
 import { entityOfOrgan, selectedEntity } from "./selection";
@@ -94,9 +94,6 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [presetRequest, setPresetRequest] = useState<PresetRequest | null>(null);
   const [sample, setSample] = useState<ViewSample | null>(null);
   const [pointer, setPointer] = useState<Point3 | null>(null);
-  const [commandProblem, setCommandProblem] = useState<string | null>(null);
-  // Only the latest command in the current source may update its feedback.
-  const commandGeneration = useRef(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [overlayToggles, setOverlayToggles] = useState<OverlayToggles>(ALL_OVERLAYS);
   const [colourBy, setColourBy] = useState<string | null>(null);
@@ -108,15 +105,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [showPlantNames, setShowPlantNames] = useState(false);
   const liveScenario = source.kind === "live" ? source.scenarioId : null;
   const live = useLiveScene(liveScenario);
+  const commands = useLiveCommands(liveScenario);
   const scenarios = useLoad(SCENARIOS_URL, () => loadScenarios());
-
-  // A command answered after the viewer has gone has no feedback to give.
-  useEffect(
-    () => () => {
-      commandGeneration.current += 1;
-    },
-    [],
-  );
 
   // A scenario reopened by its sliders, or the plant lab on another day,
   // keeps its scene on show until the next arrives; any other change of
@@ -233,9 +223,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
 
   function chooseSource(chosen: SceneSource): void {
     const next = withItsAir(source, chosen);
-    commandGeneration.current += 1;
+    commands.forget();
     setSource(next);
-    setCommandProblem(null);
     // Another layout of the same scenario keeps the selection, while what is
     // selected is still there; anything else starts afresh.
     if (
@@ -252,18 +241,6 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     if (next.kind !== "scenario" || next.probes === undefined) {
       setPlacingProbes(false);
     }
-  }
-
-  function command(next: LiveCommand): void {
-    if (liveScenario === null) {
-      return;
-    }
-    const generation = ++commandGeneration.current;
-    void sendLiveCommand(liveScenario, next).then((result) => {
-      if (generation === commandGeneration.current) {
-        setCommandProblem(result.ok ? null : result.problem);
-      }
-    });
   }
 
   const shown = source.kind === "live" ? live.scene : scene;
@@ -426,7 +403,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
 
   const liveStatus: LiveStatus | null =
     source.kind === "live"
-      ? { connection: live.connection, frame: live.frame, problem: commandProblem }
+      ? { connection: live.connection, frame: live.frame, problem: commands.problem }
       : null;
 
   function choosePreset(preset: PresetName): void {
@@ -559,7 +536,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             pointer={pointer}
             live={liveStatus}
             onPreset={choosePreset}
-            onCommand={command}
+            onCommand={commands.send}
           />
           <div className="legends">
             {byCategory && snapshot !== null && (

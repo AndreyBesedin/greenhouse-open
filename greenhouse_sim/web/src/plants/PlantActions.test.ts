@@ -10,8 +10,10 @@ function organ(properties: SceneEntity["properties"]): SceneEntity {
     transform: { position: { x: 0, y: 0, z: 0 }, rotation: { w: 1, x: 0, y: 0, z: 0 } },
     shape: { shape: "sphere", radius: 0.01 },
     color: { r: 0, g: 0, b: 0 },
+    material: null,
+    label: null,
     properties,
-  } as SceneEntity;
+  };
 }
 
 describe("what can be done to a selected organ's plant", () => {

@@ -5,14 +5,16 @@ import { describe, expect, it } from "vitest";
 
 import { ScalarLegend } from "./debug/ScalarLegend";
 import { describeDimensions, describeShape, Inspector } from "./Inspector";
-import type { SceneEntity, SceneSnapshot } from "./scene/generated/snapshotTypes";
+import type { Polygon, SceneEntity, SceneSnapshot } from "./scene/generated/snapshotTypes";
+import { present } from "./testing/present";
 
 const EXAMPLE: SceneSnapshot = JSON.parse(
   readFileSync(new URL("../public/scenes/example.json", import.meta.url), "utf8"),
 );
-const PLANT = EXAMPLE.entities.find(
-  (entity) => entity.entity_id === "climate_box_plant_001",
-) as SceneEntity;
+const PLANT = present(
+  EXAMPLE.entities.find((entity) => entity.entity_id === "climate_box_plant_001"),
+  "the example's first plant",
+);
 const ignore = () => undefined;
 // The canonical layout (`tests/test_scene_schema.py`).
 const QA_LAYOUT: SceneSnapshot = JSON.parse(
@@ -68,14 +70,14 @@ describe("the inspector", () => {
     expect(describeShape({ shape: "box", size_x: 4, size_y: 6.4, size_z: 4 })).toBe(
       "box, 4.00 × 6.40 × 4.00 m",
     );
-    const gable = [
+    const gable: Polygon["points"] = [
       { x: 0, y: 0 },
       { x: 6.4, y: 0 },
       { x: 6.4, y: 3 },
       { x: 3.2, y: 4.3 },
       { x: 0, y: 3 },
     ];
-    expect(describeShape({ shape: "polygon", points: gable as never })).toBe("polygon, 5 corners");
+    expect(describeShape({ shape: "polygon", points: gable })).toBe("polygon, 5 corners");
   });
 });
 

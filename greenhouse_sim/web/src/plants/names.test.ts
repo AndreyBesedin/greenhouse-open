@@ -10,11 +10,13 @@ function part(entityId: string, plantId: string | null, x: number, z: number): S
     transform: { position: { x, y: 0, z }, rotation: { w: 1, x: 0, y: 0, z: 0 } },
     shape: { shape: "sphere", radius: 0.01 },
     color: { r: 0, g: 0, b: 0 },
+    material: null,
+    label: null,
     properties: plantId === null ? {} : { plant_id: plantId },
-  } as SceneEntity;
+  };
 }
 
-const ROW = {
+const ROW: SceneSnapshot = {
   schema_version: 13,
   greenhouse_id: "plant_lab",
   simulated_day: 0,
@@ -25,7 +27,7 @@ const ROW = {
     part("p02_n01_internode", "p02", 0.5, 0),
     part("p02_n03_leaf_terminal", "p02", 0.6, 0.2),
   ],
-} as unknown as SceneSnapshot;
+};
 
 describe("the plants' names", () => {
   it("float over each plant's base, above its highest organ", () => {

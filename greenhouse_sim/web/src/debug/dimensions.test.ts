@@ -2,16 +2,18 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import type { SceneEntity, SceneSnapshot } from "../scene/generated/snapshotTypes";
+import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
+import { present } from "../testing/present";
 import { sceneDimensionOverlays } from "./dimensions";
 import { entityBounds } from "./overlays";
 
 const EXAMPLE: SceneSnapshot = JSON.parse(
   readFileSync(new URL("../../public/scenes/example.json", import.meta.url), "utf8"),
 );
-const BOUNDS = EXAMPLE.entities.find(
-  (entity) => entity.kind === "GREENHOUSE_BOUNDS",
-) as SceneEntity;
+const BOUNDS = present(
+  EXAMPLE.entities.find((entity) => entity.kind === "GREENHOUSE_BOUNDS"),
+  "the example's greenhouse bounds",
+);
 // A quarter turn about z: the greenhouse's length runs along the world's y.
 const QUARTER_TURN = Math.SQRT1_2;
 

@@ -15,15 +15,25 @@ body {
   inset: 0;
 }
 
+/* Every panel over the view is a card of the same look; each sets its own
+ * place and size. */
+.info-panel,
+.hud,
+.inspector,
+.category-legend,
+.scalar-legend,
+.qa-caption {
+  padding: 8px 12px;
+  background: rgb(255 255 255 / 88%);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
 .info-panel {
   position: absolute;
   top: 12px;
   left: 12px;
   max-width: 420px;
-  padding: 8px 12px;
-  background: rgb(255 255 255 / 88%);
-  border-radius: 6px;
-  font-size: 13px;
 }
 
 .info-panel h1 {
@@ -65,10 +75,6 @@ body {
   top: 12px;
   right: 12px;
   width: 300px;
-  padding: 8px 12px;
-  background: rgb(255 255 255 / 88%);
-  border-radius: 6px;
-  font-size: 13px;
 }
 
 .hud fieldset {
@@ -109,10 +115,6 @@ body {
   bottom: 12px;
   left: 12px;
   width: 400px;
-  padding: 8px 12px;
-  background: rgb(255 255 255 / 88%);
-  border-radius: 6px;
-  font-size: 13px;
 }
 
 .inspector dl {
@@ -150,10 +152,6 @@ body {
 
 .category-legend {
   margin: 0;
-  padding: 8px 12px;
-  background: rgb(255 255 255 / 88%);
-  border-radius: 6px;
-  font-size: 13px;
 }
 
 .category-legend ul {
@@ -174,10 +172,6 @@ body {
 .scalar-legend {
   width: 220px;
   margin: 0;
-  padding: 8px 12px;
-  background: rgb(255 255 255 / 88%);
-  border-radius: 6px;
-  font-size: 13px;
 }
 
 .scalar-bar {
@@ -212,9 +206,6 @@ body {
   left: 12px;
   margin: 0;
   padding: 4px 8px;
-  background: rgb(255 255 255 / 88%);
-  border-radius: 6px;
-  font-size: 13px;
 }
 
 .field-controls {
