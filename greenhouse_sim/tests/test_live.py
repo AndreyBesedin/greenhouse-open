@@ -1,5 +1,6 @@
 """Scenarios played live for the viewer, and their Server-Sent Events stream."""
 
+import errno
 import json
 import threading
 import urllib.error
@@ -326,3 +327,14 @@ def test_closing_the_server_stops_its_live_runs() -> None:
     server.server_close()
 
     assert run.stopped
+
+
+def test_a_port_already_taken_is_reported_as_such() -> None:
+    taken = create_server(port=0, seconds_per_day=0.05)
+    try:
+        with pytest.raises(OSError) as raised:
+            create_server(port=taken.server_address[1], seconds_per_day=0.05)
+    finally:
+        taken.server_close()
+
+    assert raised.value.errno == errno.EADDRINUSE
