@@ -1,0 +1,1530 @@
+{
+  "airflow_box": {
+    "air_temperature_bounds": [
+      18.0,
+      32.0
+    ],
+    "air_temperature_noise_c": 0.4,
+    "airflow": {
+      "kind": "uniform",
+      "temperature_c": 20.0,
+      "velocity_m_s": {
+        "x": 0.5,
+        "y": 0.0,
+        "z": 0.0
+      }
+    },
+    "cfd": {
+      "effective_viscosity_m2_s": 0.01,
+      "inlet_speed_m_s": 0.5,
+      "inlets": [
+        "door_front"
+      ],
+      "iterations": 2000
+    },
+    "climate": {
+      "glazing_u_w_m2k": 6.0,
+      "infiltration_per_h": 0.25,
+      "infiltration_per_h_per_m_s": 0.1,
+      "mixing_m2_s": 0.1,
+      "start_co2_ppm": 420.0,
+      "start_humidity_pct": 75.0,
+      "start_temperature_c": 18.0
+    },
+    "cloud_cover_pct": null,
+    "columns": 1,
+    "description": "Airflow QA case: air blown through a house from door to door, around one block between them, solved with OpenFOAM and compared with a prescribed breeze.",
+    "duration_days": 10,
+    "envelope": {
+      "bays": 1,
+      "eave_height": 3.0,
+      "length": 12.0,
+      "openings": [
+        {
+          "centre": {
+            "x": 3.2,
+            "y": 1.1
+          },
+          "height": 2.2,
+          "kind": "door",
+          "largest_angle": 0.7853981633974483,
+          "opening": 1.0,
+          "opening_id": "door_front",
+          "surface_id": "end_wall_front",
+          "width": 2.0
+        },
+        {
+          "centre": {
+            "x": 3.2,
+            "y": 1.1
+          },
+          "height": 2.2,
+          "kind": "door",
+          "largest_angle": 0.7853981633974483,
+          "opening": 1.0,
+          "opening_id": "door_back",
+          "surface_id": "end_wall_back",
+          "width": 2.0
+        }
+      ],
+      "origin": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "ridge_height": 3.65,
+      "spans": 1,
+      "width": 6.4
+    },
+    "evaporation_ml_per_day": 20.0,
+    "fruit_count_noise_probability": 0.1,
+    "fruit_growth_days_to_target": 20,
+    "fruits_per_truss_bounds": [
+      3,
+      6
+    ],
+    "greenhouse_id": "airflow_box",
+    "height_noise_cm": 1.5,
+    "humidity_bounds": [
+      45.0,
+      85.0
+    ],
+    "initial_stem_length_cm": 20.0,
+    "initial_water_reservoir_ml": 600.0,
+    "layout": {
+      "crop_rows": {
+        "heading": 0.0,
+        "origin": {
+          "x": 11.5,
+          "y": 0.6
+        },
+        "pair_gap": null,
+        "plant_pitch": 0.5,
+        "positions_per_row": 1,
+        "rails": null,
+        "row_spacing": 1.6,
+        "rows": 1,
+        "support": null,
+        "wires": null
+      },
+      "equipment": [],
+      "placed": [
+        {
+          "base": {
+            "x": 5.5,
+            "y": 3.2,
+            "z": 0.0
+          },
+          "fixture_id": "block",
+          "heading": 0.0,
+          "kind": "obstacle",
+          "material": null,
+          "obstructs": null,
+          "primitive": "box",
+          "size_x": 1.0,
+          "size_y": 2.0,
+          "size_z": 1.5
+        }
+      ],
+      "sensors": [],
+      "zones": []
+    },
+    "mass_coefficient_g_per_mm3": 0.0012,
+    "max_trusses": 8,
+    "name": "Airflow QA Box",
+    "random_seed": 404,
+    "ripe_mass_noise_pct": 8.0,
+    "ripening_days_bounds": [
+      16,
+      26
+    ],
+    "rows": 1,
+    "site": {
+      "elevation_m": 0.0,
+      "latitude_deg": 52.0,
+      "longitude_deg": 4.5,
+      "time_zone": "Europe/Amsterdam",
+      "x_bearing_deg": 90.0
+    },
+    "soil_moisture_noise_pct": 3.0,
+    "start_date": "2026-01-01",
+    "stem_growth_cm_per_day_base": 2.0,
+    "target_diameter_mm_bounds": [
+      18.0,
+      26.0
+    ],
+    "truss_interval_days": 6,
+    "variety": "cherry_tomato",
+    "water_capacity_ml": 1200.0,
+    "water_stress_threshold_pct": 35.0,
+    "water_use_ml_per_day_base": 80.0,
+    "weather": {
+      "air_temperature_c": 10.0,
+      "barometric_pressure_hpa": null,
+      "cloud_cover_pct": 0.0,
+      "co2_ppm": 420.0,
+      "global_radiation_w_m2": 0.0,
+      "kind": "constant",
+      "relative_humidity_pct": 80.0,
+      "wind_direction_deg": 0.0,
+      "wind_speed_m_s": 0.0
+    }
+  },
+  "climate_box": {
+    "air_temperature_bounds": [
+      18.0,
+      32.0
+    ],
+    "air_temperature_noise_c": 0.4,
+    "airflow": {
+      "kind": "uniform",
+      "temperature_c": 20.0,
+      "velocity_m_s": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      }
+    },
+    "cfd": {
+      "effective_viscosity_m2_s": 0.01,
+      "inlet_speed_m_s": 0.5,
+      "inlets": null,
+      "iterations": 2000
+    },
+    "climate": {
+      "glazing_u_w_m2k": 6.0,
+      "infiltration_per_h": 0.25,
+      "infiltration_per_h_per_m_s": 0.1,
+      "mixing_m2_s": 0.1,
+      "start_co2_ppm": 420.0,
+      "start_humidity_pct": 85.0,
+      "start_temperature_c": 16.0
+    },
+    "cloud_cover_pct": null,
+    "columns": 16,
+    "description": "A small single-span house of 32 tomato plants, shut and still, where climate equipment is tried, 14 days",
+    "duration_days": 14,
+    "envelope": {
+      "bays": 3,
+      "eave_height": 4.0,
+      "length": 12.0,
+      "openings": [
+        {
+          "centre": {
+            "x": 0.0,
+            "y": 0.8
+          },
+          "height": 1.0,
+          "kind": "roof_vent",
+          "largest_angle": 0.7853981633974483,
+          "opening": 0.0,
+          "opening_id": "roof_vent",
+          "surface_id": "roof_1_right",
+          "width": 4.0
+        },
+        {
+          "centre": {
+            "x": 0.0,
+            "y": 0.5
+          },
+          "height": 0.6,
+          "kind": "side_vent",
+          "largest_angle": 0.7853981633974483,
+          "opening": 0.0,
+          "opening_id": "side_vent",
+          "surface_id": "side_wall_right",
+          "width": 3.0
+        },
+        {
+          "centre": {
+            "x": 0.0,
+            "y": 0.5
+          },
+          "height": 0.6,
+          "kind": "side_vent",
+          "largest_angle": 0.7853981633974483,
+          "opening": 0.0,
+          "opening_id": "side_vent_left",
+          "surface_id": "side_wall_left",
+          "width": 3.0
+        },
+        {
+          "centre": {
+            "x": 5.0,
+            "y": 1.05
+          },
+          "height": 2.1,
+          "kind": "door",
+          "largest_angle": 0.7853981633974483,
+          "opening": 0.0,
+          "opening_id": "door",
+          "surface_id": "end_wall_front",
+          "width": 1.2
+        }
+      ],
+      "origin": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "ridge_height": 4.8,
+      "spans": 1,
+      "width": 6.4
+    },
+    "evaporation_ml_per_day": 20.0,
+    "fruit_count_noise_probability": 0.1,
+    "fruit_growth_days_to_target": 20,
+    "fruits_per_truss_bounds": [
+      3,
+      6
+    ],
+    "greenhouse_id": "climate_box",
+    "height_noise_cm": 1.5,
+    "humidity_bounds": [
+      45.0,
+      85.0
+    ],
+    "initial_stem_length_cm": 20.0,
+    "initial_water_reservoir_ml": 600.0,
+    "layout": {
+      "crop_rows": {
+        "heading": 0.0,
+        "origin": {
+          "x": 2.25,
+          "y": 2.4
+        },
+        "pair_gap": null,
+        "plant_pitch": 0.5,
+        "positions_per_row": 16,
+        "rails": null,
+        "row_spacing": 1.6,
+        "rows": 2,
+        "support": {
+          "depth": 0.12,
+          "height": 0.6,
+          "kind": "crop_gutter",
+          "leg_radius": 0.02,
+          "leg_spacing": 2.0,
+          "material": null,
+          "offset": 0.0,
+          "overhang": 0.25,
+          "slab": {
+            "height": 0.075,
+            "material": "substrate",
+            "width": 0.2
+          },
+          "width": 0.3
+        },
+        "wires": {
+          "height": 3.0,
+          "radius": 0.0025
+        }
+      },
+      "equipment": [
+        {
+          "actuator_id": "fan",
+          "diameter_m": 0.5,
+          "flow_m3_s": 1.0,
+          "heading": 0.0,
+          "kind": "fan",
+          "position": {
+            "x": 1.0,
+            "y": 3.2,
+            "z": 2.8
+          }
+        },
+        {
+          "actuator_id": "heater",
+          "base": {
+            "x": 11.2,
+            "y": 0.7,
+            "z": 0.0
+          },
+          "heading": 3.141592653589793,
+          "kind": "heater",
+          "power_w": 10000.0,
+          "size_x": 0.6,
+          "size_y": 0.8,
+          "size_z": 1.2
+        },
+        {
+          "actuator_id": "dehumidifier",
+          "base": {
+            "x": 6.0,
+            "y": 5.9,
+            "z": 0.0
+          },
+          "heading": -1.5707963267948966,
+          "heat_w": 1200.0,
+          "kind": "dehumidifier",
+          "removal_kg_h": 1.0,
+          "size_x": 0.6,
+          "size_y": 1.0,
+          "size_z": 1.4
+        }
+      ],
+      "placed": [
+        {
+          "end": {
+            "x": 0.9,
+            "y": 6.1
+          },
+          "fixture_id": "front_path",
+          "kind": "walkway",
+          "material": null,
+          "obstructs": null,
+          "primitive": "walkway",
+          "start": {
+            "x": 0.9,
+            "y": 0.3
+          },
+          "width": 1.2
+        }
+      ],
+      "sensors": [
+        {
+          "cadence_s": 60.0,
+          "imperfections": {
+            "bias": 0.0,
+            "drift_per_hour": 0.0,
+            "dropout": 0.0,
+            "latency_s": 0.0,
+            "noise_sd": 0.0,
+            "quantization": 0.0
+          },
+          "kind": "temperature",
+          "position": {
+            "x": 3.0,
+            "y": 3.1,
+            "z": 1.5
+          },
+          "sensor_id": "temperature_front"
+        },
+        {
+          "cadence_s": 60.0,
+          "imperfections": {
+            "bias": 0.0,
+            "drift_per_hour": 0.0,
+            "dropout": 0.0,
+            "latency_s": 0.0,
+            "noise_sd": 1.0,
+            "quantization": 0.1
+          },
+          "kind": "humidity",
+          "position": {
+            "x": 3.0,
+            "y": 3.3,
+            "z": 1.5
+          },
+          "sensor_id": "humidity_front"
+        },
+        {
+          "cadence_s": 60.0,
+          "imperfections": {
+            "bias": 0.5,
+            "drift_per_hour": 0.6,
+            "dropout": 0.1,
+            "latency_s": 30.0,
+            "noise_sd": 0.2,
+            "quantization": 0.1
+          },
+          "kind": "temperature",
+          "position": {
+            "x": 9.0,
+            "y": 3.1,
+            "z": 1.5
+          },
+          "sensor_id": "temperature_back"
+        },
+        {
+          "cadence_s": 60.0,
+          "imperfections": {
+            "bias": -2.0,
+            "drift_per_hour": 0.0,
+            "dropout": 0.0,
+            "latency_s": 0.0,
+            "noise_sd": 1.5,
+            "quantization": 0.1
+          },
+          "kind": "humidity",
+          "position": {
+            "x": 9.0,
+            "y": 3.3,
+            "z": 1.5
+          },
+          "sensor_id": "humidity_back"
+        },
+        {
+          "cadence_s": 60.0,
+          "imperfections": {
+            "bias": 0.0,
+            "drift_per_hour": 0.0,
+            "dropout": 0.0,
+            "latency_s": 0.0,
+            "noise_sd": 0.05,
+            "quantization": 0.01
+          },
+          "kind": "air_speed",
+          "position": {
+            "x": 3.0,
+            "y": 3.2,
+            "z": 2.8
+          },
+          "sensor_id": "anemometer"
+        },
+        {
+          "cadence_s": 60.0,
+          "imperfections": {
+            "bias": 0.0,
+            "drift_per_hour": 0.0,
+            "dropout": 0.0,
+            "latency_s": 60.0,
+            "noise_sd": 10.0,
+            "quantization": 1.0
+          },
+          "kind": "co2",
+          "position": {
+            "x": 6.0,
+            "y": 3.2,
+            "z": 1.5
+          },
+          "sensor_id": "co2"
+        },
+        {
+          "cadence_s": 60.0,
+          "imperfections": {
+            "bias": 0.0,
+            "drift_per_hour": 0.0,
+            "dropout": 0.0,
+            "latency_s": 0.0,
+            "noise_sd": 0.0,
+            "quantization": 0.0
+          },
+          "kind": "par",
+          "position": {
+            "x": 6.0,
+            "y": 3.2,
+            "z": 3.6
+          },
+          "sensor_id": "par"
+        },
+        {
+          "cadence_s": 60.0,
+          "intrinsics": {
+            "distortion": [],
+            "fx": 457.007,
+            "fy": 457.007,
+            "height": 480,
+            "ppx": 320.0,
+            "ppy": 240.0,
+            "width": 640
+          },
+          "kind": "camera",
+          "position": {
+            "x": 0.6,
+            "y": 3.2,
+            "z": 2.2
+          },
+          "sensor_id": "front_camera",
+          "target": {
+            "x": 11.0,
+            "y": 3.2,
+            "z": 0.6
+          }
+        },
+        {
+          "cadence_s": 60.0,
+          "imperfections": {
+            "bias": 0.0,
+            "drift_per_hour": 0.0,
+            "dropout": 0.0,
+            "latency_s": 0.0,
+            "noise_sd": 0.1,
+            "quantization": 0.1
+          },
+          "kind": "outside_temperature",
+          "position": {
+            "x": -3.0,
+            "y": 3.1,
+            "z": 1.5
+          },
+          "sensor_id": "station_temperature"
+        },
+        {
+          "cadence_s": 60.0,
+          "imperfections": {
+            "bias": 0.0,
+            "drift_per_hour": 0.0,
+            "dropout": 0.0,
+            "latency_s": 0.0,
+            "noise_sd": 1.0,
+            "quantization": 0.1
+          },
+          "kind": "outside_humidity",
+          "position": {
+            "x": -3.0,
+            "y": 3.3,
+            "z": 1.5
+          },
+          "sensor_id": "station_humidity"
+        },
+        {
+          "cadence_s": 60.0,
+          "imperfections": {
+            "bias": 0.0,
+            "drift_per_hour": 0.0,
+            "dropout": 0.0,
+            "latency_s": 0.0,
+            "noise_sd": 0.2,
+            "quantization": 0.1
+          },
+          "kind": "barometric_pressure",
+          "position": {
+            "x": -3.0,
+            "y": 3.2,
+            "z": 1.2
+          },
+          "sensor_id": "station_pressure"
+        },
+        {
+          "cadence_s": 60.0,
+          "imperfections": {
+            "bias": 0.0,
+            "drift_per_hour": 0.0,
+            "dropout": 0.0,
+            "latency_s": 0.0,
+            "noise_sd": 0.2,
+            "quantization": 0.1
+          },
+          "kind": "wind_speed",
+          "position": {
+            "x": -3.0,
+            "y": 3.1,
+            "z": 6.0
+          },
+          "sensor_id": "station_wind_speed"
+        },
+        {
+          "cadence_s": 60.0,
+          "imperfections": {
+            "bias": 0.0,
+            "drift_per_hour": 0.0,
+            "dropout": 0.0,
+            "latency_s": 0.0,
+            "noise_sd": 5.0,
+            "quantization": 1.0
+          },
+          "kind": "wind_direction",
+          "position": {
+            "x": -3.0,
+            "y": 3.3,
+            "z": 6.0
+          },
+          "sensor_id": "station_wind_direction"
+        }
+      ],
+      "zones": []
+    },
+    "mass_coefficient_g_per_mm3": 0.0012,
+    "max_trusses": 8,
+    "name": "Climate box",
+    "random_seed": 1201,
+    "ripe_mass_noise_pct": 8.0,
+    "ripening_days_bounds": [
+      16,
+      26
+    ],
+    "rows": 2,
+    "site": {
+      "elevation_m": 0.0,
+      "latitude_deg": 52.0,
+      "longitude_deg": 4.5,
+      "time_zone": "Europe/Amsterdam",
+      "x_bearing_deg": 90.0
+    },
+    "soil_moisture_noise_pct": 3.0,
+    "start_date": "2026-01-01",
+    "stem_growth_cm_per_day_base": 2.0,
+    "target_diameter_mm_bounds": [
+      18.0,
+      26.0
+    ],
+    "truss_interval_days": 6,
+    "variety": "cherry_tomato",
+    "water_capacity_ml": 1200.0,
+    "water_stress_threshold_pct": 35.0,
+    "water_use_ml_per_day_base": 80.0,
+    "weather": {
+      "air_temperature_c": 8.0,
+      "barometric_pressure_hpa": null,
+      "cloud_cover_pct": 0.0,
+      "co2_ppm": 420.0,
+      "global_radiation_w_m2": 0.0,
+      "kind": "constant",
+      "relative_humidity_pct": 90.0,
+      "wind_direction_deg": 0.0,
+      "wind_speed_m_s": 0.0
+    }
+  },
+  "sensor_lab": {
+    "air_temperature_bounds": [
+      18.0,
+      32.0
+    ],
+    "air_temperature_noise_c": 0.4,
+    "airflow": {
+      "front_temperature_c": 16.0,
+      "kind": "gradient",
+      "rise_c_per_m": 0.5
+    },
+    "cfd": {
+      "effective_viscosity_m2_s": 0.01,
+      "inlet_speed_m_s": 0.5,
+      "inlets": null,
+      "iterations": 2000
+    },
+    "climate": {
+      "glazing_u_w_m2k": 6.0,
+      "infiltration_per_h": 0.25,
+      "infiltration_per_h_per_m_s": 0.1,
+      "mixing_m2_s": 0.1,
+      "start_co2_ppm": 420.0,
+      "start_humidity_pct": 75.0,
+      "start_temperature_c": 18.0
+    },
+    "cloud_cover_pct": null,
+    "columns": 1,
+    "description": "Sensor QA case: still air warming steadily along a small house, clean and imperfect thermometers side by side, and a camera looking down the house at boxes that partly hide one another",
+    "duration_days": 10,
+    "envelope": {
+      "bays": 3,
+      "eave_height": 4.0,
+      "length": 12.0,
+      "openings": [],
+      "origin": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "ridge_height": 4.8,
+      "spans": 1,
+      "width": 6.4
+    },
+    "evaporation_ml_per_day": 20.0,
+    "fruit_count_noise_probability": 0.1,
+    "fruit_growth_days_to_target": 20,
+    "fruits_per_truss_bounds": [
+      3,
+      6
+    ],
+    "greenhouse_id": "sensor_lab",
+    "height_noise_cm": 1.5,
+    "humidity_bounds": [
+      45.0,
+      85.0
+    ],
+    "initial_stem_length_cm": 20.0,
+    "initial_water_reservoir_ml": 600.0,
+    "layout": {
+      "crop_rows": {
+        "heading": 0.0,
+        "origin": {
+          "x": 0.4,
+          "y": 0.6
+        },
+        "pair_gap": null,
+        "plant_pitch": 0.5,
+        "positions_per_row": 1,
+        "rails": null,
+        "row_spacing": 1.6,
+        "rows": 1,
+        "support": null,
+        "wires": null
+      },
+      "equipment": [],
+      "placed": [
+        {
+          "base": {
+            "x": 4.0,
+            "y": 2.8,
+            "z": 0.0
+          },
+          "fixture_id": "box_near",
+          "heading": 0.0,
+          "kind": "obstacle",
+          "material": null,
+          "obstructs": null,
+          "primitive": "box",
+          "size_x": 0.6,
+          "size_y": 0.8,
+          "size_z": 1.8
+        },
+        {
+          "base": {
+            "x": 7.0,
+            "y": 3.4,
+            "z": 0.0
+          },
+          "fixture_id": "box_middle",
+          "heading": 0.0,
+          "kind": "obstacle",
+          "material": null,
+          "obstructs": null,
+          "primitive": "box",
+          "size_x": 0.6,
+          "size_y": 1.0,
+          "size_z": 1.4
+        },
+        {
+          "base": {
+            "x": 10.0,
+            "y": 4.0,
+            "z": 0.0
+          },
+          "fixture_id": "box_far",
+          "heading": 0.0,
+          "kind": "obstacle",
+          "material": null,
+          "obstructs": null,
+          "primitive": "box",
+          "size_x": 0.6,
+          "size_y": 1.2,
+          "size_z": 1.8
+        }
+      ],
+      "sensors": [
+        {
+          "cadence_s": 60.0,
+          "imperfections": {
+            "bias": 0.0,
+            "drift_per_hour": 0.0,
+            "dropout": 0.0,
+            "latency_s": 0.0,
+            "noise_sd": 0.0,
+            "quantization": 0.0
+          },
+          "kind": "temperature",
+          "position": {
+            "x": 3.0,
+            "y": 1.2,
+            "z": 1.5
+          },
+          "sensor_id": "clean_front"
+        },
+        {
+          "cadence_s": 60.0,
+          "imperfections": {
+            "bias": 0.5,
+            "drift_per_hour": 1.2,
+            "dropout": 0.1,
+            "latency_s": 30.0,
+            "noise_sd": 0.3,
+            "quantization": 0.1
+          },
+          "kind": "temperature",
+          "position": {
+            "x": 3.0,
+            "y": 1.5,
+            "z": 1.5
+          },
+          "sensor_id": "imperfect_front"
+        },
+        {
+          "cadence_s": 60.0,
+          "imperfections": {
+            "bias": 0.0,
+            "drift_per_hour": 0.0,
+            "dropout": 0.0,
+            "latency_s": 0.0,
+            "noise_sd": 0.0,
+            "quantization": 0.0
+          },
+          "kind": "temperature",
+          "position": {
+            "x": 9.0,
+            "y": 1.2,
+            "z": 1.5
+          },
+          "sensor_id": "clean_back"
+        },
+        {
+          "cadence_s": 60.0,
+          "intrinsics": {
+            "distortion": [],
+            "fx": 457.007,
+            "fy": 457.007,
+            "height": 480,
+            "ppx": 320.0,
+            "ppy": 240.0,
+            "width": 640
+          },
+          "kind": "camera",
+          "position": {
+            "x": 0.6,
+            "y": 3.2,
+            "z": 1.6
+          },
+          "sensor_id": "lab_camera",
+          "target": {
+            "x": 11.0,
+            "y": 3.2,
+            "z": 0.8
+          }
+        }
+      ],
+      "zones": []
+    },
+    "mass_coefficient_g_per_mm3": 0.0012,
+    "max_trusses": 8,
+    "name": "Sensor lab",
+    "random_seed": 606,
+    "ripe_mass_noise_pct": 8.0,
+    "ripening_days_bounds": [
+      16,
+      26
+    ],
+    "rows": 1,
+    "site": {
+      "elevation_m": 0.0,
+      "latitude_deg": 52.0,
+      "longitude_deg": 4.5,
+      "time_zone": "Europe/Amsterdam",
+      "x_bearing_deg": 90.0
+    },
+    "soil_moisture_noise_pct": 3.0,
+    "start_date": "2026-01-01",
+    "stem_growth_cm_per_day_base": 2.0,
+    "target_diameter_mm_bounds": [
+      18.0,
+      26.0
+    ],
+    "truss_interval_days": 6,
+    "variety": "cherry_tomato",
+    "water_capacity_ml": 1200.0,
+    "water_stress_threshold_pct": 35.0,
+    "water_use_ml_per_day_base": 80.0,
+    "weather": {
+      "air_temperature_c": 10.0,
+      "barometric_pressure_hpa": null,
+      "cloud_cover_pct": 0.0,
+      "co2_ppm": 420.0,
+      "global_radiation_w_m2": 0.0,
+      "kind": "constant",
+      "relative_humidity_pct": 80.0,
+      "wind_direction_deg": 0.0,
+      "wind_speed_m_s": 0.0
+    }
+  },
+  "solar_lab": {
+    "air_temperature_bounds": [
+      18.0,
+      32.0
+    ],
+    "air_temperature_noise_c": 0.4,
+    "airflow": {
+      "kind": "uniform",
+      "temperature_c": 20.0,
+      "velocity_m_s": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      }
+    },
+    "cfd": {
+      "effective_viscosity_m2_s": 0.01,
+      "inlet_speed_m_s": 0.5,
+      "inlets": null,
+      "iterations": 2000
+    },
+    "climate": {
+      "glazing_u_w_m2k": 6.0,
+      "infiltration_per_h": 0.25,
+      "infiltration_per_h_per_m_s": 0.1,
+      "mixing_m2_s": 0.1,
+      "start_co2_ppm": 420.0,
+      "start_humidity_pct": 75.0,
+      "start_temperature_c": 18.0
+    },
+    "cloud_cover_pct": null,
+    "columns": 16,
+    "description": "Sun QA case: a small shut house at the March equinox under a clear sky, a row of plants partly shaded by a stack of crates, and PAR sensors in the sun and the shade",
+    "duration_days": 10,
+    "envelope": {
+      "bays": 3,
+      "eave_height": 4.0,
+      "length": 12.0,
+      "openings": [],
+      "origin": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "ridge_height": 4.8,
+      "spans": 1,
+      "width": 6.4
+    },
+    "evaporation_ml_per_day": 20.0,
+    "fruit_count_noise_probability": 0.1,
+    "fruit_growth_days_to_target": 20,
+    "fruits_per_truss_bounds": [
+      3,
+      6
+    ],
+    "greenhouse_id": "solar_lab",
+    "height_noise_cm": 1.5,
+    "humidity_bounds": [
+      45.0,
+      85.0
+    ],
+    "initial_stem_length_cm": 20.0,
+    "initial_water_reservoir_ml": 600.0,
+    "layout": {
+      "crop_rows": {
+        "heading": 0.0,
+        "origin": {
+          "x": 2.25,
+          "y": 3.2
+        },
+        "pair_gap": null,
+        "plant_pitch": 0.5,
+        "positions_per_row": 16,
+        "rails": null,
+        "row_spacing": 1.6,
+        "rows": 1,
+        "support": {
+          "depth": 0.12,
+          "height": 0.6,
+          "kind": "crop_gutter",
+          "leg_radius": 0.02,
+          "leg_spacing": 2.0,
+          "material": null,
+          "offset": 0.0,
+          "overhang": 0.25,
+          "slab": {
+            "height": 0.075,
+            "material": "substrate",
+            "width": 0.2
+          },
+          "width": 0.3
+        },
+        "wires": null
+      },
+      "equipment": [
+        {
+          "actuator_id": "heater",
+          "base": {
+            "x": 11.2,
+            "y": 0.7,
+            "z": 0.0
+          },
+          "heading": 3.141592653589793,
+          "kind": "heater",
+          "power_w": 10000.0,
+          "size_x": 0.6,
+          "size_y": 0.8,
+          "size_z": 1.2
+        }
+      ],
+      "placed": [
+        {
+          "base": {
+            "x": 3.05,
+            "y": 2.5,
+            "z": 0.0
+          },
+          "fixture_id": "crates",
+          "heading": 0.0,
+          "kind": "obstacle",
+          "material": null,
+          "obstructs": null,
+          "primitive": "box",
+          "size_x": 2.2,
+          "size_y": 0.6,
+          "size_z": 1.5
+        }
+      ],
+      "sensors": [
+        {
+          "cadence_s": 60.0,
+          "imperfections": {
+            "bias": 0.0,
+            "drift_per_hour": 0.0,
+            "dropout": 0.0,
+            "latency_s": 0.0,
+            "noise_sd": 0.0,
+            "quantization": 0.0
+          },
+          "kind": "par",
+          "position": {
+            "x": 3.05,
+            "y": 1.5,
+            "z": 0.3
+          },
+          "sensor_id": "par_open"
+        },
+        {
+          "cadence_s": 60.0,
+          "imperfections": {
+            "bias": 0.0,
+            "drift_per_hour": 0.0,
+            "dropout": 0.0,
+            "latency_s": 0.0,
+            "noise_sd": 0.0,
+            "quantization": 0.0
+          },
+          "kind": "par",
+          "position": {
+            "x": 3.05,
+            "y": 3.9,
+            "z": 0.3
+          },
+          "sensor_id": "par_shade"
+        }
+      ],
+      "zones": []
+    },
+    "mass_coefficient_g_per_mm3": 0.0012,
+    "max_trusses": 8,
+    "name": "Solar lab",
+    "random_seed": 808,
+    "ripe_mass_noise_pct": 8.0,
+    "ripening_days_bounds": [
+      16,
+      26
+    ],
+    "rows": 1,
+    "site": {
+      "elevation_m": 0.0,
+      "latitude_deg": 52.0,
+      "longitude_deg": 4.5,
+      "time_zone": "Europe/Amsterdam",
+      "x_bearing_deg": 90.0
+    },
+    "soil_moisture_noise_pct": 3.0,
+    "start_date": "2026-03-20",
+    "stem_growth_cm_per_day_base": 2.0,
+    "target_diameter_mm_bounds": [
+      18.0,
+      26.0
+    ],
+    "truss_interval_days": 6,
+    "variety": "cherry_tomato",
+    "water_capacity_ml": 1200.0,
+    "water_stress_threshold_pct": 35.0,
+    "water_use_ml_per_day_base": 80.0,
+    "weather": {
+      "barometric_pressure_hpa": null,
+      "calmest_m_s": 1.5,
+      "cloud_cover_pct": 0.0,
+      "co2_ppm": 420.0,
+      "coldest_c": 4.0,
+      "coldest_hour": 6.0,
+      "gustiness": 0.2,
+      "humidity_at_coldest_pct": 95.0,
+      "kind": "synthetic",
+      "veer_deg": 90.0,
+      "warmest_c": 16.0,
+      "warmest_hour": 15.0,
+      "wind_from_deg": 225.0,
+      "windiest_m_s": 6.0
+    }
+  },
+  "tomato_compartment": {
+    "air_temperature_bounds": [
+      18.0,
+      32.0
+    ],
+    "air_temperature_noise_c": 0.4,
+    "airflow": {
+      "ceiling_temperature_c": 23.0,
+      "floor_temperature_c": 18.0,
+      "kind": "buoyancy",
+      "middle_warming_c": 1.5,
+      "peak_speed_m_s": 0.25
+    },
+    "cfd": {
+      "effective_viscosity_m2_s": 0.01,
+      "inlet_speed_m_s": 0.5,
+      "inlets": null,
+      "iterations": 2000
+    },
+    "climate": {
+      "glazing_u_w_m2k": 6.0,
+      "infiltration_per_h": 0.25,
+      "infiltration_per_h_per_m_s": 0.1,
+      "mixing_m2_s": 0.1,
+      "start_co2_ppm": 420.0,
+      "start_humidity_pct": 75.0,
+      "start_temperature_c": 18.0
+    },
+    "cloud_cover_pct": null,
+    "columns": 40,
+    "description": "Reference scenario: a 24 by 16 m Venlo-style compartment of 320 high-wire tomato plants in eight rows, 28 days",
+    "duration_days": 28,
+    "envelope": {
+      "bays": 6,
+      "eave_height": 6.0,
+      "length": 24.0,
+      "openings": [
+        {
+          "centre": {
+            "x": 0.0,
+            "y": 0.5
+          },
+          "height": 1.0,
+          "kind": "roof_vent",
+          "largest_angle": 0.7853981633974483,
+          "opening": 0.2,
+          "opening_id": "roof_vent_1",
+          "surface_id": "roof_1_right",
+          "width": 6.0
+        },
+        {
+          "centre": {
+            "x": 0.0,
+            "y": 0.5
+          },
+          "height": 1.0,
+          "kind": "roof_vent",
+          "largest_angle": 0.7853981633974483,
+          "opening": 0.2,
+          "opening_id": "roof_vent_2",
+          "surface_id": "roof_2_right",
+          "width": 6.0
+        },
+        {
+          "centre": {
+            "x": 0.0,
+            "y": 0.5
+          },
+          "height": 1.0,
+          "kind": "roof_vent",
+          "largest_angle": 0.7853981633974483,
+          "opening": 0.2,
+          "opening_id": "roof_vent_3",
+          "surface_id": "roof_3_right",
+          "width": 6.0
+        },
+        {
+          "centre": {
+            "x": 0.0,
+            "y": 0.5
+          },
+          "height": 1.0,
+          "kind": "roof_vent",
+          "largest_angle": 0.7853981633974483,
+          "opening": 0.2,
+          "opening_id": "roof_vent_4",
+          "surface_id": "roof_4_right",
+          "width": 6.0
+        },
+        {
+          "centre": {
+            "x": 8.0,
+            "y": 1.5
+          },
+          "height": 3.0,
+          "kind": "door",
+          "largest_angle": 0.7853981633974483,
+          "opening": 0.0,
+          "opening_id": "door_front",
+          "surface_id": "end_wall_front",
+          "width": 3.0
+        }
+      ],
+      "origin": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "ridge_height": 6.8,
+      "spans": 4,
+      "width": 16.0
+    },
+    "evaporation_ml_per_day": 20.0,
+    "fruit_count_noise_probability": 0.1,
+    "fruit_growth_days_to_target": 20,
+    "fruits_per_truss_bounds": [
+      3,
+      6
+    ],
+    "greenhouse_id": "tomato_compartment",
+    "height_noise_cm": 1.5,
+    "humidity_bounds": [
+      45.0,
+      85.0
+    ],
+    "initial_stem_length_cm": 20.0,
+    "initial_water_reservoir_ml": 600.0,
+    "layout": {
+      "crop_rows": {
+        "heading": 0.0,
+        "origin": {
+          "x": 2.75,
+          "y": 2.4
+        },
+        "pair_gap": null,
+        "plant_pitch": 0.5,
+        "positions_per_row": 40,
+        "rails": {
+          "gauge": 0.55,
+          "height": 0.1,
+          "material": null,
+          "tube_radius": 0.0255
+        },
+        "row_spacing": 1.6,
+        "rows": 8,
+        "support": {
+          "depth": 0.12,
+          "height": 0.6,
+          "kind": "crop_gutter",
+          "leg_radius": 0.02,
+          "leg_spacing": 2.0,
+          "material": null,
+          "offset": 0.0,
+          "overhang": 0.25,
+          "slab": {
+            "height": 0.075,
+            "material": "substrate",
+            "width": 0.2
+          },
+          "width": 0.3
+        },
+        "wires": {
+          "height": 4.0,
+          "radius": 0.0025
+        }
+      },
+      "equipment": [],
+      "placed": [
+        {
+          "end": {
+            "x": 1.0,
+            "y": 15.7
+          },
+          "fixture_id": "main_path",
+          "kind": "walkway",
+          "material": null,
+          "obstructs": null,
+          "primitive": "walkway",
+          "start": {
+            "x": 1.0,
+            "y": 0.3
+          },
+          "width": 2.0
+        },
+        {
+          "end": {
+            "x": 22.6,
+            "y": 1.0
+          },
+          "fixture_id": "side_path_right",
+          "kind": "walkway",
+          "material": null,
+          "obstructs": null,
+          "primitive": "walkway",
+          "start": {
+            "x": 2.0,
+            "y": 1.0
+          },
+          "width": 1.0
+        },
+        {
+          "end": {
+            "x": 22.6,
+            "y": 15.0
+          },
+          "fixture_id": "side_path_left",
+          "kind": "walkway",
+          "material": null,
+          "obstructs": null,
+          "primitive": "walkway",
+          "start": {
+            "x": 2.0,
+            "y": 15.0
+          },
+          "width": 1.0
+        },
+        {
+          "count": 4,
+          "end": {
+            "x": 23.8,
+            "y": 0.25,
+            "z": 0.3
+          },
+          "fixture_id": "heating_pipes_right",
+          "kind": "pipe",
+          "material": null,
+          "obstructs": null,
+          "primitive": "pipe_run",
+          "radius": 0.0255,
+          "start": {
+            "x": 2.0,
+            "y": 0.25,
+            "z": 0.3
+          },
+          "step": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.15
+          }
+        },
+        {
+          "count": 4,
+          "end": {
+            "x": 23.8,
+            "y": 15.75,
+            "z": 0.3
+          },
+          "fixture_id": "heating_pipes_left",
+          "kind": "pipe",
+          "material": null,
+          "obstructs": null,
+          "primitive": "pipe_run",
+          "radius": 0.0255,
+          "start": {
+            "x": 2.0,
+            "y": 15.75,
+            "z": 0.3
+          },
+          "step": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.15
+          }
+        },
+        {
+          "base": {
+            "x": 23.35,
+            "y": 14.4,
+            "z": 0.0
+          },
+          "fixture_id": "irrigation_unit",
+          "heading": 0.0,
+          "kind": "obstacle",
+          "material": null,
+          "obstructs": null,
+          "primitive": "box",
+          "size_x": 0.6,
+          "size_y": 1.0,
+          "size_z": 1.6
+        }
+      ],
+      "sensors": [],
+      "zones": [
+        {
+          "area": {
+            "end": {
+              "x": 23.3,
+              "y": 15.6
+            },
+            "start": {
+              "x": 23.3,
+              "y": 1.6
+            },
+            "width": 1.2
+          },
+          "height": 2.2,
+          "kind": "service",
+          "zone_id": "service_area_back"
+        },
+        {
+          "area": {
+            "end": {
+              "x": 23.35,
+              "y": 15.1
+            },
+            "start": {
+              "x": 23.35,
+              "y": 13.7
+            },
+            "width": 1.0
+          },
+          "height": 2.0,
+          "kind": "keep_out",
+          "zone_id": "keep_out_irrigation"
+        }
+      ]
+    },
+    "mass_coefficient_g_per_mm3": 0.0012,
+    "max_trusses": 8,
+    "name": "Tomato compartment",
+    "random_seed": 2401,
+    "ripe_mass_noise_pct": 8.0,
+    "ripening_days_bounds": [
+      16,
+      26
+    ],
+    "rows": 8,
+    "site": {
+      "elevation_m": 0.0,
+      "latitude_deg": 52.0,
+      "longitude_deg": 4.5,
+      "time_zone": "Europe/Amsterdam",
+      "x_bearing_deg": 90.0
+    },
+    "soil_moisture_noise_pct": 3.0,
+    "start_date": "2026-01-01",
+    "stem_growth_cm_per_day_base": 2.0,
+    "target_diameter_mm_bounds": [
+      18.0,
+      26.0
+    ],
+    "truss_interval_days": 6,
+    "variety": "cherry_tomato",
+    "water_capacity_ml": 1200.0,
+    "water_stress_threshold_pct": 35.0,
+    "water_use_ml_per_day_base": 80.0,
+    "weather": {
+      "air_temperature_c": 10.0,
+      "barometric_pressure_hpa": null,
+      "cloud_cover_pct": 0.0,
+      "co2_ppm": 420.0,
+      "global_radiation_w_m2": 0.0,
+      "kind": "constant",
+      "relative_humidity_pct": 80.0,
+      "wind_direction_deg": 225.0,
+      "wind_speed_m_s": 4.0
+    }
+  }
+}
