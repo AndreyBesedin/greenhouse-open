@@ -26,7 +26,7 @@ const SUN = ["light.spec.ts", "solar-lab.spec.ts", "solar-day.spec.ts"];
 // visit, so they run on their own, after P07's; and the reference
 // greenhouse's, whose crop and schedule work its house through days too,
 // after them, so that no more than a few share the simulator at once.
-const SEASON = ["season.spec.ts", "daily-schedule.spec.ts"];
+const SEASON = ["season.spec.ts", "daily-schedule.spec.ts", "checkpoints.spec.ts"];
 const REFERENCE_SEASON = ["crop.spec.ts", "reference-schedule.spec.ts"];
 
 export default defineConfig({

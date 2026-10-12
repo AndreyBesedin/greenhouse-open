@@ -584,8 +584,8 @@ the reference; the kept opening day matches the run's.
 
 #### As implemented
 
-The checkpoints themselves; the viewer's panel, the branch comparison, the
-replay's hashes and the kept opening day follow.
+The checkpoints themselves and the viewer's panel; the branch comparison,
+the replay's hashes and the kept opening day follow.
 
 - **A checkpoint** (`services/checkpoints.py`) is a run's state at the start
   of a day: its run, its scenario and the digest of the scenario's manifest
@@ -614,6 +614,12 @@ replay's hashes and the kept opening day follow.
   scenario's, each having lived every day before. Restarting the API
   forgets them, and it writes no file. The API's server now reads a POST
   request's body.
+- **The viewer's "Checkpoints"**, under the timeline in the climate view,
+  opened on demand: it saves the start of the moment's day, lists those
+  kept for the scenario, restores one, its run at its moment with the view
+  as it was, and downloads one as JSON or uploads one again, saying why one
+  is refused. A restored run given other commands from its moment on is a
+  branch from it. Browser test: `checkpoints.spec.ts`, with the season's.
 - **Measured:** after a restart, the reference run's third day, from a
   checkpoint at its second, comes back in 1.4 s, the same as before; from
   its start it takes about 3.5 s.
