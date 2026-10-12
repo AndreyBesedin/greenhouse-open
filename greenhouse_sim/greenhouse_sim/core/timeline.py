@@ -27,23 +27,12 @@ day's moments, as on the run's clock (`greenhouse_sim.core.clock`).
 import math
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
-from enum import StrEnum
 from typing import Final
 
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.domain.processes import Process
 from greenhouse_sim.world.sensors import Camera, PointSensor
-
-
-class Process(StrEnum):
-    """A run's processes, in the order they take their turns at a moment."""
-
-    COMMANDS = "commands"
-    AIR = "air"
-    PLANTS = "plants"
-    SENSORS = "sensors"
-    CAMERAS = "cameras"
-
 
 TURNS: Final = {process: turn for turn, process in enumerate(Process)}
 # The house's air, worked on as one subject.

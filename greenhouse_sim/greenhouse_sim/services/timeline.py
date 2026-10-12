@@ -14,7 +14,8 @@ from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.climate.house import STEP_S
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.core.timeline import TURNS, Process, RunProcesses, events
+from greenhouse_sim.core.timeline import TURNS, RunProcesses, events
+from greenhouse_sim.domain.processes import Process
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import Commanded, run_schedule

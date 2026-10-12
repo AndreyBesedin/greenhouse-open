@@ -11,7 +11,7 @@ from typing import Any
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.core.timeline import Process
+from greenhouse_sim.domain.processes import Process
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services.scenarios import plant_ids
 from greenhouse_sim.services.timeline import TimelineDocument, timeline
