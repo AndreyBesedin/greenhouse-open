@@ -272,7 +272,7 @@ run in their own Playwright project, as the plant lab's and the sun's do.
 
 | Step | Commit summary | Status |
 | --- | --- | --- |
-| P09.1 | `feat(scenarios): define versioned integrated scenario manifest` | In progress |
+| P09.1 | `feat(scenarios): define versioned integrated scenario manifest` | Done |
 | P09.2 | `feat(sim): unify multi-rate scheduler and visible event timeline` | Planned |
 | P09.3 | `feat(coupling): connect radiation/weather/climate to plant environment` | Planned |
 | P09.4 | `feat(coupling): connect actuators weather and vents to sensor observations` | Planned |
@@ -290,6 +290,41 @@ requests: the conversion, then the new scenario. Visible result: one file
 boots the complete scene in the browser. Tests: every converted scenario's
 configuration equals its code's, written out before the conversion; the
 manifests validate; an unknown `schema_version` is refused.
+
+#### As implemented
+
+- **Every scenario is a manifest** (#123, decision 0031),
+  `scenarios/manifests/<id>.json`: its configuration as Pydantic writes it,
+  only the fields its module set, its layout by name, `schema_version: 1`,
+  and `notes` in place of its module's comments, keyed by what each is
+  about. `scenarios/manifest_files.py` reads them and refuses a format it
+  does not read, a manifest of another scenario, a note on what the
+  scenario does not have, and a field the configuration does not have at
+  any depth, which some nested models would otherwise ignore. Its schema,
+  `scenario.schema.json`, is generated and kept current by a test. Every
+  converted scenario was held, field by field, to the configuration its
+  code built. The registry lists the reference greenhouse first, then the
+  others by identifier.
+- **The reference greenhouse** (`reference_greenhouse`): three 3.2 m spans
+  and three 4 m bays, 12 by 9.6 m, 4 m to the gutters and 4.7 m to the
+  ridges; a roof vent 4 m by 0.8 m near each ridge and a 1.6 by 2.2 m door
+  in the front gable, all shut. Four rows of eight plants, 0.75 m apart in
+  rows 1.6 m apart, on hanging gutters with a pipe rail along each and crop
+  wires 3.6 m up; a path across the front. Two 1 m³/s fans over the path, a
+  15 kW heater in the back right corner and a 1.5 kg/h dehumidifier on the
+  left wall, all off. Temperature and humidity at crop height in either
+  half, the back pair imperfect; an anemometer in the right fan's jet; CO₂
+  in the middle; PAR in the canopy and under the roof; a camera at the
+  front looking down the middle path; a weather station 3 m in front. The
+  cold spring day every day, half clouded; 14 °C and 80% inside to start;
+  from 1 March 2026 for 120 days; seed 42. Its scene has 178 entities.
+- **What joins it later,** with the step that uses it: the plant model's
+  choice and the crop work (P09.3), commands (P09.2, P09.4) and the kept
+  opening day (P09.5). Until P09.3 it grows with the simple daily model, as
+  every scenario does, and its reference baseline is recorded.
+- **Visible result:** `e2e/reference-greenhouse.spec.ts` finds it first in
+  the scenario list, and its scene drawn whole, its equipment off, its
+  vents shut, and its sensors and camera.
 
 ### P09.2: One clock and the timeline
 
