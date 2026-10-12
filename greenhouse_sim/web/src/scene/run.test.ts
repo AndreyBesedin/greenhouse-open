@@ -59,7 +59,7 @@ describe("a scenario's run, as the viewer asks for it", () => {
     expect(weatherUrl(id, 46200, run.weather)).toBe(
       "/api/scenarios/solar_lab/weather?t=46200&weather=default%40100",
     );
-    expect(weatherDayUrl(id, run.weather)).toBe(
+    expect(weatherDayUrl(id, 46200, run.weather)).toBe(
       "/api/scenarios/solar_lab/weather/day?weather=default%40100",
     );
   });

@@ -55,6 +55,21 @@ describe("the house's air", () => {
     expect(markup.match(/class="house-air-run"/g)).toHaveLength(3);
   });
 
+  it("charts a later day across that day, from its midnight", () => {
+    const day = 86_400;
+    const markup = renderToStaticMarkup(
+      <HouseAir
+        state={{
+          status: "loaded",
+          trace: parseHouseAir({ ...BODY, times_s: [day, day + 21_600, day + 43_200] }),
+        }}
+      />,
+    );
+
+    // Its first moment at the chart's left, a quarter and a half across after it.
+    expect(markup).toContain('class="house-air-run" points="0.0,0.0 60.0,3.7 120.0,7.5"');
+  });
+
   it("says when it is on its way or cannot be read", () => {
     expect(renderToStaticMarkup(<HouseAir state={{ status: "none" }} />)).toBe("");
     expect(renderToStaticMarkup(<HouseAir state={{ status: "loading" }} />)).toContain(

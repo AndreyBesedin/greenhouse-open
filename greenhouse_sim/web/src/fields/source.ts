@@ -18,9 +18,6 @@ export type FieldState =
 /** How a scenario's run is changed from its own, for its fields. */
 export type FieldChanges = RunParts;
 
-/** How long a climate run lasts, in seconds, as the simulator runs it: a
- * day. */
-export const CLIMATE_RUN_S = 86_400;
 /** How long a grid run draws the field for, at most: through the first two
  * hours from the start, and from an hour before the moment's hour after
  * them. */

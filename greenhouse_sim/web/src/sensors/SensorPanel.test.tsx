@@ -115,6 +115,38 @@ describe("a selected sensor", () => {
     expect(html).toContain('<input type="checkbox" checked=""/> Imperfections');
   });
 
+  it("charts a later day's readings across that day so far, from its midnight", () => {
+    const later = (stamp: string) => stamp.replace("2026-01-01", "2026-01-03");
+    const html = renderToStaticMarkup(
+      <SensorPanel
+        sensorId="t"
+        unit="°C"
+        state={{
+          status: "loaded",
+          readings: {
+            ...READINGS,
+            observations: READINGS.observations.map((o) => ({
+              ...o,
+              timestamp: later(o.timestamp),
+            })),
+            truths: READINGS.truths.map((t) => ({
+              ...t,
+              times_s: t.times_s.map((seconds) => seconds + 2 * 86_400),
+            })),
+          },
+        }}
+        until={2 * 86_400 + 600}
+        imperfect={true}
+        onImperfect={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('data-testid="sensor-reading">14.96 °C at day 2, 10 min<');
+    // The day's first reading at the chart's left, its latest at its right.
+    expect(html).toContain('cx="0" cy=');
+    expect(html).toContain('cx="240" cy=');
+  });
+
   it("charts the same run all off beside it, and says what it read then", () => {
     const allOff = {
       ...READINGS,

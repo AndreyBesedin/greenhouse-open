@@ -38,8 +38,10 @@ function DayLine({
   const values = day.weather.map(of);
   const low = Math.min(...values);
   const high = Math.max(...values);
-  const span = Math.max(...day.timesS, 1);
-  const x = (seconds: number) => (seconds / span) * WIDTH;
+  // Across the day's moments, from its first.
+  const from = day.timesS[0] ?? 0;
+  const span = Math.max((day.timesS.at(-1) ?? from) - from, 1);
+  const x = (seconds: number) => ((seconds - from) / span) * WIDTH;
   const y = (value: number) =>
     high === low ? HEIGHT / 2 : HEIGHT - ((value - low) / (high - low)) * HEIGHT;
   const points = day.timesS
@@ -76,7 +78,7 @@ function DayLine({
   );
 }
 
-/** The weather through the runs' first day: the air's temperature, its
+/** The weather through the moment's day: the air's temperature, its
  * humidity, the wind's speed and the sunshine, each from its least to its
  * most, with the moment drawn marked across them. */
 export function WeatherDayChart({ state, time }: { state: WeatherDayState; time: number }) {

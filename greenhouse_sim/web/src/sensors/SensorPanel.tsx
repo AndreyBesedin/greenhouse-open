@@ -1,3 +1,4 @@
+import { dayStart } from "../clock";
 import { describeTime } from "../fields/ClimateTime";
 import { chartRange } from "../fields/ProbeCharts";
 import { formatValue } from "../readouts";
@@ -17,8 +18,9 @@ const WIDTH = 240;
 const HEIGHT = 70;
 const DOT_RADIUS = 2;
 
-/** The truth as a line, and the readings as dots, across the run so far;
- * and, dashed, what the sensor read through the same run all off. */
+/** The truth as a line, and the readings as dots, across the moment's day
+ * so far, the log's; and, dashed, what the sensor read through the same run
+ * all off. */
 function SensorChart({
   readings,
   allOff,
@@ -40,8 +42,9 @@ function SensorChart({
     truth.map(([, value]) => value),
     off.map(([, value]) => value),
   );
-  const span = Math.max(until, ...truth.map(([time]) => time), 1);
-  const x = (time: number) => (time / span) * WIDTH;
+  const from = dayStart(until);
+  const span = Math.max(until, ...truth.map(([time]) => time), from + 1) - from;
+  const x = (time: number) => ((time - from) / span) * WIDTH;
   const y = (value: number) => HEIGHT - ((value - range.min) / (range.max - range.min)) * HEIGHT;
   return (
     <svg

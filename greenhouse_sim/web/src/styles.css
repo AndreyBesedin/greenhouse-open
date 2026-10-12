@@ -292,15 +292,22 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* A climate run's moment: play, a slider over the run, and the moment shown. */
+/* A climate run's moment: play, a slider over its day, and the moment
+ * shown; under them, a slider over its days, a step either way, and play's
+ * pace. */
 .climate-time {
-  display: flex;
-  gap: 6px;
-  align-items: center;
+  display: grid;
+  gap: 4px;
   margin: 0 0 8px;
   padding: 0;
   border: 0;
   font-variant-numeric: tabular-nums;
+}
+
+.climate-time-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
 }
 
 .climate-time-slider {

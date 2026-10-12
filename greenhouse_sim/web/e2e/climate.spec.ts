@@ -73,7 +73,7 @@ test("climate: a running heater warms its corner and the house through the run",
   });
 
   await test.step("ten minutes in, its corner is warm, and the cold glass cools the rest", async () => {
-    await run.getByRole("slider", { name: "Time into the run" }).fill("600");
+    await run.getByRole("slider", { name: "Time of day" }).fill("600");
     await expect(page).toHaveURL(/&t=600(&|$)/);
     await expect(moment).toHaveText("10 min");
     // Warmed, the corner's air is far from saturated.
@@ -89,11 +89,11 @@ test("climate: a running heater warms its corner and the house through the run",
     const highest = page.getByRole("spinbutton", { name: "Highest colour" });
     const reached = await highest.inputValue();
     expect(Number(reached)).toBeGreaterThan(40);
-    await run.getByRole("slider", { name: "Time into the run" }).fill("0");
+    await run.getByRole("slider", { name: "Time of day" }).fill("0");
     await expect(moment).toHaveText("0 min");
     await expect(corner).toHaveText(/temperature 16\.00 °C/);
     await expect(highest).toHaveValue(reached);
-    await run.getByRole("slider", { name: "Time into the run" }).fill("600");
+    await run.getByRole("slider", { name: "Time of day" }).fill("600");
     await expect(moment).toHaveText("10 min");
   });
 
@@ -106,7 +106,7 @@ test("climate: a running heater warms its corner and the house through the run",
   });
 
   await test.step("switched off ten minutes in, the house cools to 12 °C and saturates", async () => {
-    const slider = page.getByRole("slider", { name: "Time into the run" });
+    const slider = page.getByRole("slider", { name: "Time of day" });
     await slider.fill("600");
     await page
       .getByRole("group", { name: "Equipment" })
@@ -148,7 +148,7 @@ test("climate: a running dehumidifier dries the air around it", async ({ page })
   });
 
   await test.step("with the heater on too from the start, the whole house is drier", async () => {
-    const slider = page.getByRole("slider", { name: "Time into the run" });
+    const slider = page.getByRole("slider", { name: "Time of day" });
     // Set at the start, not overridden ten minutes in.
     await slider.fill("0");
     await page
@@ -216,10 +216,7 @@ test("climate: a run lasts a day, its later field drawn from the whole house", a
   await expect(page.getByTestId("climate-time")).toHaveText("5 h 00 min", { timeout: 60_000 });
 
   // The slider spans the day.
-  await expect(run.getByRole("slider", { name: "Time into the run" })).toHaveAttribute(
-    "max",
-    "86400",
-  );
+  await expect(run.getByRole("slider", { name: "Time of day" })).toHaveAttribute("max", "86400");
   // The house has long settled, heated, and all off at the night's 8 °C.
   await expect(page.getByTestId("house-air-°C")).toHaveText("Air 20.8 °C, all off 8.0 °C", {
     timeout: 30_000,
