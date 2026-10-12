@@ -1,4 +1,4 @@
-import { pairsText, type ScheduledCommand, scheduleText, weatherParameter } from "../scene/source";
+import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 import type { Point3 } from "../world";
 
 /** An observation as the simulator sends it: what a sensor reported, when it
@@ -81,17 +81,10 @@ export type SensorReadingsState =
   | { status: "loaded"; readings: SensorReadings };
 
 /** The run's changes, as the climate is asked for with them. */
-export interface RunChanges {
-  layout?: string | undefined;
-  levels?: Readonly<Record<string, number>> | undefined;
-  openings?: Readonly<Record<string, number>> | undefined;
-  schedule?: readonly ScheduledCommand[] | undefined;
-  time?: number | undefined;
+export type RunChanges = RunParts & {
   /** Observations as clean sensors would have made them, for QA. */
   clean?: boolean | undefined;
-  /** Another weather the run is under, a preset's, by name. */
-  weather?: string | undefined;
-}
+};
 
 /** Where a run's sensors' observations, or their truth, are published,
  * asked for as the climate is, up to the moment drawn. */
@@ -100,17 +93,11 @@ export function sensorsUrl(
   what: "observations" | "truth",
   run: RunChanges,
 ): string {
-  const parts = [
-    ...(run.layout === undefined ? [] : [`layout=${encodeURIComponent(run.layout)}`]),
-    ...(pairsText(run.levels) === "" ? [] : [`set=${pairsText(run.levels)}`]),
-    ...(pairsText(run.openings) === "" ? [] : [`open=${pairsText(run.openings)}`]),
-    ...(scheduleText(run.schedule) === "" ? [] : [`schedule=${scheduleText(run.schedule)}`]),
-    ...(run.time === undefined || run.time === 0 ? [] : [`t=${run.time}`]),
+  return scenarioUrl(scenarioId, `climate/${what}`, [
+    ...runParameters(run, ["layout", "levels", "openings", "schedule", "time"]),
     ...(what === "observations" && run.clean === true ? ["clean=1"] : []),
-    ...weatherParameter(run.weather),
-  ];
-  const query = parts.length === 0 ? "" : `?${parts.join("&")}`;
-  return `/api/scenarios/${encodeURIComponent(scenarioId)}/climate/${what}${query}`;
+    ...runParameters(run, ["weather"]),
+  ]);
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

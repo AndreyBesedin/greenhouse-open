@@ -47,6 +47,12 @@ describe("probes' charts through a climate run", () => {
     ).toBe("/api/scenarios/climate_box/climate/probes?probes=1:2:3&weather=cold_spring_day");
   });
 
+  it("are asked for with the layout drawn, as the field is", () => {
+    expect(probeChartsUrl("airflow_box", { probes: [{ x: 1, y: 2, z: 3 }], layout: "open" })).toBe(
+      "/api/scenarios/airflow_box/climate/probes?probes=1:2:3&layout=open",
+    );
+  });
+
   it("span both runs' values, across the run's hour, the highest at the top", () => {
     const range = chartRange([16, 25, 30], [16, 14, 12]);
 

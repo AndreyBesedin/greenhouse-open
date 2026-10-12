@@ -67,8 +67,8 @@ architecture and improve specific weaknesses rather than rewrite it.
 | FE-AUDIT.6 | API bind failure masks the original exception | Medium | Addressed in the maintenance window, step 1 |
 | FE-AUDIT.7 | Small organizational, test-quality and telemetry improvements | Medium | Planned, general refactoring after P07 |
 | FE-AUDIT.8 | Every load is written out by hand | Medium | Second audit; addressed in step 3 |
-| FE-AUDIT.9 | The address is written in six places | Medium | Second audit; planned before P09 |
-| FE-AUDIT.10 | A climate run's request is assembled three times | Medium | Second audit; planned before P09 |
+| FE-AUDIT.9 | The address is written in six places | Medium | Second audit; addressed in step 4 |
+| FE-AUDIT.10 | A climate run's request is assembled three times | Medium | Second audit; addressed in step 4, with two defects it caused |
 | FE-AUDIT.11 | `App` draws every panel itself | Medium | Second audit; planned with FE-AUDIT.7 |
 
 Findings 5 and 6 were low severity in the original audit; their planned work
@@ -315,6 +315,12 @@ source chosen each call `history.replaceState` themselves.
 Acceptance: one owner of the source and its address; nothing else writes
 the address.
 
+Addressed in step 4. `useSource` reads the source from the address once and
+keeps it there: the address follows each change once it is made, and the
+address the page was opened at stays as it was until the first change.
+`App` changes the source and nothing else; `history.replaceState` is called
+in one place.
+
 ### FE-AUDIT.10: A climate run's request is assembled three times
 
 The field, the compared field and the sensors' logs each rebuild the run's
@@ -325,6 +331,31 @@ from the source instead.
 
 Acceptance: one value describes the climate run drawn, compared by its
 address, and every load of it starts from that value.
+
+Addressed in step 4. Working on it found what the finding warned of, two
+defects in what the viewer asked for:
+
+- **The clouds asked for (`&clouds=`, P08.7) were left out of four
+  requests.** The field, the weather and the sensors were asked for under
+  them, but the house's air, the glazing, the openings' flows and the
+  probes' charts were given the source's weather, without the clouds. At the
+  solar lab's noon under full cloud, the House air panel showed the clear
+  day's 29.5 °C where the clouded run is 18.3 °C. The solar lab's browser
+  test now checks the panel under cloud; it failed before the fix.
+- **The probes' charts left out the layout drawn**, which the API takes as
+  it does for the field: a scenario drawn in another of its layouts had its
+  probes charted in its own.
+
+`scenarioRun(source)` is now the run drawn, its weather with the clouds
+asked for, and `runParameters` writes its parts as every route takes them.
+`FieldChanges`, `RunChanges` and the four inline types are one `RunParts`.
+The URL builders keep their signatures, and their tests pass unchanged. A
+test asks for every part of one climate run and checks that each carries its
+clouds, layout and moment.
+
+Left for the simulator: a changed envelope (`?envelope=`) changes the scene
+and the CFD boundaries, but no climate route takes it, so a climate run is
+worked out in the scenario's own envelope.
 
 ### FE-AUDIT.11: `App` draws every panel itself
 
