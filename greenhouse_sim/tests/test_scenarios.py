@@ -2,10 +2,11 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 
 
 def test_registry_contains_exactly_the_configured_greenhouses() -> None:
+    """The first scenario first, then the others by identifier."""
     assert list(SCENARIO_REGISTRY) == [
         "tomato_compartment",
-        "climate_box",
         "airflow_box",
+        "climate_box",
         "sensor_lab",
         "solar_lab",
     ]

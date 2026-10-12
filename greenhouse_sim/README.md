@@ -16,8 +16,10 @@ Part of [greenhouse-open](../README.md). Apache-2.0.
 - **Scenarios.** `greenhouse_sim.scenarios` holds ready-made worlds; a
   `ScenarioConfig` describes the greenhouse (its `Envelope` and its
   `Layout`), crop, dynamics and sensor noise, and nothing about who manages
-  the greenhouse. Each scenario's layouts are JSON files in
-  `scenarios/layouts/` (decision
+  the greenhouse. Each scenario is a versioned JSON manifest in
+  `scenarios/manifests/` (decision
+  [0031](../docs/decisions/0031-scenarios-are-versioned-json-manifests.md)),
+  and its layouts are JSON files in `scenarios/layouts/` (decision
   [0020](../docs/decisions/0020-scenario-layouts-are-declarative-json-files.md)).
 - **Pluggable models.** Plant, environment and sensor models plug into the
   engine through small contracts. Simple reference models are the default.

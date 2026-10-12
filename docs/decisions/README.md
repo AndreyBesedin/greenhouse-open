@@ -31,7 +31,7 @@ changes course is a new record that supersedes the old one.
 | [0017](0017-envelope-surfaces-face-into-the-greenhouse.md) | Envelope surfaces face into the greenhouse, and carry a category | Accepted |
 | [0018](0018-openings-lie-on-a-surface-and-expose-an-aperture.md) | Openings lie on a surface, and expose an aperture | Accepted |
 | [0019](0019-fixtures-say-what-they-are-made-of-and-what-they-obstruct.md) | Fixtures say what they are made of, and what they obstruct | Accepted |
-| [0020](0020-scenario-layouts-are-declarative-json-files.md) | Scenario layouts are declarative JSON files | Accepted |
+| [0020](0020-scenario-layouts-are-declarative-json-files.md) | Scenario layouts are declarative JSON files | Accepted; its comments in the scenarios' modules superseded by 0031 |
 | [0021](0021-routes-are-the-interface-services-hold-the-logic.md) | Routes are the interface; services hold the logic | Accepted |
 | [0022](0022-plant-organs-are-named-by-where-they-sit.md) | Plant organs are named by where they sit, and draw from a seed hierarchy | Accepted |
 | [0023](0023-plants-vary-through-a-shared-vigour-and-keep-their-draws.md) | Plants vary through a shared vigour, and keep what they drew | Accepted |
@@ -42,6 +42,7 @@ changes course is a new record that supersedes the old one.
 | [0028](0028-the-world-has-a-site-and-its-x-axis-a-compass-bearing.md) | The world has a site, and its x axis a compass bearing | Accepted |
 | [0029](0029-test-hooks-mounted-in-a-dom-file-by-file.md) | Test hooks and components mounted, in a DOM, file by file | Accepted |
 | [0030](0030-hold-the-viewers-unit-test-coverage-to-a-floor.md) | Hold the viewer's unit-test coverage to a floor | Accepted |
+| [0031](0031-scenarios-are-versioned-json-manifests.md) | Scenarios are versioned JSON manifests | Accepted |
 
 ## Template
 
