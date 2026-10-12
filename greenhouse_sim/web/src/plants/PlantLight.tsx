@@ -1,7 +1,7 @@
 import { describePlantLight, type PlantsLightState } from "./light";
 
-/** The sun's light on a plant, at the moment drawn and through the run's
- * first day, in a climate run's view. */
+/** The sun's light on a plant, at the moment drawn and through its day, in
+ * a climate run's view. */
 export function PlantLight({ plantId, state }: { plantId: string; state: PlantsLightState }) {
   if (state.status === "none") {
     return null;

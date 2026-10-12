@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DAY_S, dayEnd, dayStart, runDay } from "./clock";
+import { DAY_S, dayEnd, dayStart, daysEnded, runDay } from "./clock";
 
 describe("a run's clock", () => {
   it.each([
@@ -14,5 +14,14 @@ describe("a run's clock", () => {
     expect(runDay(seconds)).toBe(day);
     expect(dayStart(seconds)).toBe(day * DAY_S);
     expect(dayEnd(seconds)).toBe((day + 1) * DAY_S);
+  });
+
+  it.each([
+    [0, 0],
+    [DAY_S - 1, 0],
+    [DAY_S, 1],
+    [2.5 * DAY_S, 2],
+  ])("has the crop live a day at each midnight: by %d s, %d", (seconds, days) => {
+    expect(daysEnded(seconds)).toBe(days);
   });
 });

@@ -1,6 +1,12 @@
 import { useLoad } from "../useLoad";
 import { labRunQuery } from "./lab";
-import { type LabPlant, loadPlantStructure, type OrganNode, plantStructureUrl } from "./structure";
+import {
+  type LabPlant,
+  loadPlantStructure,
+  type OrganNode,
+  type PlantEvent,
+  plantStructureUrl,
+} from "./structure";
 
 function Organ({
   organ,
@@ -40,9 +46,59 @@ function Organ({
   );
 }
 
-/** One of the plant lab's plants, organ by organ, as a debug tree: every
- * organ with its kind, thermal age and stage. An organ the view draws can be
- * selected from here, as it can by clicking any part of it. */
+/** A plant, organ by organ, as a debug tree: every organ with its kind,
+ * thermal age and stage. An organ the view draws can be selected from
+ * here, as it can by clicking any part of it. */
+export function PlantTree({
+  plantId,
+  tree,
+  selectedOrgan,
+  onSelect,
+}: {
+  plantId: string;
+  tree: OrganNode;
+  /** The organ the selected entity draws part of. */
+  selectedOrgan: string | null;
+  onSelect: (organId: string) => void;
+}) {
+  return (
+    <details className="plant-structure" open>
+      <summary>Plant structure: {plantId}</summary>
+      <ul>
+        <Organ organ={tree} selectedOrgan={selectedOrgan} onSelect={onSelect} />
+      </ul>
+    </details>
+  );
+}
+
+/** Everything done to a plant, or asked of it and refused, in order, at the
+ * plant's thermal time; nothing if nothing was. */
+export function PlantHistory({ plantId, history }: { plantId: string; history: PlantEvent[] }) {
+  if (history.length === 0) {
+    return null;
+  }
+  return (
+    <details className="plant-history" open>
+      <summary>History: {plantId}</summary>
+      <ol>
+        {history.map((event, index) => (
+          <li
+            // The history only grows, so an event keeps its place.
+            // biome-ignore lint/suspicious/noArrayIndexKey: see above
+            key={index}
+            data-testid="plant-event"
+            className={event.applied ? undefined : "refused"}
+          >
+            at {Math.round(event.thermalTime)} °Cd: {event.applied ? "" : "refused, "}
+            {event.note}
+          </li>
+        ))}
+      </ol>
+    </details>
+  );
+}
+
+/** One of the plant lab's plants, organ by organ, and its history. */
 export function PlantStructure({
   plant: { plantId, ...run },
   selectedOrgan,
@@ -69,31 +125,13 @@ export function PlantStructure({
     case "loaded":
       return (
         <>
-          <details className="plant-structure" open>
-            <summary>Plant structure: {plantId}</summary>
-            <ul>
-              <Organ organ={state.tree} selectedOrgan={selectedOrgan} onSelect={onSelect} />
-            </ul>
-          </details>
-          {state.history.length > 0 && (
-            <details className="plant-history" open>
-              <summary>History: {plantId}</summary>
-              <ol>
-                {state.history.map((event, index) => (
-                  <li
-                    // The history only grows, so an event keeps its place.
-                    // biome-ignore lint/suspicious/noArrayIndexKey: see above
-                    key={index}
-                    data-testid="plant-event"
-                    className={event.applied ? undefined : "refused"}
-                  >
-                    at {Math.round(event.thermalTime)} °Cd: {event.applied ? "" : "refused, "}
-                    {event.note}
-                  </li>
-                ))}
-              </ol>
-            </details>
-          )}
+          <PlantTree
+            plantId={plantId}
+            tree={state.tree}
+            selectedOrgan={selectedOrgan}
+            onSelect={onSelect}
+          />
+          <PlantHistory plantId={plantId} history={state.history} />
         </>
       );
   }

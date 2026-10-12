@@ -1,6 +1,8 @@
 import type { SceneSource, SceneState } from "./scene/source";
 
-function describeSource(source: SceneSource): string {
+/** What a source draws; a scenario's scene is before its first day, unless
+ * its crop is drawn on a later one (`day`). */
+function describeSource(source: SceneSource, day = 0): string {
   switch (source.kind) {
     case "reference":
       return "reference scene";
@@ -12,10 +14,12 @@ function describeSource(source: SceneSource): string {
       return "plant lab";
     case "stress":
       return `stress scene of ${source.plants} plants`;
-    case "scenario":
+    case "scenario": {
+      const when = day === 0 ? ", before day one" : "";
       return source.layout === undefined
-        ? `scenario ${source.scenarioId}, before day one`
-        : `scenario ${source.scenarioId} with its ${source.layout} layout, before day one`;
+        ? `scenario ${source.scenarioId}${when}`
+        : `scenario ${source.scenarioId} with its ${source.layout} layout${when}`;
+    }
     case "live":
       return `scenario ${source.scenarioId}, live`;
   }
@@ -48,8 +52,9 @@ export function SceneStatus({ source, state }: { source: SceneSource; state: Sce
     case "loaded":
       return (
         <p data-testid="scene-status">
-          Showing the {describeSource(source)}: {state.snapshot.greenhouse_id}, day{" "}
-          {state.snapshot.simulated_day}, {state.snapshot.entities.length} entities.
+          Showing the {describeSource(source, state.snapshot.simulated_day)}:{" "}
+          {state.snapshot.greenhouse_id}, day {state.snapshot.simulated_day},{" "}
+          {state.snapshot.entities.length} entities.
         </p>
       );
   }

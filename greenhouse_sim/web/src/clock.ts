@@ -5,7 +5,8 @@
  *
  * A moment belongs to the day it lies in, or, at a midnight, to the day it
  * ends: 86 400 s is still day 0, the end of its first day. So a later day
- * runs from just after its midnight to the next, inclusive.
+ * runs from just after its midnight to the next, inclusive. Its crop lives
+ * each day at the midnight that ends it, so by 86 400 s it has lived one.
  */
 
 export const DAY_S = 86_400;
@@ -24,4 +25,10 @@ export function dayStart(seconds: number): number {
  * that day's. */
 export function dayEnd(seconds: number): number {
   return dayStart(seconds) + DAY_S;
+}
+
+/** How many of a run's days have ended by a moment, at it or before: the
+ * days its crop has lived. */
+export function daysEnded(seconds: number): number {
+  return Math.floor(seconds / DAY_S);
 }

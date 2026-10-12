@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 // The reference scenario (P09.1): one manifest boots the whole greenhouse,
-// its 32 plants, its equipment, its vents and door, its sensors and its
-// camera; and the viewer lists it first.
+// its 32 plants, organ by organ (P09.3), its equipment, its vents and door,
+// its sensors and its camera; and the viewer lists it first.
 test("reference greenhouse: its manifest boots the whole scene, and it is listed first", async ({
   page,
 }) => {
@@ -15,7 +15,7 @@ test("reference greenhouse: its manifest boots the whole scene, and it is listed
 
   await page.goto("/?scenario=reference_greenhouse");
   await expect(page.getByTestId("scene-status")).toContainText(
-    "reference_greenhouse, day 0, 178 entities",
+    "reference_greenhouse, day 0, 3104 entities",
   );
   for (const device of ["fan_right", "fan_left", "heater", "dehumidifier"]) {
     await expect(page.getByTestId(`equipment-${device}`)).toHaveText("off");
