@@ -21,7 +21,7 @@ changes course is a new record that supersedes the old one.
 | [0007](0007-world-coordinates-metres-right-handed-z-up.md) | World coordinates are metres, right-handed, z up | Accepted |
 | [0008](0008-build-the-viewer-with-npm-node-24-and-vite.md) | Build the viewer with npm, Node 24, Vite and strict TypeScript | Accepted |
 | [0009](0009-a-standard-library-local-api-until-streaming-is-needed.md) | A standard-library local API until streaming is needed | Accepted; streaming superseded by 0012 |
-| [0010](0010-check-the-viewer-with-biome-vitest-and-playwright.md) | Check the viewer with Biome, Vitest and a Playwright smoke test | Accepted |
+| [0010](0010-check-the-viewer-with-biome-vitest-and-playwright.md) | Check the viewer with Biome, Vitest and a Playwright smoke test | Accepted; Node-only unit tests superseded by 0029 |
 | [0011](0011-the-public-api-is-the-top-level-modules-contracts-and-scene.md) | The public API is the top-level modules, the model contracts and the scene | Accepted |
 | [0012](0012-stream-to-the-viewer-with-server-sent-events.md) | Stream to the viewer with Server-Sent Events | Accepted |
 | [0013](0013-describe-debug-overlays-as-data-in-world-coordinates.md) | Describe debug overlays as data, in world coordinates | Accepted |
@@ -40,6 +40,7 @@ changes course is a new record that supersedes the old one.
 | [0026](0026-environment-fields-are-cell-centred-grids-of-packed-floats.md) | Environment fields are cell-centred grids, published as packed floats | Accepted |
 | [0027](0027-cfd-runs-out-of-process-on-the-fields-grid.md) | CFD runs out of process, on the environment field's own grid | Accepted |
 | [0028](0028-the-world-has-a-site-and-its-x-axis-a-compass-bearing.md) | The world has a site, and its x axis a compass bearing | Accepted |
+| [0029](0029-test-hooks-mounted-in-a-dom-file-by-file.md) | Test hooks and components mounted, in a DOM, file by file | Accepted |
 
 ## Template
 

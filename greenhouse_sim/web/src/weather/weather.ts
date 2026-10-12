@@ -239,15 +239,14 @@ export function parseWeather(body: unknown): WeatherAtAMoment {
   };
 }
 
-/** Fetches a scenario's weather through its runs' first day; every failure
- * becomes `unavailable`. */
+/** Fetches a scenario's weather through its runs' first day, from its
+ * `weatherDayUrl`; every failure becomes `unavailable`. */
 export async function loadWeatherDay(
-  scenarioId: string,
-  weather: string | undefined,
+  url: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<WeatherDayState> {
   try {
-    const response = await fetchFn(weatherDayUrl(scenarioId, weather));
+    const response = await fetchFn(url);
     if (!response.ok) {
       return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
     }
@@ -259,15 +258,13 @@ export async function loadWeatherDay(
 }
 
 /** Fetches a scenario's weather at a moment of a run, under its own weather
- * or a preset's; every failure becomes `unavailable`. */
+ * or a preset's, from its `weatherUrl`; every failure becomes `unavailable`. */
 export async function loadWeather(
-  scenarioId: string,
-  time: number,
-  weather: string | undefined,
+  url: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<WeatherStateOfLoad> {
   try {
-    const response = await fetchFn(weatherUrl(scenarioId, time, weather));
+    const response = await fetchFn(url);
     if (!response.ok) {
       return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
     }

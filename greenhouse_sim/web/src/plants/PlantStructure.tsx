@@ -1,12 +1,6 @@
-import { useEffect, useState } from "react";
-
+import { useLoad } from "../useLoad";
 import { labRunQuery } from "./lab";
-import {
-  type LabPlant,
-  loadPlantStructure,
-  type OrganNode,
-  type StructureState,
-} from "./structure";
+import { type LabPlant, loadPlantStructure, type OrganNode, plantStructureUrl } from "./structure";
 
 function Organ({
   organ,
@@ -60,22 +54,12 @@ export function PlantStructure({
   selectedOrgan: string | null;
   onSelect: (organId: string) => void;
 }) {
-  const [state, setState] = useState<StructureState>({ status: "loading" });
-
   // Asked for by its query, which changes only when the run does.
   const query = labRunQuery(run);
-  // Another run's or plant's tree stays on show until this one's arrives.
-  useEffect(() => {
-    let current = true;
-    void loadPlantStructure(plantId, query).then((loaded) => {
-      if (current) {
-        setState(loaded);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, [plantId, query]);
+  // Another run's or plant's tree, loaded, stays on show until this one's arrives.
+  const state = useLoad(plantStructureUrl(plantId, query), () =>
+    loadPlantStructure(plantId, query),
+  );
 
   switch (state.status) {
     case "loading":

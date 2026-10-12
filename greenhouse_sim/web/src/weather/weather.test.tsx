@@ -96,7 +96,7 @@ describe("the weather", () => {
   it("through the day is checked rather than trusted", async () => {
     const answered = (async () => Response.json(DAY_BODY)) as typeof fetch;
 
-    expect(await loadWeatherDay("climate_box", undefined, answered)).toEqual({
+    expect(await loadWeatherDay(weatherDayUrl("climate_box"), answered)).toEqual({
       status: "loaded",
       day: parseWeatherDay(DAY_BODY),
     });
@@ -127,15 +127,15 @@ describe("the weather", () => {
     }) as typeof fetch;
     const answered = (async () => Response.json(WESTERLY_BODY)) as typeof fetch;
 
-    expect(await loadWeather("climate_box", 0, undefined, refused)).toEqual({
+    expect(await loadWeather(weatherUrl("climate_box", 0), refused)).toEqual({
       status: "unavailable",
       reason: "the simulator API answered 400",
     });
-    expect(await loadWeather("climate_box", 0, undefined, unreachable)).toEqual({
+    expect(await loadWeather(weatherUrl("climate_box", 0), unreachable)).toEqual({
       status: "unavailable",
       reason: "connection refused",
     });
-    expect(await loadWeather("climate_box", 600, "cold_spring_day", answered)).toEqual({
+    expect(await loadWeather(weatherUrl("climate_box", 600, "cold_spring_day"), answered)).toEqual({
       status: "loaded",
       weather: WESTERLY,
     });

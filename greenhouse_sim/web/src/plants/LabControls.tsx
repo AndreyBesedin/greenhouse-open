@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
-
-import { describeEnvironment, type EnvironmentsState, loadLabEnvironments } from "./environments";
+import { useLoad } from "../useLoad";
+import {
+  describeEnvironment,
+  loadLabEnvironments,
+  PLANT_LAB_ENVIRONMENTS_URL,
+} from "./environments";
 import { type LabRun, PLANT_LAB_LAST_DAY } from "./lab";
 
 // The choice of no second environment beside the first.
@@ -50,19 +53,7 @@ export function LabControls({
   onSpeed: (speed: GrowthSpeed) => void;
   onShowNames: (showNames: boolean) => void;
 }) {
-  const [environments, setEnvironments] = useState<EnvironmentsState>({ status: "loading" });
-
-  useEffect(() => {
-    let current = true;
-    void loadLabEnvironments().then((loaded) => {
-      if (current) {
-        setEnvironments(loaded);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, []);
+  const environments = useLoad(PLANT_LAB_ENVIRONMENTS_URL, () => loadLabEnvironments());
 
   const known = environments.status === "loaded" ? environments.environments : {};
   const names = Object.keys(known);

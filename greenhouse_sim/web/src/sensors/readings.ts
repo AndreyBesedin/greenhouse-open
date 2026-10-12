@@ -166,11 +166,23 @@ function isTruth(value: unknown): value is SensorTruth {
   );
 }
 
+/** A run's sensors' logs, as the viewer asks for them: a scenario's, under
+ * a run's changes. */
+export interface SensorsRequest {
+  scenarioId: string;
+  run: RunChanges;
+}
+
+/** What names a request for a run's sensors' logs: the observations'
+ * address, which holds every change it asks for. */
+export function sensorsKey({ scenarioId, run }: SensorsRequest): string {
+  return sensorsUrl(scenarioId, "observations", run);
+}
+
 /** Fetches a run's sensors' observations and their truth; every failure
  * becomes a state. */
 export async function loadSensorReadings(
-  scenarioId: string,
-  run: RunChanges,
+  { scenarioId, run }: SensorsRequest,
   fetchFn: typeof fetch = fetch,
 ): Promise<SensorReadingsState> {
   try {

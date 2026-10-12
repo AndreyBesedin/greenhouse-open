@@ -1,9 +1,7 @@
-import { useEffect, useState } from "react";
-
 import { formatValue } from "../readouts";
 import type { Point3 } from "../world";
 import { quantityTitle } from "./display";
-import { loadFieldNames } from "./FieldControls";
+import { useFieldNames } from "./FieldControls";
 import type { EnvironmentField } from "./field";
 import {
   type Difference,
@@ -136,18 +134,7 @@ export function FieldProbes({
   onPlacing: (placing: boolean) => void;
   onHeight: (height: number) => void;
 }) {
-  const [names, setNames] = useState<string[]>([]);
-  useEffect(() => {
-    let current = true;
-    void loadFieldNames(scenarioId, layout).then((loaded) => {
-      if (current) {
-        setNames(loaded.names);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, [scenarioId, layout]);
+  const { names } = useFieldNames(scenarioId, layout);
 
   const compared = compareState.status === "loaded" ? compareState.field : null;
   const full = probes.length >= MAX_PROBES;

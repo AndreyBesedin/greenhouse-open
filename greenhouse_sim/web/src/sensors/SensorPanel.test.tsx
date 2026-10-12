@@ -211,7 +211,7 @@ describe("a selected sensor", () => {
       new Response(
         JSON.stringify(answers[url.includes("/truth") ? "truth" : "observations"]),
       )) as typeof fetch;
-    const state = await loadSensorReadings("climate_box", {}, fetchFn);
+    const state = await loadSensorReadings({ scenarioId: "climate_box", run: {} }, fetchFn);
 
     expect(state).toEqual({ status: "loaded", readings: READINGS });
   });

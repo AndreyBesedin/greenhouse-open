@@ -5,7 +5,7 @@ import type { PresetName, PresetRequest } from "./camera";
 import { CfdBoundaries } from "./cfd/CfdBoundaries";
 import { CfdControls } from "./cfd/CfdControls";
 import { CfdLegend } from "./cfd/CfdLegend";
-import { type CfdGeometryState, cfdGeometryUrl, loadCfdGeometry } from "./cfd/geometry";
+import { cfdGeometryUrl, loadCfdGeometry } from "./cfd/geometry";
 import { DisplayOptions } from "./DisplayOptions";
 import { CategoryLegend } from "./debug/CategoryLegend";
 import { categoriesIn } from "./debug/categories";
@@ -25,23 +25,17 @@ import { FieldLegend } from "./fields/FieldLegend";
 import { FieldProbes } from "./fields/FieldProbes";
 import { FieldSlice } from "./fields/FieldSlice";
 import { FieldStreamlines } from "./fields/FieldStreamlines";
-import { type GlazingState, glazingUrl, loadGlazing, withGlazing } from "./fields/glazing";
-import { HouseAir, type HouseAirState, houseAirUrl, loadHouseAir } from "./fields/HouseAir";
+import { glazingUrl, loadGlazing, withGlazing } from "./fields/glazing";
+import { HouseAir, houseAirUrl, loadHouseAir } from "./fields/HouseAir";
 import {
   loadOpenings,
-  type OpeningsState,
   openingFlowOverlays,
   openingsUrl,
   withOpeningFlows,
 } from "./fields/openingFlows";
-import {
-  loadProbeCharts,
-  ProbeCharts,
-  type ProbeChartsState,
-  probeChartsUrl,
-} from "./fields/ProbeCharts";
+import { loadProbeCharts, ProbeCharts, probeChartsUrl } from "./fields/ProbeCharts";
 import { MAX_PROBES, probeOverlays } from "./fields/probes";
-import { CLIMATE_FIELD, type FieldState, loadField } from "./fields/source";
+import { CLIMATE_FIELD, fetchField, fieldUrl } from "./fields/source";
 import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
@@ -53,14 +47,14 @@ import {
   PLANT_LAB_LAST_DAY,
   PLANT_LAB_POSE,
 } from "./plants/lab";
-import { loadPlantsLight, type PlantsLightState } from "./plants/light";
+import { loadPlantsLight, plantsLightUrl } from "./plants/light";
 import { plantNameOverlays } from "./plants/names";
 import { PlantActions } from "./plants/PlantActions";
 import { PlantLight } from "./plants/PlantLight";
 import { PlantStructure } from "./plants/PlantStructure";
 import { RuleChecks } from "./plants/RuleChecks";
 import type { ViewSample } from "./readouts";
-import { loadScenarios, type ScenariosState } from "./scenarios";
+import { loadScenarios, SCENARIOS_URL } from "./scenarios";
 import { type LiveCommand, sendLiveCommand } from "./scene/live";
 import {
   apiWeather,
@@ -70,7 +64,7 @@ import {
   pairsFrom,
   pairsText,
   type SceneSource,
-  type SceneState,
+  sceneRequest,
   scheduleFrom,
   scheduleText,
   searchFor,
@@ -83,8 +77,9 @@ import { entityOfOrgan, organOf, plantOf, selectedEntity } from "./selection";
 import { CameraFrames } from "./sensors/CameraFrames";
 import { CameraView } from "./sensors/CameraView";
 import { cameraOf, frustumOverlays } from "./sensors/camera";
-import { loadSensorReadings, type SensorReadingsState } from "./sensors/readings";
+import { loadSensorReadings, sensorsKey } from "./sensors/readings";
 import { SensorPanel } from "./sensors/SensorPanel";
+import { useLoad } from "./useLoad";
 import { Viewport } from "./Viewport";
 import { sceneSunlight, sunPathOverlays } from "./weather/sunlight";
 import { WeatherPanel } from "./weather/WeatherPanel";
@@ -92,8 +87,8 @@ import {
   loadWeather,
   loadWeatherDay,
   sunOverlays,
-  type WeatherDayState,
-  type WeatherStateOfLoad,
+  weatherDayUrl,
+  weatherUrl,
   windOverlays,
 } from "./weather/weather";
 import type { Point3 } from "./world";
@@ -105,26 +100,10 @@ const DEFAULT_PROBE_HEIGHT_M = 1;
 const EMPTY_PROBES: Point3[] = [];
 
 export function App({ build = buildInfo }: { build?: BuildInfo }) {
-  const [scenarios, setScenarios] = useState<ScenariosState>({ status: "loading" });
   const [source, setSource] = useState<SceneSource>(() => sourceFromSearch(location.search));
-  const [scene, setScene] = useState<SceneState>({ status: "none" });
-  const [field, setField] = useState<FieldState>({ status: "none" });
-  const [cfd, setCfd] = useState<CfdGeometryState>({ status: "none" });
-  // Another field, compared with the drawn one at the probes; and whether a
-  // click places a probe, and how high.
-  const [compared, setCompared] = useState<FieldState>({ status: "none" });
+  // Whether a click places a probe, and how high.
   const [placingProbes, setPlacingProbes] = useState(false);
   const [playingClimate, setPlayingClimate] = useState(false);
-  const [probeCharts, setProbeCharts] = useState<ProbeChartsState>({ status: "none" });
-  const [houseAir, setHouseAir] = useState<HouseAirState>({ status: "none" });
-  const [glazing, setGlazing] = useState<GlazingState>({ status: "none" });
-  const [openingFlows, setOpeningFlows] = useState<OpeningsState>({ status: "none" });
-  const [sensorReadings, setSensorReadings] = useState<SensorReadingsState>({ status: "none" });
-  // The same sensor through the same run with everything off, to compare.
-  const [offReadings, setOffReadings] = useState<SensorReadingsState>({ status: "none" });
-  const [weather, setWeather] = useState<WeatherStateOfLoad>({ status: "none" });
-  const [weatherDay, setWeatherDay] = useState<WeatherDayState>({ status: "none" });
-  const [plantsLight, setPlantsLight] = useState<PlantsLightState>({ status: "none" });
   // Whether sensors' readings are shown as they err, or as clean ones', for QA.
   const [sensorsImperfect, setSensorsImperfect] = useState(true);
   const [probeHeight, setProbeHeight] = useState(DEFAULT_PROBE_HEIGHT_M);
@@ -147,23 +126,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<GrowthSpeed>(1);
   const [showPlantNames, setShowPlantNames] = useState(false);
-  // Which scenario's scene, or the plant lab's, is on show, so reopening it
-  // does not blank it.
-  const shownView = useRef<string | null>(null);
   const liveScenario = source.kind === "live" ? source.scenarioId : null;
   const live = useLiveScene(liveScenario);
-
-  useEffect(() => {
-    let current = true;
-    void loadScenarios().then((state) => {
-      if (current) {
-        setScenarios(state);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, []);
+  const scenarios = useLoad(SCENARIOS_URL, () => loadScenarios());
 
   // A command answered after the viewer has gone has no feedback to give.
   useEffect(
@@ -173,38 +138,18 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     [],
   );
 
-  useEffect(() => {
-    if (source.kind === "live") {
-      return;
-    }
-    let current = true;
-    // A scenario reopened by its sliders, or the plant lab on another day,
-    // keeps its scene on show until the next arrives; any other change of
-    // scene starts from loading.
-    const view =
+  // A scenario reopened by its sliders, or the plant lab on another day,
+  // keeps its scene on show until the next arrives; any other change of
+  // scene starts from loading.
+  const sceneAsked = sceneRequest(source);
+  const scene = useLoad(sceneAsked, () => loadScene(source), {
+    group:
       source.kind === "scenario"
         ? `scenario ${source.scenarioId}`
         : source.kind === "plants"
           ? "plants"
-          : null;
-    const sameView = view !== null && view === shownView.current;
-    shownView.current = view;
-    setScene((previous) =>
-      source.kind === "reference"
-        ? { status: "none" }
-        : sameView && previous.status === "loaded"
-          ? previous
-          : { status: "loading" },
-    );
-    void loadScene(source).then((state) => {
-      if (current) {
-        setScene(state);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, [source]);
+          : (sceneAsked ?? ""),
+  });
 
   // The scenario's field, drawn over its scene, loaded whenever another is
   // chosen; the last one stays on show until the next arrives.
@@ -235,118 +180,50 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
           fieldSchedule,
         ].join("|")
       : null;
-  useEffect(() => {
-    if (fieldScenario === null || fieldName === null) {
-      setField({ status: "none" });
-      return;
-    }
-    const run = climateRun;
-    let current = true;
-    setField((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
-    const changes = {
-      layout: fieldLayout,
-      levels: pairsFrom(fieldLevels) ?? {},
-      openings: pairsFrom(fieldOpenings) ?? {},
-      schedule: scheduleFrom(fieldSchedule) ?? [],
-      time: fieldTime,
-      weather: fieldWeather,
-    };
-    void loadField(fieldScenario, fieldName, changes).then((state) => {
-      if (current) {
-        setField(state);
-        if (run !== null && state.status === "loaded") {
-          setHeldRanges((held) => heldThrough(held, run, state.field));
+  // The run's changes to its scenario, which its fields and sensors are
+  // asked for under.
+  const fieldChanges = {
+    layout: fieldLayout,
+    levels: pairsFrom(fieldLevels) ?? {},
+    openings: pairsFrom(fieldOpenings) ?? {},
+    schedule: scheduleFrom(fieldSchedule) ?? [],
+    time: fieldTime,
+    weather: fieldWeather,
+  };
+  const field = useLoad(
+    fieldScenario === null || fieldName === null
+      ? null
+      : fieldUrl(fieldScenario, fieldName, fieldChanges),
+    fetchField,
+    {
+      onAnswer: (state) => {
+        if (climateRun !== null && state.status === "loaded") {
+          setHeldRanges((held) => heldThrough(held, climateRun, state.field));
         }
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, [
-    fieldScenario,
-    fieldName,
-    fieldLayout,
-    fieldLevels,
-    fieldOpenings,
-    fieldSchedule,
-    fieldTime,
-    fieldWeather,
-    climateRun,
-  ]);
+      },
+    },
+  );
 
-  // The weather outside a scenario at the moment drawn; the last stays on
-  // show until the next arrives.
+  // The weather outside a scenario at the moment drawn, and through the runs'
+  // first day, for its chart.
   const weatherScenario = source.kind === "scenario" ? source.scenarioId : null;
-  useEffect(() => {
-    if (weatherScenario === null) {
-      setWeather({ status: "none" });
-      return;
-    }
-    let current = true;
-    setWeather((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
-    void loadWeather(weatherScenario, fieldTime, fieldWeather).then((state) => {
-      if (current) {
-        setWeather(state);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, [weatherScenario, fieldTime, fieldWeather]);
-
-  // The weather through the runs' first day, for its chart.
-  useEffect(() => {
-    if (weatherScenario === null) {
-      setWeatherDay({ status: "none" });
-      return;
-    }
-    let current = true;
-    setWeatherDay((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
-    void loadWeatherDay(weatherScenario, fieldWeather).then((state) => {
-      if (current) {
-        setWeatherDay(state);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, [weatherScenario, fieldWeather]);
+  const weather = useLoad(
+    weatherScenario === null ? null : weatherUrl(weatherScenario, fieldTime, fieldWeather),
+    loadWeather,
+  );
+  const weatherDay = useLoad(
+    weatherScenario === null ? null : weatherDayUrl(weatherScenario, fieldWeather),
+    loadWeatherDay,
+  );
 
   // The field compared with the drawn one, loaded as the drawn one is.
   const compareName = source.kind === "scenario" ? (source.compare ?? null) : null;
-  useEffect(() => {
-    if (fieldScenario === null || compareName === null) {
-      setCompared({ status: "none" });
-      return;
-    }
-    let current = true;
-    setCompared((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
-    const changes = {
-      layout: fieldLayout,
-      levels: pairsFrom(fieldLevels) ?? {},
-      openings: pairsFrom(fieldOpenings) ?? {},
-      schedule: scheduleFrom(fieldSchedule) ?? [],
-      time: fieldTime,
-      weather: fieldWeather,
-    };
-    void loadField(fieldScenario, compareName, changes).then((state) => {
-      if (current) {
-        setCompared(state);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, [
-    fieldScenario,
-    compareName,
-    fieldLayout,
-    fieldLevels,
-    fieldOpenings,
-    fieldSchedule,
-    fieldTime,
-    fieldWeather,
-  ]);
+  const compared = useLoad(
+    fieldScenario === null || compareName === null
+      ? null
+      : fieldUrl(fieldScenario, compareName, fieldChanges),
+    fetchField,
+  );
 
   // What the probes read through the climate run drawn, and through the
   // same run all off, up to the moment drawn; the last stays on show until
@@ -358,22 +235,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     source.probes.length > 0
       ? probeChartsUrl(source.scenarioId, { ...source, probes: source.probes })
       : null;
-  useEffect(() => {
-    if (chartsUrl === null) {
-      setProbeCharts({ status: "none" });
-      return;
-    }
-    let current = true;
-    setProbeCharts((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
-    void loadProbeCharts(chartsUrl).then((state) => {
-      if (current) {
-        setProbeCharts(state);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, [chartsUrl]);
+  const probeCharts = useLoad(chartsUrl, loadProbeCharts);
 
   // The house's air as one volume through the climate run drawn, and the
   // same run all off, up to the moment drawn; the last stays on show until
@@ -382,22 +244,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     source.kind === "scenario" && source.field === CLIMATE_FIELD
       ? houseAirUrl(source.scenarioId, source)
       : null;
-  useEffect(() => {
-    if (houseUrl === null) {
-      setHouseAir({ status: "none" });
-      return;
-    }
-    let current = true;
-    setHouseAir((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
-    void loadHouseAir(houseUrl).then((state) => {
-      if (current) {
-        setHouseAir(state);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, [houseUrl]);
+  const houseAir = useLoad(houseUrl, loadHouseAir);
 
   // The glazing at the moment drawn, each wall's and roof slope's
   // temperature, for "Colour by"; the last stays on show until the next
@@ -406,22 +253,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     source.kind === "scenario" && source.field === CLIMATE_FIELD
       ? glazingUrl(source.scenarioId, source)
       : null;
-  useEffect(() => {
-    if (glassUrl === null) {
-      setGlazing({ status: "none" });
-      return;
-    }
-    let current = true;
-    setGlazing((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
-    void loadGlazing(glassUrl).then((state) => {
-      if (current) {
-        setGlazing(state);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, [glassUrl]);
+  const glazing = useLoad(glassUrl, loadGlazing);
 
   // What the open doors and vents pass at the moment drawn, for "Colour by"
   // and their arrows; the last stays on show until the next arrives.
@@ -429,24 +261,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     source.kind === "scenario" && source.field === CLIMATE_FIELD
       ? openingsUrl(source.scenarioId, source)
       : null;
-  useEffect(() => {
-    if (flowsUrl === null) {
-      setOpeningFlows({ status: "none" });
-      return;
-    }
-    let current = true;
-    setOpeningFlows((previous) =>
-      previous.status === "loaded" ? previous : { status: "loading" },
-    );
-    void loadOpenings(flowsUrl).then((state) => {
-      if (current) {
-        setOpeningFlows(state);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, [flowsUrl]);
+  const openingFlows = useLoad(flowsUrl, loadOpenings);
 
   // The boundaries a CFD solver is given, changed as the scene is, drawn
   // over it when asked for; the last stays on show until the next arrives.
@@ -455,22 +270,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     source.kind === "scenario" && source.cfdBoundaries
       ? cfdGeometryUrl(source.scenarioId, changesQuery({ ...source, levels: {} }, "?"))
       : null;
-  useEffect(() => {
-    if (cfdUrl === null) {
-      setCfd({ status: "none" });
-      return;
-    }
-    let current = true;
-    setCfd((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
-    void loadCfdGeometry(cfdUrl).then((state) => {
-      if (current) {
-        setCfd(state);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, [cfdUrl]);
+  const cfd = useLoad(cfdUrl, loadCfdGeometry);
 
   function setScenarioSource(next: SceneSource): void {
     history.replaceState(null, "", `${location.pathname}${searchFor(next)}`);
@@ -681,96 +481,44 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     source.kind === "scenario" && source.field === CLIMATE_FIELD && selected?.kind === "PLANT"
       ? source.scenarioId
       : null;
-  useEffect(() => {
-    if (lightScenario === null) {
-      setPlantsLight({ status: "none" });
-      return;
-    }
-    let current = true;
-    setPlantsLight((previous) => (previous.status === "loaded" ? previous : { status: "loading" }));
-    void loadPlantsLight(lightScenario, fieldTime, fieldWeather, fieldLayout).then((state) => {
-      if (current) {
-        setPlantsLight(state);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, [lightScenario, fieldTime, fieldWeather, fieldLayout]);
+  const plantsLight = useLoad(
+    lightScenario === null
+      ? null
+      : plantsLightUrl(lightScenario, fieldTime, fieldWeather, fieldLayout),
+    loadPlantsLight,
+  );
   const selectedCamera = selected === null ? null : cameraOf(selected);
 
   // The run's observation log up to the moment drawn, and what its sensors
   // truly sampled, while a sensor or a camera is selected.
   const sensorSelected = selected?.kind === "SENSOR" || selected?.kind === "CAMERA";
-  useEffect(() => {
-    if (!sensorSelected || fieldScenario === null) {
-      setSensorReadings({ status: "none" });
-      return;
-    }
-    let current = true;
-    setSensorReadings((previous) =>
-      previous.status === "loaded" ? previous : { status: "loading" },
-    );
-    void loadSensorReadings(fieldScenario, {
-      layout: fieldLayout,
-      levels: pairsFrom(fieldLevels) ?? {},
-      openings: pairsFrom(fieldOpenings) ?? {},
-      schedule: scheduleFrom(fieldSchedule) ?? [],
-      time: fieldTime,
-      clean: !sensorsImperfect,
-      weather: fieldWeather,
-    }).then((state) => {
-      if (current) {
-        setSensorReadings(state);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, [
-    sensorSelected,
-    fieldScenario,
-    fieldLayout,
-    fieldLevels,
-    fieldOpenings,
-    fieldSchedule,
-    fieldTime,
-    fieldWeather,
-    sensorsImperfect,
-  ]);
+  const sensorScenario = sensorSelected ? fieldScenario : null;
+  const sensorReadings = useLoad(
+    sensorScenario === null
+      ? null
+      : { scenarioId: sensorScenario, run: { ...fieldChanges, clean: !sensorsImperfect } },
+    loadSensorReadings,
+    { key: sensorsKey },
+  );
 
   // What the sensors read through the same run all off, when something runs.
   const runsSomething = fieldLevels !== "" || fieldSchedule !== "";
-  useEffect(() => {
-    if (!sensorSelected || fieldScenario === null || !runsSomething) {
-      setOffReadings({ status: "none" });
-      return;
-    }
-    let current = true;
-    void loadSensorReadings(fieldScenario, {
-      layout: fieldLayout,
-      openings: pairsFrom(fieldOpenings) ?? {},
-      time: fieldTime,
-      clean: !sensorsImperfect,
-      weather: fieldWeather,
-    }).then((state) => {
-      if (current) {
-        setOffReadings(state);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, [
-    sensorSelected,
-    runsSomething,
-    fieldScenario,
-    fieldLayout,
-    fieldOpenings,
-    fieldTime,
-    fieldWeather,
-    sensorsImperfect,
-  ]);
+  const offReadings = useLoad(
+    sensorScenario === null || !runsSomething
+      ? null
+      : {
+          scenarioId: sensorScenario,
+          run: {
+            layout: fieldLayout,
+            openings: fieldChanges.openings,
+            time: fieldTime,
+            clean: !sensorsImperfect,
+            weather: fieldWeather,
+          },
+        },
+    loadSensorReadings,
+    { key: sensorsKey },
+  );
 
   const showingNames = source.kind === "plants" && showPlantNames;
   const probes = source.kind === "scenario" ? (source.probes ?? EMPTY_PROBES) : EMPTY_PROBES;

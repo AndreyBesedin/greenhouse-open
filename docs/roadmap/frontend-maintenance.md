@@ -61,12 +61,12 @@ architecture and improve specific weaknesses rather than rewrite it.
 | --- | --- | --- | --- |
 | FE-AUDIT.1 | Obsolete command responses change another source's feedback | Medium | Addressed in this follow-up |
 | FE-AUDIT.2 | Floating panels overlap in smaller windows | Medium | Addressed in this follow-up |
-| FE-AUDIT.3 | React hook and async lifecycle coverage is thin | Medium | Planned, after P07 |
+| FE-AUDIT.3 | React hook and async lifecycle coverage is thin | Medium | Addressed in the maintenance window, step 3 |
 | FE-AUDIT.4 | Coverage is neither measured nor enforced | Medium | Planned, after P07 |
 | FE-AUDIT.5 | Local browser tests can reuse stale servers | Medium | Addressed in the maintenance window, step 2 |
 | FE-AUDIT.6 | API bind failure masks the original exception | Medium | Addressed in the maintenance window, step 1 |
 | FE-AUDIT.7 | Small organizational, test-quality and telemetry improvements | Medium | Planned, general refactoring after P07 |
-| FE-AUDIT.8 | Every load is written out by hand | Medium | Second audit; planned with FE-AUDIT.3 |
+| FE-AUDIT.8 | Every load is written out by hand | Medium | Second audit; addressed in step 3 |
 | FE-AUDIT.9 | The address is written in six places | Medium | Second audit; planned before P09 |
 | FE-AUDIT.10 | A climate run's request is assembled three times | Medium | Second audit; planned before P09 |
 | FE-AUDIT.11 | `App` draws every panel itself | Medium | Second audit; planned with FE-AUDIT.7 |
@@ -126,6 +126,16 @@ Acceptance:
 - Prefer mounted hook/component tests with controlled EventSource, fetch and
   timers where they explain the failure better than a full-stack walkthrough.
 - Retain focused browser checks of integration with the real simulator.
+
+Addressed in step 3 of the maintenance window, with FE-AUDIT.8. Test files
+that mount a hook run in jsdom (decision 0029), through
+`src/testing/renderHook.tsx`. `scene/useLiveScene.test.tsx` drives a stand-in
+`EventSource` and fake timers through switching streams, a retry that waits
+a second and one the browser keeps, refused frames followed by good ones,
+and clean-up of the stream and a waiting retry, on unmount and on a change
+of scenario. The delayed and reordered answers are tested once, on the hook
+that now owns them (`useLoad.test.tsx`). The browser checks stay as they
+were.
 
 ### FE-AUDIT.4: Establish meaningful coverage reporting
 
@@ -245,10 +255,10 @@ extended in place.
 
 ### The first audit's findings, now
 
-- **FE-AUDIT.3** is open, and wider. `useLiveScene` still has no lifecycle
+- **FE-AUDIT.3** was open, and wider. `useLiveScene` still has no lifecycle
   tests, and the guard against a stale answer, tested nowhere, is now
   written out fourteen times in `App` and in eight components
-  (FE-AUDIT.8).
+  (FE-AUDIT.8). Step 3 addresses both.
 - **FE-AUDIT.4** is open: no coverage is configured.
 - **FE-AUDIT.5** was open. The browser and screenshot configurations reused
   a running server outside CI, and the benchmark's always did. Local runs
@@ -276,6 +286,25 @@ Acceptance:
 - One hook owns loading, keeping the last answer on show and dropping stale
   answers, and is tested mounted, as FE-AUDIT.3 asks.
 - `App` and the components use it; their effects become a call each.
+
+Addressed in step 3. `useLoad(request, load)` owns loading, keeping a loaded
+answer on show while the next loads, and dropping an answer that arrives
+after its request has changed or its component has gone. A request is the
+address it fetches, so a load is asked again exactly when that changes;
+loaders that took their parts now take their address. `App`'s fourteen
+loads, and those of the field controls, the probes, the plant lab's panels
+and the QA pages, are a call each. `App` is 867 lines. Two differences can
+be seen, both after a failure or on a change that asks for nothing new:
+
+- after an answer that did not load, a new request shows loading rather
+  than the old failure, in the plant lab's structure and checks too, as it
+  already did in `App`;
+- a scene is no longer asked for again when only something outside its
+  address changes, such as a climate run's moment or the field drawn.
+
+The two field panels share `useFieldNames` in place of two copies of the
+same effect. Each still asks for the scenario's fields itself; asking once
+belongs with FE-AUDIT.11's panels.
 
 ### FE-AUDIT.9: The address is written in six places
 
