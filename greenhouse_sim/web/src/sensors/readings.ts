@@ -94,7 +94,7 @@ export function sensorsUrl(
   run: RunChanges,
 ): string {
   return scenarioUrl(scenarioId, `climate/${what}`, [
-    ...runParameters(run, ["layout", "levels", "openings", "schedule", "time"]),
+    ...runParameters(run, ["layout", "levels", "openings", "schedule", "daily", "time"]),
     ...(what === "observations" && run.clean === true ? ["clean=1"] : []),
     ...runParameters(run, ["weather"]),
   ]);

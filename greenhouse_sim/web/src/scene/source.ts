@@ -1,4 +1,5 @@
 import type { CameraPose } from "../camera";
+import { DAY_S } from "../clock";
 import { type FieldView, fieldViewFrom, type Slice, sliceFrom, sliceText } from "../fields/display";
 import { probesFrom, probesText } from "../fields/probes";
 import {
@@ -53,6 +54,9 @@ export type SceneSource =
       /** Commands to its equipment after the start of its climate run, in
        * the order given: its schedule and the overrides made. */
       schedule?: ScheduledCommand[];
+      /** Commands at a time of day, every day of its climate run, each
+       * `timeS` its time of day, in the order given (P09.2). */
+      daily?: ScheduledCommand[];
       /** Another of its fields, compared with the drawn one at the probes. */
       compare?: string;
       /** Points the drawn field is read at. */
@@ -113,6 +117,7 @@ export function sourceFromSearch(search: string): SceneSource {
     const compare = parameters.get("compare");
     const time = timeFrom(parameters.get("t"));
     const schedule = scheduleFrom(parameters.get("schedule"));
+    const daily = scheduleFrom(parameters.get("daily"));
     const probes = probesFrom(parameters.get("probes"));
     const camera = cameraFrom(parameters.get("camera"));
     return {
@@ -126,6 +131,7 @@ export function sourceFromSearch(search: string): SceneSource {
       ...(field && slice ? { slice } : {}),
       ...(field && time !== null ? { time } : {}),
       ...(field && schedule !== null ? { schedule } : {}),
+      ...(field && daily !== null ? { daily } : {}),
       ...(field && compare && compare !== field ? { compare } : {}),
       ...(field && probes ? { probes } : {}),
       ...(parameters.get("cfd") === CFD_BOUNDARIES ? { cfdBoundaries: true as const } : {}),
@@ -228,6 +234,7 @@ function fieldQuery(source: {
   slice?: Slice;
   time?: number;
   schedule?: ScheduledCommand[];
+  daily?: ScheduledCommand[];
   compare?: string;
   probes?: Point3[];
 }): string {
@@ -242,6 +249,9 @@ function fieldQuery(source: {
     source.schedule === undefined || source.schedule.length === 0
       ? ""
       : `&schedule=${scheduleText(source.schedule)}`,
+    source.daily === undefined || source.daily.length === 0
+      ? ""
+      : `&daily=${scheduleText(source.daily)}`,
     source.compare === undefined ? "" : `&compare=${encodeURIComponent(source.compare)}`,
     source.probes === undefined || source.probes.length === 0
       ? ""
@@ -309,17 +319,31 @@ export function scheduleFrom(value: string | null): ScheduledCommand[] | null {
   return commands;
 }
 
+/** A daily command's latest moment by `now`, in seconds into the run, or
+ * null if its time of day has not yet come on the run's first day. */
+export function latestDaily(command: ScheduledCommand, now: number): number | null {
+  return now < command.timeS
+    ? null
+    : Math.floor((now - command.timeS) / DAY_S) * DAY_S + command.timeS;
+}
+
 /** A scenario's equipment's levels at the moment of its climate run drawn:
  * those set from the start, then its commands up to that moment, in time
- * order, the later winning at a moment. */
+ * order, the later winning at a moment; its daily commands at a moment
+ * before the others then, as the simulator applies them. */
 export function levelsAt(source: {
   levels?: Readonly<Record<string, number>>;
   schedule?: readonly ScheduledCommand[];
+  daily?: readonly ScheduledCommand[];
   time?: number;
 }): Record<string, number> {
   const now = source.time ?? 0;
   const levels: Record<string, number> = { ...(source.levels ?? {}) };
-  const applied = (source.schedule ?? [])
+  const daily = (source.daily ?? []).flatMap((command) => {
+    const timeS = latestDaily(command, now);
+    return timeS === null ? [] : [{ ...command, timeS }];
+  });
+  const applied = [...daily, ...(source.schedule ?? [])]
     .map((command, order) => ({ command, order }))
     .filter(({ command }) => command.timeS <= now)
     .sort((a, b) => a.command.timeS - b.command.timeS || a.order - b.order);

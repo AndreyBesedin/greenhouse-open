@@ -297,6 +297,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             ...sensorRun,
             levels: undefined,
             schedule: undefined,
+            daily: undefined,
             clean: !sensorsImperfect,
           },
         },

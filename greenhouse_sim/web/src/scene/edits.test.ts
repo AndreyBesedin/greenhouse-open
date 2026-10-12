@@ -10,7 +10,9 @@ import {
   withFieldView,
   withLevels,
   withoutCommand,
+  withoutDaily,
   withProbes,
+  withRepeated,
   withTime,
   withWeather,
 } from "./edits";
@@ -83,6 +85,21 @@ describe("changing a scenario's source from its panels", () => {
     expect(withWeather(withWeather(source, "cold_spring_day"), undefined)).toEqual(source);
     expect(withClouds(withClouds(source, 80), undefined)).toEqual(source);
     expect(withTime(withTime(source, 600), 0)).toEqual(source);
+  });
+
+  it("repeats a command every day at its time of day, and takes a daily one out", () => {
+    const source = scenario(
+      "?scenario=climate_box&field=climate&schedule=60:fan:1,151200:heater:1&daily=25200:heater:0",
+    );
+    const repeated = withRepeated(source, 1);
+
+    expect(repeated.schedule).toEqual([{ timeS: 60, actuatorId: "fan", level: 1 }]);
+    expect(repeated.daily).toEqual([
+      { timeS: 25200, actuatorId: "heater", level: 0 },
+      { timeS: 64800, actuatorId: "heater", level: 1 },
+    ]);
+    expect(withoutDaily(withoutDaily(repeated, 0), 0).daily).toBeUndefined();
+    expect(withRepeated(source, 5)).toBe(source);
   });
 
   it("slices the field where it was sliced, or across its middle", () => {

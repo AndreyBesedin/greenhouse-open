@@ -1,3 +1,4 @@
+import { DAY_S } from "../clock";
 import type { FieldView, Slice } from "../fields/display";
 import { defaultSlice } from "../fields/drawing";
 import type { EnvironmentField } from "../fields/field";
@@ -106,4 +107,23 @@ export function withoutCommand(source: ScenarioSource, index: number): ScenarioS
   const { schedule: _, ...rest } = source;
   const schedule = (source.schedule ?? []).filter((__, at) => at !== index);
   return schedule.length === 0 ? rest : { ...rest, schedule };
+}
+
+/** Its daily commands without one of them, none left out when none are
+ * left. */
+export function withoutDaily(source: ScenarioSource, index: number): ScenarioSource {
+  const { daily: _, ...rest } = source;
+  const daily = (source.daily ?? []).filter((__, at) => at !== index);
+  return daily.length === 0 ? rest : { ...rest, daily };
+}
+
+/** One of its commands repeated every day, at its time of day, in place of
+ * the one command: the last of its daily commands. */
+export function withRepeated(source: ScenarioSource, index: number): ScenarioSource {
+  const command = source.schedule?.[index];
+  if (command === undefined) {
+    return source;
+  }
+  const repeated = { ...command, timeS: command.timeS % DAY_S };
+  return { ...withoutCommand(source, index), daily: [...(source.daily ?? []), repeated] };
 }

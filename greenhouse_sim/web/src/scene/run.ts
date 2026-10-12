@@ -17,6 +17,8 @@ export interface RunParts {
   openings?: Readonly<Record<string, number>> | undefined;
   /** Commands to its equipment after the start. */
   schedule?: readonly ScheduledCommand[] | undefined;
+  /** Commands at a time of day, every day of the run. */
+  daily?: readonly ScheduledCommand[] | undefined;
   /** Seconds into the climate run. */
   time?: number | undefined;
   /** Another weather the run is under, a preset's by name, its clouds
@@ -37,6 +39,7 @@ export const CLIMATE_PARTS: readonly RunPart[] = [
   "levels",
   "openings",
   "schedule",
+  "daily",
   "time",
   "weather",
 ];
@@ -50,19 +53,21 @@ export function scenarioRun(source: Extract<SceneSource, { kind: "scenario" }>):
     levels: source.levels,
     openings: source.openings,
     schedule: source.schedule,
+    daily: source.daily,
     time: source.time,
     weather: apiWeather(source.weather, source.clouds),
   };
 }
 
 /** A run's parts as a route's query takes them, in this order: `layout=`,
- * `set=`, `open=`, `schedule=`, `t=` and `weather=`. A part not given, or
+ * `set=`, `open=`, `schedule=`, `daily=`, `t=` and `weather=`. A part not given, or
  * not among `parts`, is left out, and so is the run's start, `t=0`. */
 export function runParameters(run: RunParts, parts: readonly RunPart[] = CLIMATE_PARTS): string[] {
   const asked = new Set(parts);
   const levels = asked.has("levels") ? pairsText(run.levels) : "";
   const openings = asked.has("openings") ? pairsText(run.openings) : "";
   const schedule = asked.has("schedule") ? scheduleText(run.schedule) : "";
+  const daily = asked.has("daily") ? scheduleText(run.daily) : "";
   const time = asked.has("time") && run.time !== undefined && run.time > 0 ? run.time : null;
   return [
     ...(asked.has("layout") && run.layout !== undefined
@@ -71,6 +76,7 @@ export function runParameters(run: RunParts, parts: readonly RunPart[] = CLIMATE
     ...(levels === "" ? [] : [`set=${levels}`]),
     ...(openings === "" ? [] : [`open=${openings}`]),
     ...(schedule === "" ? [] : [`schedule=${schedule}`]),
+    ...(daily === "" ? [] : [`daily=${daily}`]),
     ...(time === null ? [] : [`t=${time}`]),
     ...(asked.has("weather") ? weatherParameter(run.weather) : []),
   ];
@@ -89,7 +95,11 @@ export function runApartFromItsMoment(run: ScenarioRun): string {
 }
 
 /** Whether the run's equipment does anything: levels from the start, or
- * commands after it. */
+ * commands after it, once or every day. */
 export function runsSomething(run: RunParts): boolean {
-  return pairsText(run.levels) !== "" || scheduleText(run.schedule) !== "";
+  return (
+    pairsText(run.levels) !== "" ||
+    scheduleText(run.schedule) !== "" ||
+    scheduleText(run.daily) !== ""
+  );
 }
