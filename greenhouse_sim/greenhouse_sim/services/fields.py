@@ -39,7 +39,7 @@ from greenhouse_sim.airflow.prescribed import PATTERNS
 from greenhouse_sim.cfd.geometry import CfdGeometry, cfd_geometry
 from greenhouse_sim.cfd.results import CfdAirflow, kept_result
 from greenhouse_sim.climate.commands import Command, Schedule
-from greenhouse_sim.climate.day import LONGEST_RUN_S, ClimateDay, window_start
+from greenhouse_sim.climate.day import ClimateDay, window_start
 from greenhouse_sim.climate.glazing import GlazingAt, glazed_cells
 from greenhouse_sim.climate.house import HouseTrace, house_trace
 from greenhouse_sim.climate.openings import OpeningsAt, opening_sites
@@ -52,6 +52,7 @@ from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.grid import air_grid
+from greenhouse_sim.services.runs import checked_moment, checked_window
 from greenhouse_sim.services.scenarios import (
     DEFAULT_WEATHER,
     SceneChanges,
@@ -97,11 +98,11 @@ def _checked(config: ScenarioConfig, commands: Sequence[Commanded]) -> tuple[Com
                 raise InvalidRequest(f"a level runs from 0 to 1: {actuator}")
             continue
         equipment_levels(config, {actuator: level})
-    outside = sorted({f"{time:g}" for time, _, _ in commands if not 0.0 <= time <= LONGEST_RUN_S})
+    length = config.run_length_s()
+    outside = sorted({f"{time:.15g}" for time, _, _ in commands if not 0.0 <= time <= length})
     if outside:
         raise InvalidRequest(
-            f"a command's moment lies within the run, 0 to {LONGEST_RUN_S:g} s: "
-            + ", ".join(outside)
+            f"a command's moment lies within the run, 0 to {length:.15g} s: " + ", ".join(outside)
         )
     return tuple(commands)
 
@@ -319,8 +320,7 @@ def field(
     equipment it does not have, or outside 0 to 1, is refused, as are an
     opening it does not have and a moment outside a run; a weather there is
     not is not found."""
-    if not 0.0 <= time_s <= LONGEST_RUN_S:
-        raise InvalidRequest(f"a climate run lasts from 0 to {LONGEST_RUN_S:g} s, not {time_s:g}")
+    checked_moment(scenario(scenario_id), time_s)
     models = _models(
         scenario_id,
         layout or DEFAULT_LAYOUT,
@@ -351,8 +351,7 @@ def climate_probes(
     and of the same run with everything off,
     its doors and vents as asked. Asked as its climate field is, and refused
     as it is; a probe outside the house's air is refused too."""
-    if not 0.0 <= until_s <= LONGEST_RUN_S:
-        raise InvalidRequest(f"a climate run lasts from 0 to {LONGEST_RUN_S:g} s, not {until_s:g}")
+    checked_moment(scenario(scenario_id), until_s)
     name = layout or DEFAULT_LAYOUT
     models = _models(scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER)
     climate = models.get(CLIMATE)
@@ -391,13 +390,14 @@ def house_air(
     commands: Sequence[Commanded] = (),
     until_s: float = 0.0,
     weather: str | None = None,
+    from_s: float | None = None,
 ) -> HouseTrace:
     """The house's air as one well-mixed volume (`greenhouse_sim.climate.house`)
-    every `PROBE_EVERY_S` up to `until_s` of a scenario's climate run, and of
-    the same run with everything off. Asked as its climate field is, and
-    refused as it is."""
-    if not 0.0 <= until_s <= LONGEST_RUN_S:
-        raise InvalidRequest(f"a climate run lasts from 0 to {LONGEST_RUN_S:g} s, not {until_s:g}")
+    every `PROBE_EVERY_S` from `from_s`, by default the start of the day
+    `until_s` belongs to (`services.runs`), to `until_s` of a scenario's
+    climate run, and of the same run with everything off. Asked as its
+    climate field is, and refused as it is."""
+    first = checked_window(scenario(scenario_id), from_s, until_s)
     name = layout or DEFAULT_LAYOUT
     models = _models(scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER)
     climate = models.get(CLIMATE)
@@ -407,7 +407,7 @@ def house_air(
     return house_trace(
         _climate_day(*climate.key).house,
         _climate_day(key_scenario, key_layout, key_weather, (), key_openings, ()).house,
-        _moments(until_s),
+        _moments(until_s, first),
     )
 
 
@@ -424,8 +424,7 @@ def glazing(
     (`greenhouse_sim.climate.glazing`): each wall's and roof slope's air,
     temperature and heat passed. Asked as its climate field is, and refused
     as it is."""
-    if not 0.0 <= time_s <= LONGEST_RUN_S:
-        raise InvalidRequest(f"a climate run lasts from 0 to {LONGEST_RUN_S:g} s, not {time_s:g}")
+    checked_moment(scenario(scenario_id), time_s)
     name = layout or DEFAULT_LAYOUT
     models = _models(scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER)
     climate = models.get(CLIMATE)
@@ -447,8 +446,7 @@ def openings(
     climate run, as the wind and the stack drive them
     (`greenhouse_sim.climate.openings`). Asked as its climate field is, and
     refused as it is."""
-    if not 0.0 <= time_s <= LONGEST_RUN_S:
-        raise InvalidRequest(f"a climate run lasts from 0 to {LONGEST_RUN_S:g} s, not {time_s:g}")
+    checked_moment(scenario(scenario_id), time_s)
     name = layout or DEFAULT_LAYOUT
     models = _models(scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER)
     climate = models.get(CLIMATE)

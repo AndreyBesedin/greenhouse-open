@@ -83,8 +83,11 @@ def test_the_same_schedule_replays_to_the_same_air() -> None:
     [
         ("?schedule=60:boiler:1", "climate_box has no equipment 'boiler'"),
         ("?schedule=60:fan:2,120:fan:1", "a level runs from 0 to 1: fan"),
-        ("?schedule=90000:fan:1", "a command's moment lies within the run, 0 to 86400 s: 90000"),
-        ("?schedule=-1:fan:1", "a command's moment lies within the run, 0 to 86400 s: -1"),
+        (
+            "?schedule=1300000:fan:1",
+            "a command's moment lies within the run, 0 to 1209600 s: 1300000",
+        ),
+        ("?schedule=-1:fan:1", "a command's moment lies within the run, 0 to 1209600 s: -1"),
         (
             "?schedule=soon:fan:1",
             "schedule wants seconds:actuator:level commands, not 'soon:fan:1'",

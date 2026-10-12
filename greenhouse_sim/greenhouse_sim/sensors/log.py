@@ -25,6 +25,7 @@ no stored capture. A frame's instance pass is the simulator's truth, which
 no camera records, and it stays out of the log.
 """
 
+import math
 from collections.abc import Collection, Sequence
 from datetime import datetime, timedelta
 from enum import StrEnum
@@ -32,12 +33,11 @@ from typing import Final
 
 from greenhouse_protocol.enums import CaptureModality, SourceType
 from greenhouse_protocol.media import CameraFrame, CameraPose
-from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.provenance import RecordSource
 from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.records import observation_id
-from greenhouse_sim.sensors.air import samples
+from greenhouse_sim.sensors.air import drops, sample_index, samples
 from greenhouse_sim.world.sensors import Camera, PointSensor
 
 # What each of a camera's frames holds.
@@ -77,7 +77,21 @@ def due(sensor: PointSensor, until_s: float, latency_s: float) -> float | None:
     seconds from the run's start; None if none is due yet."""
     if until_s < latency_s:
         return None
-    return samples(sensor, until_s - latency_s)[-1]
+    return math.floor((until_s - latency_s) / sensor.cadence_s) * sensor.cadence_s
+
+
+def latest_delivered(
+    sensor: PointSensor, until_s: float, latency_s: float, seed: int, clean: bool
+) -> float | None:
+    """When the latest reading a sensor delivered by `until_s` was taken: the
+    latest due that did not drop out (`drops`), found without the air it
+    read, so that a moment late in a run needs none of the readings before
+    it; None if none has been delivered."""
+    moment = due(sensor, until_s, latency_s)
+    while moment is not None and not clean and drops(sensor, sample_index(sensor, moment), seed):
+        earlier = moment - sensor.cadence_s
+        moment = earlier if earlier >= 0 else None
+    return moment
 
 
 def _state(due_at: datetime | None, latest_at: datetime | None, available: bool) -> Freshness:
@@ -92,28 +106,24 @@ def _state(due_at: datetime | None, latest_at: datetime | None, available: bool)
 
 def freshness(
     sensors: Sequence[PointSensor],
-    observations: Sequence[Observation],
     until_s: float,
     *,
     start: datetime,
+    seed: int,
     unavailable: Collection[str] = (),
     clean: bool = False,
 ) -> list[SensorFreshness]:
-    """Each sensor's freshness at `until_s`, from its `observations`
-    delivered by then; `unavailable` names the sensors whose quantity
-    nothing in the run gives. Readings are a clean sensor's, on time, if
-    `clean`."""
-    latest: dict[str, datetime] = {}
-    for observation in observations:
-        if observation.sensor_id is not None:
-            known = latest.get(observation.sensor_id, observation.timestamp)
-            latest[observation.sensor_id] = max(known, observation.timestamp)
+    """Each sensor's freshness at `until_s`, from the readings it delivered
+    by then (`latest_delivered`), its draws seeded by `seed`; `unavailable`
+    names the sensors whose quantity nothing in the run gives. Readings are
+    a clean sensor's, on time, if `clean`."""
     states = []
     for sensor in sensors:
         latency = 0.0 if clean else sensor.imperfections.latency_s
         moment = due(sensor, until_s, latency)
         due_at = None if moment is None else start + timedelta(seconds=moment)
-        latest_at = latest.get(sensor.sensor_id)
+        delivered = latest_delivered(sensor, until_s, latency, seed, clean)
+        latest_at = None if delivered is None else start + timedelta(seconds=delivered)
         states.append(
             SensorFreshness(
                 sensor_id=sensor.sensor_id,
@@ -146,8 +156,10 @@ def frames(
     start: datetime,
     greenhouse_id: str,
     run_id: str,
+    from_s: float = 0.0,
 ) -> list[CameraFrame]:
-    """Every frame `cameras` took up to `until_s`, in the order taken."""
+    """Every frame `cameras` took from `from_s` to `until_s`, in the order
+    taken."""
     source = RecordSource(type=SourceType.SIMULATION, source_id=run_id)
     taken = [
         CameraFrame(
@@ -161,6 +173,6 @@ def frames(
             source=source,
         )
         for camera in cameras
-        for moment in samples(camera, until_s)
+        for moment in samples(camera, until_s, from_s)
     ]
     return sorted(taken, key=lambda frame: (frame.timestamp, frame.sensor_id))

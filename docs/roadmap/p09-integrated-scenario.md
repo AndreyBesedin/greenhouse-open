@@ -273,7 +273,7 @@ run in their own Playwright project, as the plant lab's and the sun's do.
 | Step | Commit summary | Status |
 | --- | --- | --- |
 | P09.1 | `feat(scenarios): define versioned integrated scenario manifest` | Done |
-| P09.2 | `feat(sim): unify multi-rate scheduler and visible event timeline` | Planned |
+| P09.2 | `feat(sim): unify multi-rate scheduler and visible event timeline` | In progress |
 | P09.3 | `feat(coupling): connect radiation/weather/climate to plant environment` | Planned |
 | P09.4 | `feat(coupling): connect actuators weather and vents to sensor observations` | Planned |
 | P09.5 | `feat(replay): add checkpoint reset branch and replay` | Planned |

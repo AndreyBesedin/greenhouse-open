@@ -155,7 +155,7 @@ def test_the_api_serves_the_houses_air_beside_the_run_all_off() -> None:
 @pytest.mark.parametrize(
     ("path", "status"),
     [
-        ("/api/scenarios/climate_box/climate/house?t=90000", HTTPStatus.BAD_REQUEST),
+        ("/api/scenarios/climate_box/climate/house?t=1300000", HTTPStatus.BAD_REQUEST),
         ("/api/scenarios/sensor_lab/climate/house", HTTPStatus.NOT_FOUND),
         ("/api/scenarios/climate_box/climate/house?weather=foggy", HTTPStatus.NOT_FOUND),
     ],

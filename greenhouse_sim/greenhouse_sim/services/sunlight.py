@@ -19,11 +19,12 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict
 
-from greenhouse_sim.climate.day import LONGEST_RUN_S
+from greenhouse_sim.core.clock import run_day
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.grid import air_grid
+from greenhouse_sim.services.runs import checked_moment
 from greenhouse_sim.services.scenarios import (
     DEFAULT_WEATHER,
     SceneChanges,
@@ -75,7 +76,8 @@ def plant_light(scenario_id: str, layout: str, weather: str) -> PlantLight:
 class PlantsLight(BaseModel):
     """The light on each of a scenario's plants at a moment of a run, in
     seconds from its start: its PAR then, in µmol/m²/s, and its daily light
-    integral on the run's first day, in mol/m²/d, by plant."""
+    integral on the day the moment belongs to (`greenhouse_sim.core.clock`),
+    in mol/m²/d, by plant."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -93,14 +95,13 @@ def plants_light(
     """The light on each of a scenario's plants `time_s` into a run, with one
     of its layouts, by default its own, under a weather, by default its own.
     A moment outside a run is refused."""
-    if not 0.0 <= time_s <= LONGEST_RUN_S:
-        raise InvalidRequest(f"a run lasts from 0 to {LONGEST_RUN_S:g} s, not {time_s:g}")
+    checked_moment(scenario(scenario_id), time_s)
     light = plant_light(scenario_id, layout or DEFAULT_LAYOUT, weather or DEFAULT_WEATHER)
     try:
         return PlantsLight(
             time_s=time_s,
             par_umol_m2_s=light.par_at(time_s),
-            daily_light_integral_mol_m2_d=light.daily_light_integral(0),
+            daily_light_integral_mol_m2_d=light.daily_light_integral(run_day(time_s)),
         )
     except ValueError as unknown:
         raise InvalidRequest(str(unknown)) from unknown

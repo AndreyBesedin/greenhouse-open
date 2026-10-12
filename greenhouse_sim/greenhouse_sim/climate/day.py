@@ -1,6 +1,7 @@
-"""A climate run through a day (P07.3), the fidelity ladder applied.
+"""A climate run through a day (P07.3), and since P09.2 through all its
+scenario's days, the fidelity ladder applied.
 
-- **The house's air through the day** is the whole house's
+- **The house's air through the run** is the whole house's
   (`climate.house`): one well-mixed volume, from the run's start, under its
   schedule and weather.
 - **The field at a moment** is a grid run's (`climate.run`). Through the
@@ -16,7 +17,8 @@
   the equipment makes then. The field a later grid run draws is not kept
   for every moment of a day.
 
-A few of a day's later grid runs are kept, the latest asked for.
+A few of a run's later grid runs are kept, the latest asked for. How long a
+run lasts is its scenario's (`ScenarioConfig.run_length_s`).
 """
 
 import math
@@ -34,12 +36,10 @@ from greenhouse_sim.climate.transport import AirState
 from greenhouse_sim.fields.field import EnvironmentField
 
 HOUR_S: Final = 3600.0
-# How long a climate run lasts, at most, in seconds: a day.
-LONGEST_RUN_S: Final = 86_400.0
 # How long the grid run from the start is drawn, in seconds: its first two
 # hours, after which the field comes from a later grid run.
 FROM_THE_START_S: Final = 2 * HOUR_S
-# How many of a day's later grid runs are kept.
+# How many of a run's later grid runs are kept.
 KEPT_WINDOWS: Final = 3
 
 

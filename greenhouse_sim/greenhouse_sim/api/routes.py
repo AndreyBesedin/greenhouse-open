@@ -35,7 +35,8 @@ check; a route that comes to need one checks it first.
                                           switching it at those moments,
                                           &open=roof_vent:1 with its vents
                                           open, and &t=600 that many seconds
-                                          into the run, for its climate, and
+                                          into the run, to its last day's end,
+                                          for its climate, and
                                           &weather=cold_spring_day under a
                                           preset weather, not its own
     GET /api/scenarios/{id}/climate/probes what probes at ?probes=3:3.2:0.75,… read
@@ -44,9 +45,10 @@ check; a route that comes to need one checks it first.
                                           its equipment off; asked as its
                                           climate field is
     GET /api/scenarios/{id}/climate/house  its house's air as one well-mixed
-                                          volume every minute up to &t=600, and
-                                          of the same run all off; asked as its
-                                          climate field is
+                                          volume every minute up to &t=600,
+                                          from the start of that moment's day
+                                          or &from=0, and of the same run all
+                                          off; asked as its climate field is
     GET /api/scenarios/{id}/climate/glazing its walls' and roof slopes' air,
                                           temperature and heat passed &t=600
                                           seconds into its climate run; asked
@@ -61,19 +63,22 @@ check; a route that comes to need one checks it first.
                                           ?layout= and &weather= as for its
                                           climate field
     GET /api/scenarios/{id}/climate/observations its run's observation log up to
-                                          &t=600: what its point sensors
+                                          &t=600, from the start of that
+                                          moment's day or &from=0: what its point sensors
                                           observed, whether each is fresh,
                                           and its cameras' frames; asked as
                                           its climate field is; &clean=1 as
                                           clean sensors would have, for QA
     GET /api/scenarios/{id}/climate/truth what its point sensors truly sampled,
-                                          for evaluation and QA only
+                                          as its log is asked for; for
+                                          evaluation and QA only
     GET /api/scenarios/{id}/weather       its site, and the weather outside it &t=600
                                           seconds into a run, with the wind in
                                           the world's axes; &weather=cold_spring_day
                                           under a preset, as for its climate
-    GET /api/scenarios/{id}/weather/day   its weather through its runs' first
-                                          day, every ten minutes
+    GET /api/scenarios/{id}/weather/day   its weather every ten minutes through
+                                          its run's first day, or the day of
+                                          &t=600
     GET /api/scenarios/{id}/cfd/geometry  the boundaries of a scenario's air as
                                           a CFD solver is given them, snapped
                                           to its mesh; changed as for its scene
@@ -216,6 +221,7 @@ def respond(method: str, path: str) -> Response:
                     _commands(query.get("schedule", [])),
                     _seconds(query),
                     weather=_last(query, "weather"),
+                    from_s=_since(query),
                 )
             )
         case ["api", "scenarios", scenario_id, "climate", "glazing"]:
@@ -262,6 +268,7 @@ def respond(method: str, path: str) -> Response:
                     _seconds(query),
                     clean=_last(query, "clean") == "1",
                     weather=_last(query, "weather"),
+                    from_s=_since(query),
                 )
             )
         case ["api", "scenarios", scenario_id, "climate", "truth"]:
@@ -274,6 +281,7 @@ def respond(method: str, path: str) -> Response:
                     _commands(query.get("schedule", [])),
                     _seconds(query),
                     weather=_last(query, "weather"),
+                    from_s=_since(query),
                 )
             )
         case ["api", "scenarios", scenario_id, "weather"]:
@@ -281,7 +289,11 @@ def respond(method: str, path: str) -> Response:
                 lambda: weather.at_a_moment(scenario_id, _seconds(query), _last(query, "weather"))
             )
         case ["api", "scenarios", scenario_id, "weather", "day"]:
-            return _answer(lambda: weather.through_the_day(scenario_id, _last(query, "weather")))
+            return _answer(
+                lambda: weather.through_the_day(
+                    scenario_id, _last(query, "weather"), _seconds(query)
+                )
+            )
         case ["api", "scenarios", scenario_id, "cfd", "geometry"]:
             return _answer(lambda: cfd.geometry(scenario_id, _scene_changes(query)))
         case ["api", "scenarios", scenario_id, "layout"]:
@@ -416,15 +428,21 @@ def _points(requests: list[str]) -> list[tuple[float, float, float]]:
     return points
 
 
-def _seconds(query: Query) -> float:
+def _seconds(query: Query, name: str = "t") -> float:
     """The moment a query asks for, `t`, in seconds: the start if none."""
-    text = _last(query, "t")
+    text = _last(query, name)
     if text is None:
         return 0.0
     try:
         return float(text)
     except ValueError:
-        raise InvalidRequest(f"t wants seconds, not {text!r}") from None
+        raise InvalidRequest(f"{name} wants seconds, not {text!r}") from None
+
+
+def _since(query: Query) -> float | None:
+    """Where a series a query asks for begins, `from`, in seconds; None if
+    it does not say, for the service's own default."""
+    return None if _last(query, "from") is None else _seconds(query, "from")
 
 
 def _multiplier(query: Query) -> float:

@@ -4,8 +4,9 @@ and, for evaluation and QA only, what was truly there. A weather station
 reads the weather the run is under (P07.2).
 
 A run's moments are seconds from its start, which is its scenario's start
-date at midnight at its site (P07.1), until the crop's days and the air's
-seconds share a clock (P09). The run is asked for as its climate field is
+date at midnight at its site (P07.1), through its scenario's days, on the
+run's clock (`greenhouse_sim.core.clock`, P09.2). A log is a day's unless a
+longer one is asked for. The run is asked for as its climate field is
 (`greenhouse_sim.services.fields`), and refused as it is.
 """
 
@@ -16,13 +17,12 @@ from greenhouse_protocol.media import CameraFrame
 from greenhouse_protocol.observation import Observation
 from pydantic import BaseModel, ConfigDict
 
-from greenhouse_sim.climate.day import LONGEST_RUN_S
 from greenhouse_sim.evaluation.sensor_truth import SensorTruth, sensor_truth
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.sensors.air import WeatherAt, observe, reads
 from greenhouse_sim.sensors.log import SensorFreshness, frames, freshness
-from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import Commanded, air_through_a_run
+from greenhouse_sim.services.runs import checked_window
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, SceneChanges, changed, scenario
 from greenhouse_sim.world.sensors import Camera, PointSensor
 
@@ -74,12 +74,6 @@ def _weather_at(scenario_id: str, weather: str | None) -> WeatherAt:
     return config.run_weather().at
 
 
-def _checked_until(until_s: float) -> float:
-    if not 0.0 <= until_s <= LONGEST_RUN_S:
-        raise InvalidRequest(f"a run lasts from 0 to {LONGEST_RUN_S:g} s, not {until_s:g}")
-    return until_s
-
-
 def observations(
     scenario_id: str,
     layout: str | None = None,
@@ -89,10 +83,13 @@ def observations(
     until_s: float = 0.0,
     clean: bool = False,
     weather: str | None = None,
+    from_s: float | None = None,
 ) -> SensorObservations:
-    """A run's observation log up to `until_s`; as clean sensors would have
-    made it, if `clean`, for QA."""
-    until = _checked_until(until_s)
+    """A run's observation log from `from_s`, by default the start of the
+    day `until_s` belongs to (`services.runs`), to `until_s`; as clean
+    sensors would have made it, if `clean`, for QA. Each sensor's freshness
+    is its own at `until_s`, whatever it delivered before the log begins."""
+    first = checked_window(scenario(scenario_id), from_s, until_s)
     name = layout or DEFAULT_LAYOUT
     air_at, run_id = air_through_a_run(scenario_id, name, levels, openings, commands, weather)
     weather_at = _weather_at(scenario_id, weather)
@@ -102,13 +99,14 @@ def observations(
     observed = observe(
         point_sensors,
         air_at,
-        until,
+        until_s,
         start=start,
         greenhouse_id=greenhouse_id,
         run_id=run_id,
         seed=scenario(scenario_id).random_seed,
         clean=clean,
         weather_at=weather_at,
+        from_s=first,
     )
     # A quantity the run's air and weather do not give, they never give.
     unavailable = {
@@ -119,14 +117,20 @@ def observations(
         start=start,
         observations=observed,
         freshness=freshness(
-            point_sensors, observed, until, start=start, unavailable=unavailable, clean=clean
+            point_sensors,
+            until_s,
+            start=start,
+            seed=scenario(scenario_id).random_seed,
+            unavailable=unavailable,
+            clean=clean,
         ),
         frames=frames(
             _cameras(scenario_id, name),
-            until,
+            until_s,
             start=start,
             greenhouse_id=greenhouse_id,
             run_id=run_id,
+            from_s=first,
         ),
     )
 
@@ -139,15 +143,21 @@ def truth(
     commands: Sequence[Commanded] = (),
     until_s: float = 0.0,
     weather: str | None = None,
+    from_s: float | None = None,
 ) -> SensorTruths:
-    """What a scenario's point sensors truly sampled up to `until_s` of a
+    """What a scenario's point sensors truly sampled from `from_s`, by
+    default the start of the day `until_s` belongs to, to `until_s` of a
     run: for evaluation and QA only."""
-    until = _checked_until(until_s)
+    first = checked_window(scenario(scenario_id), from_s, until_s)
     name = layout or DEFAULT_LAYOUT
     air_at, run_id = air_through_a_run(scenario_id, name, levels, openings, commands, weather)
     return SensorTruths(
         run_id=run_id,
         sensors=sensor_truth(
-            _point_sensors(scenario_id, name), air_at, until, _weather_at(scenario_id, weather)
+            _point_sensors(scenario_id, name),
+            air_at,
+            until_s,
+            _weather_at(scenario_id, weather),
+            from_s=first,
         ),
     )
