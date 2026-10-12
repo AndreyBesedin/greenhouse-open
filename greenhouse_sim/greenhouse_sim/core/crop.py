@@ -2,18 +2,22 @@
 
 - **Its plants** are transplants of one crop
   (`greenhouse_sim.biology.tomato.organ.transplants`), each at its planting
-  position, its traits drawn from the scenario's seed.
+  position, trained as its layout trains it, its traits drawn from the
+  scenario's seed.
 - **Each plant lives each day** in what the run makes of it, through the
   plant model's `Environment` contract (decision 0024): the house's mean air
   temperature and CO₂ through the day, the same for every plant
   (`greenhouse_sim.climate.house`); its own daily light integral, read at
-  its crown's top with every crown as tall as its plant stands that day
-  (`greenhouse_sim.solar.plants`), so that a taller row shades its
+  its crown's top with every crown as tall as its plant stands that day,
+  where its stem rises (`greenhouse_sim.solar.plants`), so that a taller row shades its
   neighbours more as the season goes on; and a water status of 1, since
   nothing models the irrigation yet.
 - **The crop work** is the run's (`CropWork`): a harvest round at the start
   of every `harvest_every_days`th day picks every red fruit, each a harvest
-  in its plant's history.
+  in its plant's history; then a lowering round, every `lower_every_days`,
+  lowers each plant that hangs from a wire to keep its top under it,
+  laying its bare lower stem down along the lane its training gives it
+  (`greenhouse_sim.world.training`).
 - **At a midnight** the plants live the day that ends, then the day that
   starts begins with its crop work, as the run's timeline lists them
   (`greenhouse_sim.core.timeline`). The crop on day `d` has lived the run's
@@ -32,18 +36,19 @@ from collections import OrderedDict
 from collections.abc import Callable, Sequence
 from typing import Final, Protocol
 
-from pydantic import BaseModel, ConfigDict, PositiveInt
+from pydantic import BaseModel, ConfigDict, NonNegativeFloat, PositiveInt
 
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
-from greenhouse_sim.biology.tomato.organ.actions import harvest_round
+from greenhouse_sim.biology.tomato.organ.actions import harvest_round, lowering_round
 from greenhouse_sim.biology.tomato.organ.development import live_day
-from greenhouse_sim.biology.tomato.organ.geometry import stem_height_m
+from greenhouse_sim.biology.tomato.organ.geometry import rising_point, stem_height_m
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.biology.tomato.organ.transplants import DEVELOPMENT
 from greenhouse_sim.climate.house import HouseAir
-from greenhouse_sim.solar.plants import Crown, placed_crowns
+from greenhouse_sim.solar.plants import Crown
 from greenhouse_sim.world.envelope import Envelope
-from greenhouse_sim.world.rows import PlantingPosition
+from greenhouse_sim.world.geometry import Vector3
+from greenhouse_sim.world.training import Training
 
 # How many days' plants a crop keeps besides its first day's and its
 # latest's: the last asked for.
@@ -71,30 +76,41 @@ type CrownLight = Callable[[int, Sequence[Crown]], CropLight]
 
 
 class CropWork(BaseModel):
-    """What a run does to its crop: a harvest round at the start of every
-    `harvest_every_days`th day from its start, picking every red fruit;
-    none if unset."""
+    """What a run does to its crop, at the start of its days: a harvest round
+    every `harvest_every_days` days from its start, picking every red fruit;
+    and then a lowering round every `lower_every_days`, which leaves each
+    plant hanging from a wire with its top `head_room_m` or more under it;
+    neither if unset."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     harvest_every_days: PositiveInt | None = None
+    lower_every_days: PositiveInt | None = None
+    head_room_m: NonNegativeFloat = 0.3
 
     def harvests_on(self, day: int) -> bool:
         """Whether a harvest round starts the run's day `day`."""
-        every = self.harvest_every_days
-        return every is not None and day > 0 and day % every == 0
+        return _every(self.harvest_every_days, day)
+
+    def lowers_on(self, day: int) -> bool:
+        """Whether a lowering round starts the run's day `day`."""
+        return _every(self.lower_every_days, day)
+
+
+def _every(days: int | None, day: int) -> bool:
+    return days is not None and day > 0 and day % days == 0
 
 
 class RunCrop:
-    """A run's crop of `transplants` through its `days`, the first plant at
-    the first planting position of `positions` in `envelope`, and so on:
-    each day in `air` and its own `light`, and worked as `work` says. It is
-    the plant model's environment for its plants (`local`)."""
+    """A run's crop of `transplants` through its `days`, the first plant
+    trained as the first of `trainings` says in `envelope`, and so on: each
+    day in `air` and its own `light`, and worked as `work` says. It is the
+    plant model's environment for its plants (`local`)."""
 
     def __init__(
         self,
         transplants: Sequence[Plant],
-        positions: Sequence[PlantingPosition],
+        trainings: Sequence[Training],
         envelope: Envelope,
         *,
         air: DayAir,
@@ -104,7 +120,7 @@ class RunCrop:
     ) -> None:
         self.days = days
         self.work = work
-        self._positions = list(positions)
+        self._trainings = list(trainings)
         self._envelope = envelope
         self._air = air
         self._light = light
@@ -137,9 +153,11 @@ class RunCrop:
                 environments = self._day(lived, plants)
                 plants = tuple(
                     self._worked(
-                        lived + 1, live_day(plant, environments[plant.plant_id], DEVELOPMENT)
+                        lived + 1,
+                        live_day(plant, environments[plant.plant_id], DEVELOPMENT),
+                        training,
                     )
-                    for plant in plants
+                    for plant, training in zip(plants, self._trainings, strict=False)
                 )
             self._keep(day, plants)
             return plants
@@ -203,13 +221,32 @@ class RunCrop:
         self._lived.append(environments)
         return environments
 
-    def _worked(self, day: int, plant: Plant) -> Plant:
-        """The plant after the crop work that starts the run's day `day`."""
-        return harvest_round(plant) if self.work.harvests_on(day) else plant
+    def _worked(self, day: int, plant: Plant, training: Training) -> Plant:
+        """The plant after the crop work that starts the run's day `day`: a
+        harvest round, then a lowering round, if either is due."""
+        if self.work.harvests_on(day):
+            plant = harvest_round(plant)
+        if self.work.lowers_on(day) and training.wire_m is not None:
+            plant = lowering_round(plant, training.wire_m - self.work.head_room_m, training.path)
+        return plant
 
     def _crowns(self, plants: Sequence[Plant]) -> list[Crown]:
-        heights = {plant.plant_id: stem_height_m(plant) for plant in plants}
-        return placed_crowns(heights, self._positions, self._envelope)
+        """Each plant's crown, standing where its stem rises, as tall as
+        its standing stem."""
+        crowns = []
+        for plant, training in zip(plants, self._trainings, strict=False):
+            foot, rises = training.position.point, rising_point(plant, training.path)
+            height = stem_height_m(plant)
+            if height > 0:
+                base = Vector3(x=foot.x + rises.x, y=foot.y + rises.y, z=foot.z + rises.z)
+                crowns.append(
+                    Crown(
+                        plant_id=plant.plant_id,
+                        base=self._envelope.to_world(base),
+                        height_m=height,
+                    )
+                )
+        return crowns
 
     def _keep(self, day: int, plants: tuple[Plant, ...]) -> None:
         self._kept[day] = plants

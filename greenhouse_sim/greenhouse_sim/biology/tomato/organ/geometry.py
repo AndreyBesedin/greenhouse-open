@@ -17,8 +17,10 @@ flower at its place along it: a bud as a small sphere, an open flower a
 larger one, a set flower as its fruit, of its diameter. What is no longer on
 the plant is not drawn: a removed leaf, an aborted or picked fruit, a dropped
 flower, and a truss that bears nothing. A lowered stem's laid-down
-internodes lie along the row, +y in the plant's frame, from its base, and the
-stem rises from where they end.
+internodes lie along the path its training gives it (`StemPath`), each
+from one point of it to the next, and the stem rises from where they end,
+in the direction the path gives there: by default, along the row, +y in
+the plant's frame, from its base, and straight up (`ALONG_THE_ROW`).
 
 How a plant's organs are proportioned and held comes from its crop's form
 (`PlantForm`), the parameters its geometry is generated from, as the plant's
@@ -27,7 +29,7 @@ droop, and where its first leaf points about its stem.
 """
 
 import math
-from typing import Annotated, Final
+from typing import Annotated, Final, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt
 
@@ -62,8 +64,7 @@ LEAFLET_THICKNESS_M: Final = 0.002
 ATTACHED_FRUIT: Final = frozenset({FruitStage.ATTACHED})
 
 _UP: Final = Vector3(x=0.0, y=0.0, z=1.0)
-# A lowered stem is laid down along the row.
-_ALONG_ROW: Final = Vector3(x=0.0, y=1.0, z=0.0)
+_ORIGIN: Final = Vector3(x=0.0, y=0.0, z=0.0)
 
 type Fraction = Annotated[float, Field(gt=0, lt=1)]
 type Angle = Annotated[float, Field(ge=0, le=math.pi / 2)]
@@ -124,6 +125,34 @@ class OrganShape(BaseModel):
     shape: Cylinder | Sphere | Ellipsoid
 
 
+class StemPath(Protocol):
+    """How a plant is trained, in its own frame: where the stems it lays
+    down lie, and which way its standing stem rises."""
+
+    def laid(self, length_m: float) -> Vector3:
+        """The point its laid-down stem reaches `length_m` from its foot."""
+        ...
+
+    def rising(self, laid_m: float) -> Vector3:
+        """The unit direction its stem rises in, from its foot if it has laid
+        nothing down, or else from where `laid_m` of laid-down stem ends."""
+        ...
+
+
+class AlongTheRow:
+    """A stem laid straight along the row, +y in the plant's frame, rising
+    straight up."""
+
+    def laid(self, length_m: float) -> Vector3:
+        return Vector3(x=0.0, y=length_m, z=0.0)
+
+    def rising(self, laid_m: float) -> Vector3:
+        return _UP
+
+
+ALONG_THE_ROW: Final = AlongTheRow()
+
+
 def _direction(azimuth: float, elevation: float) -> Vector3:
     """The unit vector at this azimuth about the stem (from +x) and this
     elevation above the horizontal."""
@@ -132,6 +161,11 @@ def _direction(azimuth: float, elevation: float) -> Vector3:
         y=math.cos(elevation) * math.sin(azimuth),
         z=math.sin(elevation),
     )
+
+
+def _unit(x: float, y: float, z: float) -> Vector3:
+    length = math.hypot(x, y, z)
+    return Vector3(x=x / length, y=y / length, z=z / length)
 
 
 def _along(start: Vector3, direction: Vector3, distance: float) -> Vector3:
@@ -240,34 +274,68 @@ def leaf_shapes(leaf: Leaf, node: Vector3, azimuth: float, form: PlantForm) -> l
 
 
 def stem_height_m(plant: Plant) -> float:
-    """How high the plant's stem stands above its base: its standing
-    internodes' length, its laid-down ones lying along the row."""
+    """How long the plant's standing stem is: its standing internodes'
+    length, its laid-down ones lying along the row."""
     standing = plant.stem.phytomers[plant.laid_internodes :]
     return sum(phytomer.internode.length_cm for phytomer in standing) * METRES_PER_CM
 
 
-def organ_geometry(plant: Plant, form: PlantForm | None = None) -> list[OrganShape]:
+def laid_length_m(plant: Plant, internodes: int | None = None) -> float:
+    """How long the plant's laid-down stem is, or would be with its lowest
+    `internodes` laid down."""
+    laid = plant.laid_internodes if internodes is None else internodes
+    return sum(p.internode.length_cm for p in plant.stem.phytomers[:laid]) * METRES_PER_CM
+
+
+def rising_point(plant: Plant, path: StemPath = ALONG_THE_ROW) -> Vector3:
+    """Where the plant's standing stem rises from, in its own frame: its
+    foot, or where its laid-down stem ends."""
+    return path.laid(laid_length_m(plant)) if plant.laid_internodes else _ORIGIN
+
+
+def top_height_m(plant: Plant, path: StemPath = ALONG_THE_ROW, laid: int | None = None) -> float:
+    """How high above its foot the plant's top stands, as `path` trains it,
+    or would stand with its lowest `laid` internodes laid down."""
+    internodes = plant.laid_internodes if laid is None else laid
+    laid_m = laid_length_m(plant, internodes)
+    standing_m = laid_length_m(plant, len(plant.stem.phytomers)) - laid_m
+    start = path.laid(laid_m) if internodes else _ORIGIN
+    return start.z + standing_m * path.rising(laid_m if internodes else 0.0).z
+
+
+def organ_geometry(
+    plant: Plant, form: PlantForm | None = None, path: StemPath = ALONG_THE_ROW
+) -> list[OrganShape]:
     """Every shape of the plant, from the stem's base up, as `form` (by
     default a typical tomato's) proportions its organs and the plant's traits
-    change it."""
+    change it, its stem trained along `path`."""
     form = plant_form(PlantForm() if form is None else form, plant.traits)
     shapes: list[OrganShape] = []
-    base = Vector3(x=0.0, y=0.0, z=0.0)
+    base = _ORIGIN
+    laid_m = 0.0
+    rising = path.rising(laid_length_m(plant) if plant.laid_internodes else 0.0)
     for index, phytomer in enumerate(plant.stem.phytomers):
         internode = phytomer.internode
         length = internode.length_cm * METRES_PER_CM
-        laid = index < plant.laid_internodes
+        if index < plant.laid_internodes:
+            # From one point of the path to the next, as long as it is.
+            laid_m += length
+            node = path.laid(laid_m)
+            axis = _unit(node.x - base.x, node.y - base.y, node.z - base.z)
+            transform = _pointing(base, axis)
+        else:
+            node = _along(base, rising, length)
+            transform = Transform(position=base) if rising == _UP else _pointing(base, rising)
         shapes.append(
             OrganShape(
                 shape_id=internode.internode_id,
                 organ_id=internode.internode_id,
                 kind=OrganKind.INTERNODE,
                 part="internode",
-                transform=_pointing(base, _ALONG_ROW) if laid else Transform(position=base),
+                transform=transform,
                 shape=Cylinder(radius=internode.diameter_mm * METRES_PER_MM / 2, height=length),
             )
         )
-        node = _along(base, _ALONG_ROW if laid else _UP, length)
         base = node
         azimuth = plant.traits.rotation_rad + (phytomer.rank - 1) * GOLDEN_ANGLE_RAD
         if phytomer.leaf.stage != LeafStage.REMOVED:

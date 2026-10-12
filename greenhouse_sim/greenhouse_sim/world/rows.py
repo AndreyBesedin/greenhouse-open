@@ -139,12 +139,15 @@ class RowRails(BaseModel):
 
 class CropWires(BaseModel):
     """A crop wire above each run of a row's positions, `height` above the
-    floor, which the plants are trained up to."""
+    floor, which the plants are trained up to; or, `offset` to either side
+    of the row, a pair of them, a high-wire double row's, which its plants
+    are trained to by turns (`greenhouse_sim.world.training`)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     height: PositiveFloat
     radius: PositiveFloat = 0.0025
+    offset: NonNegativeFloat = 0.0
 
 
 # A pipe rail of 51 mm heating pipes, 55 cm apart, their axes 10 cm up.
@@ -372,22 +375,44 @@ class CropRows(BaseModel):
         self, row: int, number: int, run: tuple[int, int], kept_clear: list[Strip]
     ) -> list[Fixture]:
         """A crop wire above a run of positions, as long as the support under
-        it, or reaching as far beyond the run without one."""
+        it, or reaching as far beyond the run without one: `row_<r>_wire_<n>`;
+        or a pair of them either side of it, `..._left` and `..._right`."""
         wires = self.wires
         if wires is None:
             return []
+        start, end = self._run_span(row, run, kept_clear)
+        sides = (
+            [("", 0.0)]
+            if wires.offset == 0.0
+            else [("_left", wires.offset), ("_right", -wires.offset)]
+        )
+        return [
+            fixture
+            for suffix, across in sides
+            for fixture in PipePrimitive(
+                fixture_id=f"row_{row}_wire_{number}{suffix}",
+                kind=FixtureKind.WIRE,
+                start=self.point(row, start, across=across, z=wires.height),
+                end=self.point(row, end, across=across, z=wires.height),
+                radius=wires.radius,
+            ).fixtures()
+        ]
+
+    def run_spans(
+        self, row: int, kept_clear: list[Strip]
+    ) -> list[tuple[tuple[int, int], float, float]]:
+        """Each unbroken run of a row's kept positions, as its first and last
+        place along the row, with how far along the row its support starts
+        and ends, or, without one, as far beyond the run as one would."""
+        return [(run, *self._run_span(row, run, kept_clear)) for run in self._runs(row, kept_clear)]
+
+    def _run_span(
+        self, row: int, run: tuple[int, int], kept_clear: list[Strip]
+    ) -> tuple[float, float]:
         if self.support is not None:
-            start, end = self._support_span(row, run, kept_clear)
-        else:
-            first, last = ((index - 1) * self.plant_pitch for index in run)
-            start, end = first - self._overhang, last + self._overhang
-        return PipePrimitive(
-            fixture_id=f"row_{row}_wire_{number}",
-            kind=FixtureKind.WIRE,
-            start=self.point(row, start, z=wires.height),
-            end=self.point(row, end, z=wires.height),
-            radius=wires.radius,
-        ).fixtures()
+            return self._support_span(row, run, kept_clear)
+        first, last = ((index - 1) * self.plant_pitch for index in run)
+        return first - self._overhang, last + self._overhang
 
     def _runs(self, row: int, kept_clear: list[Strip]) -> list[tuple[int, int]]:
         """The unbroken runs of a row's kept positions, each as its first and

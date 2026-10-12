@@ -260,7 +260,7 @@
     },
     "CropWires": {
       "additionalProperties": false,
-      "description": "A crop wire above each run of a row's positions, `height` above the\nfloor, which the plants are trained up to.",
+      "description": "A crop wire above each run of a row's positions, `height` above the\nfloor, which the plants are trained up to; or, `offset` to either side\nof the row, a pair of them, a high-wire double row's, which its plants\nare trained to by turns (`greenhouse_sim.world.training`).",
       "properties": {
         "height": {
           "exclusiveMinimum": 0,
@@ -271,6 +271,12 @@
           "default": 0.0025,
           "exclusiveMinimum": 0,
           "title": "Radius",
+          "type": "number"
+        },
+        "offset": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Offset",
           "type": "number"
         }
       },

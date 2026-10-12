@@ -7,9 +7,9 @@
   "notes": {
     "scenario": "The reference scenario of P09 (reference-greenhouse-v1): modest enough to run on a laptop, complete enough to exercise every subsystem together. The viewer lists it first.",
     "envelope": "Three 3.2 m spans, three 4 m bays, 4 m to the gutters: a small Venlo-style roof. A vent near each span's ridge, along the middle of the house, shut until commanded; a door in the front gable, by the path.",
-    "layout": "Four rows of eight plants along the house, 1.6 m apart about its middle, 0.75 m between plants, on hanging gutters under crop wires 3.6 m up, with a pipe rail along each row; a path across the front. Its equipment, all off until commanded: two fans high over the front path blowing down the house, a 15 kW heater in the back right corner, and a dehumidifier against the left side wall, halfway along. Its sensors: temperature and humidity at crop height in the front and back halves, the back pair imperfect; an anemometer in the right fan's jet; CO2 in the middle; PAR in the canopy and under the roof; a camera at the front looking down the middle path; and a weather station 3 m in front of the house.",
+    "layout": "Four rows of eight plants along the house, 1.6 m apart about its middle, 0.75 m between plants, on gutters under two crop wires 3.6 m up, 30 cm either side of each row, a high-wire double row whose plants are trained to the wires by turns, with a pipe rail along each row; a path across the front. Its equipment, all off until commanded: two fans high over the front path blowing down the house, a 15 kW heater in the back right corner, and a dehumidifier against the left side wall, halfway along. Its sensors: temperature and humidity at crop height in the front and back halves, the back pair imperfect; an anemometer in the right fan's jet; CO2 in the middle; PAR in the canopy and under the roof; a camera at the front looking down the middle path; and a weather station 3 m in front of the house.",
     "crop_model": "Organ by organ (P09.3): each plant a transplant of the plant lab's crop, its traits drawn from the seed, living each day in the house's mean air and its own light. The other scenarios keep the simple daily model.",
-    "crop_work": "A harvest round every week, picking every red fruit: ripe fruit does not pile up, and each plant's history lists what was picked from it. By day 120 the stems are still under the crop wires, so the run lowers none.",
+    "crop_work": "Every week, a harvest round picks every red fruit, so that ripe fruit does not pile up and each plant's history lists what was picked from it; then a lowering round keeps each plant's top 30 cm or more under its wire, laying its bare lower stem down round its row's gutter, as a high-wire crop is lowered.",
     "start_date": "1 March, for 120 days: March's nights need heat, June's days need venting, and the crop bears red fruit for its last month or more.",
     "random_seed": "Seed 42, which the final QA resets to.",
     "climate": "A cool, damp March night to start: 14 °C and 80% inside.",
@@ -20,7 +20,9 @@
   "columns": 8,
   "crop_model": "organ",
   "crop_work": {
-    "harvest_every_days": 7
+    "harvest_every_days": 7,
+    "lower_every_days": 7,
+    "head_room_m": 0.3
   },
   "start_date": "2026-03-01",
   "duration_days": 120,

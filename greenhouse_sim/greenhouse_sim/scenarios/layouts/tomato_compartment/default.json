@@ -32,7 +32,8 @@
     },
     "wires": {
       "height": 4.0,
-      "radius": 0.0025
+      "radius": 0.0025,
+      "offset": 0.0
     }
   },
   "placed": [
