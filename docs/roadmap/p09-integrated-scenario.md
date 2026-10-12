@@ -1,6 +1,6 @@
 # P09: Integrated greenhouse scenario, replay and release QA
 
-**Status:** planned. Part of the [simulator roadmap](README.md).
+**Status:** in progress. Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -407,7 +407,7 @@ A reviewer should be able to:
 4. **Checkpoints made while viewing live in the API's memory,** downloadable
    as JSON, rather than in a folder the API manages; the reference run's
    opening day is a file in the repository (section 5). Explained further
-   after review; to confirm.
+   after review, then agreed.
 5. **One command launches both processes,** the API and the viewer's
    development server, rather than the API serving a built viewer, which
    would spare a release its Node dependency but add a build to every
@@ -415,7 +415,7 @@ A reviewer should be able to:
 6. **The season:** 120 days from 1 March rather than 90, with a weekly
    harvest round, opening on the first day with red fruit, kept in the
    repository (sections 1 and 5). Changed after review, which asked for a
-   longer run or a saved later start; to confirm.
+   longer run or a saved later start, then agreed.
 7. **`&t=` becomes seconds through the whole run** for every scenario,
    rather than a separate day parameter beside seconds within a day.
    Agreed.
