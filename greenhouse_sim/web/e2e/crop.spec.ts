@@ -41,7 +41,7 @@ test("crop: the reference greenhouse's plants live each day in the house's air a
     await expect(status).toContainText("reference_greenhouse, day 0, 3108 entities", ARRIVES);
     await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
     await selectThePlant(page);
-    await expect(page.getByTestId("plant-days")).toContainText("No day lived yet");
+    await expect(page.getByTestId("plant-days")).toContainText("No day lived yet", ARRIVES);
     // Its own light at noon, and through its first day, at its crown's top.
     await expect(page.getByTestId("plant-par")).toHaveText("760 µmol/m²/s", ARRIVES);
     await expect(page.getByTestId("plant-daily-light")).toHaveText("18.0 mol/m²/d");

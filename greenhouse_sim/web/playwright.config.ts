@@ -23,13 +23,11 @@ const WEATHER_DAY = "weather-day.spec.ts";
 // run on their own, after the plant lab, and P07's after them.
 const SUN = ["light.spec.ts", "solar-lab.spec.ts", "solar-day.spec.ts"];
 // P09's checks through a run's days work a climate run on each day they
-// visit, and the crop's through its days, so they run on their own, last.
-const SEASON = [
-  "season.spec.ts",
-  "daily-schedule.spec.ts",
-  "crop.spec.ts",
-  "reference-schedule.spec.ts",
-];
+// visit, so they run on their own, after P07's; and the reference
+// greenhouse's, whose crop and schedule work its house through days too,
+// after them, so that no more than a few share the simulator at once.
+const SEASON = ["season.spec.ts", "daily-schedule.spec.ts"];
+const REFERENCE_SEASON = ["crop.spec.ts", "reference-schedule.spec.ts"];
 
 export default defineConfig({
   testDir: "e2e",
@@ -40,7 +38,15 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testIgnore: [...ELSEWHERE, RENDERER_SMOKE, PLANT_LAB, WEATHER_DAY, ...SUN, ...SEASON],
+      testIgnore: [
+        ...ELSEWHERE,
+        RENDERER_SMOKE,
+        PLANT_LAB,
+        WEATHER_DAY,
+        ...SUN,
+        ...SEASON,
+        ...REFERENCE_SEASON,
+      ],
       use: { ...devices["Desktop Chrome"] },
     },
     {
@@ -71,6 +77,12 @@ export default defineConfig({
       name: "season",
       testMatch: SEASON,
       dependencies: ["weather-day"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "reference-season",
+      testMatch: REFERENCE_SEASON,
+      dependencies: ["season"],
       use: { ...devices["Desktop Chrome"] },
     },
   ],
