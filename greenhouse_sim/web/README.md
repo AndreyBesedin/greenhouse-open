@@ -99,11 +99,16 @@ its own (`&schedule=60:fan:1,300:heater:0`, seconds:actuator:level), or
 every day at a time of day (`&daily=64800:heater:1,79200:heater:0`, the
 heater on every evening from 18 h to 22 h), and
 equipment switched while the run stands past its start is an override from
-that moment, which a daily command at the same moment gives way to.
+that moment, which a daily command at the same moment gives way to. A
+scenario may have daily commands of its own, as the reference greenhouse
+heats, vents and stirs its house by the clock (P09.4): a run gives them
+unless its address gives its own, and `&daily=none` gives none; the address
+keeps a change to them, not a copy.
 "Schedule" lists the commands under the time sliders, the moment's day's
 marked on a bar over it, a daily one's square, each to go to or take out,
 and a command for one moment to repeat every day (↻); the Equipment panel and the
-scene show the levels at the moment drawn. "Timeline", opened on demand,
+scene show the levels at the moment drawn, and a door or vent a command
+opens stands as far open. "Timeline", opened on demand,
 draws a lane per process (its commands, its air, its plants, its sensors
 and its cameras) with each event a tick across the window the moment lies
 in, a day, an hour, ten minutes or a minute wide, and lists what each

@@ -249,6 +249,32 @@
       "title": "CropWork",
       "type": "object"
     },
+    "DailyCommand": {
+      "additionalProperties": false,
+      "description": "Set one piece of equipment to a level at a time of day, every day of\na run.",
+      "properties": {
+        "time_of_day_s": {
+          "exclusiveMaximum": 86400.0,
+          "minimum": 0.0,
+          "title": "Time Of Day S",
+          "type": "number"
+        },
+        "actuator_id": {
+          "title": "Actuator Id",
+          "type": "string"
+        },
+        "level": {
+          "$ref": "#/$defs/Level"
+        }
+      },
+      "required": [
+        "time_of_day_s",
+        "actuator_id",
+        "level"
+      ],
+      "title": "DailyCommand",
+      "type": "object"
+    },
     "Envelope": {
       "description": "A greenhouse's envelope, in metres.",
       "properties": {
@@ -344,6 +370,11 @@
     },
     "Hour": {
       "exclusiveMaximum": 24.0,
+      "minimum": 0.0,
+      "type": "number"
+    },
+    "Level": {
+      "maximum": 1.0,
       "minimum": 0.0,
       "type": "number"
     },
@@ -767,6 +798,14 @@
         "lower_every_days": null,
         "head_room_m": 0.3
       }
+    },
+    "daily": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/DailyCommand"
+      },
+      "title": "Daily",
+      "type": "array"
     },
     "start_date": {
       "format": "date",

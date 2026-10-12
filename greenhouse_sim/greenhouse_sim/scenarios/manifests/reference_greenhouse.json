@@ -13,7 +13,8 @@
     "start_date": "1 March, for 120 days: March's nights need heat, June's days need venting, and the crop bears red fruit for its last month or more.",
     "random_seed": "Seed 42, which the final QA resets to.",
     "climate": "A cool, damp March night to start: 14 °C and 80% inside.",
-    "weather": "The cold spring day (the cold_spring_day preset), every day: a synthetic day does not follow the season, though the sun does."
+    "weather": "The cold spring day (the cold_spring_day preset), every day: a synthetic day does not follow the season, though the sun does.",
+    "daily": "Its climate by the clock, every day (P09.4): the heater full from 17 h, set back to 80% at 23 h, full again from 5 h before dawn, half at 7 h and off at 9 h; the roof vents half open at 9 h, fully from 11 h, half from 18 h and shut at 20 h; both fans from 8 h to 20 h. A fixed schedule cannot follow the season: from May the morning's heat and an early sun meet before the vents open fully, and the house peaks near 30 °C at 9 h; a climate computer's setpoints would follow it."
   },
   "variety": "cherry_tomato",
   "rows": 4,
@@ -24,6 +25,113 @@
     "lower_every_days": 7,
     "head_room_m": 0.3
   },
+  "daily": [
+    {
+      "time_of_day_s": 18000.0,
+      "actuator_id": "heater",
+      "level": 1.0
+    },
+    {
+      "time_of_day_s": 25200.0,
+      "actuator_id": "heater",
+      "level": 0.5
+    },
+    {
+      "time_of_day_s": 28800.0,
+      "actuator_id": "fan_left",
+      "level": 1.0
+    },
+    {
+      "time_of_day_s": 28800.0,
+      "actuator_id": "fan_right",
+      "level": 1.0
+    },
+    {
+      "time_of_day_s": 32400.0,
+      "actuator_id": "heater",
+      "level": 0.0
+    },
+    {
+      "time_of_day_s": 32400.0,
+      "actuator_id": "roof_vent_1",
+      "level": 0.5
+    },
+    {
+      "time_of_day_s": 32400.0,
+      "actuator_id": "roof_vent_2",
+      "level": 0.5
+    },
+    {
+      "time_of_day_s": 32400.0,
+      "actuator_id": "roof_vent_3",
+      "level": 0.5
+    },
+    {
+      "time_of_day_s": 39600.0,
+      "actuator_id": "roof_vent_1",
+      "level": 1.0
+    },
+    {
+      "time_of_day_s": 39600.0,
+      "actuator_id": "roof_vent_2",
+      "level": 1.0
+    },
+    {
+      "time_of_day_s": 39600.0,
+      "actuator_id": "roof_vent_3",
+      "level": 1.0
+    },
+    {
+      "time_of_day_s": 61200.0,
+      "actuator_id": "heater",
+      "level": 1.0
+    },
+    {
+      "time_of_day_s": 64800.0,
+      "actuator_id": "roof_vent_1",
+      "level": 0.5
+    },
+    {
+      "time_of_day_s": 64800.0,
+      "actuator_id": "roof_vent_2",
+      "level": 0.5
+    },
+    {
+      "time_of_day_s": 64800.0,
+      "actuator_id": "roof_vent_3",
+      "level": 0.5
+    },
+    {
+      "time_of_day_s": 72000.0,
+      "actuator_id": "roof_vent_1",
+      "level": 0.0
+    },
+    {
+      "time_of_day_s": 72000.0,
+      "actuator_id": "roof_vent_2",
+      "level": 0.0
+    },
+    {
+      "time_of_day_s": 72000.0,
+      "actuator_id": "roof_vent_3",
+      "level": 0.0
+    },
+    {
+      "time_of_day_s": 72000.0,
+      "actuator_id": "fan_left",
+      "level": 0.0
+    },
+    {
+      "time_of_day_s": 72000.0,
+      "actuator_id": "fan_right",
+      "level": 0.0
+    },
+    {
+      "time_of_day_s": 82800.0,
+      "actuator_id": "heater",
+      "level": 0.8
+    }
+  ],
   "start_date": "2026-03-01",
   "duration_days": 120,
   "random_seed": 42,

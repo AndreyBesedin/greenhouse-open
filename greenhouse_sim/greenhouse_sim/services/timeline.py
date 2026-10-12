@@ -52,7 +52,7 @@ def timeline(
     levels: Mapping[str, float] | None = None,
     commands: Sequence[Commanded] = (),
     until_s: float = 0.0,
-    daily: Sequence[Commanded] = (),
+    daily: Sequence[Commanded] | None = None,
     from_s: float | None = None,
 ) -> TimelineDocument:
     """A scenario's run's events from `from_s`, by default the start of the

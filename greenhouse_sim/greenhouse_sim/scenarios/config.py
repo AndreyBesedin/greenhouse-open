@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from greenhouse_sim.airflow.prescribed import PrescribedAirflow, UniformAirflow
 from greenhouse_sim.cfd.setup import CfdSetup
+from greenhouse_sim.climate.commands import DailyCommand
 from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.core.crop import CropWork
@@ -41,6 +42,9 @@ class ScenarioConfig(BaseModel):
     # own light (`greenhouse_sim.core.crop`); and what they do to it.
     crop_model: CropModel = CropModel.SIMPLE
     crop_work: CropWork = CropWork()
+    # The commands its runs give its equipment, doors and vents at a time of
+    # day, every day, unless a run is given daily commands of its own (P09.4).
+    daily: list[DailyCommand] = []
     start_date: date
     duration_days: int
     random_seed: int
@@ -131,6 +135,16 @@ class ScenarioConfig(BaseModel):
         inside = inside_the_greenhouse(self.layout, self.envelope)
         if inside:
             raise ValueError(f"a weather station stands outside the house, not {inside[0]}")
+        return self
+
+    @model_validator(mode="after")
+    def _its_daily_commands_are_to_what_it_has(self) -> Self:
+        known = {piece.actuator_id for piece in self.layout.equipment} | {
+            opening.opening_id for opening in self.envelope.openings
+        }
+        unknown = sorted({c.actuator_id for c in self.daily} - known)
+        if unknown:
+            raise ValueError(f"daily commands to what it does not have: {', '.join(unknown)}")
         return self
 
     @model_validator(mode="after")

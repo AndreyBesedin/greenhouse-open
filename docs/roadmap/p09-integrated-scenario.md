@@ -525,6 +525,46 @@ Visible result: a heater, fan and vent schedule shows in the overlays and
 the sensors' charts. Tests: observations come only through the observation
 path; a heater's night setback shows in the readings.
 
+#### As implemented
+
+- **A scenario's own daily commands** (`ScenarioConfig.daily`, its
+  manifest's `daily`): its runs give them unless a run gives daily commands
+  of its own, and `&daily=none` gives none, at every route that takes a
+  run. A scenario refuses daily commands to equipment or openings it does
+  not have, and the scenario list gives them, and its doors' and vents'
+  identifiers. The comparison with everything off has none.
+- **The reference run's climate by the clock,** every day: the heater full
+  from 17 h, set back to 80% at 23 h, full again from 5 h before dawn, half
+  at 7 h and off at 9 h; the roof vents half open at 9 h, fully from 11 h,
+  half from 18 h and shut at 20 h; both fans from 8 h to 20 h. 21 commands.
+  The dehumidifier stays off: with no crop transpiring into the air, a
+  heated house is dry enough, and a night of drying took it to a mean of
+  23% relative humidity.
+- **What it makes of the season,** chosen among six schedules measured
+  through all 120 days (about 4 minutes each): the house averages 17 °C a
+  day in March and 21.5 °C in June; evenings stand near 19 °C, the night
+  set back to 12 to 14 °C, March mornings dip to 10 °C once the heat steps
+  down, and the day's peak rises from 22 °C in early March to 28 °C by May
+  and 31 °C in June, the relative humidity at 33 to 41% on average. A fixed schedule
+  cannot follow the season: from May the morning's heat and an early sun
+  meet before the vents open fully, and the day's peak comes at 9 h. A
+  climate computer's setpoints would follow it.
+- **The viewer** draws a scenario with its own daily commands where its
+  address gives none, lists them under "Schedule", and keeps in the address
+  only what differs from them; taking one out writes the rest, and taking
+  them all out, `&daily=none`. A door or vent a command opens now stands
+  that far open in the scene at the moment drawn: a command to it was
+  counted as equipment's before, which the scene refused.
+- **Tests** (`tests/test_reference_schedule.py`): the reference run heats,
+  vents and stirs its house every day and no other scenario's does; a run
+  gives its scenario's daily commands, its own in their place, or none;
+  the API reads `daily=none` as none; a daily command to what a scenario
+  does not have is refused; the heater's night setback shows in the front
+  temperature sensor's readings, 3 h into the third day colder than 22 h
+  into the second and far warmer than unheated; and a clean sensor's
+  observations late in the run are the run's own air where it stands.
+  Browser test: `reference-schedule.spec.ts`, with the season's.
+
 ### P09.5: Checkpoints, branches and replay
 
 Checkpoints at day starts, saved and restored as JSON, branches, state

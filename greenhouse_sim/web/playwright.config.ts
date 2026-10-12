@@ -24,7 +24,12 @@ const WEATHER_DAY = "weather-day.spec.ts";
 const SUN = ["light.spec.ts", "solar-lab.spec.ts", "solar-day.spec.ts"];
 // P09's checks through a run's days work a climate run on each day they
 // visit, and the crop's through its days, so they run on their own, last.
-const SEASON = ["season.spec.ts", "daily-schedule.spec.ts", "crop.spec.ts"];
+const SEASON = [
+  "season.spec.ts",
+  "daily-schedule.spec.ts",
+  "crop.spec.ts",
+  "reference-schedule.spec.ts",
+];
 
 export default defineConfig({
   testDir: "e2e",

@@ -1,3 +1,5 @@
+import type { ScheduledCommand } from "./scene/source";
+
 /** A scenario as the simulator's local API lists it (`GET /api/scenarios`). */
 export interface ScenarioSummary {
   id: string;
@@ -8,6 +10,12 @@ export interface ScenarioSummary {
   /** How its runs grow its crop: organ by organ (`ORGAN_CROP`), or by the
    * simple daily model. */
   crop_model?: string;
+  /** The commands its runs give at a time of day, every day, unless a run
+   * gives its own. */
+  daily?: { time_of_day_s: number; actuator_id: string; level: number }[];
+  /** Its doors' and vents' identifiers, which commands open as they do its
+   * equipment. */
+  openings?: string[];
   /** The names of its layouts, its default first. */
   layouts: string[];
   /** The names of the weathers it can be run under, its own first. */
@@ -49,12 +57,37 @@ function isScenarioSummary(value: unknown): value is ScenarioSummary {
     Number.isInteger(fields.plants) &&
     Number.isInteger(fields.duration_days) &&
     (fields.crop_model === undefined || typeof fields.crop_model === "string") &&
+    (fields.openings === undefined ||
+      (Array.isArray(fields.openings) && fields.openings.every((id) => typeof id === "string"))) &&
+    (fields.daily === undefined ||
+      (Array.isArray(fields.daily) && fields.daily.every(isDailyCommand))) &&
     Array.isArray(fields.layouts) &&
     fields.layouts.every((layout) => typeof layout === "string") &&
     (fields.weathers === undefined ||
       (Array.isArray(fields.weathers) &&
         fields.weathers.every((weather) => typeof weather === "string")))
   );
+}
+
+function isDailyCommand(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const { time_of_day_s, actuator_id, level } = value as Record<string, unknown>;
+  return (
+    typeof time_of_day_s === "number" &&
+    typeof actuator_id === "string" &&
+    typeof level === "number"
+  );
+}
+
+/** A scenario's own daily commands, as the viewer writes commands. */
+export function ownDaily(summary: ScenarioSummary | undefined): ScheduledCommand[] {
+  return (summary?.daily ?? []).map(({ time_of_day_s, actuator_id, level }) => ({
+    timeS: time_of_day_s,
+    actuatorId: actuator_id,
+    level,
+  }));
 }
 
 /** Asks the simulator for its scenarios; any failure becomes `unavailable`. */

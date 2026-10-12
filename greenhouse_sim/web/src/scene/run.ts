@@ -1,5 +1,6 @@
 import {
   apiWeather,
+  dailyText,
   pairsText,
   type SceneSource,
   type ScheduledCommand,
@@ -67,7 +68,7 @@ export function runParameters(run: RunParts, parts: readonly RunPart[] = CLIMATE
   const levels = asked.has("levels") ? pairsText(run.levels) : "";
   const openings = asked.has("openings") ? pairsText(run.openings) : "";
   const schedule = asked.has("schedule") ? scheduleText(run.schedule) : "";
-  const daily = asked.has("daily") ? scheduleText(run.daily) : "";
+  const daily = asked.has("daily") && run.daily !== undefined ? dailyText(run.daily) : "";
   const time = asked.has("time") && run.time !== undefined && run.time > 0 ? run.time : null;
   return [
     ...(asked.has("layout") && run.layout !== undefined

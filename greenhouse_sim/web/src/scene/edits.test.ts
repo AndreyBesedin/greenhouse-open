@@ -98,7 +98,8 @@ describe("changing a scenario's source from its panels", () => {
       { timeS: 25200, actuatorId: "heater", level: 0 },
       { timeS: 64800, actuatorId: "heater", level: 1 },
     ]);
-    expect(withoutDaily(withoutDaily(repeated, 0), 0).daily).toBeUndefined();
+    // With none left, it says so, rather than fall back on the scenario's own.
+    expect(withoutDaily(withoutDaily(repeated, 0), 0).daily).toEqual([]);
     expect(withRepeated(source, 5)).toBe(source);
   });
 

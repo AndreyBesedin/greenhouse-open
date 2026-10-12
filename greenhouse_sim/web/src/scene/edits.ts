@@ -109,12 +109,10 @@ export function withoutCommand(source: ScenarioSource, index: number): ScenarioS
   return schedule.length === 0 ? rest : { ...rest, schedule };
 }
 
-/** Its daily commands without one of them, none left out when none are
- * left. */
+/** Its daily commands without one of them; with none left, it says so,
+ * rather than fall back on its scenario's own. */
 export function withoutDaily(source: ScenarioSource, index: number): ScenarioSource {
-  const { daily: _, ...rest } = source;
-  const daily = (source.daily ?? []).filter((__, at) => at !== index);
-  return daily.length === 0 ? rest : { ...rest, daily };
+  return { ...source, daily: (source.daily ?? []).filter((_, at) => at !== index) };
 }
 
 /** One of its commands repeated every day, at its time of day, in place of

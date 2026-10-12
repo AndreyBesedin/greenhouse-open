@@ -117,7 +117,7 @@ export function sourceFromSearch(search: string): SceneSource {
     const compare = parameters.get("compare");
     const time = timeFrom(parameters.get("t"));
     const schedule = scheduleFrom(parameters.get("schedule"));
-    const daily = scheduleFrom(parameters.get("daily"));
+    const daily = dailyFrom(parameters.get("daily"));
     const probes = probesFrom(parameters.get("probes"));
     const camera = cameraFrom(parameters.get("camera"));
     return {
@@ -249,9 +249,7 @@ function fieldQuery(source: {
     source.schedule === undefined || source.schedule.length === 0
       ? ""
       : `&schedule=${scheduleText(source.schedule)}`,
-    source.daily === undefined || source.daily.length === 0
-      ? ""
-      : `&daily=${scheduleText(source.daily)}`,
+    source.daily === undefined ? "" : `&daily=${dailyText(source.daily)}`,
     source.compare === undefined ? "" : `&compare=${encodeURIComponent(source.compare)}`,
     source.probes === undefined || source.probes.length === 0
       ? ""
@@ -317,6 +315,44 @@ export function scheduleFrom(value: string | null): ScheduledCommand[] | null {
     commands.push({ timeS, actuatorId: decodeURIComponent(actuatorId), level: shown });
   }
   return commands;
+}
+
+/** How the address and the simulator's API ask for a run without daily
+ * commands, its scenario's own too. */
+export const NO_DAILY_COMMANDS = "none";
+
+/** A run's daily commands as the address and the API write them: none as
+ * `none`, so that a run without them is told from one with its scenario's. */
+export function dailyText(commands: readonly ScheduledCommand[]): string {
+  return commands.length === 0 ? NO_DAILY_COMMANDS : scheduleText(commands);
+}
+
+/** The daily commands an address gives a run, none if it says `none`, or
+ * null if it gives none or nothing readable: then its scenario's own. */
+function dailyFrom(value: string | null): ScheduledCommand[] | null {
+  return value === NO_DAILY_COMMANDS ? [] : scheduleFrom(value);
+}
+
+/** A scenario's source with its scenario's own daily commands, `own`, where
+ * it gives none of its own (P09.4). */
+export function withOwnDaily<S extends { daily?: ScheduledCommand[] }>(
+  source: S,
+  own: readonly ScheduledCommand[],
+): S {
+  return source.daily === undefined && own.length > 0 ? { ...source, daily: [...own] } : source;
+}
+
+/** A scenario's source keeping its daily commands only where they differ
+ * from its scenario's own, `own`: the address keeps a change, not a copy. */
+export function keptDaily<S extends { daily?: ScheduledCommand[] }>(
+  source: S,
+  own: readonly ScheduledCommand[],
+): S {
+  if (source.daily === undefined || scheduleText(source.daily) !== scheduleText(own)) {
+    return source;
+  }
+  const { daily: _, ...rest } = source;
+  return rest as S;
 }
 
 /** A daily command's latest moment by `now`, in seconds into the run, or
@@ -410,7 +446,7 @@ export function pairsFrom(value: string | null): Record<string, number> | null {
   return pairs;
 }
 
-function sceneUrl(source: SceneSource): string | null {
+function sceneUrl(source: SceneSource, openingIds: readonly string[] = []): string | null {
   switch (source.kind) {
     case "reference":
     case "stress":
@@ -424,27 +460,56 @@ function sceneUrl(source: SceneSource): string | null {
     case "plants":
       return `${PLANT_LAB_SCENE_URL}?${labRunQuery(source)}`;
     case "scenario":
-      // Its equipment as it stands at the moment of its climate run drawn.
-      return `/api/scenarios/${encodeURIComponent(source.scenarioId)}/scene${changesQuery({ ...source, levels: levelsAt(source) }, "?")}`;
+      // Its equipment, and its doors and vents, as they stand at the moment of
+      // its climate run drawn.
+      return `/api/scenarios/${encodeURIComponent(source.scenarioId)}/scene${changesQuery(standingAt(source, openingIds), "?")}`;
   }
 }
 
 /** What a scene is asked for by: its address, or, for a stress scene, which
  * the viewer builds itself, its size; null for none, or a live one. */
-export function sceneRequest(source: SceneSource): string | null {
-  return source.kind === "stress" ? `stress ${source.plants}` : sceneUrl(source);
+export function sceneRequest(
+  source: SceneSource,
+  openingIds: readonly string[] = [],
+): string | null {
+  return source.kind === "stress" ? `stress ${source.plants}` : sceneUrl(source, openingIds);
+}
+
+/** A scenario's source with its equipment, and its doors and vents,
+ * `openingIds`, at the levels they stand at at the moment drawn: its
+ * commands to an opening open it that far, as the simulator's do. */
+export function standingAt<
+  S extends {
+    levels?: Readonly<Record<string, number>>;
+    openings?: Readonly<Record<string, number>>;
+    schedule?: readonly ScheduledCommand[];
+    daily?: readonly ScheduledCommand[];
+    time?: number;
+  },
+>(source: S, openingIds: readonly string[]): S {
+  const doors = new Set(openingIds);
+  const standing = Object.entries(levelsAt(source));
+  return {
+    ...source,
+    levels: Object.fromEntries(standing.filter(([id]) => !doors.has(id))),
+    openings: {
+      ...(source.openings ?? {}),
+      ...Object.fromEntries(standing.filter(([id]) => doors.has(id))),
+    },
+  };
 }
 
 /** Fetches and checks the chosen scene; every failure becomes a state to show. */
 export async function loadScene(
   source: SceneSource,
   fetchFn: typeof fetch = fetch,
+  openingIds: readonly string[] = [],
 ): Promise<SceneState> {
   if (source.kind === "stress") {
     // The viewer builds it, so it needs no check.
     return { status: "loaded", snapshot: stressScene(source.plants) };
   }
-  const url = sceneUrl(source);
+  const url = sceneUrl(source, openingIds);
   return url === null ? { status: "none" } : fetchScene(url, fetchFn);
 }
 
