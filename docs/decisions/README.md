@@ -44,6 +44,7 @@ changes course is a new record that supersedes the old one.
 | [0030](0030-hold-the-viewers-unit-test-coverage-to-a-floor.md) | Hold the viewer's unit-test coverage to a floor | Accepted |
 | [0031](0031-scenarios-are-versioned-json-manifests.md) | Scenarios are versioned JSON manifests | Accepted |
 | [0032](0032-run-the-browser-tests-in-lanes-on-ci.md) | Run the browser tests in lanes on CI | Accepted |
+| [0033](0033-update-dependencies-with-dependabot.md) | Update dependencies with Dependabot, minor and patch updates merging by themselves | Accepted |
 
 ## Template
 

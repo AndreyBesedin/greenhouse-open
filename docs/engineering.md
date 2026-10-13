@@ -134,8 +134,15 @@ Copilot review should use **Balanced** effort. The repository instructions in
 architecture, tests and repository invariants over style nits that Ruff already
 handles.
 
+Dependabot's pull requests take the same path (decision 0033). A minor or
+patch update that changes no code merges by itself once the required checks
+pass. The rest wait for a review: when the risk gate asks for the
+manual-review item, add it to the bot's description by hand.
+
 GitHub settings should require a pull request for `main`, require CI checks,
-and require conversation resolution. Do not require a human approval while the
+and require conversation resolution. The `main` ruleset names its required
+checks: a renamed CI job, or a new browser-test lane, takes its new name
+there too. Do not require a human approval while the
 repository has one developer. Copilot auto-approval can be enabled later if it
 proves useful, but the workflow should not depend on a preview feature.
 
