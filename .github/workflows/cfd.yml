@@ -66,7 +66,7 @@ jobs:
 
       - name: Keep the solved results and the solver's logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cfd-results
           path: |
