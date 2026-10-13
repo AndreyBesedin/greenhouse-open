@@ -8,6 +8,7 @@ one that does, apart from the boundary check below.
 import ast
 import json
 import pathlib
+import subprocess
 import threading
 import urllib.error
 import urllib.request
@@ -21,8 +22,9 @@ from greenhouse_sim.api import server as server_module
 from greenhouse_sim.api.routes import Response, respond
 from greenhouse_sim.api.server import UNEXPECTED_FAILURE, create_server
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
-from greenhouse_sim.scenarios.manifest_files import opening_day
+from greenhouse_sim.scenarios.manifest_files import manifest_digest, opening_day
 from greenhouse_sim.scene.snapshot import SCHEMA_VERSION, SceneEntityKind, SceneSnapshot
+from greenhouse_sim.services import system
 
 PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "greenhouse_sim"
 
@@ -33,13 +35,46 @@ def test_the_health_check_answers() -> None:
     assert (response.status, response.body) == (HTTPStatus.OK, {"status": "ok"})
 
 
-def test_the_version_names_the_simulator_and_the_scene_schema() -> None:
+def test_the_version_names_the_simulator_its_commit_and_the_scene_schema() -> None:
     body = respond("GET", "/api/version").body
 
     assert isinstance(body, dict)
     assert body["simulator"] == "greenhouse-sim"
     assert body["scene_schema_version"] == SCHEMA_VERSION
     assert isinstance(body["version"], str) and body["version"]
+    # The tests run from a git checkout: the commit is git's abbreviation of
+    # its HEAD, as the viewer names the commit it was built from.
+    head = subprocess.run(
+        ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, check=True
+    )
+    assert body["commit"] == head.stdout.strip()
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [FileNotFoundError("git"), subprocess.CalledProcessError(128, "git"), OSError("denied")],
+)
+def test_outside_a_git_checkout_the_commit_is_unknown(
+    monkeypatch: pytest.MonkeyPatch, failure: Exception
+) -> None:
+    def fail(*_args: object, **_kwargs: object) -> None:
+        raise failure
+
+    monkeypatch.setattr(subprocess, "run", fail)
+
+    assert system.source_commit.__wrapped__() == system.UNKNOWN_COMMIT
+
+
+def test_a_runs_manifest_is_served_and_refused_as_its_run_is() -> None:
+    body = respond("GET", "/api/scenarios/reference_greenhouse/manifest?weather=default~90").body
+
+    assert isinstance(body, dict)
+    assert body["version"] == manifest_digest("reference_greenhouse")
+    assert (body["random_seed"], body["start_date"], body["opening_day"]) == (42, "2026-03-01", 80)
+    assert (body["weather"], body["wind_from_deg"]) == ("default", 90.0)
+    assert respond("GET", "/api/scenarios/nowhere/manifest").status == HTTPStatus.NOT_FOUND
+    refused = respond("GET", "/api/scenarios/climate_box/manifest?weather=default~400")
+    assert refused.status == HTTPStatus.BAD_REQUEST
 
 
 # The scenarios with more than their default layout, and their others.

@@ -13,9 +13,14 @@ machine (decision 0009) and has no users yet, so no route has a right to
 check; a route that comes to need one checks it first.
 
     GET /api/health                       the API is up
-    GET /api/version                      simulator and scene schema versions
+    GET /api/version                      the simulator's version and commit,
+                                          and its scene schema's version
     GET /api/scenarios                    the registered scenarios, with the
                                           names of their layouts
+    GET /api/scenarios/{id}/manifest      what a scenario's run is made from,
+                                          for QA: its manifest's format and
+                                          version, its seed, its days and its
+                                          models; &weather= as for its climate
     GET /api/scenarios/{id}/scene         a scenario's scene before its first day;
                                           ?layout=benches shows another of its
                                           layouts, ?envelope=length:12,spans:3
@@ -210,6 +215,8 @@ def respond(method: str, path: str, body: bytes = b"") -> Response:
                     name: e.model_dump(mode="json") for name, e in plants.environments().items()
                 }
             )
+        case ["api", "scenarios", scenario_id, "manifest"]:
+            return _answer(lambda: scenarios.run_manifest(scenario_id, _last(query, "weather")))
         case ["api", "scenarios", scenario_id, "scene"]:
             return _answer(lambda: scenarios.initial_scene(scenario_id, _scene_changes(query)))
         case ["api", "scenarios", scenario_id, "fields"]:

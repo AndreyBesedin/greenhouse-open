@@ -12,9 +12,10 @@ it does not have, is refused with the reason.
 
 import math
 from collections.abc import Mapping
+from datetime import date
 from typing import Final
 
-from pydantic import BaseModel, JsonValue, ValidationError
+from pydantic import BaseModel, ConfigDict, JsonValue, ValidationError
 
 from greenhouse_sim.biology.tomato.organ.transplants import transplant
 from greenhouse_sim.climate.commands import DailyCommand
@@ -28,7 +29,8 @@ from greenhouse_sim.scenarios.layout_files import (
     layout_names,
     load_layout,
 )
-from greenhouse_sim.scenarios.manifest_files import opening_day
+from greenhouse_sim.scenarios.manifest_files import SCHEMA_VERSION as MANIFEST_FORMAT
+from greenhouse_sim.scenarios.manifest_files import manifest_digest, opening_day
 from greenhouse_sim.scene.plants import crop_entities
 from greenhouse_sim.scene.snapshot import SceneSnapshot, greenhouse_scene, scene_snapshot
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
@@ -71,6 +73,36 @@ class ScenarioSummary(BaseModel):
     weathers: list[str]
 
 
+class RunManifest(BaseModel):
+    """What a scenario's run is made from, as QA mode shows it (P09.6): its
+    manifest's format and version, its seed and days, and the models it
+    runs, under the weather the run is asked for."""
+
+    model_config = ConfigDict(frozen=True)
+
+    scenario_id: str
+    # The format its manifest is written in, and what tells this version of
+    # it from another (`manifest_digest`).
+    schema_version: int
+    version: str
+    random_seed: int
+    start_date: date
+    duration_days: int
+    opening_day: int | None
+    # How it grows its crop ("simple" or "organ") and which variety; how its
+    # air moves until a solver says otherwise, the prescribed pattern's kind.
+    crop_model: str
+    variety: str
+    airflow: str
+    # The weather the run is under, by name, its own being "default", and
+    # its kind ("constant", "synthetic" or "recorded"); its clouds and its
+    # wind's direction where QA overrides them.
+    weather: str
+    weather_kind: str
+    cloud_cover_pct: float | None
+    wind_from_deg: float | None
+
+
 class SceneChanges(BaseModel):
     """How a client asks to see a scenario changed: with another of its
     layouts, under another weather, its greenhouse's dimensions set by name,
@@ -102,6 +134,30 @@ def scenario_summaries() -> list[ScenarioSummary]:
         )
         for config in SCENARIO_REGISTRY.values()
     ]
+
+
+def run_manifest(scenario_id: str, weather: str | None = None) -> RunManifest:
+    """What a scenario's run is made from, read from its manifest: under its
+    own weather, or another asked for as a climate run's is, with its clouds
+    and wind overridden."""
+    name = weather or DEFAULT_WEATHER
+    config = changed(scenario(scenario_id), SceneChanges(weather=name))
+    return RunManifest(
+        scenario_id=scenario_id,
+        schema_version=MANIFEST_FORMAT,
+        version=manifest_digest(scenario_id),
+        random_seed=config.random_seed,
+        start_date=config.start_date,
+        duration_days=config.duration_days,
+        opening_day=opening_day(scenario_id),
+        crop_model=config.crop_model.value,
+        variety=config.variety,
+        airflow=config.airflow.kind,
+        weather=name.partition(WIND_MARK)[0].partition(CLOUDS_MARK)[0],
+        weather_kind=config.weather.kind,
+        cloud_cover_pct=config.cloud_cover_pct,
+        wind_from_deg=config.wind_from_deg,
+    )
 
 
 def weather_names() -> list[str]:
