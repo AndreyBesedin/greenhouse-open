@@ -2,6 +2,7 @@
 report has every measure, and the report kept in the repository too."""
 
 import json
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -12,6 +13,9 @@ from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.benchmark import DayCosts, bottleneck, simulator_costs
 from greenhouse_sim.services.errors import InvalidRequest
 
+# The report kept in the repository, beside these tests: CI installs the
+# simulator as a package, out of the checkout.
+KEPT_REPORT = Path(__file__).resolve().parents[1] / "benchmarks" / "simulator.json"
 # What a report says, measure by measure.
 MEASURES = {
     "recorded",
@@ -73,7 +77,7 @@ def test_the_benchmark_runs_on_the_reference_scenario(one_day: dict[str, Any]) -
 
 
 def test_the_kept_report_has_every_measure() -> None:
-    kept = json.loads(benchmark.KEPT_REPORT.read_text())
+    kept = json.loads(KEPT_REPORT.read_text())
 
     _has_every_measure(kept)
     # The whole season, from its start, on the machine it names.
@@ -98,17 +102,36 @@ def test_the_bottleneck_is_the_costliest_part_of_a_day() -> None:
 
 
 def test_the_command_compares_the_latest_report_with_the_kept_one(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
 ) -> None:
-    kept = json.loads(benchmark.KEPT_REPORT.read_text())
+    kept = json.loads(KEPT_REPORT.read_text())
     monkeypatch.setattr(benchmark, "report", lambda days: kept | {"days": days})
+    copy = tmp_path / "simulator.json"
+    copy.write_text(KEPT_REPORT.read_text())
 
-    benchmark.main(["--days", "3"])
+    benchmark.main(["--days", "3", "--report", str(copy)])
 
     said = capsys.readouterr().out
     assert said.startswith("reference_greenhouse, 3 days on ")
     assert f"house_air_s{'':<13}" in said
     assert f"next bottleneck: {kept['bottleneck']}" in said
+
+    # Recorded, the latest is kept where the report is named.
+    benchmark.main(["--days", "3", "--report", str(copy), "--record"])
+    assert json.loads(copy.read_text())["days"] == 3
+
+
+def test_without_a_kept_report_the_command_compares_with_nothing(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    kept = json.loads(KEPT_REPORT.read_text())
+    monkeypatch.setattr(benchmark, "report", lambda days: kept)
+    monkeypatch.setattr(benchmark, "CHECKOUT_REPORT", Path("/nowhere/benchmarks/simulator.json"))
+
+    benchmark.main([])
+    assert "(—)" in capsys.readouterr().out
+    with pytest.raises(SystemExit):
+        benchmark.main(["--record"])
 
 
 def test_a_stopwatch_adds_up_each_part_and_none_times_nothing() -> None:
