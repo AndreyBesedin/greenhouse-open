@@ -8,7 +8,10 @@ A checkpoint is a run's state at the start of one of its days:
   its equipment's levels and its doors' and vents' openings from the start;
   the commands it gave before that day; and its daily commands, or none
   given, for its scenario's own;
-- **its house's air** then (`greenhouse_sim.climate.house`);
+- **its house's air** then (`greenhouse_sim.climate.house`), and an hour
+  before its day began, where the field of the day's first hour starts its
+  grid run from (`greenhouse_sim.climate.day.window_start`): without it, a
+  run restored would work out every day before to draw its first hour;
 - **its crop,** where it grows one organ by organ: its plants then, and what
   each experienced on each day before (`greenhouse_sim.core.crop`).
 
@@ -43,6 +46,7 @@ from pydantic import BaseModel, ConfigDict, JsonValue, NonNegativeInt, Validatio
 
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.biology.tomato.organ.topology import Plant
+from greenhouse_sim.climate.day import window_start
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.core.clock import DAY_S, days_ended
 from greenhouse_sim.domain.crop import CropModel
@@ -63,7 +67,7 @@ from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids, scenar
 
 # The format a checkpoint is written in, which a reader refuses if it does
 # not know it.
-CHECKPOINT_FORMAT: Final = 1
+CHECKPOINT_FORMAT: Final = 2
 # How many checkpoints are kept, the last saved or uploaded.
 KEPT_CHECKPOINTS: Final = 16
 # How many hexadecimal digits of its content's digest name a checkpoint.
@@ -91,6 +95,11 @@ class Checkpoint(BaseModel):
     daily: list[Commanded] | None = None
     day: NonNegativeInt
     house: HouseAir
+    # Its house's air an hour before its day began, where its day's first
+    # hour draws its field from (`greenhouse_sim.climate.day.window_start`),
+    # so that a run restored works out none of the days before; none on its
+    # run's first day, which draws its first hours from its start (format 2).
+    house_before: HouseAir | None = None
     plants: list[Plant] = []
     # What each plant experienced on each day before, by plant.
     lived: list[dict[str, LocalEnvironment]] = []
@@ -155,6 +164,7 @@ def save_checkpoint(
         crop = run_crop(scenario_id, layout, levels, openings, commands, weather, daily)
         plants = list(crop.plants_on(day))
         lived = crop.lived_through(day)
+    before = window_start(moment)
     checkpoint = Checkpoint(
         scenario_id=scenario_id,
         manifest=manifest_digest(scenario_id),
@@ -166,6 +176,7 @@ def save_checkpoint(
         daily=None if daily is None else list(daily),
         day=day,
         house=climate.house.air_at(moment),
+        house_before=climate.house.air_at(before) if before < moment else None,
         plants=plants,
         lived=lived,
     )
@@ -210,6 +221,11 @@ def upload_checkpoint(document: JsonValue) -> CheckpointSummary:
         raise InvalidRequest(
             f"a run of {uploaded.scenario_id} has days 0 to {config.duration_days}, "
             f"not {uploaded.day}"
+        )
+    if (uploaded.house_before is None) != (window_start(uploaded.day * DAY_S) == 0.0):
+        raise InvalidRequest(
+            "a checkpoint keeps its house's air an hour before its day, after its run's "
+            "first day, and only then"
         )
     climate_run(
         uploaded.scenario_id,
@@ -286,6 +302,11 @@ def _kept(checkpoint: Checkpoint) -> CheckpointSummary:
         air=checkpoint.house,
         plants=tuple(checkpoint.plants),
         lived=tuple(checkpoint.lived),
+        earlier=(
+            ()
+            if checkpoint.house_before is None
+            else ((window_start(checkpoint.day * DAY_S), checkpoint.house_before),)
+        ),
     )
     with _KEEPING:
         _KEPT[checkpoint_id] = checkpoint

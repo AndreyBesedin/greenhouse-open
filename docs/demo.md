@@ -91,10 +91,10 @@ its tests and its golden views (`tests/test_reference_qa.py`).
 6. **A roof vent, and the wind.** The schedule opens the roof vents by the
    clock: shut until 9:00, half open, then fully from 11:00, and shut again
    at 20:00. Shut at noon, the vents leave the house at 38.5 °C against
-   29.5 °C open (the golden views' `vents-closed` and `vents-open`). The
-   Openings sliders set how far a door or vent stands open from the run's
-   start: on a later day that is another house, its season worked out
-   afresh (see Troubleshooting). "Weather" overrides the wind's direction
+   29.5 °C open (the golden views' `vents-closed` and `vents-open`). An
+   Openings slider moved past the run's start shuts or opens a door or
+   vent from that moment, as the Equipment panel's switches do; at the
+   run's start, from the start. "Weather" overrides the wind's direction
    (`&wind=90`) and the sky's clouds (`&clouds=80`), the rest of the
    weather unchanged; that too is another run.
 7. **The sensors against QA mode's truth.** "QA mode", in the display
@@ -197,9 +197,9 @@ memory until it stops.
   checkpoint. A moment beyond it is worked out from there, about 2.5 s for
   each simulated day; the season's end takes minutes the first time, and
   the HUD says how long the simulator took for the latest request. Another
-  weather, the wind or the clouds overridden, or a door or vent set open
-  from the start with its slider, makes another run, which the kept day
-  does not fit: it is worked out from the season's start, minutes too. A sensor selected late in a day reads its log from the
+  weather, or the wind or the clouds overridden, makes another run, which
+  the kept day does not fit: it is worked out from the season's start,
+  minutes too. A sensor selected late in a day reads its log from the
   day's start, each reading sampling the house's whole field: at noon,
   minutes in QA mode.
 - **A jerky view.** Without a graphics card the browser draws in software;

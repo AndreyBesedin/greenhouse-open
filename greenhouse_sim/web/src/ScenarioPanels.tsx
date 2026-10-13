@@ -15,7 +15,7 @@ import { FieldProbes } from "./fields/FieldProbes";
 import { HouseAir, type HouseAirState } from "./fields/HouseAir";
 import { ProbeCharts, type ProbeChartsState } from "./fields/ProbeCharts";
 import { CLIMATE_FIELD, type FieldState } from "./fields/source";
-import { OpeningControls } from "./OpeningControls";
+import { OpeningControls, openingsIn } from "./OpeningControls";
 import {
   type ScenarioSource,
   withCfdBoundaries,
@@ -35,7 +35,7 @@ import {
 } from "./scene/edits";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
 import { scenarioRun } from "./scene/run";
-import { levelsAt } from "./scene/source";
+import { levelsAt, openingsAt } from "./scene/source";
 import type { SetSource } from "./scene/useSource";
 import { TimelinePanel } from "./timeline/TimelinePanel";
 import { WeatherPanel } from "./weather/WeatherPanel";
@@ -237,7 +237,10 @@ export function ScenarioPanels({
       {snapshot !== null && (
         <OpeningControls
           snapshot={snapshot}
-          requested={source.openings ?? {}}
+          requested={openingsAt(
+            source,
+            openingsIn(snapshot).map((opening) => opening.openingId),
+          )}
           onChange={(openings) => onSource(withOpenings(source, openings))}
         />
       )}

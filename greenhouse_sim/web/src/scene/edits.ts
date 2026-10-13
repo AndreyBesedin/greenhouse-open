@@ -4,7 +4,7 @@ import { defaultSlice } from "../fields/drawing";
 import type { EnvironmentField } from "../fields/field";
 import { CLIMATE_FIELD } from "../fields/source";
 import type { Point3 } from "../world";
-import { levelsAt, type SceneSource, withOverride } from "./source";
+import { levelsAt, openingsAt, type SceneSource, withOverride } from "./source";
 
 /** A scenario's source: what its panels change. */
 export type ScenarioSource = Extract<SceneSource, { kind: "scenario" }>;
@@ -79,11 +79,23 @@ export function withWind(source: ScenarioSource, wind: number | undefined): Scen
   return wind === undefined ? rest : { ...rest, wind };
 }
 
-/** How far its doors and vents stand open. */
+/** How far its doors and vents stand open: while a climate run is drawn
+ * past its start, an override at that moment of those that changed, as its
+ * equipment's are, so that the run stays the same house, carried on from a
+ * checkpoint rather than worked out again from its start; otherwise, from
+ * the start. */
 export function withOpenings(
   source: ScenarioSource,
   openings: Record<string, number>,
 ): ScenarioSource {
+  const now = source.time ?? 0;
+  if (source.field === CLIMATE_FIELD && now > 0) {
+    const standing = openingsAt(source, Object.keys(openings));
+    const changed = Object.fromEntries(
+      Object.entries(openings).filter(([openingId, level]) => standing[openingId] !== level),
+    );
+    return { ...source, schedule: withOverride(source.schedule ?? [], now, changed) };
+  }
   return { ...source, openings };
 }
 

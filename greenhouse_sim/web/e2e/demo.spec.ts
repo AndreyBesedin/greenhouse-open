@@ -87,9 +87,9 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   await say(page, "5. The dehumidifier on: the air dries around it");
 
   // 6. The roof vents, open by the schedule: shut before 9:00, half open
-  // from 9:00 and fully from 11:00. (An Openings slider sets how far one
-  // stands open from the run's start: on day 80 that is another house, its
-  // season worked out afresh.) The wind is turned last.
+  // from 9:00 and fully from 11:00; then one shut by hand, a command at the
+  // moment, the run carried on rather than worked out again. The wind is
+  // turned last.
   const vent = page.getByTestId("opening-roof_vent_1");
   await timeOfDay.fill(String(8 * HOUR_S));
   await expect(moment).toHaveText("day 80, 8 h 00 min", ARRIVES);
@@ -99,6 +99,11 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   await expect(moment).toHaveText("day 80, 11 h 00 min", ARRIVES);
   await expect(vent).toHaveText(/^100%, /, ARRIVES);
   await say(page, "6. From 11:00 the schedule has them fully open");
+  await page.getByRole("group", { name: "Openings" }).getByRole("slider").first().fill("0");
+  await expect(page).toHaveURL(/6951600:roof_vent_1:0/);
+  await expect(vent).toHaveText(/^0%, /, ARRIVES);
+  await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
+  await say(page, "6. One shut by hand at 11:00: a command at that moment");
 
   // 7. A sensor's readings against QA mode's truth, early in the day: its
   // log is read from the day's start, which at noon would take minutes. Not

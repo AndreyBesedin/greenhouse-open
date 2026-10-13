@@ -176,6 +176,9 @@ test("climate: opening the roof vent lets the heated air out, and the cold in", 
     `/?scenario=climate_box&set=heater:1&field=climate&t=600&probes=${UNDER_THE_ROOF_VENT}`,
   );
   const reading = page.getByTestId("probe-1-reading");
+  const time = page.getByRole("slider", { name: "Time of day" });
+  const vent = page.getByRole("group", { name: "Openings" }).getByRole("slider").first();
+  const opened = page.getByTestId("opening-roof_vent");
 
   await test.step("shut, the air under it is still, and warm from the heater", async () => {
     await expect(reading).toHaveText(
@@ -184,13 +187,29 @@ test("climate: opening the roof vent lets the heated air out, and the cold in", 
   });
 
   // Alone, the vent exchanges by the stack over its height: the warmer air
-  // goes out at its top and the cold in at its foot (P07.6).
+  // goes out at its top and the cold in at its foot (P07.6). Opened at the
+  // run's start, it stands open from the start.
   await test.step("open, the warmer air goes out through it, and the house cools", async () => {
-    await page.getByRole("group", { name: "Openings" }).getByRole("slider").first().fill("100");
+    await time.fill("0");
+    await expect(page.getByTestId("climate-time")).toHaveText("0 min");
+    await vent.fill("100");
     await expect(page).toHaveURL(/open=roof_vent:1(&|$)/);
+    await time.fill("600");
     await expect(reading).toHaveText(
       "climate: 0.05 m/s (0.00, 0.00, 0.05), temperature 14.57 °C, humidity 76.67 %, co2 420.00 ppm, PAR 0.00 µmol/m²/s, irradiance 0.00 W/m²",
     );
+  });
+
+  // Past the start, a vent's slider is a command at that moment, as the
+  // equipment's switches are: the house stays the same, and the run is not
+  // worked out again from its start.
+  await test.step("past the start, it is shut from the moment drawn", async () => {
+    await vent.fill("0");
+    await expect(page).toHaveURL(/schedule=600:roof_vent:0(&|$)/);
+    await expect(page).toHaveURL(/open=roof_vent:1(&|$)/);
+    await expect(opened).toHaveText(/^0%, /);
+    await time.fill("300");
+    await expect(opened).toHaveText(/^100%, /);
   });
 });
 

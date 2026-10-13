@@ -2,8 +2,9 @@
 `greenhouse_sim.services.checkpoints`).
 
 A kept state is a run's state at the start of one of its days: its house's
-air then, and its organ-level crop's plants then, with what each
-experienced on each day before. A run of the same house, under the same
+air then, and an hour before, where the day's first hour draws its field
+from, and its organ-level crop's plants then, with what each experienced
+on each day before. A run of the same house, under the same
 weather, with the same doors and vents open from the start, whose schedule
 agrees with the state's up to its moment, is the same run up to then
 (`Schedule.same_until`), so it takes the state over in place of working its
@@ -40,10 +41,17 @@ class KeptState:
     air: HouseAir
     plants: tuple[Plant, ...] = ()
     lived: tuple[dict[str, LocalEnvironment], ...] = ()
+    # Its house's air at moments before its day began, each with its moment:
+    # where the field of the day's first hour starts its grid run.
+    earlier: tuple[tuple[float, HouseAir], ...] = ()
 
     @property
     def moment_s(self) -> float:
         return self.day * DAY_S
+
+    def airs(self) -> list[tuple[float, HouseAir]]:
+        """Its house's air at each moment it keeps, the earliest first."""
+        return [*self.earlier, (self.moment_s, self.air)]
 
     def agrees(self, house: House, schedule: Schedule) -> bool:
         """Whether a run of `house` under `schedule` is this state's run up
