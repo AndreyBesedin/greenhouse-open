@@ -1,7 +1,9 @@
 """The simulator's benchmark on the reference scenario (P09.8): its costs
 (`greenhouse_sim.services.benchmark`), with the machine it ran on and the
 process's peak memory, as a JSON report, compared with the one kept in the
-repository, `greenhouse_sim/benchmarks/simulator.json`. From `greenhouse_sim/`:
+repository, `greenhouse_sim/benchmarks/simulator.json`, when the simulator
+runs from a checkout of it, or with the one `--report` names. From
+`greenhouse_sim/`:
 
     python -m greenhouse_sim.benchmark              # the whole season, about 4 min
     python -m greenhouse_sim.benchmark --days 10    # its first ten days
@@ -26,7 +28,9 @@ from typing import Final
 from greenhouse_sim.scenarios.manifest_files import FIRST_SCENARIO
 from greenhouse_sim.services.benchmark import costs_json, simulator_costs
 
-KEPT_REPORT: Final = Path(__file__).resolve().parents[1] / "benchmarks" / "simulator.json"
+# The report kept in the repository, beside the package's source: found only
+# when the simulator runs from a checkout, not installed as a package.
+CHECKOUT_REPORT: Final = Path(__file__).resolve().parents[1] / "benchmarks" / "simulator.json"
 GIBIBYTE: Final = 1024**3
 MEBIBYTE: Final = 1024**2
 KIBIBYTE: Final = 1024
@@ -101,18 +105,30 @@ def compared(latest: dict[str, object], kept: dict[str, object] | None) -> str:
     return "\n".join(lines)
 
 
+def kept_report() -> Path | None:
+    """Where the kept report lies: the repository's, when the simulator runs
+    from a checkout of it."""
+    return CHECKOUT_REPORT if CHECKOUT_REPORT.parent.is_dir() else None
+
+
 def main(arguments: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else None)
     parser.add_argument("--days", type=int, help="the days measured, by default the season")
     parser.add_argument("--record", action="store_true", help="keep the report")
+    parser.add_argument(
+        "--report", type=Path, default=kept_report(), help="the kept report, to compare and keep"
+    )
     parsed = parser.parse_args(arguments)
+    if parsed.record and parsed.report is None:
+        parser.error("no kept report here to keep it as: name one with --report")
     latest = report(parsed.days)
-    kept = json.loads(KEPT_REPORT.read_text()) if KEPT_REPORT.exists() else None
+    path: Path | None = parsed.report
+    kept = json.loads(path.read_text()) if path is not None and path.exists() else None
     print(compared(latest, kept))
-    if parsed.record:
-        KEPT_REPORT.parent.mkdir(parents=True, exist_ok=True)
-        KEPT_REPORT.write_text(json.dumps(latest, indent=2) + "\n")
-        print("kept", KEPT_REPORT)
+    if parsed.record and path is not None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(latest, indent=2) + "\n")
+        print("kept", path)
 
 
 if __name__ == "__main__":
