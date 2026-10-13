@@ -1,7 +1,12 @@
 import type { ReactNode } from "react";
 
 import type { BuildInfo } from "../buildInfo";
-import { describeManifest, type RunManifestState, type ServedVersionState } from "./manifest";
+import {
+  describeManifest,
+  type RunManifestState,
+  type ServedVersionState,
+  UNKNOWN_COMMIT,
+} from "./manifest";
 import { describeRunState, type RunStateState } from "./state";
 
 /** What each process of the scenario's run drawn holds at its moment, as
@@ -72,7 +77,9 @@ function DeveloperList({ state }: { state: RunStateState }) {
 /** What the run is made from, in QA mode: a scenario's run's manifest, its
  * version, seed, season and models; and the simulator and the viewer, each
  * one's version and commit, the simulator's as it says itself and the
- * viewer's as it was built, warning when the two commits differ. */
+ * viewer's as it was built, warning when the two commits are known and
+ * differ. A simulator installed as a package, rather than run from a git
+ * checkout, does not know its commit. */
 function RunManifestList({
   build,
   served,
@@ -100,7 +107,11 @@ function RunManifestList({
       : served.status === "unavailable"
         ? `cannot be read: ${served.reason}`
         : "reading…";
-  const commitsDiffer = served.status === "loaded" && served.served.commit !== build.sourceCommit;
+  const commitsDiffer =
+    served.status === "loaded" &&
+    served.served.commit !== UNKNOWN_COMMIT &&
+    build.sourceCommit !== UNKNOWN_COMMIT &&
+    served.served.commit !== build.sourceCommit;
   return (
     <details className="run-manifest" open>
       <summary>Run manifest</summary>

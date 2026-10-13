@@ -98,6 +98,20 @@ describe("QA mode's panel", () => {
     expect(html).not.toContain("manifest-seed");
   });
 
+  it("does not warn when a commit is unknown, as an installed simulator's is", () => {
+    const html = renderToStaticMarkup(
+      <QaPanel
+        build={BUILD}
+        served={{ status: "loaded", served: { version: "0.1.0", commit: "unknown" } }}
+        manifest={{ status: "none" }}
+        state={{ status: "none" }}
+      />,
+    );
+
+    expect(html).toContain('data-testid="manifest-simulator">0.1.0, commit unknown<');
+    expect(html).not.toContain("manifest-commits-differ");
+  });
+
   it("says when the simulator or the manifest cannot be read", () => {
     const html = renderToStaticMarkup(
       <QaPanel

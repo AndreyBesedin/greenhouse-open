@@ -46,6 +46,9 @@ export type RunManifestState =
   | { status: "loaded"; manifest: RunManifest };
 
 export const VERSION_URL = "/api/version";
+// The commit of a simulator that is not run from a git checkout, and of a
+// viewer not built in one.
+export const UNKNOWN_COMMIT = "unknown";
 
 /** Where the manifest of a scenario's run is published: under the weather
  * the run is asked for, the rest of the run making no difference to it. */

@@ -8,6 +8,7 @@ one that does, apart from the boundary check below.
 import ast
 import json
 import pathlib
+import re
 import subprocess
 import threading
 import urllib.error
@@ -42,12 +43,28 @@ def test_the_version_names_the_simulator_its_commit_and_the_scene_schema() -> No
     assert body["simulator"] == "greenhouse-sim"
     assert body["scene_schema_version"] == SCHEMA_VERSION
     assert isinstance(body["version"], str) and body["version"]
-    # The tests run from a git checkout: the commit is git's abbreviation of
-    # its HEAD, as the viewer names the commit it was built from.
-    head = subprocess.run(
-        ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, check=True
-    )
-    assert body["commit"] == head.stdout.strip()
+    # Run from a git checkout, the commit is git's abbreviation of its HEAD;
+    # installed as a package, as CI installs it, it is unknown.
+    assert body["commit"] == system.source_commit()
+    assert re.fullmatch(r"[0-9a-f]{7,}|unknown", str(body["commit"]))
+
+
+def test_the_commit_is_gits_abbreviation_of_the_checkouts_head(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    asked: list[object] = []
+
+    def git(arguments: list[str], **options: object) -> subprocess.CompletedProcess[str]:
+        asked.append((arguments, options["cwd"]))
+        return subprocess.CompletedProcess(arguments, 0, stdout="c1964e9\n")
+
+    monkeypatch.setattr(subprocess, "run", git)
+
+    assert system.source_commit.__wrapped__() == "c1964e9"
+    # Asked where the simulator's source lies, not where it was started.
+    assert asked == [
+        (["git", "rev-parse", "--short", "HEAD"], pathlib.Path(system.__file__).parent)
+    ]
 
 
 @pytest.mark.parametrize(
