@@ -17,7 +17,7 @@ const NOON_S = 43_200;
 const DAY_S = 86_400;
 // A later day's moment takes the simulator the house's air through the days
 // before it, its field then, and the crop's days.
-const ARRIVES = { timeout: 60_000 };
+const ARRIVES = { timeout: 90_000 };
 
 /** Clicks the first plant's stem until one of its organs is selected: a
  * view that has only just received its scene may not have drawn it yet. */
@@ -32,7 +32,7 @@ async function selectThePlant(page: Page): Promise<void> {
 test("crop: the reference greenhouse's plants live each day in the house's air and their own light", async ({
   page,
 }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(300_000);
   const status = page.getByTestId("scene-status");
   const run = page.getByRole("group", { name: "Climate run" });
 
@@ -50,11 +50,11 @@ test("crop: the reference greenhouse's plants live each day in the house's air a
   await test.step("a day on, it has lived its first, and grown", async () => {
     await run.getByRole("button", { name: "Next day" }).click();
     await expect(page).toHaveURL(new RegExp(`&t=${DAY_S + NOON_S}(&|$)`));
-    await expect(status).toContainText("reference_greenhouse, day 1, 3137 entities", ARRIVES);
+    await expect(status).toContainText("reference_greenhouse, day 1, 3155 entities", ARRIVES);
     // The organ selected is still the same plant's, on its next day.
     await expect(page.getByTestId("selected-entity")).toHaveText(new RegExp(`^${PLANT}_`));
     await expect(page.getByTestId("plant-days-air")).toHaveText(
-      "Air 13.6 °C on day 0, 13.6 to 13.6",
+      "Air 15.5 °C on day 0, 15.5 to 15.5",
       ARRIVES,
     );
     await expect(page.getByTestId("plant-days-light")).toHaveText(
@@ -66,10 +66,13 @@ test("crop: the reference greenhouse's plants live each day in the house's air a
 
   await test.step("two days on, its days are charted one by one", async () => {
     await run.getByRole("button", { name: "Next day" }).click();
-    await expect(status).toContainText("reference_greenhouse, day 2, 3162 entities", ARRIVES);
+    await expect(status).toContainText("reference_greenhouse, day 2, 3264 entities", ARRIVES);
     await expect(page.getByTestId("plant-days-light")).toHaveText(
       "Light 18.3 mol/m²/d on day 1, 18.0 to 18.3",
       ARRIVES,
+    );
+    await expect(page.getByTestId("plant-days-air")).toHaveText(
+      "Air 17.1 °C on day 1, 15.5 to 17.1",
     );
     await expect(page.getByRole("figure", { name: "Plant days" }).getByRole("img")).toHaveCount(3);
     await expect(page.locator("details.plant-structure summary")).toHaveText(
@@ -77,9 +80,9 @@ test("crop: the reference greenhouse's plants live each day in the house's air a
     );
   });
 
-  await test.step("with the heater on from the start, the house it lives in is warmer", async () => {
+  await test.step("without its own schedule, its heater on throughout, the house is warmer", async () => {
     await page.goto(
-      `/?scenario=reference_greenhouse&field=climate&t=${2 * DAY_S + NOON_S}&set=heater:1&camera=${CAMERA}`,
+      `/?scenario=reference_greenhouse&field=climate&t=${2 * DAY_S + NOON_S}&daily=none&set=heater:1&camera=${CAMERA}`,
     );
     await expect(status).toContainText("day 2", ARRIVES);
     await selectThePlant(page);

@@ -367,9 +367,11 @@ def test_its_plants_share_the_houses_air_each_in_its_own_light() -> None:
 
 
 def test_a_heated_house_develops_its_crop_faster() -> None:
-    cold = _body(f"/api/scenarios/reference_greenhouse/crop/{FIRST_PLANT}?t={DAY_S:.0f}")
+    # Without its own schedule, unheated, and with the heater on throughout.
+    cold = _body(f"/api/scenarios/reference_greenhouse/crop/{FIRST_PLANT}?t={DAY_S:.0f}&daily=none")
     heated = _body(
-        f"/api/scenarios/reference_greenhouse/crop/{FIRST_PLANT}?t={DAY_S:.0f}&set=heater:1"
+        f"/api/scenarios/reference_greenhouse/crop/{FIRST_PLANT}?t={DAY_S:.0f}&daily=none"
+        "&set=heater:1"
     )
 
     warmer = heated["environments"][0]["mean_temperature_c"]

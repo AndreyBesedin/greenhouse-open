@@ -73,6 +73,12 @@ export function withClouds(source: ScenarioSource, clouds: number | undefined): 
   return clouds === undefined ? rest : { ...rest, clouds };
 }
 
+/** Its wind's direction overridden, for QA, or its weather's own. */
+export function withWind(source: ScenarioSource, wind: number | undefined): ScenarioSource {
+  const { wind: _, ...rest } = source;
+  return wind === undefined ? rest : { ...rest, wind };
+}
+
 /** How far its doors and vents stand open. */
 export function withOpenings(
   source: ScenarioSource,
@@ -109,12 +115,10 @@ export function withoutCommand(source: ScenarioSource, index: number): ScenarioS
   return schedule.length === 0 ? rest : { ...rest, schedule };
 }
 
-/** Its daily commands without one of them, none left out when none are
- * left. */
+/** Its daily commands without one of them; with none left, it says so,
+ * rather than fall back on its scenario's own. */
 export function withoutDaily(source: ScenarioSource, index: number): ScenarioSource {
-  const { daily: _, ...rest } = source;
-  const daily = (source.daily ?? []).filter((__, at) => at !== index);
-  return daily.length === 0 ? rest : { ...rest, daily };
+  return { ...source, daily: (source.daily ?? []).filter((_, at) => at !== index) };
 }
 
 /** One of its commands repeated every day, at its time of day, in place of

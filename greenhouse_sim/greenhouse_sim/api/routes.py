@@ -34,13 +34,18 @@ check; a route that comes to need one checks it first.
                                           running, &schedule=60:fan:1,300:fan:0
                                           switching it at those moments,
                                           &daily=64800:heater:1 every day at
-                                          that time of day,
+                                          that time of day, in place of its
+                                          scenario's own, or &daily=none for
+                                          none,
                                           &open=roof_vent:1 with its vents
                                           open, and &t=600 that many seconds
                                           into the run, to its last day's end,
                                           for its climate, and
                                           &weather=cold_spring_day under a
-                                          preset weather, not its own
+                                          preset weather, not its own; @80
+                                          after its name overrides its
+                                          clouds, and ~90 its wind's
+                                          direction, for QA
     GET /api/scenarios/{id}/climate/probes what probes at ?probes=3:3.2:0.75,… read
                                           of its climate run every minute up to
                                           &t=600, and of the same run with all
@@ -213,7 +218,7 @@ def respond(method: str, path: str) -> Response:
                     _seconds(query),
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
-                    daily=_commands(query.get("daily", []), "daily"),
+                    daily=_daily(query),
                     weather=_last(query, "weather"),
                 )
             )
@@ -228,7 +233,7 @@ def respond(method: str, path: str) -> Response:
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
                     _seconds(query),
-                    daily=_commands(query.get("daily", []), "daily"),
+                    daily=_daily(query),
                     weather=_last(query, "weather"),
                 )
             )
@@ -241,7 +246,7 @@ def respond(method: str, path: str) -> Response:
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
                     _seconds(query),
-                    daily=_commands(query.get("daily", []), "daily"),
+                    daily=_daily(query),
                     weather=_last(query, "weather"),
                     from_s=_since(query),
                 )
@@ -255,7 +260,7 @@ def respond(method: str, path: str) -> Response:
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
                     _seconds(query),
-                    daily=_commands(query.get("daily", []), "daily"),
+                    daily=_daily(query),
                     weather=_last(query, "weather"),
                 )
             )
@@ -268,7 +273,7 @@ def respond(method: str, path: str) -> Response:
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
                     _seconds(query),
-                    daily=_commands(query.get("daily", []), "daily"),
+                    daily=_daily(query),
                     weather=_last(query, "weather"),
                 )
             )
@@ -282,7 +287,7 @@ def respond(method: str, path: str) -> Response:
                     _commands(query.get("schedule", [])),
                     _seconds(query),
                     weather=_last(query, "weather"),
-                    daily=_commands(query.get("daily", []), "daily"),
+                    daily=_daily(query),
                 )
             )
         case ["api", "scenarios", scenario_id, "crop"]:
@@ -295,7 +300,7 @@ def respond(method: str, path: str) -> Response:
                     _commands(query.get("schedule", [])),
                     _seconds(query),
                     weather=_last(query, "weather"),
-                    daily=_commands(query.get("daily", []), "daily"),
+                    daily=_daily(query),
                 )
             )
         case ["api", "scenarios", scenario_id, "crop", plant_id]:
@@ -309,7 +314,7 @@ def respond(method: str, path: str) -> Response:
                     _commands(query.get("schedule", [])),
                     _seconds(query),
                     weather=_last(query, "weather"),
-                    daily=_commands(query.get("daily", []), "daily"),
+                    daily=_daily(query),
                 )
             )
         case ["api", "scenarios", scenario_id, "climate", "observations"]:
@@ -321,7 +326,7 @@ def respond(method: str, path: str) -> Response:
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
                     _seconds(query),
-                    daily=_commands(query.get("daily", []), "daily"),
+                    daily=_daily(query),
                     clean=_last(query, "clean") == "1",
                     weather=_last(query, "weather"),
                     from_s=_since(query),
@@ -336,7 +341,7 @@ def respond(method: str, path: str) -> Response:
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
                     _seconds(query),
-                    daily=_commands(query.get("daily", []), "daily"),
+                    daily=_daily(query),
                     weather=_last(query, "weather"),
                     from_s=_since(query),
                 )
@@ -349,7 +354,7 @@ def respond(method: str, path: str) -> Response:
                     _pairs(query.get("set", []), "set"),
                     _commands(query.get("schedule", [])),
                     _seconds(query),
-                    daily=_commands(query.get("daily", []), "daily"),
+                    daily=_daily(query),
                     from_s=_since(query),
                 )
             )
@@ -484,6 +489,18 @@ def _commands(requests: list[str], name: str = "schedule") -> list[tuple[float, 
     return commands
 
 
+def _daily(query: Query) -> list[tuple[float, str, float]] | None:
+    """`daily=seconds:actuator:level,…`, a run's daily commands in place of
+    its scenario's; `daily=none` for none; or None if the query gives none,
+    for its scenario's own."""
+    requests = query.get("daily")
+    if requests is None:
+        return None
+    if requests == [NO_DAILY_COMMANDS]:
+        return []
+    return _commands(requests, "daily")
+
+
 def _points(requests: list[str]) -> list[tuple[float, float, float]]:
     """`probes=x:y:z,…` as points, in the order given."""
     points = []
@@ -526,6 +543,8 @@ def _multiplier(query: Query) -> float:
         raise InvalidSpeed() from None
 
 
+# How a query asks for a run without daily commands, its scenario's too.
+NO_DAILY_COMMANDS: Final = "none"
 # A scheduled action's parts: its day, plant, kind and target.
 LAB_ACTION_PARTS: Final = ("day", "plant", "action", "organ")
 

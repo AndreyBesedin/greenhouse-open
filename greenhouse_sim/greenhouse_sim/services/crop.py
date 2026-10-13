@@ -64,7 +64,7 @@ def run_crop(
     openings: Mapping[str, float] | None = None,
     commands: Sequence[Commanded] = (),
     weather: str | None = None,
-    daily: Sequence[Commanded] = (),
+    daily: Sequence[Commanded] | None = None,
 ) -> RunCrop:
     """A scenario's organ-level crop through a run, asked for as its climate
     field is: one of those kept, or a new one, carrying on from those kept
@@ -139,7 +139,7 @@ def crop_scene(
     commands: Sequence[Commanded] = (),
     time_s: float = 0.0,
     weather: str | None = None,
-    daily: Sequence[Commanded] = (),
+    daily: Sequence[Commanded] | None = None,
 ) -> SceneSnapshot:
     """A scenario's crop `time_s` into a run, organ by organ, as a viewer
     draws it over the scenario's scene: each plant at its planting position,
@@ -179,7 +179,7 @@ def crop_plant(
     commands: Sequence[Commanded] = (),
     time_s: float = 0.0,
     weather: str | None = None,
-    daily: Sequence[Commanded] = (),
+    daily: Sequence[Commanded] | None = None,
 ) -> CropPlant:
     """One plant of a scenario's crop `time_s` into a run, and its days so
     far. Asked for as its crop is, and refused as it is; a plant it does not
@@ -219,7 +219,7 @@ def plants_light(
     commands: Sequence[Commanded] = (),
     time_s: float = 0.0,
     weather: str | None = None,
-    daily: Sequence[Commanded] = (),
+    daily: Sequence[Commanded] | None = None,
 ) -> PlantsLight:
     """The light on each of a scenario's plants `time_s` into a run, asked
     for as its climate field is, and refused as it is: with its crowns as

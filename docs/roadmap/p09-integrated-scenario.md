@@ -276,7 +276,7 @@ run in their own Playwright project, as the plant lab's and the sun's do.
 | P09.1 | `feat(scenarios): define versioned integrated scenario manifest` | Done |
 | P09.2 | `feat(sim): unify multi-rate scheduler and visible event timeline` | Done |
 | P09.3 | `feat(coupling): connect radiation/weather/climate to plant environment` | Done |
-| P09.4 | `feat(coupling): connect actuators weather and vents to sensor observations` | Planned |
+| P09.4 | `feat(coupling): connect actuators weather and vents to sensor observations` | Done |
 | P09.5 | `feat(replay): add checkpoint reset branch and replay` | Planned |
 | P09.6 | `feat(qa): add QA mode with truth overlays` | Planned |
 | P09.7 | `test(e2e): add integrated visual regression suite` | Planned |
@@ -524,6 +524,55 @@ Schedules, weather and sun through the season, observed by the sensors.
 Visible result: a heater, fan and vent schedule shows in the overlays and
 the sensors' charts. Tests: observations come only through the observation
 path; a heater's night setback shows in the readings.
+
+#### As implemented
+
+- **A scenario's own daily commands** (`ScenarioConfig.daily`, its
+  manifest's `daily`): its runs give them unless a run gives daily commands
+  of its own, and `&daily=none` gives none, at every route that takes a
+  run. A scenario refuses daily commands to equipment or openings it does
+  not have, and the scenario list gives them, and its doors' and vents'
+  identifiers. The comparison with everything off has none.
+- **The reference run's climate by the clock,** every day: the heater full
+  from 17 h, set back to 80% at 23 h, full again from 5 h before dawn, half
+  at 7 h and off at 9 h; the roof vents half open at 9 h, fully from 11 h,
+  half from 18 h and shut at 20 h; both fans from 8 h to 20 h. 21 commands.
+  The dehumidifier stays off: with no crop transpiring into the air, a
+  heated house is dry enough, and a night of drying took it to a mean of
+  23% relative humidity.
+- **What it makes of the season,** chosen among six schedules measured
+  through all 120 days (about 4 minutes each): the house averages 17 °C a
+  day in March and 21.5 °C in June; evenings stand near 19 °C, the night
+  set back to 12 to 14 °C, March mornings dip to 10 °C once the heat steps
+  down, and the day's peak rises from 22 °C in early March to 28 °C by May
+  and 31 °C in June, the relative humidity at 33 to 41% on average. A fixed schedule
+  cannot follow the season: from May the morning's heat and an early sun
+  meet before the vents open fully, and the day's peak comes at 9 h. A
+  climate computer's setpoints would follow it.
+- **The viewer** draws a scenario with its own daily commands where its
+  address gives none, lists them under "Schedule", and keeps in the address
+  only what differs from them; taking one out writes the rest, and taking
+  them all out, `&daily=none`. A door or vent a command opens now stands
+  that far open in the scene at the moment drawn: a command to it was
+  counted as equipment's before, which the scene refused.
+- **Tests** (`tests/test_reference_schedule.py`): the reference run heats,
+  vents and stirs its house every day and no other scenario's does; a run
+  gives its scenario's daily commands, its own in their place, or none;
+  the API reads `daily=none` as none; a daily command to what a scenario
+  does not have is refused; the heater's night setback shows in the front
+  temperature sensor's readings, 3 h into the third day colder than 22 h
+  into the second and far warmer than unheated; and a clean sensor's
+  observations late in the run are the run's own air where it stands.
+  Browser test: `reference-schedule.spec.ts`, with the season's.
+- **A wind override for QA** (section 10, the final QA's sixth step):
+  `&wind=90` turns the wind to blow from that bearing at its own speed, the
+  rest of the weather its own, as `&clouds=` overrides the cloud cover; the
+  API takes it in the weather's name, `default~90` or
+  `cold_spring_day@80~90`, and refuses a bearing outside 0 to 360°. The
+  weather panel has a slider for it, in steps of 15°. Only openings in the
+  house's walls turn with it: at noon its own westerly blows 11.6 m³/s in
+  through the open front door, and a northerly draws 2.4 m³/s out; the
+  roof vents' exchange depends on the wind's speed alone (P07.4).
 
 ### P09.5: Checkpoints, branches and replay
 

@@ -89,7 +89,9 @@ type Commanded = tuple[float, str, float]
 
 
 def _checked(
-    config: ScenarioConfig, commands: Sequence[Commanded], daily: Sequence[Commanded] = ()
+    config: ScenarioConfig,
+    commands: Sequence[Commanded],
+    daily: Sequence[Commanded] | None = None,
 ) -> tuple[Commanded, ...]:
     """Commands to a scenario's equipment, or its doors and vents (P07.8),
     checked: one to equipment or an opening it does not have, to a level
@@ -97,7 +99,12 @@ def _checked(
     command, its time of day for its moment (P09.2), is checked as the
     others are, and refused at a time of day outside a day; it becomes a
     command at that time on each of the run's days, before the others
-    (`greenhouse_sim.climate.commands`)."""
+    (`greenhouse_sim.climate.commands`). Without daily commands of its own,
+    a run gives its scenario's (P09.4)."""
+    if daily is None:
+        daily = [
+            (command.time_of_day_s, command.actuator_id, command.level) for command in config.daily
+        ]
     openings = {opening.opening_id for opening in config.envelope.openings}
     for _, actuator, level in (*daily, *commands):
         if actuator in openings:
@@ -146,7 +153,7 @@ def run_schedule(
     layout: str | None = None,
     levels: Mapping[str, float] | None = None,
     commands: Sequence[Commanded] = (),
-    daily: Sequence[Commanded] = (),
+    daily: Sequence[Commanded] | None = None,
 ) -> Schedule:
     """The schedule a scenario's climate run is given, asked for and checked
     as its climate field is: its equipment at `levels` from the start, then
@@ -214,7 +221,7 @@ def climate_run(
     openings: Mapping[str, float] | None = None,
     commands: Sequence[Commanded] = (),
     weather: str | None = None,
-    daily: Sequence[Commanded] = (),
+    daily: Sequence[Commanded] | None = None,
 ) -> tuple[RunKey, ClimateDay]:
     """A scenario's climate run, asked for and checked as its climate field
     is, with what tells it from another: the air its crop lives in, whether
@@ -334,7 +341,7 @@ def _models(
     openings: Mapping[str, float] | None = None,
     commands: Sequence[Commanded] = (),
     weather: str = DEFAULT_WEATHER,
-    daily: Sequence[Commanded] = (),
+    daily: Sequence[Commanded] | None = None,
 ) -> dict[str, AirflowModel]:
     """A scenario's fields by name, with one of its layouts, its equipment at
     `levels` and then as `daily` and `commands` set it, its doors and vents
@@ -386,7 +393,7 @@ def field(
     openings: Mapping[str, float] | None = None,
     commands: Sequence[Commanded] = (),
     weather: str | None = None,
-    daily: Sequence[Commanded] = (),
+    daily: Sequence[Commanded] | None = None,
 ) -> FieldDocument:
     """One of a scenario's fields with one of its layouts, by default its
     own, its equipment at `levels` and then as `commands` set it, and every
@@ -422,7 +429,7 @@ def climate_probes(
     commands: Sequence[Commanded] = (),
     until_s: float = 0.0,
     weather: str | None = None,
-    daily: Sequence[Commanded] = (),
+    daily: Sequence[Commanded] | None = None,
 ) -> ClimateProbes:
     """What probes at `points` read of the grid run that draws a scenario's
     climate at `until_s`, every `PROBE_EVERY_S` from its start to `until_s`,
@@ -470,7 +477,7 @@ def house_air(
     commands: Sequence[Commanded] = (),
     until_s: float = 0.0,
     weather: str | None = None,
-    daily: Sequence[Commanded] = (),
+    daily: Sequence[Commanded] | None = None,
     from_s: float | None = None,
 ) -> HouseTrace:
     """The house's air as one well-mixed volume (`greenhouse_sim.climate.house`)
@@ -502,7 +509,7 @@ def glazing(
     commands: Sequence[Commanded] = (),
     time_s: float = 0.0,
     weather: str | None = None,
-    daily: Sequence[Commanded] = (),
+    daily: Sequence[Commanded] | None = None,
 ) -> GlazingAt:
     """A scenario's glazing at `time_s` into its climate run
     (`greenhouse_sim.climate.glazing`): each wall's and roof slope's air,
@@ -527,7 +534,7 @@ def openings(
     commands: Sequence[Commanded] = (),
     time_s: float = 0.0,
     weather: str | None = None,
-    daily: Sequence[Commanded] = (),
+    daily: Sequence[Commanded] | None = None,
 ) -> OpeningsAt:
     """What a scenario's open doors and vents pass at `time_s` into its
     climate run, as the wind and the stack drive them
@@ -551,7 +558,7 @@ def air_through_a_run(
     openings: Mapping[str, float] | None = None,
     commands: Sequence[Commanded] = (),
     weather: str | None = None,
-    daily: Sequence[Commanded] = (),
+    daily: Sequence[Commanded] | None = None,
 ) -> tuple[Callable[[float], EnvironmentField], str]:
     """A scenario's air at each moment of a run, asked as its climate field
     is, and refused as it is, with the run's identity: its climate run's, if

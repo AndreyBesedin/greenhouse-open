@@ -43,6 +43,8 @@ export type SceneSource =
       /** A QA override of its weather's cloud cover, in %, which dims its
        * light as such a sky would. */
       clouds?: number;
+      /** A QA override of the wind's direction, the bearing it blows from. */
+      wind?: number;
       /** One of its environment fields, drawn over its scene, as arrows by
        * default, and where a slice through it lies, if one is drawn. */
       field?: string;
@@ -96,6 +98,9 @@ const CFD_BOUNDARIES = "boundaries";
 // weather under other clouds than its own: `cold_spring_day@80`.
 const MOST_CLOUDS_PCT = 100;
 const CLOUDS_MARK = "@";
+// And then a wind's direction in place of its own: `default~90`.
+const WIND_MARK = "~";
+const FULL_TURN_DEG = 360;
 
 export function sourceFromSearch(search: string): SceneSource {
   const parameters = new URLSearchParams(search);
@@ -108,6 +113,7 @@ export function sourceFromSearch(search: string): SceneSource {
     const layout = parameters.get("layout");
     const weather = parameters.get("weather");
     const clouds = cloudsFrom(parameters.get("clouds"));
+    const wind = windFrom(parameters.get("wind"));
     const envelope = pairsFrom(parameters.get("envelope"));
     const openings = pairsFrom(parameters.get("open"));
     const levels = pairsFrom(parameters.get("set"));
@@ -117,7 +123,7 @@ export function sourceFromSearch(search: string): SceneSource {
     const compare = parameters.get("compare");
     const time = timeFrom(parameters.get("t"));
     const schedule = scheduleFrom(parameters.get("schedule"));
-    const daily = scheduleFrom(parameters.get("daily"));
+    const daily = dailyFrom(parameters.get("daily"));
     const probes = probesFrom(parameters.get("probes"));
     const camera = cameraFrom(parameters.get("camera"));
     return {
@@ -126,6 +132,7 @@ export function sourceFromSearch(search: string): SceneSource {
       ...(layout ? { layout } : {}),
       ...(weather ? { weather } : {}),
       ...(clouds === null ? {} : { clouds }),
+      ...(wind === null ? {} : { wind }),
       ...(field ? { field } : {}),
       ...(field && fieldView ? { fieldView } : {}),
       ...(field && slice ? { slice } : {}),
@@ -214,7 +221,7 @@ export function searchFor(source: SceneSource): string {
         .map((part) => `&${part}`)
         .join(
           "",
-        )}${source.clouds === undefined ? "" : `&clouds=${source.clouds}`}${fieldQuery(source)}${source.cfdBoundaries ? `&cfd=${CFD_BOUNDARIES}` : ""}${source.camera === undefined ? "" : `&camera=${cameraText(source.camera)}`}`;
+        )}${source.clouds === undefined ? "" : `&clouds=${source.clouds}`}${source.wind === undefined ? "" : `&wind=${source.wind}`}${fieldQuery(source)}${source.cfdBoundaries ? `&cfd=${CFD_BOUNDARIES}` : ""}${source.camera === undefined ? "" : `&camera=${cameraText(source.camera)}`}`;
     case "live":
       return `?live=${encodeURIComponent(source.scenarioId)}`;
   }
@@ -249,9 +256,7 @@ function fieldQuery(source: {
     source.schedule === undefined || source.schedule.length === 0
       ? ""
       : `&schedule=${scheduleText(source.schedule)}`,
-    source.daily === undefined || source.daily.length === 0
-      ? ""
-      : `&daily=${scheduleText(source.daily)}`,
+    source.daily === undefined ? "" : `&daily=${dailyText(source.daily)}`,
     source.compare === undefined ? "" : `&compare=${encodeURIComponent(source.compare)}`,
     source.probes === undefined || source.probes.length === 0
       ? ""
@@ -319,6 +324,44 @@ export function scheduleFrom(value: string | null): ScheduledCommand[] | null {
   return commands;
 }
 
+/** How the address and the simulator's API ask for a run without daily
+ * commands, its scenario's own too. */
+export const NO_DAILY_COMMANDS = "none";
+
+/** A run's daily commands as the address and the API write them: none as
+ * `none`, so that a run without them is told from one with its scenario's. */
+export function dailyText(commands: readonly ScheduledCommand[]): string {
+  return commands.length === 0 ? NO_DAILY_COMMANDS : scheduleText(commands);
+}
+
+/** The daily commands an address gives a run, none if it says `none`, or
+ * null if it gives none or nothing readable: then its scenario's own. */
+function dailyFrom(value: string | null): ScheduledCommand[] | null {
+  return value === NO_DAILY_COMMANDS ? [] : scheduleFrom(value);
+}
+
+/** A scenario's source with its scenario's own daily commands, `own`, where
+ * it gives none of its own (P09.4). */
+export function withOwnDaily<S extends { daily?: ScheduledCommand[] }>(
+  source: S,
+  own: readonly ScheduledCommand[],
+): S {
+  return source.daily === undefined && own.length > 0 ? { ...source, daily: [...own] } : source;
+}
+
+/** A scenario's source keeping its daily commands only where they differ
+ * from its scenario's own, `own`: the address keeps a change, not a copy. */
+export function keptDaily<S extends { daily?: ScheduledCommand[] }>(
+  source: S,
+  own: readonly ScheduledCommand[],
+): S {
+  if (source.daily === undefined || scheduleText(source.daily) !== scheduleText(own)) {
+    return source;
+  }
+  const { daily: _, ...rest } = source;
+  return rest as S;
+}
+
 /** A daily command's latest moment by `now`, in seconds into the run, or
  * null if its time of day has not yet come on the run's first day. */
 export function latestDaily(command: ScheduledCommand, now: number): number | null {
@@ -378,13 +421,27 @@ function cloudsFrom(value: string | null): number | null {
   return value !== null && value !== "" && clouds >= 0 && clouds <= MOST_CLOUDS_PCT ? clouds : null;
 }
 
+/** A wind direction the address overrides the weather's with, a bearing
+ * from 0 to 360°, or null when it says none or nothing readable. */
+function windFrom(value: string | null): number | null {
+  const wind = Number(value ?? "");
+  return value !== null && value !== "" && wind >= 0 && wind < FULL_TURN_DEG ? wind : null;
+}
+
 /** The weather the simulator is asked for: another by name, or its own, its
- * clouds overridden as `@80` asks, for QA. */
+ * clouds overridden as `@80` asks, and its wind's direction as `~90` does,
+ * for QA. */
 export function apiWeather(
   weather: string | undefined,
   clouds: number | undefined,
+  wind?: number,
 ): string | undefined {
-  return clouds === undefined ? weather : `${weather ?? DEFAULT_WEATHER}${CLOUDS_MARK}${clouds}`;
+  if (clouds === undefined && wind === undefined) {
+    return weather;
+  }
+  const clouded = clouds === undefined ? "" : `${CLOUDS_MARK}${clouds}`;
+  const winded = wind === undefined ? "" : `${WIND_MARK}${wind}`;
+  return `${weather ?? DEFAULT_WEATHER}${clouded}${winded}`;
 }
 
 function timeFrom(value: string | null): number | null {
@@ -410,7 +467,7 @@ export function pairsFrom(value: string | null): Record<string, number> | null {
   return pairs;
 }
 
-function sceneUrl(source: SceneSource): string | null {
+function sceneUrl(source: SceneSource, openingIds: readonly string[] = []): string | null {
   switch (source.kind) {
     case "reference":
     case "stress":
@@ -424,27 +481,56 @@ function sceneUrl(source: SceneSource): string | null {
     case "plants":
       return `${PLANT_LAB_SCENE_URL}?${labRunQuery(source)}`;
     case "scenario":
-      // Its equipment as it stands at the moment of its climate run drawn.
-      return `/api/scenarios/${encodeURIComponent(source.scenarioId)}/scene${changesQuery({ ...source, levels: levelsAt(source) }, "?")}`;
+      // Its equipment, and its doors and vents, as they stand at the moment of
+      // its climate run drawn.
+      return `/api/scenarios/${encodeURIComponent(source.scenarioId)}/scene${changesQuery(standingAt(source, openingIds), "?")}`;
   }
 }
 
 /** What a scene is asked for by: its address, or, for a stress scene, which
  * the viewer builds itself, its size; null for none, or a live one. */
-export function sceneRequest(source: SceneSource): string | null {
-  return source.kind === "stress" ? `stress ${source.plants}` : sceneUrl(source);
+export function sceneRequest(
+  source: SceneSource,
+  openingIds: readonly string[] = [],
+): string | null {
+  return source.kind === "stress" ? `stress ${source.plants}` : sceneUrl(source, openingIds);
+}
+
+/** A scenario's source with its equipment, and its doors and vents,
+ * `openingIds`, at the levels they stand at at the moment drawn: its
+ * commands to an opening open it that far, as the simulator's do. */
+export function standingAt<
+  S extends {
+    levels?: Readonly<Record<string, number>>;
+    openings?: Readonly<Record<string, number>>;
+    schedule?: readonly ScheduledCommand[];
+    daily?: readonly ScheduledCommand[];
+    time?: number;
+  },
+>(source: S, openingIds: readonly string[]): S {
+  const doors = new Set(openingIds);
+  const standing = Object.entries(levelsAt(source));
+  return {
+    ...source,
+    levels: Object.fromEntries(standing.filter(([id]) => !doors.has(id))),
+    openings: {
+      ...(source.openings ?? {}),
+      ...Object.fromEntries(standing.filter(([id]) => doors.has(id))),
+    },
+  };
 }
 
 /** Fetches and checks the chosen scene; every failure becomes a state to show. */
 export async function loadScene(
   source: SceneSource,
   fetchFn: typeof fetch = fetch,
+  openingIds: readonly string[] = [],
 ): Promise<SceneState> {
   if (source.kind === "stress") {
     // The viewer builds it, so it needs no check.
     return { status: "loaded", snapshot: stressScene(source.plants) };
   }
-  const url = sceneUrl(source);
+  const url = sceneUrl(source, openingIds);
   return url === null ? { status: "none" } : fetchScene(url, fetchFn);
 }
 
@@ -489,11 +575,12 @@ export function withItsAir(shown: SceneSource, chosen: SceneSource): SceneSource
   ) {
     return chosen;
   }
-  const { weather, clouds, field, fieldView, slice, compare, probes, cfdBoundaries } = shown;
+  const { weather, clouds, wind, field, fieldView, slice, compare, probes, cfdBoundaries } = shown;
   return {
     ...chosen,
     ...(weather === undefined ? {} : { weather }),
     ...(clouds === undefined ? {} : { clouds }),
+    ...(wind === undefined ? {} : { wind }),
     ...(field === undefined ? {} : { field }),
     ...(fieldView === undefined ? {} : { fieldView }),
     ...(slice === undefined ? {} : { slice }),

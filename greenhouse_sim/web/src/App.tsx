@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { type BuildInfo, buildInfo } from "./buildInfo";
 import type { PresetName, PresetRequest } from "./camera";
@@ -44,20 +44,22 @@ import { PlantDays } from "./plants/PlantDays";
 import { PlantLight } from "./plants/PlantLight";
 import type { ViewSample } from "./readouts";
 import { ScenarioPanels } from "./ScenarioPanels";
-import { loadScenarios, SCENARIOS_URL } from "./scenarios";
+import { loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
 import { withProbes } from "./scene/edits";
 import { runApartFromItsMoment, runsSomething, scenarioRun } from "./scene/run";
 import {
   changesQuery,
   fetchScene,
+  keptDaily,
   loadScene,
   type SceneSource,
   sceneRequest,
   withItsAir,
+  withOwnDaily,
 } from "./scene/source";
 import { useLiveCommands } from "./scene/useLiveCommands";
 import { useLiveScene } from "./scene/useLiveScene";
-import { useSource } from "./scene/useSource";
+import { type SetSource, useSource } from "./scene/useSource";
 import { entityOfOrgan, organOf, plantOf, selectedEntity } from "./selection";
 import { CameraFrames } from "./sensors/CameraFrames";
 import { CameraView } from "./sensors/CameraView";
@@ -82,9 +84,34 @@ const MILLISECONDS_PER_SECOND = 1000;
 // a crop's height.
 const DEFAULT_PROBE_HEIGHT_M = 1;
 const EMPTY_PROBES: Point3[] = [];
+const NO_OPENINGS: readonly string[] = [];
 
 export function App({ build = buildInfo }: { build?: BuildInfo }) {
-  const [source, setSource] = useSource();
+  const [addressed, setAddressed] = useSource();
+  const scenarios = useLoad(SCENARIOS_URL, () => loadScenarios());
+  // The scenario shown, as the list describes it: its weathers, its days
+  // and its own daily commands.
+  const summary =
+    addressed.kind === "scenario" && scenarios.status === "loaded"
+      ? scenarios.scenarios.find((s) => s.id === addressed.scenarioId)
+      : undefined;
+  const own = useMemo(() => ownDaily(summary), [summary]);
+  // The source drawn: a scenario's with its own daily commands where its
+  // address gives none (P09.4). Every change is made to the source drawn,
+  // and the address keeps only what differs from the scenario's own.
+  const source = useMemo(
+    () => (addressed.kind === "scenario" ? withOwnDaily(addressed, own) : addressed),
+    [addressed, own],
+  );
+  const setSource = useCallback(
+    (change: SetSource) =>
+      setAddressed((current) => {
+        const drawn = current.kind === "scenario" ? withOwnDaily(current, own) : current;
+        const next = typeof change === "function" ? change(drawn) : change;
+        return next.kind === "scenario" ? keptDaily(next, own) : next;
+      }),
+    [own, setAddressed],
+  );
   // Whether a click places a probe, and how high.
   const [placingProbes, setPlacingProbes] = useState(false);
   const [playingClimate, setPlayingClimate] = useState(false);
@@ -110,18 +137,13 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const liveScenario = source.kind === "live" ? source.scenarioId : null;
   const live = useLiveScene(liveScenario);
   const commands = useLiveCommands(liveScenario);
-  const scenarios = useLoad(SCENARIOS_URL, () => loadScenarios());
-  // The scenario shown, as the list describes it: its weathers and its days.
-  const summary =
-    source.kind === "scenario" && scenarios.status === "loaded"
-      ? scenarios.scenarios.find((s) => s.id === source.scenarioId)
-      : undefined;
 
   // A scenario reopened by its sliders, or the plant lab on another day,
   // keeps its scene on show until the next arrives; any other change of
   // scene starts from loading.
-  const sceneAsked = sceneRequest(source);
-  const scene = useLoad(sceneAsked, () => loadScene(source), {
+  const openingIds = summary?.openings ?? NO_OPENINGS;
+  const sceneAsked = sceneRequest(source, openingIds);
+  const scene = useLoad(sceneAsked, () => loadScene(source, fetch, openingIds), {
     group:
       source.kind === "scenario"
         ? `scenario ${source.scenarioId}`
@@ -320,7 +342,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             ...sensorRun,
             levels: undefined,
             schedule: undefined,
-            daily: undefined,
+            daily: [],
             clean: !sensorsImperfect,
           },
         },

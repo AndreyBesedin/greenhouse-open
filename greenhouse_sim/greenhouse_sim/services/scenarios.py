@@ -17,6 +17,7 @@ from typing import Final
 from pydantic import BaseModel, JsonValue, ValidationError
 
 from greenhouse_sim.biology.tomato.organ.transplants import transplant
+from greenhouse_sim.climate.commands import DailyCommand
 from greenhouse_sim.core.engine import SimulationEngine
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
@@ -41,6 +42,9 @@ DEFAULT_WEATHER: Final = "default"
 # its own, for QA.
 CLOUDS_MARK: Final = "@"
 MOST_CLOUD_PCT: Final = 100.0
+# And then with this and a bearing, which overrides its wind's direction.
+WIND_MARK: Final = "~"
+FULL_TURN_DEG: Final = 360.0
 
 
 class ScenarioSummary(BaseModel):
@@ -51,6 +55,12 @@ class ScenarioSummary(BaseModel):
     duration_days: int
     # How its runs grow its crop: "simple" or "organ" (`CropModel`).
     crop_model: str
+    # The commands its runs give at a time of day, every day, unless a run
+    # gives its own.
+    daily: list[DailyCommand]
+    # Its doors and vents, by identifier, which commands open as they set its
+    # equipment.
+    openings: list[str]
     # Its layouts' names, its default first.
     layouts: list[str]
     # The weathers it can be run under, by name, its own first.
@@ -80,6 +90,8 @@ def scenario_summaries() -> list[ScenarioSummary]:
             plants=config.rows * config.columns,
             duration_days=config.duration_days,
             crop_model=config.crop_model.value,
+            daily=config.daily,
+            openings=[opening.opening_id for opening in config.envelope.openings],
             layouts=layout_names(config.greenhouse_id),
             weathers=weather_names(),
         )
@@ -162,7 +174,19 @@ def _with_weather(config: ScenarioConfig, name: str) -> ScenarioConfig:
     """The scenario under a preset or a recorded weather, or its own; any
     other is not found. A name may end with `@` and a cloud cover, from 0 to
     100 %, which overrides the weather's (`cold_spring_day@80`): a QA
-    override of how clouded its sky is (P08.7); any other is refused."""
+    override of how clouded its sky is (P08.7); and then with `~` and a
+    compass bearing, from 0 to 360°, the wind's direction, which overrides
+    the weather's (`default~90`, `cold_spring_day@80~270`, P09.4); any other
+    is refused."""
+    rest, winded, wind = name.partition(WIND_MARK)
+    if winded:
+        try:
+            bearing = float(wind)
+        except ValueError:
+            bearing = math.nan
+        if not 0.0 <= bearing < FULL_TURN_DEG:
+            raise InvalidRequest(f"a wind blows from a bearing from 0 to 360°, not {wind!r}")
+        return _with_weather(config, rest).model_copy(update={"wind_from_deg": bearing})
     base, override, clouds = name.partition(CLOUDS_MARK)
     if override:
         try:

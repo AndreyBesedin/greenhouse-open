@@ -1,5 +1,6 @@
 import {
   apiWeather,
+  dailyText,
   pairsText,
   type SceneSource,
   type ScheduledCommand,
@@ -45,7 +46,7 @@ export const CLIMATE_PARTS: readonly RunPart[] = [
 ];
 
 /** The run a scenario's source draws: its parts as its address holds them,
- * and its weather with the clouds asked for. */
+ * and its weather with the clouds and the wind asked for. */
 export function scenarioRun(source: Extract<SceneSource, { kind: "scenario" }>): ScenarioRun {
   return {
     scenarioId: source.scenarioId,
@@ -55,7 +56,7 @@ export function scenarioRun(source: Extract<SceneSource, { kind: "scenario" }>):
     schedule: source.schedule,
     daily: source.daily,
     time: source.time,
-    weather: apiWeather(source.weather, source.clouds),
+    weather: apiWeather(source.weather, source.clouds, source.wind),
   };
 }
 
@@ -67,7 +68,7 @@ export function runParameters(run: RunParts, parts: readonly RunPart[] = CLIMATE
   const levels = asked.has("levels") ? pairsText(run.levels) : "";
   const openings = asked.has("openings") ? pairsText(run.openings) : "";
   const schedule = asked.has("schedule") ? scheduleText(run.schedule) : "";
-  const daily = asked.has("daily") ? scheduleText(run.daily) : "";
+  const daily = asked.has("daily") && run.daily !== undefined ? dailyText(run.daily) : "";
   const time = asked.has("time") && run.time !== undefined && run.time > 0 ? run.time : null;
   return [
     ...(asked.has("layout") && run.layout !== undefined

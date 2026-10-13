@@ -83,7 +83,7 @@ def observations(
     until_s: float = 0.0,
     clean: bool = False,
     weather: str | None = None,
-    daily: Sequence[Commanded] = (),
+    daily: Sequence[Commanded] | None = None,
     from_s: float | None = None,
 ) -> SensorObservations:
     """A run's observation log from `from_s`, by default the start of the
@@ -146,7 +146,7 @@ def truth(
     commands: Sequence[Commanded] = (),
     until_s: float = 0.0,
     weather: str | None = None,
-    daily: Sequence[Commanded] = (),
+    daily: Sequence[Commanded] | None = None,
     from_s: float | None = None,
 ) -> SensorTruths:
     """What a scenario's point sensors truly sampled from `from_s`, by

@@ -23,8 +23,15 @@ const WEATHER_DAY = "weather-day.spec.ts";
 // run on their own, after the plant lab, and P07's after them.
 const SUN = ["light.spec.ts", "solar-lab.spec.ts", "solar-day.spec.ts"];
 // P09's checks through a run's days work a climate run on each day they
-// visit, and the crop's through its days, so they run on their own, last.
-const SEASON = ["season.spec.ts", "daily-schedule.spec.ts", "crop.spec.ts"];
+// visit, and the reference greenhouse's its house and crop through days
+// too: two at once starve each other's waits on a slow machine, so each
+// runs alone, one after another, after P07's.
+const ONE_BY_ONE = [
+  "season.spec.ts",
+  "daily-schedule.spec.ts",
+  "crop.spec.ts",
+  "reference-schedule.spec.ts",
+];
 
 export default defineConfig({
   testDir: "e2e",
@@ -35,7 +42,7 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testIgnore: [...ELSEWHERE, RENDERER_SMOKE, PLANT_LAB, WEATHER_DAY, ...SUN, ...SEASON],
+      testIgnore: [...ELSEWHERE, RENDERER_SMOKE, PLANT_LAB, WEATHER_DAY, ...SUN, ...ONE_BY_ONE],
       use: { ...devices["Desktop Chrome"] },
     },
     {
@@ -62,12 +69,14 @@ export default defineConfig({
       dependencies: ["sun"],
       use: { ...devices["Desktop Chrome"] },
     },
-    {
-      name: "season",
-      testMatch: SEASON,
-      dependencies: ["weather-day"],
+    ...ONE_BY_ONE.map((spec, index) => ({
+      name: spec.replace(".spec.ts", ""),
+      testMatch: spec,
+      dependencies: [
+        index === 0 ? "weather-day" : (ONE_BY_ONE[index - 1] ?? "").replace(".spec.ts", ""),
+      ],
       use: { ...devices["Desktop Chrome"] },
-    },
+    })),
   ],
   webServer: [
     {

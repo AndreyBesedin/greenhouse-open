@@ -99,11 +99,16 @@ its own (`&schedule=60:fan:1,300:heater:0`, seconds:actuator:level), or
 every day at a time of day (`&daily=64800:heater:1,79200:heater:0`, the
 heater on every evening from 18 h to 22 h), and
 equipment switched while the run stands past its start is an override from
-that moment, which a daily command at the same moment gives way to.
+that moment, which a daily command at the same moment gives way to. A
+scenario may have daily commands of its own, as the reference greenhouse
+heats, vents and stirs its house by the clock (P09.4): a run gives them
+unless its address gives its own, and `&daily=none` gives none; the address
+keeps a change to them, not a copy.
 "Schedule" lists the commands under the time sliders, the moment's day's
 marked on a bar over it, a daily one's square, each to go to or take out,
 and a command for one moment to repeat every day (↻); the Equipment panel and the
-scene show the levels at the moment drawn. "Timeline", opened on demand,
+scene show the levels at the moment drawn, and a door or vent a command
+opens stands as far open. "Timeline", opened on demand,
 draws a lane per process (its commands, its air, its plants, its sensors
 and its cameras) with each event a tick across the window the moment lies
 in, a day, an hour, ten minutes or a minute wide, and lists what each
@@ -135,6 +140,10 @@ outside the house, a metre long for each metre a second
 synthetic day in place of its own weather
 (`?scenario=climate_box&weather=cold_spring_day`), and charts that day's
 temperature, humidity and wind (`GET /api/scenarios/{id}/weather/day`).
+For QA, its sliders override the sky's cloud cover (`&clouds=80`) and the
+wind's direction, the bearing it blows from (`&wind=90`), keeping the rest of
+the weather its own; the API takes them in the weather's name
+(`weather=default@80~90`).
 The inspector says what the selected entity is in words, and names its
 dimensions. In a climate run's view, a selected plant, or any part of one,
 shows its light: its PAR at the moment drawn and its day's light integral

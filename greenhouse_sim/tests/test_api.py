@@ -63,6 +63,8 @@ def test_the_scenario_list_is_the_registry() -> None:
             "plants": config.rows * config.columns,
             "duration_days": config.duration_days,
             "crop_model": config.crop_model.value,
+            "daily": [command.model_dump(mode="json") for command in config.daily],
+            "openings": [opening.opening_id for opening in config.envelope.openings],
             "layouts": ["default", *OTHER_LAYOUTS.get(scenario_id, [])],
             "weathers": [
                 "default",
