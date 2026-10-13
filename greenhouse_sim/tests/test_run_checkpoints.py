@@ -51,6 +51,8 @@ def test_a_checkpoint_keeps_a_runs_state_at_the_start_of_its_day() -> None:
 
     assert (saved.day, saved.time_s, saved.plants) == (1, DAY_S, 32)
     assert kept.house == climate.house.air_at(DAY_S)
+    # And an hour before its day, where its first hour's field starts.
+    assert kept.house_before == climate.house.air_at(DAY_S - HOUR_S)
     assert kept.plants == list(crop.plants_on(1))
     assert kept.lived == crop.lived_through(1)
     assert kept.manifest == manifest_digest("reference_greenhouse")
@@ -87,7 +89,32 @@ def test_a_restored_run_carries_on_as_the_original_does() -> None:
     assert restored == original
     assert house.air_at(2 * DAY_S + HOUR_S) == pytest.approx(original_air)
     # It took the checkpoint's first day over, and worked out no moment of it.
-    assert [m for m in house._kept if 0.0 < m < DAY_S] == []
+    assert [m for m in house._kept if 0.0 < m < DAY_S - HOUR_S] == []
+
+
+def test_a_restored_run_draws_its_days_first_hour_from_the_checkpoint() -> None:
+    first_hour = DAY_S + 20 * 60.0
+    original = _body(
+        "GET", f"/api/scenarios/reference_greenhouse/fields/climate?t={first_hour:.0f}"
+    )
+    checkpoints.save_checkpoint("reference_greenhouse", time_s=DAY_S)
+
+    _forget_runs()
+    restored = _body(
+        "GET", f"/api/scenarios/reference_greenhouse/fields/climate?t={first_hour:.0f}"
+    )
+    house = climate_run("reference_greenhouse")[1].house
+
+    # Its grid run starts an hour before the day began, from the air the
+    # checkpoint kept then: none of the day before is worked out.
+    assert restored == original
+    assert [m for m in house._kept if 0.0 < m < DAY_S - HOUR_S] == []
+
+
+def test_a_checkpoint_on_a_runs_first_day_keeps_no_earlier_air() -> None:
+    saved = checkpoints.save_checkpoint("climate_box", time_s=600.0)
+
+    assert checkpoints.checkpoint(saved.checkpoint_id).house_before is None
 
 
 def test_a_branch_shares_every_day_before_its_own() -> None:
@@ -104,7 +131,7 @@ def test_a_branch_shares_every_day_before_its_own() -> None:
     # Its heater off from an hour into the second day, it lives that day
     # colder.
     assert branch_days[1].mean_temperature_c < trunk_days[1].mean_temperature_c - 1.0
-    assert [m for m in house._kept if 0.0 < m < DAY_S] == []
+    assert [m for m in house._kept if 0.0 < m < DAY_S - HOUR_S] == []
     # A run that differs before the checkpoint's day takes nothing over.
     other = run_crop("reference_greenhouse", commands=[(HOUR_S, "heater", 1.0)])
     assert other.environments(PLANT, 1)[0] != trunk_days[0]
@@ -136,12 +163,13 @@ def test_a_checkpoint_that_does_not_fit_its_run_is_refused() -> None:
     good = checkpoints.checkpoint(saved.checkpoint_id).model_dump(mode="json")
 
     assert "another version" in _refusal(good | {"manifest": "0" * 16})
-    assert "format 2" in _refusal(good | {"checkpoint_format": 2})
+    assert "format 1" in _refusal(good | {"checkpoint_format": 1})
+    assert "an hour before its day" in _refusal(good | {"house_before": None})
     assert "plants are reference_greenhouse's" in _refusal(good | {"plants": good["plants"][1:]})
     assert "lived 1 days" in _refusal(good | {"lived": []})
     assert "days 0 to 120" in _refusal(good | {"day": 121})
     assert "has no equipment 'boiler'" in _refusal(good | {"levels": {"boiler": 1.0}})
-    assert "not a checkpoint" in _refusal({"checkpoint_format": 1})
+    assert "not a checkpoint" in _refusal({"checkpoint_format": 2})
     garbled = respond("POST", "/api/checkpoints", b"{")
     assert (garbled.status, garbled.body) == (
         HTTPStatus.BAD_REQUEST,

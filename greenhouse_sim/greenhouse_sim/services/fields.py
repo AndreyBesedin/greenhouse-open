@@ -210,7 +210,8 @@ def _climate_day(
             ):
                 run.carry_on_from(other)
         for state in agreeing((scenario_id, layout, weather, openings), run.run.schedule):
-            run.house.seed(state.moment_s, state.air)
+            for moment, air in state.airs():
+                run.house.seed(moment, air)
         _KEPT[key] = run
         if len(_KEPT) > KEPT_RUNS:
             _KEPT.popitem(last=False)
@@ -252,7 +253,8 @@ def seed_kept_climate_runs(state: KeptState) -> None:
         runs = list(_KEPT.items())
     for (scenario_id, layout, weather, _, openings, _), run in runs:
         if state.agrees((scenario_id, layout, weather, openings), run.run.schedule):
-            run.house.seed(state.moment_s, state.air)
+            for moment, air in state.airs():
+                run.house.seed(moment, air)
 
 
 def climate_vents(config: ScenarioConfig, geometry: CfdGeometry) -> list[Vent]:

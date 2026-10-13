@@ -24,6 +24,7 @@ import pytest
 from greenhouse_sim.biology.plant.organs import Fruit
 from greenhouse_sim.biology.tomato.organ.fruit import Maturity, maturity
 from greenhouse_sim.biology.tomato.organ.topology import Plant
+from greenhouse_sim.climate.day import HOUR_S
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.organs import FruitStage
 from greenhouse_sim.scenarios.manifest_files import (
@@ -34,7 +35,7 @@ from greenhouse_sim.scenarios.manifest_files import (
 )
 from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.crop import forget_crops, run_crop
-from greenhouse_sim.services.fields import climate_run, forget_climate_runs
+from greenhouse_sim.services.fields import climate_run, field, forget_climate_runs
 from greenhouse_sim.services.replay import _rounded
 from greenhouse_sim.services.scenarios import scenario_summaries
 
@@ -69,8 +70,11 @@ def _red(plants: tuple[Plant, ...] | list[Plant]) -> int:
 
 def _state(checkpoint: checkpoints.Checkpoint) -> object:
     """What a replay compares of a checkpoint: its plants and its house's
-    air, rounded as the replay's probes are."""
-    return _rounded(checkpoint.model_dump(mode="json", include={"plants", "house", "lived"}))
+    air, at its day's start and an hour before, rounded as the replay's
+    probes are."""
+    return _rounded(
+        checkpoint.model_dump(mode="json", include={"plants", "house", "house_before", "lived"})
+    )
 
 
 def test_the_kept_opening_day_is_the_manifests_and_bears_red_fruit() -> None:
@@ -105,12 +109,17 @@ def test_kept_as_the_api_starts_the_runs_later_days_carry_on_from_it() -> None:
     house = climate_run(SCENARIO)[1].house
     off = climate_run(SCENARIO, daily=[])[1].house
     off.air_at(80.5 * DAY_S)
+    # The air cell by cell in the day's first hour, its grid run started an
+    # hour before the day began.
+    field(SCENARIO, "climate", time_s=80 * DAY_S + 20 * 60.0)
 
     assert len(plants) == 32
     # Only the opening day's air was worked out, from its start, in the run
-    # and in the same run with everything off.
-    assert [m for m in house._kept if 0.0 < m < 80 * DAY_S] == []
-    assert [m for m in off._kept if 0.0 < m < 80 * DAY_S] == []
+    # and in the same run with everything off; before it, only the air the
+    # checkpoint kept an hour before the day.
+    hour_before = [80 * DAY_S - HOUR_S]
+    assert [m for m in house._kept if 0.0 < m < 80 * DAY_S] == hour_before
+    assert [m for m in off._kept if 0.0 < m < 80 * DAY_S] == hour_before
     assert [c.day for c in checkpoints.checkpoints()] == [80, 80]
 
 
