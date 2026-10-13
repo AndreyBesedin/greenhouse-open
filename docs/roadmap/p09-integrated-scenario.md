@@ -584,8 +584,8 @@ the reference; the kept opening day matches the run's.
 
 #### As implemented
 
-The checkpoints themselves and the viewer's panel; the branch comparison,
-the replay's hashes and the kept opening day follow.
+The checkpoints, the viewer's panel and the branch comparison; the
+replay's hashes and the kept opening day follow.
 
 - **A checkpoint** (`services/checkpoints.py`) is a run's state at the start
   of a day: its run, its scenario and the digest of the scenario's manifest
@@ -620,6 +620,15 @@ the replay's hashes and the kept opening day follow.
   as it was, and downloads one as JSON or uploads one again, saying why one
   is refused. A restored run given other commands from its moment on is a
   branch from it. Browser test: `checkpoints.spec.ts`, with the season's.
+- **Branches compared** (`BranchComparison`): "Compare" against a kept
+  checkpoint charts branch A, the checkpoint's run carried on unchanged,
+  beside branch B, the run drawn, at the moment drawn: the house's air
+  through its day, its first temperature sensor's readings through it,
+  and, where it grows its crop organ by organ, its first plant's days since
+  the checkpoint, with how far each has developed. A solid, B dashed; a
+  moment before the checkpoint says so. In the climate box, a branch whose
+  heater goes off two hours into its second day is more than 2 °C cooler
+  than its checkpoint's run two hours later (`checkpoints.spec.ts`).
 - **Measured:** after a restart, the reference run's third day, from a
   checkpoint at its second, comes back in 1.4 s, the same as before; from
   its start it takes about 3.5 s.

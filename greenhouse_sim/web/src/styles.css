@@ -505,6 +505,26 @@ body {
   padding-left: 1.4em;
 }
 
+/* Two branches compared: A, the checkpoint's run, solid; B, dashed. */
+.branches {
+  margin: 0 0 8px;
+}
+
+.branches polyline {
+  fill: none;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.branch-a {
+  stroke: #2b7bb9;
+}
+
+.branch-b {
+  stroke: #c0392b;
+  stroke-dasharray: 3 2;
+}
+
 .timeline-lanes {
   margin: 0;
   font-variant-numeric: tabular-nums;

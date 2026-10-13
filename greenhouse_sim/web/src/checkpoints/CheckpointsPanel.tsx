@@ -29,14 +29,17 @@ export function describeCheckpoint(checkpoint: CheckpointSummary): string {
 /**
  * A scenario's checkpoints (P09.5), opened on demand: save the start of the
  * moment's day, list those kept for the scenario, restore one, its run at
- * its moment, download one as JSON and upload one again. A checkpoint
- * restored, given other commands from its moment on, is a branch from it.
+ * its moment, download one as JSON and upload one again, and compare one's
+ * run with the run drawn. A checkpoint restored, given other commands from
+ * its moment on, is a branch from it.
  */
 export function CheckpointsPanel({
   scenarioId,
   run,
   time,
   onRestore,
+  compared = null,
+  onCompare,
   fetchFn = fetch,
 }: {
   scenarioId: string;
@@ -45,6 +48,10 @@ export function CheckpointsPanel({
   /** The moment drawn, in seconds into the run. */
   time: number;
   onRestore: (checkpoint: CheckpointSummary) => void;
+  /** The checkpoint whose run is compared with the run drawn, if one is. */
+  compared?: string | null;
+  /** Compares a checkpoint's run with the run drawn, or, given none, stops. */
+  onCompare?: (checkpoint: CheckpointSummary | null) => void;
   fetchFn?: typeof fetch;
 }) {
   const [open, setOpen] = useState(false);
@@ -128,6 +135,18 @@ export function CheckpointsPanel({
               >
                 Restore
               </button>{" "}
+              {onCompare !== undefined && (
+                <button
+                  type="button"
+                  aria-pressed={compared === checkpoint.checkpointId}
+                  aria-label={`Compare with day ${checkpoint.day}, ${checkpoint.checkpointId}`}
+                  onClick={() =>
+                    onCompare(compared === checkpoint.checkpointId ? null : checkpoint)
+                  }
+                >
+                  Compare
+                </button>
+              )}{" "}
               <a href={downloadUrl(checkpoint)} download={downloadName(checkpoint)}>
                 Download
               </a>

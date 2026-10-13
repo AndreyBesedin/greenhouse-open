@@ -1,9 +1,11 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 import { CfdControls } from "./cfd/CfdControls";
 import type { CfdGeometryState } from "./cfd/geometry";
+import { BranchComparison } from "./checkpoints/BranchComparison";
+import { checkpointRun, comparable } from "./checkpoints/branches";
 import { CheckpointsPanel } from "./checkpoints/CheckpointsPanel";
-import { restored } from "./checkpoints/checkpoints";
+import { type CheckpointSummary, restored } from "./checkpoints/checkpoints";
 import { EquipmentControls } from "./EquipmentControls";
 import { ClimateSchedule } from "./fields/ClimateSchedule";
 import { ClimateTime } from "./fields/ClimateTime";
@@ -98,7 +100,9 @@ export function ScenarioPanels({
   /** The field's colours go back to its own range. */
   onOwnRange: () => void;
 }) {
-  const { field, compared, weather, weatherDay, houseAir, probeCharts, cfd } = loads;
+  const { field, compared: comparedField, weather, weatherDay, houseAir, probeCharts, cfd } = loads;
+  // The checkpoint whose run is compared with the run drawn, if one is.
+  const [against, setAgainst] = useState<CheckpointSummary | null>(null);
   // Asked for once, for the field's choice and what it is compared with.
   const fields = useFieldNames(source.scenarioId, source.layout);
   const climate = source.field === CLIMATE_FIELD;
@@ -179,6 +183,21 @@ export function ScenarioPanels({
           run={scenarioRun(source)}
           time={time}
           onRestore={(checkpoint) => onSource(restored(source, checkpoint, CLIMATE_FIELD))}
+          compared={against?.checkpointId ?? null}
+          onCompare={setAgainst}
+        />
+      )}
+      {climate && against !== null && against.scenarioId === source.scenarioId && (
+        <BranchComparison
+          checkpoint={against}
+          time={time}
+          request={{
+            scenarioId: source.scenarioId,
+            a: checkpointRun(against, time),
+            b: scenarioRun(source),
+            fromDay: against.day,
+            ...comparable(snapshot),
+          }}
         />
       )}
       <WeatherPanel
@@ -199,7 +218,7 @@ export function ScenarioPanels({
           fieldName={source.field}
           field={probed}
           compareName={source.compare ?? null}
-          compareState={compared}
+          compareState={comparedField}
           probes={probes}
           placing={placing}
           height={probeHeight}

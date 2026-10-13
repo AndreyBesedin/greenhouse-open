@@ -48,6 +48,8 @@ export interface PlantDay {
 export interface CropPlant {
   plantId: string;
   days: number;
+  /** How far it has developed, in °Cd. */
+  thermalTime: number;
   tree: OrganNode;
   history: PlantEvent[];
   environments: PlantDay[];
@@ -103,9 +105,14 @@ export function parseCropPlant(body: unknown): CropPlant {
     throw new Error("the plant's days are not what the viewer expects");
   }
   const tree = organTree(structure);
+  const thermalTime = (structure as Record<string, unknown>).thermal_time;
+  if (typeof thermalTime !== "number") {
+    throw new Error("the plant's thermal time is not a number");
+  }
   return {
     plantId: tree.id,
     days: days as number,
+    thermalTime,
     tree,
     history: plantHistory(structure),
     environments: environments.map(plantDay),
