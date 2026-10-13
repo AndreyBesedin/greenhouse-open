@@ -277,7 +277,7 @@ run in their own Playwright project, as the plant lab's and the sun's do.
 | P09.2 | `feat(sim): unify multi-rate scheduler and visible event timeline` | Done |
 | P09.3 | `feat(coupling): connect radiation/weather/climate to plant environment` | Done |
 | P09.4 | `feat(coupling): connect actuators weather and vents to sensor observations` | Done |
-| P09.5 | `feat(replay): add checkpoint reset branch and replay` | Planned |
+| P09.5 | `feat(replay): add checkpoint reset branch and replay` | Done |
 | P09.6 | `feat(qa): add QA mode with truth overlays` | Planned |
 | P09.7 | `test(e2e): add integrated visual regression suite` | Planned |
 | P09.8 | `perf(sim): add representative performance benchmark` | Planned |
@@ -584,8 +584,8 @@ the reference; the kept opening day matches the run's.
 
 #### As implemented
 
-The checkpoints, the viewer's panel, the branch comparison and the
-replay's digests; the kept opening day follows.
+In four pull requests: the checkpoints and the viewer's panel, the branch
+comparison, the replay's digests, and the kept opening day.
 
 - **A checkpoint** (`services/checkpoints.py`) is a run's state at the start
   of a day: its run, its scenario and the digest of the scenario's manifest
@@ -641,6 +641,20 @@ replay's digests; the kept opening day follows.
   run against them (`tests/test_replay.py`). A branch keeps the digests of
   the days before its change. Three days probe in 11 s from the start,
   2.6 s again.
+- **The kept opening day:** the reference run's first day with red fruit is
+  day 80, under its own schedule, as the design expected. Its manifest
+  names it (`opening_day`), and a checkpoint at its start is kept beside
+  it, `scenarios/openings/reference_greenhouse.json.gz`, 188 KB gzipped
+  (1.3 MB of JSON), written the same way every time. The API keeps it as
+  it starts (`load_openings`), saying why if it does not fit the run; the
+  scenario list gives the day, and showing the reference greenhouse from
+  the list opens its climate at noon on it, in a few seconds where working
+  it out from the run's start takes three minutes. The address without a
+  moment still opens it at its start. `python tests/test_opening_day.py
+  --update` finds the day and writes it again, and a slow test replays the
+  run from its start to that day and holds it to the one kept
+  (`tests/test_opening_day.py`). Unheated, as P09.3 measured, the first red
+  fruit would come about day 105.
 - **Found on the way:** a whole day's observation log of the reference
   run, 18,600 observations, takes about 40 s, each minute's sample drawing
   the house's whole field with its sunlight; the probes sample each hour on

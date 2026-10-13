@@ -1,4 +1,8 @@
+import { DAY_S } from "./clock";
 import type { ScheduledCommand } from "./scene/source";
+
+// A day's noon, as a share of it.
+const HALF_DAY = 0.5;
 
 /** A scenario as the simulator's local API lists it (`GET /api/scenarios`). */
 export interface ScenarioSummary {
@@ -16,6 +20,9 @@ export interface ScenarioSummary {
   /** Its doors' and vents' identifiers, which commands open as they do its
    * equipment. */
   openings?: string[];
+  /** The day of its run where the viewer opens it, kept as a checkpoint, if
+   * its manifest names one. */
+  opening_day?: number | null;
   /** The names of its layouts, its default first. */
   layouts: string[];
   /** The names of the weathers it can be run under, its own first. */
@@ -57,6 +64,9 @@ function isScenarioSummary(value: unknown): value is ScenarioSummary {
     Number.isInteger(fields.plants) &&
     Number.isInteger(fields.duration_days) &&
     (fields.crop_model === undefined || typeof fields.crop_model === "string") &&
+    (fields.opening_day === undefined ||
+      fields.opening_day === null ||
+      Number.isInteger(fields.opening_day)) &&
     (fields.openings === undefined ||
       (Array.isArray(fields.openings) && fields.openings.every((id) => typeof id === "string"))) &&
     (fields.daily === undefined ||
@@ -79,6 +89,17 @@ function isDailyCommand(value: unknown): boolean {
     typeof actuator_id === "string" &&
     typeof level === "number"
   );
+}
+
+/** Where the viewer opens a scenario shown from the list: its climate at
+ * noon on its opening day (P09.5), if it has one; at its start, if not. */
+export function openingMoment(
+  summary: ScenarioSummary | undefined,
+): { field: string; time: number } | null {
+  const day = summary?.opening_day;
+  return day === undefined || day === null
+    ? null
+    : { field: "climate", time: (day + HALF_DAY) * DAY_S };
 }
 
 /** A scenario's own daily commands, as the viewer writes commands. */

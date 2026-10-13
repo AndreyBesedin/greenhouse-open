@@ -5,7 +5,7 @@ import { FIRST_LAB_RUN } from "./plants/lab";
 import { DEFAULT_STRESS_PLANTS } from "./qa/stressScene";
 import { ScenarioList } from "./ScenarioList";
 import { SceneStatus } from "./SceneStatus";
-import { DEFAULT_LAYOUT, type ScenariosState } from "./scenarios";
+import { DEFAULT_LAYOUT, openingMoment, type ScenariosState } from "./scenarios";
 import type { SceneSource, SceneState } from "./scene/source";
 
 export function InfoPanel({
@@ -62,11 +62,19 @@ export function InfoPanel({
             ? { scenarioId: source.scenarioId, layout: source.layout ?? DEFAULT_LAYOUT }
             : null
         }
-        onShow={(scenarioId, layout = DEFAULT_LAYOUT) =>
+        onShow={(scenarioId, layout) =>
           onSource({
             kind: "scenario",
             scenarioId,
-            ...(layout === DEFAULT_LAYOUT ? {} : { layout }),
+            ...(layout === undefined || layout === DEFAULT_LAYOUT ? {} : { layout }),
+            // Shown afresh, a scenario with an opening day opens there.
+            ...(layout === undefined
+              ? (openingMoment(
+                  scenarios.status === "loaded"
+                    ? scenarios.scenarios.find((s) => s.id === scenarioId)
+                    : undefined,
+                ) ?? {})
+              : {}),
           })
         }
         onLive={(scenarioId) => onSource({ kind: "live", scenarioId })}

@@ -11,6 +11,7 @@
     "crop_model": "Organ by organ (P09.3): each plant a transplant of the plant lab's crop, its traits drawn from the seed, living each day in the house's mean air and its own light. The other scenarios keep the simple daily model.",
     "crop_work": "Every week, a harvest round picks every red fruit, so that ripe fruit does not pile up and each plant's history lists what was picked from it; then a lowering round keeps each plant's top 30 cm or more under its wire, laying its bare lower stem down round its row's gutter, as a high-wire crop is lowered.",
     "start_date": "1 March, for 120 days: March's nights need heat, June's days need venting, and the crop bears red fruit for its last month or more.",
+    "opening_day": "Where the viewer opens it: the run's first day with red fruit, kept beside this manifest as a checkpoint (openings/reference_greenhouse.json.gz), so that its later days carry on from it rather than from the run's start. `python tests/test_opening_day.py --update` writes it again.",
     "random_seed": "Seed 42, which the final QA resets to.",
     "climate": "A cool, damp March night to start: 14 °C and 80% inside.",
     "weather": "The cold spring day (the cold_spring_day preset), every day: a synthetic day does not follow the season, though the sun does.",
@@ -134,6 +135,7 @@
   ],
   "start_date": "2026-03-01",
   "duration_days": 120,
+  "opening_day": 80,
   "random_seed": 42,
   "envelope": {
     "length": 12.0,

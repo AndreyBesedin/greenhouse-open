@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { ScenarioList } from "./ScenarioList";
-import { loadScenarios, parseScenarios, type ScenarioSummary } from "./scenarios";
+import { loadScenarios, openingMoment, parseScenarios, type ScenarioSummary } from "./scenarios";
 
 const DEMO: ScenarioSummary = {
   id: "climate_box",
@@ -108,5 +108,28 @@ describe("the scenario list", () => {
 
     expect(html).toContain('role="alert"');
     expect(html).toContain("python -m greenhouse_sim.api");
+  });
+});
+
+describe("a scenario's opening day", () => {
+  it("opens the scenario shown from the list at noon on it, its climate drawn", () => {
+    const reference = parseScenarios([
+      {
+        id: "reference_greenhouse",
+        name: "Reference greenhouse",
+        description: "",
+        plants: 32,
+        duration_days: 120,
+        layouts: ["default"],
+        opening_day: 80,
+      },
+    ])[0];
+
+    expect(openingMoment(reference)).toEqual({ field: "climate", time: 80.5 * 86_400 });
+    expect(openingMoment({ ...reference, opening_day: null } as never)).toBeNull();
+    expect(openingMoment(undefined)).toBeNull();
+    expect(() => parseScenarios([{ ...reference, opening_day: "eighty" }])).toThrow(
+      "scenario 0 is not a scenario summary",
+    );
   });
 });

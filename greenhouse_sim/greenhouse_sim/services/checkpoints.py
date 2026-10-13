@@ -21,13 +21,19 @@ state made on another machine, or with other code.
 
 Checkpoints are kept in the API's memory, the last `KEPT_CHECKPOINTS`
 saved or uploaded, each named by a digest of its content; restarting the
-API forgets them, and the API writes no file. A run that agrees with one up
+API forgets them, and the API writes no file. A scenario's manifest may
+name a day of its run as its opening day, kept in the repository as a
+checkpoint beside it, gzipped: the API keeps it as it starts
+(`load_openings`), so that its run's later days need not be worked out
+from its start. A run that agrees with one up
 to its moment takes its state over (`greenhouse_sim.services.kept_states`):
 restoring a checkpoint is asking for its run again, and a branch from it is
 the same run with other commands from its moment on.
 """
 
+import gzip
 import hashlib
+import json
 import threading
 from collections import OrderedDict
 from collections.abc import Mapping, Sequence
@@ -40,10 +46,11 @@ from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.core.clock import DAY_S, days_ended
 from greenhouse_sim.domain.crop import CropModel
+from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
-from greenhouse_sim.scenarios.manifest_files import manifest_digest
+from greenhouse_sim.scenarios.manifest_files import manifest_digest, opening_day, opening_file
 from greenhouse_sim.services.crop import run_crop, seed_kept_crops
-from greenhouse_sim.services.errors import InvalidRequest, NotFound
+from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.fields import (
     Commanded,
     climate_run,
@@ -224,6 +231,35 @@ def upload_checkpoint(document: JsonValue) -> CheckpointSummary:
             f"a crop on day {uploaded.day} has lived {uploaded.day} days, each plant's"
         )
     return _kept(uploaded)
+
+
+def opening_bytes(checkpoint: Checkpoint) -> bytes:
+    """A checkpoint as a scenario's kept opening day holds it: its JSON,
+    gzipped the same way every time it is written."""
+    return gzip.compress(checkpoint.model_dump_json().encode(), mtime=0)
+
+
+def load_opening(scenario_id: str) -> CheckpointSummary | None:
+    """Keep a scenario's opening day, as its manifest names it and the file
+    beside it holds it (`opening_file`): a checkpoint uploaded, so that its
+    run's later days carry on from it. None if it names none; refused, as
+    an upload is, if it does not fit its run."""
+    if opening_day(scenario_id) is None:
+        return None
+    document = json.loads(gzip.decompress(opening_file(scenario_id).read_bytes()))
+    return upload_checkpoint(document)
+
+
+def load_openings() -> list[str]:
+    """Keep every scenario's opening day that fits its run, as the API
+    starts; the reasons the others are refused, by scenario."""
+    refused = []
+    for scenario_id in SCENARIO_REGISTRY:
+        try:
+            load_opening(scenario_id)
+        except ServiceError as error:
+            refused.append(f"{scenario_id}'s opening day: {error.message}")
+    return refused
 
 
 def _kept(checkpoint: Checkpoint) -> CheckpointSummary:

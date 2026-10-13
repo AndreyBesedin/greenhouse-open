@@ -45,6 +45,10 @@ _SCHEMA_KEY: Final = "$schema"
 _VERSION_KEY: Final = "schema_version"
 _NOTES_KEY: Final = "notes"
 _LAYOUT_KEY: Final = "layout"
+_OPENING_KEY: Final = "opening_day"
+# Where a scenario's kept opening day lies: a checkpoint of its run at that
+# day's start (P09.5), gzipped, named for the scenario.
+OPENINGS_DIR: Final = Path(__file__).parent / "openings"
 
 
 class InvalidManifest(ValueError):
@@ -64,6 +68,24 @@ def load_manifest(scenario_id: str) -> ScenarioConfig:
     return scenario_from_manifest(scenario_id, json.loads(path.read_text()))
 
 
+def opening_day(scenario_id: str) -> int | None:
+    """The day of its run a scenario's manifest names as where the viewer
+    opens it, kept as a checkpoint at that day's start (`opening_file`), or
+    None if it names none."""
+    document = json.loads((MANIFESTS_DIR / f"{scenario_id}.json").read_text())
+    day = document.get(_OPENING_KEY)
+    if day is None:
+        return None
+    if not isinstance(day, int) or isinstance(day, bool) or day < 0:
+        raise InvalidManifest(f"{scenario_id}: an opening day is a day of its run, not {day!r}")
+    return day
+
+
+def opening_file(scenario_id: str) -> Path:
+    """Where a scenario's kept opening day lies, gzipped JSON."""
+    return OPENINGS_DIR / f"{scenario_id}.json.gz"
+
+
 def manifest_digest(scenario_id: str) -> str:
     """What tells one version of a scenario's manifest from another: a
     digest of its content, however its file is laid out."""
@@ -80,7 +102,7 @@ def scenario_from_manifest(scenario_id: str, document: dict[str, JsonValue]) -> 
     fields = {
         key: value
         for key, value in document.items()
-        if key not in (_SCHEMA_KEY, _VERSION_KEY, _NOTES_KEY, _LAYOUT_KEY)
+        if key not in (_SCHEMA_KEY, _VERSION_KEY, _NOTES_KEY, _LAYOUT_KEY, _OPENING_KEY)
     }
     version = document.get(_VERSION_KEY)
     if version != SCHEMA_VERSION:
@@ -98,7 +120,7 @@ def scenario_from_manifest(scenario_id: str, document: dict[str, JsonValue]) -> 
     notes = document.get(_NOTES_KEY, {})
     if not isinstance(notes, dict) or not all(isinstance(note, str) for note in notes.values()):
         raise InvalidManifest(f"{scenario_id}: notes are written by what each is about")
-    unnoted = set(notes) - {WHOLE_SCENARIO, *ScenarioConfig.model_fields}
+    unnoted = set(notes) - {WHOLE_SCENARIO, _OPENING_KEY, *ScenarioConfig.model_fields}
     if unnoted:
         raise InvalidManifest(f"{scenario_id}: notes on what it does not have: {sorted(unnoted)}")
     config = ScenarioConfig.model_validate(fields | {"layout": load_layout(scenario_id, layout)})
@@ -122,6 +144,11 @@ def manifest_json_schema() -> dict[str, JsonValue]:
     }
     properties[_SCHEMA_KEY] = {"type": "string"}
     properties[_VERSION_KEY] = {"const": SCHEMA_VERSION}
+    properties[_OPENING_KEY] = {
+        "type": "integer",
+        "minimum": 0,
+        "description": "The day of its run where the viewer opens it, kept as a checkpoint.",
+    }
     properties[_NOTES_KEY] = {
         "type": "object",
         "additionalProperties": {"type": "string"},

@@ -92,3 +92,21 @@ test("crop: the reference greenhouse's plants live each day in the house's air a
     );
   });
 });
+
+// The reference run's kept opening day (P09.5): shown from the list, it
+// opens on its first day with red fruit, day 80, which the API keeps as it
+// starts, so that the day is not worked out from the run's start.
+test("crop: shown from the list, the reference greenhouse opens on its first day with red fruit", async ({
+  page,
+}) => {
+  test.setTimeout(300_000);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Show reference_greenhouse" }).click();
+  await expect(page).toHaveURL(/[?&]field=climate(&|$)/);
+  await expect(page).toHaveURL(new RegExp(`&t=${80.5 * DAY_S}(&|$)`));
+  await expect(page.getByTestId("climate-time")).toHaveText("day 80, 12 h 00 min", ARRIVES);
+  await expect(page.getByTestId("scene-status")).toContainText(
+    "reference_greenhouse, day 80,",
+    ARRIVES,
+  );
+});

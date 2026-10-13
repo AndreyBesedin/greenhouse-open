@@ -1103,6 +1103,11 @@
     "schema_version": {
       "const": 1
     },
+    "opening_day": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The day of its run where the viewer opens it, kept as a checkpoint."
+    },
     "notes": {
       "type": "object",
       "additionalProperties": {
