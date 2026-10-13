@@ -559,7 +559,17 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
               />
             )}
             {qaMode && (
-              <QaPanel build={build} served={served} manifest={runManifest} state={runState} />
+              <QaPanel
+                build={build}
+                served={served}
+                manifest={runManifest}
+                state={runState}
+                onSelect={
+                  snapshot === null
+                    ? null
+                    : (id) => setSelectedId(`${snapshot.greenhouse_id}_${id}`)
+                }
+              />
             )}
             {source.kind === "scenario" && (
               <ScenarioPanels

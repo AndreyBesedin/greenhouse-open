@@ -9,11 +9,37 @@ import {
 } from "./manifest";
 import { describeRunState, type RunStateState } from "./state";
 
+/** A sensor's or a camera's line, a button that selects it where the panel
+ * can: in a dense crop it is easier to find here than to click in the view. */
+function Selectable({
+  id,
+  text,
+  onSelect,
+}: {
+  id: string;
+  text: string;
+  onSelect: ((id: string) => void) | null;
+}) {
+  return onSelect === null ? (
+    text
+  ) : (
+    <button type="button" className="select-link" onClick={() => onSelect(id)}>
+      {text}
+    </button>
+  );
+}
+
 /** What each process of the scenario's run drawn holds at its moment, as
  * the simulator says: the clock, the house's air, the crop, the levels and
  * the latest commands, each sensor's freshness, a stale one marked, and
- * each camera's frames. */
-function DeveloperList({ state }: { state: RunStateState }) {
+ * each camera's frames; each sensor and camera selects it, if `onSelect`. */
+function DeveloperList({
+  state,
+  onSelect,
+}: {
+  state: RunStateState;
+  onSelect: ((id: string) => void) | null;
+}) {
   if (state.status === "none") {
     return null;
   }
@@ -52,7 +78,7 @@ function DeveloperList({ state }: { state: RunStateState }) {
             <ul>
               {described.sensors.map((sensor) => (
                 <li key={sensor.id} className={sensor.stale ? "stale" : undefined}>
-                  {sensor.text}
+                  <Selectable id={sensor.id} text={sensor.text} onSelect={onSelect} />
                 </li>
               ))}
             </ul>
@@ -63,7 +89,9 @@ function DeveloperList({ state }: { state: RunStateState }) {
             ) : (
               <ul>
                 {described.cameras.map((camera) => (
-                  <li key={camera.id}>{camera.text}</li>
+                  <li key={camera.id}>
+                    <Selectable id={camera.id} text={camera.text} onSelect={onSelect} />
+                  </li>
                 ))}
               </ul>
             )}
@@ -161,6 +189,7 @@ export function QaPanel({
   served,
   manifest,
   state,
+  onSelect = null,
 }: {
   build: BuildInfo;
   served: ServedVersionState;
@@ -168,10 +197,12 @@ export function QaPanel({
    * processes holds at its moment; none for another scene. */
   manifest: RunManifestState;
   state: RunStateState;
+  /** Selects a sensor or a camera, by its identifier in the run. */
+  onSelect?: ((id: string) => void) | null;
 }) {
   return (
     <section className="qa-panel" aria-label="QA mode">
-      <DeveloperList state={state} />
+      <DeveloperList state={state} onSelect={onSelect} />
       <RunManifestList build={build} served={served} manifest={manifest} />
     </section>
   );

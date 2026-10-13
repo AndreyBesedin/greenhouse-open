@@ -674,6 +674,21 @@ body {
   color: #8a3b12;
 }
 
+/* A sensor or a camera in the developer panel, which selects it. */
+.qa-panel .select-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #1f5fbf;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.qa-panel .stale .select-link {
+  color: #8a3b12;
+}
+
 /* A camera's frames, as the run's log records them. */
 .camera-frames p {
   margin: 0 0 4px;
