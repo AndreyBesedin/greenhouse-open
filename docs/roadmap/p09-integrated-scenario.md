@@ -281,7 +281,7 @@ run in their own Playwright project, as the plant lab's and the sun's do.
 | P09.6 | `feat(qa): add QA mode with truth overlays` | Done |
 | P09.7 | `test(e2e): add integrated visual regression suite` | Done |
 | P09.8 | `perf(sim): add representative performance benchmark` | Done |
-| P09.9 | `docs(release): document local demo and QA protocol` | Planned |
+| P09.9 | `docs(release): document local demo and QA protocol` | In progress |
 
 ### P09.1: Scenarios as manifests
 
@@ -841,6 +841,30 @@ The one command, the guide, the demo video's script, and the tagged
 release. Visible result: a new checkout reaches the reference scenario by
 following the guide, and the README plays the demo. Tests: the command
 starts both and stops both; the video's script runs as a browser test.
+
+#### As implemented
+
+- **The one command:** `python scripts/demo.py` checks first what it needs,
+  the Python and Node versions, greenhouse-sim installed, the viewer's
+  packages and both ports free, and says what to do about each that is
+  missing; then starts the API and the viewer's development server, each
+  in a process group of its own, waits until both answer, and opens the
+  reference greenhouse at noon on its opening day, as the scenario list
+  opens it. Ctrl+C stops both, and so does either one stopping. Standard
+  library only.
+- **The guide,** `docs/demo.md`: setting it up from a clone, the command,
+  the reference scenario, the final QA's twelve steps with what each should
+  show, in the simulator's own numbers, the simplifications gathered from
+  every project, those a later project lifted left out, and
+  troubleshooting. The README and the simulator's README point to it.
+- **The changelog** says what the release adds since 0.1.0, project by
+  project; choosing its version, and tagging it, are the maintainer's.
+- **Tests** (`tests/test_demo.py`): stand-in servers start, answer and stop
+  together, and when one stops the other is stopped too; a server that
+  stops before it answers is said; the demo opens the reference greenhouse
+  at noon on its opening day; a port in use is said with what to do; and,
+  where the viewer's packages are installed, the command itself starts the
+  API and the viewer and stops both (slow).
 
 ## Final QA: `reference-greenhouse-v1`
 

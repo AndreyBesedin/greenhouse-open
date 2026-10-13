@@ -36,6 +36,14 @@ Python 3.14 or newer. Each package also installs on its own, with only its
 declared dependencies (`greenhouse-sim` and `greenhouse-adapters` need
 `greenhouse-protocol`).
 
+## Try the simulator
+
+`python scripts/demo.py` starts the simulator and its browser viewer and
+opens the reference greenhouse: 32 tomato plants grown organ by organ through
+a spring season, in the air its heater, vents and fans make under the sun,
+watched by its sensors and a camera. [docs/demo.md](docs/demo.md) says how
+to set it up, what to look at, and what the simulator simplifies.
+
 ## Examples
 
 ```bash

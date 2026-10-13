@@ -24,6 +24,31 @@ breaks the conformance checks is a major version.
   (`python -m greenhouse_sim.api`), using only the standard library.
 - A browser viewer for the simulator in `greenhouse_sim/web`, outside the
   Python package.
+- `greenhouse-sim`: a greenhouse as data (P01, P02): its envelope, spans and
+  bays, glazing, doors and vents, and its layout of rows, gutters, rails,
+  benches, equipment and sensors, read from JSON files and checked.
+- `greenhouse-sim`: an organ-level tomato model (P03): stochastic
+  development, procedural plant geometry, crop work (pruning, harvesting,
+  lowering) and a plant lab.
+- `greenhouse-sim`: the greenhouse's air (P04, P05, P07): environment fields
+  on a grid, prescribed airflow and OpenFOAM's out of process, and a climate
+  driven by fans, a heater, a dehumidifier and vents, under recorded,
+  synthetic or constant weather, with the house's air as one volume through
+  a run.
+- `greenhouse-sim`: virtual sensors and cameras (P06), with noise, bias,
+  drift, latency and dropouts, an observation log and each sensor's
+  freshness; and the sun (P08): its position, the glazing's transmission,
+  shadows, and each plant's light.
+- `greenhouse-sim`: the reference scenario and its season (P09): every
+  scenario a versioned JSON manifest; the reference greenhouse's 32 plants
+  grown organ by organ through 120 days in their run's air and their own
+  light, on one clock, with a timeline; checkpoints, branches and replay
+  digests; a kept opening day; a QA mode with the truth and a developer
+  panel; golden views; a benchmark (`python -m greenhouse_sim.benchmark`);
+  and the API's `Server-Timing` header.
+- The viewer draws all of it (P00 to P09), with screenshot regression in a
+  pinned container, and `python scripts/demo.py` starts the API and the
+  viewer together and opens the reference greenhouse (`docs/demo.md`).
 
 ## 0.1.0 - 2026-09-24
 
