@@ -109,8 +109,39 @@ adds a visible or measurable result.
 | [P07](p07-external-weather.md) | External weather and greenhouse boundary coupling | Done |
 | [P08](p08-sun-and-radiation.md) | Sun position, glazing and radiation propagation | Done |
 | [P09](p09-integrated-scenario.md) | Integrated greenhouse scenario, replay and release QA | In progress |
+| **Next priority: Dependabot** | Configure low-noise, reviewed updates for Python, npm and GitHub Actions dependencies | **Planned: immediately after P09** |
 
 A project's document is added when its first pull request lands.
+
+## First priority after P09: Dependabot dependency maintenance
+
+**Priority: high. Schedule: immediately after P09's release QA, before the
+CI-time improvements and camera-imperfection work below.** This is a focused
+repository-maintenance task, not a new simulator feature project. Dependabot
+is not configured yet.
+
+- Add `.github/dependabot.yml` to check the viewer's npm dependencies
+  (`greenhouse_sim/web/package-lock.json`), the root Python development
+  requirements and each Python package's `pyproject.toml`, and GitHub
+  Actions in `.github/workflows/`. Confirm the chosen package ecosystem and
+  directory configuration actually covers every manifest.
+- Run updates weekly, group compatible minor/patch updates where practical,
+  and cap concurrent dependency PRs to avoid overwhelming a solo maintainer.
+  Keep major updates separate and manually reviewed; don't auto-merge them.
+- Require the existing CI, type, test, visual-regression and PR-risk checks on
+  Dependabot PRs. Account for the current DCO sign-off check on bot commits
+  without weakening the rule for human commits, and ensure any Dependabot
+  changes to workflow permissions or review automation are narrowly scoped.
+- Treat coupled versions deliberately: keep Vitest and its coverage plugin
+  compatible; align Playwright's npm version with the pinned screenshot-test
+  container image when updating it. A green PR is not enough if its visual
+  baseline or runner environment has drifted.
+- Verify with a sample update PR per ecosystem, document the review and
+  merge policy, and make sure a stale or broken bot PR cannot merge silently.
+
+**Done when:** Dependabot PRs arrive with manageable volume, the intended
+manifests are covered, checks and review gates work for bot PRs, and updating
+pinned tooling does not compromise reproducible CI or screenshot comparisons.
 
 The [frontend audit follow-up and maintenance plan](frontend-maintenance.md)
 records the 2026-10-06 findings from P01.3, their commit provenance, and the
