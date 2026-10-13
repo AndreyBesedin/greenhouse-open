@@ -1,6 +1,6 @@
 # 0020: Scenario layouts are declarative JSON files
 
-**Status:** Accepted
+**Status:** Accepted; the comments in each scenario's module are superseded, as notes in its manifest, by [0031](0031-scenarios-are-versioned-json-manifests.md)
 **Date:** 2026-10-06
 
 ## Context

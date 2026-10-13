@@ -1,0 +1,1019 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Bearing": {
+      "exclusiveMaximum": 360.0,
+      "minimum": 0.0,
+      "type": "number"
+    },
+    "BuoyancyAirflow": {
+      "additionalProperties": false,
+      "description": "Convection: air rising up the middle and sinking along the side walls,\nover air warming with height and towards the middle.",
+      "properties": {
+        "kind": {
+          "const": "buoyancy",
+          "default": "buoyancy",
+          "title": "Kind",
+          "type": "string"
+        },
+        "peak_speed_m_s": {
+          "default": 0.25,
+          "minimum": 0,
+          "title": "Peak Speed M S",
+          "type": "number"
+        },
+        "floor_temperature_c": {
+          "default": 18.0,
+          "title": "Floor Temperature C",
+          "type": "number"
+        },
+        "ceiling_temperature_c": {
+          "default": 23.0,
+          "title": "Ceiling Temperature C",
+          "type": "number"
+        },
+        "middle_warming_c": {
+          "default": 1.5,
+          "minimum": 0,
+          "title": "Middle Warming C",
+          "type": "number"
+        }
+      },
+      "title": "BuoyancyAirflow",
+      "type": "object"
+    },
+    "CfdSetup": {
+      "additionalProperties": false,
+      "description": "What drives a scenario's air in a CFD solve, and for how long.",
+      "properties": {
+        "inlets": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Inlets"
+        },
+        "inlet_speed_m_s": {
+          "default": 0.5,
+          "exclusiveMinimum": 0,
+          "title": "Inlet Speed M S",
+          "type": "number"
+        },
+        "effective_viscosity_m2_s": {
+          "default": 0.01,
+          "exclusiveMinimum": 0,
+          "title": "Effective Viscosity M2 S",
+          "type": "number"
+        },
+        "iterations": {
+          "default": 2000,
+          "exclusiveMinimum": 0,
+          "title": "Iterations",
+          "type": "integer"
+        }
+      },
+      "title": "CfdSetup",
+      "type": "object"
+    },
+    "ClimateSettings": {
+      "additionalProperties": false,
+      "description": "A scenario's starting air, glazing, infiltration and mixing.",
+      "properties": {
+        "start_temperature_c": {
+          "default": 18.0,
+          "title": "Start Temperature C",
+          "type": "number"
+        },
+        "start_humidity_pct": {
+          "$ref": "#/$defs/Percent",
+          "default": 75.0
+        },
+        "start_co2_ppm": {
+          "default": 420.0,
+          "exclusiveMinimum": 0,
+          "title": "Start Co2 Ppm",
+          "type": "number"
+        },
+        "glazing_u_w_m2k": {
+          "default": 6.0,
+          "exclusiveMaximum": 20.389419544452608,
+          "minimum": 0.0,
+          "title": "Glazing U W M2K",
+          "type": "number"
+        },
+        "mixing_m2_s": {
+          "default": 0.1,
+          "exclusiveMinimum": 0,
+          "title": "Mixing M2 S",
+          "type": "number"
+        },
+        "infiltration_per_h": {
+          "default": 0.25,
+          "minimum": 0,
+          "title": "Infiltration Per H",
+          "type": "number"
+        },
+        "infiltration_per_h_per_m_s": {
+          "default": 0.1,
+          "minimum": 0,
+          "title": "Infiltration Per H Per M S",
+          "type": "number"
+        }
+      },
+      "title": "ClimateSettings",
+      "type": "object"
+    },
+    "ConstantWeather": {
+      "additionalProperties": false,
+      "description": "One weather for the whole of a run, by default a calm 10 °C at 80%,\nits pressure the standard atmosphere's at its site's elevation unless\ngiven.",
+      "properties": {
+        "air_temperature_c": {
+          "default": 10.0,
+          "title": "Air Temperature C",
+          "type": "number"
+        },
+        "relative_humidity_pct": {
+          "$ref": "#/$defs/Percent",
+          "default": 80.0
+        },
+        "co2_ppm": {
+          "default": 420.0,
+          "exclusiveMinimum": 0,
+          "title": "Co2 Ppm",
+          "type": "number"
+        },
+        "wind_speed_m_s": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Wind Speed M S",
+          "type": "number"
+        },
+        "wind_direction_deg": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Bearing"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 0.0
+        },
+        "global_radiation_w_m2": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Global Radiation W M2",
+          "type": "number"
+        },
+        "cloud_cover_pct": {
+          "$ref": "#/$defs/Percent",
+          "default": 0.0
+        },
+        "kind": {
+          "const": "constant",
+          "default": "constant",
+          "title": "Kind",
+          "type": "string"
+        },
+        "barometric_pressure_hpa": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Barometric Pressure Hpa"
+        }
+      },
+      "title": "ConstantWeather",
+      "type": "object"
+    },
+    "Envelope": {
+      "description": "A greenhouse's envelope, in metres.",
+      "properties": {
+        "length": {
+          "exclusiveMinimum": 0,
+          "title": "Length",
+          "type": "number"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "number"
+        },
+        "eave_height": {
+          "exclusiveMinimum": 0,
+          "title": "Eave Height",
+          "type": "number"
+        },
+        "ridge_height": {
+          "exclusiveMinimum": 0,
+          "title": "Ridge Height",
+          "type": "number"
+        },
+        "spans": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "title": "Spans",
+          "type": "integer"
+        },
+        "bays": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "title": "Bays",
+          "type": "integer"
+        },
+        "openings": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Opening"
+          },
+          "title": "Openings",
+          "type": "array"
+        },
+        "origin": {
+          "$ref": "#/$defs/Transform",
+          "default": {
+            "position": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "rotation": {
+              "w": 1.0,
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            }
+          }
+        }
+      },
+      "required": [
+        "length",
+        "width",
+        "eave_height",
+        "ridge_height"
+      ],
+      "title": "Envelope",
+      "type": "object"
+    },
+    "GradientAirflow": {
+      "additionalProperties": false,
+      "description": "Still air whose temperature rises linearly along the house: a known\nfield to check sensors against.",
+      "properties": {
+        "kind": {
+          "const": "gradient",
+          "default": "gradient",
+          "title": "Kind",
+          "type": "string"
+        },
+        "front_temperature_c": {
+          "default": 16.0,
+          "title": "Front Temperature C",
+          "type": "number"
+        },
+        "rise_c_per_m": {
+          "default": 0.5,
+          "title": "Rise C Per M",
+          "type": "number"
+        }
+      },
+      "title": "GradientAirflow",
+      "type": "object"
+    },
+    "Hour": {
+      "exclusiveMaximum": 24.0,
+      "minimum": 0.0,
+      "type": "number"
+    },
+    "Opening": {
+      "description": "A door or vent: a rectangle on its host surface, centred at `centre` in\nthe host's own x-y plane, `width` along the host's x and `height` along\nits y, open by `opening`, from 0 (closed) to 1.",
+      "properties": {
+        "opening_id": {
+          "title": "Opening Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/OpeningKind"
+        },
+        "surface_id": {
+          "title": "Surface Id",
+          "type": "string"
+        },
+        "centre": {
+          "$ref": "#/$defs/Point2"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "number"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "number"
+        },
+        "opening": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Opening",
+          "type": "number"
+        },
+        "largest_angle": {
+          "default": 0.7853981633974483,
+          "exclusiveMinimum": 0.0,
+          "maximum": 1.5707963267948966,
+          "title": "Largest Angle",
+          "type": "number"
+        }
+      },
+      "required": [
+        "opening_id",
+        "kind",
+        "surface_id",
+        "centre",
+        "width",
+        "height"
+      ],
+      "title": "Opening",
+      "type": "object"
+    },
+    "OpeningKind": {
+      "enum": [
+        "door",
+        "roof_vent",
+        "side_vent"
+      ],
+      "title": "OpeningKind",
+      "type": "string"
+    },
+    "Percent": {
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "type": "number"
+    },
+    "Point2": {
+      "description": "A point in a shape's own x-y plane.",
+      "properties": {
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "title": "Point2",
+      "type": "object"
+    },
+    "PrescribedAirflow": {
+      "discriminator": {
+        "mapping": {
+          "buoyancy": "#/$defs/BuoyancyAirflow",
+          "gradient": "#/$defs/GradientAirflow",
+          "uniform": "#/$defs/UniformAirflow",
+          "vortex": "#/$defs/VortexAirflow"
+        },
+        "propertyName": "kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/UniformAirflow"
+        },
+        {
+          "$ref": "#/$defs/BuoyancyAirflow"
+        },
+        {
+          "$ref": "#/$defs/VortexAirflow"
+        },
+        {
+          "$ref": "#/$defs/GradientAirflow"
+        }
+      ]
+    },
+    "Quaternion": {
+      "description": "A rotation as a unit quaternion; the default is no rotation.",
+      "properties": {
+        "w": {
+          "default": 1.0,
+          "title": "W",
+          "type": "number"
+        },
+        "x": {
+          "default": 0.0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "default": 0.0,
+          "title": "Y",
+          "type": "number"
+        },
+        "z": {
+          "default": 0.0,
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "title": "Quaternion",
+      "type": "object"
+    },
+    "RecordedWeather": {
+      "additionalProperties": false,
+      "description": "Weather recorded in a file of the recorded weather's directory, by its\nname.",
+      "properties": {
+        "kind": {
+          "const": "recorded",
+          "default": "recorded",
+          "title": "Kind",
+          "type": "string"
+        },
+        "file": {
+          "title": "File",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file"
+      ],
+      "title": "RecordedWeather",
+      "type": "object"
+    },
+    "Site": {
+      "additionalProperties": false,
+      "description": "Where the world lies: its latitude and longitude (degrees north and\neast), its elevation (metres above sea level), its time zone (by its\nIANA name, such as `Europe/Amsterdam`), and the bearing of its x axis.",
+      "properties": {
+        "latitude_deg": {
+          "maximum": 90.0,
+          "minimum": -90.0,
+          "title": "Latitude Deg",
+          "type": "number"
+        },
+        "longitude_deg": {
+          "maximum": 180.0,
+          "minimum": -180.0,
+          "title": "Longitude Deg",
+          "type": "number"
+        },
+        "elevation_m": {
+          "default": 0.0,
+          "title": "Elevation M",
+          "type": "number"
+        },
+        "time_zone": {
+          "title": "Time Zone",
+          "type": "string"
+        },
+        "x_bearing_deg": {
+          "$ref": "#/$defs/Bearing",
+          "default": 90.0
+        }
+      },
+      "required": [
+        "latitude_deg",
+        "longitude_deg",
+        "time_zone"
+      ],
+      "title": "Site",
+      "type": "object"
+    },
+    "SyntheticWeather": {
+      "additionalProperties": false,
+      "description": "A day of weather, each day alike: its coldest and warmest temperatures\nand their hours, its humidity at the coldest, its CO2, its calmest and\nwindiest winds, the direction the wind blows from at midnight and how\nfar it veers clockwise by the next (backing if negative), its gusts' size\nas a share of the wind's speed, its cloud cover and its pressure.",
+      "properties": {
+        "kind": {
+          "const": "synthetic",
+          "default": "synthetic",
+          "title": "Kind",
+          "type": "string"
+        },
+        "coldest_c": {
+          "title": "Coldest C",
+          "type": "number"
+        },
+        "warmest_c": {
+          "title": "Warmest C",
+          "type": "number"
+        },
+        "coldest_hour": {
+          "$ref": "#/$defs/Hour"
+        },
+        "warmest_hour": {
+          "$ref": "#/$defs/Hour"
+        },
+        "humidity_at_coldest_pct": {
+          "$ref": "#/$defs/Percent"
+        },
+        "co2_ppm": {
+          "default": 420.0,
+          "exclusiveMinimum": 0,
+          "title": "Co2 Ppm",
+          "type": "number"
+        },
+        "calmest_m_s": {
+          "minimum": 0,
+          "title": "Calmest M S",
+          "type": "number"
+        },
+        "windiest_m_s": {
+          "minimum": 0,
+          "title": "Windiest M S",
+          "type": "number"
+        },
+        "wind_from_deg": {
+          "$ref": "#/$defs/Bearing"
+        },
+        "veer_deg": {
+          "default": 0.0,
+          "title": "Veer Deg",
+          "type": "number"
+        },
+        "gustiness": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Gustiness",
+          "type": "number"
+        },
+        "cloud_cover_pct": {
+          "$ref": "#/$defs/Percent",
+          "default": 0.0
+        },
+        "barometric_pressure_hpa": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Barometric Pressure Hpa"
+        }
+      },
+      "required": [
+        "coldest_c",
+        "warmest_c",
+        "coldest_hour",
+        "warmest_hour",
+        "humidity_at_coldest_pct",
+        "calmest_m_s",
+        "windiest_m_s",
+        "wind_from_deg"
+      ],
+      "title": "SyntheticWeather",
+      "type": "object"
+    },
+    "Transform": {
+      "description": "Places a shape's own frame in the world: rotate, then translate.",
+      "properties": {
+        "position": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "rotation": {
+          "$ref": "#/$defs/Quaternion",
+          "default": {
+            "w": 1.0,
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        }
+      },
+      "required": [
+        "position"
+      ],
+      "title": "Transform",
+      "type": "object"
+    },
+    "UniformAirflow": {
+      "additionalProperties": false,
+      "description": "One breeze everywhere, at one temperature.",
+      "properties": {
+        "kind": {
+          "const": "uniform",
+          "default": "uniform",
+          "title": "Kind",
+          "type": "string"
+        },
+        "velocity_m_s": {
+          "$ref": "#/$defs/Vector3",
+          "default": {
+            "x": 0.3,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "temperature_c": {
+          "default": 20.0,
+          "title": "Temperature C",
+          "type": "number"
+        }
+      },
+      "title": "UniformAirflow",
+      "type": "object"
+    },
+    "Vector3": {
+      "properties": {
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        },
+        "z": {
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
+      "title": "Vector3",
+      "type": "object"
+    },
+    "VortexAirflow": {
+      "additionalProperties": false,
+      "description": "One roll across the house, turning about its length.",
+      "properties": {
+        "kind": {
+          "const": "vortex",
+          "default": "vortex",
+          "title": "Kind",
+          "type": "string"
+        },
+        "peak_speed_m_s": {
+          "default": 0.5,
+          "minimum": 0,
+          "title": "Peak Speed M S",
+          "type": "number"
+        },
+        "temperature_c": {
+          "default": 20.0,
+          "title": "Temperature C",
+          "type": "number"
+        }
+      },
+      "title": "VortexAirflow",
+      "type": "object"
+    }
+  },
+  "description": "The simulated world: its greenhouse, crop, dynamics and sensor noise.\n\nWhich management policy runs against it, and with what thresholds, is\nnot part of the world. That is the caller's choice about a run.",
+  "properties": {
+    "greenhouse_id": {
+      "title": "Greenhouse Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "description": {
+      "title": "Description",
+      "type": "string"
+    },
+    "variety": {
+      "title": "Variety",
+      "type": "string"
+    },
+    "rows": {
+      "title": "Rows",
+      "type": "integer"
+    },
+    "columns": {
+      "title": "Columns",
+      "type": "integer"
+    },
+    "start_date": {
+      "format": "date",
+      "title": "Start Date",
+      "type": "string"
+    },
+    "duration_days": {
+      "title": "Duration Days",
+      "type": "integer"
+    },
+    "random_seed": {
+      "title": "Random Seed",
+      "type": "integer"
+    },
+    "envelope": {
+      "$ref": "#/$defs/Envelope"
+    },
+    "layout": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$",
+      "default": "default",
+      "description": "The name of one of the scenario's layout files."
+    },
+    "airflow": {
+      "$ref": "#/$defs/PrescribedAirflow",
+      "default": {
+        "kind": "uniform",
+        "velocity_m_s": {
+          "x": 0.3,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "temperature_c": 20.0
+      }
+    },
+    "cfd": {
+      "$ref": "#/$defs/CfdSetup",
+      "default": {
+        "inlets": null,
+        "inlet_speed_m_s": 0.5,
+        "effective_viscosity_m2_s": 0.01,
+        "iterations": 2000
+      }
+    },
+    "climate": {
+      "$ref": "#/$defs/ClimateSettings",
+      "default": {
+        "start_temperature_c": 18.0,
+        "start_humidity_pct": 75.0,
+        "start_co2_ppm": 420.0,
+        "glazing_u_w_m2k": 6.0,
+        "mixing_m2_s": 0.1,
+        "infiltration_per_h": 0.25,
+        "infiltration_per_h_per_m_s": 0.1
+      }
+    },
+    "site": {
+      "$ref": "#/$defs/Site",
+      "default": {
+        "latitude_deg": 52.0,
+        "longitude_deg": 4.5,
+        "elevation_m": 0.0,
+        "time_zone": "Europe/Amsterdam",
+        "x_bearing_deg": 90.0
+      }
+    },
+    "weather": {
+      "default": {
+        "air_temperature_c": 10.0,
+        "relative_humidity_pct": 80.0,
+        "co2_ppm": 420.0,
+        "wind_speed_m_s": 0.0,
+        "wind_direction_deg": 0.0,
+        "global_radiation_w_m2": 0.0,
+        "cloud_cover_pct": 0.0,
+        "kind": "constant",
+        "barometric_pressure_hpa": null
+      },
+      "discriminator": {
+        "mapping": {
+          "constant": "#/$defs/ConstantWeather",
+          "recorded": "#/$defs/RecordedWeather",
+          "synthetic": "#/$defs/SyntheticWeather"
+        },
+        "propertyName": "kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ConstantWeather"
+        },
+        {
+          "$ref": "#/$defs/SyntheticWeather"
+        },
+        {
+          "$ref": "#/$defs/RecordedWeather"
+        }
+      ],
+      "title": "Weather"
+    },
+    "cloud_cover_pct": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Percent"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "air_temperature_bounds": {
+      "default": [
+        18.0,
+        32.0
+      ],
+      "maxItems": 2,
+      "minItems": 2,
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "title": "Air Temperature Bounds",
+      "type": "array"
+    },
+    "humidity_bounds": {
+      "default": [
+        45.0,
+        85.0
+      ],
+      "maxItems": 2,
+      "minItems": 2,
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "title": "Humidity Bounds",
+      "type": "array"
+    },
+    "initial_water_reservoir_ml": {
+      "default": 600.0,
+      "title": "Initial Water Reservoir Ml",
+      "type": "number"
+    },
+    "water_capacity_ml": {
+      "default": 1200.0,
+      "title": "Water Capacity Ml",
+      "type": "number"
+    },
+    "water_use_ml_per_day_base": {
+      "default": 80.0,
+      "title": "Water Use Ml Per Day Base",
+      "type": "number"
+    },
+    "evaporation_ml_per_day": {
+      "default": 20.0,
+      "title": "Evaporation Ml Per Day",
+      "type": "number"
+    },
+    "water_stress_threshold_pct": {
+      "default": 35.0,
+      "title": "Water Stress Threshold Pct",
+      "type": "number"
+    },
+    "initial_stem_length_cm": {
+      "default": 20.0,
+      "title": "Initial Stem Length Cm",
+      "type": "number"
+    },
+    "stem_growth_cm_per_day_base": {
+      "default": 2.0,
+      "title": "Stem Growth Cm Per Day Base",
+      "type": "number"
+    },
+    "truss_interval_days": {
+      "default": 6,
+      "title": "Truss Interval Days",
+      "type": "integer"
+    },
+    "max_trusses": {
+      "default": 8,
+      "title": "Max Trusses",
+      "type": "integer"
+    },
+    "fruits_per_truss_bounds": {
+      "default": [
+        3,
+        6
+      ],
+      "maxItems": 2,
+      "minItems": 2,
+      "prefixItems": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "integer"
+        }
+      ],
+      "title": "Fruits Per Truss Bounds",
+      "type": "array"
+    },
+    "target_diameter_mm_bounds": {
+      "default": [
+        18.0,
+        26.0
+      ],
+      "maxItems": 2,
+      "minItems": 2,
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "title": "Target Diameter Mm Bounds",
+      "type": "array"
+    },
+    "fruit_growth_days_to_target": {
+      "default": 20,
+      "title": "Fruit Growth Days To Target",
+      "type": "integer"
+    },
+    "mass_coefficient_g_per_mm3": {
+      "default": 0.0012,
+      "title": "Mass Coefficient G Per Mm3",
+      "type": "number"
+    },
+    "ripening_days_bounds": {
+      "default": [
+        16,
+        26
+      ],
+      "maxItems": 2,
+      "minItems": 2,
+      "prefixItems": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "integer"
+        }
+      ],
+      "title": "Ripening Days Bounds",
+      "type": "array"
+    },
+    "soil_moisture_noise_pct": {
+      "default": 3.0,
+      "title": "Soil Moisture Noise Pct",
+      "type": "number"
+    },
+    "air_temperature_noise_c": {
+      "default": 0.4,
+      "title": "Air Temperature Noise C",
+      "type": "number"
+    },
+    "fruit_count_noise_probability": {
+      "default": 0.1,
+      "title": "Fruit Count Noise Probability",
+      "type": "number"
+    },
+    "ripe_mass_noise_pct": {
+      "default": 8.0,
+      "title": "Ripe Mass Noise Pct",
+      "type": "number"
+    },
+    "height_noise_cm": {
+      "default": 1.5,
+      "title": "Height Noise Cm",
+      "type": "number"
+    },
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "notes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "What the scenario, or one of its fields, is and why."
+    }
+  },
+  "required": [
+    "schema_version",
+    "greenhouse_id",
+    "name",
+    "description",
+    "variety",
+    "rows",
+    "columns",
+    "start_date",
+    "duration_days",
+    "random_seed",
+    "envelope"
+  ],
+  "title": "ScenarioConfig",
+  "type": "object",
+  "additionalProperties": false
+}
