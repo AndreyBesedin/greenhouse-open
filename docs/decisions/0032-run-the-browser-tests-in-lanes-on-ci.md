@@ -29,9 +29,9 @@ The roadmap's note on test suite and CI time scheduled this after P09.
   each stage that runs alone. A lane starts at the first stage and at each
   stage named in `LANE_STARTS`, and is named for the stage it starts at.
 - **There are four lanes:** `chromium`; `renderer-smoke` to `sun`;
-  `weather-day` to `checkpoints`; `crop` to the last stage. Each lane of
-  stages that run alone takes about as long as the `chromium` lane, from
-  the times of a run at the top of P09's stack.
+  `weather-day` to `checkpoints`; `crop` to the last stage. They are cut so
+  that no lane of stages that run alone takes longer than the `chromium`
+  lane.
 - **CI runs one job per lane** (`browser tests (<lane>)`), as a matrix with
   `fail-fast: false`, so one run shows every lane's failures. The job names
   its lane in `BROWSER_TEST_LANE`, and the matrix's size in
@@ -45,8 +45,10 @@ The roadmap's note on test suite and CI time scheduled this after P09.
 
 ## Consequences
 
-- A pull request's checks take about as long as the longest lane, about
-  6 minutes, setup included, where `viewer checks` took 13 to 21.
+- The browser tests take as long as the longest lane. On the first run,
+  setup included: `chromium` 6.0 minutes, `renderer-smoke` 5.9,
+  `weather-day` 2.7, `crop` 2.4. On the commit before, `viewer checks`
+  took 15.2 minutes, the browser tests included. It now takes 30 seconds.
 - Each lane repeats the setup: the viewer's dependencies, the simulator's
   wheels, Chromium and the build, about a minute. CI runs three more jobs
   for each pull request. A free account runs 20 jobs at once, so pushing a
