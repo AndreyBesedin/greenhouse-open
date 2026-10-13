@@ -273,7 +273,7 @@ run in their own Playwright project, as the plant lab's and the sun's do.
 | Step | Commit summary | Status |
 | --- | --- | --- |
 | P09.1 | `feat(scenarios): define versioned integrated scenario manifest` | Done |
-| P09.2 | `feat(sim): unify multi-rate scheduler and visible event timeline` | In progress |
+| P09.2 | `feat(sim): unify multi-rate scheduler and visible event timeline` | Done |
 | P09.3 | `feat(coupling): connect radiation/weather/climate to plant environment` | Planned |
 | P09.4 | `feat(coupling): connect actuators weather and vents to sensor observations` | Planned |
 | P09.5 | `feat(replay): add checkpoint reset branch and replay` | Planned |
@@ -332,6 +332,53 @@ Runs through the scenario's duration, the processes' order, daily
 schedules, the timeline's route and panel. Visible result: the timeline
 shows events at their different frequencies. Tests: the event counts and
 order of section 2.
+
+#### As implemented
+
+- **One clock** (#125), `core/clock.py`, and the viewer's copy of it: a
+  run's moments are seconds from its start, and a moment belongs to the
+  day it lies in or, at a midnight, the day it ends, so a run of `d` days
+  has days 0 to `d − 1`. A run lasts its scenario's days
+  (`ScenarioConfig.run_length_s`), and every service refuses a moment past
+  its end, naming them. The house's air, the observation log, the sensors'
+  truth and the camera frames are a day's by default, from the start of
+  the moment's day; `&from=` asks for more. The weather's day is the
+  moment's, and a plant's light integral its moment's day's. A sensor's
+  freshness is worked out from its dropout draws, without the readings
+  before it.
+- **The time controls span the run** (#126): a slider over the moment's
+  time of day and one over the run's days, a day's step either way, and
+  play at five minutes, an hour or a day a step. A later day's moments
+  are written with their day (`day 3, 5 h 05 min`). The house's air, the
+  weather's day, a sensor's chart and the schedule's bar are drawn across
+  the moment's day.
+- **Daily commands** (#127): `&daily=64800:heater:1` sets a piece of
+  equipment, or a door or vent, at a time of day on every day of the run,
+  before any other command at the same moment, so that one given for the
+  moment overrides it. "Schedule" lists them apart, and repeats any
+  command every day (↻).
+- **The timeline** (`core/timeline.py`, `GET
+  /api/scenarios/{id}/timeline`): every event of a run in a window of a
+  day at most, by process, subject and kind, enumerated from the cadences
+  and the commands, in the order of section 2. The house's air is listed
+  where the run works a climate, at each minute's end and each command's
+  moment, as the whole house works it. Its document is written column by
+  column: a day of the reference greenhouse is 21 633 events, 407 KB, in
+  14 ms. The viewer's "Timeline", opened on demand, draws a lane per
+  process across the window the moment lies in, from a day to a minute,
+  and lists what each process does at the moment, in turn.
+- **Tests:** over the reference greenhouse's second day, each plant has
+  one day, each sensor `86 400 / cadence_s` samples, each camera its
+  frames, each command one event, and the air a step a minute; the same
+  run gives the same events in the same order; at a midnight the
+  processes take their turns in order (`tests/test_timeline.py`). Browser
+  tests: `season.spec.ts`, `daily-schedule.spec.ts` and
+  `timeline.spec.ts`; the first two, which work a climate run on each day
+  they visit, run on their own after the others.
+- **Found on the way:** the reference greenhouse's air takes about a
+  second a simulated day to work out, mostly the sun's heat through its
+  three spans, so a late day's first moment takes about a minute and a
+  half to reach. The kept opening day (P09.5) and P09.8 address it.
 
 ### P09.3: The crop in the climate
 

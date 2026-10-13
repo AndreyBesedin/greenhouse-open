@@ -74,6 +74,13 @@ check; a route that comes to need one checks it first.
     GET /api/scenarios/{id}/climate/truth what its point sensors truly sampled,
                                           as its log is asked for; for
                                           evaluation and QA only
+    GET /api/scenarios/{id}/timeline      every event of its run, by process,
+                                          subject and kind, in the order they
+                                          happen, up to &t=600 from the start
+                                          of that moment's day or &from=0, a
+                                          day at most; with ?layout=, &set=,
+                                          &schedule= and &daily= as for its
+                                          climate field
     GET /api/scenarios/{id}/weather       its site, and the weather outside it &t=600
                                           seconds into a run, with the wind in
                                           the world's axes; &weather=cold_spring_day
@@ -128,6 +135,7 @@ from greenhouse_sim.services import (
     sensors,
     sunlight,
     system,
+    timeline,
     weather,
 )
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
@@ -290,6 +298,18 @@ def respond(method: str, path: str) -> Response:
                     _seconds(query),
                     daily=_commands(query.get("daily", []), "daily"),
                     weather=_last(query, "weather"),
+                    from_s=_since(query),
+                )
+            )
+        case ["api", "scenarios", scenario_id, "timeline"]:
+            return _answer(
+                lambda: timeline.timeline(
+                    scenario_id,
+                    _last(query, "layout"),
+                    _pairs(query.get("set", []), "set"),
+                    _commands(query.get("schedule", [])),
+                    _seconds(query),
+                    daily=_commands(query.get("daily", []), "daily"),
                     from_s=_since(query),
                 )
             )
