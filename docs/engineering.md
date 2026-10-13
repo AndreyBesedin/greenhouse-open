@@ -299,10 +299,14 @@ The same canonical command is used by CI so local and remote checks do not
 quietly drift apart.
 
 For a change to the viewer, from `greenhouse_sim/web`, run the steps CI runs
-in its `viewer checks` job:
+in its `viewer checks` and `browser tests` jobs:
 
 ```bash
 npm ci
 npm run lint && npm run typecheck && npm run coverage && npm run build
 PYTHON=python npm run e2e   # needs greenhouse-sim installed for that python
 ```
+
+CI runs the browser tests in lanes at once, a job each (decision 0032);
+`npm run e2e` runs every lane, one after another. To run one lane as CI
+does, name it: `BROWSER_TEST_LANE=crop PYTHON=python npm run e2e`.

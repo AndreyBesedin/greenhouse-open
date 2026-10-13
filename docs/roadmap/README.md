@@ -137,6 +137,20 @@ The options to weigh then:
 - the simulator's tests run in parallel (pytest-xdist);
 - mypy's cache, and the browser install, kept between runs.
 
+By P09's end the browser tests took about 14 minutes, and the `viewer
+checks` job 9 to 21 minutes. About 9 of the 14 went to stages that run
+alone, on one worker of two. Since 2026-10-13 they run in four lanes at
+once on CI, each on a machine of its own with a simulator of its own
+(decision 0032). They took 6.0 minutes on the first run, the longest
+lane, against 15.2 before.
+
+The repository checks are now a pull request's longest: 20.6 minutes since
+P09.8's benchmark, against 10.2 just before it. The simulator's tests went
+from 9.4 to 19.4 minutes with 8 more tests, which take 7 s on their own.
+The benchmark forgets every run and checkpoint kept, so the likeliest cause
+is the tests after it working out from the start what they found kept
+before. The other options remain open.
+
 **Camera imperfections** (recorded 2026-10-08, with the headless renderer
 for datasets, after P09 unless a policy needs them sooner). P06's cameras
 take every frame on time, and draw perfect images. Planned then:

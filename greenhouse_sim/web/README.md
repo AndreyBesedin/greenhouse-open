@@ -331,7 +331,10 @@ the others too, then the checks of the sun's light (`e2e/light.spec.ts`,
 `e2e/solar-lab.spec.ts` and P08's final QA, `e2e/solar-day.spec.ts`), which
 work climate runs out to noon, and last P07's final QA,
 `e2e/weather-day.spec.ts`, which works the climate through a whole day: each
-in its own Playwright project, so that none slows another into a timeout. Run
+in its own Playwright project, so that none slows another into a timeout. On
+CI the projects are cut into lanes that run at once, each on a machine of its
+own with an API of its own (decision 0032); `BROWSER_TEST_LANE=<lane>` runs
+one lane here, as CI does (`LANE_STARTS` in `playwright.config.ts`). Run
 `npx playwright install chromium` once to get the browser.
 
 The page shows the simulator version, read from `../pyproject.toml` at build

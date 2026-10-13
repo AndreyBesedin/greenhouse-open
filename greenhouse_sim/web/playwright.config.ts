@@ -36,51 +36,75 @@ const ONE_BY_ONE = [
   "demo.spec.ts",
 ];
 
+interface Stage {
+  name: string;
+  testMatch?: string[];
+  testIgnore?: string[];
+}
+// The specs above, each a stage of its own, in the order they run.
+const ALONE: Stage[] = [
+  { name: "renderer-smoke", testMatch: [RENDERER_SMOKE] },
+  { name: "plant-lab", testMatch: [PLANT_LAB] },
+  { name: "sun", testMatch: SUN },
+  { name: "weather-day", testMatch: [WEATHER_DAY] },
+  ...ONE_BY_ONE.map((spec) => ({ name: spec.replace(".spec.ts", ""), testMatch: [spec] })),
+];
+// Every browser test, stage by stage: each stage runs once the one before
+// it has passed, so that none of those above shares the simulator with
+// another. The first is every other spec, run in parallel.
+const STAGES: Stage[] = [
+  {
+    name: "chromium",
+    testIgnore: [...ELSEWHERE, ...ALONE.flatMap((stage) => stage.testMatch ?? [])],
+  },
+  ...ALONE,
+];
+// On CI the stages are cut into lanes that run at once, each on a machine
+// of its own with a simulator of its own, so that a stage still shares it
+// with none of those above (decision 0032). A lane starts at the first
+// stage and at each of these, and is named for the stage it starts at.
+// Here, on one machine, the lanes run one after another, as one.
+const LANE_STARTS = ["renderer-smoke", "weather-day", "crop"];
+// The lane a CI job runs, and how many lanes CI runs: all of them
+// (`.github/workflows/ci.yml`).
+const LANE = process.env.BROWSER_TEST_LANE;
+const LANES_RUN = process.env.BROWSER_TEST_LANES;
+
+/** The stages to run: the lane `BROWSER_TEST_LANE` names, or all of them. */
+function stagesToRun(): Stage[] {
+  if (LANE === undefined) {
+    return STAGES;
+  }
+  const names = STAGES.filter(
+    (stage, index) => index === 0 || LANE_STARTS.includes(stage.name),
+  ).map((stage) => stage.name);
+  if (LANES_RUN !== undefined && Number(LANES_RUN) !== names.length) {
+    throw new Error(`CI runs ${LANES_RUN} lanes of browser tests, not all of ${names.join(", ")}`);
+  }
+  if (!names.includes(LANE)) {
+    throw new Error(
+      `No lane of browser tests starts at ${LANE}; they start at ${names.join(", ")}`,
+    );
+  }
+  const start = STAGES.findIndex((stage) => stage.name === LANE);
+  const next = STAGES.findIndex((stage, index) => index > start && names.includes(stage.name));
+  return STAGES.slice(start, next === -1 ? STAGES.length : next);
+}
+
 export default defineConfig({
   testDir: "e2e",
   testIgnore: ELSEWHERE,
   forbidOnly: IN_CI,
   reporter: IN_CI ? "github" : "list",
   use: { baseURL: `http://localhost:${PREVIEW_PORT}` },
-  projects: [
-    {
-      name: "chromium",
-      testIgnore: [...ELSEWHERE, RENDERER_SMOKE, PLANT_LAB, WEATHER_DAY, ...SUN, ...ONE_BY_ONE],
+  projects: stagesToRun().map((stage, index, stages) => {
+    const before = stages[index - 1];
+    return {
+      ...stage,
+      dependencies: before === undefined ? [] : [before.name],
       use: { ...devices["Desktop Chrome"] },
-    },
-    {
-      name: "renderer-smoke",
-      testMatch: RENDERER_SMOKE,
-      dependencies: ["chromium"],
-      use: { ...devices["Desktop Chrome"] },
-    },
-    {
-      name: "plant-lab",
-      testMatch: PLANT_LAB,
-      dependencies: ["renderer-smoke"],
-      use: { ...devices["Desktop Chrome"] },
-    },
-    {
-      name: "sun",
-      testMatch: SUN,
-      dependencies: ["plant-lab"],
-      use: { ...devices["Desktop Chrome"] },
-    },
-    {
-      name: "weather-day",
-      testMatch: WEATHER_DAY,
-      dependencies: ["sun"],
-      use: { ...devices["Desktop Chrome"] },
-    },
-    ...ONE_BY_ONE.map((spec, index) => ({
-      name: spec.replace(".spec.ts", ""),
-      testMatch: spec,
-      dependencies: [
-        index === 0 ? "weather-day" : (ONE_BY_ONE[index - 1] ?? "").replace(".spec.ts", ""),
-      ],
-      use: { ...devices["Desktop Chrome"] },
-    })),
-  ],
+    };
+  }),
   webServer: [
     {
       command: `${PYTHON} -m greenhouse_sim.api --port ${TEST_SIMULATOR_API_PORT}`,
