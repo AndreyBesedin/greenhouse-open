@@ -15,6 +15,7 @@ depth, rather than ignoring it.
 """
 
 import json
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Final
 
@@ -36,11 +37,18 @@ SCHEMA_VERSION: Final = 1
 FIRST_SCENARIO: Final = "reference_greenhouse"
 # What a note may be about besides one of the configuration's fields.
 WHOLE_SCENARIO: Final = "scenario"
-# A manifest's fields that are not the configuration's.
 _SCHEMA_KEY: Final = "$schema"
 _VERSION_KEY: Final = "schema_version"
 _NOTES_KEY: Final = "notes"
 _LAYOUT_KEY: Final = "layout"
+# A manifest's fields that this module reads itself rather than handing them
+# to `ScenarioConfig`, which could not read them as written: the schema, the
+# format's version and the notes are about the file, not the greenhouse, and
+# the layout is only named, its own file read in its place.
+_MANIFEST_ONLY_FIELDS: Final = frozenset({_SCHEMA_KEY, _VERSION_KEY, _NOTES_KEY, _LAYOUT_KEY})
+# How Pydantic's schema points to a model it defines, once, under `$defs`:
+# `{"$ref": "#/$defs/<model>"}`, wherever the model is used.
+_DEFINITION_REFERENCE: Final = "#/$defs/"
 
 
 class InvalidManifest(ValueError):
@@ -65,11 +73,7 @@ def scenario_from_manifest(scenario_id: str, document: dict[str, JsonValue]) -> 
     it names. Refused, with the reason, if the manifest is in a format this
     simulator does not read, names another scenario, notes a field it does
     not have, or has a field the configuration does not."""
-    fields = {
-        key: value
-        for key, value in document.items()
-        if key not in (_SCHEMA_KEY, _VERSION_KEY, _NOTES_KEY, _LAYOUT_KEY)
-    }
+    fields = {key: value for key, value in document.items() if key not in _MANIFEST_ONLY_FIELDS}
     version = document.get(_VERSION_KEY)
     if version != SCHEMA_VERSION:
         raise InvalidManifest(
@@ -99,15 +103,23 @@ def scenario_from_manifest(scenario_id: str, document: dict[str, JsonValue]) -> 
 def manifest_json_schema() -> dict[str, JsonValue]:
     """The JSON Schema a manifest follows, published as
     `scenario.schema.json`: the configuration's, with its layout named, its
-    format's version and its notes, and no field it does not have."""
+    format's version and its notes, and no field it does not have.
+
+    It is the schema Pydantic generates for the configuration, changed where
+    a manifest differs from it. Pydantic writes a model's schema as its
+    fields' schemas, under `properties`; the names of those without a
+    default, under `required`; and every model they use, once, under `$defs`.
+    """
     schema = ScenarioConfig.model_json_schema()
     properties = schema["properties"]
+    # A manifest names its layout, rather than writing it out.
     properties[_LAYOUT_KEY] = {
         "type": "string",
         "pattern": f"^{LAYOUT_NAME.pattern}$",
         "default": DEFAULT_LAYOUT,
         "description": "The name of one of the scenario's layout files.",
     }
+    # The fields a manifest has besides the configuration's.
     properties[_SCHEMA_KEY] = {"type": "string"}
     properties[_VERSION_KEY] = {"const": SCHEMA_VERSION}
     properties[_NOTES_KEY] = {
@@ -115,45 +127,80 @@ def manifest_json_schema() -> dict[str, JsonValue]:
         "additionalProperties": {"type": "string"},
         "description": "What the scenario, or one of its fields, is and why.",
     }
-    schema["required"] = [_VERSION_KEY, *(name for name in schema["required"] if name != "layout")]
+    schema["required"] = [_VERSION_KEY, *schema["required"]]
     schema["additionalProperties"] = False
-    schema["$defs"] = _referenced(schema["$defs"], properties)
+    schema["$defs"] = _used_definitions(schema["$defs"], properties)
     return {"$schema": JSON_SCHEMA_DIALECT, **schema}
 
 
 def _unknown_fields(written: JsonValue, read: JsonValue, path: str = "") -> list[str]:
-    """Where a document has a field that what was read from it does not: a
-    field the model would otherwise have ignored."""
-    if isinstance(written, dict) and isinstance(read, dict):
-        found: list[str] = []
-        for key, value in written.items():
-            where = f"{path}.{key}" if path else key
-            found += [where] if key not in read else _unknown_fields(value, read[key], where)
-        return found
+    """Where a manifest has a field that the configuration read from it does
+    not, each by its path (`envelope.openings[0].centre.z`).
+
+    Some of the configuration's models ignore a field they do not have,
+    rather than refuse it. So what the manifest wrote is compared with what
+    the configuration holds, written back as JSON: a field written but not
+    held was ignored. The two have the same shape, since no field is read
+    under another name (an alias) and a list keeps its items in order.
+    """
     if isinstance(written, list) and isinstance(read, list):
-        return [
-            field
-            for index, (item, read_item) in enumerate(zip(written, read, strict=False))
-            for field in _unknown_fields(item, read_item, f"{path}[{index}]")
-        ]
-    return []
+        found: list[str] = []
+        for index, (item, read_item) in enumerate(zip(written, read, strict=False)):
+            found += _unknown_fields(item, read_item, f"{path}[{index}]")
+        return found
+    if not isinstance(written, dict) or not isinstance(read, dict):
+        return []
+    found = []
+    for key, value in written.items():
+        where = f"{path}.{key}" if path else key
+        if key not in read:
+            found.append(where)
+            continue
+        found += _unknown_fields(value, read[key], where)
+    return found
 
 
-def _referenced(definitions: dict[str, JsonValue], within: JsonValue) -> dict[str, JsonValue]:
-    """The definitions `within` refers to, directly or through one another:
-    the layout's are left out, as a manifest only names it."""
-    kept: dict[str, JsonValue] = {}
-    waiting = [within]
+def _used_definitions(
+    definitions: dict[str, JsonValue], properties: dict[str, JsonValue]
+) -> dict[str, JsonValue]:
+    """The definitions a manifest's fields use, directly or through one
+    another, by name.
+
+    The configuration's schema defines the `Layout` and the models only it
+    uses; a manifest names its layout instead, so nothing uses those any
+    more, and they are left out.
+    """
+    used: dict[str, JsonValue] = {}
+    waiting = list(_references(properties))
     while waiting:
-        node = waiting.pop()
-        if isinstance(node, dict):
-            reference = node.get("$ref")
-            if isinstance(reference, str):
-                name = reference.removeprefix("#/$defs/")
-                if name not in kept:
-                    kept[name] = definitions[name]
-                    waiting.append(definitions[name])
-            waiting.extend(node.values())
-        elif isinstance(node, list):
-            waiting.extend(node)
-    return {name: kept[name] for name in sorted(kept)}
+        name = waiting.pop()
+        if name in used:
+            continue
+        used[name] = definitions[name]
+        waiting += _references(definitions[name])
+    return dict(sorted(used.items()))
+
+
+def _references(schema: JsonValue) -> Iterator[str]:
+    """The definitions a part of a schema points to, by name, wherever in
+    it a `$ref` is."""
+    if isinstance(schema, list):
+        for item in schema:
+            yield from _references(item)
+        return
+    if not isinstance(schema, dict):
+        return
+    reference = schema.get("$ref")
+    if isinstance(reference, str):
+        yield _definition_name(reference)
+    for value in schema.values():
+        yield from _references(value)
+
+
+def _definition_name(reference: str) -> str:
+    """The definition a `$ref` points to. Pydantic points only to the
+    schema's own `$defs`; any other reference is refused, so that a change
+    in how it writes them cannot quietly leave a definition out."""
+    if not reference.startswith(_DEFINITION_REFERENCE):
+        raise ValueError(f"a reference outside the schema's definitions: {reference}")
+    return reference.removeprefix(_DEFINITION_REFERENCE)
