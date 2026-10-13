@@ -226,6 +226,14 @@ the numbers, and CI, which has no graphics card, does not run it
 ([decision 0015](../../docs/decisions/0015-batch-repeated-shapes-and-benchmark-on-a-graphics-card.md)).
 Run `npx playwright install chromium` once for it.
 
+## The demo
+
+`e2e/demo.spec.ts` walks through P09's final QA on the reference greenhouse
+(`docs/demo.md`), step by step, as a browser test. `npm run demo:record`
+plays it on this machine's graphics card with a caption on each step,
+lingering on each (`DEMO_PAUSE_MS`), and records it as video under
+`test-results/demo/` (`PYTHON` names the simulator's interpreter).
+
 ## Screenshots
 
 `/qa/greenhouse?view=outside|aisle|top|section` shows the canonical QA

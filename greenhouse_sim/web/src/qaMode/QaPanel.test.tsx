@@ -1,6 +1,8 @@
+// @vitest-environment jsdom
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { button, click, type Rendered, render } from "../testing/render";
 import type { RunManifest } from "./manifest";
 import { QaPanel } from "./QaPanel";
 import type { RunState } from "./state";
@@ -62,6 +64,26 @@ const STATE: RunState = {
 };
 
 describe("QA mode's panel", () => {
+  let shown: Rendered | undefined;
+  afterEach(() => shown?.unmount());
+
+  it("selects a sensor or a camera from the developer's list", () => {
+    const onSelect = vi.fn();
+    shown = render(
+      <QaPanel
+        build={BUILD}
+        served={{ status: "loading" }}
+        manifest={{ status: "loading" }}
+        state={{ status: "loaded", state: STATE }}
+        onSelect={onSelect}
+      />,
+    );
+
+    click(button(shown.container, "temperature_back: stale, latest day 1, 11 h 58 min"));
+    click(button(shown.container, "path_camera: 1441 frames, latest day 1, 12 h 00 min"));
+    expect(onSelect.mock.calls).toEqual([["temperature_back"], ["path_camera"]]);
+  });
+
   it("lists what the run is made from, and the simulator's and the viewer's versions", () => {
     const html = renderToStaticMarkup(
       <QaPanel
@@ -155,6 +177,8 @@ describe("QA mode's panel", () => {
       '<li class="stale">temperature_back: stale, latest day 1, 11 h 58 min</li>',
     );
     expect(html).toContain("<li>path_camera: 1441 frames, latest day 1, 12 h 00 min</li>");
+    // Without a way to select them, a sensor and a camera are said alone.
+    expect(html).not.toContain("select-link");
     // The developer's list comes before the run's manifest.
     expect(html.indexOf("Developer")).toBeLessThan(html.indexOf("Run manifest"));
   });

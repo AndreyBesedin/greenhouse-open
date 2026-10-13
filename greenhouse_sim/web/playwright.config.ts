@@ -32,6 +32,8 @@ const ONE_BY_ONE = [
   "checkpoints.spec.ts",
   "crop.spec.ts",
   "reference-schedule.spec.ts",
+  // P09.9's demo walks through the whole final QA, last of all.
+  "demo.spec.ts",
 ];
 
 export default defineConfig({
