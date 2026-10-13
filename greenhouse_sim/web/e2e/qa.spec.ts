@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { QA_GREENHOUSE_PATH, QA_GREENHOUSE_VIEWS } from "../src/qa/greenhouseViews.ts";
 import { QA_LAYOUT_PATH, QA_LAYOUT_VIEWS } from "../src/qa/layoutViews.ts";
 import { DEFAULT_QA_SEED, QA_RENDERER_PATH, QA_SELECTED_ID } from "../src/qa/qaPage.ts";
+import { QA_REFERENCE_PATH, QA_REFERENCE_VIEWS } from "../src/qa/referencePage.ts";
 
 // The screenshot comparison itself runs only in CI's container
 // (e2e/visual). This checks the page works wherever the viewer runs.
@@ -88,5 +89,48 @@ test("the QA layout draws each of its views, without console errors", async ({ p
   await page.goto(`${QA_LAYOUT_PATH}?view=sideways`);
   await expect(page.getByRole("alert")).toHaveText(
     `The view must be ${QA_LAYOUT_VIEWS.join(" or ")}.`,
+  );
+});
+
+test("the reference greenhouse's QA page draws each golden view and its probes", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const errors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      errors.push(message.text());
+    }
+  });
+  const probes: Record<string, string> = {};
+  for (const view of QA_REFERENCE_VIEWS) {
+    await page.goto(`${QA_REFERENCE_PATH}?view=${view}`);
+    await expect(page.getByTestId("qa-caption")).toContainText(
+      `Reference greenhouse, ${view} view: `,
+      { timeout: 30_000 },
+    );
+    probes[view] = (await page.getByTestId("qa-probes").textContent()) ?? "";
+  }
+  expect(errors).toEqual([]);
+
+  // The opening day's sun, low at dawn and evening, high at its noon.
+  expect(probes.dawn).toContain("sun 10.02° up");
+  expect(probes.noon).toContain("sun 58.05° up");
+  expect(probes.evening).toContain("sun 8.28° up");
+  // The fans' jet, and nothing where they are off; the house as one volume
+  // does not feel them.
+  expect(probes["fans-on"]).toContain("house air 29.46 °C, sun 58.05° up, jet 1.39 m/s");
+  expect(probes["fans-off"]).toContain("house air 29.46 °C, sun 58.05° up, jet 0 m/s");
+  // Shut at noon, the vents exchange nothing, and the house is 9 °C warmer.
+  expect(probes["vents-open"]).toContain("vents exchange 0.84 m³/s");
+  expect(probes["vents-closed"]).toContain("house air 38.54 °C");
+  expect(probes["vents-closed"]).toContain("vents exchange 0 m³/s");
+  // A young crop bears no fruit; on the opening day, the first is red.
+  expect(probes.young).toContain("4334 leaves, 0 fruits, 0 red");
+  expect(probes.fruiting).toContain("10428 leaves, 750 fruits, 1 red");
+
+  await page.goto(`${QA_REFERENCE_PATH}?view=sideways`);
+  await expect(page.getByRole("alert")).toHaveText(
+    "There is no such view of the reference greenhouse.",
   );
 });

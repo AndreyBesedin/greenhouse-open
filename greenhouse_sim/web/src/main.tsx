@@ -10,9 +10,11 @@ import { QaAirflow } from "./qa/QaAirflow";
 import { QaGreenhouse } from "./qa/QaGreenhouse";
 import { QaLayout } from "./qa/QaLayout";
 import { QaPlants } from "./qa/QaPlants";
+import { QaReference } from "./qa/QaReference";
 import { QaRenderer } from "./qa/QaRenderer";
 import { QaSolar } from "./qa/QaSolar";
 import { QA_RENDERER_PATH } from "./qa/qaPage";
+import { QA_REFERENCE_PATH } from "./qa/referencePage";
 import { QA_SOLAR_PATH } from "./qa/solarPage";
 import "./styles.css";
 
@@ -36,6 +38,8 @@ const page =
     <QaAirflow search={location.search} />
   ) : path === QA_SOLAR_PATH ? (
     <QaSolar search={location.search} />
+  ) : path === QA_REFERENCE_PATH ? (
+    <QaReference search={location.search} />
   ) : (
     <App />
   );

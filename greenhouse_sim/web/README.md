@@ -240,6 +240,18 @@ that the roof does not hide it; from a trolley riding a rail between the rows;
 and from low down, looking across a row through the fixtures in the way. CI
 compares them with `e2e/visual/__screenshots__/layout-<view>-linux.png`.
 
+`/qa/reference-greenhouse?view=…` shows P09's golden views of the reference
+greenhouse, from its run's opening day, day 80, and a young crop's, day 21
+(`public/scenes/qa-reference-greenhouse.json.gz`, gzipped, written by the
+simulator's `tests/test_reference_qa.py --update`): `dawn`, `noon` and
+`evening`, lit by the sun with its path; `fans-on` and `fans-off`, the air as
+arrows; `vents-open` and `vents-closed`, a slice of temperature across the
+house; `young` and `fruiting`, beside a row; `camera-rgb` and
+`camera-depth`, the path camera's picture; `airflow-slice`, the air's speed
+along a fan's jet; and `radiation-slice`, the light in the canopy. Each says
+its moment's state probes under it. CI compares them with
+`e2e/visual/__screenshots__/reference-<view>-linux.png`.
+
 `/qa/renderer?seed=42` is the renderer's canonical page: a QA scene the viewer
 builds from the seed, with a plant selected, every overlay drawn and the
 plants coloured by height. CI's "visual checks" job compares its screenshot

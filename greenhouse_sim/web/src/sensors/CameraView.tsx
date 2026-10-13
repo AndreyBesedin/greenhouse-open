@@ -25,7 +25,7 @@ const NEAR_M = 0.05;
 const FAR_M = 200;
 const RGBA = 4;
 
-type Pass = "rgb" | "depth" | "instance";
+export type Pass = "rgb" | "depth" | "instance";
 const PASS_LABELS: Record<Pass, string> = { rgb: "RGB", depth: "Depth", instance: "Instance" };
 const PASS_ORDER: readonly Pass[] = ["rgb", "depth", "instance"];
 
@@ -126,13 +126,24 @@ function describePixel(
  * intrinsics, as its picture; and its depth and instance passes, drawn apart
  * from it at its own size. Pointing at the picture reads, at that pixel, the
  * entity it shows and how far ahead it lies. The picture's drawing is kept,
- * so that a test can read its pixels.
+ * so that a test can read its pixels. A QA page may open it on another pass,
+ * and draw it wider.
  */
-export function CameraView({ snapshot, spec }: { snapshot: SceneSnapshot; spec: CameraSpec }) {
-  const [pass, setPass] = useState<Pass>("rgb");
+export function CameraView({
+  snapshot,
+  spec,
+  firstPass = "rgb",
+  widthPx = VIEW_WIDTH_PX,
+}: {
+  snapshot: SceneSnapshot;
+  spec: CameraSpec;
+  firstPass?: Pass;
+  widthPx?: number;
+}) {
+  const [pass, setPass] = useState<Pass>(firstPass);
   const [passes, setPasses] = useState<CameraPasses | null>(null);
   const [pixel, setPixel] = useState<{ u: number; v: number } | null>(null);
-  const height = (VIEW_WIDTH_PX * spec.height) / spec.width;
+  const height = (widthPx * spec.height) / spec.width;
   const range = passes === null ? null : depthRange(passes);
   // Drawn once for each new pass, not as the pointer moves.
   const picture = useMemo(() => {
@@ -170,7 +181,7 @@ export function CameraView({ snapshot, spec }: { snapshot: SceneSnapshot; spec: 
       </div>
       <div
         className="camera-picture"
-        style={{ width: VIEW_WIDTH_PX, height }}
+        style={{ width: widthPx, height }}
         onPointerMove={point}
         onPointerLeave={() => setPixel(null)}
       >
