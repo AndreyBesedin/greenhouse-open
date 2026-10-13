@@ -644,6 +644,20 @@ body {
   color: #8a3b12;
 }
 
+/* QA mode's panel (P09.6), marked as QA's as the sensor's truth is: what
+ * the run is made from, and a warning when the simulator and the viewer
+ * come from different commits. */
+.qa-panel {
+  margin: 0 0 8px;
+  padding: 2px 6px;
+  border: 1px dashed #aa3377;
+  font-variant-numeric: tabular-nums;
+}
+
+.qa-panel .stale {
+  color: #8a3b12;
+}
+
 /* A camera's frames, as the run's log records them. */
 .camera-frames p {
   margin: 0 0 4px;

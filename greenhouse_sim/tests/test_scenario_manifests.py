@@ -10,6 +10,7 @@ name, generated here, from `greenhouse_sim/`:
 
 import json
 import sys
+from datetime import date
 from typing import Any
 
 import pytest
@@ -24,10 +25,13 @@ from greenhouse_sim.scenarios.manifest_files import (
     SCHEMA_FROM_A_MANIFEST_FILE,
     SCHEMA_VERSION,
     InvalidManifest,
+    manifest_digest,
     manifest_ids,
     manifest_json_schema,
     scenario_from_manifest,
 )
+from greenhouse_sim.services.errors import InvalidRequest, NotFound
+from greenhouse_sim.services.scenarios import RunManifest, run_manifest
 
 
 def _manifest(scenario_id: str) -> dict[str, Any]:
@@ -130,6 +134,46 @@ def test_a_manifest_names_a_layout_of_its_own_scenario() -> None:
         scenario_from_manifest("tomato_compartment", document | {"layout": "../climate_box"})
     with pytest.raises(KeyError, match="no layout"):
         scenario_from_manifest("tomato_compartment", document | {"layout": "hydroponic"})
+
+
+def test_a_run_says_what_it_is_made_from() -> None:
+    assert run_manifest("reference_greenhouse") == RunManifest(
+        scenario_id="reference_greenhouse",
+        schema_version=SCHEMA_VERSION,
+        version=manifest_digest("reference_greenhouse"),
+        random_seed=42,
+        start_date=date(2026, 3, 1),
+        duration_days=120,
+        opening_day=80,
+        crop_model="organ",
+        variety="cherry_tomato",
+        airflow="uniform",
+        weather="default",
+        weather_kind="synthetic",
+        cloud_cover_pct=None,
+        wind_from_deg=None,
+    )
+
+
+def test_a_run_under_another_weather_names_it_and_its_overrides() -> None:
+    manifest = run_manifest("climate_box", "cold_spring_day@80~90")
+
+    assert (manifest.weather, manifest.weather_kind) == ("cold_spring_day", "synthetic")
+    assert (manifest.cloud_cover_pct, manifest.wind_from_deg) == (80.0, 90.0)
+    # Its own, constant weather, its own seed and crop model.
+    own = run_manifest("climate_box")
+    assert (own.weather, own.weather_kind, own.random_seed) == ("default", "constant", 1201)
+    assert (own.crop_model, own.opening_day) == ("simple", None)
+    assert run_manifest("tomato_compartment").airflow == "buoyancy"
+
+
+def test_a_run_manifest_is_refused_as_its_run_is() -> None:
+    with pytest.raises(NotFound, match="no scenario"):
+        run_manifest("nowhere")
+    with pytest.raises(NotFound, match="no weather"):
+        run_manifest("climate_box", "monsoon")
+    with pytest.raises(InvalidRequest, match="cloud cover"):
+        run_manifest("climate_box", "default@120")
 
 
 def _update() -> None:

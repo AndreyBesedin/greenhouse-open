@@ -42,7 +42,9 @@ import { describePlantLight, loadPlantsLight, plantsLightUrl } from "./plants/li
 import { plantNameOverlays } from "./plants/names";
 import { PlantDays } from "./plants/PlantDays";
 import { PlantLight } from "./plants/PlantLight";
+import { loadRunManifest, loadServedVersion, runManifestUrl, VERSION_URL } from "./qaMode/manifest";
 import { useQaMode } from "./qaMode/mode";
+import { QaPanel } from "./qaMode/QaPanel";
 import type { ViewSample } from "./readouts";
 import { ScenarioPanels } from "./ScenarioPanels";
 import { loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
@@ -198,6 +200,14 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const compared = useLoad(
     run === null || compareName === null ? null : fieldUrl(run.scenarioId, compareName, run),
     fetchField,
+  );
+
+  // In QA mode, the simulator's version and commit, as it says itself, and
+  // what the scenario's run drawn is made from.
+  const served = useLoad(qaMode ? VERSION_URL : null, loadServedVersion);
+  const runManifest = useLoad(
+    !qaMode || run === null ? null : runManifestUrl(run.scenarioId, run),
+    loadRunManifest,
   );
 
   // The weather outside a scenario at the moment drawn, and through its
@@ -537,6 +547,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 onQaMode={setQaMode}
               />
             )}
+            {qaMode && <QaPanel build={build} served={served} manifest={runManifest} />}
             {source.kind === "scenario" && (
               <ScenarioPanels
                 source={source}

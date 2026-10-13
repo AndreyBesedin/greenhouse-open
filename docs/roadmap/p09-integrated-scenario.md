@@ -703,6 +703,19 @@ shows the versions served.
   each probe's label adds what the field holds there of the quantity its
   colours are drawn for, the air's speed while it is drawn as arrows or
   streamlines.
+- **The run's manifest** (`GET /api/scenarios/{id}/manifest`,
+  `RunManifest`): its manifest's format and version (`manifest_digest`),
+  its seed, start date, days and opening day, and the models it runs, its
+  crop's and variety, its prescribed airflow's kind and its weather, by
+  name and kind, under the weather the run is asked for, with its clouds
+  and wind as QA overrides them. `GET /api/version` now gives the commit
+  the simulator runs from, git's abbreviation, as the viewer names the one
+  it was built from, or "unknown" when it is not run from a git checkout,
+  installed as a package as CI installs it. QA mode's panel, marked as
+  QA's as the sensor's truth is, lists the manifest of the scenario's run
+  drawn and both versions and commits, the simulator's as it serves them
+  and the viewer's as it was built, and warns when both commits are known
+  and differ. Browser test: the panel shows what `/api/version` serves.
 
 ### P09.7: Integrated visual regression
 
