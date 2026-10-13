@@ -211,13 +211,18 @@ Tests on both sides fail while either is stale.
 Repeated shapes are drawn in instanced batches, one per kind of entity,
 shape (cylinder, sphere or ellipsoid) and finish: a field of 100,000 plants
 takes four draw calls, and the plant lab's plant, organ by organ, eight. The HUD reports the frame rate and
-time, draw calls and triangles, and memory.
+time, draw calls and triangles, and memory, and how long the simulator took
+to answer the latest request, as its API says in a `Server-Timing` header.
 
 `npm run bench` measures the stress scene at 1,000 to 100,000 plants while
 orbiting, in the full Chromium on this machine's graphics card, and compares
-it with the baseline in `benchmarks/stress.json`; `RECORD_BENCHMARK=1 npm run
-bench` records a new one. It never fails on the numbers, and CI, which has no
-graphics card, does not run it
+it with the baseline in `benchmarks/stress.json`; and the reference
+greenhouse at the end of its season, its crop at its fullest and its climate
+drawn, with how long the simulator took to give each part of it, against
+`benchmarks/reference.json`, starting its own API (`PYTHON` names its
+interpreter) and waiting minutes for the season's last days.
+`RECORD_BENCHMARK=1 npm run bench` records new baselines. It never fails on
+the numbers, and CI, which has no graphics card, does not run it
 ([decision 0015](../../docs/decisions/0015-batch-repeated-shapes-and-benchmark-on-a-graphics-card.md)).
 Run `npx playwright install chromium` once for it.
 

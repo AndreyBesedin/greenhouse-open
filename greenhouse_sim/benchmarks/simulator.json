@@ -1,0 +1,38 @@
+{
+  "recorded": "2026-10-13",
+  "machine": {
+    "platform": "darwin arm64",
+    "cpu": "Apple M2",
+    "cores": 8,
+    "memory_gib": 8,
+    "python": "3.14.7"
+  },
+  "scenario_id": "reference_greenhouse",
+  "manifest_version": "5a7c1ee05a34bf3c",
+  "days": 120,
+  "days_s": 297.157,
+  "per_day": {
+    "house_air_s": 2.248,
+    "plants_light_s": 0.215,
+    "plants_days_s": 0.013,
+    "total_s": 2.476
+  },
+  "season_days": 120,
+  "season_s": 297.157,
+  "cell_by_cell_hour_s": 5.014,
+  "frame_scene_s": 0.675,
+  "frame_scene_mib": 15.854,
+  "counts": {
+    "entities": 18331,
+    "organs": 4371,
+    "plants": 32,
+    "field_cells": [
+      24,
+      20,
+      8
+    ],
+    "field_cells_total": 3840
+  },
+  "bottleneck": "the house's air: 91% of a simulated day (2.25 s of 2.48 s). The air cell by cell is drawn for a moment, 5.0 s an hour; kept through a day it would take 120 s, 49 times a day of the house as one volume.",
+  "peak_memory_mib": 265.7
+}

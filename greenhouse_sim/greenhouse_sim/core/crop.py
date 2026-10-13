@@ -45,6 +45,7 @@ from greenhouse_sim.biology.tomato.organ.geometry import rising_point, stem_heig
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.biology.tomato.organ.transplants import DEVELOPMENT
 from greenhouse_sim.climate.house import HouseAir
+from greenhouse_sim.core.stopwatch import Stopwatch, timed
 from greenhouse_sim.solar.plants import Crown
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.geometry import Vector3
@@ -53,6 +54,11 @@ from greenhouse_sim.world.training import Training
 # How many days' plants a crop keeps besides its first day's and its
 # latest's: the last asked for.
 KEPT_DAYS: Final = 2
+# The parts of a day a benchmark times (P09.8): the house's air through it,
+# the plants' light, and the plants living it, with their crop work.
+HOUSE_AIR: Final = "house_air"
+PLANTS_LIGHT: Final = "plants_light"
+PLANTS_DAYS: Final = "plants_days"
 
 
 class CropLight(Protocol):
@@ -105,7 +111,8 @@ class RunCrop:
     """A run's crop of `transplants` through its `days`, the first plant
     trained as the first of `trainings` says in `envelope`, and so on: each
     day in `air` and its own `light`, and worked as `work` says. It is the
-    plant model's environment for its plants (`local`)."""
+    plant model's environment for its plants (`local`). A `watch` times the
+    parts of each day it works out, for a benchmark."""
 
     def __init__(
         self,
@@ -117,9 +124,11 @@ class RunCrop:
         light: CrownLight,
         work: CropWork,
         days: int,
+        watch: Stopwatch | None = None,
     ) -> None:
         self.days = days
         self.work = work
+        self._watch = watch
         self._plant_ids = [plant.plant_id for plant in transplants]
         self._trainings = list(trainings)
         self._envelope = envelope
@@ -152,14 +161,15 @@ class RunCrop:
             plants = self._kept[start]
             for lived in range(start, day):
                 environments = self._day(lived, plants)
-                plants = tuple(
-                    self._worked(
-                        lived + 1,
-                        live_day(plant, environments[plant.plant_id], DEVELOPMENT),
-                        training,
+                with timed(self._watch, PLANTS_DAYS):
+                    plants = tuple(
+                        self._worked(
+                            lived + 1,
+                            live_day(plant, environments[plant.plant_id], DEVELOPMENT),
+                            training,
+                        )
+                        for plant, training in zip(plants, self._trainings, strict=False)
                     )
-                    for plant, training in zip(plants, self._trainings, strict=False)
-                )
             self._keep(day, plants)
             return plants
 
@@ -234,8 +244,10 @@ class RunCrop:
         and their light."""
         if day < len(self._lived):
             return self._lived[day]
-        air = self._air(day)
-        light = self._light(day, self._crowns(plants)).daily_light_integral(day)
+        with timed(self._watch, HOUSE_AIR):
+            air = self._air(day)
+        with timed(self._watch, PLANTS_LIGHT):
+            light = self._light(day, self._crowns(plants)).daily_light_integral(day)
         environments = {
             plant.plant_id: LocalEnvironment(
                 mean_temperature_c=air.temperature_c,

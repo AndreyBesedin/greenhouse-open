@@ -32,6 +32,7 @@ from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.day import ClimateDay
 from greenhouse_sim.core.clock import DAY_S, days_ended, run_day
 from greenhouse_sim.core.crop import CropLight, RunCrop
+from greenhouse_sim.core.stopwatch import Stopwatch
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.scene.plants import crop_entities
@@ -66,11 +67,13 @@ def run_crop(
     commands: Sequence[Commanded] = (),
     weather: str | None = None,
     daily: Sequence[Commanded] | None = None,
+    watch: Stopwatch | None = None,
 ) -> RunCrop:
     """A scenario's organ-level crop through a run, asked for as its climate
     field is: one of those kept, or a new one, carrying on from those kept
-    for the same house up to where their air differs. A scenario that grows
-    its crop with the simple daily model has none."""
+    for the same house up to where their air differs, the parts of its days
+    timed on `watch`, for a benchmark. A scenario that grows its crop with
+    the simple daily model has none."""
     config = scenario(scenario_id)
     if config.crop_model != CropModel.ORGAN:
         raise NotFound(f"{scenario_id} grows its crop with the simple daily model, not by organ")
@@ -81,7 +84,7 @@ def run_crop(
         if kept is not None:
             _KEPT.move_to_end(key)
             return kept[0]
-        crop = _new_crop(key, climate)
+        crop = _new_crop(key, climate, watch)
         for other_key, (other, other_schedule) in _KEPT.items():
             if _same_house(key, other_key):
                 until = schedule.same_until(other_schedule)
@@ -120,9 +123,10 @@ def _same_house(key: RunKey, other: RunKey) -> bool:
     return _house(key) == _house(other)
 
 
-def _new_crop(key: RunKey, climate: ClimateDay) -> RunCrop:
+def _new_crop(key: RunKey, climate: ClimateDay, watch: Stopwatch | None = None) -> RunCrop:
     """A run's crop from its first day: the scenario's transplants, in its
-    climate run's house air and its sunlight, its crowns grown day by day."""
+    climate run's house air and its sunlight, its crowns grown day by day;
+    the parts of its days timed on `watch`, if given."""
     scenario_id, layout, weather, _, openings, _ = key
     config = changed(
         scenario(scenario_id),
@@ -142,6 +146,7 @@ def _new_crop(key: RunKey, climate: ClimateDay) -> RunCrop:
         light=light,
         work=config.crop_work,
         days=config.duration_days,
+        watch=watch,
     )
 
 

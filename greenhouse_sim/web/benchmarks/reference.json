@@ -1,0 +1,31 @@
+{
+  "recorded": "2026-10-13",
+  "machine": {
+    "platform": "darwin arm64",
+    "cpu": "Apple M2",
+    "cores": 8,
+    "memoryGib": 8
+  },
+  "browser": "Chromium 153.0.8010.12",
+  "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)",
+  "viewport": "1280 x 720",
+  "scene": "reference_greenhouse at day 120's end, its climate drawn",
+  "entities": 18331,
+  "medianFramesPerSecond": 535,
+  "medianFrameMs": 1.9,
+  "worstFrameMs": 8.5,
+  "drawCalls": 89,
+  "triangles": 2081998,
+  "simulatorMs": {
+    "climate/house": 27064,
+    "crop": 176172,
+    "fields/climate": 156121,
+    "climate/glazing": 77,
+    "climate/openings": 13,
+    "/api/scenarios": 471,
+    "scene": 267,
+    "weather/day": 67,
+    "weather": 28,
+    "fields": 17
+  }
+}

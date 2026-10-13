@@ -58,5 +58,22 @@ describe("the HUD", () => {
 
     expect(said(hud.container, "camera-position")).toBe("…");
     expect(said(hud.container, "pointer-position")).toBe("—");
+    expect(said(hud.container, "simulator-time")).toBe("—");
+  });
+
+  it("shows how long the simulator took to answer the latest request", () => {
+    hud = render(
+      <Hud
+        sample={null}
+        pointer={null}
+        simulator={{ path: "scenarios/climate_box/fields/climate", ms: 1234.5 }}
+        onPreset={ignore}
+        onCommand={ignore}
+      />,
+    );
+
+    expect(said(hud.container, "simulator-time")).toBe(
+      "1,235 ms for scenarios/climate_box/fields/climate",
+    );
   });
 });

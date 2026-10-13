@@ -70,6 +70,7 @@ import { CameraView } from "./sensors/CameraView";
 import { cameraOf, frustumOverlays } from "./sensors/camera";
 import { loadSensorReadings, sensorsKey } from "./sensors/readings";
 import { SensorPanel } from "./sensors/SensorPanel";
+import { useSimulatorTime } from "./simulatorTime";
 import { useLoad } from "./useLoad";
 import { Viewport } from "./Viewport";
 import { sceneSunlight, sunPathOverlays } from "./weather/sunlight";
@@ -95,6 +96,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // Whether the viewer shows what the simulator knows and a policy never
   // sees (P09.6): only QA mode asks for truth.
   const [qaMode, setQaMode] = useQaMode();
+  // How long the simulator took to answer the latest request, for the HUD.
+  const simulatorTime = useSimulatorTime();
   const scenarios = useLoad(SCENARIOS_URL, () => loadScenarios());
   // The scenario shown, as the list describes it: its weathers, its days
   // and its own daily commands.
@@ -636,6 +639,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             sample={sample}
             pointer={pointer}
             live={liveStatus}
+            simulator={simulatorTime}
             onPreset={choosePreset}
             onCommand={commands.send}
           />

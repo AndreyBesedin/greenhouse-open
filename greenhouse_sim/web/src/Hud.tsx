@@ -9,6 +9,7 @@ import {
   type ViewSample,
 } from "./readouts";
 import type { LiveCommand, LiveConnection, LiveFrame } from "./scene/live";
+import { describeSimulatorTime, type SimulatorTime } from "./simulatorTime";
 import { TimeControls } from "./TimeControls";
 import type { Point3 } from "./world";
 
@@ -39,12 +40,15 @@ export function Hud({
   sample,
   pointer,
   live = null,
+  simulator = null,
   onPreset,
   onCommand,
 }: {
   sample: ViewSample | null;
   pointer: Point3 | null;
   live?: LiveStatus | null;
+  /** How long the simulator took to answer the latest request (P09.8). */
+  simulator?: SimulatorTime | null;
   onPreset: (preset: PresetName) => void;
   onCommand: (command: LiveCommand) => void;
 }) {
@@ -84,6 +88,8 @@ export function Hud({
         <dd data-testid="memory">
           {sample ? formatMemory(sample.geometries, sample.textures, sample.heapBytes) : PENDING}
         </dd>
+        <dt>Simulator</dt>
+        <dd data-testid="simulator-time">{simulator ? describeSimulatorTime(simulator) : "—"}</dd>
         {live && (
           <>
             <dt>Stream</dt>

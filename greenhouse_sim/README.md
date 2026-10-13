@@ -144,6 +144,20 @@ The CFD workflow in CI runs them on changes that can affect them, and keeps
 what it solved as its `cfd-results` artifact: a kept result that went stale
 can be taken from there.
 
+## Benchmark
+
+`python -m greenhouse_sim.benchmark` runs the reference greenhouse's season
+from its start, in about five minutes on a laptop, and reports what it cost:
+the house's air, the plants' light and the plants' days per simulated day;
+an hour of the air cell by cell; the scene a camera's frame is drawn from,
+with the crop at its fullest; what there is to draw then; the process's peak
+memory; and which of them is the next bottleneck. Run from a checkout, it
+compares the report with the one kept in `benchmarks/simulator.json`, with
+the machine it ran on, or with the one `--report` names; `--record` keeps
+the new one, and `--days 10` measures the season's first days alone. It is a record, not a gate. Every answer of the local API
+says how long the simulator took to give it, in a `Server-Timing` header,
+which the viewer's HUD shows for the latest request.
+
 ## Where it is going
 
 The simulator is growing into a visual, physical simulation environment,

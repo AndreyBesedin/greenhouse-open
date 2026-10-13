@@ -27,6 +27,16 @@ test("the viewer lists the simulator's scenarios, without console errors", async
   expect(errors).toEqual([]);
 });
 
+test("the HUD says how long the simulator took to answer the latest request", async ({ page }) => {
+  await page.goto("/?scenario=climate_box");
+  await expect(page.getByTestId("scene-status")).toContainText("climate_box, day 0");
+
+  // As the API's Server-Timing header says it, through the preview's proxy.
+  await expect(page.getByTestId("simulator-time")).toHaveText(
+    /^\d[\d,]* ms for (scenarios|version|health)/,
+  );
+});
+
 test("the 3D view fills the window and follows its size", async ({ page }) => {
   const errors = collectErrors(page);
   await page.setViewportSize({ width: 1000, height: 700 });
