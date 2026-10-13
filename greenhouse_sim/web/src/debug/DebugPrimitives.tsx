@@ -1,5 +1,5 @@
 import { useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { ArrowHelper, Box3, Box3Helper, Vector3 } from "three";
 
 import { type Point3, worldToViewer } from "../world";
@@ -81,11 +81,15 @@ export function DebugLine({ from, to, color }: { from: Point3; to: Point3; color
 
 /** Text that stays upright and the same size on screen, over the view at a
  * world point. It is a page element, so it reads crisply and can be found by
- * its text. */
+ * its text. A frame places it, so it asks for one as it comes and changes:
+ * a view drawn only on demand draws none otherwise, nothing in the scene
+ * having changed. */
 export function DebugLabel({ position, text }: { position: Point3; text: string }) {
   const container = useThree((state) => state.gl.domElement.parentElement);
+  const invalidate = useThree((state) => state.invalidate);
   const element = useMemo(() => document.createElement("div"), []);
   const projected = useMemo(() => new Vector3(), []);
+  const at = useRef(position);
 
   useEffect(() => {
     element.className = "debug-label";
@@ -96,10 +100,20 @@ export function DebugLabel({ position, text }: { position: Point3; text: string 
 
   useEffect(() => {
     element.textContent = text;
-  }, [element, text]);
+    invalidate();
+  }, [element, text, invalidate]);
+
+  useEffect(() => {
+    at.current = position;
+    invalidate();
+  }, [position, invalidate]);
 
   useFrame(({ camera, size }) => {
-    const viewer = worldToViewer(position);
+    const viewer = worldToViewer(at.current);
+    // Its matrices as the camera stands now: the frame's render brings them
+    // up to date only after this, and a view drawn on demand may draw no
+    // other frame to correct the label.
+    camera.updateMatrixWorld();
     projected.set(viewer.x, viewer.y, viewer.z).project(camera);
     // Beyond the far plane, or behind the camera, which projection also puts there.
     element.hidden = projected.z > 1;

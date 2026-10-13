@@ -279,7 +279,7 @@ run in their own Playwright project, as the plant lab's and the sun's do.
 | P09.4 | `feat(coupling): connect actuators weather and vents to sensor observations` | Done |
 | P09.5 | `feat(replay): add checkpoint reset branch and replay` | Done |
 | P09.6 | `feat(qa): add QA mode with truth overlays` | Done |
-| P09.7 | `test(e2e): add integrated visual regression suite` | Planned |
+| P09.7 | `test(e2e): add integrated visual regression suite` | Done |
 | P09.8 | `perf(sim): add representative performance benchmark` | Planned |
 | P09.9 | `docs(release): document local demo and QA protocol` | Planned |
 
@@ -737,6 +737,47 @@ shows the versions served.
 
 The golden views of section 7, and their probes. Visible result: the
 views' screenshots. Tests: the screenshots, and the probes' values.
+
+#### As implemented
+
+- **The file** (`tests/test_reference_qa.py`): the reference run at moments
+  of its opening day, day 80 (dawn at 6:00, the sun's noon at 12:40, the
+  run's clock being its site's standard time, and evening at 19:30), and at
+  noon on day 21, written gzipped to
+  `web/public/scenes/qa-reference-greenhouse.json.gz`, 815 KB: for each
+  moment, the house as the viewer draws it then, its equipment's levels and
+  its vents' openings, without its crop; the crop's day; the weather; the
+  climate field's channels its views draw, rounded to thousandths; what its
+  vents pass; and its state probes. Beside them, the crop organ by organ on
+  days 21 and 80, and the sun's path through day 80. Two moments branch an
+  hour before noon: the fans turned off, the vents shut. `python
+  tests/test_reference_qa.py --update` writes it, in under a minute, from
+  the kept opening day; `--measure` prints the probes.
+- **The page** (`/qa/reference-greenhouse?view=`, `QaReference`): thirteen
+  golden views from fixed poses: dawn, noon and evening, lit by the sun with
+  its path; the fans on and off, the air as arrows on one scale; the vents
+  open and closed, a slice of temperature across the house's middle on one
+  scale; a young crop and a fruiting one, beside a row; the path camera's
+  RGB and depth (`CameraView` opened on a pass, at its own width); a slice
+  of the air's speed along the right fan's jet; and a slice of the light in
+  the canopy. Each says its moment's probes under its caption, so that they
+  are drawn into its screenshot too. It draws only when something changes
+  (`frameloop="demand"`), not every frame: drawn in software, some 13,000
+  organs a frame left CI's screenshots too little time, and one came out
+  blank while they settled. A label, and the camera's rig, ask for the frame
+  they need, and a label is placed with the camera as it stands that frame.
+- **The probes:** the house's air, the sun's elevation, the air's speed in
+  the right fan's jet at the anemometer, what the vents exchange, and the
+  crop's leaves, fruits and red fruits. At noon on day 80 the house is at
+  29.5 °C, the jet 1.39 m/s, and the open vents exchange 0.84 m³/s; with the
+  fans off the jet stops and the house as one volume does not change; with
+  the vents shut the house reaches 38.5 °C. The crop bears 750 fruits on day
+  80, one red, and none on day 21.
+- **Tests:** the probes kept are those recorded, and the views draw what
+  they say (fast); the file is what the simulator gives now (slow, about a
+  minute). `e2e/qa.spec.ts` opens every view, without console errors, and
+  reads its probes; `e2e/visual/reference.spec.ts` compares each view with
+  its baseline in CI's container, drawn by CI, as the other QA pages are.
 
 ### P09.8: Performance
 

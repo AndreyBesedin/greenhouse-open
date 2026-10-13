@@ -202,6 +202,22 @@ body {
   padding: 4px 8px;
 }
 
+/* The reference QA's state probes, under its caption. */
+.qa-caption.qa-probes {
+  top: 44px;
+}
+
+/* The reference QA's camera views: the path camera's picture alone, its
+ * caption and probes under it rather than over it. */
+.qa-camera {
+  padding: 12px;
+}
+
+.qa-camera .qa-caption {
+  position: static;
+  margin-top: 8px;
+}
+
 .field-controls {
   margin: 0 0 8px;
   padding: 0;
