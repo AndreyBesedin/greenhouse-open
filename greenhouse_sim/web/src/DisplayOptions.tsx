@@ -1,6 +1,8 @@
 import { ColourBy } from "./ColourBy";
 
-/** How the scene is shown: shaded by a property, and measured. */
+/** How the scene is shown: shaded by a property, and measured; and whether
+ * the viewer is in QA mode (P09.6), which shows what the simulator knows and
+ * a policy never sees. */
 export function DisplayOptions({
   colourProperties,
   colourBy,
@@ -9,6 +11,8 @@ export function DisplayOptions({
   onShowDimensions,
   byCategory,
   onByCategory,
+  qaMode,
+  onQaMode,
 }: {
   colourProperties: readonly string[];
   colourBy: string | null;
@@ -17,6 +21,8 @@ export function DisplayOptions({
   onShowDimensions: (show: boolean) => void;
   byCategory: boolean;
   onByCategory: (show: boolean) => void;
+  qaMode: boolean;
+  onQaMode: (on: boolean) => void;
 }) {
   return (
     <>
@@ -39,6 +45,14 @@ export function DisplayOptions({
             onChange={(event) => onByCategory(event.target.checked)}
           />{" "}
           Categories
+        </label>{" "}
+        <label>
+          <input
+            type="checkbox"
+            checked={qaMode}
+            onChange={(event) => onQaMode(event.target.checked)}
+          />{" "}
+          QA mode
         </label>
       </p>
     </>

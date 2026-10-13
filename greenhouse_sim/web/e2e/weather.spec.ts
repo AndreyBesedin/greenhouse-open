@@ -93,7 +93,7 @@ const BEFORE_THE_STATION: CameraPose = {
 
 test("weather: the weather station reads the weather outside", async ({ page }) => {
   await page.goto(
-    `/?scenario=climate_box&weather=cold_spring_day&field=climate&t=600&camera=${cameraText(BEFORE_THE_STATION)}`,
+    `/?scenario=climate_box&weather=cold_spring_day&field=climate&t=600&qa=1&camera=${cameraText(BEFORE_THE_STATION)}`,
   );
   await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
 

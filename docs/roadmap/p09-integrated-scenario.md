@@ -278,7 +278,7 @@ run in their own Playwright project, as the plant lab's and the sun's do.
 | P09.3 | `feat(coupling): connect radiation/weather/climate to plant environment` | Done |
 | P09.4 | `feat(coupling): connect actuators weather and vents to sensor observations` | Done |
 | P09.5 | `feat(replay): add checkpoint reset branch and replay` | Done |
-| P09.6 | `feat(qa): add QA mode with truth overlays` | Planned |
+| P09.6 | `feat(qa): add QA mode with truth overlays` | In progress |
 | P09.7 | `test(e2e): add integrated visual regression suite` | Planned |
 | P09.8 | `perf(sim): add representative performance benchmark` | Planned |
 | P09.9 | `docs(release): document local demo and QA protocol` | Planned |
@@ -680,6 +680,29 @@ The toggle, truth beside observations, labels, probes, the run's manifest
 and the developer panel. Visible result: one panel explains what every
 subsystem holds. Tests: no truth request without QA mode; the manifest
 shows the versions served.
+
+#### As implemented
+
+- **The toggle:** "QA mode" in the display options, or `&qa=1` in the
+  address, off by default. The address keeps it through every change of
+  view (`qaMode/mode.ts`), written apart from the scene's source, at its end.
+- **Only QA mode asks for truth.** A selected sensor's log is asked for
+  without its truth (`climate/truth`) unless QA mode is on; out of it the
+  sensor panel charts its readings alone, without the truth's line, the
+  panel marked "Truth, for QA only" or its switch to clean readings, and
+  the readings are always as the sensor errs. The same run all off, charted
+  beside it, never asks for the truth. Browser test: `qa-mode.spec.ts`
+  watches every request while a sensor is read and finds none for truth,
+  then turns QA mode on and finds the truth asked for and shown.
+- **Labels:** in QA mode every plant in a scenario is labelled with its
+  identifier, the simple daily model's plants as well as those grown organ
+  by organ, and, in a climate run's view, with its day's light
+  (`climate/plants`, asked for in QA mode whether or not a plant is
+  selected). The plant lab keeps its own switch for its plants' names.
+- **Field probes** are placed and compared as P04 made them; in QA mode
+  each probe's label adds what the field holds there of the quantity its
+  colours are drawn for, the air's speed while it is drawn as arrows or
+  streamlines.
 
 ### P09.7: Integrated visual regression
 

@@ -43,9 +43,11 @@ const BESIDE_THE_FRONT: CameraPose = {
 const BACK_FACE = { x: 8.96, y: 3.1, z: 1.5 };
 const BEFORE_THE_BACK: CameraPose = { position: { x: 7.5, y: 3.1, z: 1.7 }, target: BACK_FACE };
 const HEATED_RUN = "/?scenario=climate_box&set=heater:1&field=climate&t=600";
+// The same run in QA mode, which alone shows the truth (P09.6).
+const HEATED_RUN_QA = `${HEATED_RUN}&qa=1`;
 
 test("sensors: a clean sensor's reading through a run is the truth beside it", async ({ page }) => {
-  await page.goto(`${HEATED_RUN}&camera=${cameraText(BESIDE_THE_FRONT)}`);
+  await page.goto(`${HEATED_RUN_QA}&camera=${cameraText(BESIDE_THE_FRONT)}`);
   await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
 
   await selectAt(page, FRONT_FACE, "climate_box_temperature_front", BESIDE_THE_FRONT);
@@ -69,7 +71,7 @@ test("sensors: a clean sensor's reading through a run is the truth beside it", a
 test("sensors: an imperfect sensor errs as configured, and the QA switch cleans it", async ({
   page,
 }) => {
-  await page.goto(`${HEATED_RUN}&camera=${cameraText(BEFORE_THE_BACK)}`);
+  await page.goto(`${HEATED_RUN_QA}&camera=${cameraText(BEFORE_THE_BACK)}`);
   await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
 
   await selectAt(page, BACK_FACE, "climate_box_temperature_back", BEFORE_THE_BACK);

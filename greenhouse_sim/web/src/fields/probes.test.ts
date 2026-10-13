@@ -126,4 +126,23 @@ describe("probes", () => {
     // The fastest air's arrow is a metre long.
     expect(marks[3]).toMatchObject({ length: expect.closeTo(1) });
   });
+
+  it("are labelled in QA mode with what the field says there of the quantity drawn", () => {
+    const field = twoCells("pressure", [0.2, 0.1]);
+    const labels = (quantity: "speed" | "pressure" | "temperature" | null) =>
+      probeOverlays(
+        [
+          { x: 1.5, y: 0.5, z: 0.5 },
+          { x: 5, y: 0, z: 0 },
+        ],
+        field,
+        quantity,
+      ).flatMap((mark) => (mark.kind === "label" ? [mark.text] : []));
+
+    expect(labels(null)).toEqual(["P1", "P2"]);
+    expect(labels("speed")).toEqual(["P1 0.60 m/s", "P2"]);
+    expect(labels("pressure")).toEqual(["P1 0.10 Pa", "P2"]);
+    // A quantity the field does not hold says nothing.
+    expect(labels("temperature")).toEqual(["P1", "P2"]);
+  });
 });

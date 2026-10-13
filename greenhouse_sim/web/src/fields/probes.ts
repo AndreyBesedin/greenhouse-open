@@ -2,6 +2,7 @@ import { MathUtils } from "three";
 
 import type { OverlayPrimitive } from "../debug/overlays";
 import type { Point3 } from "../world";
+import type { SliceQuantity } from "./display";
 import { type EnvironmentField, sample } from "./field";
 import type { AirQuantity } from "./generated/fieldTypes";
 
@@ -19,6 +20,15 @@ const NAME_RISE_M = 0.15;
 // A probe's arrow is this long, in metres, where the air is the field's
 // fastest, and shorter in proportion where it is slower.
 const FASTEST_ARROW_M = 1;
+// Probes' values are read to hundredths, every one alike.
+const PROBE_DECIMALS = 2;
+
+/** A probe's value to hundredths, a negative one that rounds to nothing
+ * without its sign. */
+export function probeValue(value: number): string {
+  const text = value.toFixed(PROBE_DECIMALS);
+  return Number(text) === 0 ? (0).toFixed(PROBE_DECIMALS) : text;
+}
 
 /** The scalar quantities a field may hold. */
 export type ScalarQuantity = Exclude<AirQuantity, "velocity">;
@@ -126,16 +136,34 @@ export function middleOf(field: EnvironmentField): Point3 {
   };
 }
 
+/** What a field says of a quantity at a probe, with its unit: "21.30 °C";
+ * null where it says nothing. */
+function valueText(
+  field: EnvironmentField,
+  reading: Reading,
+  quantity: SliceQuantity,
+): string | null {
+  const value = quantity === "speed" ? reading.speed : reading.scalars[quantity];
+  const channel = quantity === "speed" ? field.channels.velocity : field.channels[quantity];
+  return value === null || value === undefined
+    ? null
+    : `${probeValue(value)} ${channel?.unit ?? ""}`.trim();
+}
+
 /** Each probe as the view marks it: a leader up from the ground under it, a
  * point, its name above it, and an arrow along the air there, as long as the
- * air is fast. */
+ * air is fast. In QA mode (P09.6), its name is followed by what the field
+ * says there of `quantity`, the one its colours are drawn for. */
 export function probeOverlays(
   probes: readonly Point3[],
   field: EnvironmentField,
+  quantity: SliceQuantity | null = null,
 ): OverlayPrimitive[] {
   const fastest = field.channels.velocity?.maximum ?? 0;
   return probes.flatMap((probe, index) => {
     const name = `P${index + 1}`;
+    const reading = readingAt(field, probe);
+    const value = quantity === null ? null : valueText(field, reading, quantity);
     const marks: OverlayPrimitive[] = [
       {
         id: `${name}-leader`,
@@ -149,10 +177,10 @@ export function probeOverlays(
         id: `${name}-name`,
         kind: "label",
         position: { ...probe, z: probe.z + NAME_RISE_M },
-        text: name,
+        text: value === null ? name : `${name} ${value}`,
       },
     ];
-    const { velocity, speed } = readingAt(field, probe);
+    const { velocity, speed } = reading;
     if (velocity !== null && speed !== null && speed > STILL_AIR_M_S && fastest > 0) {
       marks.push({
         id: `${name}-air`,

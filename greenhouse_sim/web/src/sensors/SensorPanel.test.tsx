@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { CameraFrames } from "./CameraFrames";
-import { loadSensorReadings, type SensorReadings, sensorsUrl } from "./readings";
+import { loadSensorReadings, type SensorReadings, sensorsKey, sensorsUrl } from "./readings";
 import { SensorPanel } from "./SensorPanel";
 
 const START = "2026-01-01T00:00:00Z";
@@ -101,6 +101,7 @@ describe("a selected sensor", () => {
         unit="°C"
         state={{ status: "loaded", readings: READINGS }}
         until={600}
+        qa={true}
         imperfect={true}
         onImperfect={() => undefined}
       />,
@@ -113,6 +114,27 @@ describe("a selected sensor", () => {
     expect(html.match(/<circle/g)).toHaveLength(2);
     expect(html).toContain('class="sensor-chart-truth"');
     expect(html).toContain('<input type="checkbox" checked=""/> Imperfections');
+  });
+
+  it("shows no truth out of QA mode: its readings alone, and no switch", () => {
+    const html = renderToStaticMarkup(
+      <SensorPanel
+        sensorId="t"
+        unit="°C"
+        state={{ status: "loaded", readings: { ...READINGS, truths: [] } }}
+        until={600}
+        qa={false}
+        imperfect={true}
+        onImperfect={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('data-testid="sensor-reading">14.96 °C at 10 min<');
+    expect(html.match(/<circle/g)).toHaveLength(2);
+    expect(html).toContain('aria-label="t read, ');
+    expect(html).not.toContain("sensor-chart-truth");
+    expect(html).not.toContain("Truth, for QA only");
+    expect(html).not.toContain("Imperfections");
   });
 
   it("charts a later day's readings across that day so far, from its midnight", () => {
@@ -136,6 +158,7 @@ describe("a selected sensor", () => {
           },
         }}
         until={2 * 86_400 + 600}
+        qa={true}
         imperfect={true}
         onImperfect={() => undefined}
       />,
@@ -161,6 +184,7 @@ describe("a selected sensor", () => {
         state={{ status: "loaded", readings: READINGS }}
         allOff={{ status: "loaded", readings: allOff }}
         until={600}
+        qa={true}
         imperfect={true}
         onImperfect={() => undefined}
       />,
@@ -177,6 +201,7 @@ describe("a selected sensor", () => {
         unit="µmol/m²/s"
         state={{ status: "loaded", readings: READINGS }}
         until={600}
+        qa={true}
         imperfect={true}
         onImperfect={() => undefined}
       />,
@@ -194,6 +219,7 @@ describe("a selected sensor", () => {
           unit="%"
           state={{ status: "loaded", readings: READINGS }}
           until={600}
+          qa={true}
           imperfect={true}
           onImperfect={() => undefined}
         />,
@@ -220,6 +246,7 @@ describe("a selected sensor", () => {
         unit="%"
         state={{ status: "loaded", readings: READINGS }}
         until={600}
+        qa={true}
         imperfect={true}
         onImperfect={() => undefined}
       />,
@@ -239,13 +266,42 @@ describe("a selected sensor", () => {
       },
       truth: { run_id: READINGS.runId, sensors: READINGS.truths },
     };
-    const fetchFn = (async (url: string) =>
-      new Response(
+    const asked: string[] = [];
+    const fetchFn = (async (url: string) => {
+      asked.push(url);
+      return new Response(
         JSON.stringify(answers[url.includes("/truth") ? "truth" : "observations"]),
-      )) as typeof fetch;
-    const state = await loadSensorReadings({ scenarioId: "climate_box", run: {} }, fetchFn);
+      );
+    }) as typeof fetch;
+    const state = await loadSensorReadings(
+      { scenarioId: "climate_box", run: {}, truth: true },
+      fetchFn,
+    );
 
     expect(state).toEqual({ status: "loaded", readings: READINGS });
+    expect(asked).toEqual([
+      "/api/scenarios/climate_box/climate/observations",
+      "/api/scenarios/climate_box/climate/truth",
+    ]);
+
+    // Out of QA mode, the truth is not asked for.
+    asked.length = 0;
+    const observed = await loadSensorReadings(
+      { scenarioId: "climate_box", run: {}, truth: false },
+      fetchFn,
+    );
+    expect(asked).toEqual(["/api/scenarios/climate_box/climate/observations"]);
+    expect(observed).toEqual({ status: "loaded", readings: { ...READINGS, truths: [] } });
+  });
+
+  it("names a request with its truth apart from one without", () => {
+    const request = { scenarioId: "climate_box", run: { time: 600 } };
+    expect(sensorsKey({ ...request, truth: false })).toBe(
+      "/api/scenarios/climate_box/climate/observations?t=600",
+    );
+    expect(sensorsKey({ ...request, truth: true })).not.toBe(
+      sensorsKey({ ...request, truth: false }),
+    );
   });
 });
 
