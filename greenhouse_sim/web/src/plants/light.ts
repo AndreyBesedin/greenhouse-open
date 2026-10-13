@@ -1,4 +1,4 @@
-import { runParameters, scenarioUrl } from "../scene/run";
+import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 
 // PAR is shown to whole micromoles, a day's light to tenths of a mole.
 const PAR_DECIMALS = 0;
@@ -6,8 +6,8 @@ const INTEGRAL_DECIMALS = 1;
 
 /** The light on each of a scenario's plants at a moment of a run, as the
  * simulator sends it (`GET /api/scenarios/{id}/climate/plants`): each
- * plant's PAR then, in µmol/m²/s, and its daily light integral on the run's
- * first day, in mol/m²/d, by plant. */
+ * plant's PAR then, in µmol/m²/s, and its daily light integral on the
+ * moment's day, in mol/m²/d, by plant. */
 export interface PlantsLight {
   timeS: number;
   par: Record<string, number>;
@@ -21,19 +21,10 @@ export type PlantsLightState =
   | { status: "loaded"; light: PlantsLight };
 
 /** Where the light on a scenario's plants at a moment of a run is published,
- * with one of its layouts and under a weather, or its own. */
-export function plantsLightUrl(
-  scenarioId: string,
-  time: number,
-  weather?: string,
-  layout?: string,
-): string {
-  // The sun's light does not depend on the equipment.
-  return scenarioUrl(
-    scenarioId,
-    "climate/plants",
-    runParameters({ layout, time, weather }, ["layout", "time", "weather"]),
-  );
+ * asked for as the climate is: its crowns grow with a crop grown organ by
+ * organ, as the run's air grows it. */
+export function plantsLightUrl(scenarioId: string, run: RunParts): string {
+  return scenarioUrl(scenarioId, "climate/plants", runParameters(run));
 }
 
 function isNumbers(value: unknown): value is Record<string, number> {

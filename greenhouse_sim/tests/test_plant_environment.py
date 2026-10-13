@@ -12,6 +12,7 @@ from greenhouse_sim.biology.plant.environment import (
     growth_factor,
     light_response,
 )
+from greenhouse_sim.biology.tomato.organ import transplants
 from greenhouse_sim.biology.tomato.organ.development import (
     DevelopmentParams,
     develop,
@@ -32,7 +33,7 @@ DAYS = 70
 
 
 def _transplant() -> Plant:
-    return develop(emerged("p01", PARAMS, seed=2), plants.TRANSPLANT_CD, PARAMS)
+    return develop(emerged("p01", PARAMS, seed=2), transplants.TRANSPLANT_CD, PARAMS)
 
 
 def _lived(change: dict[str, float], days: int = DAYS) -> Plant:
@@ -143,7 +144,7 @@ def test_anything_that_says_each_plants_day_serves_as_its_environment() -> None:
     plant = grow(_transplant(), (source.local("p01", day) for day in range(10)), PARAMS)
 
     assert source.asked == [("p01", day) for day in range(10)]
-    assert plant.thermal_time == pytest.approx(plants.TRANSPLANT_CD + 5 * 14.0 + 5 * 6.0)
+    assert plant.thermal_time == pytest.approx(transplants.TRANSPLANT_CD + 5 * 14.0 + 5 * 6.0)
 
 
 def test_the_lab_keeps_its_plants_in_the_environment_asked_for() -> None:

@@ -14,11 +14,11 @@ from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.biology.plant.variation import draw_traits
 from greenhouse_sim.biology.tomato.organ.development import develop, emerged, live_day
 from greenhouse_sim.biology.tomato.organ.topology import Plant
+from greenhouse_sim.biology.tomato.organ.transplants import DEVELOPMENT, TRANSPLANT_CD, VARIATION
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services import sensors
-from greenhouse_sim.services.plants import DEVELOPMENT, TRANSPLANT_CD, VARIATION
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids
 from greenhouse_sim.services.sunlight import plant_light
 from greenhouse_sim.solar.plants import (
@@ -70,6 +70,24 @@ def test_each_plant_has_a_crown_about_its_stem_as_tall_as_it_shows() -> None:
     under = np.array([[base.x + 0.1, base.y, base.z + 0.1]])
     assert not shadows.lit(under, OVERHEAD)[0]
     assert shadows.lit(lab_crowns[0].top(), OVERHEAD).all()
+
+
+def test_the_same_sunlight_can_be_shaded_by_other_crowns() -> None:
+    light = _light()
+    taller = [
+        Crown(plant_id=crown.plant_id, base=crown.base, height_m=1.5) for crown in light.crowns
+    ]
+    shaded = light.sunlight.shaded_by(Shadows([crown.solid() for crown in taller]))
+    base = taller[0].base
+    under = np.array([[base.x + 0.1, base.y, base.z + 1.0]])
+
+    assert (
+        light.sunlight.irradiance(under, OVERHEAD, NOON_S)[0]
+        > 2 * (shaded.irradiance(under, OVERHEAD, NOON_S)[0])
+    )
+    # The light shaded otherwise is still the same light.
+    assert shaded.outside_at(NOON_S) == light.sunlight.outside_at(NOON_S)
+    assert light.sunlight.shadows is not shaded.shadows
 
 
 def test_at_noon_the_crates_shade_the_first_plants_and_the_rest_take_the_sun() -> None:

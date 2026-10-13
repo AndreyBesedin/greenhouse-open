@@ -5,6 +5,7 @@ import type { PresetName, PresetRequest } from "./camera";
 import { CfdBoundaries } from "./cfd/CfdBoundaries";
 import { CfdLegend } from "./cfd/CfdLegend";
 import { cfdGeometryUrl, loadCfdGeometry } from "./cfd/geometry";
+import { daysEnded } from "./clock";
 import { DisplayOptions } from "./DisplayOptions";
 import { CategoryLegend } from "./debug/CategoryLegend";
 import { categoriesIn } from "./debug/categories";
@@ -33,11 +34,13 @@ import { CLIMATE_FIELD, fetchField, fieldUrl } from "./fields/source";
 import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
+import { cropPlantUrl, cropUrl, loadCropPlant, ORGAN_CROP, withCrop } from "./plants/crop";
 import type { GrowthSpeed } from "./plants/LabControls";
 import { LabPanels } from "./plants/LabPanels";
 import { type LabRun, PLANT_LAB_LAST_DAY, PLANT_LAB_POSE } from "./plants/lab";
 import { loadPlantsLight, plantsLightUrl } from "./plants/light";
 import { plantNameOverlays } from "./plants/names";
+import { PlantDays } from "./plants/PlantDays";
 import { PlantLight } from "./plants/PlantLight";
 import type { ViewSample } from "./readouts";
 import { ScenarioPanels } from "./ScenarioPanels";
@@ -46,6 +49,7 @@ import { withProbes } from "./scene/edits";
 import { runApartFromItsMoment, runsSomething, scenarioRun } from "./scene/run";
 import {
   changesQuery,
+  fetchScene,
   loadScene,
   type SceneSource,
   sceneRequest,
@@ -54,7 +58,7 @@ import {
 import { useLiveCommands } from "./scene/useLiveCommands";
 import { useLiveScene } from "./scene/useLiveScene";
 import { useSource } from "./scene/useSource";
-import { entityOfOrgan, selectedEntity } from "./selection";
+import { entityOfOrgan, organOf, plantOf, selectedEntity } from "./selection";
 import { CameraFrames } from "./sensors/CameraFrames";
 import { CameraView } from "./sensors/CameraView";
 import { cameraOf, frustumOverlays } from "./sensors/camera";
@@ -138,6 +142,16 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // plays and goes back. Another run starts afresh.
   const climateRun = climate === null ? null : runApartFromItsMoment(climate);
   const probes = source.kind === "scenario" ? (source.probes ?? EMPTY_PROBES) : EMPTY_PROBES;
+
+  // A crop grown organ by organ, as it stands at the moment drawn, in place
+  // of its transplants once a day has ended; the last stays on show until
+  // the next day's arrives.
+  const organCrop = summary?.crop_model === ORGAN_CROP;
+  const crop = useLoad(
+    run === null || !organCrop || daysEnded(moment) === 0 ? null : cropUrl(run),
+    fetchScene,
+    { group: run === null ? "" : `crop ${run.scenarioId}` },
+  );
 
   // The scenario's field, drawn over its scene, and another compared with it
   // at the probes; the last of each stays on show until the next arrives.
@@ -250,28 +264,37 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
 
   const shown = source.kind === "live" ? live.scene : scene;
   const shownSnapshot = shown.status === "loaded" ? shown.snapshot : null;
-  // The scene, its glazed surfaces carrying their temperatures and its open
-  // doors and vents their flows while a climate run is drawn.
+  const grown = crop.status === "loaded" ? crop.snapshot : null;
+  // The scene, its crop as it stands at the moment drawn, its glazed
+  // surfaces carrying their temperatures and its open doors and vents their
+  // flows while a climate run is drawn.
   const snapshot = useMemo(() => {
     if (shownSnapshot === null) {
       return null;
     }
-    const glazed =
-      glazing.status === "loaded" ? withGlazing(shownSnapshot, glazing.glazing) : shownSnapshot;
+    const cropped = grown === null ? shownSnapshot : withCrop(shownSnapshot, grown);
+    const glazed = glazing.status === "loaded" ? withGlazing(cropped, glazing.glazing) : cropped;
     return openingFlows.status === "loaded"
       ? withOpeningFlows(glazed, openingFlows.openings)
       : glazed;
-  }, [shownSnapshot, glazing, openingFlows]);
+  }, [shownSnapshot, grown, glazing, openingFlows]);
   const flowing = openingFlows.status === "loaded" ? openingFlows.openings : null;
   // Overlays and colours are worked out from the scene, which they only read.
   const selected = selectedEntity(snapshot, selectedId);
+  // The plant selected: a plant drawn whole, or any part of one.
+  const selectedPlant =
+    selected === null ? null : selected.kind === "PLANT" ? selected.entity_id : plantOf(selected);
   // The light on the plants at the moment drawn, while a plant is selected
   // in a climate run's view; the last stays on show until the next arrives.
   const plantsLight = useLoad(
-    climate === null || selected?.kind !== "PLANT"
-      ? null
-      : plantsLightUrl(climate.scenarioId, moment, climate.weather, climate.layout),
+    climate === null || selectedPlant === null ? null : plantsLightUrl(climate.scenarioId, climate),
     loadPlantsLight,
+  );
+  // The plant selected in a crop grown organ by organ, as it stands at the
+  // moment drawn, with each day it lived.
+  const cropPlant = useLoad(
+    run === null || !organCrop || selectedPlant === null ? null : cropPlantUrl(run, selectedPlant),
+    loadCropPlant,
   );
   const selectedCamera = selected === null ? null : cameraOf(selected);
 
@@ -452,7 +475,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             build={build}
             scenarios={scenarios}
             source={source}
-            scene={shown}
+            scene={shown.status === "loaded" && snapshot !== null ? { ...shown, snapshot } : shown}
             onSource={chooseSource}
           >
             {snapshot !== null && (
@@ -516,8 +539,13 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                   <CameraFrames cameraId={selectedCamera.cameraId} state={sensorReadings} />
                 </>
               )}
-              {selected.kind === "PLANT" && (
-                <PlantLight plantId={selected.entity_id} state={plantsLight} />
+              {selectedPlant !== null && <PlantLight plantId={selectedPlant} state={plantsLight} />}
+              {selectedPlant !== null && (
+                <PlantDays
+                  state={cropPlant}
+                  selectedOrgan={organOf(selected)}
+                  onSelect={(organId) => setSelectedId(entityOfOrgan(snapshot, organId))}
+                />
               )}
               {selected.kind === "SENSOR" && (
                 <SensorPanel

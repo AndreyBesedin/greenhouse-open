@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from greenhouse_sim.biology.plant.variation import draw_traits
+from greenhouse_sim.biology.tomato.organ import transplants
 from greenhouse_sim.biology.tomato.organ.development import develop, emerged, grow
 from greenhouse_sim.biology.tomato.organ.fruit import Maturity, maturity
 from greenhouse_sim.biology.tomato.organ.topology import Plant
@@ -29,11 +30,11 @@ def _crop() -> list[tuple[float, Plant, Plant]]:
     crop = []
     for seed in SEEDS:
         for plant_id in plants.plant_ids():
-            traits = draw_traits(seed, plant_id, plants.VARIATION)
-            plant = emerged(plant_id, plants.DEVELOPMENT, seed, traits)
-            transplant = develop(plant, plants.TRANSPLANT_CD, plants.DEVELOPMENT)
-            day_60 = grow(transplant, [REFERENCE] * 60, plants.DEVELOPMENT)
-            day_90 = grow(day_60, [REFERENCE] * 30, plants.DEVELOPMENT)
+            traits = draw_traits(seed, plant_id, transplants.VARIATION)
+            plant = emerged(plant_id, transplants.DEVELOPMENT, seed, traits)
+            transplant = develop(plant, transplants.TRANSPLANT_CD, transplants.DEVELOPMENT)
+            day_60 = grow(transplant, [REFERENCE] * 60, transplants.DEVELOPMENT)
+            day_90 = grow(day_60, [REFERENCE] * 30, transplants.DEVELOPMENT)
             crop.append((traits.vigour, day_60, day_90))
     return crop
 

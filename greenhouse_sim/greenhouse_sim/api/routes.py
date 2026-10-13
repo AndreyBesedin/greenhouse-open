@@ -61,9 +61,18 @@ check; a route that comes to need one checks it first.
                                           climate field is
     GET /api/scenarios/{id}/climate/plants the light on each of its plants &t=600
                                           seconds into a run, its PAR then
-                                          and its day's light integral; with
-                                          ?layout= and &weather= as for its
-                                          climate field
+                                          and its day's light integral, its
+                                          crowns as its crop stands then;
+                                          asked as its climate field is
+    GET /api/scenarios/{id}/crop          its crop &t=600 seconds into a run,
+                                          organ by organ, as a viewer draws
+                                          it over its scene, where it grows
+                                          one so; asked as its climate field
+                                          is
+    GET /api/scenarios/{id}/crop/{plant}  one plant of that crop: its
+                                          structure, its history, and what
+                                          it experienced each day it has
+                                          lived; asked as its crop is
     GET /api/scenarios/{id}/climate/observations its run's observation log up to
                                           &t=600, from the start of that
                                           moment's day or &from=0: what its point sensors
@@ -129,11 +138,11 @@ from pydantic import BaseModel
 
 from greenhouse_sim.services import (
     cfd,
+    crop,
     fields,
     plants,
     scenarios,
     sensors,
-    sunlight,
     system,
     timeline,
     weather,
@@ -265,11 +274,42 @@ def respond(method: str, path: str) -> Response:
             )
         case ["api", "scenarios", scenario_id, "climate", "plants"]:
             return _answer(
-                lambda: sunlight.plants_light(
+                lambda: crop.plants_light(
                     scenario_id,
                     _last(query, "layout"),
+                    _pairs(query.get("set", []), "set"),
+                    _pairs(query.get("open", []), "open"),
+                    _commands(query.get("schedule", [])),
                     _seconds(query),
                     weather=_last(query, "weather"),
+                    daily=_commands(query.get("daily", []), "daily"),
+                )
+            )
+        case ["api", "scenarios", scenario_id, "crop"]:
+            return _answer(
+                lambda: crop.crop_scene(
+                    scenario_id,
+                    _last(query, "layout"),
+                    _pairs(query.get("set", []), "set"),
+                    _pairs(query.get("open", []), "open"),
+                    _commands(query.get("schedule", [])),
+                    _seconds(query),
+                    weather=_last(query, "weather"),
+                    daily=_commands(query.get("daily", []), "daily"),
+                )
+            )
+        case ["api", "scenarios", scenario_id, "crop", plant_id]:
+            return _answer(
+                lambda: crop.crop_plant(
+                    scenario_id,
+                    plant_id,
+                    _last(query, "layout"),
+                    _pairs(query.get("set", []), "set"),
+                    _pairs(query.get("open", []), "open"),
+                    _commands(query.get("schedule", [])),
+                    _seconds(query),
+                    weather=_last(query, "weather"),
+                    daily=_commands(query.get("daily", []), "daily"),
                 )
             )
         case ["api", "scenarios", scenario_id, "climate", "observations"]:

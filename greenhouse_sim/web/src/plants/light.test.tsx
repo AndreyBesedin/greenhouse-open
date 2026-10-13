@@ -12,17 +12,24 @@ const BODY = {
 };
 
 describe("the plants' light", () => {
-  it("is asked for at a moment, under a weather and with a layout", () => {
-    expect(plantsLightUrl("solar_lab", 0)).toBe("/api/scenarios/solar_lab/climate/plants");
-    expect(plantsLightUrl("solar_lab", 42600, "hot_dry_summer_day", "benches")).toBe(
-      "/api/scenarios/solar_lab/climate/plants?layout=benches&t=42600&weather=hot_dry_summer_day",
+  it("is asked for at a moment of a run, as the climate is", () => {
+    expect(plantsLightUrl("solar_lab", {})).toBe("/api/scenarios/solar_lab/climate/plants");
+    expect(
+      plantsLightUrl("solar_lab", {
+        layout: "benches",
+        levels: { heater: 1 },
+        time: 42600,
+        weather: "hot_dry_summer_day",
+      }),
+    ).toBe(
+      "/api/scenarios/solar_lab/climate/plants?layout=benches&set=heater:1&t=42600&weather=hot_dry_summer_day",
     );
   });
 
   it("is checked rather than trusted", async () => {
     const answered = (async () => Response.json(BODY)) as typeof fetch;
 
-    expect(await loadPlantsLight(plantsLightUrl("solar_lab", 42600), answered)).toEqual({
+    expect(await loadPlantsLight(plantsLightUrl("solar_lab", { time: 42600 }), answered)).toEqual({
       status: "loaded",
       light: parsePlantsLight(BODY),
     });
@@ -30,7 +37,7 @@ describe("the plants' light", () => {
       "not what the viewer expects",
     );
     const refused = (async () => new Response("{}", { status: 400 })) as typeof fetch;
-    expect(await loadPlantsLight(plantsLightUrl("solar_lab", 90000), refused)).toEqual({
+    expect(await loadPlantsLight(plantsLightUrl("solar_lab", { time: 90000 }), refused)).toEqual({
       status: "unavailable",
       reason: "the simulator API answered 400",
     });

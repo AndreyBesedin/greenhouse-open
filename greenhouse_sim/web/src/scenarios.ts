@@ -5,6 +5,9 @@ export interface ScenarioSummary {
   description: string;
   plants: number;
   duration_days: number;
+  /** How its runs grow its crop: organ by organ (`ORGAN_CROP`), or by the
+   * simple daily model. */
+  crop_model?: string;
   /** The names of its layouts, its default first. */
   layouts: string[];
   /** The names of the weathers it can be run under, its own first. */
@@ -45,6 +48,7 @@ function isScenarioSummary(value: unknown): value is ScenarioSummary {
     typeof fields.description === "string" &&
     Number.isInteger(fields.plants) &&
     Number.isInteger(fields.duration_days) &&
+    (fields.crop_model === undefined || typeof fields.crop_model === "string") &&
     Array.isArray(fields.layouts) &&
     fields.layouts.every((layout) => typeof layout === "string") &&
     (fields.weathers === undefined ||

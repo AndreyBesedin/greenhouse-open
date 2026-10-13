@@ -200,6 +200,36 @@
       "title": "ConstantWeather",
       "type": "object"
     },
+    "CropModel": {
+      "description": "How a scenario's run grows its crop: by the simple daily model,\nthrough the engine, or organ by organ (`greenhouse_sim.core.crop`).",
+      "enum": [
+        "simple",
+        "organ"
+      ],
+      "title": "CropModel",
+      "type": "string"
+    },
+    "CropWork": {
+      "additionalProperties": false,
+      "description": "What a run does to its crop: a harvest round at the start of every\n`harvest_every_days`th day from its start, picking every red fruit;\nnone if unset.",
+      "properties": {
+        "harvest_every_days": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Harvest Every Days"
+        }
+      },
+      "title": "CropWork",
+      "type": "object"
+    },
     "Envelope": {
       "description": "A greenhouse's envelope, in metres.",
       "properties": {
@@ -706,6 +736,16 @@
     "columns": {
       "title": "Columns",
       "type": "integer"
+    },
+    "crop_model": {
+      "$ref": "#/$defs/CropModel",
+      "default": "simple"
+    },
+    "crop_work": {
+      "$ref": "#/$defs/CropWork",
+      "default": {
+        "harvest_every_days": null
+      }
     },
     "start_date": {
       "format": "date",

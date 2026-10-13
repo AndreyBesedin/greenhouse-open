@@ -6,7 +6,7 @@ into another's model for its vocabulary:
 
     envelope   the envelope's surfaces, members and openings
     layout     fixtures, their materials and obstructions, and zones
-    crop       the simple crop model's fruit and truss stages
+    crop       the crop's models, and the simple one's fruit and truss stages
     organs     a plant's organs, their stages and their allowed changes
     air        what the air carries, as environment fields describe it
     processes  a run's processes, in the order they take their turns

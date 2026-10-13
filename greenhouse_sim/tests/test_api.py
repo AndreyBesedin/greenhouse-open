@@ -62,6 +62,7 @@ def test_the_scenario_list_is_the_registry() -> None:
             "description": config.description,
             "plants": config.rows * config.columns,
             "duration_days": config.duration_days,
+            "crop_model": config.crop_model.value,
             "layouts": ["default", *OTHER_LAYOUTS.get(scenario_id, [])],
             "weathers": [
                 "default",
@@ -80,7 +81,10 @@ def test_a_scenario_has_a_scene_before_its_first_day(scenario_id: str) -> None:
 
     assert response.status == HTTPStatus.OK
     snapshot = SceneSnapshot.model_validate(response.body)
-    plants = [e for e in snapshot.entities if e.kind == SceneEntityKind.PLANT]
+    # Its whole crop: each plant a stem, or organ by organ.
+    plants = {e.entity_id for e in snapshot.entities if e.kind == SceneEntityKind.PLANT} | {
+        e.properties["plant_id"] for e in snapshot.entities if "organ_id" in e.properties
+    }
     assert (snapshot.greenhouse_id, snapshot.simulated_day) == (scenario_id, 0)
     assert len(plants) == config.rows * config.columns
 

@@ -156,8 +156,11 @@ def run_schedule(
     return _schedule(tuple(sorted(running.items())), _checked(config, commands, daily))
 
 
-type _RunKey = tuple[str, str, str, _Pairs, _Pairs, tuple[Commanded, ...]]
-_KEPT: OrderedDict[_RunKey, ClimateDay] = OrderedDict()
+# What tells one climate run from another: its scenario, layout and weather,
+# its equipment's levels and its doors' and vents' from the start, and its
+# commands after it.
+type RunKey = tuple[str, str, str, _Pairs, _Pairs, tuple[Commanded, ...]]
+_KEPT: OrderedDict[RunKey, ClimateDay] = OrderedDict()
 _KEEPING = threading.Lock()
 
 
@@ -202,6 +205,35 @@ def _climate_day(
         if len(_KEPT) > KEPT_RUNS:
             _KEPT.popitem(last=False)
         return run
+
+
+def climate_run(
+    scenario_id: str,
+    layout: str | None = None,
+    levels: Mapping[str, float] | None = None,
+    openings: Mapping[str, float] | None = None,
+    commands: Sequence[Commanded] = (),
+    weather: str | None = None,
+    daily: Sequence[Commanded] = (),
+) -> tuple[RunKey, ClimateDay]:
+    """A scenario's climate run, asked for and checked as its climate field
+    is, with what tells it from another: the air its crop lives in, whether
+    or not its layout places equipment."""
+    name = layout or DEFAULT_LAYOUT
+    under = weather or DEFAULT_WEATHER
+    config = changed(
+        scenario(scenario_id),
+        SceneChanges(layout=name, weather=under, openings=dict(openings or {})),
+    )
+    key = (
+        scenario_id,
+        name,
+        under,
+        tuple(sorted(equipment_levels(config, levels or {}).items())),
+        tuple(sorted((openings or {}).items())),
+        _checked(config, commands, daily),
+    )
+    return key, _climate_day(*key)
 
 
 def climate_vents(config: ScenarioConfig, geometry: CfdGeometry) -> list[Vent]:

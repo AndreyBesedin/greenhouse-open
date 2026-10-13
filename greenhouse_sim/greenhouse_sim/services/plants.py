@@ -18,15 +18,8 @@ from typing import Final
 from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.biology.plant.environment import Environment, LocalEnvironment
-from greenhouse_sim.biology.plant.variation import draw_traits
 from greenhouse_sim.biology.tomato.organ.actions import act
-from greenhouse_sim.biology.tomato.organ.development import (
-    DevelopmentParams,
-    develop,
-    emerged,
-    live_day,
-)
-from greenhouse_sim.biology.tomato.organ.parameters import TOMATO_VARIATION
+from greenhouse_sim.biology.tomato.organ.development import live_day
 from greenhouse_sim.biology.tomato.organ.topology import (
     HarvestFruit,
     HarvestTruss,
@@ -35,6 +28,7 @@ from greenhouse_sim.biology.tomato.organ.topology import (
     PlantAction,
     RemoveLeaf,
 )
+from greenhouse_sim.biology.tomato.organ.transplants import DEVELOPMENT, transplant
 from greenhouse_sim.scene.plants import plant_entities
 from greenhouse_sim.scene.snapshot import (
     AXES_COLOR,
@@ -58,14 +52,9 @@ LAB_SEED: Final = 1
 # The lab's ground reaches this far beyond its row on every side.
 GROUND_MARGIN_M: Final = 1.5
 GROUND_COLOR: Final = Color(r=0.45, g=0.36, b=0.27)
-# The lab's plants are transplants this far into their development on day 0,
-# shown up to this day.
-TRANSPLANT_CD: Final = 230.0
+# The lab's plants are transplants of one crop
+# (`greenhouse_sim.biology.tomato.organ.transplants`), shown up to this day.
 LAST_DAY: Final = 90
-# The crop: how its plants develop, their organs varying around each plant's
-# sizes, and how its plants vary.
-DEVELOPMENT: Final = DevelopmentParams(organ_size_cv=0.08)
-VARIATION: Final = TOMATO_VARIATION
 # The environments the lab can keep its plants in, the same every day; the
 # reference one is the conditions under which plants make all their
 # potential growth.
@@ -187,8 +176,7 @@ def _plant_action(action: LabAction) -> PlantAction:
 def _days(plant_id: str, run: LabRun, environment: Environment) -> Iterator[Plant]:
     """The plant on each day of the run up to its day, as it is shown: after
     that day's actions."""
-    traits = draw_traits(run.seed, plant_id, VARIATION)
-    plant = develop(emerged(plant_id, DEVELOPMENT, run.seed, traits), TRANSPLANT_CD, DEVELOPMENT)
+    plant = transplant(plant_id, run.seed)
     for day in range(run.day + 1):
         for action in run.actions:
             if action.day == day and action.plant_id == plant_id:

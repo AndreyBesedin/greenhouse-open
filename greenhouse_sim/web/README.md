@@ -136,7 +136,15 @@ synthetic day in place of its own weather
 (`?scenario=climate_box&weather=cold_spring_day`), and charts that day's
 temperature, humidity and wind (`GET /api/scenarios/{id}/weather/day`).
 The inspector says what the selected entity is in words, and names its
-dimensions. On a scenario's view, a slider per door and vent sets how far
+dimensions. In a climate run's view, a selected plant, or any part of one,
+shows its light: its PAR at the moment drawn and its day's light integral
+(`GET /api/scenarios/{id}/climate/plants`). The reference greenhouse grows
+its crop organ by organ (P09.3): once a day of its run has ended, its scene
+draws the crop as it stands at the moment drawn
+(`GET /api/scenarios/{id}/crop`), and a selected part of a plant shows the
+plant's days, the house's air and its own light on each day it lived,
+charted day by day, what was picked from it, and its structure
+(`GET /api/scenarios/{id}/crop/{plant}`). On a scenario's view, a slider per door and vent sets how far
 it stands open: the viewer asks the simulator for the scene with it so
 (`?open=roof_vent_1:0.5`), and the address bar keeps it. Its climate
 equipment gets a switch and a slider each, the same way: a fan, heater or

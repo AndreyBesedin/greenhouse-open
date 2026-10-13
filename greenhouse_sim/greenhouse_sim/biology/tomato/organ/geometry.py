@@ -239,6 +239,13 @@ def leaf_shapes(leaf: Leaf, node: Vector3, azimuth: float, form: PlantForm) -> l
     return shapes
 
 
+def stem_height_m(plant: Plant) -> float:
+    """How high the plant's stem stands above its base: its standing
+    internodes' length, its laid-down ones lying along the row."""
+    standing = plant.stem.phytomers[plant.laid_internodes :]
+    return sum(phytomer.internode.length_cm for phytomer in standing) * METRES_PER_CM
+
+
 def organ_geometry(plant: Plant, form: PlantForm | None = None) -> list[OrganShape]:
     """Every shape of the plant, from the stem's base up, as `form` (by
     default a typical tomato's) proportions its organs and the plant's traits

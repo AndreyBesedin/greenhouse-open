@@ -4,36 +4,27 @@ crowns, as its climate run's field carries it, and the light on each
 plant.
 
 Its plants stand as its crop does before its first day, each at its
-planting position. A scenario's sunlight is kept for each of its layouts
-and weathers, so that the cells and the plants it has worked out the light
-of are found again.
-
-Each plant's light is asked for at a moment of a run, as a climate field
-is (`greenhouse_sim.services.fields`): its PAR then, and its daily light
-integral on the run's first day.
+planting position: as the simple model starts them, or as its transplants
+stand where it grows its crop organ by organ. A scenario's sunlight is
+kept for each of its layouts and weathers, so that the cells and the
+plants it has worked out the light of are found again. How each plant's
+light is asked for at a moment of a run is the crop's
+(`greenhouse_sim.services.crop`).
 """
 
 import threading
 from collections import OrderedDict
 from typing import Final
 
-from pydantic import BaseModel, ConfigDict
-
-from greenhouse_sim.core.clock import run_day
+from greenhouse_sim.biology.tomato.organ.geometry import stem_height_m
+from greenhouse_sim.biology.tomato.organ.transplants import transplant
+from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.engine import SimulationEngine
-from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
-from greenhouse_sim.services.errors import InvalidRequest
+from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services.grid import air_grid
-from greenhouse_sim.services.runs import checked_moment
-from greenhouse_sim.services.scenarios import (
-    DEFAULT_WEATHER,
-    SceneChanges,
-    changed,
-    plant_ids,
-    scenario,
-)
+from greenhouse_sim.services.scenarios import SceneChanges, changed, plant_ids, scenario
 from greenhouse_sim.solar.inside import Sunlight
-from greenhouse_sim.solar.plants import PlantLight, crowns
+from greenhouse_sim.solar.plants import Crown, PlantLight, crowns, placed_crowns
 from greenhouse_sim.solar.shadows import Shadows
 
 # How many scenarios' sunlight, under a layout and a weather, are kept.
@@ -41,6 +32,23 @@ KEPT_SUNLIGHT: Final = 8
 
 _KEPT: OrderedDict[tuple[str, str, str], PlantLight] = OrderedDict()
 _KEEPING = threading.Lock()
+
+
+def first_crowns(config: ScenarioConfig) -> list[Crown]:
+    """A scenario's plants' crowns before its first day: its transplants',
+    where it grows its crop organ by organ, or else the simple model's
+    plants'."""
+    positions = config.layout.planting_positions()
+    if config.crop_model == CropModel.ORGAN:
+        heights = {
+            plant_id: stem_height_m(transplant(plant_id, config.random_seed))
+            for plant_id in plant_ids(config)
+        }
+        return placed_crowns(heights, positions, config.envelope)
+    world = SimulationEngine(config).initialize(
+        plant_ids(config), greenhouse_id=config.greenhouse_id
+    )
+    return crowns(world.plants, positions, config.envelope)
 
 
 def plant_light(scenario_id: str, layout: str, weather: str) -> PlantLight:
@@ -53,10 +61,7 @@ def plant_light(scenario_id: str, layout: str, weather: str) -> PlantLight:
             _KEPT.move_to_end(key)
             return kept
     config = changed(scenario(scenario_id), SceneChanges(layout=layout, weather=weather))
-    world = SimulationEngine(config).initialize(
-        plant_ids(config), greenhouse_id=config.greenhouse_id
-    )
-    plant_crowns = crowns(world.plants, config.layout.planting_positions(), config.envelope)
+    plant_crowns = first_crowns(config)
     sunlight = Sunlight(
         config.site,
         config.run_weather(),
@@ -71,37 +76,3 @@ def plant_light(scenario_id: str, layout: str, weather: str) -> PlantLight:
         if len(_KEPT) > KEPT_SUNLIGHT:
             _KEPT.popitem(last=False)
     return light
-
-
-class PlantsLight(BaseModel):
-    """The light on each of a scenario's plants at a moment of a run, in
-    seconds from its start: its PAR then, in µmol/m²/s, and its daily light
-    integral on the day the moment belongs to (`greenhouse_sim.core.clock`),
-    in mol/m²/d, by plant."""
-
-    model_config = ConfigDict(frozen=True)
-
-    time_s: float
-    par_umol_m2_s: dict[str, float]
-    daily_light_integral_mol_m2_d: dict[str, float]
-
-
-def plants_light(
-    scenario_id: str,
-    layout: str | None = None,
-    time_s: float = 0.0,
-    weather: str | None = None,
-) -> PlantsLight:
-    """The light on each of a scenario's plants `time_s` into a run, with one
-    of its layouts, by default its own, under a weather, by default its own.
-    A moment outside a run is refused."""
-    checked_moment(scenario(scenario_id), time_s)
-    light = plant_light(scenario_id, layout or DEFAULT_LAYOUT, weather or DEFAULT_WEATHER)
-    try:
-        return PlantsLight(
-            time_s=time_s,
-            par_umol_m2_s=light.par_at(time_s),
-            daily_light_integral_mol_m2_d=light.daily_light_integral(run_day(time_s)),
-        )
-    except ValueError as unknown:
-        raise InvalidRequest(str(unknown)) from unknown

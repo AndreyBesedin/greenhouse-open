@@ -16,6 +16,7 @@ that time on each of the run's days, before any other command at the same
 moment, so that one given for that moment alone overrides it.
 """
 
+import math
 from collections.abc import Iterable
 from typing import Annotated, Self
 
@@ -110,3 +111,16 @@ class Schedule(BaseModel):
     def moments(self) -> list[float]:
         """The moments commands are given at, in order."""
         return sorted({command.time_s for command in self.commands})
+
+    def same_until(self, other: Schedule) -> float:
+        """Up to when this schedule and `other` are the same: the moment of
+        the first command one gives that the other does not give in its
+        place, or infinity if they are the same throughout. A run under
+        either is the same run up to and including it."""
+        mine, theirs = self.commands, other.commands
+        differing = next(
+            (index for index, (a, b) in enumerate(zip(mine, theirs, strict=False)) if a != b),
+            min(len(mine), len(theirs)),
+        )
+        moments = [command.time_s for command in (*mine[differing:], *theirs[differing:])]
+        return min(moments, default=math.inf)

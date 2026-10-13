@@ -274,7 +274,7 @@ run in their own Playwright project, as the plant lab's and the sun's do.
 | --- | --- | --- |
 | P09.1 | `feat(scenarios): define versioned integrated scenario manifest` | Done |
 | P09.2 | `feat(sim): unify multi-rate scheduler and visible event timeline` | Done |
-| P09.3 | `feat(coupling): connect radiation/weather/climate to plant environment` | Planned |
+| P09.3 | `feat(coupling): connect radiation/weather/climate to plant environment` | Done |
 | P09.4 | `feat(coupling): connect actuators weather and vents to sensor observations` | Planned |
 | P09.5 | `feat(replay): add checkpoint reset branch and replay` | Planned |
 | P09.6 | `feat(qa): add QA mode with truth overlays` | Planned |
@@ -388,6 +388,89 @@ Visible result: plants in different places diverge over an accelerated
 season. Tests: a plant in more light grows more; a warmer house develops
 the crop faster; the same seed grows the same crop.
 
+#### As implemented
+
+- **The plant model is the manifest's choice** (`crop_model`): the
+  reference greenhouse's is `organ`, with a harvest round every seventh
+  day (`crop_work`); every other scenario keeps `simple`, and the engine,
+  the live run and the reference baseline still grow the simple model for
+  all of them. The scenario list says which each grows.
+- **A run's crop** (`core/crop.py`) starts from the plant lab's
+  transplants, now drawn in one place for both
+  (`biology/tomato/organ/transplants.py`), each from the scenario's seed,
+  at its planting position. Each plant lives each day in a
+  `LocalEnvironment` from the run, through the plant model's
+  `Environment` contract: the house's mean air temperature and CO₂
+  through the day, by the trapezoid rule over its minutes
+  (`WholeHouse.mean_between`), the same for every plant; its own daily
+  light integral, read at its crown's top with every crown as tall as
+  its plant's standing stem that day; and water status 1. At a midnight
+  the plants live the day that ends, then a harvest round, on its day,
+  picks every red fruit, each a harvest of its own in the plant's
+  history; the timeline lists each round after the plants' day. At a
+  moment, the crop has lived the days ended by then (`days_ended`): one
+  at the end of the first day.
+- **Kept, not recomputed:** what each plant experienced on each day is
+  kept, so that its plants on any day are lived again from it, without
+  the air or the light; a crop keeps its plants on its first day, its
+  latest, and the last two asked for. A run's crop takes over another's
+  days up to the first on which their air differs, and the whole house
+  now takes over another's air the same way, as its grid run did, so a
+  command added late in a season works out only the days after it.
+- **The API:** `GET /api/scenarios/{id}/crop` draws the crop organ by
+  organ on the moment's day, and `.../crop/{plant}` gives a plant's
+  structure, history and each day's environment; both are asked for as
+  a climate field is. A scenario that grows the simple model has no crop
+  to draw. The plants' light (`.../climate/plants`) takes the run's parts
+  too, its crowns as the crop stands on the moment's day. Before its
+  first day, the reference scene draws its transplants organ by organ:
+  3,104 entities in place of 178.
+- **The viewer** draws the crop on the moment's day once a day has
+  ended, asking for it at the start of the crop's day so that a day's
+  moments share it, and says the crop's day in the scene's status. A
+  selected part of a plant shows its light, and its days: the house's
+  air and its own light on each day it lived, charted day by day, what
+  was picked from it, and its structure.
+- **Tests:** in steady air and light, a plant in less light grows less
+  at the same thermal time, a warmer house develops the crop faster, the
+  same seed grows the same crop and another another, each day's light is
+  read with the crowns as tall as the plants stand, a harvest round picks
+  every red fruit, each day is worked out once, and a crop takes over
+  another's shared days (`tests/test_run_crop.py`); in the reference
+  greenhouse's own air and sunlight, its plants share the house's mean
+  air, each in its own light, and a heater from the start warms their
+  days and their development. Browser test: `crop.spec.ts`, with the
+  season's.
+
+##### What the season shows
+
+- **Plants diverge mostly by their own traits.** By day 30 of the
+  unheated run, their stems stand 0.28 to 0.52 m tall.
+- **Place matters by row, not by row end.** At the spring's noon sun, the
+  house's long gutters, 4 m up, cast their shadow about 4 m north of
+  themselves: on rows 2 and 4. Over the first month those rows take about
+  20 mol/m²/d against about 23 for rows 1 and 3, and a row end barely
+  more than its row. Read at the crowns' tops, a plant is shaded only by
+  the structure and by crowns taller than its own, and the diffuse sky
+  reaches every crown alike. Above 25 mol/m²/d light no longer holds
+  growth back, so by day 30 the gutters' shade costs a plant about a
+  centimetre of stem; by June every row is above it most days.
+- **Unheated, the crop ripens only in its last fortnight.** The shut
+  house averages 13.6 °C a day in March and 19.7 °C in June: the plants
+  reach 1,115 °Cd by day 120, the round of day 105 picks the first 5 red
+  fruits, and 147 are picked by day 119; the first day with red fruit, the
+  kept opening day (P09.5), is then about day 105, not 80. Working the whole
+  season out takes 192 s. With a heater on every night,
+  18 h to 8 h (`&daily=64800:heater:1,28800:heater:0`), it averages 22.2 °C,
+  the plants bear 38 to 61 fruits by day 100, and the tallest stems reach
+  the crop wires 3.6 m up: the reference run's own schedule (P09.4) is to
+  heat less than that, or the run lowers its stems.
+- **Costs:** a crop's day costs the house's air through it, 1.1 to 1.5 s,
+  and its light, 0.18 s for 32 crowns; living the 32 plants through 120
+  days again from their kept days, 1.4 s. Its scene is 12,000 entities
+  and 10 MB of JSON by day 60, and 20,000 and 17 MB by day 120, 1.8 MB
+  gzipped; the API does not compress its answers (P09.8).
+
 ### P09.4: Equipment, weather and sensors through the season
 
 Schedules, weather and sun through the season, observed by the sensors.
@@ -468,6 +551,15 @@ A reviewer should be able to:
   plant to plant.
 - **The crop does not change the air:** its transpiration and CO₂ uptake
   are not modelled, and its water status is always 1.
+- **The house sees the crop as it stands before its first day:** the
+  sun's heat in the house's air (P08.8) and the PAR sensors' light are
+  shaded by the transplants' crowns; only the plants' own light follows
+  the crowns as they grow.
+- **A plant's light is read at its crown's top:** a crown shades another
+  only if it stands taller, and the diffuse sky reaches every crown alike.
+- **The live run grows the simple model:** the stream a viewer can play
+  live steps the engine, which grows every scenario's crop with the simple
+  daily model, the reference greenhouse's too.
 - **Coupling at day boundaries:** a plant's day is computed from that day's
   air and light, and its crown's height changes the light the next day.
 - **Checkpoints at a day's start** only; a moment within a day is reached by

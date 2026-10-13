@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+import { DAY_S } from "../clock";
 import { glazingUrl } from "../fields/glazing";
 import { houseAirUrl } from "../fields/HouseAir";
 import { openingsUrl } from "../fields/openingFlows";
 import { probeChartsUrl } from "../fields/ProbeCharts";
 import { CLIMATE_FIELD, fieldUrl } from "../fields/source";
+import { cropPlantUrl, cropUrl } from "../plants/crop";
 import { plantsLightUrl } from "../plants/light";
 import { sensorsUrl } from "../sensors/readings";
 import { weatherDayUrl, weatherUrl } from "../weather/weather";
@@ -48,11 +50,13 @@ describe("a scenario's run, as the viewer asks for it", () => {
       probeChartsUrl(id, { ...run, probes: [{ x: 1, y: 2, z: 0.75 }] }),
       sensorsUrl(id, "observations", run),
       sensorsUrl(id, "truth", run),
-      plantsLightUrl(id, 46200, run.weather, run.layout),
+      plantsLightUrl(id, run),
+      cropUrl({ ...run, time: 2 * DAY_S + 46200 }),
+      cropPlantUrl({ ...run, time: 2 * DAY_S + 46200 }, "solar_lab_plant_001"),
     ];
     for (const url of asked) {
       expect(url).toContain("layout=open");
-      expect(url).toContain("t=46200");
+      expect(url).toMatch(/t=(46200|172800)(&|$)/);
       expect(url).toContain("weather=default%40100");
     }
     // The weather does not depend on the layout.

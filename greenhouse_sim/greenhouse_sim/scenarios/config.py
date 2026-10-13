@@ -7,6 +7,8 @@ from greenhouse_sim.airflow.prescribed import PrescribedAirflow, UniformAirflow
 from greenhouse_sim.cfd.setup import CfdSetup
 from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.core.crop import CropWork
+from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.weather.recorded import RecordedWeather
 from greenhouse_sim.weather.sources import Clouded, ConstantWeather, RunWeather
 from greenhouse_sim.weather.state import Percent
@@ -34,6 +36,11 @@ class ScenarioConfig(BaseModel):
     # positions in order.
     rows: int
     columns: int
+    # How its runs grow the crop: by the simple daily model, through the
+    # engine, or organ by organ, each day from the run's air and each plant's
+    # own light (`greenhouse_sim.core.crop`); and what they do to it.
+    crop_model: CropModel = CropModel.SIMPLE
+    crop_work: CropWork = CropWork()
     start_date: date
     duration_days: int
     random_seed: int
