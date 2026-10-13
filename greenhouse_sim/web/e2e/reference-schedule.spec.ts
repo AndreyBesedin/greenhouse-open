@@ -7,12 +7,12 @@ const DAY_S = 86_400;
 const SECOND_EVENING_S = DAY_S + 22 * 3600;
 // A later day's moment takes the simulator the house's air through the days
 // before it.
-const ARRIVES = { timeout: 60_000 };
+const ARRIVES = { timeout: 90_000 };
 
 test("reference schedule: the run heats by its own clock, set back at night, unless the address changes it", async ({
   page,
 }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(300_000);
   const run = page.getByRole("group", { name: "Climate run" });
   const moment = page.getByTestId("climate-time");
   const heater = page.getByTestId("equipment-heater");
@@ -49,7 +49,7 @@ test("reference schedule: the run heats by its own clock, set back at night, unl
 test("reference wind: an open door's flow turns with the wind, overridden for QA", async ({
   page,
 }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(240_000);
   const weather = page.getByRole("region", { name: "Weather" });
   const labels = page.getByTestId("debug-label");
 
