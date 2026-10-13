@@ -109,39 +109,59 @@ adds a visible or measurable result.
 | [P07](p07-external-weather.md) | External weather and greenhouse boundary coupling | Done |
 | [P08](p08-sun-and-radiation.md) | Sun position, glazing and radiation propagation | Done |
 | [P09](p09-integrated-scenario.md) | Integrated greenhouse scenario, replay and release QA | In progress |
-| **Next priority: Dependabot** | Configure low-noise, reviewed updates for Python, npm and GitHub Actions dependencies | **Planned: immediately after P09** |
 
 A project's document is added when its first pull request lands.
 
-## First priority after P09: Dependabot dependency maintenance
+**Dependabot** (recorded 2026-10-13, first after P09, before the CI time
+and camera work below). No dependency is updated by a bot yet. A
+`.github/dependabot.yml` is to check every day, and open pull requests
+for the updates found, in:
 
-**Priority: high. Schedule: immediately after P09's release QA, before the
-CI-time improvements and camera-imperfection work below.** This is a focused
-repository-maintenance task, not a new simulator feature project. Dependabot
-is not configured yet.
+- **npm:** the viewer's `greenhouse_sim/web/package.json` and its lockfile;
+- **pip:** the development tools pinned in `requirements-dev.txt`, and the
+  three packages' `pyproject.toml`;
+- **GitHub Actions:** the actions `.github/workflows/` uses;
+- and the pre-commit hooks' `rev`s in `.pre-commit-config.yaml`, if
+  Dependabot's ecosystems reach them.
 
-- Add `.github/dependabot.yml` to check the viewer's npm dependencies
-  (`greenhouse_sim/web/package-lock.json`), the root Python development
-  requirements and each Python package's `pyproject.toml`, and GitHub
-  Actions in `.github/workflows/`. Confirm the chosen package ecosystem and
-  directory configuration actually covers every manifest.
-- Run updates weekly, group compatible minor/patch updates where practical,
-  and cap concurrent dependency PRs to avoid overwhelming a solo maintainer.
-  Keep major updates separate and manually reviewed; don't auto-merge them.
-- Require the existing CI, type, test, visual-regression and PR-risk checks on
-  Dependabot PRs. Account for the current DCO sign-off check on bot commits
-  without weakening the rule for human commits, and ensure any Dependabot
-  changes to workflow permissions or review automation are narrowly scoped.
-- Treat coupled versions deliberately: keep Vitest and its coverage plugin
-  compatible; align Playwright's npm version with the pinned screenshot-test
-  container image when updating it. A green PR is not enough if its visual
-  baseline or runner environment has drifted.
-- Verify with a sample update PR per ecosystem, document the review and
-  merge policy, and make sure a stale or broken bot PR cannot merge silently.
+A pull request overtaken by a newer release is closed by Dependabot for the
+newer one. None merges by itself: each runs the checks every pull request
+runs, and one that needs more than its version change is completed by hand
+on its branch. What the repository already ties together:
 
-**Done when:** Dependabot PRs arrive with manageable volume, the intended
-manifests are covered, checks and review gates work for bot PRs, and updating
-pinned tooling does not compromise reproducible CI or screenshot comparisons.
+- **Vitest and `@vitest/coverage-v8`** run only at the same version: one
+  group.
+- **Playwright:** `@playwright/test` and the visual checks' container image,
+  `mcr.microsoft.com/playwright:v1.63.0-noble-amd64` in `ci.yml`, are the
+  same version. If Dependabot does not move the image with the package, the
+  visual checks fail on its pull request until the image is moved by hand;
+  screenshots that then differ get new baselines from CI, as any do.
+- **ruff** is pinned twice, in `requirements-dev.txt` and as the pre-commit
+  hook's `rev`; the two move together.
+- **The packages' runtime dependencies** are ranges, what a user may install
+  them with (`pydantic>=2.9`, `numpy>=2.0`, `openpyxl>=3.1.5,<4.0.0`), not
+  pins: they widen when a release falls outside them, and a lower bound is
+  not raised for its own sake.
+
+The checks as they stand:
+
+- **Sign-off:** Dependabot's commits carry `Signed-off-by: dependabot[bot]`,
+  so `commits are signed off` passes them as it is; a commit pushed onto a
+  bot's branch by hand is signed off as any other.
+- **The risk gate** asks for the manual-review tick on every Actions update
+  (`.github/`), every `pyproject.toml` change and every change to
+  `requirements-dev.txt`. A bot's description has no checkbox: the line
+  `- [x] I manually reviewed the complete diff` is added to it by hand. An
+  npm update is gated only past its thresholds; the lockfile is not
+  counted.
+- **CI time:** each update runs the full checks, the repository checks the
+  longest at about 20 minutes. Minor and patch updates are grouped by
+  ecosystem, which keeps the day's runs few; majors come one pull request
+  each.
+
+**Done when** each ecosystem's first pull request has passed its checks and
+been merged, and the couplings above are in the configuration's groups or
+written beside it.
 
 The [frontend audit follow-up and maintenance plan](frontend-maintenance.md)
 records the 2026-10-06 findings from P01.3, their commit provenance, and the
