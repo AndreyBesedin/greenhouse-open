@@ -109,12 +109,14 @@ test("QA mode: the run's manifest says what it is made from, and the versions se
   );
 
   // The simulator's version and commit as the API serves them, and the
-  // viewer's as it was built; warned of only if the two commits differ.
+  // viewer's as it was built; warned of only if both commits are known and
+  // differ. A simulator installed as a package, as CI installs it, does not
+  // know its commit.
   const served = (await (await page.request.get("/api/version")).json()) as {
     version: string;
     commit: string;
   };
-  expect(served.commit).toMatch(/^[0-9a-f]{7,}$/);
+  expect(served.commit).toMatch(/^([0-9a-f]{7,}|unknown)$/);
   await expect(panel.getByTestId("manifest-simulator")).toHaveText(
     `${served.version}, commit ${served.commit}`,
   );
@@ -122,8 +124,9 @@ test("QA mode: the run's manifest says what it is made from, and the versions se
   await expect(panel.getByTestId("manifest-viewer")).toHaveText(
     `${served.version}, commit ${built}`,
   );
+  const known = served.commit !== "unknown" && built !== "unknown";
   await expect(panel.getByTestId("manifest-commits-differ")).toHaveCount(
-    built === served.commit ? 0 : 1,
+    known && built !== served.commit ? 1 : 0,
   );
 
   // Out of QA mode, no panel.

@@ -710,11 +710,12 @@ shows the versions served.
   name and kind, under the weather the run is asked for, with its clouds
   and wind as QA overrides them. `GET /api/version` now gives the commit
   the simulator runs from, git's abbreviation, as the viewer names the one
-  it was built from, or "unknown" outside a git checkout. QA mode's panel,
-  marked as QA's as the sensor's truth is, lists the manifest of the
-  scenario's run drawn and both versions and commits, the simulator's as
-  it serves them and the viewer's as it was built, and warns when the
-  commits differ. Browser test: the panel shows what `/api/version` serves.
+  it was built from, or "unknown" when it is not run from a git checkout,
+  installed as a package as CI installs it. QA mode's panel, marked as
+  QA's as the sensor's truth is, lists the manifest of the scenario's run
+  drawn and both versions and commits, the simulator's as it serves them
+  and the viewer's as it was built, and warns when both commits are known
+  and differ. Browser test: the panel shows what `/api/version` serves.
 
 ### P09.7: Integrated visual regression
 
