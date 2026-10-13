@@ -645,15 +645,19 @@ comparison, the replay's digests, and the kept opening day.
   day 80, under its own schedule, as the design expected. Its manifest
   names it (`opening_day`), and a checkpoint at its start is kept beside
   it, `scenarios/openings/reference_greenhouse.json.gz`, 188 KB gzipped
-  (1.3 MB of JSON), written the same way every time. The API keeps it as
+  (1.3 MB of JSON), written the same way every time; and beside that, the
+  same run's with everything off (`.all-off.json.gz`, 144 KB), which the
+  house's air is charted beside: without it, opening on day 80 had the
+  simulator work out 80 days of air all off, two minutes in which every
+  request for that run waited. The API keeps both as
   it starts (`load_openings`), saying why if it does not fit the run; the
   scenario list gives the day, and showing the reference greenhouse from
   the list opens its climate at noon on it, in a few seconds where working
   it out from the run's start takes three minutes. The address without a
   moment still opens it at its start. `python tests/test_opening_day.py
-  --update` finds the day and writes it again, and a slow test replays the
-  run from its start to that day and holds it to the one kept
-  (`tests/test_opening_day.py`). Unheated, as P09.3 measured, the first red
+  --update` finds the day and writes both again, in about four minutes,
+  and a slow test replays the run from its start to that day and holds it
+  to the one kept (`tests/test_opening_day.py`). Unheated, as P09.3 measured, the first red
   fruit would come about day 105.
 - **Found on the way:** a whole day's observation log of the reference
   run, 18,600 observations, takes about 40 s, each minute's sample drawing

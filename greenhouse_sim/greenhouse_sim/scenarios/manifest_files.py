@@ -49,6 +49,8 @@ _OPENING_KEY: Final = "opening_day"
 # Where a scenario's kept opening day lies: a checkpoint of its run at that
 # day's start (P09.5), gzipped, named for the scenario.
 OPENINGS_DIR: Final = Path(__file__).parent / "openings"
+# And of the same run with everything off, named so.
+ALL_OFF_SUFFIX: Final = ".all-off"
 
 
 class InvalidManifest(ValueError):
@@ -81,9 +83,10 @@ def opening_day(scenario_id: str) -> int | None:
     return day
 
 
-def opening_file(scenario_id: str) -> Path:
-    """Where a scenario's kept opening day lies, gzipped JSON."""
-    return OPENINGS_DIR / f"{scenario_id}.json.gz"
+def opening_file(scenario_id: str, all_off: bool = False) -> Path:
+    """Where a scenario's kept opening day lies, gzipped JSON: its run's, or
+    the same run's with everything off, which a viewer charts beside it."""
+    return OPENINGS_DIR / f"{scenario_id}{ALL_OFF_SUFFIX if all_off else ''}.json.gz"
 
 
 def manifest_digest(scenario_id: str) -> str:

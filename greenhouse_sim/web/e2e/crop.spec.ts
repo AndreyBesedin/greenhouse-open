@@ -109,4 +109,11 @@ test("crop: shown from the list, the reference greenhouse opens on its first day
     "reference_greenhouse, day 80,",
     ARRIVES,
   );
+  // Its air at noon, the vents open, drawn cell by cell: waited for, so that
+  // the simulator is not still working it out when the next spec begins.
+  await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
+  // Its house's air beside the same run's with everything off, kept too.
+  await expect(
+    page.getByRole("figure", { name: "House air" }).getByTestId("house-air-°C"),
+  ).toHaveText(/^Air [\d.]+ °C, all off [\d.]+ °C$/, ARRIVES);
 });

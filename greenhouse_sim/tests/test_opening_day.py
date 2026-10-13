@@ -4,12 +4,13 @@ keeps as it starts, so that the run's later days carry on from it; and,
 replayed from the run's start, the same day.
 
 When a deliberate change moves the reference run, write its opening day
-again from `greenhouse_sim/` (about three minutes):
+again from `greenhouse_sim/` (about six minutes):
 
     python tests/test_opening_day.py --update
 
 which finds the first day with red fruit, names it in the manifest, and
-writes the checkpoint beside it.
+writes beside it the run's checkpoint and the same run's with everything
+off, which a viewer charts beside it.
 """
 
 import gzip
@@ -49,9 +50,9 @@ def _afresh() -> Iterator[None]:
     checkpoints.forget_checkpoints()
 
 
-def _kept() -> checkpoints.Checkpoint:
+def _kept(all_off: bool = False) -> checkpoints.Checkpoint:
     return checkpoints.Checkpoint.model_validate(
-        json.loads(gzip.decompress(opening_file(SCENARIO).read_bytes()))
+        json.loads(gzip.decompress(opening_file(SCENARIO, all_off).read_bytes()))
     )
 
 
@@ -82,6 +83,16 @@ def test_the_kept_opening_day_is_the_manifests_and_bears_red_fruit() -> None:
         "`python tests/test_opening_day.py --update`"
     )
     assert _red(kept.plants) > 0
+    # Beside it, the same run with everything off, as a viewer charts it.
+    off = _kept(all_off=True)
+    assert (off.day, off.manifest, off.daily, off.commands, off.levels) == (
+        day,
+        kept.manifest,
+        [],
+        [],
+        {},
+    )
+    assert off.house.temperature_c < kept.house.temperature_c
     listed = next(s for s in scenario_summaries() if s.id == SCENARIO)
     assert listed.opening_day == day
     assert [s.opening_day for s in scenario_summaries() if s.id != SCENARIO] == [None] * 5
@@ -92,11 +103,15 @@ def test_kept_as_the_api_starts_the_runs_later_days_carry_on_from_it() -> None:
 
     plants = run_crop(SCENARIO).plants_on(81)
     house = climate_run(SCENARIO)[1].house
+    off = climate_run(SCENARIO, daily=[])[1].house
+    off.air_at(80.5 * DAY_S)
 
     assert len(plants) == 32
-    # Only the opening day's air was worked out, from its start.
+    # Only the opening day's air was worked out, from its start, in the run
+    # and in the same run with everything off.
     assert [m for m in house._kept if 0.0 < m < 80 * DAY_S] == []
-    assert checkpoints.checkpoints()[0].day == 80
+    assert [m for m in off._kept if 0.0 < m < 80 * DAY_S] == []
+    assert [c.day for c in checkpoints.checkpoints()] == [80, 80]
 
 
 @pytest.mark.slow
@@ -117,12 +132,15 @@ def _update() -> None:
     manifest = json.loads(path.read_text())
     manifest["opening_day"] = day
     path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
-    saved = checkpoints.save_checkpoint(SCENARIO, time_s=day * DAY_S)
     opening_file(SCENARIO).parent.mkdir(exist_ok=True)
-    opening_file(SCENARIO).write_bytes(
-        checkpoints.opening_bytes(checkpoints.checkpoint(saved.checkpoint_id))
-    )
-    print(f"wrote day {day} to {opening_file(SCENARIO)}")
+    # The run, and the same run with everything off, which a viewer charts
+    # beside it.
+    for all_off, daily in ((False, None), (True, [])):
+        saved = checkpoints.save_checkpoint(SCENARIO, time_s=day * DAY_S, daily=daily)
+        opening_file(SCENARIO, all_off).write_bytes(
+            checkpoints.opening_bytes(checkpoints.checkpoint(saved.checkpoint_id))
+        )
+        print(f"wrote day {day} to {opening_file(SCENARIO, all_off)}")
 
 
 if __name__ == "__main__":

@@ -239,15 +239,18 @@ def opening_bytes(checkpoint: Checkpoint) -> bytes:
     return gzip.compress(checkpoint.model_dump_json().encode(), mtime=0)
 
 
-def load_opening(scenario_id: str) -> CheckpointSummary | None:
-    """Keep a scenario's opening day, as its manifest names it and the file
-    beside it holds it (`opening_file`): a checkpoint uploaded, so that its
-    run's later days carry on from it. None if it names none; refused, as
-    an upload is, if it does not fit its run."""
+def load_opening(scenario_id: str) -> list[CheckpointSummary]:
+    """Keep a scenario's opening day, as its manifest names it and the files
+    beside it hold it (`opening_file`): its run's checkpoint, and the same
+    run's with everything off, which a viewer charts beside it, each
+    uploaded, so that both runs' later days carry on from them. None if it
+    names none; refused, as an upload is, if one does not fit its run."""
     if opening_day(scenario_id) is None:
-        return None
-    document = json.loads(gzip.decompress(opening_file(scenario_id).read_bytes()))
-    return upload_checkpoint(document)
+        return []
+    return [
+        upload_checkpoint(json.loads(gzip.decompress(opening_file(scenario_id, off).read_bytes())))
+        for off in (False, True)
+    ]
 
 
 def load_openings() -> list[str]:
