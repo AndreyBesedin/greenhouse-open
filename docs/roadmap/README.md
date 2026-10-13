@@ -125,12 +125,43 @@ for the updates found, in:
   Dependabot's ecosystems reach them.
 
 A pull request overtaken by a newer release is closed by Dependabot for the
-newer one. None merges by itself: each runs the checks every pull request
-runs, and one that needs more than its version change is completed by hand
-on its branch. What the repository already ties together:
+newer one. One that needs more than its version change is completed by
+hand on its branch.
+
+**What merges by itself:** a minor or patch update that changes no code
+and passes every check, that is a pull request
+
+- whose commits are all Dependabot's, changing only dependency manifests
+  and lockfiles;
+- whose update Dependabot's metadata calls minor or patch; below 1.0, patch
+  only, since there a minor release may break, as `three`'s do (0.186 to
+  0.187);
+- whose required checks have all passed: CI's jobs, the visual checks and
+  the risk gate.
+
+A workflow on Dependabot's pull requests reads the update's type
+(`dependabot/fetch-metadata`) and, when the first two hold, turns on
+GitHub's auto-merge, which merges once the third holds too; a later push
+that breaks the first two turns it off again. Everything else waits for a
+review: majors, minor updates below 1.0, and whatever was completed by
+hand. As the risk gate stands, only npm's updates can merge by themselves:
+it asks for the review tick on every Actions, `pyproject.toml` and
+`requirements-dev.txt` change. Dependabot proposes a release only once it
+is a few days old (its `cooldown`), so that one found compromised is
+usually withdrawn first.
+
+The repository's settings change for it. Auto-merge is allowed (it is off
+now). The `main protection` ruleset lists the required checks (it lists
+none, and auto-merge waits on required checks only: with none it merges
+at once). Its "Restrict updates", which lets only admins update `main`,
+either gives way to those checks or names the actor that merges as one
+that may: a merge turned on with the workflow's token is not an admin's.
+Admins bypass the ruleset as they do now.
+
+What the repository already ties together:
 
 - **Vitest and `@vitest/coverage-v8`** run only at the same version: one
-  group.
+  group. So do `three` and `@types/three`.
 - **Playwright:** `@playwright/test` and the visual checks' container image,
   `mcr.microsoft.com/playwright:v1.63.0-noble-amd64` in `ci.yml`, are the
   same version. If Dependabot does not move the image with the package, the
@@ -148,19 +179,18 @@ The checks as they stand:
 - **Sign-off:** Dependabot's commits carry `Signed-off-by: dependabot[bot]`,
   so `commits are signed off` passes them as it is; a commit pushed onto a
   bot's branch by hand is signed off as any other.
-- **The risk gate** asks for the manual-review tick on every Actions update
-  (`.github/`), every `pyproject.toml` change and every change to
-  `requirements-dev.txt`. A bot's description has no checkbox: the line
-  `- [x] I manually reviewed the complete diff` is added to it by hand. An
-  npm update is gated only past its thresholds; the lockfile is not
-  counted.
+- **The risk gate:** a bot's description has no checkbox, so for an update
+  the gate holds, the line `- [x] I manually reviewed the complete diff` is
+  added to it by hand. The lockfile is not counted against the gate's
+  thresholds.
 - **CI time:** each update runs the full checks, the repository checks the
   longest at about 20 minutes. Minor and patch updates are grouped by
   ecosystem, which keeps the day's runs few; majors come one pull request
   each.
 
 **Done when** each ecosystem's first pull request has passed its checks and
-been merged, and the couplings above are in the configuration's groups or
+been merged, a minor npm update has merged by itself and a major one has
+waited, and the couplings above are in the configuration's groups or
 written beside it.
 
 The [frontend audit follow-up and maintenance plan](frontend-maintenance.md)
