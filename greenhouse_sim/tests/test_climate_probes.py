@@ -89,9 +89,9 @@ def test_the_all_off_run_keeps_the_doors_and_vents_as_asked() -> None:
         ),
         ("climate_box/climate/probes?probes=a:b", 400, "probes wants x:y:z points, not 'a:b'"),
         (
-            "climate_box/climate/probes?probes=1:1:1&t=90000",
+            "climate_box/climate/probes?probes=1:1:1&t=1300000",
             400,
-            "a climate run lasts from 0 to 86400 s, not 90000",
+            "a run of climate_box lasts from 0 to 1209600 s, its 14 days, not 1300000",
         ),
         (
             "climate_box/climate/probes?probes=1:1:1&set=boiler:1",

@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 from greenhouse_sim.airflow.prescribed import PrescribedAirflow, UniformAirflow
 from greenhouse_sim.cfd.setup import CfdSetup
 from greenhouse_sim.climate.settings import ClimateSettings
+from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.weather.recorded import RecordedWeather
 from greenhouse_sim.weather.sources import Clouded, ConstantWeather, RunWeather
 from greenhouse_sim.weather.state import Percent
@@ -92,6 +93,11 @@ class ScenarioConfig(BaseModel):
     def run_start(self) -> datetime:
         """The instant its runs start: its start date's midnight at its site."""
         return self.site.midnight(self.start_date).astimezone(UTC)
+
+    def run_length_s(self) -> float:
+        """How long its runs last, in seconds: to its last day's end
+        (`greenhouse_sim.core.clock`)."""
+        return self.duration_days * DAY_S
 
     def run_weather(self) -> RunWeather:
         """Its weather on a run's clock, its clouds as overridden, if they

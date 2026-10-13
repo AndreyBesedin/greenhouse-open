@@ -113,7 +113,13 @@ def test_a_clean_sensor_is_never_stale_and_a_sensor_of_nothing_is_unavailable() 
         for s in SCENARIO_REGISTRY["climate_box"].layout.sensors
         if isinstance(s, PointSensor) and s.sensor_id == "par"
     )
-    (state,) = freshness([par], log.observations, 600, start=log.start, unavailable=["par"])
+    (state,) = freshness(
+        [par],
+        600,
+        start=log.start,
+        seed=SCENARIO_REGISTRY["climate_box"].random_seed,
+        unavailable=["par"],
+    )
     assert state.state == Freshness.UNAVAILABLE
 
 

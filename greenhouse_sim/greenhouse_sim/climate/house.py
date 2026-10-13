@@ -26,6 +26,7 @@ mean lies a little below this model's while a heater runs.
 
 import math
 import threading
+from bisect import bisect_right, insort
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final
@@ -53,7 +54,7 @@ from greenhouse_sim.weather.state import WeatherState
 STEP_S: Final = KEEP_EVERY_S
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class HouseAir:
     """The house's air at a moment: its temperature (°C), humidity ratio
     (g/kg) and CO₂ (ppm), with the water it has lost so far to equipment and
@@ -104,7 +105,11 @@ class WholeHouse:
             ),
             co2_ppm=settings.start_co2_ppm,
         )
+        # Its air at every moment worked to, and those moments in order, so
+        # that the latest before any other is found at once, however long
+        # the run (P09.2).
         self._kept: dict[float, HouseAir] = {0.0: start}
+        self._moments: list[float] = [0.0]
         # One request at a time works the house's air on; others wait for
         # it, and find what it kept.
         self._working = threading.RLock()
@@ -195,8 +200,13 @@ class WholeHouse:
         with self._working:
             return self._worked_to(time_s)
 
+    def _keep(self, moment: float, air: HouseAir) -> None:
+        if moment not in self._kept:
+            insort(self._moments, moment)
+        self._kept[moment] = air
+
     def _worked_to(self, time_s: float) -> HouseAir:
-        start = max(moment for moment in self._kept if moment <= time_s)
+        start = self._moments[bisect_right(self._moments, time_s) - 1]
         air = self._kept[start]
         changes = {m for m in self.run.schedule.moments() if start < m <= time_s}
         steps = {
@@ -212,8 +222,8 @@ class WholeHouse:
                 air = self._advance(air, self._held(now), outside, until - now, now, sun)
                 now = until
                 if until in steps:
-                    self._kept[until] = air
-        self._kept[time_s] = air
+                    self._keep(until, air)
+        self._keep(time_s, air)
         return air
 
     def heat_j(self, air: HouseAir, reference_c: float = 0.0) -> float:

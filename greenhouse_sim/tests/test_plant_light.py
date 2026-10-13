@@ -140,7 +140,7 @@ def test_the_api_serves_each_plants_light() -> None:
     assert set(body["par_umol_m2_s"]) == set(plant_ids(LAB))
     assert 150.0 < body["par_umol_m2_s"][SHADED[0]] < 250.0
     assert body["daily_light_integral_mol_m2_d"][EXPOSED[0]] > 25.0
-    refused = respond("GET", "/api/scenarios/solar_lab/climate/plants?t=90000")
+    refused = respond("GET", "/api/scenarios/solar_lab/climate/plants?t=900000")
     assert refused.status == HTTPStatus.BAD_REQUEST
 
 

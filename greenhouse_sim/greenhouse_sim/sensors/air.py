@@ -36,6 +36,7 @@ from collections.abc import Callable, Sequence
 from datetime import datetime, timedelta
 from typing import Final
 
+import numpy as np
 from greenhouse_protocol.enums import ObservationQuality, ObservationType, SourceType
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.provenance import RecordSource
@@ -121,11 +122,29 @@ def reads(
     return value
 
 
-def samples(sensor: PointSensor | Camera, until_s: float) -> list[float]:
-    """The moments a sensor takes its samples, or a camera its frames, up to
-    `until_s`, in seconds from the run's start: every `cadence_s`, from the
-    start."""
-    return [index * sensor.cadence_s for index in range(int(until_s // sensor.cadence_s) + 1)]
+def samples(sensor: PointSensor | Camera, until_s: float, from_s: float = 0.0) -> list[float]:
+    """The moments a sensor takes its samples, or a camera its frames, from
+    `from_s` to `until_s`, in seconds from the run's start: every
+    `cadence_s`, counted from the start."""
+    first = math.ceil(from_s / sensor.cadence_s)
+    last = int(until_s // sensor.cadence_s)
+    return [index * sensor.cadence_s for index in range(first, last + 1)]
+
+
+def sample_index(sensor: PointSensor | Camera, moment_s: float) -> int:
+    """Which of a sensor's samples it takes at `moment_s`, counted from the
+    run's start: the index its draws are seeded by."""
+    return round(moment_s / sensor.cadence_s)
+
+
+def _draws(sensor: PointSensor, index: int, seed: int) -> np.random.Generator:
+    return seeded_rng(seed, "sensor", sensor.sensor_id, index)
+
+
+def drops(sensor: PointSensor, index: int, seed: int) -> bool:
+    """Whether a sensor's `index`th sample drops out: its first draw
+    (`erred`), so that it can be known without the air it would have read."""
+    return bool(_draws(sensor, index, seed).uniform() < sensor.imperfections.dropout)
 
 
 def erred(
@@ -135,9 +154,9 @@ def erred(
     `moment_s` into the run, and whether it was held at its range's end; or
     None if the sample drops out."""
     imperfections: Imperfections = sensor.imperfections
-    rng = seeded_rng(seed, "sensor", sensor.sensor_id, index)
+    rng = _draws(sensor, index, seed)
     # Drawn in a fixed order, so that one imperfection's draw never moves
-    # another's.
+    # another's; the dropout's first (`drops`).
     dropped = rng.uniform() < imperfections.dropout
     noise = rng.normal(0.0, imperfections.noise_sd) if imperfections.noise_sd > 0 else 0.0
     if dropped:
@@ -171,17 +190,19 @@ def observe(
     seed: int = 0,
     clean: bool = False,
     weather_at: WeatherAt | None = None,
+    from_s: float = 0.0,
 ) -> list[Observation]:
     """Every reading `sensors` have delivered of the air by `until_s`, and of
-    the weather, if a weather station reads it, as observations, in the order
-    they were delivered; as clean sensors would have read them, if
-    `clean`."""
+    the weather, if a weather station reads it, from samples taken from
+    `from_s` on, as observations, in the order they were delivered; as clean
+    sensors would have read them, if `clean`."""
     source = RecordSource(type=SourceType.SIMULATION, source_id=run_id)
     observations = []
     for sensor in sensors:
         observation_type = OBSERVATION_TYPES[sensor.kind]
         latency = 0.0 if clean else sensor.imperfections.latency_s
-        for index, moment in enumerate(samples(sensor, until_s)):
+        for moment in samples(sensor, until_s, from_s):
+            index = sample_index(sensor, moment)
             if moment + latency > until_s:
                 break
             outside = weather_at(moment) if weather_at is not None else None

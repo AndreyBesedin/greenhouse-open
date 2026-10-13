@@ -38,12 +38,13 @@ def sensor_truth(
     air_at: AirAt,
     until_s: float,
     weather_at: WeatherAt | None = None,
+    from_s: float = 0.0,
 ) -> list[SensorTruth]:
-    """What each sensor sampled, truly, up to `until_s`: of the air, or of
-    the weather, for a weather station's."""
+    """What each sensor sampled, truly, from `from_s` to `until_s`: of the
+    air, or of the weather, for a weather station's."""
     truths = []
     for sensor in sensors:
-        moments = samples(sensor, until_s)
+        moments = samples(sensor, until_s, from_s)
         truths.append(
             SensorTruth(
                 sensor_id=sensor.sensor_id,

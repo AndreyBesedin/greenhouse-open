@@ -158,8 +158,14 @@ def test_a_run_on_another_grid_or_solid_cells_is_refused() -> None:
         ("climate_box/fields/climate?set=fan:2", "a level runs from 0 to 1: fan"),
         ("tomato_compartment/fields/shear?set=fan:1", "tomato_compartment has no equipment 'fan'"),
         ("tomato_compartment/fields/climate", None),
-        ("climate_box/fields/climate?t=-1", "a climate run lasts from 0 to 86400 s, not -1"),
-        ("climate_box/fields/climate?t=90000", "a climate run lasts from 0 to 86400 s, not 90000"),
+        (
+            "climate_box/fields/climate?t=-1",
+            "a run of climate_box lasts from 0 to 1209600 s, its 14 days, not -1",
+        ),
+        (
+            "climate_box/fields/climate?t=1300000",
+            "a run of climate_box lasts from 0 to 1209600 s, its 14 days, not 1300000",
+        ),
         ("climate_box/fields/climate?t=soon", "t wants seconds, not 'soon'"),
     ],
     ids=["unknown", "above full", "none there", "no climate", "before", "after", "not a time"],
