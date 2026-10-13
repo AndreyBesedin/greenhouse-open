@@ -59,7 +59,7 @@ test("sensors: a clean sensor's reading through a run is the truth beside it", a
   await expect(panel.locator(".sensor-chart-reading")).toHaveCount(11);
 
   // Back at the start, it reads the starting air.
-  await page.getByRole("slider", { name: "Time into the run" }).fill("0");
+  await page.getByRole("slider", { name: "Time of day" }).fill("0");
   await expect(panel.getByTestId("sensor-reading")).toHaveText("16 °C at 0 min");
 });
 
@@ -103,7 +103,7 @@ test("sensors: a sensor is stale exactly while a reading due from it has not com
   await selectAt(page, BACK_FACE, "climate_box_temperature_back", BEFORE_THE_BACK);
   const panel = page.getByRole("region", { name: "Sensor" });
   const freshness = panel.getByTestId("sensor-freshness");
-  const time = page.getByRole("slider", { name: "Time into the run" });
+  const time = page.getByRole("slider", { name: "Time of day" });
 
   // Its sample at 19 min drops out: due half a minute later, it never comes,
   // and its latest reading is the one taken at 18.

@@ -87,16 +87,23 @@ describe("the weather", () => {
     expect(weatherUrl("climate_box", 600, "cold_spring_day")).toBe(
       "/api/scenarios/climate_box/weather?t=600&weather=cold_spring_day",
     );
-    expect(weatherDayUrl("climate_box")).toBe("/api/scenarios/climate_box/weather/day");
-    expect(weatherDayUrl("climate_box", "cold_spring_day")).toBe(
+    expect(weatherDayUrl("climate_box", 600)).toBe("/api/scenarios/climate_box/weather/day");
+    expect(weatherDayUrl("climate_box", 600, "cold_spring_day")).toBe(
       "/api/scenarios/climate_box/weather/day?weather=cold_spring_day",
     );
+    // A later day by its last moment, the same for every moment of it.
+    for (const moment of [86_401, 100_000, 172_800]) {
+      expect(weatherDayUrl("climate_box", moment, "cold_spring_day")).toBe(
+        "/api/scenarios/climate_box/weather/day?t=172800&weather=cold_spring_day",
+      );
+    }
+    expect(weatherDayUrl("climate_box", 86_400)).toBe("/api/scenarios/climate_box/weather/day");
   });
 
   it("through the day is checked rather than trusted", async () => {
     const answered = (async () => Response.json(DAY_BODY)) as typeof fetch;
 
-    expect(await loadWeatherDay(weatherDayUrl("climate_box"), answered)).toEqual({
+    expect(await loadWeatherDay(weatherDayUrl("climate_box", 0), answered)).toEqual({
       status: "loaded",
       day: parseWeatherDay(DAY_BODY),
     });
@@ -305,6 +312,19 @@ describe("the day's weather", () => {
       <WeatherDayChart state={{ status: "loaded", day }} time={21600} />,
     );
 
+    expect(markup.match(/data-testid="weather-day-now" x1="60" x2="60"/g)).toHaveLength(4);
+  });
+
+  it("charts a later day across that day, from its midnight", () => {
+    const later = parseWeatherDay({
+      ...DAY_BODY,
+      times_s: DAY_BODY.times_s.map((seconds) => seconds + 2 * 86_400),
+    });
+    const markup = renderToStaticMarkup(
+      <WeatherDayChart state={{ status: "loaded", day: later }} time={2 * 86_400 + 21600} />,
+    );
+
+    expect(markup).toContain('points="0.0,18.7 60.0,28.0 120.0,9.3 180.0,0.0 240.0,18.7"');
     expect(markup.match(/data-testid="weather-day-now" x1="60" x2="60"/g)).toHaveLength(4);
   });
 

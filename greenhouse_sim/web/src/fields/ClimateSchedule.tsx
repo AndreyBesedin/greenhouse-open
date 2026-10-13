@@ -1,6 +1,6 @@
+import { DAY_S, dayStart, runDay } from "../clock";
 import type { ScheduledCommand } from "../scene/source";
 import { describeTime } from "./ClimateTime";
-import { CLIMATE_RUN_S } from "./source";
 
 const PERCENT = 100;
 
@@ -12,9 +12,9 @@ export function describeCommand({ actuatorId, level }: ScheduledCommand): string
 
 /**
  * A climate run's schedule, its commands and the overrides made, under its
- * time slider: a marker on a bar over the run at each command's moment, and
- * each listed, to go to its moment or take it out. Those already applied at
- * the moment drawn are marked so.
+ * time sliders: a marker on a bar over the moment's day at each of that
+ * day's commands, and every command listed, to go to its moment or take it
+ * out. Those already applied at the moment drawn are marked so.
  */
 export function ClimateSchedule({
   schedule,
@@ -30,18 +30,23 @@ export function ClimateSchedule({
   if (schedule.length === 0) {
     return null;
   }
+  const day = runDay(time);
+  const from = dayStart(time);
   return (
     <section className="climate-schedule" aria-label="Schedule">
       <div className="climate-schedule-bar" aria-hidden="true">
-        {schedule.map((command, index) => (
-          <span
-            // Commands are listed in the order given, so their places are theirs.
-            // biome-ignore lint/suspicious/noArrayIndexKey: two commands may be alike.
-            key={index}
-            className={command.timeS <= time ? "applied" : "to-come"}
-            style={{ left: `${(command.timeS / CLIMATE_RUN_S) * PERCENT}%` }}
-          />
-        ))}
+        {schedule.map((command, index) =>
+          runDay(command.timeS) === day ? (
+            <span
+              // Commands are listed in the order given, so their places are theirs.
+              // biome-ignore lint/suspicious/noArrayIndexKey: two commands may be alike.
+              key={index}
+              data-testid="schedule-marker"
+              className={command.timeS <= time ? "applied" : "to-come"}
+              style={{ left: `${((command.timeS - from) / DAY_S) * PERCENT}%` }}
+            />
+          ) : null,
+        )}
       </div>
       <ol>
         {schedule.map((command, index) => {

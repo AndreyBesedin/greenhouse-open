@@ -107,6 +107,11 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const live = useLiveScene(liveScenario);
   const commands = useLiveCommands(liveScenario);
   const scenarios = useLoad(SCENARIOS_URL, () => loadScenarios());
+  // The scenario shown, as the list describes it: its weathers and its days.
+  const summary =
+    source.kind === "scenario" && scenarios.status === "loaded"
+      ? scenarios.scenarios.find((s) => s.id === source.scenarioId)
+      : undefined;
 
   // A scenario reopened by its sliders, or the plant lab on another day,
   // keeps its scene on show until the next arrives; any other change of
@@ -154,14 +159,14 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     fetchField,
   );
 
-  // The weather outside a scenario at the moment drawn, and through the runs'
-  // first day, for its chart.
+  // The weather outside a scenario at the moment drawn, and through its
+  // day, for its chart.
   const weather = useLoad(
     run === null ? null : weatherUrl(run.scenarioId, moment, run.weather),
     loadWeather,
   );
   const weatherDay = useLoad(
-    run === null ? null : weatherDayUrl(run.scenarioId, run.weather),
+    run === null ? null : weatherDayUrl(run.scenarioId, moment, run.weather),
     loadWeatherDay,
   );
 
@@ -464,11 +469,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
               <ScenarioPanels
                 source={source}
                 snapshot={snapshot}
-                weathers={
-                  scenarios.status === "loaded"
-                    ? (scenarios.scenarios.find((s) => s.id === source.scenarioId)?.weathers ?? [])
-                    : []
-                }
+                weathers={summary?.weathers ?? []}
+                days={summary?.duration_days ?? 1}
                 loads={{ field, compared, weather, weatherDay, houseAir, probeCharts, cfd }}
                 fieldView={fieldView}
                 fieldSlice={fieldSlice}

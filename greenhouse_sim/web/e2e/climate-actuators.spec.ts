@@ -33,7 +33,7 @@ async function speedOf(reading: Locator): Promise<number> {
 }
 
 async function moveTo(page: Page, seconds: number): Promise<void> {
-  await page.getByRole("slider", { name: "Time into the run" }).fill(String(seconds));
+  await page.getByRole("slider", { name: "Time of day" }).fill(String(seconds));
   await expect(page).toHaveURL(seconds === 0 ? /^(?!.*&t=)/ : new RegExp(`&t=${seconds}(&|$)`));
   // Shown once that moment's field has arrived.
   await expect(page.getByTestId("climate-time")).toHaveText(`${seconds / 60} min`, {

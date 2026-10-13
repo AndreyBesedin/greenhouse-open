@@ -55,6 +55,7 @@ export function ScenarioPanels({
   source,
   snapshot,
   weathers,
+  days,
   loads,
   fieldView,
   fieldSlice,
@@ -73,6 +74,8 @@ export function ScenarioPanels({
   snapshot: SceneSnapshot | null;
   /** The preset weathers it can be run under. */
   weathers: string[];
+  /** How many days its runs last. */
+  days: number;
   loads: ScenarioLoads;
   fieldView: FieldView;
   fieldSlice: Slice | null;
@@ -142,6 +145,7 @@ export function ScenarioPanels({
         <ClimateTime
           time={time}
           shown={field.status === "loaded" ? field.field.timeS : null}
+          days={days}
           playing={playingClimate}
           onTime={setTime}
           onPlaying={onPlayingClimate}

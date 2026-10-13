@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { DAY_S } from "../clock";
 import {
   levelsAt,
   type ScheduledCommand,
@@ -73,11 +74,30 @@ describe("a climate run's schedule", () => {
     expect(html).toContain('data-applied="true"');
     expect(html).toContain('aria-label="Go to heater 50% at 5 min"');
     expect(html).toContain('aria-label="Remove heater 50% at 5 min"');
+    expect(html.match(/data-testid="schedule-marker"/g)).toHaveLength(3);
     expect(describeCommand({ timeS: 0, actuatorId: "heater", level: 0 })).toBe("heater off");
     expect(
       renderToStaticMarkup(
         <ClimateSchedule schedule={[]} time={0} onTime={ignore} onRemove={ignore} />,
       ),
     ).toBe("");
+  });
+
+  it("marks on its bar only the moment's day's commands, across that day", () => {
+    const days: ScheduledCommand[] = [
+      { timeS: 600, actuatorId: "heater", level: 1 },
+      { timeS: DAY_S + 21_600, actuatorId: "heater", level: 0 },
+      { timeS: 2 * DAY_S + 600, actuatorId: "fan", level: 1 },
+    ];
+    const html = renderToStaticMarkup(
+      <ClimateSchedule schedule={days} time={DAY_S + 43_200} onTime={ignore} onRemove={ignore} />,
+    );
+
+    expect(html.match(/data-testid="schedule-marker"/g)).toHaveLength(1);
+    expect(html).toContain('class="applied" style="left:25%"');
+    // Every command is listed, each at its day.
+    expect(html.match(/data-testid="schedule-command"/g)).toHaveLength(3);
+    expect(html).toContain('aria-label="Go to heater off at day 1, 6 h 00 min"');
+    expect(html).toContain('aria-label="Go to fan 100% at day 2, 10 min"');
   });
 });

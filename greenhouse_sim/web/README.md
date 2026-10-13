@@ -77,11 +77,16 @@ without it. A scenario with equipment offers its `climate` too: its own air
 with its equipment running at the levels the Equipment panel sets, reloaded
 as they change (`?scenario=climate_box&field=climate&set=fan:1`, its fan's
 jet blowing down the house). A fan carries an arrow the way it blows. The
-climate is its air through a climate run, a day long: "Climate run" moves
-through it a minute at a time, or plays it, a minute at a time through its
-first hour and five minutes at a time after it (`&t=600`, ten minutes in;
-`&t=18000`, five hours), "House air" charts the house's air as one volume
-through it (`GET /api/scenarios/{id}/climate/house`), its
+climate is its air through a climate run, as many days long as its
+scenario: "Climate run" moves through a day a minute at a time, and through
+the run a day at a time, or plays it, a minute at a time through its first
+hour and five minutes at a time after it, or at the pace chosen, an hour or
+a day a step (`&t=600`, ten minutes in; `&t=18000`, five hours;
+`&t=87000`, the second day, ten minutes in, `day 1, 10 min`). A day ends at
+its midnight, `24 h 00 min`, and the next begins a minute after it. "House
+air" charts the house's air as one volume through the moment's day
+(`GET /api/scenarios/{id}/climate/house`), as the weather's and a sensor's
+charts do, its
 colours keeping the widest range its moments have reached, and a
 temperature slice shows a heater warming its corner and the house
 (`&set=heater:1&fieldView=slice&slice=temperature:z:0.75`), and a humidity
@@ -92,8 +97,8 @@ and the stack drive through it (`GET /api/scenarios/{id}/climate/openings`),
 marked by an arrow in or out, and shows its draught. A run can switch its equipment on
 its own (`&schedule=60:fan:1,300:heater:0`, seconds:actuator:level), and
 equipment switched while the run stands past its start is an override from
-that moment. "Schedule" lists the commands under the time slider, marked on
-a bar over the run, each to go to or take out; the Equipment panel and the
+that moment. "Schedule" lists the commands under the time sliders, the
+moment's day's marked on a bar over it, each to go to or take out; the Equipment panel and the
 scene show the levels at the moment drawn. With probes placed, "Probe
 charts" draws each probe's temperature, relative humidity and air speed
 through the run up to the moment drawn, beside the same run with all its

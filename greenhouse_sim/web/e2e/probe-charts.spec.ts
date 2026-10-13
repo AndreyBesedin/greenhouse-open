@@ -34,7 +34,7 @@ test("probe charts: a heated run diverges from the same run all off, where the h
   });
 
   await test.step("later in the run, the charts follow", async () => {
-    await page.getByRole("slider", { name: "Time into the run" }).fill("1200");
+    await page.getByRole("slider", { name: "Time of day" }).fill("1200");
     await expect(corner).toHaveText("temperature 38.01 °C, all off 8.67 °C");
     await expect(middle).toHaveText("temperature 19.70 °C, all off 8.72 °C");
   });

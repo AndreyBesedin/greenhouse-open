@@ -16,7 +16,7 @@ test("schedule: the equipment switches on its own, and an override holds from it
     `/?scenario=climate_box&field=climate&schedule=${SWITCHING_ON}&probes=${IN_THE_FANS_CORE}`,
   );
   const run = page.getByRole("group", { name: "Climate run" });
-  const slider = run.getByRole("slider", { name: "Time into the run" });
+  const slider = run.getByRole("slider", { name: "Time of day" });
   const schedule = page.getByRole("region", { name: "Schedule" });
   const commands = schedule.getByTestId("schedule-command");
   const heater = page.getByTestId("equipment-heater");

@@ -1,3 +1,4 @@
+import { dayEnd, runDay } from "../clock";
 import { inWorld } from "../debug/dimensions";
 import type { OverlayPrimitive } from "../debug/overlays";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
@@ -132,9 +133,16 @@ export function weatherUrl(scenarioId: string, time: number, weather?: string): 
   return scenarioUrl(scenarioId, "weather", runParameters({ time, weather }, ["time", "weather"]));
 }
 
-/** Where a scenario's weather through its runs' first day is published. */
-export function weatherDayUrl(scenarioId: string, weather?: string): string {
-  return scenarioUrl(scenarioId, "weather/day", runParameters({ weather }, ["weather"]));
+/** Where a scenario's weather through the day of a moment of a run is
+ * published. A day is asked for by its last moment (`../clock`), so that
+ * every moment of it asks the same; the first, by none. */
+export function weatherDayUrl(scenarioId: string, time: number, weather?: string): string {
+  const asked = runDay(time) === 0 ? undefined : dayEnd(time);
+  return scenarioUrl(
+    scenarioId,
+    "weather/day",
+    runParameters({ time: asked, weather }, ["time", "weather"]),
+  );
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

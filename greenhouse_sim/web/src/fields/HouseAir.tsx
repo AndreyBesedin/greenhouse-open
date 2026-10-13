@@ -1,5 +1,5 @@
+import { DAY_S, dayStart } from "../clock";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
-import { CLIMATE_RUN_S } from "./source";
 
 /** The house's air as one well-mixed volume at each moment of a trace. */
 export interface HouseSeries {
@@ -37,7 +37,7 @@ const CHARTED: readonly { name: string; unit: string; of: (s: HouseSeries) => nu
 ];
 
 /** Where the house's air through a run is published, asked for as the
- * climate is, up to the moment drawn. */
+ * climate is, up to the moment drawn from the start of its day. */
 export function houseAirUrl(scenarioId: string, run: RunParts): string {
   return scenarioUrl(scenarioId, "climate/house", runParameters(run));
 }
@@ -93,7 +93,9 @@ export async function loadHouseAir(
 }
 
 function polyline(times: number[], values: number[], low: number, high: number): string {
-  const x = (seconds: number) => (seconds / CLIMATE_RUN_S) * WIDTH;
+  // Across the day of the trace's last moment, from its start.
+  const from = dayStart(times.at(-1) ?? 0);
+  const x = (seconds: number) => ((seconds - from) / DAY_S) * WIDTH;
   const y = (value: number) =>
     high === low ? HEIGHT / 2 : HEIGHT - ((value - low) / (high - low)) * HEIGHT;
   return times
@@ -105,8 +107,8 @@ function polyline(times: number[], values: number[], low: number, high: number):
 }
 
 /**
- * The house's air as one well-mixed volume through the climate run up to
- * the moment drawn, across the run's length: its temperature, humidity and
+ * The house's air as one well-mixed volume through the moment's day up to
+ * the moment drawn, across the day: its temperature, humidity and
  * CO₂, each from its least to its most, the run with everything off dashed
  * beside it.
  */
@@ -141,7 +143,7 @@ export function HouseAir({ state }: { state: HouseAirState }) {
               viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
               preserveAspectRatio="none"
               role="img"
-              aria-label={`The house's ${name.toLowerCase()} through the run`}
+              aria-label={`The house's ${name.toLowerCase()} through the day`}
             >
               <polyline
                 className="house-air-off"
