@@ -52,7 +52,7 @@ const FRESHNESS_STATES: readonly string[] = ["waiting", "fresh", "stale", "unava
 const POSE_NUMBERS = ["x_m", "y_m", "z_m", "qw", "qx", "qy", "qz"] as const;
 
 /** What a sensor truly sampled at each of its moments, in seconds from the
- * run's start: for QA only. */
+ * run's start: for QA only, asked for in QA mode alone. */
 export interface SensorTruth {
   sensor_id: string;
   observation_type: string;
@@ -62,8 +62,8 @@ export interface SensorTruth {
 }
 
 /** A run's observation log up to a moment, what its sensors observed, each
- * one's freshness and its cameras' frames; and, for QA, what they truly
- * sampled. */
+ * one's freshness and its cameras' frames; and, in QA mode, what they truly
+ * sampled, none otherwise. */
 export interface SensorReadings {
   runId: string;
   /** When the run started, as an instant. */
@@ -154,36 +154,38 @@ function isTruth(value: unknown): value is SensorTruth {
 }
 
 /** A run's sensors' logs, as the viewer asks for them: a scenario's, under
- * a run's changes. */
+ * a run's changes, with what its sensors truly sampled only if `truth` is
+ * asked for, in QA mode (P09.6). */
 export interface SensorsRequest {
   scenarioId: string;
   run: RunChanges;
+  truth: boolean;
 }
 
 /** What names a request for a run's sensors' logs: the observations'
- * address, which holds every change it asks for. */
-export function sensorsKey({ scenarioId, run }: SensorsRequest): string {
-  return sensorsUrl(scenarioId, "observations", run);
+ * address, which holds every change it asks for, and whether the truth is
+ * asked for beside them. */
+export function sensorsKey({ scenarioId, run, truth }: SensorsRequest): string {
+  return `${sensorsUrl(scenarioId, "observations", run)}${truth ? " with its truth" : ""}`;
 }
 
-/** Fetches a run's sensors' observations and their truth; every failure
- * becomes a state. */
+/** Fetches a run's sensors' observations, and their truth only if asked
+ * for; every failure becomes a state. */
 export async function loadSensorReadings(
-  { scenarioId, run }: SensorsRequest,
+  { scenarioId, run, truth: withTruth }: SensorsRequest,
   fetchFn: typeof fetch = fetch,
 ): Promise<SensorReadingsState> {
   try {
-    const [observed, truth] = await Promise.all(
-      (["observations", "truth"] as const).map((what) =>
-        fetchFn(sensorsUrl(scenarioId, what, run)),
-      ),
-    );
-    if (observed === undefined || truth === undefined || !observed.ok || !truth.ok) {
-      const status = observed?.ok ? truth?.status : observed?.status;
+    const [observed, truth] = await Promise.all([
+      fetchFn(sensorsUrl(scenarioId, "observations", run)),
+      withTruth ? fetchFn(sensorsUrl(scenarioId, "truth", run)) : null,
+    ]);
+    if (!observed.ok || (truth !== null && !truth.ok)) {
+      const status = observed.ok ? truth?.status : observed.status;
       return { status: "unavailable", reason: `the simulator API answered ${status}` };
     }
     const observations: unknown = await observed.json();
-    const truths: unknown = await truth.json();
+    const truths: unknown = truth === null ? { sensors: [] } : await truth.json();
     if (
       !isObject(observations) ||
       !Array.isArray(observations.observations) ||

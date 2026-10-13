@@ -6,8 +6,9 @@ import { aheadAt, cameraText, pointAtPixel, shownDepth } from "./cameraView";
 import { selectAt } from "./view";
 
 // P06's final QA, in the sensor lab: still air warming 0.5 °C a metre along
-// the house from 16 °C at its front, ten minutes into a run.
-const LAB_RUN = "/?scenario=sensor_lab&field=gradient&t=600";
+// the house from 16 °C at its front, ten minutes into a run; in QA mode,
+// which alone shows the truth (P09.6).
+const LAB_RUN = "/?scenario=sensor_lab&field=gradient&t=600&qa=1";
 
 // A point on each thermometer's face, and a pose 1.5 m from it.
 function facing(x: number, y: number, side: 1 | -1): { face: Point; pose: CameraPose } {

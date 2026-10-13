@@ -7,6 +7,7 @@ import {
   difference,
   MAX_PROBES,
   middleOf,
+  probeValue,
   type Reading,
   readingAt,
   type ScalarQuantity,
@@ -18,16 +19,6 @@ const NO_FIELD = "";
 // A probe's coordinates, and the height clicks place probes at, move in
 // steps of this many metres.
 const PROBE_STEP_M = 0.05;
-
-// Probes' values are read to hundredths, every one alike.
-const PROBE_DECIMALS = 2;
-
-/** A probe's value to hundredths, a negative one that rounds to nothing
- * without its sign. */
-export function probeValue(value: number): string {
-  const text = value.toFixed(PROBE_DECIMALS);
-  return Number(text) === 0 ? (0).toFixed(PROBE_DECIMALS) : text;
-}
 
 function signed(value: number): string {
   const text = probeValue(value);

@@ -38,10 +38,11 @@ import { cropPlantUrl, cropUrl, loadCropPlant, ORGAN_CROP, withCrop } from "./pl
 import type { GrowthSpeed } from "./plants/LabControls";
 import { LabPanels } from "./plants/LabPanels";
 import { type LabRun, PLANT_LAB_LAST_DAY, PLANT_LAB_POSE } from "./plants/lab";
-import { loadPlantsLight, plantsLightUrl } from "./plants/light";
+import { describePlantLight, loadPlantsLight, plantsLightUrl } from "./plants/light";
 import { plantNameOverlays } from "./plants/names";
 import { PlantDays } from "./plants/PlantDays";
 import { PlantLight } from "./plants/PlantLight";
+import { useQaMode } from "./qaMode/mode";
 import type { ViewSample } from "./readouts";
 import { ScenarioPanels } from "./ScenarioPanels";
 import { loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
@@ -88,6 +89,9 @@ const NO_OPENINGS: readonly string[] = [];
 
 export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [addressed, setAddressed] = useSource();
+  // Whether the viewer shows what the simulator knows and a policy never
+  // sees (P09.6): only QA mode asks for truth.
+  const [qaMode, setQaMode] = useQaMode();
   const scenarios = useLoad(SCENARIOS_URL, () => loadScenarios());
   // The scenario shown, as the list describes it: its weathers, its days
   // and its own daily commands.
@@ -115,7 +119,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // Whether a click places a probe, and how high.
   const [placingProbes, setPlacingProbes] = useState(false);
   const [playingClimate, setPlayingClimate] = useState(false);
-  // Whether sensors' readings are shown as they err, or as clean ones', for QA.
+  // Whether sensors' readings are shown as they err, or, in QA mode, as clean
+  // ones'.
   const [sensorsImperfect, setSensorsImperfect] = useState(true);
   const [probeHeight, setProbeHeight] = useState(DEFAULT_PROBE_HEIGHT_M);
   // A range the viewer chose for the field's colours, in place of its own.
@@ -307,9 +312,12 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const selectedPlant =
     selected === null ? null : selected.kind === "PLANT" ? selected.entity_id : plantOf(selected);
   // The light on the plants at the moment drawn, while a plant is selected
-  // in a climate run's view; the last stays on show until the next arrives.
+  // in a climate run's view, or in QA mode, which labels every plant with
+  // it; the last stays on show until the next arrives.
   const plantsLight = useLoad(
-    climate === null || selectedPlant === null ? null : plantsLightUrl(climate.scenarioId, climate),
+    climate === null || (selectedPlant === null && !qaMode)
+      ? null
+      : plantsLightUrl(climate.scenarioId, climate),
     loadPlantsLight,
   );
   // The plant selected in a crop grown organ by organ, as it stands at the
@@ -320,14 +328,16 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   );
   const selectedCamera = selected === null ? null : cameraOf(selected);
 
-  // The run's observation log up to the moment drawn, and what its sensors
-  // truly sampled, while a sensor or a camera is selected.
+  // The run's observation log up to the moment drawn, while a sensor or a
+  // camera is selected, and, in QA mode only, what its sensors truly
+  // sampled; as clean sensors would have made it, if QA mode asks.
   const sensorSelected = selected?.kind === "SENSOR" || selected?.kind === "CAMERA";
   const sensorRun = sensorSelected ? run : null;
+  const clean = qaMode && !sensorsImperfect;
   const sensorReadings = useLoad(
     sensorRun === null
       ? null
-      : { scenarioId: sensorRun.scenarioId, run: { ...sensorRun, clean: !sensorsImperfect } },
+      : { scenarioId: sensorRun.scenarioId, run: { ...sensorRun, clean }, truth: qaMode },
     loadSensorReadings,
     { key: sensorsKey },
   );
@@ -343,14 +353,19 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             levels: undefined,
             schedule: undefined,
             daily: [],
-            clean: !sensorsImperfect,
+            clean,
           },
+          truth: false,
         },
     loadSensorReadings,
     { key: sensorsKey },
   );
 
-  const showingNames = source.kind === "plants" && showPlantNames;
+  // Every plant's name, in the plant lab if asked for, and in a scenario's
+  // view in QA mode, with its day's light in a climate run's.
+  const showingNames =
+    (source.kind === "plants" && showPlantNames) || (source.kind === "scenario" && qaMode);
+  const lightOn = qaMode && plantsLight.status === "loaded" ? plantsLight.light : null;
   const probedField = field.status === "loaded" ? field.field : null;
   const outside = weather.status === "loaded" ? weather.weather : null;
   // A climate run's view is lit by the sun, and shows its path through the
@@ -362,32 +377,6 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     [sunlit, snapshot, outside],
   );
   const sunsDay = sunlit && weatherDay.status === "loaded" ? weatherDay.day : null;
-  const overlays = useMemo(
-    () => [
-      ...(selected === null ? [] : selectionOverlays(selected, overlayToggles)),
-      ...(snapshot !== null && showDimensions ? sceneDimensionOverlays(snapshot) : []),
-      ...(snapshot !== null && showingNames ? plantNameOverlays(snapshot) : []),
-      ...(probedField === null ? [] : probeOverlays(probes, probedField)),
-      ...(snapshot === null ? [] : frustumOverlays(snapshot)),
-      ...(snapshot === null || outside === null ? [] : windOverlays(snapshot, outside)),
-      ...(snapshot === null || outside === null ? [] : sunOverlays(snapshot, outside)),
-      ...(snapshot === null || sunsDay === null ? [] : sunPathOverlays(snapshot, sunsDay)),
-      ...(snapshot === null || flowing === null ? [] : openingFlowOverlays(snapshot, flowing)),
-    ],
-    [
-      selected,
-      overlayToggles,
-      snapshot,
-      showDimensions,
-      showingNames,
-      probes,
-      probedField,
-      outside,
-      sunsDay,
-      flowing,
-    ],
-  );
-
   // Playing, the lab moves on a day once the day asked for is on show, at
   // most as fast as its speed, and stops on its last day.
   const labDay = source.kind === "plants" ? source.day : null;
@@ -434,6 +423,41 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     [fieldView, loadedField, askedSlice],
   );
   const scaleQuantity = fieldSlice === null ? "speed" : fieldSlice.quantity;
+  const overlays = useMemo(
+    () => [
+      ...(selected === null ? [] : selectionOverlays(selected, overlayToggles)),
+      ...(snapshot !== null && showDimensions ? sceneDimensionOverlays(snapshot) : []),
+      ...(snapshot !== null && showingNames
+        ? plantNameOverlays(snapshot, (plantId) =>
+            lightOn === null ? null : (describePlantLight(lightOn, plantId)?.day ?? null),
+          )
+        : []),
+      ...(probedField === null
+        ? []
+        : probeOverlays(probes, probedField, qaMode ? scaleQuantity : null)),
+      ...(snapshot === null ? [] : frustumOverlays(snapshot)),
+      ...(snapshot === null || outside === null ? [] : windOverlays(snapshot, outside)),
+      ...(snapshot === null || outside === null ? [] : sunOverlays(snapshot, outside)),
+      ...(snapshot === null || sunsDay === null ? [] : sunPathOverlays(snapshot, sunsDay)),
+      ...(snapshot === null || flowing === null ? [] : openingFlowOverlays(snapshot, flowing)),
+    ],
+    [
+      selected,
+      overlayToggles,
+      snapshot,
+      showDimensions,
+      showingNames,
+      lightOn,
+      probes,
+      probedField,
+      qaMode,
+      scaleQuantity,
+      outside,
+      sunsDay,
+      flowing,
+    ],
+  );
+
   const fieldScale = useMemo(
     () => (loadedField === null ? null : quantityScale(loadedField, scaleQuantity)),
     [loadedField, scaleQuantity],
@@ -509,6 +533,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 onShowDimensions={setShowDimensions}
                 byCategory={byCategory}
                 onByCategory={setByCategory}
+                qaMode={qaMode}
+                onQaMode={setQaMode}
               />
             )}
             {source.kind === "scenario" && (
@@ -576,6 +602,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                   state={sensorReadings}
                   allOff={offReadings}
                   until={moment}
+                  qa={qaMode}
                   imperfect={sensorsImperfect}
                   onImperfect={setSensorsImperfect}
                 />

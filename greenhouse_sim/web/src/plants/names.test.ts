@@ -41,4 +41,26 @@ describe("the plants' names", () => {
     });
     expect(labels[1]?.kind === "label" && labels[1].position.x).toBe(0.5);
   });
+
+  it("float over a plant drawn whole, above its stem's top, with more if given", () => {
+    const stem: SceneEntity = {
+      ...part("box_plant_001", null, 2, 0.6),
+      kind: "PLANT",
+      shape: { shape: "cylinder", radius: 0.02, height: 0.2 },
+    };
+    const labels = plantNameOverlays({ ...ROW, entities: [...ROW.entities, stem] }, (plantId) =>
+      plantId === "p02" ? null : "24.3 mol/m²/d",
+    ).filter((overlay) => overlay.kind === "label");
+
+    expect(labels.map((label) => label.kind === "label" && label.text)).toEqual([
+      "p01 24.3 mol/m²/d",
+      "p02",
+      "box_plant_001 24.3 mol/m²/d",
+    ]);
+    expect(labels[2]?.kind === "label" && labels[2].position).toEqual({
+      x: 2,
+      y: 0,
+      z: expect.closeTo(1),
+    });
+  });
 });

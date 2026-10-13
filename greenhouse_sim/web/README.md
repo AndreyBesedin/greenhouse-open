@@ -155,6 +155,14 @@ For QA, its sliders override the sky's cloud cover (`&clouds=80`) and the
 wind's direction, the bearing it blows from (`&wind=90`), keeping the rest of
 the weather its own; the API takes them in the weather's name
 (`weather=default@80~90`).
+"QA mode", in the display options (`&qa=1`, kept through every change of
+view), shows what the simulator knows and a policy never sees, and only it
+asks for truth (`GET /api/scenarios/{id}/climate/truth`): a selected
+sensor's truth beside its readings, with a switch to read it as a clean
+sensor would; every plant in a scenario labelled with its identifier, and
+its day's light in a climate run; and each probe's value of the quantity
+drawn beside its name. Out of it, a selected sensor shows its readings
+alone.
 The inspector says what the selected entity is in words, and names its
 dimensions. In a climate run's view, a selected plant, or any part of one,
 shows its light: its PAR at the moment drawn and its day's light integral

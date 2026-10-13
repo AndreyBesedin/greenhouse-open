@@ -18,9 +18,9 @@ const WIDTH = 240;
 const HEIGHT = 70;
 const DOT_RADIUS = 2;
 
-/** The truth as a line, and the readings as dots, across the moment's day
- * so far, the log's; and, dashed, what the sensor read through the same run
- * all off. */
+/** The readings as dots, across the moment's day so far, the log's, and,
+ * in QA mode, the truth as a line under them; and, dashed, what the sensor
+ * read through the same run all off. */
 function SensorChart({
   readings,
   allOff,
@@ -51,7 +51,7 @@ function SensorChart({
       className="sensor-chart"
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       role="img"
-      aria-label={`${sensorId} read against the truth, ${formatValue(range.min)} to ${formatValue(range.max)}`}
+      aria-label={`${sensorId} read${truth.length > 0 ? " against the truth" : ""}, ${formatValue(range.min)} to ${formatValue(range.max)}`}
       data-testid="sensor-chart"
     >
       {off.length > 0 && (
@@ -63,12 +63,15 @@ function SensorChart({
             .join(" ")}
         />
       )}
-      <polyline
-        className="sensor-chart-truth"
-        points={truth
-          .map(([time, value]) => `${x(time).toFixed(1)},${y(value).toFixed(1)}`)
-          .join(" ")}
-      />
+      {truth.length > 0 && (
+        <polyline
+          className="sensor-chart-truth"
+          data-testid="sensor-chart-truth"
+          points={truth
+            .map(([time, value]) => `${x(time).toFixed(1)},${y(value).toFixed(1)}`)
+            .join(" ")}
+        />
+      )}
       {observed.map(([time, value]) => (
         <circle
           key={time}
@@ -106,10 +109,11 @@ export function describeFreshness(
 
 /**
  * A selected sensor's latest reading at the moment drawn, whether it is
- * fresh, a chart of its readings against the truth through the run so far,
- * beside what it read through the same run all off, and, apart, in a panel
- * marked as QA's, what it truly sampled: the truth a policy never sees, and
- * a switch to see its readings as a clean sensor's.
+ * fresh, a chart of its readings through the run so far, beside what it
+ * read through the same run all off; and, in QA mode only (P09.6), the truth
+ * under its readings and, apart, in a panel marked as QA's, what it truly
+ * sampled: the truth a policy never sees, and a switch to see its readings
+ * as a clean sensor's.
  */
 export function SensorPanel({
   sensorId,
@@ -117,6 +121,7 @@ export function SensorPanel({
   state,
   allOff = { status: "none" },
   until,
+  qa,
   imperfect,
   onImperfect,
 }: {
@@ -127,6 +132,8 @@ export function SensorPanel({
   allOff?: SensorReadingsState;
   /** The moment drawn, in seconds into the run. */
   until: number;
+  /** Whether the viewer is in QA mode, which alone shows the truth. */
+  qa: boolean;
   /** Whether its readings are as it errs, or as a clean sensor's. */
   imperfect: boolean;
   onImperfect: (imperfect: boolean) => void;
@@ -183,22 +190,24 @@ export function SensorPanel({
           )}`}
         </p>
       )}
-      <aside className="sensor-truth" aria-label="Truth, for QA only">
-        <span>Truth, for QA only:</span>{" "}
-        <span data-testid="sensor-truth">
-          {truth === undefined || truth.value === null
-            ? "none"
-            : `${formatValue(truth.value)} ${truth.unit} at ${describeTime(truth.timeS)}`}
-        </span>
-        <label>
-          <input
-            type="checkbox"
-            checked={imperfect}
-            onChange={(event) => onImperfect(event.target.checked)}
-          />{" "}
-          Imperfections
-        </label>
-      </aside>
+      {qa && (
+        <aside className="sensor-truth" aria-label="Truth, for QA only">
+          <span>Truth, for QA only:</span>{" "}
+          <span data-testid="sensor-truth">
+            {truth === undefined || truth.value === null
+              ? "none"
+              : `${formatValue(truth.value)} ${truth.unit} at ${describeTime(truth.timeS)}`}
+          </span>
+          <label>
+            <input
+              type="checkbox"
+              checked={imperfect}
+              onChange={(event) => onImperfect(event.target.checked)}
+            />{" "}
+            Imperfections
+          </label>
+        </aside>
+      )}
     </section>
   );
 }
