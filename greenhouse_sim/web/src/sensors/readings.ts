@@ -114,7 +114,7 @@ function isObservation(value: unknown): value is SensorObservation {
   );
 }
 
-function isFreshness(value: unknown): value is SensorFreshness {
+export function isFreshness(value: unknown): value is SensorFreshness {
   return (
     isObject(value) &&
     typeof value.sensor_id === "string" &&
@@ -129,7 +129,7 @@ function isPose(value: unknown): value is CameraPose {
   return isObject(value) && POSE_NUMBERS.every((name) => typeof value[name] === "number");
 }
 
-function isFrame(value: unknown): value is CameraFrame {
+export function isFrame(value: unknown): value is CameraFrame {
   return (
     isObject(value) &&
     typeof value.frame_id === "string" &&

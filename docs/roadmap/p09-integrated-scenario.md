@@ -278,7 +278,7 @@ run in their own Playwright project, as the plant lab's and the sun's do.
 | P09.3 | `feat(coupling): connect radiation/weather/climate to plant environment` | Done |
 | P09.4 | `feat(coupling): connect actuators weather and vents to sensor observations` | Done |
 | P09.5 | `feat(replay): add checkpoint reset branch and replay` | Done |
-| P09.6 | `feat(qa): add QA mode with truth overlays` | In progress |
+| P09.6 | `feat(qa): add QA mode with truth overlays` | Done |
 | P09.7 | `test(e2e): add integrated visual regression suite` | Planned |
 | P09.8 | `perf(sim): add representative performance benchmark` | Planned |
 | P09.9 | `docs(release): document local demo and QA protocol` | Planned |
@@ -716,6 +716,22 @@ shows the versions served.
   drawn and both versions and commits, the simulator's as it serves them
   and the viewer's as it was built, and warns when both commits are known
   and differ. Browser test: the panel shows what `/api/version` serves.
+- **The developer panel** (`GET /api/scenarios/{id}/climate/state`,
+  `services/run_state.py`), first in QA mode's panel: what each process of
+  the scenario's run drawn holds at its moment, each part read from its own
+  service, not from another process's internals: the clock (the moment, its
+  instant and the run's identity); the house's air as one volume, or none
+  without equipment; the crop, its model, its plants and its last day
+  lived; each piece of equipment's level and how far each door and vent
+  stands open; how many commands the run has given and the latest five;
+  each sensor's freshness, a stale one marked; and each camera's frames and
+  its latest. The sensors' freshness and the cameras' frames come from the
+  same functions as the observation log's (`sensors_at`), without working
+  out the log, which samples the house's whole field every minute (40 s a
+  day for the reference run). On the reference run's opening day, at noon,
+  it answers in about 1 s, then 0.15 s an hour later. Browser test: twenty
+  minutes into the climate box's heated run the back sensor is marked
+  stale, and a minute later it is not.
 
 ### P09.7: Integrated visual regression
 

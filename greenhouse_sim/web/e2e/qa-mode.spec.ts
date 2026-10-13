@@ -133,3 +133,40 @@ test("QA mode: the run's manifest says what it is made from, and the versions se
   await page.getByRole("checkbox", { name: "QA mode" }).uncheck();
   await expect(panel).toHaveCount(0);
 });
+
+test("QA mode: the developer panel says what each process holds at the moment", async ({
+  page,
+}) => {
+  // Twenty minutes into the heated run, the back sensor's sample at 19 min
+  // has dropped out (sensors.spec.ts): it is stale until the next comes.
+  await page.goto("/?scenario=climate_box&set=heater:1&field=climate&t=1200&qa=1");
+  await expect(page.getByTestId("climate-time")).toHaveText("20 min", { timeout: 20_000 });
+  const panel = page.getByRole("region", { name: "QA mode" });
+  await expect(panel.getByTestId("developer-clock")).toHaveText(
+    /^20 min \(2025-12-31 23:20 UTC\), run climate_box-climate-[0-9a-f]{8}$/,
+    { timeout: 20_000 },
+  );
+  await expect(panel.getByTestId("developer-house-air")).toHaveText(
+    /^\d+(\.\d+)? °C, \d+(\.\d+)?%, 420 ppm$/,
+  );
+  await expect(panel.getByTestId("developer-crop")).toHaveText(
+    "32 plants, the simple daily model; no day lived yet",
+  );
+  await expect(panel.getByTestId("developer-levels")).toContainText("heater 100%");
+  await expect(panel.getByTestId("developer-commands")).toContainText("1 given, the latest:");
+  await expect(panel.getByTestId("developer-latest-commands")).toHaveText("0 min: heater 100%");
+  const stale = panel.getByTestId("developer-sensors").locator("li.stale");
+  await expect(stale).toHaveText(["temperature_back: stale, latest 18 min"]);
+  // A frame a minute from the start.
+  await expect(panel.getByTestId("developer-cameras")).toHaveText(
+    "front_camera: 21 frames, latest 20 min",
+  );
+
+  // A minute on, its reading has come.
+  await page.getByRole("slider", { name: "Time of day" }).fill("1260");
+  await expect(panel.getByTestId("developer-clock")).toHaveText(/^21 min /, { timeout: 20_000 });
+  await expect(stale).toHaveCount(0);
+  await expect(panel.getByTestId("developer-cameras")).toHaveText(
+    "front_camera: 22 frames, latest 21 min",
+  );
+});
