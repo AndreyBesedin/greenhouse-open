@@ -761,7 +761,11 @@ views' screenshots. Tests: the screenshots, and the probes' values.
   RGB and depth (`CameraView` opened on a pass, at its own width); a slice
   of the air's speed along the right fan's jet; and a slice of the light in
   the canopy. Each says its moment's probes under its caption, so that they
-  are drawn into its screenshot too.
+  are drawn into its screenshot too. It draws only when something changes
+  (`frameloop="demand"`), not every frame: drawn in software, some 13,000
+  organs a frame left CI's screenshots too little time, and one came out
+  blank while they settled. A label, and the camera's rig, ask for the frame
+  they need, and a label is placed with the camera as it stands that frame.
 - **The probes:** the house's air, the sun's elevation, the air's speed in
   the right fan's jet at the anemometer, what the vents exchange, and the
   crop's leaves, fruits and red fruits. At noon on day 80 the house is at

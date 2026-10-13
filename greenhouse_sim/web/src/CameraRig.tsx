@@ -6,7 +6,8 @@ import { CAMERA_PRESETS, type CameraPose, DEFAULT_PRESET, type PresetRequest } f
 import { worldToViewer } from "./world";
 
 /** Orbit, pan and zoom with the mouse, starting from the default preset or a
- * given pose, and moving to any preset that is requested. */
+ * given pose, and moving to any preset that is requested; each move asks for
+ * a frame, so that a view drawn only on demand follows it. */
 export function CameraRig({
   request,
   initialPose = null,
@@ -16,23 +17,29 @@ export function CameraRig({
 }) {
   const camera = useThree((state) => state.camera);
   const domElement = useThree((state) => state.gl.domElement);
+  const invalidate = useThree((state) => state.invalidate);
   const controls = useRef<OrbitControls | null>(null);
 
   useEffect(() => {
     const orbit = new OrbitControls(camera, domElement);
+    const redraw = () => invalidate();
+    orbit.addEventListener("change", redraw);
     controls.current = orbit;
     moveTo(orbit, initialPose ?? CAMERA_PRESETS[DEFAULT_PRESET]);
+    invalidate();
     return () => {
+      orbit.removeEventListener("change", redraw);
       orbit.dispose();
       controls.current = null;
     };
-  }, [camera, domElement, initialPose]);
+  }, [camera, domElement, initialPose, invalidate]);
 
   useEffect(() => {
     if (request !== null && controls.current !== null) {
       moveTo(controls.current, CAMERA_PRESETS[request.preset]);
+      invalidate();
     }
-  }, [request]);
+  }, [request, invalidate]);
 
   return null;
 }
