@@ -22,6 +22,8 @@ import {
   withLevels,
   withOpenings,
   withoutCommand,
+  withoutDaily,
+  withRepeated,
   withSlice,
   withTime,
   withWeather,
@@ -155,9 +157,12 @@ export function ScenarioPanels({
       {climate && (
         <ClimateSchedule
           schedule={source.schedule ?? []}
+          daily={source.daily ?? []}
           time={time}
           onTime={setTime}
           onRemove={(index) => onSource(withoutCommand(source, index))}
+          onRepeat={(index) => onSource(withRepeated(source, index))}
+          onRemoveDaily={(index) => onSource(withoutDaily(source, index))}
         />
       )}
       <WeatherPanel

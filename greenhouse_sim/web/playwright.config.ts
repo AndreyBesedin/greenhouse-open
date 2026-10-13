@@ -22,6 +22,9 @@ const WEATHER_DAY = "weather-day.spec.ts";
 // P08's checks of the sun's light work climate runs out to noon, so they too
 // run on their own, after the plant lab, and P07's after them.
 const SUN = ["light.spec.ts", "solar-lab.spec.ts", "solar-day.spec.ts"];
+// P09's checks through a run's days work a climate run on each day they
+// visit, so they run on their own, last.
+const SEASON = ["season.spec.ts", "daily-schedule.spec.ts"];
 
 export default defineConfig({
   testDir: "e2e",
@@ -32,7 +35,7 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testIgnore: [...ELSEWHERE, RENDERER_SMOKE, PLANT_LAB, WEATHER_DAY, ...SUN],
+      testIgnore: [...ELSEWHERE, RENDERER_SMOKE, PLANT_LAB, WEATHER_DAY, ...SUN, ...SEASON],
       use: { ...devices["Desktop Chrome"] },
     },
     {
@@ -57,6 +60,12 @@ export default defineConfig({
       name: "weather-day",
       testMatch: WEATHER_DAY,
       dependencies: ["sun"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "season",
+      testMatch: SEASON,
+      dependencies: ["weather-day"],
       use: { ...devices["Desktop Chrome"] },
     },
   ],

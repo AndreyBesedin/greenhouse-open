@@ -2,7 +2,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { DAY_S } from "../clock";
+import { runsSomething, scenarioRun } from "../scene/run";
 import {
+  latestDaily,
   levelsAt,
   type ScheduledCommand,
   scheduleFrom,
@@ -11,6 +13,7 @@ import {
   sourceFromSearch,
   withOverride,
 } from "../scene/source";
+import { sensorsUrl } from "../sensors/readings";
 import { ClimateSchedule, describeCommand } from "./ClimateSchedule";
 import { fieldUrl } from "./source";
 
@@ -81,6 +84,76 @@ describe("a climate run's schedule", () => {
         <ClimateSchedule schedule={[]} time={0} onTime={ignore} onRemove={ignore} />,
       ),
     ).toBe("");
+  });
+
+  it("is kept in the address with its daily commands, and asked of the climate with them", () => {
+    const source = sourceFromSearch(
+      "?scenario=climate_box&field=climate&t=600&schedule=60:fan:1&daily=64800:heater:1",
+    );
+
+    expect(source).toMatchObject({ daily: [{ timeS: 64800, actuatorId: "heater", level: 1 }] });
+    expect(searchFor(source)).toBe(
+      "?scenario=climate_box&field=climate&t=600&schedule=60:fan:1&daily=64800:heater:1",
+    );
+    expect(sourceFromSearch("?scenario=climate_box&daily=64800:heater:1")).toEqual({
+      kind: "scenario",
+      scenarioId: "climate_box",
+    });
+    if (source.kind === "scenario") {
+      expect(fieldUrl("climate_box", "climate", scenarioRun(source))).toBe(
+        "/api/scenarios/climate_box/fields/climate?schedule=60:fan:1&daily=64800:heater:1&t=600",
+      );
+      expect(sensorsUrl("climate_box", "truth", scenarioRun(source))).toBe(
+        "/api/scenarios/climate_box/climate/truth?schedule=60:fan:1&daily=64800:heater:1&t=600",
+      );
+      expect(runsSomething({ daily: source.daily })).toBe(true);
+    }
+  });
+
+  it("sets the levels its daily commands set, each at its latest moment", () => {
+    const evenings = {
+      daily: [
+        { timeS: 64800, actuatorId: "heater", level: 1 },
+        { timeS: 79200, actuatorId: "heater", level: 0 },
+      ],
+    };
+
+    expect(levelsAt({ ...evenings, time: 600 })).toEqual({});
+    expect(levelsAt({ ...evenings, time: 72000 })).toEqual({ heater: 1 });
+    expect(levelsAt({ ...evenings, time: DAY_S + 600 })).toEqual({ heater: 0 });
+    expect(levelsAt({ ...evenings, time: DAY_S + 72000 })).toEqual({ heater: 1 });
+    // A command for a moment overrides the day's then.
+    const overridden = {
+      ...evenings,
+      schedule: [{ timeS: 64800, actuatorId: "heater", level: 0 }],
+    };
+    expect(levelsAt({ ...overridden, time: 72000 })).toEqual({ heater: 0 });
+    expect(levelsAt({ ...overridden, time: DAY_S + 72000 })).toEqual({ heater: 1 });
+    expect(latestDaily({ timeS: 64800, actuatorId: "heater", level: 1 }, 2 * DAY_S)).toBe(
+      DAY_S + 64800,
+    );
+  });
+
+  it("lists its daily commands, each marked on every day, to go to or take out", () => {
+    const html = renderToStaticMarkup(
+      <ClimateSchedule
+        schedule={[{ timeS: DAY_S + 600, actuatorId: "fan", level: 1 }]}
+        daily={[{ timeS: 64800, actuatorId: "heater", level: 1 }]}
+        time={DAY_S + 43_200}
+        onTime={ignore}
+        onRemove={ignore}
+        onRepeat={ignore}
+        onRemoveDaily={ignore}
+      />,
+    );
+
+    expect(html.match(/data-testid="daily-command"/g)).toHaveLength(1);
+    expect(html).toContain('aria-label="Go to heater 100% every day at 18 h 00 min"');
+    expect(html).toContain('aria-label="Remove heater 100% every day at 18 h 00 min"');
+    expect(html).toContain('aria-label="Repeat fan 100% at day 1, 10 min every day"');
+    // Today's evening is still to come; the fan's command has come.
+    expect(html).toContain('class="to-come daily" style="left:75%"');
+    expect(html.match(/data-testid="schedule-marker"/g)).toHaveLength(2);
   });
 
   it("marks on its bar only the moment's day's commands, across that day", () => {

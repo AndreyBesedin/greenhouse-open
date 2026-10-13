@@ -95,10 +95,14 @@ slice a dehumidifier drying the air around it
 follows the Openings sliders too: an open door or vent passes what the wind
 and the stack drive through it (`GET /api/scenarios/{id}/climate/openings`),
 marked by an arrow in or out, and shows its draught. A run can switch its equipment on
-its own (`&schedule=60:fan:1,300:heater:0`, seconds:actuator:level), and
+its own (`&schedule=60:fan:1,300:heater:0`, seconds:actuator:level), or
+every day at a time of day (`&daily=64800:heater:1,79200:heater:0`, the
+heater on every evening from 18 h to 22 h), and
 equipment switched while the run stands past its start is an override from
-that moment. "Schedule" lists the commands under the time sliders, the
-moment's day's marked on a bar over it, each to go to or take out; the Equipment panel and the
+that moment, which a daily command at the same moment gives way to.
+"Schedule" lists the commands under the time sliders, the moment's day's
+marked on a bar over it, a daily one's square, each to go to or take out,
+and a command for one moment to repeat every day (↻); the Equipment panel and the
 scene show the levels at the moment drawn. With probes placed, "Probe
 charts" draws each probe's temperature, relative humidity and air speed
 through the run up to the moment drawn, beside the same run with all its

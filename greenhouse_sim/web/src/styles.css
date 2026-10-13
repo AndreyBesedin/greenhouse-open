@@ -474,6 +474,11 @@ body {
   background: #333333;
 }
 
+/* A daily command's marker is square, as it comes back every day. */
+.climate-schedule-bar span.daily {
+  border-radius: 1px;
+}
+
 .climate-schedule ol {
   margin: 0;
   padding-left: 1.5em;

@@ -83,6 +83,7 @@ def observations(
     until_s: float = 0.0,
     clean: bool = False,
     weather: str | None = None,
+    daily: Sequence[Commanded] = (),
     from_s: float | None = None,
 ) -> SensorObservations:
     """A run's observation log from `from_s`, by default the start of the
@@ -91,7 +92,9 @@ def observations(
     is its own at `until_s`, whatever it delivered before the log begins."""
     first = checked_window(scenario(scenario_id), from_s, until_s)
     name = layout or DEFAULT_LAYOUT
-    air_at, run_id = air_through_a_run(scenario_id, name, levels, openings, commands, weather)
+    air_at, run_id = air_through_a_run(
+        scenario_id, name, levels, openings, commands, weather, daily
+    )
     weather_at = _weather_at(scenario_id, weather)
     start = run_start(scenario_id)
     greenhouse_id = scenario(scenario_id).greenhouse_id
@@ -143,6 +146,7 @@ def truth(
     commands: Sequence[Commanded] = (),
     until_s: float = 0.0,
     weather: str | None = None,
+    daily: Sequence[Commanded] = (),
     from_s: float | None = None,
 ) -> SensorTruths:
     """What a scenario's point sensors truly sampled from `from_s`, by
@@ -150,7 +154,9 @@ def truth(
     run: for evaluation and QA only."""
     first = checked_window(scenario(scenario_id), from_s, until_s)
     name = layout or DEFAULT_LAYOUT
-    air_at, run_id = air_through_a_run(scenario_id, name, levels, openings, commands, weather)
+    air_at, run_id = air_through_a_run(
+        scenario_id, name, levels, openings, commands, weather, daily
+    )
     return SensorTruths(
         run_id=run_id,
         sensors=sensor_truth(

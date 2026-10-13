@@ -33,6 +33,8 @@ check; a route that comes to need one checks it first.
                                           ?set=fan:1 with its equipment
                                           running, &schedule=60:fan:1,300:fan:0
                                           switching it at those moments,
+                                          &daily=64800:heater:1 every day at
+                                          that time of day,
                                           &open=roof_vent:1 with its vents
                                           open, and &t=600 that many seconds
                                           into the run, to its last day's end,
@@ -194,6 +196,7 @@ def respond(method: str, path: str) -> Response:
                     _seconds(query),
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
+                    daily=_commands(query.get("daily", []), "daily"),
                     weather=_last(query, "weather"),
                 )
             )
@@ -208,6 +211,7 @@ def respond(method: str, path: str) -> Response:
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
                     _seconds(query),
+                    daily=_commands(query.get("daily", []), "daily"),
                     weather=_last(query, "weather"),
                 )
             )
@@ -220,6 +224,7 @@ def respond(method: str, path: str) -> Response:
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
                     _seconds(query),
+                    daily=_commands(query.get("daily", []), "daily"),
                     weather=_last(query, "weather"),
                     from_s=_since(query),
                 )
@@ -233,6 +238,7 @@ def respond(method: str, path: str) -> Response:
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
                     _seconds(query),
+                    daily=_commands(query.get("daily", []), "daily"),
                     weather=_last(query, "weather"),
                 )
             )
@@ -245,6 +251,7 @@ def respond(method: str, path: str) -> Response:
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
                     _seconds(query),
+                    daily=_commands(query.get("daily", []), "daily"),
                     weather=_last(query, "weather"),
                 )
             )
@@ -266,6 +273,7 @@ def respond(method: str, path: str) -> Response:
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
                     _seconds(query),
+                    daily=_commands(query.get("daily", []), "daily"),
                     clean=_last(query, "clean") == "1",
                     weather=_last(query, "weather"),
                     from_s=_since(query),
@@ -280,6 +288,7 @@ def respond(method: str, path: str) -> Response:
                     _pairs(query.get("open", []), "open"),
                     _commands(query.get("schedule", [])),
                     _seconds(query),
+                    daily=_commands(query.get("daily", []), "daily"),
                     weather=_last(query, "weather"),
                     from_s=_since(query),
                 )
@@ -397,8 +406,9 @@ def _pairs(requests: list[str], name: str) -> dict[str, float]:
     return pairs
 
 
-def _commands(requests: list[str]) -> list[tuple[float, str, float]]:
-    """`schedule=seconds:actuator:level,…` as commands, in the order given."""
+def _commands(requests: list[str], name: str = "schedule") -> list[tuple[float, str, float]]:
+    """`schedule=seconds:actuator:level,…` as commands, in the order given;
+    or `daily=`, at those seconds into each day."""
     commands = []
     for request in ",".join(requests).split(","):
         if not request:
@@ -409,7 +419,7 @@ def _commands(requests: list[str]) -> list[tuple[float, str, float]]:
             commands.append((float(time), actuator, float(level)))
         except ValueError:
             raise InvalidRequest(
-                f"schedule wants seconds:actuator:level commands, not {request!r}"
+                f"{name} wants seconds:actuator:level commands, not {request!r}"
             ) from None
     return commands
 
