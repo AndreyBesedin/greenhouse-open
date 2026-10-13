@@ -1,0 +1,104 @@
+# Dependency updates (decision 0033). Dependabot checks every weekday and
+# opens pull requests for what it finds. A minor or patch update that
+# changes no code merges by itself once every required check has passed
+# (.github/workflows/dependabot-auto-merge.yml); the rest wait for a review.
+# What has to move together is grouped here, or noted where Dependabot
+# cannot group it. Commit messages follow Conventional Commits (decision
+# 0002): `build` for packages, `ci` for workflows and hooks.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /greenhouse_sim/web
+    schedule:
+      interval: daily
+    # A release is proposed once it is three days old, so that one found
+    # compromised is usually withdrawn first.
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: build
+      include: scope
+    ignore:
+      # @types/node follows the viewer's Node, 24 (decision 0008).
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
+    # A dependency joins the first group it matches.
+    groups:
+      # Vitest and its coverage plugin run only at the same version.
+      vitest:
+        patterns: [vitest, "@vitest/*"]
+      # three's types follow its releases, which are below 1.0: any of them
+      # may break, and none merges by itself.
+      three:
+        patterns: [three, "@types/three"]
+      # The visual checks run in a container image of the same version, in
+      # ci.yml, which Dependabot does not move: until the image is moved by
+      # hand, its pull request fails them. Alone, so that it holds up no
+      # other update.
+      playwright:
+        patterns: ["@playwright/test"]
+      npm-minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  # The development tools, pinned.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: daily
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      # ruff is below 1.0, and pinned twice: here and as its pre-commit
+      # hook's `rev`, which the pre-commit entry below updates in a pull
+      # request of its own. The two are merged together.
+      ruff:
+        patterns: [ruff]
+      dev-tools-minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  # The packages' runtime dependencies: ranges a user may install them with,
+  # moved only when a release falls outside them.
+  - package-ecosystem: pip
+    directories: [/greenhouse_protocol, /greenhouse_sim, /greenhouse_adapters]
+    schedule:
+      interval: daily
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: build
+      include: scope
+    versioning-strategy: increase-if-necessary
+    ignore:
+      # The packages' bound on each other moves with their own releases. It
+      # is not on PyPI: a package of that name there would be someone
+      # else's.
+      - dependency-name: greenhouse-protocol
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      actions-minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: pre-commit
+    directory: /
+    schedule:
+      interval: daily
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: ci
+      include: scope

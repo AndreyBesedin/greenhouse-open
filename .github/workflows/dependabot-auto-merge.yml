@@ -1,0 +1,61 @@
+name: Dependabot auto-merge
+
+# A minor or patch update that changes no code merges by itself once every
+# required check has passed (decision 0033). This turns GitHub's auto-merge
+# on for such an update, and off for one that stops being one, such as a
+# pull request someone else has pushed to. GitHub merges it when the
+# required checks pass; the ruleset of `main` lists them.
+#
+# It runs on pull_request_target, from `main`: Dependabot's pull_request
+# runs get a read-only token, which cannot turn auto-merge on. Nothing of
+# the pull request's own is checked out or run here.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: dependabot-auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  auto-merge:
+    name: Dependabot auto-merge
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # `main`, pull_request_target's own ref, for the deciding script.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      # Reports nothing, and fails, unless every commit is Dependabot's own,
+      # verified: the decision then waits for a review. Pinned by commit, as
+      # it runs with a token that can merge.
+      - name: Read the update
+        id: metadata
+        continue-on-error: true
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+
+      - name: Turn auto-merge on or off
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          ACTOR: ${{ github.actor }}
+          DEPENDENCIES: ${{ steps.metadata.outputs.updated-dependencies-json }}
+        run: |
+          gh pr diff --name-only "$PR_URL" > "$RUNNER_TEMP/files.txt"
+          if python scripts/dependabot_auto_merge.py --actor "$ACTOR" \
+              --dependencies "$DEPENDENCIES" --files "$RUNNER_TEMP/files.txt"; then
+            gh pr merge --auto --merge "$PR_URL"
+          elif [ "$(gh pr view "$PR_URL" --json autoMergeRequest -q '.autoMergeRequest != null')" = true ]; then
+            gh pr merge --disable-auto "$PR_URL"
+          fi

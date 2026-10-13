@@ -113,16 +113,15 @@ adds a visible or measurable result.
 A project's document is added when its first pull request lands.
 
 **Dependabot** (recorded 2026-10-13, first after P09, before the CI time
-and camera work below). No dependency is updated by a bot yet. A
-`.github/dependabot.yml` is to check every day, and open pull requests
-for the updates found, in:
+and camera work below; configured the same day, decision 0033).
+`.github/dependabot.yml` checks every weekday (Dependabot's `daily`), and
+opens pull requests for the updates found, in:
 
 - **npm:** the viewer's `greenhouse_sim/web/package.json` and its lockfile;
 - **pip:** the development tools pinned in `requirements-dev.txt`, and the
   three packages' `pyproject.toml`;
 - **GitHub Actions:** the actions `.github/workflows/` uses;
-- and the pre-commit hooks' `rev`s in `.pre-commit-config.yaml`, if
-  Dependabot's ecosystems reach them.
+- **pre-commit:** the hooks' `rev`s in `.pre-commit-config.yaml`.
 
 A pull request overtaken by a newer release is closed by Dependabot for the
 newer one. One that needs more than its version change is completed by
@@ -131,32 +130,33 @@ hand on its branch.
 **What merges by itself:** a minor or patch update that changes no code
 and passes every check, that is a pull request
 
-- whose commits are all Dependabot's, changing only dependency manifests
-  and lockfiles;
+- whose commits are all Dependabot's, the last push its own too,
+  changing only dependency manifests and lockfiles, and none of whose
+  dependencies' maintainers changed;
 - whose update Dependabot's metadata calls minor or patch; below 1.0, patch
   only, since there a minor release may break, as `three`'s do (0.186 to
   0.187);
 - whose required checks have all passed: CI's jobs, the visual checks and
   the risk gate.
 
-A workflow on Dependabot's pull requests reads the update's type
-(`dependabot/fetch-metadata`) and, when the first two hold, turns on
+A workflow on Dependabot's pull requests (`dependabot-auto-merge.yml`)
+reads the update (`dependabot/fetch-metadata`), decides with
+`scripts/dependabot_auto_merge.py` and, when the first two hold, turns on
 GitHub's auto-merge, which merges once the third holds too; a later push
 that breaks the first two turns it off again. Everything else waits for a
 review: majors, minor updates below 1.0, and whatever was completed by
 hand. As the risk gate stands, only npm's updates can merge by themselves:
 it asks for the review tick on every Actions, `pyproject.toml` and
 `requirements-dev.txt` change. Dependabot proposes a release only once it
-is a few days old (its `cooldown`), so that one found compromised is
+is three days old (its `cooldown`), so that one found compromised is
 usually withdrawn first.
 
-The repository's settings change for it. Auto-merge is allowed (it is off
-now). The `main protection` ruleset lists the required checks (it lists
-none, and auto-merge waits on required checks only: with none it merges
-at once). Its "Restrict updates", which lets only admins update `main`,
-either gives way to those checks or names the actor that merges as one
-that may: a merge turned on with the workflow's token is not an admin's.
-Admins bypass the ruleset as they do now.
+The repository's settings changed for it. Auto-merge is allowed. The
+`main protection` ruleset lists CI's checks as required: auto-merge waits
+on required checks only, and with none it would merge at once. Its
+"Restrict updates", which let only admins update `main`, gave way to those
+checks, since a merge turned on with the workflow's token is not an
+admin's. Admins bypass the ruleset as before.
 
 What the repository already ties together:
 
@@ -164,15 +164,20 @@ What the repository already ties together:
   group. So do `three` and `@types/three`.
 - **Playwright:** `@playwright/test` and the visual checks' container image,
   `mcr.microsoft.com/playwright:v1.63.0-noble-amd64` in `ci.yml`, are the
-  same version. If Dependabot does not move the image with the package, the
-  visual checks fail on its pull request until the image is moved by hand;
-  screenshots that then differ get new baselines from CI, as any do.
+  same version. Dependabot does not move the image: `@playwright/test`
+  comes in a pull request of its own, which fails the visual checks until
+  the image is moved by hand; screenshots that then differ get new
+  baselines from CI, as any do.
 - **ruff** is pinned twice, in `requirements-dev.txt` and as the pre-commit
-  hook's `rev`; the two move together.
+  hook's `rev`. The two come in two pull requests, ruff's alone in its
+  ecosystem's, and are merged together.
+- **`@types/node`** stays on the major of the viewer's Node, 24.
 - **The packages' runtime dependencies** are ranges, what a user may install
   them with (`pydantic>=2.9`, `numpy>=2.0`, `openpyxl>=3.1.5,<4.0.0`), not
-  pins: they widen when a release falls outside them, and a lower bound is
-  not raised for its own sake.
+  pins. A range changes only when a release falls outside it
+  (`increase-if-necessary`, which pip supports), as a major, reviewed; a
+  lower bound is not raised for its own sake. Their bound on each other,
+  `greenhouse-protocol`, is left to their own releases.
 
 The checks as they stand:
 
