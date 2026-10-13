@@ -19,6 +19,7 @@
     "e2e": "playwright test",
     "e2e:visual": "playwright test --config playwright.visual.config.ts",
     "bench": "playwright test --config playwright.bench.config.ts",
+    "demo:record": "DEMO_PAUSE_MS=1500 playwright test --config playwright.demo.config.ts",
     "preview": "vite preview"
   },
   "dependencies": {

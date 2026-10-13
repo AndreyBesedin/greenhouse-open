@@ -88,19 +88,27 @@ its tests and its golden views (`tests/test_reference_qa.py`).
    switches each; the field and the house's air follow, from the moment of
    the change. The heater warms its corner first; the dehumidifier dries
    the air around it.
-6. **A roof vent, and the wind.** The Openings sliders set how far each vent
-   stands open. Shut at noon, the vents leave the house at 38.5 °C against
-   29.5 °C open. "Weather" overrides the wind's direction (`&wind=90`) and
-   the sky's clouds (`&clouds=80`), the rest of the weather unchanged.
+6. **A roof vent, and the wind.** The schedule opens the roof vents by the
+   clock: shut until 9:00, half open, then fully from 11:00, and shut again
+   at 20:00. Shut at noon, the vents leave the house at 38.5 °C against
+   29.5 °C open (the golden views' `vents-closed` and `vents-open`). The
+   Openings sliders set how far a door or vent stands open from the run's
+   start: on a later day that is another house, its season worked out
+   afresh (see Troubleshooting). "Weather" overrides the wind's direction
+   (`&wind=90`) and the sky's clouds (`&clouds=80`), the rest of the
+   weather unchanged; that too is another run.
 7. **The sensors against QA mode's truth.** "QA mode", in the display
    options (`&qa=1`), alone asks the simulator for the truth: a selected
    sensor then charts its readings against what was truly there, and a
    switch reads it as a clean sensor. The back temperature sensor is
    biased, noisy and late; a dropped sample leaves it stale until the next
    comes. QA mode's "Developer" panel says what every process holds at the
-   moment, and labels every plant with its identifier and its day's light.
+   moment, and selects a sensor or a camera from its list, easier than in
+   the view once the crop is grown; QA mode also labels every plant with
+   its identifier and its day's light.
 8. **The fixed camera: RGB, depth and instance.** Select the camera over the
-   front path: its panel draws what it sees, with tabs for its depth and its
+   front path, or `path_camera` in the developer panel: its panel draws what
+   it sees, with tabs for its depth and its
    instance pass, and reads, under the pointer, what each pixel shows and
    how far ahead.
 9. **The crop, accelerated: its seeded variation, its fruit ripening.**
@@ -188,6 +196,27 @@ memory until it stops.
 - **A slow first answer.** Opening day 80 is quick, from its kept
   checkpoint. A moment beyond it is worked out from there, about 2.5 s for
   each simulated day; the season's end takes minutes the first time, and
-  the HUD says how long the simulator took for the latest request.
+  the HUD says how long the simulator took for the latest request. Another
+  weather, the wind or the clouds overridden, or a door or vent set open
+  from the start with its slider, makes another run, which the kept day
+  does not fit: it is worked out from the season's start, minutes too. A sensor selected late in a day reads its log from the
+  day's start, each reading sampling the house's whole field: at noon,
+  minutes in QA mode.
 - **A jerky view.** Without a graphics card the browser draws in software;
   the HUD's frame rate says so.
+
+## Recording the demo video
+
+The walk-through is also a browser test, `greenhouse_sim/web/e2e/demo.spec.ts`,
+which CI runs after the other day-by-day tests. On a machine with a
+graphics card, with the viewer's packages installed:
+
+```bash
+cd greenhouse_sim/web && PYTHON=../../.venv/bin/python npm run demo:record
+```
+
+plays it with a caption on each step, lingering on each, and records it as
+video under `test-results/demo/`, so that each release can record it
+again. GitHub plays a video in the README only when it hosts it, an MP4 or
+WebM uploaded through an issue or a pull request, under 10 MB: the README
+plays a short cut, and links a longer one. Uploading them is done by hand.
