@@ -57,8 +57,35 @@ jobs:
       - name: Build
         run: npm run build
 
-      # The browser smoke test serves the simulator's API, so it needs the
-      # Python packages, installed as wheels as in the repository checks.
+  # The browser tests, in lanes that run at once, each on a machine of its
+  # own with a simulator of its own (decision 0032). A lane is named for the
+  # stage of `playwright.config.ts` it starts at; the configuration refuses
+  # a lane it does not cut, and runs none unless all of them are here.
+  browser:
+    name: browser tests (${{ matrix.lane }})
+    runs-on: ubuntu-latest
+    strategy:
+      # Every lane runs to its end, so that one run shows every failure.
+      fail-fast: false
+      matrix:
+        lane: [chromium, renderer-smoke, weather-day, crop]
+    defaults:
+      run:
+        working-directory: greenhouse_sim/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: greenhouse_sim/web/.nvmrc
+          cache: npm
+          cache-dependency-path: greenhouse_sim/web/package-lock.json
+
+      - name: Install the viewer's dependencies
+        run: npm ci
+
+      # The browser tests serve the simulator's API, so they need the Python
+      # packages, installed as wheels as in the repository checks.
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
@@ -66,17 +93,20 @@ jobs:
       - name: Install the simulator
         run: python -m pip install ../../greenhouse_protocol ..
 
-      - name: Install Chromium for the smoke test
+      - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Browser smoke test
+      - name: Browser tests
         run: npm run e2e
+        env:
+          BROWSER_TEST_LANE: ${{ matrix.lane }}
+          BROWSER_TEST_LANES: ${{ strategy.job-total }}
 
       - name: Keep the browser test report
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.lane }}
           path: greenhouse_sim/web/playwright-report
           retention-days: 7
 

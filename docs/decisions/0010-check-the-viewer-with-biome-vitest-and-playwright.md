@@ -1,6 +1,6 @@
 # 0010: Check the viewer with Biome, Vitest and a Playwright smoke test
 
-**Status:** Accepted; its unit tests in Node only are superseded, for files that mount components or hooks, by [0029](0029-test-hooks-mounted-in-a-dom-file-by-file.md)
+**Status:** Accepted; its unit tests in Node only are superseded, for files that mount components or hooks, by [0029](0029-test-hooks-mounted-in-a-dom-file-by-file.md); its browser tests in `viewer checks`, by lanes of their own on CI, [0032](0032-run-the-browser-tests-in-lanes-on-ci.md)
 **Date:** 2026-10-03
 
 ## Context
