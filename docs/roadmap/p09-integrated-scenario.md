@@ -592,9 +592,10 @@ comparison, the replay's digests, and the kept opening day.
   it was made with (`manifest_digest`, of its content, however the file is
   laid out), its layout and weather, its levels and openings from the
   start, the commands it gave before that day and its daily commands, or
-  none given, for its scenario's; its house's air then; and, where it
-  grows its crop organ by organ, its plants then and what each experienced
-  on each day before. Named by a digest of its content, so that the same
+  none given, for its scenario's; its house's air then, and an hour before
+  its day began, where the field of the day's first hour starts its grid
+  run (format 2, added with P09.9); and, where it grows its crop organ by
+  organ, its plants then and what each experienced on each day before. Named by a digest of its content, so that the same
   state uploaded twice is one checkpoint. The reference run's on its second
   day is 178 KB of JSON.
 - **Kept states** (`services/kept_states.py`): a run of the same house,
@@ -869,36 +870,40 @@ starts both and stops both; the video's script runs as a browser test.
   walked through in the viewer on the reference greenhouse, each step
   captioned and its visible result checked: from the scenario list to day
   80's noon; its dimensions; dawn to the sun's noon; the air as arrows and
-  as a slice; the dehumidifier on; the roof vents opened by the schedule;
-  QA mode's truth beside the back sensor's readings, and the
-  developer panel; the path camera's picture, depth and instances; a day
-  on; a fruit harvested by hand in the plant lab, in its plant's history;
-  a checkpoint, a branch with the heater off, compared; and the golden
-  views with their probes. It runs as a browser test, last of the
-  day-by-day ones. Two steps are placed for their cost, which P09.8's
-  report does not yet name: the sensor is read at 1:20, since its log is
-  read from the day's start, each reading sampling the house's whole
-  field, minutes at noon; and the wind is turned last,
-  since under another wind the run is another, which the kept opening day
-  does not fit, its season worked out afresh from its start. For the same
-  reason the vents are shown opening by the schedule, not by their
-  sliders: a slider sets how far an opening stands open from the run's
-  start, where an equipment's switch, past the start, gives a command at
-  the moment; on day 80 a slider makes another house.
-- **Found on the way:** a field in the first hour of a kept day, day 80
-  between 0:00 and 1:00, works the season out from its start, minutes:
-  its grid run starts an hour before the moment's hour began
-  (`window_start`), 23:00 the day before, and a checkpoint keeps the
-  house's air at its day's start only. A checkpoint could keep the house's
-  air an hour before its day too, or a grid run never start before its
-  day began; either is for the review of P09.5. The walk-through reads its
-  sensor at 1:20. QA mode's
-  developer panel now selects a sensor or a camera from its list, which the
-  walk-through uses: picked in the view, a click among day 80's crowns
-  often selects a plant instead, and asks for its 80 days. `npm run demo:record` (`playwright.demo.config.ts`) plays it on
+  as a slice; the dehumidifier on; the roof vents opened by the schedule,
+  and one shut by hand; QA mode's developer panel, and the truth beside
+  the back sensor's readings; the path camera's picture, depth and
+  instances; a day on; a fruit harvested by hand in the plant lab, in its
+  plant's history; a checkpoint, a branch with the heater off, compared;
+  the wind turned; and the golden views with their probes. It runs as a
+  browser test, last of the day-by-day ones, in about three and a half
+  minutes. `npm run demo:record` (`playwright.demo.config.ts`) plays it on
   the graphics card, lingering on each step, and records it as video;
   uploading the video, and the README's short cut and link, are the
   maintainer's.
+- **Placed for their cost,** which P09.8's report does not yet name: the
+  sensor is read early in the day, at 1:20, since its log is read from the
+  day's start, each reading sampling the house's whole field, minutes at
+  noon; and the wind is turned last, since under another wind the run is
+  another, which the kept opening day does not fit, its season worked out
+  afresh from its start.
+- **QA mode's developer panel** now selects a sensor or a camera from its
+  list, which the walk-through uses: picked in the view, a click among day
+  80's crowns often selects a plant instead, and asks for its 80 days.
+- **An Openings slider, past the run's start,** is now a command at the
+  moment, as an equipment's switch is, rather than the door or vent open
+  from the start: on day 80 the latter was another house, its season
+  worked out afresh. At the start it still sets the opening from the start.
+- **Found on the way, and fixed:** a field in the first hour of a kept day,
+  day 80 between 0:00 and 1:00, worked the season out from its start,
+  minutes: its grid run starts an hour before the moment's hour began
+  (`window_start`), 23:00 the day before, and a checkpoint kept the house's
+  air at its day's start only. A checkpoint now keeps it an hour before its
+  day too (format 2), and the kept opening days were written again; a
+  restored run draws its day's first hour working out none of the days
+  before (`tests/test_run_checkpoints.py`). The air cell by cell need not
+  be kept: a grid run starts from the house's air, the same in every cell,
+  so one more moment of it is all a checkpoint needs.
 
 ## Final QA: `reference-greenhouse-v1`
 

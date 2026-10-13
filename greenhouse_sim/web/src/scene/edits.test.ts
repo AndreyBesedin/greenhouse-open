@@ -9,6 +9,7 @@ import {
   withField,
   withFieldView,
   withLevels,
+  withOpenings,
   withoutCommand,
   withoutDaily,
   withProbes,
@@ -16,7 +17,7 @@ import {
   withTime,
   withWeather,
 } from "./edits";
-import { sourceFromSearch } from "./source";
+import { openingsAt, sourceFromSearch } from "./source";
 
 function scenario(search: string): ScenarioSource {
   const source = sourceFromSearch(search);
@@ -134,5 +135,40 @@ describe("changing a scenario's source from its panels", () => {
     // Only what changed is commanded, at the moment drawn.
     expect(overridden.levels).toEqual({ heater: 1 });
     expect(overridden.schedule).toEqual([{ timeS: 600, actuatorId: "fan", level: 1 }]);
+  });
+
+  it("opens a door or vent from the start, or, past it, from the moment drawn", () => {
+    const start = scenario("?scenario=climate_box&field=climate&open=door:1");
+    expect(withOpenings(start, { door: 1, roof_vent: 1 })).toMatchObject({
+      openings: { door: 1, roof_vent: 1 },
+    });
+
+    // Past the start the house stays the same: what changed is commanded
+    // then, as the equipment is, and the door open from the start stays so.
+    const later = withTime(start, 600);
+    const commanded = withOpenings(later, { door: 1, roof_vent: 1 });
+    expect(commanded.openings).toEqual({ door: 1 });
+    expect(commanded.schedule).toEqual([{ timeS: 600, actuatorId: "roof_vent", level: 1 }]);
+
+    // Moved again at the same moment, its command there is replaced.
+    const shut = withOpenings(commanded, { door: 1, roof_vent: 0 });
+    expect(shut.schedule).toEqual([{ timeS: 600, actuatorId: "roof_vent", level: 0 }]);
+    // Without a climate run drawn, there is no moment: from the start.
+    const still = scenario("?scenario=climate_box");
+    expect(withOpenings(still, { roof_vent: 1 }).openings).toEqual({ roof_vent: 1 });
+  });
+
+  it("says how far each door and vent stands open at the moment drawn", () => {
+    const source = scenario(
+      "?scenario=climate_box&field=climate&open=door:1&schedule=300:roof_vent:1,900:door:0&t=600",
+    );
+    expect(openingsAt(source, ["door", "roof_vent", "side_vent"])).toEqual({
+      door: 1,
+      roof_vent: 1,
+    });
+    expect(openingsAt(withTime(source, 1200), ["door", "roof_vent"])).toEqual({
+      door: 0,
+      roof_vent: 1,
+    });
   });
 });

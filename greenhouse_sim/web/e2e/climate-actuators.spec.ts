@@ -90,14 +90,20 @@ test("climate-actuators: the box's equipment and vent change its air, visibly an
   await test.step("the roof vent changes the air at its boundary, and closed, leaves it", async () => {
     const shut = (await underVent.textContent()) ?? "";
     const vent = page.getByRole("group", { name: "Openings" }).getByRole("slider").first();
+    // Opened at the run's start, as the equipment is above: open from the
+    // start. Past the start, a slider is a command at that moment.
+    await moveTo(page, 0);
     await vent.fill("100");
     await expect(page.getByTestId("opening-roof_vent")).toHaveText("100%, 3.77 m²");
+    await moveTo(page, 600);
     // Alone, it exchanges by the stack over its height (P07.6).
     await expect.poll(async () => speedOf(underVent)).toBeGreaterThan(0.02);
     expect(await reads(underVent, "temperature")).toBeLessThan(
       Number(/temperature ([\d.]+)/.exec(shut)?.[1]),
     );
+    await moveTo(page, 0);
     await vent.fill("0");
+    await moveTo(page, 600);
     await expect(underVent).toHaveText(shut);
   });
 

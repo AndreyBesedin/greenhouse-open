@@ -396,6 +396,30 @@ export function levelsAt(source: {
   return levels;
 }
 
+/** How far each of `openingIds` stands open at the moment drawn, as the
+ * source says: from the start, as its openings set them, then as its
+ * commands to them do. One the source says nothing of is left out. */
+export function openingsAt(
+  source: {
+    levels?: Readonly<Record<string, number>>;
+    openings?: Readonly<Record<string, number>>;
+    schedule?: readonly ScheduledCommand[];
+    daily?: readonly ScheduledCommand[];
+    time?: number;
+  },
+  openingIds: readonly string[],
+): Record<string, number> {
+  const commanded = levelsAt(source);
+  const standing: Record<string, number> = { ...(source.openings ?? {}) };
+  for (const openingId of openingIds) {
+    const level = commanded[openingId];
+    if (level !== undefined) {
+      standing[openingId] = level;
+    }
+  }
+  return standing;
+}
+
 /** The schedule with an override at a moment: each actuator's command at
  * that moment replaced by the level it is set to, kept in time order. */
 export function withOverride(
