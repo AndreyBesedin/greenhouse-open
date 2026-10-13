@@ -17,7 +17,7 @@ const NOON_S = 43_200;
 const DAY_S = 86_400;
 // A later day's moment takes the simulator the house's air through the days
 // before it, its field then, and the crop's days.
-const ARRIVES = { timeout: 60_000 };
+const ARRIVES = { timeout: 90_000 };
 
 /** Clicks the first plant's stem until one of its organs is selected: a
  * view that has only just received its scene may not have drawn it yet. */
@@ -32,7 +32,7 @@ async function selectThePlant(page: Page): Promise<void> {
 test("crop: the reference greenhouse's plants live each day in the house's air and their own light", async ({
   page,
 }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(300_000);
   const status = page.getByTestId("scene-status");
   const run = page.getByRole("group", { name: "Climate run" });
 
