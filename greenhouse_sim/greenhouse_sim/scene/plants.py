@@ -13,13 +13,18 @@ from typing import Final
 
 from greenhouse_sim.biology.plant.organs import Fruit, Organ
 from greenhouse_sim.biology.tomato.organ.fruit import maturity
-from greenhouse_sim.biology.tomato.organ.geometry import OrganShape, organ_geometry
+from greenhouse_sim.biology.tomato.organ.geometry import (
+    ALONG_THE_ROW,
+    OrganShape,
+    StemPath,
+    organ_geometry,
+)
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.domain.organs import FlowerStage, OrganKind
 from greenhouse_sim.scene.snapshot import Color, SceneEntity, SceneEntityKind
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.geometry import Transform
-from greenhouse_sim.world.rows import PlantingPosition
+from greenhouse_sim.world.training import Training
 
 STEM_COLOR: Final = Color(r=0.36, g=0.56, b=0.24)
 LEAF_COLOR: Final = Color(r=0.18, g=0.5, b=0.2)
@@ -67,28 +72,33 @@ _KINDS: Final = {
 
 
 def plant_entities(
-    plant: Plant, at: Transform, context: Mapping[str, str] | None = None
+    plant: Plant,
+    at: Transform,
+    context: Mapping[str, str] | None = None,
+    path: StemPath = ALONG_THE_ROW,
 ) -> list[SceneEntity]:
-    """Every shape of the plant as an entity, the plant standing at `at`, each
-    also carrying `context`'s properties, such as the plant's environment."""
+    """Every shape of the plant as an entity, the plant standing at `at` and
+    its stem trained along `path`, each also carrying `context`'s
+    properties, such as the plant's environment."""
     organs = {organ_id: (kind, parent, organ) for kind, organ_id, parent, organ in plant.organs()}
     shared = {} if context is None else dict(context)
-    return [_entity(plant, shape, at, organs, shared) for shape in organ_geometry(plant)]
+    return [_entity(plant, shape, at, organs, shared) for shape in organ_geometry(plant, path=path)]
 
 
 def crop_entities(
-    plants: Sequence[Plant], positions: Sequence[PlantingPosition], envelope: Envelope
+    plants: Sequence[Plant], trainings: Sequence[Training], envelope: Envelope
 ) -> list[SceneEntity]:
     """A greenhouse's crop organ by organ: every shape of each plant as an
-    entity, the first plant at the first planting position, and so on, each
-    saying where it stands."""
+    entity, the first plant at the first planting position, trained as the
+    first training says, and so on, each saying where it stands."""
     return [
         entity
-        for plant, position in zip(plants, positions, strict=False)
+        for plant, training in zip(plants, trainings, strict=False)
         for entity in plant_entities(
             plant,
-            envelope.origin.after(Transform(position=position.point)),
-            {"planting_position": position.position_id},
+            envelope.origin.after(Transform(position=training.position.point)),
+            {"planting_position": training.position.position_id},
+            training.path,
         )
     ]
 

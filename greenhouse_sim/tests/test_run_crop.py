@@ -100,7 +100,7 @@ def _crop(
 
     return RunCrop(
         [transplant(plant_id, seed) for plant_id in PLANTS],
-        REFERENCE.layout.planting_positions(),
+        REFERENCE.layout.trainings(),
         REFERENCE.envelope,
         air=day_air,
         light=light,
@@ -307,7 +307,9 @@ def _body(path: str) -> dict[str, Any]:
 
 def test_the_reference_greenhouse_grows_its_crop_organ_by_organ() -> None:
     assert REFERENCE.crop_model == CropModel.ORGAN
-    assert REFERENCE.crop_work == WEEKLY
+    assert REFERENCE.crop_work == CropWork(
+        harvest_every_days=7, lower_every_days=7, head_room_m=0.3
+    )
     others = [s for s in SCENARIO_REGISTRY.values() if s.greenhouse_id != "reference_greenhouse"]
     assert all(other.crop_model == CropModel.SIMPLE for other in others)
 

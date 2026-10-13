@@ -37,6 +37,7 @@ from greenhouse_sim.world.fixtures import Fixture, Primitive, WalkwayPrimitive
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.rows import CropRows, PlantingPosition
 from greenhouse_sim.world.sensors import PointSensor, Sensor
+from greenhouse_sim.world.training import Training, trainings
 from greenhouse_sim.world.zones import Strip, Zone
 
 # Walkways stay clear up to this height: a doorway's.
@@ -139,6 +140,13 @@ class Layout(BaseModel):
             for fixture in self.fixtures() + self.equipment_fixtures()
             if obstruction in fixture.obstructs
         ]
+
+    def trainings(self) -> list[Training]:
+        """How the plant at each planting position is trained, in their
+        order (`greenhouse_sim.world.training`)."""
+        if self.crop_rows is None:
+            return []
+        return trainings(self.crop_rows, self.kept_clear())
 
     def planting_positions(self) -> list[PlantingPosition]:
         """Every planting position outside the areas kept clear, row by row, in

@@ -211,7 +211,7 @@
     },
     "CropWork": {
       "additionalProperties": false,
-      "description": "What a run does to its crop: a harvest round at the start of every\n`harvest_every_days`th day from its start, picking every red fruit;\nnone if unset.",
+      "description": "What a run does to its crop, at the start of its days: a harvest round\nevery `harvest_every_days` days from its start, picking every red fruit;\nand then a lowering round every `lower_every_days`, which leaves each\nplant hanging from a wire with its top `head_room_m` or more under it;\nneither if unset.",
       "properties": {
         "harvest_every_days": {
           "anyOf": [
@@ -225,6 +225,25 @@
           ],
           "default": null,
           "title": "Harvest Every Days"
+        },
+        "lower_every_days": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lower Every Days"
+        },
+        "head_room_m": {
+          "default": 0.3,
+          "minimum": 0,
+          "title": "Head Room M",
+          "type": "number"
         }
       },
       "title": "CropWork",
@@ -744,7 +763,9 @@
     "crop_work": {
       "$ref": "#/$defs/CropWork",
       "default": {
-        "harvest_every_days": null
+        "harvest_every_days": null,
+        "lower_every_days": null,
+        "head_room_m": 0.3
       }
     },
     "start_date": {

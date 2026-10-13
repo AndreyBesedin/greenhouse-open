@@ -9,7 +9,8 @@ a window of the run, in the order it happens.
   climate.
 - **Each plant's day** at each midnight, from that day's air and light; and
   then, at the start of a day its crop work does something, what it does
-  to each plant (`greenhouse_sim.core.crop`): a harvest round.
+  to each plant (`greenhouse_sim.core.crop`): a harvest round, then a
+  lowering round.
 - **Each sensor's samples** and **each camera's frames**, every
   `cadence_s` from the run's start: the samples taken, whether or not a
   sample drops out or arrives late.
@@ -40,15 +41,17 @@ from greenhouse_sim.world.sensors import Camera, PointSensor
 TURNS: Final = {process: turn for turn, process in enumerate(Process)}
 # The house's air, worked on as one subject.
 HOUSE: Final = "house"
-# What a harvest round does to each plant.
+# What a harvest round, and a lowering round, does to each plant.
 HARVEST_ROUND: Final = "harvest round"
+LOWERING_ROUND: Final = "lowering round"
 
 
 @dataclass(frozen=True, slots=True)
 class Event:
     """One thing a process does at a moment, to its subject: a command sets
     a level ("set to 0.5"), the house's air is worked on ("step"), a plant
-    grows a day ("day 3") or is harvested ("harvest round"), a sensor
+    grows a day ("day 3"), is harvested ("harvest round") or lowered
+    ("lowering round"), a sensor
     samples ("sample"), a camera takes a frame ("frame")."""
 
     time_s: float
@@ -107,10 +110,14 @@ def events(run: RunProcesses, from_s: float, until_s: float) -> list[Event]:
             starting = round(midnight / DAY_S)
             grown = f"day {starting - 1}"
             found.extend(Event(midnight, Process.PLANTS, plant, grown) for plant in run.plants)
-            if run.crop_work.harvests_on(starting):
-                found.extend(
-                    Event(midnight, Process.PLANTS, plant, HARVEST_ROUND) for plant in run.plants
-                )
+            for round_kind, due in (
+                (HARVEST_ROUND, run.crop_work.harvests_on(starting)),
+                (LOWERING_ROUND, run.crop_work.lowers_on(starting)),
+            ):
+                if due:
+                    found.extend(
+                        Event(midnight, Process.PLANTS, plant, round_kind) for plant in run.plants
+                    )
     for sensor in run.sensors:
         found.extend(
             Event(moment, Process.SENSORS, sensor.sensor_id, "sample")

@@ -15,7 +15,7 @@ test("reference greenhouse: its manifest boots the whole scene, and it is listed
 
   await page.goto("/?scenario=reference_greenhouse");
   await expect(page.getByTestId("scene-status")).toContainText(
-    "reference_greenhouse, day 0, 3104 entities",
+    "reference_greenhouse, day 0, 3108 entities",
   );
   for (const device of ["fan_right", "fan_left", "heater", "dehumidifier"]) {
     await expect(page.getByTestId(`equipment-${device}`)).toHaveText("off");

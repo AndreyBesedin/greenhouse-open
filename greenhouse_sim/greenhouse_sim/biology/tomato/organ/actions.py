@@ -17,11 +17,16 @@ always name them.
   down: their leaves removed and their trusses bearing nothing.
 
 A harvest round (`harvest_round`) picks every red fruit on a plant, each
-fruit its own harvest, from its lowest truss up.
+fruit its own harvest, from its lowest truss up. A lowering round
+(`lowering_round`) keeps a plant's top under its wire, as a grower lowers a
+high-wire crop: it lays down as few of its lowest standing internodes as
+bring its top low enough, stripping their leaves first, but never one whose
+truss still bears.
 """
 
 from greenhouse_sim.biology.plant.organs import Flower
 from greenhouse_sim.biology.tomato.organ.fruit import Maturity, maturity
+from greenhouse_sim.biology.tomato.organ.geometry import ALONG_THE_ROW, StemPath, top_height_m
 from greenhouse_sim.biology.tomato.organ.topology import (
     HarvestFruit,
     HarvestTruss,
@@ -203,3 +208,27 @@ def harvest_round(plant: Plant) -> Plant:
     for fruit_id in red:
         plant = act(plant, HarvestFruit(fruit_id=fruit_id))
     return plant
+
+
+def lowering_round(plant: Plant, most_m: float, path: StemPath = ALONG_THE_ROW) -> Plant:
+    """The plant after a lowering round: if its top stands more than
+    `most_m` above its foot, as `path` trains it, its lowest standing
+    internodes laid down until it stands no higher, each stripped of its
+    leaf first, but never one whose truss still bears, nor its top one;
+    unchanged otherwise."""
+    if top_height_m(plant, path) <= most_m:
+        return plant
+    standing = plant.stem.phytomers[plant.laid_internodes : -1]
+    count = 0
+    for phytomer in standing:
+        if phytomer.truss is not None and bears_anything(phytomer.truss):
+            break
+        count += 1
+        if top_height_m(plant, path, plant.laid_internodes + count) <= most_m:
+            break
+    if count == 0:
+        return plant
+    for phytomer in standing[:count]:
+        if phytomer.leaf.stage != LeafStage.REMOVED:
+            plant = act(plant, RemoveLeaf(leaf_id=phytomer.leaf.leaf_id))
+    return act(plant, LowerStem(internodes=count))

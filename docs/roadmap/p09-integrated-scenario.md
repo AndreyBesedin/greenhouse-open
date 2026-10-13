@@ -104,9 +104,10 @@ generated from the model that reads it, as the layouts' is:
   month or more. Seed 42.
 - **Its crop work:** a harvest round once a week, from the first red fruit,
   picks every red fruit, so that ripe fruit does not pile up and each
-  plant's history records its harvests. By day 120 the stems are still
-  under the crop wires, so the run needs no lowering; a longer one would.
-  Like the commands, the crop work is the run's, not the world's.
+  plant's history records its harvests; and a lowering round once a week
+  keeps each plant's top under its wire, as a high-wire crop is lowered
+  (review decision 9). Like the commands, the crop work is the run's, not
+  the world's.
 - **Every scenario becomes a manifest,** in one format. Before the
   conversion, each scenario's configuration is written out by its code, and
   a test holds the manifest's to it, field by field, so that no scenario
@@ -463,13 +464,59 @@ the crop faster; the same seed grows the same crop.
   season out takes 192 s. With a heater on every night,
   18 h to 8 h (`&daily=64800:heater:1,28800:heater:0`), it averages 22.2 °C,
   the plants bear 38 to 61 fruits by day 100, and the tallest stems reach
-  the crop wires 3.6 m up: the reference run's own schedule (P09.4) is to
-  heat less than that, or the run lowers its stems.
+  the crop wires 3.6 m up, unless lowered.
 - **Costs:** a crop's day costs the house's air through it, 1.1 to 1.5 s,
   and its light, 0.18 s for 32 crowns; living the 32 plants through 120
   days again from their kept days, 1.4 s. Its scene is 12,000 entities
   and 10 MB of JSON by day 60, and 20,000 and 17 MB by day 120, 1.8 MB
   gzipped; the API does not compress its answers (P09.8).
+
+##### Lowering, as a high-wire crop is
+
+Added after P09.3's first pull request, in review (decision 9): the design
+had assumed the stems would stay under the wires through 120 days, an
+estimate, not a constraint, and a heated run proves it wrong.
+
+- **How a real crop is lowered:** each plant hangs by its twine from a hook
+  on the crop wire; once a week or so, as its top nears the wire, a grower
+  unwinds some twine, slides the hook along the wire, and the plant's bare
+  lower stem, its leaves stripped and its trusses harvested, lies down
+  along the gutter beside its neighbours'. In a double row the plants are
+  trained to two wires by turns, and at a row's end a plant passes round
+  to the other side, so that the stems travel round the gutter as a
+  carousel.
+- **A high-wire double row** (`CropWires.offset`): two wires above each run
+  of a row's positions, one either side, `row_<r>_wire_<n>_left` and
+  `_right`; the reference greenhouse's hang 0.3 m either side of its rows,
+  and its scene has 3,108 entities. Its plants are trained to them by
+  turns, its first to the left wire, and each stem leans out to its own,
+  about 6° from the vertical (`world/training.py`).
+- **The lane:** a plant's laid stem lies in a loop round its gutter, along
+  its edges, 0.15 m either side of the row: a left-wire plant's forward
+  along the left edge, a right-wire plant's back along the right, and each
+  round the gutter's end to the other edge when it gets there. Where the
+  laid stem ends, the stem rises, leaning out to the wire above that edge,
+  or, round an end, to one as far out. The plant's geometry follows its
+  path (`StemPath`): each laid internode from one point of the lane to the
+  next, the rest along the way it rises. The plant lab keeps its straight
+  path along its row.
+- **The lowering round** (`lowering_round`), every seventh day after the
+  harvest round: a plant whose top stands more than `head_room_m` (0.3 m)
+  under its wire lays down as few of its lowest standing internodes as
+  bring it low enough, stripping their leaves first, each an event in its
+  history; never one whose truss still bears, so a plant whose lowest
+  truss is still green waits for its harvest. Its crown, for its light,
+  stands where its stem rises. The timeline lists the round after the
+  harvest round.
+- **Tests** (`tests/test_crop_training.py`): the pair of wires, plants
+  trained by turns, a stem reaching its wire, the lane round the gutter
+  and back to its start, laid stems forward on the left, back on the right
+  and round the end, the geometry along the path, a round that lays down
+  no more than it must and never a bearing truss, and in steady air a
+  weekly round keeping every top under its wire through a season.
+- **What it shows:** at a steady 22 °C the first plants are lowered in
+  the run's last weeks, by up to 0.56 m by day 120; none is lowered far
+  enough to turn a row's end before day 120, which a longer run does.
 
 ### P09.4: Equipment, weather and sensors through the season
 
@@ -557,6 +604,9 @@ A reviewer should be able to:
   the crowns as they grow.
 - **A plant's light is read at its crown's top:** a crown shades another
   only if it stands taller, and the diffuse sky reaches every crown alike.
+- **A lowered crop's stems lie on its gutter's edges:** the stems on one
+  edge lie along one line rather than side by side, and the twine and the
+  hooks are not drawn.
 - **The live run grows the simple model:** the stream a viewer can play
   live steps the engine, which grows every scenario's crop with the simple
   daily model, the reference greenhouse's too.
@@ -595,3 +645,8 @@ A reviewer should be able to:
    Agreed.
 8. **A demo video** in the README, as GitHub can host it, with a longer one
    linked (section 9). Added in review.
+9. **Lowering:** the reference run lowers its crop every week, as a
+   high-wire double row is lowered, its stems passing round each gutter's
+   ends to the other side, rather than no lowering in 120 days, which was
+   an estimate. Asked for in P09.3's review, with the turn at the row's
+   end rather than stems running on past it.

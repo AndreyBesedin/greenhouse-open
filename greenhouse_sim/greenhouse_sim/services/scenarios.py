@@ -120,7 +120,7 @@ def initial_scene(scenario_id: str, changes: SceneChanges | None = None) -> Scen
         )
         crop = crop_entities(
             [transplant(plant_id, config.random_seed) for plant_id in plant_ids(config)],
-            config.layout.planting_positions(),
+            config.layout.trainings(),
             config.envelope,
         )
         return house.model_copy(update={"entities": [*house.entities, *crop]})

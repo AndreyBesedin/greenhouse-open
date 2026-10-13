@@ -122,7 +122,7 @@ def _new_crop(key: RunKey, climate: ClimateDay) -> RunCrop:
 
     return RunCrop(
         [transplant(plant_id, config.random_seed) for plant_id in plant_ids(config)],
-        config.layout.planting_positions(),
+        config.layout.trainings(),
         config.envelope,
         air=lambda day: climate.house.mean_between(day * DAY_S, (day + 1) * DAY_S),
         light=light,
@@ -152,9 +152,7 @@ def crop_scene(
     return SceneSnapshot(
         greenhouse_id=config.greenhouse_id,
         simulated_day=day,
-        entities=crop_entities(
-            crop.plants_on(day), config.layout.planting_positions(), config.envelope
-        ),
+        entities=crop_entities(crop.plants_on(day), config.layout.trainings(), config.envelope),
     )
 
 
