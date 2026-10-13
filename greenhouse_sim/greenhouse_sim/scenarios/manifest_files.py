@@ -32,8 +32,9 @@ SCHEMA_FROM_A_MANIFEST_FILE: Final = "../scenario.schema.json"
 JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 # The version of the format a manifest is written in.
 SCHEMA_VERSION: Final = 1
-# The scenario listed first; the others follow by identifier.
-FIRST_SCENARIO: Final = "tomato_compartment"
+# The scenario listed first, the reference scenario (P09); the others
+# follow by identifier.
+FIRST_SCENARIO: Final = "reference_greenhouse"
 # What a note may be about besides one of the configuration's fields.
 WHOLE_SCENARIO: Final = "scenario"
 _SCHEMA_KEY: Final = "$schema"

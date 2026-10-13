@@ -150,6 +150,7 @@ def test_each_scenario_names_its_own_airflow_which_it_offers_first() -> None:
     kinds = {scenario_id: config.airflow.kind for scenario_id, config in SCENARIO_REGISTRY.items()}
 
     assert kinds == {
+        "reference_greenhouse": "uniform",
         "airflow_box": "uniform",
         "tomato_compartment": "buoyancy",
         "climate_box": "uniform",
