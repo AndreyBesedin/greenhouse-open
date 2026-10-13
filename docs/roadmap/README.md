@@ -207,6 +207,14 @@ findings and general clean-up together. They do not block the simulator's
 P02–P07 project steps. The second audit was made on 2026-10-11, after P08;
 its findings and the order of work come before P09.
 
+The [repository audit of 2026-10-13](../audits/2026-10-13-repository-audit.md),
+after P09, looks at the whole repository for a hundred contributors and for
+models, devices and scenarios added without the whole architecture in
+mind. Its order of work proposes two pull requests that can start at once
+(the services' caches and the CI, then the run request) and one roadmap
+project, P10, for models chosen by the manifest through registries. The
+[audits](../audits/README.md) folder indexes them all.
+
 **Test suite and CI time** (recorded 2026-10-08, scheduled after P09). A
 pull request's checks take 7 to 9 minutes:
 
