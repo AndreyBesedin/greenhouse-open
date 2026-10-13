@@ -45,14 +45,23 @@ _SCHEMA_KEY: Final = "$schema"
 _VERSION_KEY: Final = "schema_version"
 _NOTES_KEY: Final = "notes"
 _LAYOUT_KEY: Final = "layout"
+_OPENING_KEY: Final = "opening_day"
 # A manifest's fields that this module reads itself rather than handing them
 # to `ScenarioConfig`, which could not read them as written: the schema, the
-# format's version and the notes are about the file, not the greenhouse, and
-# the layout is only named, its own file read in its place.
-_MANIFEST_ONLY_FIELDS: Final = frozenset({_SCHEMA_KEY, _VERSION_KEY, _NOTES_KEY, _LAYOUT_KEY})
+# format's version and the notes are about the file, not the greenhouse; the
+# layout is only named, its own file read in its place; and the opening day
+# is where a viewer opens the scenario's run, not part of its world.
+_MANIFEST_ONLY_FIELDS: Final = frozenset(
+    {_SCHEMA_KEY, _VERSION_KEY, _NOTES_KEY, _LAYOUT_KEY, _OPENING_KEY}
+)
 # How Pydantic's schema points to a model it defines, once, under `$defs`:
 # `{"$ref": "#/$defs/<model>"}`, wherever the model is used.
 _DEFINITION_REFERENCE: Final = "#/$defs/"
+# Where a scenario's kept opening day lies: a checkpoint of its run at that
+# day's start (P09.5), gzipped, named for the scenario.
+OPENINGS_DIR: Final = Path(__file__).parent / "openings"
+# And of the same run with everything off, named so.
+ALL_OFF_SUFFIX: Final = ".all-off"
 
 
 class InvalidManifest(ValueError):
@@ -70,6 +79,25 @@ def load_manifest(scenario_id: str) -> ScenarioConfig:
     """A scenario, read from its manifest and checked."""
     path = MANIFESTS_DIR / f"{scenario_id}.json"
     return scenario_from_manifest(scenario_id, json.loads(path.read_text()))
+
+
+def opening_day(scenario_id: str) -> int | None:
+    """The day of its run a scenario's manifest names as where the viewer
+    opens it, kept as a checkpoint at that day's start (`opening_file`), or
+    None if it names none."""
+    document = json.loads((MANIFESTS_DIR / f"{scenario_id}.json").read_text())
+    day = document.get(_OPENING_KEY)
+    if day is None:
+        return None
+    if not isinstance(day, int) or isinstance(day, bool) or day < 0:
+        raise InvalidManifest(f"{scenario_id}: an opening day is a day of its run, not {day!r}")
+    return day
+
+
+def opening_file(scenario_id: str, all_off: bool = False) -> Path:
+    """Where a scenario's kept opening day lies, gzipped JSON: its run's, or
+    the same run's with everything off, which a viewer charts beside it."""
+    return OPENINGS_DIR / f"{scenario_id}{ALL_OFF_SUFFIX if all_off else ''}.json.gz"
 
 
 def manifest_digest(scenario_id: str) -> str:
@@ -102,7 +130,7 @@ def scenario_from_manifest(scenario_id: str, document: dict[str, JsonValue]) -> 
     notes = document.get(_NOTES_KEY, {})
     if not isinstance(notes, dict) or not all(isinstance(note, str) for note in notes.values()):
         raise InvalidManifest(f"{scenario_id}: notes are written by what each is about")
-    unnoted = set(notes) - {WHOLE_SCENARIO, *ScenarioConfig.model_fields}
+    unnoted = set(notes) - {WHOLE_SCENARIO, _OPENING_KEY, *ScenarioConfig.model_fields}
     if unnoted:
         raise InvalidManifest(f"{scenario_id}: notes on what it does not have: {sorted(unnoted)}")
     config = ScenarioConfig.model_validate(fields | {"layout": load_layout(scenario_id, layout)})
@@ -134,6 +162,11 @@ def manifest_json_schema() -> dict[str, JsonValue]:
     # The fields a manifest has besides the configuration's.
     properties[_SCHEMA_KEY] = {"type": "string"}
     properties[_VERSION_KEY] = {"const": SCHEMA_VERSION}
+    properties[_OPENING_KEY] = {
+        "type": "integer",
+        "minimum": 0,
+        "description": "The day of its run where the viewer opens it, kept as a checkpoint.",
+    }
     properties[_NOTES_KEY] = {
         "type": "object",
         "additionalProperties": {"type": "string"},

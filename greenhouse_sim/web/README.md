@@ -121,7 +121,10 @@ uploads one again (`GET /api/checkpoints/{id}`, `POST /api/checkpoints`);
 the API keeps them in its memory, and a restored run given other commands
 from its moment on is a branch from it, sharing every day before.
 "Compare" against one charts its run, carried on unchanged, beside the run
-drawn: the house's air, a temperature sensor's readings and a plant's days. With probes placed, "Probe
+drawn: the house's air, a temperature sensor's readings and a plant's days.
+A scenario whose manifest names an opening day, as the reference greenhouse
+names its first day with red fruit, opens there when shown from the list,
+at noon, from the checkpoint the API keeps of it. With probes placed, "Probe
 charts" draws each probe's temperature, relative humidity and air speed
 through the run up to the moment drawn, beside the same run with all its
 equipment off, in plain SVG (`GET /api/scenarios/{id}/climate/probes`).

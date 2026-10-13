@@ -16,6 +16,7 @@ failure in the server's log.
 
 import argparse
 import json
+import sys
 import traceback
 from collections.abc import Callable, Sequence
 from http import HTTPStatus
@@ -23,6 +24,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Final, cast
 
 from greenhouse_sim.api.routes import Response, control, live_stream, respond
+from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.live import DEFAULT_SECONDS_PER_DAY, LiveRun, LiveRuns
 
 LOOPBACK: Final = "127.0.0.1"
@@ -51,6 +53,10 @@ class SimulatorServer(ThreadingHTTPServer):
         # started yet.
         self.live = LiveRuns(seconds_per_day=seconds_per_day)
         super().__init__((LOOPBACK, port), _Handler)
+        # The scenarios' kept opening days, so that their runs' later days
+        # need not be worked out from their starts.
+        for refused in checkpoints.load_openings():
+            print(f"not kept: {refused}", file=sys.stderr)
 
     def server_close(self) -> None:
         self.live.stop()

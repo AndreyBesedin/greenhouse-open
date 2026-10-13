@@ -28,6 +28,7 @@ from greenhouse_sim.scenarios.layout_files import (
     layout_names,
     load_layout,
 )
+from greenhouse_sim.scenarios.manifest_files import opening_day
 from greenhouse_sim.scene.plants import crop_entities
 from greenhouse_sim.scene.snapshot import SceneSnapshot, greenhouse_scene, scene_snapshot
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
@@ -61,6 +62,9 @@ class ScenarioSummary(BaseModel):
     # Its doors and vents, by identifier, which commands open as they set its
     # equipment.
     openings: list[str]
+    # The day of its run where a viewer opens it, kept as a checkpoint, if
+    # its manifest names one.
+    opening_day: int | None = None
     # Its layouts' names, its default first.
     layouts: list[str]
     # The weathers it can be run under, by name, its own first.
@@ -92,6 +96,7 @@ def scenario_summaries() -> list[ScenarioSummary]:
             crop_model=config.crop_model.value,
             daily=config.daily,
             openings=[opening.opening_id for opening in config.envelope.openings],
+            opening_day=opening_day(config.greenhouse_id),
             layouts=layout_names(config.greenhouse_id),
             weathers=weather_names(),
         )

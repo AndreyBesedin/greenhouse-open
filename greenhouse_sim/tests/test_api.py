@@ -21,6 +21,7 @@ from greenhouse_sim.api import server as server_module
 from greenhouse_sim.api.routes import Response, respond
 from greenhouse_sim.api.server import UNEXPECTED_FAILURE, create_server
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.manifest_files import opening_day
 from greenhouse_sim.scene.snapshot import SCHEMA_VERSION, SceneEntityKind, SceneSnapshot
 
 PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "greenhouse_sim"
@@ -65,6 +66,7 @@ def test_the_scenario_list_is_the_registry() -> None:
             "crop_model": config.crop_model.value,
             "daily": [command.model_dump(mode="json") for command in config.daily],
             "openings": [opening.opening_id for opening in config.envelope.openings],
+            "opening_day": opening_day(scenario_id),
             "layouts": ["default", *OTHER_LAYOUTS.get(scenario_id, [])],
             "weathers": [
                 "default",
