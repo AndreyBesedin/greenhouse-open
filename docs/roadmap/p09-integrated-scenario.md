@@ -582,6 +582,55 @@ charts from the same state. Tests: a restored run continues as the original
 does; a branch shares every day before its own; the replay's hashes match
 the reference; the kept opening day matches the run's.
 
+#### As implemented
+
+The checkpoints themselves and the viewer's panel; the branch comparison,
+the replay's hashes and the kept opening day follow.
+
+- **A checkpoint** (`services/checkpoints.py`) is a run's state at the start
+  of a day: its run, its scenario and the digest of the scenario's manifest
+  it was made with (`manifest_digest`, of its content, however the file is
+  laid out), its layout and weather, its levels and openings from the
+  start, the commands it gave before that day and its daily commands, or
+  none given, for its scenario's; its house's air then; and, where it
+  grows its crop organ by organ, its plants then and what each experienced
+  on each day before. Named by a digest of its content, so that the same
+  state uploaded twice is one checkpoint. The reference run's on its second
+  day is 178 KB of JSON.
+- **Kept states** (`services/kept_states.py`): a run of the same house,
+  weather and openings whose schedule agrees with a checkpoint's up to its
+  moment takes its state over, the house its air (`WholeHouse.seed`) and
+  the crop its plants and days (`RunCrop.seed`), as kept runs already carry
+  on from one another. Restoring a checkpoint is asking for its run again;
+  a branch is the same run with other commands from its moment on. A
+  checkpoint saved or uploaded seeds the runs already kept too.
+- **The API keeps them in memory,** the last 16: `POST
+  /api/scenarios/{id}/checkpoints` saves one at the start of the day `&t=`
+  lies in, its run asked for as a climate field is; `GET /api/checkpoints`
+  lists them; `GET /api/checkpoints/{id}` downloads one as JSON; `POST
+  /api/checkpoints` uploads one as its JSON body, checked: in a format this
+  simulator reads, made with the scenario's manifest as it is, its day
+  within the run, its commands the scenario's to run, its plants the
+  scenario's, each having lived every day before. Restarting the API
+  forgets them, and it writes no file. The API's server now reads a POST
+  request's body.
+- **The viewer's "Checkpoints"**, under the timeline in the climate view,
+  opened on demand: it saves the start of the moment's day, lists those
+  kept for the scenario, restores one, its run at its moment with the view
+  as it was, and downloads one as JSON or uploads one again, saying why one
+  is refused. A restored run given other commands from its moment on is a
+  branch from it. Browser test: `checkpoints.spec.ts`, with the season's.
+- **Measured:** after a restart, the reference run's third day, from a
+  checkpoint at its second, comes back in 1.4 s, the same as before; from
+  its start it takes about 3.5 s.
+- **Tests** (`tests/test_run_checkpoints.py`): a checkpoint keeps a run's
+  state at its day's start, and the commands given before it; a restored
+  run carries on as the original does, working out no moment before the
+  checkpoint; a branch shares every day before its own and differs on it,
+  and a run that differs before the checkpoint takes nothing over; a
+  checkpoint downloads and uploads as it was; and what does not fit its run
+  is refused, with the reason.
+
 ### P09.6: QA mode
 
 The toggle, truth beside observations, labels, probes, the run's manifest

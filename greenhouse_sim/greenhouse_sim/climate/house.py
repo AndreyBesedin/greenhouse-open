@@ -206,6 +206,14 @@ class WholeHouse:
                 if moment <= until and moment not in self._kept:
                     self._keep(moment, air)
 
+    def seed(self, moment_s: float, air: HouseAir) -> None:
+        """Take `air` as this house's at `moment_s`, from a checkpoint of the
+        same run (P09.5): later moments carry on from it, unless the house
+        has worked out its own there."""
+        with self._working:
+            if moment_s not in self._kept:
+                self._keep(moment_s, air)
+
     def mean_between(self, from_s: float, until_s: float) -> HouseAir:
         """The house's mean air from `from_s` to `until_s`: its temperature,
         humidity ratio and CO₂ every `STEP_S` from `from_s`, and at

@@ -120,6 +120,7 @@ class RunCrop:
     ) -> None:
         self.days = days
         self.work = work
+        self._plant_ids = [plant.plant_id for plant in transplants]
         self._trainings = list(trainings)
         self._envelope = envelope
         self._air = air
@@ -178,6 +179,31 @@ class RunCrop:
     def environments(self, plant_id: str, days: int) -> list[LocalEnvironment]:
         """What a plant experienced on each of the run's first `days` days."""
         return [self.local(plant_id, day) for day in range(days)]
+
+    def lived_through(self, day: int) -> list[dict[str, LocalEnvironment]]:
+        """What each plant experienced on each of the run's first `day` days,
+        by plant: what a checkpoint keeps beside the plants on `day`."""
+        return [
+            {plant_id: self.local(plant_id, lived) for plant_id in self._plant_ids}
+            for lived in range(day)
+        ]
+
+    def seed(
+        self,
+        day: int,
+        plants: Sequence[Plant],
+        lived: Sequence[dict[str, LocalEnvironment]],
+    ) -> None:
+        """Take `plants` as the crop on the run's `day`, and `lived` as what
+        they experienced on each day before it, from a checkpoint of the
+        same run (P09.5): later days carry on from them."""
+        self._checked(day, self.days)
+        if len(lived) != day:
+            raise ValueError(f"a crop on day {day} has lived {day} days, not {len(lived)}")
+        with self._working:
+            if len(self._lived) < day:
+                self._lived = list(lived)
+            self._kept.setdefault(day, tuple(plants))
 
     def crowns_on(self, day: int) -> list[Crown]:
         """The plants' crowns on the run's day `day`, each as tall as its

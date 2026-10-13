@@ -113,7 +113,13 @@ draws a lane per process (its commands, its air, its plants, its sensors
 and its cameras) with each event a tick across the window the moment lies
 in, a day, an hour, ten minutes or a minute wide, and lists what each
 process does at the moment, in the order they take their turns
-(`GET /api/scenarios/{id}/timeline`). With probes placed, "Probe
+(`GET /api/scenarios/{id}/timeline`). "Checkpoints", opened on demand,
+saves the run's state at the start of the moment's day
+(`POST /api/scenarios/{id}/checkpoints`), lists those the API keeps for the
+scenario, restores one, its run at its moment, and downloads one as JSON or
+uploads one again (`GET /api/checkpoints/{id}`, `POST /api/checkpoints`);
+the API keeps them in its memory, and a restored run given other commands
+from its moment on is a branch from it, sharing every day before. With probes placed, "Probe
 charts" draws each probe's temperature, relative humidity and air speed
 through the run up to the moment drawn, beside the same run with all its
 equipment off, in plain SVG (`GET /api/scenarios/{id}/climate/probes`).

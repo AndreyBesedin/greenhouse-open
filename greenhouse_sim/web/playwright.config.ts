@@ -29,6 +29,7 @@ const SUN = ["light.spec.ts", "solar-lab.spec.ts", "solar-day.spec.ts"];
 const ONE_BY_ONE = [
   "season.spec.ts",
   "daily-schedule.spec.ts",
+  "checkpoints.spec.ts",
   "crop.spec.ts",
   "reference-schedule.spec.ts",
 ];

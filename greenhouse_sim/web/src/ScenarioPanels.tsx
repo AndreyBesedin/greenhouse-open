@@ -2,6 +2,8 @@ import { useCallback } from "react";
 
 import { CfdControls } from "./cfd/CfdControls";
 import type { CfdGeometryState } from "./cfd/geometry";
+import { CheckpointsPanel } from "./checkpoints/CheckpointsPanel";
+import { restored } from "./checkpoints/checkpoints";
 import { EquipmentControls } from "./EquipmentControls";
 import { ClimateSchedule } from "./fields/ClimateSchedule";
 import { ClimateTime } from "./fields/ClimateTime";
@@ -51,7 +53,7 @@ export interface ScenarioLoads {
 
 /**
  * A scenario's panels, in the info panel's order: its fields, its climate
- * run's moment, house air, schedule and timeline, its weather, the probes and their
+ * run's moment, house air, schedule, timeline and checkpoints, its weather, the probes and their
  * charts, its CFD boundaries, and its doors, vents and equipment. Each
  * changes the scenario's source; what the view around them keeps (how the
  * field's colours run, whether a click places a probe) is the viewer's.
@@ -170,6 +172,14 @@ export function ScenarioPanels({
       )}
       {climate && (
         <TimelinePanel scenarioId={source.scenarioId} run={scenarioRun(source)} time={time} />
+      )}
+      {climate && (
+        <CheckpointsPanel
+          scenarioId={source.scenarioId}
+          run={scenarioRun(source)}
+          time={time}
+          onRestore={(checkpoint) => onSource(restored(source, checkpoint, CLIMATE_FIELD))}
+        />
       )}
       <WeatherPanel
         state={weather}
