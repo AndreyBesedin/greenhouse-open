@@ -90,6 +90,14 @@ check; a route that comes to need one checks it first.
                                           and its cameras' frames; asked as
                                           its climate field is; &clean=1 as
                                           clean sensors would have, for QA
+    GET /api/scenarios/{id}/climate/state what each process of its run holds at
+                                          &t=600, for QA mode's developer
+                                          panel: the clock, the house's air,
+                                          the crop's days, the equipment's
+                                          and openings' levels and the latest
+                                          commands, each sensor's freshness
+                                          and each camera's latest frame;
+                                          asked as its climate field is
     GET /api/scenarios/{id}/climate/truth what its point sensors truly sampled,
                                           as its log is asked for; for
                                           evaluation and QA only
@@ -162,6 +170,7 @@ from greenhouse_sim.services import (
     crop,
     fields,
     plants,
+    run_state,
     scenarios,
     sensors,
     system,
@@ -350,6 +359,19 @@ def respond(method: str, path: str, body: bytes = b"") -> Response:
                     clean=_last(query, "clean") == "1",
                     weather=_last(query, "weather"),
                     from_s=_since(query),
+                )
+            )
+        case ["api", "scenarios", scenario_id, "climate", "state"]:
+            return _answer(
+                lambda: run_state.run_state(
+                    scenario_id,
+                    _last(query, "layout"),
+                    _pairs(query.get("set", []), "set"),
+                    _pairs(query.get("open", []), "open"),
+                    _commands(query.get("schedule", [])),
+                    _seconds(query),
+                    weather=_last(query, "weather"),
+                    daily=_daily(query),
                 )
             )
         case ["api", "scenarios", scenario_id, "climate", "truth"]:

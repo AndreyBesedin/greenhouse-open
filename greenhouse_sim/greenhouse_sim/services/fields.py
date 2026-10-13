@@ -41,7 +41,7 @@ from greenhouse_sim.cfd.results import CfdAirflow, kept_result
 from greenhouse_sim.climate.commands import Command, DailyCommand, Schedule
 from greenhouse_sim.climate.day import ClimateDay, window_start
 from greenhouse_sim.climate.glazing import GlazingAt, glazed_cells
-from greenhouse_sim.climate.house import HouseTrace, house_trace
+from greenhouse_sim.climate.house import HouseAir, HouseTrace, house_trace
 from greenhouse_sim.climate.openings import OpeningsAt, opening_sites
 from greenhouse_sim.climate.probes import ClimateProbes, probe_series
 from greenhouse_sim.climate.run import ClimateRun
@@ -511,6 +511,36 @@ def house_air(
         _climate_day(key_scenario, key_layout, key_weather, (), key_openings, ()).house,
         _moments(until_s, first),
     )
+
+
+def house_air_at(
+    scenario_id: str,
+    layout: str | None = None,
+    levels: Mapping[str, float] | None = None,
+    openings: Mapping[str, float] | None = None,
+    commands: Sequence[Commanded] = (),
+    time_s: float = 0.0,
+    weather: str | None = None,
+    daily: Sequence[Commanded] | None = None,
+) -> HouseAir | None:
+    """The house's air as one well-mixed volume at a moment of a scenario's
+    climate run, asked as its climate field is and refused as it is; None
+    for a scenario without equipment, which has no climate run. Unlike
+    `house_air`, it works out nothing of the same run all off."""
+    checked_moment(scenario(scenario_id), time_s)
+    models = _models(
+        scenario_id,
+        layout or DEFAULT_LAYOUT,
+        levels,
+        openings,
+        commands,
+        weather or DEFAULT_WEATHER,
+        daily,
+    )
+    climate = models.get(CLIMATE)
+    if not isinstance(climate, _Climate):
+        return None
+    return _climate_day(*climate.key).house.air_at(time_s)
 
 
 def glazing(

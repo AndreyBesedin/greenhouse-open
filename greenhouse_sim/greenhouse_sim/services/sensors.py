@@ -19,7 +19,7 @@ from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.evaluation.sensor_truth import SensorTruth, sensor_truth
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
-from greenhouse_sim.sensors.air import WeatherAt, observe, reads
+from greenhouse_sim.sensors.air import AirAt, WeatherAt, observe, reads, samples
 from greenhouse_sim.sensors.log import SensorFreshness, frames, freshness
 from greenhouse_sim.services.fields import Commanded, air_through_a_run
 from greenhouse_sim.services.runs import checked_window
@@ -39,6 +39,30 @@ class SensorObservations(BaseModel):
     observations: list[Observation]
     freshness: list[SensorFreshness]
     frames: list[CameraFrame]
+
+
+class CameraAt(BaseModel):
+    """Where a camera stands with its frames at a moment of a run: how many
+    it has taken since the run's start, and its latest, if any."""
+
+    model_config = ConfigDict(frozen=True)
+
+    sensor_id: str
+    frames: int
+    latest: CameraFrame | None
+
+
+class SensorsAt(BaseModel):
+    """Where a run's sensors stand at a moment, as its observation log would
+    say, without the log: each point sensor's freshness, and each camera's
+    frames; the run that produced them, and when it started."""
+
+    model_config = ConfigDict(frozen=True)
+
+    run_id: str
+    start: datetime
+    freshness: list[SensorFreshness]
+    cameras: list[CameraAt]
 
 
 class SensorTruths(BaseModel):
@@ -111,22 +135,11 @@ def observations(
         weather_at=weather_at,
         from_s=first,
     )
-    # A quantity the run's air and weather do not give, they never give.
-    unavailable = {
-        s.sensor_id for s in point_sensors if reads(s, air_at(0.0), weather_at(0.0)) is None
-    }
     return SensorObservations(
         run_id=run_id,
         start=start,
         observations=observed,
-        freshness=freshness(
-            point_sensors,
-            until_s,
-            start=start,
-            seed=scenario(scenario_id).random_seed,
-            unavailable=unavailable,
-            clean=clean,
-        ),
+        freshness=_freshness(scenario_id, point_sensors, air_at, weather_at, until_s, clean),
         frames=frames(
             _cameras(scenario_id, name),
             until_s,
@@ -135,6 +148,78 @@ def observations(
             run_id=run_id,
             from_s=first,
         ),
+    )
+
+
+def sensors_at(
+    scenario_id: str,
+    layout: str | None = None,
+    levels: Mapping[str, float] | None = None,
+    openings: Mapping[str, float] | None = None,
+    commands: Sequence[Commanded] = (),
+    until_s: float = 0.0,
+    weather: str | None = None,
+    daily: Sequence[Commanded] | None = None,
+) -> SensorsAt:
+    """Where a run's sensors stand at `until_s`: each point sensor's
+    freshness, as its observation log gives it, and each camera's frames,
+    working out none of the log's observations, which sample the house's air
+    every minute. Asked for as the log is, and refused as it is."""
+    checked_window(scenario(scenario_id), None, until_s)
+    name = layout or DEFAULT_LAYOUT
+    air_at, run_id = air_through_a_run(
+        scenario_id, name, levels, openings, commands, weather, daily
+    )
+    start = run_start(scenario_id)
+    greenhouse_id = scenario(scenario_id).greenhouse_id
+    cameras = []
+    for camera in _cameras(scenario_id, name):
+        taken = samples(camera, until_s)
+        latest = frames(
+            [camera],
+            until_s,
+            start=start,
+            greenhouse_id=greenhouse_id,
+            run_id=run_id,
+            from_s=taken[-1] if taken else until_s,
+        )
+        cameras.append(
+            CameraAt(sensor_id=camera.sensor_id, frames=len(taken), latest=next(iter(latest), None))
+        )
+    return SensorsAt(
+        run_id=run_id,
+        start=start,
+        freshness=_freshness(
+            scenario_id,
+            _point_sensors(scenario_id, name),
+            air_at,
+            _weather_at(scenario_id, weather),
+            until_s,
+        ),
+        cameras=cameras,
+    )
+
+
+def _freshness(
+    scenario_id: str,
+    point_sensors: Sequence[PointSensor],
+    air_at: AirAt,
+    weather_at: WeatherAt,
+    until_s: float,
+    clean: bool = False,
+) -> list[SensorFreshness]:
+    """Each point sensor's freshness at `until_s`; a quantity the run's air
+    and weather do not give, they never give."""
+    unavailable = {
+        s.sensor_id for s in point_sensors if reads(s, air_at(0.0), weather_at(0.0)) is None
+    }
+    return freshness(
+        point_sensors,
+        until_s,
+        start=run_start(scenario_id),
+        seed=scenario(scenario_id).random_seed,
+        unavailable=unavailable,
+        clean=clean,
     )
 
 

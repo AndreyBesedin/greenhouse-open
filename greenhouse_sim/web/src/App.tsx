@@ -45,6 +45,7 @@ import { PlantLight } from "./plants/PlantLight";
 import { loadRunManifest, loadServedVersion, runManifestUrl, VERSION_URL } from "./qaMode/manifest";
 import { useQaMode } from "./qaMode/mode";
 import { QaPanel } from "./qaMode/QaPanel";
+import { loadRunState, runStateUrl } from "./qaMode/state";
 import type { ViewSample } from "./readouts";
 import { ScenarioPanels } from "./ScenarioPanels";
 import { loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
@@ -208,6 +209,13 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const runManifest = useLoad(
     !qaMode || run === null ? null : runManifestUrl(run.scenarioId, run),
     loadRunManifest,
+  );
+  // In QA mode, what each process of the run drawn holds at its moment; the
+  // last stays on show until the next arrives.
+  const runState = useLoad(
+    !qaMode || run === null ? null : runStateUrl(run.scenarioId, run),
+    loadRunState,
+    { group: run === null ? "" : `state ${run.scenarioId}` },
   );
 
   // The weather outside a scenario at the moment drawn, and through its
@@ -547,7 +555,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 onQaMode={setQaMode}
               />
             )}
-            {qaMode && <QaPanel build={build} served={served} manifest={runManifest} />}
+            {qaMode && (
+              <QaPanel build={build} served={served} manifest={runManifest} state={runState} />
+            )}
             {source.kind === "scenario" && (
               <ScenarioPanels
                 source={source}

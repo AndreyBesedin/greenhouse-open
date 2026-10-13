@@ -2,6 +2,72 @@ import type { ReactNode } from "react";
 
 import type { BuildInfo } from "../buildInfo";
 import { describeManifest, type RunManifestState, type ServedVersionState } from "./manifest";
+import { describeRunState, type RunStateState } from "./state";
+
+/** What each process of the scenario's run drawn holds at its moment, as
+ * the simulator says: the clock, the house's air, the crop, the levels and
+ * the latest commands, each sensor's freshness, a stale one marked, and
+ * each camera's frames. */
+function DeveloperList({ state }: { state: RunStateState }) {
+  if (state.status === "none") {
+    return null;
+  }
+  const described = state.status === "loaded" ? describeRunState(state.state) : null;
+  return (
+    <details className="developer" open>
+      <summary>Developer</summary>
+      {state.status === "loading" && <p>Reading what the run holds…</p>}
+      {state.status === "unavailable" && <p>What the run holds cannot be read: {state.reason}.</p>}
+      {described !== null && state.status === "loaded" && (
+        <dl>
+          <Row title="Clock" testId="developer-clock">
+            {described.clock}
+          </Row>
+          <Row title="House air" testId="developer-house-air">
+            {described.houseAir}
+          </Row>
+          <Row title="Crop" testId="developer-crop">
+            {described.crop}
+          </Row>
+          <Row title="Levels" testId="developer-levels">
+            {described.levels}
+          </Row>
+          <Row title="Commands" testId="developer-commands">
+            {`${state.state.commandsGiven} given${described.commands.length > 0 ? ", the latest:" : ""}`}
+            {described.commands.length > 0 && (
+              <ol data-testid="developer-latest-commands">
+                {described.commands.map((command, index) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: two commands may be alike.
+                  <li key={index}>{command}</li>
+                ))}
+              </ol>
+            )}
+          </Row>
+          <Row title="Sensors" testId="developer-sensors">
+            <ul>
+              {described.sensors.map((sensor) => (
+                <li key={sensor.id} className={sensor.stale ? "stale" : undefined}>
+                  {sensor.text}
+                </li>
+              ))}
+            </ul>
+          </Row>
+          <Row title="Cameras" testId="developer-cameras">
+            {described.cameras.length === 0 ? (
+              "none"
+            ) : (
+              <ul>
+                {described.cameras.map((camera) => (
+                  <li key={camera.id}>{camera.text}</li>
+                ))}
+              </ul>
+            )}
+          </Row>
+        </dl>
+      )}
+    </details>
+  );
+}
 
 /** What the run is made from, in QA mode: a scenario's run's manifest, its
  * version, seed, season and models; and the simulator and the viewer, each
@@ -74,22 +140,27 @@ function Row({ title, testId, children }: { title: string; testId: string; child
 }
 
 /**
- * QA mode's panel (P09.6), shown only in QA mode and marked as QA's: what
- * the run is made from, its manifest and the versions and commits of the
- * simulator and the viewer.
+ * QA mode's panel (P09.6), shown only in QA mode and marked as QA's: the
+ * developer's list of what each process of the run holds at its moment,
+ * and what the run is made from, its manifest and the versions and commits
+ * of the simulator and the viewer.
  */
 export function QaPanel({
   build,
   served,
   manifest,
+  state,
 }: {
   build: BuildInfo;
   served: ServedVersionState;
-  /** The manifest of the scenario's run drawn; none for another scene. */
+  /** The manifest of the scenario's run drawn, and what each of its
+   * processes holds at its moment; none for another scene. */
   manifest: RunManifestState;
+  state: RunStateState;
 }) {
   return (
     <section className="qa-panel" aria-label="QA mode">
+      <DeveloperList state={state} />
       <RunManifestList build={build} served={served} manifest={manifest} />
     </section>
   );

@@ -161,11 +161,14 @@ asks for truth (`GET /api/scenarios/{id}/climate/truth`): a selected
 sensor's truth beside its readings, with a switch to read it as a clean
 sensor would; every plant in a scenario labelled with its identifier, and
 its day's light in a climate run; each probe's value of the quantity drawn
-beside its name; and a panel of its own, with the run's manifest, its
-version, seed, season and models (`GET /api/scenarios/{id}/manifest`), and
-the simulator's and the viewer's versions and commits, warning when they
-differ (`GET /api/version`). Out of it, a selected sensor shows its
-readings alone.
+beside its name; and a panel of its own: "Developer", what each process
+of the run holds at the moment drawn, the clock, the house's air, the
+crop's last day, every level and the latest commands, each sensor's
+freshness and each camera's frames (`GET /api/scenarios/{id}/climate/state`);
+and "Run manifest", its version, seed, season and models
+(`GET /api/scenarios/{id}/manifest`), and the simulator's and the viewer's
+versions and commits, warning when they differ (`GET /api/version`). Out
+of it, a selected sensor shows its readings alone.
 The inspector says what the selected entity is in words, and names its
 dimensions. In a climate run's view, a selected plant, or any part of one,
 shows its light: its PAR at the moment drawn and its day's light integral
