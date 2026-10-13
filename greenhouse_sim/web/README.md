@@ -119,7 +119,9 @@ saves the run's state at the start of the moment's day
 scenario, restores one, its run at its moment, and downloads one as JSON or
 uploads one again (`GET /api/checkpoints/{id}`, `POST /api/checkpoints`);
 the API keeps them in its memory, and a restored run given other commands
-from its moment on is a branch from it, sharing every day before. With probes placed, "Probe
+from its moment on is a branch from it, sharing every day before.
+"Compare" against one charts its run, carried on unchanged, beside the run
+drawn: the house's air, a temperature sensor's readings and a plant's days. With probes placed, "Probe
 charts" draws each probe's temperature, relative humidity and air speed
 through the run up to the moment drawn, beside the same run with all its
 equipment off, in plain SVG (`GET /api/scenarios/{id}/climate/probes`).

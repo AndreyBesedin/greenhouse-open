@@ -40,6 +40,34 @@ test("checkpoints: a run saved at a day's start is restored, downloaded and uplo
     await expect(moment).toHaveText("24 h 00 min", ARRIVES);
   });
 
+  await test.step("a branch, its heater off two hours on, compared with the checkpoint's run", async () => {
+    const run = page.getByRole("group", { name: "Climate run" });
+    // Restored at 86 400 s, the first day's end: on to the second's.
+    await run.getByRole("button", { name: "Next day" }).click();
+    await run.getByRole("slider", { name: "Time of day" }).fill("7200");
+    await expect(moment).toHaveText("day 1, 2 h 00 min", ARRIVES);
+    await page
+      .getByRole("group", { name: "Equipment" })
+      .getByRole("checkbox", { name: "heater" })
+      .uncheck();
+    await expect(page).toHaveURL(new RegExp(`&schedule=600:heater:1,${DAY_S + 7200}:heater:0`));
+    await run.getByRole("slider", { name: "Time of day" }).fill("14400");
+    await expect(moment).toHaveText("day 1, 4 h 00 min", ARRIVES);
+    await kept.getByRole("button", { name: /^Compare with day 1, / }).click();
+    const branches = page.getByRole("region", { name: "Branches" });
+    await expect(branches.getByTestId("branches-heading")).toHaveText(
+      "A: day 1's checkpoint, carried on as it was; B: the run drawn.",
+    );
+    // Its heater still on, branch A's house is the warmer, two hours after
+    // B's went off.
+    const house = branches.getByTestId("branches-house");
+    await expect(house).toHaveText(/^House air: A [\d.]+ °C, B [\d.]+ °C$/, ARRIVES);
+    const [a = 0, b = 0] =
+      ((await house.textContent()) ?? "").match(/[\d.]+(?= °C)/g)?.map(Number) ?? [];
+    expect(a).toBeGreaterThan(b + 2);
+    await expect(branches.getByTestId("branches-sensor")).toHaveText(/^temperature front: A /);
+  });
+
   await test.step("downloaded as JSON, and uploaded again as the same", async () => {
     const link = kept.getByRole("link", { name: "Download" });
     await expect(link).toHaveAttribute("download", /^climate_box-day-1-[0-9a-f]{16}\.json$/);
