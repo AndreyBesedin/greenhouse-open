@@ -200,7 +200,13 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   await expect(page.getByTestId("wind-compass")).toBeVisible();
   await say(page, "6. The wind turned to blow from the east: another run, worked out afresh");
 
-  // 12. Seed 42 again: the golden views and their state probes.
+  // 12. Seed 42 again: the golden views and their state probes. The viewer
+  // is left for a blank page first: the turned wind's requests, each waiting
+  // minutes on its run, hold the browser's six connections to the viewer's
+  // host, and a page asked of it waits until one ends (on a slow machine,
+  // past the test's timeout). A blank page needs none, and leaving the
+  // viewer ends them.
+  await page.goto("about:blank");
   await page.goto(`${QA_REFERENCE_PATH}?view=noon`);
   await expect(page.getByTestId("qa-probes")).toContainText("house air 29.46 °C", ARRIVES);
   await say(page, "12. The golden views, as CI compares them, with their state probes");

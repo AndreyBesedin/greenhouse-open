@@ -202,6 +202,11 @@ memory until it stops.
   minutes too. A sensor selected late in a day reads its log from the
   day's start, each reading sampling the house's whole field: at noon,
   minutes in QA mode.
+- **Another page of the viewer that does not open.** While the viewer waits
+  on a run worked out afresh, its requests hold the six connections a
+  browser keeps to a host, and another page of the viewer, in the same tab
+  or another, waits until one of them ends. Closing the tab that waits on
+  the run, or leaving it for a blank page, ends them.
 - **A jerky view.** Without a graphics card the browser draws in software;
   the HUD's frame rate says so.
 
