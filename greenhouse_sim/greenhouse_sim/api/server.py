@@ -11,12 +11,15 @@ per simulated day, and a comment now and then to keep the connection open.
 Commands for a live run (play, pause, step, reset, speed) are POST requests,
 and so are a run's checkpoints, saved or uploaded as a JSON body.
 A request the simulator fails on unexpectedly is answered 500, with the
-failure in the server's log.
+failure in the server's log. Every answer says how long the simulator took
+to give it, as a `Server-Timing` header's `sim` metric, in milliseconds
+(P09.8), which the viewer's HUD shows for the latest request.
 """
 
 import argparse
 import json
 import sys
+import time
 import traceback
 from collections.abc import Callable, Sequence
 from http import HTTPStatus
@@ -35,6 +38,10 @@ DEFAULT_PORT: Final = 8765
 KEEPALIVE_SECONDS: Final = 15.0
 # How soon a viewer's browser should try again after losing the stream.
 RECONNECT_AFTER_MS: Final = 1000
+# The `Server-Timing` metric that says how long the simulator took to answer.
+SIMULATOR_METRIC: Final = "sim"
+MS_PER_S: Final = 1000
+
 # How many connections may wait to be accepted. A viewer asks for a scene,
 # its fields and its CFD boundaries at once, and its browser tests open
 # several viewers together; past this, macOS refuses a connection outright.
@@ -65,21 +72,23 @@ class SimulatorServer(ThreadingHTTPServer):
 
 class _Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
+        started = time.perf_counter()
         stream = self._safely(lambda: live_stream(self.path, self._live))
         if isinstance(stream, LiveRun):
             self._stream(stream)
         elif stream is not None:
-            self._send(stream)
+            self._send(stream, started)
         else:
-            self._send(self._safely(lambda: respond("GET", self.path)))
+            self._send(self._safely(lambda: respond("GET", self.path)), started)
 
     def do_POST(self) -> None:
+        started = time.perf_counter()
         response = self._safely(lambda: control(self.path, self._live))
         if response is None:
             length = int(self.headers.get("Content-Length") or 0)
             body = self.rfile.read(length) if length > 0 else b""
             response = self._safely(lambda: respond("POST", self.path, body))
-        self._send(response)
+        self._send(response, started)
 
     @property
     def _live(self) -> LiveRuns:
@@ -94,11 +103,15 @@ class _Handler(BaseHTTPRequestHandler):
             traceback.print_exc()
             return Response(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": UNEXPECTED_FAILURE})
 
-    def _send(self, response: Response) -> None:
+    def _send(self, response: Response, started: float) -> None:
+        """Sends the answer, saying how long the simulator took to give it,
+        from `started`, its JSON written."""
         body = json.dumps(response.body).encode()
+        took_ms = (time.perf_counter() - started) * MS_PER_S
         self.send_response(response.status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Server-Timing", f"{SIMULATOR_METRIC};dur={took_ms:.1f}")
         self.end_headers()
         self.wfile.write(body)
 

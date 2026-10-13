@@ -280,7 +280,7 @@ run in their own Playwright project, as the plant lab's and the sun's do.
 | P09.5 | `feat(replay): add checkpoint reset branch and replay` | Done |
 | P09.6 | `feat(qa): add QA mode with truth overlays` | Done |
 | P09.7 | `test(e2e): add integrated visual regression suite` | Done |
-| P09.8 | `perf(sim): add representative performance benchmark` | Planned |
+| P09.8 | `perf(sim): add representative performance benchmark` | Done |
 | P09.9 | `docs(release): document local demo and QA protocol` | Planned |
 
 ### P09.1: Scenarios as manifests
@@ -784,6 +784,56 @@ views' screenshots. Tests: the screenshots, and the probes' values.
 The benchmark command, its stored report, and the simulator's time in the
 HUD. Visible result: the HUD and the report. Tests: the report has every
 measure; the benchmark runs on the reference scenario.
+
+#### As implemented
+
+- **The command:** `python -m greenhouse_sim.benchmark` (`services/benchmark.py`)
+  forgets every run kept and works the reference run's season out from its
+  start, timing each part of each day with a stopwatch the run's crop
+  carries (`core/stopwatch.py`, `RunCrop(watch=)`): the house's air, the
+  plants' light and the plants' days. Then an hour of the air cell by cell,
+  drawn for noon on the last day; the scene a camera's frame is drawn from,
+  the house and its crop at its fullest, and its size; what there is to
+  draw then, entities, organs, plants and the field's cells; and the
+  process's peak memory, with the machine. It compares the report with the
+  one kept, `greenhouse_sim/benchmarks/simulator.json`; `--record` keeps a
+  new one, `--days` measures the season's first days alone. It never fails
+  on the numbers.
+- **The first report** (an Apple M2, 8 GB, Python 3.14): the season's 120
+  days take 297 s, 2.48 s a simulated day, about five minutes rather than
+  the minute and a half the design expected. The house's air is 2.25 s of
+  it, 91%; the plants' light 0.22 s; the plants' days 0.01 s. An hour of
+  the air cell by cell takes 5.0 s: kept through a day it would take 120 s,
+  49 times the house as one volume. The season's last scene, 18,331
+  entities, 4,371 organs, is 15.9 MB of JSON and takes 0.68 s; the process
+  peaks at 266 MB.
+- **The next bottleneck,** found by profiling the house's air (`cProfile`,
+  its first days): the sun's heat in it, the floor's irradiance through the
+  glass worked out every minute, each glass pane's angle to the sun and the
+  crop's shadows, about 70% of it; and the schedule, scanned whole twice a
+  minute for the levels it sets (`Schedule.applied`), which grows with the
+  season as its daily commands pile up, 2,520 by its end: 0.12 s a
+  simulated day on day 2, 0.66 s on day 110, about a fifth of the season.
+  The first is work a step repeats as the sun barely moves; the second a
+  search a sorted schedule could halve at each step. Neither asks for
+  another language.
+- **The simulator's time in the HUD:** every answer of the API says how long
+  the simulator took to give it, in a `Server-Timing` header's `sim` metric;
+  the HUD shows the latest request's, read from the browser's own timing of
+  each request (`useSimulatorTime`), beside the renderer's frame rate.
+- **The renderer's:** `npm run bench` now also measures the reference
+  greenhouse at its season's end, its crop at its fullest and its climate
+  drawn, starting its own API, with what the simulator took for each part
+  (`benchmarks/reference.json`). On the same M2: 535 frames a second, 1.9 ms
+  a frame, 18,331 entities in 89 draw calls. Opening it from the kept
+  opening day, its requests wait on one another for the run's last 40
+  days: its crop answers after about three minutes.
+- **Tests** (`tests/test_benchmark.py`): the benchmark runs on the reference
+  scenario's first day and reports every measure; the kept report has
+  every measure, for its whole season; a benchmark measures days its run
+  has; the bottleneck named is the costliest part; the command compares the
+  latest with the kept. `tests/test_api.py`: every answer says the
+  simulator's time, a refusal too. `e2e/smoke.spec.ts`: the HUD shows it.
 
 ### P09.9: The release
 

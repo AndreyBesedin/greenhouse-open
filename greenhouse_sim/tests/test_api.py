@@ -11,6 +11,7 @@ import pathlib
 import re
 import subprocess
 import threading
+import time
 import urllib.error
 import urllib.request
 from collections.abc import Iterator
@@ -185,6 +186,30 @@ def test_the_server_answers_over_http_on_the_loopback_interface(
         urllib.request.urlopen(f"http://{host!s}:{port}/api/nothing_here")
     assert refused.value.code == HTTPStatus.NOT_FOUND
     assert json.load(refused.value)["error"]
+
+
+def test_every_answer_says_how_long_the_simulator_took(
+    server: ThreadingHTTPServer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    host, port = server.server_address[:2]
+    took = re.compile(r"sim;dur=(\d+\.\d)")
+
+    with urllib.request.urlopen(f"http://{host!s}:{port}/api/health") as reply:
+        assert took.fullmatch(reply.headers["Server-Timing"])
+    with pytest.raises(urllib.error.HTTPError) as refused:
+        urllib.request.urlopen(f"http://{host!s}:{port}/api/nothing_here")
+    assert took.fullmatch(refused.value.headers["Server-Timing"])
+
+    # The time is the simulator's, from the request read to its answer
+    # written as JSON.
+    def slow(method: str, path: str) -> Response:
+        time.sleep(0.05)
+        return Response(HTTPStatus.OK, {"status": "ok"})
+
+    monkeypatch.setattr(server_module, "respond", slow)
+    with urllib.request.urlopen(f"http://{host!s}:{port}/api/health") as reply:
+        found = took.fullmatch(reply.headers["Server-Timing"])
+    assert found is not None and float(found.group(1)) >= 50
 
 
 def test_a_request_the_simulator_fails_on_is_answered_500_and_logged(
