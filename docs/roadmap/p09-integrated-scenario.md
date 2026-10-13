@@ -584,8 +584,8 @@ the reference; the kept opening day matches the run's.
 
 #### As implemented
 
-The checkpoints, the viewer's panel and the branch comparison; the
-replay's hashes and the kept opening day follow.
+The checkpoints, the viewer's panel, the branch comparison and the
+replay's digests; the kept opening day follows.
 
 - **A checkpoint** (`services/checkpoints.py`) is a run's state at the start
   of a day: its run, its scenario and the digest of the scenario's manifest
@@ -629,6 +629,22 @@ replay's hashes and the kept opening day follow.
   moment before the checkpoint says so. In the climate box, a branch whose
   heater goes off two hours into its second day is more than 2 °C cooler
   than its checkpoint's run two hours later (`checkpoints.spec.ts`).
+- **Replay** (`services/replay.py`): at each day's end a run's state is
+  probed, each plant's structure, organs, sizes and history, the house's
+  air, and what each point sensor observed on each hour of the day, noise,
+  dropouts and all; written as JSON with its numbers rounded to six
+  decimals, so that two machines' maths libraries' last bits do not tell
+  two replays apart, and digested. The digests of the reference run's first
+  three days are kept in `tests/fixtures/reference_replay.json`, with the
+  manifest they were made with and readable values beside them, and
+  rewritten by `python tests/test_replay.py --update`; a test replays the
+  run against them (`tests/test_replay.py`). A branch keeps the digests of
+  the days before its change. Three days probe in 11 s from the start,
+  2.6 s again.
+- **Found on the way:** a whole day's observation log of the reference
+  run, 18,600 observations, takes about 40 s, each minute's sample drawing
+  the house's whole field with its sunlight; the probes sample each hour on
+  its own instead. For P09.8.
 - **Measured:** after a restart, the reference run's third day, from a
   checkpoint at its second, comes back in 1.4 s, the same as before; from
   its start it takes about 3.5 s.
