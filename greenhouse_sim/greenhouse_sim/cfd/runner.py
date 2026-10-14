@@ -13,8 +13,13 @@ from pathlib import Path
 from typing import Final
 
 # The container image OpenFOAM is run from when it is not installed, unless
-# GREENHOUSE_OPENFOAM_IMAGE names another.
-DEFAULT_IMAGE: Final = "opencfd/openfoam-default:2412"
+# GREENHOUSE_OPENFOAM_IMAGE names another: by digest, as well as by tag, so
+# that a tag moved upstream cannot change what the kept results are
+# compared with.
+DEFAULT_IMAGE: Final = (
+    "opencfd/openfoam-default:2412"
+    "@sha256:1ba02114b1c025c370f2e269a07677c16c9bea8d990fcd75ac8378aff9d41b50"
+)
 IMAGE_VARIABLE: Final = "GREENHOUSE_OPENFOAM_IMAGE"
 # Where the case is mounted inside the container.
 CASE_MOUNT: Final = "/case"

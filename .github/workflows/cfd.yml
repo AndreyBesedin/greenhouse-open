@@ -27,14 +27,18 @@ on:
       - ".github/workflows/cfd.yml"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   openfoam:
     name: OpenFOAM meshes and solves the reference cases
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.14"
 
@@ -45,8 +49,10 @@ jobs:
           -e ./greenhouse_protocol -e ./greenhouse_sim
           -r requirements-dev.txt
 
+      # The image the runner names, by digest: the kept results are what it
+      # solves.
       - name: Pull OpenFOAM's container
-        run: docker pull opencfd/openfoam-default:2412
+        run: docker pull "$(python -c 'from greenhouse_sim.cfd.runner import DEFAULT_IMAGE; print(DEFAULT_IMAGE)')"
 
       - name: Run the tests that run OpenFOAM
         working-directory: greenhouse_sim
@@ -66,7 +72,7 @@ jobs:
 
       - name: Keep the solved results and the solver's logs
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: cfd-results
           path: |

@@ -22,6 +22,7 @@ jobs:
     name: risk gate, again after a review
     if: github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       actions: write
     steps:
