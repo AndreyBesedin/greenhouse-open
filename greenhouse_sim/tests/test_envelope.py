@@ -3,10 +3,12 @@ points land where they should in the world, and the surfaces close the
 greenhouse, facing into it."""
 
 import math
+from http import HTTPStatus
 
 import pytest
 from pydantic import ValidationError
 
+from greenhouse_sim.api.routes import respond
 from greenhouse_sim.domain.envelope import MemberKind, SurfaceCategory
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
@@ -323,3 +325,26 @@ def test_posts_stand_on_the_gutter_lines_and_rafters_climb_to_the_ridges() -> No
             assert round(member.start.y, 6) in gutter_lines
             assert round(member.end.y, 6) in ridges
             assert member.start.x == member.end.x
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"length": 1e308},
+        {"width": 501.0},
+        {"ridge_height": 51.0},
+        {"spans": 20_000},
+        {"bays": 200_000},
+        {"spans": 50, "bays": 50},
+    ],
+    ids=["length", "width", "ridge", "spans", "bays", "spans by bays"],
+)
+def test_an_envelope_is_no_larger_than_a_greenhouse(changes: dict[str, float]) -> None:
+    with pytest.raises(ValidationError):
+        Envelope.model_validate(HOUSE.model_dump() | changes)
+
+
+def test_the_api_refuses_an_envelope_larger_than_a_greenhouse() -> None:
+    response = respond("GET", "/api/scenarios/climate_box/scene?envelope=length:1e308")
+
+    assert response.status == HTTPStatus.BAD_REQUEST

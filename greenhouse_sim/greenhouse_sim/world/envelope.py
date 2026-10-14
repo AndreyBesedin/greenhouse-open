@@ -37,7 +37,7 @@ an opening lies on it.
 """
 
 import math
-from typing import Final, Self
+from typing import Annotated, Final, Self
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt, model_validator
 
@@ -61,6 +61,13 @@ AT_WORLD_ORIGIN = Transform(position=Vector3(x=0.0, y=0.0, z=0.0))
 DEFAULT_LARGEST_VENT_ANGLE_RAD = math.radians(45)
 # A door slides this far outside its wall, so that the two never touch.
 DOOR_CLEARANCE_M = 0.02
+# No greenhouse is larger: a longer side, a higher roof, or more spans and
+# bays only describe a model too large to draw or run.
+LONGEST_SIDE_M: Final = 500.0
+HIGHEST_M: Final = 50.0
+MOST_SPANS: Final = 100
+MOST_BAYS: Final = 200
+MOST_SPANS_BY_BAYS: Final = 2_000
 # A gutter is a channel of this cross-section, its top at the eaves, and
 # structural members are round bars of these radii, until they have profiles
 # of their own: the scene draws them so, and they shade the sun so.
@@ -256,27 +263,36 @@ def _surface(
 
 
 class Envelope(BaseModel):
-    """A greenhouse's envelope, in metres."""
+    """A greenhouse's envelope, in metres, no larger than any greenhouse."""
 
     model_config = ConfigDict(frozen=True)
 
     # Along the greenhouse's x.
-    length: PositiveFloat
+    length: Annotated[PositiveFloat, Field(le=LONGEST_SIDE_M)]
     # Along the greenhouse's y, across all its spans.
-    width: PositiveFloat
+    width: Annotated[PositiveFloat, Field(le=LONGEST_SIDE_M)]
     # From the floor to the eaves, where the walls and gutters meet the roof.
-    eave_height: PositiveFloat
+    eave_height: Annotated[PositiveFloat, Field(le=HIGHEST_M)]
     # From the floor to each span's ridge, the roof's highest line. A ridge as
     # high as the eaves makes a flat roof.
-    ridge_height: PositiveFloat
+    ridge_height: Annotated[PositiveFloat, Field(le=HIGHEST_M)]
     # Spans side by side across the width, each as wide as the others.
-    spans: PositiveInt = 1
+    spans: Annotated[PositiveInt, Field(le=MOST_SPANS)] = 1
     # Bays one after another along the length, each as long as the others.
-    bays: PositiveInt = 1
+    bays: Annotated[PositiveInt, Field(le=MOST_BAYS)] = 1
     # Doors and vents, each on one of the envelope's surfaces.
     openings: list[Opening] = []
     # Places the greenhouse's frame in the world.
     origin: Transform = AT_WORLD_ORIGIN
+
+    @model_validator(mode="after")
+    def _not_too_many_bays_and_spans(self) -> Self:
+        if self.spans * self.bays > MOST_SPANS_BY_BAYS:
+            raise ValueError(
+                f"{self.spans} spans of {self.bays} bays; a greenhouse has at most "
+                f"{MOST_SPANS_BY_BAYS} of them"
+            )
+        return self
 
     @model_validator(mode="after")
     def _ridge_is_not_below_the_eaves(self) -> Self:
