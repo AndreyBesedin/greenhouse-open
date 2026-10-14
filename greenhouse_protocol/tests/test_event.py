@@ -81,3 +81,8 @@ def test_event_source_has_expected_members() -> None:
         "RULE_BASED_POLICY",
         "AGENT",
     }
+
+
+def test_an_event_refuses_a_wall_clock_time() -> None:
+    with pytest.raises(ValidationError, match="timezone-aware"):
+        _make_event(timestamp=datetime(2026, 1, 13, 10, 15))

@@ -160,3 +160,8 @@ def test_plant_ids_must_be_unique_across_the_whole_greenhouse() -> None:
                 Compartment(compartment_id="3.06", name="one", plants=[_plant("plant_001")])
             ],
         )
+
+
+def test_a_description_refuses_a_wall_clock_creation_time() -> None:
+    with pytest.raises(ValidationError, match="timezone-aware"):
+        _make_greenhouse(created_at=datetime(2026, 1, 1))

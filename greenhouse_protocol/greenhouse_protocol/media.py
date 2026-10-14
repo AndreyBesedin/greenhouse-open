@@ -14,12 +14,12 @@ and stored nowhere.
 """
 
 import math
-from datetime import datetime
 from typing import Final, Self
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from greenhouse_protocol.enums import CaptureModality
+from greenhouse_protocol.instant import Instant
 from greenhouse_protocol.provenance import RecordSource
 from greenhouse_protocol.sensor import CameraIntrinsics
 
@@ -35,20 +35,13 @@ class MediaCapture(BaseModel):
     # The compartment the sensor looks at, when the greenhouse has them.
     compartment_id: str | None = None
     sensor_id: str
-    timestamp: datetime
+    timestamp: Instant
     modality: CaptureModality
     # Where the bytes are: "<dataset id>/<artifact name>!<member path>" for a
     # member of a source archive. The storage layer resolves it; the domain
     # never opens it.
     artifact_uri: str
     source: RecordSource
-
-    @field_validator("timestamp")
-    @classmethod
-    def _timezone_aware(cls, value: datetime) -> datetime:
-        if value.tzinfo is None:
-            raise ValueError("a capture timestamp must be timezone-aware")
-        return value
 
 
 class CameraPose(BaseModel):
@@ -89,7 +82,7 @@ class CameraFrame(BaseModel):
     # The compartment the camera looks at, when the greenhouse has them.
     compartment_id: str | None = None
     sensor_id: str
-    timestamp: datetime
+    timestamp: Instant
     pose: CameraPose
     intrinsics: CameraIntrinsics
     # What the frame holds, such as an RGB image and a depth image aligned
@@ -97,6 +90,6 @@ class CameraFrame(BaseModel):
     modalities: tuple[CaptureModality, ...] = Field(min_length=1)
     source: RecordSource
     # When the frame was delivered, if after it was taken (`timestamp`).
-    delivered_at: datetime | None = None
+    delivered_at: Instant | None = None
     # The captures holding its images, when they are stored.
     capture_ids: tuple[str, ...] = ()

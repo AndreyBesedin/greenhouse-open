@@ -5,12 +5,13 @@ cases, so a producer can call them on its own output - in its own test
 suite, in a notebook, or in a pipeline before records are stored.
 
 Each rule states something the canonical contract means, not something the
-Pydantic models already enforce. A model guarantees that a timestamp is a
-datetime; it cannot guarantee that the datetime is unambiguous, that a
-reading is a number rather than a placeholder, or that two records
-describing different moments have different identities. Those are the
-properties a consumer actually relies on, and the properties a new adapter
-is most likely to get wrong.
+Pydantic models already enforce. A model guarantees that a timestamp is an
+instant (`greenhouse_protocol.instant`), checked again here for records
+built without validation; it cannot guarantee that a reading is a number
+rather than a placeholder, or that two records describing different
+moments have different identities. Those are the properties a consumer
+actually relies on, and the properties a new adapter is most likely to get
+wrong.
 
 Every function returns a list of human-readable violations, empty when the
 records conform, so a caller can report all of them at once rather than
@@ -57,8 +58,6 @@ def check_observations(observations: Iterable[Observation]) -> list[str]:
                 f"observation {observation.observation_id!r} has a non-finite value "
                 f"({observation.value!r}): a gap is an absent record, not a NaN"
             )
-        if not observation.source.type.strip():
-            violations.append(f"observation {observation.observation_id!r} has no source type")
         if observation.sensor_id is not None and not observation.sensor_id.strip():
             violations.append(f"observation {observation.observation_id!r} names an empty sensor")
         violations += _check_delivery(observation)
@@ -90,6 +89,7 @@ def check_media(captures: Iterable[MediaCapture]) -> list[str]:
     violations += _check_identities_are_unique(
         [(c.capture_id, c.timestamp) for c in records], "capture"
     )
+    violations += _check_scoping(records, "capture")
 
     for capture in records:
         if not capture.artifact_uri.strip():

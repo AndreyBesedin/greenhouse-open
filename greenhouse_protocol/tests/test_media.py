@@ -106,3 +106,19 @@ def test_a_frame_holds_something() -> None:
             modalities=(),
             source=RecordSource(type=SourceType.SIMULATION, source_id="run"),
         )
+
+
+@pytest.mark.parametrize("field", ["timestamp", "delivered_at"])
+def test_a_frame_refuses_a_wall_clock_time(field: str) -> None:
+    taken = {"timestamp": datetime(2026, 1, 1, tzinfo=UTC), field: datetime(2026, 1, 1)}
+    with pytest.raises(ValidationError, match="timezone-aware"):
+        CameraFrame(
+            frame_id="naive",
+            greenhouse_id="climate_box",
+            sensor_id="front_camera",
+            pose=LEVEL,
+            intrinsics=INTRINSICS,
+            modalities=(CaptureModality.RGB,),
+            source=RecordSource(type=SourceType.SIMULATION, source_id="run"),
+            **taken,
+        )

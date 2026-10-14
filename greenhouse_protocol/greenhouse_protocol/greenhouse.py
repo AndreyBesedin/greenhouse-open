@@ -1,9 +1,9 @@
-from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
 from greenhouse_protocol.enums import SourceType
+from greenhouse_protocol.instant import Instant
 
 
 class Plant(BaseModel):
@@ -63,7 +63,7 @@ class GreenhouseDescription(BaseModel):
     # Plants not assigned to any compartment (the simulator's grid).
     plants: list[Plant]
     compartments: list[Compartment] = Field(default_factory=list)
-    created_at: datetime
+    created_at: Instant
 
     @model_validator(mode="after")
     def _identities_are_unique(self) -> GreenhouseDescription:

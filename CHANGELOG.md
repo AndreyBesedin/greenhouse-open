@@ -8,6 +8,12 @@ breaks the conformance checks is a major version.
 ## Unreleased
 
 - All three packages now require Python 3.14 or newer (previously 3.12).
+- `greenhouse-protocol`: every record's timestamps are timezone-aware, checked
+  as a record is built (`greenhouse_protocol.instant.Instant`): an
+  observation, event, frame or greenhouse description with a naive time is
+  refused, as a capture already was. An observation's quality is written in
+  order, so its bytes do not depend on the process. `check_media` refuses a
+  capture that names no greenhouse.
 - `greenhouse-sim`: the simple tomato model's own values (a plant's growth
   multiplier and water stress; a fruit's target diameter, growth-rate
   multiplier and ripening day) move from `PlantWorld` and `Fruit` to
