@@ -7,12 +7,11 @@ name: Pull request risk
 # including the description and base commit it saw then.
 #
 # On a Dependabot pull request a maintainer's approval of its latest commit
-# is the acknowledgement (decision 0034), so a review runs the gate again.
+# is the acknowledgement (decision 0034), read here as the reviews stand;
+# pr-risk-review.yml re-runs this gate when one is submitted.
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
-  pull_request_review:
-    types: [submitted, edited, dismissed]
 
 permissions:
   contents: read

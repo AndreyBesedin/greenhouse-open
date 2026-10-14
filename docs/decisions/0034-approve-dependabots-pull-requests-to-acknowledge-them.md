@@ -26,13 +26,20 @@ which is how GitHub records that a pull request was reviewed.
   `author_association`), not any GitHub user. An approval of an earlier
   commit does not cover a later push; a later request for changes, or the
   approval's dismissal, withdraws it; a comment changes nothing.
-- **A review runs the gate again:** `pr-risk.yml` runs on
-  `pull_request_review` too, reads the pull request's reviews with its
-  token (`pull-requests: read`), and `scripts/check_pr_risk.py` decides.
+- **The gate reads the reviews as they stand:** on a Dependabot pull
+  request, `pr-risk.yml` reads them with its token (`pull-requests: read`)
+  and `scripts/check_pr_risk.py` decides.
+- **A review runs the gate again** by re-running its latest run for the
+  pull request's head commit (`pr-risk-review.yml`), not by running the
+  gate itself. GitHub keeps the latest run of a workflow for each event
+  that started it: a gate run started by the review would pass beside the
+  failed run started by the pull request, and the required check would
+  still fail. A re-run replaces that run.
 - **Anyone else's pull request keeps the tick,** the maintainer's own
   among them. The tick still acknowledges a Dependabot pull request too.
-- The workflow's token is declared read-only (`contents: read`,
-  `pull-requests: read`).
+- The gate's token is declared read-only (`contents: read`,
+  `pull-requests: read`); the re-run's may only re-run workflows
+  (`actions: write`).
 
 ## Consequences
 
