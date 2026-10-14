@@ -6,9 +6,11 @@ one that does, apart from the boundary check below.
 """
 
 import ast
+import http.client
 import json
 import pathlib
 import re
+import socket
 import subprocess
 import threading
 import time
@@ -17,6 +19,7 @@ import urllib.request
 from collections.abc import Iterator
 from http import HTTPStatus
 from http.server import ThreadingHTTPServer
+from typing import Any
 
 import pytest
 
@@ -29,6 +32,8 @@ from greenhouse_sim.scene.snapshot import SCHEMA_VERSION, SceneEntityKind, Scene
 from greenhouse_sim.services import system
 
 PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "greenhouse_sim"
+# Long enough for any answer of the local server's.
+WAIT_S = 10.0
 
 
 def test_the_health_check_answers() -> None:
@@ -210,6 +215,75 @@ def test_every_answer_says_how_long_the_simulator_took(
     with urllib.request.urlopen(f"http://{host!s}:{port}/api/health") as reply:
         found = took.fullmatch(reply.headers["Server-Timing"])
     assert found is not None and float(found.group(1)) >= 50
+
+
+def test_a_body_with_a_number_json_does_not_have_is_refused() -> None:
+    for constant in ("NaN", "Infinity", "-Infinity"):
+        response = respond("POST", "/api/checkpoints", f'{{"day": {constant}}}'.encode())
+
+        assert response.status == HTTPStatus.BAD_REQUEST
+        assert isinstance(response.body, dict)
+        assert constant in str(response.body["error"])
+
+
+def _posted(server: ThreadingHTTPServer, length: str, body: bytes = b"") -> tuple[int, Any]:
+    """POSTs `body` to the checkpoints, its `Content-Length` said to be
+    `length`; the answer's status and body."""
+    host, port = server.server_address[:2]
+    connection = http.client.HTTPConnection(str(host), port, timeout=WAIT_S)
+    connection.putrequest("POST", "/api/checkpoints")
+    connection.putheader("Content-Length", length)
+    connection.endheaders(body)
+    reply = connection.getresponse()
+    answer = reply.status, json.load(reply)
+    connection.close()
+    return answer
+
+
+@pytest.mark.parametrize("length", ["abc", "-5", "1.5"])
+def test_a_body_whose_length_is_not_one_is_refused(
+    server: ThreadingHTTPServer, length: str
+) -> None:
+    status, body = _posted(server, length)
+
+    assert status == HTTPStatus.BAD_REQUEST
+    assert "not a length" in body["error"]
+
+
+def test_a_body_larger_than_the_api_reads_is_refused_unread(server: ThreadingHTTPServer) -> None:
+    status, body = _posted(server, str(server_module.MAX_BODY_BYTES + 1))
+
+    assert status == HTTPStatus.REQUEST_ENTITY_TOO_LARGE
+    assert "at most" in body["error"]
+
+
+def test_a_body_shorter_than_announced_is_answered_once_the_client_stops(
+    server: ThreadingHTTPServer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(server_module._Handler, "timeout", 0.2)
+    host, port = server.server_address[:2]
+
+    with socket.create_connection((str(host), port), timeout=WAIT_S) as client:
+        client.sendall(b"POST /api/checkpoints HTTP/1.1\r\nContent-Length: 100\r\n\r\n{}")
+        reply = client.makefile("rb").read()
+
+    assert reply.startswith(b"HTTP/1.0 408")
+    assert b"stopped short of the 100 bytes announced" in reply
+
+
+@pytest.mark.parametrize("method", ["PUT", "PATCH", "DELETE"])
+def test_another_method_is_refused_as_json_with_its_timing(
+    server: ThreadingHTTPServer, method: str
+) -> None:
+    host, port = server.server_address[:2]
+    connection = http.client.HTTPConnection(str(host), port, timeout=WAIT_S)
+    connection.request(method, "/api/checkpoints")
+    reply = connection.getresponse()
+
+    assert reply.status == HTTPStatus.METHOD_NOT_ALLOWED
+    assert reply.headers["Server-Timing"].startswith("sim;dur=")
+    assert method in json.load(reply)["error"]
+    connection.close()
 
 
 def test_a_request_the_simulator_fails_on_is_answered_500_and_logged(
