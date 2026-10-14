@@ -5,9 +5,18 @@ name: Pull request risk
 # and evaluates the description and base branch as they are now. Re-running
 # an earlier run would not: a re-run replays the event that started it,
 # including the description and base commit it saw then.
+#
+# On a Dependabot pull request a maintainer's approval of its latest commit
+# is the acknowledgement (decision 0034), so a review runs the gate again.
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+
+permissions:
+  contents: read
+  pull-requests: read
 
 concurrency:
   group: pr-risk-${{ github.event.pull_request.number }}
@@ -26,9 +35,22 @@ jobs:
         with:
           python-version: "3.14"
 
+      - name: Read a Dependabot pull request's reviews
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: >-
+          gh api --paginate
+          "repos/$GITHUB_REPOSITORY/pulls/$NUMBER/reviews?per_page=100"
+          --jq '.[] | {user: .user.login, state, commit_id, author_association}'
+          > "$RUNNER_TEMP/reviews.jsonl"
+
       - name: Classify review risk
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_REVIEWS: ${{ runner.temp }}/reviews.jsonl
         run: >-
           python scripts/check_pr_risk.py
           "${{ github.event.pull_request.base.sha }}"

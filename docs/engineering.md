@@ -117,9 +117,11 @@ The default path is automated and fast:
 3. GitHub Copilot reviews the pull request automatically and reviews new pushes.
 4. Resolve or explicitly acknowledge every review conversation.
 5. If the risk gate classifies the pull request as higher risk, review the full
-   diff yourself and check the manual-review item in the pull request body.
-   Saving the edited description runs the gate again. Re-running an earlier
-   gate run does not help: it replays the description that run saw.
+   diff yourself and check the manual-review item in the pull request body;
+   on a Dependabot pull request, approve its latest commit instead (decision
+   0034). Saving the edited description, or submitting the review, runs the
+   gate again. Re-running an earlier gate run does not help: it replays the
+   description that run saw.
 6. Low-risk changes may use auto-merge once the automated checks and review are
    clear. Higher-risk changes should be merged manually after the explicit
    self-review.
@@ -136,8 +138,9 @@ handles.
 
 Dependabot's pull requests take the same path (decision 0033). A minor or
 patch update that changes no code merges by itself once the required checks
-pass. The rest wait for a review: when the risk gate asks for the
-manual-review item, add it to the bot's description by hand.
+pass. The rest wait for a review: when the risk gate holds one, review
+the diff and approve the pull request's latest commit, which the gate
+takes as the acknowledgement (decision 0034).
 
 GitHub settings should require a pull request for `main`, require CI checks,
 and require conversation resolution. The `main` ruleset names its required

@@ -1,6 +1,6 @@
 # 0033: Update dependencies with Dependabot, minor and patch updates merging by themselves
 
-**Status:** Accepted
+**Status:** Accepted; its review tick added to a Dependabot pull request's description by hand superseded by an approval, [0034](0034-approve-dependabots-pull-requests-to-acknowledge-them.md)
 **Date:** 2026-10-13
 
 ## Context

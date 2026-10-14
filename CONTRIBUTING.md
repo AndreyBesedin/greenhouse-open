@@ -73,7 +73,8 @@ python scripts/check.py
 - Resolve or explicitly acknowledge automated review feedback.
 - If the pull request risk gate asks for it, review the complete diff yourself
   and check the manual-review acknowledgement in the pull request body. The
-  gate runs again when the description is saved.
+  gate runs again when the description is saved. On a Dependabot pull
+  request, a maintainer's approval of its latest commit acknowledges it.
 - A package may import only the standard library, itself and the
   dependencies it declares; `tests/test_dependencies.py` enforces this.
 
