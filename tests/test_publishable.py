@@ -129,6 +129,13 @@ def test_the_document_citation_check_can_fail() -> None:
     ]
 
 
+def test_the_guide_for_contributors_names_files_that_exist() -> None:
+    guide = (ROOT / "AGENTS.md").read_text()
+    named = re.findall(r"`((?:greenhouse_\w+|scripts|tests|docs)/[\w./-]*)`", guide)
+    assert named
+    assert [path for path in named if not (ROOT / path).exists()] == []
+
+
 def test_no_file_uses_a_name_from_the_original_codebase() -> None:
     hits = [
         f"  {path.relative_to(ROOT)}:{lineno}"

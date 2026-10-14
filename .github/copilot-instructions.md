@@ -1,5 +1,9 @@
 # Copilot code review instructions
 
+The repository's rules, checks and generated files, for any assistant, are
+listed in [AGENTS.md](../AGENTS.md); these instructions add what a reviewer
+looks for.
+
 Review for high-signal problems. Do not spend review comments on formatting,
 import ordering or other issues Ruff/pre-commit already enforces.
 
