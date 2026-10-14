@@ -195,7 +195,7 @@ code at `467821f`; *review*, reproduced by a review and not again here.
 | `AUDIT.22` A run's numbers depend on the moments asked for before | new | run | **now** | W1 (#162) |
 | `AUDIT.23` The adapters' storage accepts bytes it never verified | new | run | **now** | W2 (#161) |
 | `AUDIT.24` The packages admit a pydantic that writes observations differently | new | run | **now** | W3 (#160) |
-| `AUDIT.25` What a client sends is checked for shape, not sense | new | review | now | W4 |
+| `AUDIT.25` What a client sends is checked for shape, not sense | new | review | now | W4 (#165, #166, #167) |
 | `AUDIT.26` Ground truth leaves by the API, which says it never does | new | read | decide | D2 |
 | `AUDIT.27` The protocol's records are checked unevenly | new | read | next | W3 |
 | `AUDIT.28` The adapters' command line and canonical tier | new | read | next | W2 (#161, the command line) |
