@@ -81,6 +81,18 @@ def test_an_override_later_in_the_day_carries_on_from_the_air_before_it() -> Non
     assert window.air_at(4.5 * HOUR_S) is day.window(4.5 * HOUR_S).air_at(4.5 * HOUR_S)
 
 
+def test_a_branch_starts_none_of_the_later_grid_runs_it_cannot_share() -> None:
+    day = _day()
+    day.field("f", 6.5 * HOUR_S)
+    branch = _day(((HOUR_S, "heater", 0.25),))
+
+    # The two differ from the first hour on: the grid run that draws 6:30,
+    # from 5:00, shares nothing with the branch, which is not worked out to
+    # 5:00 to start one of its own.
+    assert not branch._windows
+    assert max(branch.house._moments) <= HOUR_S
+
+
 def test_sensors_sample_the_grid_then_the_whole_house() -> None:
     log = sensors.observations(
         "climate_box", levels={"heater": 1.0}, until_s=3 * HOUR_S, clean=True
