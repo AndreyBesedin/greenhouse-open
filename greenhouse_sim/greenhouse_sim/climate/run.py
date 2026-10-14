@@ -32,6 +32,7 @@ each stretch, as it takes the equipment's.
 """
 
 import threading
+from collections import OrderedDict
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from typing import Final
@@ -58,6 +59,10 @@ from greenhouse_sim.world.equipment import Equipment
 type _Levels = tuple[tuple[str, float], ...]
 # A run keeps its air this often on the way to a moment, in seconds.
 KEEP_EVERY_S: Final = 60.0
+# How many of the latest moments asked for between those kept a run holds
+# the air of, so that the requests a viewer makes for one moment work it
+# out once.
+KEPT_BETWEEN: Final = 8
 # The share of the sun's light reaching the floor that the air above it
 # takes as heat; the ground and the crop's water take the rest (P08.8).
 SOLAR_HEAT_SHARE: Final = 0.7
@@ -145,6 +150,10 @@ class ClimateRun:
         # is started later (`started_at`).
         self.start_s = 0.0
         self._working = threading.RLock()
+        # The air at the latest moments asked for between those kept: given
+        # again when asked again, and never a start for a later moment, so
+        # that the air at a moment is the same whatever was asked before.
+        self._between: OrderedDict[float, AirState] = OrderedDict()
         start = humidity_ratio_g_kg(settings.start_temperature_c, settings.start_humidity_pct)
         self._kept: dict[float, AirState] = {
             0.0: AirState(
@@ -326,7 +335,15 @@ class ClimateRun:
         if time_s < self.start_s:
             raise ValueError(f"this climate run starts at {self.start_s:g} s")
         with self._working:
-            return self._worked_to(time_s)
+            between = self._between.get(time_s)
+            if between is not None:
+                return between
+            air = self._worked_to(time_s)
+            if time_s not in self._kept:
+                self._between[time_s] = air
+                if len(self._between) > KEPT_BETWEEN:
+                    self._between.popitem(last=False)
+            return air
 
     def _worked_to(self, time_s: float) -> AirState:
         start = max(moment for moment in self._kept if moment <= time_s)

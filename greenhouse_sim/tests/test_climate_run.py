@@ -85,3 +85,6 @@ def test_its_air_is_the_same_whatever_moments_were_asked_for_before() -> None:
         assert np.array_equal(air.temperature, expected.temperature)
         assert np.array_equal(air.humidity, expected.humidity)
         assert np.array_equal(air.co2, expected.co2)
+    # Asked again, as a viewer's requests for one moment ask, it is not
+    # worked out again.
+    assert scrubbed.air_at(245.5) is scrubbed.air_at(245.5)
