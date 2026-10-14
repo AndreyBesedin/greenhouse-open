@@ -208,15 +208,18 @@ P02–P07 project steps. The second audit was made on 2026-10-11, after P08;
 its findings and the order of work come before P09.
 
 The [repository audit of 2026-10-13](../audits/2026-10-13-repository-audit.md),
-after P09, looks at the whole repository for a hundred contributors and for
-models, devices and scenarios added without the whole architecture in
-mind. Its order of work proposes two pull requests that can start at once
-(the services' caches and the CI, then the run request) and one roadmap
-project, P10, for models chosen by the manifest through registries. The
+after P09 and reviewed on 2026-10-14, looks at the whole repository for a
+hundred contributors and for models, devices and scenarios added without
+the whole architecture in mind. Its work plan starts with defects that no
+scaling work reaches: a run's numbers that depend on the moments asked for
+before, the adapters' storage, the protocol's pydantic floor, the
+services' lock. Then come checks that do not depend on the tests' order,
+the run request and the viewer's contracts, four decisions, and one
+roadmap project, P10, for models chosen by the manifest. The
 [audits](../audits/README.md) folder indexes them all.
 
 **Test suite and CI time** (recorded 2026-10-08, scheduled after P09). A
-pull request's checks take 7 to 9 minutes:
+pull request's checks then took 7 to 9 minutes:
 
 - **The viewer's browser tests** take 5.6 minutes on CI's two workers.
   Locally, on one worker, they take 275 s, of which the plant lab's
@@ -239,12 +242,15 @@ once on CI, each on a machine of its own with a simulator of its own
 (decision 0032). They took 6.0 minutes on the first run, the longest
 lane, against 15.2 before.
 
-The repository checks are now a pull request's longest: 20.6 minutes since
-P09.8's benchmark, against 10.2 just before it. The simulator's tests went
-from 9.4 to 19.4 minutes with 8 more tests, which take 7 s on their own.
-The benchmark forgets every run and checkpoint kept, so the likeliest cause
-is the tests after it working out from the start what they found kept
-before. The other options remain open.
+The repository checks are now a pull request's longest: 10.8 to 21.7
+minutes, 18.5 at the median, over the 37 successful runs up to
+2026-10-14. They went from 10.2 to 20.6 minutes at P09.8's benchmark,
+which was first put on the benchmark forgetting every run and checkpoint
+kept; but the same commit has since run in 10.2 and 20.7 minutes, every
+step about twice as long, so the spread is the runners'. The suite does
+depend on its order, for reasons the
+[repository audit](../audits/2026-10-13-repository-audit.md) measures
+(`AUDIT.12`, `AUDIT.29`), and its work plan takes up the options above.
 
 **Camera imperfections** (recorded 2026-10-08, with the headless renderer
 for datasets, after P09 unless a policy needs them sooner). P06's cameras
