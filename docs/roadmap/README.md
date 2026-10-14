@@ -162,9 +162,9 @@ What the repository already ties together:
 
 - **Vitest and `@vitest/coverage-v8`** run only at the same version: one
   group. So do `three` and `@types/three`.
-- **Playwright:** `@playwright/test` and the visual checks' container image,
-  `mcr.microsoft.com/playwright:v1.63.0-noble-amd64` in `ci.yml`, are the
-  same version. Dependabot does not move the image: `@playwright/test`
+- **Playwright:** `@playwright/test` and the visual checks' container image
+  in `ci.yml`, `mcr.microsoft.com/playwright:v<version>-noble-amd64`, are
+  the same version. Dependabot does not move the image: `@playwright/test`
   comes in a pull request of its own, which fails the visual checks until
   the image is moved by hand; screenshots that then differ get new
   baselines from CI, as any do.
