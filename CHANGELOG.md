@@ -52,7 +52,10 @@ breaks the conformance checks is a major version.
 - `greenhouse-adapters`: a verified artifact is hashed again once its size,
   inode or modification time changes, and after every fetch; a fetched
   file that fails its checksum is moved aside, so the next run fetches it
-  again.
+  again. A download the publisher answers with 429 or 5xx, or that the
+  connection cuts short, is resumed up to four times, waiting longer each
+  time, and its bytes are kept; a resume no longer empties the partial
+  file on an error, and a short or long body never reaches the final path.
 
 ## 0.1.0 - 2026-09-24
 

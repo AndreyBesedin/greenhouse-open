@@ -11,7 +11,8 @@ fails its checksum is moved aside, so the next run fetches it again.
 """
 
 import hashlib
-from collections.abc import Sequence
+import time
+from collections.abc import Callable, Sequence
 from http import HTTPStatus
 from pathlib import Path
 from typing import Protocol
@@ -23,7 +24,20 @@ from greenhouse_adapters.storage.layout import DataDirectory
 
 _CHUNK_BYTES = 1024 * 1024
 _VERIFIED_SUFFIX = ".md5-verified"
+_PARTIAL_SUFFIX = ".part"
 _REJECTED_SUFFIX = ".rejected"
+# Answers worth asking again for: the provider is busy or failing for now.
+_RETRIED = frozenset(
+    {
+        HTTPStatus.TOO_MANY_REQUESTS,
+        HTTPStatus.INTERNAL_SERVER_ERROR,
+        HTTPStatus.BAD_GATEWAY,
+        HTTPStatus.SERVICE_UNAVAILABLE,
+        HTTPStatus.GATEWAY_TIMEOUT,
+    }
+)
+_ATTEMPTS = 4
+_FIRST_WAIT_S = 2.0
 
 
 class ArtifactUnavailable(Exception):
@@ -48,39 +62,90 @@ class ArtifactMirror(Protocol):
         ...
 
 
+class _Interrupted(Exception):
+    """A download that stopped short for a reason that may pass."""
+
+
 class UpstreamHttpMirror:
     """Fetches from the manifest's own download URL (the provider, e.g.
-    4TU). Resumes an interrupted download with an HTTP Range request."""
+    4TU). Resumes an interrupted download with an HTTP Range request, and
+    asks again, a few times and less often each time, when the provider is
+    busy, fails, or the connection drops; what was fetched is kept for the
+    next run to resume from."""
 
     name = "upstream"
 
-    def __init__(self, *, timeout_seconds: float = 60.0) -> None:
+    def __init__(
+        self,
+        *,
+        timeout_seconds: float = 60.0,
+        attempts: int = _ATTEMPTS,
+        transport: httpx.BaseTransport | None = None,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
         self._timeout_seconds = timeout_seconds
+        self._attempts = attempts
+        self._transport = transport
+        self._sleep = sleep
 
     def fetch(self, artifact: ArtifactManifest, destination: Path) -> bool:
-        partial = destination.with_suffix(destination.suffix + ".part")
+        partial = destination.with_name(destination.name + _PARTIAL_SUFFIX)
+        for attempt in range(1, self._attempts + 1):
+            try:
+                self._download(artifact, partial)
+            except _Interrupted as error:
+                if attempt == self._attempts:
+                    kept = partial.stat().st_size if partial.exists() else 0
+                    raise ArtifactUnavailable(
+                        f"{artifact.name}: {error} ({attempt} attempts); the {kept:,} bytes "
+                        f"fetched are kept in {partial}, and the next run resumes from them"
+                    ) from error
+                self._sleep(_FIRST_WAIT_S * 2 ** (attempt - 1))
+                continue
+            partial.replace(destination)
+            return True
+        return False
+
+    def _download(self, artifact: ArtifactManifest, partial: Path) -> None:
+        """Brings `partial` to the artifact's size, from where it stands, or
+        raises `_Interrupted` with what it has kept."""
         already = partial.stat().st_size if partial.exists() else 0
         if already >= artifact.size_bytes:
             already = 0
             partial.unlink()
         headers = {"Range": f"bytes={already}-"} if already else {}
-        with (
-            httpx.stream(
-                "GET",
-                artifact.download_url,
-                headers=headers,
-                timeout=self._timeout_seconds,
-                follow_redirects=True,
-            ) as response,
-            partial.open(
-                "ab" if already and response.status_code == HTTPStatus.PARTIAL_CONTENT else "wb"
-            ) as sink,
-        ):
-            response.raise_for_status()
-            for chunk in response.iter_bytes(_CHUNK_BYTES):
-                sink.write(chunk)
-        partial.replace(destination)
-        return True
+        try:
+            with (
+                httpx.Client(
+                    transport=self._transport,
+                    timeout=self._timeout_seconds,
+                    follow_redirects=True,
+                ) as client,
+                client.stream("GET", artifact.download_url, headers=headers) as response,
+            ):
+                if response.status_code in _RETRIED:
+                    raise _Interrupted(f"the provider answered {response.status_code}")
+                if response.is_error:
+                    raise ArtifactUnavailable(
+                        f"{artifact.name}: the provider answered {response.status_code} "
+                        f"for {artifact.download_url}"
+                    )
+                # A provider that ignores the range sends the whole file again.
+                resuming = already and response.status_code == HTTPStatus.PARTIAL_CONTENT
+                with partial.open("ab" if resuming else "wb") as sink:
+                    for chunk in response.iter_bytes(_CHUNK_BYTES):
+                        sink.write(chunk)
+        except httpx.TransportError as error:
+            raise _Interrupted(f"the connection failed: {error}") from error
+        size = partial.stat().st_size
+        if size < artifact.size_bytes:
+            raise _Interrupted(f"the download stopped at {size:,} of {artifact.size_bytes:,} bytes")
+        if size > artifact.size_bytes:
+            partial.unlink()
+            raise ChecksumMismatch(
+                f"{artifact.download_url} sent {size:,} bytes, the manifest says "
+                f"{artifact.size_bytes:,}; nothing was kept"
+            )
 
 
 class ArtifactResolver:
