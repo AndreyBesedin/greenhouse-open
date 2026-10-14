@@ -117,7 +117,7 @@ jobs:
     # renderer that drew the baselines are the ones that check them (decision
     # 0014). Its version moves with @playwright/test.
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-noble-amd64
+      image: mcr.microsoft.com/playwright:v1.64.0-noble-amd64
     defaults:
       run:
         working-directory: greenhouse_sim/web

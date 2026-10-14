@@ -3,10 +3,10 @@ import { defineConfig, devices } from "@playwright/test";
 import { REUSE_TEST_SERVERS } from "./simulatorApi.ts";
 
 // Screenshot regression for the renderer (decision 0014). The baselines are
-// drawn in CI's container, mcr.microsoft.com/playwright:v1.63.0-noble-amd64,
-// whose fonts and software renderer draw the same pixels on every run.
-// Elsewhere the comparisons are skipped. The QA page needs only the built
-// viewer, not the simulator.
+// drawn in CI's container, Playwright's image of the version installed here
+// (ci.yml), whose fonts and software renderer draw the same pixels on every
+// run. Elsewhere the comparisons are skipped. The QA page needs only the
+// built viewer, not the simulator.
 const PREVIEW_PORT = 4318;
 const IN_CI = process.env.CI !== undefined;
 // A pixel counts as different when its colour moves more than this, on
