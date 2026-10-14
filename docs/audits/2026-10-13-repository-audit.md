@@ -175,7 +175,7 @@ code at `467821f`; *review*, reproduced by a review and not again here.
 | `AUDIT.2` Models are chosen by code, not by the manifest | corrected | read | P10 | P10 |
 | `AUDIT.3` A new device touches ten files | corrected | read | P10 | P10 |
 | `AUDIT.4` One model's parameters sit at the top of every scenario | confirmed | read | P10 | P10 |
-| `AUDIT.5` There is no recipe, for a person or an assistant | corrected | read | now | W6, W14 |
+| `AUDIT.5` There is no recipe, for a person or an assistant | corrected | read | now | W6 (#164), W14 |
 | `AUDIT.6` The run request is written out 22 times | corrected | read | next | W11 |
 | `AUDIT.7` Five caches, five locks, and what they share | corrected | read | next | W9 |
 | `AUDIT.8` The viewer validates by hand what the simulator could publish | corrected | read | next | W12 |
@@ -192,15 +192,15 @@ code at `467821f`; *review*, reproduced by a review and not again here.
 | `AUDIT.19` What the benchmark and the profile point at | corrected | run | next | W10 |
 | `AUDIT.20` The viewer's global stylesheet and bundle | corrected | read | when touched | W15 |
 | `AUDIT.21` The process is one developer's, and says so | corrected | read | decide | D4 |
-| `AUDIT.22` A run's numbers depend on the moments asked for before | new | run | **now** | W1 |
-| `AUDIT.23` The adapters' storage accepts bytes it never verified | new | run | **now** | W2 |
-| `AUDIT.24` The packages admit a pydantic that writes observations differently | new | run | **now** | W3 |
+| `AUDIT.22` A run's numbers depend on the moments asked for before | new | run | **now** | W1 (#162) |
+| `AUDIT.23` The adapters' storage accepts bytes it never verified | new | run | **now** | W2 (#161) |
+| `AUDIT.24` The packages admit a pydantic that writes observations differently | new | run | **now** | W3 (#160) |
 | `AUDIT.25` What a client sends is checked for shape, not sense | new | review | now | W4 |
 | `AUDIT.26` Ground truth leaves by the API, which says it never does | new | read | decide | D2 |
 | `AUDIT.27` The protocol's records are checked unevenly | new | read | next | W3 |
-| `AUDIT.28` The adapters' command line and canonical tier | new | read | next | W2 |
-| `AUDIT.29` The kept runs stall the server, and the openings go first | new | run | now | W5 |
-| `AUDIT.30` Documents that no longer describe the code | new | read | now | W6 |
+| `AUDIT.28` The adapters' command line and canonical tier | new | read | next | W2 (#161, the command line) |
+| `AUDIT.29` The kept runs stall the server, and the openings go first | new | run | now | W5 (#163) |
+| `AUDIT.30` Documents that no longer describe the code | new | read | now | W6 (#164) |
 
 ## Work plan
 
@@ -267,7 +267,7 @@ traceback.
 
 `fix(protocol)`. Fixes `AUDIT.24`, then `AUDIT.27`.
 
-- `pydantic>=2.12` in the three `pyproject.toml` files. A CI job installs
+- `pydantic>=2.12.2` in the three `pyproject.toml` files. A CI job installs
   the lowest versions the packages' metadata allows
   (`uv pip install --resolution lowest-direct`) and runs the protocol's
   and the adapters' tests, so that the next bound like this one is tested
@@ -587,7 +587,10 @@ unknown keyword, and writes `sensor_id`, `delivered_at` and `quality` that
 that an observation naming none of them is written as before, then hold
 only on versions the metadata does not require. On Python 3.14, `pip`
 resolves 2.12 or later today, because 2.11's core has no wheels for it;
-the bound is still wrong.
+the bound is still wrong. Found while fixing it: 2.12.0 fails on Python
+3.14 too, reading a validator's annotation that names its own model before
+the model exists, and 2.12.1 was yanked, so the floor that works is
+2.12.2.
 [Review comment](https://github.com/AndreyBesedin/greenhouse-open/pull/148#discussion_r4270293336).
 Work: W3.
 
