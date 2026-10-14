@@ -117,7 +117,11 @@ The default path is automated and fast:
 3. GitHub Copilot reviews the pull request automatically and reviews new pushes.
 4. Resolve or explicitly acknowledge every review conversation.
 5. If the risk gate classifies the pull request as higher risk, review the full
-   diff yourself and check the manual-review item in the pull request body;
+   diff yourself and check the manual-review item in the pull request body.
+   It holds a pull request that is large or spans packages, or that changes
+   the protocol, CI, package metadata, the scripts, a file that keeps truth
+   from observations or takes uploads in, or the simulation data kept to
+   compare runs with (`scripts/check_pr_risk.py`);
    on a Dependabot pull request, approve its latest commit instead (decision
    0034). Saving the edited description, or submitting the review, runs the
    gate again. Re-running an earlier gate run does not help: it replays the

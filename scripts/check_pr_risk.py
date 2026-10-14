@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 from collections.abc import Iterable
 from pathlib import Path
@@ -25,6 +26,10 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_ROOTS = ("greenhouse_protocol", "greenhouse_sim", "greenhouse_adapters")
 MANUAL_REVIEW_MARKER = "- [x] I manually reviewed the complete diff"
+# The acknowledgement: the template's item ticked, on a line of its own,
+# outside an HTML comment.
+_ACKNOWLEDGED = re.compile(r"^\s*- \[[xX]\] I manually reviewed the complete diff", re.MULTILINE)
+_HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 DEPENDABOT = "dependabot[bot]"
 # Who may acknowledge a pull request by approving it: the repository's owner,
 # its organisation's members and its collaborators, not any GitHub user.
@@ -56,6 +61,9 @@ GENERATED_OR_LOCK_FILES = {
     "uv.lock",
 }
 
+# Files that hold a boundary: the repository's own checks, and where ground
+# truth is kept apart from observations, or leaves the simulator, and where
+# a client's uploads are taken in.
 SENSITIVE_FILES = {
     ".pre-commit-config.yaml",
     "requirements-dev.txt",
@@ -64,8 +72,27 @@ SENSITIVE_FILES = {
     "greenhouse_sim/greenhouse_sim/core/engine.py",
     "greenhouse_sim/greenhouse_sim/ground_truth.py",
     "greenhouse_sim/greenhouse_sim/sensors/generation.py",
+    "greenhouse_sim/greenhouse_sim/sensors/air.py",
     "greenhouse_sim/greenhouse_sim/core/rng.py",
+    "greenhouse_sim/greenhouse_sim/evaluation/sensor_truth.py",
+    "greenhouse_sim/greenhouse_sim/services/sensors.py",
+    "greenhouse_sim/greenhouse_sim/services/checkpoints.py",
+    "greenhouse_sim/greenhouse_sim/api/routes.py",
 }
+# Folders whose every file is a boundary: the scripts that check and merge
+# pull requests, this gate among them.
+SENSITIVE_FOLDERS = ("scripts/",)
+# Data the simulator keeps and compares its runs with: replacing it is not
+# counted in lines, which a regenerated file has thousands of or, gzipped,
+# none, but always asks for a review.
+KEPT_DATA_FOLDERS = (
+    "greenhouse_sim/greenhouse_sim/cfd/results/",
+    "greenhouse_sim/greenhouse_sim/scenarios/openings/",
+    "greenhouse_sim/greenhouse_sim/weather/recorded/",
+    "greenhouse_sim/tests/fixtures/",
+    "greenhouse_sim/web/public/fields/",
+    "greenhouse_sim/web/public/scenes/",
+)
 
 
 def _git(*args: str) -> str:
@@ -89,7 +116,7 @@ def _changed_code_lines(base: str, head: str) -> int:
     for line in output.splitlines():
         additions, deletions, path = line.split("\t", 2)
         file_path = Path(path)
-        if file_path.name in GENERATED_OR_LOCK_FILES:
+        if file_path.name in GENERATED_OR_LOCK_FILES or _kept_data(path):
             continue
         if file_path.suffix not in CODE_SUFFIXES:
             continue
@@ -104,7 +131,9 @@ def _risk_reasons(files: list[str], changed_code_lines: int) -> list[str]:
     code_files = [
         path
         for path in files
-        if Path(path).suffix in CODE_SUFFIXES and Path(path).name not in GENERATED_OR_LOCK_FILES
+        if Path(path).suffix in CODE_SUFFIXES
+        and Path(path).name not in GENERATED_OR_LOCK_FILES
+        and not _kept_data(path)
     ]
 
     if changed_code_lines > 500:
@@ -132,11 +161,27 @@ def _risk_reasons(files: list[str], changed_code_lines: int) -> list[str]:
     if any(path.endswith("/pyproject.toml") or path == "pyproject.toml" for path in files):
         reasons.append("package metadata or runtime dependencies may have changed")
 
-    sensitive = sorted(set(files) & SENSITIVE_FILES)
+    sensitive = sorted(
+        path for path in files if path in SENSITIVE_FILES or path.startswith(SENSITIVE_FOLDERS)
+    )
     if sensitive:
         reasons.append("sensitive repository boundary changed: " + ", ".join(sensitive))
 
+    kept = sorted(path for path in files if _kept_data(path))
+    if kept:
+        reasons.append("kept simulation data changed: " + ", ".join(kept))
+
     return reasons
+
+
+def _kept_data(path: str) -> bool:
+    return path.startswith(KEPT_DATA_FOLDERS)
+
+
+def acknowledged(body: str) -> bool:
+    """Whether a pull request's description ticks the manual-review item,
+    on a line of its own and outside a comment."""
+    return _ACKNOWLEDGED.search(_HTML_COMMENT.sub("", body)) is not None
 
 
 def approved(reviews: Iterable[dict[str, Any]], head: str) -> bool:
@@ -187,7 +232,7 @@ def main() -> int:
         print(f"  - {reason}")
 
     pr_body = os.environ.get("PR_BODY", "")
-    if MANUAL_REVIEW_MARKER in pr_body:
+    if acknowledged(pr_body):
         print("Manual self-review acknowledgement found.")
         return 0
 
