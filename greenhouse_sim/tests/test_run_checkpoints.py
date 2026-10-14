@@ -3,6 +3,7 @@ memory, downloaded and uploaded as JSON; a restored run carrying on as the
 original does, and a branch sharing every day before its own."""
 
 import json
+import math
 from collections.abc import Iterator
 from http import HTTPStatus
 from typing import Any
@@ -14,6 +15,7 @@ from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.manifest_files import manifest_digest
 from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.crop import forget_crops, run_crop
+from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import climate_run, forget_climate_runs
 
 PLANT = "reference_greenhouse_plant_001"
@@ -170,6 +172,45 @@ def _refusal(document: Any) -> str:
     assert response.status == HTTPStatus.BAD_REQUEST
     assert isinstance(response.body, dict)
     return str(response.body["error"])
+
+
+def test_a_checkpoint_no_run_could_reach_is_refused() -> None:
+    saved = checkpoints.save_checkpoint("reference_greenhouse", time_s=2 * DAY_S)
+    good = checkpoints.checkpoint(saved.checkpoint_id).model_dump(mode="json")
+    house = good["house"]
+    plant = good["plants"][0]
+
+    assert "-300 °C" in _refusal(good | {"house": house | {"temperature_c": -300.0}})
+    assert "g/kg of water" in _refusal(good | {"house": house | {"humidity_g_kg": -5.0}})
+    assert "ppm of CO₂" in _refusal(good | {"house": house | {"co2_ppm": 1e300}})
+    assert "before it" in _refusal(good | {"house_before": house | {"co2_ppm": -1.0}})
+    # A plant older than the days it lived, as a later day's crop with its
+    # days cut to fit an earlier one's would be.
+    older = plant | {"thermal_time": plant["thermal_time"] + 50.0}
+    assert "add up to" in _refusal(good | {"plants": [older, *good["plants"][1:]]})
+    # Numbers JSON has none for reach the service from Python only.
+    hot = [
+        {plant_id: day[plant_id] | {"mean_temperature_c": math.inf} for plant_id in day}
+        for day in good["lived"]
+    ]
+    for unreachable in (
+        good | {"house": house | {"temperature_c": math.nan}},
+        good | {"lived": hot},
+    ):
+        with pytest.raises(InvalidRequest, match="not finite"):
+            checkpoints.upload_checkpoint(unreachable)
+
+
+def test_forgetting_the_checkpoints_forgets_the_runs_that_took_their_state() -> None:
+    saved = checkpoints.save_checkpoint("reference_greenhouse", time_s=DAY_S)
+    document = checkpoints.checkpoint(saved.checkpoint_id).model_dump(mode="json")
+    checkpoints.forget_checkpoints()
+    checkpoints.upload_checkpoint(document)
+    seeded = climate_run("reference_greenhouse")[1]
+
+    checkpoints.forget_checkpoints()
+
+    assert climate_run("reference_greenhouse")[1] is not seeded
 
 
 def test_a_checkpoint_that_does_not_fit_its_run_is_refused() -> None:
