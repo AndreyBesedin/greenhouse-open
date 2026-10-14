@@ -49,6 +49,10 @@ breaks the conformance checks is a major version.
 - The viewer draws all of it (P00 to P09), with screenshot regression in a
   pinned container, and `python scripts/demo.py` starts the API and the
   viewer together and opens the reference greenhouse (`docs/demo.md`).
+- All three packages now require pydantic 2.12.2 or newer (previously 2.9):
+  `Observation` leaves its unset fields out with `exclude_if`, which
+  pydantic 2.11 ignores, and 2.12.0 fails on Python 3.14. CI installs the
+  protocol and the adapters at their lowest dependencies and tests them.
 
 ## 0.1.0 - 2026-09-24
 
