@@ -49,6 +49,10 @@ breaks the conformance checks is a major version.
 - The viewer draws all of it (P00 to P09), with screenshot regression in a
   pinned container, and `python scripts/demo.py` starts the API and the
   viewer together and opens the reference greenhouse (`docs/demo.md`).
+- `greenhouse-adapters`: a verified artifact is hashed again once its size,
+  inode or modification time changes, and after every fetch; a fetched
+  file that fails its checksum is moved aside, so the next run fetches it
+  again.
 
 ## 0.1.0 - 2026-09-24
 

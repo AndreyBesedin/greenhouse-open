@@ -131,8 +131,12 @@ def test_build_writes_one_greenhouse_with_its_single_compartment(tmp_path: Path)
         archive.writestr(CLIMATE_MEMBER, _workbook(*ROWS))
         archive.writestr(CROP_MEMBER, _empty_crop_workbook())
         archive.writestr(DESTRUCTIVE_MEMBER, _empty_destructive_workbook())
-    # the fixture is not the real artifact: pre-mark it verified
-    path.with_name(path.name + ".md5-verified").write_text(artifact.md5 + "\n")
+    # the fixture is not the real artifact: pre-mark it verified, as the
+    # resolver records a verification, with what names the file as it is
+    status = path.stat()
+    path.with_name(path.name + ".md5-verified").write_text(
+        f"{artifact.md5} {status.st_size} {status.st_ino} {status.st_mtime_ns}\n"
+    )
 
     first = build_greenhouse(data_dir, ArtifactResolver(data_dir))
     second = build_greenhouse(data_dir, ArtifactResolver(data_dir))

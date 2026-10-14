@@ -1,4 +1,5 @@
 import hashlib
+import os
 from pathlib import Path
 
 import pytest
@@ -136,3 +137,44 @@ def test_no_source_at_all_is_a_clear_error(tmp_path: Path) -> None:
 
     with pytest.raises(ArtifactUnavailable, match="place a copy at"):
         resolver.resolve(_manifest(), "timeseries.zip")
+
+
+def _replace_bytes(path: Path, content: bytes) -> None:
+    """Writes `content` over `path` as a later write would, its modification
+    time moved on even where the clock is coarser than two quick writes."""
+    before = path.stat().st_mtime_ns
+    path.write_bytes(content)
+    os.utime(path, ns=(before, before + 1_000_000_000))
+
+
+def test_a_verified_file_replaced_afterwards_is_verified_again(tmp_path: Path) -> None:
+    layout = DataDirectory(tmp_path)
+    manifest = _manifest()
+    resolver = ArtifactResolver(layout, mirrors=[RecordingMirror("upstream", has_it=True)])
+    path = resolver.resolve(manifest, "timeseries.zip")
+
+    _replace_bytes(path, bytes(len(CONTENT)))
+
+    with pytest.raises(ChecksumMismatch):
+        resolver.resolve(manifest, "timeseries.zip")
+
+
+def test_a_file_fetched_again_is_verified_again_and_a_bad_one_moved_aside(
+    tmp_path: Path,
+) -> None:
+    layout = DataDirectory(tmp_path)
+    manifest = _manifest()
+    mirror = RecordingMirror("upstream", has_it=True)
+    resolver = ArtifactResolver(layout, mirrors=[mirror])
+    path = resolver.resolve(manifest, "timeseries.zip")
+    path.unlink()  # the record of its verification stays behind
+    mirror.content = bytes(len(CONTENT))
+
+    with pytest.raises(ChecksumMismatch, match="moved aside"):
+        resolver.resolve(manifest, "timeseries.zip")
+    assert not path.exists()
+    assert path.with_name("timeseries.zip.rejected").read_bytes() == mirror.content
+
+    mirror.content = CONTENT
+    assert resolver.resolve(manifest, "timeseries.zip").read_bytes() == CONTENT
+    assert mirror.calls == 3

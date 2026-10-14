@@ -2,6 +2,12 @@
 upstream provider. Every path verifies the manifest's checksum, and a caller
 can cap how much it is willing to download so a `tiny` snapshot can never
 silently turn into a 30 GB image pull.
+
+A verified file is not hashed again while it stays the file that was
+verified: a record beside it names the checksum with the file's size,
+inode and modification time, and a file that differs in any of them is
+hashed again. A fetch drops the record first, and a fetched file that
+fails its checksum is moved aside, so the next run fetches it again.
 """
 
 import hashlib
@@ -17,6 +23,7 @@ from greenhouse_adapters.storage.layout import DataDirectory
 
 _CHUNK_BYTES = 1024 * 1024
 _VERIFIED_SUFFIX = ".md5-verified"
+_REJECTED_SUFFIX = ".rejected"
 
 
 class ArtifactUnavailable(Exception):
@@ -110,9 +117,19 @@ class ArtifactResolver:
             )
 
         destination.parent.mkdir(parents=True, exist_ok=True)
+        # A record left by a file deleted since describes nothing fetched now.
+        _verified(destination).unlink(missing_ok=True)
         for mirror in self._mirrors:
             if mirror.fetch(artifact, destination):
-                self._verify(artifact, destination)
+                try:
+                    self._verify(artifact, destination)
+                except ChecksumMismatch as error:
+                    rejected = destination.with_name(destination.name + _REJECTED_SUFFIX)
+                    destination.replace(rejected)
+                    raise ChecksumMismatch(
+                        f"{error}: {mirror.name} sent it; it is moved aside to {rejected}, "
+                        "and the next run fetches it again"
+                    ) from error
                 return destination
 
         raise ArtifactUnavailable(
@@ -122,15 +139,28 @@ class ArtifactResolver:
         )
 
     def _verify(self, artifact: ArtifactManifest, path: Path) -> None:
-        marker = path.with_name(path.name + _VERIFIED_SUFFIX)
-        if marker.exists() and marker.read_text().strip() == artifact.md5:
+        marker = _verified(path)
+        stamp = _stamp(artifact.md5, path)
+        if marker.exists() and marker.read_text(encoding="utf-8").strip() == stamp:
             return
         actual = _md5(path)
         if actual != artifact.md5:
             raise ChecksumMismatch(
                 f"{path} has md5 {actual}, manifest says {artifact.md5}; delete it and re-fetch"
             )
-        marker.write_text(artifact.md5 + "\n")
+        marker.write_text(stamp + "\n", encoding="utf-8")
+
+
+def _verified(path: Path) -> Path:
+    """Where the record of `path`'s verification is kept."""
+    return path.with_name(path.name + _VERIFIED_SUFFIX)
+
+
+def _stamp(md5: str, path: Path) -> str:
+    """The checksum a verification found, with what says the file is still
+    the one it was found in: its size, inode and modification time."""
+    status = path.stat()
+    return f"{md5} {status.st_size} {status.st_ino} {status.st_mtime_ns}"
 
 
 def _md5(path: Path) -> str:
