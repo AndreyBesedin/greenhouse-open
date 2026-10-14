@@ -1,0 +1,43 @@
+name: Pull request risk, after a review
+
+# On a Dependabot pull request a maintainer's approval of its latest commit
+# acknowledges the risk gate (decision 0034). A review runs the gate's
+# latest run for that commit again, which reads the reviews as they then
+# stand. It re-runs that run rather than running the gate itself: GitHub
+# keeps the latest run of a workflow for each event that started it, so a
+# gate run started by the review would leave the failed run started by the
+# pull request standing, and the required check failing.
+on:
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+
+concurrency:
+  group: pr-risk-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  rerun:
+    name: risk gate, again after a review
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Run the gate again for the latest commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          run=$(gh run list --workflow pr-risk.yml --event pull_request \
+            --commit "$HEAD_SHA" --limit 1 --json databaseId --jq '.[0].databaseId')
+          if [ -z "$run" ]; then
+            echo "No gate run for $HEAD_SHA yet; it will read the reviews when it runs."
+            exit 0
+          fi
+          # A run still going may have read the reviews before this one.
+          gh run watch "$run" > /dev/null || true
+          gh run rerun "$run"
+          echo "Re-running the gate's run $run for $HEAD_SHA."

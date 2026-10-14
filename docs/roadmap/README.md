@@ -146,8 +146,9 @@ GitHub's auto-merge, which merges once the third holds too; a later push
 that breaks the first two turns it off again. Everything else waits for a
 review: majors, minor updates below 1.0, and whatever was completed by
 hand. As the risk gate stands, only npm's updates can merge by themselves:
-it asks for the review tick on every Actions, `pyproject.toml` and
-`requirements-dev.txt` change. Dependabot proposes a release only once it
+it holds every Actions, `pyproject.toml` and `requirements-dev.txt` change
+for a review, which on Dependabot's pull requests is an approval of the
+latest commit (decision 0034). Dependabot proposes a release only once it
 is three days old (its `cooldown`), so that one found compromised is
 usually withdrawn first.
 
@@ -185,9 +186,9 @@ The checks as they stand:
   so `commits are signed off` passes them as it is; a commit pushed onto a
   bot's branch by hand is signed off as any other.
 - **The risk gate:** a bot's description has no checkbox, so for an update
-  the gate holds, the line `- [x] I manually reviewed the complete diff` is
-  added to it by hand. The lockfile is not counted against the gate's
-  thresholds.
+  the gate holds, a maintainer's approval of its latest commit is the
+  acknowledgement (decision 0034). The lockfile is not counted against the
+  gate's thresholds.
 - **CI time:** each update runs the full checks, the repository checks the
   longest at about 20 minutes. Minor and patch updates are grouped by
   ecosystem, which keeps the day's runs few; majors come one pull request

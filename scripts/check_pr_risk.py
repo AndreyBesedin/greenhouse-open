@@ -4,18 +4,34 @@ The repository is currently maintained by one developer, so GitHub's normal
 "required human approval" mechanism is not useful: a pull request author
 cannot approve their own pull request. This check keeps the fast path fast and
 adds deliberate friction only when a diff crosses clear risk boundaries.
+
+The acknowledgement is the ticked item in the pull request's description. A
+Dependabot pull request has no template to tick, and someone else opened it,
+so there a maintainer's approval of its latest commit is the acknowledgement
+(decision 0034). The workflow passes its reviews in `PR_REVIEWS`, a file of
+one JSON object a line: `user`, `state`, `commit_id`, `author_association`.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
+from collections.abc import Iterable
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_ROOTS = ("greenhouse_protocol", "greenhouse_sim", "greenhouse_adapters")
 MANUAL_REVIEW_MARKER = "- [x] I manually reviewed the complete diff"
+DEPENDABOT = "dependabot[bot]"
+# Who may acknowledge a pull request by approving it: the repository's owner,
+# its organisation's members and its collaborators, not any GitHub user.
+MAINTAINERS = frozenset({"OWNER", "MEMBER", "COLLABORATOR"})
+# The review states that are a verdict; a comment, or a review still
+# pending, leaves the reviewer's verdict as it was.
+VERDICTS = frozenset({"APPROVED", "CHANGES_REQUESTED", "DISMISSED"})
 
 CODE_SUFFIXES = {
     ".py",
@@ -123,6 +139,32 @@ def _risk_reasons(files: list[str], changed_code_lines: int) -> list[str]:
     return reasons
 
 
+def approved(reviews: Iterable[dict[str, Any]], head: str) -> bool:
+    """Whether a maintainer's latest verdict approves the `head` commit.
+
+    `reviews` come in the order they were submitted. An approval of an
+    earlier commit does not cover a later push, and a later request for
+    changes, or the approval's dismissal, withdraws it.
+    """
+    latest: dict[str, dict[str, Any]] = {}
+    for review in reviews:
+        if review["state"] in VERDICTS:
+            latest[review["user"]] = review
+    return any(
+        review["state"] == "APPROVED"
+        and review["commit_id"] == head
+        and review["author_association"] in MAINTAINERS
+        for review in latest.values()
+    )
+
+
+def _reviews(path: str) -> list[dict[str, Any]]:
+    if not path or not Path(path).exists():
+        return []
+    lines = Path(path).read_text().splitlines()
+    return [json.loads(line) for line in lines if line.strip()]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("base")
@@ -148,6 +190,13 @@ def main() -> int:
     if MANUAL_REVIEW_MARKER in pr_body:
         print("Manual self-review acknowledgement found.")
         return 0
+
+    if os.environ.get("PR_AUTHOR") == DEPENDABOT:
+        if approved(_reviews(os.environ.get("PR_REVIEWS", "")), args.head):
+            print("A maintainer approved its latest commit.")
+            return 0
+        print("\nReview the complete diff, then approve the pull request's latest commit.\n")
+        return 1
 
     print(
         "\nReview the complete diff, then check this item in the pull request body:\n"
