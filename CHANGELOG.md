@@ -56,6 +56,9 @@ breaks the conformance checks is a major version.
   connection cuts short, is resumed up to four times, waiting longer each
   time, and its bytes are kept; a resume no longer empties the partial
   file on an error, and a short or long body never reaches the final path.
+- `greenhouse-adapters`: `greenhouse-data` ends a checksum mismatch, a
+  network error or an archive that is not one in a line and exit code 1,
+  instead of a traceback.
 
 ## 0.1.0 - 2026-09-24
 

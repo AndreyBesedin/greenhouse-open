@@ -16,9 +16,12 @@ entry point group.
 
 import argparse
 import sys
+import zipfile
 from collections.abc import Sequence
 from importlib.metadata import entry_points
 from pathlib import Path
+
+import httpx
 
 from greenhouse_adapters.manifests import (
     ArtifactKind,
@@ -32,6 +35,7 @@ from greenhouse_adapters.storage.layout import DataDirectory
 from greenhouse_adapters.storage.resolver import (
     ArtifactResolver,
     ArtifactUnavailable,
+    ChecksumMismatch,
     UpstreamHttpMirror,
 )
 from greenhouse_adapters.storage.upstream_4tu import build_manifest, fetch_dataset_metadata
@@ -48,6 +52,10 @@ type Commands = argparse._SubParsersAction[argparse.ArgumentParser]
 #     [project.entry-points."greenhouse_data.commands"]
 #     load = "mypackage.cli:add_load_command"
 COMMAND_PLUGINS = "greenhouse_data.commands"
+
+# What a command meets in the data or the network, not in its own code: said
+# in one line, whose message names the remedy, rather than with a traceback.
+KNOWN_FAILURES = (ArtifactUnavailable, ChecksumMismatch, httpx.HTTPError, zipfile.BadZipFile)
 
 _BYTES_PER_UNIT = 1024
 
@@ -69,7 +77,11 @@ def build_parser() -> tuple[argparse.ArgumentParser, Commands]:
 def run(parser: argparse.ArgumentParser, argv: Sequence[str] | None) -> int:
     args = parser.parse_args(argv)
     handler = args.handler
-    result: int = handler(args)
+    try:
+        result: int = handler(args)
+    except KNOWN_FAILURES as error:
+        print(f"{parser.prog}: error: {error}", file=sys.stderr)
+        return 1
     return result
 
 
@@ -192,7 +204,7 @@ def _prepare(args: argparse.Namespace) -> int:
             continue
         try:
             path = resolver.resolve(manifest, artifact.name)
-        except ArtifactUnavailable as error:
+        except (ArtifactUnavailable, ChecksumMismatch) as error:
             print(f"  error  {error}")
             return 1
         print(f"  ready  {path}")
