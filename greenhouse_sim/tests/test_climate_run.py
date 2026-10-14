@@ -69,3 +69,19 @@ def test_a_later_moment_carries_on_from_the_latest_kept_before_it() -> None:
     straight = _run(*commands).temperature_at(900)
 
     np.testing.assert_allclose(asked_in_turn.temperature_at(900), straight, atol=1e-9)
+
+
+def test_its_air_is_the_same_whatever_moments_were_asked_for_before() -> None:
+    # A viewer scrubbing a run asks for moments between its minutes: the
+    # air later is worked out from the minutes kept, never from those.
+    commands = (_at(0, "heater", 1.0), _at(150, "fan", 1.0))
+    scrubbed = _run(*commands)
+    for moment in (90.0, 170.0, 245.5):
+        scrubbed.air_at(moment)
+    alone = _run(*commands)
+
+    for moment in (245.5, 300.0, 330.0):
+        air, expected = scrubbed.air_at(moment), alone.air_at(moment)
+        assert np.array_equal(air.temperature, expected.temperature)
+        assert np.array_equal(air.humidity, expected.humidity)
+        assert np.array_equal(air.co2, expected.co2)

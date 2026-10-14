@@ -149,6 +149,21 @@ def test_it_takes_over_anothers_air_up_to_where_their_schedules_differ() -> None
     )
 
 
+def test_its_air_is_the_same_whatever_moments_were_asked_for_before() -> None:
+    # A viewer scrubbing a run asks for moments between its minutes: the air
+    # later is worked out from the minutes kept, never from those, under a
+    # weather and a sun that change through the stretch.
+    run = _climate_day("climate_box", "default", "cold_spring_day", (), (), ()).run
+    scrubbed = WholeHouse(run)
+    for moment in (90.0, 3_599.5, 43_230.0):
+        scrubbed.air_at(moment)
+    alone = WholeHouse(run)
+
+    for moment in (120.0, 3_660.0, 43_230.0, 43_260.0, DAY_S):
+        assert scrubbed.air_at(moment) == alone.air_at(moment)
+    assert all(moment % 60.0 == 0 for moment in scrubbed._kept)
+
+
 def test_its_mean_through_a_stretch_weighs_each_minute_alike() -> None:
     house = _climate_day("climate_box", "default", "cold_spring_day", (), (), ()).house
     minutes = [house.air_at(60.0 * minute) for minute in range(1441)]

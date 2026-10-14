@@ -109,9 +109,11 @@ class WholeHouse:
             ),
             co2_ppm=settings.start_co2_ppm,
         )
-        # Its air at every moment worked to, and those moments in order, so
-        # that the latest before any other is found at once, however long
-        # the run (P09.2).
+        # Its air at every step worked through, each `STEP_S`, and those
+        # moments in order, so that the latest before any other is found at
+        # once, however long the run (P09.2). A moment asked for between
+        # them is worked out from the step before it and not kept: the air
+        # at a moment is the same whatever was asked for before.
         self._kept: dict[float, HouseAir] = {0.0: start}
         self._moments: list[float] = [0.0]
         # One request at a time works the house's air on; others wait for
@@ -270,7 +272,6 @@ class WholeHouse:
                 now = until
                 if until in steps:
                     self._keep(until, air)
-        self._keep(time_s, air)
         return air
 
     def heat_j(self, air: HouseAir, reference_c: float = 0.0) -> float:

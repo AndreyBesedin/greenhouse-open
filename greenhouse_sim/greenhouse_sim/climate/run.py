@@ -349,7 +349,6 @@ class ClimateRun:
                 now = until
                 if until in kept:
                     self._kept[until] = air
-        self._kept[time_s] = air
         return air
 
     def temperature_at(self, time_s: float) -> np.ndarray:
