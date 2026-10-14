@@ -1,7 +1,7 @@
 # The simulator's demo: the reference greenhouse
 
 A guide to running the simulator and its viewer on your own machine, and to
-walking through the reference scenario, `reference-greenhouse-v1`, as the
+walking through the reference scenario, `reference_greenhouse`, as the
 [P09 roadmap](roadmap/p09-integrated-scenario.md) checks it: what each step
 should show, what the simulator simplifies, and what to do when something
 does not start.
