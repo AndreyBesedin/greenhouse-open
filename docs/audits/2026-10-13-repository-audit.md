@@ -182,8 +182,8 @@ code at `467821f`; *review*, reproduced by a review and not again here.
 | `AUDIT.9` Small Python toolboxes worth naming | corrected | read | when touched | W13 |
 | `AUDIT.10` The layering between subpackages is not checked | corrected | read | decide | D3 |
 | `AUDIT.11` Ruff checks five rule families | confirmed | run | when touched | W15 |
-| `AUDIT.12` The checks take 11 to 22 minutes, in one job | corrected | run | next | W7, W8 |
-| `AUDIT.13` Supply chain and the review gate | corrected | read | next | W7, D4 |
+| `AUDIT.12` The checks take 11 to 22 minutes, in one job | corrected | run | next | W7 (#169), W8 |
+| `AUDIT.13` Supply chain and the review gate | corrected | read | next | W7 (#169, #170, #171), D4 |
 | `AUDIT.14` Nothing in the packages logs | corrected | read | when touched | W15 |
 | `AUDIT.15` Module globals and threads make tests order-dependent | corrected | run | next | W8, W9 |
 | `AUDIT.16` The prose is consistent, dense and tied to the roadmap | corrected | read | when touched | W14 |
@@ -197,7 +197,7 @@ code at `467821f`; *review*, reproduced by a review and not again here.
 | `AUDIT.24` The packages admit a pydantic that writes observations differently | new | run | **now** | W3 (#160) |
 | `AUDIT.25` What a client sends is checked for shape, not sense | new | review | now | W4 (#165, #166, #167) |
 | `AUDIT.26` Ground truth leaves by the API, which says it never does | new | read | decide | D2 |
-| `AUDIT.27` The protocol's records are checked unevenly | new | read | next | W3 |
+| `AUDIT.27` The protocol's records are checked unevenly | new | read | next | W3 (#168), a decision for the rest |
 | `AUDIT.28` The adapters' command line and canonical tier | new | read | next | W2 (#161, the command line) |
 | `AUDIT.29` The kept runs stall the server, and the openings go first | new | run | now | W5 (#163) |
 | `AUDIT.30` Documents that no longer describe the code | new | read | now | W6 (#164) |
