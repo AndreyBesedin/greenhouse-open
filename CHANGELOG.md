@@ -59,6 +59,10 @@ breaks the conformance checks is a major version.
 - `greenhouse-adapters`: `greenhouse-data` ends a checksum mismatch, a
   network error or an archive that is not one in a line and exit code 1,
   instead of a traceback.
+- All three packages now require pydantic 2.12.2 or newer (previously 2.9):
+  `Observation` leaves its unset fields out with `exclude_if`, which
+  pydantic 2.11 ignores, and 2.12.0 fails on Python 3.14. CI installs the
+  protocol and the adapters at their lowest dependencies and tests them.
 
 ## 0.1.0 - 2026-09-24
 
