@@ -89,8 +89,8 @@ checks that span packages: every producer against the canonical contract,
 each package's declared dependencies, and the examples.
 
 The browser viewer in `greenhouse_sim/web` has its own checks (Biome,
-TypeScript, Vitest, a Playwright smoke test), which CI runs as a separate job;
-see [docs/engineering.md](docs/engineering.md#local-checks).
+TypeScript, Vitest, and Playwright's browser tests in lanes), which CI runs
+as separate jobs; see [docs/engineering.md](docs/engineering.md#local-checks).
 
 Engineering conventions, pull request scope guidance and the solo-developer
 review policy live in [docs/engineering.md](docs/engineering.md). Where the
