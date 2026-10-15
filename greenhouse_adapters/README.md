@@ -14,6 +14,10 @@ greenhouse-data prepare wur agc4-2024 --profile tiny
   the publisher's metadata API and compares.
 - **Storage** resolves an artifact from a local copy, then configured
   mirrors, then the publisher, verifying checksums and resuming downloads.
+  A download the publisher interrupts is asked for again a few times, and
+  what was fetched is kept for the next run; a file that fails its
+  checksum after a fetch is moved aside (`.rejected`), and a verified
+  file is hashed again once its size, inode or modification time changes.
   A profile caps what may be downloaded: `tiny` and `dev` never fetch the
   image archives; `full` does (about 43 GB).
 - **The canonical tier** is line-delimited JSON of the protocol's records

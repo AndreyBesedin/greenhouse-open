@@ -49,6 +49,16 @@ breaks the conformance checks is a major version.
 - The viewer draws all of it (P00 to P09), with screenshot regression in a
   pinned container, and `python scripts/demo.py` starts the API and the
   viewer together and opens the reference greenhouse (`docs/demo.md`).
+- `greenhouse-adapters`: a verified artifact is hashed again once its size,
+  inode or modification time changes, and after every fetch; a fetched
+  file that fails its checksum is moved aside, so the next run fetches it
+  again. A download the publisher answers with 429 or 5xx, or that the
+  connection cuts short, is resumed up to four times, waiting longer each
+  time, and its bytes are kept; a resume no longer empties the partial
+  file on an error, and a short or long body never reaches the final path.
+- `greenhouse-adapters`: `greenhouse-data` ends a checksum mismatch, a
+  network error or an archive that is not one in a line and exit code 1,
+  instead of a traceback.
 
 ## 0.1.0 - 2026-09-24
 
