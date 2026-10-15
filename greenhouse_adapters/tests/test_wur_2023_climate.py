@@ -149,7 +149,7 @@ def test_build_writes_one_greenhouse_with_its_single_compartment(tmp_path: Path)
         DESTRUCTIVE_MEMBER,
     ]
     assert first.provenance().event_count == 0
-    assert greenhouse.compartments[0].plants == []
+    assert greenhouse.compartments[0].plants == ()
 
 
 def _empty_crop_workbook() -> bytes:

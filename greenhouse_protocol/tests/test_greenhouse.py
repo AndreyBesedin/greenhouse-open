@@ -112,7 +112,7 @@ def _plant(plant_id: str) -> Plant:
 def test_greenhouse_has_no_compartments_by_default() -> None:
     greenhouse = _make_greenhouse()
 
-    assert greenhouse.compartments == []
+    assert greenhouse.compartments == ()
     assert greenhouse.compartment("3.06") is None
     assert greenhouse.all_plants == greenhouse.plants
 
@@ -126,7 +126,7 @@ def test_compartments_are_looked_up_by_id_and_can_hold_their_own_plants() -> Non
 
     assert greenhouse.compartment("3.06") is reference
     assert greenhouse.compartment("3.08") is trigger
-    assert trigger.plants == []
+    assert trigger.plants == ()
     assert [p.plant_id for p in greenhouse.all_plants] == ["p_306_1", "p_306_2"]
 
 
@@ -165,3 +165,72 @@ def test_plant_ids_must_be_unique_across_the_whole_greenhouse() -> None:
 def test_a_description_refuses_a_wall_clock_creation_time() -> None:
     with pytest.raises(ValidationError, match="timezone-aware"):
         _make_greenhouse(created_at=datetime(2026, 1, 1))
+
+
+def test_an_edit_is_checked_as_the_description_was_when_built() -> None:
+    greenhouse = _make_greenhouse()
+
+    with pytest.raises(ValidationError, match="timezone-aware"):
+        greenhouse.created_at = datetime(2026, 2, 1)
+    assert greenhouse.created_at == datetime(2026, 1, 1, tzinfo=UTC)
+
+    greenhouse.created_at = datetime(2026, 2, 1, tzinfo=UTC)
+    assert greenhouse.created_at == datetime(2026, 2, 1, tzinfo=UTC)
+
+
+def test_a_plant_added_under_a_taken_id_is_refused_and_leaves_the_plants_as_they_were() -> None:
+    greenhouse = _make_greenhouse(
+        plants=[_plant("loose")],
+        compartments=[Compartment(compartment_id="3.06", name="one", plants=[_plant("p_306")])],
+    )
+
+    with pytest.raises(ValidationError, match=r"duplicate plant ids: \['p_306'\]"):
+        greenhouse.plants = (*greenhouse.plants, _plant("p_306"))
+    assert [p.plant_id for p in greenhouse.all_plants] == ["loose", "p_306"]
+
+    greenhouse.plants = (*greenhouse.plants, _plant("new"))
+    assert [p.plant_id for p in greenhouse.all_plants] == ["loose", "new", "p_306"]
+
+
+def test_a_compartment_added_under_a_taken_id_or_with_taken_plants_is_refused() -> None:
+    greenhouse = _make_greenhouse(
+        plants=[_plant("loose")],
+        compartments=[Compartment(compartment_id="3.06", name="one")],
+    )
+    before = greenhouse.compartments
+
+    with pytest.raises(ValidationError, match=r"duplicate compartment ids: \['3.06'\]"):
+        greenhouse.compartments = (*before, Compartment(compartment_id="3.06", name="two"))
+    with pytest.raises(ValidationError, match=r"duplicate plant ids: \['loose'\]"):
+        greenhouse.compartments = (
+            *before,
+            Compartment(compartment_id="3.07", name="two", plants=[_plant("loose")]),
+        )
+    assert greenhouse.compartments == before
+
+
+def test_a_part_is_replaced_through_its_description_rather_than_changed_in_place() -> None:
+    greenhouse = _make_greenhouse(plants=[_plant("p1")])
+
+    with pytest.raises(ValidationError, match="frozen"):
+        greenhouse.plants[0].row = 2  # type: ignore[misc]
+    with pytest.raises(ValidationError, match="frozen"):
+        greenhouse.layout.rows = 5  # type: ignore[misc]
+
+    greenhouse.plants = (greenhouse.plants[0].model_copy(update={"row": 2}),)
+    greenhouse.layout = GreenhouseLayout(rows=5, columns=10)
+    assert greenhouse.plants[0].row == 2
+    assert greenhouse.layout.rows == 5
+
+
+def test_a_consumers_own_record_keeps_its_state_editable_and_its_description_checked() -> None:
+    class ReplayedGreenhouse(GreenhouseDescription):
+        replayed_until: datetime | None = None
+
+    greenhouse = ReplayedGreenhouse(**_make_greenhouse(plants=[_plant("p1")]).model_dump())
+
+    greenhouse.replayed_until = datetime(2026, 3, 1, tzinfo=UTC)
+    with pytest.raises(ValidationError, match="duplicate plant ids"):
+        greenhouse.plants = (*greenhouse.plants, _plant("p1"))
+    assert greenhouse.replayed_until == datetime(2026, 3, 1, tzinfo=UTC)
+    assert len(greenhouse.plants) == 1
