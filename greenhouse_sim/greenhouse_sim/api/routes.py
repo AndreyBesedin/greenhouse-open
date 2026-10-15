@@ -449,12 +449,17 @@ def _posted(path: str, query: Query, body: bytes) -> Response:
 
 
 def _json(body: bytes) -> JsonValue:
-    """A request's body, read as JSON."""
+    """A request's body, read as JSON: standard JSON, whose numbers are all
+    finite, not Python's, which reads `NaN` and `Infinity` too."""
     try:
-        parsed: JsonValue = json.loads(body)
+        parsed: JsonValue = json.loads(body, parse_constant=_not_a_number)
     except ValueError:
         raise InvalidRequest("the body is not JSON") from None
     return parsed
+
+
+def _not_a_number(name: str) -> JsonValue:
+    raise InvalidRequest(f"the body holds {name}, which JSON has no number for")
 
 
 def live_stream(path: str, runs: LiveRuns) -> LiveRun | Response | None:

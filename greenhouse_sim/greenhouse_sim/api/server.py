@@ -42,6 +42,13 @@ RECONNECT_AFTER_MS: Final = 1000
 SIMULATOR_METRIC: Final = "sim"
 MS_PER_S: Final = 1000
 
+# The largest request body the API reads, in bytes: a season's checkpoint,
+# the largest body a viewer sends, is a megabyte or two.
+MAX_BODY_BYTES: Final = 64 * 1024 * 1024
+# How long the API waits on a client that has not sent what it said it
+# would, in seconds, before it answers and closes the connection.
+READ_TIMEOUT_S: Final = 30.0
+
 # How many connections may wait to be accepted. A viewer asks for a scene,
 # its fields and its CFD boundaries at once, and its browser tests open
 # several viewers together; past this, macOS refuses a connection outright.
@@ -71,6 +78,8 @@ class SimulatorServer(ThreadingHTTPServer):
 
 
 class _Handler(BaseHTTPRequestHandler):
+    timeout = READ_TIMEOUT_S
+
     def do_GET(self) -> None:
         started = time.perf_counter()
         stream = self._safely(lambda: live_stream(self.path, self._live))
@@ -85,10 +94,44 @@ class _Handler(BaseHTTPRequestHandler):
         started = time.perf_counter()
         response = self._safely(lambda: control(self.path, self._live))
         if response is None:
-            length = int(self.headers.get("Content-Length") or 0)
-            body = self.rfile.read(length) if length > 0 else b""
-            response = self._safely(lambda: respond("POST", self.path, body))
+            body = self._body()
+            if isinstance(body, Response):
+                response = body
+            else:
+                response = self._safely(lambda: respond("POST", self.path, body))
         self._send(response, started)
+
+    def do_PUT(self) -> None:
+        self._send(_refused_method(self.command), time.perf_counter())
+
+    do_PATCH = do_DELETE = do_PUT
+
+    def _body(self) -> bytes | Response:
+        """The request's body, as long as its `Content-Length` says, or the
+        refusal if that is not a length, is more than the API reads, or is
+        more than the client sends."""
+        declared = self.headers.get("Content-Length") or "0"
+        if not declared.isdigit():
+            return Response(
+                HTTPStatus.BAD_REQUEST, {"error": f"Content-Length {declared!r} is not a length"}
+            )
+        length = int(declared)
+        if length > MAX_BODY_BYTES:
+            return Response(
+                HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+                {"error": f"a body of {length:,} bytes; the API reads {MAX_BODY_BYTES:,} at most"},
+            )
+        try:
+            body = self.rfile.read(length)
+        except TimeoutError:
+            body = b""
+        if len(body) < length:
+            self.close_connection = True
+            return Response(
+                HTTPStatus.REQUEST_TIMEOUT,
+                {"error": f"the body stopped short of the {length:,} bytes announced"},
+            )
+        return body
 
     @property
     def _live(self) -> LiveRuns:
@@ -134,6 +177,12 @@ class _Handler(BaseHTTPRequestHandler):
                 self.wfile.flush()
         except BrokenPipeError, ConnectionResetError:
             pass
+
+
+def _refused_method(method: str) -> Response:
+    return Response(
+        HTTPStatus.METHOD_NOT_ALLOWED, {"error": f"the API answers GET and POST, not {method}"}
+    )
 
 
 def create_server(
