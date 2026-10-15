@@ -137,6 +137,20 @@ def test_a_branch_shares_every_day_before_its_own() -> None:
     assert other.environments(PLANT, 1)[0] != trunk_days[0]
 
 
+def test_the_opening_days_are_kept_beside_the_last_checkpoints_saved() -> None:
+    # The openings, kept as the API starts, are the oldest checkpoints: the
+    # next saves do not evict them.
+    assert checkpoints.load_openings() == []
+    openings = {summary.checkpoint_id for summary in checkpoints.checkpoints()}
+    for level in range(checkpoints.KEPT_CHECKPOINTS + 1):
+        checkpoints.save_checkpoint("climate_box", levels={"heater": level / 100})
+
+    kept = {summary.checkpoint_id for summary in checkpoints.checkpoints()}
+    assert openings
+    assert openings <= kept
+    assert len(kept - openings) == checkpoints.KEPT_CHECKPOINTS
+
+
 def test_a_checkpoint_downloads_and_uploads_as_it_was() -> None:
     saved = _body("POST", f"/api/scenarios/reference_greenhouse/checkpoints?t={DAY_S:.0f}")
     downloaded = _body("GET", f"/api/checkpoints/{saved['checkpoint_id']}")

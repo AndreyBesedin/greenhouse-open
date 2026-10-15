@@ -40,6 +40,7 @@ from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.fields import Commanded, RunKey, climate_run
 from greenhouse_sim.services.kept_states import House, KeptState, agreeing
+from greenhouse_sim.services.making import Kept, kept_values, made_once
 from greenhouse_sim.services.runs import checked_moment
 from greenhouse_sim.services.scenarios import SceneChanges, changed, plant_ids, scenario
 from greenhouse_sim.services.sunlight import plant_light
@@ -49,7 +50,7 @@ from greenhouse_sim.solar.shadows import Shadows
 # How many recent runs' crops are kept.
 KEPT_CROPS: Final = 4
 
-_KEPT: OrderedDict[RunKey, tuple[RunCrop, Schedule]] = OrderedDict()
+_KEPT: Kept[RunKey, tuple[RunCrop, Schedule]] = OrderedDict()
 _KEEPING = threading.Lock()
 
 
@@ -79,33 +80,29 @@ def run_crop(
         raise NotFound(f"{scenario_id} grows its crop with the simple daily model, not by organ")
     key, climate = climate_run(scenario_id, layout, levels, openings, commands, weather, daily)
     schedule = climate.run.schedule
-    with _KEEPING:
-        kept = _KEPT.get(key)
-        if kept is not None:
-            _KEPT.move_to_end(key)
-            return kept[0]
+
+    def make(others: list[tuple[RunKey, tuple[RunCrop, Schedule]]]) -> tuple[RunCrop, Schedule]:
         crop = _new_crop(key, climate, watch)
-        for other_key, (other, other_schedule) in _KEPT.items():
-            if _same_house(key, other_key):
-                until = schedule.same_until(other_schedule)
-                shared = config.duration_days if math.isinf(until) else days_ended(until)
-                crop.carry_on_from(other, min(shared, config.duration_days))
+        for _, (other, other_schedule) in others:
+            until = schedule.same_until(other_schedule)
+            shared = config.duration_days if math.isinf(until) else days_ended(until)
+            crop.carry_on_from(other, min(shared, config.duration_days))
         for state in agreeing(_house(key), schedule):
             if state.plants:
                 crop.seed(state.day, state.plants, state.lived)
-        _KEPT[key] = (crop, schedule)
-        if len(_KEPT) > KEPT_CROPS:
-            _KEPT.popitem(last=False)
-        return crop
+        return crop, schedule
+
+    crop, _ = made_once(
+        _KEPT, _KEEPING, key, KEPT_CROPS, lambda other: _same_house(key, other), make
+    )
+    return crop
 
 
 def seed_kept_crops(state: KeptState) -> None:
     """Give a kept state's plants to the crops kept that agree with it."""
     if not state.plants:
         return
-    with _KEEPING:
-        crops = list(_KEPT.items())
-    for key, (crop, schedule) in crops:
+    for key, (crop, schedule) in kept_values(_KEPT, _KEEPING):
         if state.agrees(_house(key), schedule):
             crop.seed(state.day, state.plants, state.lived)
 

@@ -53,7 +53,8 @@ from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.grid import air_grid
-from greenhouse_sim.services.kept_states import KeptState, agreeing
+from greenhouse_sim.services.kept_states import House, KeptState, agreeing
+from greenhouse_sim.services.making import Kept, kept_values, made_once
 from greenhouse_sim.services.runs import checked_moment, checked_window
 from greenhouse_sim.services.scenarios import (
     DEFAULT_WEATHER,
@@ -168,7 +169,7 @@ def run_schedule(
 # its equipment's levels and its doors' and vents' from the start, and its
 # commands after it.
 type RunKey = tuple[str, str, str, _Pairs, _Pairs, tuple[Commanded, ...]]
-_KEPT: OrderedDict[RunKey, ClimateDay] = OrderedDict()
+_KEPT: Kept[RunKey, ClimateDay] = OrderedDict()
 _KEEPING = threading.Lock()
 
 
@@ -195,27 +196,27 @@ def _climate_day(
     the same weather up to where their schedules differ, as an override's
     does."""
     key = (scenario_id, layout, weather, levels, openings, commands)
-    with _KEEPING:
-        run = _KEPT.get(key)
-        if run is not None:
-            _KEPT.move_to_end(key)
-            return run
+
+    def make(others: list[tuple[RunKey, ClimateDay]]) -> ClimateDay:
         run = ClimateDay(_new_climate_run(*key))
-        for (other_id, other_layout, other_weather, _, other_openings, _), other in _KEPT.items():
-            if (other_id, other_layout, other_weather, other_openings) == (
-                scenario_id,
-                layout,
-                weather,
-                openings,
-            ):
-                run.carry_on_from(other)
-        for state in agreeing((scenario_id, layout, weather, openings), run.run.schedule):
+        for _, other in others:
+            run.carry_on_from(other)
+        for state in agreeing(_house(key), run.run.schedule):
             for moment, air in state.airs():
                 run.house.seed(moment, air)
-        _KEPT[key] = run
-        if len(_KEPT) > KEPT_RUNS:
-            _KEPT.popitem(last=False)
         return run
+
+    return made_once(
+        _KEPT, _KEEPING, key, KEPT_RUNS, lambda other: _house(other) == _house(key), make
+    )
+
+
+def _house(key: RunKey) -> House:
+    """A run's house, as its key names it: its scenario, layout and weather,
+    and its doors and vents open from the start. Runs of the same house are
+    the same air until their schedules differ."""
+    scenario_id, layout, weather, _, openings, _ = key
+    return scenario_id, layout, weather, openings
 
 
 def climate_run(
@@ -249,10 +250,8 @@ def climate_run(
 
 def seed_kept_climate_runs(state: KeptState) -> None:
     """Give a kept state to the climate runs kept that agree with it."""
-    with _KEEPING:
-        runs = list(_KEPT.items())
-    for (scenario_id, layout, weather, _, openings, _), run in runs:
-        if state.agrees((scenario_id, layout, weather, openings), run.run.schedule):
+    for key, run in kept_values(_KEPT, _KEEPING):
+        if state.agrees(_house(key), run.run.schedule):
             for moment, air in state.airs():
                 run.house.seed(moment, air)
 

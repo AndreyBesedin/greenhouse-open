@@ -27,8 +27,8 @@ saved or uploaded, each named by a digest of its content; restarting the
 API forgets them, and the API writes no file. A scenario's manifest may
 name a day of its run as its opening day, kept in the repository as a
 checkpoint beside it, gzipped: the API keeps it as it starts
-(`load_openings`), so that its run's later days need not be worked out
-from its start. A run that agrees with one up
+(`load_openings`), beside the others and never evicted, so that its run's
+later days need not be worked out from its start. A run that agrees with one up
 to its moment takes its state over (`greenhouse_sim.services.kept_states`):
 restoring a checkpoint is asking for its run again, and a branch from it is
 the same run with other commands from its moment on.
@@ -129,15 +129,22 @@ class CheckpointSummary(BaseModel):
 
 
 _KEPT: OrderedDict[str, Checkpoint] = OrderedDict()
+# The scenarios' opening days among them, which are kept beside the last
+# `KEPT_CHECKPOINTS` saved or uploaded, never in their place: they are the
+# oldest, and the next fresh run of their scenario would work its days out
+# from the start without them.
+_OPENINGS: set[str] = set()
 _KEEPING = threading.Lock()
 
 
 def forget_checkpoints() -> None:
-    """Forget every checkpoint kept, and the states runs took from them."""
+    """Forget every checkpoint kept, the opening days among them, and the
+    states runs took from them."""
     with _KEEPING:
         for checkpoint_id in _KEPT:
             drop(checkpoint_id)
         _KEPT.clear()
+        _OPENINGS.clear()
 
 
 def save_checkpoint(
@@ -203,6 +210,11 @@ def upload_checkpoint(document: JsonValue) -> CheckpointSummary:
     """A checkpoint uploaded, checked, and kept. Refused if it is not one,
     is in a format this simulator does not read, was made with another
     version of its scenario's manifest, or does not fit its scenario's run."""
+    return _kept(_checked(document))
+
+
+def _checked(document: JsonValue) -> Checkpoint:
+    """A checkpoint uploaded, checked as `upload_checkpoint` says."""
     if isinstance(document, dict) and document.get("checkpoint_format") != CHECKPOINT_FORMAT:
         raise InvalidRequest(
             f"a checkpoint in format {document.get('checkpoint_format')!r}; this simulator "
@@ -246,7 +258,7 @@ def upload_checkpoint(document: JsonValue) -> CheckpointSummary:
         raise InvalidRequest(
             f"a crop on day {uploaded.day} has lived {uploaded.day} days, each plant's"
         )
-    return _kept(uploaded)
+    return uploaded
 
 
 def opening_bytes(checkpoint: Checkpoint) -> bytes:
@@ -264,7 +276,10 @@ def load_opening(scenario_id: str) -> list[CheckpointSummary]:
     if opening_day(scenario_id) is None:
         return []
     return [
-        upload_checkpoint(json.loads(gzip.decompress(opening_file(scenario_id, off).read_bytes())))
+        _kept(
+            _checked(json.loads(gzip.decompress(opening_file(scenario_id, off).read_bytes()))),
+            opening=True,
+        )
         for off in (False, True)
     ]
 
@@ -281,8 +296,9 @@ def load_openings() -> list[str]:
     return refused
 
 
-def _kept(checkpoint: Checkpoint) -> CheckpointSummary:
-    """Keep a checkpoint, and its state for the runs that agree with it."""
+def _kept(checkpoint: Checkpoint, *, opening: bool = False) -> CheckpointSummary:
+    """Keep a checkpoint, and its state for the runs that agree with it; a
+    scenario's opening day beside the others, never evicted."""
     checkpoint_id = checkpoint.identifier()
     state = KeptState(
         house=(
@@ -311,9 +327,12 @@ def _kept(checkpoint: Checkpoint) -> CheckpointSummary:
     with _KEEPING:
         _KEPT[checkpoint_id] = checkpoint
         _KEPT.move_to_end(checkpoint_id)
+        if opening:
+            _OPENINGS.add(checkpoint_id)
         keep(checkpoint_id, state)
-        while len(_KEPT) > KEPT_CHECKPOINTS:
-            oldest, _ = _KEPT.popitem(last=False)
+        while len(_KEPT) - len(_OPENINGS) > KEPT_CHECKPOINTS:
+            oldest = next(kept for kept in _KEPT if kept not in _OPENINGS)
+            del _KEPT[oldest]
             drop(oldest)
     seed_kept_climate_runs(state)
     seed_kept_crops(state)
