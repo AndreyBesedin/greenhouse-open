@@ -50,10 +50,16 @@ def test_an_action_refuses_an_edit_its_type_refuses() -> None:
         action.action_type = "HARVEST_PLANT"  # type: ignore[assignment]
     assert action == WaterPlantAction(plant_id="p1", amount_ml=100.0)
 
+    action.amount_ml = 250.0
+    assert action.amount_ml == 250.0
 
-def test_an_outcome_refuses_a_status_that_does_not_exist() -> None:
+
+def test_an_outcome_refuses_a_status_that_does_not_exist_and_takes_a_reason() -> None:
     outcome = ActionOutcome(status=ExecutionStatus.REJECTED, reason="no such plant")
 
     with pytest.raises(ValidationError):
         outcome.status = "PENDING"  # type: ignore[assignment]
     assert outcome.status == ExecutionStatus.REJECTED
+
+    outcome.reason = "plant harvested"
+    assert outcome.reason == "plant harvested"

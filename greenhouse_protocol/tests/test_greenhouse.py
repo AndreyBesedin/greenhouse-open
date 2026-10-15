@@ -208,6 +208,12 @@ def test_a_compartment_added_under_a_taken_id_or_with_taken_plants_is_refused() 
         )
     assert greenhouse.compartments == before
 
+    greenhouse.compartments = (
+        *before,
+        Compartment(compartment_id="3.07", name="two", plants=[_plant("p_307")]),
+    )
+    assert [c.compartment_id for c in greenhouse.compartments] == ["3.06", "3.07"]
+
 
 def test_a_part_is_replaced_through_its_description_rather_than_changed_in_place() -> None:
     greenhouse = _make_greenhouse(plants=[_plant("p1")])
