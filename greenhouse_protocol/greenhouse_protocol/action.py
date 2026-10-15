@@ -11,7 +11,7 @@ outcome comes back as an `ActionOutcome` (`greenhouse_protocol.execution`).
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 # The hard upper bound on a single watering request. Part of the contract
 # rather than of any one executor: whatever proposes an action can know it
@@ -20,23 +20,31 @@ MAX_WATER_AMOUNT_ML = 2000.0
 
 
 class WaterPlantAction(BaseModel):
+    model_config = ConfigDict(validate_assignment=True)
+
     action_type: Literal["WATER_PLANT"] = "WATER_PLANT"
     plant_id: str
     amount_ml: float
 
 
 class HarvestPlantAction(BaseModel):
+    model_config = ConfigDict(validate_assignment=True)
+
     action_type: Literal["HARVEST_PLANT"] = "HARVEST_PLANT"
     plant_id: str
 
 
 class LowerPlantAction(BaseModel):
+    model_config = ConfigDict(validate_assignment=True)
+
     action_type: Literal["LOWER_PLANT"] = "LOWER_PLANT"
     plant_id: str
     amount_cm: float
 
 
 class ScheduleInspectionAction(BaseModel):
+    model_config = ConfigDict(validate_assignment=True)
+
     action_type: Literal["SCHEDULE_INSPECTION"] = "SCHEDULE_INSPECTION"
     plant_id: str
     reason: str
@@ -49,6 +57,8 @@ RequestedAction = (
 
 class ActionResult(BaseModel):
     """The outcome of checking a request, before anything is executed."""
+
+    model_config = ConfigDict(validate_assignment=True)
 
     accepted: bool
     reason: str | None = None

@@ -24,6 +24,13 @@ implement. Part of [greenhouse-open](../README.md). Apache-2.0.
 Chronology is the timestamp alone, always timezone-aware: every record
 refuses a naive time (`greenhouse_protocol.instant.Instant`).
 
+What was observed or happened cannot be edited: observations, events,
+captures, frames and sensors are frozen. A greenhouse description, an action
+and an outcome can be, by assigning a field, and each edit is checked as the
+record was when built; a refused edit leaves the record as it was. A
+description's plants, compartments and layout are values that an edit
+replaces, so that the description checks it.
+
 ## Contracts (`greenhouse_protocol.contracts`)
 
 - `canonical_store`: one store and one query contract per record kind.

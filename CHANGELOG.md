@@ -14,6 +14,12 @@ breaks the conformance checks is a major version.
   refused, as a capture already was. An observation's quality is written in
   order, so its bytes do not depend on the process. `check_media` refuses a
   capture that names no greenhouse.
+- `greenhouse-protocol`: a greenhouse description, an action and an outcome
+  check every edit as they were checked when built, and a refused edit
+  leaves them as they were. A description's plants, compartments and layout
+  are frozen, and its `plants`, `compartments` and `all_plants`, and a
+  compartment's `plants`, are tuples: a plant or compartment is added or
+  changed by assigning the description's field, which checks its identity.
 - `greenhouse-sim`: the simple tomato model's own values (a plant's growth
   multiplier and water stress; a fruit's target diameter, growth-rate
   multiplier and ripening day) move from `PlantWorld` and `Fruit` to
