@@ -1,4 +1,8 @@
+import pytest
+from pydantic import ValidationError
+
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.config import ScenarioConfig
 
 
 def test_registry_contains_exactly_the_configured_greenhouses() -> None:
@@ -49,3 +53,24 @@ def test_a_scenario_describes_the_world_and_no_policy() -> None:
         "harvest_ripe_fruit_count_threshold",
         "agent_tool_call_budget",
     }
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("rows", 0),
+        ("columns", -1),
+        ("duration_days", -5),
+        ("random_seed", -1),
+        ("water_capacity_ml", 0.0),
+        ("truss_interval_days", 0),
+        ("fruit_growth_days_to_target", 0),
+        ("max_trusses", -1),
+    ],
+)
+def test_a_scenario_refuses_a_count_or_capacity_no_run_can_have(field: str, value: float) -> None:
+    # Each would fail later, dividing by zero or drawing a seed, not here.
+    config = SCENARIO_REGISTRY["climate_box"].model_dump()
+
+    with pytest.raises(ValidationError, match=field):
+        ScenarioConfig.model_validate(config | {field: value})

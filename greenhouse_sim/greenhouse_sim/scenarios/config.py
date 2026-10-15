@@ -1,7 +1,14 @@
 from datetime import UTC, date, datetime
 from typing import Annotated, Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    NonNegativeInt,
+    PositiveFloat,
+    PositiveInt,
+    model_validator,
+)
 
 from greenhouse_sim.airflow.prescribed import PrescribedAirflow, UniformAirflow
 from greenhouse_sim.cfd.setup import CfdSetup
@@ -35,8 +42,8 @@ class ScenarioConfig(BaseModel):
     variety: str
     # The crop: rows times columns plants, standing at the layout's planting
     # positions in order.
-    rows: int
-    columns: int
+    rows: PositiveInt
+    columns: PositiveInt
     # How its runs grow the crop: by the simple daily model, through the
     # engine, or organ by organ, each day from the run's air and each plant's
     # own light (`greenhouse_sim.core.crop`); and what they do to it.
@@ -46,8 +53,8 @@ class ScenarioConfig(BaseModel):
     # day, every day, unless a run is given daily commands of its own (P09.4).
     daily: list[DailyCommand] = []
     start_date: date
-    duration_days: int
-    random_seed: int
+    duration_days: PositiveInt
+    random_seed: NonNegativeInt
     # The greenhouse around the crop: where it stands, and the space it encloses.
     envelope: Envelope
     # What stands inside it, in its frame, including where the plants stand.
@@ -79,7 +86,7 @@ class ScenarioConfig(BaseModel):
 
     # Water reservoir / stress.
     initial_water_reservoir_ml: float = 600.0
-    water_capacity_ml: float = 1200.0
+    water_capacity_ml: PositiveFloat = 1200.0
     water_use_ml_per_day_base: float = 80.0
     evaporation_ml_per_day: float = 20.0
     water_stress_threshold_pct: float = 35.0
@@ -87,13 +94,13 @@ class ScenarioConfig(BaseModel):
     # Stem / truss growth.
     initial_stem_length_cm: float = 20.0
     stem_growth_cm_per_day_base: float = 2.0
-    truss_interval_days: int = 6
-    max_trusses: int = 8
+    truss_interval_days: PositiveInt = 6
+    max_trusses: NonNegativeInt = 8
     fruits_per_truss_bounds: tuple[int, int] = (3, 6)
 
     # Fruit growth / ripening.
     target_diameter_mm_bounds: tuple[float, float] = (18.0, 26.0)
-    fruit_growth_days_to_target: int = 20
+    fruit_growth_days_to_target: PositiveInt = 20
     mass_coefficient_g_per_mm3: float = 0.0012
     ripening_days_bounds: tuple[int, int] = (16, 26)
 

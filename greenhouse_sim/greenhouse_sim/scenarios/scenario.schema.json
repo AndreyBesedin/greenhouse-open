@@ -276,37 +276,43 @@
       "type": "object"
     },
     "Envelope": {
-      "description": "A greenhouse's envelope, in metres.",
+      "description": "A greenhouse's envelope, in metres, no larger than any greenhouse.",
       "properties": {
         "length": {
           "exclusiveMinimum": 0,
+          "maximum": 500.0,
           "title": "Length",
           "type": "number"
         },
         "width": {
           "exclusiveMinimum": 0,
+          "maximum": 500.0,
           "title": "Width",
           "type": "number"
         },
         "eave_height": {
           "exclusiveMinimum": 0,
+          "maximum": 50.0,
           "title": "Eave Height",
           "type": "number"
         },
         "ridge_height": {
           "exclusiveMinimum": 0,
+          "maximum": 50.0,
           "title": "Ridge Height",
           "type": "number"
         },
         "spans": {
           "default": 1,
           "exclusiveMinimum": 0,
+          "maximum": 100,
           "title": "Spans",
           "type": "integer"
         },
         "bays": {
           "default": 1,
           "exclusiveMinimum": 0,
+          "maximum": 200,
           "title": "Bays",
           "type": "integer"
         },
@@ -780,10 +786,12 @@
       "type": "string"
     },
     "rows": {
+      "exclusiveMinimum": 0,
       "title": "Rows",
       "type": "integer"
     },
     "columns": {
+      "exclusiveMinimum": 0,
       "title": "Columns",
       "type": "integer"
     },
@@ -813,10 +821,12 @@
       "type": "string"
     },
     "duration_days": {
+      "exclusiveMinimum": 0,
       "title": "Duration Days",
       "type": "integer"
     },
     "random_seed": {
+      "minimum": 0,
       "title": "Random Seed",
       "type": "integer"
     },
@@ -970,6 +980,7 @@
     },
     "water_capacity_ml": {
       "default": 1200.0,
+      "exclusiveMinimum": 0,
       "title": "Water Capacity Ml",
       "type": "number"
     },
@@ -1000,11 +1011,13 @@
     },
     "truss_interval_days": {
       "default": 6,
+      "exclusiveMinimum": 0,
       "title": "Truss Interval Days",
       "type": "integer"
     },
     "max_trusses": {
       "default": 8,
+      "minimum": 0,
       "title": "Max Trusses",
       "type": "integer"
     },
@@ -1046,6 +1059,7 @@
     },
     "fruit_growth_days_to_target": {
       "default": 20,
+      "exclusiveMinimum": 0,
       "title": "Fruit Growth Days To Target",
       "type": "integer"
     },
