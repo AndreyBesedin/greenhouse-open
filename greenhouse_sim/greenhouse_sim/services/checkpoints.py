@@ -34,9 +34,11 @@ restoring a checkpoint is asking for its run again, and a branch from it is
 the same run with other commands from its moment on.
 """
 
+import dataclasses
 import gzip
 import hashlib
 import json
+import math
 import threading
 from collections import OrderedDict
 from collections.abc import Mapping, Sequence
@@ -45,19 +47,23 @@ from typing import Final
 from pydantic import BaseModel, ConfigDict, JsonValue, NonNegativeInt, ValidationError
 
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
+from greenhouse_sim.biology.tomato.organ.development import daily_thermal_time
 from greenhouse_sim.biology.tomato.organ.topology import Plant
+from greenhouse_sim.biology.tomato.organ.transplants import DEVELOPMENT, TRANSPLANT_CD
 from greenhouse_sim.climate.day import window_start
 from greenhouse_sim.climate.house import HouseAir
+from greenhouse_sim.climate.psychrometrics import saturation_ratio_g_kg
 from greenhouse_sim.core.clock import DAY_S, days_ended
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.scenarios.manifest_files import manifest_digest, opening_day, opening_file
-from greenhouse_sim.services.crop import run_crop, seed_kept_crops
+from greenhouse_sim.services.crop import forget_crops, run_crop, seed_kept_crops
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.fields import (
     Commanded,
     climate_run,
+    forget_climate_runs,
     run_schedule,
     seed_kept_climate_runs,
 )
@@ -72,6 +78,15 @@ CHECKPOINT_FORMAT: Final = 2
 KEPT_CHECKPOINTS: Final = 16
 # How many hexadecimal digits of its content's digest name a checkpoint.
 ID_LENGTH: Final = 16
+# What a house's air may be, in an uploaded checkpoint: colder or warmer
+# than any greenhouse's air, or richer in CO₂ than any enrichment, is not a
+# state a run reaches.
+COLDEST_AIR_C: Final = -60.0
+WARMEST_AIR_C: Final = 80.0
+MOST_CO2_PPM: Final = 20_000.0
+# How far a plant's thermal time may be from the sum of the days it lived,
+# relative to it: what adding them up in another order gives.
+THERMAL_TIME_TOLERANCE: Final = 1e-9
 
 
 class Checkpoint(BaseModel):
@@ -138,13 +153,16 @@ _KEEPING = threading.Lock()
 
 
 def forget_checkpoints() -> None:
-    """Forget every checkpoint kept, the opening days among them, and the
-    states runs took from them."""
+    """Forget every checkpoint kept, the opening days among them, the states
+    runs took from them, and the runs and crops kept, which may have carried
+    on from those states."""
     with _KEEPING:
         for checkpoint_id in _KEPT:
             drop(checkpoint_id)
         _KEPT.clear()
         _OPENINGS.clear()
+    forget_climate_runs()
+    forget_crops()
 
 
 def save_checkpoint(
@@ -258,7 +276,56 @@ def _checked(document: JsonValue) -> Checkpoint:
         raise InvalidRequest(
             f"a crop on day {uploaded.day} has lived {uploaded.day} days, each plant's"
         )
+    problems = _implausible(uploaded)
+    if problems:
+        raise InvalidRequest(f"a checkpoint no run reaches: {problems[0]}")
     return uploaded
+
+
+def _implausible(checkpoint: Checkpoint) -> list[str]:
+    """What, in a checkpoint that fits its run's shape, no run could have
+    reached: air out of bounds, a plant that breaks the structure's rules,
+    or one whose thermal time is not what the days it lived add up to."""
+    problems = [
+        f"its house's air {when}: {problem}"
+        for when, air in (("on its day", checkpoint.house), ("before it", checkpoint.house_before))
+        if air is not None
+        for problem in _air_problems(air)
+    ]
+    for day, lived in enumerate(checkpoint.lived):
+        for plant_id, environment in lived.items():
+            if not all(map(math.isfinite, environment.model_dump().values())):
+                problems.append(f"what {plant_id} lived on day {day} is not finite")
+    if problems:
+        return problems
+    for plant in checkpoint.plants:
+        problems += [f"{plant.plant_id}: {problem}" for problem in plant.problems()]
+        added = TRANSPLANT_CD + sum(
+            daily_thermal_time(day[plant.plant_id].mean_temperature_c, DEVELOPMENT)
+            for day in checkpoint.lived
+        )
+        if not math.isclose(plant.thermal_time, added, rel_tol=THERMAL_TIME_TOLERANCE):
+            problems.append(
+                f"{plant.plant_id}'s thermal time is {plant.thermal_time:.6g} °Cd, and the "
+                f"{checkpoint.day} days it lived add up to {added:.6g}"
+            )
+    return problems
+
+
+def _air_problems(air: HouseAir) -> list[str]:
+    if not all(map(math.isfinite, dataclasses.astuple(air))):
+        return ["it is not finite"]
+    problems = []
+    if not COLDEST_AIR_C <= air.temperature_c <= WARMEST_AIR_C:
+        problems.append(f"{air.temperature_c:g} °C")
+    saturated = float(saturation_ratio_g_kg(air.temperature_c))
+    if not 0.0 <= air.humidity_g_kg <= saturated:
+        problems.append(f"{air.humidity_g_kg:g} g/kg of water, saturated at {saturated:g}")
+    if not 0.0 <= air.co2_ppm <= MOST_CO2_PPM:
+        problems.append(f"{air.co2_ppm:g} ppm of CO₂")
+    if air.removed_kg < 0 or air.condensed_kg < 0:
+        problems.append("it has lost less than no water")
+    return problems
 
 
 def opening_bytes(checkpoint: Checkpoint) -> bytes:
