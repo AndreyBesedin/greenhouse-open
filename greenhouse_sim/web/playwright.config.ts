@@ -96,7 +96,13 @@ export default defineConfig({
   testIgnore: ELSEWHERE,
   forbidOnly: IN_CI,
   reporter: IN_CI ? "github" : "list",
-  use: { baseURL: `http://localhost:${PREVIEW_PORT}` },
+  use: {
+    baseURL: `http://localhost:${PREVIEW_PORT}`,
+    // A failed test leaves its trace and a screenshot in test-results/,
+    // which CI keeps; a passing one leaves nothing.
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+  },
   projects: stagesToRun().map((stage, index, stages) => {
     const before = stages[index - 1];
     return {
