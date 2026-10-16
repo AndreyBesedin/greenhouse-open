@@ -5,14 +5,26 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
+# A pull request's newer push stops its older run; every push to main runs
+# to its end.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Each job's timeout is about twice its longest run, so that one that hangs
+# stops instead of holding a runner for GitHub's six hours.
 jobs:
   check:
     name: repository checks
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.14"
 
@@ -54,13 +66,14 @@ jobs:
   viewer:
     name: viewer checks
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: greenhouse_sim/web
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: greenhouse_sim/web/.nvmrc
           cache: npm
@@ -89,6 +102,7 @@ jobs:
   browser:
     name: browser tests (${{ matrix.lane }})
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       # Every lane runs to its end, so that one run shows every failure.
       fail-fast: false
@@ -98,9 +112,9 @@ jobs:
       run:
         working-directory: greenhouse_sim/web
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: greenhouse_sim/web/.nvmrc
           cache: npm
@@ -111,7 +125,7 @@ jobs:
 
       # The browser tests serve the simulator's API, so they need the Python
       # packages, installed as wheels as in the repository checks.
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.14"
 
@@ -129,7 +143,7 @@ jobs:
 
       - name: Keep the browser test report
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-report-${{ matrix.lane }}
           path: greenhouse_sim/web/playwright-report
@@ -138,6 +152,7 @@ jobs:
   visual:
     name: visual checks
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     # Screenshots are compared in a pinned image, so the fonts and software
     # renderer that drew the baselines are the ones that check them (decision
     # 0014). Its version moves with @playwright/test.
@@ -147,9 +162,9 @@ jobs:
       run:
         working-directory: greenhouse_sim/web
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: greenhouse_sim/web/.nvmrc
           cache: npm
@@ -165,7 +180,7 @@ jobs:
       # change takes its new baseline from here.
       - name: Keep the screenshots of a failed comparison
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: visual-results
           path: greenhouse_sim/web/test-results
@@ -178,8 +193,9 @@ jobs:
     name: commits are signed off
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Check Signed-off-by
