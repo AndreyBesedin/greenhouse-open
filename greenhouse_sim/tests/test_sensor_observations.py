@@ -11,6 +11,7 @@ import pytest
 from greenhouse_protocol.contracts.conformance import check_observations
 from greenhouse_protocol.enums import ObservationType
 from greenhouse_protocol.observation import Observation
+from pydantic import ValidationError
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.domain.air import AirQuantity
@@ -130,6 +131,30 @@ def test_a_sensor_samples_every_cadence_from_the_start() -> None:
 
     assert samples(sensor, 100) == [0, 45, 90]
     assert samples(sensor, 0) == [0]
+
+
+def test_a_sensor_samples_at_most_once_a_second() -> None:
+    # Each sample's identifier is stamped to the second: two samples in one
+    # second would share it.
+    with pytest.raises(ValidationError, match="greater than or equal to 1"):
+        PointSensor(
+            sensor_id="t",
+            kind=SensorKind.TEMPERATURE,
+            position=Vector3(x=1, y=1, z=1),
+            cadence_s=0.5,
+        )
+
+
+def test_samples_a_second_or_more_apart_are_each_their_own_observation() -> None:
+    sensor = PointSensor(
+        sensor_id="t", kind=SensorKind.TEMPERATURE, position=Vector3(x=1, y=1, z=1), cadence_s=1.5
+    )
+    air = CONFIG.airflow.field("still", _climate(0).grid)
+
+    observed = observe([sensor], lambda _: air, 60, start=START, greenhouse_id="box", run_id="run")
+
+    assert len(observed) == len(samples(sensor, 60)) == 41
+    assert check_observations(observed) == []
 
 
 def test_a_sensor_in_steady_air_reads_it_the_same_at_every_sample() -> None:

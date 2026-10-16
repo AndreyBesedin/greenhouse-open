@@ -92,7 +92,7 @@
         },
         "cadence_s": {
           "default": 60.0,
-          "exclusiveMinimum": 0,
+          "minimum": 1.0,
           "title": "Cadence S",
           "type": "number"
         },
@@ -797,7 +797,7 @@
         },
         "cadence_s": {
           "default": 60.0,
-          "exclusiveMinimum": 0,
+          "minimum": 1.0,
           "title": "Cadence S",
           "type": "number"
         },
