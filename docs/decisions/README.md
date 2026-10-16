@@ -49,6 +49,7 @@ changes course is a new record that supersedes the old one.
 | [0035](0035-one-simulator-the-run-every-part-on-a-ladder-of-fidelity.md) | One simulator, the run, with every part on a ladder of fidelity | Accepted |
 | [0036](0036-the-api-shows-people-the-truth-a-policy-reads-observations.md) | The API shows people the truth; a policy reads observations only | Accepted |
 | [0037](0037-the-simulators-subpackages-tangle-no-further.md) | The simulator's subpackages tangle no further | Accepted |
+| [0038](0038-hooks-merge-like-dev-dependencies-review-waits-for-a-second-maintainer.md) | Hook updates merge like development dependencies; review changes with a second maintainer | Accepted |
 
 ## Template
 
