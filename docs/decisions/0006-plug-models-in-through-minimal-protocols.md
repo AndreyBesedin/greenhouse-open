@@ -1,6 +1,6 @@
 # 0006: Plug simulation models in through minimal protocols
 
-**Status:** Accepted
+**Status:** Accepted; the engine's day its contracts plug into superseded by the run, [0035](0035-one-simulator-the-run-every-part-on-a-ladder-of-fidelity.md)
 **Date:** 2026-10-03
 
 ## Context

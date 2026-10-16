@@ -115,8 +115,10 @@ The model contracts above are the engine's: they drive the simple daily
 model, the examples and the live stream. The reference scenario runs
 through the richer run instead, the house's air (`greenhouse_sim.climate`),
 the sun (`greenhouse_sim.solar`) and the organ-level crop, which have no
-contract of their own for the air yet; which path a new model joins is
-still to be decided.
+contract of their own for the air yet. The run is the one simulator
+(decision 0035): each of its parts gets a contract and a ladder of models
+from the simplest to the richest, the engine's models among them, and a new
+model joins it as one of them.
 
 ## The viewer
 
