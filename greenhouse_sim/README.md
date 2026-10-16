@@ -111,6 +111,13 @@ behind them moves.
 Everything else is internal and may move. `tests/test_public_imports.py`
 lists every public name.
 
+The model contracts above are the engine's: they drive the simple daily
+model, the examples and the live stream. The reference scenario runs
+through the richer run instead, the house's air (`greenhouse_sim.climate`),
+the sun (`greenhouse_sim.solar`) and the organ-level crop, which have no
+contract of their own for the air yet; which path a new model joins is
+still to be decided.
+
 ## The viewer
 
 The browser viewer shows what the simulator is doing, in 3D: a scenario
