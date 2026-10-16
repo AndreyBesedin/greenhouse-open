@@ -99,8 +99,10 @@ export default defineConfig({
   // On CI a failed test runs once more, with its trace recorded: recording
   // costs every test's first attempt otherwise, and that cost tipped the
   // chromium lane's slowest waits past their timeout when traces were kept
-  // on failure. A test that passes its retry is reported flaky, not green.
+  // on failure. The retry is there for the trace alone: a test that passes
+  // it still fails the run, so the lane stays red and CI keeps the trace.
   retries: IN_CI ? 1 : 0,
+  failOnFlakyTests: IN_CI,
   use: {
     baseURL: `http://localhost:${PREVIEW_PORT}`,
     // A failed test leaves its screenshot, and its retry's trace, in
