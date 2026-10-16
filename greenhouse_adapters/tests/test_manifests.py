@@ -97,5 +97,16 @@ def test_an_artifact_named_as_the_provider_names_files_is_accepted() -> None:
     assert ArtifactManifest.model_validate(_artifact(name)).name == name
 
 
-def test_the_manifests_here_are_a_source_checkouts() -> None:
-    assert manifests_in_a_checkout()
+@pytest.mark.parametrize(("in_a_checkout", "expected"), [(True, True), (False, False)])
+def test_the_manifests_are_a_checkouts_only_beside_its_package_metadata(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, in_a_checkout: bool, expected: bool
+) -> None:
+    # A source checkout keeps them in <package>/<module>/manifests, beside
+    # <package>/pyproject.toml; an installed wheel in site-packages, without.
+    manifests = tmp_path / "greenhouse_adapters" / "greenhouse_adapters" / "manifests"
+    manifests.mkdir(parents=True)
+    if in_a_checkout:
+        (tmp_path / "greenhouse_adapters" / "pyproject.toml").write_text("[project]\n")
+    monkeypatch.setattr("greenhouse_adapters.manifests.MANIFEST_DIR", manifests)
+
+    assert manifests_in_a_checkout() is expected
