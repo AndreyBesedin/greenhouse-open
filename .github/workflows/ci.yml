@@ -26,6 +26,31 @@ jobs:
       - name: Run canonical repository checks
         run: python scripts/check.py
 
+  lowest:
+    name: lowest dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      # The protocol and the adapters with each of their own dependencies at
+      # the lowest version their metadata allows, so that a floor below what
+      # the code needs fails here rather than for a user (AUDIT.24).
+      - name: Install the packages at their lowest dependencies
+        run: |
+          python -m pip install "$(grep '^uv==' requirements-dev.txt)" \
+            "$(grep '^pytest==' requirements-dev.txt)"
+          uv pip install --system --resolution lowest-direct \
+            ./greenhouse_protocol ./greenhouse_adapters
+
+      - name: Test them
+        run: |
+          (cd greenhouse_protocol && python -m pytest -q)
+          (cd greenhouse_adapters && python -m pytest -q)
+
   viewer:
     name: viewer checks
     runs-on: ubuntu-latest
