@@ -197,7 +197,7 @@ code at `467821f`; *review*, reproduced by a review and not again here.
 | `AUDIT.24` The packages admit a pydantic that writes observations differently | new | run | **now** | W3 (#160) |
 | `AUDIT.25` What a client sends is checked for shape, not sense | new | review | now | W4 (#165, #166, #167) |
 | `AUDIT.26` Ground truth leaves by the API, which says it never does | new | read | decide | D2 |
-| `AUDIT.27` The protocol's records are checked unevenly | new | read | next | W3 (#168), a decision for the rest |
+| `AUDIT.27` The protocol's records are checked unevenly | new | read | next | W3 (#168, #174), a decision for the rest |
 | `AUDIT.28` The adapters' command line and canonical tier | new | read | next | W2 (#161, the command line) |
 | `AUDIT.29` The kept runs stall the server, and the openings go first | new | run | now | W5 (#163) |
 | `AUDIT.30` Documents that no longer describe the code | new | read | now | W6 (#164) |
@@ -274,8 +274,10 @@ traceback.
   rather than trusted.
 - Then, in its own pull request, `AUDIT.27`: one timezone-aware datetime
   type for every record's timestamps; `check_media`'s scoping check; the
-  dead `source.type.strip()` rule removed; frozen structure models; a
-  sorted `quality`; a decision on the unimplemented execution contracts.
+  dead `source.type.strip()` rule removed; structure models that check
+  their edits (decided in review: a description stays editable, its parts
+  are values it replaces; #174); a sorted `quality`; a decision on the
+  unimplemented execution contracts.
 
 **Done when:** the lowest-version job is green, and fails on a branch that
 sets the bound back to 2.9; a naive timestamp is refused on every record.
