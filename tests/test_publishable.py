@@ -129,6 +129,49 @@ def test_the_document_citation_check_can_fail() -> None:
     ]
 
 
+# What the guide for contributors names as a path, from the repository's
+# root: a link's target, and each word of an inline code span that is one,
+# such as the script in `python greenhouse_sim/tests/test_x.py --update`.
+GUIDE_LINK_TARGET = re.compile(r"\]\(([^)\s#]+)")
+GUIDE_CODE_SPAN = re.compile(r"`([^`]+)`")
+REPOSITORY_PATH = re.compile(
+    r"(?:greenhouse_\w+|scripts|tests|docs|\.github)(?:/[\w./-]*)?|[\w-]+\.md"
+)
+
+
+def _paths_named_in(guide: str) -> list[str]:
+    linked = [target for target in GUIDE_LINK_TARGET.findall(guide) if "://" not in target]
+    in_code = [
+        word
+        for line in guide.splitlines()
+        for span in GUIDE_CODE_SPAN.findall(line)
+        for word in span.split()
+        if REPOSITORY_PATH.fullmatch(word)
+    ]
+    return linked + in_code
+
+
+def test_the_guide_for_contributors_names_files_that_exist() -> None:
+    named = _paths_named_in((ROOT / "AGENTS.md").read_text())
+
+    assert named
+    assert [path for path in named if not (ROOT / path).exists()] == []
+
+
+def test_the_guide_path_check_reads_links_and_paths_in_commands() -> None:
+    guide = (
+        "See [the rules](CONTRIBUTING.md), [a site](https://example.org/a.md) and"
+        " [a part](#part); run `python greenhouse_sim/tests/test_x.py --update`,"
+        " keep `greenhouse_protocol` apart, and `npm ci` first."
+    )
+
+    assert _paths_named_in(guide) == [
+        "CONTRIBUTING.md",
+        "greenhouse_sim/tests/test_x.py",
+        "greenhouse_protocol",
+    ]
+
+
 def test_no_file_uses_a_name_from_the_original_codebase() -> None:
     hits = [
         f"  {path.relative_to(ROOT)}:{lineno}"

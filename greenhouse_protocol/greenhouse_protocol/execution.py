@@ -12,7 +12,7 @@ executing side knows and the deciding side is told.
 
 from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from greenhouse_protocol.enums import ActionExecutorType
 
@@ -27,6 +27,8 @@ class ExecutionStatus(StrEnum):
 
 
 class ActionOutcome(BaseModel):
+    model_config = ConfigDict(validate_assignment=True)
+
     status: ExecutionStatus
     # Who carried it out; absent when nothing was carried out.
     executor: ActionExecutorType | None = None
