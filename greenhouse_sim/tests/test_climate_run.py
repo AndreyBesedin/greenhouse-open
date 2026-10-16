@@ -1,6 +1,9 @@
 """A climate run (P05.3): the air through time on its own clock, applying
 its schedule's commands at their moments, the same every time it is run."""
 
+from collections.abc import Callable
+from contextlib import AbstractContextManager
+
 import numpy as np
 
 from greenhouse_sim.climate.commands import Command, Schedule
@@ -88,3 +91,14 @@ def test_its_air_is_the_same_whatever_moments_were_asked_for_before() -> None:
     # Asked again, as a viewer's requests for one moment ask, it is not
     # worked out again.
     assert scrubbed.air_at(245.5) is scrubbed.air_at(245.5)
+
+
+def test_it_carries_on_from_another_without_waiting_for_a_request_working_it_on(
+    finishes_beside_held: Callable[[AbstractContextManager[bool], Callable[[], object]], bool],
+) -> None:
+    first = _run()
+    first.air_at(600.0)
+    second = _run()
+
+    assert finishes_beside_held(first._working, lambda: second.carry_on_from(first))
+    assert second._kept.keys() == first._kept.keys()

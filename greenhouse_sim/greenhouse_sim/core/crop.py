@@ -142,6 +142,10 @@ class RunCrop:
         # One request at a time works a crop on; others wait for it, and
         # find what it kept.
         self._working = threading.RLock()
+        # Held only to change what is kept, or to copy it: another crop
+        # carrying on from this one copies it without waiting for a request
+        # working this crop on.
+        self._keeping = threading.Lock()
 
     def _checked(self, day: int, last: int) -> None:
         if not 0 <= day <= last:
@@ -155,7 +159,8 @@ class RunCrop:
         with self._working:
             kept = self._kept.get(day)
             if kept is not None:
-                self._kept.move_to_end(day)
+                with self._keeping:
+                    self._kept.move_to_end(day)
                 return kept
             start = max(kept_day for kept_day in self._kept if kept_day <= day)
             plants = self._kept[start]
@@ -210,7 +215,7 @@ class RunCrop:
         self._checked(day, self.days)
         if len(lived) != day:
             raise ValueError(f"a crop on day {day} has lived {day} days, not {len(lived)}")
-        with self._working:
+        with self._working, self._keeping:
             if len(self._lived) < day:
                 self._lived = list(lived)
             self._kept.setdefault(day, tuple(plants))
@@ -231,11 +236,14 @@ class RunCrop:
         what its plants experienced on them, and its plants kept on those
         days and the next. Only another crop of the same scenario, in a run
         whose air is the same through those days, is the same crop."""
-        with self._working, other._working:
-            if len(self._lived) < min(days, len(other._lived)):
-                self._lived = other._lived[: min(days, len(other._lived))]
-            for day, plants in other._kept.items():
-                if day <= min(days, len(self._lived)):
+        with other._keeping:
+            lived = other._lived[:days]
+            kept = [(day, plants) for day, plants in other._kept.items() if day <= days]
+        with self._working, self._keeping:
+            if len(self._lived) < len(lived):
+                self._lived = lived
+            for day, plants in kept:
+                if day <= len(self._lived):
                     self._kept.setdefault(day, plants)
 
     def _day(self, day: int, plants: tuple[Plant, ...]) -> dict[str, LocalEnvironment]:
@@ -256,7 +264,8 @@ class RunCrop:
             )
             for plant in plants
         }
-        self._lived.append(environments)
+        with self._keeping:
+            self._lived.append(environments)
         return environments
 
     def _worked(self, day: int, plant: Plant, training: Training) -> Plant:
@@ -287,9 +296,10 @@ class RunCrop:
         return crowns
 
     def _keep(self, day: int, plants: tuple[Plant, ...]) -> None:
-        self._kept[day] = plants
-        self._kept.move_to_end(day)
-        latest = max(self._kept)
-        while len(self._kept) > KEPT_DAYS + 2:
-            oldest = next(kept for kept in self._kept if kept not in (0, latest, day))
-            del self._kept[oldest]
+        with self._keeping:
+            self._kept[day] = plants
+            self._kept.move_to_end(day)
+            latest = max(self._kept)
+            while len(self._kept) > KEPT_DAYS + 2:
+                oldest = next(kept for kept in self._kept if kept not in (0, latest, day))
+                del self._kept[oldest]
