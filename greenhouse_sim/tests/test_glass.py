@@ -10,7 +10,11 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.solar.glass import (
     DIFFUSE_TRANSMITTANCE,
     NORMAL_TRANSMITTANCE,
+    SEAM_M,
     Glazing,
+    _Outline,
+    _outline,
+    _within,
     transmittance,
 )
 from greenhouse_sim.world.envelope import Envelope
@@ -108,3 +112,41 @@ def test_a_multi_span_house_lets_the_beam_out_through_each_spans_roof() -> None:
     cosine = glazing.cos_incidence(middles, Vector3(x=0.0, y=0.0, z=1.0))
 
     assert np.allclose(cosine, math.cos(math.atan2(1.0, 2.0)))
+
+
+def _within_edge_by_edge(u: np.ndarray, v: np.ndarray, outline: np.ndarray) -> np.ndarray:
+    """A point's test against a polygon's edges one at a time."""
+    inside = np.zeros(u.shape, dtype=bool)
+    near = np.zeros(u.shape, dtype=bool)
+    for (ax, ay), (bx, by) in zip(outline, np.roll(outline, -1, axis=0), strict=True):
+        crosses = (ay > v) != (by > v)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            crossing = ax + (v - ay) * (bx - ax) / (by - ay)
+        inside ^= crosses & (u < crossing)
+        edge = np.hypot(bx - ax, by - ay)
+        along = np.clip(((u - ax) * (bx - ax) + (v - ay) * (by - ay)) / edge**2, 0.0, 1.0)
+        near |= np.hypot(u - (ax + along * (bx - ax)), v - (ay + along * (by - ay))) <= SEAM_M
+    return inside | near
+
+
+def test_every_edge_at_once_is_every_edge_in_turn() -> None:
+    # The glass tests a point against all of a surface's edges at once, as
+    # the house's air asks every minute of a season: bit for bit what testing
+    # them in turn gives, on every surface, at its corners and seams too.
+    draws = np.random.default_rng(7)
+    for scenario in ("reference_greenhouse", "climate_box", "solar_lab"):
+        for surface in SCENARIO_REGISTRY[scenario].envelope.surfaces_in_world():
+            outline = _outline(surface)
+            low, high = outline.min(axis=0) - 0.5, outline.max(axis=0) + 0.5
+            points = np.vstack(
+                [
+                    draws.uniform(low, high, size=(400, 2)),
+                    outline,
+                    (outline + np.roll(outline, -1, axis=0)) / 2,
+                ]
+            )
+            u, v = points[:, 0], points[:, 1]
+
+            assert np.array_equal(
+                _within(u, v, _Outline.of(outline)), _within_edge_by_edge(u, v, outline)
+            )
