@@ -83,7 +83,9 @@ the reply and the report, and let the user decide.
   #170 rejected a real tick because its own description quoted `<!--` in inline
   code; the unit tests passed and the live body would have caught it.
 - Run the checks that cover what you changed: formatter, linter, type checker, the
-  tests of every package touched. Run `python scripts/check.py --fast` when the
+  tests of every package touched. A Markdown-only change is covered too: the root
+  `pytest` holds every document to its citations and publishability (#177's first
+  push failed on a placeholder path). Run `python scripts/check.py --fast` when the
   change spans packages or touches shared code; when you skip it (a scripts-only
   change, say) because of its runtime, say so explicitly in the report and push
   with `--no-verify` only then.
@@ -133,8 +135,8 @@ still running is "still running", not "passing".
 ## Where deferred findings go
 
 Findings on a project's stacked PRs that are left for later go into that project's
-clean-up doc (`docs/roadmap/pNN-cleanup.md`) under a heading for the PR, on the
-reviewed branch, and merge up the stack. The clean-up runs as one PR once the
+clean-up doc under `docs/roadmap/`, as `docs/roadmap/p03-cleanup.md` did for P03, under
+a heading for the PR, on the reviewed branch, and merge up the stack. The clean-up runs as one PR once the
 project's steps are merged. A finding about the repository as a whole goes to a
 follow-up issue or the roadmap, not into an audit document: an audit records one
 commit and is not edited once its work begins (`docs/audits/README.md`).
