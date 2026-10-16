@@ -119,6 +119,10 @@ class WholeHouse:
         # One request at a time works the house's air on; others wait for
         # it, and find what it kept.
         self._working = threading.RLock()
+        # Held only to add to what is kept, or to copy it: another house
+        # carrying on from this one copies it without waiting for a request
+        # working this house's air on.
+        self._keeping = threading.Lock()
 
     def _held(self, time_s: float) -> _Steady:
         levels = self.run.levels_at(time_s)
@@ -203,9 +207,11 @@ class WholeHouse:
         then, both are the same air. Only another house under the same
         weather, with the same doors and vents, is the same air."""
         until = self.run.schedule.same_until(other.run.schedule)
-        with self._working, other._working:
-            for moment, air in other._kept.items():
-                if moment <= until and moment not in self._kept:
+        with other._keeping:
+            theirs = [(moment, air) for moment, air in other._kept.items() if moment <= until]
+        with self._working:
+            for moment, air in theirs:
+                if moment not in self._kept:
                     self._keep(moment, air)
 
     def seed(self, moment_s: float, air: HouseAir) -> None:
@@ -250,9 +256,10 @@ class WholeHouse:
             return self._worked_to(time_s)
 
     def _keep(self, moment: float, air: HouseAir) -> None:
-        if moment not in self._kept:
-            insort(self._moments, moment)
-        self._kept[moment] = air
+        with self._keeping:
+            if moment not in self._kept:
+                insort(self._moments, moment)
+            self._kept[moment] = air
 
     def _worked_to(self, time_s: float) -> HouseAir:
         start = self._moments[bisect_right(self._moments, time_s) - 1]

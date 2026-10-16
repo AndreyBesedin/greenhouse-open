@@ -150,6 +150,10 @@ class ClimateRun:
         # is started later (`started_at`).
         self.start_s = 0.0
         self._working = threading.RLock()
+        # Held only to add to what is kept, or to copy it: another run
+        # carrying on from this one copies it without waiting for a request
+        # working this run's air on.
+        self._keeping = threading.Lock()
         # The air at the latest moments asked for between those kept: given
         # again when asked again, and never a start for a later moment, so
         # that the air at a moment is the same whatever was asked before.
@@ -324,10 +328,11 @@ class ClimateRun:
         schedule and this run's differ: until then, both runs are the same
         air."""
         until = self.schedule.same_until(other.schedule)
-        with self._working, other._working:
-            for moment, air in other._kept.items():
-                if moment <= until:
-                    self._kept.setdefault(moment, air)
+        with other._keeping:
+            theirs = [(moment, air) for moment, air in other._kept.items() if moment <= until]
+        with self._working, self._keeping:
+            for moment, air in theirs:
+                self._kept.setdefault(moment, air)
 
     def air_at(self, time_s: float) -> AirState:
         """The air in every cell at `time_s`, from the latest moment kept
@@ -365,7 +370,8 @@ class ClimateRun:
                 air = transport.advance(air, terms, until - now, outside)
                 now = until
                 if until in kept:
-                    self._kept[until] = air
+                    with self._keeping:
+                        self._kept[until] = air
         return air
 
     def temperature_at(self, time_s: float) -> np.ndarray:
