@@ -20,7 +20,7 @@ changes course is a new record that supersedes the old one.
 | [0006](0006-plug-models-in-through-minimal-protocols.md) | Plug simulation models in through minimal protocols | Accepted; the engine's day its contracts plug into superseded by 0035 |
 | [0007](0007-world-coordinates-metres-right-handed-z-up.md) | World coordinates are metres, right-handed, z up | Accepted |
 | [0008](0008-build-the-viewer-with-npm-node-24-and-vite.md) | Build the viewer with npm, Node 24, Vite and strict TypeScript | Accepted |
-| [0009](0009-a-standard-library-local-api-until-streaming-is-needed.md) | A standard-library local API until streaming is needed | Accepted; streaming superseded by 0012 |
+| [0009](0009-a-standard-library-local-api-until-streaming-is-needed.md) | A standard-library local API until streaming is needed | Accepted; streaming superseded by 0012; "serves no ground truth" superseded by 0036 |
 | [0010](0010-check-the-viewer-with-biome-vitest-and-playwright.md) | Check the viewer with Biome, Vitest and a Playwright smoke test | Accepted; Node-only unit tests superseded by 0029; browser tests in `viewer checks` superseded by 0032 |
 | [0011](0011-the-public-api-is-the-top-level-modules-contracts-and-scene.md) | The public API is the top-level modules, the model contracts and the scene | Accepted |
 | [0012](0012-stream-to-the-viewer-with-server-sent-events.md) | Stream to the viewer with Server-Sent Events | Accepted |
@@ -47,6 +47,7 @@ changes course is a new record that supersedes the old one.
 | [0033](0033-update-dependencies-with-dependabot.md) | Update dependencies with Dependabot, minor and patch updates merging by themselves | Accepted; its review tick on Dependabot's pull requests superseded by 0034 |
 | [0034](0034-approve-dependabots-pull-requests-to-acknowledge-them.md) | Approve Dependabot's pull requests to acknowledge their review | Accepted |
 | [0035](0035-one-simulator-the-run-every-part-on-a-ladder-of-fidelity.md) | One simulator, the run, with every part on a ladder of fidelity | Accepted |
+| [0036](0036-the-api-shows-people-the-truth-a-policy-reads-observations.md) | The API shows people the truth; a policy reads observations only | Accepted |
 
 ## Template
 
