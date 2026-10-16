@@ -13,6 +13,9 @@ Read only the policies relevant to the change:
 - [Contributing](CONTRIBUTING.md) for the DCO, package boundaries and PR process.
 - [Copilot instructions](.github/copilot-instructions.md) for compatible
   repository invariants. Codex should complement, not duplicate, Copilot.
+- [Address-review skill](.claude/skills/address-review/SKILL.md) when answering
+  a review of a pull request: how to judge findings, fix with regression tests,
+  reply on and resolve threads, and keep the risk gate's tick honest.
 
 ## Code review: what to prioritize
 
