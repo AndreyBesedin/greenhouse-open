@@ -32,12 +32,17 @@ MANUAL_REVIEW_MARKER = "- [x] I manually reviewed the complete diff"
 # inside anything GitHub does not render as Markdown. The gate's own hint
 # prints the ticked item, so a pasted failure log must not count.
 _ACKNOWLEDGED = re.compile(r"^ {0,3}- \[[xX]\] I manually reviewed the complete diff", re.MULTILINE)
-# What GitHub does not render: an HTML comment, which an unterminated `<!--`
-# extends to the end, and a fenced code block, opened by three or more
-# backticks or tildes and closed by a fence of the same kind, or the end.
-# Whichever opens first in the description wins, as in the renderer.
+# What GitHub does not render as Markdown: an HTML comment, which an
+# unterminated `<!--` extends to the end; a fenced code block, opened by three
+# or more backticks or tildes and closed by a fence of the same kind, or the
+# end; and an inline code span, within a line, closed by a run of backticks
+# as long as the one that opened it. Whichever opens first in the description
+# wins, as in the renderer, so a `<!--` quoted in code opens no comment, and
+# a fence is tried before a code span where both could start.
 _NOT_RENDERED = re.compile(
-    r"<!--.*?(?:-->|\Z)" r"|^ {0,3}(`{3,}|~{3,}).*?(?:^ {0,3}\1[^\n]*$|\Z)",
+    r"<!--.*?(?:-->|\Z)"
+    r"|^ {0,3}(?P<fence>`{3,}|~{3,}).*?(?:^ {0,3}(?P=fence)[^\n]*$|\Z)"
+    r"|(?P<span>`+)(?:(?!(?P=span))[^\n])+?(?P=span)(?!`)",
     re.DOTALL | re.MULTILINE,
 )
 DEPENDABOT = "dependabot[bot]"

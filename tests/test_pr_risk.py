@@ -89,6 +89,17 @@ def test_the_acknowledgement_is_not_in_what_github_does_not_render() -> None:
     assert acknowledged(f"```\n<!--\n```\n\n{item}\n")
 
 
+def test_a_comment_opener_quoted_in_inline_code_hides_nothing() -> None:
+    """#170's own description says an unterminated `<!--` hides the rest, in
+    inline code, and a bot appends a closed comment; the tick between them
+    was hidden."""
+    item = "- [x] I manually reviewed the complete diff"
+    trailer = "<!-- Reviewable:start -->\n- - -\n<!-- Reviewable:end -->"
+
+    assert acknowledged(f"An unterminated `<!--` hides the rest.\n\n{item}\n\n{trailer}\n")
+    assert acknowledged(f"``a `<!--` quoted``\n\n{item}\n")
+
+
 def _commit(repo: Path, message: str) -> None:
     subprocess.run(("git", "add", "-A"), cwd=repo, check=True)
     subprocess.run(
