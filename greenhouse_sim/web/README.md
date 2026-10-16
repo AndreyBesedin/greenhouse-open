@@ -2,9 +2,11 @@
 
 The browser viewer for the simulator. It is an adapter around the headless
 simulator core: it displays what the simulator produces, and the simulator
-never depends on it. It shows a full-window 3D view of what the panel
-chooses, the reference greenhouse first (see Scenes below), with panels for
-the scenario, its run and what the simulator measures, and a HUD.
+never depends on it. It shows a full-window 3D view, with panels for the
+scenario, its run and what the simulator measures, and a HUD. It opens on a
+reference scene, a 1 m grid on the ground, the world axes and a 1 m cube;
+the panel chooses what else it draws (see Scenes below), and
+`python scripts/demo.py` opens it on the reference greenhouse.
 
 Drag to orbit, right-drag to pan, and scroll to zoom. The HUD's buttons jump
 to the top, front, side and isometric views; a refresh always returns to the
