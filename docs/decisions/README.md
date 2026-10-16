@@ -48,6 +48,7 @@ changes course is a new record that supersedes the old one.
 | [0034](0034-approve-dependabots-pull-requests-to-acknowledge-them.md) | Approve Dependabot's pull requests to acknowledge their review | Accepted |
 | [0035](0035-one-simulator-the-run-every-part-on-a-ladder-of-fidelity.md) | One simulator, the run, with every part on a ladder of fidelity | Accepted |
 | [0036](0036-the-api-shows-people-the-truth-a-policy-reads-observations.md) | The API shows people the truth; a policy reads observations only | Accepted |
+| [0037](0037-the-simulators-subpackages-tangle-no-further.md) | The simulator's subpackages tangle no further | Accepted |
 
 ## Template
 
