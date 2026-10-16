@@ -1,12 +1,14 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
 from greenhouse_protocol.enums import SourceType
 from greenhouse_protocol.instant import Instant
 
 
 class Plant(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     plant_id: str
     variety: str
     row: int
@@ -24,6 +26,8 @@ class GreenhouseLayout(BaseModel):
     columns are then 0. Positions inside a compartment are a later spatial
     model."""
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["grid", "compartment"] = "grid"
     rows: int = Field(ge=0)
     columns: int = Field(ge=0)
@@ -36,12 +40,14 @@ class Compartment(BaseModel):
     scoped to a compartment; a greenhouse with no compartments (the
     simulator today) scopes everything to the greenhouse itself."""
 
+    model_config = ConfigDict(frozen=True)
+
     compartment_id: str  # unique within its greenhouse, e.g. "3.06"
     name: str
     description: str = ""
     # Individually identified plants in this compartment, when the source
     # knows them; empty when it only observes the compartment as a whole.
-    plants: list[Plant] = Field(default_factory=list)
+    plants: tuple[Plant, ...] = ()
 
 
 class GreenhouseDescription(BaseModel):
@@ -51,7 +57,13 @@ class GreenhouseDescription(BaseModel):
     Any producer can emit it and any consumer can read it. What a consumer
     adds on top - who owns the greenhouse, how far a replay has got - is the
     consumer's own record, typically a subclass of this one.
+
+    It is edited by assigning a field, and each edit is checked as the
+    description was when built: one that is refused leaves it as it was.
+    Its layout, compartments and plants are values, so an edit replaces one.
     """
+
+    model_config = ConfigDict(validate_assignment=True)
 
     greenhouse_id: str
     name: str
@@ -61,40 +73,53 @@ class GreenhouseDescription(BaseModel):
     crop: str | None = None
     layout: GreenhouseLayout
     # Plants not assigned to any compartment (the simulator's grid).
-    plants: list[Plant]
-    compartments: list[Compartment] = Field(default_factory=list)
+    plants: tuple[Plant, ...]
+    compartments: tuple[Compartment, ...] = ()
     created_at: Instant
 
-    @model_validator(mode="after")
-    def _identities_are_unique(self) -> GreenhouseDescription:
-        compartment_ids = [c.compartment_id for c in self.compartments]
-        duplicates = _duplicates(compartment_ids)
-        if duplicates:
-            raise ValueError(f"duplicate compartment ids: {sorted(duplicates)}")
-        plant_ids = [p.plant_id for p in self.all_plants]
-        duplicates = _duplicates(plant_ids)
-        if duplicates:
-            raise ValueError(f"duplicate plant ids: {sorted(duplicates)}")
-        return self
+    # Identities are checked field by field, each against the other field's
+    # current value, rather than on the whole model: pydantic stores an
+    # assignment before a model validator runs, so a refused edit would stay.
+    @field_validator("plants")
+    @classmethod
+    def _plant_ids_are_unique(
+        cls, plants: tuple[Plant, ...], info: ValidationInfo
+    ) -> tuple[Plant, ...]:
+        _refuse_duplicates("plant", _plant_ids(plants, info.data.get("compartments", ())))
+        return plants
+
+    @field_validator("compartments")
+    @classmethod
+    def _compartment_and_plant_ids_are_unique(
+        cls, compartments: tuple[Compartment, ...], info: ValidationInfo
+    ) -> tuple[Compartment, ...]:
+        _refuse_duplicates("compartment", [c.compartment_id for c in compartments])
+        _refuse_duplicates("plant", _plant_ids(info.data.get("plants", ()), compartments))
+        return compartments
 
     @property
-    def all_plants(self) -> list[Plant]:
+    def all_plants(self) -> tuple[Plant, ...]:
         """Every plant in the greenhouse, unassigned ones first, then
         compartment by compartment in declaration order."""
-        return [*self.plants, *(p for c in self.compartments for p in c.plants)]
+        return (*self.plants, *(p for c in self.compartments for p in c.plants))
 
     def compartment(self, compartment_id: str) -> Compartment | None:
         return next((c for c in self.compartments if c.compartment_id == compartment_id), None)
 
 
-def _duplicates(values: list[str]) -> set[str]:
+def _plant_ids(plants: tuple[Plant, ...], compartments: tuple[Compartment, ...]) -> list[str]:
+    return [p.plant_id for p in (*plants, *(p for c in compartments for p in c.plants))]
+
+
+def _refuse_duplicates(kind: str, ids: list[str]) -> None:
     seen: set[str] = set()
     repeated: set[str] = set()
-    for value in values:
+    for value in ids:
         if value in seen:
             repeated.add(value)
         seen.add(value)
-    return repeated
+    if repeated:
+        raise ValueError(f"duplicate {kind} ids: {sorted(repeated)}")
 
 
 def build_grid_plants(greenhouse_id: str, variety: str, rows: int, columns: int) -> list[Plant]:
