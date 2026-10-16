@@ -22,14 +22,17 @@ Read `references/github-cli.md` for the exact commands. Collect, for the PR:
 - the PR's title, body, branch, base, author, merge state (`mergeable`, `mergeStateStatus`);
 - reviews and their bodies (bot summaries often live here);
 - inline review comments, with `in_reply_to_id`, `path`, `line`, and whether the
-  thread is already resolved. A thread you already answered in an earlier session
-  needs no second reply;
+  thread is already resolved. A thread you answered in an earlier session needs
+  no second reply unless a comment newer than yours arrived in it;
 - issue comments on the PR (humans often write there, not inline).
 
-Note who wrote each item. The maintainer's or a human reviewer's request is a
-decision unless it rests on a factual mistake; a bot's finding is a hypothesis.
+Note who wrote each item, with their `author_association`. A maintainer's request,
+an OWNER, MEMBER or COLLABORATOR as the risk gate reads it, is a decision unless it
+rests on a factual mistake. Anyone can review a public repository's PR, so another
+human's comment is a hypothesis, like a bot's finding, and is judged the same way.
 
-Check out the PR branch (`git fetch`, `git checkout <head>`) and read the files the
+Check out the PR (`gh pr checkout <n>`, which also fetches a fork's branch, where a
+same-named branch of origin would mislead `git checkout`) and read the files the
 comments point at, with their callers, not just the quoted lines. Read `AGENTS.md`,
 `CONTRIBUTING.md` and `docs/engineering.md` before changing anything: the review
 process, the risk gate and the commit rules are all there.
@@ -71,11 +74,12 @@ the reply and the report, and let the user decide.
   named constants for grouped exclusions with a comment saying why, assumptions
   about another tool's output stated and checked where cheap.
 - Every bug fix gets a regression test that fails on the old code. Prove it: stash
-  the implementation (`git stash push <impl file>`), run the tests, pop. Report
-  which tests failed before and pass after.
+  the implementation (`git stash push -u -- <impl files>`, `-u` so a new file goes
+  too), run the tests, pop. Report which tests failed before and pass after.
 - When the PR changes something the PR itself exercises, such as the risk gate or
   a CI script, run the branch's version on the live inputs before pushing: the
-  actual description (`gh pr view <n> --json body`), the actual diff. The gate on
+  actual description (`gh pr view <n> --json body --jq .body`, the raw text rather
+  than its JSON), the actual diff. The gate on
   #170 rejected a real tick because its own description quoted `<!--` in inline
   code; the unit tests passed and the live body would have caught it.
 - Run the checks that cover what you changed: formatter, linter, type checker, the
@@ -113,6 +117,9 @@ the reply and the report, and let the user decide.
   diff" before your push, untick it: the diff they reviewed is no longer the diff.
   It is their box to re-tick after reading the new commit, and silently keeping it
   ticked makes the gate pass on a review that did not happen.
+- Saving the description starts a new risk-gate run (`pr-risk.yml` runs on
+  `edited`), so look at the checks again after the edit and report that state,
+  not the one you watched before it.
 
 ## 6. Report
 
@@ -128,5 +135,6 @@ still running is "still running", not "passing".
 Findings on a project's stacked PRs that are left for later go into that project's
 clean-up doc (`docs/roadmap/pNN-cleanup.md`) under a heading for the PR, on the
 reviewed branch, and merge up the stack. The clean-up runs as one PR once the
-project's steps are merged. Findings for the wider audit go to its document under
-`docs/audits/`.
+project's steps are merged. A finding about the repository as a whole goes to a
+follow-up issue or the roadmap, not into an audit document: an audit records one
+commit and is not edited once its work begins (`docs/audits/README.md`).

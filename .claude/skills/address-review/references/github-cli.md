@@ -25,8 +25,9 @@ gh api repos/{owner}/{repo}/pulls/<n>/comments --paginate
 # Conversation comments on the PR itself
 gh api repos/{owner}/{repo}/issues/<n>/comments --paginate
 
-# Threads with their resolution state (GraphQL; the REST comments carry no isResolved)
-gh api graphql -f query='query{repository(owner:"<owner>",name:"<repo>"){pullRequest(number:<n>){reviewThreads(first:100){nodes{id isResolved isOutdated comments(first:1){nodes{databaseId author{login} body}}}}}}}'
+# Threads with their resolution state (GraphQL; the REST comments carry no isResolved).
+# --paginate needs the $endCursor variable and pageInfo, or a long review is cut at 100.
+gh api graphql --paginate -f owner=<owner> -f name=<repo> -F number=<n> -f query='query($owner:String!,$name:String!,$number:Int!,$endCursor:String){repository(owner:$owner,name:$name){pullRequest(number:$number){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{id isResolved isOutdated comments(first:1){nodes{databaseId author{login} body}}}}}}}'
 ```
 
 Pipe the JSON through `python3 -c` to print one block per comment: id, reply-to, author,
@@ -38,8 +39,10 @@ path, line, body. Read the full body; the first line is a badge or a title.
 # Reply in an inline thread (the id is the thread's first comment)
 gh api -X POST repos/{owner}/{repo}/pulls/<n>/comments/<comment id>/replies -f body="..."
 
-# React on a comment (content: +1, -1, laugh, confused, heart, hooray, rocket, eyes)
+# React on a comment (content: +1, -1, laugh, confused, heart, hooray, rocket, eyes).
+# An inline review comment and a conversation comment have different endpoints.
 gh api -X POST repos/{owner}/{repo}/pulls/comments/<comment id>/reactions -f content=+1
+gh api -X POST repos/{owner}/{repo}/issues/comments/<comment id>/reactions -f content=+1
 
 # Comment on the PR conversation
 gh pr comment <n> --body "..."
