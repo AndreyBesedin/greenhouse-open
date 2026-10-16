@@ -4,6 +4,7 @@ effect from its moment on, the same schedule replaying to the same air, and
 commands a scenario cannot run refused."""
 
 import math
+import random
 
 import numpy as np
 import pytest
@@ -117,3 +118,31 @@ def test_two_schedules_are_the_same_until_the_first_command_they_differ_in() -> 
     assert both.same_until(Schedule.of([heater_on])) == 120.0
     assert both.same_until(Schedule.of([heater_on, fan_on, heater_off])) == 300.0
     assert both.same_until(Schedule()) == 60.0
+
+
+def test_the_schedule_read_by_moment_is_the_schedule_read_through() -> None:
+    # A schedule is indexed by moment for a season's thousands of commands;
+    # read through from the start, it gives the same commands and levels, a
+    # later command at one moment winning, as it does to an actuator twice.
+    draws = random.Random(3)
+    actuators = ("heater", "fan", "roof_vent", "door")
+    schedule = Schedule.of(
+        Command(
+            time_s=float(draws.randrange(0, 50, 5)),
+            actuator_id=draws.choice(actuators),
+            level=round(draws.random(), 2),
+        )
+        for _ in range(60)
+    )
+
+    for moment in (step / 2 for step in range(-2, 110)):
+        through = [c for c in schedule.commands if c.time_s <= moment]
+        levels = dict.fromkeys(("heater", "fan", "unknown"), 0.0)
+        for command in through:
+            if command.actuator_id in levels:
+                levels[command.actuator_id] = command.level
+        assert schedule.applied(moment) == through
+        assert schedule.levels_at(("heater", "fan", "unknown"), moment) == levels
+        assert schedule.moments_between(moment, moment + 7.5) == sorted(
+            {c.time_s for c in schedule.commands if moment < c.time_s <= moment + 7.5}
+        )
