@@ -257,7 +257,7 @@ class WholeHouse:
     def _worked_to(self, time_s: float) -> HouseAir:
         start = self._moments[bisect_right(self._moments, time_s) - 1]
         air = self._kept[start]
-        changes = {m for m in self.run.schedule.moments() if start < m <= time_s}
+        changes = set(self.run.schedule.moments_between(start, time_s))
         steps = {
             (math.floor(start / STEP_S) + n) * STEP_S
             for n in range(1, int(time_s // STEP_S) - int(start // STEP_S) + 1)
