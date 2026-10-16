@@ -23,6 +23,7 @@ from pathlib import Path
 
 import httpx
 
+from greenhouse_adapters.canonical import RefusedBuild
 from greenhouse_adapters.manifests import (
     ArtifactKind,
     DatasetManifest,
@@ -55,7 +56,13 @@ COMMAND_PLUGINS = "greenhouse_data.commands"
 
 # What a command meets in the data or the network, not in its own code: said
 # in one line, whose message names the remedy, rather than with a traceback.
-KNOWN_FAILURES = (ArtifactUnavailable, ChecksumMismatch, httpx.HTTPError, zipfile.BadZipFile)
+KNOWN_FAILURES = (
+    ArtifactUnavailable,
+    ChecksumMismatch,
+    RefusedBuild,
+    httpx.HTTPError,
+    zipfile.BadZipFile,
+)
 
 _BYTES_PER_UNIT = 1024
 
