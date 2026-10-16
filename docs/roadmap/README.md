@@ -218,9 +218,12 @@ the run request and the viewer's contracts, four decisions, and one
 roadmap project, P10, for models chosen by the manifest. The
 [audits](../audits/README.md) folder indexes them all.
 
-The [AI-assisted engineering workflow](engineering-automation.md) proposes,
-for after P09, an advisory reviewer, harder merge gates and, if the
-reviewer's record justifies it, auto-merge for a narrow set of changes.
+The [engineering workflow](engineering-automation.md), proposed on 2026-10-12
+for after P09 and revised on 2026-10-17, records where review, the merge
+gates and automation stand: what Dependabot, the audit and the Codex review
+did, what is left (the gate run from `main`, the rest of its lists, resolved
+conversations, a reading guide), and the count of the reviewer's findings
+that decides whether auto-merge goes further.
 
 **Test suite and CI time** (recorded 2026-10-08, scheduled after P09). A
 pull request's checks then took 7 to 9 minutes:
