@@ -1,6 +1,9 @@
+import os
 import subprocess
 from pathlib import Path
 from typing import Any
+
+import pytest
 
 from scripts.check_pr_risk import (
     KEPT_DATA_FOLDERS,
@@ -100,6 +103,24 @@ def test_a_comment_opener_quoted_in_inline_code_hides_nothing() -> None:
     assert acknowledged(f"``a `<!--` quoted``\n\n{item}\n")
 
 
+def _own_repository(path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A new repository at `path`, which git commands run in it act on. A git
+    hook runs with `GIT_DIR` and its kin set to the repository it runs in,
+    and they would carry the commands there: a pre-push hook running this
+    file once made its repository bare and staged these tests' files in it."""
+    for name in [name for name in os.environ if name.startswith("GIT_")]:
+        monkeypatch.delenv(name)
+    path.mkdir(exist_ok=True)
+    subprocess.run(("git", "init", "-q", "-b", "main"), cwd=path, check=True)
+    return path
+
+
+def _git_output(repo: Path, *arguments: str) -> str:
+    return subprocess.run(
+        ("git", *arguments), cwd=repo, capture_output=True, text=True, check=True
+    ).stdout.strip()
+
+
 def _commit(repo: Path, message: str) -> None:
     subprocess.run(("git", "add", "-A"), cwd=repo, check=True)
     subprocess.run(
@@ -121,10 +142,12 @@ def _commit(repo: Path, message: str) -> None:
     )
 
 
-def test_a_file_moved_out_of_a_sensitive_folder_is_seen_leaving_it(tmp_path: Path) -> None:
+def test_a_file_moved_out_of_a_sensitive_folder_is_seen_leaving_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """`git diff` names a renamed file by its destination only, so a script
     moved elsewhere unchanged passed as normal risk."""
-    subprocess.run(("git", "init", "-q", "-b", "main"), cwd=tmp_path, check=True)
+    _own_repository(tmp_path, monkeypatch)
     (tmp_path / "scripts").mkdir()
     (tmp_path / "scripts" / "merge.py").write_text("print('merge')\n" * 30)
     _commit(tmp_path, "base")
@@ -200,3 +223,18 @@ def test_a_later_verdict_withdraws_an_approval_and_a_comment_does_not() -> None:
 def test_one_maintainers_approval_is_enough() -> None:
     reviews = [_review("COMMENTED", user="other"), _review("APPROVED")]
     assert approved(reviews, HEAD)
+
+
+def test_a_repository_of_these_tests_leaves_the_one_a_hook_runs_in_alone(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hooked = _own_repository(tmp_path / "hooked", monkeypatch)
+    monkeypatch.setenv("GIT_DIR", str(hooked / ".git"))
+
+    repo = _own_repository(tmp_path / "repo", monkeypatch)
+    (repo / "x.py").write_text("x = 1\n")
+    _commit(repo, "base")
+
+    assert _git_output(repo, "ls-files") == "x.py"
+    assert _git_output(hooked, "config", "core.bare") == "false"
+    assert _git_output(hooked, "ls-files") == ""
