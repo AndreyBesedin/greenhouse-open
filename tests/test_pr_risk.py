@@ -1,9 +1,13 @@
+import subprocess
+from pathlib import Path
 from typing import Any
 
 from scripts.check_pr_risk import (
     KEPT_DATA_FOLDERS,
     ROOT,
     SENSITIVE_FILES,
+    _changed_code_lines,
+    _changed_files,
     _risk_reasons,
     acknowledged,
     approved,
@@ -38,18 +42,24 @@ def test_a_change_to_the_gate_or_another_script_asks_for_review() -> None:
 
 
 def test_a_change_where_truth_or_uploads_pass_asks_for_review() -> None:
-    reasons = _risk_reasons(["greenhouse_sim/greenhouse_sim/services/sensors.py"], 3)
+    for path in (
+        "greenhouse_sim/greenhouse_sim/services/sensors.py",
+        "greenhouse_sim/greenhouse_sim/api/server.py",
+        "greenhouse_sim/tests/test_sensor_observations.py",
+    ):
+        reasons = _risk_reasons([path], 3)
 
-    assert any("sensitive repository boundary" in reason for reason in reasons)
+        assert any("sensitive repository boundary" in reason for reason in reasons), path
 
 
 def test_kept_data_asks_for_review_and_is_not_counted_in_lines() -> None:
-    golden = "greenhouse_sim/tests/fixtures/reference_replay.json"
+    golden = "greenhouse_sim/tests/golden/plant_lab.json"
+    replay = "greenhouse_sim/tests/fixtures/reference_replay.json"
     opening = "greenhouse_sim/greenhouse_sim/scenarios/openings/reference_greenhouse.json.gz"
 
-    reasons = _risk_reasons([golden, opening], 0)
+    reasons = _risk_reasons([golden, replay, opening], 0)
 
-    assert reasons == [f"kept simulation data changed: {opening}, {golden}"]
+    assert reasons == [f"kept simulation data changed: {opening}, {replay}, {golden}"]
     many = [f"greenhouse_sim/web/public/scenes/scene_{n}.json" for n in range(20)]
     assert not any("files changed" in reason for reason in _risk_reasons(many, 0))
 
@@ -62,6 +72,60 @@ def test_the_acknowledgement_is_the_item_ticked_on_its_own_line() -> None:
     assert not acknowledged("- [ ] I manually reviewed the complete diff")
     assert not acknowledged(f"<!-- the template:\n{item}\n-->")
     assert not acknowledged(f"Say `{item}` once you have.")
+
+
+def test_the_acknowledgement_is_not_in_what_github_does_not_render() -> None:
+    """The gate's own hint prints the ticked item: a failure log pasted into a
+    code block, or a comment left open, must not pass for the tick."""
+    item = "- [x] I manually reviewed the complete diff"
+    hint = f"Review the complete diff, then check this item:\n  {item}\n"
+
+    assert not acknowledged(f"The gate said:\n```\n{hint}```\n")
+    assert not acknowledged(f"The gate said:\n~~~text\n{hint}~~~\n")
+    assert not acknowledged(f"The gate said:\n```\n{hint}")
+    assert not acknowledged(f"<!-- the template:\n{item}\n")
+    assert not acknowledged(f"The gate said:\n\n    {item}\n")
+    assert acknowledged(f"```\nlog\n```\n\n{item}\n")
+    assert acknowledged(f"```\n<!--\n```\n\n{item}\n")
+
+
+def _commit(repo: Path, message: str) -> None:
+    subprocess.run(("git", "add", "-A"), cwd=repo, check=True)
+    subprocess.run(
+        (
+            "git",
+            "-c",
+            "user.name=t",
+            "-c",
+            "user.email=t@example.org",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "-q",
+            "-m",
+            message,
+        ),
+        cwd=repo,
+        check=True,
+    )
+
+
+def test_a_file_moved_out_of_a_sensitive_folder_is_seen_leaving_it(tmp_path: Path) -> None:
+    """`git diff` names a renamed file by its destination only, so a script
+    moved elsewhere unchanged passed as normal risk."""
+    subprocess.run(("git", "init", "-q", "-b", "main"), cwd=tmp_path, check=True)
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "scripts" / "merge.py").write_text("print('merge')\n" * 30)
+    _commit(tmp_path, "base")
+    (tmp_path / "tools").mkdir()
+    (tmp_path / "scripts" / "merge.py").rename(tmp_path / "tools" / "merge.py")
+    _commit(tmp_path, "move")
+
+    files = _changed_files("HEAD~1", "HEAD", repo=tmp_path)
+
+    assert files == ["scripts/merge.py", "tools/merge.py"]
+    assert any("sensitive repository boundary" in reason for reason in _risk_reasons(files, 0))
+    assert _changed_code_lines("HEAD~1", "HEAD", repo=tmp_path) == 0
 
 
 def test_small_single_package_change_is_normal_risk() -> None:

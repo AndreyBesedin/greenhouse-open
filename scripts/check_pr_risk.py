@@ -26,10 +26,20 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_ROOTS = ("greenhouse_protocol", "greenhouse_sim", "greenhouse_adapters")
 MANUAL_REVIEW_MARKER = "- [x] I manually reviewed the complete diff"
-# The acknowledgement: the template's item ticked, on a line of its own,
-# outside an HTML comment.
-_ACKNOWLEDGED = re.compile(r"^\s*- \[[xX]\] I manually reviewed the complete diff", re.MULTILINE)
-_HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
+# The acknowledgement: the template's item ticked, where GitHub draws it as a
+# task item. That is a line of its own, indented by at most the three spaces
+# CommonMark allows a list item (four start an indented code block), and not
+# inside anything GitHub does not render as Markdown. The gate's own hint
+# prints the ticked item, so a pasted failure log must not count.
+_ACKNOWLEDGED = re.compile(r"^ {0,3}- \[[xX]\] I manually reviewed the complete diff", re.MULTILINE)
+# What GitHub does not render: an HTML comment, which an unterminated `<!--`
+# extends to the end, and a fenced code block, opened by three or more
+# backticks or tildes and closed by a fence of the same kind, or the end.
+# Whichever opens first in the description wins, as in the renderer.
+_NOT_RENDERED = re.compile(
+    r"<!--.*?(?:-->|\Z)" r"|^ {0,3}(`{3,}|~{3,}).*?(?:^ {0,3}\1[^\n]*$|\Z)",
+    re.DOTALL | re.MULTILINE,
+)
 DEPENDABOT = "dependabot[bot]"
 # Who may acknowledge a pull request by approving it: the repository's owner,
 # its organisation's members and its collaborators, not any GitHub user.
@@ -61,14 +71,16 @@ GENERATED_OR_LOCK_FILES = {
     "uv.lock",
 }
 
-# Files that hold a boundary: the repository's own checks, and where ground
-# truth is kept apart from observations, or leaves the simulator, and where
-# a client's uploads are taken in.
+# Files that hold a boundary: the repository's own checks, the tests that
+# hold its package and truth boundaries, and where ground truth is kept apart
+# from observations, or leaves the simulator, and where a client's uploads
+# are taken in, from the socket to the checkpoint.
 SENSITIVE_FILES = {
     ".pre-commit-config.yaml",
     "requirements-dev.txt",
     "tests/test_dependencies.py",
     "tests/test_publishable.py",
+    "greenhouse_sim/tests/test_sensor_observations.py",
     "greenhouse_sim/greenhouse_sim/core/engine.py",
     "greenhouse_sim/greenhouse_sim/ground_truth.py",
     "greenhouse_sim/greenhouse_sim/sensors/generation.py",
@@ -77,6 +89,7 @@ SENSITIVE_FILES = {
     "greenhouse_sim/greenhouse_sim/evaluation/sensor_truth.py",
     "greenhouse_sim/greenhouse_sim/services/sensors.py",
     "greenhouse_sim/greenhouse_sim/services/checkpoints.py",
+    "greenhouse_sim/greenhouse_sim/api/server.py",
     "greenhouse_sim/greenhouse_sim/api/routes.py",
 }
 # Folders whose every file is a boundary: the scripts that check and merge
@@ -90,28 +103,35 @@ KEPT_DATA_FOLDERS = (
     "greenhouse_sim/greenhouse_sim/scenarios/openings/",
     "greenhouse_sim/greenhouse_sim/weather/recorded/",
     "greenhouse_sim/tests/fixtures/",
+    "greenhouse_sim/tests/golden/",
     "greenhouse_sim/web/public/fields/",
     "greenhouse_sim/web/public/scenes/",
 )
 
 
-def _git(*args: str) -> str:
+def _git(*args: str, repo: Path = ROOT) -> str:
     return subprocess.run(
         ("git", *args),
-        cwd=ROOT,
+        cwd=repo,
         check=True,
         capture_output=True,
         text=True,
     ).stdout
 
 
-def _changed_files(base: str, head: str) -> list[str]:
-    output = _git("diff", "--name-only", f"{base}...{head}")
+def _changed_files(base: str, head: str, repo: Path = ROOT) -> list[str]:
+    """Every path the change touches, a moved file under both its names.
+
+    Rename detection would report only the destination, so a file moved out
+    of a sensitive folder would not be seen leaving it."""
+    output = _git("diff", "--no-renames", "--name-only", f"{base}...{head}", repo=repo)
     return [line for line in output.splitlines() if line]
 
 
-def _changed_code_lines(base: str, head: str) -> int:
-    output = _git("diff", "--numstat", f"{base}...{head}")
+def _changed_code_lines(base: str, head: str, repo: Path = ROOT) -> int:
+    """The lines to review. Here renames are detected, so a file moved as it
+    is counts no lines; its path then reads `{old => new}/name`."""
+    output = _git("diff", "-M", "--numstat", f"{base}...{head}", repo=repo)
     total = 0
     for line in output.splitlines():
         additions, deletions, path = line.split("\t", 2)
@@ -179,9 +199,10 @@ def _kept_data(path: str) -> bool:
 
 
 def acknowledged(body: str) -> bool:
-    """Whether a pull request's description ticks the manual-review item,
-    on a line of its own and outside a comment."""
-    return _ACKNOWLEDGED.search(_HTML_COMMENT.sub("", body)) is not None
+    """Whether a pull request's description ticks the manual-review item
+    where GitHub renders it: on a line of its own, outside an HTML comment
+    and outside a fenced code block."""
+    return _ACKNOWLEDGED.search(_NOT_RENDERED.sub("", body)) is not None
 
 
 def approved(reviews: Iterable[dict[str, Any]], head: str) -> bool:
