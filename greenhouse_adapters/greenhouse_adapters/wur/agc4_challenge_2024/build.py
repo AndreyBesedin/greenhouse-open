@@ -7,7 +7,6 @@ their compartment id (none for site weather)."""
 import io
 import zipfile
 from collections.abc import Sequence
-from datetime import UTC, datetime
 from pathlib import Path
 
 from greenhouse_protocol.enums import SourceType
@@ -18,6 +17,7 @@ from greenhouse_protocol.observation import Observation
 from greenhouse_adapters.canonical import (
     CanonicalGreenhouse,
     SourceMember,
+    recording_start,
     write_canonical_greenhouse,
 )
 from greenhouse_adapters.manifests import DatasetManifest, load_manifest
@@ -130,9 +130,6 @@ def build_greenhouse(
 
 
 def _greenhouse(observations: list[Observation]) -> GreenhouseDescription:
-    # created_at is the start of the recording so the canonical record is a
-    # pure function of the source data, not of when the build ran.
-    recording_start = min(o.timestamp for o in observations) if observations else datetime.now(UTC)
     return GreenhouseDescription(
         greenhouse_id=GREENHOUSE_ID,
         name="WUR AGC4 2024",
@@ -147,5 +144,5 @@ def _greenhouse(observations: list[Observation]) -> GreenhouseDescription:
         layout=GreenhouseLayout(kind="compartment", rows=0, columns=0),
         plants=[],
         compartments=[c.to_domain() for c in COMPARTMENTS.values()],
-        created_at=recording_start,
+        created_at=recording_start(observations),
     )
