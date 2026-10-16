@@ -8,11 +8,10 @@ of this, leave them unset, and they are written as before. A gap in a
 sensor's readings is an absent record, not a flagged one.
 """
 
-from datetime import datetime
-
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 from greenhouse_protocol.enums import ObservationQuality, ObservationType
+from greenhouse_protocol.instant import Instant
 from greenhouse_protocol.provenance import RecordSource
 
 
@@ -29,13 +28,20 @@ class Observation(BaseModel):
     # compartments; None scopes it to the greenhouse as a whole.
     compartment_id: str | None = None
     plant_id: str | None
-    timestamp: datetime
+    timestamp: Instant
     observation_type: ObservationType
     value: float
     source: RecordSource
     # The instrument that took the reading, when it is known.
     sensor_id: str | None = Field(default=None, exclude_if=_unset)
     # When the reading was delivered, if after it was taken (`timestamp`).
-    delivered_at: datetime | None = Field(default=None, exclude_if=_unset)
+    delivered_at: Instant | None = Field(default=None, exclude_if=_unset)
     # What is known of the reading's quality; none, for a plain reading.
     quality: frozenset[ObservationQuality] = Field(default=frozenset(), exclude_if=_unset)
+
+    @field_serializer("quality", when_used="json")
+    def _sorted(self, quality: frozenset[ObservationQuality]) -> list[str]:
+        # A set's order follows its members' hashes, which a string's vary
+        # from one process to the next: written in order, the same reading
+        # is the same bytes.
+        return sorted(quality)

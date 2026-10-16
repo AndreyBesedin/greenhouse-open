@@ -103,7 +103,10 @@ def test_an_observation_with_them_survives_being_written_and_read() -> None:
 def test_a_delivery_before_the_reading_or_without_a_timezone_does_not_conform() -> None:
     taken = datetime(2026, 1, 9, 12, 0, tzinfo=UTC)
     early = _make_observation(delivered_at=datetime(2026, 1, 9, 11, 59, tzinfo=UTC))
-    naive = _make_observation(observation_id="obs_2", delivered_at=datetime(2026, 1, 9, 12, 1))
+    # Built without validation, which refuses a naive time.
+    naive = _make_observation(observation_id="obs_2").model_copy(
+        update={"delivered_at": datetime(2026, 1, 9, 12, 1)}
+    )
     unnamed = _make_observation(observation_id="obs_3", sensor_id=" ")
     on_time = _make_observation(observation_id="obs_4", delivered_at=taken, sensor_id="t_1")
 
@@ -113,3 +116,19 @@ def test_a_delivery_before_the_reading_or_without_a_timezone_does_not_conform() 
     assert "before it was taken" in violations[0]
     assert "no timezone" in violations[1]
     assert "empty sensor" in violations[2]
+
+
+@pytest.mark.parametrize("field", ["timestamp", "delivered_at"])
+def test_an_observation_refuses_a_wall_clock_time(field: str) -> None:
+    # A naive time names no instant, and a store holding one beside aware
+    # ones could not sort them.
+    with pytest.raises(ValidationError, match="timezone-aware"):
+        _make_observation(**{field: datetime(2026, 1, 9, 12, 0)})
+
+
+def test_its_quality_is_written_in_order() -> None:
+    # One member today; with more, a set's own order would follow the
+    # process's string hashes, and the same reading would change its bytes.
+    observation = _make_observation().model_copy(update={"quality": frozenset({"b", "a", "c"})})
+
+    assert json.loads(observation.model_dump_json())["quality"] == ["a", "b", "c"]

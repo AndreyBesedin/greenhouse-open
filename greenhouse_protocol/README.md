@@ -21,7 +21,8 @@ implement. Part of [greenhouse-open](../README.md). Apache-2.0.
 - `RequestedAction` and `ActionOutcome`: what someone wants done, and what
   happened when an executor tried.
 
-Chronology is the timestamp alone, always timezone-aware.
+Chronology is the timestamp alone, always timezone-aware: every record
+refuses a naive time (`greenhouse_protocol.instant.Instant`).
 
 ## Contracts (`greenhouse_protocol.contracts`)
 

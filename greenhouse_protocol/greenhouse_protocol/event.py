@@ -1,9 +1,9 @@
-from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from greenhouse_protocol.enums import EventSource, EventType
+from greenhouse_protocol.instant import Instant
 
 
 class Event(BaseModel):
@@ -15,7 +15,7 @@ class Event(BaseModel):
     # compartments; None scopes it to the greenhouse as a whole.
     compartment_id: str | None = None
     plant_id: str | None
-    timestamp: datetime
+    timestamp: Instant
     event_type: EventType
     source: EventSource
     confidence: float = 1.0

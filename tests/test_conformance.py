@@ -10,6 +10,7 @@ nothing, so each rule is exercised against a record that breaks it.
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from greenhouse_adapters.wur.agc4_challenge_2024.compartments import compartment
 from greenhouse_adapters.wur.agc4_challenge_2024.timeseries import parse_timeseries
 from greenhouse_protocol.action import WaterPlantAction
@@ -33,6 +34,7 @@ from greenhouse_protocol.sensor import CameraIntrinsics
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import sensors
+from pydantic import ValidationError
 
 CONFIG = SCENARIO_REGISTRY["tomato_compartment"]
 PLANT_IDS = ["tomato_compartment_plant_001", "tomato_compartment_plant_002"]
@@ -111,7 +113,11 @@ def _observation(**overrides: object) -> Observation:
 
 
 def test_a_wall_clock_timestamp_is_refused() -> None:
-    naive = _observation(timestamp=datetime(2026, 7, 1, 12, 0))
+    wall_clock = datetime(2026, 7, 1, 12, 0)
+    with pytest.raises(ValidationError, match="timezone-aware"):
+        _observation(timestamp=wall_clock)
+    # A record built without validation is refused by the checks.
+    naive = _observation().model_copy(update={"timestamp": wall_clock})
 
     violations = check_observations([naive])
 
@@ -174,6 +180,20 @@ def test_a_capture_without_bytes_behind_it_is_refused() -> None:
     assert any("empty artifact reference" in v for v in violations)
 
 
+def test_a_capture_that_names_no_greenhouse_is_refused() -> None:
+    capture = MediaCapture(
+        capture_id="cap_1",
+        greenhouse_id=" ",
+        sensor_id="cam_1",
+        timestamp=START,
+        modality=CaptureModality.RGB,
+        artifact_uri="wur/images.zip!a.png",
+        source=RecordSource(type=SourceType.IMPORTED_DATA, source_id="wur"),
+    )
+
+    assert check_media([capture]) == ["a capture names no greenhouse"]
+
+
 def _frame(**overrides: object) -> CameraFrame:
     defaults: dict[str, object] = dict(
         frame_id="frame_1",
@@ -197,7 +217,9 @@ def test_the_simulators_camera_frames_conform() -> None:
 
 
 def test_a_frame_must_be_unambiguous_named_and_delivered_after_it_was_taken() -> None:
-    naive = _frame(frame_id="naive", timestamp=START.replace(tzinfo=None))
+    with pytest.raises(ValidationError, match="timezone-aware"):
+        _frame(frame_id="naive", timestamp=START.replace(tzinfo=None))
+    naive = _frame(frame_id="naive").model_copy(update={"timestamp": START.replace(tzinfo=None)})
     nameless = _frame(frame_id="nameless", sensor_id=" ", timestamp=START + timedelta(minutes=1))
     early = _frame(
         frame_id="early",
