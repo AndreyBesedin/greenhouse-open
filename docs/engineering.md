@@ -316,6 +316,9 @@ python scripts/check.py
 
 The same canonical command is used by CI so local and remote checks do not
 quietly drift apart.
+It runs the simulator's tests in a process per core (`pytest-xdist`, in the
+development requirements), each test file in one process: a test may not
+rely on another file's having run first, in the same process or at all.
 
 For a change to the viewer, from `greenhouse_sim/web`, run the steps CI runs
 in its `viewer checks` and `browser tests` jobs:
