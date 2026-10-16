@@ -17,7 +17,7 @@ changes course is a new record that supersedes the old one.
 | [0003](0003-require-python-3-14.md) | Require Python 3.14 | Accepted |
 | [0004](0004-organize-greenhouse-sim-by-domain.md) | Organize `greenhouse_sim` by simulation domain | Accepted |
 | [0005](0005-keep-model-state-apart-from-the-world.md) | Keep a model's own state apart from the world | Accepted |
-| [0006](0006-plug-models-in-through-minimal-protocols.md) | Plug simulation models in through minimal protocols | Accepted |
+| [0006](0006-plug-models-in-through-minimal-protocols.md) | Plug simulation models in through minimal protocols | Accepted; the engine's day its contracts plug into superseded by 0035 |
 | [0007](0007-world-coordinates-metres-right-handed-z-up.md) | World coordinates are metres, right-handed, z up | Accepted |
 | [0008](0008-build-the-viewer-with-npm-node-24-and-vite.md) | Build the viewer with npm, Node 24, Vite and strict TypeScript | Accepted |
 | [0009](0009-a-standard-library-local-api-until-streaming-is-needed.md) | A standard-library local API until streaming is needed | Accepted; streaming superseded by 0012 |
@@ -46,6 +46,7 @@ changes course is a new record that supersedes the old one.
 | [0032](0032-run-the-browser-tests-in-lanes-on-ci.md) | Run the browser tests in lanes on CI | Accepted |
 | [0033](0033-update-dependencies-with-dependabot.md) | Update dependencies with Dependabot, minor and patch updates merging by themselves | Accepted; its review tick on Dependabot's pull requests superseded by 0034 |
 | [0034](0034-approve-dependabots-pull-requests-to-acknowledge-them.md) | Approve Dependabot's pull requests to acknowledge their review | Accepted |
+| [0035](0035-one-simulator-the-run-every-part-on-a-ladder-of-fidelity.md) | One simulator, the run, with every part on a ladder of fidelity | Accepted |
 
 ## Template
 
