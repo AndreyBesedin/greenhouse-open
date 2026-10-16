@@ -96,11 +96,16 @@ export default defineConfig({
   testIgnore: ELSEWHERE,
   forbidOnly: IN_CI,
   reporter: IN_CI ? "github" : "list",
+  // On CI a failed test runs once more, with its trace recorded: recording
+  // costs every test's first attempt otherwise, and that cost tipped the
+  // chromium lane's slowest waits past their timeout when traces were kept
+  // on failure. A test that passes its retry is reported flaky, not green.
+  retries: IN_CI ? 1 : 0,
   use: {
     baseURL: `http://localhost:${PREVIEW_PORT}`,
-    // A failed test leaves its trace and a screenshot in test-results/,
-    // which CI keeps; a passing one leaves nothing.
-    trace: "retain-on-failure",
+    // A failed test leaves its screenshot, and its retry's trace, in
+    // test-results/, which CI keeps; a passing one leaves nothing.
+    trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
   projects: stagesToRun().map((stage, index, stages) => {
