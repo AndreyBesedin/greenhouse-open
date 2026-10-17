@@ -171,7 +171,7 @@ code at `467821f`; *review*, reproduced by a review and not again here.
 
 | Finding | Status | Checked | Priority | Work |
 | --- | --- | --- | --- | --- |
-| `AUDIT.1` Two simulation paths, and the contracts belong to the older one | corrected | read | decide | D1, P10 |
+| `AUDIT.1` Two simulation paths, and the contracts belong to the older one | corrected | read | decide | D1 (decision 0035, #180), P10 |
 | `AUDIT.2` Models are chosen by code, not by the manifest | corrected | read | P10 | P10 |
 | `AUDIT.3` A new device touches ten files | corrected | read | P10 | P10 |
 | `AUDIT.4` One model's parameters sit at the top of every scenario | confirmed | read | P10 | P10 |
@@ -180,26 +180,26 @@ code at `467821f`; *review*, reproduced by a review and not again here.
 | `AUDIT.7` Five caches, five locks, and what they share | corrected | read | next | W9 |
 | `AUDIT.8` The viewer validates by hand what the simulator could publish | corrected | read | next | W12 |
 | `AUDIT.9` Small Python toolboxes worth naming | corrected | read | when touched | W13 |
-| `AUDIT.10` The layering between subpackages is not checked | corrected | read | decide | D3 |
+| `AUDIT.10` The layering between subpackages is not checked | corrected | read | decide | D3 (decision 0037 and its ratchet, #182) |
 | `AUDIT.11` Ruff checks five rule families | confirmed | run | when touched | W15 |
-| `AUDIT.12` The checks take 11 to 22 minutes, in one job | corrected | run | next | W7 (#169), W8 |
-| `AUDIT.13` Supply chain and the review gate | corrected | read | next | W7 (#169, #170, #171), D4 |
+| `AUDIT.12` The checks take 11 to 22 minutes, in one job | corrected | run | next | W7 (#169), W8 (#184, #185, #186) |
+| `AUDIT.13` Supply chain and the review gate | corrected | read | next | W7 (#169, #170, #171), D4 (decision 0038, #183) |
 | `AUDIT.14` Nothing in the packages logs | corrected | read | when touched | W15 |
-| `AUDIT.15` Module globals and threads make tests order-dependent | corrected | run | next | W8, W9 |
+| `AUDIT.15` Module globals and threads make tests order-dependent | corrected | run | next | W8 (#184, #185), W5's follow-up (#191), W9 |
 | `AUDIT.16` The prose is consistent, dense and tied to the roadmap | corrected | read | when touched | W14 |
 | `AUDIT.17` Four hubs carry the weight | corrected | read | when touched | W11, W15 |
-| `AUDIT.18` The test suite's shape | corrected | read | next | W8 |
-| `AUDIT.19` What the benchmark and the profile point at | corrected | run | next | W10 |
+| `AUDIT.18` The test suite's shape | corrected | read | next | W8 (#184, #185, #186) |
+| `AUDIT.19` What the benchmark and the profile point at | corrected | run | next | W10 (#193, #194) |
 | `AUDIT.20` The viewer's global stylesheet and bundle | corrected | read | when touched | W15 |
-| `AUDIT.21` The process is one developer's, and says so | corrected | read | decide | D4 |
+| `AUDIT.21` The process is one developer's, and says so | corrected | read | decide | D4 (decision 0038, #183) |
 | `AUDIT.22` A run's numbers depend on the moments asked for before | new | run | **now** | W1 (#162) |
 | `AUDIT.23` The adapters' storage accepts bytes it never verified | new | run | **now** | W2 (#161) |
 | `AUDIT.24` The packages admit a pydantic that writes observations differently | new | run | **now** | W3 (#160) |
-| `AUDIT.25` What a client sends is checked for shape, not sense | new | review | now | W4 (#165, #166, #167) |
-| `AUDIT.26` Ground truth leaves by the API, which says it never does | new | read | decide | D2 |
+| `AUDIT.25` What a client sends is checked for shape, not sense | new | review | now | W4 (#165, #166, #167, #192) |
+| `AUDIT.26` Ground truth leaves by the API, which says it never does | new | read | decide | D2 (decision 0036, #181) |
 | `AUDIT.27` The protocol's records are checked unevenly | new | read | next | W3 (#168, #174), a decision for the rest |
-| `AUDIT.28` The adapters' command line and canonical tier | new | read | next | W2 (#161, the command line) |
-| `AUDIT.29` The kept runs stall the server, and the openings go first | new | run | now | W5 (#163) |
+| `AUDIT.28` The adapters' command line and canonical tier | new | read | next | W2 (#161, the command line), #187, #188, #189, #190 |
+| `AUDIT.29` The kept runs stall the server, and the openings go first | new | run | now | W5 (#163, #191) |
 | `AUDIT.30` Documents that no longer describe the code | new | read | now | W6 (#164) |
 
 ## Work plan
