@@ -99,8 +99,11 @@ test("weather: the weather station reads the weather outside", async ({ page }) 
 
   await selectAt(page, STATION_FACE, "climate_box_station_temperature", BEFORE_THE_STATION);
   await expect(page.getByTestId("property-sensor_kind")).toHaveText("outside_temperature");
-  // Its reading errs by its noise about the spring day's 7.95 °C.
-  await expect(page.getByTestId("sensor-reading")).toHaveText("8.10 °C at 10 min");
+  // Its reading errs by its noise about the spring day's 7.95 °C. The log is
+  // read once the sensor is selected, behind the run's other loads.
+  await expect(page.getByTestId("sensor-reading")).toHaveText("8.10 °C at 10 min", {
+    timeout: 20_000,
+  });
   await expect(page.getByTestId("sensor-truth")).toHaveText("7.95 °C at 10 min");
 });
 
