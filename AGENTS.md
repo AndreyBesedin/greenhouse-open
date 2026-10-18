@@ -71,8 +71,9 @@ fails when it drifts from its source.
   (`greenhouse_sim/greenhouse_sim/core/engine.py`) and its model contracts
   drive the simple daily model, the examples and every scenario's live
   stream, the reference scenario's included, but not the reference
-  scenario's climate run, crop or views; which path a new model joins is
-  still to be decided.
+  scenario's climate run, crop or views. The run is the one simulator
+  (decision 0035): a new model is a rung of one of its parts, and the
+  engine's day only takes fixes.
 - An API route: the route checks the request and maps the result; the
   logic is a service's (decision 0021).
 - A dataset: `greenhouse_adapters`, from a manifest to canonical records.
