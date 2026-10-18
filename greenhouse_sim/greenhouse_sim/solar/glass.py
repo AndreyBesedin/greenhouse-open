@@ -46,6 +46,9 @@ DIFFUSE_TRANSMITTANCE: Final = NORMAL_TRANSMITTANCE * (
 SEAM_M: Final = 1e-6
 # The surfaces light leaves the house through.
 GLAZED: Final = frozenset({SurfaceCategory.WALL, SurfaceCategory.ROOF})
+# At most this many pairs of a point and an edge are worked out at once,
+# 8 MB for each array of them: a large house's points go in batches.
+PAIRS_AT_ONCE: Final = 1 << 20
 
 
 def transmittance(cos_incidence: np.ndarray) -> np.ndarray:
@@ -103,7 +106,17 @@ class _Outline:
 
 def _within(u: np.ndarray, v: np.ndarray, outline: _Outline) -> np.ndarray:
     """Whether each point (u, v) lies inside a polygon, or within `SEAM_M`
-    of its edges."""
+    of its edges: in batches of points, each tested against every edge at
+    once."""
+    batch = max(1, PAIRS_AT_ONCE // len(outline.ax))
+    within = np.empty(len(u), dtype=bool)
+    for start in range(0, len(u), batch):
+        part = slice(start, start + batch)
+        within[part] = _within_batch(u[part], v[part], outline)
+    return within
+
+
+def _within_batch(u: np.ndarray, v: np.ndarray, outline: _Outline) -> np.ndarray:
     ax, ay, bx, by = outline.ax, outline.ay, outline.bx, outline.by
     crosses = (ay > v) != (by > v)
     with np.errstate(divide="ignore", invalid="ignore"):
