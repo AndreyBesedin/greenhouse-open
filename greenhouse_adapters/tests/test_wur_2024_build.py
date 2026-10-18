@@ -2,6 +2,7 @@
 readings, the site's weather and forecast, and the harvest workbook become
 one canonical greenhouse, the same bytes every time."""
 
+import hashlib
 import zipfile
 from datetime import UTC, datetime
 from io import BytesIO
@@ -87,10 +88,19 @@ def _build(data_dir: DataDirectory) -> CanonicalGreenhouse:
     return build_greenhouse(data_dir, ArtifactResolver(data_dir), [REFERENCE])
 
 
-def test_a_build_is_the_same_bytes_every_time(data_dir: DataDirectory) -> None:
-    first = _build(data_dir).provenance().content_sha256
-    second = _build(data_dir).provenance().content_sha256
+def _written(built: CanonicalGreenhouse) -> dict[str, str]:
+    """Every file the build wrote, by its digest."""
+    return {
+        path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(built.directory.iterdir())
+    }
 
+
+def test_a_build_is_the_same_bytes_every_time(data_dir: DataDirectory) -> None:
+    first = _written(_build(data_dir))
+    second = _written(_build(data_dir))
+
+    assert "provenance.json" in first
     assert second == first
 
 
@@ -125,9 +135,10 @@ def test_the_compartments_readings_are_its_own_and_the_sites_are_the_greenhouses
 
 
 def test_the_spacing_and_the_final_harvest_are_events(data_dir: DataDirectory) -> None:
-    events = {e.event_type: e for e in _build(data_dir).events()}
+    built = list(_build(data_dir).events())
+    events = {e.event_type: e for e in built}
 
-    assert set(events) == {EventType.SPACING, EventType.HARVEST}
+    assert sorted(e.event_type for e in built) == [EventType.HARVEST, EventType.SPACING]
     assert events[EventType.SPACING].timestamp == datetime(2024, 9, 30, 22, tzinfo=UTC)
     # noon on 15 November, in Amsterdam's winter time
     assert events[EventType.HARVEST].timestamp == datetime(2024, 11, 15, 11, tzinfo=UTC)
