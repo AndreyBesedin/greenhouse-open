@@ -28,37 +28,35 @@ scopes and how to mark a breaking change.
 
 ## Set up development checks
 
-After installing the editable packages and `requirements-dev.txt`, install
-the repository hooks once:
+With [uv](https://docs.astral.sh/uv/getting-started/installation/) and Node 24
+(see `greenhouse_sim/web/.nvmrc`), once, from the clone:
 
 ```bash
-pre-commit install --hook-type pre-commit --hook-type pre-push
+uv run setup
 ```
 
-The pre-commit hook handles fast file hygiene, Ruff fixes and formatting,
-the named-numbers check, and Biome for viewer files. The pre-push hook runs
+`uv run` installs Python 3.14 when the machine has none, the packages and
+the development tools; `setup` adds the viewer's packages, Playwright's
+Chromium and the repository's git hooks. The pre-commit hook handles fast
+file hygiene, Ruff fixes and formatting, the named-numbers check, and Biome
+for viewer files, which needs the viewer's packages for any commit that
+touches `greenhouse_sim/web/`, a README fix included. The pre-push hook runs
 the repository's fast Python check suite.
-
-Install the browser viewer's dependencies once too, with Node 24 (see
-`greenhouse_sim/web/.nvmrc`): the Biome hook needs them for any commit that
-touches `greenhouse_sim/web/`, a README fix included.
-
-```bash
-cd greenhouse_sim/web && npm ci
-```
 
 You can run the same checks manually:
 
 ```bash
-pre-commit run --all-files
-python scripts/check.py --fast
+uv run pre-commit run --all-files
+uv run check --fast
 ```
 
 Run the full suite before requesting review for a non-trivial change:
 
 ```bash
-python scripts/check.py
+uv run check
 ```
+
+`uv run help` lists the other commands.
 
 ## Before opening a pull request
 

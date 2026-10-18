@@ -85,7 +85,7 @@ the reply and the report, and let the user decide.
 - Run the checks that cover what you changed: formatter, linter, type checker, the
   tests of every package touched. A Markdown-only change is covered too: the root
   `pytest` holds every document to its citations and publishability (#177's first
-  push failed on a placeholder path). Run `python scripts/check.py --fast` when the
+  push failed on a placeholder path). Run `uv run check --fast` when the
   change spans packages or touches shared code; when you skip it (a scripts-only
   change, say) because of its runtime, say so explicitly in the report and push
   with `--no-verify` only then.

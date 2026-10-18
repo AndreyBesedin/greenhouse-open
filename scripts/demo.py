@@ -1,15 +1,16 @@
 """Start the simulator and its viewer, and open the reference scenario (P09.9).
 
-    python scripts/demo.py                  # the API on 8765, the viewer on 5173
-    python scripts/demo.py --no-browser     # without opening a browser
-    python scripts/demo.py --api-port 8770 --viewer-port 5180
+    uv run demo                              # the API on 8765, the viewer on 5173
+    uv run demo --no-browser                 # without opening a browser
+    uv run demo --api-port 8770 --viewer-port 5180
+    uv run start                             # open the viewer's start page instead
 
 It runs the simulator's local API (`python -m greenhouse_sim.api`) and the
 viewer's development server (`npm run dev` in `greenhouse_sim/web`) side by
 side, waits until both answer, and opens the reference greenhouse on its
 opening day, at noon. Ctrl+C stops both, and so does either one stopping.
-Run it with the Python that has greenhouse-sim installed, once `npm ci` has
-run in `greenhouse_sim/web` (`docs/demo.md`). Standard library only.
+`uv run demo` runs it with the workspace's Python once `uv run setup` has
+installed the viewer's packages (`docs/demo.md`). Standard library only.
 """
 
 from __future__ import annotations
@@ -64,8 +65,7 @@ def problems(api_port: int, viewer_port: int) -> list[str]:
         found.append(f"Python {wanted} or newer is needed; this is {sys.version.split()[0]}.")
     if importlib.util.find_spec("greenhouse_sim") is None:
         found.append(
-            "greenhouse-sim is not installed for this Python: "
-            "pip install -e greenhouse_protocol -e greenhouse_sim"
+            "greenhouse-sim is not installed for this Python: run the demo with `uv run demo`"
         )
     node = shutil.which("node")
     if node is None or shutil.which("npm") is None:
@@ -76,7 +76,7 @@ def problems(api_port: int, viewer_port: int) -> list[str]:
         if major < NODE_NEEDED:
             found.append(f"Node {NODE_NEEDED} or newer is needed; this is {version.strip()}.")
     if not (WEB / "node_modules").is_dir():
-        found.append("The viewer's packages are not installed: cd greenhouse_sim/web && npm ci")
+        found.append("The viewer's packages are not installed: uv run setup")
     for name, port, flag in (
         ("the API", api_port, "--api-port"),
         ("the viewer", viewer_port, "--viewer-port"),
@@ -184,6 +184,11 @@ def main(arguments: Sequence[str] | None = None) -> int:
     parser.add_argument("--api-port", type=int, default=DEFAULT_API_PORT)
     parser.add_argument("--viewer-port", type=int, default=DEFAULT_VIEWER_PORT)
     parser.add_argument("--no-browser", action="store_true", help="do not open a browser")
+    parser.add_argument(
+        "--start-page",
+        action="store_true",
+        help="open the viewer's start page rather than the reference greenhouse",
+    )
     parsed = parser.parse_args(arguments)
     found = problems(parsed.api_port, parsed.viewer_port)
     if found:
@@ -216,8 +221,11 @@ def main(arguments: Sequence[str] | None = None) -> int:
         servers.stop()
         print(f"The demo did not start: {reason}.")
         return 1
-    address = opening_address(api_url, viewer_url)
-    print(f"The reference greenhouse: {address}\nCtrl+C stops the API and the viewer.", flush=True)
+    if parsed.start_page:
+        address, shown = viewer_url, "The viewer"
+    else:
+        address, shown = opening_address(api_url, viewer_url), "The reference greenhouse"
+    print(f"{shown}: {address}\nCtrl+C stops the API and the viewer.", flush=True)
     if not parsed.no_browser:
         webbrowser.open(address)
     return servers.run_until(stop)

@@ -45,8 +45,7 @@ repos:
         files: ^greenhouse_(protocol|sim|adapters)/greenhouse_(protocol|sim|adapters)/(api|services)/
 
       # The viewer's own Biome, so the hook and the lockfile always agree on
-      # its version. Run `npm ci` in greenhouse_sim/web before committing
-      # viewer changes.
+      # its version: `uv run setup` installs it.
       - id: biome
         name: biome format and lint (viewer)
         entry: >-
@@ -56,9 +55,11 @@ repos:
         files: ^greenhouse_sim/web/
         exclude: ^greenhouse_sim/web/package-lock\.json$
 
+      # Through uv, with the workspace's own Python and tools, whichever
+      # Python the shell has (decision 0039).
       - id: fast-project-checks
         name: fast repository checks
-        entry: python scripts/check.py --fast
+        entry: uv run check --fast
         language: system
         pass_filenames: false
         stages: [pre-push]

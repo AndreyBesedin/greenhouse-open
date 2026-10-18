@@ -125,13 +125,13 @@ model joins it as one of them.
 The browser viewer shows what the simulator is doing, in 3D: a scenario
 before its first day, or live, growing day by day as the simulator advances
 it, with controls to pause, step, reset and change its speed.
-`python scripts/demo.py`, from the repository's root, starts both and opens
-the reference greenhouse ([docs/demo.md](../docs/demo.md)). Or start the
-local API, then the viewer:
+`uv run demo`, from a clone, starts both and opens the reference greenhouse
+([docs/demo.md](../docs/demo.md)), once `uv run setup` has installed the
+viewer's packages (Node 24). Or start the local API, then the viewer:
 
 ```bash
-python -m greenhouse_sim.api                    # http://127.0.0.1:8765/api
-cd greenhouse_sim/web && npm ci && npm run dev  # Node 24
+uv run api      # http://127.0.0.1:8765/api
+uv run viewer   # http://localhost:5173, in a second terminal
 ```
 
 See [web/README.md](web/README.md) for the viewer's own checks.

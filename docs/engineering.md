@@ -305,21 +305,24 @@ a smaller test can explain the broken contract.
 
 ## Local checks
 
-After installing the development requirements and hooks:
+Every task runs as `uv run <command>` from the clone, with the workspace's
+own Python and tools (decision 0039); `uv run help` lists the commands.
+After `uv run setup`, which installs the viewer's packages, Playwright's
+Chromium and the hooks:
 
 ```bash
-pre-commit run --all-files
-python scripts/check.py --fast
+uv run pre-commit run --all-files
+uv run check --fast
 ```
 
 Before requesting review or merging a non-trivial change:
 
 ```bash
-python scripts/check.py
+uv run check
 ```
 
-The same canonical command is used by CI so local and remote checks do not
-quietly drift apart.
+The same canonical command (`scripts/check.py`) is used by CI so local and
+remote checks do not quietly drift apart.
 It runs the simulator's tests in a process per core (`pytest-xdist`, in the
 development requirements), each test file in one process: a test may not
 rely on another file's having run first, in the same process or at all.
@@ -327,15 +330,15 @@ CI runs it in four jobs at once, one per part (`--only protocol`, `sim`,
 `adapters` or `root`), and gathers them as the one required check,
 `repository checks`.
 
-For a change to the viewer, from `greenhouse_sim/web`, run the steps CI runs
-in its `viewer checks` and `browser tests` jobs:
+For a change to the viewer, run the steps CI runs in its `viewer checks` and
+`browser tests` jobs:
 
 ```bash
-npm ci
-npm run lint && npm run typecheck && npm run coverage && npm run build
-PYTHON=python npm run e2e   # needs greenhouse-sim installed for that python
+uv run viewer-checks   # lint, type check, coverage, build
+uv run browser-tests   # Playwright, serving the simulator from the workspace's Python
 ```
 
 CI runs the browser tests in lanes at once, a job each (decision 0032);
-`npm run e2e` runs every lane, one after another. To run one lane as CI
-does, name it: `BROWSER_TEST_LANE=crop PYTHON=python npm run e2e`.
+`uv run browser-tests` runs every lane, one after another. To run one lane
+as CI does, name it: `BROWSER_TEST_LANE=crop uv run browser-tests`. What
+follows the command goes to Playwright: `uv run browser-tests e2e/camera.spec.ts`.

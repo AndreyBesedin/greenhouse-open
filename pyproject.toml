@@ -1,0 +1,68 @@
+# The repository's development workspace (decision 0039): the three
+# packages, the tools that check them, and a command for each task, through
+# uv. From a clone:
+#
+#     uv run help     # the commands
+#     uv run setup    # what uv does not install: the viewer's packages,
+#                     # Playwright's Chromium and the git hooks
+#     uv run demo     # the simulator and its viewer
+#
+# It is never published. Each package keeps its own metadata and installs on
+# its own; the tools' configuration stays in ruff.toml, mypy.ini and
+# pytest.ini.
+[project]
+name = "greenhouse-open"
+version = "0.0.0"
+description = "The greenhouse-open repository's development workspace and its commands"
+requires-python = ">=3.14"
+classifiers = ["Private :: Do Not Upload"]
+dependencies = [
+    "greenhouse-protocol",
+    "greenhouse-sim",
+    "greenhouse-adapters",
+]
+
+# Every command runs `main`, which finds it by its script's name
+# (tools/greenhouse_dev/commands.py, `COMMANDS`).
+[project.scripts]
+help = "greenhouse_dev.commands:main"
+setup = "greenhouse_dev.commands:main"
+demo = "greenhouse_dev.commands:main"
+start = "greenhouse_dev.commands:main"
+api = "greenhouse_dev.commands:main"
+viewer = "greenhouse_dev.commands:main"
+check = "greenhouse_dev.commands:main"
+viewer-checks = "greenhouse_dev.commands:main"
+browser-tests = "greenhouse_dev.commands:main"
+record-demo = "greenhouse_dev.commands:main"
+
+# The tools that check the packages, pinned; `uv run` installs them with the
+# packages. requirements-dev.txt holds the same pins for CI, which installs
+# with pip, until it moves to uv (tests/test_dev_commands.py keeps the two
+# equal).
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-xdist==3.8.0",
+    "mypy==2.4.0",
+    "ruff==0.17.0",
+    "pre-commit==4.7.0",
+    "types-openpyxl==3.1.5.20260827",
+]
+
+[build-system]
+requires = ["uv_build>=0.12,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "greenhouse_dev"
+module-root = "tools"
+
+[tool.uv.workspace]
+members = ["greenhouse_protocol", "greenhouse_sim", "greenhouse_adapters"]
+
+# The packages' requirements of each other are met by the workspace's own.
+[tool.uv.sources]
+greenhouse-protocol = { workspace = true }
+greenhouse-sim = { workspace = true }
+greenhouse-adapters = { workspace = true }
