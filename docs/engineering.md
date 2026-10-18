@@ -105,7 +105,8 @@ planning tool or document.
   the repository as a whole, with findings numbered so that pull requests
   can cite them (`AUDIT.6`), and an order of work the roadmap then
   schedules. An audit records the commit it looked at and is not rewritten
-  once its work begins; a finding's status is updated in place.
+  once its work begins; its table names, in place, the pull requests that
+  do each finding's work.
 - **Public documents describe this open project only.** Product plans,
   business strategy, customer information and the names or internals of
   private systems stay out. Applications that build on these packages are
