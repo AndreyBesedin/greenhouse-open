@@ -46,6 +46,7 @@ from greenhouse_sim.biology.tomato.organ.geometry import rising_point, stem_heig
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.biology.tomato.organ.transplants import DEVELOPMENT
 from greenhouse_sim.climate.house import HouseAir
+from greenhouse_sim.climate.run import LOOK_AGAIN_S
 from greenhouse_sim.core.stopwatch import Stopwatch, timed
 from greenhouse_sim.solar.plants import Crown
 from greenhouse_sim.world.envelope import Envelope
@@ -147,6 +148,13 @@ class RunCrop:
         # carrying on from this one copies it without waiting for a request
         # working this crop on.
         self._keeping = threading.Lock()
+        # The days a request is working the crop through, from the latest
+        # kept before the one asked for to it, or None: a crop carrying on
+        # from this one waits while they cover what it needs, rather than
+        # live them beside this crop. Told under `_keeping`, and
+        # `_kept_changed` is notified when they end.
+        self._stretch: tuple[int, int] | None = None
+        self._kept_changed = threading.Condition(self._keeping)
         # The crops this one carries on from (`carry_on_from`), each with the
         # days through which it is the same crop: what they work out of
         # those days is taken over again whenever this crop works a day on,
@@ -172,20 +180,31 @@ class RunCrop:
                 return kept
             self._take_over(day)
             start = max(kept_day for kept_day in self._kept if kept_day <= day)
-            plants = self._kept[start]
-            for lived in range(start, day):
-                environments = self._day(lived, plants)
-                with timed(self._watch, PLANTS_DAYS):
-                    plants = tuple(
-                        self._worked(
-                            lived + 1,
-                            live_day(plant, environments[plant.plant_id], DEVELOPMENT),
-                            training,
-                        )
-                        for plant, training in zip(plants, self._trainings, strict=False)
-                    )
+            with self._keeping:
+                self._stretch = (start, day)
+            try:
+                plants = self._lived_through(start, day)
+            finally:
+                with self._kept_changed:
+                    self._stretch = None
+                    self._kept_changed.notify_all()
             self._keep(day, plants)
             return plants
+
+    def _lived_through(self, start: int, day: int) -> tuple[Plant, ...]:
+        plants = self._kept[start]
+        for lived in range(start, day):
+            environments = self._day(lived, plants)
+            with timed(self._watch, PLANTS_DAYS):
+                plants = tuple(
+                    self._worked(
+                        lived + 1,
+                        live_day(plant, environments[plant.plant_id], DEVELOPMENT),
+                        training,
+                    )
+                    for plant, training in zip(plants, self._trainings, strict=False)
+                )
+        return plants
 
     def local(self, plant_id: str, day: int) -> LocalEnvironment:
         """What a plant experienced on the run's day `day`, from 0 to its
@@ -254,26 +273,41 @@ class RunCrop:
 
     def _take_over(self, day: int) -> None:
         """Take over, from each crop carried on from, what it has worked out
-        of the run's first `day` days, as far as the two are the same crop.
-        Called with `_working` held."""
+        of the run's first `day` days, as far as the two are the same crop;
+        while the other is living those very days, wait for it rather than
+        live them beside it. Called with `_working` held."""
         for source, days in self._sources:
             other = source()
             if other is None:
                 continue
             through = min(day, days)
-            with other._keeping:
-                lived = other._lived[:through]
-                kept = [
-                    (kept_day, plants)
-                    for kept_day, plants in other._kept.items()
-                    if kept_day <= through
-                ]
-            with self._keeping:
-                if len(self._lived) < len(lived):
-                    self._lived = lived
-                for kept_day, plants in kept:
-                    if kept_day <= len(self._lived):
-                        self._kept.setdefault(kept_day, plants)
+            with other._kept_changed:
+                while True:
+                    lived = other._lived[:through]
+                    kept = [
+                        (kept_day, plants)
+                        for kept_day, plants in other._kept.items()
+                        if kept_day <= through
+                    ]
+                    with self._keeping:
+                        if len(self._lived) < len(lived):
+                            self._lived = lived
+                        for kept_day, plants in kept:
+                            if kept_day <= len(self._lived):
+                                self._kept.setdefault(kept_day, plants)
+                        since = len(self._lived)
+                    if not other._working_through(since, through):
+                        break
+                    other._kept_changed.wait(LOOK_AGAIN_S)
+
+    def _working_through(self, since: int, through: int) -> bool:
+        """Whether a request is living this crop through a day past `since`
+        and up to `through`, which a crop carrying on from this one would
+        otherwise live itself. Called with `_keeping` held."""
+        if self._stretch is None:
+            return False
+        start, end = self._stretch
+        return start < through and since < min(end, through)
 
     def _day(self, day: int, plants: tuple[Plant, ...]) -> dict[str, LocalEnvironment]:
         """What each of the crop's plants, `plants` on the run's day `day`,

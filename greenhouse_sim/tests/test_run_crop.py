@@ -7,6 +7,8 @@ grows months in a moment; the last ones grow the reference greenhouse's in
 its own air and sunlight, for a day or two.
 """
 
+import threading
+import time
 from collections.abc import Callable, Sequence
 from contextlib import AbstractContextManager
 from http import HTTPStatus
@@ -298,6 +300,31 @@ def test_a_crop_takes_over_the_days_another_lives_after_it_carried_on() -> None:
     first.plants_on(6)
 
     assert second.plants_on(6) == first.plants_on(6)
+    assert second.local("p1", 5) == first.local("p1", 5)
+    assert second_asked.air == []
+
+
+def test_a_crop_waits_for_another_living_the_days_it_needs() -> None:
+    # Its source is living the very days it needs when it is asked: it waits
+    # for that rather than live them beside the source.
+    first_asked, second_asked = _Asked(), _Asked()
+
+    def slowly(day: int) -> HouseAir:
+        time.sleep(0.05)
+        return WARM
+
+    first = _crop(asked=first_asked, air_on=slowly)
+    second = _crop(asked=second_asked)
+    second.carry_on_from(first, 6)
+    working = threading.Thread(target=first.plants_on, args=(6,))
+    working.start()
+    while first._stretch is None:
+        time.sleep(0.001)
+
+    taken = second.plants_on(6)
+
+    working.join()
+    assert taken == first.plants_on(6)
     assert second.local("p1", 5) == first.local("p1", 5)
     assert second_asked.air == []
 

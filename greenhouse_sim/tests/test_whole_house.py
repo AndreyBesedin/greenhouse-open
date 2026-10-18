@@ -3,6 +3,7 @@ run's mean, closes its energy and water budgets, follows the weather, and
 runs a day in well under a second."""
 
 import json
+import threading
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
@@ -14,7 +15,7 @@ import pytest
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.climate.commands import Schedule
-from greenhouse_sim.climate.house import WholeHouse, grid_mean
+from greenhouse_sim.climate.house import HouseAir, WholeHouse, grid_mean
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
@@ -181,6 +182,40 @@ def test_it_takes_over_what_another_works_out_after_it_carried_on(
 
     monkeypatch.setattr(second, "_advance", not_again)
     assert second.air_at(3 * hour) == first.air_at(3 * hour)
+
+
+def test_it_waits_for_another_working_the_stretch_it_needs_and_no_longer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Its source is working the very stretch it needs when it is asked: it
+    # waits for that rather than work it out beside the source, and goes on
+    # as soon as the source is past it, not when the source is done.
+    hour = 3600.0
+    heated = ((2 * hour, "heater", 1.0),)
+    first = WholeHouse(_run())
+    second = WholeHouse(_climate_day("climate_box", "default", "default", (), (), heated).run)
+    second.carry_on_from(first)
+    advance = first._advance
+
+    def slowly(*args: object, **kwargs: object) -> HouseAir:
+        time.sleep(0.01)
+        return advance(*args, **kwargs)  # type: ignore[arg-type]
+
+    def not_again(*args: object, **kwargs: object) -> NoReturn:
+        raise AssertionError("the branch worked out a stretch its source was working")
+
+    monkeypatch.setattr(first, "_advance", slowly)
+    monkeypatch.setattr(second, "_advance", not_again)
+    working = threading.Thread(target=first.air_at, args=(12 * hour,))
+    working.start()
+    while first._stretch is None:
+        time.sleep(0.001)
+
+    taken = second.air_at(2 * hour)
+
+    assert working.is_alive()
+    working.join()
+    assert taken == first.air_at(2 * hour)
 
 
 def test_its_air_is_the_same_whatever_moments_were_asked_for_before() -> None:
