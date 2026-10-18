@@ -34,6 +34,9 @@ def _imported_modules(source: str) -> set[str]:
     for node in ast.walk(ast.parse(source)):
         if isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
             modules.add(node.module)
+            # `from greenhouse_sim import solar` imports a subpackage by name.
+            if node.module == "greenhouse_sim":
+                modules.update(f"greenhouse_sim.{alias.name}" for alias in node.names)
         elif isinstance(node, ast.Import):
             modules.update(alias.name for alias in node.names)
     return modules
@@ -104,9 +107,15 @@ def test_the_check_finds_a_pair_whatever_the_import_looks_like() -> None:
         ),
         ("weather", "from greenhouse_sim.solar import sky\nimport numpy\n"),
         ("domain", "from greenhouse_sim.domain.kinds import Kind\n"),
+        ("biology", "from greenhouse_sim import weather\n"),
     ]
 
     imports = _imports_between(sources)
 
-    assert imports == {("climate", "solar"), ("solar", "climate"), ("weather", "solar")}
+    assert imports == {
+        ("biology", "weather"),
+        ("climate", "solar"),
+        ("solar", "climate"),
+        ("weather", "solar"),
+    }
     assert _tangled(imports) == {("climate", "solar")}
