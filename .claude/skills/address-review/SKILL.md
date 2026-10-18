@@ -109,8 +109,10 @@ the reply and the report, and let the user decide.
   "— Claude", so the maintainer's own words and the agent's stay distinguishable
   on the PR.
 - Resolve the threads you fixed. Leave declined and deferred threads open: the
-  user decides those, and an open thread is the reminder. The `main` ruleset
-  requires every conversation resolved before a merge.
+  user decides those, and an open thread is the reminder. The review policy
+  asks for every conversation to be resolved or acknowledged
+  (`docs/engineering.md`); the `main` ruleset requires it only once a second
+  person can merge (decision 0038).
 - Bots that ask for a reaction get one: thumbs up when the finding was acted on,
   thumbs down when it was wrong. It is the only feedback they receive.
 - Update the PR description so it describes the branch as it now is: changed-list,

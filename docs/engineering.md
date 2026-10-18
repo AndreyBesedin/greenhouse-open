@@ -134,6 +134,8 @@ The default path is automated and fast:
 6. Low-risk changes may use auto-merge once the automated checks and review are
    clear. Higher-risk changes should be merged manually after the explicit
    self-review.
+7. A pull request from anyone else is reviewed whole before it is merged,
+   whatever its risk (decision 0038).
 
 The number of Copilot comments is not itself a risk score. A verbose review can
 produce many low-value comments, while one comment can expose a serious issue.
@@ -151,11 +153,12 @@ pass. The rest wait for a review: when the risk gate holds one, review
 the diff and approve the pull request's latest commit, which the gate
 takes as the acknowledgement (decision 0034).
 
-GitHub settings should require a pull request for `main`, require CI checks,
-and require conversation resolution. The `main` ruleset names its required
-checks: a renamed CI job, or a new browser-test lane, takes its new name
-there too. Do not require a human approval while the
-repository has one developer. Copilot auto-approval can be enabled later if it
+GitHub settings require a pull request for `main` and CI checks. The `main`
+ruleset names its required checks: a renamed CI job, or a new browser-test
+lane, takes its new name there too. Do not require a human approval, or
+resolved conversations, while the repository has one developer; item 4 is
+the author's own. When a second person can merge, the policy changes as
+decision 0038 says. Copilot auto-approval can be enabled later if it
 proves useful, but the workflow should not depend on a preview feature.
 
 ## Code structure
