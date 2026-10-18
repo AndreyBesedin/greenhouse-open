@@ -7,4 +7,4 @@ ruff==0.17.0
 pre-commit==4.7.0
 types-openpyxl==3.1.5.20260827
 # Installs the packages at their lowest dependencies in CI (ci.yml).
-uv==0.13.0
+uv==0.13.1
