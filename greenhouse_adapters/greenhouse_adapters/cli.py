@@ -25,10 +25,12 @@ import httpx
 
 from greenhouse_adapters.canonical import RefusedBuild
 from greenhouse_adapters.manifests import (
+    MANIFEST_DIR,
     ArtifactKind,
     DatasetManifest,
     load_manifest,
     manifest_path,
+    manifests_in_a_checkout,
     write_manifest,
 )
 from greenhouse_adapters.profiles import PROFILES, Profile
@@ -134,6 +136,13 @@ def wur_dataset(args: argparse.Namespace) -> WurDataset:
 
 
 def _inventory(args: argparse.Namespace) -> int:
+    if args.write and not manifests_in_a_checkout():
+        print(
+            f"greenhouse-data: error: --write updates the manifests of a source checkout; "
+            f"these are an installed package's, in {MANIFEST_DIR}",
+            file=sys.stderr,
+        )
+        return 1
     dataset = wur_dataset(args)
     metadata = fetch_dataset_metadata(dataset.dataset_uuid)
     generated = build_manifest(

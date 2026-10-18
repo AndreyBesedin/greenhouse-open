@@ -49,6 +49,13 @@ it from the publisher, and it stays under the publisher's licence.
 If you publish results derived from these datasets, cite them as their
 publishers ask.
 
+## Tests
+
+`pytest` in this folder needs no network and no data. The tests that ask
+4TU's API for the datasets' current metadata run only with
+`GREENHOUSE_ONLINE_TESTS=1`. `greenhouse-data inventory --write` updates
+the manifests of a source checkout, not of an installed package.
+
 ## Dependencies
 
 `greenhouse-protocol`, Pydantic 2, openpyxl and httpx.

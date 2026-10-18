@@ -78,3 +78,18 @@ def test_a_failure_in_the_commands_own_code_keeps_its_traceback(
 
     with pytest.raises(AttributeError):
         cli.main(["inventory", "wur", DATASET])
+
+
+def test_inventory_does_not_write_into_an_installed_package(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def fetched(dataset_uuid: str) -> dict[str, object]:
+        raise AssertionError("nothing is fetched for a write that is refused")
+
+    monkeypatch.setattr(cli, "manifests_in_a_checkout", lambda: False)
+    monkeypatch.setattr(cli, "fetch_dataset_metadata", fetched)
+
+    assert cli.main(["inventory", "wur", DATASET, "--write"]) == 1
+    error = capsys.readouterr().err
+    assert error.startswith("greenhouse-data: error: --write updates the manifests of a source")
+    assert error.count("\n") == 1

@@ -80,12 +80,12 @@ class CanonicalGreenhouse:
         # they are not part of the description and are ignored. Whoever
         # loads the tier decides ownership.
         return GreenhouseDescription.model_validate_json(
-            (self.directory / GREENHOUSE_FILE).read_text()
+            (self.directory / GREENHOUSE_FILE).read_text(encoding="utf-8")
         )
 
     def provenance(self) -> CanonicalProvenance:
         return CanonicalProvenance.model_validate_json(
-            (self.directory / PROVENANCE_FILE).read_text()
+            (self.directory / PROVENANCE_FILE).read_text(encoding="utf-8")
         )
 
     def observations(self) -> Iterator[Observation]:
@@ -138,7 +138,9 @@ def write_canonical_greenhouse(
     description = GreenhouseDescription.model_validate(
         greenhouse.model_dump(include=set(GreenhouseDescription.model_fields))
     )
-    (directory / GREENHOUSE_FILE).write_text(description.model_dump_json(indent=2) + "\n")
+    (directory / GREENHOUSE_FILE).write_text(
+        description.model_dump_json(indent=2) + "\n", encoding="utf-8"
+    )
     _write_jsonl(directory / OBSERVATIONS_FILE, sorted_observations)
     _write_jsonl(directory / EVENTS_FILE, sorted_events)
 
@@ -160,20 +162,21 @@ def write_canonical_greenhouse(
         },
     )
     (directory / PROVENANCE_FILE).write_text(
-        json.dumps(provenance.model_dump(mode="json"), indent=2, sort_keys=True) + "\n"
+        json.dumps(provenance.model_dump(mode="json"), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
     )
     return CanonicalGreenhouse(directory)
 
 
 def _write_jsonl(path: Path, records: Iterable[BaseModel]) -> None:
-    with path.open("w") as sink:
+    with path.open("w", encoding="utf-8") as sink:
         for record in records:
             sink.write(record.model_dump_json())
             sink.write("\n")
 
 
 def _read_jsonl[T: BaseModel](path: Path, model: type[T]) -> Iterator[T]:
-    with path.open() as source:
+    with path.open(encoding="utf-8") as source:
         for line in source:
             if line.strip():
                 yield model.model_validate_json(line)
