@@ -4,7 +4,9 @@ runs a day in well under a second."""
 
 import json
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import AbstractContextManager
 from http import HTTPStatus
 
 import pytest
@@ -147,6 +149,17 @@ def test_it_takes_over_anothers_air_up_to_where_their_schedules_differ() -> None
     assert second.air_at(4 * hour).temperature_c == pytest.approx(
         alone.air_at(4 * hour).temperature_c, abs=1e-9
     )
+
+
+def test_it_carries_on_from_another_without_waiting_for_a_request_working_it_on(
+    finishes_beside_held: Callable[[AbstractContextManager[bool], Callable[[], object]], bool],
+) -> None:
+    first = WholeHouse(_run())
+    first.air_at(2 * 3600.0)
+    second = WholeHouse(_run())
+
+    assert finishes_beside_held(first._working, lambda: second.carry_on_from(first))
+    assert second._kept.keys() == first._kept.keys()
 
 
 def test_its_air_is_the_same_whatever_moments_were_asked_for_before() -> None:

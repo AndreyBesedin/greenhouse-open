@@ -8,6 +8,7 @@ its own air and sunlight, for a day or two.
 """
 
 from collections.abc import Callable, Sequence
+from contextlib import AbstractContextManager
 from http import HTTPStatus
 from typing import Any, Final
 
@@ -271,6 +272,18 @@ def test_a_crop_takes_over_the_days_another_lived_in_the_same_air() -> None:
     assert second_asked.air == list(range(6, 10))
     assert shared == first.plants_on(6)
     assert later != first.plants_on(10)
+    assert second.local("p1", 5) == first.local("p1", 5)
+
+
+def test_a_crop_carries_on_from_another_without_waiting_for_a_request_working_it_on(
+    finishes_beside_held: Callable[[AbstractContextManager[bool], Callable[[], object]], bool],
+) -> None:
+    first = _crop()
+    first.plants_on(6)
+    second = _crop()
+
+    assert finishes_beside_held(first._working, lambda: second.carry_on_from(first, 6))
+    assert second.plants_on(6) == first.plants_on(6)
     assert second.local("p1", 5) == first.local("p1", 5)
 
 
