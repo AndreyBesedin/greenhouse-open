@@ -24,10 +24,16 @@ def _height_cm(plant: Plant) -> float:
     return sum(phytomer.internode.length_cm for phytomer in plant.stem.phytomers)
 
 
-def _crop() -> list[tuple[float, Plant, Plant]]:
+Crop = list[tuple[float, Plant, Plant]]
+
+
+@pytest.fixture(scope="module")
+def crop() -> Crop:
     """Each plant's vigour, and the plant on days 60 and 90 of the lab's
-    reference run."""
-    crop = []
+    reference run: grown once, by the first of these tests that runs, and
+    not when the file is collected, which a run leaving them out still
+    does."""
+    grown = []
     for seed in SEEDS:
         for plant_id in plants.plant_ids():
             traits = draw_traits(seed, plant_id, transplants.VARIATION)
@@ -35,30 +41,27 @@ def _crop() -> list[tuple[float, Plant, Plant]]:
             transplant = develop(plant, transplants.TRANSPLANT_CD, transplants.DEVELOPMENT)
             day_60 = grow(transplant, [REFERENCE] * 60, transplants.DEVELOPMENT)
             day_90 = grow(day_60, [REFERENCE] * 30, transplants.DEVELOPMENT)
-            crop.append((traits.vigour, day_60, day_90))
-    return crop
+            grown.append((traits.vigour, day_60, day_90))
+    return grown
 
 
-CROP = _crop()
-
-
-def test_every_plant_keeps_every_rule() -> None:
-    for _, day_60, day_90 in CROP:
+def test_every_plant_keeps_every_rule(crop: Crop) -> None:
+    for _, day_60, day_90 in crop:
         assert day_60.problems() == [] and day_90.problems() == []
 
 
-def test_plants_vary_in_height_but_stay_one_crop_and_are_never_clones() -> None:
-    heights = np.array([_height_cm(day_60) for _, day_60, _ in CROP])
+def test_plants_vary_in_height_but_stay_one_crop_and_are_never_clones(crop: Crop) -> None:
+    heights = np.array([_height_cm(day_60) for _, day_60, _ in crop])
 
     assert 130 < heights.mean() < 180
     assert 0.08 < heights.std() / heights.mean() < 0.2
     assert heights.min() > 0.6 * heights.mean() and heights.max() < 1.5 * heights.mean()
-    assert len(set(heights.round(9))) == len(CROP)
+    assert len(set(heights.round(9))) == len(crop)
 
 
-def test_vigorous_plants_grow_taller_and_carry_more_fruit() -> None:
-    vigour = np.array([v for v, _, _ in CROP])
-    heights = np.array([_height_cm(day_60) for _, day_60, _ in CROP])
+def test_vigorous_plants_grow_taller_and_carry_more_fruit(crop: Crop) -> None:
+    vigour = np.array([v for v, _, _ in crop])
+    heights = np.array([_height_cm(day_60) for _, day_60, _ in crop])
     load = np.array(
         [
             sum(
@@ -68,7 +71,7 @@ def test_vigorous_plants_grow_taller_and_carry_more_fruit() -> None:
                 for flower in phytomer.truss.flowers
                 if flower.fruit is not None and flower.fruit.stage == FruitStage.ATTACHED
             )
-            for _, _, day_90 in CROP
+            for _, _, day_90 in crop
         ]
     )
 
@@ -76,19 +79,19 @@ def test_vigorous_plants_grow_taller_and_carry_more_fruit() -> None:
     assert np.corrcoef(vigour, load)[0, 1] > 0.1
 
 
-def test_development_runs_at_a_tomatos_pace() -> None:
-    phytomers = np.array([len(day_60.stem.phytomers) for _, day_60, _ in CROP])
+def test_development_runs_at_a_tomatos_pace(crop: Crop) -> None:
+    phytomers = np.array([len(day_60.stem.phytomers) for _, day_60, _ in crop])
     trusses = np.array(
-        [sum(p.truss is not None for p in day_90.stem.phytomers) for _, _, day_90 in CROP]
+        [sum(p.truss is not None for p in day_90.stem.phytomers) for _, _, day_90 in crop]
     )
 
     assert 25 < phytomers.mean() < 30 and 22 <= phytomers.min() and phytomers.max() <= 34
     assert 9 < trusses.mean() < 12 and trusses.min() >= 8
 
 
-def test_flowers_set_and_fruits_ripen_at_a_plausible_rate_and_size() -> None:
+def test_flowers_set_and_fruits_ripen_at_a_plausible_rate_and_size(crop: Crop) -> None:
     set_rates, reds, red_masses = [], [], []
-    for _, _, day_90 in CROP:
+    for _, _, day_90 in crop:
         flowers = [
             flower
             for phytomer in day_90.stem.phytomers
