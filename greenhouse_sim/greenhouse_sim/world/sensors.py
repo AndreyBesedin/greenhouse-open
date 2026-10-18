@@ -23,7 +23,7 @@ import math
 from typing import Annotated, Final, Literal, Self
 
 from greenhouse_protocol.sensor import CameraIntrinsics
-from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, PositiveFloat, model_validator
+from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, model_validator
 
 from greenhouse_sim.domain.layout import FixtureKind, Material, Obstruction
 from greenhouse_sim.domain.sensors import SensorKind
@@ -37,6 +37,9 @@ CAMERA_BODY_M: Final = (0.12, 0.08, 0.08)
 _UP: Final = Vector3(x=0.0, y=0.0, z=1.0)
 _ACROSS: Final = Vector3(x=0.0, y=1.0, z=0.0)
 _NOTHING: Final[frozenset[Obstruction]] = frozenset()
+# A sensor's shortest cadence: two samples a second or more apart are
+# stamped with different seconds, so their identifiers differ.
+MIN_CADENCE_S: Final = 1.0
 # What each kind of point sensor reports its quantity in.
 UNITS: Final = {
     SensorKind.TEMPERATURE: "°C",
@@ -101,8 +104,9 @@ class _Sensor(BaseModel):
 
     sensor_id: str
     position: Vector3
-    # A sample every so many seconds of a run.
-    cadence_s: PositiveFloat = 60.0
+    # A sample every so many seconds of a run: a second or more, as each
+    # sample's identifier is stamped to the second (`greenhouse_sim.records`).
+    cadence_s: float = Field(default=60.0, ge=MIN_CADENCE_S)
 
 
 class PointSensor(_Sensor):
