@@ -236,11 +236,11 @@ class ClimateRun:
     def opening_levels_at(self, time_s: float) -> dict[str, float]:
         """How far each of its doors and vents stands open at `time_s`: as
         far as it is opened at the start, until a command moves it."""
-        levels = {vent.opening_id: vent.opening.opening for vent in self.vents}
-        for command in self.schedule.applied(time_s):
-            if command.actuator_id in levels:
-                levels[command.actuator_id] = command.level
-        return levels
+        commanded = self.schedule.commanded_levels(time_s)
+        return {
+            vent.opening_id: commanded.get(vent.opening_id, vent.opening.opening)
+            for vent in self.vents
+        }
 
     def openings_for(
         self, air: AirState, outside: WeatherState, time_s: float
@@ -353,7 +353,7 @@ class ClimateRun:
     def _worked_to(self, time_s: float) -> AirState:
         start = max(moment for moment in self._kept if moment <= time_s)
         air = self._kept[start]
-        changes = {moment for moment in self.schedule.moments() if start < moment <= time_s}
+        changes = set(self.schedule.moments_between(start, time_s))
         minutes = int(time_s // KEEP_EVERY_S) - int(start // KEEP_EVERY_S)
         kept = {
             (int(start // KEEP_EVERY_S) + step) * KEEP_EVERY_S for step in range(1, minutes + 1)

@@ -79,7 +79,7 @@ def test_a_schedule_replays_the_same_from_its_record() -> None:
 def test_levels_set_at_the_start_are_commands_at_time_zero() -> None:
     schedule = Schedule.from_start({"heater": 0.5, "fan": 1.0})
 
-    assert schedule.commands == [_at(0, "fan", 1.0), _at(0, "heater", 0.5)]
+    assert schedule.commands == (_at(0, "fan", 1.0), _at(0, "heater", 0.5))
 
 
 def test_commands_to_equipment_a_layout_lacks_are_named() -> None:
