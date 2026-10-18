@@ -23,6 +23,7 @@ run lasts is its scenario's (`ScenarioConfig.run_length_s`).
 
 import math
 import threading
+import weakref
 from collections import OrderedDict
 from typing import Final
 
@@ -60,6 +61,12 @@ class ClimateDay:
         self._windows: OrderedDict[float, ClimateRun] = OrderedDict()
         # The later grid runs are kept and dropped one request at a time.
         self._keeping = threading.RLock()
+        # The days this one carries on from (`carry_on_from`), each with the
+        # moment up to which the two are the same air: a later grid run
+        # started before then is started on them too, so that whichever day
+        # is asked for it first, the other takes it over. Held weakly: a day
+        # the kept runs have forgotten is not kept alive by its branches.
+        self._sources: list[tuple[weakref.ref[ClimateDay], float]] = []
 
     def _uniform(self, air: HouseAir) -> AirState:
         shape = self.run.solid.shape
@@ -74,13 +81,21 @@ class ClimateDay:
     def _started(self, start_s: float) -> ClimateRun:
         with self._keeping:
             window = self._windows.get(start_s)
-            if window is None:
-                window = self.run.started_at(start_s, self._uniform(self.house.air_at(start_s)))
-                self._windows[start_s] = window
-                if len(self._windows) > KEPT_WINDOWS:
-                    self._windows.popitem(last=False)
-            else:
+            if window is not None:
                 self._windows.move_to_end(start_s)
+                return window
+            window = self.run.started_at(start_s, self._uniform(self.house.air_at(start_s)))
+            self._windows[start_s] = window
+            if len(self._windows) > KEPT_WINDOWS:
+                self._windows.popitem(last=False)
+            for source, until in self._sources:
+                other = source()
+                if other is None or start_s >= until:
+                    continue
+                # The same air up to `until`, whichever works it out first.
+                theirs = other._started(start_s)
+                window.carry_on_from(theirs)
+                theirs.carry_on_from(window)
             return window
 
     def window(self, time_s: float) -> ClimateRun:
@@ -115,13 +130,18 @@ class ClimateDay:
         """Take over what `other` has worked out up to the first moment its
         schedule and this day's differ: its grid run from the start, its
         whole house, and those of its later grid runs that start before
-        then, each from the same start. A later grid run that starts after
-        the two differ shares nothing with this day's, and is not started
-        here: starting it would work this day's house out to its start."""
+        then, each from the same start; and those started later, on either
+        day, as they are started (`_started`). A later grid run that starts
+        after the two differ shares nothing with this day's, and is not
+        started here: starting it would work this day's house out to its
+        start."""
         self.run.carry_on_from(other.run)
         self.house.carry_on_from(other.house)
         until = self.run.schedule.same_until(other.run.schedule)
+        with self._keeping:
+            self._sources = [(source, up_to) for source, up_to in self._sources if source()]
+            self._sources.append((weakref.ref(other), until))
         with other._keeping:
-            theirs = [(start, window) for start, window in other._windows.items() if start < until]
-        for start, window in theirs:
-            self._started(start).carry_on_from(window)
+            starts = [start for start in other._windows if start < until]
+        for start in starts:
+            self._started(start)

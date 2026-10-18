@@ -281,24 +281,30 @@ class RunCrop:
             if other is None:
                 continue
             through = min(day, days)
-            with other._kept_changed:
-                while True:
+            while True:
+                # Only this request writes what this crop keeps: `_working` is
+                # held. The two `_keeping` locks are never held together,
+                # since two crops may carry on from each other.
+                with other._kept_changed:
                     lived = other._lived[:through]
                     kept = [
                         (kept_day, plants)
                         for kept_day, plants in other._kept.items()
                         if kept_day <= through
                     ]
-                    with self._keeping:
-                        if len(self._lived) < len(lived):
-                            self._lived = lived
-                        for kept_day, plants in kept:
-                            if kept_day <= len(self._lived):
-                                self._kept.setdefault(kept_day, plants)
-                        since = len(self._lived)
-                    if not other._working_through(since, through):
-                        break
-                    other._kept_changed.wait(LOOK_AGAIN_S)
+                    ahead = max(len(self._lived), len(lived))
+                    waiting = other._working_through(ahead, through)
+                    if waiting:
+                        other._kept_changed.wait(LOOK_AGAIN_S)
+                with self._keeping:
+                    if len(self._lived) < len(lived):
+                        self._lived = lived
+                    for kept_day, plants in kept:
+                        if kept_day <= len(self._lived):
+                            self._kept.setdefault(kept_day, plants)
+                    self._bounded(day)
+                if not waiting:
+                    break
 
     def _working_through(self, since: int, through: int) -> bool:
         """Whether a request is living this crop through a day past `since`
@@ -362,7 +368,12 @@ class RunCrop:
         with self._keeping:
             self._kept[day] = plants
             self._kept.move_to_end(day)
-            latest = max(self._kept)
-            while len(self._kept) > KEPT_DAYS + 2:
-                oldest = next(kept for kept in self._kept if kept not in (0, latest, day))
-                del self._kept[oldest]
+            self._bounded(day)
+
+    def _bounded(self, day: int) -> None:
+        """Drop the days kept longest ago beyond `KEPT_DAYS` and two: never
+        the first, the latest or `day`. Called with `_keeping` held."""
+        latest = max(self._kept)
+        while len(self._kept) > KEPT_DAYS + 2:
+            oldest = next(kept for kept in self._kept if kept not in (0, latest, day))
+            del self._kept[oldest]

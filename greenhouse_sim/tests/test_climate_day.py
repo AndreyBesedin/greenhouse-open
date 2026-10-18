@@ -4,6 +4,7 @@ the same air however late a run is looked at, and the API taking a day."""
 
 import json
 from http import HTTPStatus
+from typing import NoReturn
 
 import numpy as np
 import pytest
@@ -91,6 +92,24 @@ def test_a_branch_starts_none_of_the_later_grid_runs_it_cannot_share() -> None:
     # 5:00 to start one of its own.
     assert not branch._windows
     assert max(branch.house._moments) <= HOUR_S
+
+
+def test_a_later_grid_run_is_shared_whichever_day_starts_it_first(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The source has no grid run for 3:00 to 5:00 when the branch is made;
+    # the branch is asked for 4:30 first. The source's is started beside the
+    # branch's, and takes the hour over rather than work it out again.
+    day = _day()
+    branch = _day(((6 * HOUR_S, "heater", 0.0),))
+    branch.field("f", 4.5 * HOUR_S)
+
+    def not_again(*args: object, **kwargs: object) -> NoReturn:
+        raise AssertionError("the source worked out an hour its branch had")
+
+    window = day.window(4.5 * HOUR_S)
+    monkeypatch.setattr(window, "_transport", not_again)
+    assert window.air_at(4.5 * HOUR_S) is branch.window(4.5 * HOUR_S).air_at(4.5 * HOUR_S)
 
 
 def test_sensors_sample_the_grid_then_the_whole_house() -> None:

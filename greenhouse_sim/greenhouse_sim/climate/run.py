@@ -364,20 +364,24 @@ class ClimateRun:
             if other is None:
                 continue
             up_to = min(time_s, until)
-            with other._kept_changed:
-                while True:
-                    since = max(
-                        (moment for moment in self._kept if moment <= up_to), default=self.start_s
-                    )
+            while True:
+                # Only this request writes what this run keeps: `_working` is
+                # held. The two `_keeping` locks are never held together,
+                # since two runs may carry on from each other.
+                since = max(
+                    (moment for moment in self._kept if moment <= up_to), default=self.start_s
+                )
+                with other._kept_changed:
                     theirs = [(m, air) for m, air in other._kept.items() if since < m <= up_to]
-                    with self._keeping:
-                        for moment, air in theirs:
-                            self._kept.setdefault(moment, air)
-                    if theirs:
-                        since = max(moment for moment, _ in theirs)
-                    if not other._working_through(since, up_to):
-                        break
-                    other._kept_changed.wait(LOOK_AGAIN_S)
+                    ahead = max((moment for moment, _ in theirs), default=since)
+                    waiting = other._working_through(ahead, up_to)
+                    if waiting:
+                        other._kept_changed.wait(LOOK_AGAIN_S)
+                with self._keeping:
+                    for moment, air in theirs:
+                        self._kept.setdefault(moment, air)
+                if not waiting:
+                    break
 
     def _working_through(self, since: float, up_to: float) -> bool:
         """Whether a request is working this run's air through a moment past

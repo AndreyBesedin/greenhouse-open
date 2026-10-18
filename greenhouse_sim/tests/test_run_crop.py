@@ -27,7 +27,7 @@ from greenhouse_sim.biology.tomato.organ.transplants import transplant
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.core.clock import DAY_S, days_ended
-from greenhouse_sim.core.crop import CropLight, CropWork, RunCrop
+from greenhouse_sim.core.crop import KEPT_DAYS, CropLight, CropWork, RunCrop
 from greenhouse_sim.core.timeline import HARVEST_ROUND, RunProcesses, events
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.organs import FruitStage
@@ -327,6 +327,20 @@ def test_a_crop_waits_for_another_living_the_days_it_needs() -> None:
     assert taken == first.plants_on(6)
     assert second.local("p1", 5) == first.local("p1", 5)
     assert second_asked.air == []
+
+
+def test_a_crop_keeps_no_more_days_for_what_it_takes_over() -> None:
+    # Its source keeps a few days at a time, different ones as it is asked
+    # on: the branch, taking them over day after day, keeps as few.
+    first = _crop()
+    second = _crop()
+    second.carry_on_from(first, 12)
+
+    for day in range(1, 9):
+        first.plants_on(day)
+        second.local("p1", day - 1)
+
+    assert len(second._kept) <= KEPT_DAYS + 2
 
 
 def test_the_timeline_lists_each_harvest_round_after_the_plants_day() -> None:

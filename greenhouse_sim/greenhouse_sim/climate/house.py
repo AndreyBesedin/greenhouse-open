@@ -240,17 +240,25 @@ class WholeHouse:
             if other is None:
                 continue
             up_to = min(time_s, until)
-            with other._kept_changed:
-                while True:
-                    since = self._moments[bisect_right(self._moments, up_to) - 1]
+            while True:
+                # Only this request writes what this house keeps: `_working`
+                # is held. The two `_keeping` locks are never held together,
+                # since two houses may carry on from each other.
+                since = self._moments[bisect_right(self._moments, up_to) - 1]
+                with other._kept_changed:
                     first = bisect_right(other._moments, since)
                     last = bisect_right(other._moments, up_to)
-                    for moment in other._moments[first:last]:
-                        self._keep(moment, other._kept[moment])
-                    since = self._moments[bisect_right(self._moments, up_to) - 1]
-                    if not other._working_through(since, up_to):
-                        break
-                    other._kept_changed.wait(LOOK_AGAIN_S)
+                    theirs = [
+                        (moment, other._kept[moment]) for moment in other._moments[first:last]
+                    ]
+                    ahead = theirs[-1][0] if theirs else since
+                    waiting = other._working_through(ahead, up_to)
+                    if waiting:
+                        other._kept_changed.wait(LOOK_AGAIN_S)
+                for moment, air in theirs:
+                    self._keep(moment, air)
+                if not waiting:
+                    break
 
     def _working_through(self, since: float, up_to: float) -> bool:
         """Whether a request is working this house's air through a step past
