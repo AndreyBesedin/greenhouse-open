@@ -8,6 +8,11 @@ on:
 permissions:
   contents: read
 
+# The uv every job installs with (decision 0039). Dependabot does not move
+# it: it is moved by hand, here and in cfd.yml.
+env:
+  UV_VERSION: "0.13.0"
+
 # A pull request's newer push stops its older run; every push to main runs
 # to its end.
 concurrency:
@@ -32,23 +37,21 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      # uv, which installs the Python that .python-version names, and the
+      # workspace at the versions uv.lock pins (decision 0039).
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
-          python-version: "3.14"
-          cache: pip
-          cache-dependency-path: |
-            requirements-dev.txt
-            greenhouse_*/pyproject.toml
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: uv.lock
 
-      # Built and installed as wheels, as a user would get them.
+      # Built and installed as wheels, as a user would get them. A lockfile
+      # that no longer matches the pyproject.toml files fails here.
       - name: Install the packages and tools
-        run: >-
-          python -m pip install
-          ./greenhouse_protocol ./greenhouse_sim ./greenhouse_adapters
-          -r requirements-dev.txt
+        run: uv sync --locked --no-editable
 
       - name: Run canonical repository checks
-        run: python scripts/check.py --only ${{ matrix.part }}
+        run: uv run --no-sync python scripts/check.py --only ${{ matrix.part }}
 
   # The four parts as the one check the `main` ruleset requires.
   checks:
@@ -70,24 +73,25 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
-          python-version: "3.14"
+          version: ${{ env.UV_VERSION }}
 
       # The protocol and the adapters with each of their own dependencies at
       # the lowest version their metadata allows, so that a floor below what
-      # the code needs fails here rather than for a user (AUDIT.24).
+      # the code needs fails here rather than for a user (AUDIT.24); pytest
+      # at the workspace's pin.
       - name: Install the packages at their lowest dependencies
         run: |
-          python -m pip install "$(grep '^uv==' requirements-dev.txt)" \
-            "$(grep '^pytest==' requirements-dev.txt)"
-          uv pip install --system --resolution lowest-direct \
-            ./greenhouse_protocol ./greenhouse_adapters
+          uv venv
+          uv pip install --resolution lowest-direct \
+            ./greenhouse_protocol ./greenhouse_adapters \
+            "$(uv export --frozen --only-group dev --no-hashes | grep '^pytest==')"
 
       - name: Test them
         run: |
-          (cd greenhouse_protocol && python -m pytest -q)
-          (cd greenhouse_adapters && python -m pytest -q)
+          (cd greenhouse_protocol && ../.venv/bin/python -m pytest -q)
+          (cd greenhouse_adapters && ../.venv/bin/python -m pytest -q)
 
   viewer:
     name: viewer checks
@@ -151,12 +155,17 @@ jobs:
 
       # The browser tests serve the simulator's API, so they need the Python
       # packages, installed as wheels as in the repository checks.
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      # uv, which installs the Python that .python-version names, and the
+      # workspace at the versions uv.lock pins (decision 0039).
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
-          python-version: "3.14"
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: uv.lock
 
       - name: Install the simulator
-        run: python -m pip install ../../greenhouse_protocol ..
+        working-directory: .
+        run: uv sync --locked --no-editable --no-dev
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
@@ -164,6 +173,7 @@ jobs:
       - name: Browser tests
         run: npm run e2e
         env:
+          PYTHON: ${{ github.workspace }}/.venv/bin/python
           BROWSER_TEST_LANE: ${{ matrix.lane }}
           BROWSER_TEST_LANES: ${{ strategy.job-total }}
 

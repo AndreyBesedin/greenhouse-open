@@ -37,9 +37,7 @@ browser-tests = "greenhouse_dev.commands:main"
 record-demo = "greenhouse_dev.commands:main"
 
 # The tools that check the packages, pinned; `uv run` installs them with the
-# packages. requirements-dev.txt holds the same pins for CI, which installs
-# with pip, until it moves to uv (tests/test_dev_commands.py keeps the two
-# equal).
+# packages, and CI with `uv sync --locked`.
 [dependency-groups]
 dev = [
     "pytest==9.1.1",

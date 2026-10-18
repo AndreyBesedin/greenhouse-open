@@ -118,8 +118,11 @@ and camera work below; configured the same day, decision 0033).
 opens pull requests for the updates found, in:
 
 - **npm:** the viewer's `greenhouse_sim/web/package.json` and its lockfile;
-- **pip:** the development tools pinned in `requirements-dev.txt`, and the
-  three packages' `pyproject.toml`;
+- **uv:** the development tools pinned in the root `pyproject.toml` and
+  locked in `uv.lock` (decision 0039), and nothing else of the workspace;
+- **pip:** the three packages' `pyproject.toml`, whose ranges move only
+  when a release falls outside them; `uv lock` on the pull request's branch
+  then brings `uv.lock` along, which CI's `uv sync --locked` asks for;
 - **GitHub Actions:** the actions `.github/workflows/` uses;
 - **pre-commit:** the hooks' `rev`s in `.pre-commit-config.yaml`.
 
@@ -146,8 +149,7 @@ GitHub's auto-merge, which merges once the third holds too; a later push
 that breaks the first two turns it off again. Everything else waits for a
 review: majors, minor updates below 1.0, and whatever was completed by
 hand. As the risk gate stands, only npm's updates can merge by themselves:
-it holds every Actions, `pyproject.toml` and `requirements-dev.txt` change
-for a review, which on Dependabot's pull requests is an approval of the
+it holds every Actions and `pyproject.toml` change for a review, which on Dependabot's pull requests is an approval of the
 latest commit (decision 0034). Dependabot proposes a release only once it
 is three days old (its `cooldown`), so that one found compromised is
 usually withdrawn first.
@@ -169,8 +171,8 @@ What the repository already ties together:
   comes in a pull request of its own, which fails the visual checks until
   the image is moved by hand; screenshots that then differ get new
   baselines from CI, as any do.
-- **ruff** is pinned twice, in `requirements-dev.txt` and as the pre-commit
-  hook's `rev`. The two come in two pull requests, ruff's alone in its
+- **ruff** is pinned twice, in the root `pyproject.toml` and as the
+  pre-commit hook's `rev`. The two come in two pull requests, ruff's alone in its
   ecosystem's, and are merged together.
 - **`@types/node`** stays on the major of the viewer's Node, 24.
 - **The packages' runtime dependencies** are ranges, what a user may install

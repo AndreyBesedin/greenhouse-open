@@ -323,8 +323,8 @@ uv run check
 
 The same canonical command (`scripts/check.py`) is used by CI so local and
 remote checks do not quietly drift apart.
-It runs the simulator's tests in a process per core (`pytest-xdist`, in the
-development requirements), each test file in one process: a test may not
+It runs the simulator's tests in a process per core (`pytest-xdist`, among
+the workspace's development tools), each test file in one process: a test may not
 rely on another file's having run first, in the same process or at all.
 CI runs it in four jobs at once, one per part (`--only protocol`, `sim`,
 `adapters` or `root`), and gathers them as the one required check,

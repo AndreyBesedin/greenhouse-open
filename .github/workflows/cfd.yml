@@ -30,6 +30,10 @@ on:
 permissions:
   contents: read
 
+# ci.yml's uv (decision 0039), moved by hand with it.
+env:
+  UV_VERSION: "0.13.0"
+
 jobs:
   openfoam:
     name: OpenFOAM meshes and solves the reference cases
@@ -38,25 +42,27 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      # uv, which installs the Python and the workspace.
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
-          python-version: "3.14"
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: uv.lock
 
       # Editable, so that a solve keeps its result where the repository does.
       - name: Install the simulator and its tests' tools
-        run: >-
-          python -m pip install
-          -e ./greenhouse_protocol -e ./greenhouse_sim
-          -r requirements-dev.txt
+        run: uv sync --locked
 
       # The image the runner names, by digest: the kept results are what it
       # solves.
       - name: Pull OpenFOAM's container
-        run: docker pull "$(python -c 'from greenhouse_sim.cfd.runner import DEFAULT_IMAGE; print(DEFAULT_IMAGE)')"
+        run: >-
+          docker pull "$(uv run --no-sync python -c
+          'from greenhouse_sim.cfd.runner import DEFAULT_IMAGE; print(DEFAULT_IMAGE)')"
 
       - name: Run the tests that run OpenFOAM
         working-directory: greenhouse_sim
-        run: python -m pytest -m cfd -v -rs
+        run: uv run --no-sync python -m pytest -m cfd -v -rs
 
       # Every case whose result is kept, so that a stale one can be taken
       # from here.
@@ -64,11 +70,12 @@ jobs:
         if: always()
         working-directory: greenhouse_sim
         run: |
-          python -m greenhouse_sim.cfd tomato_compartment \
+          uv run --no-sync python -m greenhouse_sim.cfd tomato_compartment \
             "$RUNNER_TEMP/cases/tomato_compartment" --solve
-          python -m greenhouse_sim.cfd airflow_box "$RUNNER_TEMP/cases/airflow_box" --solve
-          python -m greenhouse_sim.cfd airflow_box "$RUNNER_TEMP/cases/airflow_box@open" \
-            --layout open --solve
+          uv run --no-sync python -m greenhouse_sim.cfd airflow_box \
+            "$RUNNER_TEMP/cases/airflow_box" --solve
+          uv run --no-sync python -m greenhouse_sim.cfd airflow_box \
+            "$RUNNER_TEMP/cases/airflow_box@open" --layout open --solve
 
       - name: Keep the solved results and the solver's logs
         if: always()

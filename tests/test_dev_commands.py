@@ -102,13 +102,15 @@ def test_the_guides_quote_only_commands_that_exist() -> None:
     assert sorted(q for q in quoted if q[1] not in {*commands.COMMANDS, *INSTALLED}) == []
 
 
-def test_ci_installs_the_tools_the_workspace_pins() -> None:
-    # CI installs requirements-dev.txt with pip until it moves to uv; uv is
-    # pinned there for CI's lowest-dependencies job alone.
-    pinned = {
-        line.strip()
-        for line in (ROOT / "requirements-dev.txt").read_text().splitlines()
-        if line.strip() and not line.startswith("#") and not line.startswith("uv==")
-    }
+def test_ci_installs_python_with_uv_from_the_lock() -> None:
+    # pip would install whatever its index has today, not what uv.lock pins.
+    workflows = sorted((ROOT / ".github" / "workflows").glob("*.yml"))
+    with_pip = [
+        workflow.name
+        for workflow in workflows
+        for line in workflow.read_text().splitlines()
+        if "pip install" in line and "uv pip install" not in line
+    ]
 
-    assert pinned == set(PYPROJECT["dependency-groups"]["dev"])
+    assert with_pip == []
+    assert "uv sync --locked" in (ROOT / ".github" / "workflows" / "ci.yml").read_text()
