@@ -67,7 +67,7 @@ class Schedule(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    commands: list[Command] = []
+    commands: tuple[Command, ...] = ()
 
     @model_validator(mode="after")
     def _in_order(self) -> Self:
@@ -80,16 +80,16 @@ class Schedule(BaseModel):
     def of(cls, commands: Iterable[Command]) -> Schedule:
         """A schedule of commands given in any order: sorted by time, keeping
         the given order at each time."""
-        return cls(commands=sorted(commands, key=lambda command: command.time_s))
+        return cls(commands=tuple(sorted(commands, key=lambda command: command.time_s)))
 
     @classmethod
     def from_start(cls, levels: dict[str, float]) -> Schedule:
         """Levels set at the start of a run, by actuator."""
         return cls(
-            commands=[
+            commands=tuple(
                 Command(time_s=0.0, actuator_id=actuator_id, level=level)
                 for actuator_id, level in sorted(levels.items())
-            ]
+            )
         )
 
     def unknown(self, actuator_ids: Iterable[str]) -> list[str]:
@@ -99,8 +99,9 @@ class Schedule(BaseModel):
 
     # The schedule indexed by moment, worked out once: a run asks for its
     # levels at every step of a season, and a season's schedule holds
-    # thousands of commands. A schedule is never changed, or copied with
-    # changes, so the indexes stay its own.
+    # thousands of commands. A schedule cannot be changed, its commands
+    # being a tuple, and is never copied with changes, which would carry
+    # the indexes over: they stay its own.
     @cached_property
     def _times(self) -> list[float]:
         return [command.time_s for command in self.commands]
@@ -123,7 +124,7 @@ class Schedule(BaseModel):
     def applied(self, until_s: float) -> list[Command]:
         """The commands a run applies up to and including `until_s`, in order:
         its log."""
-        return self.commands[: bisect_right(self._times, until_s)]
+        return list(self.commands[: bisect_right(self._times, until_s)])
 
     def commanded_levels(self, time_s: float) -> dict[str, float]:
         """The level each actuator commanded by `time_s` stands at: the last

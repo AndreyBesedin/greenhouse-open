@@ -146,3 +146,16 @@ def test_the_schedule_read_by_moment_is_the_schedule_read_through() -> None:
         assert schedule.moments_between(moment, moment + 7.5) == sorted(
             {c.time_s for c in schedule.commands if moment < c.time_s <= moment + 7.5}
         )
+
+
+def test_a_schedules_commands_cannot_change_under_its_indexes() -> None:
+    # Read once, its indexes are kept: a command added afterwards would be
+    # in its commands and not in what it applies.
+    schedule = Schedule.of([Command(time_s=0.0, actuator_id="heater", level=1.0)])
+    schedule.applied(0.0)
+
+    with pytest.raises(AttributeError):
+        schedule.commands.append(  # type: ignore[attr-defined]
+            Command(time_s=10.0, actuator_id="fan", level=1.0)
+        )
+    assert schedule.applied(10.0) == list(schedule.commands)

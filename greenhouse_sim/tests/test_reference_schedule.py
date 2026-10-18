@@ -68,7 +68,7 @@ def test_a_run_gives_its_scenarios_daily_commands_unless_it_gives_its_own() -> N
         (64800.0, "heater"),
         (DAY_S + 64800.0, "heater"),
     ]
-    assert none.commands == []
+    assert none.commands == ()
 
 
 def test_the_api_reads_daily_none_as_none_and_leaves_out_none_as_its_own() -> None:
