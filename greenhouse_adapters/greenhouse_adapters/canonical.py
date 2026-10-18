@@ -10,16 +10,19 @@ domain models themselves.
                            their checksums, and content hashes of the
                            outputs - so a rebuild can be checked for drift
 
-Deterministic by construction: same source bytes -> same output bytes.
+Deterministic by construction: same source bytes -> same output bytes. What
+is written passes the protocol's conformance checks, or nothing is written.
 """
 
 import hashlib
 import json
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from greenhouse_protocol.contracts.conformance import check_events, check_observations
 from greenhouse_protocol.event import Event
 from greenhouse_protocol.greenhouse import GreenhouseDescription
 from greenhouse_protocol.observation import Observation
@@ -31,6 +34,14 @@ EVENTS_FILE = "events.jsonl"
 PROVENANCE_FILE = "provenance.json"
 
 _HASH_CHUNK_BYTES = 1024 * 1024
+# A refused build can break thousands of records the same way; its error
+# names the first few.
+_VIOLATIONS_NAMED = 5
+
+
+class RefusedBuild(ValueError):
+    """A build the canonical tier does not write: one whose records fail the
+    protocol's conformance checks, or one with no readings at all."""
 
 
 class SourceMember(BaseModel):
@@ -84,6 +95,15 @@ class CanonicalGreenhouse:
         yield from _read_jsonl(self.directory / EVENTS_FILE, Event)
 
 
+def recording_start(observations: Sequence[Observation]) -> datetime:
+    """When the source's recording starts, its first reading: a
+    greenhouse's `created_at`, so that the tier is a pure function of the
+    source data and not of when the build ran."""
+    if not observations:
+        raise RefusedBuild("the source has no readings, so no greenhouse is built from it")
+    return min(o.timestamp for o in observations)
+
+
 def write_canonical_greenhouse(
     directory: Path,
     *,
@@ -96,11 +116,22 @@ def write_canonical_greenhouse(
     sources: list[SourceMember],
     selection: dict[str, Any],
 ) -> CanonicalGreenhouse:
-    directory.mkdir(parents=True, exist_ok=True)
+    # Checked before they are sorted: records built without validation may
+    # hold a naive timestamp beside an aware one, which cannot be ordered.
+    observations = list(observations)
+    events = list(events)
+    violations = check_observations(observations) + check_events(events)
+    if violations:
+        raise RefusedBuild(
+            f"{len(violations)} conformance violation(s) in what {adapter} would write, "
+            "for example: " + "; ".join(violations[:_VIOLATIONS_NAMED])
+        )
     sorted_observations = sorted(
         observations, key=lambda o: (o.timestamp, o.observation_type.value, o.observation_id)
     )
     sorted_events = sorted(events, key=lambda e: (e.timestamp, e.event_type.value, e.event_id))
+
+    directory.mkdir(parents=True, exist_ok=True)
 
     # Only the description, even if a caller passes a richer subclass, so
     # the tier stays the same whoever wrote it.
