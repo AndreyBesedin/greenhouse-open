@@ -4,8 +4,9 @@ A periodic look at the repository as a whole, apart from any one project:
 what works, what repeats, what is missing, and in what order to put it
 right. An audit records the commit it looked at, what it measured, its
 findings with identifiers that pull requests can cite, and an order of
-work. The roadmap schedules that work; the audit is not edited once its
-work begins, apart from its findings' status.
+work. The roadmap schedules that work; once it begins, the audit is not
+edited, apart from its table naming the pull requests that do each
+finding's work.
 
 | Audit | Date | Scope | Where |
 | --- | --- | --- | --- |
