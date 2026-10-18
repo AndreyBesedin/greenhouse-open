@@ -3,6 +3,7 @@ place of the data itself. Generated from the provider's metadata API by
 `greenhouse-data inventory`, never hand-copied."""
 
 import json
+import tomllib
 from enum import StrEnum
 from pathlib import Path
 from typing import Literal
@@ -10,6 +11,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, field_validator
 
 MANIFEST_DIR = Path(__file__).resolve().parent / "manifests"
+# The name in this package's own pyproject.toml, which marks its checkout.
+PROJECT_NAME = "greenhouse-adapters"
 
 
 class ArtifactKind(StrEnum):
@@ -35,9 +38,10 @@ class ArtifactManifest(BaseModel):
     @classmethod
     def _a_plain_file_name(cls, name: str) -> str:
         # An artifact is stored under its name in the data directory, and a
-        # name comes from the provider's metadata: a path, or `..`, would put
-        # the download somewhere else.
-        if name in {"", ".", ".."} or any(c in name for c in ("/", "\\", "\0")):
+        # name comes from the provider's metadata: a path, `..`, or on
+        # Windows a drive (`D:file.zip`), would put the download somewhere
+        # else.
+        if name in {"", ".", ".."} or any(c in name for c in ("/", "\\", ":", "\0")):
             raise ValueError(f"artifact name {name!r} is not a plain file name")
         return name
 
@@ -82,8 +86,19 @@ def manifest_path(dataset_id: str) -> Path:
 
 def manifests_in_a_checkout() -> bool:
     """Whether the manifests are the source checkout's, which `inventory
-    --write` may update, rather than an installed package's copy."""
-    return (MANIFEST_DIR.parents[1] / "pyproject.toml").is_file()
+    --write` may update, rather than an installed package's copy: beside
+    this package's own metadata, not any `pyproject.toml`, which the
+    application a package is installed into (`pip install --target`) may
+    have."""
+    metadata = MANIFEST_DIR.parents[1] / "pyproject.toml"
+    if not metadata.is_file():
+        return False
+    try:
+        project = tomllib.loads(metadata.read_text(encoding="utf-8")).get("project", {})
+    except tomllib.TOMLDecodeError:
+        return False
+    name: object = project.get("name")
+    return name == PROJECT_NAME
 
 
 def load_manifest(dataset_id: str) -> DatasetManifest:

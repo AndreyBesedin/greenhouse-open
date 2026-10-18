@@ -85,7 +85,9 @@ def _artifact(name: str) -> dict[str, object]:
     }
 
 
-@pytest.mark.parametrize("name", ["../outside.zip", "a/b.zip", "a\\b.zip", "..", ".", ""])
+@pytest.mark.parametrize(
+    "name", ["../outside.zip", "a/b.zip", "a\\b.zip", "D:outside.zip", "..", ".", ""]
+)
 def test_an_artifact_named_as_a_path_is_refused(name: str) -> None:
     with pytest.raises(ValidationError, match="not a plain file name"):
         ArtifactManifest.model_validate(_artifact(name))
@@ -97,16 +99,26 @@ def test_an_artifact_named_as_the_provider_names_files_is_accepted() -> None:
     assert ArtifactManifest.model_validate(_artifact(name)).name == name
 
 
-@pytest.mark.parametrize(("in_a_checkout", "expected"), [(True, True), (False, False)])
+@pytest.mark.parametrize(
+    ("metadata", "expected"),
+    [
+        ('[project]\nname = "greenhouse-adapters"\n', True),
+        (None, False),
+        ('[project]\nname = "an-application"\n', False),
+        ("not toml [", False),
+    ],
+    ids=["a checkout", "an install", "installed into an application", "unreadable"],
+)
 def test_the_manifests_are_a_checkouts_only_beside_its_package_metadata(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, in_a_checkout: bool, expected: bool
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, metadata: str | None, expected: bool
 ) -> None:
     # A source checkout keeps them in <package>/<module>/manifests, beside
-    # <package>/pyproject.toml; an installed wheel in site-packages, without.
+    # <package>/pyproject.toml; an installed wheel in site-packages, without,
+    # or, installed with `pip install --target`, beside an application's.
     manifests = tmp_path / "greenhouse_adapters" / "greenhouse_adapters" / "manifests"
     manifests.mkdir(parents=True)
-    if in_a_checkout:
-        (tmp_path / "greenhouse_adapters" / "pyproject.toml").write_text("[project]\n")
+    if metadata is not None:
+        (tmp_path / "greenhouse_adapters" / "pyproject.toml").write_text(metadata)
     monkeypatch.setattr("greenhouse_adapters.manifests.MANIFEST_DIR", manifests)
 
     assert manifests_in_a_checkout() is expected
