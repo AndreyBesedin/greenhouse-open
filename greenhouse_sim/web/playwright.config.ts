@@ -1,11 +1,15 @@
 import { defineConfig, devices } from "@playwright/test";
 
-import { REUSE_TEST_SERVERS, simulatorApi, TEST_SIMULATOR_API_PORT } from "./simulatorApi.ts";
+import {
+  REUSE_TEST_SERVERS,
+  simulatorApi,
+  simulatorServer,
+  TEST_SIMULATOR_API_PORT,
+} from "./simulatorApi.ts";
 
 // The smoke test runs the real thing: the simulator's local API and the
 // production build of the viewer, in Chromium. PYTHON names an interpreter
-// that has greenhouse-sim installed.
-const PYTHON = process.env.PYTHON ?? "python";
+// that has greenhouse-sim installed (`simulatorServer`).
 const PREVIEW_PORT = 4317;
 const IN_CI = process.env.CI !== undefined;
 // Screenshot comparisons and the benchmark have their own configurations.
@@ -120,7 +124,7 @@ export default defineConfig({
   }),
   webServer: [
     {
-      command: `${PYTHON} -m greenhouse_sim.api --port ${TEST_SIMULATOR_API_PORT}`,
+      command: simulatorServer(TEST_SIMULATOR_API_PORT),
       url: `${simulatorApi(TEST_SIMULATOR_API_PORT)}/api/health`,
       reuseExistingServer: REUSE_TEST_SERVERS,
     },

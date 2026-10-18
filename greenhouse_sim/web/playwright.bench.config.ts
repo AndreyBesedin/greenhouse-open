@@ -1,13 +1,18 @@
 import { defineConfig } from "@playwright/test";
 
-import { REUSE_TEST_SERVERS, simulatorApi, TEST_SIMULATOR_API_PORT } from "./simulatorApi.ts";
+import {
+  REUSE_TEST_SERVERS,
+  simulatorApi,
+  simulatorServer,
+  TEST_SIMULATOR_API_PORT,
+} from "./simulatorApi.ts";
 
 // The renderer's performance benchmarks, measured on this machine's graphics
 // card: the stress scene, and the reference greenhouse at its fullest crop,
 // which its own API works out (P09.8). They are a record, not a gate: they
 // never fail on the numbers, and CI, which has no graphics card, does not run
-// them. PYTHON names an interpreter that has greenhouse-sim installed.
-const PYTHON = process.env.PYTHON ?? "python";
+// them. PYTHON names an interpreter that has greenhouse-sim installed
+// (`simulatorServer`).
 const PREVIEW_PORT = 4319;
 // Several scenes, each loaded, warmed up and orbited for seconds; the
 // reference greenhouse's sets its own, longer.
@@ -30,7 +35,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: `${PYTHON} -m greenhouse_sim.api --port ${TEST_SIMULATOR_API_PORT}`,
+      command: simulatorServer(TEST_SIMULATOR_API_PORT),
       url: `${simulatorApi(TEST_SIMULATOR_API_PORT)}/api/health`,
       reuseExistingServer: REUSE_TEST_SERVERS,
     },

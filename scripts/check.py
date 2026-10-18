@@ -36,10 +36,10 @@ def _pytest_args(*, fast: bool, package: str = ".") -> tuple[str, ...]:
 
 def _check(directory: str, *, fast: bool) -> None:
     """Lint, type-check and test a package's directory, or the root's
-    cross-package tests, examples and scripts (`.`)."""
+    cross-package tests, examples, scripts and commands (`.`)."""
     if directory == ".":
-        _run("ruff", "check", "tests", "examples", "scripts")
-        _run("ruff", "format", "--check", "tests", "examples", "scripts")
+        _run("ruff", "check", "tests", "examples", "scripts", "tools")
+        _run("ruff", "format", "--check", "tests", "examples", "scripts", "tools")
         _run("mypy")
         _run(*_pytest_args(fast=fast))
         return

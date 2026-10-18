@@ -25,16 +25,17 @@ rules themselves are in the documents above.
 ### Before a commit, and before a push
 
 ```bash
-pre-commit run --files <the files changed>
-python scripts/check.py --fast   # the pre-push hook runs it too
+uv run pre-commit run --files <the files changed>
+uv run check --fast   # the pre-push hook runs it too
 ```
 
-A change to the viewer runs its checks from `greenhouse_sim/web`, after
-`npm ci` with Node 24: `npm run lint`, `npm run typecheck`,
-`npm run coverage`, `npm run build`, and the browser tests,
-`PYTHON=python npm run e2e`, which serve the simulator from that Python
-(`docs/engineering.md` says how CI splits them into lanes). The Biome hook
-needs `npm ci` for any commit that touches `greenhouse_sim/web/`, a README
+Every task is a `uv run` command (`uv run help` lists them, decision 0039),
+with the workspace's own Python; `uv run setup` installs, once, what uv
+does not. A change to the viewer runs `uv run viewer-checks` (lint, type
+check, coverage, build) and `uv run browser-tests`, which serve the
+simulator from the workspace's Python (`docs/engineering.md` says how CI
+splits them into lanes). The Biome hook needs the viewer's packages, from
+`uv run setup`, for any commit that touches `greenhouse_sim/web/`, a README
 included.
 Commits and pull request titles follow Conventional Commits
 (`type(scope): summary`, decision 0002), and every commit is signed off.

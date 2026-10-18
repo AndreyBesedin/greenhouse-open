@@ -9,7 +9,7 @@
 ## Verification
 
 - [ ] Relevant tests added or updated
-- [ ] `python scripts/check.py --fast` passes
+- [ ] `uv run check --fast` passes
 - [ ] Behavior/documentation changes are described above
 
 ## Review

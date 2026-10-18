@@ -60,6 +60,13 @@ updates:
       dev-tools-minor-and-patch:
         patterns: ["*"]
         update-types: [minor, patch]
+    ignore:
+      # The root pyproject.toml, the development workspace (decision 0039),
+      # lists the workspace's own packages. They are not on PyPI: a package
+      # of one of their names there would be someone else's.
+      - dependency-name: greenhouse-protocol
+      - dependency-name: greenhouse-sim
+      - dependency-name: greenhouse-adapters
 
   # The packages' runtime dependencies: ranges a user may install them with,
   # moved only when a release falls outside them.

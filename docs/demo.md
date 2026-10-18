@@ -8,8 +8,10 @@ does not start.
 
 ## What you need
 
-- **Python 3.14 or newer**
-  ([decision 0003](decisions/0003-require-python-3-14.md)).
+- **[uv](https://docs.astral.sh/uv/getting-started/installation/)**, which
+  installs Python 3.14 when the machine has none
+  ([decision 0003](decisions/0003-require-python-3-14.md),
+  [decision 0039](decisions/0039-develop-with-uv-one-workspace-a-command-for-each-task.md)).
 - **Node 24 and npm**, for the viewer
   ([decision 0008](decisions/0008-build-the-viewer-with-npm-node-24-and-vite.md)).
 - **A browser with WebGL**, on a machine with a graphics card for a smooth
@@ -21,22 +23,26 @@ does not start.
 From a clone of the repository:
 
 ```bash
-python3.14 -m venv .venv && source .venv/bin/activate
-python -m pip install -e ./greenhouse_protocol -e ./greenhouse_sim
-cd greenhouse_sim/web && npm ci && cd ../..
+uv run setup
 ```
+
+`uv run` installs Python 3.14, when the machine has none, and the packages,
+in `.venv`; `setup` adds the viewer's packages, the Chromium the browser
+tests and the recording use, and the git hooks.
 
 ## Start it
 
 ```bash
-python scripts/demo.py
+uv run demo
 ```
 
 One command starts the simulator's local API on port 8765 and the viewer's
 development server on port 5173, waits until both answer, and opens the
 reference greenhouse in the browser, at noon on its opening day. Ctrl+C
 stops both; so does either stopping. `--no-browser` leaves the browser
-closed, and `--api-port` and `--viewer-port` move them.
+closed, and `--api-port` and `--viewer-port` move them: `uv run demo
+--no-browser`. `uv run start` does the same and opens the viewer's start
+page instead.
 
 ## The reference scenario
 
@@ -65,8 +71,8 @@ closed, and `--api-port` and `--viewer-port` move them.
 The final QA of P09, step by step. The numbers are the simulator's own, from
 its tests and its golden views (`tests/test_reference_qa.py`).
 
-1. **Start it and open the reference scenario, seed 42.** `python
-   scripts/demo.py` opens it at noon on day 80; the scenario list says its
+1. **Start it and open the reference scenario, seed 42.** `uv run demo`
+   opens it at noon on day 80; the scenario list says its
    seed and its opening day, and in QA mode (step 7) the run's manifest
    names the seed, the manifest's version and the commits of the simulator
    and the viewer.
@@ -186,13 +192,13 @@ memory until it stops.
 
 ## Troubleshooting
 
-- **A port in use.** `scripts/demo.py` says which: stop what holds it, or
+- **A port in use.** `uv run demo` says which: stop what holds it, or
   pass `--api-port` or `--viewer-port`. The browser tests use their own API
   on 8766 and previews on 4317 to 4319, apart from the demo's.
-- **The wrong Python or Node.** The demo checks both before it starts, and
-  says which it needs: Python 3.14 or newer, with greenhouse-sim installed
-  for it, and the Node version `greenhouse_sim/web/.nvmrc` names.
-- **The viewer's packages missing.** `npm ci` in `greenhouse_sim/web`.
+- **The wrong Node.** The demo checks it before it starts, and says which
+  it needs: the version `greenhouse_sim/web/.nvmrc` names. `uv run`
+  provides the Python.
+- **The viewer's packages missing.** `uv run setup`.
 - **A slow first answer.** Opening day 80 is quick, from its kept
   checkpoint. A moment beyond it is worked out from there, about 2.5 s for
   each simulated day; the season's end takes minutes the first time, and
@@ -214,14 +220,14 @@ memory until it stops.
 
 The walk-through is also a browser test, `greenhouse_sim/web/e2e/demo.spec.ts`,
 which CI runs after the other day-by-day tests. On a machine with a
-graphics card, with the viewer's packages installed:
+graphics card, after `uv run setup`:
 
 ```bash
-cd greenhouse_sim/web && PYTHON=../../.venv/bin/python npm run demo:record
+uv run record-demo
 ```
 
 plays it with a caption on each step, lingering on each, and records it as
-video under `test-results/demo/`, so that each release can record it
+video under `greenhouse_sim/web/test-results/demo/`, whose path it prints, so that each release can record it
 again. GitHub plays a video in the README only when it hosts it, an MP4 or
 WebM uploaded through an issue or a pull request, under 10 MB: the README
 plays a short cut, and links a longer one. Uploading them is done by hand.

@@ -24,73 +24,93 @@ The simulator matters because it is the one setting where a decision can be
 scored against what was really true. Its ground truth leaves by a separate
 path from its observations, so decision logic cannot use it by accident.
 
-## Install
+## Run it
 
-The packages are not on PyPI yet. From a clone:
+On a machine with [uv](https://docs.astral.sh/uv/getting-started/installation/)
+and, for the browser viewer, [Node 24](https://nodejs.org):
 
 ```bash
-python -m pip install ./greenhouse_protocol ./greenhouse_sim ./greenhouse_adapters
+git clone https://github.com/AndreyBesedin/greenhouse-open.git && cd greenhouse-open
+uv run setup   # installs everything: Python 3.14 if missing, the packages, the viewer
+uv run demo    # starts the simulator and its viewer, on the reference greenhouse
 ```
 
-Python 3.14 or newer. Each package also installs on its own, with only its
-declared dependencies (`greenhouse-sim` and `greenhouse-adapters` need
-`greenhouse-protocol`).
+`uv run demo` opens the reference greenhouse: 32 tomato plants grown organ
+by organ through a spring season, in the air its heater, vents and fans
+make under the sun, watched by its sensors and a camera. Ctrl+C stops it.
+[docs/demo.md](docs/demo.md) says what to look at, and what the simulator
+simplifies.
 
-## Try the simulator
+Every task is a command, run from the clone as `uv run <command>`; what
+follows the command's name goes to what it runs (`uv run demo --no-browser`,
+`uv run check --fast`):
 
-`python scripts/demo.py` starts the simulator and its browser viewer and
-opens the reference greenhouse: 32 tomato plants grown organ by organ through
-a spring season, in the air its heater, vents and fans make under the sun,
-watched by its sensors and a camera. [docs/demo.md](docs/demo.md) says how
-to set it up, what to look at, and what the simulator simplifies.
+| Command | What it does |
+| --- | --- |
+| `uv run help` | lists the commands |
+| `uv run setup` | installs what `uv run` does not: the viewer's packages, Playwright's Chromium and the git hooks |
+| `uv run demo` | the simulator's API and the viewer, open on the reference greenhouse |
+| `uv run start` | the same, open on the viewer's start page |
+| `uv run api` | the simulator's local API alone, on port 8765 |
+| `uv run viewer` | the viewer's development server alone, on port 5173 |
+| `uv run check` | the repository's Python checks, as CI runs them; `--fast` leaves out the slow tests, as a push does |
+| `uv run viewer-checks` | the viewer's lint, type check, unit tests and build |
+| `uv run browser-tests` | the viewer's browser tests, against the simulator |
+| `uv run record-demo` | records the demo's walk-through as a video |
+
+`uv run` itself installs Python 3.14, when the machine has none, and the
+three packages with the development tools, in `.venv`, before running any
+command. Nothing needs activating, and the shell's own Python is not used.
 
 ## Examples
 
 ```bash
-python examples/01_run_a_simulation.py        # a deterministic run and its observations
-python examples/02_store_and_query.py         # store, query, and never see the future
-python examples/03_close_the_loop.py          # observe, decide, act, observe again
-python examples/04_score_against_ground_truth.py  # how noisy is the sensing?
-```
-
-The simulator's browser viewer, with Node 24:
-
-```bash
-python -m greenhouse_sim.api                    # the simulator's local API
-cd greenhouse_sim/web && npm ci && npm run dev  # the viewer, in a second terminal
+uv run python examples/01_run_a_simulation.py        # a deterministic run and its observations
+uv run python examples/02_store_and_query.py         # store, query, and never see the future
+uv run python examples/03_close_the_loop.py          # observe, decide, act, observe again
+uv run python examples/04_score_against_ground_truth.py  # how noisy is the sensing?
 ```
 
 Recorded data, with nothing heavier than about 10 MB downloaded:
 
 ```bash
-greenhouse-data inventory wur agc4-2024
-greenhouse-data prepare wur agc4-2024 --profile tiny
+uv run greenhouse-data inventory wur agc4-2024
+uv run greenhouse-data prepare wur agc4-2024 --profile tiny
 ```
 
 `prepare` writes deterministic canonical records under
 `GREENHOUSE_DATA_DIR` (default `~/.greenhouse-open/data`). See
 [`greenhouse_adapters`](greenhouse_adapters/) for profiles and datasets.
 
-## Development
+## Install the packages elsewhere
+
+The packages are not on PyPI yet. Into another project's environment, from
+a clone:
 
 ```bash
-python -m pip install -e ./greenhouse_protocol -e ./greenhouse_sim -e ./greenhouse_adapters \
-    -r requirements-dev.txt
-pre-commit install --hook-type pre-commit --hook-type pre-push
-python scripts/check.py --fast
+uv pip install ./greenhouse_protocol ./greenhouse_sim ./greenhouse_adapters
 ```
 
-Use `python scripts/check.py` for the full repository check before requesting
-review or merging a non-trivial change. CI runs the same canonical command.
+or `python -m pip install` with the same paths, from an activated virtual
+environment, not into a system's Python. Python 3.14 or newer. Each package
+also installs on its own, with only its declared dependencies
+(`greenhouse-sim` and `greenhouse-adapters` need `greenhouse-protocol`).
+
+## Development
+
+`uv run setup` installs the git hooks: before a commit, file hygiene, Ruff
+and Biome; before a push, `uv run check --fast`. Before requesting review of
+a non-trivial change, `uv run check` runs the full repository check, the
+command CI runs; a change to the viewer also runs `uv run viewer-checks` and
+`uv run browser-tests`.
 
 Each package is still checked from its own directory with its own configuration,
 as a user installing it alone would see it. `tests/` at the top level holds
 checks that span packages: every producer against the canonical contract,
-each package's declared dependencies, and the examples.
-
-The browser viewer in `greenhouse_sim/web` has its own checks (Biome,
-TypeScript, Vitest, and Playwright's browser tests in lanes), which CI runs
-as separate jobs; see [docs/engineering.md](docs/engineering.md#local-checks).
+each package's declared dependencies, and the examples. The browser viewer
+in `greenhouse_sim/web` has its own checks (Biome, TypeScript, Vitest, and
+Playwright's browser tests in lanes), which CI runs as separate jobs; see
+[docs/engineering.md](docs/engineering.md#local-checks).
 
 Engineering conventions, pull request scope guidance and the solo-developer
 review policy live in [docs/engineering.md](docs/engineering.md). Where the

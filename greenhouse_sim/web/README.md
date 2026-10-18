@@ -6,7 +6,8 @@ never depends on it. It shows a full-window 3D view, with panels for the
 scenario, its run and what the simulator measures, and a HUD. It opens on a
 reference scene, a 1 m grid on the ground, the world axes and a 1 m cube;
 the panel chooses what else it draws (see Scenes below), and
-`python scripts/demo.py` opens it on the reference greenhouse.
+`uv run demo`, from the repository's root, opens it on the reference
+greenhouse.
 
 Drag to orbit, right-drag to pan, and scroll to zoom. The HUD's buttons jump
 to the top, front, side and isometric views; a refresh always returns to the
@@ -36,8 +37,8 @@ fixture primitives (`public/scenes/qa-fixtures.json`), one of each, drawn in
 its material, `?scene=stress&plants=10000` is a dense field of
 plants for measuring the renderer, `?scenario=climate_box` is that scenario before
 day one, from the simulator's API, and `?live=climate_box` follows it live as the
-API plays it one simulated day per second (`python -m greenhouse_sim.api
---seconds-per-day 0.2` plays faster). The HUD then shows the stream's state
+API plays it one simulated day per second (`uv run api --seconds-per-day
+0.2` plays faster). The HUD then shows the stream's state
 and the simulated day; if the API goes away the viewer says so and reconnects
 when it is back. Its controls play, pause, step, reset and speed up the run,
 which every viewer of that scenario shares. The viewer checks every scene
@@ -229,15 +230,16 @@ interpreter) and waiting minutes for the season's last days.
 `RECORD_BENCHMARK=1 npm run bench` records new baselines. It never fails on
 the numbers, and CI, which has no graphics card, does not run it
 ([decision 0015](../../docs/decisions/0015-batch-repeated-shapes-and-benchmark-on-a-graphics-card.md)).
-Run `npx playwright install chromium` once for it.
+`uv run setup` installs the Chromium it runs in.
 
 ## The demo
 
 `e2e/demo.spec.ts` walks through P09's final QA on the reference greenhouse
-(`docs/demo.md`), step by step, as a browser test. `npm run demo:record`
-plays it on this machine's graphics card with a caption on each step,
-lingering on each (`DEMO_PAUSE_MS`), and records it as video under
-`test-results/demo/` (`PYTHON` names the simulator's interpreter).
+(`docs/demo.md`), step by step, as a browser test. `uv run record-demo`,
+from the repository's root (`npm run demo:record` here, with `PYTHON` naming
+the simulator's interpreter), plays it on this machine's graphics card with
+a caption on each step, lingering on each (`DEMO_PAUSE_MS`), and records it
+as video under `test-results/demo/`.
 
 ## Screenshots
 
@@ -290,22 +292,26 @@ cp /tmp/visual-results/renderer-the-renderer-s-QA-scene-matches-its-baseline-chr
 
 ## Run it with the simulator
 
-The viewer reads the simulator through its local API. Start the API, then the
-viewer, in two terminals:
+The viewer reads the simulator through its local API. `uv run start`, from
+the repository's root, starts both; or start the API, then the viewer, in
+two terminals:
 
 ```bash
-python -m greenhouse_sim.api          # http://127.0.0.1:8765/api
-cd greenhouse_sim/web && npm run dev  # the viewer, which forwards /api there
+uv run api      # http://127.0.0.1:8765/api
+uv run viewer   # the viewer, which forwards /api there
 ```
 
 Without the API, the page says so and how to start it.
 
 ## Develop
 
-Node 24 (see `.nvmrc`) and npm.
+Node 24 (see `.nvmrc`) and npm. `uv run setup`, from the repository's root,
+installs the packages (`npm ci`) and the browsers; `uv run viewer-checks`
+runs the lint, the type check, the coverage and the build as CI does, and
+`uv run browser-tests` the browser tests, with the workspace's Python. From
+this directory, each step:
 
 ```bash
-cd greenhouse_sim/web
 npm ci
 npm run dev         # local development server
 npm run lint        # Biome: formatting and lint (npm run format applies fixes)
@@ -313,13 +319,14 @@ npm run typecheck   # TypeScript, strict
 npm test            # Vitest
 npm run coverage    # Vitest, and how much of the code it runs, held to a floor
 npm run build       # production build into dist/
-PYTHON=python npm run e2e  # Playwright smoke test against the real simulator API
+PYTHON=../../.venv/bin/python npm run e2e  # browser tests against the real simulator API
 npm run e2e:visual  # screenshot comparisons (they run in CI's container only)
 npm run bench       # the renderer's benchmark, on this machine's graphics card
 ```
 
-The smoke test starts the simulator's API with `$PYTHON -m greenhouse_sim.api`,
-so that interpreter needs greenhouse-sim installed. The browser tests start
+The browser tests start the simulator's API with `$PYTHON -m greenhouse_sim.api`,
+so that interpreter needs greenhouse-sim installed: `uv run browser-tests`
+names the workspace's. The browser tests start
 their own API, on port 8766, and their own build of the viewer, so an API
 kept running on 8765 for development cannot answer for them. They never test
 a server already running on their ports: Playwright stops, saying the port is
@@ -336,8 +343,8 @@ work climate runs out to noon, and last P07's final QA,
 in its own Playwright project, so that none slows another into a timeout. On
 CI the projects are cut into lanes that run at once, each on a machine of its
 own with an API of its own (decision 0032); `BROWSER_TEST_LANE=<lane>` runs
-one lane here, as CI does (`LANE_STARTS` in `playwright.config.ts`). Run
-`npx playwright install chromium` once to get the browser.
+one lane here, as CI does (`LANE_STARTS` in `playwright.config.ts`).
+`uv run setup` installs the browser, Chromium.
 
 The page shows the simulator version, read from `../pyproject.toml` at build
 time, and the commit it was built from. The viewer has no version of its own:

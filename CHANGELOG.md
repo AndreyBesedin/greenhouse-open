@@ -59,8 +59,13 @@ breaks the conformance checks is a major version.
   panel; golden views; a benchmark (`python -m greenhouse_sim.benchmark`);
   and the API's `Server-Timing` header.
 - The viewer draws all of it (P00 to P09), with screenshot regression in a
-  pinned container, and `python scripts/demo.py` starts the API and the
-  viewer together and opens the reference greenhouse (`docs/demo.md`).
+  pinned container, and `uv run demo` starts the API and the viewer
+  together and opens the reference greenhouse (`docs/demo.md`).
+- A clone is a uv workspace: `uv run <command>` installs Python 3.14 and
+  the packages and runs a task, `uv run setup` installs the viewer's
+  packages, Chromium and the git hooks, and `uv run help` lists the rest
+  (`demo`, `start`, `api`, `viewer`, `check`, `viewer-checks`,
+  `browser-tests`, `record-demo`; decision 0039).
 - `greenhouse-adapters`: a verified artifact is hashed again once its size,
   inode or modification time changes, and after every fetch; a fetched
   file that fails its checksum is moved aside, so the next run fetches it
