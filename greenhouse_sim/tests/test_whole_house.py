@@ -8,6 +8,7 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import AbstractContextManager
 from http import HTTPStatus
+from typing import NoReturn
 
 import pytest
 
@@ -160,6 +161,26 @@ def test_it_carries_on_from_another_without_waiting_for_a_request_working_it_on(
 
     assert finishes_beside_held(first._working, lambda: second.carry_on_from(first))
     assert second._kept.keys() == first._kept.keys()
+
+
+def test_it_takes_over_what_another_works_out_after_it_carried_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A branch made while a request works its source on does not wait for
+    # it (above): what the source works out afterwards, up to where their
+    # schedules differ, is the branch's air too, and is not worked out again.
+    hour = 3600.0
+    heated = ((4 * hour, "heater", 1.0),)
+    first = WholeHouse(_run())
+    second = WholeHouse(_climate_day("climate_box", "default", "default", (), (), heated).run)
+    second.carry_on_from(first)
+    first.air_at(3 * hour)
+
+    def not_again(*args: object, **kwargs: object) -> NoReturn:
+        raise AssertionError("the branch worked out a stretch its source had")
+
+    monkeypatch.setattr(second, "_advance", not_again)
+    assert second.air_at(3 * hour) == first.air_at(3 * hour)
 
 
 def test_its_air_is_the_same_whatever_moments_were_asked_for_before() -> None:

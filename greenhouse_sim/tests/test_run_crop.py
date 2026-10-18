@@ -287,6 +287,21 @@ def test_a_crop_carries_on_from_another_without_waiting_for_a_request_working_it
     assert second.local("p1", 5) == first.local("p1", 5)
 
 
+def test_a_crop_takes_over_the_days_another_lives_after_it_carried_on() -> None:
+    # A branch made while a request works its source on does not wait for
+    # it (above): the days the source lives afterwards, through those the
+    # two share, are the branch's too, and are not lived again.
+    first_asked, second_asked = _Asked(), _Asked()
+    first = _crop(asked=first_asked)
+    second = _crop(asked=second_asked)
+    second.carry_on_from(first, 6)
+    first.plants_on(6)
+
+    assert second.plants_on(6) == first.plants_on(6)
+    assert second.local("p1", 5) == first.local("p1", 5)
+    assert second_asked.air == []
+
+
 def test_the_timeline_lists_each_harvest_round_after_the_plants_day() -> None:
     run = RunProcesses(
         schedule=Schedule(),

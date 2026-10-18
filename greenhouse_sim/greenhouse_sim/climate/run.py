@@ -32,6 +32,7 @@ each stretch, as it takes the equipment's.
 """
 
 import threading
+import weakref
 from collections import OrderedDict
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
@@ -154,6 +155,13 @@ class ClimateRun:
         # carrying on from this one copies it without waiting for a request
         # working this run's air on.
         self._keeping = threading.Lock()
+        # The runs this one carries on from (`carry_on_from`), each with the
+        # moment up to which it is the same air: what they keep up to then
+        # is taken over again whenever this run works its air on, so that a
+        # request working one of them on is neither waited for nor repeated.
+        # Held weakly: a run the kept runs have forgotten is not kept alive
+        # by those that carried on from it.
+        self._sources: list[tuple[weakref.ref[ClimateRun], float]] = []
         # The air at the latest moments asked for between those kept: given
         # again when asked again, and never a start for a later moment, so
         # that the air at a moment is the same whatever was asked before.
@@ -326,13 +334,29 @@ class ClimateRun:
     def carry_on_from(self, other: ClimateRun) -> None:
         """Take over the air `other` has kept up to the first moment its
         schedule and this run's differ: until then, both runs are the same
-        air."""
+        air, so what `other` keeps later up to then is taken over too, as
+        this run works its own air on."""
         until = self.schedule.same_until(other.schedule)
-        with other._keeping:
-            theirs = [(moment, air) for moment, air in other._kept.items() if moment <= until]
-        with self._working, self._keeping:
-            for moment, air in theirs:
-                self._kept.setdefault(moment, air)
+        with self._working:
+            self._sources = [(source, up_to) for source, up_to in self._sources if source()]
+            self._sources.append((weakref.ref(other), until))
+            self._take_over(until)
+
+    def _take_over(self, time_s: float) -> None:
+        """Take over, from each run carried on from, the moments it has kept
+        up to `time_s` and past the latest this run has kept before then, as
+        far as the two are the same air. Called with `_working` held."""
+        for source, until in self._sources:
+            other = source()
+            if other is None:
+                continue
+            up_to = min(time_s, until)
+            since = max((moment for moment in self._kept if moment <= up_to), default=self.start_s)
+            with other._keeping:
+                theirs = [(m, air) for m, air in other._kept.items() if since < m <= up_to]
+            with self._keeping:
+                for moment, air in theirs:
+                    self._kept.setdefault(moment, air)
 
     def air_at(self, time_s: float) -> AirState:
         """The air in every cell at `time_s`, from the latest moment kept
@@ -351,6 +375,7 @@ class ClimateRun:
             return air
 
     def _worked_to(self, time_s: float) -> AirState:
+        self._take_over(time_s)
         start = max(moment for moment in self._kept if moment <= time_s)
         air = self._kept[start]
         changes = set(self.schedule.moments_between(start, time_s))

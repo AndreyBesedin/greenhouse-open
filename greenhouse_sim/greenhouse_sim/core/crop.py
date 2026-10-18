@@ -32,6 +32,7 @@ air differs (`carry_on_from`).
 """
 
 import threading
+import weakref
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
 from typing import Final, Protocol
@@ -146,6 +147,13 @@ class RunCrop:
         # carrying on from this one copies it without waiting for a request
         # working this crop on.
         self._keeping = threading.Lock()
+        # The crops this one carries on from (`carry_on_from`), each with the
+        # days through which it is the same crop: what they work out of
+        # those days is taken over again whenever this crop works a day on,
+        # so that a request working one of them on is neither waited for nor
+        # repeated. Held weakly: a crop the kept runs have forgotten is not
+        # kept alive by those that carried on from it.
+        self._sources: list[tuple[weakref.ref[RunCrop], int]] = []
 
     def _checked(self, day: int, last: int) -> None:
         if not 0 <= day <= last:
@@ -162,6 +170,7 @@ class RunCrop:
                 with self._keeping:
                     self._kept.move_to_end(day)
                 return kept
+            self._take_over(day)
             start = max(kept_day for kept_day in self._kept if kept_day <= day)
             plants = self._kept[start]
             for lived in range(start, day):
@@ -183,6 +192,7 @@ class RunCrop:
         last."""
         self._checked(day, self.days - 1)
         with self._working:
+            self._take_over(day + 1)
             if day >= len(self._lived):
                 self._day(day, self.plants_on(day))
             environments = self._lived[day]
@@ -234,17 +244,36 @@ class RunCrop:
     def carry_on_from(self, other: RunCrop, days: int) -> None:
         """Take over what `other` worked out of the run's first `days` days:
         what its plants experienced on them, and its plants kept on those
-        days and the next. Only another crop of the same scenario, in a run
-        whose air is the same through those days, is the same crop."""
-        with other._keeping:
-            lived = other._lived[:days]
-            kept = [(day, plants) for day, plants in other._kept.items() if day <= days]
-        with self._working, self._keeping:
-            if len(self._lived) < len(lived):
-                self._lived = lived
-            for day, plants in kept:
-                if day <= len(self._lived):
-                    self._kept.setdefault(day, plants)
+        days and the next; and what it works out of them later, as this crop
+        works its own days on. Only another crop of the same scenario, in a
+        run whose air is the same through those days, is the same crop."""
+        with self._working:
+            self._sources = [(source, through) for source, through in self._sources if source()]
+            self._sources.append((weakref.ref(other), days))
+            self._take_over(days)
+
+    def _take_over(self, day: int) -> None:
+        """Take over, from each crop carried on from, what it has worked out
+        of the run's first `day` days, as far as the two are the same crop.
+        Called with `_working` held."""
+        for source, days in self._sources:
+            other = source()
+            if other is None:
+                continue
+            through = min(day, days)
+            with other._keeping:
+                lived = other._lived[:through]
+                kept = [
+                    (kept_day, plants)
+                    for kept_day, plants in other._kept.items()
+                    if kept_day <= through
+                ]
+            with self._keeping:
+                if len(self._lived) < len(lived):
+                    self._lived = lived
+                for kept_day, plants in kept:
+                    if kept_day <= len(self._lived):
+                        self._kept.setdefault(kept_day, plants)
 
     def _day(self, day: int, plants: tuple[Plant, ...]) -> dict[str, LocalEnvironment]:
         """What each of the crop's plants, `plants` on the run's day `day`,

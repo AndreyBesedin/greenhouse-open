@@ -3,8 +3,10 @@ its schedule's commands at their moments, the same every time it is run."""
 
 from collections.abc import Callable
 from contextlib import AbstractContextManager
+from typing import NoReturn
 
 import numpy as np
+import pytest
 
 from greenhouse_sim.climate.commands import Command, Schedule
 from greenhouse_sim.climate.run import ClimateRun
@@ -102,3 +104,21 @@ def test_it_carries_on_from_another_without_waiting_for_a_request_working_it_on(
 
     assert finishes_beside_held(first._working, lambda: second.carry_on_from(first))
     assert second._kept.keys() == first._kept.keys()
+
+
+def test_it_takes_over_what_another_keeps_after_it_carried_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A branch made while a request works its source on does not wait for
+    # it (above): what the source keeps afterwards, up to where their
+    # schedules differ, is the branch's air too, and is not worked out again.
+    first = _run()
+    second = _run(_at(900, "heater", 1.0))
+    second.carry_on_from(first)
+    first.air_at(600.0)
+
+    def not_again(*args: object, **kwargs: object) -> NoReturn:
+        raise AssertionError("the branch worked out a stretch its source had")
+
+    monkeypatch.setattr(second, "_transport", not_again)
+    assert second.air_at(600.0) is first.air_at(600.0)
