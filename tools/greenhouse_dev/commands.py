@@ -111,13 +111,14 @@ def _setup() -> int:
     return 0
 
 
+# The demo's launcher checks Node, the viewer's packages and the ports
+# itself, once it has read its arguments: `uv run demo --help` answers
+# before the viewer is installed.
 def _start() -> int:
-    _viewer()
     return _become([sys.executable, str(SCRIPTS / "demo.py"), "--start-page", *_arguments()])
 
 
 def _demo() -> int:
-    _viewer()
     return _become([sys.executable, str(SCRIPTS / "demo.py"), *_arguments()])
 
 

@@ -1,14 +1,18 @@
 import { defineConfig } from "@playwright/test";
 
-import { REUSE_TEST_SERVERS, simulatorApi, TEST_SIMULATOR_API_PORT } from "./simulatorApi.ts";
+import {
+  REUSE_TEST_SERVERS,
+  simulatorApi,
+  simulatorServer,
+  TEST_SIMULATOR_API_PORT,
+} from "./simulatorApi.ts";
 
 // P09.9's demo video: the final QA's walk-through (`e2e/demo.spec.ts`),
 // recorded by Playwright as it plays, on this machine's graphics card, so
 // that each release can record it again (`npm run demo:record`). The video
 // is written under `test-results/demo/`; uploading it is done by hand
 // (docs/demo.md). PYTHON names an interpreter that has greenhouse-sim
-// installed.
-const PYTHON = process.env.PYTHON ?? "python";
+// installed (`simulatorServer`).
 const PREVIEW_PORT = 4320;
 const VIEW = { width: 1280, height: 720 };
 
@@ -27,7 +31,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: `${PYTHON} -m greenhouse_sim.api --port ${TEST_SIMULATOR_API_PORT}`,
+      command: simulatorServer(TEST_SIMULATOR_API_PORT),
       url: `${simulatorApi(TEST_SIMULATOR_API_PORT)}/api/health`,
       reuseExistingServer: REUSE_TEST_SERVERS,
     },

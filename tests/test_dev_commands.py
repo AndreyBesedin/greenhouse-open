@@ -28,6 +28,15 @@ INSTALLED = {"python", "greenhouse-data", "pre-commit", "pytest"}
 _UV_RUN = re.compile(r"\buv run ([a-z][a-z0-9-]*)")
 
 
+@pytest.fixture(autouse=True)
+def started(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
+    """What a command would have become: never the command itself, which
+    would replace the test's process."""
+    became: list[list[str]] = []
+    monkeypatch.setattr(commands, "_become", lambda command, *a, **k: became.append(command))
+    return became
+
+
 def test_every_command_is_a_script_of_the_workspace_and_every_script_a_command() -> None:
     scripts = PYPROJECT["project"]["scripts"]
 
@@ -60,13 +69,28 @@ def test_a_command_that_cannot_run_yet_says_what_to_do(
     # No Node on the path: the viewer's commands say how to get it, in a
     # line, rather than in a traceback.
     monkeypatch.setattr(shutil, "which", lambda name: None)
-    monkeypatch.setattr(sys, "argv", ["/workspace/.venv/bin/demo"])
+    monkeypatch.setattr(sys, "argv", ["/workspace/.venv/bin/viewer"])
 
     with pytest.raises(SystemExit) as stopped:
         commands.main()
 
     assert stopped.value.code == 1
     assert capsys.readouterr().err.startswith(f"Node {commands.NODE_NEEDED} and npm are needed")
+
+
+def test_the_demos_help_needs_no_viewer(
+    monkeypatch: pytest.MonkeyPatch, started: list[list[str]]
+) -> None:
+    # As `uv run help` suggests, on a clone with neither Node nor the
+    # viewer's packages yet: the launcher reads `--help` before it checks
+    # what it needs.
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    monkeypatch.setattr(sys, "argv", ["/workspace/.venv/bin/demo", "--help"])
+
+    with pytest.raises(SystemExit):
+        commands.main()
+
+    assert [command[1:] for command in started] == [[str(commands.SCRIPTS / "demo.py"), "--help"]]
 
 
 def test_the_guides_quote_only_commands_that_exist() -> None:
