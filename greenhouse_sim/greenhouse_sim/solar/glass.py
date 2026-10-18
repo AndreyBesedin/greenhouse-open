@@ -46,6 +46,9 @@ DIFFUSE_TRANSMITTANCE: Final = NORMAL_TRANSMITTANCE * (
 SEAM_M: Final = 1e-6
 # The surfaces light leaves the house through.
 GLAZED: Final = frozenset({SurfaceCategory.WALL, SurfaceCategory.ROOF})
+# At most this many pairs of a point and an edge are worked out at once,
+# 8 MB for each array of them: a large house's points go in batches.
+PAIRS_AT_ONCE: Final = 1 << 20
 
 
 def transmittance(cos_incidence: np.ndarray) -> np.ndarray:
@@ -67,23 +70,68 @@ def _outline(surface: Surface) -> np.ndarray:
     return np.array([[-half_x, -half_y], [half_x, -half_y], [half_x, half_y], [-half_x, half_y]])
 
 
-def _within(u: np.ndarray, v: np.ndarray, outline: np.ndarray) -> np.ndarray:
+@dataclass(frozen=True)
+class _Outline:
+    """A polygon's edges, each from a corner to the next, as columns that
+    broadcast against rows of points: the edges are tested all at once."""
+
+    ax: np.ndarray
+    ay: np.ndarray
+    bx: np.ndarray
+    by: np.ndarray
+    # Each edge's length, squared.
+    length_squared: np.ndarray
+
+    @classmethod
+    def of(cls, outline: np.ndarray) -> _Outline:
+        following = np.roll(outline, -1, axis=0)
+        # Each edge's length squared as a number on its own, so that it is
+        # the very number a test of the edge alone would find.
+        squared = [
+            np.hypot(bx - ax, by - ay) ** 2
+            for (ax, ay), (bx, by) in zip(outline, following, strict=True)
+        ]
+
+        def column(values: np.ndarray) -> np.ndarray:
+            return np.asarray(values, dtype=float)[:, np.newaxis]
+
+        return cls(
+            ax=column(outline[:, 0]),
+            ay=column(outline[:, 1]),
+            bx=column(following[:, 0]),
+            by=column(following[:, 1]),
+            length_squared=column(np.array(squared)),
+        )
+
+
+def _within(u: np.ndarray, v: np.ndarray, outline: _Outline) -> np.ndarray:
     """Whether each point (u, v) lies inside a polygon, or within `SEAM_M`
-    of its edges."""
-    inside = np.zeros(u.shape, dtype=bool)
-    near = np.zeros(u.shape, dtype=bool)
-    count = len(outline)
-    for index in range(count):
-        (ax, ay), (bx, by) = outline[index], outline[(index + 1) % count]
-        crosses = (ay > v) != (by > v)
-        with np.errstate(divide="ignore", invalid="ignore"):
-            crossing = ax + (v - ay) * (bx - ax) / (by - ay)
-        inside ^= crosses & (u < crossing)
-        # How far each point lies from this edge.
-        edge = np.hypot(bx - ax, by - ay)
-        along = np.clip(((u - ax) * (bx - ax) + (v - ay) * (by - ay)) / edge**2, 0.0, 1.0)
-        near |= np.hypot(u - (ax + along * (bx - ax)), v - (ay + along * (by - ay))) <= SEAM_M
-    return inside | near
+    of its edges: in batches of points, each tested against every edge at
+    once."""
+    batch = max(1, PAIRS_AT_ONCE // len(outline.ax))
+    within = np.empty(len(u), dtype=bool)
+    for start in range(0, len(u), batch):
+        part = slice(start, start + batch)
+        within[part] = _within_batch(u[part], v[part], outline)
+    return within
+
+
+def _within_batch(u: np.ndarray, v: np.ndarray, outline: _Outline) -> np.ndarray:
+    ax, ay, bx, by = outline.ax, outline.ay, outline.bx, outline.by
+    crosses = (ay > v) != (by > v)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        crossing = ax + (v - ay) * (bx - ax) / (by - ay)
+    # A point is inside if a ray from it crosses the outline an odd number
+    # of times.
+    inside: np.ndarray = np.logical_xor.reduce(crosses & (u < crossing), axis=0)
+    # How far each point lies from each edge.
+    along = np.clip(
+        ((u - ax) * (bx - ax) + (v - ay) * (by - ay)) / outline.length_squared, 0.0, 1.0
+    )
+    apart = np.hypot(u - (ax + along * (bx - ax)), v - (ay + along * (by - ay)))
+    near = (apart <= SEAM_M).any(axis=0)
+    within: np.ndarray = inside | near
+    return within
 
 
 @dataclass(frozen=True)
@@ -93,7 +141,7 @@ class _Pane:
     up: np.ndarray
     # Facing into the house.
     normal: np.ndarray
-    outline: np.ndarray
+    outline: _Outline
 
 
 def _vector(vector: Vector3) -> np.ndarray:
@@ -111,7 +159,7 @@ class Glazing:
                 across=_vector(surface.transform.rotation.rotate(Vector3(x=1.0, y=0.0, z=0.0))),
                 up=_vector(surface.transform.rotation.rotate(Vector3(x=0.0, y=1.0, z=0.0))),
                 normal=_vector(surface.transform.rotation.rotate(Vector3(x=0.0, y=0.0, z=1.0))),
-                outline=_outline(surface),
+                outline=_Outline.of(_outline(surface)),
             )
             for surface in envelope.surfaces_in_world()
             if surface.category in GLAZED

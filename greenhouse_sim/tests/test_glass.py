@@ -7,10 +7,15 @@ import numpy as np
 import pytest
 
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.solar import glass
 from greenhouse_sim.solar.glass import (
     DIFFUSE_TRANSMITTANCE,
     NORMAL_TRANSMITTANCE,
+    SEAM_M,
     Glazing,
+    _Outline,
+    _outline,
+    _within,
     transmittance,
 )
 from greenhouse_sim.world.envelope import Envelope
@@ -108,3 +113,80 @@ def test_a_multi_span_house_lets_the_beam_out_through_each_spans_roof() -> None:
     cosine = glazing.cos_incidence(middles, Vector3(x=0.0, y=0.0, z=1.0))
 
     assert np.allclose(cosine, math.cos(math.atan2(1.0, 2.0)))
+
+
+def _within_edge_by_edge(u: np.ndarray, v: np.ndarray, outline: np.ndarray) -> np.ndarray:
+    """A point's test against a polygon's edges one at a time."""
+    inside = np.zeros(u.shape, dtype=bool)
+    near = np.zeros(u.shape, dtype=bool)
+    for (ax, ay), (bx, by) in zip(outline, np.roll(outline, -1, axis=0), strict=True):
+        crosses = (ay > v) != (by > v)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            crossing = ax + (v - ay) * (bx - ax) / (by - ay)
+        inside ^= crosses & (u < crossing)
+        edge = np.hypot(bx - ax, by - ay)
+        along = np.clip(((u - ax) * (bx - ax) + (v - ay) * (by - ay)) / edge**2, 0.0, 1.0)
+        near |= np.hypot(u - (ax + along * (bx - ax)), v - (ay + along * (by - ay))) <= SEAM_M
+    return inside | near
+
+
+def test_every_edge_at_once_is_every_edge_in_turn() -> None:
+    # The glass tests a point against all of a surface's edges at once, as
+    # the house's air asks every minute of a season: bit for bit what testing
+    # them in turn gives, on every surface, at its corners and seams too.
+    draws = np.random.default_rng(7)
+    for scenario in ("reference_greenhouse", "climate_box", "solar_lab"):
+        for surface in SCENARIO_REGISTRY[scenario].envelope.surfaces_in_world():
+            outline = _outline(surface)
+            low, high = outline.min(axis=0) - 0.5, outline.max(axis=0) + 0.5
+            points = np.vstack(
+                [
+                    draws.uniform(low, high, size=(400, 2)),
+                    outline,
+                    (outline + np.roll(outline, -1, axis=0)) / 2,
+                ]
+            )
+            u, v = points[:, 0], points[:, 1]
+
+            assert np.array_equal(
+                _within(u, v, _Outline.of(outline)), _within_edge_by_edge(u, v, outline)
+            )
+
+
+@pytest.mark.parametrize("pairs_at_once", [1, 7, 64])
+def test_points_in_batches_are_the_points_at_once(
+    monkeypatch: pytest.MonkeyPatch, pairs_at_once: int
+) -> None:
+    # A large house's points are tested in batches, to bound the memory of
+    # every point against every edge: the same answers, whatever the batch.
+    outline = _outline(SCENARIO_REGISTRY["reference_greenhouse"].envelope.surfaces_in_world()[0])
+    points = np.random.default_rng(11).uniform(-3.0, 3.0, size=(301, 2))
+    u, v = points[:, 0], points[:, 1]
+    at_once = _within(u, v, _Outline.of(outline))
+
+    monkeypatch.setattr(glass, "PAIRS_AT_ONCE", pairs_at_once)
+
+    assert np.array_equal(_within(u, v, _Outline.of(outline)), at_once)
+
+
+def test_a_large_houses_points_go_in_batches_of_bounded_size(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Every point against every edge at once would hold arrays of points
+    # times edges; in batches, no array holds more than PAIRS_AT_ONCE.
+    batches: list[int] = []
+    tested = glass._within_batch
+
+    def counted(u: np.ndarray, v: np.ndarray, outline: _Outline) -> np.ndarray:
+        batches.append(len(u))
+        return tested(u, v, outline)
+
+    monkeypatch.setattr(glass, "PAIRS_AT_ONCE", 1 << 12)
+    monkeypatch.setattr(glass, "_within_batch", counted)
+    square = _Outline.of(np.array([[-1.0, -1.0], [1.0, -1.0], [1.0, 1.0], [-1.0, 1.0]]))
+    u, v = np.random.default_rng(5).uniform(-2.0, 2.0, size=(2, 100_000))
+
+    _within(u, v, square)
+
+    # 1,024 points a batch against four edges, the last batch what is left.
+    assert batches == [1024] * 97 + [672]
