@@ -31,10 +31,9 @@ def local_noon(day: date) -> datetime:
 
 def excel_serial_to_utc(serial: float) -> datetime:
     """Excel serial day number in Dutch local time -> aware UTC datetime,
-    rounded to the nearest second (serials carry float noise)."""
-    naive = _EXCEL_EPOCH + timedelta(days=serial)
-    naive = (naive + timedelta(microseconds=500_000)).replace(microsecond=0)
-    return naive.replace(tzinfo=WUR_LOCAL_TIMEZONE).astimezone(UTC)
+    rounded to the nearest second (serials carry float noise). A local time
+    that occurs twice or never is refused, as for a MATLAB datenum."""
+    return _local_to_utc(_EXCEL_EPOCH + timedelta(days=serial))
 
 
 def matlab_datenum_to_utc(datenum: float) -> datetime:
@@ -46,7 +45,14 @@ def matlab_datenum_to_utc(datenum: float) -> datetime:
     rather than guessed: the 2023 export leaves that hour's rows empty, so a
     reading there means the source changed."""
     whole = int(datenum)
-    naive = datetime.fromordinal(whole - _MATLAB_ORDINAL_OFFSET) + timedelta(days=datenum - whole)
+    return _local_to_utc(
+        datetime.fromordinal(whole - _MATLAB_ORDINAL_OFFSET) + timedelta(days=datenum - whole)
+    )
+
+
+def _local_to_utc(naive: datetime) -> datetime:
+    """A Dutch wall-clock time, rounded to the nearest second, as a UTC
+    instant; refused if the clocks skip it or show it twice."""
     naive = (naive + timedelta(microseconds=500_000)).replace(microsecond=0)
     first = naive.replace(tzinfo=WUR_LOCAL_TIMEZONE, fold=0)
     as_utc = first.astimezone(UTC)
