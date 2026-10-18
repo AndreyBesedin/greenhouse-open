@@ -116,16 +116,20 @@ def write_canonical_greenhouse(
     sources: list[SourceMember],
     selection: dict[str, Any],
 ) -> CanonicalGreenhouse:
-    sorted_observations = sorted(
-        observations, key=lambda o: (o.timestamp, o.observation_type.value, o.observation_id)
-    )
-    sorted_events = sorted(events, key=lambda e: (e.timestamp, e.event_type.value, e.event_id))
-    violations = check_observations(sorted_observations) + check_events(sorted_events)
+    # Checked before they are sorted: records built without validation may
+    # hold a naive timestamp beside an aware one, which cannot be ordered.
+    observations = list(observations)
+    events = list(events)
+    violations = check_observations(observations) + check_events(events)
     if violations:
         raise RefusedBuild(
             f"{len(violations)} conformance violation(s) in what {adapter} would write, "
             "for example: " + "; ".join(violations[:_VIOLATIONS_NAMED])
         )
+    sorted_observations = sorted(
+        observations, key=lambda o: (o.timestamp, o.observation_type.value, o.observation_id)
+    )
+    sorted_events = sorted(events, key=lambda e: (e.timestamp, e.event_type.value, e.event_id))
 
     directory.mkdir(parents=True, exist_ok=True)
 

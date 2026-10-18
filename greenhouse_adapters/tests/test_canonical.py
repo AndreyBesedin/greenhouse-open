@@ -37,7 +37,9 @@ def _reading(index: int, value: float = 21.0, observation_id: str | None = None)
     )
 
 
-def _write(directory: Path, observations: list[Observation]) -> CanonicalGreenhouse:
+def _write(
+    directory: Path, observations: list[Observation], created_at: datetime | None = None
+) -> CanonicalGreenhouse:
     return write_canonical_greenhouse(
         directory,
         greenhouse=GreenhouseDescription(
@@ -47,7 +49,7 @@ def _write(directory: Path, observations: list[Observation]) -> CanonicalGreenho
             source_type=SourceType.IMPORTED_DATA,
             layout=GreenhouseLayout(kind="compartment", rows=0, columns=0),
             plants=[],
-            created_at=recording_start(observations),
+            created_at=created_at or recording_start(observations),
         ),
         observations=observations,
         events=[],
@@ -89,6 +91,18 @@ def test_records_that_fail_the_protocols_checks_are_refused_and_nothing_is_writt
 ) -> None:
     with pytest.raises(RefusedBuild, match=violation):
         _write(tmp_path / "gh", records)
+
+    assert not (tmp_path / "gh").exists()
+
+
+def test_records_built_without_validation_are_checked_before_they_are_sorted(
+    tmp_path: Path,
+) -> None:
+    # A naive timestamp cannot be ordered beside an aware one.
+    naive = _reading(1).model_copy(update={"timestamp": datetime(2024, 9, 3, 0, 5)})
+
+    with pytest.raises(RefusedBuild, match="no timezone"):
+        _write(tmp_path / "gh", [_reading(0), naive], created_at=START)
 
     assert not (tmp_path / "gh").exists()
 
