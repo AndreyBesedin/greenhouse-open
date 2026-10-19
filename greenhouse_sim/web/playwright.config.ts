@@ -34,6 +34,8 @@ const ONE_BY_ONE = [
   "season.spec.ts",
   "daily-schedule.spec.ts",
   "checkpoints.spec.ts",
+  // The camera's way back from a close-up, through a change of day.
+  "close-up.spec.ts",
   "crop.spec.ts",
   "reference-schedule.spec.ts",
   // P09.9's demo walks through the whole final QA, last of all.
