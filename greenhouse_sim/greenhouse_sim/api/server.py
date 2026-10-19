@@ -21,7 +21,9 @@ to give it, as a `Server-Timing` header's `sim` metric, in milliseconds
 """
 
 import argparse
+import faulthandler
 import json
+import signal
 import sys
 import time
 import traceback
@@ -239,6 +241,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="how fast a played-back run's clock plays a simulated day",
     )
     args = parser.parse_args(argv)
+    # `kill -USR1 <pid>` prints every thread's stack to stderr and leaves
+    # the server running, to see where a busy or stuck one is.
+    faulthandler.register(signal.SIGUSR1, all_threads=True)
 
     server = create_server(args.port, seconds_per_day=args.seconds_per_day)
     host, port = server.server_address[:2]
