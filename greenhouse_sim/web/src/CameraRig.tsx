@@ -1,5 +1,6 @@
 import { useThree } from "@react-three/fiber";
-import { useEffect, useRef } from "react";
+import { type RefObject, useEffect, useRef } from "react";
+import type { Object3D } from "three";
 import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import { CAMERA_PRESETS, type CameraPose, DEFAULT_PRESET, type PresetRequest } from "./camera";
@@ -12,9 +13,12 @@ import { worldToViewer } from "./world";
 export function CameraRig({
   request,
   initialPose = null,
+  zoomTowards = null,
 }: {
   request: PresetRequest | null;
   initialPose?: CameraPose | null;
+  /** What the wheel zooms towards, where the pointer is over it. */
+  zoomTowards?: RefObject<Object3D | null> | null;
 }) {
   const camera = useThree((state) => state.camera);
   const domElement = useThree((state) => state.gl.domElement);
@@ -22,7 +26,8 @@ export function CameraRig({
   const controls = useRef<OrbitControls | null>(null);
 
   useEffect(() => {
-    const orbit = orbitControls(camera, domElement);
+    const view = orbitControls(camera, domElement, () => zoomTowards?.current ?? null);
+    const orbit = view.orbit;
     const redraw = () => invalidate();
     orbit.addEventListener("change", redraw);
     controls.current = orbit;
@@ -30,10 +35,10 @@ export function CameraRig({
     invalidate();
     return () => {
       orbit.removeEventListener("change", redraw);
-      orbit.dispose();
+      view.dispose();
       controls.current = null;
     };
-  }, [camera, domElement, initialPose, invalidate]);
+  }, [camera, domElement, initialPose, invalidate, zoomTowards]);
 
   useEffect(() => {
     if (request !== null && controls.current !== null) {

@@ -145,7 +145,7 @@ export function Viewport({
       }}
       aria-label="3D view"
     >
-      <CameraRig request={presetRequest} initialPose={initialPose} />
+      <CameraRig request={presetRequest} initialPose={initialPose} zoomTowards={casters} />
       <Section plane={section} />
       <HudProbe onSample={onSample} />
       <color attach="background" args={[BACKGROUND_COLOR]} />
