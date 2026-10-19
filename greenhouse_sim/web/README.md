@@ -9,12 +9,14 @@ the panel chooses what else it draws (see Scenes below), and
 `uv run demo`, from the repository's root, opens it on the reference
 greenhouse.
 
-Drag to orbit, right-drag to pan, and scroll to zoom. The HUD's buttons jump
-to the top, front, side and isometric views; a refresh always returns to the
-isometric one. It also shows the camera's position and where the pointer
-meets the ground, both in world metres, with the frame rate and object
-count. What it draws was built project by project, as the
-[simulator roadmap](../../docs/roadmap/README.md) records.
+Drag to orbit, right-drag to pan, and scroll to zoom: in no nearer than 20 cm
+to the point the camera orbits, so that a notch out always backs it away
+again. The HUD's buttons jump to the top, front, side and isometric views,
+from any view; a refresh always returns to the isometric one. It also shows
+the camera's position and where the pointer meets the ground, both in world
+metres, with the frame rate and object count. What it draws was built
+project by project, as the [simulator roadmap](../../docs/roadmap/README.md)
+records.
 
 The view uses the simulator's world axes: metres, right-handed, z up. Three.js
 is y up, so `src/world.ts` converts once, at the root of the scene; nothing

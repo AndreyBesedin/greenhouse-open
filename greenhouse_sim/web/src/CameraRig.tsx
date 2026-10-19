@@ -1,8 +1,9 @@
 import { useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import { CAMERA_PRESETS, type CameraPose, DEFAULT_PRESET, type PresetRequest } from "./camera";
+import { orbitControls } from "./orbit";
 import { worldToViewer } from "./world";
 
 /** Orbit, pan and zoom with the mouse, starting from the default preset or a
@@ -21,7 +22,7 @@ export function CameraRig({
   const controls = useRef<OrbitControls | null>(null);
 
   useEffect(() => {
-    const orbit = new OrbitControls(camera, domElement);
+    const orbit = orbitControls(camera, domElement);
     const redraw = () => invalidate();
     orbit.addEventListener("change", redraw);
     controls.current = orbit;

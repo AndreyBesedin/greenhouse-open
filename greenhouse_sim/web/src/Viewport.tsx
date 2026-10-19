@@ -2,7 +2,12 @@ import { Canvas, type ThreeEvent } from "@react-three/fiber";
 import { type ReactNode, useRef } from "react";
 import { type Group, PCFShadowMap } from "three";
 import { CameraRig } from "./CameraRig";
-import { CAMERA_FIELD_OF_VIEW_DEG, type CameraPose, type PresetRequest } from "./camera";
+import {
+  CAMERA_FIELD_OF_VIEW_DEG,
+  CAMERA_NEAR_M,
+  type CameraPose,
+  type PresetRequest,
+} from "./camera";
 import { Overlays } from "./debug/DebugPrimitives";
 import type { OverlayPrimitive } from "./debug/overlays";
 import type { Colouring } from "./debug/scalar";
@@ -121,7 +126,7 @@ export function Viewport({
   return (
     <Canvas
       frameloop={frameloop}
-      camera={{ fov: CAMERA_FIELD_OF_VIEW_DEG }}
+      camera={{ fov: CAMERA_FIELD_OF_VIEW_DEG, near: CAMERA_NEAR_M }}
       data-testid="main-view"
       data-light={sunlight === null ? "fixed" : sunlight === "night" ? "night" : "sun"}
       data-light-from={
