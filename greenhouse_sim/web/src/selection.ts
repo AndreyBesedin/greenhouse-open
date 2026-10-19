@@ -39,7 +39,8 @@ export function pickEntity(hits: readonly Hit[]): string | null {
   return nearestEntity(hits);
 }
 
-function isSeeThrough(hit: Hit): boolean {
+/** Whether a hit landed on something drawn see-through, such as glazing. */
+export function isSeeThrough(hit: Hit): boolean {
   return hit.object.userData.seeThrough === true;
 }
 

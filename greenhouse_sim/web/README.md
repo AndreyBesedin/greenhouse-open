@@ -9,12 +9,14 @@ the panel chooses what else it draws (see Scenes below), and
 `uv run demo`, from the repository's root, opens it on the reference
 greenhouse.
 
-Drag to orbit, right-drag to pan, and scroll to zoom: in no nearer than 20 cm
-to the point the camera orbits, so that a notch out always backs it away
-again. The HUD's buttons jump to the top, front, side and isometric views,
-from any view; a refresh always returns to the isometric one. It also shows
-the camera's position and where the pointer meets the ground, both in world
-metres, with the frame rate and object count. What it draws was built
+Drag to orbit, right-drag to pan, and scroll to zoom: over the scene, towards
+the point under the pointer, which stays under it, and the view then orbits
+at its depth; over the sky, towards the middle of the view. The camera comes
+no nearer than 20 cm to the point it orbits, so that a notch out always backs
+it away again. The HUD's buttons jump to the top, front, side and isometric
+views, from any view; a refresh always returns to the isometric one. It also
+shows the camera's position and where the pointer meets the ground, both in
+world metres, with the frame rate and object count. What it draws was built
 project by project, as the [simulator roadmap](../../docs/roadmap/README.md)
 records.
 
