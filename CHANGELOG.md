@@ -7,6 +7,13 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+## 0.2.0 - 2026-10-19
+
+The simulator's greenhouse, crop, air, sensors and sun, the reference
+scenario's season, and the browser viewer that draws them (P00 to P09).
+Several entries break 0.1.0's interfaces: the Python floor, records'
+timestamps, a description's tuples, and worlds serialized by 0.1.0.
+
 - All three packages now require Python 3.14 or newer (previously 3.12).
 - `greenhouse-protocol`: every record's timestamps are timezone-aware, checked
   as a record is built (`greenhouse_protocol.instant.Instant`): an
@@ -25,6 +32,11 @@ breaks the conformance checks is a major version.
   multiplier and ripening day) move from `PlantWorld` and `Fruit` to
   `GreenhouseWorld.plant_model`. Worlds serialized by earlier versions no
   longer load.
+- `greenhouse-sim`: `ScenarioConfig` refuses values no run can have:
+  `rows`, `columns`, `duration_days`, `truss_interval_days`,
+  `fruit_growth_days_to_target` and `water_capacity_ml` are positive, and
+  `random_seed` and `max_trusses` are not negative. Such values used to be
+  accepted, and some then failed deep in a run.
 - `greenhouse-sim`: plant, environment and sensor models plug into
   `SimulationEngine` through contracts (`PlantModel`, `EnvironmentModel`,
   `SensorModel`), with the existing dynamics kept as the default simple
@@ -33,7 +45,10 @@ breaks the conformance checks is a major version.
 - `greenhouse-sim`: `scene_snapshot` describes a world as a renderable scene,
   in metres with z up.
 - `greenhouse-sim`: a local API for the browser viewer
-  (`python -m greenhouse_sim.api`), using only the standard library.
+  (`python -m greenhouse_sim.api`), using only the standard library. It
+  refuses a body over 64 MB, one that does not arrive in full, or one
+  holding `NaN` or `Infinity`, and answers `PUT`, `PATCH` and `DELETE`
+  with 405.
 - A browser viewer for the simulator in `greenhouse_sim/web`, outside the
   Python package.
 - `greenhouse-sim`: a greenhouse as data (P01, P02): its envelope, spans and
@@ -47,20 +62,25 @@ breaks the conformance checks is a major version.
   driven by fans, a heater, a dehumidifier and vents, under recorded,
   synthetic or constant weather, with the house's air as one volume through
   a run.
-- `greenhouse-sim`: virtual sensors and cameras (P06), with noise, bias,
-  drift, latency and dropouts, an observation log and each sensor's
-  freshness; and the sun (P08): its position, the glazing's transmission,
-  shadows, and each plant's light.
+- `greenhouse-sim`: virtual sensors and cameras (P06), sampling at most
+  once a second, with noise, bias, drift, latency and dropouts, an
+  observation log and each sensor's freshness; and the sun (P08): its
+  position, the glazing's transmission, shadows, and each plant's light.
 - `greenhouse-sim`: the reference scenario and its season (P09): every
   scenario a versioned JSON manifest; the reference greenhouse's 32 plants
   grown organ by organ through 120 days in their run's air and their own
-  light, on one clock, with a timeline; checkpoints, branches and replay
-  digests; a kept opening day; a QA mode with the truth and a developer
-  panel; golden views; a benchmark (`python -m greenhouse_sim.benchmark`);
-  and the API's `Server-Timing` header.
+  light, on one clock, with a timeline; checkpoints, of which an upload
+  is refused unless a run could reach it, branches and replay digests; a
+  kept opening day; a QA mode with the truth and a developer panel; golden
+  views; a benchmark (`python -m greenhouse_sim.benchmark`); and the
+  API's `Server-Timing` header.
 - The viewer draws all of it (P00 to P09), with screenshot regression in a
   pinned container, and `uv run demo` starts the API and the viewer
   together and opens the reference greenhouse (`docs/demo.md`).
+- The viewer zooms towards the point under the pointer and stops at the
+  camera's closest approach, hides the overlays over the scene apart from
+  the run, folds a run's daily schedule to a summary, and gives up the
+  requests it no longer needs.
 - A clone is a uv workspace: `uv run <command>` installs Python 3.14 and
   the packages and runs a task, `uv run setup` installs the viewer's
   packages, Chromium and the git hooks, and `uv run help` lists the rest
@@ -76,6 +96,16 @@ breaks the conformance checks is a major version.
 - `greenhouse-adapters`: `greenhouse-data` ends a checksum mismatch, a
   network error or an archive that is not one in a line and exit code 1,
   instead of a traceback.
+- `greenhouse-adapters`: a canonical build writes only records that pass
+  the protocol's checks, and otherwise raises `RefusedBuild`, naming the
+  first violations. It dates a greenhouse by its first reading rather than
+  by when the build ran, and refuses a source with no readings.
+- `greenhouse-adapters`: `excel_serial_to_utc` refuses a local time that
+  the clocks skip or repeat, as `matlab_datenum_to_utc` already did.
+- `greenhouse-adapters`: an artifact's name is a plain file name, with no
+  folder, `..` or `:`; manifests and the canonical tier are read and
+  written as UTF-8; and `greenhouse-data inventory --write` refuses to
+  overwrite an installed package's manifests.
 - All three packages now require pydantic 2.12.2 or newer (previously 2.9):
   `Observation` leaves its unset fields out with `exclude_if`, which
   pydantic 2.11 ignores, and 2.12.0 fails on Python 3.14. CI installs the
