@@ -33,20 +33,21 @@ updates:
         patterns: [three, "@types/three"]
       # The visual checks run in a container image of the same version, in
       # ci.yml, which Dependabot does not move: until the image is moved by
-      # hand, its pull request fails them. Alone, so that it holds up no
-      # other update.
+      # hand, its pull request fails them, and tests/test_pins.py names the
+      # image to move to. Alone, so that it holds up no other update.
       playwright:
         patterns: ["@playwright/test"]
       npm-minor-and-patch:
         patterns: ["*"]
         update-types: [minor, patch]
 
-  # The development tools, pinned in the root pyproject.toml's `dev` group
-  # and locked in uv.lock (decision 0039). Only they: the packages' runtime
-  # ranges have the entry below, and Dependabot's uv support still mistakes
-  # a workspace's own packages for PyPI's (dependabot/dependabot-core#14004),
-  # whose names it ignores here too. A pull request that leaves uv.lock out
-  # of step with the pyproject.toml files fails CI's `uv sync --locked`.
+  # The development tools, pinned in the root pyproject.toml's `dev` group,
+  # and uv and poetry-core, in its `toolchain` group, all locked in uv.lock
+  # (decision 0039). Only they: the packages' runtime ranges have the entry
+  # below, and Dependabot's uv support still mistakes a workspace's own
+  # packages for PyPI's (dependabot/dependabot-core#14004), whose names it
+  # ignores here too. A pull request that leaves uv.lock out of step with
+  # the pyproject.toml files fails CI's `uv sync --locked`.
   - package-ecosystem: uv
     directory: /
     schedule:
@@ -63,6 +64,8 @@ updates:
       - dependency-name: ruff
       - dependency-name: pre-commit
       - dependency-name: types-openpyxl
+      - dependency-name: uv
+      - dependency-name: poetry-core
     ignore:
       - dependency-name: greenhouse-protocol
       - dependency-name: greenhouse-sim
@@ -73,6 +76,13 @@ updates:
       # request of its own. The two are merged together.
       ruff:
         patterns: [ruff]
+      # CI's uv, which runs every job, in a pull request of its own.
+      uv:
+        patterns: [uv]
+      # The packages' build backend, alone: its pull request fails until
+      # the root pyproject.toml's build pin follows it, by hand.
+      poetry-core:
+        patterns: [poetry-core]
       dev-tools-minor-and-patch:
         patterns: ["*"]
         update-types: [minor, patch]

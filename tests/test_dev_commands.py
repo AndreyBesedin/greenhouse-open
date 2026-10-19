@@ -148,24 +148,3 @@ def test_a_workflow_run_on_some_paths_runs_when_what_it_runs_on_changes() -> Non
 
     assert filtered
     assert [name for name, paths in filtered if not runs_on <= {*paths}] == []
-
-
-def test_the_packages_build_with_a_backend_the_workspace_pins() -> None:
-    # uv.lock pins what is installed, not what builds it: a new release of
-    # an unpinned backend would change CI's build under `--locked`.
-    uv = PYPROJECT["tool"]["uv"]
-    pins = {
-        re.split(r"[=<>!~ ]", constraint)[0]
-        for constraint in uv.get("build-constraint-dependencies", [])
-        if "==" in constraint
-    }
-    unpinned = [
-        (member, requirement)
-        for member in uv["workspace"]["members"]
-        for requirement in tomllib.loads((ROOT / member / "pyproject.toml").read_text())[
-            "build-system"
-        ]["requires"]
-        if re.split(r"[=<>!~ ;\[]", requirement)[0] not in pins
-    ]
-
-    assert unpinned == []
