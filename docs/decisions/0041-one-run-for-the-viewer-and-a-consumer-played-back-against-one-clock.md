@@ -5,7 +5,9 @@
 
 ## Context
 
-A consumer that reads a running simulation (P10, decision 0040) and a person
+A consumer that reads a running simulation (P10, decision 0040 in
+[#240](https://github.com/AndreyBesedin/greenhouse-open/pull/240), which
+this record follows) and a person
 watching it in the viewer must see the same run. As they stood, they would
 not.
 
