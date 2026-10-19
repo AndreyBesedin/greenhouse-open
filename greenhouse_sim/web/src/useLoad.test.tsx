@@ -133,6 +133,25 @@ describe("loading what a request names", () => {
     expect(hook.current).toEqual({ status: "loading" });
   });
 
+  it("gives up what a fetch it is given fetches too, as a test's", () => {
+    const signals = new Map<string, AbortSignal>();
+    const given = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.signal) {
+        signals.set(String(url), init.signal);
+      }
+      return new Promise<Response>(() => undefined);
+    });
+    const hook = renderHook(({ url }: Props) => useLoad(url, fetching, { fetch: given }), {
+      url: "/a",
+    });
+
+    hook.rerender({ url: "/b" });
+
+    expect(given).toHaveBeenCalledTimes(2);
+    expect(signals.get("/a")?.aborted).toBe(true);
+    expect(signals.get("/b")?.aborted).toBe(false);
+  });
+
   it("gives up a request whose component has gone", () => {
     const signals = fetchingForever();
     const hook = renderHook(({ url }: Props) => useLoad(url, fetching), { url: "/a" });

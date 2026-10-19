@@ -24,6 +24,9 @@ interface Options<R, T> {
   group?: string | undefined;
   /** Acts on an answer as it arrives, with the render that shows it. */
   onAnswer?: ((state: T) => void) | undefined;
+  /** The fetch that the one given to the load cancels: the browser's,
+   * unless another is given, as a test gives its own. */
+  fetch?: typeof fetch | undefined;
 }
 
 /** Loads what a request asks for, through `fetchFn`: a `fetch` that gives
@@ -64,9 +67,13 @@ export function useLoad<R, T extends Settled>(
   const key = request === null ? null : (options.key ?? String)(request);
   const group = options.group ?? "";
   const [answer, setAnswer] = useState<Answer<T> | null>(null);
-  const ask = useEffectEvent((fetchFn: typeof fetch) =>
-    request === null ? null : load(request, fetchFn),
-  );
+  const ask = useEffectEvent((signal: AbortSignal) => {
+    if (request === null) {
+      return null;
+    }
+    const fetching = options.fetch ?? fetch;
+    return load(request, (input, init) => fetching(input, { ...init, signal }));
+  });
   const answered = useEffectEvent((state: T) => options.onAnswer?.(state));
 
   useEffect(() => {
@@ -77,8 +84,7 @@ export function useLoad<R, T extends Settled>(
     }
     let current = true;
     const wanted = new AbortController();
-    const fetchFn: typeof fetch = (input, init) => fetch(input, { ...init, signal: wanted.signal });
-    void ask(fetchFn)?.then(
+    void ask(wanted.signal)?.then(
       (state) => {
         if (current) {
           setAnswer({ key, group, state });

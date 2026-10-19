@@ -26,10 +26,11 @@ type LightState =
   | { status: "missing"; reason: string }
   | { status: "loaded"; light: SolarLight };
 
-/** Fetches the solar lab's light; a failure is the reason it is missing. */
-async function loadSolarLight(): Promise<LightState> {
+/** Fetches the solar lab's light from `url`; a failure is the reason it is
+ * missing. */
+async function loadSolarLight(url: string, fetchFn: typeof fetch = fetch): Promise<LightState> {
   try {
-    const response = await fetch(QA_SOLAR_LIGHT_URL);
+    const response = await fetchFn(url);
     if (!response.ok) {
       throw new Error(`the file answered ${response.status}`);
     }

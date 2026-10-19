@@ -61,8 +61,8 @@ export function CheckpointsPanel({
   const [problem, setProblem] = useState<string | null>(null);
   const state = useLoad(
     open ? { url: CHECKPOINTS_URL, made } : null,
-    ({ url }) => loadCheckpoints(url, fetchFn),
-    { key: ({ url, made: count }) => `${url}#${count}` },
+    ({ url }, given) => loadCheckpoints(url, given),
+    { key: ({ url, made: count }) => `${url}#${count}`, fetch: fetchFn },
   );
   const day = daysEnded(time);
 

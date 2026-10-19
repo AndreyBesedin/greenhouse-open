@@ -158,4 +158,39 @@ describe("the checkpoints panel", () => {
     await act(async () => button(details, "Restore day 1, a6c84f7670591ba5").click());
     expect(onRestore).toHaveBeenCalledWith(CHECKPOINT);
   });
+
+  it("gives up its list's request when it is closed, through the fetch it is given", async () => {
+    let listing: AbortSignal | undefined;
+    const fetchFn = vi.fn(async (_url: string, init?: RequestInit) => {
+      listing = init?.signal ?? undefined;
+      return new Promise<Response>(() => undefined);
+    }) as unknown as typeof fetch;
+    shown = render(
+      <CheckpointsPanel
+        scenarioId="reference_greenhouse"
+        run={{ time: 90000 }}
+        time={90000}
+        onRestore={vi.fn()}
+        fetchFn={fetchFn}
+      />,
+    );
+    const details = shown.container.querySelector("details");
+    if (details === null) {
+      throw new Error("no details");
+    }
+    async function toggle(open: boolean): Promise<void> {
+      await act(async () => {
+        if (details !== null) {
+          details.open = open;
+          details.dispatchEvent(new Event("toggle"));
+        }
+      });
+    }
+
+    await toggle(true);
+    expect(listing?.aborted).toBe(false);
+    await toggle(false);
+
+    expect(listing?.aborted).toBe(true);
+  });
 });
