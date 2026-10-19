@@ -16,8 +16,12 @@ breaks the conformance checks is a major version.
 - `greenhouse-sim`: the consumer interface served from a played-back run
   (P10.4): `GET /consumer/v1/runs`, a run, its greenhouse, and its
   observations and events after a cursor, on the API's loopback server;
-  observed records only. `uv run api --play reference_greenhouse` starts
-  the run with the API.
+  observed records only. Besides the sensors' readings, the run's
+  organ-level crop delivers a daily walk through it at noon (each plant's
+  fruit and red fruit counted, their mass estimated, its height measured,
+  with the scenario's observation errors) and its weekly harvests, one
+  `HARVEST` event per plant picked. `uv run api --play reference_greenhouse
+  [--hold]` starts the run with the API, held until told to play if asked.
 - `greenhouse-protocol`: the consumer interface
   (`greenhouse_protocol.contracts.consumer`, decision 0040, P10.1): how a
   client reads a running producer, whatever it is. Routes under

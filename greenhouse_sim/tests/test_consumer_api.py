@@ -8,6 +8,7 @@ import threading
 import time
 import urllib.request
 from collections.abc import Iterator, Mapping
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -20,10 +21,14 @@ from greenhouse_protocol.contracts.consumer import (
     check_polls,
     check_run,
 )
+from greenhouse_protocol.enums import EventSource, EventType
+from greenhouse_protocol.event import Event
 from greenhouse_protocol.greenhouse import GreenhouseDescription
+from greenhouse_protocol.observation import Observation
 
 from greenhouse_sim.api.consumer import consumer_respond
 from greenhouse_sim.api.server import create_server
+from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import playback
 from greenhouse_sim.services.playback import PlaybackCommand
 
@@ -221,3 +226,51 @@ def _fetch(url: str) -> Mapping[str, object]:
         body = json.loads(answer.read())
     assert isinstance(body, dict)
     return body
+
+
+def test_a_held_playback_waits_for_a_play_command(clock: Clock) -> None:
+    playback.forget_playbacks()
+    held = playback.start(SCENARIO, 10.0, hold=True, clock=clock)
+    assert held.playing is False
+    clock.now += 50.0
+    assert playback.state(SCENARIO).time_s == 0.0
+    assert playback.command(SCENARIO, PlaybackCommand.PLAY).playing
+
+
+def test_the_run_s_events_reach_a_consumer_by_the_clock(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A harvest an hour into each day after the first, as the crop's log
+    # would give it, in place of the climate box's simple crop's none.
+    def harvest(
+        scenario_id: str, day: int, start: datetime, run_id: str
+    ) -> tuple[list[Observation], list[Event]]:
+        if day == 0:
+            return [], []
+        at = start + timedelta(seconds=day * DAY_S + 3600)
+        return [], [
+            Event(
+                event_id=f"sim_{scenario_id}_plant_001_{day}_harvest",
+                greenhouse_id=scenario_id,
+                plant_id=f"{scenario_id}_plant_001",
+                timestamp=at,
+                event_type=EventType.HARVEST,
+                source=EventSource.SIMULATION,
+                parameters={"harvested_mass_g": 120.0, "harvested_fruit_count": 2},
+            )
+        ]
+
+    monkeypatch.setattr("greenhouse_sim.services.playback.crop_records", harvest)
+    playback.forget_playbacks()
+    moved = Clock()
+    playback.start(SCENARIO, 10.0, clock=moved)
+    try:
+        assert playback.playback(SCENARIO).wait_for(3, timeout_s=120)
+        run_id = _run_id()
+        moved.now += 10.0  # the start of day 1: its harvest is an hour off
+        early = EventBatch.model_validate(_get(f"{PREFIX}/runs/{run_id}/events?after=0"))
+        assert early.events == ()
+        moved.now += 10.0  # day 2's start: day 1's harvest is in
+        later = EventBatch.model_validate(_get(f"{PREFIX}/runs/{run_id}/events?after=0"))
+        assert [e.parameters["harvested_mass_g"] for e in later.events] == [120.0]
+        assert later.next == 1 and check_polls([early, later]) == []
+    finally:
+        playback.forget_playbacks()

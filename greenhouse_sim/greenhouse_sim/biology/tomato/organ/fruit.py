@@ -88,6 +88,11 @@ def maturity(ripeness: float) -> Maturity:
     return Maturity.BREAKER if ripeness > 0 else Maturity.GREEN
 
 
+def is_red(ripeness: float) -> bool:
+    """Whether a fruit this ripe is red: ripe for a harvest round."""
+    return maturity(ripeness) == Maturity.RED
+
+
 def fruit_mass_g(diameter_mm: float, params: FruitParams) -> float:
     """A fruit's fresh mass, from the volume of a sphere of its diameter."""
     diameter_cm = diameter_mm / MM_PER_CM

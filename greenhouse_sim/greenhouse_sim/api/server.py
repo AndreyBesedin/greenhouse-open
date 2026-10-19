@@ -228,6 +228,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="play a scenario's own run back from its start, for the viewer and a consumer",
     )
     parser.add_argument(
+        "--hold",
+        action="store_true",
+        help="hold a played-back run's clock until it is told to play, its days worked out ahead",
+    )
+    parser.add_argument(
         "--play-seconds-per-day",
         type=float,
         default=playback.DEFAULT_SECONDS_PER_DAY,
@@ -239,8 +244,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     host, port = server.server_address[:2]
     print(f"greenhouse-sim API on http://{host!s}:{port}/api", flush=True)
     for scenario_id in args.play:
-        played = playback.start(scenario_id, args.play_seconds_per_day)
-        print(f"playing {played.run_id}, read at http://{host!s}:{port}/consumer/v1", flush=True)
+        played = playback.start(scenario_id, args.play_seconds_per_day, hold=args.hold)
+        held = f" (held: POST /api/scenarios/{scenario_id}/playback/play)" if args.hold else ""
+        print(
+            f"playing {played.run_id}{held}, read at http://{host!s}:{port}/consumer/v1",
+            flush=True,
+        )
     try:
         server.serve_forever()
     except KeyboardInterrupt:

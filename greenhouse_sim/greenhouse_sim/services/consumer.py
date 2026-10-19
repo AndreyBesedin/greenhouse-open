@@ -163,18 +163,31 @@ def observations(
 
 
 def events(run_id: str, after: int | None = None, limit: int | None = None) -> EventBatch:
-    """The events delivered in a run after the cursor, by its clock: none
-    yet, until the run's harvests and actions are its records too."""
+    """The events delivered in a run after the cursor, by its clock, in
+    delivery order, from the first if no cursor is given: its crop's
+    harvests."""
     cursor = FIRST_CURSOR if after is None else after
     if cursor < FIRST_CURSOR:
         raise InvalidRequest("a cursor is 0 or more")
-    _limit(limit)
-    now = _played(run_id).state()
+    found = _played(run_id)
+    now = found.state()
+    if not _given.knows(run_id, "events", now.epoch, cursor):
+        return EventBatch(
+            run_id=run_id,
+            epoch=now.epoch,
+            after=cursor,
+            next=cursor,
+            simulated_now=now.simulated_now,
+            events=(),
+        )
+    cut = found.events_after(cursor, _limit(limit))
+    _given.give(run_id, "events", cut.state.epoch, cut.next)
     return EventBatch(
         run_id=run_id,
-        epoch=now.epoch,
+        epoch=cut.state.epoch,
         after=cursor,
-        next=cursor,
-        simulated_now=now.simulated_now,
-        events=(),
+        next=cut.next,
+        simulated_now=cut.state.simulated_now,
+        has_more=cut.has_more,
+        events=cut.records,
     )
