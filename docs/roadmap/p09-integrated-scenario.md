@@ -1,6 +1,7 @@
 # P09: Integrated greenhouse scenario, replay and release QA
 
-**Status:** in progress. Part of the [simulator roadmap](README.md).
+**Status:** done: P09.1 to P09.9, released as 0.2.0. Part of the
+[simulator roadmap](README.md).
 
 ## Goal
 
@@ -281,7 +282,7 @@ run in their own Playwright project, as the plant lab's and the sun's do.
 | P09.6 | `feat(qa): add QA mode with truth overlays` | Done |
 | P09.7 | `test(e2e): add integrated visual regression suite` | Done |
 | P09.8 | `perf(sim): add representative performance benchmark` | Done |
-| P09.9 | `docs(release): document local demo and QA protocol` | In progress |
+| P09.9 | `docs(release): document local demo and QA protocol` | Done |
 
 ### P09.1: Scenarios as manifests
 
@@ -860,6 +861,9 @@ starts both and stops both; the video's script runs as a browser test.
   troubleshooting. The README and the simulator's README point to it.
 - **The changelog** says what the release adds since 0.1.0, project by
   project; choosing its version, and tagging it, are the maintainer's.
+- **The version** is 0.2.0 for all three packages, dated in the changelog
+  on 2026-10-19. The simulator and the adapters require the protocol's
+  0.2 (`>=0.2.0,<0.3`), which the 0.1 range would have refused.
 - **Tests** (`tests/test_demo.py`): stand-in servers start, answer and stop
   together, and when one stops the other is stopped too; a server that
   stops before it answers is said; the demo opens the reference greenhouse
