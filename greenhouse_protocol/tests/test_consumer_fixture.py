@@ -253,11 +253,13 @@ def build_exchange() -> dict[str, Any]:
     batch, a repoll, a stale cursor, and the run starting over."""
     first = _Producer(FIRST_EPOCH)
     first.advance_to(1)
+    # In the order a client makes them: it discovers the run and reads the
+    # greenhouse once, then each day reads the clock and drains both logs.
     steps = [
         _step(f"{CONSUMER_PREFIX}/runs", RunList(runs=(first.run(),))),
-        _step(RUN, first.run()),
         _step(f"{RUN}/greenhouse", greenhouse()),
         _step(f"{CONSUMER_PREFIX}/runs/unknown", {"detail": "no run 'unknown'"}, status=404),
+        _step(RUN, first.run()),
         _step(
             f"{RUN}/observations", first.observation_batch(FIRST_CURSOR), {"after": FIRST_CURSOR}
         ),
