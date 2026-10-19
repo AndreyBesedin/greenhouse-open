@@ -58,6 +58,7 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
   // The camera on the house from here on: the address keeps it.
   await page.goto(`${page.url()}&camera=${ON_THE_HOUSE}`);
+  await expect(page.getByTestId("camera-position")).toHaveText("x -5.00, y -14.00, z 11.00");
   await expect(moment).toHaveText("day 80, 12 h 00 min", ARRIVES);
   await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
   await say(page, "1. Opened on day 80, its first day with red fruit");
