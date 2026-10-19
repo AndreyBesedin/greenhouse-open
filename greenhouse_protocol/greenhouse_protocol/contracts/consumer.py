@@ -274,7 +274,10 @@ def check_polls(batches: Iterable[Batch]) -> list[str]:
                 "a cursor the producer never gave in this epoch"
             )
         earlier = at.get(batch.after)
-        if earlier is not None and list(earlier) != ids[: len(earlier)]:
+        # A repoll may be cut shorter or longer than the one before (its
+        # limit, or more having arrived); the records both hold must agree.
+        shared = min(len(earlier), len(ids)) if earlier is not None else 0
+        if earlier is not None and list(earlier[:shared]) != ids[:shared]:
             violations.append(
                 f"{_label(batch)} (poll {index}) rewrites the log: a repoll at "
                 f"after={batch.after} no longer starts with what was delivered before"

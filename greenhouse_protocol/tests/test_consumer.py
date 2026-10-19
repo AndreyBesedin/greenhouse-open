@@ -195,6 +195,14 @@ def test_a_repoll_extends_what_was_delivered_but_never_rewrites_it() -> None:
     ]
 
 
+def test_a_repoll_cut_shorter_by_its_limit_is_not_a_rewrite() -> None:
+    full = _batch((_observation(1, START), _observation(2, START), _observation(3, NOW)))
+    cut = _batch((_observation(1, START),), next=1).model_copy(update={"has_more": True})
+
+    assert check_polls([full, cut]) == []
+    assert check_polls([cut, full]) == []
+
+
 def test_a_record_is_never_delivered_twice_in_an_epoch() -> None:
     first = _batch((_observation(1, START), _observation(2, START)))
     again = _batch((_observation(2, START), _observation(3, NOW)), after=first.next)
