@@ -9,7 +9,7 @@ export function RuleChecks({ run }: { run: LabRun }) {
   const query = labRunQuery(run);
 
   // The last checks loaded stay on show until this run's arrive.
-  const state = useLoad(labChecksUrl(query), () => loadLabChecks(query));
+  const state = useLoad(labChecksUrl(query), (_url, fetchFn) => loadLabChecks(query, fetchFn));
 
   switch (state.status) {
     case "loading":

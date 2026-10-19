@@ -11,6 +11,7 @@ import json
 import pathlib
 import re
 import socket
+import struct
 import subprocess
 import threading
 import time
@@ -301,6 +302,38 @@ def test_a_request_the_simulator_fails_on_is_answered_500_and_logged(
     assert failed.value.code == HTTPStatus.INTERNAL_SERVER_ERROR
     assert json.load(failed.value) == {"error": UNEXPECTED_FAILURE}
     assert "a failure nobody planned for" in capsys.readouterr().err
+
+
+def test_a_client_gone_before_its_answer_is_let_go_quietly(
+    server: ThreadingHTTPServer, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # The viewer gives up on a request it no longer wants, while the
+    # simulator works on it: routine, not a failure.
+    gone = threading.Event()
+    let_go = threading.Event()
+
+    def slow(method: str, path: str) -> Response:
+        gone.wait(WAIT_S)
+        return Response(HTTPStatus.OK, {"field": "x" * 1_000_000})
+
+    def closed(request: socket.socket) -> None:
+        ThreadingHTTPServer.shutdown_request(server, request)
+        let_go.set()
+
+    monkeypatch.setattr(server_module, "respond", slow)
+    monkeypatch.setattr(server, "shutdown_request", closed)
+    host, port = server.server_address[:2]
+
+    with socket.create_connection((str(host), port), timeout=WAIT_S) as client:
+        client.sendall(b"GET /api/health HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        # Closed as a browser gives up: at once, unread.
+        client.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
+    gone.set()
+
+    assert let_go.wait(WAIT_S)
+    log = capsys.readouterr().err
+    assert "Traceback" not in log
+    assert "the client left before its answer" in log
 
 
 def test_nothing_in_the_simulator_imports_its_api() -> None:

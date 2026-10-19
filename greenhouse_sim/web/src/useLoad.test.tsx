@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderHook } from "./testing/renderHook";
 import { useLoad } from "./useLoad";
@@ -30,6 +30,37 @@ function loaded(value: string): State {
   return { status: "loaded", value };
 }
 
+/** The browser's `fetch`, stood in for: nothing is answered, a request
+ * given up fails as the browser's does, and each request's signal is
+ * kept, by its address. */
+function fetchingForever(): Map<string, AbortSignal> {
+  const signals = new Map<string, AbortSignal>();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      (url: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          const signal = init?.signal;
+          if (signal) {
+            signals.set(url, signal);
+            signal.addEventListener("abort", () => reject(signal.reason));
+          }
+        }),
+    ),
+  );
+  return signals;
+}
+
+/** A load that fetches its address, and fails if the fetch does. */
+async function fetching(url: string, fetchFn: typeof fetch): Promise<State> {
+  await fetchFn(url);
+  return loaded(url);
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 interface Props {
   url: string | null;
   group?: string;
@@ -53,7 +84,7 @@ describe("loading what a request names", () => {
     await answer("/a", loaded("A"));
 
     expect(hook.current).toEqual(loaded("A"));
-    expect(load).toHaveBeenCalledExactlyOnceWith("/a");
+    expect(load).toHaveBeenCalledExactlyOnceWith("/a", expect.any(Function));
   });
 
   it("keeps a loaded answer on show while the next request loads", async () => {
@@ -87,6 +118,45 @@ describe("loading what a request names", () => {
     await answer("/a", loaded("A"));
 
     expect(hook.current).toEqual(loaded("B"));
+  });
+
+  it("gives up a request that has changed, cancelling what it fetches", () => {
+    // Else every step asked for queues behind the last on the browser's
+    // few connections to the API (#202).
+    const signals = fetchingForever();
+    const hook = renderHook(({ url }: Props) => useLoad(url, fetching), { url: "/a" });
+
+    hook.rerender({ url: "/b" });
+
+    expect(signals.get("/a")?.aborted).toBe(true);
+    expect(signals.get("/b")?.aborted).toBe(false);
+    expect(hook.current).toEqual({ status: "loading" });
+  });
+
+  it("gives up a request whose component has gone", () => {
+    const signals = fetchingForever();
+    const hook = renderHook(({ url }: Props) => useLoad(url, fetching), { url: "/a" });
+
+    hook.unmount();
+
+    expect(signals.get("/a")?.aborted).toBe(true);
+  });
+
+  it("keeps a loaded answer on show while the request after it is given up", async () => {
+    const signals = fetchingForever();
+    const { load, answer } = answering();
+    const hook = renderHook(
+      ({ url }: Props) =>
+        useLoad(url, (asked, fetchFn) => (asked === "/a" ? load(asked) : fetching(asked, fetchFn))),
+      { url: "/a" },
+    );
+    await answer("/a", loaded("A"));
+
+    hook.rerender({ url: "/b" });
+    await act(async () => hook.rerender({ url: "/c" }));
+
+    expect(signals.get("/b")?.aborted).toBe(true);
+    expect(hook.current).toEqual(loaded("A"));
   });
 
   it("drops an answer that arrives after the component has gone", async () => {

@@ -26,39 +26,47 @@ interface Options<R, T> {
   onAnswer?: ((state: T) => void) | undefined;
 }
 
+/** Loads what a request asks for, through `fetchFn`: a `fetch` that gives
+ * up once the request is no longer wanted. */
+type Load<R, T> = (request: R, fetchFn: typeof fetch) => Promise<T>;
+
 /**
  * What `load` answers for `request`, asked for again whenever the request
  * changes; `null` asks for nothing. A request is its address, unless
  * `options.key` names it.
  *
  * An answer that loaded stays on show until the next arrives; anything else
- * gives way to loading. An answer that arrives after the request has
- * changed, or after the component has gone, is dropped.
+ * gives way to loading. A request that has changed, or whose component has
+ * gone, is given up: what `load` fetches for it is cancelled, so that it
+ * holds none of the browser's few connections to the API, and an answer
+ * that arrives anyway is dropped.
  */
 export function useLoad<T extends Settled>(
   url: string,
-  load: (url: string) => Promise<T>,
+  load: Load<string, T>,
   options?: Options<string, T>,
 ): T | Loading;
 export function useLoad<T extends Settled>(
   url: string | null,
-  load: (url: string) => Promise<T>,
+  load: Load<string, T>,
   options?: Options<string, T>,
 ): T | Pending;
 export function useLoad<R, T extends Settled>(
   request: R | null,
-  load: (request: R) => Promise<T>,
+  load: Load<R, T>,
   options: Options<R, T> & { key: (request: R) => string },
 ): T | Pending;
 export function useLoad<R, T extends Settled>(
   request: R | null,
-  load: (request: R) => Promise<T>,
+  load: Load<R, T>,
   options: Options<R, T> = {},
 ): T | Pending {
   const key = request === null ? null : (options.key ?? String)(request);
   const group = options.group ?? "";
   const [answer, setAnswer] = useState<Answer<T> | null>(null);
-  const ask = useEffectEvent(() => (request === null ? null : load(request)));
+  const ask = useEffectEvent((fetchFn: typeof fetch) =>
+    request === null ? null : load(request, fetchFn),
+  );
   const answered = useEffectEvent((state: T) => options.onAnswer?.(state));
 
   useEffect(() => {
@@ -68,14 +76,26 @@ export function useLoad<R, T extends Settled>(
       return;
     }
     let current = true;
-    void ask()?.then((state) => {
-      if (current) {
-        setAnswer({ key, group, state });
-        answered(state);
-      }
-    });
+    const wanted = new AbortController();
+    const fetchFn: typeof fetch = (input, init) => fetch(input, { ...init, signal: wanted.signal });
+    void ask(fetchFn)?.then(
+      (state) => {
+        if (current) {
+          setAnswer({ key, group, state });
+          answered(state);
+        }
+      },
+      (error: unknown) => {
+        // A load given up may fail as it gives up; any other failure is
+        // its own to report.
+        if (current) {
+          throw error;
+        }
+      },
+    );
     return () => {
       current = false;
+      wanted.abort();
     };
   }, [key, group]);
 
