@@ -104,7 +104,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [qaMode, setQaMode] = useQaMode();
   // How long the simulator took to answer the latest request, for the HUD.
   const simulatorTime = useSimulatorTime();
-  const scenarios = useLoad(SCENARIOS_URL, () => loadScenarios());
+  const scenarios = useLoad(SCENARIOS_URL, (_url, fetchFn) => loadScenarios(fetchFn));
   // The scenario shown, as the list describes it: its weathers, its days
   // and its own daily commands.
   const summary =
@@ -160,7 +160,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // scene starts from loading.
   const openingIds = summary?.openings ?? NO_OPENINGS;
   const sceneAsked = sceneRequest(source, openingIds);
-  const scene = useLoad(sceneAsked, () => loadScene(source, fetch, openingIds), {
+  const scene = useLoad(sceneAsked, (_url, fetchFn) => loadScene(source, fetchFn, openingIds), {
     group:
       source.kind === "scenario"
         ? `scenario ${source.scenarioId}`

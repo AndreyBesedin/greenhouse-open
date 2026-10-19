@@ -56,9 +56,9 @@ const NO_FIELDS: FieldNames = { names: [], configured: null };
 /** The fields a scenario offers with one of its layouts: none until they
  * arrive, and the last scenario's or layout's until the next's do. */
 export function useFieldNames(scenarioId: string, layout?: string): FieldNames {
-  const listed = useLoad(fieldNamesUrl(scenarioId, layout), async () => ({
+  const listed = useLoad(fieldNamesUrl(scenarioId, layout), async (_url, fetchFn) => ({
     status: "loaded" as const,
-    ...(await loadFieldNames(scenarioId, layout)),
+    ...(await loadFieldNames(scenarioId, layout, fetchFn)),
   }));
   return listed.status === "loaded" ? listed : NO_FIELDS;
 }

@@ -113,8 +113,8 @@ export function PlantStructure({
   // Asked for by its query, which changes only when the run does.
   const query = labRunQuery(run);
   // Another run's or plant's tree, loaded, stays on show until this one's arrives.
-  const state = useLoad(plantStructureUrl(plantId, query), () =>
-    loadPlantStructure(plantId, query),
+  const state = useLoad(plantStructureUrl(plantId, query), (_url, fetchFn) =>
+    loadPlantStructure(plantId, query, fetchFn),
   );
 
   switch (state.status) {

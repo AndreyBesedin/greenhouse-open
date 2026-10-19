@@ -53,7 +53,9 @@ export function LabControls({
   onSpeed: (speed: GrowthSpeed) => void;
   onShowNames: (showNames: boolean) => void;
 }) {
-  const environments = useLoad(PLANT_LAB_ENVIRONMENTS_URL, () => loadLabEnvironments());
+  const environments = useLoad(PLANT_LAB_ENVIRONMENTS_URL, (_url, fetchFn) =>
+    loadLabEnvironments(fetchFn),
+  );
 
   const known = environments.status === "loaded" ? environments.environments : {};
   const names = Object.keys(known);

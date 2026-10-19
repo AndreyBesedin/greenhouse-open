@@ -148,15 +148,20 @@ class _Handler(BaseHTTPRequestHandler):
 
     def _send(self, response: Response, started: float) -> None:
         """Sends the answer, saying how long the simulator took to give it,
-        from `started`, its JSON written."""
+        from `started`, its JSON written. A client gone by then, as a viewer
+        goes from a request it no longer wants, is let go."""
         body = json.dumps(response.body).encode()
         took_ms = (time.perf_counter() - started) * MS_PER_S
         self.send_response(response.status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Server-Timing", f"{SIMULATOR_METRIC};dur={took_ms:.1f}")
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.end_headers()
+            self.wfile.write(body)
+        except BrokenPipeError, ConnectionResetError:
+            self.close_connection = True
+            self.log_message('"%s": the client left before its answer', self.requestline)
 
     def _stream(self, run: LiveRun) -> None:
         """Sends the run's frames as Server-Sent Events until either side stops."""

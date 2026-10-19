@@ -26,7 +26,7 @@ const ignore = () => undefined;
 export function QaAirflow({ search }: { search: string }) {
   const view = qaAirflowView(search);
   const scene = useSceneFile(QA_AIRFLOW_SCENE_URL);
-  const field = useLoad(QA_AIRFLOW_FIELD_URL, () => fetchField(QA_AIRFLOW_FIELD_URL));
+  const field = useLoad(QA_AIRFLOW_FIELD_URL, fetchField);
 
   if (view === null) {
     return (
