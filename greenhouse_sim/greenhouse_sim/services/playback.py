@@ -24,6 +24,7 @@ makes another run, which the playback does not follow.
 """
 
 import gzip
+import math
 import threading
 from bisect import bisect_right
 from collections import OrderedDict
@@ -37,9 +38,9 @@ from typing import Final
 from greenhouse_protocol.observation import Observation
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 
-from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.core.clock import DAY_S, run_day
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
-from greenhouse_sim.services.errors import InvalidRequest, NotFound
+from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.sensors import delivered_between, run_start
@@ -59,6 +60,14 @@ DAYS_READ_BACK: Final = 4
 WAIT_STEP_S: Final = 0.05
 
 _RECORDS: Final = TypeAdapter(list[Observation])
+
+
+class PlaybackFailed(RuntimeError):
+    """A playback's run could not be worked out, unexpectedly: a failure of
+    the simulator's, not of a request, answered and logged as such."""
+
+    def __init__(self, run_id: str) -> None:
+        super().__init__(f"the playback of {run_id} could not work its run out")
 
 
 class PlaybackCommand(StrEnum):
@@ -166,35 +175,43 @@ class Playback:
             self._stopped.wait(WAIT_STEP_S)
 
     def _work(self) -> None:
-        days = round(self.end_s / DAY_S)
-        for day in range(days):
-            if self._stopped.is_set():
+        for day in range(round(self.end_s / DAY_S)):
+            if self._stopped.is_set() or not self.work_day(day):
                 return
-            try:
-                records, run_id = delivered_between(
-                    self.scenario_id,
-                    None if day == 0 else day * DAY_S,
-                    (day + 1) * DAY_S,
-                    self.every_s,
-                )
-            except Exception as error:
-                # Kept, and said by `state`, rather than lost with the thread.
-                with self._lock:
-                    self._failure = error
-                return
-            if run_id != self.run_id:
-                with self._lock:
-                    self._failure = RuntimeError(f"its run is another now: {run_id}")
-                return
-            worked = _Day(
-                count=len(records),
-                delivered_s=tuple(
-                    ((r.delivered_at or r.timestamp) - self.start).total_seconds() for r in records
-                ),
-                packed=gzip.compress(_RECORDS.dump_json(records)),
+
+    def work_day(self, day: int) -> bool:
+        """Works the run's day `day` out and publishes its records, the day
+        after the last published; whether it could, any failure kept and
+        said by `state` rather than lost with the worker."""
+        try:
+            records, run_id = delivered_between(
+                self.scenario_id,
+                None if day == 0 else day * DAY_S,
+                (day + 1) * DAY_S,
+                self.every_s,
             )
+        except Exception as error:
             with self._lock:
-                self._days.append(worked)
+                self._failure = error
+            return False
+        if run_id != self.run_id:
+            with self._lock:
+                self._failure = RuntimeError(f"its run is another now: {run_id}")
+            return False
+        worked = _Day(
+            count=len(records),
+            delivered_s=tuple(
+                ((r.delivered_at or r.timestamp) - self.start).total_seconds() for r in records
+            ),
+            packed=gzip.compress(_RECORDS.dump_json(records)),
+        )
+        with self._lock:
+            # The clock moved as far as it could before this day: from now
+            # on it moves into it. Time it spent waiting is not banked,
+            # however often anyone asked meanwhile.
+            self._advance()
+            self._days.append(worked)
+        return True
 
     def _advance(self) -> None:
         """Moves the clock on by the real time since it last moved, at its
@@ -210,7 +227,9 @@ class Playback:
 
     def _state(self) -> PlaybackState:
         if self._failure is not None:
-            raise InvalidRequest(f"the run could not be worked out: {self._failure}")
+            if isinstance(self._failure, ServiceError):
+                raise self._failure
+            raise PlaybackFailed(self.run_id) from self._failure
         return PlaybackState(
             scenario_id=self.scenario_id,
             run_id=self.run_id,
@@ -219,7 +238,7 @@ class Playback:
             started_at=self.start,
             simulated_now=self.start + timedelta(seconds=self._time_s),
             time_s=self._time_s,
-            day=min(int(self._time_s // DAY_S), round(self.end_s / DAY_S) - 1),
+            day=run_day(self._time_s),
             playing=self._playing,
             seconds_per_day=self._seconds_per_day,
             worked_out_s=len(self._days) * DAY_S,
@@ -303,7 +322,7 @@ class Playback:
 
 
 def _check_pace(seconds_per_day: float) -> None:
-    if not seconds_per_day > 0:
+    if not (math.isfinite(seconds_per_day) and seconds_per_day > 0):
         raise InvalidRequest("a day takes some time to play: seconds_per_day is above 0")
 
 

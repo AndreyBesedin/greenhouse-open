@@ -27,7 +27,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Final, cast
 
 from greenhouse_sim.api.routes import Response, control, live_stream, respond
-from greenhouse_sim.services import checkpoints
+from greenhouse_sim.services import checkpoints, playback
 from greenhouse_sim.services.live import DEFAULT_SECONDS_PER_DAY, LiveRun, LiveRuns
 
 LOOPBACK: Final = "127.0.0.1"
@@ -74,6 +74,8 @@ class SimulatorServer(ThreadingHTTPServer):
 
     def server_close(self) -> None:
         self.live.stop()
+        # The runs played back go with the server that played them.
+        playback.forget_playbacks()
         super().server_close()
 
 
