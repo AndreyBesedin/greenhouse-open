@@ -350,6 +350,12 @@ body {
   min-width: 0;
 }
 
+/* What the moment asked for is waiting on, or why it cannot be drawn. */
+.climate-time-note {
+  margin: 0;
+  font-size: 0.85em;
+}
+
 /* The weather outside: a line, with a compass beside it, opening on its
  * details. */
 .weather-panel {

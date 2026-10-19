@@ -25,8 +25,31 @@ function describeSource(source: SceneSource, day = 0): string {
   }
 }
 
-/** What is drawn, and if a scene could not be drawn, exactly why. */
-export function SceneStatus({ source, state }: { source: SceneSource; state: SceneState }) {
+/** What is drawn, and if a scene could not be drawn, exactly why; and what
+ * failed to arrive while something else is drawn in its place, so that it
+ * is never taken for what was asked for (#197). */
+export function SceneStatus({
+  source,
+  state,
+  failures = [],
+}: {
+  source: SceneSource;
+  state: SceneState;
+  failures?: readonly string[];
+}) {
+  return (
+    <>
+      <Drawn source={source} state={state} />
+      {failures.length > 0 && (
+        <p data-testid="scene-failures" role="alert">
+          Not drawn as asked: {failures.join("; ")}.
+        </p>
+      )}
+    </>
+  );
+}
+
+function Drawn({ source, state }: { source: SceneSource; state: SceneState }) {
   switch (state.status) {
     case "none":
       return <p data-testid="scene-status">Showing the {describeSource(source)}.</p>;

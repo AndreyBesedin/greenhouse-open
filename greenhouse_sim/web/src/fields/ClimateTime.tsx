@@ -12,6 +12,7 @@ const SECONDS_PER_HOUR = 3600;
 const MINUTE_DIGITS = 2;
 // Playing, the run moves on a step this long after each moment arrives.
 const PLAY_PAUSE_MS = 400;
+const MS_PER_S = 1000;
 /** How far each step of play moves, to choose from: the first, a day in a
  * few minutes; the last, the same time of day, day after day. */
 export const PACES: readonly { stepS: number; label: string }[] = [
@@ -51,16 +52,48 @@ export function onDay(day: number, withinS: number): number {
   return day * DAY_S + Math.min(DAY_S, Math.max(earliest, withinS));
 }
 
+/** How many whole seconds `asked` has waited, counted afresh whenever it
+ * changes, and second by second while `waiting`. */
+function useSecondsWaited(asked: number, waiting: boolean): number {
+  const [since, setSince] = useState<{ asked: number; at: number }>(() => ({
+    asked,
+    at: Date.now(),
+  }));
+  const [now, setNow] = useState(since.at);
+  if (since.asked !== asked) {
+    const at = Date.now();
+    setSince({ asked, at });
+    setNow(at);
+  }
+  useEffect(() => {
+    if (!waiting) {
+      return;
+    }
+    const tick = setInterval(() => setNow(Date.now()), MS_PER_S);
+    return () => clearInterval(tick);
+  }, [waiting]);
+  return Math.floor((now - since.at) / MS_PER_S);
+}
+
+/** `text`, its first letter a capital, to begin a sentence. */
+function sentence(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 /**
  * How far into its climate run a scenario's climate is drawn: a slider over
  * the moment's day, a minute at a time; through a run of several days, a
  * slider over its days, with a step either way; and play, which moves on
  * once the last moment asked for has arrived (`playStep`), at the pace
- * chosen, until the run's end.
+ * chosen, until the run's end. The moment shown is the one drawn; while
+ * another is on its way, it says which and for how long, so that a slow
+ * step is never taken for one that does nothing (#198, #202). A moment
+ * that cannot be drawn stops play.
  */
 export function ClimateTime({
   time,
   shown,
+  failed = false,
   days,
   playing,
   onTime,
@@ -68,8 +101,11 @@ export function ClimateTime({
 }: {
   /** The moment asked for, in seconds. */
   time: number;
-  /** The moment of the field drawn, once it has arrived. */
+  /** The moment of the field drawn, once one has arrived. */
   shown: number | null;
+  /** Whether the moment asked for cannot be drawn, which the scene's status
+   * says why. */
+  failed?: boolean;
   /** How many days the run lasts. */
   days: number;
   playing: boolean;
@@ -79,6 +115,13 @@ export function ClimateTime({
   const [pace, setPace] = useState(PLAY_LATER_STEP_S);
   const end = days * DAY_S;
   const arrived = shown === time;
+  const waiting = !arrived && !failed;
+  const waited = useSecondsWaited(time, waiting);
+  useEffect(() => {
+    if (playing && failed) {
+      onPlaying(false);
+    }
+  }, [playing, failed, onPlaying]);
   useEffect(() => {
     if (!playing || !arrived) {
       return;
@@ -114,6 +157,17 @@ export function ClimateTime({
         />
         <span data-testid="climate-time">{describeTime(shown ?? time)}</span>
       </div>
+      {waiting && (
+        <p className="climate-time-note" data-testid="climate-pending">
+          {playing ? "Playing: waiting for" : "Loading"} {describeTime(time)}… {waited} s
+        </p>
+      )}
+      {failed && !arrived && (
+        <p className="climate-time-note" data-testid="climate-failed" role="alert">
+          {sentence(describeTime(time))} cannot be drawn
+          {shown === null ? "" : `; ${describeTime(shown)} is shown`}.
+        </p>
+      )}
       {days > 1 && (
         <div className="climate-time-row">
           <button

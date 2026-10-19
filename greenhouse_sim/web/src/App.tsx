@@ -77,7 +77,7 @@ import { cameraOf, frustumOverlays } from "./sensors/camera";
 import { loadSensorReadings, sensorsKey } from "./sensors/readings";
 import { SensorPanel } from "./sensors/SensorPanel";
 import { useSimulatorTime } from "./simulatorTime";
-import { useLoad } from "./useLoad";
+import { type Pending, type Progress, useLoad, useLoadProgress } from "./useLoad";
 import { Viewport } from "./Viewport";
 import { sceneSunlight, sunPathOverlays } from "./weather/sunlight";
 import {
@@ -96,6 +96,29 @@ const MILLISECONDS_PER_SECOND = 1000;
 const DEFAULT_PROBE_HEIGHT_M = 1;
 const EMPTY_PROBES: Point3[] = [];
 const NO_OPENINGS: readonly string[] = [];
+
+/** What a part of the view draws: the latest of it that loaded, kept while
+ * the next is on its way and when the next fails, or else how its latest
+ * request stands. */
+function drawn<T extends { status: string }>({ shown, latest }: Progress<T>): T | Pending {
+  return shown ?? latest;
+}
+
+/** Whether a part's latest request failed. */
+function failed(latest: { status: string }): boolean {
+  return latest.status === "unavailable" || latest.status === "rejected";
+}
+
+/** Why a part's latest request failed, in words, if it did. */
+function failureOf(part: string, latest: { status: string }): string | null {
+  if (latest.status === "unavailable" && "reason" in latest) {
+    return `the ${part} is not available (${String(latest.reason)})`;
+  }
+  if (latest.status === "rejected" && "problems" in latest && Array.isArray(latest.problems)) {
+    return `the ${part} was refused (${latest.problems.join("; ")})`;
+  }
+  return null;
+}
 
 export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [addressed, setAddressed] = useSource();
@@ -160,14 +183,19 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // scene starts from loading.
   const openingIds = summary?.openings ?? NO_OPENINGS;
   const sceneAsked = sceneRequest(source, openingIds);
-  const scene = useLoad(sceneAsked, (_url, fetchFn) => loadScene(source, fetchFn, openingIds), {
-    group:
-      source.kind === "scenario"
-        ? `scenario ${source.scenarioId}`
-        : source.kind === "plants"
-          ? "plants"
-          : (sceneAsked ?? ""),
-  });
+  const sceneProgress = useLoadProgress(
+    sceneAsked,
+    (_url, fetchFn) => loadScene(source, fetchFn, openingIds),
+    {
+      group:
+        source.kind === "scenario"
+          ? `scenario ${source.scenarioId}`
+          : source.kind === "plants"
+            ? "plants"
+            : (sceneAsked ?? ""),
+    },
+  );
+  const scene = drawn(sceneProgress);
 
   // The scenario's run drawn, every part of which is asked for under its
   // layout, equipment, openings, schedule, moment and weather; and the same
@@ -184,18 +212,20 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
 
   // A crop grown organ by organ, as it stands at the moment drawn, in place
   // of its transplants once a day has ended; the last stays on show until
-  // the next day's arrives.
+  // the next day's arrives, and when the next day's fails.
   const organCrop = summary?.crop_model === ORGAN_CROP;
-  const crop = useLoad(
+  const cropProgress = useLoadProgress(
     run === null || !organCrop || daysEnded(moment) === 0 ? null : cropUrl(run),
     fetchScene,
     { group: run === null ? "" : `crop ${run.scenarioId}` },
   );
+  const crop = drawn(cropProgress);
 
   // The scenario's field, drawn over its scene, and another compared with it
-  // at the probes; the last of each stays on show until the next arrives.
+  // at the probes; the last of each stays on show until the next arrives,
+  // and the field's when the next fails.
   const fieldName = source.kind === "scenario" ? (source.field ?? null) : null;
-  const field = useLoad(
+  const fieldProgress = useLoadProgress(
     run === null || fieldName === null ? null : fieldUrl(run.scenarioId, fieldName, run),
     fetchField,
     {
@@ -205,6 +235,18 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         }
       },
     },
+  );
+  const field = drawn(fieldProgress);
+  // What of the moment asked for failed to arrive, while something else of
+  // it is drawn in its place: the scene and the field each say why when
+  // nothing of them is drawn; the crop never says so itself.
+  const failures = [
+    sceneProgress.shown === null ? null : failureOf("scene", sceneProgress.latest),
+    failureOf("crop", cropProgress.latest),
+    fieldProgress.shown === null ? null : failureOf("field", fieldProgress.latest),
+  ].filter((failure) => failure !== null);
+  const momentFailed = [sceneProgress, cropProgress, fieldProgress].some(({ latest }) =>
+    failed(latest),
   );
   const compareName = source.kind === "scenario" ? (source.compare ?? null) : null;
   const compared = useLoad(
@@ -547,6 +589,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             scenarios={scenarios}
             source={source}
             scene={shown.status === "loaded" && snapshot !== null ? { ...shown, snapshot } : shown}
+            failures={source.kind === "live" ? [] : failures}
             onSource={chooseSource}
           >
             {snapshot !== null && (
@@ -586,6 +629,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 weathers={summary?.weathers ?? []}
                 days={summary?.duration_days ?? 1}
                 loads={{ field, compared, weather, weatherDay, houseAir, probeCharts, cfd }}
+                momentFailed={momentFailed}
                 fieldView={fieldView}
                 fieldSlice={fieldSlice}
                 probes={probes}

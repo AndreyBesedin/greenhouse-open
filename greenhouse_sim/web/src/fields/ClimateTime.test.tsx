@@ -1,8 +1,11 @@
+// @vitest-environment jsdom
+import { act } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DAY_S } from "../clock";
 import { searchFor, sourceFromSearch } from "../scene/source";
+import { render, said } from "../testing/render";
 import { ClimateTime, describeTime, onDay, playStep } from "./ClimateTime";
 import { fieldUrl } from "./source";
 
@@ -153,5 +156,81 @@ describe("a climate run's moment", () => {
     expect(fieldUrl("climate_box", "uniform", { weather: "cold_spring_day" })).toBe(
       "/api/scenarios/climate_box/fields/uniform",
     );
+  });
+});
+
+describe("a climate run's moment on its way", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function clock(props: {
+    time: number;
+    shown: number | null;
+    failed?: boolean;
+    playing?: boolean;
+  }) {
+    const { playing = false, ...rest } = props;
+    return <ClimateTime {...rest} days={14} playing={playing} onTime={ignore} onPlaying={ignore} />;
+  }
+
+  it("says which moment it is loading, and for how long, beside the one drawn", () => {
+    const view = render(clock({ time: DAY_S + 600, shown: 600 }));
+
+    expect(said(view.container, "climate-time")).toBe("10 min");
+    expect(said(view.container, "climate-pending")).toBe("Loading day 1, 10 min… 0 s");
+    act(() => {
+      vi.advanceTimersByTime(3_000);
+    });
+
+    expect(said(view.container, "climate-pending")).toBe("Loading day 1, 10 min… 3 s");
+    view.unmount();
+  });
+
+  it("says play is waiting for it, and counts afresh for the next", () => {
+    const view = render(clock({ time: DAY_S + 600, shown: 600, playing: true }));
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+
+    view.rerender(clock({ time: 2 * DAY_S + 600, shown: DAY_S + 600, playing: true }));
+
+    expect(said(view.container, "climate-pending")).toBe("Playing: waiting for day 2, 10 min… 0 s");
+    view.unmount();
+  });
+
+  it("says nothing more once it has arrived", () => {
+    const view = render(clock({ time: DAY_S + 600, shown: DAY_S + 600 }));
+
+    expect(said(view.container, "climate-pending")).toBeNull();
+    expect(said(view.container, "climate-failed")).toBeNull();
+    view.unmount();
+  });
+
+  it("stops play when it cannot be drawn, and says which moment is drawn instead", () => {
+    // Play waits for the moment asked for, which a failure never brings:
+    // waiting on, it would look stuck (#202).
+    const onPlaying = vi.fn();
+    const view = render(
+      <ClimateTime
+        time={DAY_S + 600}
+        shown={600}
+        failed
+        days={14}
+        playing
+        onTime={ignore}
+        onPlaying={onPlaying}
+      />,
+    );
+
+    expect(onPlaying).toHaveBeenCalledExactlyOnceWith(false);
+    expect(said(view.container, "climate-pending")).toBeNull();
+    expect(said(view.container, "climate-failed")).toBe(
+      "Day 1, 10 min cannot be drawn; 10 min is shown.",
+    );
+    view.unmount();
   });
 });
