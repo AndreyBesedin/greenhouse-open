@@ -1,6 +1,8 @@
 # P09: Integrated greenhouse scenario, replay and release QA
 
-**Status:** in progress. Part of the [simulator roadmap](README.md).
+**Status:** in progress: P09.1 to P09.8 done; P09.9 released as 0.2.0,
+while the README's demo video and the acceptance criteria are still open.
+Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -860,6 +862,9 @@ starts both and stops both; the video's script runs as a browser test.
   troubleshooting. The README and the simulator's README point to it.
 - **The changelog** says what the release adds since 0.1.0, project by
   project; choosing its version, and tagging it, are the maintainer's.
+- **The version** is 0.2.0 for all three packages, dated in the changelog
+  on 2026-10-19. The simulator and the adapters require the protocol's
+  0.2 (`>=0.2.0,<0.3`), which the 0.1 range would have refused.
 - **Tests** (`tests/test_demo.py`): stand-in servers start, answer and stop
   together, and when one stops the other is stopped too; a server that
   stops before it answers is said; the demo opens the reference greenhouse

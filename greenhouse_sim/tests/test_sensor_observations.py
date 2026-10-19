@@ -168,6 +168,27 @@ def test_a_sensor_in_steady_air_reads_it_the_same_at_every_sample() -> None:
     assert [o.value for o in observed] == [reads(sensor, air)] * 4
 
 
+def test_the_air_at_a_moment_is_worked_out_once_for_every_sensor_sampling_then() -> None:
+    # Three sensors on the same cadence, over five minutes: the air is asked
+    # for at each of the six moments once, not once a sensor (the log of a
+    # day of the reference house took 50 s rather than 9).
+    trio = [
+        PointSensor(sensor_id=f"t{x}", kind=SensorKind.TEMPERATURE, position=Vector3(x=x, y=1, z=1))
+        for x in (1, 2, 3)
+    ]
+    air = CONFIG.airflow.field("still", _climate(0).grid)
+    asked: list[float] = []
+
+    def air_at(time_s: float) -> EnvironmentField:
+        asked.append(time_s)
+        return air
+
+    observed = observe(trio, air_at, 300, start=START, greenhouse_id="box", run_id="run")
+
+    assert asked == MOMENTS
+    assert len(observed) == len(trio) * len(MOMENTS)
+
+
 def test_the_api_serves_the_observations_and_the_truth() -> None:
     observed = respond(
         "GET", "/api/scenarios/climate_box/climate/observations?set=heater:1&t=120&clean=1"

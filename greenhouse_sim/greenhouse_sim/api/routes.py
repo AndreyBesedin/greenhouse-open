@@ -153,6 +153,14 @@ check; a route that comes to need one checks it first.
                                           Events (served by `server`, found by
                                           `live_stream`)
     POST /api/scenarios/{id}/live/...     commands for that live run (`control`)
+    GET /api/scenarios/{id}/playback      its own run played back against one
+                                          clock, which the viewer and a
+                                          consumer follow (P10.2): the run,
+                                          its epoch, the clock
+    POST /api/scenarios/{id}/playback/start?seconds_per_day=10
+                                          started, or played on, at that pace
+    POST /api/scenarios/{id}/playback/play, /pause, /restart (a new epoch)
+    POST /api/scenarios/{id}/playback/pace?seconds_per_day=5
 """
 
 import json
@@ -170,6 +178,7 @@ from greenhouse_sim.services import (
     crop,
     fields,
     plants,
+    playback,
     run_state,
     scenarios,
     sensors,
@@ -179,6 +188,7 @@ from greenhouse_sim.services import (
 )
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.live import InvalidSpeed, LiveCommand, LiveRun, LiveRuns
+from greenhouse_sim.services.playback import PlaybackCommand
 
 type JsonValue = dict[str, JsonValue] | list[JsonValue] | str | int | float | bool | None
 type Query = dict[str, list[str]]
@@ -224,6 +234,8 @@ def respond(method: str, path: str, body: bytes = b"") -> Response:
                     name: e.model_dump(mode="json") for name, e in plants.environments().items()
                 }
             )
+        case ["api", "scenarios", scenario_id, "playback"]:
+            return _answer(lambda: playback.state(scenario_id))
         case ["api", "scenarios", scenario_id, "manifest"]:
             return _answer(lambda: scenarios.run_manifest(scenario_id, _last(query, "weather")))
         case ["api", "scenarios", scenario_id, "scene"]:
@@ -444,6 +456,14 @@ def _posted(path: str, query: Query, body: bytes) -> Response:
             )
         case ["api", "checkpoints"]:
             return _answer(lambda: checkpoints.upload_checkpoint(_json(body)))
+        case ["api", "scenarios", scenario_id, "playback", "start"]:
+            return _answer(lambda: playback.start(scenario_id, _pace(query)))
+        case ["api", "scenarios", scenario_id, "playback", "pace"]:
+            return _answer(lambda: playback.set_pace(scenario_id, _pace(query) or 0.0))
+        case ["api", "scenarios", scenario_id, "playback", action]:
+            if action not in PlaybackCommand:
+                return _error(HTTPStatus.NOT_FOUND, f"no playback command {action!r}")
+            return _answer(lambda: playback.command(scenario_id, PlaybackCommand(action)))
         case _:
             return _error(HTTPStatus.METHOD_NOT_ALLOWED, f"{path!r} only answers GET")
 
@@ -662,6 +682,18 @@ def _whole(query: Query, name: str, default: int) -> int:
         return int(value)
     except ValueError:
         raise InvalidRequest(f"{name} wants a whole number, not {value!r}") from None
+
+
+def _pace(query: Query) -> float | None:
+    """The real seconds a playback plays a simulated day in, if the query
+    gives them."""
+    given = _last(query, "seconds_per_day")
+    if given is None:
+        return None
+    try:
+        return float(given)
+    except ValueError:
+        raise InvalidRequest(f"seconds_per_day is a number, not {given!r}") from None
 
 
 def _last(query: Query, name: str) -> str | None:
