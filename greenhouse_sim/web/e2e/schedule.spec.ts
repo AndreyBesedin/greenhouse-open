@@ -19,10 +19,18 @@ test("schedule: the equipment switches on its own, and an override holds from it
   const slider = run.getByRole("slider", { name: "Time of day" });
   const schedule = page.getByRole("region", { name: "Schedule" });
   const commands = schedule.getByTestId("schedule-command");
+  const summary = schedule.getByTestId("schedule-summary");
   const heater = page.getByTestId("equipment-heater");
   const reading = page.getByTestId("probe-1-reading");
   // The moment drawn, once its field has arrived.
   const moment = page.getByTestId("climate-time");
+
+  await test.step("folded at first, it says what comes next, and opens on its commands", async () => {
+    await expect(summary).toHaveText("Schedule: 3 commands. Next at 1 min: fan 100%.");
+    await expect(commands.first()).toBeHidden();
+    await schedule.locator("summary").click();
+    await expect(commands.first()).toBeVisible();
+  });
 
   await test.step("at the start, nothing runs", async () => {
     await expect(commands).toHaveCount(3);
@@ -39,6 +47,7 @@ test("schedule: the equipment switches on its own, and an override holds from it
     await expect(page.getByTestId("equipment-dehumidifier")).toHaveText("100%, 1 kg/h");
     await expect(reading).toHaveText(/^climate: 4\.34 m\/s/);
     await expect(schedule.locator('[data-applied="true"]')).toHaveCount(3);
+    await expect(summary).toHaveText("Schedule: 3 commands, none to come.");
   });
 
   await test.step("switched off ten minutes in, the heater is off from then on", async () => {
@@ -57,6 +66,7 @@ test("schedule: the equipment switches on its own, and an override holds from it
     await slider.fill("540");
     await expect(moment).toHaveText("9 min", { timeout: ARRIVES_MS });
     await expect(heater).toHaveText("100%, 10 kW");
+    await expect(summary).toHaveText("Schedule: 4 commands. Next at 10 min: heater off.");
   });
 
   await test.step("taken out, the override is gone", async () => {
@@ -67,5 +77,11 @@ test("schedule: the equipment switches on its own, and an override holds from it
     await expect(page).toHaveURL(/&t=120(&|$)/);
     await expect(moment).toHaveText("2 min", { timeout: ARRIVES_MS });
     await expect(heater).toHaveText("100%, 10 kW");
+  });
+
+  await test.step("folded again, its commands are out of the way", async () => {
+    await schedule.locator("summary").click();
+    await expect(commands.first()).toBeHidden();
+    await expect(summary).toHaveText("Schedule: 3 commands. Next at 3 min: dehumidifier 100%.");
   });
 });

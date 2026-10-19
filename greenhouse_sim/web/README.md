@@ -107,8 +107,10 @@ scenario may have daily commands of its own, as the reference greenhouse
 heats, vents and stirs its house by the clock (P09.4): a run gives them
 unless its address gives its own, and `&daily=none` gives none; the address
 keeps a change to them, not a copy.
-"Schedule" lists the commands under the time sliders, the moment's day's
-marked on a bar over it, a daily one's square, each to go to or take out,
+"Schedule", under the time sliders, is folded at first to how many commands
+it has and the next to come (`Schedule: 21 commands. Next at 23 h 00 min:
+heater 80%.`), over a bar across the moment's day with its commands marked,
+a daily one's square; opened, it lists them, each to go to or take out,
 and a command for one moment to repeat every day (↻); the Equipment panel and the
 scene show the levels at the moment drawn, and a door or vent a command
 opens stands as far open. "Timeline", opened on demand,

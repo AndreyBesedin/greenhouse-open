@@ -17,12 +17,19 @@ test("reference schedule: the run heats by its own clock, set back at night, unl
   const moment = page.getByTestId("climate-time");
   const heater = page.getByTestId("equipment-heater");
   const air = page.getByRole("figure", { name: "House air" }).getByTestId("house-air-°C");
-  const daily = page.getByRole("region", { name: "Schedule" }).getByTestId("daily-command");
+  const schedule = page.getByRole("region", { name: "Schedule" });
+  const daily = schedule.getByTestId("daily-command");
+  const summary = schedule.getByTestId("schedule-summary");
 
   await test.step("in its second evening, the heater runs in full by its own schedule", async () => {
     await page.goto(`/?scenario=reference_greenhouse&field=climate&t=${SECOND_EVENING_S}`);
     await expect(moment).toHaveText("day 1, 22 h 00 min", ARRIVES);
     await expect(daily).toHaveCount(21);
+    // Folded, its 21 commands are a line, and the next of them.
+    await expect(summary).toHaveText(
+      "Schedule: 21 commands. Next at day 1, 23 h 00 min: heater 80%.",
+    );
+    await expect(daily.first()).toBeHidden();
     await expect(heater).toHaveText("100%, 15 kW", ARRIVES);
     await expect(air).toHaveText("Air 18.9 °C, all off 10.7 °C", ARRIVES);
     // The address keeps no copy of the scenario's own schedule.
@@ -38,9 +45,17 @@ test("reference schedule: the run heats by its own clock, set back at night, unl
   });
 
   await test.step("its setback taken out, the address keeps the rest, and the heater runs on", async () => {
-    await page.getByRole("button", { name: "Remove heater 80% every day at 23 h 00 min" }).click();
+    // Opened from the keyboard, as its summary is a control.
+    await schedule.locator("summary").press("Enter");
+    await expect(daily.first()).toBeVisible();
+    await schedule
+      .getByRole("button", { name: "Remove heater 80% every day at 23 h 00 min" })
+      .click();
     await expect(page).toHaveURL(/&daily=/);
     await expect(daily).toHaveCount(20);
+    await expect(summary).toHaveText(
+      "Schedule: 20 commands. Next at day 2, 5 h 00 min: heater 100%.",
+    );
     await expect(heater).toHaveText("100%, 15 kW", ARRIVES);
   });
 });

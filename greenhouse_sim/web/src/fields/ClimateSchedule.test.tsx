@@ -1,5 +1,6 @@
+// @vitest-environment jsdom
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DAY_S } from "../clock";
 import { runsSomething, scenarioRun } from "../scene/run";
@@ -14,7 +15,8 @@ import {
   withOverride,
 } from "../scene/source";
 import { sensorsUrl } from "../sensors/readings";
-import { ClimateSchedule, describeCommand } from "./ClimateSchedule";
+import { button, click, type Rendered, render, said } from "../testing/render";
+import { ClimateSchedule, describeCommand, describeSchedule } from "./ClimateSchedule";
 import { fieldUrl } from "./source";
 
 const ignore = () => undefined;
@@ -25,6 +27,8 @@ const SCHEDULE: ScheduledCommand[] = [
 ];
 
 describe("a climate run's schedule", () => {
+  let shown: Rendered | undefined;
+  afterEach(() => shown?.unmount());
   it("is kept in the address with its climate, in the order given", () => {
     const source = sourceFromSearch(
       "?scenario=climate_box&field=climate&t=600&schedule=60:fan:1,300:heater:1,300:heater:0.5",
@@ -69,7 +73,7 @@ describe("a climate run's schedule", () => {
 
   it("is listed under the time slider, each command to go to or take out", () => {
     const html = renderToStaticMarkup(
-      <ClimateSchedule schedule={SCHEDULE} time={120} onTime={ignore} onRemove={ignore} />,
+      <ClimateSchedule schedule={SCHEDULE} time={120} days={1} onTime={ignore} onRemove={ignore} />,
     );
 
     expect(html).toContain('aria-label="Schedule"');
@@ -81,7 +85,7 @@ describe("a climate run's schedule", () => {
     expect(describeCommand({ timeS: 0, actuatorId: "heater", level: 0 })).toBe("heater off");
     expect(
       renderToStaticMarkup(
-        <ClimateSchedule schedule={[]} time={0} onTime={ignore} onRemove={ignore} />,
+        <ClimateSchedule schedule={[]} time={0} days={1} onTime={ignore} onRemove={ignore} />,
       ),
     ).toBe("");
   });
@@ -140,6 +144,7 @@ describe("a climate run's schedule", () => {
         schedule={[{ timeS: DAY_S + 600, actuatorId: "fan", level: 1 }]}
         daily={[{ timeS: 64800, actuatorId: "heater", level: 1 }]}
         time={DAY_S + 43_200}
+        days={2}
         onTime={ignore}
         onRemove={ignore}
         onRepeat={ignore}
@@ -163,7 +168,13 @@ describe("a climate run's schedule", () => {
       { timeS: 2 * DAY_S + 600, actuatorId: "fan", level: 1 },
     ];
     const html = renderToStaticMarkup(
-      <ClimateSchedule schedule={days} time={DAY_S + 43_200} onTime={ignore} onRemove={ignore} />,
+      <ClimateSchedule
+        schedule={days}
+        time={DAY_S + 43_200}
+        days={3}
+        onTime={ignore}
+        onRemove={ignore}
+      />,
     );
 
     expect(html.match(/data-testid="schedule-marker"/g)).toHaveLength(1);
@@ -172,5 +183,75 @@ describe("a climate run's schedule", () => {
     expect(html.match(/data-testid="schedule-command"/g)).toHaveLength(3);
     expect(html).toContain('aria-label="Go to heater off at day 1, 6 h 00 min"');
     expect(html).toContain('aria-label="Go to fan 100% at day 2, 10 min"');
+  });
+
+  it("is folded at first to how many commands it has and the next, and opens on them", () => {
+    const onTime = vi.fn();
+    const onRemove = vi.fn();
+    shown = render(
+      <ClimateSchedule
+        schedule={SCHEDULE}
+        time={120}
+        days={1}
+        onTime={onTime}
+        onRemove={onRemove}
+      />,
+    );
+    const details = shown.container.querySelector("details");
+    const summary = details?.querySelector("summary");
+    if (details === null || summary === null || summary === undefined) {
+      throw new Error("no details");
+    }
+
+    expect(details.open).toBe(false);
+    expect(said(summary, "schedule-summary")).toBe(
+      "Schedule: 3 commands. Next at 5 min: heater 100% and 1 more.",
+    );
+    // The day's bar is the summary's, and shows while it is folded.
+    expect(summary.querySelectorAll('[data-testid="schedule-marker"]')).toHaveLength(3);
+    click(summary);
+    expect(details.open).toBe(true);
+    click(button(details, "Go to heater 50% at 5 min"));
+    expect(onTime).toHaveBeenCalledWith(300);
+    click(button(details, "Remove fan 100% at 1 min"));
+    expect(onRemove).toHaveBeenCalledWith(0);
+    click(summary);
+    expect(details.open).toBe(false);
+  });
+
+  it("says which commands come next, a daily one's at its next time of day, until the run ends", () => {
+    const evenings: ScheduledCommand[] = [
+      { timeS: 64800, actuatorId: "heater", level: 1 },
+      { timeS: 79200, actuatorId: "heater", level: 0 },
+    ];
+    const twoDays = { schedule: [], daily: evenings, days: 2 };
+
+    expect(describeSchedule({ ...twoDays, time: 72000 })).toBe(
+      "Schedule: 2 commands. Next at 22 h 00 min: heater off.",
+    );
+    // At a command's moment, it has been given: the next is the day's next.
+    expect(describeSchedule({ ...twoDays, time: 64800 })).toBe(
+      "Schedule: 2 commands. Next at 22 h 00 min: heater off.",
+    );
+    // The day's last given, the next is the next day's first.
+    expect(describeSchedule({ ...twoDays, time: 80000 })).toBe(
+      "Schedule: 2 commands. Next at day 1, 18 h 00 min: heater 100%.",
+    );
+    // A command for a moment, sooner than the day's.
+    expect(
+      describeSchedule({
+        ...twoDays,
+        schedule: [{ timeS: 70200, actuatorId: "fan", level: 0.5 }],
+        time: 66000,
+      }),
+    ).toBe("Schedule: 3 commands. Next at 19 h 30 min: fan 50%.");
+    // On the run's last day, past its last command, none is to come.
+    expect(describeSchedule({ ...twoDays, time: DAY_S + 80000 })).toBe(
+      "Schedule: 2 commands, none to come.",
+    );
+    const fan = { timeS: 60, actuatorId: "fan", level: 1 };
+    expect(describeSchedule({ schedule: [fan], daily: [], time: 60, days: 1 })).toBe(
+      "Schedule: 1 command, none to come.",
+    );
   });
 });

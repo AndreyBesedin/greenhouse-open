@@ -168,6 +168,7 @@ export function ScenarioPanels({
           schedule={source.schedule ?? []}
           daily={source.daily ?? []}
           time={time}
+          days={days}
           onTime={setTime}
           onRemove={(index) => onSource(withoutCommand(source, index))}
           onRepeat={(index) => onSource(withRepeated(source, index))}
