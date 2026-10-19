@@ -25,6 +25,7 @@ makes another run, which the playback does not follow.
 
 import gzip
 import math
+import os
 import threading
 from bisect import bisect_right
 from collections import OrderedDict
@@ -32,6 +33,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import StrEnum
+from pathlib import Path
 from time import monotonic
 from typing import Final
 
@@ -63,6 +65,44 @@ WAIT_STEP_S: Final = 0.05
 
 _OBSERVATIONS: Final = TypeAdapter(list[Observation])
 _EVENTS: Final = TypeAdapter(list[Event])
+
+
+class Epochs:
+    """The epochs of runs played back, kept in `folder` across the
+    producer's restarts, a file per run holding the last one started: so
+    that a consumer reconnecting after a restart sees a new epoch of the
+    run, never its first again, and starts it afresh (decision 0040)."""
+
+    def __init__(self, folder: Path) -> None:
+        self.folder = folder
+
+    def _file(self, run_id: str) -> Path:
+        return self.folder / f"{run_id}.epoch"
+
+    def next(self, run_id: str) -> int:
+        """The epoch a run starts now: the one after the last kept, or the
+        first; kept in turn."""
+        try:
+            last = int(self._file(run_id).read_text())
+        except FileNotFoundError, ValueError:
+            epoch = FIRST_EPOCH
+        else:
+            epoch = last + 1
+        self.started(run_id, epoch)
+        return epoch
+
+    def started(self, run_id: str, epoch: int) -> None:
+        """Keeps `epoch` as the run's last started."""
+        self.folder.mkdir(parents=True, exist_ok=True)
+        self._file(run_id).write_text(f"{epoch}\n")
+
+
+def default_epochs() -> Epochs:
+    """Where a played-back run's epochs are kept on this machine: the user's
+    state folder (`XDG_STATE_HOME`, or ~/.local/state), under
+    greenhouse-sim."""
+    state = os.environ.get("XDG_STATE_HOME") or str(Path.home() / ".local" / "state")
+    return Epochs(Path(state) / "greenhouse-sim" / "playback-epochs")
 
 
 class PlaybackFailed(RuntimeError):
@@ -199,6 +239,7 @@ class Playback:
         seconds_per_day: float = DEFAULT_SECONDS_PER_DAY,
         every_s: float = CONSUMER_CADENCE_S,
         clock: Callable[[], float] = monotonic,
+        epochs: Epochs | None = None,
     ) -> None:
         config = scenario(scenario_id)
         _check_pace(seconds_per_day)
@@ -214,7 +255,10 @@ class Playback:
         self._events = _Log(_EVENTS, self.start)
         # The days worked out of both logs, appended together.
         self._worked: list[tuple[_Packed, _Packed]] = []
-        self._epoch = FIRST_EPOCH
+        # Counted on from the run's last epoch, if they are kept: a producer
+        # started again is a new epoch of its run, never its first again.
+        self._epochs = epochs
+        self._epoch = FIRST_EPOCH if epochs is None else epochs.next(self.run_id)
         self._time_s = 0.0
         self._playing = False
         self._seconds_per_day = seconds_per_day
@@ -331,6 +375,8 @@ class Playback:
                     self._playing = False
                 case PlaybackCommand.RESTART:
                     self._epoch += 1
+                    if self._epochs is not None:
+                        self._epochs.started(self.run_id, self._epoch)
                     self._time_s = 0.0
                     self._playing = True
             return self._state()
@@ -384,6 +430,7 @@ def start(
     *,
     hold: bool = False,
     clock: Callable[[], float] = monotonic,
+    epochs: Epochs | None = None,
 ) -> PlaybackState:
     """The scenario's playback, started, at `seconds_per_day` if given: the
     one already started, or a new one from the run's start, on `clock`;
@@ -396,6 +443,7 @@ def start(
                 scenario_id,
                 seconds_per_day=seconds_per_day or DEFAULT_SECONDS_PER_DAY,
                 clock=clock,
+                epochs=epochs,
             )
             found.begin()
             _playbacks[scenario_id] = found

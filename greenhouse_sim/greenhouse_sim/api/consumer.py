@@ -42,7 +42,8 @@ def consumer_respond(method: str, path: str) -> Response | None:
         return _detail(
             HTTPStatus.METHOD_NOT_ALLOWED, f"the consumer interface answers GET, not {method}"
         )
-    query = parse_qs(url.query)
+    # Blank values kept, so that `after=` is refused rather than read as 0.
+    query = parse_qs(url.query, keep_blank_values=True)
     match segments[len(_PREFIX) :]:
         case ["runs"]:
             return _answer(consumer.runs)

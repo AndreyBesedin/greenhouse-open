@@ -135,30 +135,21 @@ def observations(
 ) -> ObservationBatch:
     """The observations a run's sensors delivered after the cursor, by its
     clock, in delivery order, from the first if no cursor is given."""
-    cursor = FIRST_CURSOR if after is None else after
-    if cursor < FIRST_CURSOR:
-        raise InvalidRequest("a cursor is 0 or more")
-    found = _played(run_id)
-    now = found.state()
-    if not _given.knows(run_id, "observations", now.epoch, cursor):
-        return ObservationBatch(
-            run_id=run_id,
-            epoch=now.epoch,
-            after=cursor,
-            next=cursor,
-            simulated_now=now.simulated_now,
-            observations=(),
-        )
-    cut = found.records_after(cursor, _limit(limit))
-    _given.give(run_id, "observations", cut.state.epoch, cut.next)
+    cursor = _cursor(after)
+    cut = _played(run_id).records_after(cursor, _limit(limit))
+    # Judged by the epoch the records were cut in, which a restart between
+    # a look at the epoch and the cut could not change.
+    known = _given.knows(run_id, "observations", cut.state.epoch, cursor)
+    if known:
+        _given.give(run_id, "observations", cut.state.epoch, cut.next)
     return ObservationBatch(
         run_id=run_id,
         epoch=cut.state.epoch,
         after=cursor,
-        next=cut.next,
+        next=cut.next if known else cursor,
         simulated_now=cut.state.simulated_now,
-        has_more=cut.has_more,
-        observations=cut.records,
+        has_more=cut.has_more if known else False,
+        observations=cut.records if known else (),
     )
 
 
@@ -166,28 +157,24 @@ def events(run_id: str, after: int | None = None, limit: int | None = None) -> E
     """The events delivered in a run after the cursor, by its clock, in
     delivery order, from the first if no cursor is given: its crop's
     harvests."""
-    cursor = FIRST_CURSOR if after is None else after
-    if cursor < FIRST_CURSOR:
-        raise InvalidRequest("a cursor is 0 or more")
-    found = _played(run_id)
-    now = found.state()
-    if not _given.knows(run_id, "events", now.epoch, cursor):
-        return EventBatch(
-            run_id=run_id,
-            epoch=now.epoch,
-            after=cursor,
-            next=cursor,
-            simulated_now=now.simulated_now,
-            events=(),
-        )
-    cut = found.events_after(cursor, _limit(limit))
-    _given.give(run_id, "events", cut.state.epoch, cut.next)
+    cursor = _cursor(after)
+    cut = _played(run_id).events_after(cursor, _limit(limit))
+    known = _given.knows(run_id, "events", cut.state.epoch, cursor)
+    if known:
+        _given.give(run_id, "events", cut.state.epoch, cut.next)
     return EventBatch(
         run_id=run_id,
         epoch=cut.state.epoch,
         after=cursor,
-        next=cut.next,
+        next=cut.next if known else cursor,
         simulated_now=cut.state.simulated_now,
-        has_more=cut.has_more,
-        events=cut.records,
+        has_more=cut.has_more if known else False,
+        events=cut.records if known else (),
     )
+
+
+def _cursor(after: int | None) -> int:
+    cursor = FIRST_CURSOR if after is None else after
+    if cursor < FIRST_CURSOR:
+        raise InvalidRequest("a cursor is 0 or more")
+    return cursor

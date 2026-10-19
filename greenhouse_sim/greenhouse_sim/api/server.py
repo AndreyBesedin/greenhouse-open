@@ -251,10 +251,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     host, port = server.server_address[:2]
     print(f"greenhouse-sim API on http://{host!s}:{port}/api", flush=True)
     for scenario_id in args.play:
-        played = playback.start(scenario_id, args.play_seconds_per_day, hold=args.hold)
+        played = playback.start(
+            scenario_id,
+            args.play_seconds_per_day,
+            hold=args.hold,
+            epochs=playback.default_epochs(),
+        )
         held = f" (held: POST /api/scenarios/{scenario_id}/playback/play)" if args.hold else ""
         print(
-            f"playing {played.run_id}{held}, read at http://{host!s}:{port}/consumer/v1",
+            f"playing {played.run_id}, epoch {played.epoch}{held}, "
+            f"read at http://{host!s}:{port}/consumer/v1",
             flush=True,
         )
     try:

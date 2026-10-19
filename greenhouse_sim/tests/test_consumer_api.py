@@ -30,7 +30,7 @@ from greenhouse_sim.api.consumer import consumer_respond
 from greenhouse_sim.api.server import create_server
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import playback
-from greenhouse_sim.services.playback import PlaybackCommand
+from greenhouse_sim.services.playback import Epochs, PlaybackCommand
 
 SCENARIO = "climate_box"
 PACKAGE = Path(__file__).resolve().parents[1] / "greenhouse_sim"
@@ -153,6 +153,8 @@ def test_what_is_not_a_consumer_route_or_request_is_refused(clock: Clock) -> Non
         ("GET", f"{PREFIX}/runs/{run_id}/observations?after=x"): 400,
         ("GET", f"{PREFIX}/runs/{run_id}/observations?after=-1"): 400,
         ("GET", f"{PREFIX}/runs/{run_id}/observations?limit=0"): 400,
+        ("GET", f"{PREFIX}/runs/{run_id}/observations?after="): 400,
+        ("GET", f"{PREFIX}/runs/{run_id}/events?limit="): 400,
         ("POST", f"{PREFIX}/runs"): 405,
     }
     for (method, path), status in cases.items():
@@ -274,3 +276,31 @@ def test_the_run_s_events_reach_a_consumer_by_the_clock(monkeypatch: pytest.Monk
         assert later.next == 1 and check_polls([early, later]) == []
     finally:
         playback.forget_playbacks()
+
+
+def test_a_producer_started_again_is_a_new_epoch_of_its_run(clock: Clock, tmp_path: Path) -> None:
+    # The run's epochs kept across the producer's restarts, as the API keeps
+    # them for the runs it plays back.
+    playback.forget_playbacks()
+    epochs = Epochs(tmp_path)
+    playback.start(SCENARIO, 10.0, clock=clock, epochs=epochs)
+    assert playback.playback(SCENARIO).wait_for(1, timeout_s=120)
+    run_id = _run_id()
+    clock.now += 5.0
+    before = ObservationBatch.model_validate(_get(f"{PREFIX}/runs/{run_id}/observations"))
+    assert before.epoch == 0 and before.records
+
+    # The producer stops and starts again: the same run, a new epoch.
+    playback.forget_playbacks()
+    playback.start(SCENARIO, 10.0, clock=clock, epochs=epochs)
+    assert playback.playback(SCENARIO).wait_for(1, timeout_s=120)
+    clock.now += 8.0  # past where the client's cursor stood, in the new epoch
+    run = RunDescriptor.model_validate(_get(f"{PREFIX}/runs/{run_id}"))
+    assert run.epoch == 1
+    stale = ObservationBatch.model_validate(
+        _get(f"{PREFIX}/runs/{run_id}/observations?after={before.next}")
+    )
+    assert (stale.epoch, stale.next, stale.observations) == (1, before.next, ())
+    # A restart of the playback itself counts on from there.
+    assert playback.command(SCENARIO, PlaybackCommand.RESTART).epoch == 2
+    assert Epochs(tmp_path).next(run_id) == 3
