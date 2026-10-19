@@ -45,13 +45,11 @@ the recording.
 
 - The documents quote `uv run` commands, and a test holds every one they
   quote to a command that exists (`tests/test_dev_commands.py`).
-- CI installs with `uv sync --locked`, the packages as wheels where it
-  tests them as a user installs them, and a lockfile out of step with the
-  `pyproject.toml` files fails it. `requirements-dev.txt` is gone.
-- Dependabot keeps the development tools with its `uv` ecosystem, and the
-  packages' ranges with `pip`, as before: its uv support still mistakes a
-  workspace's own packages for PyPI's and can rewrite a member's
-  requirements in a grouped update (dependabot-core #14004, #15786).
+- CI and Dependabot still install with pip, from `requirements-dev.txt`
+  and the packages' directories. The next change moves CI to `uv sync
+  --locked`, Dependabot to its `uv` ecosystem, and removes
+  `requirements-dev.txt`, whose pins a test holds equal to the `dev` group
+  until then.
 - A git worktree gets its own `.venv` from `uv run`, with its own code
   installed, so its tests need no `PYTHONPATH`.
 - The commands that start servers run on macOS and Linux: the demo's

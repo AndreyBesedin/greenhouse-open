@@ -15,6 +15,9 @@ on:
       - "greenhouse_sim/greenhouse_sim/world/**"
       - "greenhouse_sim/tests/conftest.py"
       - "greenhouse_sim/tests/test_cfd_*.py"
+      # What it runs on: the locked packages and the Python.
+      - "uv.lock"
+      - ".python-version"
       - ".github/workflows/cfd.yml"
   pull_request:
     paths:
@@ -24,6 +27,9 @@ on:
       - "greenhouse_sim/greenhouse_sim/world/**"
       - "greenhouse_sim/tests/conftest.py"
       - "greenhouse_sim/tests/test_cfd_*.py"
+      # What it runs on: the locked packages and the Python.
+      - "uv.lock"
+      - ".python-version"
       - ".github/workflows/cfd.yml"
   workflow_dispatch:
 

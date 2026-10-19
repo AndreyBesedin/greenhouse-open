@@ -13,6 +13,7 @@ members = [
     "greenhouse-protocol",
     "greenhouse-sim",
 ]
+build-constraints = [{ name = "poetry-core", specifier = "==2.5.0" }]
 
 [[package]]
 name = "annotated-types"

@@ -119,7 +119,11 @@ opens pull requests for the updates found, in:
 
 - **npm:** the viewer's `greenhouse_sim/web/package.json` and its lockfile;
 - **uv:** the development tools pinned in the root `pyproject.toml` and
-  locked in `uv.lock` (decision 0039), and nothing else of the workspace;
+  locked in `uv.lock` (decision 0039), and nothing else of the workspace:
+  its uv support still mistakes a workspace's own packages for PyPI's
+  ([dependabot-core#14004](https://github.com/dependabot/dependabot-core/issues/14004))
+  and can rewrite a member's requirements in a grouped update
+  ([#15786](https://github.com/dependabot/dependabot-core/issues/15786));
 - **pip:** the three packages' `pyproject.toml`, whose ranges move only
   when a release falls outside them; `uv lock` on the pull request's branch
   then brings `uv.lock` along, which CI's `uv sync --locked` asks for;
@@ -149,10 +153,10 @@ GitHub's auto-merge, which merges once the third holds too; a later push
 that breaks the first two turns it off again. Everything else waits for a
 review: majors, minor updates below 1.0, and whatever was completed by
 hand. As the risk gate stands, only npm's updates can merge by themselves:
-it holds every Actions and `pyproject.toml` change for a review, which on Dependabot's pull requests is an approval of the
-latest commit (decision 0034). Dependabot proposes a release only once it
-is three days old (its `cooldown`), so that one found compromised is
-usually withdrawn first.
+it holds every Actions and `pyproject.toml` change for a review, which on
+Dependabot's pull requests is an approval of the latest commit (decision
+0034). Dependabot proposes a release only once it is three days old (its
+`cooldown`), so that one found compromised is usually withdrawn first.
 
 The repository's settings changed for it. Auto-merge is allowed. The
 `main protection` ruleset lists CI's checks as required: auto-merge waits
@@ -172,8 +176,12 @@ What the repository already ties together:
   the image is moved by hand; screenshots that then differ get new
   baselines from CI, as any do.
 - **ruff** is pinned twice, in the root `pyproject.toml` and as the
-  pre-commit hook's `rev`. The two come in two pull requests, ruff's alone in its
-  ecosystem's, and are merged together.
+  pre-commit hook's `rev`. The two come in two pull requests, ruff's alone
+  in its ecosystem's, and are merged together.
+- **uv and the packages' build backend** are moved by hand: CI's uv
+  (`UV_VERSION` in `ci.yml` and `cfd.yml`), which also builds the root
+  project, and `poetry-core`, which builds the three packages, pinned for
+  the workspace in the root `pyproject.toml` and recorded in `uv.lock`.
 - **`@types/node`** stays on the major of the viewer's Node, 24.
 - **The packages' runtime dependencies** are ranges, what a user may install
   them with (`pydantic>=2.9`, `numpy>=2.0`, `openpyxl>=3.1.5,<4.0.0`), not
