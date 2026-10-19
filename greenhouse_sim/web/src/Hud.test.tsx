@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Hud } from "./Hud";
@@ -59,6 +60,32 @@ describe("the HUD", () => {
     expect(said(hud.container, "camera-position")).toBe("…");
     expect(said(hud.container, "pointer-position")).toBe("—");
     expect(said(hud.container, "simulator-time")).toBe("—");
+  });
+
+  it("folds to its header, and unfolds with its readouts as they were", async () => {
+    hud = render(<Hud sample={SAMPLE} pointer={null} onPreset={ignore} onCommand={ignore} />);
+    const section = hud.container.querySelector("section");
+    const header = hud.container.querySelector("summary");
+    if (section === null || header === null) {
+      throw new Error("the HUD has no header");
+    }
+
+    await act(async () => header.click());
+    expect(section.querySelector("details")?.open).toBe(false);
+    expect(section.classList.contains("folded")).toBe(true);
+    expect(header.textContent).toBe("View");
+
+    await act(async () => header.click());
+    expect(section.classList.contains("folded")).toBe(false);
+    expect(said(section, "object-count")).toBe("8");
+    // Unmoved, there is nothing to put back.
+    expect(section.style.transform).toBe("");
+    expect([...section.querySelectorAll("button")].map((each) => each.textContent)).toEqual([
+      "Top",
+      "Front",
+      "Side",
+      "Isometric",
+    ]);
   });
 
   it("shows how long the simulator took to answer the latest request", () => {
