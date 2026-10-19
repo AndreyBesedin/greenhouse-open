@@ -1,13 +1,15 @@
 import { defineConfig, devices } from "@playwright/test";
 
-import { REUSE_TEST_SERVERS } from "./simulatorApi.ts";
+import { REUSE_TEST_SERVERS, testPort } from "./simulatorApi.ts";
 
 // Screenshot regression for the renderer (decision 0014). The baselines are
 // drawn in CI's container, Playwright's image of the version installed here
 // (ci.yml), whose fonts and software renderer draw the same pixels on every
 // run. Elsewhere the comparisons are skipped. The QA page needs only the
 // built viewer, not the simulator.
-const PREVIEW_PORT = 4318;
+// Its preview's port, unless TEST_PORT_OFFSET moves it.
+const OWN_PREVIEW_PORT = 4318;
+const PREVIEW_PORT = testPort(OWN_PREVIEW_PORT);
 const IN_CI = process.env.CI !== undefined;
 // A pixel counts as different when its colour moves more than this, on
 // Playwright's 0-to-1 scale; smaller moves are edge smoothing.

@@ -331,7 +331,9 @@ their own API, on port 8766, and their own build of the viewer, so an API
 kept running on 8765 for development cannot answer for them. They never test
 a server already running on their ports: Playwright stops, saying the port is
 in use. `REUSE_TEST_SERVERS=1` reuses such servers deliberately, to rerun a
-test quickly against ones known to be this checkout's. Once every other browser
+test quickly against ones known to be this checkout's. `TEST_PORT_OFFSET=20`
+moves every port they start a server on by 20 (8786, 4337 and so on), so that
+two checkouts can run their browser tests at once. Once every other browser
 test has passed, `e2e/renderer-smoke.spec.ts` walks through the whole renderer
 as a person would: live play, camera presets, pause, step and reset with a
 deterministic replay, selection and overlays, and the stress scene. The

@@ -2,9 +2,30 @@
 // forward /api to it: on the API's own default port
 // (`python -m greenhouse_sim.api`), or on the one SIMULATOR_API_PORT names.
 export const DEFAULT_SIMULATOR_API_PORT = 8765;
-// The browser tests start their own API on this port, apart from one a
-// developer keeps running on the default port, which cannot answer for them.
-export const TEST_SIMULATOR_API_PORT = 8766;
+/** How far the browser tests' ports are moved, TEST_PORT_OFFSET: a whole
+ * number, so that several checkouts can run their browser tests at once,
+ * each on its own ports. */
+export function portOffset(value: string | undefined = process.env.TEST_PORT_OFFSET): number {
+  if (value === undefined || value === "") {
+    return 0;
+  }
+  const offset = Number(value);
+  if (!Number.isInteger(offset) || offset < 0) {
+    throw new Error(`TEST_PORT_OFFSET=${value} is not a whole number of ports`);
+  }
+  return offset;
+}
+
+/** A port a browser test starts a server on, moved by TEST_PORT_OFFSET. */
+export function testPort(port: number): number {
+  return port + portOffset();
+}
+
+// The browser tests start their own API on this port, unless
+// TEST_PORT_OFFSET moves it, apart from one a developer keeps running on
+// the default port, which cannot answer for them.
+const OWN_TEST_SIMULATOR_API_PORT = 8766;
+export const TEST_SIMULATOR_API_PORT = testPort(OWN_TEST_SIMULATOR_API_PORT);
 
 export function simulatorApi(port: number): string {
   return `http://127.0.0.1:${port}`;
