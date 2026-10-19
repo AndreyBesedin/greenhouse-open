@@ -40,6 +40,7 @@ import { CLIMATE_FIELD, fetchField, fieldUrl } from "./fields/source";
 import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
+import { PlaybackPanel } from "./PlaybackPanel";
 import { cropPlantUrl, cropUrl, loadCropPlant, ORGAN_CROP, withCrop } from "./plants/crop";
 import type { GrowthSpeed } from "./plants/LabControls";
 import { LabPanels } from "./plants/LabPanels";
@@ -56,7 +57,8 @@ import type { ViewSample } from "./readouts";
 import { ScenarioPanels } from "./ScenarioPanels";
 import { WhatAmISeeing } from "./SeenInTheView";
 import { loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
-import { withProbes } from "./scene/edits";
+import { withProbes, withTime } from "./scene/edits";
+import { commandPlayback, followedMoment, usePlayback } from "./scene/playback";
 import { runApartFromItsMoment, runsSomething, scenarioRun } from "./scene/run";
 import {
   changesQuery,
@@ -267,6 +269,33 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     },
   );
   const field = drawn(fieldProgress);
+
+  // A run followed as it is played back (P10.2, decision 0041): the moment
+  // drawn is the playback's clock, in whole minutes, moved on once the moment
+  // asked for before has arrived, so that a slow day is never skipped past
+  // half drawn; the run's own play stands aside.
+  const followed = source.kind === "scenario" && source.follow ? source.scenarioId : null;
+  const [playback, setPlayback] = usePlayback(followed);
+  const clockMoment = playback.status === "loaded" ? followedMoment(playback.state) : null;
+  const askedMoment = source.kind === "scenario" ? (source.time ?? 0) : null;
+  const shownMoment = fieldProgress.shown?.field.timeS ?? null;
+  const drawingField = fieldName !== null;
+  useEffect(() => {
+    if (followed === null || clockMoment === null || clockMoment === askedMoment) {
+      return;
+    }
+    if (drawingField && shownMoment !== askedMoment) {
+      return;
+    }
+    setPlayingClimate(false);
+    setSource((current) =>
+      current.kind === "scenario" ? withTime(current, clockMoment) : current,
+    );
+  }, [followed, clockMoment, askedMoment, shownMoment, drawingField, setSource]);
+  // What the view changes of the scenario's own run, which is the one
+  // played back: any of these makes it another run.
+  const anotherRun =
+    addressed.kind === "scenario" && followed !== null ? runChanges(addressed) : [];
   // What of the moment asked for failed to arrive, while something else of
   // it is drawn in its place: the scene and the field each say why when
   // nothing of them is drawn; the crop never says so itself.
@@ -647,6 +676,24 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 }
               />
             )}
+            {followed !== null && (
+              <PlaybackPanel
+                load={playback}
+                changed={anotherRun}
+                onCommand={(command) => void commandPlayback(followed, command).then(setPlayback)}
+                onStart={() => void commandPlayback(followed, "start").then(setPlayback)}
+                onOwnRun={() => setSource((current) => withoutRunChanges(current))}
+                onStop={() =>
+                  setSource((current) => {
+                    if (current.kind !== "scenario") {
+                      return current;
+                    }
+                    const { follow: _, ...rest } = current;
+                    return rest;
+                  })
+                }
+              />
+            )}
             {source.kind === "scenario" && (
               <ScenarioPanels
                 source={source}
@@ -763,4 +810,44 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       </div>
     </main>
   );
+}
+
+type ScenarioOf<S> = Extract<S, { kind: "scenario" }>;
+
+/** What a view's address changes of its scenario's own run, in words: each
+ * makes the run drawn another than the one played back. */
+function runChanges(source: ScenarioOf<SceneSource>): string[] {
+  const changes: [boolean, string][] = [
+    [source.layout !== undefined, "its layout"],
+    [source.weather !== undefined, "its weather"],
+    [source.clouds !== undefined, "its clouds"],
+    [source.wind !== undefined, "its wind"],
+    [(source.schedule?.length ?? 0) > 0, "its commands"],
+    [source.daily !== undefined, "its daily commands"],
+    [source.levels !== undefined, "its equipment"],
+    [source.openings !== undefined, "its openings"],
+    [source.envelope !== undefined, "its dimensions"],
+  ];
+  return changes.filter(([changed]) => changed).map(([, said]) => said);
+}
+
+/** A view of its scenario's own run, as it is played back: without what
+ * would make it another. */
+function withoutRunChanges(source: SceneSource): SceneSource {
+  if (source.kind !== "scenario") {
+    return source;
+  }
+  const {
+    layout: _layout,
+    weather: _weather,
+    clouds: _clouds,
+    wind: _wind,
+    schedule: _schedule,
+    daily: _daily,
+    levels: _levels,
+    openings: _openings,
+    envelope: _envelope,
+    ...own
+  } = source;
+  return own;
 }

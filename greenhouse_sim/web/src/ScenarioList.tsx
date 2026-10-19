@@ -17,6 +17,7 @@ export function ScenarioList({
   filter = "",
   onShow,
   onLive,
+  onFollow,
 }: {
   state: ScenariosState;
   /** The scenario on show and its layout, which its layout picker shows. */
@@ -24,6 +25,8 @@ export function ScenarioList({
   filter?: string;
   onShow?: (scenarioId: string, layout?: string) => void;
   onLive?: (scenarioId: string) => void;
+  /** Follows its own run as it is played back (decision 0041). */
+  onFollow?: (scenarioId: string) => void;
 }) {
   switch (state.status) {
     case "loading":
@@ -52,6 +55,7 @@ export function ScenarioList({
               {choosing && <th>Layout</th>}
               {onShow && <th />}
               {onLive && <th />}
+              {onFollow && <th />}
             </tr>
           </thead>
           <tbody>
@@ -106,6 +110,18 @@ export function ScenarioList({
                       onClick={() => onLive(scenario.id)}
                     >
                       Live
+                    </button>
+                  </td>
+                )}
+                {onFollow && (
+                  <td>
+                    <button
+                      type="button"
+                      aria-label={`Follow ${scenario.id}`}
+                      title="Follow its own run as it is played back, as a consumer reads it"
+                      onClick={() => onFollow(scenario.id)}
+                    >
+                      Follow
                     </button>
                   </td>
                 )}

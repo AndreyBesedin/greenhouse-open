@@ -107,6 +107,9 @@ export function SourceChooser({
             })
           }
           onLive={(scenarioId) => choose({ kind: "live", scenarioId })}
+          onFollow={(scenarioId) =>
+            choose({ kind: "scenario", scenarioId, field: "climate", follow: true })
+          }
         />
       </section>
       <Group
@@ -123,7 +126,8 @@ export function SourceChooser({
       />
       <p className="chooser-note">
         Open: its run here, from its start or its opening day. Live: the simulator plays it a day a
-        second, the same for every viewer. Back returns to the view before.
+        second, the same for every viewer. Follow: its own run as it is played back, the run a
+        consumer reads. Back returns to the view before.
       </p>
     </details>
   );
