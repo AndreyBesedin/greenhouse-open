@@ -10,6 +10,12 @@ research datasets into that format.
 | [`greenhouse-sim`](greenhouse_sim/) | A simulator with a hidden world and noisy sensors. It publishes canonical observations, accepts semantic actions, and exposes ground truth only through a separate evaluation interface. Plant, environment and sensor models plug in through small contracts, and a browser viewer shows what it is doing. |
 | [`greenhouse-adapters`](greenhouse_adapters/) | Reproducible adapters from recorded datasets to canonical records, starting with the Wageningen University & Research Autonomous Greenhouse Challenge datasets, and the `greenhouse-data` command. |
 
+## Demo
+
+Greenhouse Open v0.2.0 — Greenhouse Simulation
+
+https://github.com/user-attachments/assets/e1d71454-c96f-4b71-95f5-b8f4b9efb084
+
 ## Why a shared format
 
 Simulated, recorded and live greenhouses should look the same to whatever
