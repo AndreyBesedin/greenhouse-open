@@ -10,9 +10,9 @@ PACKAGE = Path(__file__).resolve().parents[1] / "greenhouse_sim"
 DOMAIN = "domain"
 ENUM_BASES = frozenset({"Enum", "StrEnum", "IntEnum"})
 # A contract's vocabulary, shared by what speaks it: the scene's entity kinds,
-# which the scene contract publishes, and a live run's commands, which its
-# service takes and its API reads.
-CONTRACTS = frozenset({"SceneEntityKind", "LiveCommand"})
+# which the scene contract publishes, and a live run's and a playback's
+# commands, which their services take and the API reads.
+CONTRACTS = frozenset({"SceneEntityKind", "LiveCommand", "PlaybackCommand"})
 
 
 def _modules() -> dict[Path, ast.Module]:

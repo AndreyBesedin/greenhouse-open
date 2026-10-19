@@ -11,7 +11,7 @@ longer one is asked for. The run is asked for as its climate field is
 """
 
 from collections.abc import Mapping, Sequence
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from greenhouse_protocol.media import CameraFrame
 from greenhouse_protocol.observation import Observation
@@ -149,6 +149,38 @@ def observations(
             from_s=first,
         ),
     )
+
+
+def delivered_between(
+    scenario_id: str, after_s: float | None, until_s: float, every_s: float | None = None
+) -> tuple[list[Observation], str]:
+    """What a scenario's own run delivered of its point sensors' readings
+    after `after_s` and by `until_s`, from the run's start if `after_s` is
+    None, in the order delivered, taken every `every_s` (all if None); with
+    the run's identity. Its own run: its layout, its weather and its daily
+    commands, none changed. Spans that meet end to end deliver each reading
+    once, a late one in the span it arrived in."""
+    config = scenario(scenario_id)
+    point_sensors = _point_sensors(scenario_id, DEFAULT_LAYOUT)
+    air_at, run_id = air_through_a_run(scenario_id, DEFAULT_LAYOUT)
+    start = run_start(scenario_id)
+    latest = max((sensor.imperfections.latency_s for sensor in point_sensors), default=0.0)
+    observed = observe(
+        point_sensors,
+        air_at,
+        until_s,
+        start=start,
+        greenhouse_id=config.greenhouse_id,
+        run_id=run_id,
+        seed=config.random_seed,
+        weather_at=_weather_at(scenario_id, None),
+        from_s=0.0 if after_s is None else max(0.0, after_s - latest),
+        every_s=every_s,
+    )
+    if after_s is None:
+        return observed, run_id
+    after = start + timedelta(seconds=after_s)
+    return [o for o in observed if (o.delivered_at or o.timestamp) > after], run_id
 
 
 def sensors_at(
