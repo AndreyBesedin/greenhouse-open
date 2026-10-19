@@ -12,6 +12,11 @@ const SCENE_OVERLAY_LABELS: Record<Exclude<SceneOverlay, "airField">, string> = 
   probes: "Probes",
 };
 
+// What the switches change, apart from the equipment's, which change the run.
+// It is the group's tooltip, not a line of its own: the info panel shows all
+// of itself at the usual window size beside the tallest legend.
+const VIEW_ONLY = "Hiding one changes only the view, never the run or its equipment.";
+
 function overlayLabel(overlay: SceneOverlay, fieldView: FieldView): string {
   return overlay === "airField" ? `Air field ${fieldView}` : SCENE_OVERLAY_LABELS[overlay];
 }
@@ -82,9 +87,7 @@ export function DisplayOptions({
         </label>
       </p>
       {drawn.length > 0 && (
-        // Named for what is seen, apart from the equipment's switches, which
-        // change the run: these change only the view.
-        <fieldset className="shown-overlays">
+        <fieldset className="shown-overlays" title={VIEW_ONLY}>
           <legend>Shown in the view</legend>
           {drawn.map((overlay) => (
             <label key={overlay}>
@@ -96,7 +99,6 @@ export function DisplayOptions({
               {overlayLabel(overlay, fieldView)}
             </label>
           ))}
-          <p>Hiding one changes only the view, never the run or its equipment.</p>
         </fieldset>
       )}
     </>

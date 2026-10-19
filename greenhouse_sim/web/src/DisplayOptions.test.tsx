@@ -53,7 +53,7 @@ describe("the display options", () => {
     expect(checkbox(shown, "Wind").checked).toBe(false);
     expect(checkbox(shown, "Probes").checked).toBe(true);
     // Unlike the equipment's switches, which change the run.
-    expect(shown.querySelector("fieldset p")?.textContent).toBe(
+    expect(shown.querySelector("fieldset")?.title).toBe(
       "Hiding one changes only the view, never the run or its equipment.",
     );
   });

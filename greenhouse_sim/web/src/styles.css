@@ -266,11 +266,14 @@ body {
   margin: 2px 0 0;
 }
 
-/* The switches of the overlays over the scene, wrapped to the panel's width,
- * with the note that they change only the view on a line of its own. */
+/* The switches of the overlays over the scene, wrapped to the panel's width.
+ * Floated, the legend is a flex item on the switches' line, not a line of its
+ * own: the info panel shows all of itself at the usual window size beside the
+ * tallest legend (e2e/panels.spec.ts). */
 .shown-overlays {
   display: flex;
   flex-wrap: wrap;
+  align-items: baseline;
   gap: 2px 12px;
   margin: 0 0 8px;
   padding: 0;
@@ -278,13 +281,8 @@ body {
 }
 
 .shown-overlays legend {
+  float: left;
   padding: 0;
-}
-
-.shown-overlays p {
-  flex-basis: 100%;
-  margin: 2px 0 0;
-  color: #555;
 }
 
 .field-views {
