@@ -29,8 +29,8 @@ MANIFESTS = frozenset(
     {
         "package.json",
         "package-lock.json",
-        "requirements-dev.txt",
         "pyproject.toml",
+        "uv.lock",
         ".pre-commit-config.yaml",
     }
 )

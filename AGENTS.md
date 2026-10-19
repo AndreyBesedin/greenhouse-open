@@ -45,6 +45,9 @@ Commits and pull request titles follow Conventional Commits
 Not edited by hand; each is written by the command beside it, and a test
 fails when it drifts from its source.
 
+- `uv.lock`, every Python dependency's version for development and CI:
+  `uv lock`, after a `pyproject.toml` changes (decision 0039). CI's
+  `uv sync --locked` fails while it is out of step.
 - The viewer's contracts in `greenhouse_sim/web/src/scene/generated/`,
   `greenhouse_sim/web/src/fields/generated/` and
   `greenhouse_sim/web/src/cfd/generated/`: `npm run generate` in

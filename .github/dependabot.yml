@@ -41,8 +41,13 @@ updates:
         patterns: ["*"]
         update-types: [minor, patch]
 
-  # The development tools, pinned.
-  - package-ecosystem: pip
+  # The development tools, pinned in the root pyproject.toml's `dev` group
+  # and locked in uv.lock (decision 0039). Only they: the packages' runtime
+  # ranges have the entry below, and Dependabot's uv support still mistakes
+  # a workspace's own packages for PyPI's (dependabot/dependabot-core#14004),
+  # whose names it ignores here too. A pull request that leaves uv.lock out
+  # of step with the pyproject.toml files fails CI's `uv sync --locked`.
+  - package-ecosystem: uv
     directory: /
     schedule:
       interval: daily
@@ -51,6 +56,17 @@ updates:
     commit-message:
       prefix: build
       include: scope
+    allow:
+      - dependency-name: pytest
+      - dependency-name: pytest-xdist
+      - dependency-name: mypy
+      - dependency-name: ruff
+      - dependency-name: pre-commit
+      - dependency-name: types-openpyxl
+    ignore:
+      - dependency-name: greenhouse-protocol
+      - dependency-name: greenhouse-sim
+      - dependency-name: greenhouse-adapters
     groups:
       # ruff is below 1.0, and pinned twice: here and as its pre-commit
       # hook's `rev`, which the pre-commit entry below updates in a pull
@@ -60,16 +76,10 @@ updates:
       dev-tools-minor-and-patch:
         patterns: ["*"]
         update-types: [minor, patch]
-    ignore:
-      # The root pyproject.toml, the development workspace (decision 0039),
-      # lists the workspace's own packages. They are not on PyPI: a package
-      # of one of their names there would be someone else's.
-      - dependency-name: greenhouse-protocol
-      - dependency-name: greenhouse-sim
-      - dependency-name: greenhouse-adapters
 
   # The packages' runtime dependencies: ranges a user may install them with,
-  # moved only when a release falls outside them.
+  # moved only when a release falls outside them. Such a pull request leaves
+  # uv.lock behind, and CI says so: `uv lock` on its branch completes it.
   - package-ecosystem: pip
     directories: [/greenhouse_protocol, /greenhouse_sim, /greenhouse_adapters]
     schedule:

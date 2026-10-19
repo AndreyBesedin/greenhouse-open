@@ -37,9 +37,7 @@ browser-tests = "greenhouse_dev.commands:main"
 record-demo = "greenhouse_dev.commands:main"
 
 # The tools that check the packages, pinned; `uv run` installs them with the
-# packages. requirements-dev.txt holds the same pins for CI, which installs
-# with pip, until it moves to uv (tests/test_dev_commands.py keeps the two
-# equal).
+# packages, and CI with `uv sync --locked`.
 [dependency-groups]
 dev = [
     "pytest==9.1.1",
@@ -60,6 +58,14 @@ module-root = "tools"
 
 [tool.uv.workspace]
 members = ["greenhouse_protocol", "greenhouse_sim", "greenhouse_adapters"]
+
+# The backend that builds the packages, pinned for the workspace and recorded
+# in uv.lock, so that a new release cannot change a build under `--locked`.
+# The packages' own `poetry-core>=2.0` stays a range for those who install
+# them elsewhere. Moved by hand: Dependabot's uv entry moves only the dev
+# tools. This project is built by uv itself, whose version CI pins.
+[tool.uv]
+build-constraint-dependencies = ["poetry-core==2.5.0"]
 
 # The packages' requirements of each other are met by the workspace's own.
 [tool.uv.sources]

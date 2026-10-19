@@ -90,7 +90,8 @@ def test_a_change_beyond_manifests_and_lockfiles_waits() -> None:
 def test_every_manifest_kind_counts_as_one() -> None:
     files = [
         *VIEWER,
-        "requirements-dev.txt",
+        "pyproject.toml",
+        "uv.lock",
         "greenhouse_sim/pyproject.toml",
         ".pre-commit-config.yaml",
     ]

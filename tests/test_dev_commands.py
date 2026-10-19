@@ -102,13 +102,70 @@ def test_the_guides_quote_only_commands_that_exist() -> None:
     assert sorted(q for q in quoted if q[1] not in {*commands.COMMANDS, *INSTALLED}) == []
 
 
-def test_ci_installs_the_tools_the_workspace_pins() -> None:
-    # CI installs requirements-dev.txt with pip until it moves to uv; uv is
-    # pinned there for CI's lowest-dependencies job alone.
-    pinned = {
-        line.strip()
-        for line in (ROOT / "requirements-dev.txt").read_text().splitlines()
-        if line.strip() and not line.startswith("#") and not line.startswith("uv==")
-    }
+def test_ci_installs_python_with_uv_from_the_lock() -> None:
+    # pip would install whatever its index has today, not what uv.lock pins.
+    workflows = sorted((ROOT / ".github" / "workflows").glob("*.yml"))
+    with_pip = [
+        workflow.name
+        for workflow in workflows
+        for line in workflow.read_text().splitlines()
+        if "pip install" in line and "uv pip install" not in line
+    ]
 
-    assert pinned == set(PYPROJECT["dependency-groups"]["dev"])
+    assert with_pip == []
+    assert "uv sync --locked" in (ROOT / ".github" / "workflows" / "ci.yml").read_text()
+
+
+def _path_filters(workflow: str) -> list[list[str]]:
+    """Each `paths:` list among a workflow's triggers."""
+    lines = workflow.splitlines()
+    filters: list[list[str]] = []
+    for at, line in enumerate(lines):
+        if line.strip() != "paths:":
+            continue
+        entries: list[str] = []
+        for item in lines[at + 1 :]:
+            entry = item.strip()
+            if entry.startswith("#"):
+                continue
+            if not entry.startswith("- "):
+                break
+            entries.append(entry.removeprefix("- ").strip('"'))
+        filters.append(entries)
+    return filters
+
+
+def test_a_workflow_run_on_some_paths_runs_when_what_it_runs_on_changes() -> None:
+    # What a workflow that syncs from the lock tests moves with the lock and
+    # the Python, as the CFD results may.
+    runs_on = {"uv.lock", ".python-version"}
+    filtered = [
+        (workflow.name, paths)
+        for workflow in sorted((ROOT / ".github" / "workflows").glob("*.yml"))
+        if "uv sync" in workflow.read_text()
+        for paths in _path_filters(workflow.read_text())
+    ]
+
+    assert filtered
+    assert [name for name, paths in filtered if not runs_on <= {*paths}] == []
+
+
+def test_the_packages_build_with_a_backend_the_workspace_pins() -> None:
+    # uv.lock pins what is installed, not what builds it: a new release of
+    # an unpinned backend would change CI's build under `--locked`.
+    uv = PYPROJECT["tool"]["uv"]
+    pins = {
+        re.split(r"[=<>!~ ]", constraint)[0]
+        for constraint in uv.get("build-constraint-dependencies", [])
+        if "==" in constraint
+    }
+    unpinned = [
+        (member, requirement)
+        for member in uv["workspace"]["members"]
+        for requirement in tomllib.loads((ROOT / member / "pyproject.toml").read_text())[
+            "build-system"
+        ]["requires"]
+        if re.split(r"[=<>!~ ;\[]", requirement)[0] not in pins
+    ]
+
+    assert unpinned == []

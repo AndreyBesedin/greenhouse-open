@@ -82,7 +82,6 @@ GENERATED_OR_LOCK_FILES = {
 # are taken in, from the socket to the checkpoint.
 SENSITIVE_FILES = {
     ".pre-commit-config.yaml",
-    "requirements-dev.txt",
     "tests/test_dependencies.py",
     "tests/test_publishable.py",
     "greenhouse_sim/tests/test_sensor_observations.py",
