@@ -11,10 +11,11 @@ import { ClimateSchedule } from "./fields/ClimateSchedule";
 import { ClimateTime } from "./fields/ClimateTime";
 import type { FieldView, Slice } from "./fields/display";
 import { FieldControls, useFieldNames } from "./fields/FieldControls";
-import { FieldProbes } from "./fields/FieldProbes";
+import { describeProbes, FieldProbes } from "./fields/FieldProbes";
 import { HouseAir, type HouseAirState } from "./fields/HouseAir";
 import { ProbeCharts, type ProbeChartsState } from "./fields/ProbeCharts";
 import { CLIMATE_FIELD, type FieldState } from "./fields/source";
+import { useFolds } from "./folds";
 import { OpeningControls, openingsIn } from "./OpeningControls";
 import {
   type ScenarioSource,
@@ -112,6 +113,11 @@ export function ScenarioPanels({
   const climate = source.field === CLIMATE_FIELD;
   const time = source.time ?? 0;
   const probed = field.status === "loaded" ? field.field : null;
+  // Equipment, openings and probes, each folded to the line that says how
+  // it stands (#206).
+  const fold = useFolds<"equipment" | "openings" | "probes">();
+  const fieldName = source.field;
+  const probing = fieldName !== undefined && probed !== null;
 
   // The moment changes from the source as it is then: playing, the climate
   // run moves on render after render.
@@ -218,23 +224,30 @@ export function ScenarioPanels({
         windFrom={source.wind}
         onWindFrom={(wind) => onSource(withWind(source, wind))}
       />
-      {source.field !== undefined && probed !== null && (
-        <FieldProbes
-          names={fields.names}
-          fieldName={source.field}
-          field={probed}
-          compareName={source.compare ?? null}
-          compareState={comparedField}
-          probes={probes}
-          placing={placing}
-          height={probeHeight}
-          onProbes={onProbes}
-          onCompare={(name) => onSource(withCompared(source, name))}
-          onPlacing={onPlacing}
-          onHeight={onProbeHeight}
-        />
+      {(probing || climate) && (
+        <details className="probes-fold" {...fold("probes")}>
+          <summary data-testid="probes-summary">
+            {describeProbes(probes.length, source.compare ?? null)}
+          </summary>
+          {probing && (
+            <FieldProbes
+              names={fields.names}
+              fieldName={fieldName}
+              field={probed}
+              compareName={source.compare ?? null}
+              compareState={comparedField}
+              probes={probes}
+              placing={placing}
+              height={probeHeight}
+              onProbes={onProbes}
+              onCompare={(name) => onSource(withCompared(source, name))}
+              onPlacing={onPlacing}
+              onHeight={onProbeHeight}
+            />
+          )}
+          {climate && <ProbeCharts state={probeCharts} time={time} />}
+        </details>
       )}
-      {climate && <ProbeCharts state={probeCharts} time={time} />}
       <CfdControls
         shown={source.cfdBoundaries === true}
         state={cfd}
@@ -247,6 +260,7 @@ export function ScenarioPanels({
             source,
             openingsIn(snapshot).map((opening) => opening.openingId),
           )}
+          fold={fold("openings")}
           onChange={(openings) => onSource(withOpenings(source, openings))}
         />
       )}
@@ -254,6 +268,7 @@ export function ScenarioPanels({
         <EquipmentControls
           snapshot={snapshot}
           requested={levelsAt(source)}
+          fold={fold("equipment")}
           onChange={(levels) => onSource(withLevels(source, levels))}
         />
       )}

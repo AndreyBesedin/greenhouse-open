@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { unfold } from "./folds";
 
 // Beside the climate box's heater, and in the middle of the house, both
 // 0.75 m up.
@@ -10,6 +11,7 @@ test("probe charts: a heated run diverges from the same run all off, where the h
   await page.goto(
     `/?scenario=climate_box&set=heater:1&field=climate&t=600&probes=${BY_THE_HEATER}`,
   );
+  await unfold(page, "Probes");
   const charts = page.getByRole("region", { name: "Probe charts" });
   const corner = page.getByTestId("chart-P1-temperature_c");
   const middle = page.getByTestId("chart-P2-temperature_c");

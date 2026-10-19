@@ -31,12 +31,6 @@ export function InfoPanel({
   return (
     <aside className="info-panel">
       <h1>greenhouse-sim viewer</h1>
-      <dl>
-        <dt>Simulator version</dt>
-        <dd>{build.simulatorVersion}</dd>
-        <dt>Built from commit</dt>
-        <dd>{build.sourceCommit}</dd>
-      </dl>
       <SourceChooser
         scenarios={scenarios}
         source={source}
@@ -46,6 +40,11 @@ export function InfoPanel({
       />
       <SceneFailures failures={failures} />
       {children}
+      {/* What the viewer was built from, last, in a line: QA mode's run
+          manifest says it too, beside the simulator's own (#206). */}
+      <p className="build-line" data-testid="build-line">
+        simulator {build.simulatorVersion} · commit {build.sourceCommit}
+      </p>
     </aside>
   );
 }

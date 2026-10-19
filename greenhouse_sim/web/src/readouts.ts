@@ -108,3 +108,17 @@ export function formatMemory(
     ? held
     : `${held}, ${formatCount(Math.round(heapBytes / BYTES_PER_MEBIBYTE))} MiB heap`;
 }
+
+/** A line of what is on and what is not: those on, each with how far, and
+ * then the rest as `rest` says (`heater 100%; fan right, fan left off`), or
+ * `all off` when none is on. */
+export function onAndRest(
+  on: readonly string[],
+  rest: readonly string[],
+  restWord: string,
+): string {
+  if (on.length === 0) {
+    return `all ${restWord}`;
+  }
+  return rest.length === 0 ? on.join(", ") : `${on.join(", ")}; ${rest.join(", ")} ${restWord}`;
+}

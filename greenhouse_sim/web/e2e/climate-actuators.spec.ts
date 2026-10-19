@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { unfold } from "./folds";
 
 /**
  * P05's final QA, `climate-actuators`, at runtime in the climate box:
@@ -53,6 +54,8 @@ test("climate-actuators: the box's equipment and vent change its air, visibly an
   const byDehumidifier = page.getByTestId("probe-3-reading");
   const underVent = page.getByTestId("probe-4-reading");
   await expect(status).toContainText("air speed 0 to 0 m/s.");
+  await unfold(page, "Equipment");
+  await unfold(page, "Openings");
 
   await test.step("the fan changes the air's direction and speed near it", async () => {
     await equipment.getByRole("checkbox", { name: "fan" }).check();
@@ -117,6 +120,7 @@ test("climate-actuators: the box's equipment and vent change its air, visibly an
   });
 
   await test.step("fixed probes are charted through the run, beside it all off", async () => {
+    await unfold(page, "Probes");
     const charts = page.getByRole("region", { name: "Probe charts" });
     await expect(charts.locator("polyline")).toHaveCount(4 * 3 * 2);
     const charted = page.getByTestId("chart-P2-temperature_c");

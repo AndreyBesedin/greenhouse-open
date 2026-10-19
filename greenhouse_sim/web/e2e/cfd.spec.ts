@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { unfold } from "./folds";
 
 import { DRAWN_TIMEOUT_MS, objectCount, settledObjectCount } from "./hud";
 
@@ -33,6 +34,7 @@ test("a scenario's CFD boundaries are drawn by category, and follow its openings
   ]);
 
   // Opening the door makes it a fifth opening, 6 faces wide and 6 high.
+  await unfold(page, "Openings");
   const door = page.getByTestId("opening-door_front").locator("..").getByRole("slider");
   await door.fill("100");
   await expect(page).toHaveURL(/\?scenario=tomato_compartment&open=door_front:1&cfd=boundaries$/);

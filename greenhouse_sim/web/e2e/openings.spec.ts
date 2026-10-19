@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { unfold } from "./folds";
 
 test("a slider opens a roof vent, through the simulator, and the address keeps it", async ({
   page,
@@ -15,6 +16,7 @@ test("a slider opens a roof vent, through the simulator, and the address keeps i
   // The climate box's roof vent, shut to start.
   await expect(vent).toHaveText("0%, 0 m²");
 
+  await unfold(page, "Openings");
   await openings.getByRole("slider").first().fill("100");
 
   // Wide open, at 45°, the 4 by 1 m vent's curtain: the gap along its free

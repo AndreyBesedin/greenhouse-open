@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { unfold } from "./folds";
 
 // Three probes on the climate box's fan's axis, 2.8 m up along the middle of
 // the house, from its rotor at x = 1 m: in its 3 m core, far down the house,
@@ -25,6 +26,7 @@ test("climate: a running fan drives the air along its axis, and its level sets h
   });
 
   await test.step("switched on, it blows down the house, slowing as its jet spreads", async () => {
+    await unfold(page, "Equipment");
     await equipment.getByRole("checkbox", { name: "fan" }).check();
     await expect(page).toHaveURL(/&set=fan:1(&|$)/);
     await expect(status).toContainText("air speed 0 to 4.81 m/s.");
@@ -108,6 +110,7 @@ test("climate: a running heater warms its corner and the house through the run",
   await test.step("switched off ten minutes in, the house cools to 12 °C and saturates", async () => {
     const slider = page.getByRole("slider", { name: "Time of day" });
     await slider.fill("600");
+    await unfold(page, "Equipment");
     await page
       .getByRole("group", { name: "Equipment" })
       .getByRole("checkbox", { name: "heater" })
@@ -151,6 +154,7 @@ test("climate: a running dehumidifier dries the air around it", async ({ page })
     const slider = page.getByRole("slider", { name: "Time of day" });
     // Set at the start, not overridden ten minutes in.
     await slider.fill("0");
+    await unfold(page, "Equipment");
     await page
       .getByRole("group", { name: "Equipment" })
       .getByRole("checkbox", { name: "heater" })
@@ -179,6 +183,7 @@ test("climate: opening the roof vent lets the heated air out, and the cold in", 
   const time = page.getByRole("slider", { name: "Time of day" });
   const vent = page.getByRole("group", { name: "Openings" }).getByRole("slider").first();
   const opened = page.getByTestId("opening-roof_vent");
+  await unfold(page, "Openings");
 
   await test.step("shut, the air under it is still, and warm from the heater", async () => {
     await expect(reading).toHaveText(
