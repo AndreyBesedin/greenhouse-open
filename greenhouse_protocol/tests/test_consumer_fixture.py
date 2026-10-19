@@ -60,7 +60,8 @@ HEIGHTS_CM = {PLANT_1: (41.0, 43.5, 46.0), PLANT_2: (39.0, 41.0, 43.5)}
 RIPE_COUNTS = {PLANT_1: (0, 1, 2), PLANT_2: (0, 0, 1)}
 AIR_TEMPERATURES_C = (21.4, 22.1, 20.8)
 LATE_HUMIDITY_PCT = 78.0
-HARVESTED = {"fruit_count": 2, "mass_g": 150.0}
+# The parameters the simulator's harvests carry (`actions/effects.py`).
+HARVESTED = {"harvested_fruit_count": 2, "harvested_mass_g": 150.0}
 # One batch is cut short to show `has_more`.
 SHORT_LIMIT = 2
 
