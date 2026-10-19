@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, type Route, test } from "@playwright/test";
 
 // The climate box's runs last its 14 days (P09.2): its heater on ten minutes
 // into the first, and off an hour into the second.
@@ -7,6 +7,25 @@ const DAY_S = 86_400;
 // A moment on a later day takes the simulator a grid run of its own; the
 // heater's level is the scene's, asked for beside it.
 const ARRIVES = { timeout: 40_000 };
+
+/** Whether a request asks for the climate's field at `time`. */
+function fieldAt(time: number): (url: URL) => boolean {
+  return (url) =>
+    url.pathname.endsWith("/fields/climate") && url.searchParams.get("t") === String(time);
+}
+
+/** Holds the request for the climate's field at `time` until the test
+ * lets it through, or for good; `held` is that request, once it is made.
+ * (Wrapped, since an async function's promise of a promise would wait for
+ * the request itself.) */
+async function holdField(page: Page, time: number): Promise<{ held: Promise<Route> }> {
+  let receive: (route: Route) => void = () => undefined;
+  const held = new Promise<Route>((resolve) => {
+    receive = resolve;
+  });
+  await page.route(fieldAt(time), (route) => receive(route));
+  return { held };
+}
 
 test("season: the time controls span the run's days, each chart its moment's day", async ({
   page,
@@ -60,5 +79,67 @@ test("season: the time controls span the run's days, each chart its moment's day
     await expect(moment).toHaveText("day 13, 24 h 00 min", ARRIVES);
     await expect(run.getByRole("button", { name: "Play" })).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`&t=${14 * DAY_S}(&|$)`));
+  });
+});
+
+test("season: a day on its way says so, play waits for it, and one that cannot be drawn stops play", async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  await page.goto(`/?scenario=climate_box&field=climate&t=600&schedule=${SCHEDULE}`);
+  const run = page.getByRole("group", { name: "Climate run" });
+  const moment = page.getByTestId("climate-time");
+  const pending = page.getByTestId("climate-pending");
+  await expect(moment).toHaveText("10 min", ARRIVES);
+  await expect(pending).toBeHidden(ARRIVES);
+
+  await test.step("a step on says which day it is loading, and a step past it gives it up", async () => {
+    // Else every day stepped past is asked for to the end, each holding
+    // one of the browser's few connections to the API (#202).
+    await holdField(page, DAY_S + 600);
+    const givenUp = page.waitForEvent("requestfailed", (request) =>
+      fieldAt(DAY_S + 600)(new URL(request.url())),
+    );
+    await run.getByRole("button", { name: "Next day" }).click();
+    await expect(pending).toHaveText(/^Loading day 1, 10 min… \d+ s$/);
+    await expect(moment).toHaveText("10 min");
+
+    await run.getByRole("button", { name: "Next day" }).click();
+    await givenUp;
+    await expect(moment).toHaveText("day 2, 10 min", ARRIVES);
+    await expect(pending).toBeHidden();
+  });
+
+  await test.step("play waits for the day it asked for, says so, and pauses and resumes there", async () => {
+    const { held } = await holdField(page, 3 * DAY_S + 600);
+    await run.getByRole("combobox", { name: "Pace" }).selectOption({ label: "1 day a step" });
+    await run.getByRole("button", { name: "Play" }).click();
+    const route = await held;
+    await expect(pending).toHaveText(/^Playing: waiting for day 3, 10 min… \d+ s$/);
+
+    await run.getByRole("button", { name: "Pause" }).click();
+    await expect(pending).toHaveText(/^Loading day 3, 10 min… \d+ s$/);
+    await run.getByRole("button", { name: "Play" }).click();
+    await expect(pending).toHaveText(/^Playing: waiting for day 3, 10 min… \d+ s$/);
+    // The next day's field fails, once play moves on to it.
+    await page.route(fieldAt(4 * DAY_S + 600), (failing) =>
+      failing.fulfill({ status: 500, json: { error: "a failure for the test" } }),
+    );
+    await route.continue();
+    await expect(moment).toHaveText("day 3, 10 min", ARRIVES);
+  });
+
+  await test.step("a day that cannot be drawn stops play, which says what is drawn instead", async () => {
+    await expect(page.getByTestId("climate-failed")).toHaveText(
+      "Day 4, 10 min cannot be drawn; day 3, 10 min is shown.",
+      ARRIVES,
+    );
+    await expect(run.getByRole("button", { name: "Play" })).toBeVisible();
+    await expect(moment).toHaveText("day 3, 10 min");
+    await expect(page.getByTestId("scene-failures")).toHaveText(
+      "Not drawn as asked: the field is not available (the simulator API answered 500).",
+    );
+    // The field drawn is day 3's still, not taken off the view.
+    await expect(page.getByTestId("field-status")).toContainText("cells");
   });
 });

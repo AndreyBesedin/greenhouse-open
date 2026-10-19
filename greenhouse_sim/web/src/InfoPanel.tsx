@@ -13,6 +13,7 @@ export function InfoPanel({
   scenarios,
   source,
   scene,
+  failures = [],
   onSource,
   children,
 }: {
@@ -20,6 +21,8 @@ export function InfoPanel({
   scenarios: ScenariosState;
   source: SceneSource;
   scene: SceneState;
+  /** What failed to arrive while something else is drawn in its place. */
+  failures?: readonly string[];
   onSource: (source: SceneSource) => void;
   /** Display options for the scene, shown under its choice. */
   children?: ReactNode;
@@ -33,7 +36,7 @@ export function InfoPanel({
         <dt>Built from commit</dt>
         <dd>{build.sourceCommit}</dd>
       </dl>
-      <SceneStatus source={source} state={scene} />
+      <SceneStatus source={source} state={scene} failures={failures} />
       <p>
         <button type="button" onClick={() => onSource({ kind: "reference" })}>
           Reference scene

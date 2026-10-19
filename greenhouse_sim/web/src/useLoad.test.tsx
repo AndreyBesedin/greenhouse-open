@@ -3,7 +3,7 @@ import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderHook } from "./testing/renderHook";
-import { useLoad } from "./useLoad";
+import { useLoad, useLoadProgress } from "./useLoad";
 
 type State = { status: "loaded"; value: string } | { status: "unavailable"; reason: string };
 
@@ -259,5 +259,59 @@ describe("loading what a request names", () => {
 
     expect(hook.current).toEqual(loaded("a"));
     expect(load).toHaveBeenCalledOnce();
+  });
+});
+
+describe("telling what is on show from how the latest request stands", () => {
+  const UNAVAILABLE: State = { status: "unavailable", reason: "the API answered 500" };
+
+  it("shows the last answer while the next is on its way, and says it is", async () => {
+    const { load, answer } = answering();
+    const hook = renderHook(({ url }: Props) => useLoadProgress(url, load), { url: "/a" });
+    await answer("/a", loaded("A"));
+
+    hook.rerender({ url: "/b" });
+    expect(hook.current).toEqual({ shown: loaded("A"), latest: { status: "loading" } });
+    await answer("/b", loaded("B"));
+
+    expect(hook.current).toEqual({ shown: loaded("B"), latest: loaded("B") });
+  });
+
+  it("keeps the last answer that loaded on show when the next fails, and says it failed", async () => {
+    // Else a failed day's request takes its crop, or its whole scene, off
+    // the view (#197).
+    const { load, answer } = answering();
+    const hook = renderHook(({ url }: Props) => useLoadProgress(url, load), { url: "/a" });
+    await answer("/a", loaded("A"));
+
+    hook.rerender({ url: "/b" });
+    await answer("/b", UNAVAILABLE);
+
+    expect(hook.current).toEqual({ shown: loaded("A"), latest: UNAVAILABLE });
+  });
+
+  it("shows nothing that loaded in another group", async () => {
+    const { load, answer } = answering();
+    const hook = renderHook(({ url, group }: Props) => useLoadProgress(url, load, { group }), {
+      url: "/a",
+      group: "one",
+    });
+    await answer("/a", loaded("A"));
+
+    hook.rerender({ url: "/b", group: "two" });
+
+    expect(hook.current).toEqual({ shown: null, latest: { status: "loading" } });
+  });
+
+  it("shows nothing once nothing is asked for, nor when asked for again", async () => {
+    const { load, answer } = answering();
+    const hook = renderHook(({ url }: Props) => useLoadProgress(url, load), { url: "/a" });
+    await answer("/a", loaded("A"));
+
+    hook.rerender({ url: null });
+    expect(hook.current).toEqual({ shown: null, latest: { status: "none" } });
+    hook.rerender({ url: "/a" });
+
+    expect(hook.current).toEqual({ shown: null, latest: { status: "loading" } });
   });
 });

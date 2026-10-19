@@ -66,6 +66,7 @@ export function ScenarioPanels({
   weathers,
   days,
   loads,
+  momentFailed = false,
   fieldView,
   fieldSlice,
   probes,
@@ -86,6 +87,9 @@ export function ScenarioPanels({
   /** How many days its runs last. */
   days: number;
   loads: ScenarioLoads;
+  /** Whether the moment asked for cannot be drawn, part of it having failed
+   * to arrive. */
+  momentFailed?: boolean;
   fieldView: FieldView;
   fieldSlice: Slice | null;
   probes: Point3[];
@@ -156,6 +160,7 @@ export function ScenarioPanels({
         <ClimateTime
           time={time}
           shown={field.status === "loaded" ? field.field.timeS : null}
+          failed={momentFailed}
           days={days}
           playing={playingClimate}
           onTime={setTime}

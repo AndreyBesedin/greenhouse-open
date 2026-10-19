@@ -9,11 +9,23 @@ const NONE: Pending = { status: "none" };
 const LOADING: Loading = { status: "loading" };
 
 type Settled = { status: string };
+/** An answer that loaded. */
+type Loaded<T extends Settled> = Extract<T, { status: "loaded" }>;
 
 interface Answer<T> {
   key: string;
   group: string;
   state: T;
+}
+
+/** What a load has on show, and how its latest request stands apart from
+ * it (`useLoadProgress`). */
+export interface Progress<T extends Settled> {
+  /** The latest answer that loaded within the request's group, on show
+   * while the next loads and when the next fails; null if none has. */
+  shown: Loaded<T> | null;
+  /** The latest request's own answer, or how it stands until it arrives. */
+  latest: T | Pending;
 }
 
 interface Options<R, T> {
@@ -64,9 +76,63 @@ export function useLoad<R, T extends Settled>(
   load: Load<R, T>,
   options: Options<R, T> = {},
 ): T | Pending {
+  const { key, group, answer } = useAnswers(request, load, options);
+  if (key === null) {
+    return NONE;
+  }
+  if (answer === null) {
+    return LOADING;
+  }
+  if (answer.key === key && answer.group === group) {
+    return answer.state;
+  }
+  return answer.state.status === "loaded" && answer.group === group ? answer.state : LOADING;
+}
+
+/**
+ * What `load` answers for `url`, asked for as `useLoad` asks, told apart:
+ * what is on show, which is the latest answer that loaded within the
+ * group, kept while the next loads and also when the next fails; and how
+ * the latest request stands, so that what is on show is never taken for
+ * the answer to a request still on its way, or one that failed.
+ */
+export function useLoadProgress<T extends Settled>(
+  url: string | null,
+  load: Load<string, T>,
+  options?: Options<string, T>,
+): Progress<T> {
+  const { key, group, answer, loaded } = useAnswers(url, load, options);
+  if (key === null) {
+    return { shown: null, latest: NONE };
+  }
+  return {
+    shown: loaded !== null && loaded.group === group ? loaded.state : null,
+    latest:
+      answer !== null && answer.key === key && answer.group === group ? answer.state : LOADING,
+  };
+}
+
+function isLoaded<T extends Settled>(state: T): state is Loaded<T> {
+  return state.status === "loaded";
+}
+
+/** The latest answer to a request, and the latest that loaded, each with
+ * the request and the group it answers; asked for again whenever the
+ * request or its group changes. */
+function useAnswers<R, T extends Settled>(
+  request: R | null,
+  load: Load<R, T>,
+  options: Options<R, T> = {},
+): {
+  key: string | null;
+  group: string;
+  answer: Answer<T> | null;
+  loaded: Answer<Loaded<T>> | null;
+} {
   const key = request === null ? null : (options.key ?? String)(request);
   const group = options.group ?? "";
   const [answer, setAnswer] = useState<Answer<T> | null>(null);
+  const [loaded, setLoaded] = useState<Answer<Loaded<T>> | null>(null);
   const ask = useEffectEvent((signal: AbortSignal) => {
     if (request === null) {
       return null;
@@ -80,6 +146,7 @@ export function useLoad<R, T extends Settled>(
     if (key === null) {
       // Asked for again later, it starts from loading.
       setAnswer(null);
+      setLoaded(null);
       return;
     }
     let current = true;
@@ -88,6 +155,9 @@ export function useLoad<R, T extends Settled>(
       (state) => {
         if (current) {
           setAnswer({ key, group, state });
+          if (isLoaded(state)) {
+            setLoaded({ key, group, state });
+          }
           answered(state);
         }
       },
@@ -105,14 +175,5 @@ export function useLoad<R, T extends Settled>(
     };
   }, [key, group]);
 
-  if (key === null) {
-    return NONE;
-  }
-  if (answer === null) {
-    return LOADING;
-  }
-  if (answer.key === key && answer.group === group) {
-    return answer.state;
-  }
-  return answer.state.status === "loaded" && answer.group === group ? answer.state : LOADING;
+  return { key, group, answer, loaded };
 }
