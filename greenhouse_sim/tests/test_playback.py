@@ -8,9 +8,11 @@ from datetime import timedelta
 import pytest
 
 from greenhouse_sim.api.routes import respond
+from greenhouse_sim.api.server import create_server
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import playback, run_state, sensors
-from greenhouse_sim.services.playback import Playback, PlaybackCommand
+from greenhouse_sim.services.errors import NotFound
+from greenhouse_sim.services.playback import Playback, PlaybackCommand, PlaybackFailed
 
 SCENARIO = "climate_box"
 EVERY_S = 300.0
@@ -214,3 +216,68 @@ def test_the_reference_greenhouse_s_second_day_is_one_run_for_the_viewer_and_a_c
         )
     finally:
         run.stop()
+
+
+def test_time_spent_waiting_for_a_day_is_not_banked(clock: Clock) -> None:
+    # Days published by hand, at moments the test chooses.
+    run = Playback(SCENARIO, seconds_per_day=10.0, clock=clock)
+    assert run.work_day(0)
+    run.command(PlaybackCommand.PLAY)
+    clock.now += 30.0
+    assert run.state().time_s == DAY_S  # waiting at the first day's end
+    clock.now += 100.0  # a long wait, nobody asking
+    assert run.work_day(1)
+    clock.now += 5.0
+    # Half a day into the second, whatever the wait: the clock plays its
+    # pace from the day's arrival.
+    later = run.state()
+    assert later.time_s == 1.5 * DAY_S
+    # At a day's end, the day is the one it ends, as the run's clock says.
+    clock.now += 100.0
+    ended = run.state()
+    assert (ended.time_s, ended.day) == (2 * DAY_S, 1)
+
+
+def test_a_pace_is_a_finite_number_of_seconds() -> None:
+    playback.forget_playbacks()
+    try:
+        assert respond("POST", f"/api/scenarios/{SCENARIO}/playback/start").status == 200
+        for pace in ("1e309", "inf", "nan", "-1"):
+            refused = respond(
+                "POST", f"/api/scenarios/{SCENARIO}/playback/pace?seconds_per_day={pace}"
+            )
+            assert refused.status == 400, pace
+    finally:
+        playback.forget_playbacks()
+
+
+def test_a_run_that_cannot_be_worked_out_is_the_simulator_s_failure(
+    clock: Clock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken(*_: object) -> None:
+        raise ArithmeticError("a numerical failure")
+
+    monkeypatch.setattr("greenhouse_sim.services.playback.delivered_between", broken)
+    run = Playback(SCENARIO, clock=clock)
+    assert not run.work_day(0)
+    with pytest.raises(PlaybackFailed):
+        run.state()
+
+    def refused(*_: object) -> None:
+        raise NotFound("no such run")
+
+    monkeypatch.setattr("greenhouse_sim.services.playback.delivered_between", refused)
+    other = Playback(SCENARIO, clock=clock)
+    assert not other.work_day(0)
+    with pytest.raises(NotFound):
+        other.state()
+
+
+def test_the_runs_played_back_go_with_the_server_that_played_them() -> None:
+    playback.forget_playbacks()
+    server = create_server(0)
+    playback.start(SCENARIO, 600.0)
+    assert playback.state(SCENARIO).playing
+    server.server_close()
+    with pytest.raises(NotFound):
+        playback.state(SCENARIO)
