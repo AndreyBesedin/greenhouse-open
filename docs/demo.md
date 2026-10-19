@@ -194,7 +194,8 @@ memory until it stops.
 
 - **A port in use.** `uv run demo` says which: stop what holds it, or
   pass `--api-port` or `--viewer-port`. The browser tests use their own API
-  on 8766 and previews on 4317 to 4319, apart from the demo's.
+  on 8766 and previews on 4317 to 4320, apart from the demo's;
+  `TEST_PORT_OFFSET` moves them all.
 - **The wrong Node.** The demo checks it before it starts, and says which
   it needs: the version `greenhouse_sim/web/.nvmrc` names. `uv run`
   provides the Python.

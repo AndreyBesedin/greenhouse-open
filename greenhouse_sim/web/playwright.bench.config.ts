@@ -5,6 +5,7 @@ import {
   simulatorApi,
   simulatorServer,
   TEST_SIMULATOR_API_PORT,
+  testPort,
 } from "./simulatorApi.ts";
 
 // The renderer's performance benchmarks, measured on this machine's graphics
@@ -13,7 +14,9 @@ import {
 // never fail on the numbers, and CI, which has no graphics card, does not run
 // them. PYTHON names an interpreter that has greenhouse-sim installed
 // (`simulatorServer`).
-const PREVIEW_PORT = 4319;
+// Its preview's port, unless TEST_PORT_OFFSET moves it.
+const OWN_PREVIEW_PORT = 4319;
+const PREVIEW_PORT = testPort(OWN_PREVIEW_PORT);
 // Several scenes, each loaded, warmed up and orbited for seconds; the
 // reference greenhouse's sets its own, longer.
 const BENCHMARK_TIMEOUT_MS = 180_000;

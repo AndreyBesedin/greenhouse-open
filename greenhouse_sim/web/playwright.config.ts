@@ -5,12 +5,15 @@ import {
   simulatorApi,
   simulatorServer,
   TEST_SIMULATOR_API_PORT,
+  testPort,
 } from "./simulatorApi.ts";
 
 // The smoke test runs the real thing: the simulator's local API and the
 // production build of the viewer, in Chromium. PYTHON names an interpreter
 // that has greenhouse-sim installed (`simulatorServer`).
-const PREVIEW_PORT = 4317;
+// Its preview's port, unless TEST_PORT_OFFSET moves it.
+const OWN_PREVIEW_PORT = 4317;
+const PREVIEW_PORT = testPort(OWN_PREVIEW_PORT);
 const IN_CI = process.env.CI !== undefined;
 // Screenshot comparisons and the benchmark have their own configurations.
 const ELSEWHERE = ["visual/**", "bench/**"];

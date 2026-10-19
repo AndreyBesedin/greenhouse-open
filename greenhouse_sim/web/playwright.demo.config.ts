@@ -5,6 +5,7 @@ import {
   simulatorApi,
   simulatorServer,
   TEST_SIMULATOR_API_PORT,
+  testPort,
 } from "./simulatorApi.ts";
 
 // P09.9's demo video: the final QA's walk-through (`e2e/demo.spec.ts`),
@@ -13,7 +14,9 @@ import {
 // is written under `test-results/demo/`; uploading it is done by hand
 // (docs/demo.md). PYTHON names an interpreter that has greenhouse-sim
 // installed (`simulatorServer`).
-const PREVIEW_PORT = 4320;
+// Its preview's port, unless TEST_PORT_OFFSET moves it.
+const OWN_PREVIEW_PORT = 4320;
+const PREVIEW_PORT = testPort(OWN_PREVIEW_PORT);
 const VIEW = { width: 1280, height: 720 };
 
 export default defineConfig({
