@@ -1,7 +1,8 @@
 # P09: Integrated greenhouse scenario, replay and release QA
 
-**Status:** done: P09.1 to P09.9, released as 0.2.0. Part of the
-[simulator roadmap](README.md).
+**Status:** in progress: P09.1 to P09.8 done; P09.9 released as 0.2.0,
+while the README's demo video and the acceptance criteria are still open.
+Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -282,7 +283,7 @@ run in their own Playwright project, as the plant lab's and the sun's do.
 | P09.6 | `feat(qa): add QA mode with truth overlays` | Done |
 | P09.7 | `test(e2e): add integrated visual regression suite` | Done |
 | P09.8 | `perf(sim): add representative performance benchmark` | Done |
-| P09.9 | `docs(release): document local demo and QA protocol` | Done |
+| P09.9 | `docs(release): document local demo and QA protocol` | In progress |
 
 ### P09.1: Scenarios as manifests
 
