@@ -90,3 +90,85 @@ test("at the usual window size, the info panel shows all of itself beside a tall
   // The HUD keeps its width, so that its readings stay on one line each.
   expect((await page.locator(".hud").boundingBox())?.width).toBe(324);
 });
+
+test("the HUD folds to its header, and moves by it, never out of the window (#204)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/?scene=example");
+  await expect(page.getByTestId("scene-status")).toContainText("Showing the example scene");
+  const hud = page.getByRole("region", { name: "View" });
+  const header = hud.locator("summary");
+  const top = hud.getByRole("button", { name: "Top", exact: true });
+  const putBack = hud.getByRole("button", { name: "Put it back" });
+  const box = async () => {
+    const found = await hud.boundingBox();
+    if (found === null) {
+      throw new Error("the HUD is not drawn");
+    }
+    return found;
+  };
+  // Where it stands, and how wide: its height follows its readouts.
+  const place = async () => {
+    const { x, y, width } = await box();
+    return { x, y, width };
+  };
+  /** Drags the HUD's header by (dx, dy), in steps, as a person would. */
+  const dragBy = async (dx: number, dy: number) => {
+    const grip = await header.boundingBox();
+    if (grip === null) {
+      throw new Error("the HUD's header is not drawn");
+    }
+    const from = { x: grip.x + grip.width / 2, y: grip.y + grip.height / 2 };
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(from.x + dx, from.y + dy, { steps: 8 });
+    await page.mouse.up();
+  };
+  await expect(hud.getByTestId("object-count")).not.toHaveText("…");
+  const inPlace = await place();
+
+  await test.step("a click on its header folds it to a tab, and another unfolds it", async () => {
+    // It folds and unfolds on the details' toggle, a moment after the click.
+    await header.click();
+    await expect(top).toBeHidden();
+    await expect.poll(async () => (await place()).width).toBeLessThan(inPlace.width / 2);
+    await header.click();
+    await expect(top).toBeVisible();
+    await expect.poll(place).toEqual(inPlace);
+  });
+
+  await test.step("dragged by its header, it moves with the pointer and stays unfolded", async () => {
+    await dragBy(-400, 150);
+    const moved = await box();
+    expect(moved.x).toBeCloseTo(inPlace.x - 400, 0);
+    expect(moved.y).toBeCloseTo(inPlace.y + 150, 0);
+    await expect(top).toBeVisible();
+    // The camera's presets still work from where it is.
+    await top.click();
+  });
+
+  await test.step("dragged past the window's corner, it stops at its edges", async () => {
+    await dragBy(-3000, 3000);
+    const cornered = await box();
+    expect(cornered.x).toBeCloseTo(0, 0);
+    expect(cornered.y + cornered.height).toBeCloseTo(720, 0);
+  });
+
+  await test.step("a smaller window brings it back within", async () => {
+    await page.setViewportSize({ width: 1280, height: 600 });
+    await expect
+      .poll(async () => {
+        const { y, height } = await box();
+        return y + height;
+      })
+      .toBeLessThanOrEqual(600);
+  });
+
+  await test.step("put back, it is where it was", async () => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await putBack.click();
+    await expect(putBack).toBeHidden();
+    expect(await place()).toEqual(inPlace);
+  });
+});
