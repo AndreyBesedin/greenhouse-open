@@ -160,6 +160,12 @@ body {
   vertical-align: top;
 }
 
+.scenario-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 4px;
+}
+
 .hud {
   position: absolute;
   top: 12px;
@@ -1061,7 +1067,11 @@ body {
   min-width: 0;
 }
 
+/* The HUD's column keeps its width, so that its readings stay on one line
+ * each: the info panel's column gives way instead, however long a line of
+ * it would run unwrapped, which is what its width asks for. */
 .panel-column.at-the-end {
+  flex-shrink: 0;
   align-items: flex-end;
 }
 

@@ -53,9 +53,7 @@ export function ScenarioList({
               <th>Plants</th>
               <th>Days</th>
               {choosing && <th>Layout</th>}
-              {onShow && <th />}
-              {onLive && <th />}
-              {onFollow && <th />}
+              {(onShow || onLive || onFollow) && <th />}
             </tr>
           </thead>
           <tbody>
@@ -91,38 +89,40 @@ export function ScenarioList({
                     )}
                   </td>
                 )}
-                {onShow && (
+                {(onShow || onLive || onFollow) && (
+                  // Its ways of being shown in one cell, which wraps them
+                  // rather than widen the table past the panel.
                   <td>
-                    <button
-                      type="button"
-                      aria-label={`Open ${scenario.id}`}
-                      onClick={() => onShow(scenario.id)}
-                    >
-                      Open
-                    </button>
-                  </td>
-                )}
-                {onLive && (
-                  <td>
-                    <button
-                      type="button"
-                      aria-label={`Play ${scenario.id} live`}
-                      onClick={() => onLive(scenario.id)}
-                    >
-                      Live
-                    </button>
-                  </td>
-                )}
-                {onFollow && (
-                  <td>
-                    <button
-                      type="button"
-                      aria-label={`Follow ${scenario.id}`}
-                      title="Follow its own run as it is played back, as a consumer reads it"
-                      onClick={() => onFollow(scenario.id)}
-                    >
-                      Follow
-                    </button>
+                    <div className="scenario-actions">
+                      {onShow && (
+                        <button
+                          type="button"
+                          aria-label={`Open ${scenario.id}`}
+                          onClick={() => onShow(scenario.id)}
+                        >
+                          Open
+                        </button>
+                      )}
+                      {onLive && (
+                        <button
+                          type="button"
+                          aria-label={`Play ${scenario.id} live`}
+                          onClick={() => onLive(scenario.id)}
+                        >
+                          Live
+                        </button>
+                      )}
+                      {onFollow && (
+                        <button
+                          type="button"
+                          aria-label={`Follow ${scenario.id}`}
+                          title="Follow its own run as it is played back, as a consumer reads it"
+                          onClick={() => onFollow(scenario.id)}
+                        >
+                          Follow
+                        </button>
+                      )}
+                    </div>
                   </td>
                 )}
               </tr>
