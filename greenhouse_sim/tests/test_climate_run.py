@@ -1,10 +1,14 @@
 """A climate run (P05.3): the air through time on its own clock, applying
 its schedule's commands at their moments, the same every time it is run."""
 
+import threading
+import time
 from collections.abc import Callable
 from contextlib import AbstractContextManager
+from typing import NoReturn
 
 import numpy as np
+import pytest
 
 from greenhouse_sim.climate.commands import Command, Schedule
 from greenhouse_sim.climate.run import ClimateRun
@@ -102,3 +106,45 @@ def test_it_carries_on_from_another_without_waiting_for_a_request_working_it_on(
 
     assert finishes_beside_held(first._working, lambda: second.carry_on_from(first))
     assert second._kept.keys() == first._kept.keys()
+
+
+def test_it_takes_over_what_another_keeps_after_it_carried_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A branch made while a request works its source on does not wait for
+    # it (above): what the source keeps afterwards, up to where their
+    # schedules differ, is the branch's air too, and is not worked out again.
+    first = _run()
+    second = _run(_at(900, "heater", 1.0))
+    second.carry_on_from(first)
+    first.air_at(600.0)
+
+    def not_again(*args: object, **kwargs: object) -> NoReturn:
+        raise AssertionError("the branch worked out a stretch its source had")
+
+    monkeypatch.setattr(second, "_transport", not_again)
+    assert second.air_at(600.0) is first.air_at(600.0)
+
+
+def test_it_waits_for_another_working_the_stretch_it_needs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Its source is working the very stretch it needs when it is asked: it
+    # waits for that rather than work it out beside the source.
+    first = _run()
+    second = _run(_at(300, "heater", 1.0))
+    second.carry_on_from(first)
+
+    def not_again(*args: object, **kwargs: object) -> NoReturn:
+        raise AssertionError("the branch worked out a stretch its source was working")
+
+    monkeypatch.setattr(second, "_transport", not_again)
+    working = threading.Thread(target=first.air_at, args=(600.0,))
+    working.start()
+    while first._stretch is None:
+        time.sleep(0.001)
+
+    taken = second.air_at(300.0)
+
+    working.join()
+    assert taken is first.air_at(300.0)

@@ -30,6 +30,7 @@ stretch of its run, such as a day the crop lives in it (`mean_between`).
 
 import math
 import threading
+import weakref
 from bisect import bisect_right, insort
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -45,7 +46,7 @@ from greenhouse_sim.climate.psychrometrics import (
     relative_humidity_pct,
     saturation_ratio_g_kg,
 )
-from greenhouse_sim.climate.run import KEEP_EVERY_S, ClimateRun
+from greenhouse_sim.climate.run import KEEP_EVERY_S, LOOK_AGAIN_S, ClimateRun
 from greenhouse_sim.climate.transport import (
     AIR_DENSITY_KG_M3,
     AIR_HEAT_CAPACITY_J_KG_K,
@@ -123,6 +124,20 @@ class WholeHouse:
         # carrying on from this one copies it without waiting for a request
         # working this house's air on.
         self._keeping = threading.Lock()
+        # The stretch a request is working the house's air through, from the
+        # latest step kept before the moment asked for to it, or None: a
+        # house carrying on from this one waits while the stretch covers
+        # what it needs, rather than work it out beside this house. Told
+        # under `_keeping`, and `_kept_changed` is notified when it ends.
+        self._stretch: tuple[float, float] | None = None
+        self._kept_changed = threading.Condition(self._keeping)
+        # The houses this one carries on from (`carry_on_from`), each with
+        # the moment up to which it is the same air: what they keep up to
+        # then is taken over again whenever this house works its air on, so
+        # that a request working one of them on is neither waited for nor
+        # repeated. Held weakly: a house the kept runs have forgotten is not
+        # kept alive by those that carried on from it.
+        self._sources: list[tuple[weakref.ref[WholeHouse], float]] = []
 
     def _held(self, time_s: float) -> _Steady:
         levels = self.run.levels_at(time_s)
@@ -204,15 +219,55 @@ class WholeHouse:
     def carry_on_from(self, other: WholeHouse) -> None:
         """Take over the air `other` has worked out up to the first moment
         its schedule and this house's differ (`Schedule.same_until`): until
-        then, both are the same air. Only another house under the same
-        weather, with the same doors and vents, is the same air."""
+        then, both are the same air, so what `other` works out later up to
+        then is taken over too, as this house works its own air on. Only
+        another house under the same weather, with the same doors and vents,
+        is the same air."""
         until = self.run.schedule.same_until(other.run.schedule)
-        with other._keeping:
-            theirs = [(moment, air) for moment, air in other._kept.items() if moment <= until]
         with self._working:
-            for moment, air in theirs:
-                if moment not in self._kept:
+            self._sources = [(source, up_to) for source, up_to in self._sources if source()]
+            self._sources.append((weakref.ref(other), until))
+            self._take_over(until)
+
+    def _take_over(self, time_s: float) -> None:
+        """Take over, from each house carried on from, the steps it has kept
+        up to `time_s` and past the latest this house has kept before then,
+        as far as the two are the same air; while the other is working that
+        very stretch, wait for it rather than work it out beside it. Called
+        with `_working` held."""
+        for source, until in self._sources:
+            other = source()
+            if other is None:
+                continue
+            up_to = min(time_s, until)
+            while True:
+                # Only this request writes what this house keeps: `_working`
+                # is held. The two `_keeping` locks are never held together,
+                # since two houses may carry on from each other.
+                since = self._moments[bisect_right(self._moments, up_to) - 1]
+                with other._kept_changed:
+                    first = bisect_right(other._moments, since)
+                    last = bisect_right(other._moments, up_to)
+                    theirs = [
+                        (moment, other._kept[moment]) for moment in other._moments[first:last]
+                    ]
+                    ahead = theirs[-1][0] if theirs else since
+                    waiting = other._working_through(ahead, up_to)
+                    if waiting:
+                        other._kept_changed.wait(LOOK_AGAIN_S)
+                for moment, air in theirs:
                     self._keep(moment, air)
+                if not waiting:
+                    break
+
+    def _working_through(self, since: float, up_to: float) -> bool:
+        """Whether a request is working this house's air through a step past
+        `since` and up to `up_to`, which a house carrying on from this one
+        would otherwise work out itself. Called with `_keeping` held."""
+        if self._stretch is None:
+            return False
+        start, end = self._stretch
+        return start < up_to and since < min(end, up_to)
 
     def seed(self, moment_s: float, air: HouseAir) -> None:
         """Take `air` as this house's at `moment_s`, from a checkpoint of the
@@ -262,7 +317,20 @@ class WholeHouse:
             self._kept[moment] = air
 
     def _worked_to(self, time_s: float) -> HouseAir:
+        self._take_over(time_s)
         start = self._moments[bisect_right(self._moments, time_s) - 1]
+        if start == time_s:
+            return self._kept[start]
+        with self._keeping:
+            self._stretch = (start, time_s)
+        try:
+            return self._worked_on(start, time_s)
+        finally:
+            with self._kept_changed:
+                self._stretch = None
+                self._kept_changed.notify_all()
+
+    def _worked_on(self, start: float, time_s: float) -> HouseAir:
         air = self._kept[start]
         changes = set(self.run.schedule.moments_between(start, time_s))
         steps = {

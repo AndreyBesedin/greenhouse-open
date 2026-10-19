@@ -7,6 +7,8 @@ grows months in a moment; the last ones grow the reference greenhouse's in
 its own air and sunlight, for a day or two.
 """
 
+import threading
+import time
 from collections.abc import Callable, Sequence
 from contextlib import AbstractContextManager
 from http import HTTPStatus
@@ -25,7 +27,7 @@ from greenhouse_sim.biology.tomato.organ.transplants import transplant
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.core.clock import DAY_S, days_ended
-from greenhouse_sim.core.crop import CropLight, CropWork, RunCrop
+from greenhouse_sim.core.crop import KEPT_DAYS, CropLight, CropWork, RunCrop
 from greenhouse_sim.core.timeline import HARVEST_ROUND, RunProcesses, events
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.organs import FruitStage
@@ -285,6 +287,60 @@ def test_a_crop_carries_on_from_another_without_waiting_for_a_request_working_it
     assert finishes_beside_held(first._working, lambda: second.carry_on_from(first, 6))
     assert second.plants_on(6) == first.plants_on(6)
     assert second.local("p1", 5) == first.local("p1", 5)
+
+
+def test_a_crop_takes_over_the_days_another_lives_after_it_carried_on() -> None:
+    # A branch made while a request works its source on does not wait for
+    # it (above): the days the source lives afterwards, through those the
+    # two share, are the branch's too, and are not lived again.
+    first_asked, second_asked = _Asked(), _Asked()
+    first = _crop(asked=first_asked)
+    second = _crop(asked=second_asked)
+    second.carry_on_from(first, 6)
+    first.plants_on(6)
+
+    assert second.plants_on(6) == first.plants_on(6)
+    assert second.local("p1", 5) == first.local("p1", 5)
+    assert second_asked.air == []
+
+
+def test_a_crop_waits_for_another_living_the_days_it_needs() -> None:
+    # Its source is living the very days it needs when it is asked: it waits
+    # for that rather than live them beside the source.
+    first_asked, second_asked = _Asked(), _Asked()
+
+    def slowly(day: int) -> HouseAir:
+        time.sleep(0.05)
+        return WARM
+
+    first = _crop(asked=first_asked, air_on=slowly)
+    second = _crop(asked=second_asked)
+    second.carry_on_from(first, 6)
+    working = threading.Thread(target=first.plants_on, args=(6,))
+    working.start()
+    while first._stretch is None:
+        time.sleep(0.001)
+
+    taken = second.plants_on(6)
+
+    working.join()
+    assert taken == first.plants_on(6)
+    assert second.local("p1", 5) == first.local("p1", 5)
+    assert second_asked.air == []
+
+
+def test_a_crop_keeps_no_more_days_for_what_it_takes_over() -> None:
+    # Its source keeps a few days at a time, different ones as it is asked
+    # on: the branch, taking them over day after day, keeps as few.
+    first = _crop()
+    second = _crop()
+    second.carry_on_from(first, 12)
+
+    for day in range(1, 9):
+        first.plants_on(day)
+        second.local("p1", day - 1)
+
+    assert len(second._kept) <= KEPT_DAYS + 2
 
 
 def test_the_timeline_lists_each_harvest_round_after_the_plants_day() -> None:
