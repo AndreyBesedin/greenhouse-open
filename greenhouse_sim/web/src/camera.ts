@@ -12,6 +12,17 @@ export interface CameraPose {
 
 // The camera's vertical field of view.
 export const CAMERA_FIELD_OF_VIEW_DEG = 50;
+// The nearest the camera draws, in metres: what lies closer is cut away.
+export const CAMERA_NEAR_M = 0.1;
+// The nearest the camera comes to the point it orbits, in metres: twice its
+// near plane, so that the point and what lies around it stay drawn. A notch of
+// the wheel moves the camera a fixed share of its distance to that point, so
+// without a floor a long zoom in only ever brings it nearer: inside the near
+// plane, where the view stops changing and a notch back out moves the camera
+// by a fraction of a millimetre, and at last so near that rounding swallows
+// the notches, and the wheel turns back hundreds of them, or for ever, without
+// moving it.
+export const CAMERA_CLOSEST_M = 0.2;
 
 const VIEW_DISTANCE_M = 9;
 // Straight down would leave "up" on screen undefined; leaning a millimetre
