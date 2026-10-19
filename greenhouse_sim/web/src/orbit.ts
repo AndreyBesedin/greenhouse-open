@@ -1,4 +1,4 @@
-import { type Camera, Mesh, type Object3D, Raycaster, Vector2, Vector3 } from "three";
+import { type Camera, Mesh, type Object3D, type Plane, Raycaster, Vector2, Vector3 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import { CAMERA_CLOSEST_M, CAMERA_NEAR_M } from "./camera";
@@ -10,11 +10,28 @@ export interface ViewControls {
   dispose: () => void;
 }
 
+/** What the wheel zooms towards: what `scene` draws, where the renderer's
+ * `clipping` planes, a section's, leave it drawn. */
+export interface ZoomTowards {
+  scene: () => Object3D | null;
+  clipping: () => readonly Plane[];
+}
+
+const NOTHING: ZoomTowards = { scene: () => null, clipping: () => [] };
+
+// A notch within this long of the one before it, in milliseconds, is part of
+// the same turn of the wheel and keeps its aim. After a pause the scene may
+// have changed under the pointer, as a live run's does, so the wheel aims
+// again.
+const AIM_KEPT_MS = 250;
+
 /** The point the wheel last aimed at, in the viewer's axes, or null over the
- * sky, and where the pointer stood when it did. */
+ * sky, and where the pointer stood when, and when its turn's latest notch
+ * came. */
 interface Aim {
   clientX: number;
   clientY: number;
+  atMs: number;
   point: Vector3 | null;
 }
 
@@ -28,34 +45,42 @@ interface Aim {
 export function orbitControls(
   camera: Camera,
   element: HTMLElement,
-  zoomTowards: () => Object3D | null = () => null,
+  zoomTowards: ZoomTowards = NOTHING,
 ): ViewControls {
   const orbit = new OrbitControls(camera);
   orbit.minDistance = CAMERA_CLOSEST_M;
   const raycaster = new Raycaster();
-  // What lies nearer than the near plane is not drawn, so it is not aimed at:
-  // from a preset at the ground's height, the ground would meet every ray
-  // where the camera stands.
-  raycaster.near = CAMERA_NEAR_M;
-  // Kept while the pointer stays where it was and only the wheel moves the
-  // camera, along the ray through the pointer, so that the point stays under
-  // it: a scene of thousands of plants is not searched again at every notch.
+  // Kept through a turn of the wheel while the pointer stays where it was and
+  // only the wheel moves the camera, along the ray through the pointer, so
+  // that the point stays under it: a scene of thousands of plants is not
+  // searched again at every notch.
   let aimed: Aim | null = null;
   let zooming = false;
 
   function aim(event: WheelEvent): void {
-    // The controls take no notch turned in the middle of a drag.
-    if (event.buttons !== 0) {
+    // The controls take no notch turned in the middle of a drag, and zoom by
+    // none that only scrolls sideways.
+    if (event.buttons !== 0 || event.deltaY === 0) {
       return;
     }
-    if (aimed === null || aimed.clientX !== event.clientX || aimed.clientY !== event.clientY) {
-      const scene = zoomTowards();
+    if (
+      aimed === null ||
+      aimed.clientX !== event.clientX ||
+      aimed.clientY !== event.clientY ||
+      event.timeStamp - aimed.atMs > AIM_KEPT_MS
+    ) {
+      const scene = zoomTowards.scene();
       aimed = {
         clientX: event.clientX,
         clientY: event.clientY,
-        point: scene === null ? null : pointUnder(raycaster, camera, element, event, scene),
+        atMs: event.timeStamp,
+        point:
+          scene === null
+            ? null
+            : pointUnder(raycaster, camera, element, event, scene, zoomTowards.clipping()),
       };
     }
+    aimed.atMs = event.timeStamp;
     zooming = true;
     orbit.zoomToCursor = aimed.point !== null;
     if (aimed.point !== null) {
@@ -96,6 +121,7 @@ function pointUnder(
   element: HTMLElement,
   event: WheelEvent,
   scene: Object3D,
+  clipping: readonly Plane[],
 ): Vector3 | null {
   const box = element.getBoundingClientRect();
   if (box.width === 0 || box.height === 0) {
@@ -107,8 +133,19 @@ function pointUnder(
   );
   camera.updateMatrixWorld();
   raycaster.setFromCamera(pointer, camera);
-  // Lines, such as the grid and the axes, are drawn to read the scene by.
-  const hits = raycaster.intersectObject(scene, true).filter((hit) => hit.object instanceof Mesh);
+  // How far a metre along the ray takes it along the way the camera looks.
+  const slant = raycaster.ray.direction.dot(camera.getWorldDirection(new Vector3()));
+  const hits = raycaster.intersectObject(scene, true).filter(
+    (hit) =>
+      // Lines, such as the grid and the axes, are drawn to read the scene by.
+      hit.object instanceof Mesh &&
+      // What the camera does not draw is not aimed at: what lies nearer than
+      // its near plane, which is a depth along the way it looks, such as the
+      // ground where a preset at the ground's height stands, and what a
+      // section cuts away, which raycasting does not.
+      hit.distance * slant >= CAMERA_NEAR_M &&
+      clipping.every((plane) => plane.distanceToPoint(hit.point) >= 0),
+  );
   const hit = hits.find((candidate) => !isSeeThrough(candidate)) ?? hits[0];
   return hit === undefined ? null : hit.point;
 }

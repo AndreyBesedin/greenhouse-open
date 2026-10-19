@@ -5,6 +5,7 @@ import {
   MeshBasicMaterial,
   type Object3D,
   PerspectiveCamera,
+  Plane,
   PlaneGeometry,
   Raycaster,
   Vector2,
@@ -84,11 +85,18 @@ function poseCamera(pose: CameraPose): PerspectiveCamera {
 
 /** The view's controls, looking from a pose over a scene, if any, on a view
  * of `VIEW`'s size. */
-function controlsAt(pose: CameraPose, scene: Object3D | null = null) {
+function controlsAt(
+  pose: CameraPose,
+  scene: Object3D | null = null,
+  clipping: readonly Plane[] = [],
+) {
   const camera = poseCamera(pose);
   const element = document.createElement("div");
   element.getBoundingClientRect = () => new DOMRect(0, 0, VIEW.width, VIEW.height);
-  const { orbit, dispose } = orbitControls(camera, element, () => scene);
+  const { orbit, dispose } = orbitControls(camera, element, {
+    scene: () => scene,
+    clipping: () => clipping,
+  });
   disposers.push(dispose);
   const target = worldToViewer(pose.target);
   orbit.target.set(target.x, target.y, target.z);
@@ -102,18 +110,18 @@ function controlsAt(pose: CameraPose, scene: Object3D | null = null) {
 }
 
 /** Turns the wheel by `notches` with the pointer at `at`, in the view's
- * pixels: in, towards the point orbited, while negative, as a wheel turned
- * away from the user scrolls up the page. */
-function turnWheel(element: HTMLElement, notches: number, at = { x: 0, y: 0 }): void {
+ * pixels, `laterMs` after now: in, towards the point orbited, while negative,
+ * as a wheel turned away from the user scrolls up the page. */
+function turnWheel(element: HTMLElement, notches: number, at = { x: 0, y: 0 }, laterMs = 0) {
   for (let notch = 0; notch < Math.abs(notches); notch += 1) {
-    element.dispatchEvent(
-      new WheelEvent("wheel", {
-        deltaY: Math.sign(notches) * NOTCH_PX,
-        clientX: at.x,
-        clientY: at.y,
-        cancelable: true,
-      }),
-    );
+    const event = new WheelEvent("wheel", {
+      deltaY: Math.sign(notches) * NOTCH_PX,
+      clientX: at.x,
+      clientY: at.y,
+      cancelable: true,
+    });
+    Object.defineProperty(event, "timeStamp", { value: event.timeStamp + laterMs });
+    element.dispatchEvent(event);
   }
 }
 
@@ -229,6 +237,60 @@ describe("the wheel, over the scene", () => {
     expect(pixelOf(camera, point).y).toBeCloseTo(OFF_THE_MIDDLE.y);
   });
 
+  it("aims past what is nearer than the near plane, along the way the camera looks", () => {
+    // Facing the front view's camera: a solid pane 9 cm ahead, not drawn, and
+    // a wall 5 m ahead. Near the side of the view the ray meets the pane more
+    // than the near plane's 10 cm away.
+    const near = new Mesh(new PlaneGeometry(GROUND_SIZE_M, GROUND_SIZE_M), new MeshBasicMaterial());
+    near.position.z = worldToViewer(CAMERA_PRESETS.front.position).z - 0.09;
+    const wall = new Mesh(new PlaneGeometry(GROUND_SIZE_M, GROUND_SIZE_M), new MeshBasicMaterial());
+    wall.position.z = worldToViewer(CAMERA_PRESETS.front.position).z - 5;
+    const scene = new Group().add(near, wall);
+    scene.updateMatrixWorld(true);
+    const { camera, element } = controlsAt(CAMERA_PRESETS.front, scene);
+    const from = camera.position.clone();
+
+    turnWheel(element, -10, { x: VIEW.width * 0.95, y: VIEW.height / 2 });
+
+    // Towards the wall: aimed at the pane, the camera would stand still at its
+    // closest approach to it.
+    expect(camera.position.distanceTo(from)).toBeGreaterThan(1);
+  });
+
+  it("aims past what a section cuts away", () => {
+    const roof = ground();
+    roof.position.y = 3;
+    roof.updateMatrixWorld();
+    const behind = ground();
+    // Keeps what lies below 2.5 m.
+    const section = new Plane(new Vector3(0, -1, 0), 2.5);
+    const { camera, element } = controlsAt(
+      CAMERA_PRESETS.isometric,
+      new Group().add(roof, behind),
+      [section],
+    );
+    const point = pointAt(camera, behind, OFF_THE_MIDDLE);
+    const before = camera.position.distanceTo(point);
+
+    turnWheel(element, -20, OFF_THE_MIDDLE);
+
+    expect(camera.position.distanceTo(point)).toBeLessThan(0.5 * before);
+  });
+
+  it("moves nothing for a sideways scroll, which does not zoom", () => {
+    const { orbit, element } = controlsAt(CAMERA_PRESETS.isometric, ground());
+
+    element.dispatchEvent(
+      new WheelEvent("wheel", {
+        deltaX: NOTCH_PX,
+        clientX: OFF_THE_MIDDLE.x,
+        clientY: OFF_THE_MIDDLE.y,
+      }),
+    );
+
+    expect(orbit.target.length()).toBeCloseTo(0);
+  });
+
   it("searches the scene once while the pointer stays put, and again once the view turns", () => {
     const scene = ground();
     const searched = vi.spyOn(scene, "raycast");
@@ -243,6 +305,17 @@ describe("the wheel, over the scene", () => {
     orbit.rotateLeft(0.1);
     turnWheel(element, -1, { x: OFF_THE_MIDDLE.x + 1, y: OFF_THE_MIDDLE.y });
     expect(searched).toHaveBeenCalledTimes(3);
+  });
+
+  it("searches it again after a pause, for the scene may have changed under the pointer", () => {
+    const scene = ground();
+    const searched = vi.spyOn(scene, "raycast");
+    const { element } = controlsAt(CAMERA_PRESETS.isometric, scene);
+
+    turnWheel(element, -1, OFF_THE_MIDDLE);
+    turnWheel(element, -1, OFF_THE_MIDDLE, 1000);
+
+    expect(searched).toHaveBeenCalledTimes(2);
   });
 });
 

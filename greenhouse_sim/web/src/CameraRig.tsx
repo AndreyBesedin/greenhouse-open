@@ -21,12 +21,16 @@ export function CameraRig({
   zoomTowards?: RefObject<Object3D | null> | null;
 }) {
   const camera = useThree((state) => state.camera);
-  const domElement = useThree((state) => state.gl.domElement);
+  const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);
   const controls = useRef<OrbitControls | null>(null);
 
   useEffect(() => {
-    const view = orbitControls(camera, domElement, () => zoomTowards?.current ?? null);
+    const view = orbitControls(camera, gl.domElement, {
+      scene: () => zoomTowards?.current ?? null,
+      // The planes a section cuts the view by, if any.
+      clipping: () => gl.clippingPlanes,
+    });
     const orbit = view.orbit;
     const redraw = () => invalidate();
     orbit.addEventListener("change", redraw);
@@ -38,7 +42,7 @@ export function CameraRig({
       view.dispose();
       controls.current = null;
     };
-  }, [camera, domElement, initialPose, invalidate, zoomTowards]);
+  }, [camera, gl, initialPose, invalidate, zoomTowards]);
 
   useEffect(() => {
     if (request !== null && controls.current !== null) {
