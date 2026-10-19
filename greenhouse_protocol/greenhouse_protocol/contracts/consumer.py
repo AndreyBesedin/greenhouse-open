@@ -68,8 +68,11 @@ The rules a producer keeps, which `check_batch` and `check_polls` test:
 - Delivery order within a batch is non-decreasing, and every record was
   delivered at or before `simulated_now`.
 - Two polls of the same epoch at the same `after` agree: the earlier
-  batch's records are a prefix of the later's. A log is appended to, never
-  rewritten, so a repoll duplicates nothing a client already stored.
+  batch's records, the records themselves and not only their identities,
+  are a prefix of the later's. A log is appended to, never rewritten, so a
+  repoll duplicates nothing a client already stored.
+- Delivery order holds across batches as within one: the first record of
+  a batch was delivered no earlier than the last of the batch before it.
 - Within an epoch, a non-empty batch's `after` is `0` or a `next` the
   producer gave before: a client cannot be answered from a position it was
   never given. A cursor from an earlier epoch is answered with an empty
@@ -261,14 +264,18 @@ def check_polls(batches: Iterable[Batch]) -> list[str]:
     epoch = -1
     given: set[int] = set()
     seen: dict[str, int] = {}
-    at: dict[int, Sequence[str]] = {}
+    # What was delivered at each cursor, the records themselves: a repoll
+    # must hold the same records, not only the same identities.
+    at: dict[int, Sequence[Observation | Event]] = {}
+    # When the record at each position was delivered, across batches.
+    delivered: dict[int, datetime] = {}
     for index, batch in enumerate(polls):
         if batch.epoch < epoch:
             violations.append(f"{_label(batch)} (poll {index}) returns to epoch {batch.epoch}")
         if batch.epoch != epoch:
-            epoch, given, seen, at = batch.epoch, {FIRST_CURSOR}, {}, {}
-        ids = [record_id(record) for record in batch.records]
-        if batch.records and batch.after not in given:
+            epoch, given, seen, at, delivered = batch.epoch, {FIRST_CURSOR}, {}, {}, {}
+        records = list(batch.records)
+        if records and batch.after not in given:
             violations.append(
                 f"{_label(batch)} (poll {index}) answers after={batch.after}, "
                 "a cursor the producer never gave in this epoch"
@@ -276,22 +283,32 @@ def check_polls(batches: Iterable[Batch]) -> list[str]:
         earlier = at.get(batch.after)
         # A repoll may be cut shorter or longer than the one before (its
         # limit, or more having arrived); the records both hold must agree.
-        shared = min(len(earlier), len(ids)) if earlier is not None else 0
-        if earlier is not None and list(earlier[:shared]) != ids[:shared]:
+        shared = min(len(earlier), len(records)) if earlier is not None else 0
+        if earlier is not None and list(earlier[:shared]) != records[:shared]:
             violations.append(
                 f"{_label(batch)} (poll {index}) rewrites the log: a repoll at "
                 f"after={batch.after} no longer starts with what was delivered before"
             )
-        elif earlier is None or len(ids) > len(earlier):
-            at[batch.after] = ids
-        for position, record_identity in enumerate(ids, start=batch.after + 1):
-            delivered_before = seen.get(record_identity)
+        elif earlier is None or len(records) > len(earlier):
+            at[batch.after] = records
+        for position, record in enumerate(records, start=batch.after + 1):
+            identity = record_id(record)
+            delivered_before = seen.get(identity)
             if delivered_before is not None and delivered_before != position:
                 violations.append(
-                    f"{_label(batch)} (poll {index}) delivers {record_identity!r} again, "
+                    f"{_label(batch)} (poll {index}) delivers {identity!r} again, "
                     f"at position {position} after position {delivered_before}"
                 )
-            seen.setdefault(record_identity, position)
+            seen.setdefault(identity, position)
+            instant = delivered_at(record)
+            before = delivered.get(position - 1)
+            if before is not None and instant < before:
+                violations.append(
+                    f"{_label(batch)} (poll {index}) is out of delivery order across batches: "
+                    f"{identity!r} at position {position} ({instant.isoformat()}) was delivered "
+                    f"before position {position - 1} ({before.isoformat()})"
+                )
+            delivered.setdefault(position, instant)
         given.add(batch.next)
     return violations
 

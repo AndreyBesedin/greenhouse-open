@@ -203,6 +203,27 @@ def test_a_repoll_cut_shorter_by_its_limit_is_not_a_rewrite() -> None:
     assert check_polls([cut, full]) == []
 
 
+def test_a_repoll_that_changes_a_record_is_a_rewrite_even_with_the_same_id() -> None:
+    early = _batch((_observation(1, START),), now=START)
+    changed = _batch((_observation(1, START).model_copy(update={"value": 99.0}),), now=START)
+
+    assert check_polls([early, changed]) == [
+        "observations batch of run 'run_1' epoch 0 after=0 (poll 1) rewrites the log: "
+        "a repoll at after=0 no longer starts with what was delivered before"
+    ]
+
+
+def test_delivery_order_holds_across_consecutive_batches() -> None:
+    first = _batch((_observation(1, START), _observation(2, START, START + timedelta(hours=2))))
+    later = _batch((_observation(3, START, START + timedelta(hours=1)),), after=first.next)
+
+    assert check_polls([first, later]) == [
+        "observations batch of run 'run_1' epoch 0 after=2 (poll 1) is out of delivery order "
+        "across batches: 'obs_3' at position 3 (2026-03-01T13:00:00+00:00) was delivered "
+        "before position 2 (2026-03-01T14:00:00+00:00)"
+    ]
+
+
 def test_a_record_is_never_delivered_twice_in_an_epoch() -> None:
     first = _batch((_observation(1, START), _observation(2, START)))
     again = _batch((_observation(2, START), _observation(3, NOW)), after=first.next)
