@@ -21,12 +21,17 @@ function nextCommands(
   end: number,
 ): ScheduledCommand[] {
   const coming = [
-    ...daily.map((command) => {
+    // The simulator gives a daily command once on each of the run's days, at
+    // its time of day after that day's midnight (`DailyCommand.through`): the
+    // last on the last day, so never at the run's end, as a midnight one
+    // would be. A command for a moment may come at the end itself.
+    ...daily.flatMap((command) => {
       const latest = latestDaily(command, time);
-      return { ...command, timeS: latest === null ? command.timeS : latest + DAY_S };
+      const timeS = latest === null ? command.timeS : latest + DAY_S;
+      return timeS < end ? [{ ...command, timeS }] : [];
     }),
-    ...schedule,
-  ].filter((command) => command.timeS > time && command.timeS <= end);
+    ...schedule.filter((command) => command.timeS <= end),
+  ].filter((command) => command.timeS > time);
   const soonest = Math.min(...coming.map((command) => command.timeS));
   return coming.filter((command) => command.timeS === soonest);
 }

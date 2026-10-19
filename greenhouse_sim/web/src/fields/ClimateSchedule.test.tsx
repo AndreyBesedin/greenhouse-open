@@ -249,6 +249,19 @@ describe("a climate run's schedule", () => {
     expect(describeSchedule({ ...twoDays, time: DAY_S + 80000 })).toBe(
       "Schedule: 2 commands, none to come.",
     );
+    // A midnight one is given at each day's start, the last at the last
+    // day's, never at the run's end; a command for a moment may be.
+    const midnight = { timeS: 0, actuatorId: "heater", level: 1 };
+    const pastLastMidnight = { daily: [midnight], time: DAY_S + 600, days: 2 };
+    expect(describeSchedule({ ...pastLastMidnight, schedule: [] })).toBe(
+      "Schedule: 1 command, none to come.",
+    );
+    expect(
+      describeSchedule({
+        ...pastLastMidnight,
+        schedule: [{ timeS: 2 * DAY_S, actuatorId: "fan", level: 0 }],
+      }),
+    ).toBe("Schedule: 2 commands. Next at day 1, 24 h 00 min: fan off.");
     const fan = { timeS: 60, actuatorId: "fan", level: 1 };
     expect(describeSchedule({ schedule: [fan], daily: [], time: 60, days: 1 })).toBe(
       "Schedule: 1 command, none to come.",
