@@ -13,6 +13,15 @@ breaks the conformance checks is a major version.
   of 300 s, and served only as far as the clock has reached; the run's
   identity, epoch and instant said the same way to both. The API starts,
   plays, pauses, restarts and paces it (`/api/scenarios/{id}/playback`).
+- `greenhouse-protocol`: the consumer interface
+  (`greenhouse_protocol.contracts.consumer`, decision 0040, P10.1): how a
+  client reads a running producer, whatever it is. Routes under
+  `/consumer/v1` answer a run's identity, epoch and clock, its greenhouse
+  description, and its observations and events after a cursor, in delivery
+  order, with nothing from after the run's clock. `check_batch` and
+  `check_polls` hold a producer to the rules, and a recorded exchange
+  (`tests/fixtures/consumer/exchange.json`) lets a client be built before
+  any producer serves it.
 
 ## 0.2.0 - 2026-10-19
 
