@@ -2,10 +2,13 @@
 // forward /api to it: on the API's own default port
 // (`python -m greenhouse_sim.api`), or on the one SIMULATOR_API_PORT names.
 export const DEFAULT_SIMULATOR_API_PORT = 8765;
-/** How far the browser tests' ports are moved, TEST_PORT_OFFSET: a whole
- * number, so that several checkouts can run their browser tests at once,
- * each on its own ports. */
-export function portOffset(value: string | undefined = process.env.TEST_PORT_OFFSET): number {
+// The highest port a server can listen on.
+const MAX_PORT = 65_535;
+
+/** How far `value`, TEST_PORT_OFFSET as the environment gives it, moves the
+ * browser tests' ports: a whole number, so that several checkouts can run
+ * their browser tests at once, each on its own ports; none if unset. */
+export function portOffset(value: string | undefined): number {
   if (value === undefined || value === "") {
     return 0;
   }
@@ -16,9 +19,18 @@ export function portOffset(value: string | undefined = process.env.TEST_PORT_OFF
   return offset;
 }
 
-/** A port a browser test starts a server on, moved by TEST_PORT_OFFSET. */
-export function testPort(port: number): number {
-  return port + portOffset();
+/** A port a browser test starts a server on, moved by `offset`:
+ * TEST_PORT_OFFSET's, unless given. Refused past the last port, so that the
+ * offset is named rather than a server failing to start. */
+export function testPort(
+  port: number,
+  offset: number = portOffset(process.env.TEST_PORT_OFFSET),
+): number {
+  const moved = port + offset;
+  if (moved > MAX_PORT) {
+    throw new Error(`TEST_PORT_OFFSET=${offset} moves port ${port} past ${MAX_PORT}, the last`);
+  }
+  return moved;
 }
 
 // The browser tests start their own API on this port, unless
