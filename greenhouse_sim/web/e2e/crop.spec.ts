@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
-
 import type { CameraPose } from "../src/camera.ts";
+import { chooser } from "./chooser";
 import { clickAt } from "./view";
 
 // The reference greenhouse's crop (P09.3): 32 transplants organ by organ,
@@ -101,7 +101,7 @@ test("crop: shown from the list, the reference greenhouse opens on its first day
 }) => {
   test.setTimeout(300_000);
   await page.goto("/");
-  await page.getByRole("button", { name: "Show reference_greenhouse" }).click();
+  await (await chooser(page)).getByRole("button", { name: "Open reference_greenhouse" }).click();
   await expect(page).toHaveURL(/[?&]field=climate(&|$)/);
   await expect(page).toHaveURL(new RegExp(`&t=${80.5 * DAY_S}(&|$)`));
   await expect(page.getByTestId("climate-time")).toHaveText("day 80, 12 h 00 min", ARRIVES);

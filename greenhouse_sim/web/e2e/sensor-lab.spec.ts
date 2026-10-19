@@ -1,8 +1,8 @@
 import { expect, type Page, test } from "@playwright/test";
-
 import type { CameraPose } from "../src/camera.ts";
 import type { CameraSpec } from "../src/sensors/camera.ts";
 import { aheadAt, cameraText, pointAtPixel, shownDepth } from "./cameraView";
+import { layoutPicker } from "./chooser";
 import { selectAt } from "./view";
 
 // P06's final QA, in the sensor lab: still air warming 0.5 °C a metre along
@@ -167,7 +167,7 @@ test("sensor lab: what an obstacle hides from the camera is missing from its ins
   await expect(inView.getByText(/^sensor_lab_box_middle: /)).toBeVisible();
 
   // Its blocked layout moves the near box in front of the camera.
-  await page.getByRole("combobox", { name: "Layout of sensor_lab" }).selectOption("blocked");
+  await (await layoutPicker(page, "sensor_lab")).selectOption("blocked");
   await expect(page.getByTestId("scene-status")).toContainText("blocked layout");
   await expect(page.getByTestId("selected-entity")).toHaveText("sensor_lab_lab_camera");
   await expect(inView.getByText(/^sensor_lab_box_near: /)).toBeVisible();

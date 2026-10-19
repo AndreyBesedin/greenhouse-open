@@ -1,5 +1,4 @@
 import { expect, type Page, test } from "@playwright/test";
-
 import { CAMERA_PRESETS, PRESET_ORDER, type PresetName } from "../src/camera.ts";
 import { DEFAULT_QA_SEED, QA_RENDERER_PATH, QA_SELECTED_ID } from "../src/qa/qaPage.ts";
 import {
@@ -9,6 +8,7 @@ import {
   stressPlantPosition,
 } from "../src/qa/stressScene.ts";
 import { formatPoint } from "../src/readouts.ts";
+import { chooser } from "./chooser";
 import { simulatedDay } from "./hud";
 import { selectAt } from "./view";
 
@@ -133,7 +133,7 @@ test("renderer-smoke: the renderer, end to end", async ({ page }) => {
 
   await test.step("the stress scene stays interactive", async () => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Stress scene" }).click();
+    await (await chooser(page)).getByRole("button", { name: "Stress scene" }).click();
     await expect(page.getByTestId("scene-status")).toContainText(
       `${DEFAULT_STRESS_PLANTS + 2} entities`,
     );

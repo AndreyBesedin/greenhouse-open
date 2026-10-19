@@ -64,6 +64,7 @@ import {
   loadScene,
   type SceneSource,
   sceneRequest,
+  searchFor,
   withItsAir,
   withOwnDaily,
 } from "./scene/source";
@@ -122,6 +123,9 @@ function failureOf(part: string, latest: { status: string }): string | null {
 
 export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [addressed, setAddressed] = useSource();
+  // Opened with nothing chosen, at the bare address, the viewer starts with
+  // the choice of what to show open (#201).
+  const [chooseFirst] = useState(() => searchFor(addressed) === "");
   // Whether the viewer shows what the simulator knows and a policy never
   // sees (P09.6): only QA mode asks for truth.
   const [qaMode, setQaMode] = useQaMode();
@@ -590,6 +594,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             source={source}
             scene={shown.status === "loaded" && snapshot !== null ? { ...shown, snapshot } : shown}
             failures={source.kind === "live" ? [] : failures}
+            chooseFirst={chooseFirst}
             onSource={chooseSource}
           >
             {snapshot !== null && (

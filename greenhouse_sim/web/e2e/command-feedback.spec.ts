@@ -1,4 +1,5 @@
 import { expect, type Page, type Route, test } from "@playwright/test";
+import { chooser } from "./chooser";
 
 async function openLive(page: Page): Promise<void> {
   await page.goto("/?live=climate_box");
@@ -35,12 +36,16 @@ for (const returnToOriginal of [false, true]) {
     await page.getByRole("button", { name: "Pause", exact: true }).click();
     const route = await pending.received;
 
-    await page.getByRole("button", { name: "Play airflow_box live", exact: true }).click();
+    await (await chooser(page))
+      .getByRole("button", { name: "Play airflow_box live", exact: true })
+      .click();
     await expect(page.getByTestId("scene-status")).toContainText(
       "scenario airflow_box, live: airflow_box",
     );
     if (returnToOriginal) {
-      await page.getByRole("button", { name: "Play climate_box live", exact: true }).click();
+      await (await chooser(page))
+        .getByRole("button", { name: "Play climate_box live", exact: true })
+        .click();
       await expect(page.getByTestId("scene-status")).toContainText(
         "scenario climate_box, live: climate_box",
       );
