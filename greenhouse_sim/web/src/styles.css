@@ -180,6 +180,27 @@ body {
   margin: 6px 0 0;
 }
 
+/* The HUD folds to its header, a tab in the view's corner, and moves where
+ * its header is dragged (#204). */
+.hud summary {
+  cursor: move;
+  font-weight: 600;
+  touch-action: none;
+  user-select: none;
+}
+
+/* Open, its header sits at the end of the presets' line, so that the fold
+ * costs the HUD no height over the scene. */
+.hud details[open] > summary {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.hud-put-back {
+  margin: 8px 0 0;
+}
+
 .inspector {
   position: absolute;
   bottom: 12px;
@@ -979,6 +1000,17 @@ body {
   width: 324px;
 }
 
+/* Placed for its header, open, at the end of the presets' line; the
+ * corner offsets it had when it floated stay unused. */
+.panel-column > .hud {
+  position: relative;
+  inset: auto;
+}
+
+.panel-column > .hud.folded {
+  width: auto;
+}
+
 .panel-column > .inspector {
   width: 424px;
 }
@@ -1051,6 +1083,17 @@ body {
 
   .hud fieldset {
     flex-wrap: wrap;
+  }
+
+  /* Docked, the HUD keeps its place, and its header only folds it, on a
+   * line of its own above the presets, which wrap. */
+  .hud summary {
+    cursor: pointer;
+  }
+
+  .hud details[open] > summary {
+    position: static;
+    margin: 0 0 8px;
   }
 
   .opening-control,
