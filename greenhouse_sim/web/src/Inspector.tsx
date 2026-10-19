@@ -2,19 +2,21 @@ import { Fragment, type ReactNode } from "react";
 import { Quaternion, Vector3 } from "three";
 
 import { semanticType } from "./debug/categories";
-import type { OverlayToggles } from "./debug/overlays";
+import type { OverlayToggles, SelectionToggles } from "./debug/overlays";
 import { formatPoint, formatRotation, formatSize, formatValue } from "./readouts";
 import type { SceneEntity, Shape } from "./scene/generated/snapshotTypes";
 
 // A cylinder whose axis leans less than this from the vertical stands up.
 const UPRIGHT_COSINE = 0.99;
 
-const OVERLAY_LABELS: Record<keyof OverlayToggles, string> = {
+// The overlays around the selection; the display options hide those over the
+// whole scene.
+const OVERLAY_LABELS: Record<keyof SelectionToggles, string> = {
   box: "Bounding box",
   axes: "Origin and axes",
   label: "Label",
 };
-const OVERLAY_ORDER: readonly (keyof OverlayToggles)[] = ["box", "axes", "label"];
+const OVERLAY_ORDER: readonly (keyof SelectionToggles)[] = ["box", "axes", "label"];
 
 export function describeShape(shape: Shape): string {
   switch (shape.shape) {

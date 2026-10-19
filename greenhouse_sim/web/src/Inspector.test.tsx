@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { ALL_OVERLAYS } from "./debug/overlays";
 import { ScalarLegend } from "./debug/ScalarLegend";
 import { describeDimensions, describeShape, Inspector } from "./Inspector";
 import type { Polygon, SceneEntity, SceneSnapshot } from "./scene/generated/snapshotTypes";
@@ -32,12 +33,7 @@ function layoutEntity(entityId: string): SceneEntity {
 describe("the inspector", () => {
   it("shows the selected entity's identity, transform, shape and properties", () => {
     const html = renderToStaticMarkup(
-      <Inspector
-        entity={PLANT}
-        overlays={{ box: true, axes: true, label: true }}
-        onOverlays={ignore}
-        onClear={ignore}
-      />,
+      <Inspector entity={PLANT} overlays={ALL_OVERLAYS} onOverlays={ignore} onClear={ignore} />,
     );
 
     expect(html).toContain('data-testid="selected-entity">climate_box_plant_001<');
@@ -53,7 +49,7 @@ describe("the inspector", () => {
     const html = renderToStaticMarkup(
       <Inspector
         entity={PLANT}
-        overlays={{ box: true, axes: false, label: true }}
+        overlays={{ ...ALL_OVERLAYS, axes: false }}
         onOverlays={ignore}
         onClear={ignore}
       />,
@@ -101,7 +97,7 @@ describe("what the inspector says an entity is", () => {
     const html = renderToStaticMarkup(
       <Inspector
         entity={layoutEntity("row_1_support_1")}
-        overlays={{ box: true, axes: true, label: true }}
+        overlays={ALL_OVERLAYS}
         onOverlays={ignore}
         onClear={ignore}
       />,

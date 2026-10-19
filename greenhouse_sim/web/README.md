@@ -200,7 +200,13 @@ for a part of a big greenhouse no preset frames
 point it looks at).
 Overlays are data in world coordinates, drawn by `src/debug`
 ([decision 0013](../../docs/decisions/0013-describe-debug-overlays-as-data-in-world-coordinates.md)),
-and they only ever read the scene.
+and they only ever read the scene. "Shown in the view", in the display
+options, hides and shows again each overlay over the scene that has
+something to draw: the air field as it is drawn, with its legend, the flows
+through the openings, the wind, the sun and its path, the cameras' views and
+the probes. Hiding one changes only the view, never the run, its equipment
+or what was loaded to draw it, so that it comes back at once, without
+asking the simulator for anything.
 
 The scene contract has one source, the simulator's types. After changing
 them, regenerate both sides:
