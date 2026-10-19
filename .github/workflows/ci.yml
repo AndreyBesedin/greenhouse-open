@@ -8,11 +8,6 @@ on:
 permissions:
   contents: read
 
-# The uv every job installs with (decision 0039). Dependabot does not move
-# it: it is moved by hand, here and in cfd.yml.
-env:
-  UV_VERSION: "0.13.0"
-
 # A pull request's newer push stops its older run; every push to main runs
 # to its end.
 concurrency:
@@ -37,11 +32,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # uv, which installs the Python that .python-version names, and the
-      # workspace at the versions uv.lock pins (decision 0039).
+      # uv, at the version uv.lock records, which installs the Python that
+      # .python-version names, and the workspace at the versions uv.lock
+      # pins (decision 0039).
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
-          version: ${{ env.UV_VERSION }}
+          version-file: uv.lock
           enable-cache: true
           cache-dependency-glob: uv.lock
 
@@ -75,7 +71,7 @@ jobs:
 
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
-          version: ${{ env.UV_VERSION }}
+          version-file: uv.lock
 
       # The protocol and the adapters with each of their own dependencies at
       # the lowest version their metadata allows, so that a floor below what
@@ -155,11 +151,12 @@ jobs:
 
       # The browser tests serve the simulator's API, so they need the Python
       # packages, installed as wheels as in the repository checks.
-      # uv, which installs the Python that .python-version names, and the
-      # workspace at the versions uv.lock pins (decision 0039).
+      # uv, at the version uv.lock records, which installs the Python that
+      # .python-version names, and the workspace at the versions uv.lock
+      # pins (decision 0039).
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
-          version: ${{ env.UV_VERSION }}
+          version-file: uv.lock
           enable-cache: true
           cache-dependency-glob: uv.lock
 
@@ -193,7 +190,8 @@ jobs:
     timeout-minutes: 20
     # Screenshots are compared in a pinned image, so the fonts and software
     # renderer that drew the baselines are the ones that check them (decision
-    # 0014). Its version moves with @playwright/test.
+    # 0014). Its version moves with @playwright/test, by hand on that
+    # package's pull request (tests/test_pins.py).
     container:
       image: mcr.microsoft.com/playwright:v1.64.0-noble-amd64
     defaults:

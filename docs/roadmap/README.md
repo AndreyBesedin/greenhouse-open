@@ -118,8 +118,9 @@ and camera work below; configured the same day, decision 0033).
 opens pull requests for the updates found, in:
 
 - **npm:** the viewer's `greenhouse_sim/web/package.json` and its lockfile;
-- **uv:** the development tools pinned in the root `pyproject.toml` and
-  locked in `uv.lock` (decision 0039), and nothing else of the workspace:
+- **uv:** the development tools pinned in the root `pyproject.toml`'s
+  `dev` group, and uv and `poetry-core` in its `toolchain` group, all locked
+  in `uv.lock` (decision 0039), and nothing else of the workspace:
   its uv support still mistakes a workspace's own packages for PyPI's
   ([dependabot-core#14004](https://github.com/dependabot/dependabot-core/issues/14004))
   and can rewrite a member's requirements in a grouped update
@@ -172,16 +173,21 @@ What the repository already ties together:
 - **Playwright:** `@playwright/test` and the visual checks' container image
   in `ci.yml`, `mcr.microsoft.com/playwright:v<version>-noble-amd64`, are
   the same version. Dependabot does not move the image: `@playwright/test`
-  comes in a pull request of its own, which fails the visual checks until
+  comes in a pull request of its own, which fails the visual checks, and a
+  root test that names the image to move to (`tests/test_pins.py`), until
   the image is moved by hand; screenshots that then differ get new
   baselines from CI, as any do.
 - **ruff** is pinned twice, in the root `pyproject.toml` and as the
   pre-commit hook's `rev`. The two come in two pull requests, ruff's alone
   in its ecosystem's, and are merged together.
-- **uv and the packages' build backend** are moved by hand: CI's uv
-  (`UV_VERSION` in `ci.yml` and `cfd.yml`), which also builds the root
-  project, and `poetry-core`, which builds the three packages, pinned for
-  the workspace in the root `pyproject.toml` and recorded in `uv.lock`.
+- **uv** comes in a pull request of its own. Every CI job installs the uv
+  `uv.lock` records (setup-uv's `version-file`), and that uv builds the root
+  project itself while its version is inside the root's `uv_build` range: a
+  release outside it fails a root test until the range is widened by hand.
+- **`poetry-core`**, which builds the three packages, comes in a pull
+  request of its own too. The workspace's build pin, the root
+  `pyproject.toml`'s `build-constraint-dependencies`, follows it by hand:
+  a root test fails until it does, naming the version to move to.
 - **`@types/node`** stays on the major of the viewer's Node, 24.
 - **The packages' runtime dependencies** are ranges, what a user may install
   them with (`pydantic>=2.9`, `numpy>=2.0`, `openpyxl>=3.1.5,<4.0.0`), not

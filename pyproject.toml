@@ -47,6 +47,16 @@ dev = [
     "pre-commit==4.7.0",
     "types-openpyxl==3.1.5.20260827",
 ]
+# What runs the workspace rather than in it, pinned here so that uv.lock
+# records it and Dependabot proposes its releases; `uv sync` leaves it out,
+# installing only `dev`. CI installs the uv uv.lock records (setup-uv's
+# `version-file`), and the packages build with this poetry-core: the build
+# pin below follows it, by hand, on Dependabot's pull request
+# (tests/test_pins.py fails until it does).
+toolchain = [
+    "uv==0.13.0",
+    "poetry-core==2.5.0",
+]
 
 [build-system]
 requires = ["uv_build>=0.12,<0.14"]
@@ -60,10 +70,10 @@ module-root = "tools"
 members = ["greenhouse_protocol", "greenhouse_sim", "greenhouse_adapters"]
 
 # The backend that builds the packages, pinned for the workspace and recorded
-# in uv.lock, so that a new release cannot change a build under `--locked`.
-# The packages' own `poetry-core>=2.0` stays a range for those who install
-# them elsewhere. Moved by hand: Dependabot's uv entry moves only the dev
-# tools. This project is built by uv itself, whose version CI pins.
+# in uv.lock, so that a new release cannot change a build under `--locked`:
+# the `toolchain` group's version. The packages' own `poetry-core>=2.0`
+# stays a range for those who install them elsewhere. This project is built
+# by uv itself, while uv's version is inside its `uv_build` range.
 [tool.uv]
 build-constraint-dependencies = ["poetry-core==2.5.0"]
 
