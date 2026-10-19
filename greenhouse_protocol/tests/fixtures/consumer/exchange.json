@@ -26,25 +26,6 @@
     },
     {
       "method": "GET",
-      "path": "/consumer/v1/runs/consumer_demo",
-      "query": {},
-      "status": 200,
-      "body": {
-        "run_id": "consumer_demo",
-        "epoch": 0,
-        "greenhouse_id": "consumer_demo",
-        "scenario": "demo",
-        "started_at": "2026-03-01T00:00:00Z",
-        "clock": {
-          "simulated_now": "2026-03-02T12:00:30Z",
-          "day": 1,
-          "playing": true
-        },
-        "interface_version": "v1"
-      }
-    },
-    {
-      "method": "GET",
       "path": "/consumer/v1/runs/consumer_demo/greenhouse",
       "query": {},
       "status": 200,
@@ -92,6 +73,25 @@
       "status": 404,
       "body": {
         "detail": "no run 'unknown'"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/consumer_demo",
+      "query": {},
+      "status": 200,
+      "body": {
+        "run_id": "consumer_demo",
+        "epoch": 0,
+        "greenhouse_id": "consumer_demo",
+        "scenario": "demo",
+        "started_at": "2026-03-01T00:00:00Z",
+        "clock": {
+          "simulated_now": "2026-03-02T12:00:30Z",
+          "day": 1,
+          "playing": true
+        },
+        "interface_version": "v1"
       }
     },
     {
