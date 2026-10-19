@@ -1,0 +1,667 @@
+{
+  "interface_version": "v1",
+  "steps": [
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs",
+      "query": {},
+      "status": 200,
+      "body": {
+        "runs": [
+          {
+            "run_id": "consumer_demo",
+            "epoch": 0,
+            "greenhouse_id": "consumer_demo",
+            "scenario": "demo",
+            "started_at": "2026-03-01T00:00:00Z",
+            "clock": {
+              "simulated_now": "2026-03-02T12:00:30Z",
+              "day": 1,
+              "playing": true
+            },
+            "interface_version": "v1"
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/consumer_demo",
+      "query": {},
+      "status": 200,
+      "body": {
+        "run_id": "consumer_demo",
+        "epoch": 0,
+        "greenhouse_id": "consumer_demo",
+        "scenario": "demo",
+        "started_at": "2026-03-01T00:00:00Z",
+        "clock": {
+          "simulated_now": "2026-03-02T12:00:30Z",
+          "day": 1,
+          "playing": true
+        },
+        "interface_version": "v1"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/consumer_demo/greenhouse",
+      "query": {},
+      "status": 200,
+      "body": {
+        "greenhouse_id": "consumer_demo",
+        "name": "Consumer demo",
+        "description": "Two tomato plants, one air sensor, three days.",
+        "source_type": "SIMULATION",
+        "crop": "tomato",
+        "layout": {
+          "kind": "grid",
+          "rows": 1,
+          "columns": 2
+        },
+        "plants": [
+          {
+            "plant_id": "consumer_demo_plant_001",
+            "variety": "tomato",
+            "row": 1,
+            "position_in_row": 1,
+            "x": null,
+            "y": null,
+            "zone": null,
+            "tray_id": null
+          },
+          {
+            "plant_id": "consumer_demo_plant_002",
+            "variety": "tomato",
+            "row": 1,
+            "position_in_row": 2,
+            "x": null,
+            "y": null,
+            "zone": null,
+            "tray_id": null
+          }
+        ],
+        "compartments": [],
+        "created_at": "2026-03-01T00:00:00Z"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/unknown",
+      "query": {},
+      "status": 404,
+      "body": {
+        "detail": "no run 'unknown'"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/consumer_demo/observations",
+      "query": {
+        "after": 0
+      },
+      "status": 200,
+      "body": {
+        "run_id": "consumer_demo",
+        "epoch": 0,
+        "after": 0,
+        "next": 3,
+        "simulated_now": "2026-03-02T12:00:30Z",
+        "has_more": false,
+        "observations": [
+          {
+            "observation_id": "consumer_demo_plant_001_20260302T120000_visible_height_cm",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": "consumer_demo_plant_001",
+            "timestamp": "2026-03-02T12:00:00Z",
+            "observation_type": "visible_height_cm",
+            "value": 41.0,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            }
+          },
+          {
+            "observation_id": "consumer_demo_plant_002_20260302T120000_visible_height_cm",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": "consumer_demo_plant_002",
+            "timestamp": "2026-03-02T12:00:00Z",
+            "observation_type": "visible_height_cm",
+            "value": 39.0,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            }
+          },
+          {
+            "observation_id": "air_1_20260302T120000_air_temperature_c",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": null,
+            "timestamp": "2026-03-02T12:00:00Z",
+            "observation_type": "air_temperature_c",
+            "value": 21.4,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            },
+            "sensor_id": "air_1",
+            "delivered_at": "2026-03-02T12:00:30Z"
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/consumer_demo/events",
+      "query": {
+        "after": 0
+      },
+      "status": 200,
+      "body": {
+        "run_id": "consumer_demo",
+        "epoch": 0,
+        "after": 0,
+        "next": 0,
+        "simulated_now": "2026-03-02T12:00:30Z",
+        "has_more": false,
+        "events": []
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/consumer_demo/observations",
+      "query": {
+        "after": 0
+      },
+      "status": 200,
+      "body": {
+        "run_id": "consumer_demo",
+        "epoch": 0,
+        "after": 0,
+        "next": 3,
+        "simulated_now": "2026-03-02T12:00:30Z",
+        "has_more": false,
+        "observations": [
+          {
+            "observation_id": "consumer_demo_plant_001_20260302T120000_visible_height_cm",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": "consumer_demo_plant_001",
+            "timestamp": "2026-03-02T12:00:00Z",
+            "observation_type": "visible_height_cm",
+            "value": 41.0,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            }
+          },
+          {
+            "observation_id": "consumer_demo_plant_002_20260302T120000_visible_height_cm",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": "consumer_demo_plant_002",
+            "timestamp": "2026-03-02T12:00:00Z",
+            "observation_type": "visible_height_cm",
+            "value": 39.0,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            }
+          },
+          {
+            "observation_id": "air_1_20260302T120000_air_temperature_c",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": null,
+            "timestamp": "2026-03-02T12:00:00Z",
+            "observation_type": "air_temperature_c",
+            "value": 21.4,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            },
+            "sensor_id": "air_1",
+            "delivered_at": "2026-03-02T12:00:30Z"
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/consumer_demo",
+      "query": {},
+      "status": 200,
+      "body": {
+        "run_id": "consumer_demo",
+        "epoch": 0,
+        "greenhouse_id": "consumer_demo",
+        "scenario": "demo",
+        "started_at": "2026-03-01T00:00:00Z",
+        "clock": {
+          "simulated_now": "2026-03-03T12:00:30Z",
+          "day": 2,
+          "playing": true
+        },
+        "interface_version": "v1"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/consumer_demo/observations",
+      "query": {
+        "after": 3,
+        "limit": 2
+      },
+      "status": 200,
+      "body": {
+        "run_id": "consumer_demo",
+        "epoch": 0,
+        "after": 3,
+        "next": 5,
+        "simulated_now": "2026-03-03T12:00:30Z",
+        "has_more": true,
+        "observations": [
+          {
+            "observation_id": "consumer_demo_plant_001_20260303T120000_visible_height_cm",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": "consumer_demo_plant_001",
+            "timestamp": "2026-03-03T12:00:00Z",
+            "observation_type": "visible_height_cm",
+            "value": 43.5,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            }
+          },
+          {
+            "observation_id": "consumer_demo_plant_002_20260303T120000_visible_height_cm",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": "consumer_demo_plant_002",
+            "timestamp": "2026-03-03T12:00:00Z",
+            "observation_type": "visible_height_cm",
+            "value": 41.0,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/consumer_demo/observations",
+      "query": {
+        "after": 5
+      },
+      "status": 200,
+      "body": {
+        "run_id": "consumer_demo",
+        "epoch": 0,
+        "after": 5,
+        "next": 9,
+        "simulated_now": "2026-03-03T12:00:30Z",
+        "has_more": false,
+        "observations": [
+          {
+            "observation_id": "consumer_demo_plant_001_20260303T120000_ripe_fruit_count",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": "consumer_demo_plant_001",
+            "timestamp": "2026-03-03T12:00:00Z",
+            "observation_type": "ripe_fruit_count",
+            "value": 1.0,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            }
+          },
+          {
+            "observation_id": "consumer_demo_plant_002_20260303T120000_ripe_fruit_count",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": "consumer_demo_plant_002",
+            "timestamp": "2026-03-03T12:00:00Z",
+            "observation_type": "ripe_fruit_count",
+            "value": 0.0,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            }
+          },
+          {
+            "observation_id": "rh_1_20260302T120000_relative_humidity_pct",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": null,
+            "timestamp": "2026-03-02T12:00:00Z",
+            "observation_type": "relative_humidity_pct",
+            "value": 78.0,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            },
+            "sensor_id": "rh_1",
+            "delivered_at": "2026-03-03T12:00:05Z"
+          },
+          {
+            "observation_id": "air_1_20260303T120000_air_temperature_c",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": null,
+            "timestamp": "2026-03-03T12:00:00Z",
+            "observation_type": "air_temperature_c",
+            "value": 22.1,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            },
+            "sensor_id": "air_1",
+            "delivered_at": "2026-03-03T12:00:30Z"
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/consumer_demo/events",
+      "query": {
+        "after": 0
+      },
+      "status": 200,
+      "body": {
+        "run_id": "consumer_demo",
+        "epoch": 0,
+        "after": 0,
+        "next": 1,
+        "simulated_now": "2026-03-03T12:00:30Z",
+        "has_more": false,
+        "events": [
+          {
+            "event_id": "consumer_demo_20260303T120000_watering",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": null,
+            "timestamp": "2026-03-03T12:00:00Z",
+            "event_type": "WATERING",
+            "source": "CONTROL_SYSTEM",
+            "confidence": 1.0,
+            "parameters": {
+              "volume_ml": 500.0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/consumer_demo",
+      "query": {},
+      "status": 200,
+      "body": {
+        "run_id": "consumer_demo",
+        "epoch": 0,
+        "greenhouse_id": "consumer_demo",
+        "scenario": "demo",
+        "started_at": "2026-03-01T00:00:00Z",
+        "clock": {
+          "simulated_now": "2026-03-04T12:00:30Z",
+          "day": 3,
+          "playing": true
+        },
+        "interface_version": "v1"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/consumer_demo/observations",
+      "query": {
+        "after": 9
+      },
+      "status": 200,
+      "body": {
+        "run_id": "consumer_demo",
+        "epoch": 0,
+        "after": 9,
+        "next": 14,
+        "simulated_now": "2026-03-04T12:00:30Z",
+        "has_more": false,
+        "observations": [
+          {
+            "observation_id": "consumer_demo_plant_001_20260304T120000_visible_height_cm",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": "consumer_demo_plant_001",
+            "timestamp": "2026-03-04T12:00:00Z",
+            "observation_type": "visible_height_cm",
+            "value": 46.0,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            }
+          },
+          {
+            "observation_id": "consumer_demo_plant_002_20260304T120000_visible_height_cm",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": "consumer_demo_plant_002",
+            "timestamp": "2026-03-04T12:00:00Z",
+            "observation_type": "visible_height_cm",
+            "value": 43.5,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            }
+          },
+          {
+            "observation_id": "consumer_demo_plant_001_20260304T120000_ripe_fruit_count",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": "consumer_demo_plant_001",
+            "timestamp": "2026-03-04T12:00:00Z",
+            "observation_type": "ripe_fruit_count",
+            "value": 2.0,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            }
+          },
+          {
+            "observation_id": "consumer_demo_plant_002_20260304T120000_ripe_fruit_count",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": "consumer_demo_plant_002",
+            "timestamp": "2026-03-04T12:00:00Z",
+            "observation_type": "ripe_fruit_count",
+            "value": 1.0,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            }
+          },
+          {
+            "observation_id": "air_1_20260304T120000_air_temperature_c",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": null,
+            "timestamp": "2026-03-04T12:00:00Z",
+            "observation_type": "air_temperature_c",
+            "value": 20.8,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            },
+            "sensor_id": "air_1",
+            "delivered_at": "2026-03-04T12:00:30Z"
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/consumer_demo/events",
+      "query": {
+        "after": 1
+      },
+      "status": 200,
+      "body": {
+        "run_id": "consumer_demo",
+        "epoch": 0,
+        "after": 1,
+        "next": 2,
+        "simulated_now": "2026-03-04T12:00:30Z",
+        "has_more": false,
+        "events": [
+          {
+            "event_id": "consumer_demo_plant_001_20260304T120000_harvest",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": "consumer_demo_plant_001",
+            "timestamp": "2026-03-04T12:00:00Z",
+            "event_type": "HARVEST",
+            "source": "SIMULATION",
+            "confidence": 1.0,
+            "parameters": {
+              "fruit_count": 2,
+              "mass_g": 150.0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/consumer_demo/observations",
+      "query": {
+        "after": 14
+      },
+      "status": 200,
+      "body": {
+        "run_id": "consumer_demo",
+        "epoch": 0,
+        "after": 14,
+        "next": 14,
+        "simulated_now": "2026-03-04T12:00:30Z",
+        "has_more": false,
+        "observations": []
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/consumer_demo",
+      "query": {},
+      "status": 200,
+      "body": {
+        "run_id": "consumer_demo",
+        "epoch": 1,
+        "greenhouse_id": "consumer_demo",
+        "scenario": "demo",
+        "started_at": "2026-03-01T00:00:00Z",
+        "clock": {
+          "simulated_now": "2026-03-02T12:00:30Z",
+          "day": 1,
+          "playing": true
+        },
+        "interface_version": "v1"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/consumer_demo/observations",
+      "query": {
+        "after": 14
+      },
+      "status": 200,
+      "body": {
+        "run_id": "consumer_demo",
+        "epoch": 1,
+        "after": 14,
+        "next": 14,
+        "simulated_now": "2026-03-02T12:00:30Z",
+        "has_more": false,
+        "observations": []
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/consumer_demo/observations",
+      "query": {
+        "after": 0
+      },
+      "status": 200,
+      "body": {
+        "run_id": "consumer_demo",
+        "epoch": 1,
+        "after": 0,
+        "next": 3,
+        "simulated_now": "2026-03-02T12:00:30Z",
+        "has_more": false,
+        "observations": [
+          {
+            "observation_id": "consumer_demo_plant_001_20260302T120000_visible_height_cm",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": "consumer_demo_plant_001",
+            "timestamp": "2026-03-02T12:00:00Z",
+            "observation_type": "visible_height_cm",
+            "value": 41.0,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            }
+          },
+          {
+            "observation_id": "consumer_demo_plant_002_20260302T120000_visible_height_cm",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": "consumer_demo_plant_002",
+            "timestamp": "2026-03-02T12:00:00Z",
+            "observation_type": "visible_height_cm",
+            "value": 39.0,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            }
+          },
+          {
+            "observation_id": "air_1_20260302T120000_air_temperature_c",
+            "greenhouse_id": "consumer_demo",
+            "compartment_id": null,
+            "plant_id": null,
+            "timestamp": "2026-03-02T12:00:00Z",
+            "observation_type": "air_temperature_c",
+            "value": 21.4,
+            "source": {
+              "type": "SIMULATION",
+              "source_id": "consumer_demo"
+            },
+            "sensor_id": "air_1",
+            "delivered_at": "2026-03-02T12:00:30Z"
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/consumer/v1/runs/consumer_demo/events",
+      "query": {
+        "after": 0
+      },
+      "status": 200,
+      "body": {
+        "run_id": "consumer_demo",
+        "epoch": 1,
+        "after": 0,
+        "next": 0,
+        "simulated_now": "2026-03-02T12:00:30Z",
+        "has_more": false,
+        "events": []
+      }
+    }
+  ]
+}
