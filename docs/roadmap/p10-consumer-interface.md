@@ -1,6 +1,6 @@
 # P10: A consumer's interface to a running simulation
 
-**Status:** in progress: P10.1 in review; P10.2 to P10.4 not started.
+**Status:** in progress: P10.1, P10.2 and P10.4 in review; P10.3 not started.
 Part of the [simulator roadmap](README.md).
 
 ## Goal
@@ -37,9 +37,9 @@ and its run). The protocol's records and conformance checks.
 | Step | What | Status |
 | --- | --- | --- |
 | P10.1 | The consumer interface in the protocol: routes, payloads, cursor and epoch rules, conformance checks, and a recorded exchange as the fixture ([#233](https://github.com/AndreyBesedin/greenhouse-open/issues/233)) | In review |
-| P10.2 | One coherent run for the viewer and the consumer: a measured spike of a unified live rich run against precomputed playback, and the choice ([#234](https://github.com/AndreyBesedin/greenhouse-open/issues/234)) | Not started |
+| P10.2 | One coherent run for the viewer and the consumer: a measured spike of a unified live rich run against precomputed playback, and the choice ([#234](https://github.com/AndreyBesedin/greenhouse-open/issues/234); decision 0041: a precomputed rich run played back against one clock) | In review |
 | P10.3 | Seasonally varying weather, a thermostat with hysteresis on the heater, and modeled heating energy as observations ([#235](https://github.com/AndreyBesedin/greenhouse-open/issues/235)) | Not started |
-| P10.4 | The simulator serves the consumer interface from a running scenario, read-only, bound to loopback ([#236](https://github.com/AndreyBesedin/greenhouse-open/issues/236)) | Not started |
+| P10.4 | The simulator serves the consumer interface from a running scenario, read-only, bound to loopback ([#236](https://github.com/AndreyBesedin/greenhouse-open/issues/236)) | In review |
 
 ## Acceptance
 

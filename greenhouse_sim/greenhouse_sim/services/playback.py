@@ -311,20 +311,34 @@ _playbacks: dict[str, Playback] = {}
 _playbacks_lock = threading.Lock()
 
 
-def start(scenario_id: str, seconds_per_day: float | None = None) -> PlaybackState:
+def start(
+    scenario_id: str,
+    seconds_per_day: float | None = None,
+    *,
+    clock: Callable[[], float] = monotonic,
+) -> PlaybackState:
     """The scenario's playback, started and playing, at `seconds_per_day` if
-    given: the one already started, or a new one from the run's start."""
+    given: the one already started, or a new one from the run's start, on
+    `clock`."""
     with _playbacks_lock:
         found = _playbacks.get(scenario_id)
         if found is None:
             found = Playback(
-                scenario_id, seconds_per_day=seconds_per_day or DEFAULT_SECONDS_PER_DAY
+                scenario_id,
+                seconds_per_day=seconds_per_day or DEFAULT_SECONDS_PER_DAY,
+                clock=clock,
             )
             found.begin()
             _playbacks[scenario_id] = found
     if seconds_per_day is not None:
         found.set_pace(seconds_per_day)
     return found.command(PlaybackCommand.PLAY)
+
+
+def playbacks() -> list[Playback]:
+    """Every playback started, in the order they were."""
+    with _playbacks_lock:
+        return list(_playbacks.values())
 
 
 def playback(scenario_id: str) -> Playback:

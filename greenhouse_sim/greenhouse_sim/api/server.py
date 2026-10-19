@@ -1,10 +1,14 @@
 """Serving the local API over HTTP, on this machine only.
 
-    python -m greenhouse_sim.api [--port PORT] [--seconds-per-day SECONDS]
+    python -m greenhouse_sim.api [--port PORT] [--seconds-per-day SECONDS] [--play SCENARIO]
 
 The browser viewer's development server forwards `/api` here, so the API
 needs no cross-origin headers. It binds to the loopback interface: it is a
 tool for a developer's own machine, not a service.
+
+The consumer interface's routes (`/consumer/v1`, `consumer`) answer before
+the viewer's, `GET` only. `--play SCENARIO` plays a scenario's own run back
+from its start (`services.playback`), for the viewer and a consumer.
 
 Live scenarios stream as Server-Sent Events (decision 0012): a `frame` event
 per simulated day, and a comment now and then to keep the connection open.
@@ -26,8 +30,10 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Final, cast
 
-from greenhouse_sim.api.routes import Response, control, live_stream, respond
-from greenhouse_sim.services import checkpoints
+from greenhouse_sim.api.consumer import consumer_respond
+from greenhouse_sim.api.responses import Response
+from greenhouse_sim.api.routes import control, live_stream, respond
+from greenhouse_sim.services import checkpoints, playback
 from greenhouse_sim.services.live import DEFAULT_SECONDS_PER_DAY, LiveRun, LiveRuns
 
 LOOPBACK: Final = "127.0.0.1"
@@ -82,6 +88,10 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         started = time.perf_counter()
+        consumers = self._safely(lambda: consumer_respond("GET", self.path))
+        if consumers is not None:
+            self._send(consumers, started)
+            return
         stream = self._safely(lambda: live_stream(self.path, self._live))
         if isinstance(stream, LiveRun):
             self._stream(stream)
@@ -92,6 +102,10 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         started = time.perf_counter()
+        consumers = self._safely(lambda: consumer_respond("POST", self.path))
+        if consumers is not None:
+            self._send(consumers, started)
+            return
         response = self._safely(lambda: control(self.path, self._live))
         if response is None:
             body = self._body()
@@ -206,11 +220,27 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=DEFAULT_SECONDS_PER_DAY,
         help="how fast live scenarios play",
     )
+    parser.add_argument(
+        "--play",
+        action="append",
+        default=[],
+        metavar="SCENARIO",
+        help="play a scenario's own run back from its start, for the viewer and a consumer",
+    )
+    parser.add_argument(
+        "--play-seconds-per-day",
+        type=float,
+        default=playback.DEFAULT_SECONDS_PER_DAY,
+        help="how fast a played-back run's clock plays a simulated day",
+    )
     args = parser.parse_args(argv)
 
     server = create_server(args.port, seconds_per_day=args.seconds_per_day)
     host, port = server.server_address[:2]
     print(f"greenhouse-sim API on http://{host!s}:{port}/api", flush=True)
+    for scenario_id in args.play:
+        played = playback.start(scenario_id, args.play_seconds_per_day)
+        print(f"playing {played.run_id}, read at http://{host!s}:{port}/consumer/v1", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
