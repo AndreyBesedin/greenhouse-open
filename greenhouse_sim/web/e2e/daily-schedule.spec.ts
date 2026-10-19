@@ -18,18 +18,24 @@ test("daily schedule: a command repeated every day runs every day, until overrid
   const run = page.getByRole("group", { name: "Climate run" });
   const moment = page.getByTestId("climate-time");
   const schedule = page.getByRole("region", { name: "Schedule" });
+  const summary = schedule.getByTestId("schedule-summary");
   const heater = page.getByTestId("equipment-heater");
   const nextDay = run.getByRole("button", { name: "Next day" });
 
   await test.step("repeated, the evening's command becomes every evening's", async () => {
     await expect(moment).toHaveText("20 h 00 min", ARRIVES);
     await expect(heater).toHaveText("100%, 10 kW", ARRIVES);
+    await expect(summary).toHaveText("Schedule: 1 command, none to come.");
+    await schedule.locator("summary").click();
     await schedule
       .getByRole("button", { name: "Repeat heater 100% at 18 h 00 min every day" })
       .click();
     await expect(page).toHaveURL(new RegExp(`&daily=${EVENING_S}:heater:1(&|$)`));
     await expect(page).not.toHaveURL(/&schedule=/);
     await expect(schedule.getByTestId("daily-command")).toHaveText(/every day 18 h 00 min/);
+    await expect(summary).toHaveText(
+      "Schedule: 1 command. Next at day 1, 18 h 00 min: heater 100%.",
+    );
     await expect(heater).toHaveText("100%, 10 kW", ARRIVES);
   });
 

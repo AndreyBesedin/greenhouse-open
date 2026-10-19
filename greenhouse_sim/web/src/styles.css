@@ -462,16 +462,20 @@ body {
   stroke-dasharray: 3 2;
 }
 
-/* A climate run's schedule: a marker on a bar over the run at each
- * command's moment, filled once applied, and the commands listed. */
+/* A climate run's schedule, folded to a line and a bar across the moment's
+ * day under it, a marker at each command's moment, filled once applied;
+ * opened, the commands listed. */
 .climate-schedule {
   margin: 0 0 8px;
 }
 
+/* The bar is part of the summary, under its line, so that it shows while
+ * the schedule is folded. */
 .climate-schedule-bar {
+  display: block;
   position: relative;
   height: 10px;
-  margin: 0 6px 4px;
+  margin: 2px 6px 4px;
   border-bottom: 1px solid #888888;
 }
 
