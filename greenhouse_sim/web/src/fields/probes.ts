@@ -14,7 +14,7 @@ const PROBE_PARTS = 3;
 // Air slower than this has no direction worth comparing, in metres a second.
 const STILL_AIR_M_S = 1e-6;
 // Probes are marked in a colour of their own, from ColorBrewer's Dark2.
-const PROBE_COLOR = "#e7298a";
+export const PROBE_COLOR = "#e7298a";
 // A probe's name floats this far above it, in metres.
 const NAME_RISE_M = 0.15;
 // A probe's arrow is this long, in metres, where the air is the field's

@@ -229,6 +229,71 @@ body {
   border: 0;
 }
 
+/* "What am I seeing?" (#205): a button at the top of the legends, and the
+ * card it opens above them, a swatch, a name and a meaning per row. */
+.seen-in-the-view {
+  box-sizing: border-box;
+  width: 300px;
+  /* Never so tall that the legends under it leave the window: it scrolls. */
+  max-height: 50vh;
+  overflow: auto;
+  padding: 8px 12px;
+  background: rgb(255 255 255 / 88%);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.seen-in-the-view header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.seen-in-the-view h2 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.seen-in-the-view dl {
+  margin: 6px 0 0;
+}
+
+.seen-in-the-view dt {
+  font-weight: 600;
+}
+
+.seen-in-the-view dd {
+  margin: 0 0 4px 18px;
+  color: #444444;
+}
+
+.seen-in-the-view p {
+  margin: 6px 0 0;
+  color: #444444;
+}
+
+.seen-glyph {
+  display: inline-block;
+  width: 12px;
+  height: 10px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.seen-dot {
+  width: 10px;
+  border-radius: 50%;
+}
+
+.seen-line {
+  height: 3px;
+}
+
+.seen-arrow {
+  width: 14px;
+  clip-path: polygon(0 35%, 60% 35%, 60% 0, 100% 50%, 60% 100%, 60% 65%, 0 65%);
+}
+
 /* Legends stack at the bottom right of the view. */
 .legends {
   position: absolute;

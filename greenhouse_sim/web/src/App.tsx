@@ -54,6 +54,7 @@ import { QaPanel } from "./qaMode/QaPanel";
 import { loadRunState, runStateUrl } from "./qaMode/state";
 import type { ViewSample } from "./readouts";
 import { ScenarioPanels } from "./ScenarioPanels";
+import { WhatAmISeeing } from "./SeenInTheView";
 import { loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
 import { withProbes } from "./scene/edits";
 import { runApartFromItsMoment, runsSomething, scenarioRun } from "./scene/run";
@@ -557,6 +558,14 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     ) : (
       <FieldArrows field={loadedField} range={fieldColours} />
     );
+  // The overlays over the scene that have something to draw, which the
+  // display options switch and "What am I seeing?" explains (#205).
+  const overlaysDrawn = sceneOverlaysDrawn(scenePrimitives, fieldLayer !== null);
+  // The kinds the scene holds, for what the card says the scene draws.
+  const kindsShown = useMemo(
+    () => (snapshot === null ? null : new Set(snapshot.entities.map((entity) => entity.kind))),
+    [snapshot],
+  );
 
   const liveStatus: LiveStatus | null =
     source.kind === "live"
@@ -617,7 +626,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 onShowDimensions={setShowDimensions}
                 byCategory={byCategory}
                 onByCategory={setByCategory}
-                drawn={sceneOverlaysDrawn(scenePrimitives, fieldLayer !== null)}
+                drawn={overlaysDrawn}
                 fieldView={fieldView}
                 overlays={overlayToggles}
                 onOverlays={setOverlayToggles}
@@ -722,6 +731,19 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             onCommand={commands.send}
           />
           <div className="legends">
+            <WhatAmISeeing
+              view={{
+                drawn: overlaysDrawn,
+                overlays: overlayToggles,
+                fieldView,
+                fieldScale,
+                colourBy: colouring?.property ?? null,
+                byCategory: byCategory && snapshot !== null,
+                cfdBoundaries: cfd.status === "loaded",
+                dimensions: showDimensions && snapshot !== null,
+                kinds: kindsShown,
+              }}
+            />
             {byCategory && snapshot !== null && (
               <CategoryLegend categories={categoriesIn(snapshot)} />
             )}
