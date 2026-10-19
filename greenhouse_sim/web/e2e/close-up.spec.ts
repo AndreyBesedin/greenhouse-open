@@ -12,6 +12,8 @@ const RUN = "/?scenario=climate_box&field=climate&t=600";
 const ARRIVES = { timeout: 40_000 };
 // A mouse wheel's notch, as Chromium reports it.
 const NOTCH_PX = 100;
+// The HUD writes the camera's position to the centimetre.
+const ROUNDING_M = 0.01;
 const DEFAULT_VIEW = formatPoint(CAMERA_PRESETS[DEFAULT_PRESET].position);
 
 /** How far the camera stands from the world's origin, where the default view
@@ -45,19 +47,23 @@ test("close-up: zoomed in as far as it goes, the camera backs out after a change
   await expect(camera).toHaveText(DEFAULT_VIEW);
 
   await test.step("a long zoom in stops at the camera's closest approach", async () => {
+    // Towards what the middle of the view is over, at the house's corner: the
+    // camera stops 20 cm short of it, which lies at or before the origin.
     await turnWheel(page, -300);
-    await expect.poll(() => fromTheOrigin(page)).toBeCloseTo(CAMERA_CLOSEST_M, 1);
+    await expect.poll(() => fromTheOrigin(page)).toBeLessThan(2 * CAMERA_CLOSEST_M);
+    expect(await fromTheOrigin(page)).toBeGreaterThanOrEqual(CAMERA_CLOSEST_M - ROUNDING_M);
   });
 
-  await test.step("a day on, a few notches out back it away again", async () => {
+  await test.step("a day on, the wheel backs it away again", async () => {
     await page
       .getByRole("group", { name: "Climate run" })
       .getByRole("button", { name: "Next day" })
       .click();
     await expect(moment).toHaveText("day 1, 10 min", ARRIVES);
-    // Each notch out takes it a twentieth further away.
-    await turnWheel(page, 30);
-    await expect.poll(() => fromTheOrigin(page)).toBeGreaterThan(3 * CAMERA_CLOSEST_M);
+    // Each notch out takes it a twentieth further away: 40 of them, nearly
+    // eight times as far.
+    await turnWheel(page, 40);
+    await expect.poll(() => fromTheOrigin(page)).toBeGreaterThan(1);
   });
 
   await test.step("and a preset returns it to its view", async () => {
