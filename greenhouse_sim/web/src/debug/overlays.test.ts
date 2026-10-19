@@ -4,7 +4,17 @@ import { describe, expect, it } from "vitest";
 
 import type { SceneEntity, SceneSnapshot } from "../scene/generated/snapshotTypes";
 import { sceneDimensionOverlays } from "./dimensions";
-import { entityBounds, type OverlayToggles, selectionOverlays } from "./overlays";
+import {
+  ALL_OVERLAYS,
+  entityBounds,
+  type OverlayPrimitive,
+  type OverlayToggles,
+  type ScenePrimitives,
+  type SelectionToggles,
+  sceneOverlaysDrawn,
+  selectionOverlays,
+  shownPrimitives,
+} from "./overlays";
 import { colouringBy, scalarColor, scalarProperties, scalarValue } from "./scalar";
 
 const EXAMPLE_JSON = readFileSync(
@@ -33,9 +43,22 @@ const TIPPED: SceneEntity = {
   ...PLANT,
   transform: { ...PLANT.transform, rotation: { w: QUARTER_TURN, x: QUARTER_TURN, y: 0, z: 0 } },
 };
-const EVERY_TOGGLE: OverlayToggles[] = [false, true].flatMap((box) =>
+const EVERY_TOGGLE: SelectionToggles[] = [false, true].flatMap((box) =>
   [false, true].flatMap((axes) => [false, true].map((label) => ({ box, axes, label }))),
 );
+
+// What a scene's overlays draw, each a mark per primitive: the camera
+// views draw nothing, as in a scene without a camera.
+function marks(...ids: string[]): OverlayPrimitive[] {
+  return ids.map((id) => ({ id, kind: "point", position: { x: 0, y: 0, z: 0 }, color: "#000000" }));
+}
+const OVER_THE_SCENE: ScenePrimitives = {
+  openingFlows: marks("door-flow", "door-flow-label"),
+  wind: marks("wind-arrow", "wind-label"),
+  sun: marks("sun-marker", "sun-path-0"),
+  cameraViews: [],
+  probes: marks("P1-point", "P1-name"),
+};
 
 function deepFreeze<T>(value: T): T {
   if (typeof value === "object" && value !== null) {
@@ -91,7 +114,7 @@ describe("an entity's bounding box", () => {
 
 describe("the overlays around a selection", () => {
   it("draw the box, the origin and axes, and the label, each when it is on", () => {
-    const ids = (toggles: OverlayToggles) => selectionOverlays(PLANT, toggles).map((p) => p.id);
+    const ids = (toggles: SelectionToggles) => selectionOverlays(PLANT, toggles).map((p) => p.id);
 
     expect(ids({ box: true, axes: true, label: true })).toEqual([
       "box",
@@ -155,5 +178,51 @@ describe("the overlays around a selection", () => {
     }
 
     expect(scene).toEqual(JSON.parse(EXAMPLE_JSON));
+  });
+});
+
+describe("the overlays over a scene", () => {
+  const ids = (toggles: OverlayToggles) =>
+    shownPrimitives(OVER_THE_SCENE, toggles).map((primitive) => primitive.id);
+
+  it("leave a hidden one out, and give it back as it was when it is shown again", () => {
+    const hidden = { ...ALL_OVERLAYS, wind: false, probes: false };
+
+    expect(ids(ALL_OVERLAYS)).toEqual([
+      "door-flow",
+      "door-flow-label",
+      "wind-arrow",
+      "wind-label",
+      "sun-marker",
+      "sun-path-0",
+      "P1-point",
+      "P1-name",
+    ]);
+    expect(ids(hidden)).toEqual(["door-flow", "door-flow-label", "sun-marker", "sun-path-0"]);
+    // From what was drawn before, untouched: nothing is worked out again.
+    const again = shownPrimitives(OVER_THE_SCENE, { ...hidden, wind: true, probes: true });
+    expect(again[2]).toBe(OVER_THE_SCENE.wind[0]);
+    expect(again).toEqual(shownPrimitives(OVER_THE_SCENE, ALL_OVERLAYS));
+  });
+
+  it("are hidden by their own switches alone, the air field's by its own layer", () => {
+    const shown = ids(ALL_OVERLAYS);
+
+    expect(ids({ ...ALL_OVERLAYS, box: false, axes: false, label: false })).toEqual(shown);
+    expect(ids({ ...ALL_OVERLAYS, airField: false })).toEqual(shown);
+  });
+
+  it("each get a switch while they have something to draw, shown or hidden", () => {
+    expect(sceneOverlaysDrawn(OVER_THE_SCENE, true)).toEqual([
+      "airField",
+      "openingFlows",
+      "wind",
+      "sun",
+      "probes",
+    ]);
+    expect(sceneOverlaysDrawn({ ...OVER_THE_SCENE, wind: [], probes: [] }, false)).toEqual([
+      "openingFlows",
+      "sun",
+    ]);
   });
 });

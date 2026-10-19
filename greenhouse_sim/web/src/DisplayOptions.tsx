@@ -1,8 +1,29 @@
 import { ColourBy } from "./ColourBy";
+import type { OverlayToggles, SceneOverlay } from "./debug/overlays";
+import type { FieldView } from "./fields/display";
 
-/** How the scene is shown: shaded by a property, and measured; and whether
- * the viewer is in QA mode (P09.6), which shows what the simulator knows and
- * a policy never sees. */
+// What each overlay over the scene is called beside its switch; the air
+// field is called by how it is drawn.
+const SCENE_OVERLAY_LABELS: Record<Exclude<SceneOverlay, "airField">, string> = {
+  openingFlows: "Flows through openings",
+  wind: "Wind",
+  sun: "Sun and its path",
+  cameraViews: "Camera views",
+  probes: "Probes",
+};
+
+// What the switches change, apart from the equipment's, which change the run.
+// It is the group's tooltip, not a line of its own: the info panel shows all
+// of itself at the usual window size beside the tallest legend.
+const VIEW_ONLY = "Hiding one changes only the view, never the run or its equipment.";
+
+function overlayLabel(overlay: SceneOverlay, fieldView: FieldView): string {
+  return overlay === "airField" ? `Air field ${fieldView}` : SCENE_OVERLAY_LABELS[overlay];
+}
+
+/** How the scene is shown: shaded by a property, and measured; which of the
+ * overlays over it are drawn; and whether the viewer is in QA mode (P09.6),
+ * which shows what the simulator knows and a policy never sees. */
 export function DisplayOptions({
   colourProperties,
   colourBy,
@@ -11,6 +32,10 @@ export function DisplayOptions({
   onShowDimensions,
   byCategory,
   onByCategory,
+  drawn,
+  fieldView,
+  overlays,
+  onOverlays,
   qaMode,
   onQaMode,
 }: {
@@ -21,6 +46,12 @@ export function DisplayOptions({
   onShowDimensions: (show: boolean) => void;
   byCategory: boolean;
   onByCategory: (show: boolean) => void;
+  /** The overlays over the scene that have something to draw, shown or not. */
+  drawn: readonly SceneOverlay[];
+  /** How the air field is drawn, which names its switch. */
+  fieldView: FieldView;
+  overlays: OverlayToggles;
+  onOverlays: (overlays: OverlayToggles) => void;
   qaMode: boolean;
   onQaMode: (on: boolean) => void;
 }) {
@@ -55,6 +86,21 @@ export function DisplayOptions({
           QA mode
         </label>
       </p>
+      {drawn.length > 0 && (
+        <fieldset className="shown-overlays" title={VIEW_ONLY}>
+          <legend>Shown in the view</legend>
+          {drawn.map((overlay) => (
+            <label key={overlay}>
+              <input
+                type="checkbox"
+                checked={overlays[overlay]}
+                onChange={(event) => onOverlays({ ...overlays, [overlay]: event.target.checked })}
+              />{" "}
+              {overlayLabel(overlay, fieldView)}
+            </label>
+          ))}
+        </fieldset>
+      )}
     </>
   );
 }

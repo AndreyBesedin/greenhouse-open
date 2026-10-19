@@ -10,7 +10,13 @@ import { DisplayOptions } from "./DisplayOptions";
 import { CategoryLegend } from "./debug/CategoryLegend";
 import { categoriesIn } from "./debug/categories";
 import { sceneDimensionOverlays } from "./debug/dimensions";
-import { ALL_OVERLAYS, type OverlayToggles, selectionOverlays } from "./debug/overlays";
+import {
+  ALL_OVERLAYS,
+  type OverlayToggles,
+  sceneOverlaysDrawn,
+  selectionOverlays,
+  shownPrimitives,
+} from "./debug/overlays";
 import { ScalarLegend } from "./debug/ScalarLegend";
 import type { ScalarRange } from "./debug/scalar";
 import { colouringBy, scalarProperties } from "./debug/scalar";
@@ -444,6 +450,25 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     [fieldView, loadedField, askedSlice],
   );
   const scaleQuantity = fieldSlice === null ? "speed" : fieldSlice.quantity;
+  // What each overlay over the scene draws, shown or hidden: hiding one
+  // leaves out its primitives, never what they are drawn from.
+  const scenePrimitives = useMemo(
+    () => ({
+      openingFlows:
+        snapshot === null || flowing === null ? [] : openingFlowOverlays(snapshot, flowing),
+      wind: snapshot === null || outside === null ? [] : windOverlays(snapshot, outside),
+      sun: [
+        ...(snapshot === null || outside === null ? [] : sunOverlays(snapshot, outside)),
+        ...(snapshot === null || sunsDay === null ? [] : sunPathOverlays(snapshot, sunsDay)),
+      ],
+      cameraViews: snapshot === null ? [] : frustumOverlays(snapshot),
+      probes:
+        probedField === null
+          ? []
+          : probeOverlays(probes, probedField, qaMode ? scaleQuantity : null),
+    }),
+    [snapshot, flowing, outside, sunsDay, probes, probedField, qaMode, scaleQuantity],
+  );
   const overlays = useMemo(
     () => [
       ...(selected === null ? [] : selectionOverlays(selected, overlayToggles)),
@@ -453,30 +478,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             lightOn === null ? null : (describePlantLight(lightOn, plantId)?.day ?? null),
           )
         : []),
-      ...(probedField === null
-        ? []
-        : probeOverlays(probes, probedField, qaMode ? scaleQuantity : null)),
-      ...(snapshot === null ? [] : frustumOverlays(snapshot)),
-      ...(snapshot === null || outside === null ? [] : windOverlays(snapshot, outside)),
-      ...(snapshot === null || outside === null ? [] : sunOverlays(snapshot, outside)),
-      ...(snapshot === null || sunsDay === null ? [] : sunPathOverlays(snapshot, sunsDay)),
-      ...(snapshot === null || flowing === null ? [] : openingFlowOverlays(snapshot, flowing)),
+      ...shownPrimitives(scenePrimitives, overlayToggles),
     ],
-    [
-      selected,
-      overlayToggles,
-      snapshot,
-      showDimensions,
-      showingNames,
-      lightOn,
-      probes,
-      probedField,
-      qaMode,
-      scaleQuantity,
-      outside,
-      sunsDay,
-      flowing,
-    ],
+    [selected, overlayToggles, snapshot, showDimensions, showingNames, lightOn, scenePrimitives],
   );
 
   const fieldScale = useMemo(
@@ -533,7 +537,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             : null
         }
       >
-        {fieldLayer}
+        {overlayToggles.airField && fieldLayer}
         {cfd.status === "loaded" && <CfdBoundaries geometry={cfd.geometry} />}
       </Viewport>
       <div className="viewer-panels">
@@ -554,6 +558,10 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 onShowDimensions={setShowDimensions}
                 byCategory={byCategory}
                 onByCategory={setByCategory}
+                drawn={sceneOverlaysDrawn(scenePrimitives, fieldLayer !== null)}
+                fieldView={fieldView}
+                overlays={overlayToggles}
+                onOverlays={setOverlayToggles}
                 qaMode={qaMode}
                 onQaMode={setQaMode}
               />
@@ -659,7 +667,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             )}
             {colouring && <ScalarLegend colouring={colouring} />}
             {cfd.status === "loaded" && <CfdLegend geometry={cfd.geometry} />}
-            {fieldScale !== null && (
+            {fieldScale !== null && overlayToggles.airField && (
               <FieldLegend
                 title={fieldScale.title}
                 unit={fieldScale.unit}

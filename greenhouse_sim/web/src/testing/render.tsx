@@ -51,6 +51,14 @@ export function select(within: ParentNode, name: string): HTMLSelectElement {
   return only(found, `a select labelled "${name}"`);
 }
 
+/** The checkbox whose label, around it, says `name`. */
+export function checkbox(within: ParentNode, name: string): HTMLInputElement {
+  const found = [...within.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].filter(
+    (candidate) => candidate.closest("label")?.textContent?.trim() === name,
+  );
+  return only(found, `a checkbox labelled "${name}"`);
+}
+
 /** What the element with this test id says, or null if there is none. */
 export function said(within: ParentNode, testId: string): string | null {
   return within.querySelector(`[data-testid="${testId}"]`)?.textContent ?? null;

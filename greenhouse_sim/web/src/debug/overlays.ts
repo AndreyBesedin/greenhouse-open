@@ -22,14 +22,89 @@ export type OverlayPrimitive = { id: string } & (
   | { kind: "label"; position: Point3; text: string }
 );
 
-/** Which overlays are drawn around the selected entity. */
+/**
+ * Which overlays are drawn: around the selected entity, its box, its origin
+ * and axes, and its label; and over the whole scene, what explains it.
+ * Hiding one changes only what is drawn: what the simulator runs, and what
+ * the viewer asks of it, stay as they are.
+ */
 export interface OverlayToggles {
   box: boolean;
   axes: boolean;
   label: boolean;
+  /** The air field, as it is drawn: arrows, streamlines or a slice. */
+  airField: boolean;
+  /** The arrows in or out through the open doors and vents. */
+  openingFlows: boolean;
+  /** The wind's arrow outside the house. */
+  wind: boolean;
+  /** The sun, the way its beam falls, and its path through the day. */
+  sun: boolean;
+  /** What each camera sees, outlined from its eye. */
+  cameraViews: boolean;
+  /** The probes, each marked and named, with the air's arrow there. */
+  probes: boolean;
 }
 
-export const ALL_OVERLAYS: OverlayToggles = { box: true, axes: true, label: true };
+/** The overlays drawn around the selected entity, which the inspector
+ * hides and shows. */
+export type SelectionToggles = Pick<OverlayToggles, "box" | "axes" | "label">;
+
+export const ALL_OVERLAYS: OverlayToggles = {
+  box: true,
+  axes: true,
+  label: true,
+  airField: true,
+  openingFlows: true,
+  wind: true,
+  sun: true,
+  cameraViews: true,
+  probes: true,
+};
+
+/** The overlays drawn over the whole scene, rather than around the
+ * selection, in the order the display options list them. */
+export const SCENE_OVERLAYS = [
+  "airField",
+  "openingFlows",
+  "wind",
+  "sun",
+  "cameraViews",
+  "probes",
+] as const;
+export type SceneOverlay = (typeof SCENE_OVERLAYS)[number];
+
+/** What each overlay over the scene draws, as primitives: all but the air
+ * field, which a layer of its own draws (`fields/`). */
+export type ScenePrimitives = Record<
+  Exclude<SceneOverlay, "airField">,
+  readonly OverlayPrimitive[]
+>;
+
+/**
+ * The primitives of the overlays over the scene that are shown. A hidden
+ * one's are left out, so that it is neither drawn nor picked, while what it
+ * is drawn from stays loaded: shown again, it asks the simulator for nothing.
+ */
+export function shownPrimitives(
+  primitives: ScenePrimitives,
+  toggles: OverlayToggles,
+): OverlayPrimitive[] {
+  return SCENE_OVERLAYS.flatMap((overlay) =>
+    overlay === "airField" || !toggles[overlay] ? [] : primitives[overlay],
+  );
+}
+
+/** The overlays over the scene that have something to draw, shown or
+ * hidden: those a switch can hide and show again. */
+export function sceneOverlaysDrawn(
+  primitives: ScenePrimitives,
+  fieldDrawn: boolean,
+): SceneOverlay[] {
+  return SCENE_OVERLAYS.filter((overlay) =>
+    overlay === "airField" ? fieldDrawn : primitives[overlay].length > 0,
+  );
+}
 
 export const SELECTION_COLOR = "#ff8c1a";
 // The entity's own axes, coloured as the world axes are: x red, y green, z blue.
@@ -115,7 +190,7 @@ export function entityBounds(entity: SceneEntity): Bounds {
  */
 export function selectionOverlays(
   entity: SceneEntity,
-  toggles: OverlayToggles,
+  toggles: SelectionToggles,
 ): OverlayPrimitive[] {
   const primitives: OverlayPrimitive[] = [];
   const bounds = entityBounds(entity);
