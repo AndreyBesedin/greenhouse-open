@@ -274,7 +274,7 @@ def check_polls(batches: Iterable[Batch]) -> list[str]:
             violations.append(f"{_label(batch)} (poll {index}) returns to epoch {batch.epoch}")
         if batch.epoch != epoch:
             epoch, given, seen, at, delivered = batch.epoch, {FIRST_CURSOR}, {}, {}, {}
-        records = list(batch.records)
+        records: list[Observation | Event] = list(batch.records)
         if records and batch.after not in given:
             violations.append(
                 f"{_label(batch)} (poll {index}) answers after={batch.after}, "
