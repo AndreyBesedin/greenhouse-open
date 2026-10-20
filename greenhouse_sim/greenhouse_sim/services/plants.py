@@ -136,7 +136,7 @@ class LabEnvironment:
         return ENVIRONMENTS[self.name(plant_id)]
 
 
-def _checked(run: LabRun) -> None:
+def _checked_run(run: LabRun) -> None:
     if not 0 <= run.day <= LAST_DAY:
         raise InvalidRequest(f"the plant lab runs from day 0 to day {LAST_DAY}, not day {run.day}")
     if run.seed < 0:
@@ -186,7 +186,7 @@ def _days(plant_id: str, run: LabRun, environment: Environment) -> Iterator[Plan
             plant = live_day(plant, environment.local(plant_id, day), DEVELOPMENT)
 
 
-def _grown(plant_id: str, run: LabRun, environment: Environment) -> Plant:
+def _lab_plant(plant_id: str, run: LabRun, environment: Environment) -> Plant:
     *_, plant = _days(plant_id, run, environment)
     return plant
 
@@ -206,7 +206,7 @@ def checks(run: LabRun | None = None) -> LabChecks:
     """Each of the lab's plants on its run's day, held to the structure's
     rules, and to what a plant may do from one day to the next."""
     run = LabRun() if run is None else run
-    _checked(run)
+    _checked_run(run)
     environment = LabEnvironment(run)
     found = {}
     for plant_id in plant_ids():
@@ -221,17 +221,17 @@ def checks(run: LabRun | None = None) -> LabChecks:
 def structure(run: LabRun | None = None, plant_id: str = LAB_PLANT_ID) -> Plant:
     """One of the lab's plants on its run's day, organ by organ."""
     run = LabRun() if run is None else run
-    _checked(run)
+    _checked_run(run)
     if plant_id not in plant_ids():
         raise NotFound(f"the plant lab has no plant {plant_id!r}")
-    return _grown(plant_id, run, LabEnvironment(run))
+    return _lab_plant(plant_id, run, LabEnvironment(run))
 
 
 def scene(run: LabRun | None = None) -> SceneSnapshot:
     """The lab's row on its run's day, on its ground, as a viewer draws it,
     each plant's entities naming the environment it lives in."""
     run = LabRun() if run is None else run
-    _checked(run)
+    _checked_run(run)
     environment = LabEnvironment(run)
     row_length = (ROW_PLANTS - 1) * PLANT_SPACING_M
     ground = SceneEntity(
@@ -254,7 +254,7 @@ def scene(run: LabRun | None = None) -> SceneSnapshot:
         entity
         for place, plant_id in enumerate(plant_ids())
         for entity in plant_entities(
-            _grown(plant_id, run, environment),
+            _lab_plant(plant_id, run, environment),
             Transform(position=Vector3(x=0.0, y=place * PLANT_SPACING_M, z=0.0)),
             {"environment": environment.name(plant_id)},
         )

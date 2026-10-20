@@ -69,7 +69,7 @@ BELOW_HORIZON_ARC_SECONDS: Final = -20.772
 ARC_SECONDS_PER_DEGREE: Final = 3600.0
 
 
-def _polynomial(coefficients: Sequence[float], x: float) -> float:
+def polynomial(coefficients: Sequence[float], x: float) -> float:
     """Σ cᵢ xⁱ, the lowest power first."""
     total = 0.0
     for coefficient in reversed(coefficients):
@@ -86,7 +86,7 @@ def _refraction_deg(elevation_deg: float) -> float:
         first, third, fifth = TANGENT_ARC_SECONDS
         seconds = first / tangent + third / tangent**3 + fifth / tangent**5
     elif elevation_deg > HORIZON_REFRACTION_ABOVE_DEG:
-        seconds = _polynomial(HORIZON_ARC_SECONDS, elevation_deg)
+        seconds = polynomial(HORIZON_ARC_SECONDS, elevation_deg)
     else:
         seconds = BELOW_HORIZON_ARC_SECONDS / tangent
     return seconds / ARC_SECONDS_PER_DEGREE
@@ -126,21 +126,21 @@ def sun_position(moment: datetime, site: Site) -> SunPosition:
     julian_day = UNIX_EPOCH_JULIAN_DAY + seconds / DAY_S
     century = (julian_day - J2000_JULIAN_DAY) / DAYS_PER_JULIAN_CENTURY
 
-    mean_longitude = _polynomial(MEAN_LONGITUDE, century) % FULL_TURN_DEG
-    anomaly = math.radians(_polynomial(MEAN_ANOMALY, century))
-    eccentricity = _polynomial(ECCENTRICITY, century)
+    mean_longitude = polynomial(MEAN_LONGITUDE, century) % FULL_TURN_DEG
+    anomaly = math.radians(polynomial(MEAN_ANOMALY, century))
+    eccentricity = polynomial(ECCENTRICITY, century)
     centre = (
-        math.sin(anomaly) * _polynomial(CENTRE_FIRST, century)
-        + math.sin(2 * anomaly) * _polynomial(CENTRE_SECOND, century)
+        math.sin(anomaly) * polynomial(CENTRE_FIRST, century)
+        + math.sin(2 * anomaly) * polynomial(CENTRE_SECOND, century)
         + math.sin(THIRD_HARMONIC * anomaly) * CENTRE_THIRD
     )
-    node = math.radians(_polynomial(NODE, century))
+    node = math.radians(polynomial(NODE, century))
     apparent_longitude = math.radians(
         mean_longitude + centre - ABERRATION_DEG - NUTATION_DEG * math.sin(node)
     )
     mean_obliquity = (
         OBLIQUITY_DEGREES
-        + (OBLIQUITY_MINUTES + _polynomial(OBLIQUITY_SECONDS, century) / ARC_MINUTES_PER_DEGREE)
+        + (OBLIQUITY_MINUTES + polynomial(OBLIQUITY_SECONDS, century) / ARC_MINUTES_PER_DEGREE)
         / ARC_MINUTES_PER_DEGREE
     )
     obliquity = math.radians(mean_obliquity + OBLIQUITY_NUTATION_DEG * math.cos(node))
