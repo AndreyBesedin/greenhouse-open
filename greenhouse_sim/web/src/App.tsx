@@ -278,11 +278,13 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const field = drawn(fieldProgress);
   // What of the moment asked for failed to arrive, while something else of
   // it is drawn in its place: the scene and the field each say why when
-  // nothing of them is drawn; the crop never says so itself.
+  // nothing of them is drawn; the crop never says so itself; nor does a
+  // thermostat's heater, which the scene then draws off, not as it runs.
   const failures = [
     sceneProgress.shown === null ? null : failureOf("scene", sceneProgress.latest),
     failureOf("crop", cropProgress.latest),
     fieldProgress.shown === null ? null : failureOf("field", fieldProgress.latest),
+    failureOf("equipment", equipment),
   ].filter((failure) => failure !== null);
   const momentFailed = [sceneProgress, cropProgress, fieldProgress].some(({ latest }) =>
     failed(latest),

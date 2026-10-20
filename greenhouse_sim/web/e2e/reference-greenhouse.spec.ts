@@ -39,3 +39,19 @@ test("reference greenhouse: its manifest boots the whole scene, and it is listed
   await page.getByRole("checkbox", { name: "Categories" }).check();
   await expect(page.getByTestId("sensor-category")).toHaveText(["sensor", "camera"]);
 });
+
+// Its thermostat's heater is the run's to say (P10.3): when the simulator
+// cannot say it, the viewer says so, rather than drawing it off unsaid.
+test("reference greenhouse: a heater the run cannot say is reported, not drawn off unsaid", async ({
+  page,
+}) => {
+  await page.route("**/api/scenarios/reference_greenhouse/climate/equipment*", (failing) =>
+    failing.fulfill({ status: 500, json: { error: "a failure for the test" } }),
+  );
+  await page.goto("/?scenario=reference_greenhouse");
+  await expect(page.getByTestId("scene-status")).toContainText("reference_greenhouse, day 0");
+  await expect(page.getByTestId("scene-failures")).toHaveText(
+    "Not drawn as asked: the equipment is not available (the simulator API answered 500).",
+    { timeout: 60_000 },
+  );
+});
