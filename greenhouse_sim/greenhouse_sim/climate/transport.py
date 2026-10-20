@@ -68,8 +68,12 @@ from greenhouse_sim.weather.state import WeatherState
 
 AIR_DENSITY_KG_M3: Final = 1.2
 AIR_HEAT_CAPACITY_J_KG_K: Final = 1005.0
-# Each step takes at most this share of a cell's temperature away.
-STEP_SHARE: Final = 0.5
+# Each step takes at most this share of a cell's temperature away. Up to all
+# of it, every new temperature is a weighted mean of the old ones; this keeps
+# a margin under that bound. Half, as it first was, took twice the steps,
+# which a late day of the reference greenhouse spends most of its 3D air on,
+# for a field within 0.03 K of this one (#198).
+STEP_SHARE: Final = 0.9
 # The longest step, when nothing moves or mixes fast enough to need shorter.
 LONGEST_STEP_S: Final = 10.0
 GRAMS_PER_KG: Final = 1000.0
