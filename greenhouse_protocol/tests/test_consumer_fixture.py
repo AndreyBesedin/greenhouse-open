@@ -338,9 +338,10 @@ def test_every_answer_in_the_fixture_is_its_route_s_payload() -> None:
         elif path.endswith("/greenhouse"):
             GreenhouseDescription.model_validate(body)
         elif path.endswith("/observations"):
-            assert check_batch(ObservationBatch.model_validate(body)) == []
+            batch = ObservationBatch.model_validate(body)
+            assert check_batch(batch, greenhouse_id=GREENHOUSE_ID) == []
         elif path.endswith("/events"):
-            assert check_batch(EventBatch.model_validate(body)) == []
+            assert check_batch(EventBatch.model_validate(body), greenhouse_id=GREENHOUSE_ID) == []
         else:
             raise AssertionError(f"a step the interface does not describe: {path}")
 
@@ -348,8 +349,8 @@ def test_every_answer_in_the_fixture_is_its_route_s_payload() -> None:
 def test_the_fixture_s_polls_follow_the_rules_together() -> None:
     exchange = json.loads(FIXTURE.read_text())
 
-    assert check_polls(_batches(exchange, "observations")) == []
-    assert check_polls(_batches(exchange, "events")) == []
+    assert check_polls(_batches(exchange, "observations"), greenhouse_id=GREENHOUSE_ID) == []
+    assert check_polls(_batches(exchange, "events"), greenhouse_id=GREENHOUSE_ID) == []
 
 
 def test_the_fixture_shows_what_a_client_must_handle() -> None:

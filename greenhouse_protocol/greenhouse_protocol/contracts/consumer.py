@@ -67,10 +67,10 @@ The rules a producer keeps, which `check_batch` and `check_polls` test:
   log's slice, nothing filtered out of it.
 - Delivery order within a batch is non-decreasing, and every record was
   delivered at or before `simulated_now`.
-- Two polls of the same epoch at the same `after` agree: the earlier
-  batch's records, the records themselves and not only their identities,
-  are a prefix of the later's. A log is appended to, never rewritten, so a
-  repoll duplicates nothing a client already stored.
+- The record at a position never changes: two polls of the same epoch
+  that both reach a position hold the same record there, the record
+  itself and not only its identity. A log is appended to, never
+  rewritten, so a repoll duplicates nothing a client already stored.
 - Delivery order holds across batches as within one: the first record of
   a batch was delivered no earlier than the last of the batch before it.
 - Within an epoch, a non-empty batch's `after` is `0` or a `next` the
@@ -78,7 +78,12 @@ The rules a producer keeps, which `check_batch` and `check_polls` test:
   never given. A cursor from an earlier epoch is answered with an empty
   batch of the current epoch at the same `after`; the client sees the epoch
   change and starts again from `0`.
-- An epoch never decreases.
+- An epoch never decreases, and within an epoch the clock never turns
+  back: consecutive batches' `simulated_now` are non-decreasing. A
+  timeline that starts over is a new epoch, not an earlier clock.
+- Every record names the run's greenhouse. A batch does not carry the
+  run's `greenhouse_id`, so a client checks it against the run
+  descriptor's: `check_batch(batch, greenhouse_id=run.greenhouse_id)`.
 
 ## Fixtures
 
@@ -90,7 +95,7 @@ before any producer serves it, and a producer's answers are compared with
 it; `tests/test_consumer_fixture.py` writes it and holds it to the rules.
 """
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from datetime import datetime
 from typing import Final
 
@@ -213,9 +218,10 @@ def check_run(run: RunDescriptor) -> list[str]:
     return violations
 
 
-def check_batch(batch: Batch) -> list[str]:
+def check_batch(batch: Batch, *, greenhouse_id: str | None = None) -> list[str]:
     """What one batch must satisfy on its own: dense positions, delivery
-    order, nothing from after its clock, and conforming records."""
+    order, nothing from after its clock, conforming records, and, given the
+    run's `greenhouse_id`, records of that greenhouse only."""
     label = _label(batch)
     violations: list[str] = []
     if batch.next < batch.after:
@@ -227,6 +233,11 @@ def check_batch(batch: Batch) -> list[str]:
         )
     previous: datetime | None = None
     for record in batch.records:
+        if greenhouse_id is not None and record.greenhouse_id != greenhouse_id:
+            violations.append(
+                f"{label} delivers {record_id(record)!r} of greenhouse "
+                f"{record.greenhouse_id!r}, not the run's ({greenhouse_id!r})"
+            )
         delivered = delivered_at(record)
         if delivered.tzinfo is None or delivered.utcoffset() is None:
             # The record checks below report it; delivery order cannot be
@@ -250,65 +261,67 @@ def check_batch(batch: Batch) -> list[str]:
     return violations
 
 
-def check_polls(batches: Iterable[Batch]) -> list[str]:
+def check_polls(batches: Iterable[Batch], *, greenhouse_id: str | None = None) -> list[str]:
     """What a sequence of batches of one log, as a client received them,
-    must satisfy together: epochs that never decrease, repolls that extend
-    rather than rewrite, cursors the producer gave, and no record twice."""
+    must satisfy together: epochs that never decrease, a clock that never
+    turns back within one, repolls that extend rather than rewrite, cursors
+    the producer gave, and no record twice."""
     polls = list(batches)
     violations: list[str] = []
     for batch in polls:
-        violations += check_batch(batch)
+        violations += check_batch(batch, greenhouse_id=greenhouse_id)
     if len({batch.run_id for batch in polls}) > 1:
         violations.append(f"the polls name several runs: {sorted({b.run_id for b in polls})}")
 
     epoch = -1
     given: set[int] = set()
     seen: dict[str, int] = {}
-    # What was delivered at each cursor, the records themselves: a repoll
-    # must hold the same records, not only the same identities.
-    at: dict[int, Sequence[Observation | Event]] = {}
-    # When the record at each position was delivered, across batches.
-    delivered: dict[int, datetime] = {}
+    # The log as the polls revealed it, the record at each position: a
+    # repoll must hold the same record there, not only the same identity.
+    log: dict[int, Observation | Event] = {}
+    clock: datetime | None = None
     for index, batch in enumerate(polls):
+        label = f"{_label(batch)} (poll {index})"
         if batch.epoch < epoch:
-            violations.append(f"{_label(batch)} (poll {index}) returns to epoch {batch.epoch}")
+            violations.append(f"{label} returns to epoch {batch.epoch}")
         if batch.epoch != epoch:
-            epoch, given, seen, at, delivered = batch.epoch, {FIRST_CURSOR}, {}, {}, {}
+            epoch, given, seen, log, clock = batch.epoch, {FIRST_CURSOR}, {}, {}, None
+        if clock is not None and batch.simulated_now < clock:
+            violations.append(
+                f"{label} turns the clock back within epoch {epoch}: "
+                f"{batch.simulated_now.isoformat()} after {clock.isoformat()}; "
+                "a timeline that starts over is a new epoch"
+            )
+        clock = batch.simulated_now if clock is None else max(clock, batch.simulated_now)
         records: list[Observation | Event] = list(batch.records)
         if records and batch.after not in given:
             violations.append(
-                f"{_label(batch)} (poll {index}) answers after={batch.after}, "
+                f"{label} answers after={batch.after}, "
                 "a cursor the producer never gave in this epoch"
             )
-        earlier = at.get(batch.after)
-        # A repoll may be cut shorter or longer than the one before (its
-        # limit, or more having arrived); the records both hold must agree.
-        shared = min(len(earlier), len(records)) if earlier is not None else 0
-        if earlier is not None and list(earlier[:shared]) != records[:shared]:
-            violations.append(
-                f"{_label(batch)} (poll {index}) rewrites the log: a repoll at "
-                f"after={batch.after} no longer starts with what was delivered before"
-            )
-        elif earlier is None or len(records) > len(earlier):
-            at[batch.after] = records
         for position, record in enumerate(records, start=batch.after + 1):
             identity = record_id(record)
+            earlier = log.get(position)
+            if earlier is not None and earlier != record:
+                violations.append(
+                    f"{label} rewrites the log at position {position}: {identity!r} is not "
+                    f"the record delivered there before ({record_id(earlier)!r})"
+                )
+            log.setdefault(position, record)
             delivered_before = seen.get(identity)
             if delivered_before is not None and delivered_before != position:
                 violations.append(
-                    f"{_label(batch)} (poll {index}) delivers {identity!r} again, "
+                    f"{label} delivers {identity!r} again, "
                     f"at position {position} after position {delivered_before}"
                 )
             seen.setdefault(identity, position)
-            instant = delivered_at(record)
-            before = delivered.get(position - 1)
-            if before is not None and instant < before:
+            before = log.get(position - 1)
+            if before is not None and delivered_at(record) < delivered_at(before):
                 violations.append(
-                    f"{_label(batch)} (poll {index}) is out of delivery order across batches: "
-                    f"{identity!r} at position {position} ({instant.isoformat()}) was delivered "
-                    f"before position {position - 1} ({before.isoformat()})"
+                    f"{label} is out of delivery order across batches: {identity!r} at position "
+                    f"{position} ({delivered_at(record).isoformat()}) was delivered before "
+                    f"position {position - 1} ({delivered_at(before).isoformat()})"
                 )
-            delivered.setdefault(position, instant)
         given.add(batch.next)
     return violations
 
