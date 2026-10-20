@@ -118,3 +118,54 @@ test("crop: shown from the list, the reference greenhouse opens on its first day
     page.getByRole("figure", { name: "House air" }).getByTestId("house-air-°C"),
   ).toHaveText(/^Air [\d.]+ °C, all off [\d.]+ °C$/, ARRIVES);
 });
+
+test("crop: stepped on from its opening day, a day given up on the way, the crop is drawn throughout (#197)", async ({
+  page,
+}) => {
+  test.setTimeout(300_000);
+  // From its opening day (86), where the viewer opens it, as the QA stepped
+  // on from it; the days before it are worked out from the run's start, so
+  // the simulator's tests cover the crop on days 83 and 85 (#197). Some
+  // 13,000 entities are drawn on these days; without a day's crop, the
+  // scene draws its transplants in its place, some 3,000.
+  const WHOLE = 10_000;
+  const status = page.getByTestId("scene-status");
+  const moment = page.getByTestId("climate-time");
+  const pending = page.getByTestId("climate-pending");
+  const next = page.getByRole("group", { name: "Climate run" }).getByRole("button", {
+    name: "Next day",
+  });
+  /** The entities drawn, as the scene's status counts them. */
+  const drawn = async (): Promise<number> =>
+    Number(/([\d,]+) entities/.exec((await status.textContent()) ?? "")?.[1]?.replaceAll(",", ""));
+  /** What is drawn while a step is on its way, sampled until it arrives. */
+  async function whileOnItsWay(day: number): Promise<number[]> {
+    const seen: number[] = [];
+    while ((await moment.textContent()) !== `day ${day}, 10 min` || (await pending.isVisible())) {
+      seen.push(await drawn());
+      await page.waitForTimeout(250);
+    }
+    return seen;
+  }
+
+  await page.goto(`/?scenario=reference_greenhouse&field=climate&t=${86 * DAY_S + 600}`);
+  await expect(moment).toHaveText("day 86, 10 min", ARRIVES);
+  await expect(pending).toBeHidden(ARRIVES);
+  await expect(status).toContainText("reference_greenhouse, day 86,");
+  const counts = [await drawn()];
+
+  // Day 87 asked for and given up for 88 before it arrives: two requests
+  // overlapping, the first superseded.
+  await next.click();
+  await next.click();
+  const steps = [...(await whileOnItsWay(88))];
+  counts.push(await drawn());
+  for (const day of [89, 90]) {
+    await next.click();
+    steps.push(...(await whileOnItsWay(day)));
+    await expect(status).toContainText(`reference_greenhouse, day ${day},`);
+    counts.push(await drawn());
+  }
+
+  expect(Math.min(...counts, ...steps)).toBeGreaterThan(WHOLE);
+});
