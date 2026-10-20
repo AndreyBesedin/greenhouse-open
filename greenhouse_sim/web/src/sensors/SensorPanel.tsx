@@ -1,3 +1,4 @@
+import { CHART_WIDTH, chartY, polylinePoints } from "../charts/chart";
 import { dayStart } from "../clock";
 import { describeTime } from "../fields/ClimateTime";
 import { chartRange } from "../fields/ProbeCharts";
@@ -14,7 +15,6 @@ import {
 } from "./readings";
 
 // The chart's size in its own units, and its readings' dots.
-const WIDTH = 240;
 const HEIGHT = 70;
 const DOT_RADIUS = 2;
 
@@ -44,12 +44,12 @@ function SensorChart({
   );
   const from = dayStart(until);
   const span = Math.max(until, ...truth.map(([time]) => time), from + 1) - from;
-  const x = (time: number) => ((time - from) / span) * WIDTH;
-  const y = (value: number) => HEIGHT - ((value - range.min) / (range.max - range.min)) * HEIGHT;
+  const x = (time: number) => ((time - from) / span) * CHART_WIDTH;
+  const y = (value: number) => chartY(value, range, HEIGHT);
   return (
     <svg
       className="sensor-chart"
-      viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+      viewBox={`0 0 ${CHART_WIDTH} ${HEIGHT}`}
       role="img"
       aria-label={`${sensorId} read${truth.length > 0 ? " against the truth" : ""}, ${formatValue(range.min)} to ${formatValue(range.max)}`}
       data-testid="sensor-chart"
@@ -58,18 +58,24 @@ function SensorChart({
         <polyline
           className="sensor-chart-off"
           data-testid="sensor-chart-off"
-          points={off
-            .map(([time, value]) => `${x(time).toFixed(1)},${y(value).toFixed(1)}`)
-            .join(" ")}
+          points={polylinePoints(
+            off.map(([time]) => x(time)),
+            off.map(([, value]) => value),
+            range,
+            HEIGHT,
+          )}
         />
       )}
       {truth.length > 0 && (
         <polyline
           className="sensor-chart-truth"
           data-testid="sensor-chart-truth"
-          points={truth
-            .map(([time, value]) => `${x(time).toFixed(1)},${y(value).toFixed(1)}`)
-            .join(" ")}
+          points={polylinePoints(
+            truth.map(([time]) => x(time)),
+            truth.map(([, value]) => value),
+            range,
+            HEIGHT,
+          )}
         />
       )}
       {observed.map(([time, value]) => (

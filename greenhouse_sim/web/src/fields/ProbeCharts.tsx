@@ -1,3 +1,4 @@
+import { CHART_WIDTH, polylinePoints } from "../charts/chart";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 import type { Point3 } from "../world";
 import { describeTime } from "./ClimateTime";
@@ -99,7 +100,6 @@ export async function loadProbeCharts(
 }
 
 // A chart's size in its own units.
-const WIDTH = 240;
 const HEIGHT = 70;
 
 /** The quantities charted, each with its unit and how many decimals it is
@@ -122,7 +122,7 @@ export function chartRange(...series: number[][]): { min: number; max: number } 
 /** Where a moment lies across a chart that starts at `from`, as wide as a
  * grid run's longest. */
 function across(time: number, from: number): number {
-  return ((time - from) / GRID_RUN_S) * WIDTH;
+  return ((time - from) / GRID_RUN_S) * CHART_WIDTH;
 }
 
 /** A run's values as an SVG polyline's points: across the grid run they
@@ -134,13 +134,8 @@ export function chartPoints(
   range: { min: number; max: number },
 ): string {
   const from = times[0] ?? 0;
-  return values
-    .map((value, index) => {
-      const x = across(times[index] ?? 0, from);
-      const y = HEIGHT - ((value - range.min) / (range.max - range.min)) * HEIGHT;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
+  const xs = values.map((_, index) => across(times[index] ?? 0, from));
+  return polylinePoints(xs, values, range, HEIGHT);
 }
 
 function format(value: number | undefined): string {
@@ -187,7 +182,7 @@ export function ProbeCharts({ state, time }: { state: ProbeChartsState; time: nu
               return (
                 <div key={key} className="probe-chart">
                   <svg
-                    viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+                    viewBox={`0 0 ${CHART_WIDTH} ${HEIGHT}`}
                     role="img"
                     aria-label={`${name} ${quantity}, ${format(range.min)} to ${format(range.max)} ${unit}`}
                   >

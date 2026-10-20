@@ -1,24 +1,17 @@
+import { CHART_WIDTH, polylinePoints } from "../charts/chart";
 import { useLoad } from "../useLoad";
 import { type ComparisonRequest, comparisonKey, loadComparison, type TwoSeries } from "./branches";
 import type { CheckpointSummary } from "./checkpoints";
 
 // Each chart, in its own units: A drawn solid, B dashed.
-const WIDTH = 240;
 const HEIGHT = 32;
-const POINT_DECIMALS = 1;
 
 function polyline(at: number[], values: number[], low: number, high: number): string {
   const first = at[0] ?? 0;
   const span = (at.at(-1) ?? first) - first;
-  const x = (point: number) => (span === 0 ? WIDTH / 2 : ((point - first) / span) * WIDTH);
-  const y = (value: number) =>
-    high === low ? HEIGHT / 2 : HEIGHT - ((value - low) / (high - low)) * HEIGHT;
-  return at
-    .map(
-      (point, index) =>
-        `${x(point).toFixed(POINT_DECIMALS)},${y(values[index] ?? low).toFixed(POINT_DECIMALS)}`,
-    )
-    .join(" ");
+  const x = (point: number) =>
+    span === 0 ? CHART_WIDTH / 2 : ((point - first) / span) * CHART_WIDTH;
+  return polylinePoints(at.map(x), values, { min: low, max: high }, HEIGHT);
 }
 
 /** Two branches' latest values in words: "A 18.9 °C, B 16.2 °C". */
@@ -52,7 +45,7 @@ function TwoLines({
       </span>
       <svg
         className="house-air-chart"
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        viewBox={`0 0 ${CHART_WIDTH} ${HEIGHT}`}
         preserveAspectRatio="none"
         role="img"
         aria-label={`${name}, branch A and branch B`}

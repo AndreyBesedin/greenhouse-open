@@ -1,3 +1,4 @@
+import { CHART_WIDTH, polylinePoints } from "../charts/chart";
 import { DAY_S, dayStart } from "../clock";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 
@@ -26,9 +27,7 @@ export type HouseAirState =
 
 const SERIES = ["temperature_c", "humidity_pct", "co2_ppm", "removed_kg", "condensed_kg"] as const;
 // Each quantity's chart, in its own units, and how its range is written.
-const WIDTH = 240;
 const HEIGHT = 28;
-const POINT_DECIMALS = 1;
 const RANGE_DECIMALS = 1;
 const CHARTED: readonly { name: string; unit: string; of: (s: HouseSeries) => number[] }[] = [
   { name: "Air", unit: "°C", of: (s) => s.temperature_c },
@@ -95,15 +94,8 @@ export async function loadHouseAir(
 function polyline(times: number[], values: number[], low: number, high: number): string {
   // Across the day of the trace's last moment, from its start.
   const from = dayStart(times.at(-1) ?? 0);
-  const x = (seconds: number) => ((seconds - from) / DAY_S) * WIDTH;
-  const y = (value: number) =>
-    high === low ? HEIGHT / 2 : HEIGHT - ((value - low) / (high - low)) * HEIGHT;
-  return times
-    .map((time, index) => {
-      const value = values[index] ?? low;
-      return `${x(time).toFixed(POINT_DECIMALS)},${y(value).toFixed(POINT_DECIMALS)}`;
-    })
-    .join(" ");
+  const x = (seconds: number) => ((seconds - from) / DAY_S) * CHART_WIDTH;
+  return polylinePoints(times.map(x), values, { min: low, max: high }, HEIGHT);
 }
 
 /**
@@ -140,7 +132,7 @@ export function HouseAir({ state }: { state: HouseAirState }) {
             <span data-testid={`house-air-${unit}`}>{text}</span>
             <svg
               className="house-air-chart"
-              viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+              viewBox={`0 0 ${CHART_WIDTH} ${HEIGHT}`}
               preserveAspectRatio="none"
               role="img"
               aria-label={`The house's ${name.toLowerCase()} through the day`}

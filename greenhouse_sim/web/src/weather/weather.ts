@@ -3,6 +3,7 @@ import { inWorld } from "../debug/dimensions";
 import type { OverlayPrimitive } from "../debug/overlays";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import { runParameters, scenarioUrl } from "../scene/run";
+import { PERCENT } from "../units";
 import type { Point3 } from "../world";
 
 /** Where a scenario's world lies on the Earth: its latitude and longitude in
@@ -354,8 +355,6 @@ export function describeSun(sun: SunPosition): string {
   }
   return `${sun.elevation_deg.toFixed(SPEED_DECIMALS)}° up, at ${Math.round(sun.azimuth_deg)}° (${compassPoint(sun.azimuth_deg)})`;
 }
-
-const PERCENT = 100;
 
 /** The light outside, in words: "572 W/m², 28% of it the sky's, PAR 1229
  * µmol/m²/s", or "dark". */

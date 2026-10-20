@@ -8,6 +8,7 @@ import {
   type SensorFreshness,
   secondsInto,
 } from "../sensors/readings";
+import { PERCENT } from "../units";
 
 /** A command a run gave its equipment, a door or a vent, at a moment. */
 export interface GivenCommand {
@@ -171,8 +172,6 @@ export async function loadRunState(
     };
   }
 }
-
-const PERCENT = 100;
 
 /** A level, or how far a door stands open, in %. */
 function percent(level: number): string {
