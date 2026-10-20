@@ -13,13 +13,15 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import air_through_a_run
-from greenhouse_sim.services.scenarios import SceneChanges, changed
+from greenhouse_sim.services.scenarios import SceneChanges, changed, layout_name
 from greenhouse_sim.world.equipment import Fan, Heater
 from greenhouse_sim.world.geometry import Quaternion, Transform, Vector3
 from greenhouse_sim.world.moves import Move, moved
 from greenhouse_sim.world.sensors import Camera, PointSensor
 
 REFERENCE = SCENARIO_REGISTRY["reference_greenhouse"]
+# 12 m long, its heater's base at x = 11.2 m, its box reaching 11.5 m.
+BOX = SCENARIO_REGISTRY["climate_box"]
 AT_THE_ORIGIN = Transform(position=Vector3(x=0.0, y=0.0, z=0.0))
 # A greenhouse turned a quarter turn anticlockwise in the world, and set
 # aside: the world's x runs along its -y.
@@ -134,3 +136,49 @@ def test_a_moved_layout_is_another_run_and_the_api_draws_it() -> None:
     assert heater["transform"]["position"] == {"x": 10.2, "y": 1.2, "z": 0.0}
     refused = respond("GET", "/api/scenarios/reference_greenhouse/scene?layout=default~heater:99:0")
     assert refused.status == HTTPStatus.BAD_REQUEST
+
+
+def test_moves_are_checked_in_the_greenhouse_as_its_dimensions_change_it() -> None:
+    def heater_x(name: str, length_m: float) -> float:
+        config = changed(BOX, SceneChanges(layout=name, envelope={"length": length_m}))
+        heater = next(p for p in config.layout.equipment if isinstance(p, Heater))
+        return heater.base.x
+
+    # Into the room 2 m more make, and out of the metre fewer take.
+    assert heater_x("default~heater:1.5:0", 14.0) == pytest.approx(12.7)
+    assert heater_x("default~heater:-2:0", 11.0) == pytest.approx(9.2)
+    with pytest.raises(InvalidRequest, match="moved so, outside the greenhouse: heater"):
+        heater_x("default~heater:1.5:0", 12.0)
+    with pytest.raises(InvalidRequest, match="no such greenhouse"):
+        heater_x("default", 11.0)
+    # The layout route serves a moved layout, as its own file would be.
+    served = respond("GET", "/api/scenarios/climate_box/layout?layout=default~heater:-1:0.5")
+    assert served.status == HTTPStatus.OK
+    assert isinstance(served.body, dict)
+    document: dict[str, Any] = served.body
+    heater = next(p for p in document["equipment"] if p["actuator_id"] == "heater")
+    assert (heater["base"]["x"], heater["base"]["y"]) == pytest.approx((10.2, 1.2))
+
+
+def test_the_same_moves_however_written_are_the_same_run() -> None:
+    assert layout_name("default") == "default"
+    assert layout_name("default~heater:-1:0.50,co2:0:1") == "default~co2:0.0:1.0,heater:-1.0:0.5"
+    # A move of nought is none, and no moves left is the layout itself.
+    assert layout_name("default~heater:-0:0,co2:0:1") == "default~co2:0.0:1.0"
+    assert layout_name("benches~heater:0:-0.0") == "benches"
+    assert layout_name(layout_name("default~heater:-1:0.5")) == "default~heater:-1.0:0.5"
+
+    runs = {
+        air_through_a_run("climate_box", layout=name)[1]
+        for name in [
+            "default~heater:-1:0,temperature_front:0.5:0",
+            "default~temperature_front:0.5:0,heater:-1:0",
+            "default~heater:-1.0:0.0,temperature_front:0.50:-0",
+        ]
+    }
+    assert len(runs) == 1
+    # No moves at all is the scenario's own run.
+    assert (
+        air_through_a_run("climate_box", layout="default~heater:0:0")[1]
+        == (air_through_a_run("climate_box")[1])
+    )
