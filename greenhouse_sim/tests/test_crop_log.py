@@ -41,9 +41,12 @@ def test_a_day_s_walk_records_every_plant_at_noon_with_the_run_s_identity() -> N
     assert check_observations(walked) == []
     # The same walk again is the same: its errors are drawn from the seed.
     assert crop_records(SCENARIO, 1, start, run_id)[0] == walked
-    # Transplants a day on: no fruit yet, some height.
+    # Transplants a day on: no fruit yet, some height. A walk can miss a
+    # fruit or count one twice, but counts none where there is none.
     heights = [o.value for o in walked if o.observation_type == ObservationType.VISIBLE_HEIGHT_CM]
     assert all(isinstance(h, float) and h > 0 for h in heights)
+    counted = {ObservationType.VISIBLE_FRUIT_COUNT, ObservationType.RIPE_FRUIT_COUNT}
+    assert {o.value for o in walked if o.observation_type in counted} == {0.0}
 
 
 def test_a_scenario_with_the_simple_crop_has_no_records_of_it() -> None:

@@ -137,7 +137,12 @@ def _walk(
 
 
 def _counted(count: int, config: ScenarioConfig, rng: np.random.Generator) -> float:
-    """A count as a walk records it: one off, either way, now and then."""
+    """A count as a walk records it: one off, either way, now and then, as a
+    fruit is missed or counted twice; but none where there is none, which
+    is no fruit to miscount. The draws are made either way, so that a plant
+    without fruit leaves the others' counts as they were."""
     if rng.uniform() < config.fruit_count_noise_probability:
-        count = max(0, count + int(rng.choice(MISCOUNTS)))
+        miscount = int(rng.choice(MISCOUNTS))
+        if count > 0:
+            count += miscount
     return float(count)
