@@ -13,6 +13,7 @@ from typing import Annotated, Final
 
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, PositiveFloat
 
+from greenhouse_sim.units import HALF_TURN_DEG
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.site import Bearing, Site, bearing
 
@@ -21,8 +22,6 @@ type Percent = Annotated[float, Field(ge=0.0, le=100.0)]
 OUTSIDE_TEMPERATURE_C: Final = 10.0
 OUTSIDE_HUMIDITY_PCT: Final = 80.0
 OUTSIDE_CO2_PPM: Final = 420.0
-# The wind blows to the bearing opposite the one it blows from.
-HALF_TURN_DEG: Final = 180.0
 
 
 class OutsideConditions(BaseModel):
@@ -56,5 +55,6 @@ class WeatherState(OutsideConditions):
         it blows to, at its speed; nothing, if its direction is not known."""
         if self.wind_direction_deg is None:
             return Vector3(x=0.0, y=0.0, z=0.0)
+        # The wind blows to the bearing opposite the one it blows from.
         towards = site.towards(bearing(self.wind_direction_deg + HALF_TURN_DEG))
         return Vector3(x=self.wind_speed_m_s * towards.x, y=self.wind_speed_m_s * towards.y, z=0.0)

@@ -23,6 +23,7 @@ from greenhouse_sim.domain.equipment import ActuatorKind
 from greenhouse_sim.domain.layout import FixtureKind, Material, Obstruction
 from greenhouse_sim.world.fixtures import Fixture
 from greenhouse_sim.world.geometry import Box, Cylinder, Quaternion, Transform, Vector3
+from greenhouse_sim.world.identifiers import ItemId
 
 # A fan's housing, along its axis, in metres.
 FAN_DEPTH_M: Final = 0.3
@@ -36,7 +37,7 @@ _HANGING_OBSTRUCTS: Final[frozenset[Obstruction]] = frozenset()
 class _Equipment(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    actuator_id: str
+    actuator_id: ItemId
     # Which way it faces, a turn about the vertical from the greenhouse's x;
     # a fan blows that way.
     heading: float = 0.0

@@ -26,14 +26,13 @@ from greenhouse_sim.services.crop import crop_scene, forget_crops, run_crop
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import field, forget_climate_runs, grid
 from greenhouse_sim.services.scenarios import initial_scene, plant_ids, scenario
+from greenhouse_sim.units import HOUR_S, HOURS_A_DAY, PERCENT
 
 # The moment of the last day measured that an hour of air cell by cell is
 # drawn for: noon, when the sun, the vents and the fans are all at work in
 # the reference run.
-NOON_S: Final = 12 * 3600.0
+NOON_S: Final = 12 * HOUR_S
 MEBIBYTE: Final = 1024 * 1024
-PERCENT: Final = 100
-HOURS_A_DAY: Final = 24
 # The report's times are written to the millisecond.
 REPORTED_DECIMALS: Final = 3
 
@@ -177,14 +176,14 @@ def bottleneck(per_day: DayCosts, cell_by_cell_hour_s: float) -> str:
 
 def costs_json(costs: SimulatorCosts) -> str:
     """The costs as the report writes them, numbers rounded to milliseconds."""
-    return json.dumps(_rounded(costs.model_dump(mode="json")), indent=2) + "\n"
+    return json.dumps(_reported(costs.model_dump(mode="json")), indent=2) + "\n"
 
 
-def _rounded(value: object) -> object:
+def _reported(value: object) -> object:
     if isinstance(value, float):
         return round(value, REPORTED_DECIMALS)
     if isinstance(value, dict):
-        return {key: _rounded(item) for key, item in value.items()}
+        return {key: _reported(item) for key, item in value.items()}
     if isinstance(value, list):
-        return [_rounded(item) for item in value]
+        return [_reported(item) for item in value]
     return value

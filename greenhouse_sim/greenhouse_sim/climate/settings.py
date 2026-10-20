@@ -5,15 +5,14 @@ fast the air mixes. The outside
 itself is the scenario's weather (`greenhouse_sim.weather`, P07.1).
 """
 
-from typing import Annotated, Final
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, PositiveFloat
 
 from greenhouse_sim.climate.glazing import most_u_w_m2k
+from greenhouse_sim.units import HOUR_S
 
 type Percent = Annotated[float, Field(ge=0.0, le=100.0)]
-
-SECONDS_PER_HOUR: Final = 3600.0
 
 
 class ClimateSettings(BaseModel):
@@ -47,6 +46,4 @@ class ClimateSettings(BaseModel):
     def infiltration_per_s(self, wind_m_s: float) -> float:
         """The share of the house's air that leaks out each second in a wind,
         replaced by the outside's."""
-        return (
-            self.infiltration_per_h + self.infiltration_per_h_per_m_s * wind_m_s
-        ) / SECONDS_PER_HOUR
+        return (self.infiltration_per_h + self.infiltration_per_h_per_m_s * wind_m_s) / HOUR_S

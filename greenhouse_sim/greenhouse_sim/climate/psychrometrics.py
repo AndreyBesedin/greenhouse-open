@@ -14,12 +14,13 @@ from typing import Final
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
+from greenhouse_sim.units import PERCENT
+
 # Standard atmospheric pressure, in pascals.
 ATMOSPHERE_PA: Final = 101_325.0
 # Water's molar mass over dry air's: grams of water per gram of air for each
 # unit of vapour pressure share, times 1000 for grams per kilogram.
 WATER_PER_AIR_G_KG: Final = 622.0
-PERCENT: Final = 100.0
 # Buck's (1996) saturation pressure over water: 611.21 Pa at 0 °C, with
 # these constants.
 _BUCK_ZERO_PA: Final = 611.21
