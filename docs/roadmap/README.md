@@ -278,6 +278,33 @@ take every frame on time, and draw perfect images. Planned then:
 - images as cameras make them: exposure, noise, motion blur and lens
   distortion, with the distortion in the camera's intrinsics.
 
+**Climate setpoints** (recorded 2026-10-20, after P10). A target, set by
+a person, for the air's temperature and humidity, which runs the house's
+equipment as a climate computer would. Today the reference greenhouse heats
+to a setpoint (decision 0042) and runs the rest of its equipment by the
+clock. Planned then:
+
+- **air temperature:** the heater's thermostat with its setpoints set from
+  the viewer, and vents and fans opened above a venting setpoint, in place
+  of their daily commands, which waste heat on a cold day and let a bright
+  June morning pass 30 °C;
+- **humidity:** the dehumidifier, and the vents opened, above a target.
+
+Each target is a run's input: changed, it makes another run, as a command
+does. Targets set from outside the simulator, by a consumer, wait for an
+actuation interface, which P10 leaves out.
+
+**CO₂ and light targets** (recorded 2026-10-20, future work, after the
+climate setpoints). Each needs equipment the simulator does not have yet:
+
+- **CO₂:** a CO₂ doser, adding CO₂ to the air below a target while the
+  vents are shut;
+- **PAR** (the light in the 400 to 700 nm band plants use, in µmol/m²/s):
+  grow lamps, lighting the crop below a target by day length or by the
+  light the sun gives, their light reaching the crop as the sun's does
+  (P08) and their heat the air. The reference greenhouse's PAR is the
+  sun's alone, so it falls to 0 every night.
+
 ```mermaid
 flowchart LR
     PM1["P-1 Restructure greenhouse_sim"] --> P00["P00 Browser renderer"]
