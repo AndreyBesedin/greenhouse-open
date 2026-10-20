@@ -7,6 +7,14 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: air past water's boiling point holds any water, and
+  none condenses from it. A cell the heater warmed past 100 °C used to lose
+  more water than it held, as the saturation ratio's formula turns
+  negative there: in the reference greenhouse's first minutes the house's
+  humidity cell by cell ran to ±10⁸ %, and its hygrometers, which read the
+  grid run through a run's first two hours, read 0% and then 100% for over
+  an hour. They now read 43 to 89%. The reference run's day 0 replay digest
+  changes with them; days 1 and 2, read from the house's air, do not.
 - `greenhouse-sim`: the reference greenhouse's back temperature sensor
   drifts 0.001 °C an hour, not 0.01. Its drift grows from the run's start,
   and over the 120-day season 0.01 added 29 °C, so it read 42 to 58 °C in
@@ -63,6 +71,15 @@ breaks the conformance checks is a major version.
   `check_polls` hold a producer to the rules, and a recorded exchange
   (`tests/fixtures/consumer/exchange.json`) lets a client be built before
   any producer serves it.
+- `greenhouse-sim`: the identifier of a piece of equipment
+  (`actuator_id`), a sensor (`sensor_id`) or a door or vent (`opening_id`)
+  holds only letters, digits, `_`, `.` and `-`, as `layout.schema.json` and
+  `scenario.schema.json` now say. The API's parameters write identifiers
+  between `:` and `,`, so an item named otherwise could not be set,
+  scheduled or moved; a layout or scenario that names one is now refused
+  as it is read. Scenario manifests are in format 2 for it
+  (`schema_version`, decision 0031); a format 1 manifest is read as format
+  2, and refused only if it names an item otherwise.
 
 ## 0.2.0 - 2026-10-19
 

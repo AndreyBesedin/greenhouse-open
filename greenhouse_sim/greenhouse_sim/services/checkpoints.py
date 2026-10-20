@@ -36,7 +36,6 @@ the same run with other commands from its moment on.
 
 import dataclasses
 import gzip
-import hashlib
 import json
 import math
 from collections.abc import Mapping, Sequence
@@ -52,6 +51,7 @@ from greenhouse_sim.climate.day import window_start
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.climate.psychrometrics import saturation_ratio_g_kg
 from greenhouse_sim.core.clock import DAY_S, days_ended
+from greenhouse_sim.digests import short_digest
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
@@ -119,7 +119,7 @@ class Checkpoint(BaseModel):
 
     def identifier(self) -> str:
         """A digest of its content, which names it."""
-        return hashlib.sha256(self.model_dump_json().encode()).hexdigest()[:ID_LENGTH]
+        return short_digest(self.model_dump_json(), ID_LENGTH)
 
 
 class CheckpointSummary(BaseModel):
@@ -208,10 +208,10 @@ def upload_checkpoint(document: JsonValue) -> CheckpointSummary:
     """A checkpoint uploaded, checked, and kept. Refused if it is not one,
     is in a format this simulator does not read, was made with another
     version of its scenario's manifest, or does not fit its scenario's run."""
-    return _kept(_checked(document))
+    return _kept(_checked_upload(document))
 
 
-def _checked(document: JsonValue) -> Checkpoint:
+def _checked_upload(document: JsonValue) -> Checkpoint:
     """A checkpoint uploaded, checked as `upload_checkpoint` says."""
     if isinstance(document, dict) and document.get("checkpoint_format") != CHECKPOINT_FORMAT:
         raise InvalidRequest(
@@ -324,7 +324,9 @@ def load_opening(scenario_id: str) -> list[CheckpointSummary]:
         return []
     return [
         _kept(
-            _checked(json.loads(gzip.decompress(opening_file(scenario_id, off).read_bytes()))),
+            _checked_upload(
+                json.loads(gzip.decompress(opening_file(scenario_id, off).read_bytes()))
+            ),
             opening=True,
         )
         for off in (False, True)

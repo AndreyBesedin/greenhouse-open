@@ -13,13 +13,14 @@ from greenhouse_sim.climate.psychrometrics import (
     saturation_pressure_pa,
     saturation_ratio_g_kg,
 )
-from greenhouse_sim.climate.sources import SECONDS_PER_HOUR, source_terms
+from greenhouse_sim.climate.sources import source_terms
 from greenhouse_sim.climate.transport import AirState, Transport
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.grid import air_grid
+from greenhouse_sim.units import HOUR_S
 from greenhouse_sim.world.equipment import Dehumidifier, Fan
 from greenhouse_sim.world.geometry import Vector3
 
@@ -69,6 +70,31 @@ def test_moist_air_agrees_with_the_psychrometric_tables(
     assert saturation_ratio_g_kg(temperature) == pytest.approx(saturated_g_kg, rel=0.01)
 
 
+def test_past_boiling_air_holds_any_water_and_none_condenses() -> None:
+    # Below 100 °C, more water as the air warms; past it, the vapour's
+    # pressure would exceed the atmosphere's, and the ratio's formula turns
+    # negative: a cell a heater warmed past it lost more water than it held,
+    # and the reference greenhouse's humidity ran wild (#198).
+    temperatures = np.array([-20.0, 0.0, 40.0, 80.0, 99.0, 100.5, 120.0, 200.0])
+    held = saturation_ratio_g_kg(temperatures)
+
+    assert np.all(np.isfinite(held[:5])) and np.all(np.diff(held[:5]) > 0)
+    assert np.all(held[5:] == np.inf)
+    # Air past boiling, holding more water than air at 100 °C could, keeps
+    # it through a minute: none condenses, and none is lost.
+    transport = _transport(STILL)
+    hot = AirState(
+        temperature=np.full((NZ, NY, NX), 105.0),
+        humidity=np.full((NZ, NY, NX), 2000.0),
+        co2=np.full((NZ, NY, NX), 420.0),
+    )
+    nothing = source_terms(DEHUMIDIFIER, 0.0, GRID, SOLID)
+    after = transport.advance(hot, nothing, 60.0, OUTSIDE)
+
+    assert after.condensed_kg == 0.0
+    np.testing.assert_allclose(after.humidity[AIR], 2000.0)
+
+
 def test_relative_humidity_and_the_humidity_ratio_are_one_anothers_inverse() -> None:
     temperatures = np.array([5.0, 16.0, 25.0])
     relative = np.array([30.0, 85.0, 100.0])
@@ -88,7 +114,7 @@ def test_shut_off_the_air_loses_what_the_dehumidifier_takes(velocity: np.ndarray
 
     after = transport.advance(START, terms, 600, OUTSIDE)
 
-    rate_kg = DEHUMIDIFIER.removal_kg_h * 600 / SECONDS_PER_HOUR
+    rate_kg = DEHUMIDIFIER.removal_kg_h * 600 / HOUR_S
     lost = transport.water_kg(START.humidity) - transport.water_kg(after.humidity)
     assert after.removed_kg == pytest.approx(rate_kg, rel=1e-9)
     assert after.condensed_kg == 0.0
@@ -106,7 +132,7 @@ def test_a_dehumidifier_never_takes_more_than_the_air_holds() -> None:
     assert after.removed_kg <= transport.water_kg(START.humidity)
     # Its own cells are dry; the rest of the house is drying into them.
     assert after.humidity[terms.water_removed_kg_s > 0].max() < 0.01
-    assert after.removed_kg < 1000.0 * 600 / SECONDS_PER_HOUR
+    assert after.removed_kg < 1000.0 * 600 / HOUR_S
 
 
 def test_cooling_air_condenses_what_it_can_no_longer_hold() -> None:

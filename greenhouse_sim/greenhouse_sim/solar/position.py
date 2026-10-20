@@ -21,6 +21,7 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict
 
+from greenhouse_sim.units import DAY_S, FULL_TURN_DEG, HALF_TURN_DEG, QUARTER_TURN_DEG
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.site import Site, bearing
 
@@ -30,12 +31,8 @@ from greenhouse_sim.world.site import Site, bearing
 UNIX_EPOCH_JULIAN_DAY: Final = 2440587.5
 J2000_JULIAN_DAY: Final = 2451545.0
 DAYS_PER_JULIAN_CENTURY: Final = 36525.0
-SECONDS_PER_DAY: Final = 86_400.0
 MINUTES_PER_DAY: Final = 1440.0
 MINUTES_PER_DEGREE: Final = 4.0
-HALF_TURN_DEG: Final = 180.0
-QUARTER_TURN_DEG: Final = 90.0
-DEGREES_IN_A_TURN: Final = 360.0
 # Polynomials in the Julian century, lowest power first.
 MEAN_LONGITUDE: Final = (280.46646, 36000.76983, 0.0003032)
 MEAN_ANOMALY: Final = (357.52911, 35999.05029, -0.0001537)
@@ -72,7 +69,7 @@ BELOW_HORIZON_ARC_SECONDS: Final = -20.772
 ARC_SECONDS_PER_DEGREE: Final = 3600.0
 
 
-def _polynomial(coefficients: Sequence[float], x: float) -> float:
+def polynomial(coefficients: Sequence[float], x: float) -> float:
     """Σ cᵢ xⁱ, the lowest power first."""
     total = 0.0
     for coefficient in reversed(coefficients):
@@ -89,7 +86,7 @@ def _refraction_deg(elevation_deg: float) -> float:
         first, third, fifth = TANGENT_ARC_SECONDS
         seconds = first / tangent + third / tangent**3 + fifth / tangent**5
     elif elevation_deg > HORIZON_REFRACTION_ABOVE_DEG:
-        seconds = _polynomial(HORIZON_ARC_SECONDS, elevation_deg)
+        seconds = polynomial(HORIZON_ARC_SECONDS, elevation_deg)
     else:
         seconds = BELOW_HORIZON_ARC_SECONDS / tangent
     return seconds / ARC_SECONDS_PER_DEGREE
@@ -126,24 +123,24 @@ def sun_position(moment: datetime, site: Site) -> SunPosition:
     if moment.utcoffset() is None:
         raise ValueError(f"a moment has a time zone: {moment.isoformat()}")
     seconds = moment.astimezone(UTC).timestamp()
-    julian_day = UNIX_EPOCH_JULIAN_DAY + seconds / SECONDS_PER_DAY
+    julian_day = UNIX_EPOCH_JULIAN_DAY + seconds / DAY_S
     century = (julian_day - J2000_JULIAN_DAY) / DAYS_PER_JULIAN_CENTURY
 
-    mean_longitude = _polynomial(MEAN_LONGITUDE, century) % DEGREES_IN_A_TURN
-    anomaly = math.radians(_polynomial(MEAN_ANOMALY, century))
-    eccentricity = _polynomial(ECCENTRICITY, century)
+    mean_longitude = polynomial(MEAN_LONGITUDE, century) % FULL_TURN_DEG
+    anomaly = math.radians(polynomial(MEAN_ANOMALY, century))
+    eccentricity = polynomial(ECCENTRICITY, century)
     centre = (
-        math.sin(anomaly) * _polynomial(CENTRE_FIRST, century)
-        + math.sin(2 * anomaly) * _polynomial(CENTRE_SECOND, century)
+        math.sin(anomaly) * polynomial(CENTRE_FIRST, century)
+        + math.sin(2 * anomaly) * polynomial(CENTRE_SECOND, century)
         + math.sin(THIRD_HARMONIC * anomaly) * CENTRE_THIRD
     )
-    node = math.radians(_polynomial(NODE, century))
+    node = math.radians(polynomial(NODE, century))
     apparent_longitude = math.radians(
         mean_longitude + centre - ABERRATION_DEG - NUTATION_DEG * math.sin(node)
     )
     mean_obliquity = (
         OBLIQUITY_DEGREES
-        + (OBLIQUITY_MINUTES + _polynomial(OBLIQUITY_SECONDS, century) / ARC_MINUTES_PER_DEGREE)
+        + (OBLIQUITY_MINUTES + polynomial(OBLIQUITY_SECONDS, century) / ARC_MINUTES_PER_DEGREE)
         / ARC_MINUTES_PER_DEGREE
     )
     obliquity = math.radians(mean_obliquity + OBLIQUITY_NUTATION_DEG * math.cos(node))
@@ -159,7 +156,7 @@ def sun_position(moment: datetime, site: Site) -> SunPosition:
         - TIME_ECCENTRIC_SQUARED * eccentricity**2 * math.sin(2 * anomaly)
     )
 
-    minutes = (seconds % SECONDS_PER_DAY) / (SECONDS_PER_DAY / MINUTES_PER_DAY)
+    minutes = (seconds % DAY_S) / (DAY_S / MINUTES_PER_DAY)
     true_solar = (
         minutes + equation_of_time + MINUTES_PER_DEGREE * site.longitude_deg
     ) % MINUTES_PER_DAY
@@ -184,7 +181,7 @@ def sun_position(moment: datetime, site: Site) -> SunPosition:
         azimuth = (
             from_south + HALF_TURN_DEG
             if hour_angle > 0
-            else DEGREES_IN_A_TURN + HALF_TURN_DEG - from_south
+            else FULL_TURN_DEG + HALF_TURN_DEG - from_south
         )
     return SunPosition(
         elevation_deg=elevation + _refraction_deg(elevation),

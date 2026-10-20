@@ -7,15 +7,11 @@ selections are checked here against the grid's own face and cell centres,
 and, with `pytest -m cfd`, against what OpenFOAM meshes.
 
 `greenhouse_sim/cfd/geometry.schema.json` is the schema the viewer generates
-its CFD geometry types from. It is written here, from `greenhouse_sim/`:
-
-    python tests/test_cfd_geometry.py --update
+its CFD geometry types from (`tests/test_published_schemas.py`).
 """
 
 import itertools
-import json
 import re
-import sys
 from http import HTTPStatus
 from pathlib import Path
 
@@ -30,7 +26,6 @@ from greenhouse_sim.cfd.geometry import (
     CfdGeometry,
     Face,
     cfd_geometry,
-    cfd_geometry_json_schema,
 )
 from greenhouse_sim.cfd.openfoam import (
     OBSTACLES_PATCH,
@@ -268,10 +263,6 @@ def test_a_scenarios_cfd_geometry_is_served_changed_as_its_scene_is() -> None:
     )
 
 
-def test_the_published_schema_matches_the_cfd_geometry() -> None:
-    assert json.loads(SCHEMA_FILE.read_text()) == json.loads(json.dumps(cfd_geometry_json_schema()))
-
-
 def test_the_command_line_writes_a_case_described_as_the_api_describes_it(tmp_path: Path) -> None:
     case = tmp_path / "tomato_compartment"
 
@@ -312,12 +303,3 @@ def test_openfoam_meshes_exactly_the_boundaries_the_geometry_describes(tmp_path:
     # The irrigation unit's 6 cells, 1 by 2 by 3 on the floor, expose 2 by 3
     # faces on either side, 1 by 3 at either end, and 1 by 2 on top.
     assert meshed.patches[-1].faces == 2 * 6 + 2 * 3 + 2
-
-
-if __name__ == "__main__":
-    if sys.argv[1:] != ["--update"]:
-        raise SystemExit("usage: python tests/test_cfd_geometry.py --update")
-    SCHEMA_FILE.write_text(
-        json.dumps(cfd_geometry_json_schema(), indent=2, ensure_ascii=False) + "\n"
-    )
-    print("wrote", SCHEMA_FILE)

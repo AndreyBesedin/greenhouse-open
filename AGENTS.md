@@ -84,6 +84,11 @@ fails when it drifts from its source.
 - The viewer: `greenhouse_sim/web`, which only displays what the simulator
   serves.
 
+For the steps themselves (a scenario, a layout, a weather, a device, a
+sensor kind, an air or plant model, a viewer panel, an API route), with the
+files each touches and the tests to run, see the recipes in
+[docs/guides](docs/guides/README.md).
+
 ## Code review: what to prioritize
 
 CI already handles formatting, lint, types, tests and some import rules.

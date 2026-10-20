@@ -1,9 +1,8 @@
+import { CHART_WIDTH, polylinePoints } from "../charts/chart";
 import type { WeatherDay, WeatherDayState, WeatherState } from "./weather";
 
 // Each quantity's chart, in its own units: wide and short.
-const WIDTH = 240;
 const HEIGHT = 28;
-const POINT_DECIMALS = 1;
 const RANGE_DECIMALS = 1;
 // What is charted through the day, its unit, and its colour.
 const CHARTED: readonly {
@@ -41,15 +40,8 @@ function DayLine({
   // Across the day's moments, from its first.
   const from = day.timesS[0] ?? 0;
   const span = Math.max((day.timesS.at(-1) ?? from) - from, 1);
-  const x = (seconds: number) => ((seconds - from) / span) * WIDTH;
-  const y = (value: number) =>
-    high === low ? HEIGHT / 2 : HEIGHT - ((value - low) / (high - low)) * HEIGHT;
-  const points = day.timesS
-    .map((seconds, index) => {
-      const value = values[index] ?? low;
-      return `${x(seconds).toFixed(POINT_DECIMALS)},${y(value).toFixed(POINT_DECIMALS)}`;
-    })
-    .join(" ");
+  const x = (seconds: number) => ((seconds - from) / span) * CHART_WIDTH;
+  const points = polylinePoints(day.timesS.map(x), values, { min: low, max: high }, HEIGHT);
   const range =
     high === low
       ? `${low.toFixed(RANGE_DECIMALS)} ${unit}`
@@ -59,7 +51,7 @@ function DayLine({
       <span data-testid={`weather-day-${className}`}>{`${name}, ${range}`}</span>
       <svg
         className="weather-day-chart"
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        viewBox={`0 0 ${CHART_WIDTH} ${HEIGHT}`}
         preserveAspectRatio="none"
         role="img"
         aria-label={`${name} through the day, ${range}`}

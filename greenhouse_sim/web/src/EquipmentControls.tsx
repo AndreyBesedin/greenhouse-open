@@ -2,9 +2,9 @@ import type { Fold } from "./folds";
 import { formatValue, onAndRest } from "./readouts";
 import type { ThermostatAt } from "./scene/equipment";
 import type { SceneEntityKind, SceneSnapshot } from "./scene/generated/snapshotTypes";
+import { PERCENT } from "./units";
 
 // The sliders move in steps of 5%.
-const PERCENT = 100;
 const STEP_PERCENT = 5;
 const WATTS_PER_KILOWATT = 1000;
 

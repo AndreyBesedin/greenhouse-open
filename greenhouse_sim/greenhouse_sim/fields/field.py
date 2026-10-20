@@ -28,6 +28,7 @@ import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, PositiveInt, model_validator
 
 from greenhouse_sim.domain.air import AIR_UNITS, VECTOR_QUANTITIES, AirQuantity
+from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
 from greenhouse_sim.world.geometry import Vector3
 
 # The version of the published field format; a viewer refuses any other.
@@ -250,6 +251,6 @@ def field_json_schema() -> dict[str, object]:
     """The JSON Schema a viewer validates published fields against, written
     as `field.schema.json` next to this module."""
     return {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": JSON_SCHEMA_DIALECT,
         **FieldDocument.model_json_schema(mode="serialization"),
     }

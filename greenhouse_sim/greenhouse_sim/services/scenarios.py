@@ -34,6 +34,7 @@ from greenhouse_sim.scenarios.manifest_files import manifest_digest, opening_day
 from greenhouse_sim.scene.plants import crop_entities
 from greenhouse_sim.scene.snapshot import SceneSnapshot, greenhouse_scene, scene_snapshot
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
+from greenhouse_sim.units import FULL_TURN_DEG
 from greenhouse_sim.weather.presets import PRESETS
 from greenhouse_sim.weather.recorded import recorded_weathers
 from greenhouse_sim.world.moves import Move, moved
@@ -51,7 +52,6 @@ WIND_MARK: Final = "~"
 # What follows it in a layout's name are moves of its equipment and sensors
 # (#209): `default~heater:1.2:-0.4`.
 MOVES_MARK: Final = "~"
-FULL_TURN_DEG: Final = 360.0
 
 
 class ScenarioSummary(BaseModel):

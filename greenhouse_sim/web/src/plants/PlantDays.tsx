@@ -1,10 +1,9 @@
+import { CHART_WIDTH, polylinePoints } from "../charts/chart";
 import type { CropPlant, CropPlantState, PlantDay } from "./crop";
 import { PlantHistory, PlantTree } from "./PlantStructure";
 
 // Each quantity's chart across the days lived, in its own units.
-const WIDTH = 240;
 const HEIGHT = 28;
-const POINT_DECIMALS = 1;
 const CHARTED: readonly {
   key: string;
   name: string;
@@ -19,15 +18,13 @@ const CHARTED: readonly {
 
 function polyline(values: number[], low: number, high: number): string {
   // A day's value across its share of the days, so a single day is a line.
-  const x = (index: number) => (index / values.length) * WIDTH;
-  const y = (value: number) =>
-    high === low ? HEIGHT / 2 : HEIGHT - ((value - low) / (high - low)) * HEIGHT;
-  return values
-    .flatMap((value, index) => [
-      `${x(index).toFixed(POINT_DECIMALS)},${y(value).toFixed(POINT_DECIMALS)}`,
-      `${x(index + 1).toFixed(POINT_DECIMALS)},${y(value).toFixed(POINT_DECIMALS)}`,
-    ])
-    .join(" ");
+  const x = (index: number) => (index / values.length) * CHART_WIDTH;
+  return polylinePoints(
+    values.flatMap((_, index) => [x(index), x(index + 1)]),
+    values.flatMap((value) => [value, value]),
+    { min: low, max: high },
+    HEIGHT,
+  );
 }
 
 /** A quantity of a plant's days in words: its last day's, and its range
@@ -66,7 +63,7 @@ function Days({ plant }: { plant: CropPlant }) {
             </span>
             <svg
               className="house-air-chart"
-              viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+              viewBox={`0 0 ${CHART_WIDTH} ${HEIGHT}`}
               preserveAspectRatio="none"
               role="img"
               aria-label={`The plant's ${name.toLowerCase()} day by day`}

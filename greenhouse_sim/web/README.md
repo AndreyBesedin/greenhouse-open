@@ -63,7 +63,8 @@ around the plant's foot. The greenhouse's walls and
 roof are see-through glass: a click picks the nearest solid thing along it,
 such as a plant or the floor, and picks the glass only where nothing solid
 lies behind. A scenario with several layouts offers them in the scenarios table: choosing
-one shows the scenario with it, and the address keeps it (`&layout=benches`).
+one shows the scenario with it, and the address keeps it (`&layout=propagation`,
+the tomato compartment's other layout).
 A selected piece of equipment or sensor can be moved across the floor
 (#209): "Move" in the inspector holds the camera still but for the wheel, and
 a drag anywhere in the view moves the item as far as the pointer goes along

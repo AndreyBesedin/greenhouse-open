@@ -1,9 +1,9 @@
 import type { Fold } from "./folds";
 import { formatValue, onAndRest } from "./readouts";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
+import { PERCENT } from "./units";
 
 // The sliders move in steps of 5%.
-const PERCENT = 100;
 const STEP_PERCENT = 5;
 
 interface OpeningState {

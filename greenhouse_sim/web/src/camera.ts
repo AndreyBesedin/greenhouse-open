@@ -1,3 +1,5 @@
+import { MathUtils } from "three";
+
 import type { Point3 } from "./world";
 
 // Camera presets, in world coordinates (metres, z up), all looking at the
@@ -46,6 +48,44 @@ export const CAMERA_PRESETS: Record<PresetName, CameraPose> = {
     target: ORIGIN,
   },
 };
+
+// A framed box is aimed at this share of its height up: the floor and what
+// stands on it, under the roof.
+const FRAMED_AIM_SHARE = 0.3;
+// What a framing pose is rounded to, as an address writes it: decimetres.
+const FRAMING_DECIMALS = 1;
+
+function toStep(value: number): number {
+  return Number(value.toFixed(FRAMING_DECIMALS)) + 0;
+}
+
+/**
+ * A pose that frames a box standing on the ground, from the default
+ * preset's direction: aimed at its middle, some way up its height, and
+ * far enough back that all of it is within a view of `aspect`, as a
+ * greenhouse is shown whole rather than from its corner at the world's
+ * origin, where the presets look.
+ */
+export function framing(base: Point3, size: Point3, aspect: number): CameraPose {
+  const target = { x: base.x, y: base.y, z: base.z + size.z * FRAMED_AIM_SHARE };
+  // The farthest corner from the aim, which the view must hold.
+  const reach = Math.hypot(size.x / 2, size.y / 2, size.z * (1 - FRAMED_AIM_SHARE));
+  // The view's narrower half-angle: its height's, or, in a view taller than
+  // wide, its width's.
+  const halfHeight = MathUtils.degToRad(CAMERA_FIELD_OF_VIEW_DEG) / 2;
+  const half = Math.min(halfHeight, Math.atan(Math.tan(halfHeight) * aspect));
+  const distance = reach / Math.sin(half);
+  const { position: away } = CAMERA_PRESETS[DEFAULT_PRESET];
+  const scale = distance / Math.hypot(away.x, away.y, away.z);
+  return {
+    position: {
+      x: toStep(target.x + away.x * scale),
+      y: toStep(target.y + away.y * scale),
+      z: toStep(target.z + away.z * scale),
+    },
+    target: { x: toStep(target.x), y: toStep(target.y), z: toStep(target.z) },
+  };
+}
 
 export const PRESET_ORDER: readonly PresetName[] = ["top", "front", "side", "isometric"];
 export const DEFAULT_PRESET: PresetName = "isometric";

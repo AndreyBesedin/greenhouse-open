@@ -10,11 +10,12 @@ import numpy as np
 import pytest
 
 from greenhouse_sim.api.routes import respond
-from greenhouse_sim.climate.day import FROM_THE_START_S, HOUR_S, ClimateDay, window_start
+from greenhouse_sim.climate.day import FROM_THE_START_S, ClimateDay, window_start
 from greenhouse_sim.climate.house import grid_mean
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.services import fields, sensors
 from greenhouse_sim.services.fields import _climate_day
+from greenhouse_sim.units import HOUR_S
 
 HEATED = (("heater", 1.0),)
 # How closely a later grid run's mean follows the whole house after its

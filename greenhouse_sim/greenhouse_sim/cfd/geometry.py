@@ -32,6 +32,7 @@ from pydantic import BaseModel, ConfigDict
 from greenhouse_sim.domain.envelope import OpeningKind, SurfaceCategory
 from greenhouse_sim.domain.layout import Obstruction
 from greenhouse_sim.fields.field import FieldGrid
+from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.world.envelope import Opening, Surface
 from greenhouse_sim.world.geometry import Vector3
@@ -191,7 +192,7 @@ def _edges(grid: FieldGrid, axis: str, first: int, last: int) -> tuple[float, fl
     return origin + first * size, origin + (last + 1) * size
 
 
-def _within(grid: FieldGrid, axis: str, low: float, high: float) -> list[int]:
+def _cells_between(grid: FieldGrid, axis: str, low: float, high: float) -> list[int]:
     """The cells along an axis whose centres lie between `low` and `high`."""
     return [i for i, centre in enumerate(_centres(grid, axis)) if low <= centre <= high]
 
@@ -238,7 +239,7 @@ def _opening_faces(grid: FieldGrid, face: Face, corners: list[Vector3]) -> dict[
     for axis in axes:
         values = [_axis(corner, axis) for corner in corners]
         low, high = min(values), max(values)
-        inside = _within(grid, axis, low, high)
+        inside = _cells_between(grid, axis, low, high)
         if not inside:
             middle = (low + high) / 2
             centres = _centres(grid, axis)
@@ -305,7 +306,9 @@ def cfd_geometry(scenario_id: str, config: ScenarioConfig, grid: FieldGrid) -> C
     too_small = []
     for fixture in config.layout.obstructing(Obstruction.AIRFLOW):
         low, high = fixture.bounds()
-        cells = {axis: _within(grid, axis, _axis(low, axis), _axis(high, axis)) for axis in "xyz"}
+        cells = {
+            axis: _cells_between(grid, axis, _axis(low, axis), _axis(high, axis)) for axis in "xyz"
+        }
         if not all(cells.values()):
             too_small.append(fixture.fixture_id)
             continue
@@ -334,6 +337,6 @@ def cfd_geometry_json_schema() -> dict[str, object]:
     """The JSON Schema a viewer validates a CFD geometry against, written as
     `geometry.schema.json` next to this module."""
     return {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": JSON_SCHEMA_DIALECT,
         **CfdGeometry.model_json_schema(mode="serialization"),
     }

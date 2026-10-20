@@ -175,18 +175,18 @@ code at `467821f`; *review*, reproduced by a review and not again here.
 | `AUDIT.2` Models are chosen by code, not by the manifest | corrected | read | P10 | P10 |
 | `AUDIT.3` A new device touches ten files | corrected | read | P10 | P10 |
 | `AUDIT.4` One model's parameters sit at the top of every scenario | confirmed | read | P10 | P10 |
-| `AUDIT.5` There is no recipe, for a person or an assistant | corrected | read | now | W6 (#164), W14 |
+| `AUDIT.5` There is no recipe, for a person or an assistant | corrected | read | now | W6 (#164), W14 (#263) |
 | `AUDIT.6` The run request is written out 22 times | corrected | read | next | W11 |
 | `AUDIT.7` Five caches, five locks, and what they share | corrected | read | next | W9 (#253) |
 | `AUDIT.8` The viewer validates by hand what the simulator could publish | corrected | read | next | W12 |
-| `AUDIT.9` Small Python toolboxes worth naming | corrected | read | when touched | W13 |
+| `AUDIT.9` Small Python toolboxes worth naming | corrected | read | when touched | W13 (#256, #257, #259) |
 | `AUDIT.10` The layering between subpackages is not checked | corrected | read | decide | D3 (decision 0037 and its ratchet, #182) |
 | `AUDIT.11` Ruff checks five rule families | confirmed | run | when touched | W15 |
 | `AUDIT.12` The checks take 11 to 22 minutes, in one job | corrected | run | next | W7 (#169), W8 (#184, #185, #186) |
 | `AUDIT.13` Supply chain and the review gate | corrected | read | next | W7 (#169, #170, #171), D4 (decision 0038, #183) |
 | `AUDIT.14` Nothing in the packages logs | corrected | read | when touched | W15 |
 | `AUDIT.15` Module globals and threads make tests order-dependent | corrected | run | next | W8 (#184, #185), W5's follow-up (#191), W9 (#253) |
-| `AUDIT.16` The prose is consistent, dense and tied to the roadmap | corrected | read | when touched | W14 |
+| `AUDIT.16` The prose is consistent, dense and tied to the roadmap | corrected | read | when touched | W14 (#263) |
 | `AUDIT.17` Four hubs carry the weight | corrected | read | when touched | W11, W15 |
 | `AUDIT.18` The test suite's shape | corrected | read | next | W8 (#184, #185, #186) |
 | `AUDIT.19` What the benchmark and the profile point at | corrected | run | next | W10 (#193, #194) |

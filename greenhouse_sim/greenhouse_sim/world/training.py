@@ -42,10 +42,6 @@ def _minus(a: Vector3, b: Vector3) -> Vector3:
     return Vector3(x=a.x - b.x, y=a.y - b.y, z=a.z - b.z)
 
 
-def _dot(a: Vector3, b: Vector3) -> float:
-    return a.x * b.x + a.y * b.y + a.z * b.z
-
-
 @dataclass(frozen=True)
 class Lane:
     """A loop around a run's centre line from `start` to `end`, in the
@@ -113,7 +109,7 @@ class Lane:
     def onto(self, point: Vector3, on_the_left: bool) -> float:
         """How far round the lane the point beside `point` on its left or
         right edge lies."""
-        along = _dot(_minus(point, self.start), self.along)
+        along = _minus(point, self.start).dot(self.along)
         if on_the_left:
             return along
         return self.straight_m + math.pi * self.half_width + (self.straight_m - along)
@@ -147,7 +143,7 @@ class HighWire:
             start = self.lane.onto(self.foot, self.on_the_left)
             _, sideways = self.lane.at(start + laid_m)
             out = self.offset - self.lane.half_width
-        return _unit(_plus(Vector3(x=0.0, y=0.0, z=self.wire_m), sideways, out))
+        return _plus(Vector3(x=0.0, y=0.0, z=self.wire_m), sideways, out).unit()
 
 
 @dataclass(frozen=True)
@@ -162,11 +158,6 @@ class AlongItsRow:
 
     def rising(self, laid_m: float) -> Vector3:
         return _UP
-
-
-def _unit(vector: Vector3) -> Vector3:
-    length = math.hypot(vector.x, vector.y, vector.z)
-    return Vector3(x=vector.x / length, y=vector.y / length, z=vector.z / length)
 
 
 @dataclass(frozen=True)

@@ -1,10 +1,10 @@
 {
   "scenario_id": "reference_greenhouse",
-  "manifest": "65ed77fdb7b8e672",
+  "manifest": "2572859959e2aba6",
   "days": [
     {
       "day": 0,
-      "digest": "90a402b4bd30ee07",
+      "digest": "dc2711a31918a455",
       "house_temperature_c": 16.07,
       "house_humidity_pct": 41.1,
       "organs": 870,

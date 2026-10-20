@@ -110,6 +110,7 @@ adds a visible or measurable result.
 | [P08](p08-sun-and-radiation.md) | Sun position, glazing and radiation propagation | Done |
 | [P09](p09-integrated-scenario.md) | Integrated greenhouse scenario, replay and release QA | In progress |
 | [P10](p10-consumer-interface.md) | A consumer's interface to a running simulation | Done |
+| [P11](p11-climate-setpoints.md) | Climate setpoints: targets that run the house's equipment | Proposed |
 
 A project's document is added when its first pull request lands.
 
@@ -278,7 +279,8 @@ take every frame on time, and draw perfect images. Planned then:
 - images as cameras make them: exposure, noise, motion blur and lens
   distortion, with the distortion in the camera's intrinsics.
 
-**Climate setpoints** (recorded 2026-10-20, after P10). A target, set by
+**Climate setpoints** (recorded 2026-10-20, after P10; proposed as
+[P11](p11-climate-setpoints.md)). A target, set by
 a person, for the air's temperature and humidity, which runs the house's
 equipment as a climate computer would. Today the reference greenhouse heats
 to a setpoint (decision 0042) and runs the rest of its equipment by the
