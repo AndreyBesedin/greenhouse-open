@@ -19,8 +19,8 @@ from typing import Annotated, Final, Self
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, model_validator
 
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.units import HOUR_S
 
-HOUR_S: Final = 3600.0
 # Its day and night start on the minute, where a run's air is worked from.
 MINUTE_S: Final = 60.0
 # A heater a thermostat runs is full on or off.

@@ -84,6 +84,8 @@
       "description": "A camera at its position, looking at `target`, with its intrinsics.",
       "properties": {
         "sensor_id": {
+          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
+          "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Sensor Id",
           "type": "string"
         },
@@ -358,6 +360,8 @@
       "description": "A dehumidifier: the water it takes out of the air at full power, and\nthe heat it gives the air while it does.",
       "properties": {
         "actuator_id": {
+          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
+          "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Actuator Id",
           "type": "string"
         },
@@ -439,6 +443,8 @@
       "description": "A fan: a rotor of a diameter, centred on `position`, blowing its rated\nflow of air along its heading.",
       "properties": {
         "actuator_id": {
+          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
+          "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Actuator Id",
           "type": "string"
         },
@@ -496,6 +502,8 @@
       "description": "A unit heater: its rated power, all of it given to the air as heat.",
       "properties": {
         "actuator_id": {
+          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
+          "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Actuator Id",
           "type": "string"
         },
@@ -789,6 +797,8 @@
       "description": "A sensor reading one quantity of the air at its position, or, outside\nthe house, of the weather.",
       "properties": {
         "sensor_id": {
+          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
+          "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Sensor Id",
           "type": "string"
         },

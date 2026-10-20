@@ -28,6 +28,7 @@ import numpy as np
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.solar.inside import UP, Sunlight
 from greenhouse_sim.solar.sky import PAR_UMOL_M2_S_PER_W_M2
+from greenhouse_sim.units import DAY_S, METRES_PER_CENTIMETRE
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.geometry import Cylinder, Transform, Vector3
 from greenhouse_sim.world.rows import PlantingPosition
@@ -44,9 +45,7 @@ TOP_CLEARANCE_M: Final = 1e-3
 # its first and last moments each half a step's worth, by the trapezoid rule.
 DAY_EVERY_S: Final = 600.0
 END_WEIGHT: Final = 0.5
-DAY_S: Final = 86_400.0
 UMOL_PER_MOL: Final = 1e6
-METRES_PER_CENTIMETRE: Final = 0.01
 # A point's coordinates.
 _XYZ: Final = ("x", "y", "z")
 

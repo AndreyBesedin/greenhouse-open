@@ -29,6 +29,7 @@ from greenhouse_sim.domain.layout import FixtureKind, Material, Obstruction
 from greenhouse_sim.domain.sensors import SensorKind
 from greenhouse_sim.world.fixtures import Fixture
 from greenhouse_sim.world.geometry import Box, Quaternion, Transform, Vector3
+from greenhouse_sim.world.identifiers import ItemId
 
 # A point sensor's housing, a cube this wide, in metres.
 SENSOR_SIZE_M: Final = 0.08
@@ -102,7 +103,7 @@ class Imperfections(BaseModel):
 class _Sensor(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    sensor_id: str
+    sensor_id: ItemId
     position: Vector3
     # A sample every so many seconds of a run: a second or more, as each
     # sample's identifier is stamped to the second (`greenhouse_sim.records`).

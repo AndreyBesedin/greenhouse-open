@@ -64,9 +64,9 @@ from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.climate.sources import SourceTerms
 from greenhouse_sim.climate.vents import Vent
 from greenhouse_sim.fields.field import FieldGrid
+from greenhouse_sim.units import AIR_DENSITY_KG_M3
 from greenhouse_sim.weather.state import WeatherState
 
-AIR_DENSITY_KG_M3: Final = 1.2
 AIR_HEAT_CAPACITY_J_KG_K: Final = 1005.0
 # Each step takes at most this share of a cell's temperature away.
 STEP_SHARE: Final = 0.5

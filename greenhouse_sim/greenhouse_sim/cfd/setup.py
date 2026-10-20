@@ -8,12 +8,7 @@ viscosity, as a constant eddy viscosity. The temperature is not solved: the
 air is the same temperature everywhere.
 """
 
-from typing import Final
-
 from pydantic import BaseModel, ConfigDict, PositiveFloat, PositiveInt
-
-# The air's density, which turns a solver's kinematic pressure into pascals.
-AIR_DENSITY_KG_M3: Final = 1.2
 
 
 class CfdSetup(BaseModel):
