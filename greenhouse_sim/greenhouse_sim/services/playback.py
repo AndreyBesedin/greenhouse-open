@@ -268,15 +268,21 @@ class Playback:
         self._since = clock()
         self._stopped = threading.Event()
         self._failure: Exception | None = None
-        self._worker = threading.Thread(target=self._work, daemon=True)
+        self._worker = threading.Thread(
+            target=self._work, name=f"playback of {self.run_id}", daemon=True
+        )
 
     def begin(self) -> None:
         """Starts working the run's days out, ahead of the clock."""
         self._worker.start()
 
     def stop(self) -> None:
-        """Stops working days out, after the one under way."""
+        """Stops working days out, once the one under way is: it returns when
+        the worker has, so that nothing of the run goes on being worked out
+        beside whatever comes next, such as another run of the same crop."""
         self._stopped.set()
+        if self._worker.is_alive() and self._worker is not threading.current_thread():
+            self._worker.join()
 
     def wait_for(self, days: int, timeout_s: float | None = None) -> bool:
         """Whether `days` days are worked out, waiting up to `timeout_s`."""

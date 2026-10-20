@@ -149,6 +149,20 @@ def test_a_restart_is_a_new_epoch_of_the_same_run_from_its_start(
     assert again.records == before.records
 
 
+def test_a_playback_stopped_works_out_nothing_more(clock: Clock) -> None:
+    run = Playback(SCENARIO, seconds_per_day=10.0, every_s=EVERY_S, clock=clock)
+    run.begin()
+    assert run.wait_for(1, timeout_s=120)
+
+    # Stopped while it works out its next day.
+    run.stop()
+
+    # Its worker has ended, the day it had under way with it: nothing of
+    # the run is worked out beside what a test or the API does next.
+    assert not run._worker.is_alive()
+    assert run._worker.name == f"playback of {run.run_id}"
+
+
 def test_a_run_played_to_its_end_stops_there(clock: Clock) -> None:
     run = Playback(SCENARIO, seconds_per_day=1.0, every_s=DAY_S, clock=clock)
     run.begin()
