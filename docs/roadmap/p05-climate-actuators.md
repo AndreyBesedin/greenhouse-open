@@ -56,7 +56,7 @@ and CFD.
   - first-order upwind advection, which keeps values within their range;
   - explicit diffusion;
   - a time step held within both stability limits (the air crossing at
-    most half a cell per step, and the diffusion limit);
+    most 0.9 of a cell per step, half until #198, and the diffusion limit);
   - obstacles' cells (P04.4) blocked;
   - no flux through walls, the floor and the ceiling, except heat exchange
     and open vents.

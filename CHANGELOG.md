@@ -7,6 +7,15 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: the climate's 3D air takes steps up to 0.9 of the
+  longest that keeps each new temperature a weighted mean of the old ones,
+  not half of it: a late day of the reference greenhouse draws its air in
+  1.3 s, not 2.2, and a day step costs about 4.3 s, not 5.2 (#198). The
+  air drawn moves by 0.02 K at most. The sensors read the grid only through
+  a run's first two hours, the house's air after: there, a few readings
+  move by one step of their rounding (20 of the reference run's 2,341 in
+  its first three hours, by 0.1), and none after. The reference QA page's
+  kept views are written again.
 - `greenhouse-sim`: air past water's boiling point holds any water, and
   none condenses from it. A cell the heater warmed past 100 °C used to lose
   more water than it held, as the saturation ratio's formula turns

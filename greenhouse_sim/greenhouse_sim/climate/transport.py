@@ -38,8 +38,9 @@ the outside.
   and roof, each by its share of their area, with its heat, water and CO2.
 - **The time step** keeps every cell's new temperature a weighted mean of the
   old ones: the air flowing in, the mixing and the exchange take at most
-  half a cell's temperature away per step, which holds both the air crossing
-  at most half a cell and explicit mixing's limit.
+  `STEP_SHARE`, 0.9, of a cell's temperature away per step, under the bound
+  of all of it, which holds both the air crossing at most 0.9 of a cell and
+  explicit mixing's limit (half, until #198).
 
 With the envelope shut (U = 0), the heat the air gains is what equipment
 adds, and the water it loses what equipment removes and what condenses:
@@ -68,8 +69,12 @@ from greenhouse_sim.units import AIR_DENSITY_KG_M3
 from greenhouse_sim.weather.state import WeatherState
 
 AIR_HEAT_CAPACITY_J_KG_K: Final = 1005.0
-# Each step takes at most this share of a cell's temperature away.
-STEP_SHARE: Final = 0.5
+# Each step takes at most this share of a cell's temperature away. Up to all
+# of it, every new temperature is a weighted mean of the old ones; this keeps
+# a margin under that bound. Half, as it first was, took twice the steps,
+# which a late day of the reference greenhouse spends most of its 3D air on,
+# for a field within 0.03 K of this one (#198).
+STEP_SHARE: Final = 0.9
 # The longest step, when nothing moves or mixes fast enough to need shorter.
 LONGEST_STEP_S: Final = 10.0
 GRAMS_PER_KG: Final = 1000.0

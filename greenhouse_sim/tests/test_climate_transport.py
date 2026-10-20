@@ -8,7 +8,7 @@ from greenhouse_sim.climate.glazing import glazing_u_w_m2k
 from greenhouse_sim.climate.projection import FaceFlows, conserving, face_flows
 from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.climate.sources import SourceTerms, source_terms
-from greenhouse_sim.climate.transport import AirState, Transport
+from greenhouse_sim.climate.transport import LONGEST_STEP_S, STEP_SHARE, AirState, Transport
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.grid import air_grid
@@ -191,7 +191,10 @@ def test_a_heaters_warmth_spreads_out_from_it_with_time() -> None:
     assert later[beside] > later[across] > later[far]
 
 
-def test_each_step_keeps_within_the_air_crossing_half_a_cell_and_the_mixing_limit() -> None:
+def test_each_step_takes_at_most_its_share_of_a_cells_air_crossing_or_mixing() -> None:
+    # Up to all of it, a new temperature is a weighted mean of the old ones
+    # (`test_carried_and_mixed_temperatures_stay_within_those_around_them`).
+    assert 0.0 < STEP_SHARE <= 1.0
     jet = _transport(JET)
     still = _transport(STILL)
     fastest = float(np.linalg.norm(_flows(JET).velocity(), axis=-1).max())
@@ -200,8 +203,14 @@ def test_each_step_keeps_within_the_air_crossing_half_a_cell_and_the_mixing_limi
     size = GRID.cell_size
     mixing = 2 * SETTINGS.mixing_m2_s * (1 / size.x**2 + 1 / size.y**2 + 1 / size.z**2)
 
-    assert jet.step_s() * fastest <= 0.5 * cell
-    assert still.step_s() * mixing <= 0.5 + 1e-9
+    assert jet.step_s() * fastest <= STEP_SHARE * cell
+    assert still.step_s() * mixing <= STEP_SHARE + 1e-9
+    # And most of the way there, as #198 measured it: up to 0.9 of a cell, not
+    # the half it first was, which took a late day's 3D air twice the steps.
+    # Neither step is the longest a step may be, so the share sets both.
+    assert max(jet.step_s(), still.step_s()) < LONGEST_STEP_S
+    assert 0.5 < jet.step_s() * fastest / cell <= 0.9
+    assert 0.5 < still.step_s() * mixing <= 0.9 + 1e-9
 
 
 def test_cells_obstacles_fill_keep_their_temperature() -> None:
