@@ -134,6 +134,8 @@ def test_the_document_citation_check_can_fail() -> None:
 # such as the script in `python greenhouse_sim/tests/test_x.py --update`.
 GUIDE_LINK_TARGET = re.compile(r"\]\(([^)\s#]+)")
 GUIDE_CODE_SPAN = re.compile(r"`([^`]+)`")
+# A fenced block's first and last lines.
+GUIDE_FENCE = "```"
 REPOSITORY_PATH = re.compile(
     r"(?:greenhouse_(?:sim|protocol|adapters)|scripts|tests|docs|\.github)(?:/[\w./-]*)?"
     r"|[\w-]+\.md"
@@ -153,14 +155,17 @@ def _links_in(guide: str) -> list[str]:
 
 
 def _code_paths_in(guide: str) -> list[str]:
-    """The paths a guide's inline code names: from the repository's root."""
-    return [
-        word
-        for line in guide.splitlines()
-        for span in GUIDE_CODE_SPAN.findall(line)
-        for word in span.split()
-        if REPOSITORY_PATH.fullmatch(word)
-    ]
+    """The paths a guide's code names, inline or in a fenced block such as
+    its commands: from the repository's root."""
+    words: list[str] = []
+    fenced = False
+    for line in guide.splitlines():
+        if line.lstrip().startswith(GUIDE_FENCE):
+            fenced = not fenced
+            continue
+        spans = [line] if fenced else GUIDE_CODE_SPAN.findall(line)
+        words += [word for span in spans for word in span.split()]
+    return [word for word in words if REPOSITORY_PATH.fullmatch(word)]
 
 
 def _paths_named_in(guide: str) -> list[str]:
@@ -179,6 +184,17 @@ def test_each_guide_for_contributors_names_files_that_exist(guide: pathlib.Path)
 
     assert _paths_named_in(text)
     assert missing == []
+
+
+def test_the_guide_path_check_reads_fenced_commands() -> None:
+    guide = (
+        "Run:\n\n```bash\n"
+        "uv run pytest greenhouse_sim/tests/test_gone.py \\\n"
+        "  tests/test_x.py\n"
+        "```\n"
+    )
+
+    assert _code_paths_in(guide) == ["greenhouse_sim/tests/test_gone.py", "tests/test_x.py"]
 
 
 def test_there_are_recipes_and_each_names_a_test_to_run() -> None:

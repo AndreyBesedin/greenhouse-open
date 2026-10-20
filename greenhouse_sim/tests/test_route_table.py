@@ -7,11 +7,15 @@ The tables are written by hand, for a reader; this holds them to the
 `match` arms of `respond` and `live_stream` (GET), and `_posted` and
 `control` (POST). A path's `{…}` is a segment a route captures, a query
 after `?` is an example, `/play, /pause` lists two routes beside each
-other, and a path ending in `/...` points to another table.
+other, and a path ending in `/...` points to another table. A segment an
+arm captures and then refuses unless it is one of an enum's values
+(`if action not in PlaybackCommand`) is each of those values, each a route
+the tables list.
 """
 
 import ast
 import re
+from enum import StrEnum
 from pathlib import Path
 from typing import Final
 
@@ -34,7 +38,8 @@ type Segments = tuple[str | None, ...]
 
 def _routes_answered() -> set[tuple[str, Segments]]:
     """Each route a `match` arm answers: its method, and its segments, None
-    where it captures one."""
+    where it captures any segment, and each of an enum's values where it
+    takes only those."""
     answered: set[tuple[str, Segments]] = set()
     for node in ast.parse(SOURCE).body:
         if not isinstance(node, ast.FunctionDef) or node.name not in ROUTING:
@@ -42,20 +47,41 @@ def _routes_answered() -> set[tuple[str, Segments]]:
         for match in (each for each in ast.walk(node) if isinstance(each, ast.Match)):
             for case in match.cases:
                 if isinstance(case.pattern, ast.MatchSequence):
-                    answered.add((ROUTING[node.name], _segments(case.pattern)))
+                    for segments in _segments(case.pattern, _guarded(case.body)):
+                        answered.add((ROUTING[node.name], segments))
     return answered
 
 
-def _segments(pattern: ast.MatchSequence) -> Segments:
-    segments: list[str | None] = []
+def _guarded(body: list[ast.stmt]) -> dict[str, list[str]]:
+    """The captures an arm refuses unless they are one of an enum's values,
+    `if action not in PlaybackCommand`, and those values."""
+    guarded: dict[str, list[str]] = {}
+    for statement in body:
+        test = statement.test if isinstance(statement, ast.If) else None
+        if (
+            isinstance(test, ast.Compare)
+            and isinstance(test.left, ast.Name)
+            and [type(op) for op in test.ops] == [ast.NotIn]
+            and isinstance(enum := test.comparators[0], ast.Name)
+        ):
+            values = getattr(routes, enum.id)
+            assert issubclass(values, StrEnum), enum.id
+            guarded[test.left.id] = [member.value for member in values]
+    return guarded
+
+
+def _segments(pattern: ast.MatchSequence, guarded: dict[str, list[str]]) -> list[Segments]:
+    """An arm's routes: one, or one for each value of a guarded capture."""
+    routes_of: list[list[str | None]] = [[]]
     for part in pattern.patterns:
         if isinstance(part, ast.MatchValue) and isinstance(part.value, ast.Constant):
-            segments.append(str(part.value.value))
+            choices: list[str | None] = [str(part.value.value)]
         elif isinstance(part, ast.MatchAs) and part.pattern is None and part.name is not None:
-            segments.append(None)
+            choices = list(guarded.get(part.name, [None]))
         else:
             raise AssertionError(f"a route's pattern this test cannot read: {ast.dump(part)}")
-    return tuple(segments)
+        routes_of = [[*route, choice] for route in routes_of for choice in choices]
+    return [tuple(route) for route in routes_of]
 
 
 def _routes_listed() -> set[tuple[str, tuple[str, ...]]]:
@@ -133,3 +159,17 @@ def test_a_route_left_out_of_the_table_is_found() -> None:
     assert not any(
         m == "GET" and _answers(path, ("api", "scenarios", None, "timeline")) for m, path in without
     )
+
+
+def test_each_command_a_guarded_route_takes_is_listed_on_its_own() -> None:
+    """A command the playback takes is a route of its own: one left out of
+    the table is not hidden by the others."""
+    restart = ("POST", ("api", "scenarios", "{id}", "playback", "restart"))
+    reset = ("POST", ("api", "scenarios", "{id}", "live", "reset"))
+
+    assert ("POST", ("api", "scenarios", None, "playback", "restart")) in ANSWERED
+    assert ("POST", ("api", "scenarios", None, "live", "reset")) in ANSWERED
+    for left_out in (restart, reset):
+        without = LISTED_ROUTES - {left_out}
+        arm = tuple(None if part.startswith("{") else part for part in left_out[1])
+        assert not any(m == "POST" and _answers(path, arm) for m, path in without)
