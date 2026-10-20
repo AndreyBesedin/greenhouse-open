@@ -321,7 +321,7 @@ body {
   max-height: 50vh;
   overflow: auto;
   padding: 8px 12px;
-  background: rgb(255 255 255 / 88%);
+  background: var(--panel-bg);
   border-radius: 6px;
   font-size: 13px;
 }
@@ -340,7 +340,7 @@ body {
 
 .controls-help h3 {
   margin-top: 6px;
-  color: #444444;
+  color: var(--panel-muted-strong);
 }
 
 .controls-help dl {
@@ -353,12 +353,12 @@ body {
 
 .controls-help dd {
   margin: 0 0 2px 12px;
-  color: #444444;
+  color: var(--panel-muted-strong);
 }
 
 .controls-open kbd {
   padding: 0 4px;
-  border: 1px solid #999999;
+  border: 1px solid var(--panel-muted);
   border-radius: 3px;
   font-size: 11px;
 }
