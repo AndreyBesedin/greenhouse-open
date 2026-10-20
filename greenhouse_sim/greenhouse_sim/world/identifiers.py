@@ -2,7 +2,7 @@
 its sensors and its doors and vents (#254).
 
 The API's parameters write these identifiers between marks, `:` and `,`
-(`set=heater:1`, `schedule=600:heater:1`, `openings=roof_vent:0.5`), and
+(`set=heater:1`, `schedule=600:heater:1`, `open=roof_vent:0.5`), and
 after `~` in a layout's moves (`layout=default~heater:1:0`), and its routes
 decode a query before they read it, so escaping a mark would not help. An
 identifier holds only what none of them mark: letters, digits, `_`, `.` and
