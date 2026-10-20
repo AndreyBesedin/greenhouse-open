@@ -19,24 +19,23 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from greenhouse_sim.units import FULL_TURN_DEG, QUARTER_TURN_DEG
 from greenhouse_sim.world.geometry import Vector3
 
-DEGREES_IN_A_TURN: Final = 360.0
-QUARTER_TURN_DEG: Final = 90.0
 # The standard atmosphere's pressure at sea level, and how it falls with
 # height below 11 km: p = p0 (1 - L h / T0) ^ (g M / R L).
 SEA_LEVEL_PRESSURE_HPA: Final = 1013.25
 LAPSE_PER_M: Final = 2.25577e-5
 PRESSURE_EXPONENT: Final = 5.25588
 
-type Bearing = Annotated[float, Field(ge=0.0, lt=DEGREES_IN_A_TURN)]
+type Bearing = Annotated[float, Field(ge=0.0, lt=FULL_TURN_DEG)]
 
 
 def bearing(degrees: float) -> float:
     """A bearing in degrees, brought within 0 to 360: a hair below north,
     which the remainder rounds up to 360, is north."""
-    within = degrees % DEGREES_IN_A_TURN
-    return 0.0 if within >= DEGREES_IN_A_TURN else within
+    within = degrees % FULL_TURN_DEG
+    return 0.0 if within >= FULL_TURN_DEG else within
 
 
 class Site(BaseModel):
@@ -47,7 +46,7 @@ class Site(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     latitude_deg: Annotated[float, Field(ge=-QUARTER_TURN_DEG, le=QUARTER_TURN_DEG)]
-    longitude_deg: Annotated[float, Field(ge=-DEGREES_IN_A_TURN / 2, le=DEGREES_IN_A_TURN / 2)]
+    longitude_deg: Annotated[float, Field(ge=-FULL_TURN_DEG / 2, le=FULL_TURN_DEG / 2)]
     elevation_m: float = 0.0
     time_zone: str
     # East, by default: x east, y north and z up.

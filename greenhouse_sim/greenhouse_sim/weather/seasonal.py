@@ -46,17 +46,15 @@ from pydantic import (
 
 from greenhouse_sim.climate.psychrometrics import humidity_ratio_g_kg, relative_humidity_pct
 from greenhouse_sim.core.rng import seeded_rng
+from greenhouse_sim.units import DAYS_IN_A_YEAR, HOUR_S, HOURS_A_DAY
 from greenhouse_sim.weather.sources import WeatherSource
 from greenhouse_sim.weather.state import OUTSIDE_CO2_PPM, Percent, WeatherState
 from greenhouse_sim.weather.synthetic import (
-    HOURS_IN_A_DAY,
-    SECONDS_PER_HOUR,
     Hour,
     SyntheticWeather,
 )
 from greenhouse_sim.world.site import Bearing, Site
 
-DAYS_IN_A_YEAR: Final = 365.25
 # How many days before a date its spell is worked out from: the shift a day
 # keeps from so long before is too small to matter at any persistence below
 # 0.8 (0.8 ** 40 is about 1e-4).
@@ -193,14 +191,14 @@ class _Seasonal:
         weather = self.weather
         wall = moment.astimezone(self.site.zone()).replace(tzinfo=None)
         today = wall.date()
-        hour = (wall - datetime.combine(today, time())).total_seconds() / SECONDS_PER_HOUR
+        hour = (wall - datetime.combine(today, time())).total_seconds() / HOUR_S
         warmth = weather.day_shape.warmth(hour)
         # The stretch the moment falls in, from one coldest hour to the next:
         # warming through today's morning, or cooling from a day's warmest to
         # the next day's coldest.
         if hour < weather.coldest_hour:
             cold_day, warm_day = today, today - timedelta(days=1)
-            since_coldest = hour + HOURS_IN_A_DAY - weather.coldest_hour
+            since_coldest = hour + HOURS_A_DAY - weather.coldest_hour
         elif hour <= weather.warmest_hour:
             cold_day, warm_day = today, today
             since_coldest = hour - weather.coldest_hour
@@ -212,7 +210,7 @@ class _Seasonal:
         temperature = coldest + (warmest - coldest) * warmth
         # The air's water goes from one coldest hour's to the next's.
         first = today if hour >= weather.coldest_hour else today - timedelta(days=1)
-        share = since_coldest / HOURS_IN_A_DAY
+        share = since_coldest / HOURS_A_DAY
         water = (1.0 - share) * self._water_g_kg(first) + share * self._water_g_kg(
             first + timedelta(days=1)
         )

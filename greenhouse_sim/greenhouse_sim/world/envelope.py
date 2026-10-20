@@ -51,7 +51,9 @@ from greenhouse_sim.world.geometry import (
     Quaternion,
     Transform,
     Vector3,
+    direction_and_length,
 )
+from greenhouse_sim.world.identifiers import ItemId
 
 # Where a greenhouse stands unless a scenario says otherwise: its floor corner
 # at the world's origin, its axes along the world's.
@@ -94,13 +96,6 @@ class Surface(BaseModel):
     shape: Plane | Polygon
 
 
-def _along(start: Vector3, end: Vector3) -> tuple[Vector3, float]:
-    """The unit direction from `start` to `end`, and the distance."""
-    along = Vector3(x=end.x - start.x, y=end.y - start.y, z=end.z - start.z)
-    length = math.hypot(along.x, along.y, along.z)
-    return Vector3(x=along.x / length, y=along.y / length, z=along.z / length), length
-
-
 class Gutter(BaseModel):
     """A gutter's line, from end to end, in the greenhouse's frame."""
 
@@ -114,7 +109,7 @@ class Gutter(BaseModel):
         """The gutter as a channel along its line, its top at the line, in
         the greenhouse's frame: the box's own x along it, its base's middle
         at its frame's origin."""
-        direction, length = _along(self.start, self.end)
+        direction, length = direction_and_length(self.start, self.end)
         base_middle = Vector3(
             x=(self.start.x + self.end.x) / 2,
             y=(self.start.y + self.end.y) / 2,
@@ -135,7 +130,7 @@ class Opening(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    opening_id: str
+    opening_id: ItemId
     kind: OpeningKind
     surface_id: str
     centre: Point2
@@ -205,8 +200,9 @@ def _inside(point: Point2, polygon: list[Point2]) -> bool:
     return inside
 
 
-def _outline(shape: Plane | Polygon) -> list[Point2]:
-    """A host shape's outline in its own x-y plane."""
+def outline(shape: Plane | Polygon) -> list[Point2]:
+    """A host shape's outline in its own x-y plane: a polygon's points, or
+    a rectangle's corners, anticlockwise from its lower left."""
     if shape.shape == "polygon":
         return shape.points
     half_x, half_y = shape.size_x / 2, shape.size_y / 2
@@ -234,7 +230,7 @@ class Member(BaseModel):
         """The member as a round bar from its foot to its head, in the
         greenhouse's frame. Members lie across the length, so the length's
         direction stays square to each."""
-        direction, length = _along(self.start, self.end)
+        direction, length = direction_and_length(self.start, self.end)
         # A cylinder rises along its +z: turn that onto the member's direction.
         return (
             Transform(
@@ -314,8 +310,8 @@ class Envelope(BaseModel):
                 raise ValueError(
                     f"{opening.opening_id} is on {opening.surface_id!r}, not a surface"
                 )
-            outline = _outline(host.shape)
-            if not all(_inside(corner, outline) for corner in opening.corners()):
+            host_outline = outline(host.shape)
+            if not all(_inside(corner, host_outline) for corner in opening.corners()):
                 raise ValueError(f"{opening.opening_id} does not fit on {opening.surface_id}")
         return self
 

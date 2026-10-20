@@ -17,16 +17,15 @@ instead: those whose centres lie within a cell of it, beside it or above it.
 """
 
 from dataclasses import dataclass
-from typing import Final, Self
+from typing import Self
 
 import numpy as np
 
 from greenhouse_sim.climate.jets import jet_velocity
 from greenhouse_sim.fields.field import VECTOR_COMPONENTS, FieldGrid
+from greenhouse_sim.units import HOUR_S
 from greenhouse_sim.world.equipment import Dehumidifier, Equipment, Fan, Heater
 from greenhouse_sim.world.geometry import Vector3
-
-SECONDS_PER_HOUR: Final = 3600
 
 
 @dataclass(frozen=True, eq=False)
@@ -120,5 +119,5 @@ def source_terms(piece: Equipment, level: float, grid: FieldGrid, solid: np.ndar
         grid=grid,
         velocity=terms.velocity,
         heat_w=share * level * piece.heat_w,
-        water_removed_kg_s=share * level * piece.removal_kg_h / SECONDS_PER_HOUR,
+        water_removed_kg_s=share * level * piece.removal_kg_h / HOUR_S,
     )

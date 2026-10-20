@@ -28,8 +28,8 @@ from typing import Final
 import numpy as np
 
 from greenhouse_sim.domain.envelope import SurfaceCategory
-from greenhouse_sim.world.envelope import Envelope, Surface
-from greenhouse_sim.world.geometry import Point2, Vector3
+from greenhouse_sim.world.envelope import Envelope, Surface, outline
+from greenhouse_sim.world.geometry import Vector3
 
 # Single glass's transmittance square to the beam, and ASHRAE's
 # incidence-angle coefficient for glass.
@@ -61,13 +61,9 @@ def transmittance(cos_incidence: np.ndarray) -> np.ndarray:
 
 
 def _outline(surface: Surface) -> np.ndarray:
-    """A surface's outline in its own x-y plane, as rows of points."""
-    shape = surface.shape
-    if shape.shape == "polygon":
-        points: list[Point2] = shape.points
-        return np.array([[point.x, point.y] for point in points])
-    half_x, half_y = shape.size_x / 2, shape.size_y / 2
-    return np.array([[-half_x, -half_y], [half_x, -half_y], [half_x, half_y], [-half_x, half_y]])
+    """A surface's outline in its own x-y plane (`outline`), as rows of
+    points."""
+    return np.array([[point.x, point.y] for point in outline(surface.shape)])
 
 
 @dataclass(frozen=True)

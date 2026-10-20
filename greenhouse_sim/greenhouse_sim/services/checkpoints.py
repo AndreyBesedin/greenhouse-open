@@ -228,10 +228,10 @@ def upload_checkpoint(document: JsonValue) -> CheckpointSummary:
     """A checkpoint uploaded, checked, and kept. Refused if it is not one,
     is in a format this simulator does not read, was made with another
     version of its scenario's manifest, or does not fit its scenario's run."""
-    return _kept(_checked(document))
+    return _kept(_checked_upload(document))
 
 
-def _checked(document: JsonValue) -> Checkpoint:
+def _checked_upload(document: JsonValue) -> Checkpoint:
     """A checkpoint uploaded, checked as `upload_checkpoint` says."""
     if isinstance(document, dict) and document.get("checkpoint_format") != CHECKPOINT_FORMAT:
         raise InvalidRequest(
@@ -344,7 +344,9 @@ def load_opening(scenario_id: str) -> list[CheckpointSummary]:
         return []
     return [
         _kept(
-            _checked(json.loads(gzip.decompress(opening_file(scenario_id, off).read_bytes()))),
+            _checked_upload(
+                json.loads(gzip.decompress(opening_file(scenario_id, off).read_bytes()))
+            ),
             opening=True,
         )
         for off in (False, True)

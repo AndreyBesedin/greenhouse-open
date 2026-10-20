@@ -33,13 +33,14 @@ from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.records import observation_id
 from greenhouse_sim.services.fields import climate_run
 from greenhouse_sim.services.scenarios import scenario
+from greenhouse_sim.units import HOUR_S
 from greenhouse_sim.world.equipment import Heater
 
 J_PER_MJ: Final = 1e6
 # Its value is kept to a kilojoule per square metre.
 DECIMALS: Final = 3
 # How long each record's interval is, in seconds: an hour.
-EVERY_S: Final = 3600.0
+EVERY_S: Final = HOUR_S
 
 
 def heat_records(scenario_id: str, day: int, start: datetime, run_id: str) -> list[Observation]:

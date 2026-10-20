@@ -39,6 +39,7 @@ from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from greenhouse_sim.units import HALF_TURN_DEG
 from greenhouse_sim.weather.sources import WeatherSource
 from greenhouse_sim.weather.state import OUTSIDE_CO2_PPM, WeatherState
 from greenhouse_sim.world.site import Site, bearing
@@ -70,7 +71,6 @@ RANGES: Final = {
 }
 # The longest gap between known values interpolated across.
 LONGEST_GAP: Final = timedelta(hours=1)
-HALF_TURN_DEG: Final = 180.0
 # A file's first data row is its second line.
 FIRST_ROW: Final = 2
 

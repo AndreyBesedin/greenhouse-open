@@ -37,7 +37,7 @@ from greenhouse_sim.cfd.results import (
     kept_result,
     scenario_key,
 )
-from greenhouse_sim.cfd.setup import AIR_DENSITY_KG_M3, CfdSetup
+from greenhouse_sim.cfd.setup import CfdSetup
 from greenhouse_sim.cfd.solve import (
     SOURCE,
     SolveFailed,
@@ -52,6 +52,7 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services import cfd, fields
 from greenhouse_sim.services.scenarios import SceneChanges, changed, scenario
+from greenhouse_sim.units import AIR_DENSITY_KG_M3
 from greenhouse_sim.world.geometry import Vector3
 
 COMPARTMENT = scenario("tomato_compartment")
