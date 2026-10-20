@@ -33,6 +33,7 @@ import {
   withWeather,
   withWind,
 } from "./scene/edits";
+import type { ThermostatAt } from "./scene/equipment";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
 import { scenarioRun } from "./scene/run";
 import { levelsAt, openingsAt } from "./scene/source";
@@ -73,6 +74,7 @@ export function ScenarioPanels({
   placing,
   probeHeight,
   playingClimate,
+  thermostat = null,
   onSource,
   onProbes,
   onPlacing,
@@ -96,6 +98,8 @@ export function ScenarioPanels({
   placing: boolean;
   probeHeight: number;
   playingClimate: boolean;
+  /** The thermostat that runs its heater at the moment drawn, if one does. */
+  thermostat?: ThermostatAt | null;
   onSource: (change: SetSource) => void;
   onProbes: (probes: Point3[]) => void;
   onPlacing: (placing: boolean) => void;
@@ -254,6 +258,7 @@ export function ScenarioPanels({
         <EquipmentControls
           snapshot={snapshot}
           requested={levelsAt(source)}
+          thermostat={thermostat}
           onChange={(levels) => onSource(withLevels(source, levels))}
         />
       )}

@@ -56,6 +56,7 @@ import type { ViewSample } from "./readouts";
 import { ScenarioPanels } from "./ScenarioPanels";
 import { loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
 import { withProbes } from "./scene/edits";
+import { equipmentUrl, governedLevels, loadEquipment, runningThermostat } from "./scene/equipment";
 import { runApartFromItsMoment, runsSomething, scenarioRun } from "./scene/run";
 import {
   changesQuery,
@@ -182,10 +183,19 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // keeps its scene on show until the next arrives; any other change of
   // scene starts from loading.
   const openingIds = summary?.openings ?? NO_OPENINGS;
-  const sceneAsked = sceneRequest(source, openingIds);
+  // A thermostat runs its heater by the house's air (P10.3), which only the
+  // run knows: the scene draws the heater as the run has it at the moment.
+  const equipment = useLoad(
+    source.kind === "scenario" && summary?.thermostat
+      ? equipmentUrl(source.scenarioId, scenarioRun(source))
+      : null,
+    loadEquipment,
+  );
+  const governed = governedLevels(equipment);
+  const sceneAsked = sceneRequest(source, openingIds, governed);
   const sceneProgress = useLoadProgress(
     sceneAsked,
-    (_url, fetchFn) => loadScene(source, fetchFn, openingIds),
+    (_url, fetchFn) => loadScene(source, fetchFn, openingIds, governed),
     {
       group:
         source.kind === "scenario"
@@ -629,6 +639,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 weathers={summary?.weathers ?? []}
                 days={summary?.duration_days ?? 1}
                 loads={{ field, compared, weather, weatherDay, houseAir, probeCharts, cfd }}
+                thermostat={runningThermostat(equipment)}
                 momentFailed={momentFailed}
                 fieldView={fieldView}
                 fieldSlice={fieldSlice}

@@ -1,4 +1,5 @@
 import { formatValue } from "./readouts";
+import type { ThermostatAt } from "./scene/equipment";
 import type { SceneEntityKind, SceneSnapshot } from "./scene/generated/snapshotTypes";
 
 // The sliders move in steps of 5%.
@@ -58,19 +59,32 @@ export function describeLevel({ level, rated, unit }: EquipmentState): string {
     : `${Math.round(level * PERCENT)}%, ${formatValue(level * rated)} ${unit}`;
 }
 
+/** What a piece of equipment does, and, if a thermostat runs it, at what it
+ * aims: `100%, 30 kW, by its thermostat at 16 °C`. */
+export function describeRun(piece: EquipmentState, thermostat: ThermostatAt | null): string {
+  const level = describeLevel(piece);
+  return thermostat?.actuatorId === piece.actuatorId
+    ? `${level}, by its thermostat at ${formatValue(thermostat.setpointC)} °C`
+    : level;
+}
+
 /**
  * A switch and a slider per piece of equipment. Switched on, a piece runs at
  * full power, and the slider sets its level; either asks the simulator for
  * the scene with that level set, so the scene shown says how hard each runs.
+ * A heater a thermostat runs says so; a command to it takes it over.
  */
 export function EquipmentControls({
   snapshot,
   requested,
+  thermostat = null,
   onChange,
 }: {
   snapshot: SceneSnapshot;
   /** The levels asked for, which a control shows until the scene catches up. */
   requested: Readonly<Record<string, number>>;
+  /** The thermostat that runs its heater at the moment drawn, if one does. */
+  thermostat?: ThermostatAt | null;
   onChange: (levels: Record<string, number>) => void;
 }) {
   const equipment = equipmentIn(snapshot);
@@ -101,7 +115,9 @@ export function EquipmentControls({
               value={Math.round(shown * PERCENT)}
               onChange={(event) => set(Number(event.target.value) / PERCENT)}
             />
-            <span data-testid={`equipment-${piece.actuatorId}`}>{describeLevel(piece)}</span>
+            <span data-testid={`equipment-${piece.actuatorId}`}>
+              {describeRun(piece, thermostat)}
+            </span>
           </div>
         );
       })}

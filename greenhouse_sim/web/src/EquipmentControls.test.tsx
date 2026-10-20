@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { describeLevel, EquipmentControls, equipmentIn } from "./EquipmentControls";
+import { describeLevel, describeRun, EquipmentControls, equipmentIn } from "./EquipmentControls";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
 import { changesQuery, searchFor, sourceFromSearch } from "./scene/source";
 
@@ -28,6 +28,18 @@ describe("a scene's equipment", () => {
     expect(describeLevel(heater)).toBe("off");
     expect(describeLevel({ ...heater, level: 0.5 })).toBe("50%, 5 kW");
     expect(describeLevel({ ...heater, level: 0.35 })).toBe("35%, 3.50 kW");
+  });
+
+  it("says when a thermostat runs one, and at what it aims", () => {
+    const heater = { actuatorId: "heater", label: "heater", level: 1, rated: 30, unit: "kW" };
+    const thermostat = { actuatorId: "heater", setpointC: 16, runs: true };
+
+    expect(describeRun(heater, thermostat)).toBe("100%, 30 kW, by its thermostat at 16 °C");
+    expect(describeRun({ ...heater, level: 0 }, thermostat)).toBe(
+      "off, by its thermostat at 16 °C",
+    );
+    expect(describeRun(heater, null)).toBe("100%, 30 kW");
+    expect(describeRun({ ...heater, actuatorId: "fan" }, thermostat)).toBe("100%, 30 kW");
   });
 
   it("each get a switch and a slider showing the level asked for, and what the scene says", () => {
