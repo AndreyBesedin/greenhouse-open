@@ -109,7 +109,7 @@ adds a visible or measurable result.
 | [P07](p07-external-weather.md) | External weather and greenhouse boundary coupling | Done |
 | [P08](p08-sun-and-radiation.md) | Sun position, glazing and radiation propagation | Done |
 | [P09](p09-integrated-scenario.md) | Integrated greenhouse scenario, replay and release QA | In progress |
-| [P10](p10-consumer-interface.md) | A consumer's interface to a running simulation | In progress |
+| [P10](p10-consumer-interface.md) | A consumer's interface to a running simulation | Done |
 
 A project's document is added when its first pull request lands.
 
