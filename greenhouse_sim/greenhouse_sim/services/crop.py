@@ -36,8 +36,8 @@ from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.scene.plants import crop_entities
 from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
-from greenhouse_sim.services.fields import Commanded, RunKey, climate_run
-from greenhouse_sim.services.kept_states import House, KeptState, agreeing
+from greenhouse_sim.services.fields import Commanded, RunKey, climate_run, house_of
+from greenhouse_sim.services.kept_states import KeptState, agreeing
 from greenhouse_sim.services.runs import checked_moment
 from greenhouse_sim.services.scenarios import SceneChanges, changed, plant_ids, scenario
 from greenhouse_sim.services.stores import Store
@@ -78,7 +78,7 @@ def run_crop(
             until = schedule.same_until(other_schedule)
             shared = config.duration_days if math.isinf(until) else days_ended(until)
             crop.carry_on_from(other, min(shared, config.duration_days))
-        for state in agreeing(_house(key), schedule):
+        for state in agreeing(house_of(key), schedule):
             if state.plants:
                 crop.seed(state.day, state.plants, state.lived)
         return crop, schedule
@@ -92,21 +92,15 @@ def seed_kept_crops(state: KeptState) -> None:
     if not state.plants:
         return
     for key, (crop, schedule) in CROPS.values():
-        if state.agrees(_house(key), schedule):
+        if state.agrees(house_of(key), schedule):
             crop.seed(state.day, state.plants, state.lived)
-
-
-def _house(key: RunKey) -> House:
-    """A run's house, as its key names it."""
-    scenario_id, layout, weather, _, openings, _ = key
-    return scenario_id, layout, weather, openings
 
 
 def _same_house(key: RunKey, other: RunKey) -> bool:
     """Whether two runs are of the same house, under the same weather, with
     the same doors and vents open from the start: their air is the same
     until their schedules differ."""
-    return _house(key) == _house(other)
+    return house_of(key) == house_of(other)
 
 
 def _new_crop(key: RunKey, climate: ClimateDay, watch: Stopwatch | None = None) -> RunCrop:

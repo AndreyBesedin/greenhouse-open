@@ -193,15 +193,15 @@ def _climate_day(
         run = ClimateDay(_new_climate_run(*key))
         for _, other in others:
             run.carry_on_from(other)
-        for state in agreeing(_house(key), run.run.schedule):
+        for state in agreeing(house_of(key), run.run.schedule):
             for moment, air in state.airs():
                 run.house.seed(moment, air)
         return run
 
-    return CLIMATE_RUNS.made_once(key, make, lambda other: _house(other) == _house(key))
+    return CLIMATE_RUNS.made_once(key, make, lambda other: house_of(other) == house_of(key))
 
 
-def _house(key: RunKey) -> House:
+def house_of(key: RunKey) -> House:
     """A run's house, as its key names it: its scenario, layout and weather,
     and its doors and vents open from the start. Runs of the same house are
     the same air until their schedules differ."""
@@ -258,7 +258,7 @@ def climate_run(
 def seed_kept_climate_runs(state: KeptState) -> None:
     """Give a kept state to the climate runs kept that agree with it."""
     for key, run in CLIMATE_RUNS.values():
-        if state.agrees(_house(key), run.run.schedule):
+        if state.agrees(house_of(key), run.run.schedule):
             for moment, air in state.airs():
                 run.house.seed(moment, air)
 
