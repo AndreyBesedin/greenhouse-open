@@ -42,6 +42,7 @@ import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
 import { PlaybackPanel } from "./PlaybackPanel";
+import { usePanelTheme } from "./panelTheme";
 import { cropPlantUrl, cropUrl, loadCropPlant, ORGAN_CROP, withCrop } from "./plants/crop";
 import type { GrowthSpeed } from "./plants/LabControls";
 import { LabPanels } from "./plants/LabPanels";
@@ -132,6 +133,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // Opened with nothing chosen, at the bare address, the viewer starts with
   // the choice of what to show open (#201).
   const [chooseFirst] = useState(() => searchFor(addressed) === "");
+  // How the panels look (#208): dark unless the person chose light.
+  const [panelTheme, setPanelTheme] = usePanelTheme();
   // Whether the viewer shows what the simulator knows and a policy never
   // sees (P09.6): only QA mode asks for truth.
   const [qaMode, setQaMode] = useQaMode();
@@ -669,6 +672,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             scene={shown.status === "loaded" && snapshot !== null ? { ...shown, snapshot } : shown}
             failures={source.kind === "live" ? [] : failures}
             chooseFirst={chooseFirst}
+            theme={panelTheme}
+            onTheme={setPanelTheme}
             onSource={chooseSource}
           >
             {snapshot !== null && (
