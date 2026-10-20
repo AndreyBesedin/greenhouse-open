@@ -1,7 +1,8 @@
-"""A scenario's own daily commands (P09.4): the reference run heats, vents
-and stirs its house by the clock every day, as its manifest says, unless a
-run gives daily commands of its own; and its sensors observe the season it
-makes, only through the observation path."""
+"""A scenario's own daily commands (P09.4): the reference run vents and
+stirs its house by the clock every day, as its manifest says, unless a run
+gives daily commands of its own, and heats it by its thermostat (P10.3); and
+its sensors observe the season it makes, only through the observation
+path."""
 
 from datetime import timedelta
 from http import HTTPStatus
@@ -20,10 +21,10 @@ from greenhouse_sim.world.sensors import PointSensor
 
 REFERENCE = SCENARIO_REGISTRY["reference_greenhouse"]
 HOUR_S: Final = 3600.0
-# The reference run's second day: its evening, heated in full, and the small
-# hours after, the heat set back.
-EVENING_S: Final = DAY_S + 22 * HOUR_S
+# The reference run's third day: its small hours, heated to the night's
+# setpoint, and its noon, to the day's.
 SMALL_HOURS_S: Final = 2 * DAY_S + 3 * HOUR_S
+NOON_S: Final = 2 * DAY_S + 12 * HOUR_S
 
 
 def _own() -> list[tuple[float, str, float]]:
@@ -37,11 +38,12 @@ def _body(path: str) -> dict[str, Any]:
     return response.body
 
 
-def test_the_reference_run_heats_vents_and_stirs_its_house_every_day() -> None:
+def test_the_reference_run_vents_and_stirs_its_house_by_the_clock_and_heats_it_by_the_air() -> None:
     actuators = {command.actuator_id for command in REFERENCE.daily}
 
+    assert REFERENCE.thermostat is not None
+    assert REFERENCE.thermostat.actuator_id == "heater"
     assert actuators == {
-        "heater",
         "fan_left",
         "fan_right",
         "roof_vent_1",
@@ -94,10 +96,18 @@ def test_a_scenario_refuses_daily_commands_to_what_it_does_not_have() -> None:
         )
 
 
-def _reading(time_s: float, daily: list[tuple[float, str, float]] | None = None) -> float:
+def _reading(
+    time_s: float,
+    daily: list[tuple[float, str, float]] | None = None,
+    levels: dict[str, float] | None = None,
+) -> float:
     """What the front temperature sensor, a clean one, observed at `time_s`."""
     log = sensors.observations(
-        "reference_greenhouse", until_s=time_s, from_s=time_s - 60.0, daily=daily
+        "reference_greenhouse",
+        levels=levels,
+        until_s=time_s,
+        from_s=time_s - 60.0,
+        daily=daily,
     )
     return next(
         o.value
@@ -107,13 +117,15 @@ def _reading(time_s: float, daily: list[tuple[float, str, float]] | None = None)
     )
 
 
-def test_the_heaters_night_setback_shows_in_the_readings() -> None:
-    evening, small_hours = _reading(EVENING_S), _reading(SMALL_HOURS_S)
-    unheated = _reading(SMALL_HOURS_S, daily=[])
+def test_the_thermostats_setpoints_show_in_the_readings() -> None:
+    small_hours, noon = _reading(SMALL_HOURS_S), _reading(NOON_S)
+    unheated = _reading(SMALL_HOURS_S, daily=[], levels=fields.off_levels("reference_greenhouse"))
 
-    # Set back, the house cools from the evening's warmth, but stays well
-    # above what an unheated house falls to.
-    assert small_hours < evening - 1.0
+    # Near 16 °C at night and 18 °C by day, a sensor's error and the
+    # thermostat's band either way, well above what an unheated house falls
+    # to on a March night.
+    assert small_hours == pytest.approx(16.0, abs=1.5)
+    assert noon == pytest.approx(18.0, abs=1.5)
     assert small_hours > unheated + 5.0
 
 

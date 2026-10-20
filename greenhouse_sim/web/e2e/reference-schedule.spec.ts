@@ -1,15 +1,19 @@
 import { expect, test } from "@playwright/test";
 
-// The reference run's own schedule (P09.4): its manifest heats, vents and
-// stirs the house by the clock every day, the heater full from 17 h and set
-// back to 80% at 23 h, unless the address gives daily commands of its own.
+import { unfold } from "./folds";
+
+// The reference run's own schedule (P09.4) and its thermostat (P10.3): its
+// manifest vents and stirs the house by the clock every day, unless the
+// address gives daily commands of its own, and its thermostat heats it to
+// 16 °C by night and 18 °C by day, as the air needs; a command to the
+// heater takes it over.
 const DAY_S = 86_400;
 const SECOND_EVENING_S = DAY_S + 22 * 3600;
 // A later day's moment takes the simulator the house's air through the days
 // before it.
 const ARRIVES = { timeout: 90_000 };
 
-test("reference schedule: the run heats by its own clock, set back at night, unless the address changes it", async ({
+test("reference schedule: the run vents by its own clock, its thermostat heats it, and a command takes the heater over", async ({
   page,
 }) => {
   test.setTimeout(300_000);
@@ -21,42 +25,37 @@ test("reference schedule: the run heats by its own clock, set back at night, unl
   const daily = schedule.getByTestId("daily-command");
   const summary = schedule.getByTestId("schedule-summary");
 
-  await test.step("in its second evening, the heater runs in full by its own schedule", async () => {
+  await test.step("in its second evening, the thermostat heats the house to the night's 16 °C", async () => {
     await page.goto(`/?scenario=reference_greenhouse&field=climate&t=${SECOND_EVENING_S}`);
     await expect(moment).toHaveText("day 1, 22 h 00 min", ARRIVES);
-    await expect(daily).toHaveCount(21);
-    // Folded, its 21 commands are a line, and the next of them.
+    // Its vents and fans by the clock; its heater by no command.
+    await expect(daily).toHaveCount(16);
     await expect(summary).toHaveText(
-      "Schedule: 21 commands. Next at day 1, 23 h 00 min: heater 80%.",
+      "Schedule: 16 commands. Next at day 2, 8 h 00 min: fan left 100% and 1 more.",
     );
     await expect(daily.first()).toBeHidden();
-    await expect(heater).toHaveText("100%, 15 kW", ARRIVES);
-    await expect(air).toHaveText("Air 18.9 °C, all off 10.7 °C", ARRIVES);
+    await expect(heater).toHaveText("100%, 30 kW, by its thermostat at 16 °C", ARRIVES);
+    await expect(air).toHaveText("Air 15.7 °C, all off 6.3 °C", ARRIVES);
     // The address keeps no copy of the scenario's own schedule.
     expect(page.url()).not.toContain("daily=");
   });
 
-  await test.step("in the small hours, set back, the house cools, still well above all off", async () => {
+  await test.step("by the next noon, to the day's 18 °C", async () => {
     await run.getByRole("button", { name: "Next day" }).click();
-    await run.getByRole("slider", { name: "Time of day" }).fill("10800");
-    await expect(moment).toHaveText("day 2, 3 h 00 min", ARRIVES);
-    await expect(heater).toHaveText("80%, 12 kW", ARRIVES);
-    await expect(air).toHaveText("Air 13.1 °C, all off 5.2 °C", ARRIVES);
+    await run.getByRole("slider", { name: "Time of day" }).fill("43200");
+    await expect(moment).toHaveText("day 2, 12 h 00 min", ARRIVES);
+    await expect(heater).toHaveText(/, by its thermostat at 18 °C$/, ARRIVES);
+    await expect(air).toHaveText("Air 18.1 °C, all off 13.6 °C", ARRIVES);
   });
 
-  await test.step("its setback taken out, the address keeps the rest, and the heater runs on", async () => {
-    // Opened from the keyboard, as its summary is a control.
-    await schedule.locator("summary").press("Enter");
-    await expect(daily.first()).toBeVisible();
-    await schedule
-      .getByRole("button", { name: "Remove heater 80% every day at 23 h 00 min" })
-      .click();
-    await expect(page).toHaveURL(/&daily=/);
-    await expect(daily).toHaveCount(20);
-    await expect(summary).toHaveText(
-      "Schedule: 20 commands. Next at day 2, 5 h 00 min: heater 100%.",
-    );
-    await expect(heater).toHaveText("100%, 15 kW", ARRIVES);
+  await test.step("switched off by hand, the heater is the command's, not the thermostat's", async () => {
+    await unfold(page, "Equipment");
+    await page
+      .getByRole("group", { name: "Equipment" })
+      .getByRole("checkbox", { name: "heater" })
+      .uncheck();
+    await expect(page).toHaveURL(/&schedule=216000:heater:0/);
+    await expect(heater).toHaveText("off", ARRIVES);
   });
 });
 
@@ -83,7 +82,7 @@ test("reference wind: an open door's flow turns with the wind, overridden for QA
   await expect(page).toHaveURL(/&wind=0(&|$)/);
   await expect(weather.getByTestId("weather-wind-override")).toHaveText("0°, for QA");
   await expect(weather.getByTestId("weather-wind")).toContainText("(0°)", ARRIVES);
-  await expect(labels.filter({ hasText: /^2\.\d\d m³\/s out$/ })).toHaveCount(1, ARRIVES);
+  await expect(labels.filter({ hasText: /^0\.\d\d m³\/s out$/ })).toHaveCount(1, ARRIVES);
 
   await weather.getByRole("button", { name: "Its own wind" }).click();
   await expect(page).not.toHaveURL(/&wind=/);

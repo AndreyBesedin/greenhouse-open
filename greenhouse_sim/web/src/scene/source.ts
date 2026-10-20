@@ -509,7 +509,11 @@ export function pairsFrom(value: string | null): Record<string, number> | null {
   return pairs;
 }
 
-function sceneUrl(source: SceneSource, openingIds: readonly string[] = []): string | null {
+function sceneUrl(
+  source: SceneSource,
+  openingIds: readonly string[] = [],
+  governed: Readonly<Record<string, number>> = {},
+): string | null {
   switch (source.kind) {
     case "reference":
     case "stress":
@@ -524,8 +528,8 @@ function sceneUrl(source: SceneSource, openingIds: readonly string[] = []): stri
       return `${PLANT_LAB_SCENE_URL}?${labRunQuery(source)}`;
     case "scenario":
       // Its equipment, and its doors and vents, as they stand at the moment of
-      // its climate run drawn.
-      return `/api/scenarios/${encodeURIComponent(source.scenarioId)}/scene${changesQuery(standingAt(source, openingIds), "?")}`;
+      // its climate run drawn, its thermostat's heater as the run has it.
+      return `/api/scenarios/${encodeURIComponent(source.scenarioId)}/scene${changesQuery(standingAt(source, openingIds, governed), "?")}`;
   }
 }
 
@@ -534,13 +538,17 @@ function sceneUrl(source: SceneSource, openingIds: readonly string[] = []): stri
 export function sceneRequest(
   source: SceneSource,
   openingIds: readonly string[] = [],
+  governed: Readonly<Record<string, number>> = {},
 ): string | null {
-  return source.kind === "stress" ? `stress ${source.plants}` : sceneUrl(source, openingIds);
+  return source.kind === "stress"
+    ? `stress ${source.plants}`
+    : sceneUrl(source, openingIds, governed);
 }
 
 /** A scenario's source with its equipment, and its doors and vents,
  * `openingIds`, at the levels they stand at at the moment drawn: its
- * commands to an opening open it that far, as the simulator's do. */
+ * commands to an opening open it that far, as the simulator's do; and the
+ * levels `governed` by a thermostat as the run has them. */
 export function standingAt<
   S extends {
     levels?: Readonly<Record<string, number>>;
@@ -549,9 +557,9 @@ export function standingAt<
     daily?: readonly ScheduledCommand[];
     time?: number;
   },
->(source: S, openingIds: readonly string[]): S {
+>(source: S, openingIds: readonly string[], governed: Readonly<Record<string, number>> = {}): S {
   const doors = new Set(openingIds);
-  const standing = Object.entries(levelsAt(source));
+  const standing = Object.entries({ ...levelsAt(source), ...governed });
   return {
     ...source,
     levels: Object.fromEntries(standing.filter(([id]) => !doors.has(id))),
@@ -567,12 +575,13 @@ export async function loadScene(
   source: SceneSource,
   fetchFn: typeof fetch = fetch,
   openingIds: readonly string[] = [],
+  governed: Readonly<Record<string, number>> = {},
 ): Promise<SceneState> {
   if (source.kind === "stress") {
     // The viewer builds it, so it needs no check.
     return { status: "loaded", snapshot: stressScene(source.plants) };
   }
-  const url = sceneUrl(source, openingIds);
+  const url = sceneUrl(source, openingIds, governed);
   return url === null ? { status: "none" } : fetchScene(url, fetchFn);
 }
 

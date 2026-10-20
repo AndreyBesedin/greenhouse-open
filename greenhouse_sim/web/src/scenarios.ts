@@ -27,6 +27,8 @@ export interface ScenarioSummary {
   layouts: string[];
   /** The names of the weathers it can be run under, its own first. */
   weathers?: string[];
+  /** The heater a thermostat runs by the house's air, if it has one. */
+  thermostat?: string | null;
 }
 
 /** The layout a scenario is defined with. */
@@ -75,7 +77,10 @@ function isScenarioSummary(value: unknown): value is ScenarioSummary {
     fields.layouts.every((layout) => typeof layout === "string") &&
     (fields.weathers === undefined ||
       (Array.isArray(fields.weathers) &&
-        fields.weathers.every((weather) => typeof weather === "string")))
+        fields.weathers.every((weather) => typeof weather === "string"))) &&
+    (fields.thermostat === undefined ||
+      fields.thermostat === null ||
+      typeof fields.thermostat === "string")
   );
 }
 

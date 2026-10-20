@@ -451,6 +451,11 @@
       "minimum": 0.0,
       "type": "number"
     },
+    "Persistence": {
+      "exclusiveMaximum": 0.8,
+      "minimum": 0.0,
+      "type": "number"
+    },
     "Point2": {
       "description": "A point in a shape's own x-y plane.",
       "properties": {
@@ -542,6 +547,126 @@
       ],
       "title": "RecordedWeather",
       "type": "object"
+    },
+    "SeasonalWeather": {
+      "additionalProperties": false,
+      "description": "Weather through a season: each day's usual coldest and warmest\ntemperatures on the year's coldest day and half a year later, which day\nof the year is coldest, how far a day's temperatures wander from their\nusual ones and how much of that a day keeps from the day before, and\neach day's clouds; and a synthetic day's shape, humidity and wind.",
+      "properties": {
+        "kind": {
+          "const": "seasonal",
+          "default": "seasonal",
+          "title": "Kind",
+          "type": "string"
+        },
+        "coldest_c": {
+          "$ref": "#/$defs/Seasons"
+        },
+        "warmest_c": {
+          "$ref": "#/$defs/Seasons"
+        },
+        "coldest_day": {
+          "default": 20,
+          "maximum": 366,
+          "minimum": 1,
+          "title": "Coldest Day",
+          "type": "integer"
+        },
+        "day_to_day_c": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Day To Day C",
+          "type": "number"
+        },
+        "persistence": {
+          "$ref": "#/$defs/Persistence",
+          "default": 0.0
+        },
+        "coldest_hour": {
+          "$ref": "#/$defs/Hour"
+        },
+        "warmest_hour": {
+          "$ref": "#/$defs/Hour"
+        },
+        "humidity_at_coldest_pct": {
+          "$ref": "#/$defs/Percent"
+        },
+        "co2_ppm": {
+          "default": 420.0,
+          "exclusiveMinimum": 0,
+          "title": "Co2 Ppm",
+          "type": "number"
+        },
+        "calmest_m_s": {
+          "minimum": 0,
+          "title": "Calmest M S",
+          "type": "number"
+        },
+        "windiest_m_s": {
+          "minimum": 0,
+          "title": "Windiest M S",
+          "type": "number"
+        },
+        "wind_from_deg": {
+          "$ref": "#/$defs/Bearing"
+        },
+        "veer_deg": {
+          "default": 0.0,
+          "title": "Veer Deg",
+          "type": "number"
+        },
+        "gustiness": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Gustiness",
+          "type": "number"
+        },
+        "cloud_cover_pct": {
+          "$ref": "#/$defs/Percent",
+          "default": 0.0
+        },
+        "cloud_spread_pct": {
+          "$ref": "#/$defs/Percent",
+          "default": 0.0
+        },
+        "barometric_pressure_hpa": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Barometric Pressure Hpa"
+        }
+      },
+      "required": [
+        "coldest_c",
+        "warmest_c",
+        "coldest_hour",
+        "warmest_hour",
+        "humidity_at_coldest_pct",
+        "calmest_m_s",
+        "windiest_m_s",
+        "wind_from_deg"
+      ],
+      "title": "SeasonalWeather",
+      "type": "object"
+    },
+    "Seasons": {
+      "maxItems": 2,
+      "minItems": 2,
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "type": "array"
     },
     "Site": {
       "additionalProperties": false,
@@ -668,6 +793,50 @@
       ],
       "title": "SyntheticWeather",
       "type": "object"
+    },
+    "Thermostat": {
+      "additionalProperties": false,
+      "description": "Heat the house's air to `day_c` from `day_from_s` and to `night_c`\nfrom `night_from_s`, times of a run's day, with the heater `actuator_id`,\non below the setpoint by half `band_c` and off above it by as much.",
+      "properties": {
+        "actuator_id": {
+          "title": "Actuator Id",
+          "type": "string"
+        },
+        "day_c": {
+          "title": "Day C",
+          "type": "number"
+        },
+        "night_c": {
+          "title": "Night C",
+          "type": "number"
+        },
+        "day_from_s": {
+          "$ref": "#/$defs/TimeOfDay",
+          "default": 25200.0
+        },
+        "night_from_s": {
+          "$ref": "#/$defs/TimeOfDay",
+          "default": 68400.0
+        },
+        "band_c": {
+          "default": 1.0,
+          "exclusiveMinimum": 0,
+          "title": "Band C",
+          "type": "number"
+        }
+      },
+      "required": [
+        "actuator_id",
+        "day_c",
+        "night_c"
+      ],
+      "title": "Thermostat",
+      "type": "object"
+    },
+    "TimeOfDay": {
+      "exclusiveMaximum": 86400.0,
+      "minimum": 0.0,
+      "type": "number"
     },
     "Transform": {
       "description": "Places a shape's own frame in the world: rotate, then translate.",
@@ -815,6 +984,17 @@
       "title": "Daily",
       "type": "array"
     },
+    "thermostat": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Thermostat"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "start_date": {
       "format": "date",
       "title": "Start Date",
@@ -898,6 +1078,7 @@
         "mapping": {
           "constant": "#/$defs/ConstantWeather",
           "recorded": "#/$defs/RecordedWeather",
+          "seasonal": "#/$defs/SeasonalWeather",
           "synthetic": "#/$defs/SyntheticWeather"
         },
         "propertyName": "kind"
@@ -908,6 +1089,9 @@
         },
         {
           "$ref": "#/$defs/SyntheticWeather"
+        },
+        {
+          "$ref": "#/$defs/SeasonalWeather"
         },
         {
           "$ref": "#/$defs/RecordedWeather"

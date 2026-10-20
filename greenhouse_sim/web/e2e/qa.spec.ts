@@ -114,20 +114,20 @@ test("the reference greenhouse's QA page draws each golden view and its probes",
   expect(errors).toEqual([]);
 
   // The opening day's sun, low at dawn and evening, high at its noon.
-  expect(probes.dawn).toContain("sun 10.02° up");
-  expect(probes.noon).toContain("sun 58.05° up");
-  expect(probes.evening).toContain("sun 8.28° up");
+  expect(probes.dawn).toContain("sun 10.84° up");
+  expect(probes.noon).toContain("sun 59.19° up");
+  expect(probes.evening).toContain("sun 9.24° up");
   // The fans' jet, and nothing where they are off; the house as one volume
   // does not feel them.
-  expect(probes["fans-on"]).toContain("house air 29.46 °C, sun 58.05° up, jet 1.39 m/s");
-  expect(probes["fans-off"]).toContain("house air 29.46 °C, sun 58.05° up, jet 0 m/s");
-  // Shut at noon, the vents exchange nothing, and the house is 9 °C warmer.
-  expect(probes["vents-open"]).toContain("vents exchange 0.84 m³/s");
-  expect(probes["vents-closed"]).toContain("house air 38.54 °C");
+  expect(probes["fans-on"]).toContain("house air 28.16 °C, sun 59.19° up, jet 1.39 m/s");
+  expect(probes["fans-off"]).toContain("house air 28.16 °C, sun 59.19° up, jet 0 m/s");
+  // Shut at noon, the vents exchange nothing, and the house is 10 °C warmer.
+  expect(probes["vents-open"]).toContain("vents exchange 1.08 m³/s");
+  expect(probes["vents-closed"]).toContain("house air 38.16 °C");
   expect(probes["vents-closed"]).toContain("vents exchange 0 m³/s");
   // A young crop bears no fruit; on the opening day, the first is red.
-  expect(probes.young).toContain("4334 leaves, 0 fruits, 0 red");
-  expect(probes.fruiting).toContain("10428 leaves, 750 fruits, 1 red");
+  expect(probes.young).toContain("4257 leaves, 0 fruits, 0 red");
+  expect(probes.fruiting).toContain("10384 leaves, 741 fruits, 1 red");
 
   await page.goto(`${QA_REFERENCE_PATH}?view=sideways`);
   await expect(page.getByRole("alert")).toHaveText(

@@ -42,37 +42,38 @@ test("crop: the reference greenhouse's plants live each day in the house's air a
     await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
     await selectThePlant(page);
     await expect(page.getByTestId("plant-days")).toContainText("No day lived yet", ARRIVES);
-    // Its own light at noon, and through its first day, at its crown's top.
-    await expect(page.getByTestId("plant-par")).toHaveText("760 µmol/m²/s", ARRIVES);
-    await expect(page.getByTestId("plant-daily-light")).toHaveText("18.0 mol/m²/d");
+    // Its own light at noon, and through its first day, a dull one, at its
+    // crown's top.
+    await expect(page.getByTestId("plant-par")).toHaveText("376 µmol/m²/s", ARRIVES);
+    await expect(page.getByTestId("plant-daily-light")).toHaveText("9.2 mol/m²/d");
   });
 
   await test.step("a day on, it has lived its first, and grown", async () => {
     await run.getByRole("button", { name: "Next day" }).click();
     await expect(page).toHaveURL(new RegExp(`&t=${DAY_S + NOON_S}(&|$)`));
-    await expect(status).toContainText("reference_greenhouse, day 1, 3155 entities", ARRIVES);
+    await expect(status).toContainText("reference_greenhouse, day 1, 3161 entities", ARRIVES);
     // The organ selected is still the same plant's, on its next day.
     await expect(page.getByTestId("selected-entity")).toHaveText(new RegExp(`^${PLANT}_`));
     await expect(page.getByTestId("plant-days-air")).toHaveText(
-      "Air 15.5 °C on day 0, 15.5 to 15.5",
+      "Air 17.0 °C on day 0, 17.0 to 17.0",
       ARRIVES,
     );
     await expect(page.getByTestId("plant-days-light")).toHaveText(
-      "Light 18.0 mol/m²/d on day 0, 18.0 to 18.0",
+      "Light 9.2 mol/m²/d on day 0, 9.2 to 9.2",
     );
     await expect(page.getByTestId("plant-days-co2")).toHaveText("CO₂ 420 ppm on day 0, 420 to 420");
-    await expect(page.getByTestId("plant-daily-light")).toHaveText("18.3 mol/m²/d", ARRIVES);
+    await expect(page.getByTestId("plant-daily-light")).toHaveText("19.7 mol/m²/d", ARRIVES);
   });
 
   await test.step("two days on, its days are charted one by one", async () => {
     await run.getByRole("button", { name: "Next day" }).click();
-    await expect(status).toContainText("reference_greenhouse, day 2, 3264 entities", ARRIVES);
+    await expect(status).toContainText("reference_greenhouse, day 2, 3281 entities", ARRIVES);
     await expect(page.getByTestId("plant-days-light")).toHaveText(
-      "Light 18.3 mol/m²/d on day 1, 18.0 to 18.3",
+      "Light 19.7 mol/m²/d on day 1, 9.2 to 19.7",
       ARRIVES,
     );
     await expect(page.getByTestId("plant-days-air")).toHaveText(
-      "Air 17.1 °C on day 1, 15.5 to 17.1",
+      "Air 17.0 °C on day 1, 17.0 to 17.0",
     );
     await expect(page.getByRole("figure", { name: "Plant days" }).getByRole("img")).toHaveCount(3);
     await expect(page.locator("details.plant-structure summary")).toHaveText(
@@ -87,14 +88,14 @@ test("crop: the reference greenhouse's plants live each day in the house's air a
     await expect(status).toContainText("day 2", ARRIVES);
     await selectThePlant(page);
     await expect(page.getByTestId("plant-days-air")).toHaveText(
-      "Air 22.2 °C on day 1, 22.2 to 22.2",
+      "Air 27.4 °C on day 1, 27.0 to 27.4",
       ARRIVES,
     );
   });
 });
 
 // The reference run's kept opening day (P09.5): shown from the list, it
-// opens on its first day with red fruit, day 80, which the API keeps as it
+// opens on its first day with red fruit, day 86, which the API keeps as it
 // starts, so that the day is not worked out from the run's start.
 test("crop: shown from the list, the reference greenhouse opens on its first day with red fruit", async ({
   page,
@@ -103,10 +104,10 @@ test("crop: shown from the list, the reference greenhouse opens on its first day
   await page.goto("/");
   await (await chooser(page)).getByRole("button", { name: "Open reference_greenhouse" }).click();
   await expect(page).toHaveURL(/[?&]field=climate(&|$)/);
-  await expect(page).toHaveURL(new RegExp(`&t=${80.5 * DAY_S}(&|$)`));
-  await expect(page.getByTestId("climate-time")).toHaveText("day 80, 12 h 00 min", ARRIVES);
+  await expect(page).toHaveURL(new RegExp(`&t=${86.5 * DAY_S}(&|$)`));
+  await expect(page.getByTestId("climate-time")).toHaveText("day 86, 12 h 00 min", ARRIVES);
   await expect(page.getByTestId("scene-status")).toContainText(
-    "reference_greenhouse, day 80,",
+    "reference_greenhouse, day 86,",
     ARRIVES,
   );
   // Its air at noon, the vents open, drawn cell by cell: waited for, so that

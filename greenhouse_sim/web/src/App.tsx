@@ -58,6 +58,7 @@ import { ScenarioPanels } from "./ScenarioPanels";
 import { WhatAmISeeing, worldAxesLength } from "./SeenInTheView";
 import { loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
 import { withProbes } from "./scene/edits";
+import { equipmentUrl, governedLevels, loadEquipment, runningThermostat } from "./scene/equipment";
 import { runApartFromItsMoment, runsSomething, scenarioRun } from "./scene/run";
 import {
   changesQuery,
@@ -213,10 +214,19 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // keeps its scene on show until the next arrives; any other change of
   // scene starts from loading.
   const openingIds = summary?.openings ?? NO_OPENINGS;
-  const sceneAsked = sceneRequest(source, openingIds);
+  // A thermostat runs its heater by the house's air (P10.3), which only the
+  // run knows: the scene draws the heater as the run has it at the moment.
+  const equipment = useLoad(
+    source.kind === "scenario" && summary?.thermostat
+      ? equipmentUrl(source.scenarioId, scenarioRun(source))
+      : null,
+    loadEquipment,
+  );
+  const governed = governedLevels(equipment);
+  const sceneAsked = sceneRequest(source, openingIds, governed);
   const sceneProgress = useLoadProgress(
     sceneAsked,
-    (_url, fetchFn) => loadScene(source, fetchFn, openingIds),
+    (_url, fetchFn) => loadScene(source, fetchFn, openingIds, governed),
     {
       group:
         source.kind === "scenario"
@@ -270,11 +280,13 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const field = drawn(fieldProgress);
   // What of the moment asked for failed to arrive, while something else of
   // it is drawn in its place: the scene and the field each say why when
-  // nothing of them is drawn; the crop never says so itself.
+  // nothing of them is drawn; the crop never says so itself; nor does a
+  // thermostat's heater, which the scene then draws off, not as it runs.
   const failures = [
     sceneProgress.shown === null ? null : failureOf("scene", sceneProgress.latest),
     failureOf("crop", cropProgress.latest),
     fieldProgress.shown === null ? null : failureOf("field", fieldProgress.latest),
+    failureOf("equipment", equipment),
   ].filter((failure) => failure !== null);
   const momentFailed = [sceneProgress, cropProgress, fieldProgress].some(({ latest }) =>
     failed(latest),
@@ -664,6 +676,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 weathers={summary?.weathers ?? []}
                 days={summary?.duration_days ?? 1}
                 loads={{ field, compared, weather, weatherDay, houseAir, probeCharts, cfd }}
+                thermostat={runningThermostat(equipment)}
                 momentFailed={momentFailed}
                 fieldView={fieldView}
                 fieldSlice={fieldSlice}

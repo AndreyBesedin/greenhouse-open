@@ -16,6 +16,9 @@ from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.sensors import run_start
 
 SCENARIO = "reference_greenhouse"
+# The reference run's first harvest round with red fruit to pick: the
+# weekly round after its opening day, 86.
+FIRST_ROUND = 91
 WALKED = {
     ObservationType.VISIBLE_FRUIT_COUNT,
     ObservationType.RIPE_FRUIT_COUNT,
@@ -53,23 +56,23 @@ def test_a_scenario_with_the_simple_crop_has_no_records_of_it() -> None:
 
 @pytest.mark.slow
 def test_a_harvest_round_is_an_event_per_plant_picked_as_the_plant_s_history_has_it() -> None:
-    # From the kept opening day, 80, the first with red fruit, as the viewer
-    # opens the run; the round after it starts day 84.
+    # From the kept opening day, 86, the first with red fruit, as the viewer
+    # opens the run; the round after it starts day 91.
     assert checkpoints.load_openings() == []
     start = run_start(SCENARIO)
     _, run_id = air_through_a_run(SCENARIO)
 
-    walked, harvests = crop_records(SCENARIO, 84, start, run_id)
+    walked, harvests = crop_records(SCENARIO, FIRST_ROUND, start, run_id)
 
-    assert harvests, "the day-84 round picks red fruit"
+    assert harvests, "the first round after the opening day picks red fruit"
     assert check_events(harvests) == []
     assert {e.event_type for e in harvests} == {EventType.HARVEST}
-    assert {e.timestamp for e in harvests} == {start + timedelta(seconds=84 * DAY_S)}
+    assert {e.timestamp for e in harvests} == {start + timedelta(seconds=FIRST_ROUND * DAY_S)}
     # Each event is what the round picked from its plant, by its history.
     run = crop.run_crop(SCENARIO)
-    before = {p.plant_id: p for p in run.plants_on(83)}
+    before = {p.plant_id: p for p in run.plants_on(FIRST_ROUND - 1)}
     for event in harvests:
-        plant = next(p for p in run.plants_on(84) if p.plant_id == event.plant_id)
+        plant = next(p for p in run.plants_on(FIRST_ROUND) if p.plant_id == event.plant_id)
         picked = [
             e
             for e in plant.history[len(before[plant.plant_id].history) :]

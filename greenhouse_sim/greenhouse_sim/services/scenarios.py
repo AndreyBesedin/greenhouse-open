@@ -71,6 +71,9 @@ class ScenarioSummary(BaseModel):
     layouts: list[str]
     # The weathers it can be run under, by name, its own first.
     weathers: list[str]
+    # The heater a thermostat runs by the house's air, if it has one
+    # (`climate.thermostat`).
+    thermostat: str | None = None
 
 
 class RunManifest(BaseModel):
@@ -131,6 +134,7 @@ def scenario_summaries() -> list[ScenarioSummary]:
             opening_day=opening_day(config.greenhouse_id),
             layouts=layout_names(config.greenhouse_id),
             weathers=weather_names(),
+            thermostat=None if config.thermostat is None else config.thermostat.actuator_id,
         )
         for config in SCENARIO_REGISTRY.values()
     ]

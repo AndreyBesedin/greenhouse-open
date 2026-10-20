@@ -52,6 +52,7 @@ changes course is a new record that supersedes the old one.
 | [0038](0038-hooks-merge-like-dev-dependencies-review-waits-for-a-second-maintainer.md) | Hook updates merge like development dependencies; review changes with a second maintainer | Accepted |
 | [0039](0039-develop-with-uv-one-workspace-a-command-for-each-task.md) | Develop with uv: one workspace, a command for each task | Accepted |
 | [0041](0041-one-run-for-the-viewer-and-a-consumer-played-back-against-one-clock.md) | One run for the viewer and a consumer, played back against one clock | Accepted |
+| [0042](0042-a-season-a-thermostat-and-the-heat-it-gives-as-a-modelled-record.md) | A season, a thermostat, and the heat it gives as a modelled record | Accepted |
 
 ## Template
 

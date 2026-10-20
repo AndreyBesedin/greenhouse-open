@@ -2,12 +2,12 @@
 API (P09.7), and the state probes checked beside them.
 
 `web/public/scenes/qa-reference-greenhouse.json.gz` holds, gzipped, the
-reference run at a few moments of its opening day, day 80, and on day 21:
+reference run at a few moments of its opening day, day 86, and on day 21:
 for each, the house as the viewer draws it then (its equipment's levels and
 its vents' openings, without its crop), the crop's day, the weather, the
 climate field's channels that its views draw, what its vents pass, and its
 state probes; and the crop, organ by organ, on each day drawn, and the sun's
-path through day 80. Two moments branch an hour before the sun's noon: one
+path through day 86. Two moments branch an hour before the sun's noon: one
 turns the fans off, one shuts the vents. The viewer's reference QA page
 (`/qa/reference-greenhouse`) draws its golden views from it for its
 screenshot tests. It is written here, from `greenhouse_sim/`, in about a
@@ -53,7 +53,7 @@ HOUR_S = 3600.0
 MINUTE_S = 60.0
 # The opening day, its dawn, the sun's noon (12:40 on the run's clock, its
 # site's standard time) and its evening; and a young crop's day, at noon.
-OPENING_DAY = 80
+OPENING_DAY = 86
 DAWN_S = OPENING_DAY * DAY_S + 6 * HOUR_S
 NOON_S = OPENING_DAY * DAY_S + 12 * HOUR_S + 40 * MINUTE_S
 EVENING_S = OPENING_DAY * DAY_S + 19 * HOUR_S + 30 * MINUTE_S
@@ -91,39 +91,39 @@ MOMENTS: Final = {
     "vents-shut": Moment(NOON_S, VENTS_SHUT, channels=(AirQuantity.TEMPERATURE,), openings=True),
     "young": Moment(YOUNG_S),
 }
-# The probes at each moment, as worked out when P09.7 was built: the
-# house's air (°C), the sun's elevation (°), the air's speed in the right
-# fan's jet (m/s), what the vents exchange (m³/s), and the crop's leaves,
-# fruits and red fruits. A change to any model they come from moves them,
-# and should be meant.
-CROP_ON_DAY_80: Final = {"leaves": 10428.0, "fruits": 750.0, "red_fruits": 1.0}
+# The probes at each moment, as worked out when P10.3 gave the run its
+# season and its thermostat: the house's air (°C), the sun's elevation (°),
+# the air's speed in the right fan's jet (m/s), what the vents exchange
+# (m³/s), and the crop's leaves, fruits and red fruits. A change to any
+# model they come from moves them, and should be meant.
+CROP_ON_OPENING_DAY: Final = {"leaves": 10384.0, "fruits": 741.0, "red_fruits": 1.0}
 REFERENCE: Final[dict[str, dict[str, float]]] = {
-    "dawn": {"house_air_c": 18.213047, "sun_elevation_deg": 10.01911, **CROP_ON_DAY_80},
+    "dawn": {"house_air_c": 15.815854, "sun_elevation_deg": 10.842524, **CROP_ON_OPENING_DAY},
     "noon": {
-        "house_air_c": 29.464759,
-        "sun_elevation_deg": 58.048532,
+        "house_air_c": 28.155517,
+        "sun_elevation_deg": 59.18513,
         "jet_m_s": 1.391237,
-        "vents_exchange_m3_s": 0.84417,
-        **CROP_ON_DAY_80,
+        "vents_exchange_m3_s": 1.07656,
+        **CROP_ON_OPENING_DAY,
     },
-    "evening": {"house_air_c": 20.63034, "sun_elevation_deg": 8.27722, **CROP_ON_DAY_80},
+    "evening": {"house_air_c": 15.844551, "sun_elevation_deg": 9.236631, **CROP_ON_OPENING_DAY},
     # The house as one volume does not feel its fans: only the jet stops.
     "fans-off": {
-        "house_air_c": 29.464759,
-        "sun_elevation_deg": 58.048532,
+        "house_air_c": 28.155517,
+        "sun_elevation_deg": 59.18513,
         "jet_m_s": 0.0,
-        **CROP_ON_DAY_80,
+        **CROP_ON_OPENING_DAY,
     },
     "vents-shut": {
-        "house_air_c": 38.542341,
-        "sun_elevation_deg": 58.048532,
+        "house_air_c": 38.155198,
+        "sun_elevation_deg": 59.18513,
         "vents_exchange_m3_s": 0.0,
-        **CROP_ON_DAY_80,
+        **CROP_ON_OPENING_DAY,
     },
     "young": {
-        "house_air_c": 23.691986,
+        "house_air_c": 20.444744,
         "sun_elevation_deg": 38.727684,
-        "leaves": 4334.0,
+        "leaves": 4257.0,
         "fruits": 0.0,
         "red_fruits": 0.0,
     },

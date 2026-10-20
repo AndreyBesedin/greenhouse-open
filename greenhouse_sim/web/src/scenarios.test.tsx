@@ -155,4 +155,14 @@ describe("a scenario's opening day", () => {
       "scenario 0 is not a scenario summary",
     );
   });
+
+  it("says which heater a thermostat runs, if one does", () => {
+    const base = { id: "a", name: "A", description: "", plants: 1, duration_days: 1 };
+    const [heated] = parseScenarios([{ ...base, layouts: ["default"], thermostat: "heater" }]);
+
+    expect(heated?.thermostat).toBe("heater");
+    expect(() => parseScenarios([{ ...base, layouts: ["default"], thermostat: 1 }])).toThrow(
+      "scenario 0 is not a scenario summary",
+    );
+  });
 });
