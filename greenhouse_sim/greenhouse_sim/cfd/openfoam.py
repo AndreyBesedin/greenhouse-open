@@ -91,15 +91,15 @@ def _number(value: float) -> str:
     return f"{value:.9g}"
 
 
-def _vector(x: float, y: float, z: float) -> str:
+def _foam_vector(x: float, y: float, z: float) -> str:
     return f"({_number(x)} {_number(y)} {_number(z)})"
 
 
 def _padded(box: Box, grid: FieldGrid) -> tuple[str, str]:
     """A selection box's corners, padded by a fraction of a cell."""
     pad = {axis: PAD_SHARE_OF_CELL * getattr(grid.cell_size, axis) for axis in "xyz"}
-    low = _vector(*(getattr(box.minimum, a) - pad[a] for a in "xyz"))
-    high = _vector(*(getattr(box.maximum, a) + pad[a] for a in "xyz"))
+    low = _foam_vector(*(getattr(box.minimum, a) - pad[a] for a in "xyz"))
+    high = _foam_vector(*(getattr(box.maximum, a) + pad[a] for a in "xyz"))
     return low, high
 
 
@@ -107,8 +107,8 @@ def _shrunk(box: Box, grid: FieldGrid) -> tuple[str, str]:
     """An obstacle's box, shrunk by a fraction of a cell, so that it holds the
     centres of the cells it removes and no others."""
     pad = {axis: PAD_SHARE_OF_CELL * getattr(grid.cell_size, axis) for axis in "xyz"}
-    low = _vector(*(getattr(box.minimum, a) + pad[a] for a in "xyz"))
-    high = _vector(*(getattr(box.maximum, a) - pad[a] for a in "xyz"))
+    low = _foam_vector(*(getattr(box.minimum, a) + pad[a] for a in "xyz"))
+    high = _foam_vector(*(getattr(box.maximum, a) - pad[a] for a in "xyz"))
     return low, high
 
 
@@ -125,7 +125,7 @@ def block_mesh_dict(geometry: CfdGeometry) -> str:
         (high.x, high.y, high.z),
         (low.x, high.y, high.z),
     ]
-    vertices = "\n".join(f"    {_vector(*corner)}" for corner in corners)
+    vertices = "\n".join(f"    {_foam_vector(*corner)}" for corner in corners)
     patches = "\n".join(
         f"    {face.value}\n    {{\n        type wall;\n"
         f"        faces (({' '.join(str(v) for v in _FACE_VERTICES[face])}));\n    }}"

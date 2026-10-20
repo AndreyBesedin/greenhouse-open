@@ -375,7 +375,7 @@
       "type": "object"
     },
     "Hour": {
-      "exclusiveMaximum": 24.0,
+      "exclusiveMaximum": 24,
       "minimum": 0.0,
       "type": "number"
     },
@@ -388,6 +388,8 @@
       "description": "A door or vent: a rectangle on its host surface, centred at `centre` in\nthe host's own x-y plane, `width` along the host's x and `height` along\nits y, open by `opening`, from 0 (closed) to 1.",
       "properties": {
         "opening_id": {
+          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
+          "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Opening Id",
           "type": "string"
         },
@@ -1299,7 +1301,7 @@
       "type": "string"
     },
     "schema_version": {
-      "const": 1
+      "const": 2
     },
     "opening_day": {
       "type": "integer",

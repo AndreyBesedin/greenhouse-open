@@ -60,10 +60,24 @@ def test_every_manifest_names_its_schema_its_format_and_its_layout(scenario_id: 
 
 
 def test_a_manifest_in_a_format_it_does_not_read_is_refused() -> None:
-    for version in (SCHEMA_VERSION + 1, None, "1"):
+    for version in (SCHEMA_VERSION + 1, 0, None, "2", True):
         document = _manifest("climate_box") | {"schema_version": version}
-        with pytest.raises(InvalidManifest, match="this simulator reads format 1"):
+        with pytest.raises(InvalidManifest, match="this simulator reads format 2, and format 1"):
             scenario_from_manifest("climate_box", document)
+
+
+def test_a_format_1_manifest_is_read_as_format_2_its_identifiers_held_to_it() -> None:
+    """Format 2 narrowed the identifiers an item may have (#254); a format 1
+    manifest is otherwise the same, and is read as format 2, or refused for
+    an identifier format 2 does not allow, by name."""
+    older = _manifest("climate_box") | {"schema_version": 1}
+    assert scenario_from_manifest("climate_box", older) == SCENARIO_REGISTRY["climate_box"]
+
+    openings = older["envelope"]["openings"]
+    renamed = [openings[0] | {"opening_id": "roof:vent"}, *openings[1:]]
+    named_so = older | {"envelope": older["envelope"] | {"openings": renamed}}
+    with pytest.raises(ValidationError, match="opening_id"):
+        scenario_from_manifest("climate_box", named_so)
 
 
 def test_a_manifest_of_another_scenario_is_refused() -> None:

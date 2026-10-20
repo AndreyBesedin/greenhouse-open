@@ -28,10 +28,11 @@ from greenhouse_sim.cfd.openfoam import (
     write_case,
 )
 from greenhouse_sim.cfd.results import CfdResult, case_key
-from greenhouse_sim.cfd.setup import AIR_DENSITY_KG_M3, CfdSetup
+from greenhouse_sim.cfd.setup import CfdSetup
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import VECTOR_COMPONENTS, EnvironmentField, FieldGrid
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
+from greenhouse_sim.units import AIR_DENSITY_KG_M3
 
 # What made a solved field, as its source says.
 SOURCE: Final = f"openfoam:simpleFoam {OPENFOAM_VERSION}"
@@ -99,7 +100,7 @@ def _cell_indices(centres: np.ndarray, grid: FieldGrid) -> tuple[np.ndarray, ...
     return k, j, i
 
 
-def _filled(values: np.ndarray) -> np.ndarray:
+def _gaps_filled(values: np.ndarray) -> np.ndarray:
     """A scalar grid with its gaps (NaN) filled, layer by layer from their
     edges, with the mean of the neighbours already known."""
     filled = values.copy()
@@ -150,7 +151,7 @@ def read_field(directory: Path, grid: FieldGrid, field_id: str) -> EnvironmentFi
         source=SOURCE,
         grid=grid,
         time_s=0.0,
-        channels={AirQuantity.VELOCITY: velocities, AirQuantity.PRESSURE: _filled(pressures)},
+        channels={AirQuantity.VELOCITY: velocities, AirQuantity.PRESSURE: _gaps_filled(pressures)},
     )
 
 

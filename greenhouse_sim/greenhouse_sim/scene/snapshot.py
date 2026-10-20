@@ -30,6 +30,7 @@ from greenhouse_sim.domain.equipment import ActuatorKind
 from greenhouse_sim.domain.layout import FixtureKind, Material, Obstruction, ZoneKind
 from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.units import METRES_PER_CENTIMETRE
 from greenhouse_sim.world.envelope import Envelope, Gutter, Member, OpeningPanel, Surface
 from greenhouse_sim.world.equipment import Equipment
 from greenhouse_sim.world.fixtures import Fixture
@@ -69,7 +70,6 @@ SCHEMA_VERSION: Final = 15
 
 PLANT_STEM_RADIUS_M: Final = 0.02
 AXES_LENGTH_M: Final = 1.0
-METRES_PER_CENTIMETRE: Final = 0.01
 
 
 class Color(BaseModel):

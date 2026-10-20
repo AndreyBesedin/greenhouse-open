@@ -33,9 +33,10 @@ from greenhouse_sim.records import event_id, observation_id
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services.crop import run_crop
 from greenhouse_sim.services.scenarios import scenario
+from greenhouse_sim.units import HOUR_S
 
 # When the day's walk through the crop is, in seconds into its day: noon.
-WALK_S: Final = 12 * 3600.0
+WALK_S: Final = 12 * HOUR_S
 CM_PER_M: Final = 100.0
 # A count that a walk gets wrong is off by one, one way or the other.
 MISCOUNTS: Final = (-1, 1)

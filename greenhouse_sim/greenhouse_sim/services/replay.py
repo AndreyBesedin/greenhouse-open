@@ -33,6 +33,7 @@ from greenhouse_sim.services.crop import run_crop
 from greenhouse_sim.services.fields import Commanded, climate_run
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.sensors import observations
+from greenhouse_sim.units import HOUR_S, HOURS_A_DAY
 
 # Probes' numbers are rounded to this many decimals before they are digested,
 # and to this many significant digits: a season's heat in joules has eleven
@@ -41,8 +42,6 @@ ROUNDED_DECIMALS: Final = 6
 SIGNIFICANT_DIGITS: Final = 12
 # How many hexadecimal digits of a probe's digest are kept.
 DIGEST_LENGTH: Final = 16
-HOUR_S: Final = 3600.0
-HOURS_A_DAY: Final = 24
 
 
 class DayProbe(BaseModel):

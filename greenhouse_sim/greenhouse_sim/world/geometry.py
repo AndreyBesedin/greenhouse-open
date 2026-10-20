@@ -34,6 +34,24 @@ class Vector3(BaseModel):
             z=self.x * other.y - self.y * other.x,
         )
 
+    def dot(self, other: Vector3) -> float:
+        return self.x * other.x + self.y * other.y + self.z * other.z
+
+    def length(self) -> float:
+        return math.hypot(self.x, self.y, self.z)
+
+    def unit(self) -> Vector3:
+        """The vector one long that points the same way."""
+        length = self.length()
+        return Vector3(x=self.x / length, y=self.y / length, z=self.z / length)
+
+
+def direction_and_length(start: Vector3, end: Vector3) -> tuple[Vector3, float]:
+    """The unit direction from `start` to `end`, and the distance."""
+    along = Vector3(x=end.x - start.x, y=end.y - start.y, z=end.z - start.z)
+    length = along.length()
+    return Vector3(x=along.x / length, y=along.y / length, z=along.z / length), length
+
 
 class Point2(BaseModel):
     """A point in a shape's own x-y plane."""

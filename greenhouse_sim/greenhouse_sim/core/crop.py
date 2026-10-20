@@ -98,14 +98,16 @@ class CropWork(BaseModel):
 
     def harvests_on(self, day: int) -> bool:
         """Whether a harvest round starts the run's day `day`."""
-        return _every(self.harvest_every_days, day)
+        return _due(self.harvest_every_days, day)
 
     def lowers_on(self, day: int) -> bool:
         """Whether a lowering round starts the run's day `day`."""
-        return _every(self.lower_every_days, day)
+        return _due(self.lower_every_days, day)
 
 
-def _every(days: int | None, day: int) -> bool:
+def _due(days: int | None, day: int) -> bool:
+    """Whether a task done every `days` days, if at all, starts the run's
+    day `day`: never its first."""
     return days is not None and day > 0 and day % days == 0
 
 

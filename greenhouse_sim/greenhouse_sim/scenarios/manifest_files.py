@@ -30,8 +30,13 @@ MANIFESTS_DIR: Final = Path(__file__).parent / "manifests"
 MANIFEST_SCHEMA_FILE: Final = Path(__file__).parent / "scenario.schema.json"
 # Where a manifest finds the schema, from the manifests' folder.
 SCHEMA_FROM_A_MANIFEST_FILE: Final = "../scenario.schema.json"
-# The version of the format a manifest is written in.
-SCHEMA_VERSION: Final = 1
+# The version of the format a manifest is written in: 2 since an item's
+# identifier holds only letters, digits, `_`, `.` and `-` (#254).
+SCHEMA_VERSION: Final = 2
+# Older formats read as the current one: format 1 differs from it only in
+# the identifiers it allowed, and one that format 2 refuses is refused as
+# any field that does not fit is, by name.
+READ_AS_CURRENT: Final = frozenset({1})
 # How many hexadecimal digits of its content's digest name a manifest's
 # version.
 DIGEST_LENGTH: Final = 16
@@ -114,10 +119,12 @@ def scenario_from_manifest(scenario_id: str, document: dict[str, JsonValue]) -> 
     not have, or has a field the configuration does not."""
     fields = {key: value for key, value in document.items() if key not in _MANIFEST_ONLY_FIELDS}
     version = document.get(_VERSION_KEY)
-    if version != SCHEMA_VERSION:
+    readable = isinstance(version, int) and not isinstance(version, bool)
+    if not readable or (version != SCHEMA_VERSION and version not in READ_AS_CURRENT):
+        older = ", ".join(str(each) for each in sorted(READ_AS_CURRENT))
         raise InvalidManifest(
             f"{scenario_id}: a manifest in format {version!r}; this simulator reads "
-            f"format {SCHEMA_VERSION}"
+            f"format {SCHEMA_VERSION}, and format {older} as it"
         )
     if fields.get("greenhouse_id") != scenario_id:
         raise InvalidManifest(
