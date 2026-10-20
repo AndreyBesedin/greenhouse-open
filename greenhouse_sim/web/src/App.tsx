@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { type BuildInfo, buildInfo } from "./buildInfo";
+import { ControlsHelp } from "./ControlsHelp";
 import type { PresetName, PresetRequest } from "./camera";
 import { CfdBoundaries } from "./cfd/CfdBoundaries";
 import { CfdLegend } from "./cfd/CfdLegend";
@@ -809,6 +810,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             onCommand={commands.send}
           />
           <div className="legends">
+            <ControlsHelp />
             <WhatAmISeeing
               view={{
                 drawn: overlaysDrawn,

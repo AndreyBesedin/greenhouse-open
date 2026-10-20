@@ -313,6 +313,56 @@ body {
   border: 0;
 }
 
+/* The view's controls (#207): a button above "What am I seeing?", and the
+ * card it, or `?`, opens: what each gesture does, by device. */
+.controls-help {
+  box-sizing: border-box;
+  width: 300px;
+  max-height: 50vh;
+  overflow: auto;
+  padding: 8px 12px;
+  background: rgb(255 255 255 / 88%);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.controls-help header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.controls-help h2,
+.controls-help h3 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.controls-help h3 {
+  margin-top: 6px;
+  color: #444444;
+}
+
+.controls-help dl {
+  margin: 2px 0 0;
+}
+
+.controls-help dt {
+  font-weight: 600;
+}
+
+.controls-help dd {
+  margin: 0 0 2px 12px;
+  color: #444444;
+}
+
+.controls-open kbd {
+  padding: 0 4px;
+  border: 1px solid #999999;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
 /* "What am I seeing?" (#205): a button at the top of the legends, and the
  * card it opens above them, a swatch, a name and a meaning per row. */
 .seen-in-the-view {
