@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { layoutPicker } from "./chooser";
 
 // The P04 final QA, `airflow-box`, as a walk through the airflow QA case:
 // air blown from door to door past a block, solved with OpenFOAM, drawn as
@@ -46,8 +47,7 @@ test("probes read the solution against the breeze, with the block and without it
 
   // Taken away, the block no longer turns the air: beside where it stood the
   // air is slower, and behind it the air runs on down the house.
-  const layout = page.getByRole("combobox", { name: "Layout of airflow_box" });
-  await layout.selectOption("open");
+  await (await layoutPicker(page, "airflow_box")).selectOption("open");
   await expect(page).toHaveURL(
     `/?scenario=airflow_box&layout=open&field=cfd&compare=uniform&probes=${PROBES}`,
   );
@@ -55,7 +55,7 @@ test("probes read the solution against the breeze, with the block and without it
   await expect(reading(3)).toHaveText("cfd: 0.29 m/s (0.29, 0.00, 0.01), pressure 0.16 Pa");
 
   // Put back, it turns the air again.
-  await layout.selectOption("default");
+  await (await layoutPicker(page, "airflow_box")).selectOption("default");
   await expect(reading(3)).toHaveText("cfd: 0.02 m/s (-0.01, 0.00, 0.01), pressure 0.19 Pa");
 });
 

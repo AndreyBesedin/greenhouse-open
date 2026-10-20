@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { ScenarioList } from "./ScenarioList";
+import { ScenarioList, scenarioMatches } from "./ScenarioList";
 import { loadScenarios, openingMoment, parseScenarios, type ScenarioSummary } from "./scenarios";
 
 const DEMO: ScenarioSummary = {
@@ -73,7 +73,10 @@ describe("the scenario list", () => {
       <ScenarioList state={{ status: "loaded", scenarios: [DEMO] }} />,
     );
 
-    expect(html).toContain(">Agentic Demo Greenhouse</td>");
+    expect(html).toContain('<span class="scenario-name">Agentic Demo Greenhouse</span>');
+    expect(html).toContain(
+      '<span class="scenario-description">A short walkthrough greenhouse</span>',
+    );
     expect(html).toContain('title="climate_box: ');
     expect(html).toContain("<td>6</td><td>15</td>");
   });
@@ -91,6 +94,26 @@ describe("the scenario list", () => {
     expect(html).toContain('aria-label="Layout of tomato_compartment"');
     expect(html).not.toContain('aria-label="Layout of climate_box"');
     expect(html).toContain('<option value="benches" selected="">benches</option>');
+  });
+
+  it("opens a scenario by a button that says so", () => {
+    const html = renderToStaticMarkup(
+      <ScenarioList state={{ status: "loaded", scenarios: [DEMO] }} onShow={() => undefined} />,
+    );
+
+    expect(html).toContain('aria-label="Open climate_box">Open</button>');
+  });
+
+  it("lists the scenarios a filter matches, by name, identifier or description", () => {
+    expect(scenarioMatches(DEMO, " walkthrough ")).toBe(true);
+    expect(scenarioMatches(DEMO, "CLIMATE_")).toBe(true);
+    expect(scenarioMatches(DEMO, "agentic demo")).toBe(true);
+    expect(scenarioMatches(DEMO, "benches")).toBe(false);
+    const html = renderToStaticMarkup(
+      <ScenarioList state={{ status: "loaded", scenarios: [DEMO, SIMULATION] }} filter="forty" />,
+    );
+    expect(html).toContain("Simulation Greenhouse 001");
+    expect(html).not.toContain("Agentic Demo Greenhouse");
   });
 
   it("offers no layouts where every scenario has one", () => {

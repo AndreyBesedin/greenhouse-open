@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooser } from "./chooser";
 
 import { selectAt } from "./view";
 
@@ -57,8 +58,8 @@ for (const size of [
       expect(dock?.height).toBeLessThanOrEqual(size.height * 0.45);
       // Scroll back to the source picker and exercise it, rather than just
       // checking the canvas dimensions while its controls are obscured.
-      await page.getByRole("button", { name: "Reference scene", exact: true }).click();
-      await expect(page.getByTestId("scene-status")).toContainText("reference scene");
+      await (await chooser(page)).getByRole("button", { name: "Empty grid", exact: true }).click();
+      await expect(page.getByTestId("scene-status")).toContainText("empty grid");
     }
   });
 }
@@ -82,7 +83,10 @@ test("at the usual window size, the info panel shows all of itself beside a tall
     clientHeight: element.clientHeight,
   }));
   expect(scrollHeight).toBeLessThanOrEqual(clientHeight);
-  await expect(page.getByRole("button", { name: "Show climate_box" })).toBeInViewport({ ratio: 1 });
+  // Opened, the choice of what to show is at its top, every scenario in sight.
+  await expect(
+    (await chooser(page)).getByRole("button", { name: "Open climate_box" }),
+  ).toBeInViewport({ ratio: 1 });
   // The HUD keeps its width, so that its readings stay on one line each.
   expect((await page.locator(".hud").boundingBox())?.width).toBe(324);
 });

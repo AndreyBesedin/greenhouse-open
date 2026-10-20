@@ -5,7 +5,7 @@ import type { SceneSource, SceneState } from "./scene/source";
 function describeSource(source: SceneSource, day = 0): string {
   switch (source.kind) {
     case "reference":
-      return "reference scene";
+      return "empty grid";
     case "example":
       return "example scene";
     case "fixtures":
@@ -25,60 +25,47 @@ function describeSource(source: SceneSource, day = 0): string {
   }
 }
 
-/** What is drawn, and if a scene could not be drawn, exactly why; and what
- * failed to arrive while something else is drawn in its place, so that it
- * is never taken for what was asked for (#197). */
-export function SceneStatus({
-  source,
-  state,
-  failures = [],
-}: {
-  source: SceneSource;
-  state: SceneState;
-  failures?: readonly string[];
-}) {
-  return (
-    <>
-      <Drawn source={source} state={state} />
-      {failures.length > 0 && (
-        <p data-testid="scene-failures" role="alert">
-          Not drawn as asked: {failures.join("; ")}.
-        </p>
-      )}
-    </>
-  );
-}
-
-function Drawn({ source, state }: { source: SceneSource; state: SceneState }) {
+/** What is drawn, and if a scene could not be drawn, exactly why: one line,
+ * the "Show" chooser's while it is folded (#201), so that it says what is
+ * shown, or why nothing is, as it stands open or not. */
+export function SceneStatus({ source, state }: { source: SceneSource; state: SceneState }) {
   switch (state.status) {
     case "none":
-      return <p data-testid="scene-status">Showing the {describeSource(source)}.</p>;
+      return <span data-testid="scene-status">Showing the {describeSource(source)}.</span>;
     case "loading":
-      return <p data-testid="scene-status">Loading the {describeSource(source)}…</p>;
+      return <span data-testid="scene-status">Loading the {describeSource(source)}…</span>;
     case "unavailable":
       return (
-        <p data-testid="scene-status" role="alert">
+        <span data-testid="scene-status" role="alert">
           The {describeSource(source)} is not available: {state.reason}.
-        </p>
+        </span>
       );
     case "rejected":
       return (
-        <div data-testid="scene-status" role="alert">
-          <p>The {describeSource(source)} was rejected:</p>
-          <ul>
-            {state.problems.map((problem) => (
-              <li key={problem}>{problem}</li>
-            ))}
-          </ul>
-        </div>
+        <span data-testid="scene-status" role="alert">
+          The {describeSource(source)} was rejected: {state.problems.join("; ")}.
+        </span>
       );
     case "loaded":
       return (
-        <p data-testid="scene-status">
+        <span data-testid="scene-status">
           Showing the {describeSource(source, state.snapshot.simulated_day)}:{" "}
           {state.snapshot.greenhouse_id}, day {state.snapshot.simulated_day},{" "}
           {state.snapshot.entities.length} entities.
-        </p>
+        </span>
       );
   }
+}
+
+/** What failed to arrive while something else is drawn in its place, so
+ * that it is never taken for what was asked for (#197). */
+export function SceneFailures({ failures }: { failures: readonly string[] }) {
+  if (failures.length === 0) {
+    return null;
+  }
+  return (
+    <p data-testid="scene-failures" role="alert">
+      Not drawn as asked: {failures.join("; ")}.
+    </p>
+  );
 }

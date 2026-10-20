@@ -64,6 +64,82 @@ body {
   text-align: left;
 }
 
+/* What is shown, and the choice of it (#201): folded, the line that says
+ * what is shown; opened, the scenarios, the test scenes and the plant lab,
+ * each group saying what it is, under a filter. */
+.source-chooser {
+  margin: 0 0 8px;
+}
+
+.source-chooser > summary {
+  cursor: pointer;
+}
+
+.source-chooser[open] > summary {
+  margin: 0 0 6px;
+}
+
+.source-chooser input[type="search"] {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 6px;
+}
+
+.source-chooser h2 {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.chooser-note {
+  margin: 2px 0 4px;
+  color: #555555;
+  font-size: 12px;
+}
+
+.chooser-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 2px 0 4px;
+}
+
+/* A scenario's description under its name, cut to a line until its row is
+ * hovered or focused; as wide as the name makes its column, never wider,
+ * so that the table keeps to the panel's width. */
+.scenario-name,
+.scenario-description {
+  display: block;
+}
+
+.scenario-description {
+  width: 0;
+  min-width: 100%;
+  overflow: hidden;
+  color: #555555;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-chooser tr:hover .scenario-description,
+.source-chooser tr:focus-within .scenario-description {
+  white-space: normal;
+}
+
+/* The table keeps the panel's width, any to spare going to the names and
+ * their descriptions. */
+.source-chooser table {
+  width: 100%;
+}
+
+.source-chooser th:first-child {
+  width: 100%;
+}
+
+.source-chooser td {
+  vertical-align: top;
+}
+
 .hud {
   position: absolute;
   top: 12px;
@@ -900,7 +976,11 @@ body {
   min-width: 0;
 }
 
+/* The HUD's column keeps its width, so that its readings stay on one line
+ * each: the info panel's column gives way instead, however long a line of
+ * it would run unwrapped, which is what its width asks for. */
 .panel-column.at-the-end {
+  flex-shrink: 0;
   align-items: flex-end;
 }
 

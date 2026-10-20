@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
-
 import { QA_REFERENCE_PATH } from "../src/qa/referencePage.ts";
+import { chooser } from "./chooser";
 
 // P09.9: the final QA of P09 (docs/demo.md), walked through as one scripted
 // demo of the reference greenhouse. As a browser test it runs on its own,
@@ -52,7 +52,7 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   // 1. The reference scenario, seed 42, opened on its first day with red fruit.
   await page.goto("/");
   await say(page, "1. The reference greenhouse, seed 42, from the scenario list");
-  await page.getByRole("button", { name: "Show reference_greenhouse" }).click();
+  await (await chooser(page)).getByRole("button", { name: "Open reference_greenhouse" }).click();
   await expect(moment).toHaveText("day 80, 12 h 00 min", ARRIVES);
   await expect(page.getByTestId("scene-status")).toContainText("day 80,", ARRIVES);
   await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);

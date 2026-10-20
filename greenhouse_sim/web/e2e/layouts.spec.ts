@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { layoutPicker } from "./chooser";
 
 import { selectAt } from "./view";
 
@@ -11,10 +12,10 @@ test("a scenario's layouts are switched in the viewer, without code changes", as
   await page.goto("/?scenario=tomato_compartment");
   const status = page.getByTestId("scene-status");
   await expect(status).toContainText("tomato_compartment, day 0, 896 entities");
-  const picker = page.getByRole("combobox", { name: "Layout of tomato_compartment" });
-  await expect(picker).toHaveValue("default");
+  const picker = () => layoutPicker(page, "tomato_compartment");
+  await expect(await picker()).toHaveValue("default");
 
-  await picker.selectOption("propagation");
+  await (await picker()).selectOption("propagation");
   await expect(status).toHaveText(
     "Showing the scenario tomato_compartment with its propagation layout, before day one: tomato_compartment, day 0, 898 entities.",
   );
@@ -28,9 +29,9 @@ test("a scenario's layouts are switched in the viewer, without code changes", as
   // The address keeps the layout.
   await page.reload();
   await expect(status).toContainText("propagation layout");
-  await expect(picker).toHaveValue("propagation");
+  await expect(await picker()).toHaveValue("propagation");
 
-  await picker.selectOption("default");
+  await (await picker()).selectOption("default");
   await expect(status).toContainText("tomato_compartment, day 0, 896 entities");
   await expect(page).toHaveURL(/\?scenario=tomato_compartment$/);
 });

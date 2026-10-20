@@ -2,6 +2,7 @@
 import { act } from "react";
 import { describe, expect, it } from "vitest";
 import { useSource } from "../scene/useSource";
+import { back } from "../testing/history";
 import { renderHook } from "../testing/renderHook";
 import { qaModeFrom, useQaMode, withQaMode } from "./mode";
 
@@ -47,5 +48,21 @@ describe("QA mode, in the address", () => {
     expect(location.search).toBe("?scenario=gh_001&qa=1");
     act(() => hook.current[1]({ kind: "reference" }));
     expect(location.search).toBe("?qa=1");
+  });
+
+  it("stays as it is on Back to a page written before it changed", async () => {
+    openAt("?scenario=climate_box");
+    const source = renderHook(useSource, undefined);
+    const qa = renderHook(useQaMode, undefined);
+    act(() => source.current[1]({ kind: "example" }));
+    act(() => qa.current[1](true));
+    expect(location.search).toBe("?scene=example&qa=1");
+
+    await back();
+
+    expect(qa.current[0]).toBe(true);
+    expect(location.search).toBe("?scenario=climate_box&qa=1");
+    source.unmount();
+    qa.unmount();
   });
 });
