@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
-
 import type { CameraPose } from "../src/camera.ts";
+import { unfold } from "./folds";
 import { selectAt } from "./view";
 
 // The climate box seen from outside its right side wall, through the glass:
@@ -51,6 +51,7 @@ test("equipment: a device is picked, switched on, set to a level and off, and th
   });
 
   await test.step("switched on, it runs at full power, and the address keeps it", async () => {
+    await unfold(page, "Equipment");
     await equipment.getByRole("checkbox", { name: "heater" }).check();
     await expect(heater).toHaveText("100%, 10 kW");
     await expect(page).toHaveURL(/&set=heater:1(&|$)/);

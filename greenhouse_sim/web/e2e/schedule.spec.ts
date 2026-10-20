@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { unfold } from "./folds";
 
 // The climate box's fan, heater and dehumidifier switching on on their own,
 // a minute apart, with a probe in the fan's core.
@@ -54,6 +55,7 @@ test("schedule: the equipment switches on its own, and an override holds from it
     await slider.fill("600");
     await expect(moment).toHaveText("10 min", { timeout: ARRIVES_MS });
     await expect(heater).toHaveText("100%, 10 kW");
+    await unfold(page, "Equipment");
     await page
       .getByRole("group", { name: "Equipment" })
       .getByRole("checkbox", { name: "heater" })

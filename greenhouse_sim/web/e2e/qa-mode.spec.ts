@@ -120,7 +120,8 @@ test("QA mode: the run's manifest says what it is made from, and the versions se
   await expect(panel.getByTestId("manifest-simulator")).toHaveText(
     `${served.version}, commit ${served.commit}`,
   );
-  const built = await page.locator(".info-panel dd").nth(1).textContent();
+  // The viewer's commit, as the info panel's last line says it.
+  const built = (await page.getByTestId("build-line").textContent())?.match(/commit (\S+)$/)?.[1];
   await expect(panel.getByTestId("manifest-viewer")).toHaveText(
     `${served.version}, commit ${built}`,
   );

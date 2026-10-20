@@ -64,6 +64,26 @@ body {
   text-align: left;
 }
 
+/* Equipment, openings and probes, each folded to the line that says how
+ * it stands (#206), and what the viewer was built from, last. */
+.equipment-fold,
+.openings-fold,
+.probes-fold {
+  margin: 0 0 8px;
+}
+
+.equipment-fold > summary,
+.openings-fold > summary,
+.probes-fold > summary {
+  cursor: pointer;
+}
+
+.build-line {
+  margin: 8px 0 0;
+  color: #555555;
+  font-size: 12px;
+}
+
 /* What is shown, and the choice of it (#201): folded, the line that says
  * what is shown; opened, the scenarios, the test scenes and the plant lab,
  * each group saying what it is, under a filter. */

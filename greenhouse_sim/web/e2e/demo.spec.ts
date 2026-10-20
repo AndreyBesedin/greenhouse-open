@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import { QA_REFERENCE_PATH } from "../src/qa/referencePage.ts";
 import { chooser } from "./chooser";
+import { unfold } from "./folds";
 
 // P09.9: the final QA of P09 (docs/demo.md), walked through as one scripted
 // demo of the reference greenhouse. As a browser test it runs on its own,
@@ -88,6 +89,7 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   await say(page, "4. A slice of the air's temperature");
 
   // 5. The equipment: the dehumidifier on, from this moment.
+  await unfold(page, "Equipment");
   await page
     .getByRole("group", { name: "Equipment" })
     .getByRole("checkbox", { name: "dehumidifier" })
@@ -101,6 +103,7 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   // moment, the run carried on rather than worked out again. The wind is
   // turned last.
   const vent = page.getByTestId("opening-roof_vent_1");
+  await unfold(page, "Openings");
   await timeOfDay.fill(String(8 * HOUR_S));
   await expect(moment).toHaveText("day 80, 8 h 00 min", ARRIVES);
   await expect(vent).toHaveText(/^0%, /, ARRIVES);
@@ -190,6 +193,7 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   await expect(compare).toBeVisible(ARRIVES);
   await say(page, "11. Day 81's start saved");
   // The schedule has the heater at 80% through the night: a branch turns it off.
+  await unfold(page, "Equipment");
   await page
     .getByRole("group", { name: "Equipment" })
     .getByRole("checkbox", { name: "heater" })

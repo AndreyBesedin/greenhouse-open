@@ -8,6 +8,7 @@ import {
   formatPoint,
   formatSize,
   framesPerSecond,
+  onAndRest,
 } from "./readouts";
 
 describe("HUD readouts", () => {
@@ -49,5 +50,15 @@ describe("the renderer's diagnostics", () => {
   it("adds the heap only where the browser reports it", () => {
     expect(formatMemory(5, 1, null)).toBe("5 geometries, 1 textures");
     expect(formatMemory(5, 1, 10 * 1_048_576)).toBe("5 geometries, 1 textures, 10 MiB heap");
+  });
+});
+
+describe("a line of what is on and what is not", () => {
+  it("names those on with how far, then the rest, or says all are not", () => {
+    expect(onAndRest(["heater 100%"], ["fan", "dehumidifier"], "off")).toBe(
+      "heater 100%; fan, dehumidifier off",
+    );
+    expect(onAndRest(["vent 50%", "door 100%"], [], "shut")).toBe("vent 50%, door 100%");
+    expect(onAndRest([], ["vent", "door"], "shut")).toBe("all shut");
   });
 });

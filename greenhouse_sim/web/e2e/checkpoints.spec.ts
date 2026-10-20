@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { unfold } from "./folds";
 
 // A run's checkpoints (P09.5): the climate box, its heater on ten minutes
 // into its first day, saved at its second day's start, restored from its
@@ -53,6 +54,7 @@ test("checkpoints: a run saved at a day's start is restored, downloaded and uplo
     await run.getByRole("button", { name: "Next day" }).click();
     await run.getByRole("slider", { name: "Time of day" }).fill("7200");
     await expect(moment).toHaveText("day 1, 2 h 00 min", ARRIVES);
+    await unfold(page, "Equipment");
     await page
       .getByRole("group", { name: "Equipment" })
       .getByRole("checkbox", { name: "heater" })

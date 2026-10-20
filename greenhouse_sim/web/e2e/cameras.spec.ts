@@ -1,8 +1,8 @@
 import { expect, type Page, test } from "@playwright/test";
-
 import type { CameraPose } from "../src/camera.ts";
 import type { CameraSpec } from "../src/sensors/camera.ts";
 import { aheadAt, cameraText, pointAtPixel, shownDepth } from "./cameraView";
+import { unfold } from "./folds";
 import { selectAt } from "./view";
 
 // The climate box's camera, at the front of the house, 2.2 m up, looking down
@@ -88,6 +88,7 @@ test("cameras: a camera's picture is the scene as its intrinsics project it", as
   await expect.poll(() => pictureAt(page, DEHUMIDIFIER_PIXEL).then(isGrey)).toBe(true);
 
   // Running, the heater shows red in the camera's picture as in the view.
+  await unfold(page, "Equipment");
   await page
     .getByRole("group", { name: "Equipment" })
     .getByRole("checkbox", { name: "heater" })

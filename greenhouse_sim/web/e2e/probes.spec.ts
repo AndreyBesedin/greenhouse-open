@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { unfold } from "./folds";
 
 import { onScreen } from "./view";
 
@@ -32,6 +33,7 @@ test("probes read the drawn field and compare it with another", async ({ page })
   await expect(page.getByTestId("debug-label")).toHaveText(["P1", "P2"]);
 
   // Compared with nothing, only the drawn field is read.
+  await unfold(page, "Probes");
   await page.getByRole("combobox", { name: "Compare with" }).selectOption("none");
   await expect(page).toHaveURL(/&field=cfd&probes=3:3\.2:0\.75,7:3\.2:0\.75$/);
   await expect(page.getByTestId("probe-1-compared")).toHaveCount(0);
@@ -43,6 +45,7 @@ test("a probe is placed by clicking the view, moved, and removed", async ({ page
   const probes = page.getByRole("group", { name: "Probes" });
 
   // Added in the field's middle: halfway along, across and up the house.
+  await unfold(page, "Probes");
   await probes.getByRole("button", { name: "Add a probe" }).click();
   await expect(page).toHaveURL(/&probes=6:3\.2\d*:1\.5$/);
 

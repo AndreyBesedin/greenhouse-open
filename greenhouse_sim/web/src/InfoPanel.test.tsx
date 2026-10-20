@@ -37,8 +37,8 @@ describe("the viewer's information panel", () => {
       />,
     );
 
-    expect(html).toContain("<dd>9.8.7</dd>");
-    expect(html).toContain("<dd>abc1234</dd>");
+    // In one line, at the panel's end, under everything it holds (#206).
+    expect(html).toContain("simulator 9.8.7 · commit abc1234</p></aside>");
   });
 
   it("reports the version of the simulator it ships with", () => {
