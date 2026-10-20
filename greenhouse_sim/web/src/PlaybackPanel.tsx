@@ -1,17 +1,24 @@
 import { DAY_S } from "./clock";
 import { describeTime } from "./fields/ClimateTime";
-import type { PlaybackCommand, PlaybackLoad } from "./scene/playback";
+import {
+  followedMoment,
+  type PlaybackCommand,
+  type PlaybackLoad,
+  type PlaybackState,
+} from "./scene/playback";
 
 /**
  * The run a view follows as it is played back (P10.2, decision 0041): which
- * run, its epoch, where its clock stands and how fast it plays, with its
- * controls, which every viewer and consumer of it shares. The view draws the
- * run at that clock's moment; a change made here (a command, a weather, an
- * opening) makes another run, which the view then draws in its place, and
- * says so.
+ * run, its epoch, how fast it plays and where its clock stands across all
+ * its days, with its controls, which every viewer and consumer of it
+ * shares. Its play and pause are the view's, the climate run's own standing
+ * aside (#270). The view draws the run at that clock's moment; a change made
+ * here (a command, a weather, an opening) makes another run, which the view
+ * then draws in its place, and says so.
  */
 export function PlaybackPanel({
   load,
+  days,
   changed,
   onCommand,
   onStart,
@@ -19,6 +26,8 @@ export function PlaybackPanel({
   onStop,
 }: {
   load: PlaybackLoad;
+  /** How many days the run lasts, once the viewer knows. */
+  days: number | null;
   /** What the view changes of the scenario's own run, if anything. */
   changed: readonly string[];
   onCommand: (command: PlaybackCommand) => void;
@@ -29,7 +38,7 @@ export function PlaybackPanel({
 }) {
   return (
     <section className="playback" aria-label="Run played back">
-      <Standing load={load} onCommand={onCommand} onStart={onStart} />
+      <Standing load={load} days={days} onCommand={onCommand} onStart={onStart} />
       {changed.length > 0 && (
         <p role="alert" data-testid="playback-another-run">
           This view draws another run than the one played back: it changes {changed.join(", ")}.{" "}
@@ -47,10 +56,12 @@ export function PlaybackPanel({
 
 function Standing({
   load,
+  days,
   onCommand,
   onStart,
 }: {
   load: PlaybackLoad;
+  days: number | null;
   onCommand: (command: PlaybackCommand) => void;
   onStart: () => void;
 }) {
@@ -79,10 +90,10 @@ function Standing({
       return (
         <>
           <p data-testid="playback-status">
-            Following run <code>{state.runId}</code>, epoch {state.epoch}:{" "}
-            {describeTime(state.timeS)}, {pace}; worked out to day{" "}
+            Following run <code>{state.runId}</code>, epoch {state.epoch}: {pace}; worked out to day{" "}
             {Math.floor(state.workedOutS / DAY_S)}.
           </p>
+          <Progress state={state} days={days} />
           <p>
             <button type="button" onClick={() => onCommand(state.playing ? "pause" : "play")}>
               {state.playing ? "Pause" : "Play"}
@@ -95,4 +106,23 @@ function Standing({
       );
     }
   }
+}
+
+/** Where the run's clock stands across all its days, as one progress: a bar
+ * from the run's start to its end, which moves only as the clock does, and
+ * the moment reached, in the minute the view draws, once the run's length
+ * is known. */
+function Progress({ state, days }: { state: PlaybackState; days: number | null }) {
+  const end = days === null ? null : days * DAY_S;
+  return (
+    <p className="playback-progress">
+      {end !== null && (
+        <progress aria-label="The run's progress" max={end} value={Math.min(state.timeS, end)} />
+      )}
+      <span data-testid="playback-progress">
+        {describeTime(followedMoment(state))}
+        {days === null ? "" : ` of ${days} ${days === 1 ? "day" : "days"}`}
+      </span>
+    </p>
+  );
 }

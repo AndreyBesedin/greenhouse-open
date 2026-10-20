@@ -1,10 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { type CameraPose, framing } from "../src/camera.ts";
+import { DAY_S, dayEnd } from "../src/clock.ts";
 import { formatPoint } from "../src/readouts.ts";
 import { chooser } from "./chooser";
 
 const PLAYBACK = "/api/scenarios/climate_box/playback";
 const ARRIVES = { timeout: 60_000 };
+// The climate box's run lasts 14 days, and plays a day in 10 s.
+const RUN_END_S = 14 * DAY_S;
 
 test("a view follows its scenario's run as it is played back, the run a consumer reads (P10.2)", async ({
   page,
@@ -77,6 +80,87 @@ test("a view follows its scenario's run as it is played back, the run a consumer
     await expect(panel.getByTestId("playback-another-run")).toHaveCount(0);
     await expect(page).not.toHaveURL(/set=heater/);
   });
+});
+
+test("followed, the playback's play is the view's, and one progress says where the run stands (#270)", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  // Played back, started here if no test has yet, and playing; started over
+  // if its clock is too near the run's end to be seen moving on, as on a
+  // retry.
+  const started = (await (await page.request.post(`${PLAYBACK}/start`)).json()) as {
+    time_s: number;
+  };
+  if (started.time_s > RUN_END_S - 4 * DAY_S) {
+    expect((await page.request.post(`${PLAYBACK}/restart`)).ok()).toBe(true);
+  }
+  await page.goto("/?scenario=climate_box&field=climate&follow=1");
+  const panel = page.getByRole("region", { name: "Run played back" });
+  const status = panel.getByTestId("playback-status");
+  const progress = panel.getByRole("progressbar", { name: "The run's progress" });
+  const reached = async () => Number(await progress.getAttribute("value"));
+  const run = page.getByRole("group", { name: "Climate run" });
+
+  await test.step("playing, its Pause is the only play: the climate run's own stand aside", async () => {
+    await expect(status).toContainText("playing a day in", ARRIVES);
+    await expect(panel.getByRole("button", { name: "Pause" })).toBeVisible();
+    await expect(run).toBeVisible();
+    await expect(run.getByRole("button")).toHaveCount(0);
+    await expect(run.getByRole("slider")).toHaveCount(0);
+    await expect(run.getByRole("combobox")).toHaveCount(0);
+    await expect(run.getByTestId("climate-followed")).toContainText("Stop following");
+    await expect(page.getByTestId("climate-time")).toHaveText(/min$/, ARRIVES);
+  });
+
+  await test.step("its progress moves on across the run, into the next day, never back", async () => {
+    await expect(progress).toHaveAttribute("max", String(RUN_END_S));
+    await expect(panel.getByTestId("playback-progress")).toContainText("of 14 days");
+    // Every value the progress shows on the way, past the midnight a
+    // time-of-day slider went back at.
+    const seen: number[] = [];
+    const sample = async () => {
+      const at = await reached();
+      seen.push(at);
+      return at;
+    };
+    const from = await sample();
+    await expect.poll(sample, ARRIVES).toBeGreaterThan(dayEnd(from));
+    expect(seen).toEqual([...seen].sort((a, b) => a - b));
+  });
+
+  await test.step("paused, its play reads Play, and the progress holds at the run's clock", async () => {
+    await panel.getByRole("button", { name: "Pause" }).click();
+    await expect(status).toContainText("paused");
+    await expect(panel.getByRole("button", { name: "Play" })).toBeVisible();
+    const held = ((await (await page.request.get(PLAYBACK)).json()) as { time_s: number }).time_s;
+    await expect.poll(reached, ARRIVES).toBe(held);
+    // Long enough for the view to have asked where the clock stands twice.
+    await page.waitForTimeout(2500);
+    expect(await reached()).toBe(held);
+    await expect(run.getByRole("button")).toHaveCount(0);
+    await expect(run.getByRole("slider")).toHaveCount(0);
+  });
+
+  await test.step("played again from the panel, it moves on, the climate run's own still aside", async () => {
+    const held = await reached();
+    await panel.getByRole("button", { name: "Play" }).click();
+    await expect(status).toContainText("playing a day in");
+    await expect(panel.getByRole("button", { name: "Pause" })).toBeVisible();
+    await expect.poll(reached, ARRIVES).toBeGreaterThan(held);
+    await expect(run.getByRole("button")).toHaveCount(0);
+  });
+
+  await test.step("no longer followed, the climate run's own play and sliders are back", async () => {
+    await panel.getByRole("button", { name: "Stop following" }).click();
+    await expect(panel).toHaveCount(0);
+    await expect(run.getByRole("button", { name: "Play" })).toBeVisible();
+    await expect(run.getByRole("slider", { name: "Time of day" })).toBeVisible();
+    await expect(run.getByTestId("climate-followed")).toHaveCount(0);
+  });
+  // Paused, as the first test leaves it, so that the tests after find room
+  // in the run for its clock to move on.
+  expect((await page.request.post(`${PLAYBACK}/pause`)).ok()).toBe(true);
 });
 
 test("a moment whose field fails does not stop the view following the run's clock", async ({
