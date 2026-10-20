@@ -7,6 +7,15 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-protocol`: the consumer interface
+  (`greenhouse_protocol.contracts.consumer`, decision 0040, P10.1): how a
+  client reads a running producer, whatever it is. Routes under
+  `/consumer/v1` answer a run's identity, epoch and clock, its greenhouse
+  description, and its observations and events after a cursor, in delivery
+  order, with nothing from after the run's clock. `check_batch` and
+  `check_polls` hold a producer to the rules, and a recorded exchange
+  (`tests/fixtures/consumer/exchange.json`) lets a client be built before
+  any producer serves it.
 - `greenhouse-sim`: a scenario's own run played back against one clock
   (decision 0041), which the viewer and a consumer follow: its point
   sensors' readings worked out ahead, day by day, at a consumer's cadence

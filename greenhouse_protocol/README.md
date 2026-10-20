@@ -43,6 +43,14 @@ replaces, so that the description checks it.
   as plain functions returning a list of violations.
 - `memory`: an in-memory reference implementation of the store and query
   contracts, precise about the semantics a real store must share.
+- `consumer`: the interface a client reads a running producer through:
+  `/consumer/v1` routes answering a run's identity, epoch and clock, its
+  greenhouse description, and its observations and events after a cursor,
+  in delivery order and never from the client's future. The rules a
+  producer keeps (`check_batch`, `check_polls`) and a recorded exchange to
+  develop a client against (`tests/fixtures/consumer/exchange.json`). The
+  simulator is one producer of it; a gateway in front of real sensors is
+  another.
 
 ## Dependencies
 
