@@ -187,6 +187,10 @@ test("the panels are dark, or light if chosen, and the golden views keep theirs 
   // Dark navy by default, its text light.
   expect(await background(".info-panel")).toBe("rgba(17, 24, 39, 0.9)");
   expect(await background(".hud")).toBe("rgba(17, 24, 39, 0.9)");
+  // The cards over the view too, the controls' as "What am I seeing?".
+  await page.getByRole("button", { name: "Controls ?" }).click();
+  expect(await background(".controls-help")).toBe("rgba(17, 24, 39, 0.9)");
+  await page.getByRole("button", { name: "Close the controls" }).click();
 
   // Light, once chosen, and still so after a reload: from the panels' first
   // appearance, never flashing dark before.
