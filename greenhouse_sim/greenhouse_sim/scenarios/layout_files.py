@@ -17,6 +17,7 @@ from typing import Final
 
 from pydantic import JsonValue
 
+from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
 from greenhouse_sim.world.layout import Layout
 
 LAYOUTS_DIR: Final = Path(__file__).parent / "layouts"
@@ -25,8 +26,6 @@ DEFAULT_LAYOUT: Final = "default"
 # A layout's name, as a file name and in an address: lower case, digits and
 # underscores, so that it can never reach outside its scenario's folder.
 LAYOUT_NAME: Final = re.compile(r"[a-z0-9_]+")
-# The JSON Schema dialect Pydantic generates, stated in the published schema.
-JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 # Where a layout file finds the schema, from its scenario's folder.
 SCHEMA_FROM_A_LAYOUT_FILE: Final = "../../layout.schema.json"
 

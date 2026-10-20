@@ -1,15 +1,11 @@
 """Scenarios as manifests (P09.1): every scenario is read from its file, in
 a format whose version it states, and a manifest the simulator cannot read
-exactly is refused with the reason.
-
-`greenhouse_sim/scenarios/scenario.schema.json` is the schema the manifests
-name, generated here, from `greenhouse_sim/`:
-
-    python tests/test_scenario_manifests.py --update
+exactly is refused with the reason. The manifests name
+`greenhouse_sim/scenarios/scenario.schema.json`, which
+`tests/test_published_schemas.py` holds to the configuration's model.
 """
 
 import json
-import sys
 from datetime import date
 from typing import Any
 
@@ -20,7 +16,6 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.layout_files import load_layout
 from greenhouse_sim.scenarios.manifest_files import (
     FIRST_SCENARIO,
-    MANIFEST_SCHEMA_FILE,
     MANIFESTS_DIR,
     SCHEMA_FROM_A_MANIFEST_FILE,
     SCHEMA_VERSION,
@@ -37,10 +32,6 @@ from greenhouse_sim.services.scenarios import RunManifest, run_manifest
 def _manifest(scenario_id: str) -> dict[str, Any]:
     document: dict[str, Any] = json.loads((MANIFESTS_DIR / f"{scenario_id}.json").read_text())
     return document
-
-
-def test_the_published_manifest_schema_matches_the_configuration() -> None:
-    assert json.loads(MANIFEST_SCHEMA_FILE.read_text()) == manifest_json_schema()
 
 
 def test_the_schema_names_the_layout_and_refuses_what_it_does_not_have() -> None:
@@ -174,15 +165,3 @@ def test_a_run_manifest_is_refused_as_its_run_is() -> None:
         run_manifest("climate_box", "monsoon")
     with pytest.raises(InvalidRequest, match="cloud cover"):
         run_manifest("climate_box", "default@120")
-
-
-def _update() -> None:
-    schema = json.dumps(manifest_json_schema(), indent=2, ensure_ascii=False)
-    MANIFEST_SCHEMA_FILE.write_text(schema + "\n")
-
-
-if __name__ == "__main__":
-    if sys.argv[1:] != ["--update"]:
-        raise SystemExit("usage: python tests/test_scenario_manifests.py --update")
-    _update()
-    print(f"wrote {MANIFEST_SCHEMA_FILE}")

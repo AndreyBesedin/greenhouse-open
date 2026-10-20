@@ -14,7 +14,8 @@ from `greenhouse_sim/`:
     python tests/test_scene_schema.py --update
 
 These tests fail if any drifts from what the simulator produces now. They
-compare parsed JSON, so formatting does not count.
+compare parsed JSON, so formatting does not count; the schema is held to
+its export with the others, in `tests/test_published_schemas.py`.
 """
 
 import json
@@ -26,9 +27,9 @@ from pathlib import Path
 from greenhouse_sim.domain.envelope import OpeningKind
 from greenhouse_sim.domain.layout import Material, ZoneKind
 from greenhouse_sim.engine import SimulationEngine
+from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT, schema_text
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scene.snapshot import (
-    JSON_SCHEMA_DIALECT,
     greenhouse_scene,
     scene_snapshot,
     snapshot_json_schema,
@@ -246,10 +247,6 @@ def _example_scene() -> object:
     return scene_snapshot(world, config).model_dump(mode="json")
 
 
-def test_the_published_schema_matches_the_snapshot_types() -> None:
-    assert json.loads(SCHEMA_FILE.read_text()) == snapshot_json_schema()
-
-
 def test_the_published_schema_is_plain_json_schema() -> None:
     """No OpenAPI keywords, so a standard validator accepts it in strict mode."""
     text = SCHEMA_FILE.read_text()
@@ -340,7 +337,7 @@ def test_the_example_scene_holds_differently_sized_and_placed_plants() -> None:
 
 
 def _update() -> None:
-    SCHEMA_FILE.write_text(json.dumps(snapshot_json_schema(), indent=2) + "\n")
+    SCHEMA_FILE.write_text(schema_text(snapshot_json_schema()))
     EXAMPLE_FILE.parent.mkdir(parents=True, exist_ok=True)
     EXAMPLE_FILE.write_text(json.dumps(_example_scene(), indent=2) + "\n")
     QA_GREENHOUSE_FILE.write_text(json.dumps(_qa_greenhouse(), indent=2) + "\n")

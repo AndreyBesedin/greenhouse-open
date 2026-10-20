@@ -36,7 +36,6 @@ the same run with other commands from its moment on.
 
 import dataclasses
 import gzip
-import hashlib
 import json
 import math
 import threading
@@ -54,6 +53,7 @@ from greenhouse_sim.climate.day import window_start
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.climate.psychrometrics import saturation_ratio_g_kg
 from greenhouse_sim.core.clock import DAY_S, days_ended
+from greenhouse_sim.digests import short_digest
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
@@ -121,7 +121,7 @@ class Checkpoint(BaseModel):
 
     def identifier(self) -> str:
         """A digest of its content, which names it."""
-        return hashlib.sha256(self.model_dump_json().encode()).hexdigest()[:ID_LENGTH]
+        return short_digest(self.model_dump_json(), ID_LENGTH)
 
 
 class CheckpointSummary(BaseModel):

@@ -1,15 +1,11 @@
 """Scenario layouts as declarative files: each scenario reads its layout from
 one, other layouts can be shown in its place, and a layout survives being
-written out and read back, identifiers and all.
-
-`greenhouse_sim/scenarios/layout.schema.json` is the schema the files name,
-generated here, from `greenhouse_sim/`:
-
-    python tests/test_layout_files.py --update
+written out and read back, identifiers and all. The files name
+`greenhouse_sim/scenarios/layout.schema.json`, which
+`tests/test_published_schemas.py` holds to the layout's model.
 """
 
 import json
-import sys
 from http import HTTPStatus
 
 import pytest
@@ -19,10 +15,8 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.layout_files import (
     DEFAULT_LAYOUT,
-    LAYOUT_SCHEMA_FILE,
     LAYOUTS_DIR,
     layout_document,
-    layout_json_schema,
     layout_names,
     load_layout,
 )
@@ -32,10 +26,6 @@ from greenhouse_sim.world.layout import Layout
 ALL_LAYOUTS = [
     (scenario_id, name) for scenario_id in SCENARIO_REGISTRY for name in layout_names(scenario_id)
 ]
-
-
-def test_the_published_layout_schema_matches_the_layout() -> None:
-    assert json.loads(LAYOUT_SCHEMA_FILE.read_text()) == layout_json_schema()
 
 
 @pytest.mark.parametrize("scenario_id", sorted(SCENARIO_REGISTRY))
@@ -149,14 +139,3 @@ def test_the_api_refuses_a_layout_it_cannot_show(
     assert response.status == status
     assert isinstance(response.body, dict)
     assert reason in str(response.body["error"])
-
-
-def _update() -> None:
-    LAYOUT_SCHEMA_FILE.write_text(json.dumps(layout_json_schema(), indent=2) + "\n")
-
-
-if __name__ == "__main__":
-    if sys.argv[1:] != ["--update"]:
-        raise SystemExit("usage: python tests/test_layout_files.py --update")
-    _update()
-    print(f"wrote {LAYOUT_SCHEMA_FILE}")
