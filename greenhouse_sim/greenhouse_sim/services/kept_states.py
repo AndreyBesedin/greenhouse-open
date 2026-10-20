@@ -68,9 +68,10 @@ def keep(key: str, state: KeptState) -> None:
     STATES.keep(key, state)
 
 
-def drop(key: str, _: object = None) -> None:
-    """Keep a checkpoint's state no longer."""
-    STATES.drop(key)
+def drop(key: str, state: KeptState) -> None:
+    """Keep a checkpoint's state no longer: `state`, if it is still the one
+    kept; not one kept since, as the same checkpoint uploaded again keeps."""
+    STATES.drop(key, state)
 
 
 def agreeing(house: House, schedule: Schedule) -> list[KeptState]:

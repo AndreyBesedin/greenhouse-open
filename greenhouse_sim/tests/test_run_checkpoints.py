@@ -13,7 +13,7 @@ import pytest
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.manifest_files import manifest_digest
-from greenhouse_sim.services import checkpoints
+from greenhouse_sim.services import checkpoints, kept_states
 from greenhouse_sim.services.crop import run_crop
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import climate_run
@@ -236,3 +236,21 @@ def test_a_checkpoint_that_does_not_fit_its_run_is_refused() -> None:
     )
     missing = respond("GET", "/api/checkpoints/nothing")
     assert missing.status == HTTPStatus.NOT_FOUND
+
+
+def test_a_checkpoint_let_go_takes_its_own_state_not_one_kept_since() -> None:
+    # Codex's review of #253: a checkpoint the store lets go lets its state
+    # go once the store's lock is released. Uploaded again meanwhile, the
+    # same checkpoint keeps a state of its own, which that late drop must
+    # leave, or a run restored from it would work its days out again.
+    saved = checkpoints.save_checkpoint("climate_box", time_s=DAY_S)
+    document = checkpoints.checkpoint(saved.checkpoint_id).model_dump(mode="json")
+    first = kept_states.STATES.get(saved.checkpoint_id)
+    checkpoints.upload_checkpoint(document)
+    again = kept_states.STATES.get(saved.checkpoint_id)
+    assert first is not None and again is not None and again is not first
+
+    kept_states.drop(saved.checkpoint_id, first)
+
+    assert kept_states.STATES.get(saved.checkpoint_id) is again
+    assert saved in checkpoints.checkpoints()

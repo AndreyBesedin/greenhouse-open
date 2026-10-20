@@ -113,6 +113,19 @@ def test_what_is_let_go_is_handed_on_outside_the_lock() -> None:
     assert held == [False] * 4
 
 
+def test_a_drop_told_late_leaves_a_value_kept_since() -> None:
+    # Told to let a value go once it was replaced, a drop leaves the new one.
+    store: Store[str, list[str]] = Store("test")
+    first, again = ["first"], ["again"]
+    store.keep("a", first)
+    store.keep("a", again)
+
+    store.drop("a", first)
+    assert store.get("a") is again
+    store.drop("a", again)
+    assert store.get("a") is None
+
+
 def test_a_value_whose_making_fails_is_not_kept() -> None:
     store: Store[str, str] = Store("test", 4)
 

@@ -145,7 +145,11 @@ class CheckpointSummary(BaseModel):
 # never in their place, the scenarios' opening days: they are the oldest,
 # and the next fresh run of their scenario would work its days out from the
 # start without them. A checkpoint let go takes its state with it.
-CHECKPOINTS: Store[str, Checkpoint] = Store("checkpoints", KEPT_CHECKPOINTS, on_drop=drop)
+# Each with the state it was kept with: let go, it takes that state with it,
+# and not one the same checkpoint, uploaded again meanwhile, keeps since.
+CHECKPOINTS: Store[str, tuple[Checkpoint, KeptState]] = Store(
+    "checkpoints", KEPT_CHECKPOINTS, on_drop=lambda key, kept: drop(key, kept[1])
+)
 
 
 def save_checkpoint(
@@ -193,7 +197,7 @@ def save_checkpoint(
 
 def checkpoints() -> list[CheckpointSummary]:
     """The checkpoints kept, the earliest saved first."""
-    return [_summary(checkpoint_id, kept) for checkpoint_id, kept in CHECKPOINTS.values()]
+    return [_summary(checkpoint_id, kept) for checkpoint_id, (kept, _) in CHECKPOINTS.values()]
 
 
 def checkpoint(checkpoint_id: str) -> Checkpoint:
@@ -201,7 +205,7 @@ def checkpoint(checkpoint_id: str) -> Checkpoint:
     found = CHECKPOINTS.get(checkpoint_id)
     if found is None:
         raise NotFound(f"no checkpoint {checkpoint_id!r}: restarting the API forgets them")
-    return found
+    return found[0]
 
 
 def upload_checkpoint(document: JsonValue) -> CheckpointSummary:
@@ -375,7 +379,7 @@ def _kept(checkpoint: Checkpoint, *, opening: bool = False) -> CheckpointSummary
     )
     # Its state first, so that a checkpoint listed always has one.
     keep(checkpoint_id, state)
-    CHECKPOINTS.keep(checkpoint_id, checkpoint, pinned=opening)
+    CHECKPOINTS.keep(checkpoint_id, (checkpoint, state), pinned=opening)
     seed_kept_climate_runs(state)
     seed_kept_crops(state)
     return _summary(checkpoint_id, checkpoint)

@@ -117,12 +117,16 @@ class Store[K: Hashable, V]:
             promised = list(self._kept.items())
         return _made(promised)
 
-    def drop(self, key: K) -> None:
-        """Let the value kept for `key` go, if one is."""
+    def drop(self, key: K, kept: V | None = None) -> None:
+        """Let the value kept for `key` go, if one is: only if it is `kept`,
+        when given, so that a drop told late leaves a value kept since."""
         with self._lock:
-            promised = self._kept.pop(key, None)
+            promised = self._kept.get(key)
+            if promised is None or (kept is not None and not _is(promised, kept)):
+                return
+            del self._kept[key]
             self._pinned.discard(key)
-        self._dropped([] if promised is None else [(key, promised)])
+        self._dropped([(key, promised)])
 
     def forget(self) -> None:
         """Let every value kept go, the pinned ones too."""
@@ -167,6 +171,11 @@ def forget_everything() -> None:
     for store in stores:
         if store is not None:
             store.forget()
+
+
+def _is[V](promised: Future[V], value: V) -> bool:
+    """Whether a value promised has been made, and is `value` itself."""
+    return promised.done() and promised.exception() is None and promised.result() is value
 
 
 def _made[K: Hashable, V](promised: list[tuple[K, Future[V]]]) -> list[tuple[K, V]]:
