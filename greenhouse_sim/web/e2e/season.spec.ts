@@ -143,3 +143,50 @@ test("season: a day on its way says so, play waits for it, and one that cannot b
     await expect(page.getByTestId("field-status")).toContainText("cells");
   });
 });
+
+test("season: play and pause pressed in a hurry while a day is on its way end as last pressed, and resume from there (#202)", async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  await page.goto(`/?scenario=climate_box&field=climate&t=600&schedule=${SCHEDULE}`);
+  const run = page.getByRole("group", { name: "Climate run" });
+  const moment = page.getByTestId("climate-time");
+  const pending = page.getByTestId("climate-pending");
+  const toggle = run.getByRole("button", { name: /^(Play|Pause)$/ });
+  await expect(moment).toHaveText("10 min", ARRIVES);
+  await expect(pending).toBeHidden(ARRIVES);
+
+  await test.step("pressed seven times while day 1 is held, it ends paused, waiting for nothing new", async () => {
+    const { held } = await holdField(page, DAY_S + 600);
+    await run.getByRole("combobox", { name: "Pace" }).selectOption({ label: "1 day a step" });
+    await toggle.click();
+    const route = await held;
+    for (let pressed = 0; pressed < 7; pressed++) {
+      await toggle.click();
+    }
+    await expect(toggle).toHaveText("Play");
+    await expect(pending).toHaveText(/^Loading day 1, 10 min… \d+ s$/);
+    // No step after day 1 is asked for while paused, before or after it
+    // arrives.
+    const later: string[] = [];
+    page.on("request", (request) => {
+      const t = Number(new URL(request.url()).searchParams.get("t"));
+      if (request.url().includes("/fields/climate") && t > DAY_S + 600) {
+        later.push(request.url());
+      }
+    });
+    await route.continue();
+    await expect(moment).toHaveText("day 1, 10 min", ARRIVES);
+    await expect(pending).toBeHidden();
+    await page.waitForTimeout(2000);
+    await expect(moment).toHaveText("day 1, 10 min");
+    expect(later).toEqual([]);
+  });
+
+  await test.step("played again, it moves on from the day it stopped at", async () => {
+    await toggle.click();
+    await expect(moment).toHaveText("day 2, 10 min", ARRIVES);
+    await toggle.click();
+    await expect(toggle).toHaveText("Play");
+  });
+});
