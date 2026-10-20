@@ -53,10 +53,12 @@ fails when it drifts from its source.
   `greenhouse_sim/web/src/cfd/generated/`: `npm run generate` in
   `greenhouse_sim/web`, from the schemas below.
 - The schemas beside their models, such as
-  `greenhouse_sim/greenhouse_sim/scene/snapshot.schema.json` and
-  `greenhouse_sim/greenhouse_sim/scenarios/scenario.schema.json`, and the
-  golden files under `greenhouse_sim/tests/fixtures/`: the test that holds
-  each, run with `--update`, for example
+  `greenhouse_sim/greenhouse_sim/scene/snapshot.schema.json`,
+  `greenhouse_sim/greenhouse_sim/scenarios/scenario.schema.json` and each
+  service answer the viewer reads
+  (`greenhouse_sim/tests/test_published_schemas.py` lists them all), and
+  the golden files under `greenhouse_sim/tests/fixtures/`: the test that
+  holds each, run with `--update`, for example
   `python greenhouse_sim/tests/test_scene_schema.py --update`. The commit
   says why they moved.
 - The browser's screenshot baselines: drawn by CI's visual checks, never

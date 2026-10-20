@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Where a run stands: its frame's sequence, simulated day and instant,\nand whether it plays, and how fast.",
+  "properties": {
+    "sequence": {
+      "title": "Sequence",
+      "type": "integer"
+    },
+    "day": {
+      "title": "Day",
+      "type": "integer"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "playing": {
+      "title": "Playing",
+      "type": "boolean"
+    },
+    "speed": {
+      "title": "Speed",
+      "type": "number"
+    }
+  },
+  "required": [
+    "sequence",
+    "day",
+    "timestamp",
+    "playing",
+    "speed"
+  ],
+  "title": "LiveState",
+  "type": "object"
+}

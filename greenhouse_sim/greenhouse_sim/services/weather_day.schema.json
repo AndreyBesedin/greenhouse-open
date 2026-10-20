@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Bearing": {
+      "exclusiveMaximum": 360.0,
+      "minimum": 0.0,
+      "type": "number"
+    },
+    "Percent": {
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "type": "number"
+    },
+    "SunPosition": {
+      "additionalProperties": false,
+      "description": "Where the sun stands at a moment, seen from a site: its elevation\nabove the horizon (refraction included) and its azimuth, clockwise from\nnorth, both in degrees; with its declination and the equation of time,\nin minutes, for those who check them.",
+      "properties": {
+        "elevation_deg": {
+          "title": "Elevation Deg",
+          "type": "number"
+        },
+        "azimuth_deg": {
+          "title": "Azimuth Deg",
+          "type": "number"
+        },
+        "declination_deg": {
+          "title": "Declination Deg",
+          "type": "number"
+        },
+        "equation_of_time_min": {
+          "title": "Equation Of Time Min",
+          "type": "number"
+        }
+      },
+      "required": [
+        "elevation_deg",
+        "azimuth_deg",
+        "declination_deg",
+        "equation_of_time_min"
+      ],
+      "title": "SunPosition",
+      "type": "object"
+    },
+    "Vector3": {
+      "properties": {
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        },
+        "z": {
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
+      "title": "Vector3",
+      "type": "object"
+    },
+    "WeatherState": {
+      "additionalProperties": false,
+      "description": "The weather at a moment: the outside air's temperature, relative\nhumidity and CO2, the wind's speed and the direction it blows from, the\nbarometric pressure, the global radiation and the cloud cover.",
+      "properties": {
+        "air_temperature_c": {
+          "default": 10.0,
+          "title": "Air Temperature C",
+          "type": "number"
+        },
+        "relative_humidity_pct": {
+          "$ref": "#/$defs/Percent",
+          "default": 80.0
+        },
+        "co2_ppm": {
+          "default": 420.0,
+          "exclusiveMinimum": 0,
+          "title": "Co2 Ppm",
+          "type": "number"
+        },
+        "wind_speed_m_s": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Wind Speed M S",
+          "type": "number"
+        },
+        "wind_direction_deg": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Bearing"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 0.0
+        },
+        "global_radiation_w_m2": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Global Radiation W M2",
+          "type": "number"
+        },
+        "cloud_cover_pct": {
+          "$ref": "#/$defs/Percent",
+          "default": 0.0
+        },
+        "barometric_pressure_hpa": {
+          "exclusiveMinimum": 0,
+          "title": "Barometric Pressure Hpa",
+          "type": "number"
+        }
+      },
+      "required": [
+        "air_temperature_c",
+        "relative_humidity_pct",
+        "co2_ppm",
+        "wind_speed_m_s",
+        "wind_direction_deg",
+        "global_radiation_w_m2",
+        "cloud_cover_pct",
+        "barometric_pressure_hpa"
+      ],
+      "title": "WeatherState",
+      "type": "object"
+    }
+  },
+  "description": "A scenario's weather through its runs' first day: when the day\nstarts, and the weather every `every_s`, at those seconds from its\nstart, with where the sun stands and the direction towards it (P08.2),\nfor its path across the sky.",
+  "properties": {
+    "start": {
+      "format": "date-time",
+      "title": "Start",
+      "type": "string"
+    },
+    "every_s": {
+      "title": "Every S",
+      "type": "number"
+    },
+    "times_s": {
+      "items": {
+        "type": "number"
+      },
+      "title": "Times S",
+      "type": "array"
+    },
+    "weather": {
+      "items": {
+        "$ref": "#/$defs/WeatherState"
+      },
+      "title": "Weather",
+      "type": "array"
+    },
+    "sun": {
+      "items": {
+        "$ref": "#/$defs/SunPosition"
+      },
+      "title": "Sun",
+      "type": "array"
+    },
+    "sun_directions": {
+      "items": {
+        "$ref": "#/$defs/Vector3"
+      },
+      "title": "Sun Directions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "start",
+    "every_s",
+    "times_s",
+    "weather",
+    "sun",
+    "sun_directions"
+  ],
+  "title": "WeatherThroughADay",
+  "type": "object"
+}

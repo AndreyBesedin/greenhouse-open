@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "DailyCommand": {
+      "additionalProperties": false,
+      "description": "Set one piece of equipment to a level at a time of day, every day of\na run.",
+      "properties": {
+        "time_of_day_s": {
+          "exclusiveMaximum": 86400.0,
+          "minimum": 0.0,
+          "title": "Time Of Day S",
+          "type": "number"
+        },
+        "actuator_id": {
+          "title": "Actuator Id",
+          "type": "string"
+        },
+        "level": {
+          "$ref": "#/$defs/Level"
+        }
+      },
+      "required": [
+        "time_of_day_s",
+        "actuator_id",
+        "level"
+      ],
+      "title": "DailyCommand",
+      "type": "object"
+    },
+    "Level": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "type": "number"
+    }
+  },
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "description": {
+      "title": "Description",
+      "type": "string"
+    },
+    "plants": {
+      "title": "Plants",
+      "type": "integer"
+    },
+    "duration_days": {
+      "title": "Duration Days",
+      "type": "integer"
+    },
+    "crop_model": {
+      "title": "Crop Model",
+      "type": "string"
+    },
+    "daily": {
+      "items": {
+        "$ref": "#/$defs/DailyCommand"
+      },
+      "title": "Daily",
+      "type": "array"
+    },
+    "openings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Openings",
+      "type": "array"
+    },
+    "opening_day": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Opening Day"
+    },
+    "layouts": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Layouts",
+      "type": "array"
+    },
+    "weathers": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Weathers",
+      "type": "array"
+    },
+    "thermostat": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Thermostat"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "description",
+    "plants",
+    "duration_days",
+    "crop_model",
+    "daily",
+    "openings",
+    "opening_day",
+    "layouts",
+    "weathers",
+    "thermostat"
+  ],
+  "title": "ScenarioSummary",
+  "type": "object"
+}

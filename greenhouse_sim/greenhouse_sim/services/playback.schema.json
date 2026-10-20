@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Where a playback stands: the run it plays, its epoch, its clock, both\nas the instant it has reached and as seconds into the run, as the viewer\nasks for a moment; whether it plays and how fast; and how far ahead of\nit the run's records are worked out.",
+  "properties": {
+    "scenario_id": {
+      "title": "Scenario Id",
+      "type": "string"
+    },
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "epoch": {
+      "title": "Epoch",
+      "type": "integer"
+    },
+    "greenhouse_id": {
+      "title": "Greenhouse Id",
+      "type": "string"
+    },
+    "started_at": {
+      "format": "date-time",
+      "title": "Started At",
+      "type": "string"
+    },
+    "simulated_now": {
+      "format": "date-time",
+      "title": "Simulated Now",
+      "type": "string"
+    },
+    "time_s": {
+      "title": "Time S",
+      "type": "number"
+    },
+    "day": {
+      "title": "Day",
+      "type": "integer"
+    },
+    "playing": {
+      "title": "Playing",
+      "type": "boolean"
+    },
+    "seconds_per_day": {
+      "title": "Seconds Per Day",
+      "type": "number"
+    },
+    "worked_out_s": {
+      "title": "Worked Out S",
+      "type": "number"
+    },
+    "every_s": {
+      "title": "Every S",
+      "type": "number"
+    }
+  },
+  "required": [
+    "scenario_id",
+    "run_id",
+    "epoch",
+    "greenhouse_id",
+    "started_at",
+    "simulated_now",
+    "time_s",
+    "day",
+    "playing",
+    "seconds_per_day",
+    "worked_out_s",
+    "every_s"
+  ],
+  "title": "PlaybackState",
+  "type": "object"
+}

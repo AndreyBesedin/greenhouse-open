@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "What a scenario's run is made from, as QA mode shows it (P09.6): its\nmanifest's format and version, its seed and days, and the models it\nruns, under the weather the run is asked for.",
+  "properties": {
+    "scenario_id": {
+      "title": "Scenario Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    },
+    "random_seed": {
+      "title": "Random Seed",
+      "type": "integer"
+    },
+    "start_date": {
+      "format": "date",
+      "title": "Start Date",
+      "type": "string"
+    },
+    "duration_days": {
+      "title": "Duration Days",
+      "type": "integer"
+    },
+    "opening_day": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Opening Day"
+    },
+    "crop_model": {
+      "title": "Crop Model",
+      "type": "string"
+    },
+    "variety": {
+      "title": "Variety",
+      "type": "string"
+    },
+    "airflow": {
+      "title": "Airflow",
+      "type": "string"
+    },
+    "weather": {
+      "title": "Weather",
+      "type": "string"
+    },
+    "weather_kind": {
+      "title": "Weather Kind",
+      "type": "string"
+    },
+    "cloud_cover_pct": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Cloud Cover Pct"
+    },
+    "wind_from_deg": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Wind From Deg"
+    }
+  },
+  "required": [
+    "scenario_id",
+    "schema_version",
+    "version",
+    "random_seed",
+    "start_date",
+    "duration_days",
+    "opening_day",
+    "crop_model",
+    "variety",
+    "airflow",
+    "weather",
+    "weather_kind",
+    "cloud_cover_pct",
+    "wind_from_deg"
+  ],
+  "title": "RunManifest",
+  "type": "object"
+}
