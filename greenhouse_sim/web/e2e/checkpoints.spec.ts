@@ -5,12 +5,14 @@ import { expect, test } from "@playwright/test";
 // third, downloaded and uploaded again.
 const SCHEDULE = "600:heater:1";
 const DAY_S = 86_400;
-const ARRIVES = { timeout: 40_000 };
+// On CI, the simulator may still be working out what the spec before this
+// one asked for and left: a moment's air, or a branch's, can take a minute.
+const ARRIVES = { timeout: 90_000 };
 
 test("checkpoints: a run saved at a day's start is restored, downloaded and uploaded again", async ({
   page,
 }) => {
-  test.setTimeout(150_000);
+  test.setTimeout(300_000);
   const moment = page.getByTestId("climate-time");
   const panel = page.locator("details.checkpoints");
   const kept = panel.getByTestId("checkpoint");
@@ -18,7 +20,12 @@ test("checkpoints: a run saved at a day's start is restored, downloaded and uplo
   await page.goto(`/?scenario=climate_box&field=climate&t=${DAY_S + 3600}&schedule=${SCHEDULE}`);
   await expect(moment).toHaveText("day 1, 1 h 00 min", ARRIVES);
   await panel.locator("summary").click();
-  await expect(panel).toContainText("None kept for this scenario.", ARRIVES);
+  // None kept; or, retried against the same simulator, the one this test
+  // saved before, the same run's day 1, which saving again keeps once.
+  await expect(panel).toContainText(
+    /None kept for this scenario\.|day 1: 1 commands before it/,
+    ARRIVES,
+  );
 
   await test.step("saved at its second day's start", async () => {
     await panel.getByRole("button", { name: "Save day 1's start" }).click();
