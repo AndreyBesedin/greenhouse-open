@@ -1,5 +1,4 @@
-import Ajv2020 from "ajv/dist/2020";
-
+import { contractCheck } from "../loadJson";
 import type { Point3 } from "../world";
 import { FIELD_SCHEMA } from "./generated/fieldSchema";
 import type {
@@ -13,9 +12,7 @@ import type {
 export const SUPPORTED_FIELD_VERSION = 1;
 const VECTOR_COMPONENTS = 3;
 
-const validate = new Ajv2020({ allErrors: true, strict: true }).compile<FieldDocument>(
-  FIELD_SCHEMA,
-);
+const checkDocument = contractCheck<FieldDocument>(FIELD_SCHEMA, "the field");
 
 /** One channel of a field, its values decoded: 32-bit floats running x
  * fastest, then y, then z, a vector's three components fastest of all
@@ -56,17 +53,16 @@ function decode(channel: ChannelDocument, cells: number): Float32Array {
 /** A published field checked against the schema the simulator publishes,
  * and decoded, rather than trusted. */
 export function checkField(body: unknown): FieldCheck {
-  if (!validate(body)) {
-    const problems = (validate.errors ?? []).map(
-      (error) => `${error.instancePath || "the field"} ${error.message ?? "is not valid"}`,
-    );
-    return { ok: false, problems };
+  const checked = checkDocument(body);
+  if (!checked.ok) {
+    return checked;
   }
-  const { cells } = body.grid;
+  const published = checked.value;
+  const { cells } = published.grid;
   const count = cells.x * cells.y * cells.z;
   try {
     const channels: Partial<Record<AirQuantity, Channel>> = {};
-    for (const channel of body.channels) {
+    for (const channel of published.channels) {
       channels[channel.quantity] = {
         quantity: channel.quantity,
         unit: channel.unit,
@@ -79,10 +75,10 @@ export function checkField(body: unknown): FieldCheck {
     return {
       ok: true,
       field: {
-        fieldId: body.field_id,
-        source: body.source,
-        timeS: body.time_s,
-        grid: body.grid,
+        fieldId: published.field_id,
+        source: published.source,
+        timeS: published.time_s,
+        grid: published.grid,
         channels,
       },
     };

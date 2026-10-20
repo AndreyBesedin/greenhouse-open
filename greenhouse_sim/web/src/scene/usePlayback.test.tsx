@@ -17,14 +17,18 @@ function Following({ scenarioId, fetchFn }: { scenarioId: string | null; fetchFn
 function playing(runId: string, timeS: number): Response {
   return new Response(
     JSON.stringify({
+      scenario_id: "climate_box",
       run_id: runId,
       epoch: 0,
+      greenhouse_id: "climate_box",
+      started_at: "2026-03-01T00:00:00Z",
       simulated_now: "2026-03-01T00:00:00Z",
       time_s: timeS,
       day: 0,
       playing: true,
       seconds_per_day: 10,
       worked_out_s: 86_400,
+      every_s: 300,
     }),
   );
 }

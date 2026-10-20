@@ -1,14 +1,28 @@
 import { describe, expect, it } from "vitest";
 
+import type { Plant, PlantEvent } from "./generated/plantTypes";
 import { FIRST_LAB_RUN, labRunQuery } from "./lab";
 import { loadPlantStructure, type OrganNode, organTree, plantHistory } from "./structure";
 
 // A plant of one phytomer with a truss of two flowers, one set as a fruit, as
 // the simulator's plant lab writes it.
-const PLANT = {
+const PLANT: Plant = {
   born_tt: 0,
   plant_id: "p01",
   thermal_time: 100,
+  seed: 1,
+  traits: {
+    vigour: 1,
+    phyllochron_scale: 1,
+    internode_length_scale: 1,
+    stem_diameter_scale: 1,
+    leaf_length_scale: 1,
+    leaf_insertion_scale: 1,
+    leaf_droop_scale: 1,
+    rotation_rad: 0,
+  },
+  laid_internodes: 0,
+  history: [],
   stem: {
     born_tt: 0,
     axis_id: "p01_stem",
@@ -17,8 +31,21 @@ const PLANT = {
         born_tt: 0,
         phytomer_id: "p01_n01",
         rank: 1,
-        internode: { born_tt: 0, internode_id: "p01_n01_internode", length_cm: 5, diameter_mm: 8 },
-        leaf: { born_tt: 0, leaf_id: "p01_n01_leaf", length_cm: 20, stage: "mature" },
+        internode: {
+          born_tt: 0,
+          internode_id: "p01_n01_internode",
+          length_cm: 5,
+          diameter_mm: 8,
+          final_length_cm: 6,
+          final_diameter_mm: 10,
+        },
+        leaf: {
+          born_tt: 0,
+          leaf_id: "p01_n01_leaf",
+          length_cm: 20,
+          final_length_cm: 40,
+          stage: "mature",
+        },
         truss: {
           born_tt: 40,
           truss_id: "p01_t01",
@@ -115,8 +142,8 @@ describe("a plant's structure", () => {
   it("does not draw a removed leaf, or a truss that bears nothing", () => {
     const pruned = structuredClone(PLANT);
     const [first] = pruned.stem.phytomers;
-    if (first === undefined) {
-      throw new Error("the plant has no phytomer");
+    if (first === undefined || first.truss === null) {
+      throw new Error("the plant has no phytomer with a truss");
     }
     first.leaf.stage = "removed";
     for (const flower of first.truss.flowers) {
@@ -130,7 +157,7 @@ describe("a plant's structure", () => {
   });
 
   it("reads the plant's history, and none if it has none", () => {
-    const history = [
+    const history: PlantEvent[] = [
       {
         thermal_time: 560,
         action: { kind: "remove_leaf", leaf_id: "p01_n01_leaf" },
@@ -156,11 +183,20 @@ describe("a plant's structure", () => {
     expect(plantHistory(PLANT)).toEqual([]);
   });
 
-  it("refuses a structure it cannot read", () => {
-    expect(() => organTree({ plant_id: "p01", thermal_time: 1 })).toThrow("the stem");
-    expect(() => organTree({ ...PLANT, stem: { ...PLANT.stem, phytomers: {} } })).toThrow(
-      "phytomers is not a list",
-    );
+  it("refuses a structure it cannot read", async () => {
+    const run = labRunQuery(FIRST_LAB_RUN);
+    const refused = { status: "unavailable", reason: "the plant is not what the viewer expects" };
+
+    expect(
+      await loadPlantStructure("p01", run, answering(200, { plant_id: "p01", thermal_time: 1 })),
+    ).toEqual(refused);
+    expect(
+      await loadPlantStructure(
+        "p01",
+        run,
+        answering(200, { ...PLANT, stem: { ...PLANT.stem, phytomers: {} } }),
+      ),
+    ).toEqual(refused);
   });
 
   it("is loaded from the plant lab by plant and run, and an error becomes unavailable", async () => {

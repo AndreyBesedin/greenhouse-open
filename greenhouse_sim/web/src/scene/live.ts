@@ -1,4 +1,7 @@
+import { contractCheck } from "../loadJson";
 import { checkScene } from "./checkScene";
+import { LIVE_SCHEMA } from "./generated/liveSchema";
+import type { LiveState } from "./generated/liveTypes";
 import type { SceneSnapshot } from "./generated/snapshotTypes";
 
 /** One simulated day of a live scenario, as `GET /api/scenarios/{id}/live` sends it. */
@@ -69,7 +72,12 @@ async function refusal(response: Response): Promise<string> {
   }
 }
 
-/** A frame's event data, checked rather than trusted, scene included. */
+// A frame is the run's state with its scene, which the scene's own contract
+// checks.
+const checkState = contractCheck<LiveState & { snapshot?: unknown }>(LIVE_SCHEMA, "the frame");
+
+/** A frame's event data, checked rather than trusted, scene included: the
+ * run's state as its contract says, and its scene as the scene's does. */
 export function parseLiveFrame(data: string): FrameCheck {
   let body: unknown;
   try {
@@ -77,33 +85,17 @@ export function parseLiveFrame(data: string): FrameCheck {
   } catch {
     return { ok: false, problems: ["the frame is not JSON"] };
   }
-  if (typeof body !== "object" || body === null) {
-    return { ok: false, problems: ["the frame is not an object"] };
+  const state = checkState(body);
+  if (!state.ok) {
+    return state;
   }
-  const fields = body as Record<string, unknown>;
-  if (
-    !Number.isInteger(fields.sequence) ||
-    !Number.isInteger(fields.day) ||
-    typeof fields.timestamp !== "string"
-  ) {
-    return { ok: false, problems: ["the frame has no sequence, day or timestamp"] };
-  }
-  if (typeof fields.playing !== "boolean" || typeof fields.speed !== "number") {
-    return { ok: false, problems: ["the frame does not say whether or how fast it plays"] };
-  }
-  const scene = checkScene(fields.snapshot);
+  const { sequence, day, timestamp, playing, speed, snapshot } = state.value;
+  const scene = checkScene(snapshot);
   if (!scene.ok) {
-    return { ok: false, problems: scene.problems };
+    return scene;
   }
   return {
     ok: true,
-    frame: {
-      sequence: fields.sequence as number,
-      day: fields.day as number,
-      timestamp: fields.timestamp,
-      playing: fields.playing,
-      speed: fields.speed,
-      snapshot: scene.snapshot,
-    },
+    frame: { sequence, day, timestamp, playing, speed, snapshot: scene.snapshot },
   };
 }

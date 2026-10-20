@@ -20,9 +20,9 @@ describe("the plant lab's environments", () => {
   });
 
   it("refuse what they cannot read", () => {
-    expect(() => labEnvironments([])).toThrow("not an object");
+    expect(() => labEnvironments([])).toThrow("the environments are not what the viewer expects");
     expect(() => labEnvironments({ dry: { ...ENVIRONMENTS.dry, co2_ppm: "high" } })).toThrow(
-      "dry's co2_ppm is not a number",
+      "the environments are not what the viewer expects",
     );
   });
 

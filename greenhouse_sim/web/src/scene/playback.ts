@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { contractCheck } from "../loadJson";
+import { PLAYBACK_SCHEMA } from "./generated/playbackSchema";
+import type { PlaybackState as ServedPlayback } from "./generated/playbackTypes";
+
 // How often a view following a played-back run asks where its clock is.
 const POLL_MS = 1000;
 const MINUTE_S = 60;
@@ -36,31 +40,25 @@ export function playbackUrl(scenarioId: string): string {
   return `/api/scenarios/${encodeURIComponent(scenarioId)}/playback`;
 }
 
+const checkPlayback = contractCheck<ServedPlayback>(PLAYBACK_SCHEMA, "the playback");
+
 /** The playback's state as the simulator answers it, checked rather than
  * trusted; null if it is not one. */
 export function parsePlayback(body: unknown): PlaybackState | null {
-  if (typeof body !== "object" || body === null) {
+  const checked = checkPlayback(body);
+  if (!checked.ok) {
     return null;
   }
-  const b = body as Record<string, unknown>;
-  const numbers = ["epoch", "time_s", "day", "seconds_per_day", "worked_out_s"] as const;
-  if (
-    typeof b.run_id !== "string" ||
-    typeof b.simulated_now !== "string" ||
-    typeof b.playing !== "boolean" ||
-    numbers.some((name) => typeof b[name] !== "number")
-  ) {
-    return null;
-  }
+  const played = checked.value;
   return {
-    runId: b.run_id,
-    epoch: b.epoch as number,
-    simulatedNow: b.simulated_now,
-    timeS: b.time_s as number,
-    day: b.day as number,
-    playing: b.playing,
-    secondsPerDay: b.seconds_per_day as number,
-    workedOutS: b.worked_out_s as number,
+    runId: played.run_id,
+    epoch: played.epoch,
+    simulatedNow: played.simulated_now,
+    timeS: played.time_s,
+    day: played.day,
+    playing: played.playing,
+    secondsPerDay: played.seconds_per_day,
+    workedOutS: played.worked_out_s,
   };
 }
 

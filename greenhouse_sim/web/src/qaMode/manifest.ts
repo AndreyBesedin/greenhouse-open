@@ -1,5 +1,9 @@
-import { isObject, loadJson } from "../loadJson";
+import { contractReader, loadJson } from "../loadJson";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
+import { RUN_MANIFEST_SCHEMA } from "./generated/runManifestSchema";
+import type { RunManifest as ServedManifest } from "./generated/runManifestTypes";
+import { VERSION_SCHEMA } from "./generated/versionSchema";
+import type { Version } from "./generated/versionTypes";
 
 /** The simulator the viewer is talking to, as it says itself
  * (`GET /api/version`): its version and the commit it runs from. */
@@ -57,54 +61,39 @@ export function runManifestUrl(scenarioId: string, run: RunParts): string {
   return scenarioUrl(scenarioId, "manifest", runParameters(run, ["weather"]));
 }
 
-function isNumberOrNull(value: unknown): value is number | null {
-  return value === null || typeof value === "number";
-}
+const readVersion = contractReader<Version>(
+  VERSION_SCHEMA,
+  "the simulator's version is not what the viewer expects",
+);
+const readManifest = contractReader<ServedManifest>(
+  RUN_MANIFEST_SCHEMA,
+  "the run's manifest is not what the viewer expects",
+);
 
 /** The simulator's version, checked rather than trusted. */
 export function parseServedVersion(body: unknown): ServedVersion {
-  if (!isObject(body) || typeof body.version !== "string" || typeof body.commit !== "string") {
-    throw new Error("the simulator's version is not what the viewer expects");
-  }
-  return { version: body.version, commit: body.commit };
+  const { version, commit } = readVersion(body);
+  return { version, commit };
 }
 
 /** A run's manifest, checked rather than trusted. */
 export function parseRunManifest(body: unknown): RunManifest {
-  if (
-    !isObject(body) ||
-    typeof body.scenario_id !== "string" ||
-    typeof body.schema_version !== "number" ||
-    typeof body.version !== "string" ||
-    typeof body.random_seed !== "number" ||
-    typeof body.start_date !== "string" ||
-    typeof body.duration_days !== "number" ||
-    !isNumberOrNull(body.opening_day) ||
-    typeof body.crop_model !== "string" ||
-    typeof body.variety !== "string" ||
-    typeof body.airflow !== "string" ||
-    typeof body.weather !== "string" ||
-    typeof body.weather_kind !== "string" ||
-    !isNumberOrNull(body.cloud_cover_pct) ||
-    !isNumberOrNull(body.wind_from_deg)
-  ) {
-    throw new Error("the run's manifest is not what the viewer expects");
-  }
+  const served = readManifest(body);
   return {
-    scenarioId: body.scenario_id,
-    format: body.schema_version,
-    version: body.version,
-    seed: body.random_seed,
-    startDate: body.start_date,
-    days: body.duration_days,
-    openingDay: body.opening_day,
-    cropModel: body.crop_model,
-    variety: body.variety,
-    airflow: body.airflow,
-    weather: body.weather,
-    weatherKind: body.weather_kind,
-    cloudCoverPct: body.cloud_cover_pct,
-    windFromDeg: body.wind_from_deg,
+    scenarioId: served.scenario_id,
+    format: served.schema_version,
+    version: served.version,
+    seed: served.random_seed,
+    startDate: served.start_date,
+    days: served.duration_days,
+    openingDay: served.opening_day,
+    cropModel: served.crop_model,
+    variety: served.variety,
+    airflow: served.airflow,
+    weather: served.weather,
+    weatherKind: served.weather_kind,
+    cloudCoverPct: served.cloud_cover_pct,
+    windFromDeg: served.wind_from_deg,
   };
 }
 

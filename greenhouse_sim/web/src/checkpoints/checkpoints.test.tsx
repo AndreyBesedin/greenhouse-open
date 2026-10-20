@@ -48,7 +48,9 @@ describe("a checkpoint", () => {
       day: 1,
       timeS: 86400,
     });
-    expect(() => parseCheckpoint({ ...BODY, commands: [[1, 2, 3]] })).toThrow("not a moment");
+    expect(() => parseCheckpoint({ ...BODY, commands: [[1, 2, 3]] })).toThrow(
+      "not what the viewer expects",
+    );
     expect(() => parseCheckpoint({ ...BODY, day: "one" })).toThrow("not what the viewer expects");
   });
 

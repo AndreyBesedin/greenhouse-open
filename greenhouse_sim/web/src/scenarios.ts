@@ -1,5 +1,7 @@
 import { DAY_S } from "./clock";
-import { loadJson } from "./loadJson";
+import { SCENARIO_SUMMARY_SCHEMA } from "./generated/scenarioSummarySchema";
+import type { ScenarioSummary as ServedSummary } from "./generated/scenarioSummaryTypes";
+import { contractCheck, loadJson } from "./loadJson";
 import type { ScheduledCommand } from "./scene/source";
 
 // A day's noon, as a share of it.
@@ -42,59 +44,20 @@ export type ScenariosState =
   | { status: "unavailable"; reason: string }
   | { status: "loaded"; scenarios: ScenarioSummary[] };
 
+const checkSummary = contractCheck<ServedSummary>(SCENARIO_SUMMARY_SCHEMA, "the scenario");
+
 /** The scenarios in a response body, checked rather than trusted. */
 export function parseScenarios(body: unknown): ScenarioSummary[] {
   if (!Array.isArray(body)) {
     throw new Error("expected a list of scenarios");
   }
   return body.map((item: unknown, index) => {
-    if (!isScenarioSummary(item)) {
+    const checked = checkSummary(item);
+    if (!checked.ok) {
       throw new Error(`scenario ${index} is not a scenario summary`);
     }
-    return item;
+    return checked.value;
   });
-}
-
-function isScenarioSummary(value: unknown): value is ScenarioSummary {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const fields = value as Record<string, unknown>;
-  return (
-    typeof fields.id === "string" &&
-    typeof fields.name === "string" &&
-    typeof fields.description === "string" &&
-    Number.isInteger(fields.plants) &&
-    Number.isInteger(fields.duration_days) &&
-    (fields.crop_model === undefined || typeof fields.crop_model === "string") &&
-    (fields.opening_day === undefined ||
-      fields.opening_day === null ||
-      Number.isInteger(fields.opening_day)) &&
-    (fields.openings === undefined ||
-      (Array.isArray(fields.openings) && fields.openings.every((id) => typeof id === "string"))) &&
-    (fields.daily === undefined ||
-      (Array.isArray(fields.daily) && fields.daily.every(isDailyCommand))) &&
-    Array.isArray(fields.layouts) &&
-    fields.layouts.every((layout) => typeof layout === "string") &&
-    (fields.weathers === undefined ||
-      (Array.isArray(fields.weathers) &&
-        fields.weathers.every((weather) => typeof weather === "string"))) &&
-    (fields.thermostat === undefined ||
-      fields.thermostat === null ||
-      typeof fields.thermostat === "string")
-  );
-}
-
-function isDailyCommand(value: unknown): boolean {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const { time_of_day_s, actuator_id, level } = value as Record<string, unknown>;
-  return (
-    typeof time_of_day_s === "number" &&
-    typeof actuator_id === "string" &&
-    typeof level === "number"
-  );
 }
 
 /** Where the viewer opens a scenario shown from the list: its climate at

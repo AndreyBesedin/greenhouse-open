@@ -1,25 +1,17 @@
 import { CHART_WIDTH, polylinePoints } from "../charts/chart";
-import { isNumberList, loadJson } from "../loadJson";
+import { contractCheck, loadJson } from "../loadJson";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 import type { Point3 } from "../world";
 import { describeTime } from "./ClimateTime";
+import { CLIMATE_PROBES_SCHEMA } from "./generated/probesSchema";
+import type { ClimateProbes, Readings } from "./generated/probesTypes";
 import { probesText } from "./probes";
 import { GRID_RUN_S } from "./source";
 
-/** What a probe reads at each moment of a run: temperature (°C), relative
- * humidity (%) and air speed (m/s). */
-export interface Readings {
-  temperature_c: number[];
-  humidity_pct: number[];
-  speed_m_s: number[];
-}
-
-/** What probes read through a climate run and the same run with everything
- * off (`GET /api/scenarios/{id}/climate/probes`). */
-export interface ClimateProbes {
-  times_s: number[];
-  probes: { point: Point3; controlled: Readings; all_off: Readings }[];
-}
+// What a probe reads at each moment of a run, temperature (°C), relative
+// humidity (%) and air speed (m/s), through a climate run and the same run
+// with everything off (`GET /api/scenarios/{id}/climate/probes`).
+export type { ClimateProbes, Readings };
 
 export type ProbeChartsState =
   | { status: "none" }
@@ -27,39 +19,12 @@ export type ProbeChartsState =
   | { status: "unavailable"; reason: string }
   | { status: "loaded"; probes: ClimateProbes };
 
-function isReadings(value: unknown): value is Readings {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "temperature_c" in value &&
-    isNumberList(value.temperature_c) &&
-    "humidity_pct" in value &&
-    isNumberList(value.humidity_pct) &&
-    "speed_m_s" in value &&
-    isNumberList(value.speed_m_s)
-  );
-}
+const checkProbes = contractCheck<ClimateProbes>(CLIMATE_PROBES_SCHEMA, "the readings");
 
 /** Whether a body is probes' readings through a run, as the simulator sends
  * them. */
 export function isClimateProbes(body: unknown): body is ClimateProbes {
-  return (
-    typeof body === "object" &&
-    body !== null &&
-    "times_s" in body &&
-    isNumberList(body.times_s) &&
-    "probes" in body &&
-    Array.isArray(body.probes) &&
-    body.probes.every(
-      (probe: unknown) =>
-        typeof probe === "object" &&
-        probe !== null &&
-        "controlled" in probe &&
-        isReadings(probe.controlled) &&
-        "all_off" in probe &&
-        isReadings(probe.all_off),
-    )
-  );
+  return checkProbes(body).ok;
 }
 
 /** Where probes' readings through a scenario's climate run are published,

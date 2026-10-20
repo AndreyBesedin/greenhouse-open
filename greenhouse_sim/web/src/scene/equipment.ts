@@ -1,4 +1,6 @@
-import { loadJson } from "../loadJson";
+import { contractReader, loadJson } from "../loadJson";
+import { EQUIPMENT_SCHEMA } from "./generated/equipmentSchema";
+import type { EquipmentAt as ServedEquipment } from "./generated/equipmentTypes";
 import { type RunParts, runParameters, scenarioUrl } from "./run";
 
 /** A run's thermostat at a moment (P10.3): the heater it runs, the
@@ -32,38 +34,25 @@ export function equipmentUrl(scenarioId: string, run: RunParts): string {
   return scenarioUrl(scenarioId, "climate/equipment", runParameters(run));
 }
 
-function isThermostat(value: unknown): boolean {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const { actuator_id, setpoint_c, runs } = value as Record<string, unknown>;
-  return (
-    typeof actuator_id === "string" && typeof setpoint_c === "number" && typeof runs === "boolean"
-  );
-}
+const readEquipment = contractReader<ServedEquipment>(
+  EQUIPMENT_SCHEMA,
+  "the run's equipment is not what the viewer expects",
+);
 
 /** A run's equipment at a moment, checked rather than trusted. */
 export function parseEquipment(body: unknown): EquipmentAt {
-  const refused = new Error("the run's equipment is not what the viewer expects");
-  if (typeof body !== "object" || body === null) {
-    throw refused;
-  }
-  const { time_s, levels, thermostat } = body as Record<string, unknown>;
-  if (
-    typeof time_s !== "number" ||
-    typeof levels !== "object" ||
-    levels === null ||
-    !Object.values(levels).every((level) => typeof level === "number") ||
-    !(thermostat === null || isThermostat(thermostat))
-  ) {
-    throw refused;
-  }
-  const at = thermostat as { actuator_id: string; setpoint_c: number; runs: boolean } | null;
+  const { time_s, levels, thermostat } = readEquipment(body);
   return {
     timeS: time_s,
-    levels: levels as Record<string, number>,
+    levels,
     thermostat:
-      at === null ? null : { actuatorId: at.actuator_id, setpointC: at.setpoint_c, runs: at.runs },
+      thermostat === null
+        ? null
+        : {
+            actuatorId: thermostat.actuator_id,
+            setpointC: thermostat.setpoint_c,
+            runs: thermostat.runs,
+          },
   };
 }
 

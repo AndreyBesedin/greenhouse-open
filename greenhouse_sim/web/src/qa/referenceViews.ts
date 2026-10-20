@@ -4,7 +4,7 @@ import type { Slice, SliceQuantity } from "../fields/display";
 import { quantityScale } from "../fields/drawing";
 import { checkField, type EnvironmentField } from "../fields/field";
 import { type OpeningsAt, parseOpenings } from "../fields/openingFlows";
-import { isObject } from "../loadJson";
+import { isNumberRecord, isObject } from "../loadJson";
 import { formatValue } from "../readouts";
 import { checkScene } from "../scene/checkScene";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
@@ -169,10 +169,10 @@ function scene(body: unknown, what: string): SceneSnapshot {
 }
 
 function probesFrom(body: unknown, what: string): Record<string, number> {
-  if (!isObject(body) || !Object.values(body).every((value) => typeof value === "number")) {
+  if (!isNumberRecord(body)) {
     throw new Error(`the reference QA's ${what} has no probes`);
   }
-  return body as Record<string, number>;
+  return body;
 }
 
 function momentFrom(body: unknown, name: string): ReferenceMoment {

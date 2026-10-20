@@ -1,8 +1,10 @@
-import { loadJson } from "../loadJson";
+import { contractReader, loadJson } from "../loadJson";
 import { DEFAULT_WEATHER } from "../scenarios";
 import type { ScenarioSource } from "../scene/edits";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 import type { ScheduledCommand } from "../scene/source";
+import { CHECKPOINT_SCHEMA } from "./generated/checkpointSchema";
+import type { Commanded, CheckpointSummary as ServedCheckpoint } from "./generated/checkpointTypes";
 
 /** Where the API lists the checkpoints it keeps, and takes one uploaded. */
 export const CHECKPOINTS_URL = "/api/checkpoints";
@@ -43,65 +45,30 @@ export type CheckpointMade =
 
 type Fields = Record<string, unknown>;
 
-function numbers(value: unknown): value is Record<string, number> {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value) &&
-    Object.values(value).every((entry) => typeof entry === "number")
-  );
-}
+const readCheckpoint = contractReader<ServedCheckpoint>(
+  CHECKPOINT_SCHEMA,
+  "a checkpoint is not what the viewer expects",
+);
 
-function commandsFrom(value: unknown): ScheduledCommand[] {
-  if (!Array.isArray(value)) {
-    throw new Error("a checkpoint's commands are not a list");
-  }
-  return value.map((command: unknown) => {
-    if (
-      !Array.isArray(command) ||
-      typeof command[0] !== "number" ||
-      typeof command[1] !== "string" ||
-      typeof command[2] !== "number"
-    ) {
-      throw new Error("a checkpoint's command is not a moment, an actuator and a level");
-    }
-    return { timeS: command[0], actuatorId: command[1], level: command[2] };
-  });
+function commandsFrom(commands: Commanded[]): ScheduledCommand[] {
+  return commands.map(([timeS, actuatorId, level]) => ({ timeS, actuatorId, level }));
 }
 
 /** A checkpoint as the API lists it, checked rather than trusted. */
 export function parseCheckpoint(body: unknown): CheckpointSummary {
-  if (typeof body !== "object" || body === null) {
-    throw new Error("a checkpoint is not what the viewer expects");
-  }
-  const fields = body as Fields;
-  const { checkpoint_id, scenario_id, layout, weather, levels, openings, day, time_s, plants } =
-    fields;
-  if (
-    typeof checkpoint_id !== "string" ||
-    typeof scenario_id !== "string" ||
-    typeof layout !== "string" ||
-    typeof weather !== "string" ||
-    !numbers(levels) ||
-    !numbers(openings) ||
-    !Number.isInteger(day) ||
-    typeof time_s !== "number" ||
-    !Number.isInteger(plants)
-  ) {
-    throw new Error("a checkpoint is not what the viewer expects");
-  }
+  const checkpoint = readCheckpoint(body);
   return {
-    checkpointId: checkpoint_id,
-    scenarioId: scenario_id,
-    layout,
-    weather,
-    levels,
-    openings,
-    commands: commandsFrom(fields.commands),
-    daily: fields.daily === null ? null : commandsFrom(fields.daily),
-    day: day as number,
-    timeS: time_s,
-    plants: plants as number,
+    checkpointId: checkpoint.checkpoint_id,
+    scenarioId: checkpoint.scenario_id,
+    layout: checkpoint.layout,
+    weather: checkpoint.weather,
+    levels: checkpoint.levels,
+    openings: checkpoint.openings,
+    commands: commandsFrom(checkpoint.commands),
+    daily: checkpoint.daily === null ? null : commandsFrom(checkpoint.daily),
+    day: checkpoint.day,
+    timeS: checkpoint.time_s,
+    plants: checkpoint.plants,
   };
 }
 

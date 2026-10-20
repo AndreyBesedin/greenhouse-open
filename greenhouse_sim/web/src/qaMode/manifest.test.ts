@@ -98,7 +98,12 @@ describe("a run's manifest", () => {
 
 describe("the simulator's version", () => {
   it("is read with its commit, and checked", async () => {
-    const body = { simulator: "greenhouse-sim", version: "0.1.0", commit: "c1964e9" };
+    const body = {
+      simulator: "greenhouse-sim",
+      version: "0.1.0",
+      commit: "c1964e9",
+      scene_schema_version: 1,
+    };
     expect(await loadServedVersion("/api/version", answering(body))).toEqual({
       status: "loaded",
       served: { version: "0.1.0", commit: "c1964e9" },

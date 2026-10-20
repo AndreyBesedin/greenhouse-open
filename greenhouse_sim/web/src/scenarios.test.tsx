@@ -4,7 +4,19 @@ import { describe, expect, it } from "vitest";
 import { ScenarioList, scenarioMatches } from "./ScenarioList";
 import { loadScenarios, openingMoment, parseScenarios, type ScenarioSummary } from "./scenarios";
 
+// What the simulator sends of a scenario besides: how it grows its crop,
+// its own daily commands, its openings and weathers, and the day it opens
+// on and the heater a thermostat runs, if any.
+const SENT = {
+  crop_model: "simple",
+  daily: [],
+  openings: [],
+  weathers: ["default"],
+  opening_day: null,
+  thermostat: null,
+};
 const DEMO: ScenarioSummary = {
+  ...SENT,
   id: "climate_box",
   name: "Agentic Demo Greenhouse",
   description: "A short walkthrough greenhouse",
@@ -13,6 +25,7 @@ const DEMO: ScenarioSummary = {
   layouts: ["default"],
 };
 const SIMULATION: ScenarioSummary = {
+  ...SENT,
   id: "tomato_compartment",
   name: "Simulation Greenhouse 001",
   description: "Forty plants",
@@ -138,6 +151,7 @@ describe("a scenario's opening day", () => {
   it("opens the scenario shown from the list at noon on it, its climate drawn", () => {
     const reference = parseScenarios([
       {
+        ...SENT,
         id: "reference_greenhouse",
         name: "Reference greenhouse",
         description: "",
@@ -157,7 +171,7 @@ describe("a scenario's opening day", () => {
   });
 
   it("says which heater a thermostat runs, if one does", () => {
-    const base = { id: "a", name: "A", description: "", plants: 1, duration_days: 1 };
+    const base = { ...SENT, id: "a", name: "A", description: "", plants: 1, duration_days: 1 };
     const [heated] = parseScenarios([{ ...base, layouts: ["default"], thermostat: "heater" }]);
 
     expect(heated?.thermostat).toBe("heater");

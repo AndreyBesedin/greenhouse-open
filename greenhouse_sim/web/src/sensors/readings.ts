@@ -1,45 +1,31 @@
-import { isObject } from "../loadJson";
+import { contractReader } from "../loadJson";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 import type { Point3 } from "../world";
+import { OBSERVATIONS_SCHEMA } from "./generated/observationsSchema";
+import type {
+  CameraPose,
+  Observation,
+  SensorFreshness,
+  SensorObservations,
+} from "./generated/observationsTypes";
+import { TRUTH_SCHEMA } from "./generated/truthSchema";
+import type { SensorTruth, SensorTruths } from "./generated/truthTypes";
 
-/** An observation as the simulator sends it: what a sensor reported, when it
- * took it and when it was delivered. */
-export interface SensorObservation {
-  sensor_id: string;
-  observation_type: string;
-  timestamp: string;
-  delivered_at?: string;
-  value: number;
-  /** What is known of the reading, such as "CLIPPED"; absent if nothing. */
-  quality?: string[];
-}
+// A sensor's freshness, a camera's pose and what a sensor truly sampled, as
+// the simulator publishes them.
+export type { CameraPose, SensorFreshness, SensorTruth };
 
-/** Where a sensor stands with its readings at the moment drawn: waiting for
- * its first, fresh, stale, or unavailable, if nothing in the run gives its
- * quantity; and the moments its due and latest readings were taken, as
- * instants. */
-export interface SensorFreshness {
-  sensor_id: string;
-  state: "waiting" | "fresh" | "stale" | "unavailable";
-  due_at: string | null;
-  latest_at: string | null;
-}
+/** An observation as the viewer reads it: what a sensor reported, when it
+ * took it and when it was delivered, and what is known of the reading, such
+ * as "CLIPPED"; absent if nothing. */
+export type SensorObservation = Pick<
+  Observation,
+  "sensor_id" | "observation_type" | "timestamp" | "delivered_at" | "value" | "quality"
+>;
 
-/** Where a camera stood, in its greenhouse's frame, and the unit quaternion
- * that turns its own frame (x along the way it looks, y to its left, z up)
- * into the greenhouse's. */
-export interface CameraPose {
-  x_m: number;
-  y_m: number;
-  z_m: number;
-  qw: number;
-  qx: number;
-  qy: number;
-  qz: number;
-}
-
-/** A frame a camera took, as the log records it: when, from where, turned
- * how, with what intrinsics, and what it holds; not its pixels. */
+/** A frame a camera took, as the viewer reads it from the log: when, from
+ * where, turned how, with what intrinsics, and what it holds; not its
+ * pixels. */
 export interface CameraFrame {
   frame_id: string;
   sensor_id: string;
@@ -47,19 +33,6 @@ export interface CameraFrame {
   pose: CameraPose;
   intrinsics: { width: number; height: number; fx: number; fy: number };
   modalities: string[];
-}
-
-const FRESHNESS_STATES: readonly string[] = ["waiting", "fresh", "stale", "unavailable"];
-const POSE_NUMBERS = ["x_m", "y_m", "z_m", "qw", "qx", "qy", "qz"] as const;
-
-/** What a sensor truly sampled at each of its moments, in seconds from the
- * run's start: for QA only, asked for in QA mode alone. */
-export interface SensorTruth {
-  sensor_id: string;
-  observation_type: string;
-  unit: string;
-  times_s: number[];
-  values: (number | null)[];
 }
 
 /** A run's observation log up to a moment, what its sensors observed, each
@@ -101,54 +74,11 @@ export function sensorsUrl(
   ]);
 }
 
-function isObservation(value: unknown): value is SensorObservation {
-  return (
-    isObject(value) &&
-    typeof value.sensor_id === "string" &&
-    typeof value.observation_type === "string" &&
-    typeof value.timestamp === "string" &&
-    typeof value.value === "number"
-  );
-}
+const UNEXPECTED = "the readings are not what the viewer expects";
 
-export function isFreshness(value: unknown): value is SensorFreshness {
-  return (
-    isObject(value) &&
-    typeof value.sensor_id === "string" &&
-    typeof value.state === "string" &&
-    FRESHNESS_STATES.includes(value.state) &&
-    (value.due_at === null || typeof value.due_at === "string") &&
-    (value.latest_at === null || typeof value.latest_at === "string")
-  );
-}
-
-function isPose(value: unknown): value is CameraPose {
-  return isObject(value) && POSE_NUMBERS.every((name) => typeof value[name] === "number");
-}
-
-export function isFrame(value: unknown): value is CameraFrame {
-  return (
-    isObject(value) &&
-    typeof value.frame_id === "string" &&
-    typeof value.sensor_id === "string" &&
-    typeof value.timestamp === "string" &&
-    isPose(value.pose) &&
-    isObject(value.intrinsics) &&
-    typeof value.intrinsics.width === "number" &&
-    typeof value.intrinsics.height === "number" &&
-    Array.isArray(value.modalities)
-  );
-}
-
-function isTruth(value: unknown): value is SensorTruth {
-  return (
-    isObject(value) &&
-    typeof value.sensor_id === "string" &&
-    typeof value.unit === "string" &&
-    Array.isArray(value.times_s) &&
-    Array.isArray(value.values)
-  );
-}
+/** A run's observation log, checked rather than trusted. */
+export const readObservations = contractReader<SensorObservations>(OBSERVATIONS_SCHEMA, UNEXPECTED);
+const readTruths = contractReader<SensorTruths>(TRUTH_SCHEMA, UNEXPECTED);
 
 /** A run's sensors' logs, as the viewer asks for them: a scenario's, under
  * a run's changes, with what its sensors truly sampled only if `truth` is
@@ -181,31 +111,17 @@ export async function loadSensorReadings(
       const status = observed.ok ? truth?.status : observed.status;
       return { status: "unavailable", reason: `the simulator API answered ${status}` };
     }
-    const observations: unknown = await observed.json();
-    const truths: unknown = truth === null ? { sensors: [] } : await truth.json();
-    if (
-      !isObject(observations) ||
-      !Array.isArray(observations.observations) ||
-      !observations.observations.every(isObservation) ||
-      !Array.isArray(observations.freshness) ||
-      !observations.freshness.every(isFreshness) ||
-      !Array.isArray(observations.frames) ||
-      !observations.frames.every(isFrame) ||
-      !isObject(truths) ||
-      !Array.isArray(truths.sensors) ||
-      !truths.sensors.every(isTruth)
-    ) {
-      return { status: "unavailable", reason: "the readings are not what the viewer expects" };
-    }
+    const observations = readObservations(await observed.json());
+    const truths = truth === null ? [] : readTruths(await truth.json()).sensors;
     return {
       status: "loaded",
       readings: {
-        runId: typeof observations.run_id === "string" ? observations.run_id : "",
-        start: typeof observations.start === "string" ? observations.start : "",
+        runId: observations.run_id,
+        start: observations.start,
         observations: observations.observations,
         freshness: observations.freshness,
         frames: observations.frames,
-        truths: truths.sensors,
+        truths,
       },
     };
   } catch (error) {

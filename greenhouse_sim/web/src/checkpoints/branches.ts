@@ -3,7 +3,7 @@ import { type CropPlant, cropPlantUrl, parseCropPlant } from "../plants/crop";
 import { DEFAULT_WEATHER } from "../scenarios";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import type { RunParts } from "../scene/run";
-import { secondsInto, sensorsUrl } from "../sensors/readings";
+import { readObservations, secondsInto, sensorsUrl } from "../sensors/readings";
 import type { CheckpointSummary } from "./checkpoints";
 
 /** A checkpoint's run carried on unchanged from its moment, at the moment
@@ -89,23 +89,13 @@ async function json(url: string, fetchFn: typeof fetch): Promise<unknown> {
 /** A sensor's observations in a log, as seconds from the run's start and
  * values. */
 function readingsOf(body: unknown, sensorId: string): [number, number][] {
-  if (typeof body !== "object" || body === null) {
-    throw new Error("the readings are not what the viewer expects");
-  }
-  const { start, observations } = body as Record<string, unknown>;
-  if (typeof start !== "string" || !Array.isArray(observations)) {
-    throw new Error("the readings are not what the viewer expects");
-  }
+  const { start, observations } = readObservations(body);
   return observations
-    .filter(
-      (o): o is { sensor_id: string; timestamp: string; value: number } =>
-        typeof o === "object" &&
-        o !== null &&
-        (o as Record<string, unknown>).sensor_id === sensorId &&
-        typeof (o as Record<string, unknown>).timestamp === "string" &&
-        typeof (o as Record<string, unknown>).value === "number",
-    )
-    .map((o): [number, number] => [secondsInto(start, o.timestamp), o.value]);
+    .filter((observation) => observation.sensor_id === sensorId)
+    .map((observation): [number, number] => [
+      secondsInto(start, observation.timestamp),
+      observation.value,
+    ]);
 }
 
 /** The readings of A and B at the moments both have one. */

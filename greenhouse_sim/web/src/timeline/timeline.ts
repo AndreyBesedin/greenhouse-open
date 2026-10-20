@@ -1,6 +1,8 @@
 import { DAY_S } from "../clock";
-import { isNumberList, loadJson } from "../loadJson";
+import { contractReader, loadJson } from "../loadJson";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
+import { TIMELINE_SCHEMA } from "./generated/timelineSchema";
+import type { TimelineDocument } from "./generated/timelineTypes";
 
 /** A run's events in a window, in the order they happen, column by column,
  * as the simulator serves them (`GET /api/scenarios/{id}/timeline`): each
@@ -55,40 +57,29 @@ export function timelineUrl(
   ]);
 }
 
-function isStrings(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === "string");
-}
+const UNEXPECTED = "the timeline is not what the viewer expects";
+const readTimeline = contractReader<TimelineDocument>(TIMELINE_SCHEMA, UNEXPECTED);
 
-/** A timeline, checked rather than trusted. */
+/** A timeline, checked rather than trusted: each event with its process,
+ * subject and kind. */
 export function parseTimeline(body: unknown): Timeline {
-  if (typeof body !== "object" || body === null) {
-    throw new Error("the timeline is not what the viewer expects");
-  }
-  const fields = body as Record<string, unknown>;
-  const times = fields.times_s;
+  const timeline = readTimeline(body);
+  const events = timeline.times_s.length;
   if (
-    typeof fields.from_s !== "number" ||
-    typeof fields.until_s !== "number" ||
-    !isStrings(fields.processes) ||
-    !isStrings(fields.subjects) ||
-    !isStrings(fields.kinds) ||
-    !isNumberList(times) ||
-    !isNumberList(fields.process, times.length) ||
-    !isNumberList(fields.subject, times.length) ||
-    !isNumberList(fields.kind, times.length)
+    [timeline.process, timeline.subject, timeline.kind].some((column) => column.length !== events)
   ) {
-    throw new Error("the timeline is not what the viewer expects");
+    throw new Error(UNEXPECTED);
   }
   return {
-    fromS: fields.from_s,
-    untilS: fields.until_s,
-    processes: fields.processes,
-    subjects: fields.subjects,
-    kinds: fields.kinds,
-    timesS: times,
-    process: fields.process,
-    subject: fields.subject,
-    kind: fields.kind,
+    fromS: timeline.from_s,
+    untilS: timeline.until_s,
+    processes: timeline.processes,
+    subjects: timeline.subjects,
+    kinds: timeline.kinds,
+    timesS: timeline.times_s,
+    process: timeline.process,
+    subject: timeline.subject,
+    kind: timeline.kind,
   };
 }
 
