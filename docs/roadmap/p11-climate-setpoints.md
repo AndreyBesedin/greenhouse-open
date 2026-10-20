@@ -86,7 +86,7 @@ keeps it.
 
 | Step | What | Status |
 | --- | --- | --- |
-| P11.1 | **The controller as data:** `climate/control.py` holds the loops, their targets, bands and stages, and checks them (the dead band between heating and venting, stages in order, times of day on the minute). A manifest's `thermostat` becomes its `control`, through a manifest format 2 and a migration of format 1. | Proposed |
+| P11.1 | **The controller as data:** `climate/control.py` holds the loops, their targets, bands and stages, and checks them (the dead band between heating and venting, stages in order, times of day on the minute). A manifest's `thermostat` becomes its `control`, in the manifest's next format, with a migration of the one before. | Proposed |
 | P11.2 | **The house decides every loop exactly:** the next switch is the earliest moment any loop's edge is reached. The house's course through a stretch gains its humidity, so that a relative humidity's edge is found too. The grid follows each device a loop runs. Checkpoints keep each loop's state (checkpoint format 3). **With the heating loop alone, a run is today's run, to the last digit.** | Proposed |
 | P11.3 | **Targets as a run's input:** a `&targets=` parameter on every climate route, read once and checked (refused with the reason, as commands are), in the run's identity. The equipment route says which loop runs each device, its state and its target at the moment. | Proposed |
 | P11.4 | **The viewer:** a Targets panel (heating by day and by night, venting, humidity) that keeps its values in the address. The Equipment panel names the loop that runs each device. The timeline shows the loops' switches in the air's lane. | Proposed |
