@@ -2,6 +2,7 @@ import type { CameraPose } from "../camera";
 import { DAY_S } from "../clock";
 import { type FieldView, fieldViewFrom, type Slice, sliceFrom, sliceText } from "../fields/display";
 import { probesFrom, probesText } from "../fields/probes";
+import { loadJson } from "../loadJson";
 import {
   actionFrom,
   actionsQuery,
@@ -605,19 +606,14 @@ async function refusal(url: string, response: Response): Promise<string> {
 
 /** Fetches and checks the scene at `url`; every failure becomes a state to show. */
 export async function fetchScene(url: string, fetchFn: typeof fetch = fetch): Promise<SceneState> {
-  try {
-    const response = await fetchFn(url);
-    if (!response.ok) {
-      return { status: "unavailable", reason: await refusal(url, response) };
-    }
-    const check = checkScene(await response.json());
-    return check.ok
-      ? { status: "loaded", snapshot: check.snapshot }
-      : { status: "rejected", problems: check.problems };
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return { status: "unavailable", reason };
+  const answer = await loadJson(url, checkScene, fetchFn, (response) => refusal(url, response));
+  if (answer.status !== "loaded") {
+    return answer;
   }
+  const check = answer.value;
+  return check.ok
+    ? { status: "loaded", snapshot: check.snapshot }
+    : { status: "rejected", problems: check.problems };
 }
 
 /** The scenario on show with another of its layouts keeps the weather it is

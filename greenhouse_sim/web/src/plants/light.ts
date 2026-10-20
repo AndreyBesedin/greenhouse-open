@@ -1,3 +1,4 @@
+import { isNumberRecord, loadJson } from "../loadJson";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 
 // PAR is shown to whole micromoles, a day's light to tenths of a mole.
@@ -27,15 +28,6 @@ export function plantsLightUrl(scenarioId: string, run: RunParts): string {
   return scenarioUrl(scenarioId, "climate/plants", runParameters(run));
 }
 
-function isNumbers(value: unknown): value is Record<string, number> {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value) &&
-    Object.values(value).every((entry) => typeof entry === "number")
-  );
-}
-
 /** A plants' light response, checked rather than trusted. */
 export function parsePlantsLight(body: unknown): PlantsLight {
   if (typeof body !== "object" || body === null) {
@@ -44,8 +36,8 @@ export function parsePlantsLight(body: unknown): PlantsLight {
   const { time_s, par_umol_m2_s, daily_light_integral_mol_m2_d } = body as Record<string, unknown>;
   if (
     typeof time_s !== "number" ||
-    !isNumbers(par_umol_m2_s) ||
-    !isNumbers(daily_light_integral_mol_m2_d)
+    !isNumberRecord(par_umol_m2_s) ||
+    !isNumberRecord(daily_light_integral_mol_m2_d)
   ) {
     throw new Error("the plants' light is not what the viewer expects");
   }
@@ -58,16 +50,8 @@ export async function loadPlantsLight(
   url: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<PlantsLightState> {
-  try {
-    const response = await fetchFn(url);
-    if (!response.ok) {
-      return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
-    }
-    return { status: "loaded", light: parsePlantsLight(await response.json()) };
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return { status: "unavailable", reason };
-  }
+  const answer = await loadJson(url, parsePlantsLight, fetchFn);
+  return answer.status === "loaded" ? { status: "loaded", light: answer.value } : answer;
 }
 
 /** A plant's light in words: its PAR at the moment, "512 µmol/m²/s", and its

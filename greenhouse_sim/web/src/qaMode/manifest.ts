@@ -1,3 +1,4 @@
+import { isObject, loadJson } from "../loadJson";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 
 /** The simulator the viewer is talking to, as it says itself
@@ -56,10 +57,6 @@ export function runManifestUrl(scenarioId: string, run: RunParts): string {
   return scenarioUrl(scenarioId, "manifest", runParameters(run, ["weather"]));
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
 function isNumberOrNull(value: unknown): value is number | null {
   return value === null || typeof value === "number";
 }
@@ -111,33 +108,12 @@ export function parseRunManifest(body: unknown): RunManifest {
   };
 }
 
-/** Fetches what `parse` reads from `url`; every failure becomes
- * `unavailable`. */
-async function loadChecked<T>(
-  url: string,
-  parse: (body: unknown) => T,
-  fetchFn: typeof fetch,
-): Promise<{ status: "loaded"; value: T } | { status: "unavailable"; reason: string }> {
-  try {
-    const response = await fetchFn(url);
-    if (!response.ok) {
-      return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
-    }
-    return { status: "loaded", value: parse(await response.json()) };
-  } catch (error) {
-    return {
-      status: "unavailable",
-      reason: error instanceof Error ? error.message : String(error),
-    };
-  }
-}
-
 /** Fetches the simulator's version. */
 export async function loadServedVersion(
   url: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<ServedVersionState> {
-  const answer = await loadChecked(url, parseServedVersion, fetchFn);
+  const answer = await loadJson(url, parseServedVersion, fetchFn);
   return answer.status === "loaded" ? { status: "loaded", served: answer.value } : answer;
 }
 
@@ -146,7 +122,7 @@ export async function loadRunManifest(
   url: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<RunManifestState> {
-  const answer = await loadChecked(url, parseRunManifest, fetchFn);
+  const answer = await loadJson(url, parseRunManifest, fetchFn);
   return answer.status === "loaded" ? { status: "loaded", manifest: answer.value } : answer;
 }
 

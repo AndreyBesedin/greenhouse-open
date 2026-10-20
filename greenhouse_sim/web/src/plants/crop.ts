@@ -1,4 +1,5 @@
 import { DAY_S, daysEnded } from "../clock";
+import { loadJson } from "../loadJson";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import { runParameters, type ScenarioRun, scenarioUrl } from "../scene/run";
 import { type OrganNode, organTree, type PlantEvent, plantHistory } from "./structure";
@@ -124,14 +125,6 @@ export async function loadCropPlant(
   url: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<CropPlantState> {
-  try {
-    const response = await fetchFn(url);
-    if (!response.ok) {
-      return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
-    }
-    return { status: "loaded", plant: parseCropPlant(await response.json()) };
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return { status: "unavailable", reason };
-  }
+  const answer = await loadJson(url, parseCropPlant, fetchFn);
+  return answer.status === "loaded" ? { status: "loaded", plant: answer.value } : answer;
 }

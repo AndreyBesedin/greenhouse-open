@@ -1,5 +1,6 @@
 import { inWorld } from "../debug/dimensions";
 import type { OverlayPrimitive } from "../debug/overlays";
+import { loadJson } from "../loadJson";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 
@@ -78,16 +79,8 @@ export async function loadOpenings(
   url: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<OpeningsState> {
-  try {
-    const response = await fetchFn(url);
-    if (!response.ok) {
-      return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
-    }
-    return { status: "loaded", openings: parseOpenings(await response.json()) };
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return { status: "unavailable", reason };
-  }
+  const answer = await loadJson(url, parseOpenings, fetchFn);
+  return answer.status === "loaded" ? { status: "loaded", openings: answer.value } : answer;
 }
 
 function rounded(value: number): number {

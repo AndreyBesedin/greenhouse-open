@@ -1,3 +1,4 @@
+import { loadJson } from "../loadJson";
 import { PERCENT } from "../units";
 import type { LabRun } from "./lab";
 
@@ -157,15 +158,10 @@ export async function loadPlantStructure(
   runQuery: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<StructureState> {
-  try {
-    const response = await fetchFn(plantStructureUrl(plantId, runQuery));
-    if (!response.ok) {
-      return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
-    }
-    const body: unknown = await response.json();
-    return { status: "loaded", tree: organTree(body), history: plantHistory(body) };
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return { status: "unavailable", reason };
-  }
+  const answer = await loadJson(
+    plantStructureUrl(plantId, runQuery),
+    (body) => ({ tree: organTree(body), history: plantHistory(body) }),
+    fetchFn,
+  );
+  return answer.status === "loaded" ? { status: "loaded", ...answer.value } : answer;
 }

@@ -1,5 +1,5 @@
 import Ajv2020 from "ajv/dist/2020";
-
+import { loadJson } from "../loadJson";
 import { CFD_GEOMETRY_SCHEMA } from "./generated/geometrySchema";
 import type { CfdGeometry } from "./generated/geometryTypes";
 
@@ -40,19 +40,12 @@ export async function loadCfdGeometry(
   url: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<CfdGeometryState> {
-  try {
-    const response = await fetchFn(url);
-    if (!response.ok) {
-      return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
-    }
-    const check = checkCfdGeometry(await response.json());
-    return check.ok
-      ? { status: "loaded", geometry: check.geometry }
-      : { status: "rejected", problems: check.problems };
-  } catch (error) {
-    return {
-      status: "unavailable",
-      reason: error instanceof Error ? error.message : String(error),
-    };
+  const answer = await loadJson(url, checkCfdGeometry, fetchFn);
+  if (answer.status !== "loaded") {
+    return answer;
   }
+  const check = answer.value;
+  return check.ok
+    ? { status: "loaded", geometry: check.geometry }
+    : { status: "rejected", problems: check.problems };
 }

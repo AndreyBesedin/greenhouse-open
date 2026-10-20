@@ -1,6 +1,7 @@
 import { dayEnd, runDay } from "../clock";
 import { inWorld } from "../debug/dimensions";
 import type { OverlayPrimitive } from "../debug/overlays";
+import { isObject, loadJson } from "../loadJson";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import { runParameters, scenarioUrl } from "../scene/run";
 import { PERCENT } from "../units";
@@ -146,10 +147,6 @@ export function weatherDayUrl(scenarioId: string, time: number, weather?: string
   );
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
 function isPoint(value: unknown): value is Point3 {
   return (
     isObject(value) &&
@@ -259,16 +256,8 @@ export async function loadWeatherDay(
   url: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<WeatherDayState> {
-  try {
-    const response = await fetchFn(url);
-    if (!response.ok) {
-      return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
-    }
-    return { status: "loaded", day: parseWeatherDay(await response.json()) };
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return { status: "unavailable", reason };
-  }
+  const answer = await loadJson(url, parseWeatherDay, fetchFn);
+  return answer.status === "loaded" ? { status: "loaded", day: answer.value } : answer;
 }
 
 /** Fetches a scenario's weather at a moment of a run, under its own weather
@@ -277,16 +266,8 @@ export async function loadWeather(
   url: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<WeatherStateOfLoad> {
-  try {
-    const response = await fetchFn(url);
-    if (!response.ok) {
-      return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
-    }
-    return { status: "loaded", weather: parseWeather(await response.json()) };
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return { status: "unavailable", reason };
-  }
+  const answer = await loadJson(url, parseWeather, fetchFn);
+  return answer.status === "loaded" ? { status: "loaded", weather: answer.value } : answer;
 }
 
 /** The point of the compass nearest a bearing, such as "SW". */

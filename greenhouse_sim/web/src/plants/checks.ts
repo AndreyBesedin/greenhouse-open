@@ -1,3 +1,5 @@
+import { loadJson } from "../loadJson";
+
 /** What the simulator's lab finds wrong with each of its plants on a run's
  * day (`GET /api/plants/checks`): the structure's rules each breaks, and
  * anything it did since the day before that a plant cannot. */
@@ -37,14 +39,6 @@ export async function loadLabChecks(
   runQuery: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<ChecksState> {
-  try {
-    const response = await fetchFn(labChecksUrl(runQuery));
-    if (!response.ok) {
-      return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
-    }
-    return { status: "loaded", ...labChecks(await response.json()) };
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return { status: "unavailable", reason };
-  }
+  const answer = await loadJson(labChecksUrl(runQuery), labChecks, fetchFn);
+  return answer.status === "loaded" ? { status: "loaded", ...answer.value } : answer;
 }
