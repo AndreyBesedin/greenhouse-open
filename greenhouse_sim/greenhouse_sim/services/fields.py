@@ -34,6 +34,8 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from typing import Final
 
+from pydantic import BaseModel, ConfigDict
+
 from greenhouse_sim.airflow.contract import AirflowModel
 from greenhouse_sim.airflow.prescribed import PATTERNS
 from greenhouse_sim.cfd.geometry import CfdGeometry, cfd_geometry
@@ -219,6 +221,23 @@ def _house(key: RunKey) -> House:
     return scenario_id, layout, weather, openings
 
 
+def off_levels(scenario_id: str) -> dict[str, float]:
+    """The levels that switch off, from the start, what a scenario's run
+    would otherwise run by itself: its thermostat's heater, at 0
+    (`climate.thermostat`). With no daily commands and no others, its run
+    has everything off."""
+    thermostat = scenario(scenario_id).thermostat
+    return {} if thermostat is None else {thermostat.actuator_id: 0.0}
+
+
+def _everything_off(key: RunKey) -> ClimateDay:
+    """The run `key` names with everything off: its house, under its
+    weather, its doors and vents as open from the start, and nothing run."""
+    scenario_id, layout, weather, _, openings, _ = key
+    off = tuple(sorted(off_levels(scenario_id).items()))
+    return _climate_day(scenario_id, layout, weather, off, openings, ())
+
+
 def climate_run(
     scenario_id: str,
     layout: str | None = None,
@@ -316,6 +335,7 @@ def _new_climate_run(
         vents=vents,
         glazed=glazed_cells(config.envelope, grid, geometry.solid()),
         sunlight=plant_light(scenario_id, layout, weather).sunlight,
+        thermostat=config.thermostat,
     )
 
 
@@ -463,11 +483,9 @@ def climate_probes(
     if outside:
         named = ", ".join(f"({p.x:g}, {p.y:g}, {p.z:g})" for p in outside)
         raise InvalidRequest(f"a probe stands in the house's air, not at {named}")
-    key_scenario, key_layout, key_weather, _, key_openings, _ = climate.key
-    everything_off = _climate_day(key_scenario, key_layout, key_weather, (), key_openings, ())
     return probe_series(
         _climate_day(*climate.key).window(until_s),
-        everything_off.window(until_s),
+        _everything_off(climate.key).window(until_s),
         probed,
         _moments(until_s, window_start(until_s)),
     )
@@ -506,10 +524,9 @@ def house_air(
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
         raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
-    key_scenario, key_layout, key_weather, _, key_openings, _ = climate.key
     return house_trace(
         _climate_day(*climate.key).house,
-        _climate_day(key_scenario, key_layout, key_weather, (), key_openings, ()).house,
+        _everything_off(climate.key).house,
         _moments(until_s, first),
     )
 
@@ -542,6 +559,71 @@ def house_air_at(
     if not isinstance(climate, _Climate):
         return None
     return _climate_day(*climate.key).house.air_at(time_s)
+
+
+class ThermostatAt(BaseModel):
+    """A run's thermostat at a moment (`climate.thermostat`): the heater it
+    runs, the temperature it heats the house's air to then, and whether it
+    runs the heater then, or a command to the heater has taken it over."""
+
+    model_config = ConfigDict(frozen=True)
+
+    actuator_id: str
+    setpoint_c: float
+    runs: bool
+
+
+class EquipmentAt(BaseModel):
+    """A run's equipment at a moment: each piece's level, as its commands set
+    it and its thermostat runs its heater, and the thermostat, if it has
+    one."""
+
+    model_config = ConfigDict(frozen=True)
+
+    time_s: float
+    levels: dict[str, float]
+    thermostat: ThermostatAt | None
+
+
+def equipment_at(
+    scenario_id: str,
+    layout: str | None = None,
+    levels: Mapping[str, float] | None = None,
+    openings: Mapping[str, float] | None = None,
+    commands: Sequence[Commanded] = (),
+    time_s: float = 0.0,
+    weather: str | None = None,
+    daily: Sequence[Commanded] | None = None,
+) -> EquipmentAt:
+    """A scenario's equipment at a moment of its climate run, asked as its
+    climate field is and refused as it is: none for a scenario without
+    equipment, which has no climate run."""
+    checked_moment(scenario(scenario_id), time_s)
+    models = _models(
+        scenario_id,
+        layout or DEFAULT_LAYOUT,
+        levels,
+        openings,
+        commands,
+        weather or DEFAULT_WEATHER,
+        daily,
+    )
+    climate = models.get(CLIMATE)
+    if not isinstance(climate, _Climate):
+        return EquipmentAt(time_s=time_s, levels={}, thermostat=None)
+    run = _climate_day(*climate.key).run
+    thermostat = run.thermostat
+    return EquipmentAt(
+        time_s=time_s,
+        levels=run.levels_at(time_s),
+        thermostat=None
+        if thermostat is None
+        else ThermostatAt(
+            actuator_id=thermostat.actuator_id,
+            setpoint_c=thermostat.setpoint_c(time_s),
+            runs=run.thermostat_governs(time_s),
+        ),
+    )
 
 
 def glazing(
@@ -615,12 +697,16 @@ def air_through_a_run(
     climate = models.get(CLIMATE)
     if isinstance(climate, _Climate):
         day = _climate_day(*climate.key)
-        # A run under recorded weather is told apart by its file's content.
-        under = changed(scenario(scenario_id), SceneChanges(weather=climate.key[2])).weather
+        # A run under recorded weather is told apart by its file's content,
+        # and a run of a scenario by what it is made of: a manifest or a
+        # layout changed, such as its weather or its heater, makes another.
+        config = changed(
+            scenario(scenario_id), SceneChanges(layout=climate.key[1], weather=climate.key[2])
+        )
+        under = config.weather
         recorded = under.identity() if isinstance(under, RecordedWeather) else ""
-        digest = hashlib.sha256((repr(climate.key) + recorded).encode()).hexdigest()[
-            :RUN_DIGEST_LENGTH
-        ]
+        told = repr(climate.key) + recorded + config.model_dump_json()
+        digest = hashlib.sha256(told.encode()).hexdigest()[:RUN_DIGEST_LENGTH]
         return (lambda time_s: day.sampled(f"{scenario_id}_{CLIMATE}", time_s)), (
             f"{scenario_id}-climate-{digest}"
         )

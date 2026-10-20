@@ -95,7 +95,7 @@ def test_a_runs_manifest_is_served_and_refused_as_its_run_is() -> None:
 
     assert isinstance(body, dict)
     assert body["version"] == manifest_digest("reference_greenhouse")
-    assert (body["random_seed"], body["start_date"], body["opening_day"]) == (42, "2026-03-01", 80)
+    assert (body["random_seed"], body["start_date"], body["opening_day"]) == (42, "2026-03-01", 86)
     assert (body["weather"], body["wind_from_deg"]) == ("default", 90.0)
     assert respond("GET", "/api/scenarios/nowhere/manifest").status == HTTPStatus.NOT_FOUND
     refused = respond("GET", "/api/scenarios/climate_box/manifest?weather=default~400")
@@ -135,6 +135,7 @@ def test_the_scenario_list_is_the_registry() -> None:
                 "windy_autumn_day",
                 "example_day",
             ],
+            "thermostat": None if config.thermostat is None else config.thermostat.actuator_id,
         }
 
 

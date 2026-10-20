@@ -32,8 +32,8 @@ import math
 import threading
 import weakref
 from bisect import bisect_right, insort
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, replace
 from typing import Final
 
 import numpy as np
@@ -47,12 +47,14 @@ from greenhouse_sim.climate.psychrometrics import (
     saturation_ratio_g_kg,
 )
 from greenhouse_sim.climate.run import KEEP_EVERY_S, LOOK_AGAIN_S, ClimateRun
+from greenhouse_sim.climate.thermostat import OFF, ON
 from greenhouse_sim.climate.transport import (
     AIR_DENSITY_KG_M3,
     AIR_HEAT_CAPACITY_J_KG_K,
     GRAMS_PER_KG,
 )
 from greenhouse_sim.weather.state import WeatherState
+from greenhouse_sim.world.equipment import Heater
 
 # The longest stretch advanced at once, in seconds: the weather is taken at
 # the middle of each.
@@ -63,13 +65,17 @@ STEP_S: Final = KEEP_EVERY_S
 class HouseAir:
     """The house's air at a moment: its temperature (°C), humidity ratio
     (g/kg) and CO₂ (ppm), with the water it has lost so far to equipment and
-    to condensation, in kg."""
+    to condensation, in kg; the heat its heaters have given it so far, in J;
+    and whether its thermostat ran its heater up to then
+    (`climate.thermostat`)."""
 
     temperature_c: float
     humidity_g_kg: float
     co2_ppm: float
     removed_kg: float = 0.0
     condensed_kg: float = 0.0
+    heated_j: float = 0.0
+    heating: bool = False
 
     def relative_humidity_pct(self) -> float:
         return float(relative_humidity_pct(self.temperature_c, self.humidity_g_kg))
@@ -79,11 +85,43 @@ class HouseAir:
 class _Steady:
     """What the house exchanges and is given at steady levels: its exchange
     with the outside through the glass, for each W/m²K of U (m³/s), the heat
-    added (W) and the water taken (kg/s)."""
+    added (W), of it the heaters' (W), and the water taken (kg/s)."""
 
     glass_m3_s_per_u: float
     heat_w: float
+    heater_w: float
     water_removed_kg_s: float
+
+
+@dataclass(frozen=True)
+class _Course:
+    """How the house's air temperature goes through a stretch: towards
+    `settled_c` at `rate_s` per second while it exchanges air with the
+    outside; or, shut off from it, by `warming_c_s` a second. With what it
+    exchanges through its doors, vents and gaps (m³/s)."""
+
+    settled_c: float
+    rate_s: float
+    warming_c_s: float
+    venting_m3_s: float
+
+    def temperature_c(self, start_c: float, duration_s: float) -> float:
+        if self.rate_s > 0:
+            return _towards(start_c, self.settled_c, self.rate_s, duration_s)
+        return start_c + self.warming_c_s * duration_s
+
+    def reaching_s(self, start_c: float, edge_c: float) -> float | None:
+        """How long the air takes from `start_c` to `edge_c`, if it gets
+        there: none if it goes the other way, or settles short of it."""
+        if self.rate_s > 0:
+            if not min(start_c, self.settled_c) <= edge_c <= max(start_c, self.settled_c):
+                return None
+            if edge_c == self.settled_c:
+                return None
+            return math.log((start_c - self.settled_c) / (edge_c - self.settled_c)) / self.rate_s
+        if self.warming_c_s == 0 or (edge_c - start_c) / self.warming_c_s < 0:
+            return None
+        return (edge_c - start_c) / self.warming_c_s
 
 
 def _towards(value: float, settled: float, rate_s: float, duration_s: float) -> float:
@@ -139,35 +177,119 @@ class WholeHouse:
         # kept alive by those that carried on from it.
         self._sources: list[tuple[weakref.ref[WholeHouse], float]] = []
 
-    def _held(self, time_s: float) -> _Steady:
-        levels = self.run.levels_at(time_s)
+    def _levels(self, time_s: float, air: HouseAir) -> dict[str, float]:
+        """Its equipment's levels from `time_s`, the air being `air` then:
+        as the schedule sets them, and its thermostat's heater as the air
+        has the thermostat run it."""
+        levels = self.run.scheduled_levels_at(time_s)
+        thermostat = self.run.thermostat
+        if thermostat is not None and self.run.thermostat_governs(time_s):
+            levels[thermostat.actuator_id] = ON if air.heating else OFF
+        return levels
+
+    def _decided(self, time_s: float, air: HouseAir) -> HouseAir:
+        """`air`, with its thermostat's decision at `time_s`, while it runs
+        its heater: on below its band, off above it, as it was between."""
+        thermostat = self.run.thermostat
+        if thermostat is None or not self.run.thermostat_governs(time_s):
+            return air
+        heating = thermostat.heats(air.temperature_c, air.heating, time_s)
+        return air if heating == air.heating else replace(air, heating=heating)
+
+    def _switching_s(
+        self, air: HouseAir, course: _Course, time_s: float, within_s: float
+    ) -> float | None:
+        """How long, within `within_s` of `time_s`, until its thermostat
+        switches its heater, as the air reaches its band's far edge: the top
+        while it heats, the bottom while it does not; none if it does not."""
+        thermostat = self.run.thermostat
+        if thermostat is None or not self.run.thermostat_governs(time_s):
+            return None
+        half = thermostat.band_c / 2
+        setpoint = thermostat.setpoint_c(time_s)
+        edge = setpoint + half if air.heating else setpoint - half
+        reached = course.reaching_s(air.temperature_c, edge)
+        return reached if reached is not None and reached < within_s else None
+
+    def _through(
+        self, air: HouseAir, start_s: float, end_s: float, until_s: float | None = None
+    ) -> HouseAir:
+        """The air through one stretch of its run, from `start_s` to `end_s`,
+        or only to `until_s` within it: under the weather and the sun at its
+        middle, its levels held but for its thermostat's heater, switched the
+        moment the air reaches its band's edge."""
+        middle = (start_s + end_s) / 2
+        outside = self.run.weather.at(middle)
+        sun = self.run.solar_heat_total_w(middle)
+        now, end = start_s, end_s if until_s is None else until_s
+        air = self._decided(now, air)
+        while now < end:
+            steady = self._held(self._levels(now, air))
+            course = self._course(air, steady, outside, now, sun)
+            switch = self._switching_s(air, course, now, end - now)
+            span = end - now if switch is None else switch
+            air = self._advance(air, steady, outside, span, now, sun, course)
+            now = end if switch is None else now + span
+            if switch is not None:
+                air = replace(air, heating=not air.heating)
+        return air
+
+    def _stretch_around(self, time_s: float) -> tuple[float, float]:
+        """The stretch of its run `time_s` lies in, as the air is worked
+        through: from the latest `STEP_S` or command at or before it, to the
+        next after it."""
+        step = math.floor(time_s / STEP_S) * STEP_S
+        changes = self.run.schedule.moments_between(step, step + STEP_S)
+        start = max([step, *(moment for moment in changes if moment <= time_s)])
+        end = min([step + STEP_S, *(moment for moment in changes if moment > time_s)])
+        return start, end
+
+    def heater_level_at(self, time_s: float) -> float:
+        """The level its thermostat runs its heater at, at `time_s`: on from
+        the moment the air fell below its band, off from the moment it rose
+        above it."""
+        thermostat = self.run.thermostat
+        if thermostat is None:
+            raise ValueError("a house without a thermostat runs no heater by itself")
+        start, end = self._stretch_around(time_s)
+        with self._working:
+            air = self._through(self.air_at(start), start, end, time_s)
+        return ON if air.heating else OFF
+
+    def _held(self, levels: Mapping[str, float]) -> _Steady:
         key = tuple(sorted(levels.items()))
         if key not in self._steady:
-            terms = self.run.terms_at(time_s)
-            transport = self.run.transport_at(time_s, openings={})
+            terms = self.run.terms_for(levels)
+            transport = self.run.transport_for(levels, openings={})
             air = self._air
             configured_u = self.run.settings.glazing_u_w_m2k
             glass = float(transport.glass_m3_s()[air].sum())
             self._steady[key] = _Steady(
                 glass_m3_s_per_u=glass / configured_u if configured_u > 0 else 0.0,
                 heat_w=float(terms.heat_w[air].sum()),
+                heater_w=sum(
+                    piece.power_w * levels.get(piece.actuator_id, 0.0)
+                    for piece in self.run.equipment
+                    if isinstance(piece, Heater)
+                ),
                 water_removed_kg_s=float(terms.water_removed_kg_s[air].sum()),
             )
         return self._steady[key]
 
-    def _advance(
+    def _course(
         self,
         air: HouseAir,
         steady: _Steady,
         outside: WeatherState,
-        duration_s: float,
         time_s: float,
         sun_w: float = 0.0,
-    ) -> HouseAir:
+    ) -> _Course:
+        """How the air's temperature goes from `air`, at steady levels and
+        under the weather `outside`, its doors and vents open as they are at
+        `time_s`."""
         volume = self.volume_m3
         heat_per_k = AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K
         heat_w = steady.heat_w + sun_w
-        warming_c_s = heat_w / (heat_per_k * volume)
         settings = self.run.settings
         u = glazing_u_w_m2k(settings.glazing_u_w_m2k, outside.wind_speed_m_s)
         leaks_m3_s = settings.infiltration_per_s(outside.wind_speed_m_s) * volume
@@ -179,11 +301,28 @@ class WholeHouse:
         entering = sum(max(flow.net_m3_s, 0.0) + flow.exchange_m3_s for flow in through)
         venting_m3_s = entering + leaks_m3_s
         exchange = u * steady.glass_m3_s_per_u + venting_m3_s
-        if exchange > 0:
-            settled = outside.air_temperature_c + heat_w / (heat_per_k * exchange)
-            temperature = _towards(air.temperature_c, settled, exchange / volume, duration_s)
-        else:
-            temperature = air.temperature_c + warming_c_s * duration_s
+        return _Course(
+            settled_c=outside.air_temperature_c
+            + (heat_w / (heat_per_k * exchange) if exchange > 0 else 0.0),
+            rate_s=exchange / volume,
+            warming_c_s=heat_w / (heat_per_k * volume),
+            venting_m3_s=venting_m3_s,
+        )
+
+    def _advance(
+        self,
+        air: HouseAir,
+        steady: _Steady,
+        outside: WeatherState,
+        duration_s: float,
+        time_s: float,
+        sun_w: float = 0.0,
+        course: _Course | None = None,
+    ) -> HouseAir:
+        volume = self.volume_m3
+        course = course or self._course(air, steady, outside, time_s, sun_w)
+        temperature = course.temperature_c(air.temperature_c, duration_s)
+        venting_m3_s = course.venting_m3_s
         air_kg = AIR_DENSITY_KG_M3 * volume
         outside_water = float(
             humidity_ratio_g_kg(outside.air_temperature_c, outside.relative_humidity_pct)
@@ -214,6 +353,8 @@ class WholeHouse:
             co2_ppm=co2,
             removed_kg=air.removed_kg + removed_kg,
             condensed_kg=air.condensed_kg + condensed_kg,
+            heated_j=air.heated_j + steady.heater_w * duration_s,
+            heating=air.heating,
         )
 
     def carry_on_from(self, other: WholeHouse) -> None:
@@ -299,7 +440,14 @@ class WholeHouse:
             co2_ppm=mean([air.co2_ppm for air in airs]),
             removed_kg=airs[-1].removed_kg,
             condensed_kg=airs[-1].condensed_kg,
+            heated_j=airs[-1].heated_j,
+            heating=airs[-1].heating,
         )
+
+    def heated_j(self, from_s: float, until_s: float) -> float:
+        """The heat its heaters give its air from `from_s` to `until_s`, in
+        J: their rated power at the levels they run at, for as long."""
+        return self.air_at(until_s).heated_j - self.air_at(from_s).heated_j
 
     def air_at(self, time_s: float) -> HouseAir:
         """The house's air at `time_s`, from the latest moment kept before
@@ -340,10 +488,7 @@ class WholeHouse:
         now = start
         for until in sorted(changes | steps | {time_s}):
             if until > now:
-                middle = (now + until) / 2
-                outside = self.run.weather.at(middle)
-                sun = self.run.solar_heat_total_w(middle)
-                air = self._advance(air, self._held(now), outside, until - now, now, sun)
+                air = self._through(air, now, until)
                 now = until
                 if until in steps:
                     self._keep(until, air)

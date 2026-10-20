@@ -14,14 +14,17 @@ from greenhouse_sim.airflow.prescribed import PrescribedAirflow, UniformAirflow
 from greenhouse_sim.cfd.setup import CfdSetup
 from greenhouse_sim.climate.commands import DailyCommand
 from greenhouse_sim.climate.settings import ClimateSettings
+from greenhouse_sim.climate.thermostat import Thermostat
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.core.crop import CropWork
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.weather.recorded import RecordedWeather
+from greenhouse_sim.weather.seasonal import SeasonalWeather
 from greenhouse_sim.weather.sources import Clouded, ConstantWeather, RunWeather, Winded
 from greenhouse_sim.weather.state import Percent
 from greenhouse_sim.weather.synthetic import SyntheticWeather
 from greenhouse_sim.world.envelope import Envelope
+from greenhouse_sim.world.equipment import Heater
 from greenhouse_sim.world.layout import Layout, inside_the_greenhouse, outside_the_greenhouse
 from greenhouse_sim.world.site import DEFAULT_SITE, Bearing, Site
 
@@ -52,6 +55,9 @@ class ScenarioConfig(BaseModel):
     # The commands its runs give its equipment, doors and vents at a time of
     # day, every day, unless a run is given daily commands of its own (P09.4).
     daily: list[DailyCommand] = []
+    # A thermostat on its heater, which runs it by the house's air from the
+    # start, in place of daily commands to it (P10.3); none by default.
+    thermostat: Thermostat | None = None
     start_date: date
     duration_days: PositiveInt
     random_seed: NonNegativeInt
@@ -70,7 +76,8 @@ class ScenarioConfig(BaseModel):
     # Where it lies on the Earth, and the weather outside it.
     site: Site = DEFAULT_SITE
     weather: Annotated[
-        ConstantWeather | SyntheticWeather | RecordedWeather, Field(discriminator="kind")
+        ConstantWeather | SyntheticWeather | SeasonalWeather | RecordedWeather,
+        Field(discriminator="kind"),
     ] = ConstantWeather()
     # A QA override of its weather's cloud cover, which dims its light as
     # such a sky would (`greenhouse_sim.weather.sources.Clouded`); none by
@@ -157,6 +164,22 @@ class ScenarioConfig(BaseModel):
         unknown = sorted({c.actuator_id for c in self.daily} - known)
         if unknown:
             raise ValueError(f"daily commands to what it does not have: {', '.join(unknown)}")
+        return self
+
+    @model_validator(mode="after")
+    def _its_thermostat_runs_a_heater_of_its_own(self) -> Self:
+        if self.thermostat is None:
+            return self
+        heaters = {
+            piece.actuator_id for piece in self.layout.equipment if isinstance(piece, Heater)
+        }
+        actuator = self.thermostat.actuator_id
+        if actuator not in heaters:
+            raise ValueError(f"a thermostat runs one of its heaters, not {actuator!r}")
+        if any(command.actuator_id == actuator for command in self.daily):
+            raise ValueError(
+                f"its thermostat runs {actuator!r}: daily commands to it would take it over"
+            )
         return self
 
     @model_validator(mode="after")

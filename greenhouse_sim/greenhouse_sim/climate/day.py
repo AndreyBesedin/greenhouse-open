@@ -58,6 +58,10 @@ class ClimateDay:
     def __init__(self, run: ClimateRun) -> None:
         self.run = run
         self.house = WholeHouse(run)
+        # Its thermostat, if it has one, decides from the house's air, which
+        # its sensors sample: the grid runs follow.
+        if run.thermostat is not None:
+            run.governed_by(self.house.heater_level_at)
         self._windows: OrderedDict[float, ClimateRun] = OrderedDict()
         # The later grid runs are kept and dropped one request at a time.
         self._keeping = threading.RLock()
