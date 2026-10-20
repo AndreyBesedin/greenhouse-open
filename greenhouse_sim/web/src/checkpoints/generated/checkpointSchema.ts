@@ -1,0 +1,105 @@
+// Generated from greenhouse_sim/services/checkpoint.schema.json by `npm run generate`.
+// Do not edit: change the simulator's types and regenerate.
+
+export const CHECKPOINT_SCHEMA = {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Commanded": {
+      "maxItems": 3,
+      "minItems": 3,
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "type": "array"
+    }
+  },
+  "description": "A checkpoint as a client lists it: its identifier, its run's parts,\nits day and moment, and how many plants it keeps.",
+  "properties": {
+    "checkpoint_id": {
+      "title": "Checkpoint Id",
+      "type": "string"
+    },
+    "scenario_id": {
+      "title": "Scenario Id",
+      "type": "string"
+    },
+    "layout": {
+      "title": "Layout",
+      "type": "string"
+    },
+    "weather": {
+      "title": "Weather",
+      "type": "string"
+    },
+    "levels": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "title": "Levels",
+      "type": "object"
+    },
+    "openings": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "title": "Openings",
+      "type": "object"
+    },
+    "commands": {
+      "items": {
+        "$ref": "#/$defs/Commanded"
+      },
+      "title": "Commands",
+      "type": "array"
+    },
+    "daily": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/Commanded"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Daily"
+    },
+    "day": {
+      "title": "Day",
+      "type": "integer"
+    },
+    "time_s": {
+      "title": "Time S",
+      "type": "number"
+    },
+    "plants": {
+      "title": "Plants",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "checkpoint_id",
+    "scenario_id",
+    "layout",
+    "weather",
+    "levels",
+    "openings",
+    "commands",
+    "daily",
+    "day",
+    "time_s",
+    "plants"
+  ],
+  "title": "CheckpointSummary",
+  "type": "object"
+};

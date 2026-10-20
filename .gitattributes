@@ -4,8 +4,6 @@
 greenhouse_sim/greenhouse_sim/**/*.schema.json linguist-generated=true
 greenhouse_sim/tests/fixtures/reference_baseline.json linguist-generated=true
 greenhouse_sim/web/public/scenes/*.json linguist-generated=true
-greenhouse_sim/web/src/scene/generated/** linguist-generated=true
-greenhouse_sim/web/src/fields/generated/** linguist-generated=true
-greenhouse_sim/web/src/cfd/generated/** linguist-generated=true
+greenhouse_sim/web/src/**/generated/** linguist-generated=true
 greenhouse_sim/web/public/fields/*.json linguist-generated=true
 greenhouse_sim/web/package-lock.json linguist-generated=true
