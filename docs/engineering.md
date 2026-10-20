@@ -235,6 +235,27 @@ obvious from the surrounding code or test.
 Prefer straightforward code over dense transformations. Small duplication is
 often cheaper than a premature generic abstraction.
 
+### Docstrings
+
+A docstring tells a reader what they need before they read the code, in
+this order:
+
+1. **What the thing is**, in the domain's words: "A run's clock", "The
+   house's air at each moment of a run".
+2. **Its units, its contract and what it refuses:** the units of what it
+   takes and returns (seconds from the run's start, metres, °C), what it
+   promises (the same draws for the same seed, the events in the order
+   they happen), and each refusal, with the error it raises.
+3. **Where it comes from**, briefly: the roadmap step or decision that
+   made it, as a tag such as `(P09.2)` or `(decision 0035)`, so that a
+   reader can find the reasoning without having it repeated here.
+
+It leaves out how the code works line by line, which is the code's job, and
+history that the roadmap or a commit already records. A private helper whose
+name and types say all of this needs no docstring. For where a change goes
+in the first place, and the files and tests it involves, see the recipes in
+[`docs/guides/`](guides/README.md).
+
 ### Name the numbers that carry meaning
 
 A number that encodes a modelling assumption, a rate, a threshold, a range, a
