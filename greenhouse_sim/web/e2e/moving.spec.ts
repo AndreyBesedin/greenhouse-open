@@ -39,6 +39,9 @@ async function drag(page: Page, from: Point3, to: Point3, letGo = true): Promise
 test("moving: the heater is dragged across the floor, undone, cancelled, and Back takes a move back", async ({
   page,
 }) => {
+  // Four drags, two picks and four scenes: at the few frames a second CI
+  // draws, far longer than the default allows.
+  test.setTimeout(180_000);
   const status = page.getByTestId("scene-status");
   const position = page.getByTestId("selected-position");
   const offset = page.getByTestId("move-offset");
