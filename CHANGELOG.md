@@ -7,6 +7,11 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: the reference greenhouse's back temperature sensor
+  drifts 0.001 °C an hour, not 0.01. Its drift grows from the run's start,
+  and over the 120-day season 0.01 added 29 °C, so it read 42 to 58 °C in
+  June; now it reads about 2 °C high by the opening day, still a fault a
+  consumer can find. The run's identity changes with it.
 - `greenhouse-protocol`: the consumer interface
   (`greenhouse_protocol.contracts.consumer`, decision 0040, P10.1): how a
   client reads a running producer, whatever it is. Routes under
