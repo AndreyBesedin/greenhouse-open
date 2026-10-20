@@ -90,7 +90,7 @@
       "size_y": 0.8,
       "size_z": 1.2,
       "kind": "heater",
-      "power_w": 15000.0
+      "power_w": 30000.0
     },
     {
       "actuator_id": "dehumidifier",
