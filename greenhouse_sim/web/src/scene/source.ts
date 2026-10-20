@@ -202,6 +202,24 @@ function labQuery(run: LabRun, separator: "?" | "&"): string {
   return parts.length === 0 ? "" : `${separator}${parts.join("&")}`;
 }
 
+/**
+ * What a source shows, apart from where in it and how: a scene, the plant
+ * lab, or a scenario, its layout and whether it is live. Another of these
+ * is a new page in the browser's history, so that Back returns to the view
+ * before it (#201); a change within one, a moment, a field or a command,
+ * replaces the page.
+ */
+export function shownBy(source: SceneSource): string {
+  switch (source.kind) {
+    case "scenario":
+      return `scenario ${source.scenarioId} ${source.layout ?? ""}`;
+    case "live":
+      return `live ${source.scenarioId}`;
+    default:
+      return source.kind;
+  }
+}
+
 export function searchFor(source: SceneSource): string {
   switch (source.kind) {
     case "reference":

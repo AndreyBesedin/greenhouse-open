@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
-
 import { QA_LAYOUT_PATH } from "../src/qa/layoutViews.ts";
+import { layoutPicker } from "./chooser";
 import { selectAt } from "./view";
 
 // P02's final QA, `greenhouse-layout`, in the browser: two layouts of one
@@ -75,9 +75,7 @@ test("greenhouse-layout: two layouts inspected, measured, clear and selected by 
   await inspector.getByRole("button", { name: "Clear selection" }).click();
 
   // The second layout: the same rows on benches, the same spacing.
-  await page
-    .getByRole("combobox", { name: "Layout of tomato_compartment" })
-    .selectOption("propagation");
+  await (await layoutPicker(page, "tomato_compartment")).selectOption("propagation");
   await expect(status).toContainText(
     "propagation layout, before day one: tomato_compartment, day 0, 898",
   );

@@ -1,4 +1,5 @@
-import { formatValue } from "./readouts";
+import type { Fold } from "./folds";
+import { formatValue, onAndRest } from "./readouts";
 import type { ThermostatAt } from "./scene/equipment";
 import type { SceneEntityKind, SceneSnapshot } from "./scene/generated/snapshotTypes";
 
@@ -59,6 +60,16 @@ export function describeLevel({ level, rated, unit }: EquipmentState): string {
     : `${Math.round(level * PERCENT)}%, ${formatValue(level * rated)} ${unit}`;
 }
 
+/** The equipment in a line, as the scene drawn runs it: `Equipment: heater
+ * 100%; fan right, fan left off`. */
+export function describeEquipment(equipment: readonly EquipmentState[]): string {
+  const on = equipment
+    .filter(({ level }) => level > 0)
+    .map(({ label, level }) => `${label} ${Math.round(level * PERCENT)}%`);
+  const off = equipment.filter(({ level }) => level === 0).map(({ label }) => label);
+  return `Equipment: ${onAndRest(on, off, "off")}`;
+}
+
 /** What a piece of equipment does, and, if a thermostat runs it, at what it
  * aims: `100%, 30 kW, by its thermostat at 16 °C`. */
 export function describeRun(piece: EquipmentState, thermostat: ThermostatAt | null): string {
@@ -69,15 +80,17 @@ export function describeRun(piece: EquipmentState, thermostat: ThermostatAt | nu
 }
 
 /**
- * A switch and a slider per piece of equipment. Switched on, a piece runs at
- * full power, and the slider sets its level; either asks the simulator for
- * the scene with that level set, so the scene shown says how hard each runs.
- * A heater a thermostat runs says so; a command to it takes it over.
+ * A switch and a slider per piece of equipment, folded to a line that says
+ * how each runs (#206). Switched on, a piece runs at full power, and the
+ * slider sets its level; either asks the simulator for the scene with that
+ * level set, so the scene shown says how hard each runs. A heater a
+ * thermostat runs says so; a command to it takes it over.
  */
 export function EquipmentControls({
   snapshot,
   requested,
   thermostat = null,
+  fold,
   onChange,
 }: {
   snapshot: SceneSnapshot;
@@ -85,6 +98,7 @@ export function EquipmentControls({
   requested: Readonly<Record<string, number>>;
   /** The thermostat that runs its heater at the moment drawn, if one does. */
   thermostat?: ThermostatAt | null;
+  fold: Fold;
   onChange: (levels: Record<string, number>) => void;
 }) {
   const equipment = equipmentIn(snapshot);
@@ -92,35 +106,38 @@ export function EquipmentControls({
     return null;
   }
   return (
-    <fieldset className="equipment-controls" aria-label="Equipment">
-      {equipment.map((piece) => {
-        const shown = requested[piece.actuatorId] ?? piece.level;
-        const set = (level: number) => onChange({ ...requested, [piece.actuatorId]: level });
-        return (
-          <div key={piece.actuatorId} className="equipment-control">
-            <label className="equipment-switch">
+    <details className="equipment-fold" open={fold.open} onToggle={fold.onToggle}>
+      <summary data-testid="equipment-summary">{describeEquipment(equipment)}</summary>
+      <fieldset className="equipment-controls" aria-label="Equipment">
+        {equipment.map((piece) => {
+          const shown = requested[piece.actuatorId] ?? piece.level;
+          const set = (level: number) => onChange({ ...requested, [piece.actuatorId]: level });
+          return (
+            <div key={piece.actuatorId} className="equipment-control">
+              <label className="equipment-switch">
+                <input
+                  type="checkbox"
+                  checked={shown > 0}
+                  onChange={(event) => set(event.target.checked ? 1 : 0)}
+                />{" "}
+                {piece.label}
+              </label>
               <input
-                type="checkbox"
-                checked={shown > 0}
-                onChange={(event) => set(event.target.checked ? 1 : 0)}
-              />{" "}
-              {piece.label}
-            </label>
-            <input
-              type="range"
-              aria-label={`${piece.label} level`}
-              min={0}
-              max={PERCENT}
-              step={STEP_PERCENT}
-              value={Math.round(shown * PERCENT)}
-              onChange={(event) => set(Number(event.target.value) / PERCENT)}
-            />
-            <span data-testid={`equipment-${piece.actuatorId}`}>
-              {describeRun(piece, thermostat)}
-            </span>
-          </div>
-        );
-      })}
-    </fieldset>
+                type="range"
+                aria-label={`${piece.label} level`}
+                min={0}
+                max={PERCENT}
+                step={STEP_PERCENT}
+                value={Math.round(shown * PERCENT)}
+                onChange={(event) => set(Number(event.target.value) / PERCENT)}
+              />
+              <span data-testid={`equipment-${piece.actuatorId}`}>
+                {describeRun(piece, thermostat)}
+              </span>
+            </div>
+          );
+        })}
+      </fieldset>
+    </details>
   );
 }

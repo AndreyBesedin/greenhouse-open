@@ -264,6 +264,20 @@ def test_a_pace_is_a_finite_number_of_seconds() -> None:
         playback.forget_playbacks()
 
 
+def test_a_start_at_a_pace_refused_starts_nothing() -> None:
+    playback.forget_playbacks()
+    try:
+        for pace in ("0", "-1", "nan"):
+            refused = respond(
+                "POST", f"/api/scenarios/{SCENARIO}/playback/start?seconds_per_day={pace}"
+            )
+            assert refused.status == 400, pace
+        assert playback.playbacks() == []
+        assert respond("GET", f"/api/scenarios/{SCENARIO}/playback").status == 404
+    finally:
+        playback.forget_playbacks()
+
+
 def test_a_run_that_cannot_be_worked_out_is_the_simulator_s_failure(
     clock: Clock, monkeypatch: pytest.MonkeyPatch
 ) -> None:

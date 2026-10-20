@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { unfold } from "./folds";
 
 // The climate box's heater on at 18 h on its first day, 20 h shown.
 const EVENING_S = 64_800;
@@ -46,6 +47,7 @@ test("daily schedule: a command repeated every day runs every day, until overrid
   });
 
   await test.step("switched off that evening, it is off then, and on the next", async () => {
+    await unfold(page, "Equipment");
     await page
       .getByRole("group", { name: "Equipment" })
       .getByRole("checkbox", { name: "heater" })

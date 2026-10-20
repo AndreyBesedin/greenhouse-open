@@ -65,6 +65,8 @@ import {
   loadScene,
   type SceneSource,
   sceneRequest,
+  searchFor,
+  shownBy,
   withItsAir,
   withOwnDaily,
 } from "./scene/source";
@@ -123,6 +125,9 @@ function failureOf(part: string, latest: { status: string }): string | null {
 
 export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [addressed, setAddressed] = useSource();
+  // Opened with nothing chosen, at the bare address, the viewer starts with
+  // the choice of what to show open (#201).
+  const [chooseFirst] = useState(() => searchFor(addressed) === "");
   // Whether the viewer shows what the simulator knows and a policy never
   // sees (P09.6): only QA mode asks for truth.
   const [qaMode, setQaMode] = useQaMode();
@@ -178,6 +183,30 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const liveScenario = source.kind === "live" ? source.scenarioId : null;
   const live = useLiveScene(liveScenario);
   const commands = useLiveCommands(liveScenario);
+
+  // What a view starts with once another is shown, chosen or come back to
+  // with Back and Forward (#201): nothing selected, unless another layout of
+  // the same scenario still holds it; no colouring, no play, and no probe
+  // placing unless it has probes.
+  function startAfresh(from: SceneSource, to: SceneSource): void {
+    if (
+      !(to.kind === "scenario" && from.kind === "scenario" && to.scenarioId === from.scenarioId)
+    ) {
+      setSelectedId(null);
+    }
+    setPlaying(false);
+    setPlayingClimate(false);
+    setColourBy(null);
+    if (to.kind !== "scenario" || to.probes === undefined) {
+      setPlacingProbes(false);
+    }
+  }
+  // Another scene, scenario, layout or the lab, however it came to be shown.
+  const [lastShown, setLastShown] = useState(source);
+  if (shownBy(source) !== shownBy(lastShown)) {
+    setLastShown(source);
+    startAfresh(lastShown, source);
+  }
 
   // A scenario reopened by its sliders, or the plant lab on another day,
   // keeps its scene on show until the next arrives; any other change of
@@ -346,26 +375,12 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     setSource({ ...source, ...change });
   }
 
+  // A choice starts afresh, even of what is shown already.
   function chooseSource(chosen: SceneSource): void {
     const next = withItsAir(source, chosen);
     commands.forget();
     setSource(next);
-    // Another layout of the same scenario keeps the selection, while what is
-    // selected is still there; anything else starts afresh.
-    if (
-      !(
-        chosen.kind === "scenario" &&
-        source.kind === "scenario" &&
-        chosen.scenarioId === source.scenarioId
-      )
-    ) {
-      setSelectedId(null);
-    }
-    setPlaying(false);
-    setColourBy(null);
-    if (next.kind !== "scenario" || next.probes === undefined) {
-      setPlacingProbes(false);
-    }
+    startAfresh(source, next);
   }
 
   const shown = source.kind === "live" ? live.scene : scene;
@@ -600,6 +615,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             source={source}
             scene={shown.status === "loaded" && snapshot !== null ? { ...shown, snapshot } : shown}
             failures={source.kind === "live" ? [] : failures}
+            chooseFirst={chooseFirst}
             onSource={chooseSource}
           >
             {snapshot !== null && (

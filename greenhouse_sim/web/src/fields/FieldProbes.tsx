@@ -89,6 +89,15 @@ function CoordinateInput({
   );
 }
 
+/** The probes in a line: how many are placed, and the field they are
+ * compared with, if one is (#206). */
+export function describeProbes(count: number, compareName: string | null): string {
+  const placed = count === 0 ? "none placed" : `${count} placed`;
+  return compareName === null
+    ? `Probes: ${placed}`
+    : `Probes: ${placed}, compared with ${compareName}`;
+}
+
 /** Points in the drawn field, what it says at each, and, if another of the
  * scenario's fields is chosen to compare with, what that one says and how
  * the drawn field differs from it. A probe is added in the field's middle,

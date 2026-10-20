@@ -37,7 +37,8 @@ backwards or silently overwrite a day with its own copy.
 - **A consumer reaches observed records only**, and the interface's checks
   hold a producer to what can be checked from outside: dense cursor
   positions, delivery order, nothing from after the run's clock, repolls
-  that extend and never rewrite, no record twice in an epoch.
+  that extend and never rewrite, no record twice in an epoch, a clock that
+  never turns back within one, and records of the run's greenhouse only.
 - **A run has epochs.** A timeline that starts over, by looping, restart or
   re-initialisation, is a new epoch of the same run, never a step back in
   time; a consumer keys what it stores by run, epoch and record id. A stale

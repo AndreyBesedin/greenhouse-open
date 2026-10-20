@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
-
 import { QA_GREENHOUSE_PATH } from "../src/qa/greenhouseViews.ts";
+import { unfold } from "./folds";
 
 /**
  * P01's final QA, `greenhouse-shell`, in the browser: change a scenario's
@@ -37,6 +37,7 @@ test("greenhouse-shell: a changed greenhouse is drawn to its dimensions, open an
   });
 
   await test.step("a vent opens, and the address keeps both changes", async () => {
+    await unfold(page, "Openings");
     await page.getByRole("group", { name: "Openings" }).getByRole("slider").first().fill("100");
     // Wide open, at 45°, the 4 by 1 m vent's curtain.
     await expect(page.getByTestId("opening-roof_vent")).toHaveText("100%, 3.77 m²");

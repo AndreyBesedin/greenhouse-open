@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { differenceText, readingText } from "./FieldProbes";
+import { describeProbes, differenceText, readingText } from "./FieldProbes";
 import { checkField } from "./field";
 import type { FieldDocument } from "./generated/fieldTypes";
 import {
@@ -144,5 +144,13 @@ describe("probes", () => {
     expect(labels("pressure")).toEqual(["P1 0.10 Pa", "P2"]);
     // A quantity the field does not hold says nothing.
     expect(labels("temperature")).toEqual(["P1", "P2"]);
+  });
+});
+
+describe("the probes, folded to a line (#206)", () => {
+  it("say how many are placed, and the field they are compared with", () => {
+    expect(describeProbes(0, null)).toBe("Probes: none placed");
+    expect(describeProbes(2, null)).toBe("Probes: 2 placed");
+    expect(describeProbes(1, "uniform")).toBe("Probes: 1 placed, compared with uniform");
   });
 });

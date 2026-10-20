@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooser } from "./chooser";
 
 // The reference scenario (P09.1): one manifest boots the whole greenhouse,
 // its 32 plants, organ by organ (P09.3), its equipment, its heater on a
@@ -8,9 +9,12 @@ test("reference greenhouse: its manifest boots the whole scene, and it is listed
   page,
 }) => {
   await page.goto("/");
-  const firstRow = page.getByRole("table", { name: "Scenarios" }).locator("tbody tr").first();
-  await expect(firstRow.getByRole("cell").first()).toHaveText("Reference greenhouse");
-  await expect(firstRow.getByRole("button", { name: "Show reference_greenhouse" })).toBeVisible();
+  const firstRow = (await chooser(page))
+    .getByRole("table", { name: "Scenarios" })
+    .locator("tbody tr")
+    .first();
+  await expect(firstRow.locator(".scenario-name")).toHaveText("Reference greenhouse");
+  await expect(firstRow.getByRole("button", { name: "Open reference_greenhouse" })).toBeVisible();
   await expect(firstRow).toContainText("32");
   await expect(firstRow).toContainText("120");
 

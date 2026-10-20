@@ -190,8 +190,48 @@ def test_a_repoll_extends_what_was_delivered_but_never_rewrites_it() -> None:
 
     assert check_polls([early, extended]) == []
     assert check_polls([early, rewritten]) == [
-        "observations batch of run 'run_1' epoch 0 after=0 (poll 1) rewrites the log: "
-        "a repoll at after=0 no longer starts with what was delivered before"
+        "observations batch of run 'run_1' epoch 0 after=0 (poll 1) rewrites the log at "
+        "position 1: 'obs_9' is not the record delivered there before ('obs_1')"
+    ]
+
+
+def test_a_repoll_cut_shorter_by_its_limit_is_not_a_rewrite() -> None:
+    full = _batch((_observation(1, START), _observation(2, START), _observation(3, NOW)))
+    cut = _batch((_observation(1, START),), next=1).model_copy(update={"has_more": True})
+
+    assert check_polls([full, cut]) == []
+    assert check_polls([cut, full]) == []
+
+
+def test_a_repoll_that_changes_a_record_is_a_rewrite_even_with_the_same_id() -> None:
+    early = _batch((_observation(1, START),), now=START)
+    changed = _batch((_observation(1, START).model_copy(update={"value": 99.0}),), now=START)
+
+    assert check_polls([early, changed]) == [
+        "observations batch of run 'run_1' epoch 0 after=0 (poll 1) rewrites the log at "
+        "position 1: 'obs_1' is not the record delivered there before ('obs_1')"
+    ]
+
+
+def test_a_position_first_seen_from_another_cursor_is_held_to_as_well() -> None:
+    first = _batch((_observation(1, START),), now=START)
+    second = _batch((_observation(2, START),), after=first.next, now=START)
+    replaced = _batch((_observation(1, START), _observation(3, START)), now=START)
+
+    assert check_polls([first, second, replaced]) == [
+        "observations batch of run 'run_1' epoch 0 after=0 (poll 2) rewrites the log at "
+        "position 2: 'obs_3' is not the record delivered there before ('obs_2')"
+    ]
+
+
+def test_delivery_order_holds_across_consecutive_batches() -> None:
+    first = _batch((_observation(1, START), _observation(2, START, START + timedelta(hours=2))))
+    later = _batch((_observation(3, START, START + timedelta(hours=1)),), after=first.next)
+
+    assert check_polls([first, later]) == [
+        "observations batch of run 'run_1' epoch 0 after=2 (poll 1) is out of delivery order "
+        "across batches: 'obs_3' at position 3 (2026-03-01T13:00:00+00:00) was delivered "
+        "before position 2 (2026-03-01T14:00:00+00:00)"
     ]
 
 
@@ -225,6 +265,32 @@ def test_an_epoch_never_decreases_and_a_new_one_starts_the_log_over() -> None:
     assert check_polls([first, stale, restarted, backwards]) == [
         "observations batch of run 'run_1' epoch 0 after=0 (poll 3) returns to epoch 0"
     ]
+
+
+def test_the_clock_never_turns_back_within_an_epoch() -> None:
+    later = _batch((), now=NOW)
+    earlier = _batch((), now=START)
+    restarted = _batch((), now=START, epoch=1)
+
+    assert check_polls([later, restarted]) == []
+    assert check_polls([later, earlier]) == [
+        "observations batch of run 'run_1' epoch 0 after=0 (poll 1) turns the clock back "
+        "within epoch 0: 2026-03-01T12:00:00+00:00 after 2026-03-02T12:00:00+00:00; "
+        "a timeline that starts over is a new epoch"
+    ]
+
+
+def test_a_batch_holds_records_of_the_run_s_greenhouse_only() -> None:
+    stranger = _observation(2, START).model_copy(update={"greenhouse_id": "other"})
+    batch = _batch((_observation(1, START), stranger))
+    violation = (
+        "observations batch of run 'run_1' epoch 0 after=0 delivers 'obs_2' of greenhouse "
+        "'other', not the run's ('gh')"
+    )
+
+    assert check_batch(batch) == []
+    assert check_batch(batch, greenhouse_id="gh") == [violation]
+    assert check_polls([batch], greenhouse_id="gh") == [violation]
 
 
 def test_polls_of_several_runs_do_not_belong_together() -> None:
