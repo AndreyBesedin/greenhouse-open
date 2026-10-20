@@ -69,7 +69,9 @@ breaks the conformance checks is a major version.
   `scenario.schema.json` now say. The API's parameters write identifiers
   between `:` and `,`, so an item named otherwise could not be set,
   scheduled or moved; a layout or scenario that names one is now refused
-  as it is read.
+  as it is read. Scenario manifests are in format 2 for it
+  (`schema_version`, decision 0031); a format 1 manifest is read as format
+  2, and refused only if it names an item otherwise.
 
 ## 0.2.0 - 2026-10-19
 
