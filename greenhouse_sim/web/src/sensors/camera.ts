@@ -23,7 +23,7 @@ export interface CameraSpec {
 // The frustum is drawn this far out from the camera, in metres.
 export const FRUSTUM_DEPTH_M = 1.5;
 // In Tol's purple, as the camera itself.
-const FRUSTUM_COLOR = "#aa3377";
+export const FRUSTUM_COLOR = "#aa3377";
 const UP: Point3 = { x: 0, y: 0, z: 1 };
 
 function minus(a: Point3, b: Point3): Point3 {

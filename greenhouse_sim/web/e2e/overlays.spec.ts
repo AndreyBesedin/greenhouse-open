@@ -76,3 +76,31 @@ test("a climate run's air is hidden without ending the run or moving its moment"
   expect(asked).toEqual([]);
   await expect(page).toHaveURL(/\?scenario=climate_box&field=climate&t=600$/);
 });
+
+test("What am I seeing? explains what is drawn, and follows the switches (#205)", async ({
+  page,
+}) => {
+  await page.goto(PROBED_AIR);
+  await expect(page.getByTestId("field-status")).toContainText("24 × 13 × 8 cells");
+  const card = page.getByRole("region", { name: "What am I seeing?" });
+  await expect(card).toHaveCount(0);
+
+  await page.getByRole("button", { name: "What am I seeing?" }).click();
+  await expect(card.getByTestId("seen-airField")).toContainText("Air field arrows");
+  await expect(card.getByTestId("seen-airField")).toContainText("air speed (m/s)");
+  await expect(card.getByTestId("seen-probes")).toContainText("Where the drawn field is read");
+  await expect(card.getByTestId("seen-cameraViews")).toBeVisible();
+  await expect(card.getByTestId("seen-glass")).toContainText("drawn see-through");
+  await expect(card.getByTestId("seen-hidden")).toHaveCount(0);
+
+  // Hidden by its switch, an overlay leaves the card, which says it is hidden.
+  const shown = page.getByRole("group", { name: "Shown in the view" });
+  await shown.getByRole("checkbox", { name: "Probes" }).uncheck();
+  await expect(card.getByTestId("seen-probes")).toHaveCount(0);
+  await expect(card.getByTestId("seen-hidden")).toHaveText("Hidden: probes.");
+
+  // Closed, its button stays, to open it again.
+  await card.getByRole("button", { name: "Close what am I seeing" }).click();
+  await expect(card).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "What am I seeing?" })).toBeVisible();
+});
