@@ -8,7 +8,7 @@ from greenhouse_sim.climate.glazing import glazing_u_w_m2k
 from greenhouse_sim.climate.projection import FaceFlows, conserving, face_flows
 from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.climate.sources import SourceTerms, source_terms
-from greenhouse_sim.climate.transport import STEP_SHARE, AirState, Transport
+from greenhouse_sim.climate.transport import LONGEST_STEP_S, STEP_SHARE, AirState, Transport
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.grid import air_grid
@@ -205,6 +205,12 @@ def test_each_step_takes_at_most_its_share_of_a_cells_air_crossing_or_mixing() -
 
     assert jet.step_s() * fastest <= STEP_SHARE * cell
     assert still.step_s() * mixing <= STEP_SHARE + 1e-9
+    # And most of the way there, as #198 measured it: up to 0.9 of a cell, not
+    # the half it first was, which took a late day's 3D air twice the steps.
+    # Neither step is the longest a step may be, so the share sets both.
+    assert max(jet.step_s(), still.step_s()) < LONGEST_STEP_S
+    assert 0.5 < jet.step_s() * fastest / cell <= 0.9
+    assert 0.5 < still.step_s() * mixing <= 0.9 + 1e-9
 
 
 def test_cells_obstacles_fill_keep_their_temperature() -> None:

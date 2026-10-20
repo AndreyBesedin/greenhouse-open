@@ -38,8 +38,9 @@ the outside.
   and roof, each by its share of their area, with its heat, water and CO2.
 - **The time step** keeps every cell's new temperature a weighted mean of the
   old ones: the air flowing in, the mixing and the exchange take at most
-  half a cell's temperature away per step, which holds both the air crossing
-  at most half a cell and explicit mixing's limit.
+  `STEP_SHARE`, 0.9, of a cell's temperature away per step, under the bound
+  of all of it, which holds both the air crossing at most 0.9 of a cell and
+  explicit mixing's limit (half, until #198).
 
 With the envelope shut (U = 0), the heat the air gains is what equipment
 adds, and the water it loses what equipment removes and what condenses:
