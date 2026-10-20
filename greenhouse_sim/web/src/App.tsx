@@ -20,6 +20,7 @@ import {
 import { ScalarLegend } from "./debug/ScalarLegend";
 import type { ScalarRange } from "./debug/scalar";
 import { colouringBy, scalarProperties } from "./debug/scalar";
+import { arrowSpacing } from "./fields/arrows";
 import type { FieldView } from "./fields/display";
 import { defaultSlice, type HeldRanges, heldThrough, quantityScale } from "./fields/drawing";
 import { FieldArrows } from "./fields/FieldArrows";
@@ -54,7 +55,7 @@ import { QaPanel } from "./qaMode/QaPanel";
 import { loadRunState, runStateUrl } from "./qaMode/state";
 import type { ViewSample } from "./readouts";
 import { ScenarioPanels } from "./ScenarioPanels";
-import { WhatAmISeeing } from "./SeenInTheView";
+import { WhatAmISeeing, worldAxesLength } from "./SeenInTheView";
 import { loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
 import { withProbes } from "./scene/edits";
 import { runApartFromItsMoment, runsSomething, scenarioRun } from "./scene/run";
@@ -508,6 +509,16 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     [fieldView, loadedField, askedSlice],
   );
   const scaleQuantity = fieldSlice === null ? "speed" : fieldSlice.quantity;
+  // The sun's two halves load on their own: the sun now, above the horizon
+  // only, and its day's path; the card says which of them is drawn.
+  const sunNow = useMemo(
+    () => (snapshot === null || outside === null ? [] : sunOverlays(snapshot, outside)),
+    [snapshot, outside],
+  );
+  const sunPath = useMemo(
+    () => (snapshot === null || sunsDay === null ? [] : sunPathOverlays(snapshot, sunsDay)),
+    [snapshot, sunsDay],
+  );
   // What each overlay over the scene draws, shown or hidden: hiding one
   // leaves out its primitives, never what they are drawn from.
   const scenePrimitives = useMemo(
@@ -515,17 +526,14 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       openingFlows:
         snapshot === null || flowing === null ? [] : openingFlowOverlays(snapshot, flowing),
       wind: snapshot === null || outside === null ? [] : windOverlays(snapshot, outside),
-      sun: [
-        ...(snapshot === null || outside === null ? [] : sunOverlays(snapshot, outside)),
-        ...(snapshot === null || sunsDay === null ? [] : sunPathOverlays(snapshot, sunsDay)),
-      ],
+      sun: [...sunNow, ...sunPath],
       cameraViews: snapshot === null ? [] : frustumOverlays(snapshot),
       probes:
         probedField === null
           ? []
           : probeOverlays(probes, probedField, qaMode ? scaleQuantity : null),
     }),
-    [snapshot, flowing, outside, sunsDay, probes, probedField, qaMode, scaleQuantity],
+    [snapshot, flowing, outside, sunNow, sunPath, probes, probedField, qaMode, scaleQuantity],
   );
   const overlays = useMemo(
     () => [
@@ -561,11 +569,13 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // The overlays over the scene that have something to draw, which the
   // display options switch and "What am I seeing?" explains (#205).
   const overlaysDrawn = sceneOverlaysDrawn(scenePrimitives, fieldLayer !== null);
-  // The kinds the scene holds, for what the card says the scene draws.
+  // The kinds the scene holds, and how long its world axes are, for what the
+  // card says the scene draws; the empty view draws its own axes.
   const kindsShown = useMemo(
     () => (snapshot === null ? null : new Set(snapshot.entities.map((entity) => entity.kind))),
     [snapshot],
   );
+  const axesLengthM = useMemo(() => worldAxesLength(snapshot), [snapshot]);
 
   const liveStatus: LiveStatus | null =
     source.kind === "live"
@@ -737,11 +747,14 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 overlays: overlayToggles,
                 fieldView,
                 fieldScale,
+                fieldArrowSpacing: loadedField === null ? 1 : arrowSpacing(loadedField.grid.cells),
+                sun: { now: sunNow.length > 0, path: sunPath.length > 0 },
                 colourBy: colouring?.property ?? null,
                 byCategory: byCategory && snapshot !== null,
                 cfdBoundaries: cfd.status === "loaded",
                 dimensions: showDimensions && snapshot !== null,
                 kinds: kindsShown,
+                axesLengthM,
               }}
             />
             {byCategory && snapshot !== null && (
