@@ -11,6 +11,11 @@ import { QA_REFERENCE_PATH } from "../src/qa/referencePage.ts";
 const PAUSE_MS = Number(process.env.DEMO_PAUSE_MS ?? 0);
 const ARRIVES = { timeout: 180_000 };
 const HOUR_S = 3_600;
+// The camera on the whole reference house, from south-west of it and above:
+// at 1280 × 720 the house stands between the info panel and the HUD,
+// rather than its corner at the world's origin, where the default camera
+// looks.
+const ON_THE_HOUSE = "-5:-14:11,5:4.8:1";
 const STARTED = Date.now();
 
 /** Shows a step's caption over the page, for the video, and lingers on it. */
@@ -50,6 +55,11 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   await page.getByRole("button", { name: "Show reference_greenhouse" }).click();
   await expect(moment).toHaveText("day 80, 12 h 00 min", ARRIVES);
   await expect(page.getByTestId("scene-status")).toContainText("day 80,", ARRIVES);
+  await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
+  // The camera on the house from here on: the address keeps it.
+  await page.goto(`${page.url()}&camera=${ON_THE_HOUSE}`);
+  await expect(page.getByTestId("camera-position")).toHaveText("x -5.00, y -14.00, z 11.00");
+  await expect(moment).toHaveText("day 80, 12 h 00 min", ARRIVES);
   await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
   await say(page, "1. Opened on day 80, its first day with red fruit");
 
