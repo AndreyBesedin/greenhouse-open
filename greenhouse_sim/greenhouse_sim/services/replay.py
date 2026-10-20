@@ -11,8 +11,9 @@ At the end of each of a run's days, its state is probed:
   all (`greenhouse_sim.services.sensors`).
 
 The probe is written as JSON with its numbers rounded to
-`ROUNDED_DECIMALS`, so that the last bits in which two machines' maths
-libraries differ do not tell two replays apart, and digested. The same run
+`ROUNDED_DECIMALS`, and to `SIGNIFICANT_DIGITS` where that is coarser, so
+that the last bits in which two machines' maths libraries differ do not
+tell two replays apart, however large the number, and digested. The same run
 gives the same digests on every replay; a run changed from a moment on
 gives the same digests for the days before it. A test replays the reference
 run's first days against the digests kept in the repository
@@ -33,8 +34,11 @@ from greenhouse_sim.services.fields import Commanded, climate_run
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.sensors import observations
 
-# Probes' numbers are rounded to this many decimals before they are digested.
+# Probes' numbers are rounded to this many decimals before they are digested,
+# and to this many significant digits: a season's heat in joules has eleven
+# digits before its point, its last decimals the machine's, not the run's.
 ROUNDED_DECIMALS: Final = 6
+SIGNIFICANT_DIGITS: Final = 12
 # How many hexadecimal digits of a probe's digest are kept.
 DIGEST_LENGTH: Final = 16
 HOUR_S: Final = 3600.0
@@ -60,7 +64,7 @@ class DayProbe(BaseModel):
 
 def _rounded(value: JsonValue) -> JsonValue:
     if isinstance(value, float):
-        return round(value, ROUNDED_DECIMALS)
+        return float(f"{round(value, ROUNDED_DECIMALS):.{SIGNIFICANT_DIGITS}g}")
     if isinstance(value, dict):
         return {key: _rounded(item) for key, item in value.items()}
     if isinstance(value, list):

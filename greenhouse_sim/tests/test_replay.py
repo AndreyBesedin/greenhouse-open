@@ -88,6 +88,14 @@ def _update() -> None:
     FIXTURE.write_text(json.dumps(kept, indent=2) + "\n")
 
 
+def test_large_numbers_are_told_apart_by_their_run_not_their_machine() -> None:
+    # A season's heat in joules, as macOS and Linux worked it out (#246):
+    # the same to twelve significant digits, not to six decimals.
+    assert _rounded(68523090804.529655) == _rounded(68523090804.52964)
+    assert _rounded(68523090804.529655) != _rounded(68523090904.529655)
+    assert _rounded(15.9194131234) == 15.919413
+
+
 if __name__ == "__main__":
     if sys.argv[1:] != ["--update"]:
         raise SystemExit("usage: python tests/test_replay.py --update")
