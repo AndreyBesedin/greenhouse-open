@@ -30,7 +30,7 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict, NonNegativeFloat
 
-from greenhouse_sim.solar.position import SunPosition
+from greenhouse_sim.solar.position import SunPosition, polynomial
 from greenhouse_sim.units import DAYS_IN_A_YEAR, PERCENT
 
 # Haurwitz's clear sky: its scale, in W/m², and its attenuation's.
@@ -93,20 +93,13 @@ def cloud_factor(cloud_cover_pct: float) -> float:
     return 1.0 - CLOUD_DIMMING * math.pow(oktas / OKTAS, CLOUD_POWER)
 
 
-def _polynomial(coefficients: tuple[float, ...], x: float) -> float:
-    total = 0.0
-    for coefficient in reversed(coefficients):
-        total = total * x + coefficient
-    return total
-
-
 def diffuse_share(clearness: float) -> float:
     """The diffuse sky's share of the global horizontal irradiance at a
     clearness index, by Erbs's correlation."""
     if clearness <= DARK_CLEARNESS:
-        return _polynomial(DARK_DIFFUSE, clearness)
+        return polynomial(DARK_DIFFUSE, clearness)
     if clearness <= CLEAR_CLEARNESS:
-        return _polynomial(MIDDLING_DIFFUSE, clearness)
+        return polynomial(MIDDLING_DIFFUSE, clearness)
     return CLEAR_DIFFUSE
 
 

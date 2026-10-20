@@ -15,13 +15,20 @@ its dimensions, a kind, a material and what it obstructs; the kind brings a
 material and obstructions of its own unless the description says otherwise.
 """
 
-import math
 from typing import Annotated, Final, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt, model_validator
 
 from greenhouse_sim.domain.layout import FixtureKind, Material, Obstruction
-from greenhouse_sim.world.geometry import Box, Cylinder, Point2, Quaternion, Transform, Vector3
+from greenhouse_sim.world.geometry import (
+    Box,
+    Cylinder,
+    Point2,
+    Quaternion,
+    Transform,
+    Vector3,
+    direction_and_length,
+)
 from greenhouse_sim.world.zones import Strip
 
 # A walkway is drawn as a slab this thick on the floor: a path poured a little
@@ -100,22 +107,11 @@ class Fixture(BaseModel):
         )
 
 
-def _length(vector: Vector3) -> float:
-    return math.hypot(vector.x, vector.y, vector.z)
-
-
-def _between(start: Vector3, end: Vector3) -> tuple[Vector3, float]:
-    """The unit direction from `start` to `end`, and the distance."""
-    along = Vector3(x=end.x - start.x, y=end.y - start.y, z=end.z - start.z)
-    length = _length(along)
-    return Vector3(x=along.x / length, y=along.y / length, z=along.z / length), length
-
-
 def _level_across(direction: Vector3) -> Vector3:
     """The level unit vector at right angles to `direction`, to its left as
     seen looking along it from above; for an upright direction, +y."""
     across = _UP.cross(direction)
-    length = _length(across)
+    length = across.length()
     if length == 0.0:
         return Vector3(x=0.0, y=1.0, z=0.0)
     return Vector3(x=across.x / length, y=across.y / length, z=across.z / length)
@@ -138,7 +134,7 @@ def _laid_between(start: Vector3, end: Vector3) -> tuple[Transform, float]:
     """A frame at the middle of a line, its x running along the line, its y
     level across it and its z up from both, and the line's length: a box
     standing in it lies along the line."""
-    direction, length = _between(start, end)
+    direction, length = direction_and_length(start, end)
     middle = Vector3(x=(start.x + end.x) / 2, y=(start.y + end.y) / 2, z=(start.z + end.z) / 2)
     rotation = Quaternion.from_axes(direction, _level_across(direction))
     return Transform(position=middle, rotation=rotation), length
@@ -147,7 +143,7 @@ def _laid_between(start: Vector3, end: Vector3) -> tuple[Transform, float]:
 def _pointing_between(start: Vector3, end: Vector3) -> tuple[Transform, float]:
     """A frame at `start` whose z runs to `end`, and the distance: a cylinder
     standing in it runs from one to the other."""
-    direction, length = _between(start, end)
+    direction, length = direction_and_length(start, end)
     # At right angles to the direction, so the frame's z is the direction.
     x_axis = _level_across(direction).cross(direction)
     return Transform(
@@ -267,7 +263,7 @@ class PipeRunPrimitive(_Primitive):
     @model_validator(mode="after")
     def _has_a_length_and_a_step(self) -> Self:
         _not_a_point(self.start, self.end)
-        if self.count > 1 and _length(self.step) <= 2 * self.radius:
+        if self.count > 1 and self.step.length() <= 2 * self.radius:
             raise ValueError(f"{self.fixture_id}'s pipes overlap: its step is too short")
         return self
 
@@ -308,7 +304,7 @@ class RailPrimitive(_Primitive):
         return self
 
     def fixtures(self) -> list[Fixture]:
-        direction, _ = _between(self.start, self.end)
+        direction, _ = direction_and_length(self.start, self.end)
         across = _level_across(direction)
         tubes = []
         for side, sign in (("right", -1), ("left", 1)):

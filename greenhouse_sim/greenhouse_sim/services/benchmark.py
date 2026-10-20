@@ -176,14 +176,14 @@ def bottleneck(per_day: DayCosts, cell_by_cell_hour_s: float) -> str:
 
 def costs_json(costs: SimulatorCosts) -> str:
     """The costs as the report writes them, numbers rounded to milliseconds."""
-    return json.dumps(_rounded(costs.model_dump(mode="json")), indent=2) + "\n"
+    return json.dumps(_reported(costs.model_dump(mode="json")), indent=2) + "\n"
 
 
-def _rounded(value: object) -> object:
+def _reported(value: object) -> object:
     if isinstance(value, float):
         return round(value, REPORTED_DECIMALS)
     if isinstance(value, dict):
-        return {key: _rounded(item) for key, item in value.items()}
+        return {key: _reported(item) for key, item in value.items()}
     if isinstance(value, list):
-        return [_rounded(item) for item in value]
+        return [_reported(item) for item in value]
     return value

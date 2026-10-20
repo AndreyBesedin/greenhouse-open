@@ -100,7 +100,7 @@ def _cell_indices(centres: np.ndarray, grid: FieldGrid) -> tuple[np.ndarray, ...
     return k, j, i
 
 
-def _filled(values: np.ndarray) -> np.ndarray:
+def _gaps_filled(values: np.ndarray) -> np.ndarray:
     """A scalar grid with its gaps (NaN) filled, layer by layer from their
     edges, with the mean of the neighbours already known."""
     filled = values.copy()
@@ -151,7 +151,7 @@ def read_field(directory: Path, grid: FieldGrid, field_id: str) -> EnvironmentFi
         source=SOURCE,
         grid=grid,
         time_s=0.0,
-        channels={AirQuantity.VELOCITY: velocities, AirQuantity.PRESSURE: _filled(pressures)},
+        channels={AirQuantity.VELOCITY: velocities, AirQuantity.PRESSURE: _gaps_filled(pressures)},
     )
 
 
