@@ -6,6 +6,7 @@ from collections.abc import Iterator
 from datetime import timedelta
 
 import pytest
+from greenhouse_protocol.enums import ObservationType
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.api.server import create_server
@@ -214,6 +215,18 @@ def test_the_reference_greenhouse_s_second_day_is_one_run_for_the_viewer_and_a_c
         assert (
             now.simulated_now - timedelta(seconds=EVERY_S) < latest.timestamp <= now.simulated_now
         )
+        # The heat its heater gave, hour by hour, each delivered as its hour
+        # ended, up to the clock (P10.3).
+        heat = [
+            r
+            for r in cut.records
+            if r.observation_type == ObservationType.HEATING_ENERGY_INCREMENT_MJ_M2
+        ]
+        hours = int(now.time_s // 3600)
+        assert [r.timestamp for r in heat] == [
+            run.start + timedelta(hours=hour) for hour in range(1, hours + 1)
+        ]
+        assert sum(r.value for r in heat) > 0
     finally:
         run.stop()
 
@@ -247,6 +260,20 @@ def test_a_pace_is_a_finite_number_of_seconds() -> None:
                 "POST", f"/api/scenarios/{SCENARIO}/playback/pace?seconds_per_day={pace}"
             )
             assert refused.status == 400, pace
+    finally:
+        playback.forget_playbacks()
+
+
+def test_a_start_at_a_pace_refused_starts_nothing() -> None:
+    playback.forget_playbacks()
+    try:
+        for pace in ("0", "-1", "nan"):
+            refused = respond(
+                "POST", f"/api/scenarios/{SCENARIO}/playback/start?seconds_per_day={pace}"
+            )
+            assert refused.status == 400, pace
+        assert playback.playbacks() == []
+        assert respond("GET", f"/api/scenarios/{SCENARIO}/playback").status == 404
     finally:
         playback.forget_playbacks()
 

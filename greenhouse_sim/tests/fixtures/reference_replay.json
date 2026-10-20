@@ -1,32 +1,32 @@
 {
   "scenario_id": "reference_greenhouse",
-  "manifest": "5a7c1ee05a34bf3c",
+  "manifest": "f27d4767a4d66885",
   "days": [
     {
       "day": 0,
-      "digest": "d38e07ee0d260af6",
-      "house_temperature_c": 15.31,
-      "house_humidity_pct": 44.4,
-      "organs": 864,
-      "thermal_time_cd": 235.51,
+      "digest": "90a402b4bd30ee07",
+      "house_temperature_c": 16.07,
+      "house_humidity_pct": 41.1,
+      "organs": 870,
+      "thermal_time_cd": 237.0,
       "readings": 264
     },
     {
       "day": 1,
-      "digest": "92fb60d52c00f6bf",
-      "house_temperature_c": 15.29,
-      "house_humidity_pct": 44.5,
-      "organs": 910,
-      "thermal_time_cd": 242.63,
+      "digest": "aa15284f0d2fa9ff",
+      "house_temperature_c": 15.99,
+      "house_humidity_pct": 38.5,
+      "organs": 918,
+      "thermal_time_cd": 244.0,
       "readings": 264
     },
     {
       "day": 2,
-      "digest": "0b90628b1f25d99f",
-      "house_temperature_c": 15.12,
-      "house_humidity_pct": 45.0,
-      "organs": 969,
-      "thermal_time_cd": 249.78,
+      "digest": "1ad83940889ee4e6",
+      "house_temperature_c": 15.67,
+      "house_humidity_pct": 37.0,
+      "organs": 980,
+      "thermal_time_cd": 250.99,
       "readings": 264
     }
   ]

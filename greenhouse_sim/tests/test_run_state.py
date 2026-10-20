@@ -11,6 +11,7 @@ from greenhouse_sim.climate.commands import Command
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import fields, sensors
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
+from greenhouse_sim.services.fields import equipment_at
 from greenhouse_sim.services.run_state import LATEST_COMMANDS, RunState, run_state
 
 HEATED = {"heater": 1.0}
@@ -49,12 +50,14 @@ def test_the_sensors_and_cameras_stand_as_the_observation_log_says() -> None:
 def test_the_equipment_doors_and_vents_stand_as_the_commands_set_them() -> None:
     state = run_state("reference_greenhouse", until_s=SECOND_NOON_S)
 
-    # By noon its own schedule has the fans on, the heater off and the roof
-    # vents fully open; the door stays shut.
+    # By noon its own schedule has the fans on and the roof vents fully
+    # open, and its thermostat has the heater as the air needs; the door
+    # stays shut.
+    heater = equipment_at("reference_greenhouse", time_s=SECOND_NOON_S).levels["heater"]
     assert state.levels == {
         "fan_left": 1.0,
         "fan_right": 1.0,
-        "heater": 0.0,
+        "heater": heater,
         "dehumidifier": 0.0,
         "roof_vent_1": 1.0,
         "roof_vent_2": 1.0,

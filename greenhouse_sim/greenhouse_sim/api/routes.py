@@ -90,6 +90,12 @@ check; a route that comes to need one checks it first.
                                           and its cameras' frames; asked as
                                           its climate field is; &clean=1 as
                                           clean sensors would have, for QA
+    GET /api/scenarios/{id}/climate/equipment its equipment's levels at &t=600,
+                                          as its commands set them and its
+                                          thermostat, if it has one, runs its
+                                          heater, with the thermostat's
+                                          setpoint then; asked as its climate
+                                          field is
     GET /api/scenarios/{id}/climate/state what each process of its run holds at
                                           &t=600, for QA mode's developer
                                           panel: the clock, the house's air,
@@ -165,13 +171,13 @@ check; a route that comes to need one checks it first.
 
 import json
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
 from http import HTTPStatus
 from typing import Final
 from urllib.parse import parse_qs, urlsplit
 
 from pydantic import BaseModel
 
+from greenhouse_sim.api.responses import JsonValue, Response
 from greenhouse_sim.services import (
     cfd,
     checkpoints,
@@ -190,14 +196,7 @@ from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceErro
 from greenhouse_sim.services.live import InvalidSpeed, LiveCommand, LiveRun, LiveRuns
 from greenhouse_sim.services.playback import PlaybackCommand
 
-type JsonValue = dict[str, JsonValue] | list[JsonValue] | str | int | float | bool | None
 type Query = dict[str, list[str]]
-
-
-@dataclass(frozen=True)
-class Response:
-    status: HTTPStatus
-    body: JsonValue
 
 
 # How each kind of service error is answered; the first that matches.
@@ -371,6 +370,19 @@ def respond(method: str, path: str, body: bytes = b"") -> Response:
                     clean=_last(query, "clean") == "1",
                     weather=_last(query, "weather"),
                     from_s=_since(query),
+                )
+            )
+        case ["api", "scenarios", scenario_id, "climate", "equipment"]:
+            return _answer(
+                lambda: fields.equipment_at(
+                    scenario_id,
+                    _last(query, "layout"),
+                    _pairs(query.get("set", []), "set"),
+                    _pairs(query.get("open", []), "open"),
+                    _commands(query.get("schedule", [])),
+                    _seconds(query),
+                    weather=_last(query, "weather"),
+                    daily=_daily(query),
                 )
             )
         case ["api", "scenarios", scenario_id, "climate", "state"]:

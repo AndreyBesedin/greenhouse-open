@@ -18,7 +18,7 @@ import { numbersIn, type Orbited, orbit, type RanOn, ranOn } from "./measuring";
 const BASELINE = new URL("../../benchmarks/reference.json", import.meta.url);
 const LATEST = new URL("../../test-results/bench/reference.json", import.meta.url);
 // The season's end: 120 days, each lived. The simulator works the run out
-// from its kept opening day, day 80, its air and its crop, and the same run
+// from its kept opening day, day 86, its air and its crop, and the same run
 // all off beside it: minutes, on a laptop.
 const SEASON_DAYS = 120;
 const DAY_S = 86_400;

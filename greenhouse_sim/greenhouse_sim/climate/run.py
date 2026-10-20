@@ -34,7 +34,7 @@ each stretch, as it takes the equipment's.
 import threading
 import weakref
 from collections import OrderedDict
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from typing import Final
 
@@ -48,6 +48,7 @@ from greenhouse_sim.climate.projection import FaceFlows, conserving, face_flows
 from greenhouse_sim.climate.psychrometrics import humidity_ratio_g_kg, relative_humidity_pct
 from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.climate.sources import SourceTerms, source_terms
+from greenhouse_sim.climate.thermostat import Thermostat
 from greenhouse_sim.climate.transport import AirState, Transport
 from greenhouse_sim.climate.vents import Vent
 from greenhouse_sim.domain.air import AirQuantity
@@ -133,6 +134,7 @@ class ClimateRun:
         vents: Sequence[Vent] = (),
         glazed: Mapping[str, GlazedCells] | None = None,
         sunlight: Sunlight | None = None,
+        thermostat: Thermostat | None = None,
     ) -> None:
         nx, ny, nz = grid.shape
         if solid.shape != (nz, ny, nx):
@@ -147,9 +149,17 @@ class ClimateRun:
         self.vents = tuple(vents)
         self.glazed = dict(glazed or {})
         self.sunlight = sunlight
+        self.thermostat = thermostat
+        # What level its thermostat runs its heater at, at a moment: as the
+        # house's air decides it (`governed_by`); until then, none.
+        self._thermostat_level: Callable[[float], float] | None = None
         self._floor_cells = _lowest_air(solid)
         self._base_velocity = base.field("base", grid).channels[AirQuantity.VELOCITY]
         self._steady: dict[_Levels, tuple[SourceTerms, FaceFlows]] = {}
+        # Held only to work out, or find, what the equipment does at steady
+        # levels: the house asks for it while working its air on, which a
+        # request working this run on may be waiting for.
+        self._steadying = threading.Lock()
         self._through_flows: dict[str, FaceFlows] | None = None
         # When its air starts: at the start of the scenario's runs, unless it
         # is started later (`started_at`).
@@ -202,22 +212,51 @@ class ClimateRun:
             self.vents,
             self.glazed,
             self.sunlight,
+            self.thermostat,
         )
         later._steady = self._steady
+        later._steadying = self._steadying
+        later._thermostat_level = self._thermostat_level
         later._through_flows = self._through_flows
         later.start_s = start_s
         later._kept = {start_s: air}
         return later
 
-    def levels_at(self, time_s: float) -> dict[str, float]:
-        """Each piece of equipment's level at `time_s`."""
+    def governed_by(self, level: Callable[[float], float]) -> None:
+        """Run its thermostat's heater at `level` at each moment: its house's
+        air decides it (`climate.house`), and this run's air follows."""
+        self._thermostat_level = level
+
+    def thermostat_governs(self, time_s: float) -> bool:
+        """Whether its thermostat runs its heater at `time_s`: if it has one,
+        for a heater it has, until a command to the heater."""
+        thermostat = self.thermostat
+        return (
+            thermostat is not None
+            and any(piece.actuator_id == thermostat.actuator_id for piece in self.equipment)
+            and thermostat.actuator_id not in self.schedule.commanded_levels(time_s)
+        )
+
+    def scheduled_levels_at(self, time_s: float) -> dict[str, float]:
+        """Each piece of equipment's level at `time_s`, as its schedule sets
+        it."""
         return self.schedule.levels_at([piece.actuator_id for piece in self.equipment], time_s)
+
+    def levels_at(self, time_s: float) -> dict[str, float]:
+        """Each piece of equipment's level at `time_s`: as its schedule sets
+        it, and its thermostat's heater as the thermostat runs it."""
+        levels = self.scheduled_levels_at(time_s)
+        if self.thermostat is not None and self.thermostat_governs(time_s):
+            if self._thermostat_level is None:
+                raise RuntimeError("a run with a thermostat is governed by its house's air")
+            levels[self.thermostat.actuator_id] = self._thermostat_level(time_s)
+        return levels
 
     def _held(self, levels: Mapping[str, float]) -> tuple[SourceTerms, FaceFlows]:
         """What the equipment does at steady levels: its source terms, and the
         flow it makes with the base airflow."""
         key = tuple(sorted(levels.items()))
-        with self._working:
+        with self._steadying:
             return self._steady_at(key, levels)
 
     def _steady_at(
@@ -288,9 +327,9 @@ class ClimateRun:
         return FaceFlows(grid=flows.grid, flows=(added[0], added[1], added[2]))
 
     def _transport(
-        self, time_s: float, openings: Mapping[str, OpeningFlow]
+        self, levels: Mapping[str, float], openings: Mapping[str, OpeningFlow]
     ) -> tuple[SourceTerms, Transport]:
-        terms, flows = self._held(self.levels_at(time_s))
+        terms, flows = self._held(levels)
         transport = Transport(
             self.grid,
             self._flowing(flows, openings),
@@ -303,7 +342,18 @@ class ClimateRun:
 
     def terms_at(self, time_s: float) -> SourceTerms:
         """What the equipment adds to the air at `time_s`."""
-        return self._held(self.levels_at(time_s))[0]
+        return self.terms_for(self.levels_at(time_s))
+
+    def terms_for(self, levels: Mapping[str, float]) -> SourceTerms:
+        """What the equipment adds to the air at `levels`."""
+        return self._held(levels)[0]
+
+    def transport_for(
+        self, levels: Mapping[str, float], openings: Mapping[str, OpeningFlow]
+    ) -> Transport:
+        """How heat moves with the equipment at `levels` and the doors and
+        vents passing `openings`."""
+        return self._transport(levels, openings)[1]
 
     def solar_heat_w(self, time_s: float) -> np.ndarray | None:
         """The heat the sun's light adds to the air at `time_s`, cell by cell,
@@ -340,7 +390,7 @@ class ClimateRun:
         the air then drives them unless given."""
         if openings is None:
             openings = self.openings_for(self.air_at(time_s), self.weather.at(time_s), time_s)
-        return self._transport(time_s, openings)[1]
+        return self._transport(self.levels_at(time_s), openings)[1]
 
     def carry_on_from(self, other: ClimateRun) -> None:
         """Take over the air `other` has kept up to the first moment its
@@ -434,7 +484,9 @@ class ClimateRun:
             if until > now:
                 middle = (now + until) / 2
                 outside = self.weather.at(middle)
-                terms, transport = self._transport(now, self.openings_for(air, outside, now))
+                terms, transport = self._transport(
+                    self.levels_at(now), self.openings_for(air, outside, now)
+                )
                 sun = self.solar_heat_w(middle)
                 if sun is not None:
                     terms = replace(terms, heat_w=terms.heat_w + sun)

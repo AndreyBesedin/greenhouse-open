@@ -94,4 +94,11 @@ describe("a scenario's scene at a moment", () => {
     // Without its doors and vents named, every command is equipment's.
     expect(standingAt(source, []).levels).toEqual({ heater: 1, roof_vent_1: 0.5 });
   });
+
+  it("draws a heater its thermostat runs as the run has it", () => {
+    const source = scenario("?scenario=reference_greenhouse&field=climate&t=3600");
+
+    expect(standingAt(source, [], { heater: 1 }).levels).toEqual({ heater: 1 });
+    expect(standingAt(source, []).levels).toEqual({});
+  });
 });

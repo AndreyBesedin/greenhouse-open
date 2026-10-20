@@ -7,12 +7,57 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-protocol`: the consumer interface
+  (`greenhouse_protocol.contracts.consumer`, decision 0040, P10.1): how a
+  client reads a running producer, whatever it is. Routes under
+  `/consumer/v1` answer a run's identity, epoch and clock, its greenhouse
+  description, and its observations and events after a cursor, in delivery
+  order, with nothing from after the run's clock. `check_batch` and
+  `check_polls` hold a producer to the rules, and a recorded exchange
+  (`tests/fixtures/consumer/exchange.json`) lets a client be built before
+  any producer serves it.
 - `greenhouse-sim`: a scenario's own run played back against one clock
   (decision 0041), which the viewer and a consumer follow: its point
   sensors' readings worked out ahead, day by day, at a consumer's cadence
   of 300 s, and served only as far as the clock has reached; the run's
   identity, epoch and instant said the same way to both. The API starts,
   plays, pauses, restarts and paces it (`/api/scenarios/{id}/playback`).
+- `greenhouse-sim`: the consumer interface served from a played-back run
+  (P10.4): `GET /consumer/v1/runs`, a run, its greenhouse, and its
+  observations and events after a cursor, on the API's loopback server;
+  observed records only. Besides the sensors' readings, the run's
+  organ-level crop delivers a daily walk through it at noon (each plant's
+  fruit and red fruit counted, their mass estimated, its height measured,
+  with the scenario's observation errors) and its weekly harvests, one
+  `HARVEST` event per plant picked. `uv run api --play reference_greenhouse
+  [--hold]` starts the run with the API, held until told to play if asked.
+- `greenhouse-sim`: a season and a thermostat (P10.3, decision 0042). A
+  scenario's weather can follow the year (`"kind": "seasonal"`): each day's
+  coldest and warmest temperatures go from winter's to summer's and wander
+  in spells drawn from the seed, each day its own clouds. A thermostat runs
+  a heater by the house's air, on below its setpoint by half its band and
+  off above it by as much, a setpoint by day and one by night; a command to
+  the heater takes it over. The heat a run's heaters give is counted, and
+  played back hour by hour as `HEATING_ENERGY_INCREMENT_MJ_M2`, modelled
+  heat input per square metre of floor, not a meter's reading. The viewer draws
+  and says the thermostat's heater as the run has it
+  (`GET /api/scenarios/{id}/climate/equipment`). A run's identity now covers
+  everything its scenario is made of, so a changed manifest or layout is
+  another run.
+- `greenhouse-sim`: the reference greenhouse under a season from 1 March
+  and its heater, now 30 kW, on a thermostat at 18 °C by day and 16 °C by
+  night, in place of the cold spring day every day and the heater by the
+  clock. Its run is another: its identity, its opening day and its numbers
+  change.
+- `greenhouse-protocol`: the consumer interface
+  (`greenhouse_protocol.contracts.consumer`, decision 0040, P10.1): how a
+  client reads a running producer, whatever it is. Routes under
+  `/consumer/v1` answer a run's identity, epoch and clock, its greenhouse
+  description, and its observations and events after a cursor, in delivery
+  order, with nothing from after the run's clock. `check_batch` and
+  `check_polls` hold a producer to the rules, and a recorded exchange
+  (`tests/fixtures/consumer/exchange.json`) lets a client be built before
+  any producer serves it.
 
 ## 0.2.0 - 2026-10-19
 
