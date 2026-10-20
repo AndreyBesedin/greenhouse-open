@@ -27,7 +27,6 @@ its start, beside the same run with everything off
 start.
 """
 
-import hashlib
 import threading
 from collections import OrderedDict
 from collections.abc import Callable, Mapping, Sequence
@@ -49,6 +48,7 @@ from greenhouse_sim.climate.probes import ClimateProbes, probe_series
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.vents import Vent
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.digests import short_digest
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument, FieldGrid
 from greenhouse_sim.fields.synthetic import shear_field
 from greenhouse_sim.scenarios.config import ScenarioConfig
@@ -721,4 +721,4 @@ def air_through_a_run(
 
 def _digest(told: str) -> str:
     """What tells one run from another, shortened."""
-    return hashlib.sha256(told.encode()).hexdigest()[:RUN_DIGEST_LENGTH]
+    return short_digest(told, RUN_DIGEST_LENGTH)

@@ -3,16 +3,12 @@ air's quantities at its cells' centres, interpolation between them, and the
 document a viewer reads.
 
 `greenhouse_sim/fields/field.schema.json` is the schema the viewer generates
-its field types from and validates fields against. It is written here, from
-`greenhouse_sim/`:
-
-    python tests/test_fields.py --update
+its field types from and validates fields against
+(`tests/test_published_schemas.py`).
 """
 
 import base64
-import json
 import math
-import sys
 from http import HTTPStatus
 from pathlib import Path
 
@@ -27,7 +23,6 @@ from greenhouse_sim.fields.field import (
     EnvironmentField,
     FieldDocument,
     FieldGrid,
-    field_json_schema,
 )
 from greenhouse_sim.fields.synthetic import shear_field, shear_temperature, shear_velocity
 from greenhouse_sim.services import fields
@@ -143,10 +138,6 @@ def test_a_field_published_and_read_back_is_the_same_to_single_precision() -> No
         assert np.allclose(read.channels[quantity], values, atol=1e-5)
 
 
-def test_the_published_schema_matches_the_field_document() -> None:
-    assert json.loads(SCHEMA_FILE.read_text()) == json.loads(json.dumps(field_json_schema()))
-
-
 def test_a_scenario_offers_its_fields_over_its_greenhouses_air() -> None:
     answer = respond("GET", "/api/scenarios/tomato_compartment/fields/shear")
     missing = respond("GET", "/api/scenarios/tomato_compartment/fields/wind")
@@ -172,10 +163,3 @@ def test_a_scenario_offers_its_fields_over_its_greenhouses_air() -> None:
         {"fields": ["buoyancy", "uniform", "vortex", "cfd", "shear"], "configured": "buoyancy"},
     )
     assert respond("GET", "/api/scenarios/gh_999/fields").status == HTTPStatus.NOT_FOUND
-
-
-if __name__ == "__main__":
-    if sys.argv[1:] != ["--update"]:
-        raise SystemExit("usage: python tests/test_fields.py --update")
-    SCHEMA_FILE.write_text(json.dumps(field_json_schema(), indent=2, ensure_ascii=False) + "\n")
-    print("wrote", SCHEMA_FILE)

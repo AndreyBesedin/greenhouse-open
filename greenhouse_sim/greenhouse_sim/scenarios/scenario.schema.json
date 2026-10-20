@@ -375,7 +375,7 @@
       "type": "object"
     },
     "Hour": {
-      "exclusiveMaximum": 24.0,
+      "exclusiveMaximum": 24,
       "minimum": 0.0,
       "type": "number"
     },

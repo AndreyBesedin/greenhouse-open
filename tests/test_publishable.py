@@ -134,35 +134,87 @@ def test_the_document_citation_check_can_fail() -> None:
 # such as the script in `python greenhouse_sim/tests/test_x.py --update`.
 GUIDE_LINK_TARGET = re.compile(r"\]\(([^)\s#]+)")
 GUIDE_CODE_SPAN = re.compile(r"`([^`]+)`")
+# A fenced block's first and last lines.
+GUIDE_FENCE = "```"
 REPOSITORY_PATH = re.compile(
-    r"(?:greenhouse_\w+|scripts|tests|docs|\.github)(?:/[\w./-]*)?|[\w-]+\.md"
+    r"(?:greenhouse_(?:sim|protocol|adapters)|scripts|tests|docs|\.github)(?:/[\w./-]*)?"
+    r"|[\w-]+\.md"
 )
 
 
+# The recipes for contributors (audit W14): how to add a scenario, a
+# layout, a weather, a device, an air or plant model, a viewer panel or an
+# API route, each naming the files it touches and the tests to run.
+GUIDES_DIR = ROOT / "docs" / "guides"
+RECIPES = sorted(path for path in GUIDES_DIR.glob("*.md") if path.name != "README.md")
+
+
+def _links_in(guide: str) -> list[str]:
+    """A guide's links to files, as written: from the guide's folder."""
+    return [target for target in GUIDE_LINK_TARGET.findall(guide) if "://" not in target]
+
+
+def _code_paths_in(guide: str) -> list[str]:
+    """The paths a guide's code names, inline or in a fenced block such as
+    its commands: from the repository's root."""
+    words: list[str] = []
+    fenced = False
+    for line in guide.splitlines():
+        if line.lstrip().startswith(GUIDE_FENCE):
+            fenced = not fenced
+            continue
+        spans = [line] if fenced else GUIDE_CODE_SPAN.findall(line)
+        words += [word for span in spans for word in span.split()]
+    return [word for word in words if REPOSITORY_PATH.fullmatch(word)]
+
+
 def _paths_named_in(guide: str) -> list[str]:
-    linked = [target for target in GUIDE_LINK_TARGET.findall(guide) if "://" not in target]
-    in_code = [
-        word
-        for line in guide.splitlines()
-        for span in GUIDE_CODE_SPAN.findall(line)
-        for word in span.split()
-        if REPOSITORY_PATH.fullmatch(word)
-    ]
-    return linked + in_code
+    return _links_in(guide) + _code_paths_in(guide)
 
 
-def test_the_guide_for_contributors_names_files_that_exist() -> None:
-    named = _paths_named_in((ROOT / "AGENTS.md").read_text())
+@pytest.mark.parametrize(
+    "guide",
+    [ROOT / "AGENTS.md", GUIDES_DIR / "README.md", *RECIPES],
+    ids=lambda path: str(path.relative_to(ROOT)),
+)
+def test_each_guide_for_contributors_names_files_that_exist(guide: pathlib.Path) -> None:
+    text = guide.read_text()
+    missing = [link for link in _links_in(text) if not (guide.parent / link).exists()]
+    missing += [path for path in _code_paths_in(text) if not (ROOT / path).exists()]
 
-    assert named
-    assert [path for path in named if not (ROOT / path).exists()] == []
+    assert _paths_named_in(text)
+    assert missing == []
+
+
+def test_the_guide_path_check_reads_fenced_commands() -> None:
+    guide = (
+        "Run:\n\n```bash\n"
+        "uv run pytest greenhouse_sim/tests/test_gone.py \\\n"
+        "  tests/test_x.py\n"
+        "```\n"
+    )
+
+    assert _code_paths_in(guide) == ["greenhouse_sim/tests/test_gone.py", "tests/test_x.py"]
+
+
+def test_there_are_recipes_and_each_names_a_test_to_run() -> None:
+    assert RECIPES
+    for recipe in RECIPES:
+        named = _code_paths_in(recipe.read_text())
+        assert any("/tests/" in path or "/e2e/" in path for path in named), recipe.name
+
+
+def test_the_guides_index_lists_every_recipe() -> None:
+    listed = set(_links_in((GUIDES_DIR / "README.md").read_text()))
+
+    assert {recipe.name for recipe in RECIPES} <= listed
 
 
 def test_the_guide_path_check_reads_links_and_paths_in_commands() -> None:
     guide = (
         "See [the rules](CONTRIBUTING.md), [a site](https://example.org/a.md) and"
         " [a part](#part); run `python greenhouse_sim/tests/test_x.py --update`,"
-        " keep `greenhouse_protocol` apart, and `npm ci` first."
+        " keep `greenhouse_protocol` apart, set `greenhouse_id`, and `npm ci` first."
     )
 
     assert _paths_named_in(guide) == [

@@ -22,7 +22,7 @@ check; a route that comes to need one checks it first.
                                           version, its seed, its days and its
                                           models; &weather= as for its climate
     GET /api/scenarios/{id}/scene         a scenario's scene before its first day;
-                                          ?layout=benches shows another of its
+                                          ?layout=propagation shows another of its
                                           layouts, ?envelope=length:12,spans:3
                                           changes its greenhouse's dimensions,
                                           and ?open=roof_vent_1:0.5,door_1:1 how
@@ -125,7 +125,7 @@ check; a route that comes to need one checks it first.
                                           a CFD solver is given them, snapped
                                           to its mesh; changed as for its scene
     GET /api/scenarios/{id}/layout        a scenario's layout, as its file holds
-                                          it; ?layout=benches another of them
+                                          it; ?layout=propagation another of them
     GET /api/plants/scene                 the plant lab's scene: a row of tomato
                                           plants from the organ-level model;
                                           ?day=12 on another day of the lab's

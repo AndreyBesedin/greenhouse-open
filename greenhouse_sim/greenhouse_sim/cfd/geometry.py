@@ -32,6 +32,7 @@ from pydantic import BaseModel, ConfigDict
 from greenhouse_sim.domain.envelope import OpeningKind, SurfaceCategory
 from greenhouse_sim.domain.layout import Obstruction
 from greenhouse_sim.fields.field import FieldGrid
+from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.world.envelope import Opening, Surface
 from greenhouse_sim.world.geometry import Vector3
@@ -336,6 +337,6 @@ def cfd_geometry_json_schema() -> dict[str, object]:
     """The JSON Schema a viewer validates a CFD geometry against, written as
     `geometry.schema.json` next to this module."""
     return {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": JSON_SCHEMA_DIALECT,
         **CfdGeometry.model_json_schema(mode="serialization"),
     }

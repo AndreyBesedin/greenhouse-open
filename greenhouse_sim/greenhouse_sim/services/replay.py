@@ -20,7 +20,6 @@ run's first days against the digests kept in the repository
 (`tests/fixtures/reference_replay.json`).
 """
 
-import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from typing import Final
@@ -28,6 +27,7 @@ from typing import Final
 from pydantic import BaseModel, ConfigDict, JsonValue
 
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.digests import short_digest
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.services.crop import run_crop
 from greenhouse_sim.services.fields import Commanded, climate_run
@@ -123,7 +123,7 @@ def day_probes(
         probes.append(
             DayProbe(
                 day=day,
-                digest=hashlib.sha256(text.encode()).hexdigest()[:DIGEST_LENGTH],
+                digest=short_digest(text, DIGEST_LENGTH),
                 house_temperature_c=round(air.temperature_c, 2),
                 house_humidity_pct=round(air.relative_humidity_pct(), 1),
                 organs=organs,

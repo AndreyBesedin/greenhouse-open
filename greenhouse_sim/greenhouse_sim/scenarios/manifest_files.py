@@ -14,7 +14,6 @@ checks it again when it reads it, refusing a field it does not know, at any
 depth, rather than ignoring it.
 """
 
-import hashlib
 import json
 from collections.abc import Iterator
 from pathlib import Path
@@ -22,6 +21,8 @@ from typing import Final
 
 from pydantic import JsonValue
 
+from greenhouse_sim.digests import short_digest
+from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT, LAYOUT_NAME, load_layout
 
@@ -29,8 +30,6 @@ MANIFESTS_DIR: Final = Path(__file__).parent / "manifests"
 MANIFEST_SCHEMA_FILE: Final = Path(__file__).parent / "scenario.schema.json"
 # Where a manifest finds the schema, from the manifests' folder.
 SCHEMA_FROM_A_MANIFEST_FILE: Final = "../scenario.schema.json"
-# The JSON Schema dialect Pydantic generates, stated in the published schema.
-JSON_SCHEMA_DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 # The version of the format a manifest is written in: 2 since an item's
 # identifier holds only letters, digits, `_`, `.` and `-` (#254).
 SCHEMA_VERSION: Final = 2
@@ -110,7 +109,7 @@ def manifest_digest(scenario_id: str) -> str:
     digest of its content, however its file is laid out."""
     document = json.loads((MANIFESTS_DIR / f"{scenario_id}.json").read_text())
     canonical = json.dumps(document, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-    return hashlib.sha256(canonical.encode()).hexdigest()[:DIGEST_LENGTH]
+    return short_digest(canonical, DIGEST_LENGTH)
 
 
 def scenario_from_manifest(scenario_id: str, document: dict[str, JsonValue]) -> ScenarioConfig:
