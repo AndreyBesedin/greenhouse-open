@@ -47,10 +47,11 @@ from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.domain.sensors import SensorKind
 from greenhouse_sim.fields.field import EnvironmentField
 from greenhouse_sim.records import observation_id
+from greenhouse_sim.units import FULL_TURN_DEG, HOUR_S
 from greenhouse_sim.weather.state import WeatherState
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.sensors import Camera, Imperfections, PointSensor
-from greenhouse_sim.world.site import DEGREES_IN_A_TURN, bearing
+from greenhouse_sim.world.site import bearing
 
 # What each kind of point sensor reads of a field.
 QUANTITIES: Final = {
@@ -93,12 +94,11 @@ MEASURING_RANGES: Final = {
     SensorKind.OUTSIDE_TEMPERATURE: (-50.0, 60.0),
     SensorKind.OUTSIDE_HUMIDITY: (0.0, 100.0),
     SensorKind.WIND_SPEED: (0.0, 60.0),
-    SensorKind.WIND_DIRECTION: (0.0, DEGREES_IN_A_TURN),
+    SensorKind.WIND_DIRECTION: (0.0, FULL_TURN_DEG),
     SensorKind.BAROMETRIC_PRESSURE: (500.0, 1_100.0),
 }
 # The kinds whose readings go round, rather than end.
 GOING_ROUND: Final = frozenset({SensorKind.WIND_DIRECTION})
-SECONDS_PER_HOUR: Final = 3600.0
 
 # The air at a moment of a run, in seconds from its start, and the weather.
 type AirAt = Callable[[float], EnvironmentField]
@@ -162,12 +162,7 @@ def erred(
     noise = rng.normal(0.0, imperfections.noise_sd) if imperfections.noise_sd > 0 else 0.0
     if dropped:
         return None
-    value = (
-        truth
-        + imperfections.bias
-        + imperfections.drift_per_hour * moment_s / SECONDS_PER_HOUR
-        + noise
-    )
+    value = truth + imperfections.bias + imperfections.drift_per_hour * moment_s / HOUR_S + noise
     step = imperfections.quantization
     if step > 0:
         # Rounded to the step, and written to its own decimals.

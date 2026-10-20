@@ -26,14 +26,13 @@ from greenhouse_sim.services.crop import crop_scene, forget_crops, run_crop
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import field, forget_climate_runs, grid
 from greenhouse_sim.services.scenarios import initial_scene, plant_ids, scenario
+from greenhouse_sim.units import HOUR_S, HOURS_A_DAY, PERCENT
 
 # The moment of the last day measured that an hour of air cell by cell is
 # drawn for: noon, when the sun, the vents and the fans are all at work in
 # the reference run.
-NOON_S: Final = 12 * 3600.0
+NOON_S: Final = 12 * HOUR_S
 MEBIBYTE: Final = 1024 * 1024
-PERCENT: Final = 100
-HOURS_A_DAY: Final = 24
 # The report's times are written to the millisecond.
 REPORTED_DECIMALS: Final = 3
 
