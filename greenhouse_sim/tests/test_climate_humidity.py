@@ -70,6 +70,31 @@ def test_moist_air_agrees_with_the_psychrometric_tables(
     assert saturation_ratio_g_kg(temperature) == pytest.approx(saturated_g_kg, rel=0.01)
 
 
+def test_past_boiling_air_holds_any_water_and_none_condenses() -> None:
+    # Below 100 °C, more water as the air warms; past it, the vapour's
+    # pressure would exceed the atmosphere's, and the ratio's formula turns
+    # negative: a cell a heater warmed past it lost more water than it held,
+    # and the reference greenhouse's humidity ran wild (#198).
+    temperatures = np.array([-20.0, 0.0, 40.0, 80.0, 99.0, 100.5, 120.0, 200.0])
+    held = saturation_ratio_g_kg(temperatures)
+
+    assert np.all(np.isfinite(held[:5])) and np.all(np.diff(held[:5]) > 0)
+    assert np.all(held[5:] == np.inf)
+    # Air past boiling, holding more water than air at 100 °C could, keeps
+    # it through a minute: none condenses, and none is lost.
+    transport = _transport(STILL)
+    hot = AirState(
+        temperature=np.full((NZ, NY, NX), 105.0),
+        humidity=np.full((NZ, NY, NX), 2000.0),
+        co2=np.full((NZ, NY, NX), 420.0),
+    )
+    nothing = source_terms(DEHUMIDIFIER, 0.0, GRID, SOLID)
+    after = transport.advance(hot, nothing, 60.0, OUTSIDE)
+
+    assert after.condensed_kg == 0.0
+    np.testing.assert_allclose(after.humidity[AIR], 2000.0)
+
+
 def test_relative_humidity_and_the_humidity_ratio_are_one_anothers_inverse() -> None:
     temperatures = np.array([5.0, 16.0, 25.0])
     relative = np.array([30.0, 85.0, 100.0])

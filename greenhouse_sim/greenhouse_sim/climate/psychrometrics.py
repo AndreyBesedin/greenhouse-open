@@ -39,9 +39,15 @@ def saturation_pressure_pa(temperature_c: ArrayLike) -> NDArray[np.float64]:
 
 def humidity_ratio_g_kg(temperature_c: ArrayLike, relative_pct: ArrayLike) -> NDArray[np.float64]:
     """The grams of water per kilogram of air at a temperature and relative
-    humidity."""
+    humidity: without limit once the vapour's pressure reaches the
+    atmosphere's, as it does at saturation past water's boiling point, where
+    air holds any water and none condenses. (Past it, the ratio's formula
+    turns negative, and a cell a heater warmed past 100 °C lost more water
+    than it held, #198.)"""
     vapour = np.asarray(relative_pct, dtype=float) / PERCENT * saturation_pressure_pa(temperature_c)
-    return np.asarray(WATER_PER_AIR_G_KG * vapour / (ATMOSPHERE_PA - vapour), dtype=float)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        ratio = WATER_PER_AIR_G_KG * vapour / (ATMOSPHERE_PA - vapour)
+    return np.asarray(np.where(vapour < ATMOSPHERE_PA, ratio, np.inf), dtype=float)
 
 
 def saturation_ratio_g_kg(temperature_c: ArrayLike) -> NDArray[np.float64]:
