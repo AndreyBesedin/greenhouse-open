@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { BuildInfo } from "./buildInfo";
+import type { PanelTheme } from "./panelTheme";
 import { SceneFailures } from "./SceneStatus";
 import { SourceChooser } from "./SourceChooser";
 import type { ScenariosState } from "./scenarios";
@@ -13,6 +14,8 @@ export function InfoPanel({
   scene,
   failures = [],
   chooseFirst = false,
+  theme = "dark",
+  onTheme,
   onSource,
   children,
 }: {
@@ -24,6 +27,9 @@ export function InfoPanel({
   failures?: readonly string[];
   /** Whether nothing has been chosen yet, so that the choice starts open. */
   chooseFirst?: boolean;
+  /** How the panels look, and how to change it (#208), if they can be. */
+  theme?: PanelTheme;
+  onTheme?: (theme: PanelTheme) => void;
   onSource: (source: SceneSource) => void;
   /** Display options for the scene, shown under its choice. */
   children?: ReactNode;
@@ -42,9 +48,21 @@ export function InfoPanel({
       {children}
       {/* What the viewer was built from, last, in a line: QA mode's run
           manifest says it too, beside the simulator's own (#206). */}
-      <p className="build-line" data-testid="build-line">
-        simulator {build.simulatorVersion} · commit {build.sourceCommit}
-      </p>
+      <div className="panel-footer">
+        <p className="build-line" data-testid="build-line">
+          simulator {build.simulatorVersion} · commit {build.sourceCommit}
+        </p>
+        {onTheme !== undefined && (
+          <label className="panel-theme">
+            <input
+              type="checkbox"
+              checked={theme === "light"}
+              onChange={(event) => onTheme(event.target.checked ? "light" : "dark")}
+            />{" "}
+            Light panels
+          </label>
+        )}
+      </div>
     </aside>
   );
 }
