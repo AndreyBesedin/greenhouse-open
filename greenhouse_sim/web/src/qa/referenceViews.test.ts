@@ -28,15 +28,15 @@ describe("the reference greenhouse's golden views", () => {
   });
 
   it("draw moments of the opening day, and a young crop's", () => {
-    expect(QA.moments.noon.cropDay).toBe(80);
+    expect(QA.moments.noon.cropDay).toBe(86);
     expect(QA.moments.young.cropDay).toBe(21);
-    expect(Object.keys(QA.crops).sort()).toEqual(["21", "80"]);
+    expect(Object.keys(QA.crops).sort()).toEqual(["21", "86"]);
     // The house is kept without its crop, which the crop's day gives.
     expect(QA.moments.noon.house.entities.some((entity) => "organ_id" in entity.properties)).toBe(
       false,
     );
     // The noon's sun high in the south, its path through the day.
-    expect(QA.moments.noon.weather.sun.elevation_deg).toBeCloseTo(58.05, 1);
+    expect(QA.moments.noon.weather.sun.elevation_deg).toBeCloseTo(59.19, 1);
     expect(QA.sunPath.sun.length).toBeGreaterThan(100);
   });
 
@@ -56,8 +56,8 @@ describe("the reference greenhouse's golden views", () => {
 
   it("say their state probes", () => {
     expect(describeProbes(QA.moments.noon.probes)).toBe(
-      "house air 29.46 °C, sun 58.05° up, jet 1.39 m/s, vents exchange 0.84 m³/s, " +
-        "10428 leaves, 750 fruits, 1 red",
+      "house air 28.16 °C, sun 59.19° up, jet 1.39 m/s, vents exchange 1.08 m³/s, " +
+        "10384 leaves, 741 fruits, 1 red",
     );
     expect(describeProbes({})).toBe("");
   });
@@ -76,7 +76,7 @@ describe("the reference greenhouse's golden views", () => {
     expect(() => parseReferenceQa(null)).toThrow("not what the viewer expects");
     expect(() => parseReferenceQa({ moments: {}, crops: {} })).toThrow("has no dawn");
     const body = BODY as { crops: Record<string, unknown> };
-    expect(() => parseReferenceQa({ ...body, crops: { "80": body.crops["80"] } })).toThrow(
+    expect(() => parseReferenceQa({ ...body, crops: { "86": body.crops["86"] } })).toThrow(
       "no crop on day 21",
     );
   });
