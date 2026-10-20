@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { type BuildInfo, buildInfo } from "./buildInfo";
 import { ControlsHelp } from "./ControlsHelp";
-import type { PresetName, PresetRequest } from "./camera";
+import { framing, type PresetName, type PresetRequest } from "./camera";
 import { CfdBoundaries } from "./cfd/CfdBoundaries";
 import { CfdLegend } from "./cfd/CfdLegend";
 import { cfdGeometryUrl, loadCfdGeometry } from "./cfd/geometry";
@@ -531,6 +531,23 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     () => snapshot?.entities.find((entity) => entity.kind === "GREENHOUSE_BOUNDS") ?? null,
     [snapshot],
   );
+  // A run followed without a camera of its own is shown whole, its house
+  // framed, rather than from its corner at the world's origin, where the
+  // presets look; the address keeps the pose, so the camera stays where a
+  // person then moves it.
+  const houseShape = house?.shape.shape === "box" ? house.shape : null;
+  const housePlace = house?.transform.position ?? null;
+  useEffect(() => {
+    if (followed === null || houseShape === null || housePlace === null) {
+      return;
+    }
+    const size = { x: houseShape.size_x, y: houseShape.size_y, z: houseShape.size_z };
+    setSource((current) =>
+      current.kind === "scenario" && current.follow && current.camera === undefined
+        ? { ...current, camera: framing(housePlace, size, window.innerWidth / window.innerHeight) }
+        : current,
+    );
+  }, [followed, houseShape, housePlace, setSource]);
   // The item drawn where a drag takes it: while the drag lasts, and once let
   // go, until the scene with the item moved arrives, or fails to.
   const nudged =

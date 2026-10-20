@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { framing } from "../src/camera.ts";
+import { formatPoint } from "../src/readouts.ts";
 
 const PLAYBACK = "/api/scenarios/climate_box/playback";
 const ARRIVES = { timeout: 60_000 };
@@ -27,6 +29,16 @@ test("a view follows its scenario's run as it is played back, the run a consumer
       /^Following run climate_box-climate-[0-9a-f]+, epoch 0: /,
       ARRIVES,
     );
+  });
+
+  await test.step("it shows the house whole, not its corner, and the address keeps the view", async () => {
+    // The climate box's bounds: 12 m by 6.4 m, 4.8 m to its ridge, its
+    // footprint's middle at (6, 3.2); the window, 1280 by 720.
+    const framed = framing({ x: 6, y: 3.2, z: 0 }, { x: 12, y: 6.4, z: 4.8 }, 1280 / 720);
+    // As the address writes a pose: its position, then where it looks.
+    const written = [framed.position, framed.target].map(({ x, y, z }) => `${x}:${y}:${z}`);
+    await expect(page).toHaveURL((url) => url.searchParams.get("camera") === written.join(","));
+    await expect(page.getByTestId("camera-position")).toHaveText(formatPoint(framed.position));
   });
 
   await test.step("the view's moment follows the run's clock", async () => {
