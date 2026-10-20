@@ -7,6 +7,7 @@ import { DEFAULT_STRESS_PLANTS } from "./qa/stressScene";
 import { ScenarioList } from "./ScenarioList";
 import { SceneStatus } from "./SceneStatus";
 import { DEFAULT_LAYOUT, openingMoment, type ScenariosState } from "./scenarios";
+import { baseLayout } from "./scene/moves";
 import type { SceneSource, SceneState } from "./scene/source";
 
 /** A scene or the plant lab, to be chosen by name. */
@@ -90,7 +91,11 @@ export function SourceChooser({
           filter={filter}
           shownLayout={
             source.kind === "scenario"
-              ? { scenarioId: source.scenarioId, layout: source.layout ?? DEFAULT_LAYOUT }
+              ? // A moved layout is shown as the one it moves from (#209).
+                {
+                  scenarioId: source.scenarioId,
+                  layout: baseLayout(source.layout) ?? DEFAULT_LAYOUT,
+                }
               : null
           }
           onShow={(scenarioId, layout) =>

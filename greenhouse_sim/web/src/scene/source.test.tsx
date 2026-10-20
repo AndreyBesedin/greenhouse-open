@@ -78,6 +78,15 @@ describe("choosing a scene in the address bar", () => {
       "?scenario=tomato_compartment&layout=benches",
       { kind: "scenario", scenarioId: "tomato_compartment", layout: "benches" },
     ],
+    // Its items moved (#209): the marks between moves are written as they are.
+    [
+      "?scenario=climate_box&layout=default~heater:-1:0.5,temperature_front:0:0.2",
+      {
+        kind: "scenario",
+        scenarioId: "climate_box",
+        layout: "default~heater:-1:0.5,temperature_front:0:0.2",
+      },
+    ],
     [
       "?scenario=tomato_compartment&field=shear",
       { kind: "scenario", scenarioId: "tomato_compartment", field: "shear" },

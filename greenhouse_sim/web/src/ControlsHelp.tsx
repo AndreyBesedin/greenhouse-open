@@ -42,6 +42,10 @@ export const CONTROLS: readonly { device: string; controls: readonly Control[] }
     controls: [
       { input: "Click", does: "select what is under the pointer; click empty space to clear it" },
       { input: "Click, while placing probes", does: "place a probe" },
+      {
+        input: "Drag, while moving equipment or a sensor",
+        does: "move it along the floor; the camera holds still but for the wheel",
+      },
       { input: "Top, Front, Side, Isometric", does: "the View panel's camera presets" },
       { input: "The View panel's header", does: "fold it, or drag it elsewhere" },
     ],
@@ -50,6 +54,7 @@ export const CONTROLS: readonly { device: string; controls: readonly Control[] }
     device: "Keyboard",
     controls: [
       { input: "?", does: "open or close this list" },
+      { input: "Escape", does: "close this list; cancel a drag, or stop moving" },
       { input: "Tab, then Enter or Space", does: "reach a control, open a folded panel" },
     ],
   },

@@ -102,6 +102,6 @@ describe("the view's controls, listed", () => {
       element.remove();
     }
     const keys = CONTROLS.find(({ device }) => device === "Keyboard")?.controls ?? [];
-    expect(keys.map(({ input }) => input)).toEqual(["?", "Tab, then Enter or Space"]);
+    expect(keys.map(({ input }) => input)).toEqual(["?", "Escape", "Tab, then Enter or Space"]);
   });
 });

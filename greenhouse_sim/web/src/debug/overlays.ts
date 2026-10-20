@@ -123,7 +123,7 @@ function point(vector: Vector3): Point3 {
 }
 
 /** The box a shape fills in its own frame, as `world/geometry.py` describes it. */
-function shapeExtent(shape: Shape): Bounds {
+export function shapeExtent(shape: Shape): Bounds {
   switch (shape.shape) {
     case "plane":
       return {
