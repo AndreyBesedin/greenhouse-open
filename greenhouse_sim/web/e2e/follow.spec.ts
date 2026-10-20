@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { framing } from "../src/camera.ts";
+import { type CameraPose, framing } from "../src/camera.ts";
 import { formatPoint } from "../src/readouts.ts";
+import { chooser } from "./chooser";
 
 const PLAYBACK = "/api/scenarios/climate_box/playback";
 const ARRIVES = { timeout: 60_000 };
@@ -106,4 +107,50 @@ test("a moment whose field fails does not stop the view following the run's cloc
   }
   await expect(page.getByTestId("climate-failed")).toContainText("cannot be drawn");
   expect(asked).toBeGreaterThan(2);
+});
+
+test("followed, the house is framed as the latest scene has it, again as the window narrows, never once moved", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  // The climate box's own bounds, as the API draws them.
+  const base = { x: 6, y: 3.2, z: 0 };
+  const size = { x: 12, y: 6.4, z: 4.8 };
+  const written = ({ position, target }: CameraPose) =>
+    [position, target].map(({ x, y, z }) => `${x}:${y}:${z}`).join(",");
+  const camera = () => new URL(page.url()).searchParams.get("camera");
+
+  await test.step("followed from a longer house on show, its own is framed", async () => {
+    // The longer house stays on show until the scenario's own arrives: the
+    // framing waits for that.
+    await page.goto("/?scenario=climate_box&envelope=length:20");
+    await expect(page.getByTestId("scene-status")).toContainText("entities", ARRIVES);
+    await (await chooser(page)).getByRole("button", { name: "Follow climate_box" }).click();
+    await expect.poll(camera, ARRIVES).toBe(written(framing(base, size, 1280 / 720)));
+  });
+
+  await test.step("the window made narrow, as beside a consumer's, it is framed again", async () => {
+    await page.setViewportSize({ width: 540, height: 720 });
+    await expect.poll(camera, ARRIVES).toBe(written(framing(base, size, 540 / 720)));
+  });
+
+  await test.step("moved by a person, it stays where they put it as the window widens", async () => {
+    const view = await page.getByTestId("main-view").locator("canvas").boundingBox();
+    if (view === null) {
+      throw new Error("the 3D view is not on the page");
+    }
+    const at = { x: view.x + view.width / 2, y: view.y + 80 };
+    await page.mouse.move(at.x, at.y);
+    await page.mouse.down();
+    await page.mouse.move(at.x + 120, at.y + 20, { steps: 8 });
+    await page.mouse.up();
+    const narrow = written(framing(base, size, 540 / 720));
+    await expect(page.getByTestId("camera-position")).not.toHaveText(
+      formatPoint(framing(base, size, 540 / 720).position),
+    );
+    await page.setViewportSize({ width: 1280, height: 720 });
+    // Long enough for the view to have sampled its camera, and answered.
+    await page.waitForTimeout(2000);
+    expect(camera()).toBe(narrow);
+  });
 });

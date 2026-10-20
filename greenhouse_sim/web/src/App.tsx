@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { type BuildInfo, buildInfo } from "./buildInfo";
 import { ControlsHelp } from "./ControlsHelp";
-import { framing, type PresetName, type PresetRequest } from "./camera";
+import { type CameraPose, framing, type PresetName, type PresetRequest } from "./camera";
 import { CfdBoundaries } from "./cfd/CfdBoundaries";
 import { CfdLegend } from "./cfd/CfdLegend";
 import { cfdGeometryUrl, loadCfdGeometry } from "./cfd/geometry";
@@ -120,6 +120,9 @@ const MILLISECONDS_PER_SECOND = 1000;
 const DEFAULT_PROBE_HEIGHT_M = 1;
 const EMPTY_PROBES: Point3[] = [];
 const NO_OPENINGS: readonly string[] = [];
+// How near the camera may stand to the pose framed for it, in metres, and
+// still be taken as not moved since: the HUD samples it as drawn.
+const FRAMED_STILL_M = 0.01;
 
 /** A drag moving the selected item (#209): the entity, how far it has moved
  * it, from where the scene shown places it and how far it was drawn from
@@ -136,6 +139,21 @@ interface Dragged {
 
 function samePoint(a: Point3, b: Point3): boolean {
   return a.x === b.x && a.y === b.y && a.z === b.z;
+}
+
+function samePose(a: CameraPose, b: CameraPose): boolean {
+  return samePoint(a.position, b.position) && samePoint(a.target, b.target);
+}
+
+/** The window's width over its height, as it changes. */
+function useWindowAspect(): number {
+  const [aspect, setAspect] = useState(() => window.innerWidth / window.innerHeight);
+  useEffect(() => {
+    const resized = () => setAspect(window.innerWidth / window.innerHeight);
+    window.addEventListener("resize", resized);
+    return () => window.removeEventListener("resize", resized);
+  }, []);
+  return aspect;
 }
 
 /** A scenario's view with another layout, or with its own (undefined). */
@@ -533,21 +551,55 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   );
   // A run followed without a camera of its own is shown whole, its house
   // framed, rather than from its corner at the world's origin, where the
-  // presets look; the address keeps the pose, so the camera stays where a
-  // person then moves it.
-  const houseShape = house?.shape.shape === "box" ? house.shape : null;
-  const housePlace = house?.transform.position ?? null;
+  // presets look; the address keeps the pose. Framed from the scene the
+  // latest request asked for, never one kept on show while another envelope
+  // is on its way; framed again as the window changes shape, as when it is
+  // moved beside a consumer's, while the camera stands where it was framed,
+  // never once a person has moved it.
+  const latestScene = sceneProgress.latest;
+  const latestBounds = useMemo(() => {
+    const bounds =
+      latestScene.status === "loaded"
+        ? latestScene.snapshot.entities.find((entity) => entity.kind === "GREENHOUSE_BOUNDS")
+        : undefined;
+    return bounds?.shape.shape === "box"
+      ? {
+          base: bounds.transform.position,
+          size: { x: bounds.shape.size_x, y: bounds.shape.size_y, z: bounds.shape.size_z },
+        }
+      : null;
+  }, [latestScene]);
+  const aspect = useWindowAspect();
+  const followedCamera = source.kind === "scenario" ? source.camera : undefined;
+  // The pose last framed here, to tell it from one a person chose.
+  const [framed, setFramed] = useState<CameraPose | null>(null);
+  const cameraAt = sample?.camera ?? null;
   useEffect(() => {
-    if (followed === null || houseShape === null || housePlace === null) {
+    if (followed === null || latestBounds === null) {
       return;
     }
-    const size = { x: houseShape.size_x, y: houseShape.size_y, z: houseShape.size_z };
+    const untouched =
+      followedCamera === undefined ||
+      (framed !== null &&
+        samePose(followedCamera, framed) &&
+        cameraAt !== null &&
+        Math.hypot(
+          cameraAt.x - framed.position.x,
+          cameraAt.y - framed.position.y,
+          cameraAt.z - framed.position.z,
+        ) < FRAMED_STILL_M);
+    if (!untouched) {
+      return;
+    }
+    const pose = framing(latestBounds.base, latestBounds.size, aspect);
+    if (followedCamera !== undefined && samePose(followedCamera, pose)) {
+      return;
+    }
+    setFramed(pose);
     setSource((current) =>
-      current.kind === "scenario" && current.follow && current.camera === undefined
-        ? { ...current, camera: framing(housePlace, size, window.innerWidth / window.innerHeight) }
-        : current,
+      current.kind === "scenario" && current.follow ? { ...current, camera: pose } : current,
     );
-  }, [followed, houseShape, housePlace, setSource]);
+  }, [followed, latestBounds, aspect, followedCamera, framed, cameraAt, setSource]);
   // The item drawn where a drag takes it: while the drag lasts, and once let
   // go, until the scene with the item moved arrives, or fails to.
   const nudged =
