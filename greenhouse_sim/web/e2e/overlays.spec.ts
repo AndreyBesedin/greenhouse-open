@@ -10,6 +10,9 @@ const CAMERA_VIEW_LINES = 8;
 test("overlays over the scene are hidden and shown again without asking the simulator", async ({
   page,
 }) => {
+  // Six switches, each waiting for the view to settle: on CI's software
+  // rendering, at two frames a second, two to six seconds each.
+  test.setTimeout(60_000);
   await page.goto(PROBED_AIR);
   const status = page.getByTestId("field-status");
   await expect(status).toContainText("24 × 13 × 8 cells");

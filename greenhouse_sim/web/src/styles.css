@@ -160,6 +160,12 @@ body {
   vertical-align: top;
 }
 
+.scenario-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 4px;
+}
+
 .hud {
   position: absolute;
   top: 12px;

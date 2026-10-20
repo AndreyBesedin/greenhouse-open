@@ -273,3 +273,16 @@ describe("drawing a checked scene", () => {
     expect(rejected).toContain("/entities/0/kind must be equal to one of the allowed values");
   });
 });
+
+describe("following a run as it is played back", () => {
+  it("is kept in the address, beside the scenario's field and moment", () => {
+    const search = "?scenario=reference_greenhouse&field=climate&t=600&follow=1";
+    const source = sourceFromSearch(search);
+
+    expect(source).toMatchObject({ kind: "scenario", follow: true, time: 600 });
+    expect(searchFor(source)).toBe(search);
+    expect(sourceFromSearch("?scenario=reference_greenhouse&follow=0")).not.toHaveProperty(
+      "follow",
+    );
+  });
+});

@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import { loadFieldNames } from "./fields/FieldControls";
+import { CLIMATE_FIELD } from "./fields/source";
 import { FIRST_LAB_RUN } from "./plants/lab";
 import { DEFAULT_STRESS_PLANTS } from "./qa/stressScene";
 import { ScenarioList } from "./ScenarioList";
@@ -107,6 +109,18 @@ export function SourceChooser({
             })
           }
           onLive={(scenarioId) => choose({ kind: "live", scenarioId })}
+          onFollow={(scenarioId) =>
+            // Its climate drawn, if its layout's equipment makes one; or
+            // none, for a scenario whose airflow is its own.
+            void loadFieldNames(scenarioId).then(({ names }) =>
+              choose({
+                kind: "scenario",
+                scenarioId,
+                ...(names.includes(CLIMATE_FIELD) ? { field: CLIMATE_FIELD } : {}),
+                follow: true,
+              }),
+            )
+          }
         />
       </section>
       <Group
@@ -123,7 +137,8 @@ export function SourceChooser({
       />
       <p className="chooser-note">
         Open: its run here, from its start or its opening day. Live: the simulator plays it a day a
-        second, the same for every viewer. Back returns to the view before.
+        second, the same for every viewer. Follow: its own run as it is played back, the run a
+        consumer reads. Back returns to the view before.
       </p>
     </details>
   );

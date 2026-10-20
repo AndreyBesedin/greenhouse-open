@@ -68,6 +68,9 @@ export type SceneSource =
       /** Where the camera starts, rather than the default preset: for a part
        * of a big greenhouse no preset frames. */
       camera?: CameraPose;
+      /** Whether its moment follows the clock of its own run played back
+       * (P10.2, decision 0041), rather than being set here. */
+      follow?: true;
       envelope?: Readonly<Record<string, number>>;
       openings?: Readonly<Record<string, number>>;
       levels?: Readonly<Record<string, number>>;
@@ -143,6 +146,7 @@ export function sourceFromSearch(search: string): SceneSource {
       ...(field && probes ? { probes } : {}),
       ...(parameters.get("cfd") === CFD_BOUNDARIES ? { cfdBoundaries: true as const } : {}),
       ...(camera === undefined ? {} : { camera }),
+      ...(parameters.get("follow") === "1" ? { follow: true as const } : {}),
       ...(envelope === null ? {} : { envelope }),
       ...(openings === null ? {} : { openings }),
       ...(levels === null ? {} : { levels }),
@@ -239,7 +243,7 @@ export function searchFor(source: SceneSource): string {
         .map((part) => `&${part}`)
         .join(
           "",
-        )}${source.clouds === undefined ? "" : `&clouds=${source.clouds}`}${source.wind === undefined ? "" : `&wind=${source.wind}`}${fieldQuery(source)}${source.cfdBoundaries ? `&cfd=${CFD_BOUNDARIES}` : ""}${source.camera === undefined ? "" : `&camera=${cameraText(source.camera)}`}`;
+        )}${source.clouds === undefined ? "" : `&clouds=${source.clouds}`}${source.wind === undefined ? "" : `&wind=${source.wind}`}${fieldQuery(source)}${source.cfdBoundaries ? `&cfd=${CFD_BOUNDARIES}` : ""}${source.camera === undefined ? "" : `&camera=${cameraText(source.camera)}`}${source.follow ? "&follow=1" : ""}`;
     case "live":
       return `?live=${encodeURIComponent(source.scenarioId)}`;
   }
