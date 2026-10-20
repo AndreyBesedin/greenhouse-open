@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { unfold } from "./folds";
+
 // The reference run's own schedule (P09.4) and its thermostat (P10.3): its
 // manifest vents and stirs the house by the clock every day, unless the
 // address gives daily commands of its own, and its thermostat heats it to
@@ -47,6 +49,7 @@ test("reference schedule: the run vents by its own clock, its thermostat heats i
   });
 
   await test.step("switched off by hand, the heater is the command's, not the thermostat's", async () => {
+    await unfold(page, "Equipment");
     await page
       .getByRole("group", { name: "Equipment" })
       .getByRole("checkbox", { name: "heater" })
