@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 
 import { renderToStaticMarkup } from "react-dom/server";
+import { Quaternion, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
+
+import { entityBounds } from "../debug/overlays";
 
 import { SceneStatus } from "../SceneStatus";
 import { present } from "../testing/present";
@@ -17,6 +20,7 @@ import {
   putBack,
   shifted,
   snapped,
+  undoable,
 } from "./moves";
 
 // The climate box, 12 m by 6.4 m: its heater in the back right corner, 0.6
@@ -75,6 +79,17 @@ describe("moves written in a layout's name", () => {
     expect(layoutWith("default", "default", { a: { dx: -0.04, dy: 0 } })).toBe("default~a:0:0");
   });
 
+  it("are undone in the view a move led to, and in no other scenario's", () => {
+    const made = [
+      { scenarioId: "climate_box", before: "default~heater:0.5:0", after: "default~heater:1:0" },
+    ];
+    expect(undoable(made, "climate_box", "default~heater:1:0")).toBe(made[0]);
+    expect(undoable(made, "climate_box", "default~heater:0.5:0")).toBeNull();
+    // The same layout's name in another scenario, come back to with Back.
+    expect(undoable(made, "reference_greenhouse", "default~heater:1:0")).toBeNull();
+    expect(undoable([], "climate_box", undefined)).toBeNull();
+  });
+
   it("move what is equipment or a sensor, and nothing else", () => {
     expect(movableItem(HEATER)).toBe("heater");
     expect(movableItem(entity("fan"))).toBe("fan");
@@ -118,6 +133,57 @@ describe("a drag's move", () => {
       transform: { position: { x: 6.5, y: 8.4, z: 0 }, rotation: quarter },
     };
     expect(keptInside({ dx: 0, dy: 3 }, heater, house)).toEqual({ dx: 0, dy: 0.4 });
+  });
+
+  it("keeps to the snap and inside a house turned across its steps", () => {
+    // The house turned a twelfth of a turn about its centre, the heater with
+    // it: its walls run across the world's 10 cm steps.
+    const turn = new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), Math.PI / 6);
+    const centre = new Vector3(6, 3.2, 0);
+    const turned = (entity: SceneEntity): SceneEntity => {
+      const { position, rotation } = entity.transform;
+      const at = new Vector3(position.x, position.y, position.z)
+        .sub(centre)
+        .applyQuaternion(turn)
+        .add(centre);
+      const own = new Quaternion(rotation.x, rotation.y, rotation.z, rotation.w).premultiply(turn);
+      return {
+        ...entity,
+        transform: {
+          position: { x: at.x, y: at.y, z: at.z },
+          rotation: { w: own.w, x: own.x, y: own.y, z: own.z },
+        },
+      };
+    };
+    const house = turned(HOUSE);
+    const heater = turned(HEATER);
+    const back = turn.clone().invert();
+    // How far inside the house's walls the heater's box would stand, at
+    // the least, in the house's own axes.
+    const clearance = (by: { dx: number; dy: number }) => {
+      const { min, max } = entityBounds(shifted(heater, by));
+      const corners = [min.x, max.x].flatMap((x) =>
+        [min.y, max.y].map((y) => new Vector3(x, y, 0).sub(centre).applyQuaternion(back)),
+      );
+      return Math.min(
+        ...corners.flatMap((corner) => [6 - Math.abs(corner.x), 3.2 - Math.abs(corner.y)]),
+      );
+    };
+    const towards = Array.from({ length: 24 }, (_, n) => (n * Math.PI) / 12);
+    for (const angle of towards) {
+      for (const metres of [0.37, 2.5, 20]) {
+        const by = keptInside(
+          { dx: metres * Math.cos(angle), dy: metres * Math.sin(angle) },
+          heater,
+          house,
+        );
+        expect(snapped(by)).toEqual(by);
+        expect(clearance(by)).toBeGreaterThan(0);
+      }
+    }
+    // Dragged far into its corner, the heater stops near the walls.
+    const cornered = keptInside({ dx: 0, dy: 20 }, heater, house);
+    expect(clearance(cornered)).toBeLessThan(0.2);
   });
 
   it("draws an item where it would stand, its height kept", () => {

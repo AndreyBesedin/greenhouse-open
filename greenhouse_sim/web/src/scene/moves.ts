@@ -127,6 +127,27 @@ export function putBack(
   return layoutWith(layout, defaultLayout, rest);
 }
 
+/** A move made in a scenario's view, as the layouts before and after it. */
+export interface MoveMade {
+  scenarioId: string;
+  before: string | undefined;
+  after: string | undefined;
+}
+
+/** The latest move made, if it led to the view of `scenarioId` with
+ * `layout`, to be undone there; null if another view is shown, such as
+ * another scenario's with a layout of the same name. */
+export function undoable(
+  made: readonly MoveMade[],
+  scenarioId: string,
+  layout: string | undefined,
+): MoveMade | null {
+  const latest = made.at(-1);
+  return latest !== undefined && latest.scenarioId === scenarioId && latest.after === layout
+    ? latest
+    : null;
+}
+
 /** The item an entity draws, by its actuator or sensor, if it can be moved. */
 export function movableItem(entity: SceneEntity): string | null {
   const property = MOVABLE[entity.kind];
@@ -142,6 +163,11 @@ function snap(metres: number): number {
 /** An offset to the snap. */
 export function snapped({ dx, dy }: Offset): Offset {
   return { dx: snap(dx), dy: snap(dy) };
+}
+
+/** One offset after another. */
+export function plus(a: Offset, b: Offset): Offset {
+  return { dx: a.dx + b.dx, dy: a.dy + b.dy };
 }
 
 /** An entity as it would stand, moved by `by`. */
@@ -193,19 +219,46 @@ export function keptInside(by: Offset, item: SceneEntity, house: SceneEntity | n
   if (!inside) {
     return snapped(by);
   }
+  // How far the item may move along the house's own axes, its box kept
+  // inside the walls.
+  const from = {
+    x: walls.min.x - lowest.x + WALL_CLEARANCE_M,
+    y: walls.min.y - lowest.y + WALL_CLEARANCE_M,
+  };
+  const to = {
+    x: walls.max.x - highest.x - WALL_CLEARANCE_M,
+    y: walls.max.y - highest.y - WALL_CLEARANCE_M,
+  };
+  const keeps = ({ dx, dy }: Offset) => {
+    const along = new Vector3(dx, dy, 0).applyQuaternion(back);
+    return along.x >= from.x && along.x <= to.x && along.y >= from.y && along.y <= to.y;
+  };
   // The move in the house's own axes, held between its walls, each limit
-  // rounded inwards to the snap.
+  // rounded inwards to the snap: on it, where the house's axes are the
+  // world's.
   const along = new Vector3(by.dx, by.dy, 0).applyQuaternion(back);
-  const held = (value: number, from: number, to: number) =>
+  const held = (value: number, least: number, most: number) =>
     Math.min(
-      Math.max(value, Math.ceil((from + WALL_CLEARANCE_M) / SNAP_M) * SNAP_M),
-      Math.floor((to - WALL_CLEARANCE_M) / SNAP_M) * SNAP_M,
+      Math.max(value, Math.ceil(least / SNAP_M) * SNAP_M),
+      Math.floor(most / SNAP_M) * SNAP_M,
     );
-  along.set(
-    held(along.x, walls.min.x - lowest.x, walls.max.x - highest.x),
-    held(along.y, walls.min.y - lowest.y, walls.max.y - highest.y),
-    0,
-  );
+  along.set(held(along.x, from.x, to.x), held(along.y, from.y, to.y), 0);
   along.applyQuaternion(turn);
-  return snapped({ dx: along.x, dy: along.y });
+  const near = snapped({ dx: along.x, dy: along.y });
+  if (keeps(near)) {
+    return near;
+  }
+  // A house turned otherwise has walls across the snap's steps, and the
+  // nearest step may lie outside one: the nearest step that keeps inside,
+  // or no move if none near does.
+  const steps = (metres: number) =>
+    [-1, 0, 1, 2].map((step) => snap((Math.floor(metres / SNAP_M) + step) * SNAP_M));
+  const kept = steps(along.x)
+    .flatMap((dx) => steps(along.y).map((dy) => ({ dx, dy })))
+    .filter(keeps);
+  const away = ({ dx, dy }: Offset) => Math.hypot(dx - along.x, dy - along.y);
+  return kept.reduce<Offset>(
+    (best, step) => (away(step) < away(best) ? step : best),
+    kept[0] ?? NO_OFFSET,
+  );
 }

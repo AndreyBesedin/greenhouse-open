@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Page, type Route, test } from "@playwright/test";
 
 import type { CameraPose } from "../src/camera.ts";
 import type { Point3 } from "../src/world.ts";
@@ -110,5 +110,51 @@ test("moving: the heater is dragged across the floor, undone, cancelled, and Bac
 
     await expect(page).not.toHaveURL(/layout=/);
     await expect(position).toHaveText("x 11.20, y 0.70, z 0.00");
+  });
+});
+
+test("moving: a drag before the last move's scene arrives starts where the heater is drawn", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const position = page.getByTestId("selected-position");
+  const offset = page.getByTestId("move-offset");
+  // The scenes of moved layouts, held until the test lets them through.
+  const held: Route[] = [];
+  const moved = (url: URL) =>
+    url.pathname.endsWith("/scene") && (url.searchParams.get("layout") ?? "").includes("~");
+  await page.route(moved, (route) => {
+    held.push(route);
+  });
+
+  await page.goto(`/?scenario=climate_box&camera=${cameraText(ACROSS)}`);
+  await expect(page.getByTestId("scene-status")).toContainText("climate_box, day 0, 128 entities");
+  await selectAt(page, HEATER_SIDE, "climate_box_heater", ACROSS);
+  await page.getByRole("button", { name: "Move", exact: true }).click();
+
+  await test.step("a first move, its scene on its way", async () => {
+    // 0.3 m towards the right side wall, 0.5 m beyond the heater's box.
+    await drag(page, HEATER_FOOT, { x: 11.5, y: 0.3, z: 0 });
+    await expect(page).toHaveURL(/[?&]layout=default~heater:0\.3:0(&|$)/);
+    await expect.poll(() => held.length).toBeGreaterThan(0);
+    await expect(position).toHaveText("x 11.20, y 0.70, z 0.00");
+  });
+
+  await test.step("a second drag is held by the wall from where the heater is drawn", async () => {
+    await drag(page, { x: 10.9, y: 0.3, z: 0 }, { x: 11.9, y: 0.3, z: 0 });
+    // A step short of the wall: 0.1 m more, not the 0.4 m it had at first.
+    await expect(page).toHaveURL(/[?&]layout=default~heater:0\.4:0(&|$)/);
+    await expect(offset).toHaveText(
+      "The heater stands +0.4 m along x and 0.0 m along y from where its layout places it.",
+    );
+  });
+
+  await test.step("its scene arrives with the heater there", async () => {
+    await page.unroute(moved);
+    for (const route of held) {
+      // The first move's scene was given up for the second's.
+      await route.continue().catch(() => undefined);
+    }
+    await expect(position).toHaveText("x 11.60, y 0.70, z 0.00");
   });
 });

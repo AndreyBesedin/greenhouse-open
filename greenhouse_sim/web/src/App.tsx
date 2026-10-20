@@ -66,12 +66,16 @@ import { equipmentUrl, governedLevels, loadEquipment, runningThermostat } from "
 import {
   baseLayout,
   keptInside,
+  type MoveMade,
   movableItem,
   movedBy,
   movesIn,
+  NO_OFFSET,
   type Offset,
+  plus,
   putBack,
   shifted,
+  undoable,
 } from "./scene/moves";
 import { commandPlayback, followedMoment, usePlayback } from "./scene/playback";
 import { runApartFromItsMoment, runsSomething, scenarioRun } from "./scene/run";
@@ -118,20 +122,16 @@ const EMPTY_PROBES: Point3[] = [];
 const NO_OPENINGS: readonly string[] = [];
 
 /** A drag moving the selected item (#209): the entity, how far it has moved
- * it, from where it stood, under which layout, and whether it has been let
- * go, its move made. */
+ * it, from where the scene shown places it and how far it was drawn from
+ * there as the drag began (by a move let go whose scene is on its way),
+ * under which layout, and whether it has been let go, its move made. */
 interface Dragged {
   entityId: string;
   by: Offset;
   from: Point3;
+  before: Offset;
   layout: string | undefined;
   dropped: boolean;
-}
-
-/** A move made, as the layouts before and after it, to be undone. */
-interface MoveMade {
-  before: string | undefined;
-  after: string | undefined;
 }
 
 function samePoint(a: Point3, b: Point3): boolean {
@@ -542,8 +542,13 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     !failed(sceneProgress.latest)
       ? dragged
       : null;
+  // How far the item is drawn from where the scene shown places it, and how
+  // far a drag starts from there: as drawn, a move let go included, but for
+  // the drag under way.
+  const drawnBy = nudged === null ? NO_OFFSET : plus(nudged.before, nudged.by);
+  const startsBy = nudged === null || nudged.dropped ? drawnBy : nudged.before;
   const drawnSelected =
-    selected === null || nudged === null ? selected : shifted(selected, nudged.by);
+    selected === null || nudged === null ? selected : shifted(selected, drawnBy);
   // How far the item stands from where its layout places it, a drag under
   // way included.
   const placedBy = movable === null ? null : (movesIn(layoutShown)[movable] ?? null);
@@ -551,9 +556,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     nudged === null || nudged.dropped
       ? placedBy
       : { dx: (placedBy?.dx ?? 0) + nudged.by.dx, dy: (placedBy?.dy ?? 0) + nudged.by.dy };
-  const lastMove = movesMade.at(-1);
-  const canUndo =
-    source.kind === "scenario" && lastMove !== undefined && lastMove.after === source.layout;
+  const lastMove =
+    source.kind === "scenario" ? undoable(movesMade, source.scenarioId, source.layout) : null;
+  const canUndo = lastMove !== null;
 
   // A move made is another layout, and a page of its own in the browser's
   // history, so that Back undoes it too.
@@ -561,15 +566,28 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     if (source.kind !== "scenario") {
       return;
     }
-    setMovesMade((made) => [...made, { before: source.layout, after }]);
+    const { scenarioId, layout: before } = source;
+    setMovesMade((made) => [...made, { scenarioId, before, after }]);
     setSource((current) => withLayout(current, after));
+  }
+  // A drag cancelled, or let go where it began: the item drawn as it was,
+  // a move on its way still where it was let go.
+  function dragEnded(): void {
+    setDragged((was) => {
+      if (was === null || was.dropped) {
+        return was;
+      }
+      return was.before.dx === 0 && was.before.dy === 0
+        ? null
+        : { ...was, by: was.before, before: NO_OFFSET, dropped: true };
+    });
   }
   function dropMove(by: Offset | null): void {
     if (source.kind !== "scenario" || movable === null || selected === null) {
       return;
     }
     if (by === null || (by.dx === 0 && by.dy === 0)) {
-      setDragged(null);
+      dragEnded();
       return;
     }
     const after = movedBy(source.layout, DEFAULT_LAYOUT, movable, by);
@@ -577,13 +595,14 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       entityId: selected.entity_id,
       by,
       from: selected.transform.position,
+      before: startsBy,
       layout: after,
       dropped: true,
     });
     makeMove(after);
   }
   function undoMove(): void {
-    if (!canUndo || lastMove === undefined) {
+    if (lastMove === null) {
       return;
     }
     setDragged(null);
@@ -815,24 +834,24 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
           moving && selected !== null
             ? {
                 heightM: selected.transform.position.z,
-                shape: (by) => keptInside(by, selected, house),
+                // From where the item is drawn, a move on its way included.
+                shape: (by) => keptInside(by, shifted(selected, startsBy), house),
                 onDrag: (by) =>
-                  setDragged(
-                    by === null || source.kind !== "scenario"
-                      ? null
-                      : {
-                          entityId: selected.entity_id,
-                          by,
-                          from: selected.transform.position,
-                          layout: source.layout,
-                          dropped: false,
-                        },
-                  ),
+                  by === null || source.kind !== "scenario"
+                    ? dragEnded()
+                    : setDragged({
+                        entityId: selected.entity_id,
+                        by,
+                        from: selected.transform.position,
+                        before: startsBy,
+                        layout: source.layout,
+                        dropped: false,
+                      }),
                 onDrop: dropMove,
               }
             : null
         }
-        nudged={nudged}
+        nudged={nudged === null ? null : { entityId: nudged.entityId, by: drawnBy }}
       >
         {overlayToggles.airField && fieldLayer}
         {cfd.status === "loaded" && <CfdBoundaries geometry={cfd.geometry} />}
