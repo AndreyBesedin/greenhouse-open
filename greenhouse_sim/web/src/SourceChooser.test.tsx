@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SourceChooser } from "./SourceChooser";
 import type { ScenarioSummary, ScenariosState } from "./scenarios";
@@ -85,6 +86,39 @@ describe("the choice of what the viewer shows", () => {
 
     click(button(details, "Play climate_box live"));
     expect(onSource).toHaveBeenLastCalledWith({ kind: "live", scenarioId: "climate_box" });
+  });
+
+  it("follows a scenario's run, its climate drawn only where its layout makes one", async () => {
+    const fields: Record<string, string[]> = {
+      reference_greenhouse: ["uniform", "climate"],
+      climate_box: ["uniform"],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        const scenarioId = decodeURIComponent(url.split("/")[3] ?? "");
+        return new Response(JSON.stringify({ fields: fields[scenarioId], configured: "uniform" }));
+      }),
+    );
+    try {
+      const { details, onSource } = shown(vi.fn(), true);
+
+      await act(async () => click(button(details, "Follow reference_greenhouse")));
+      expect(onSource).toHaveBeenLastCalledWith({
+        kind: "scenario",
+        scenarioId: "reference_greenhouse",
+        field: "climate",
+        follow: true,
+      });
+      await act(async () => click(button(details, "Follow climate_box")));
+      expect(onSource).toHaveBeenLastCalledWith({
+        kind: "scenario",
+        scenarioId: "climate_box",
+        follow: true,
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("chooses a test scene or the plant lab by name", () => {

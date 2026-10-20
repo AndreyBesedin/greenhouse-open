@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import { loadFieldNames } from "./fields/FieldControls";
+import { CLIMATE_FIELD } from "./fields/source";
 import { FIRST_LAB_RUN } from "./plants/lab";
 import { DEFAULT_STRESS_PLANTS } from "./qa/stressScene";
 import { ScenarioList } from "./ScenarioList";
@@ -108,7 +110,16 @@ export function SourceChooser({
           }
           onLive={(scenarioId) => choose({ kind: "live", scenarioId })}
           onFollow={(scenarioId) =>
-            choose({ kind: "scenario", scenarioId, field: "climate", follow: true })
+            // Its climate drawn, if its layout's equipment makes one; or
+            // none, for a scenario whose airflow is its own.
+            void loadFieldNames(scenarioId).then(({ names }) =>
+              choose({
+                kind: "scenario",
+                scenarioId,
+                ...(names.includes(CLIMATE_FIELD) ? { field: CLIMATE_FIELD } : {}),
+                follow: true,
+              }),
+            )
           }
         />
       </section>
