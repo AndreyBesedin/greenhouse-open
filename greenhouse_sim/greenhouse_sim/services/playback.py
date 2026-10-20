@@ -435,13 +435,17 @@ def start(
     """The scenario's playback, started, at `seconds_per_day` if given: the
     one already started, or a new one from the run's start, on `clock`;
     playing, unless `hold`, when its clock waits for a play command while
-    the run is worked out ahead of it."""
+    the run is worked out ahead of it. A pace refused starts nothing."""
+    if seconds_per_day is not None:
+        _check_pace(seconds_per_day)
     with _playbacks_lock:
         found = _playbacks.get(scenario_id)
         if found is None:
             found = Playback(
                 scenario_id,
-                seconds_per_day=seconds_per_day or DEFAULT_SECONDS_PER_DAY,
+                seconds_per_day=DEFAULT_SECONDS_PER_DAY
+                if seconds_per_day is None
+                else seconds_per_day,
                 clock=clock,
                 epochs=epochs,
             )
