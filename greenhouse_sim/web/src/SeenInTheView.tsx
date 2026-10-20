@@ -1,26 +1,41 @@
 import { useState } from "react";
 
-import { type OverlayToggles, type SceneOverlay, SELECTION_COLOR } from "./debug/overlays";
+import { CFD_COLORS } from "./cfd/boundaries";
+import { CATEGORY_COLORS, type Category } from "./debug/categories";
+import { DIMENSION_COLOR } from "./debug/dimensions";
+import type { OverlayToggles, SceneOverlay } from "./debug/overlays";
+import {
+  CUBE_COLOR,
+  CUBE_CORNER_M,
+  CUBE_SIZE_M,
+  GRID_COLORS,
+  GRID_DIVISIONS,
+  GRID_SIZE_M,
+  PLACEHOLDER_AXES_LENGTH_M,
+} from "./emptyView";
 import type { FieldView } from "./fields/display";
-import { FLOW_COLOR } from "./fields/openingFlows";
+import {
+  ARROW_M_PER_M3_S,
+  FLOW_COLOR,
+  LONGEST_ARROW_M,
+  SHORTEST_ARROW_M,
+} from "./fields/openingFlows";
 import { PROBE_COLOR } from "./fields/probes";
-import type { SceneEntityKind } from "./scene/generated/snapshotTypes";
+import type { SceneEntityKind, SceneSnapshot } from "./scene/generated/snapshotTypes";
 import { FRUSTUM_COLOR } from "./sensors/camera";
 import { SUN_COLOR, WIND_COLOR } from "./weather/weather";
 
-// The colours of what the scene draws itself, as the simulator and the
-// view draw them (scene/snapshot.py, Viewport.tsx), and of a scale, a
-// category's and the CFD boundaries' colours as the card hints at them.
-const GRID_COLOR = "#888888";
+// The colours of what the scene draws itself, as the simulator draws them
+// (scene/snapshot.py), and of a scale as the card hints at it.
 const AXES_COLORS = "linear-gradient(90deg, #e03c31 33%, #2e9e44 33% 66%, #2f6fd6 66%)";
 const PLANTING_COLOR = "#d99940";
 const GLASS_COLOR = "#9ec7e0";
 const EQUIPMENT_OFF_COLOR = "#8c8c8c";
 const SCALE_COLORS = "linear-gradient(90deg, #440154, #21918c, #fde725)";
-const CATEGORY_COLORS = "linear-gradient(90deg, #e69f00, #56b4e9, #009e73)";
-const CFD_COLOR = "#999999";
-const EQUIPMENT_KINDS: readonly SceneEntityKind[] = ["FAN", "HEATER", "DEHUMIDIFIER"];
-const GLAZED_KINDS: readonly SceneEntityKind[] = ["WALL", "ROOF", "VENT"];
+// The categories' swatch: the first three of their colours, as a hint.
+const CATEGORY_HINT: readonly Category[] = ["FLOOR", "WALL", "ROOF"];
+const EQUIPMENT_KINDS = ["FAN", "HEATER", "DEHUMIDIFIER"] as const satisfies readonly Category[];
+const GLAZED_KINDS = ["WALL", "ROOF", "VENT"] as const satisfies readonly Category[];
 
 /** One thing in the view, and what it means. */
 export interface SeenRow {
@@ -54,32 +69,51 @@ export interface ViewState {
   fieldView: FieldView;
   /** What the air field's colours measure, if one is drawn. */
   fieldScale: { title: string; unit: string } | null;
+  /** How many cells apart the air field's arrows stand along x and y: 1
+   * on every cell, more on a field too big for that (`arrowSpacing`). */
+  fieldArrowSpacing: number;
+  /** Which of the sun overlay's two halves have something to draw: the sun
+   * where it is now (above the horizon only), and its path through the day,
+   * each loaded on its own. */
+  sun: { now: boolean; path: boolean };
   colourBy: string | null;
   byCategory: boolean;
   cfdBoundaries: boolean;
   dimensions: boolean;
-  /** The kinds the scene holds; null while the empty grid is shown. */
+  /** The kinds the scene holds; null while the empty view is shown. */
   kinds: ReadonlySet<SceneEntityKind> | null;
+  /** How long the world axes are drawn, in metres: the scene's own, or the
+   * empty view's; null when none are drawn. */
+  axesLengthM: number | null;
 }
 
-const OVERLAYS: Record<Exclude<SceneOverlay, "airField">, Omit<SeenRow, "key">> = {
+/** How long the world axes are drawn, in metres: a scene's own axes marker,
+ * one metre in the simulator's scenes, or the empty view's two; null for a
+ * scene that holds none. */
+export function worldAxesLength(snapshot: SceneSnapshot | null): number | null {
+  if (snapshot === null) {
+    return PLACEHOLDER_AXES_LENGTH_M;
+  }
+  const axes = snapshot.entities.find((entity) => entity.kind === "AXES");
+  return axes?.shape.shape === "axes" ? axes.shape.length : null;
+}
+
+type OverlayRow = Omit<SeenRow, "key">;
+
+const OVERLAYS: Record<Exclude<SceneOverlay, "airField" | "sun">, OverlayRow> = {
   openingFlows: {
     glyph: "arrow",
     color: FLOW_COLOR,
     name: "Flows through openings",
-    meaning: "Air in or out of each open door or vent: a metre of arrow per m³/s.",
+    meaning:
+      `Air in or out of each open door or vent: ${ARROW_M_PER_M3_S} m of arrow per m³/s, ` +
+      `never shorter than ${SHORTEST_ARROW_M} m nor longer than ${LONGEST_ARROW_M} m.`,
   },
   wind: {
     glyph: "arrow",
     color: WIND_COLOR,
     name: "Wind",
     meaning: "The wind outside, the way it blows: a metre of arrow per m/s.",
-  },
-  sun: {
-    glyph: "dot",
-    color: SUN_COLOR,
-    name: "Sun and its path",
-    meaning: "Where the sun is now, and its path through the day, its height and bearing in °.",
   },
   cameraViews: {
     glyph: "line",
@@ -95,21 +129,55 @@ const OVERLAYS: Record<Exclude<SceneOverlay, "airField">, Omit<SeenRow, "key">> 
   },
 };
 
+/** The sun overlay as far as it draws: the sun now, its day's path, or both. */
+function sunRow({ now, path }: ViewState["sun"]): OverlayRow {
+  const looks = { glyph: "dot", color: SUN_COLOR } as const;
+  if (now && !path) {
+    return { ...looks, name: "Sun", meaning: "Where the sun is now, its height and bearing in °." };
+  }
+  if (path && !now) {
+    return { ...looks, name: "Sun's path", meaning: "The sun's path through the day." };
+  }
+  return {
+    ...looks,
+    name: "Sun and its path",
+    meaning: "Where the sun is now, its height and bearing in °, and its path through the day.",
+  };
+}
+
 /** The air field as it is drawn, and what its colours measure. */
-function airField(view: FieldView, scale: { title: string; unit: string } | null): SeenRow {
-  const measured = scale === null ? "" : ` Its colours: ${scale.title} (${scale.unit}).`;
+function airField(view: ViewState): SeenRow {
+  const { fieldView, fieldScale, fieldArrowSpacing } = view;
+  const measured =
+    fieldScale === null ? "" : ` Its colours: ${fieldScale.title} (${fieldScale.unit}).`;
+  const where =
+    fieldArrowSpacing > 1
+      ? `in one cell in ${fieldArrowSpacing} along x and y, a big field thinned to draw quickly`
+      : "in each cell";
   const meaning = {
-    arrows: "The air's velocity in each cell: an arrow's length and colour, its speed.",
+    arrows: `The air's velocity ${where}: an arrow's length and colour, its speed.`,
     streamlines: "The air's paths, traced through the field from seeds across it.",
     slice: "A plane through the air, each cell coloured by what it measures.",
-  }[view];
+  }[fieldView];
   return {
     key: "airField",
-    glyph: view === "slice" ? "square" : "arrow",
+    glyph: fieldView === "slice" ? "square" : "arrow",
     color: SCALE_COLORS,
-    name: `Air field ${view}`,
+    name: `Air field ${fieldView}`,
     meaning: `${meaning}${measured}`,
   };
+}
+
+function overlayRow(overlay: SceneOverlay, view: ViewState): SeenRow {
+  if (overlay === "airField") {
+    return airField(view);
+  }
+  return { key: overlay, ...(overlay === "sun" ? sunRow(view.sun) : OVERLAYS[overlay]) };
+}
+
+/** A swatch for one colour or several. */
+function swatch(colors: readonly string[]): string {
+  return colors.length === 1 ? (colors[0] ?? "") : `linear-gradient(90deg, ${colors.join(", ")})`;
 }
 
 /**
@@ -121,16 +189,10 @@ function airField(view: FieldView, scale: { title: string; unit: string } | null
  */
 export function seenInTheView(view: ViewState): Seen {
   const shown = view.drawn.filter((overlay) => view.overlays[overlay]);
-  const overlays = shown.map((overlay) =>
-    overlay === "airField"
-      ? airField(view.fieldView, view.fieldScale)
-      : { key: overlay, ...OVERLAYS[overlay] },
-  );
+  const overlays = shown.map((overlay) => overlayRow(overlay, view));
   const hidden = view.drawn
     .filter((overlay) => !view.overlays[overlay])
-    .map((overlay) =>
-      overlay === "airField" ? `air field ${view.fieldView}` : OVERLAYS[overlay].name.toLowerCase(),
-    );
+    .map((overlay) => overlayRow(overlay, view).name.toLowerCase());
 
   const colours: SeenRow[] = [];
   if (view.colourBy !== null) {
@@ -146,7 +208,7 @@ export function seenInTheView(view: ViewState): Seen {
     colours.push({
       key: "categories",
       glyph: "square",
-      color: CATEGORY_COLORS,
+      color: swatch(CATEGORY_HINT.map((category) => CATEGORY_COLORS[category])),
       name: "Categories",
       meaning: "Each entity coloured by what it is: the legend below.",
     });
@@ -155,73 +217,106 @@ export function seenInTheView(view: ViewState): Seen {
     colours.push({
       key: "cfd",
       glyph: "square",
-      color: CFD_COLOR,
+      color: swatch(Object.values(CFD_COLORS)),
       name: "CFD boundaries",
-      meaning: "The faces the air's mesh is bounded by, by kind: the legend below.",
+      meaning:
+        "The faces the air's mesh is bounded by, each in its kind's colour: the legend below.",
     });
   }
   if (view.dimensions) {
     colours.push({
       key: "dimensions",
       glyph: "line",
-      color: SELECTION_COLOR,
+      color: DIMENSION_COLOR,
       name: "Dimensions and axis labels",
-      meaning: "Each entity's size, and the selected one's axes.",
+      meaning:
+        "The greenhouse's length, width and height along its floor edges, and the axes' names.",
     });
   }
 
-  return { overlays, colours, always: always(view.kinds), hidden };
+  return { overlays, colours, always: always(view), hidden };
 }
 
 /** What the scene always draws: the ground grid, the world's axes, and,
- * where the scene holds them, its glass, planting positions and equipment. */
-function always(kinds: ReadonlySet<SceneEntityKind> | null): SeenRow[] {
+ * where the scene holds them, its glass, planting positions and equipment,
+ * in their own colours unless a colour mode puts its own on them
+ * (`SceneView`'s `shownColor`); or, before a scene, a cube for scale. */
+function always(view: ViewState): SeenRow[] {
+  const { kinds, axesLengthM, byCategory, colourBy } = view;
   const rows: SeenRow[] = [
     {
       key: "grid",
       glyph: "line",
-      color: GRID_COLOR,
+      color: GRID_COLORS.centre,
       name: "Ground grid",
-      meaning: "20 m across, in 1 m cells.",
+      meaning: `${GRID_SIZE_M} m across, in ${GRID_SIZE_M / GRID_DIVISIONS} m cells.`,
     },
   ];
-  if (kinds === null || kinds.has("AXES")) {
+  if (axesLengthM !== null) {
     rows.push({
       key: "axes",
       glyph: "line",
       color: AXES_COLORS,
       name: "World axes",
-      meaning: "2 m long from the origin: x red, y green, z blue.",
+      meaning: `${axesLengthM} m long from the origin: x red, y green, z blue.`,
     });
   }
   if (kinds === null) {
+    const far = CUBE_CORNER_M + CUBE_SIZE_M;
+    rows.push({
+      key: "cube",
+      glyph: "square",
+      color: CUBE_COLOR,
+      name: `A ${CUBE_SIZE_M} m cube`,
+      meaning:
+        `For scale, on the grid cell from (${CUBE_CORNER_M}, ${CUBE_CORNER_M}) ` +
+        `to (${far}, ${far}) m, until a scene is shown.`,
+    });
     return rows;
   }
-  if (GLAZED_KINDS.some((kind) => kinds.has(kind))) {
+  // A colour mode's colours replace an entity's own: the category's for
+  // every one of these, or the colouring's where it has the value.
+  const own = (color: string, meaning: string, held: readonly Category[]) =>
+    byCategory
+      ? {
+          color: swatch(held.map((kind) => CATEGORY_COLORS[kind])),
+          meaning: `${meaning} Each in its category's colour: the legend below.`,
+        }
+      : {
+          color,
+          meaning:
+            colourBy === null ? meaning : `${meaning} Shaded by ${colourBy} where it has a value.`,
+        };
+  const glazed = GLAZED_KINDS.filter((kind) => kinds.has(kind));
+  if (glazed.length > 0) {
     rows.push({
       key: "glass",
       glyph: "square",
-      color: GLASS_COLOR,
       name: "Glass",
-      meaning: "Walls, roof and vents, drawn see-through.",
+      ...own(GLASS_COLOR, "Walls, roof and vents, drawn see-through.", glazed),
     });
   }
   if (kinds.has("PLANTING_POSITION")) {
     rows.push({
       key: "planting",
       glyph: "dot",
-      color: PLANTING_COLOR,
       name: "Planting positions",
-      meaning: "A disc on the floor where a plant can stand.",
+      ...own(PLANTING_COLOR, "A disc on the floor where a plant can stand.", ["PLANTING_POSITION"]),
     });
   }
-  if (EQUIPMENT_KINDS.some((kind) => kinds.has(kind))) {
+  const equipment = EQUIPMENT_KINDS.filter((kind) => kinds.has(kind));
+  if (equipment.length > 0) {
     rows.push({
       key: "equipment",
       glyph: "square",
-      color: EQUIPMENT_OFF_COLOR,
       name: "Equipment",
-      meaning: "Grey while off, in its kind's colour while running. A fan's arrow shows its way.",
+      ...own(
+        EQUIPMENT_OFF_COLOR,
+        byCategory
+          ? "Running or not. A fan's arrow shows its way."
+          : "Grey while off, in its kind's colour while running. A fan's arrow shows its way.",
+        equipment,
+      ),
     });
   }
   return rows;

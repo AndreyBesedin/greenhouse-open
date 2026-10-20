@@ -31,9 +31,9 @@ export const EXCHANGE = "exchange_m3_s";
 const DECIMALS = 100;
 // The arrow at an opening: a metre long for each cubic metre a second, from
 // half a metre to three, beside the opening.
-const ARROW_M_PER_M3_S = 1;
-const SHORTEST_ARROW_M = 0.5;
-const LONGEST_ARROW_M = 3;
+export const ARROW_M_PER_M3_S = 1;
+export const SHORTEST_ARROW_M = 0.5;
+export const LONGEST_ARROW_M = 3;
 const ARROW_CLEARANCE_M = 0.2;
 const FLOW_DECIMALS = 2;
 export const FLOW_COLOR = "#16a085";

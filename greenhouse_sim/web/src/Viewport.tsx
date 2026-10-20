@@ -11,6 +11,15 @@ import {
 import { Overlays } from "./debug/DebugPrimitives";
 import type { OverlayPrimitive } from "./debug/overlays";
 import type { Colouring } from "./debug/scalar";
+import {
+  CUBE_COLOR,
+  CUBE_CORNER_M,
+  CUBE_SIZE_M,
+  GRID_COLORS,
+  GRID_DIVISIONS,
+  GRID_SIZE_M,
+  PLACEHOLDER_AXES_LENGTH_M,
+} from "./emptyView";
 import { HudProbe } from "./HudProbe";
 import type { ViewSample } from "./readouts";
 import { Section, type SectionPlane } from "./Section";
@@ -21,21 +30,12 @@ import { CLICK_TOLERANCE_PX, pickEntity } from "./selection";
 import type { SunLightPose } from "./weather/sunlight";
 import { type Point3, viewerToWorld, WORLD_TO_VIEWER_ROTATION } from "./world";
 
-// A 20 m ground grid with 1 m cells is always shown. Without a scene, 2 m world
-// axes and a 1 m cube resting on the grid cell from (1, 1) to (2, 2) m, clear
-// of the axes, make scale and orientation read at a glance.
-const GRID_SIZE_M = 20;
-const GRID_DIVISIONS = 20;
-const AXES_LENGTH_M = 2;
-const CUBE_SIZE_M = 1;
-const CUBE_CORNER_M = 1;
+// The empty view's cube rests on the grid, clear of the axes (`emptyView.ts`).
 const CUBE_CENTRE: [number, number, number] = [
   CUBE_CORNER_M + CUBE_SIZE_M / 2,
   CUBE_CORNER_M + CUBE_SIZE_M / 2,
   CUBE_SIZE_M / 2,
 ];
-const CUBE_COLOR = "#4f8a5b";
-const GRID_COLORS = { centre: "#888888", cells: "#cccccc" };
 export const BACKGROUND_COLOR = "#f4f4f2";
 
 export const AMBIENT_LIGHT_INTENSITY = 0.6;
@@ -169,7 +169,7 @@ export function Viewport({
         <group onClick={pick} ref={casters}>
           {snapshot === null ? (
             <>
-              <axesHelper args={[AXES_LENGTH_M]} />
+              <axesHelper args={[PLACEHOLDER_AXES_LENGTH_M]} />
               <mesh position={CUBE_CENTRE}>
                 <boxGeometry args={[CUBE_SIZE_M, CUBE_SIZE_M, CUBE_SIZE_M]} />
                 <meshStandardMaterial color={CUBE_COLOR} />
