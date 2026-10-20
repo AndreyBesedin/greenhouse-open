@@ -14,13 +14,13 @@ them to be written again.
 
 import json
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import Final
 
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.manifest_files import manifest_digest
-from greenhouse_sim.services.crop import forget_crops
-from greenhouse_sim.services.fields import forget_climate_runs, house_air_at
+from greenhouse_sim.services.fields import house_air_at
 from greenhouse_sim.services.replay import ROUNDED_DECIMALS, DayProbe, _rounded, day_probes
 
 FIXTURE: Final = Path(__file__).resolve().parent / "fixtures" / "reference_replay.json"
@@ -55,14 +55,13 @@ def test_a_replay_gives_the_same_digests_and_a_branch_the_same_before_its_change
     assert branch[1].thermal_time_cd < first[1].thermal_time_cd
 
 
-def test_a_replay_gives_the_same_digests_after_a_viewer_scrubbed_the_run() -> None:
+def test_a_replay_gives_the_same_digests_after_a_viewer_scrubbed_the_run(
+    afresh: Callable[[], None],
+) -> None:
     # A moment between the run's minutes, asked for first, changes nothing
     # that is worked out after it.
-    forget_climate_runs()
-    forget_crops()
     fresh = day_probes(SCENARIO, 1)
-    forget_climate_runs()
-    forget_crops()
+    afresh()
     house_air_at(SCENARIO, time_s=DAY_S - 30.0)
 
     assert day_probes(SCENARIO, 1) == fresh

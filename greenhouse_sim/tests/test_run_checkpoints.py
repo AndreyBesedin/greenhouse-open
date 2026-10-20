@@ -4,7 +4,7 @@ original does, and a branch sharing every day before its own."""
 
 import json
 import math
-from collections.abc import Iterator
+from collections.abc import Callable
 from http import HTTPStatus
 from typing import Any
 
@@ -13,10 +13,10 @@ import pytest
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.manifest_files import manifest_digest
-from greenhouse_sim.services import checkpoints
-from greenhouse_sim.services.crop import forget_crops, run_crop
+from greenhouse_sim.services import checkpoints, kept_states
+from greenhouse_sim.services.crop import run_crop
 from greenhouse_sim.services.errors import InvalidRequest
-from greenhouse_sim.services.fields import climate_run, forget_climate_runs
+from greenhouse_sim.services.fields import climate_run
 
 PLANT = "reference_greenhouse_plant_001"
 HOUR_S = 3600.0
@@ -24,19 +24,21 @@ HOUR_S = 3600.0
 BRANCH = [(DAY_S + HOUR_S, "heater", 0.0)]
 
 
-@pytest.fixture(autouse=True)
-def _afresh() -> Iterator[None]:
-    """Each test starts with no run, crop or checkpoint kept, as after the
-    API restarts."""
-    _forget_runs()
-    checkpoints.forget_checkpoints()
-    yield
-    checkpoints.forget_checkpoints()
+# Each test starts with no run, crop or checkpoint kept, as after the API
+# restarts.
+pytestmark = pytest.mark.usefixtures("afresh")
 
 
-def _forget_runs() -> None:
-    forget_climate_runs()
-    forget_crops()
+def _restarted(afresh: Callable[[], None]) -> None:
+    """As after the API restarts, its checkpoints uploaded again, as a client
+    that downloaded them keeps them: no run or crop kept."""
+    documents = [
+        checkpoints.checkpoint(summary.checkpoint_id).model_dump(mode="json")
+        for summary in checkpoints.checkpoints()
+    ]
+    afresh()
+    for document in documents:
+        checkpoints.upload_checkpoint(document)
 
 
 def _body(method: str, path: str, body: bytes = b"") -> Any:
@@ -78,13 +80,13 @@ def test_it_keeps_the_commands_given_before_its_day_and_its_daily_ones() -> None
     assert saved.levels == {"fan": 1.0}
 
 
-def test_a_restored_run_carries_on_as_the_original_does() -> None:
+def test_a_restored_run_carries_on_as_the_original_does(afresh: Callable[[], None]) -> None:
     later = f"/api/scenarios/reference_greenhouse/crop/{PLANT}?t={2 * DAY_S:.0f}"
     original = _body("GET", later)
     original_air = climate_run("reference_greenhouse")[1].house.air_at(2 * DAY_S + HOUR_S)
     checkpoints.save_checkpoint("reference_greenhouse", time_s=DAY_S)
 
-    _forget_runs()
+    _restarted(afresh)
     restored = _body("GET", later)
     house = climate_run("reference_greenhouse")[1].house
 
@@ -94,14 +96,16 @@ def test_a_restored_run_carries_on_as_the_original_does() -> None:
     assert [m for m in house._kept if 0.0 < m < DAY_S - HOUR_S] == []
 
 
-def test_a_restored_run_draws_its_days_first_hour_from_the_checkpoint() -> None:
+def test_a_restored_run_draws_its_days_first_hour_from_the_checkpoint(
+    afresh: Callable[[], None],
+) -> None:
     first_hour = DAY_S + 20 * 60.0
     original = _body(
         "GET", f"/api/scenarios/reference_greenhouse/fields/climate?t={first_hour:.0f}"
     )
     checkpoints.save_checkpoint("reference_greenhouse", time_s=DAY_S)
 
-    _forget_runs()
+    _restarted(afresh)
     restored = _body(
         "GET", f"/api/scenarios/reference_greenhouse/fields/climate?t={first_hour:.0f}"
     )
@@ -119,12 +123,12 @@ def test_a_checkpoint_on_a_runs_first_day_keeps_no_earlier_air() -> None:
     assert checkpoints.checkpoint(saved.checkpoint_id).house_before is None
 
 
-def test_a_branch_shares_every_day_before_its_own() -> None:
+def test_a_branch_shares_every_day_before_its_own(afresh: Callable[[], None]) -> None:
     checkpoints.save_checkpoint("reference_greenhouse", time_s=DAY_S)
     trunk = run_crop("reference_greenhouse")
     trunk_days = trunk.environments(PLANT, 2)
 
-    _forget_runs()
+    _restarted(afresh)
     branch = run_crop("reference_greenhouse", commands=BRANCH)
     house = climate_run("reference_greenhouse", commands=BRANCH)[1].house
     branch_days = branch.environments(PLANT, 2)
@@ -153,12 +157,12 @@ def test_the_opening_days_are_kept_beside_the_last_checkpoints_saved() -> None:
     assert len(kept - openings) == checkpoints.KEPT_CHECKPOINTS
 
 
-def test_a_checkpoint_downloads_and_uploads_as_it_was() -> None:
+def test_a_checkpoint_downloads_and_uploads_as_it_was(afresh: Callable[[], None]) -> None:
     saved = _body("POST", f"/api/scenarios/reference_greenhouse/checkpoints?t={DAY_S:.0f}")
     downloaded = _body("GET", f"/api/checkpoints/{saved['checkpoint_id']}")
     listed = _body("GET", "/api/checkpoints")
 
-    checkpoints.forget_checkpoints()
+    afresh()
     assert respond("GET", "/api/checkpoints").body == []
     uploaded = _body("POST", "/api/checkpoints", json.dumps(downloaded).encode())
 
@@ -201,14 +205,14 @@ def test_a_checkpoint_no_run_could_reach_is_refused() -> None:
             checkpoints.upload_checkpoint(unreachable)
 
 
-def test_forgetting_the_checkpoints_forgets_the_runs_that_took_their_state() -> None:
-    saved = checkpoints.save_checkpoint("reference_greenhouse", time_s=DAY_S)
-    document = checkpoints.checkpoint(saved.checkpoint_id).model_dump(mode="json")
-    checkpoints.forget_checkpoints()
-    checkpoints.upload_checkpoint(document)
+def test_a_clean_slate_forgets_the_runs_that_took_a_checkpoints_state(
+    afresh: Callable[[], None],
+) -> None:
+    checkpoints.save_checkpoint("reference_greenhouse", time_s=DAY_S)
+    _restarted(afresh)
     seeded = climate_run("reference_greenhouse")[1]
 
-    checkpoints.forget_checkpoints()
+    afresh()
 
     assert climate_run("reference_greenhouse")[1] is not seeded
 
@@ -232,3 +236,21 @@ def test_a_checkpoint_that_does_not_fit_its_run_is_refused() -> None:
     )
     missing = respond("GET", "/api/checkpoints/nothing")
     assert missing.status == HTTPStatus.NOT_FOUND
+
+
+def test_a_checkpoint_let_go_takes_its_own_state_not_one_kept_since() -> None:
+    # Codex's review of #253: a checkpoint the store lets go lets its state
+    # go once the store's lock is released. Uploaded again meanwhile, the
+    # same checkpoint keeps a state of its own, which that late drop must
+    # leave, or a run restored from it would work its days out again.
+    saved = checkpoints.save_checkpoint("climate_box", time_s=DAY_S)
+    document = checkpoints.checkpoint(saved.checkpoint_id).model_dump(mode="json")
+    first = kept_states.STATES.get(saved.checkpoint_id)
+    checkpoints.upload_checkpoint(document)
+    again = kept_states.STATES.get(saved.checkpoint_id)
+    assert first is not None and again is not None and again is not first
+
+    kept_states.drop(saved.checkpoint_id, first)
+
+    assert kept_states.STATES.get(saved.checkpoint_id) is again
+    assert saved in checkpoints.checkpoints()

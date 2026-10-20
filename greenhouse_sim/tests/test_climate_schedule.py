@@ -5,6 +5,7 @@ commands a scenario cannot run refused."""
 
 import math
 import random
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -62,10 +63,9 @@ def test_the_later_command_at_a_moment_wins() -> None:
     _same_air(_temperature("?set=heater:1&schedule=0:heater:0&t=300"), _temperature("?t=300"))
 
 
-def test_the_same_schedule_replays_to_the_same_air() -> None:
+def test_the_same_schedule_replays_to_the_same_air(afresh: Callable[[], None]) -> None:
     query = "?set=fan:0.5&schedule=120:heater:1,240:dehumidifier:1,360:fan:0&t=480"
     # Each run afresh, not found among the kept runs.
-    fields.forget_climate_runs()
     first = fields.field(
         "climate_box",
         "climate",
@@ -73,7 +73,7 @@ def test_the_same_schedule_replays_to_the_same_air() -> None:
         time_s=480,
         commands=[(120, "heater", 1), (240, "dehumidifier", 1), (360, "fan", 0)],
     )
-    fields.forget_climate_runs()
+    afresh()
     again = _climate(query)
 
     for quantity in (AirQuantity.VELOCITY, AirQuantity.TEMPERATURE, AirQuantity.HUMIDITY):

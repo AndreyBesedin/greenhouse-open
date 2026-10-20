@@ -7,7 +7,7 @@ import json
 import threading
 import time
 import urllib.request
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -53,17 +53,15 @@ def _get(path: str) -> Mapping[str, object]:
 
 
 @pytest.fixture
-def clock() -> Iterator[Clock]:
+def clock(no_playbacks: Callable[[], None]) -> Iterator[Clock]:
     """The climate box played back on a clock a test moves, its first two
     days worked out, a day played in 10 real seconds."""
-    playback.forget_playbacks()
     moved = Clock()
     playback.start(SCENARIO, 10.0, clock=moved)
     played = playback.playback(SCENARIO)
     assert played.wait_for(2, timeout_s=120)
     played.stop()
     yield moved
-    playback.forget_playbacks()
 
 
 def _run_id() -> str:
@@ -192,8 +190,7 @@ def test_the_consumer_reaches_the_simulator_through_its_service_alone() -> None:
         assert imported <= allowed, (module, imported - allowed)
 
 
-def test_a_consumer_follows_a_progressing_run_over_http() -> None:
-    playback.forget_playbacks()
+def test_a_consumer_follows_a_progressing_run_over_http(no_playbacks: Callable[[], None]) -> None:
     server = create_server(0, seconds_per_day=1.0)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     host, port = server.server_address[:2]
@@ -220,7 +217,6 @@ def test_a_consumer_follows_a_progressing_run_over_http() -> None:
     finally:
         server.shutdown()
         server.server_close()
-        playback.forget_playbacks()
 
 
 def _fetch(url: str) -> Mapping[str, object]:
@@ -230,8 +226,10 @@ def _fetch(url: str) -> Mapping[str, object]:
     return body
 
 
-def test_a_held_playback_waits_for_a_play_command(clock: Clock) -> None:
-    playback.forget_playbacks()
+def test_a_held_playback_waits_for_a_play_command(
+    clock: Clock, no_playbacks: Callable[[], None]
+) -> None:
+    no_playbacks()
     held = playback.start(SCENARIO, 10.0, hold=True, clock=clock)
     assert held.playing is False
     clock.now += 50.0
@@ -239,7 +237,9 @@ def test_a_held_playback_waits_for_a_play_command(clock: Clock) -> None:
     assert playback.command(SCENARIO, PlaybackCommand.PLAY).playing
 
 
-def test_the_run_s_events_reach_a_consumer_by_the_clock(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_run_s_events_reach_a_consumer_by_the_clock(
+    monkeypatch: pytest.MonkeyPatch, no_playbacks: Callable[[], None]
+) -> None:
     # A harvest an hour into each day after the first, as the crop's log
     # would give it, in place of the climate box's simple crop's none.
     def harvest(
@@ -261,27 +261,25 @@ def test_the_run_s_events_reach_a_consumer_by_the_clock(monkeypatch: pytest.Monk
         ]
 
     monkeypatch.setattr("greenhouse_sim.services.playback.crop_records", harvest)
-    playback.forget_playbacks()
     moved = Clock()
     playback.start(SCENARIO, 10.0, clock=moved)
-    try:
-        assert playback.playback(SCENARIO).wait_for(3, timeout_s=120)
-        run_id = _run_id()
-        moved.now += 10.0  # the start of day 1: its harvest is an hour off
-        early = EventBatch.model_validate(_get(f"{PREFIX}/runs/{run_id}/events?after=0"))
-        assert early.events == ()
-        moved.now += 10.0  # day 2's start: day 1's harvest is in
-        later = EventBatch.model_validate(_get(f"{PREFIX}/runs/{run_id}/events?after=0"))
-        assert [e.parameters["harvested_mass_g"] for e in later.events] == [120.0]
-        assert later.next == 1 and check_polls([early, later]) == []
-    finally:
-        playback.forget_playbacks()
+    assert playback.playback(SCENARIO).wait_for(3, timeout_s=120)
+    run_id = _run_id()
+    moved.now += 10.0  # the start of day 1: its harvest is an hour off
+    early = EventBatch.model_validate(_get(f"{PREFIX}/runs/{run_id}/events?after=0"))
+    assert early.events == ()
+    moved.now += 10.0  # day 2's start: day 1's harvest is in
+    later = EventBatch.model_validate(_get(f"{PREFIX}/runs/{run_id}/events?after=0"))
+    assert [e.parameters["harvested_mass_g"] for e in later.events] == [120.0]
+    assert later.next == 1 and check_polls([early, later]) == []
 
 
-def test_a_producer_started_again_is_a_new_epoch_of_its_run(clock: Clock, tmp_path: Path) -> None:
+def test_a_producer_started_again_is_a_new_epoch_of_its_run(
+    clock: Clock, tmp_path: Path, no_playbacks: Callable[[], None]
+) -> None:
     # The run's epochs kept across the producer's restarts, as the API keeps
     # them for the runs it plays back.
-    playback.forget_playbacks()
+    no_playbacks()
     epochs = Epochs(tmp_path)
     playback.start(SCENARIO, 10.0, clock=clock, epochs=epochs)
     assert playback.playback(SCENARIO).wait_for(1, timeout_s=120)
@@ -291,7 +289,7 @@ def test_a_producer_started_again_is_a_new_epoch_of_its_run(clock: Clock, tmp_pa
     assert before.epoch == 0 and before.records
 
     # The producer stops and starts again: the same run, a new epoch.
-    playback.forget_playbacks()
+    no_playbacks()
     playback.start(SCENARIO, 10.0, clock=clock, epochs=epochs)
     assert playback.playback(SCENARIO).wait_for(1, timeout_s=120)
     clock.now += 8.0  # past where the client's cursor stood, in the new epoch

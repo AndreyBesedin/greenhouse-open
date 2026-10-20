@@ -27,8 +27,6 @@ its start, beside the same run with everything off
 start.
 """
 
-import threading
-from collections import OrderedDict
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from typing import Final
@@ -56,7 +54,6 @@ from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.kept_states import House, KeptState, agreeing
-from greenhouse_sim.services.making import Kept, kept_values, made_once
 from greenhouse_sim.services.runs import checked_moment, checked_window
 from greenhouse_sim.services.scenarios import (
     DEFAULT_WEATHER,
@@ -66,6 +63,7 @@ from greenhouse_sim.services.scenarios import (
     layout_name,
     scenario,
 )
+from greenhouse_sim.services.stores import Store
 from greenhouse_sim.services.sunlight import plant_light
 from greenhouse_sim.weather.recorded import RecordedWeather
 from greenhouse_sim.world.geometry import Vector3
@@ -172,15 +170,7 @@ def run_schedule(
 # its equipment's levels and its doors' and vents' from the start, and its
 # commands after it.
 type RunKey = tuple[str, str, str, _Pairs, _Pairs, tuple[Commanded, ...]]
-_KEPT: Kept[RunKey, ClimateDay] = OrderedDict()
-_KEEPING = threading.Lock()
-
-
-def forget_climate_runs() -> None:
-    """Forget the kept climate runs, so that the next one asked for is run
-    afresh."""
-    with _KEEPING:
-        _KEPT.clear()
+CLIMATE_RUNS: Store[RunKey, ClimateDay] = Store("climate runs", KEPT_RUNS)
 
 
 def _climate_day(
@@ -204,17 +194,15 @@ def _climate_day(
         run = ClimateDay(_new_climate_run(*key))
         for _, other in others:
             run.carry_on_from(other)
-        for state in agreeing(_house(key), run.run.schedule):
+        for state in agreeing(house_of(key), run.run.schedule):
             for moment, air in state.airs():
                 run.house.seed(moment, air)
         return run
 
-    return made_once(
-        _KEPT, _KEEPING, key, KEPT_RUNS, lambda other: _house(other) == _house(key), make
-    )
+    return CLIMATE_RUNS.made_once(key, make, lambda other: house_of(other) == house_of(key))
 
 
-def _house(key: RunKey) -> House:
+def house_of(key: RunKey) -> House:
     """A run's house, as its key names it: its scenario, layout and weather,
     and its doors and vents open from the start. Runs of the same house are
     the same air until their schedules differ."""
@@ -270,8 +258,8 @@ def climate_run(
 
 def seed_kept_climate_runs(state: KeptState) -> None:
     """Give a kept state to the climate runs kept that agree with it."""
-    for key, run in kept_values(_KEPT, _KEEPING):
-        if state.agrees(_house(key), run.run.schedule):
+    for key, run in CLIMATE_RUNS.values():
+        if state.agrees(house_of(key), run.run.schedule):
             for moment, air in state.airs():
                 run.house.seed(moment, air)
 

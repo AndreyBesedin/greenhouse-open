@@ -15,7 +15,6 @@ The climate's and the crop's services look here when they make a run; this
 module looks at neither.
 """
 
-import threading
 from dataclasses import dataclass
 
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
@@ -23,6 +22,7 @@ from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.services.stores import Store
 
 # A run's house: its scenario, layout and weather, by name, and its doors'
 # and vents' openings from the start, sorted.
@@ -59,25 +59,23 @@ class KeptState:
         return house == self.house and schedule.same_until(self.schedule) >= self.moment_s
 
 
-_STATES: dict[str, KeptState] = {}
-_KEEPING = threading.Lock()
+# Each kept as long as its checkpoint is.
+STATES: Store[str, KeptState] = Store("kept states")
 
 
 def keep(key: str, state: KeptState) -> None:
     """Keep a state, under its checkpoint's identifier."""
-    with _KEEPING:
-        _STATES[key] = state
+    STATES.keep(key, state)
 
 
-def drop(key: str) -> None:
-    """Keep a checkpoint's state no longer."""
-    with _KEEPING:
-        _STATES.pop(key, None)
+def drop(key: str, state: KeptState) -> None:
+    """Keep a checkpoint's state no longer: `state`, if it is still the one
+    kept; not one kept since, as the same checkpoint uploaded again keeps."""
+    STATES.drop(key, state)
 
 
 def agreeing(house: House, schedule: Schedule) -> list[KeptState]:
     """The kept states a run of `house` under `schedule` takes over, from
     its earliest day."""
-    with _KEEPING:
-        states = list(_STATES.values())
-    return sorted((state for state in states if state.agrees(house, schedule)), key=lambda s: s.day)
+    states = [state for _, state in STATES.values() if state.agrees(house, schedule)]
+    return sorted(states, key=lambda s: s.day)

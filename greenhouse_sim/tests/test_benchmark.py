@@ -2,6 +2,7 @@
 report has every measure, and the report kept in the repository too."""
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -9,7 +10,6 @@ import pytest
 
 from greenhouse_sim import benchmark
 from greenhouse_sim.core.stopwatch import Stopwatch, timed
-from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.benchmark import DayCosts, bottleneck, simulator_costs
 from greenhouse_sim.services.errors import InvalidRequest
 
@@ -40,10 +40,9 @@ MACHINE = {"platform", "cpu", "cores", "memory_gib", "python"}
 
 
 @pytest.fixture(scope="module")
-def one_day() -> dict[str, Any]:
+def one_day(afresh_module: Callable[[], None]) -> dict[str, Any]:
     """The benchmark's report on the reference run's first day, worked out
-    afresh: no checkpoint another test kept gives the run its days."""
-    checkpoints.forget_checkpoints()
+    afresh: nothing another test kept gives the run its days."""
     return benchmark.report(days=1)
 
 

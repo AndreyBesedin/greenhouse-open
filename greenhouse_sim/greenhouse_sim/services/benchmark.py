@@ -22,9 +22,9 @@ from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.core.crop import HOUSE_AIR, PLANTS_DAYS, PLANTS_LIGHT
 from greenhouse_sim.core.stopwatch import Stopwatch
 from greenhouse_sim.scenarios.manifest_files import manifest_digest
-from greenhouse_sim.services.crop import crop_scene, forget_crops, run_crop
+from greenhouse_sim.services.crop import CROPS, crop_scene, run_crop
 from greenhouse_sim.services.errors import InvalidRequest
-from greenhouse_sim.services.fields import field, forget_climate_runs, grid
+from greenhouse_sim.services.fields import CLIMATE_RUNS, field, grid
 from greenhouse_sim.services.scenarios import initial_scene, plant_ids, scenario
 from greenhouse_sim.units import HOUR_S, HOURS_A_DAY, PERCENT
 
@@ -101,8 +101,8 @@ def simulator_costs(scenario_id: str, days: int | None = None) -> SimulatorCosts
             f"{scenario_id} runs {config.duration_days} days; a benchmark measures 1 to "
             f"{config.duration_days}, not {measured}"
         )
-    forget_climate_runs()
-    forget_crops()
+    CLIMATE_RUNS.forget()
+    CROPS.forget()
     watch = Stopwatch()
     started = time.perf_counter()
     crop = run_crop(scenario_id, watch=watch)

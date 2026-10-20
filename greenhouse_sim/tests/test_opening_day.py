@@ -16,7 +16,6 @@ off, which a viewer charts beside it.
 import gzip
 import json
 import sys
-from collections.abc import Iterator
 from http import HTTPStatus
 from itertools import pairwise
 from typing import Any, Final
@@ -36,8 +35,8 @@ from greenhouse_sim.scenarios.manifest_files import (
     opening_file,
 )
 from greenhouse_sim.services import checkpoints
-from greenhouse_sim.services.crop import forget_crops, run_crop
-from greenhouse_sim.services.fields import climate_run, field, forget_climate_runs, off_levels
+from greenhouse_sim.services.crop import run_crop
+from greenhouse_sim.services.fields import climate_run, field, off_levels
 from greenhouse_sim.services.replay import _rounded
 from greenhouse_sim.services.scenarios import scenario_summaries
 from greenhouse_sim.units import HOUR_S
@@ -52,13 +51,8 @@ KEPT_SHARE: Final = 0.95
 OPENING: Final = 86
 
 
-@pytest.fixture(autouse=True)
-def _afresh() -> Iterator[None]:
-    forget_climate_runs()
-    forget_crops()
-    checkpoints.forget_checkpoints()
-    yield
-    checkpoints.forget_checkpoints()
+# Each from a clean slate: nothing another test kept gives the run its days.
+pytestmark = pytest.mark.usefixtures("afresh")
 
 
 def _kept(all_off: bool = False) -> checkpoints.Checkpoint:

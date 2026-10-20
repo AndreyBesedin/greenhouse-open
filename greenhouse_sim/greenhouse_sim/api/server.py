@@ -83,7 +83,7 @@ class SimulatorServer(ThreadingHTTPServer):
     def server_close(self) -> None:
         self.live.stop()
         # The runs played back go with the server that played them.
-        playback.forget_playbacks()
+        playback.stop_playbacks()
         super().server_close()
 
 

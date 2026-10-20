@@ -12,8 +12,6 @@ light is asked for at a moment of a run is the crop's
 (`greenhouse_sim.services.crop`).
 """
 
-import threading
-from collections import OrderedDict
 from typing import Final
 
 from greenhouse_sim.biology.tomato.organ.geometry import stem_height_m
@@ -23,6 +21,7 @@ from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.scenarios import SceneChanges, changed, plant_ids, scenario
+from greenhouse_sim.services.stores import Store
 from greenhouse_sim.solar.inside import Sunlight
 from greenhouse_sim.solar.plants import Crown, PlantLight, crowns, placed_crowns
 from greenhouse_sim.solar.shadows import Shadows
@@ -30,8 +29,7 @@ from greenhouse_sim.solar.shadows import Shadows
 # How many scenarios' sunlight, under a layout and a weather, are kept.
 KEPT_SUNLIGHT: Final = 8
 
-_KEPT: OrderedDict[tuple[str, str, str], PlantLight] = OrderedDict()
-_KEEPING = threading.Lock()
+SUNLIGHT: Store[tuple[str, str, str], PlantLight] = Store("sunlight", KEPT_SUNLIGHT)
 
 
 def first_crowns(config: ScenarioConfig) -> list[Crown]:
@@ -54,25 +52,17 @@ def first_crowns(config: ScenarioConfig) -> list[Crown]:
 def plant_light(scenario_id: str, layout: str, weather: str) -> PlantLight:
     """A scenario's sunlight with one of its layouts, under a weather, and the
     light on each of its plants: one of those kept, or a new one."""
-    key = (scenario_id, layout, weather)
-    with _KEEPING:
-        kept = _KEPT.get(key)
-        if kept is not None:
-            _KEPT.move_to_end(key)
-            return kept
-    config = changed(scenario(scenario_id), SceneChanges(layout=layout, weather=weather))
-    plant_crowns = first_crowns(config)
-    sunlight = Sunlight(
-        config.site,
-        config.run_weather(),
-        air_grid(config),
-        config.envelope,
-        Shadows.of(config.envelope, config.layout, [crown.solid() for crown in plant_crowns]),
-    )
-    light = PlantLight(sunlight, plant_crowns)
-    with _KEEPING:
-        light = _KEPT.setdefault(key, light)
-        _KEPT.move_to_end(key)
-        if len(_KEPT) > KEPT_SUNLIGHT:
-            _KEPT.popitem(last=False)
-    return light
+
+    def make(_: object) -> PlantLight:
+        config = changed(scenario(scenario_id), SceneChanges(layout=layout, weather=weather))
+        plant_crowns = first_crowns(config)
+        sunlight = Sunlight(
+            config.site,
+            config.run_weather(),
+            air_grid(config),
+            config.envelope,
+            Shadows.of(config.envelope, config.layout, [crown.solid() for crown in plant_crowns]),
+        )
+        return PlantLight(sunlight, plant_crowns)
+
+    return SUNLIGHT.made_once((scenario_id, layout, weather), make)
