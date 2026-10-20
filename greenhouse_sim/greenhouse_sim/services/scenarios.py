@@ -36,6 +36,7 @@ from greenhouse_sim.scene.snapshot import SceneSnapshot, greenhouse_scene, scene
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.weather.presets import PRESETS
 from greenhouse_sim.weather.recorded import recorded_weathers
+from greenhouse_sim.world.moves import Move, moved
 
 # The envelope's dimensions a client may change.
 DIMENSIONS: Final = ("length", "width", "spans", "bays", "eave_height", "ridge_height")
@@ -47,6 +48,9 @@ CLOUDS_MARK: Final = "@"
 MOST_CLOUD_PCT: Final = 100.0
 # And then with this and a bearing, which overrides its wind's direction.
 WIND_MARK: Final = "~"
+# What follows it in a layout's name are moves of its equipment and sensors
+# (#209): `default~heater:1.2:-0.4`.
+MOVES_MARK: Final = "~"
 FULL_TURN_DEG: Final = 360.0
 
 
@@ -270,10 +274,45 @@ def _with_weather(config: ScenarioConfig, name: str) -> ScenarioConfig:
     return config.model_copy(update={"weather": weather})
 
 
+def _moves(text: str) -> list[Move]:
+    """Moves as an address writes them: `heater:1.2:-0.4,fan_left:0:2`, each
+    an item and its displacement along the world's x and y, in metres."""
+    moves = []
+    for written in text.split(","):
+        item_id, *by = written.split(":")
+        try:
+            dx, dy = (float(value) for value in by)
+        except ValueError:
+            dx = dy = math.nan
+        if not item_id or not (math.isfinite(dx) and math.isfinite(dy)):
+            raise InvalidRequest(
+                f"a move is an item and two distances, item:dx:dy, not {written!r}"
+            )
+        moves.append(Move(item_id=item_id, dx_m=dx, dy_m=dy))
+    return moves
+
+
 def _with_layout(config: ScenarioConfig, name: str) -> ScenarioConfig:
     """The scenario with another of its layouts, read from its file: one it
     does not have is not found, and one that does not fit its greenhouse or
-    crop is refused."""
+    crop is refused. A name may end with `~` and moves of its equipment and
+    sensors across the floor (`default~heater:1.2:-0.4`, #209,
+    `greenhouse_sim.world.moves`): the layout with them moved, refused as
+    any layout is if they no longer fit."""
+    base, marked, written = name.partition(MOVES_MARK)
+    if marked:
+        laid_out = _with_layout(config, base)
+        try:
+            layout = moved(laid_out.layout, laid_out.envelope.origin, _moves(written))
+        except ValueError as error:
+            raise InvalidRequest(str(error)) from None
+        try:
+            return ScenarioConfig.model_validate(
+                laid_out.model_dump() | {"layout": layout.model_dump()}
+            )
+        except ValidationError as error:
+            found = error.errors()[0]["msg"].removeprefix("Value error, ")
+            raise InvalidRequest(f"moved so, {found}") from None
     if name == DEFAULT_LAYOUT:
         return config
     try:
