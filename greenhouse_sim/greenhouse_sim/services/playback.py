@@ -16,7 +16,9 @@ The records are the point sensors' readings at a consumer's cadence
 (`every_s`): each sensor's own sample at that minute, noise and all, as the
 viewer's sensor panel has it, so a consumer and the viewer never disagree
 about what a sensor said. A camera's frames are not records a consumer
-reads. A day's records are kept as compressed JSON, read back as asked for.
+reads. Beside them, the crop's walk and harvests (`crop_log`) and the heat
+its heaters gave each day (`heat_log`). A day's records are kept as
+compressed JSON, read back as asked for.
 
 The run is the scenario's own: its layout, weather and daily commands, as
 the viewer draws it when nothing is changed. A command given in the viewer
@@ -46,6 +48,7 @@ from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.crop_log import crop_records
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.fields import air_through_a_run
+from greenhouse_sim.services.heat_log import heat_records
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.sensors import delivered_between, run_start
 
@@ -293,9 +296,9 @@ class Playback:
 
     def work_day(self, day: int) -> bool:
         """Works the run's day `day` out and publishes its records, the day
-        after the last published: its sensors' readings and its crop's walk
-        and harvests. Whether it could, any failure kept and said by `state`
-        rather than lost with the worker."""
+        after the last published: its sensors' readings, its crop's walk and
+        harvests, and the heat its heaters gave. Whether it could, any
+        failure kept and said by `state` rather than lost with the worker."""
         try:
             readings, run_id = delivered_between(
                 self.scenario_id,
@@ -304,6 +307,7 @@ class Playback:
                 self.every_s,
             )
             walked, harvests = crop_records(self.scenario_id, day, self.start, self.run_id)
+            heated = heat_records(self.scenario_id, day, self.start, self.run_id)
         except Exception as error:
             with self._lock:
                 self._failure = error
@@ -313,7 +317,7 @@ class Playback:
                 self._failure = RuntimeError(f"its run is another now: {run_id}")
             return False
         observations = sorted(
-            [*readings, *walked],
+            [*readings, *walked, *heated],
             key=lambda r: (delivered(r), r.sensor_id or r.plant_id or ""),
         )
         events = sorted(harvests, key=lambda e: (e.timestamp, e.plant_id or ""))

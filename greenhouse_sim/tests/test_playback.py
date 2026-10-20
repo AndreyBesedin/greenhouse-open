@@ -6,6 +6,7 @@ from collections.abc import Iterator
 from datetime import timedelta
 
 import pytest
+from greenhouse_protocol.enums import ObservationType
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.api.server import create_server
@@ -214,6 +215,14 @@ def test_the_reference_greenhouse_s_second_day_is_one_run_for_the_viewer_and_a_c
         assert (
             now.simulated_now - timedelta(seconds=EVERY_S) < latest.timestamp <= now.simulated_now
         )
+        # The first day's heat, delivered as the day ended (P10.3).
+        heat = [
+            r
+            for r in cut.records
+            if r.observation_type == ObservationType.HEATING_ENERGY_INCREMENT_MJ_M2
+        ]
+        assert [r.timestamp for r in heat] == [run.start + timedelta(seconds=DAY_S)]
+        assert heat[0].value > 0
     finally:
         run.stop()
 
