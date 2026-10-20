@@ -6,6 +6,7 @@ import { highlighted } from "../selection";
 import type { Color, SceneEntity, SceneSnapshot } from "./generated/snapshotTypes";
 import { InstancedShapes } from "./InstancedShapes";
 import { isInstanced, shapeBatches } from "./instancing";
+import type { Offset } from "./moves";
 import { placement } from "./placement";
 import { RENDERERS } from "./renderers";
 
@@ -37,6 +38,7 @@ export function SceneView({
   colouring = null,
   showBounds = false,
   byCategory = false,
+  nudged = null,
 }: {
   snapshot: SceneSnapshot;
   selectedId?: string | null;
@@ -47,6 +49,9 @@ export function SceneView({
   showBounds?: boolean;
   /** Colours each part of the envelope by its semantic category. */
   byCategory?: boolean;
+  /** The selected entity drawn moved along the floor, as it is dragged
+   * (#209). */
+  nudged?: { entityId: string; by: Offset } | null;
 }) {
   const { batches, single, glowing } = useMemo(() => {
     const glowing = highlighted(snapshot, selectedId);
@@ -85,6 +90,7 @@ export function SceneView({
       ))}
       {single.map((entity) => {
         const { position, quaternion } = placement(entity.transform);
+        const by = nudged?.entityId === entity.entity_id ? nudged.by : null;
         const look = {
           color: shownColor(entity, colouring, byCategory),
           selected: glowing.has(entity.entity_id),
@@ -93,7 +99,9 @@ export function SceneView({
         return (
           <group
             key={entity.entity_id}
-            position={position}
+            position={
+              by === null ? position : [position[0] + by.dx, position[1] + by.dy, position[2]]
+            }
             quaternion={quaternion}
             userData={{ entityId: entity.entity_id, entityKind: entity.kind }}
           >

@@ -41,6 +41,7 @@ import { CLIMATE_FIELD, fetchField, fieldUrl } from "./fields/source";
 import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
+import { MovePanel } from "./MovePanel";
 import { PlaybackPanel } from "./PlaybackPanel";
 import { cropPlantUrl, cropUrl, loadCropPlant, ORGAN_CROP, withCrop } from "./plants/crop";
 import type { GrowthSpeed } from "./plants/LabControls";
@@ -57,9 +58,19 @@ import { loadRunState, runStateUrl } from "./qaMode/state";
 import type { ViewSample } from "./readouts";
 import { ScenarioPanels } from "./ScenarioPanels";
 import { WhatAmISeeing, worldAxesLength } from "./SeenInTheView";
-import { loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
+import { DEFAULT_LAYOUT, loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
 import { withProbes, withTime } from "./scene/edits";
 import { equipmentUrl, governedLevels, loadEquipment, runningThermostat } from "./scene/equipment";
+import {
+  baseLayout,
+  keptInside,
+  movableItem,
+  movedBy,
+  movesIn,
+  type Offset,
+  putBack,
+  shifted,
+} from "./scene/moves";
 import { commandPlayback, followedMoment, usePlayback } from "./scene/playback";
 import { runApartFromItsMoment, runsSomething, scenarioRun } from "./scene/run";
 import {
@@ -103,6 +114,36 @@ const MILLISECONDS_PER_SECOND = 1000;
 const DEFAULT_PROBE_HEIGHT_M = 1;
 const EMPTY_PROBES: Point3[] = [];
 const NO_OPENINGS: readonly string[] = [];
+
+/** A drag moving the selected item (#209): the entity, how far it has moved
+ * it, from where it stood, under which layout, and whether it has been let
+ * go, its move made. */
+interface Dragged {
+  entityId: string;
+  by: Offset;
+  from: Point3;
+  layout: string | undefined;
+  dropped: boolean;
+}
+
+/** A move made, as the layouts before and after it, to be undone. */
+interface MoveMade {
+  before: string | undefined;
+  after: string | undefined;
+}
+
+function samePoint(a: Point3, b: Point3): boolean {
+  return a.x === b.x && a.y === b.y && a.z === b.z;
+}
+
+/** A scenario's view with another layout, or with its own (undefined). */
+function withLayout(source: SceneSource, layout: string | undefined): SceneSource {
+  if (source.kind !== "scenario") {
+    return source;
+  }
+  const { layout: _, ...rest } = source;
+  return layout === undefined ? rest : { ...rest, layout };
+}
 
 /** What a part of the view draws: the latest of it that loaded, kept while
  * the next is on its way and when the next fails, or else how its latest
@@ -187,12 +228,26 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const liveScenario = source.kind === "live" ? source.scenarioId : null;
   const live = useLiveScene(liveScenario);
   const commands = useLiveCommands(liveScenario);
+  // The entity whose item is being moved across the floor (#209), the drag
+  // moving it, and the moves made, the latest undone first.
+  const [movingId, setMovingId] = useState<string | null>(null);
+  const [dragged, setDragged] = useState<Dragged | null>(null);
+  const [movesMade, setMovesMade] = useState<MoveMade[]>([]);
 
   // What a view starts with once another is shown, chosen or come back to
   // with Back and Forward (#201): nothing selected, unless another layout of
   // the same scenario still holds it; no colouring, no play, and no probe
   // placing unless it has probes.
   function startAfresh(from: SceneSource, to: SceneSource): void {
+    // Items moved, or put back (#209), leave the view as it was.
+    if (
+      to.kind === "scenario" &&
+      from.kind === "scenario" &&
+      to.scenarioId === from.scenarioId &&
+      (baseLayout(to.layout) ?? DEFAULT_LAYOUT) === (baseLayout(from.layout) ?? DEFAULT_LAYOUT)
+    ) {
+      return;
+    }
     if (
       !(to.kind === "scenario" && from.kind === "scenario" && to.scenarioId === from.scenarioId)
     ) {
@@ -458,6 +513,94 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   );
   const selectedCamera = selected === null ? null : cameraOf(selected);
 
+  // The selected item, if it is equipment or a sensor a scenario's view can
+  // move, and whether it is being moved; the house it is kept inside.
+  const movable = source.kind === "scenario" && selected !== null ? movableItem(selected) : null;
+  const layoutShown = source.kind === "scenario" ? source.layout : undefined;
+  // Another selection stops moving: coming back to the item does not start
+  // it again.
+  if (movingId !== null && movingId !== selectedId) {
+    setMovingId(null);
+  }
+  const moving = movable !== null && movingId !== null && movingId === selectedId;
+  const house = useMemo(
+    () => snapshot?.entities.find((entity) => entity.kind === "GREENHOUSE_BOUNDS") ?? null,
+    [snapshot],
+  );
+  // The item drawn where a drag takes it: while the drag lasts, and once let
+  // go, until the scene with the item moved arrives, or fails to.
+  const nudged =
+    dragged !== null &&
+    selected !== null &&
+    dragged.entityId === selected.entity_id &&
+    dragged.layout === layoutShown &&
+    samePoint(selected.transform.position, dragged.from) &&
+    !failed(sceneProgress.latest)
+      ? dragged
+      : null;
+  const drawnSelected =
+    selected === null || nudged === null ? selected : shifted(selected, nudged.by);
+  // How far the item stands from where its layout places it, a drag under
+  // way included.
+  const placedBy = movable === null ? null : (movesIn(layoutShown)[movable] ?? null);
+  const standsBy =
+    nudged === null || nudged.dropped
+      ? placedBy
+      : { dx: (placedBy?.dx ?? 0) + nudged.by.dx, dy: (placedBy?.dy ?? 0) + nudged.by.dy };
+  const lastMove = movesMade.at(-1);
+  const canUndo =
+    source.kind === "scenario" && lastMove !== undefined && lastMove.after === source.layout;
+
+  // A move made is another layout, and a page of its own in the browser's
+  // history, so that Back undoes it too.
+  function makeMove(after: string | undefined): void {
+    if (source.kind !== "scenario") {
+      return;
+    }
+    setMovesMade((made) => [...made, { before: source.layout, after }]);
+    setSource((current) => withLayout(current, after));
+  }
+  function dropMove(by: Offset | null): void {
+    if (source.kind !== "scenario" || movable === null || selected === null) {
+      return;
+    }
+    if (by === null || (by.dx === 0 && by.dy === 0)) {
+      setDragged(null);
+      return;
+    }
+    const after = movedBy(source.layout, DEFAULT_LAYOUT, movable, by);
+    setDragged({
+      entityId: selected.entity_id,
+      by,
+      from: selected.transform.position,
+      layout: after,
+      dropped: true,
+    });
+    makeMove(after);
+  }
+  function undoMove(): void {
+    if (!canUndo || lastMove === undefined) {
+      return;
+    }
+    setDragged(null);
+    setMovesMade((made) => made.slice(0, -1));
+    setSource((current) => withLayout(current, lastMove.before));
+  }
+
+  // Escape stops moving, unless it cancels a drag (`MoveDrag`).
+  useEffect(() => {
+    if (!moving) {
+      return;
+    }
+    function stop(event: KeyboardEvent): void {
+      if (event.key === "Escape" && !event.defaultPrevented) {
+        setMovingId(null);
+      }
+    }
+    window.addEventListener("keydown", stop);
+    return () => window.removeEventListener("keydown", stop);
+  }, [moving]);
+
   // The run's observation log up to the moment drawn, while a sensor or a
   // camera is selected, and, in QA mode only, what its sensors truly
   // sampled; as clean sensors would have made it, if QA mode asks.
@@ -581,7 +724,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   );
   const overlays = useMemo(
     () => [
-      ...(selected === null ? [] : selectionOverlays(selected, overlayToggles)),
+      ...(drawnSelected === null ? [] : selectionOverlays(drawnSelected, overlayToggles)),
       ...(snapshot !== null && showDimensions ? sceneDimensionOverlays(snapshot) : []),
       ...(snapshot !== null && showingNames
         ? plantNameOverlays(snapshot, (plantId) =>
@@ -590,7 +733,15 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         : []),
       ...shownPrimitives(scenePrimitives, overlayToggles),
     ],
-    [selected, overlayToggles, snapshot, showDimensions, showingNames, lightOn, scenePrimitives],
+    [
+      drawnSelected,
+      overlayToggles,
+      snapshot,
+      showDimensions,
+      showingNames,
+      lightOn,
+      scenePrimitives,
+    ],
   );
 
   const fieldScale = useMemo(
@@ -656,6 +807,28 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             ? (ground) => setProbes([...probes, { ...ground, z: probeHeight }])
             : null
         }
+        moving={
+          moving && selected !== null
+            ? {
+                heightM: selected.transform.position.z,
+                shape: (by) => keptInside(by, selected, house),
+                onDrag: (by) =>
+                  setDragged(
+                    by === null || source.kind !== "scenario"
+                      ? null
+                      : {
+                          entityId: selected.entity_id,
+                          by,
+                          from: selected.transform.position,
+                          layout: source.layout,
+                          dropped: false,
+                        },
+                  ),
+                onDrop: dropMove,
+              }
+            : null
+        }
+        nudged={nudged}
       >
         {overlayToggles.airField && fieldLayer}
         {cfd.status === "loaded" && <CfdBoundaries geometry={cfd.geometry} />}
@@ -789,6 +962,22 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                   qa={qaMode}
                   imperfect={sensorsImperfect}
                   onImperfect={setSensorsImperfect}
+                />
+              )}
+              {movable !== null && (
+                <MovePanel
+                  label={selected.label ?? movable}
+                  moving={moving}
+                  movedBy={standsBy}
+                  canUndo={canUndo}
+                  onMoving={(on) => {
+                    setMovingId(on ? selected.entity_id : null);
+                    if (on) {
+                      setPlacingProbes(false);
+                    }
+                  }}
+                  onUndo={undoMove}
+                  onPutBack={() => makeMove(putBack(layoutShown, DEFAULT_LAYOUT, movable))}
                 />
               )}
             </Inspector>

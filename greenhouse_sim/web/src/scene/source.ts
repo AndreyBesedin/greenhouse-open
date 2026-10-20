@@ -16,6 +16,7 @@ import { DEFAULT_WEATHER } from "../scenarios";
 import type { Point3 } from "../world";
 import { checkScene } from "./checkScene";
 import type { SceneSnapshot } from "./generated/snapshotTypes";
+import { layoutText } from "./moves";
 
 /** Which scene the viewer draws, chosen in the address bar so a refresh keeps it. */
 export type SceneSource =
@@ -309,7 +310,7 @@ export function changesQuery(
   separator: "?" | "&",
 ): string {
   const parts = [
-    ["layout", encodeURIComponent(source.layout ?? "")],
+    ["layout", layoutText(source.layout ?? "")],
     ["envelope", pairsText(source.envelope)],
     ["open", pairsText(source.openings)],
     ["set", pairsText(source.levels)],

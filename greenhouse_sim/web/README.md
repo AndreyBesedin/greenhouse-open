@@ -64,6 +64,16 @@ roof are see-through glass: a click picks the nearest solid thing along it,
 such as a plant or the floor, and picks the glass only where nothing solid
 lies behind. A scenario with several layouts offers them in the scenarios table: choosing
 one shows the scenario with it, and the address keeps it (`&layout=benches`).
+A selected piece of equipment or sensor can be moved across the floor
+(#209): "Move" in the inspector holds the camera still but for the wheel, and
+a drag anywhere in the view moves the item as far as the pointer goes along
+the level of its height, in 10 cm steps, kept inside the house; a weather
+station's instrument, outside it, is not held in. Escape cancels a drag, or
+stops moving. Each move made is another layout, the one moved from with the
+moves after a `~`, and another run, which the address keeps
+(`&layout=default~heater:-1:0.5`, the heater a metre along the world's -x
+and half a metre along its y); "Undo move" and Back take a move back, and
+"Put back" returns the item to where its layout places it.
 
 A scenario's air field, one of the environment fields the simulator publishes
 for it (`greenhouse_sim/fields/`), can be drawn over its scene: "Air field"

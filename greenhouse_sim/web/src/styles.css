@@ -1204,3 +1204,21 @@ body {
     width: 100%;
   }
 }
+
+/* Moving the selected equipment or sensor (#209), set off from the
+ * inspector's details below, as a sensor's reading is. */
+.move-panel {
+  margin: 0 0 8px;
+  padding: 0 0 8px;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+}
+
+.move-panel p {
+  margin: 0 0 4px;
+}
+
+.move-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}

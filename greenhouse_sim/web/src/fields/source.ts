@@ -1,3 +1,4 @@
+import { layoutText } from "../scene/moves";
 import { CLIMATE_PARTS, type RunParts, runParameters, scenarioUrl } from "../scene/run";
 import { checkField, type EnvironmentField, SUPPORTED_FIELD_VERSION } from "./field";
 
@@ -39,7 +40,7 @@ export function fieldUrl(scenarioId: string, name: string, changes: FieldChanges
 
 /** `?layout=` for another of a scenario's layouts, or nothing for its own. */
 export function layoutQuery(layout: string | undefined): string {
-  return layout === undefined ? "" : `?layout=${encodeURIComponent(layout)}`;
+  return layout === undefined ? "" : `?layout=${layoutText(layout)}`;
 }
 
 /** Fetches and checks a scenario's field; every failure becomes a state to show. */
