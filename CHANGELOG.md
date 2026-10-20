@@ -29,8 +29,8 @@ breaks the conformance checks is a major version.
   a heater by the house's air, on below its setpoint by half its band and
   off above it by as much, a setpoint by day and one by night; a command to
   the heater takes it over. The heat a run's heaters give is counted, and
-  played back each day as `HEATING_ENERGY_INCREMENT_MJ_M2`, modelled heat
-  input per square metre of floor, not a meter's reading. The viewer draws
+  played back hour by hour as `HEATING_ENERGY_INCREMENT_MJ_M2`, modelled
+  heat input per square metre of floor, not a meter's reading. The viewer draws
   and says the thermostat's heater as the run has it
   (`GET /api/scenarios/{id}/climate/equipment`). A run's identity now covers
   everything its scenario is made of, so a changed manifest or layout is

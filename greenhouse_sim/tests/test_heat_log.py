@@ -1,7 +1,7 @@
-"""The heat a run's heaters give its house each day, as a record a consumer
-reads (P10.3): one increment at the day's end, in MJ per square metre of
+"""The heat a run's heaters give its house, as records a consumer reads
+(P10.3): an increment at the end of each hour, in MJ per square metre of
 floor, modelled by the simulation and said to be, the same run's as the
-viewer's; a cold spell's far above a summer day's."""
+viewer's; a cold spell's day far above a summer day's."""
 
 from datetime import timedelta
 from typing import Final
@@ -20,6 +20,9 @@ from greenhouse_sim.services.sensors import run_start
 SCENARIO: Final = "reference_greenhouse"
 # Its floor, 12 m by 9.6 m.
 FLOOR_M2: Final = 115.2
+HOUR_S: Final = 3600.0
+# Its heater's rated power, in W.
+HEATER_W: Final = 30_000.0
 
 
 def _day(scenario_id: str, day: int) -> list[Observation]:
@@ -27,29 +30,41 @@ def _day(scenario_id: str, day: int) -> list[Observation]:
     return heat_records(scenario_id, day, run_start(scenario_id), run_id)
 
 
-def test_a_days_heat_is_one_increment_at_its_end_from_the_runs_house() -> None:
+def _mj_m2(joules: float) -> float:
+    return joules / 1e6 / FLOOR_M2
+
+
+def test_an_hours_heat_is_an_increment_at_its_end_from_the_runs_house() -> None:
     _, run_id = air_through_a_run(SCENARIO)
     house = climate_run(SCENARIO)[1].house
+    start = run_start(SCENARIO)
 
-    [record] = _day(SCENARIO, 1)
+    records = _day(SCENARIO, 1)
 
-    assert record.observation_type == ObservationType.HEATING_ENERGY_INCREMENT_MJ_M2
-    assert record.timestamp == run_start(SCENARIO) + timedelta(seconds=2 * DAY_S)
-    assert record.value == round(house.heated_j(DAY_S, 2 * DAY_S) / 1e6 / FLOOR_M2, 3)
+    assert {r.observation_type for r in records} == {ObservationType.HEATING_ENERGY_INCREMENT_MJ_M2}
+    assert [r.timestamp for r in records] == [
+        start + timedelta(seconds=DAY_S + hour * HOUR_S) for hour in range(1, 25)
+    ]
+    fourth = house.heated_j(DAY_S + 3 * HOUR_S, DAY_S + 4 * HOUR_S)
+    assert records[3].value == round(_mj_m2(fourth), 3)
+    # The day's sum is its heat, each hour's kept to a kilojoule.
+    day = _mj_m2(house.heated_j(DAY_S, 2 * DAY_S))
+    assert sum(r.value for r in records) == pytest.approx(day, abs=24 * 0.0005)
     # March: the heater runs half the day or more, never more than all of
-    # it at its 30 kW.
-    assert 30_000 * DAY_S / 2 / 1e6 / FLOOR_M2 < record.value <= 30_000 * DAY_S / 1e6 / FLOOR_M2
+    # it; an hour, no more than an hour of it.
+    assert _mj_m2(HEATER_W * DAY_S / 2) < day <= _mj_m2(HEATER_W * DAY_S)
+    assert max(r.value for r in records) <= round(_mj_m2(HEATER_W * HOUR_S), 3)
     # Modelled, by the run the viewer draws; no instrument took it.
-    assert (record.source.type, record.source.source_id) == (SourceType.SIMULATION, run_id)
-    assert (record.sensor_id, record.plant_id) == (None, None)
-    assert check_observations([record]) == []
+    assert {(r.source.type, r.source.source_id) for r in records} == {
+        (SourceType.SIMULATION, run_id)
+    }
+    assert {(r.sensor_id, r.plant_id) for r in records} == {(None, None)}
+    assert check_observations(records) == []
 
 
 def test_a_heater_no_one_runs_gives_no_heat_and_a_house_without_one_no_record() -> None:
     # The climate box's heater is off until commanded; the airflow box has none.
-    [record] = _day("climate_box", 0)
-
-    assert record.value == 0.0
+    assert [r.value for r in _day("climate_box", 0)] == [0.0] * 24
     assert _day("airflow_box", 0) == []
 
 
@@ -57,9 +72,9 @@ def test_a_heater_no_one_runs_gives_no_heat_and_a_house_without_one_no_record() 
 def test_a_cold_spell_takes_far_more_heat_than_a_june_day() -> None:
     # From the kept opening day, as the viewer and a playback carry on.
     checkpoints.load_openings()
-    march = [_day(SCENARIO, day)[0].value for day in range(3)]
-    june = [_day(SCENARIO, day)[0].value for day in range(110, 113)]
+    march = [sum(r.value for r in _day(SCENARIO, day)) for day in range(3)]
+    june = [sum(r.value for r in _day(SCENARIO, day)) for day in range(110, 113)]
 
     assert min(march) > 4 * max(june)
     # Every day differs: the heater follows the weather, not a schedule.
-    assert len(set(march + june)) == 6
+    assert len({round(day, 3) for day in march + june}) == 6

@@ -60,12 +60,16 @@ depends on the air cannot be a schedule worked out in advance.
   the water its equipment removes, the heat its heaters have given so far:
   their rated power at the levels they run at, for as long. A checkpoint
   keeps it, and whether the thermostat was heating.
-- **One record a day,** `HEATING_ENERGY_INCREMENT_MJ_M2` at the day's end
-  (`services.heat_log`): the heat given over the run's day, in MJ per
-  square metre of floor. Its source is the simulation and the run, and it
-  names no sensor. It is heat input to the air, not the fuel or
-  electricity a heater draws, which its efficiency would set, and it leaves
-  out the sun's. A consumer sums the increments, as it would a meter's.
+- **One record an hour,** `HEATING_ENERGY_INCREMENT_MJ_M2` at the hour's
+  end (`services.heat_log`): the heat given over the hour, in MJ per square
+  metre of floor. Its source is the simulation and the run, and it names no
+  sensor. It is heat input to the air, not the fuel or electricity a heater
+  draws, which its efficiency would set, and it leaves out the sun's. A
+  consumer sums the increments, as it would a meter's, into a day's total.
+  An hour at a time, it shows the heater running through a night and not
+  through a day, which a heating pipe's temperature would show of a pipe
+  heating system: the reference greenhouse's heater warms the air directly,
+  and has no pipe whose temperature to record, so none is invented.
 - **The viewer is told what it cannot work out:** a run's equipment at a
   moment, the thermostat's heater as the run has it, and its setpoint then
   (`GET /api/scenarios/{id}/climate/equipment`). The scene draws the heater

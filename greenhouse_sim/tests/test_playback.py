@@ -215,14 +215,18 @@ def test_the_reference_greenhouse_s_second_day_is_one_run_for_the_viewer_and_a_c
         assert (
             now.simulated_now - timedelta(seconds=EVERY_S) < latest.timestamp <= now.simulated_now
         )
-        # The first day's heat, delivered as the day ended (P10.3).
+        # The heat its heater gave, hour by hour, each delivered as its hour
+        # ended, up to the clock (P10.3).
         heat = [
             r
             for r in cut.records
             if r.observation_type == ObservationType.HEATING_ENERGY_INCREMENT_MJ_M2
         ]
-        assert [r.timestamp for r in heat] == [run.start + timedelta(seconds=DAY_S)]
-        assert heat[0].value > 0
+        hours = int(now.time_s // 3600)
+        assert [r.timestamp for r in heat] == [
+            run.start + timedelta(hours=hour) for hour in range(1, hours + 1)
+        ]
+        assert sum(r.value for r in heat) > 0
     finally:
         run.stop()
 
