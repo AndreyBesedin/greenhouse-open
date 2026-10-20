@@ -70,6 +70,19 @@ describe("a run played back, as the viewer reads it", () => {
     });
   });
 
+  it("is said not to be read when its answer is not JSON, rather than lost", async () => {
+    const broken: typeof fetch = vi.fn(async () => new Response("{ truncated", { status: 200 }));
+
+    expect(await loadPlayback("climate_box", broken)).toEqual({
+      status: "unavailable",
+      reason: "the playback's state is not what the viewer reads",
+    });
+    expect(await commandPlayback("climate_box", "play", broken)).toEqual({
+      status: "unavailable",
+      reason: "the playback's state is not what the viewer reads",
+    });
+  });
+
   it("is started and commanded by POST, answered with its new state", async () => {
     const fetchFn = answering(200, ANSWER);
 

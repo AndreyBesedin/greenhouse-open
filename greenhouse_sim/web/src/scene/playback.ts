@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 // How often a view following a played-back run asks where its clock is.
 const POLL_MS = 1000;
@@ -82,10 +82,22 @@ export async function loadPlayback(
   if (response.status === NOT_FOUND) {
     return { status: "unstarted" };
   }
+  return answered(response);
+}
+
+/** The playback's state a response says, or why it says none: its status,
+ * or a body that is not the state, or not JSON at all. */
+async function answered(response: Response): Promise<PlaybackLoad> {
   if (!response.ok) {
     return { status: "unavailable", reason: `the simulator answered ${response.status}` };
   }
-  const state = parsePlayback(await response.json());
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    body = null;
+  }
+  const state = parsePlayback(body);
   return state === null
     ? { status: "unavailable", reason: "the playback's state is not what the viewer reads" }
     : { status: "loaded", state };
@@ -103,13 +115,7 @@ export async function commandPlayback(
   } catch {
     return { status: "unavailable", reason: "the simulator could not be reached" };
   }
-  if (!response.ok) {
-    return { status: "unavailable", reason: `the simulator answered ${response.status}` };
-  }
-  const state = parsePlayback(await response.json());
-  return state === null
-    ? { status: "unavailable", reason: "the playback's state is not what the viewer reads" }
-    : { status: "loaded", state };
+  return answered(response);
 }
 
 /** The playback's clock as a moment the viewer draws: its minute, as runs
@@ -118,31 +124,43 @@ export function followedMoment(state: PlaybackState): number {
   return Math.floor(state.timeS / MINUTE_S) * MINUTE_S;
 }
 
+const NONE: PlaybackLoad = { status: "none" };
+const LOADING: PlaybackLoad = { status: "loading" };
+
 /**
  * Where the scenario's playback stands, asked every second while
- * `scenarioId` is followed; `refresh` asks again at once, as after a
- * command. Nothing is asked for when no scenario is followed.
+ * `scenarioId` is followed, and kept as the playback of that scenario: a
+ * view following another is never told the one before's clock, not even
+ * on its first render. An answer that fails is said, and asked again.
+ * The setter keeps a state given, as after a command, for the scenario
+ * followed when it was made. Nothing is asked for when no scenario is
+ * followed.
  */
 export function usePlayback(
   scenarioId: string | null,
   fetchFn: typeof fetch = fetch,
 ): [PlaybackLoad, (load: PlaybackLoad) => void] {
-  const [load, setLoad] = useState<PlaybackLoad>({ status: "none" });
+  const [held, setHeld] = useState<{ scenarioId: string | null; load: PlaybackLoad }>({
+    scenarioId: null,
+    load: NONE,
+  });
   useEffect(() => {
     if (scenarioId === null) {
-      setLoad({ status: "none" });
       return;
     }
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
-    setLoad({ status: "loading" });
     const ask = async () => {
+      let load: PlaybackLoad;
       try {
-        const answered = await loadPlayback(scenarioId, fetchFn, { signal: controller.signal });
-        setLoad(answered);
-      } catch {
-        return; // given up: the view no longer follows it
+        load = await loadPlayback(scenarioId, fetchFn, { signal: controller.signal });
+      } catch (error) {
+        if (controller.signal.aborted) {
+          return; // given up: the view no longer follows it
+        }
+        load = { status: "unavailable", reason: String(error) };
       }
+      setHeld({ scenarioId, load });
       timer = setTimeout(ask, POLL_MS);
     };
     void ask();
@@ -151,5 +169,7 @@ export function usePlayback(
       clearTimeout(timer);
     };
   }, [scenarioId, fetchFn]);
-  return [load, setLoad];
+  const keep = useCallback((load: PlaybackLoad) => setHeld({ scenarioId, load }), [scenarioId]);
+  const load = scenarioId === null ? NONE : held.scenarioId === scenarioId ? held.load : LOADING;
+  return [load, keep];
 }
