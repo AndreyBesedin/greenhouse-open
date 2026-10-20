@@ -695,21 +695,27 @@ def air_through_a_run(
     )
     air = grid(scenario_id)
     climate = models.get(CLIMATE)
+    # A run of a scenario is told apart by what it is made of, whatever
+    # drives its air: a manifest or a layout changed, such as its weather or
+    # its heater, makes another run.
     if isinstance(climate, _Climate):
         day = _climate_day(*climate.key)
-        # A run under recorded weather is told apart by its file's content,
-        # and a run of a scenario by what it is made of: a manifest or a
-        # layout changed, such as its weather or its heater, makes another.
         config = changed(
             scenario(scenario_id), SceneChanges(layout=climate.key[1], weather=climate.key[2])
         )
+        # A run under recorded weather is told apart by its file's content.
         under = config.weather
         recorded = under.identity() if isinstance(under, RecordedWeather) else ""
-        told = repr(climate.key) + recorded + config.model_dump_json()
-        digest = hashlib.sha256(told.encode()).hexdigest()[:RUN_DIGEST_LENGTH]
+        digest = _digest(repr(climate.key) + recorded + config.model_dump_json())
         return (lambda time_s: day.sampled(f"{scenario_id}_{CLIMATE}", time_s)), (
             f"{scenario_id}-climate-{digest}"
         )
     config = changed(scenario(scenario_id), SceneChanges(layout=name))
     own = config.airflow.field(f"{scenario_id}_{config.airflow.kind}", air)
-    return (lambda _: own), f"{scenario_id}-{config.airflow.kind}"
+    digest = _digest(config.model_dump_json())
+    return (lambda _: own), f"{scenario_id}-{config.airflow.kind}-{digest}"
+
+
+def _digest(told: str) -> str:
+    """What tells one run from another, shortened."""
+    return hashlib.sha256(told.encode()).hexdigest()[:RUN_DIGEST_LENGTH]
