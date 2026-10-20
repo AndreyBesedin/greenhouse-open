@@ -7,6 +7,13 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: a scenario's own run played back against one clock
+  (decision 0041), which the viewer and a consumer follow: its point
+  sensors' readings worked out ahead, day by day, at a consumer's cadence
+  of 300 s, and served only as far as the clock has reached; the run's
+  identity, epoch and instant said the same way to both. The API starts,
+  plays, pauses, restarts and paces it (`/api/scenarios/{id}/playback`).
+
 ## 0.2.0 - 2026-10-19
 
 The simulator's greenhouse, crop, air, sensors and sun, the reference

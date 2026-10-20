@@ -192,11 +192,15 @@ def observe(
     clean: bool = False,
     weather_at: WeatherAt | None = None,
     from_s: float = 0.0,
+    every_s: float | None = None,
 ) -> list[Observation]:
     """Every reading `sensors` have delivered of the air by `until_s`, and of
     the weather, if a weather station reads it, from samples taken from
     `from_s` on, as observations, in the order they were delivered; as clean
-    sensors would have read them, if `clean`."""
+    sensors would have read them, if `clean`. With `every_s`, only the
+    samples taken at a multiple of it from the run's start: those a consumer
+    following the run at that cadence receives, each the reading the whole
+    log has then, its draws included."""
     source = RecordSource(type=SourceType.SIMULATION, source_id=run_id)
     observations: list[Observation] = []
     # Moment by moment, each moment's air and weather worked out once for
@@ -210,6 +214,7 @@ def observe(
         (moment, order)
         for order, sensor in enumerate(sensors)
         for moment in samples(sensor, until_s, from_s)
+        if every_s is None or moment % every_s == 0
     )
     for moment, order in taken_in_turn:
         sensor = sensors[order]
