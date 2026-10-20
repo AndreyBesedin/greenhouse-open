@@ -165,13 +165,13 @@ check; a route that comes to need one checks it first.
 
 import json
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
 from http import HTTPStatus
 from typing import Final
 from urllib.parse import parse_qs, urlsplit
 
 from pydantic import BaseModel
 
+from greenhouse_sim.api.responses import JsonValue, Response
 from greenhouse_sim.services import (
     cfd,
     checkpoints,
@@ -190,14 +190,7 @@ from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceErro
 from greenhouse_sim.services.live import InvalidSpeed, LiveCommand, LiveRun, LiveRuns
 from greenhouse_sim.services.playback import PlaybackCommand
 
-type JsonValue = dict[str, JsonValue] | list[JsonValue] | str | int | float | bool | None
 type Query = dict[str, list[str]]
-
-
-@dataclass(frozen=True)
-class Response:
-    status: HTTPStatus
-    body: JsonValue
 
 
 # How each kind of service error is answered; the first that matches.

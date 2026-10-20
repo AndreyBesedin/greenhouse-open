@@ -22,6 +22,24 @@ breaks the conformance checks is a major version.
   of 300 s, and served only as far as the clock has reached; the run's
   identity, epoch and instant said the same way to both. The API starts,
   plays, pauses, restarts and paces it (`/api/scenarios/{id}/playback`).
+- `greenhouse-sim`: the consumer interface served from a played-back run
+  (P10.4): `GET /consumer/v1/runs`, a run, its greenhouse, and its
+  observations and events after a cursor, on the API's loopback server;
+  observed records only. Besides the sensors' readings, the run's
+  organ-level crop delivers a daily walk through it at noon (each plant's
+  fruit and red fruit counted, their mass estimated, its height measured,
+  with the scenario's observation errors) and its weekly harvests, one
+  `HARVEST` event per plant picked. `uv run api --play reference_greenhouse
+  [--hold]` starts the run with the API, held until told to play if asked.
+- `greenhouse-protocol`: the consumer interface
+  (`greenhouse_protocol.contracts.consumer`, decision 0040, P10.1): how a
+  client reads a running producer, whatever it is. Routes under
+  `/consumer/v1` answer a run's identity, epoch and clock, its greenhouse
+  description, and its observations and events after a cursor, in delivery
+  order, with nothing from after the run's clock. `check_batch` and
+  `check_polls` hold a producer to the rules, and a recorded exchange
+  (`tests/fixtures/consumer/exchange.json`) lets a client be built before
+  any producer serves it.
 
 ## 0.2.0 - 2026-10-19
 

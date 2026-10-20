@@ -99,12 +99,15 @@ thread of its own is a live runner that never shows what is not worked out.
   it fits in memory. A playback started some minutes before it is watched
   plays at any pace. The viewer's own day step (about 9 s) runs beside it,
   on the same interpreter: a pace under 10 s a day may wait on both.
-- The playback's records are the sensors' only. The crop's observations
-  and its harvests, and the heater's modeled energy, are records of the
-  same run that later steps add (P10.3, P10.4).
-- Nothing is kept across a restart of the API; a playback works its run
-  out again. Writing it to disk is worth doing if a demo cannot wait those
-  minutes.
+- The playback's records are the sensors' and the crop's
+  (`services/crop_log`, P10.4): a walk through the crop at noon each day,
+  and each harvest round as an event per plant picked, kept in a log of
+  their own beside the observations. The heater's modeled energy is a
+  record of the same run that a later step adds (P10.3).
+- A restart of the API keeps only each run's last epoch, so a producer
+  started again is a new epoch to its consumers (P10.4). Its records are
+  not kept: a playback works its run out again. Writing them to disk is
+  worth doing if a demo cannot wait those minutes.
 - Worth revisiting if a run's day ever costs more than its pace, when a
   playback worked out entirely before it plays is the same design with its
   clock started last.
