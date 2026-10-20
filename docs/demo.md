@@ -56,15 +56,17 @@ page instead.
   organ from transplants, each plant's traits drawn from seed 42, on a
   high-wire double row lowered every week and harvested every week.
 - **The equipment:** two fans over the front path blowing down the house, a
-  15 kW heater, a dehumidifier; temperature, humidity, CO₂ and PAR sensors,
-  an anemometer, a weather station outside, and a camera looking down the
-  middle path.
-- **The season:** 120 days from 1 March, the cold spring day's weather
-  every day under the season's own sun, the heater, vents and fans on a
-  fixed daily schedule.
-- **The opening day:** day 80, the first with a red fruit, kept as a
+  30 kW heater on a thermostat, a dehumidifier; temperature, humidity, CO₂
+  and PAR sensors, an anemometer, a weather station outside, and a camera
+  looking down the middle path.
+- **The season:** 120 days from 1 March, a season's weather (P10.3): each
+  day's temperatures following the year, from March's frosts to June's
+  warm afternoons, in spells of a few days, each day its own clouds. The
+  heater on a thermostat, at 16 °C by night and 18 °C by day; the vents
+  and fans on a fixed daily schedule.
+- **The opening day:** day 86, the first with a red fruit, kept as a
   checkpoint beside the manifest so that the viewer opens there in seconds
-  rather than working out 80 days.
+  rather than working out 86 days.
 
 ## The walk-through
 
@@ -72,7 +74,7 @@ The final QA of P09, step by step. The numbers are the simulator's own, from
 its tests and its golden views (`tests/test_reference_qa.py`).
 
 1. **Start it and open the reference scenario, seed 42.** `uv run demo`
-   opens it at noon on day 80; the scenario list says its
+   opens it at noon on day 86; the scenario list says its
    seed and its opening day, and in QA mode (step 7) the run's manifest
    names the seed, the manifest's version and the commits of the simulator
    and the viewer.
@@ -81,9 +83,9 @@ its tests and its golden views (`tests/test_reference_qa.py`).
    selects it, and the inspector names it and its size; the rows stand 1.6 m
    apart about the middle, the plants 0.75 m apart along them.
 3. **Morning to noon: the sun, the shadows and the radiation.** "Climate
-   run" moves through the day. At 6:00 the sun stands 10° up in the
+   run" moves through the day. At 6:00 the sun stands 11° up in the
    east-north-east, the crop's shadows long on the floor; at the sun's noon,
-   12:40 on the run's clock (its site's standard time), 58° up in the south.
+   12:40 on the run's clock (its site's standard time), 59° up in the south.
    "Air field" set to a slice of PAR shows the light in the canopy, with
    the gutters' shadows across it.
 4. **The air: vectors, temperature and humidity slices.** The climate's
@@ -92,12 +94,13 @@ its tests and its golden views (`tests/test_reference_qa.py`).
    across or along the house.
 5. **The fans, the heater and the dehumidifier.** The Equipment panel
    switches each; the field and the house's air follow, from the moment of
-   the change. The heater warms its corner first; the dehumidifier dries
-   the air around it.
+   the change. The heater says when its thermostat runs it, and at what it
+   aims; switched by hand, it is the command's from then on. It warms its
+   corner first; the dehumidifier dries the air around it.
 6. **A roof vent, and the wind.** The schedule opens the roof vents by the
    clock: shut until 9:00, half open, then fully from 11:00, and shut again
-   at 20:00. Shut at noon, the vents leave the house at 38.5 °C against
-   29.5 °C open (the golden views' `vents-closed` and `vents-open`). An
+   at 20:00. Shut at noon, the vents leave the house at 38.2 °C against
+   28.2 °C open (the golden views' `vents-closed` and `vents-open`). An
    Openings slider moved past the run's start shuts or opens a door or
    vent from that moment, as the Equipment panel's switches do; at the
    run's start, from the start. "Weather" overrides the wind's direction
@@ -121,10 +124,10 @@ its tests and its golden views (`tests/test_reference_qa.py`).
    "Climate run" moves a day at a time, or plays a day a step. No two
    plants are alike, each drawn from the seed; a selected part of a plant
    charts its days, the air and its own light on each, and its fruit
-   reddens as it ripens. The first red fruit, on day 80, hangs on plant 30's
+   reddens as it ripens. The first red fruit, on day 86, hangs on plant 30's
    first truss.
 10. **A harvest, in the plant's history.** The weekly round picks every red
-    fruit: on day 84 it picks plant 30's first, 85 g, and the plant's days
+    fruit: on day 91 it picks plant 30's first, 82 g, and the plant's days
     list it among what was picked. The plant lab (`?plants=lab`) harvests a
     chosen fruit by hand, and its plant's history keeps it too.
 11. **A checkpoint, a branch, two schedules compared.** "Checkpoints", under
@@ -200,7 +203,7 @@ memory until it stops.
   it needs: the version `greenhouse_sim/web/.nvmrc` names. `uv run`
   provides the Python.
 - **The viewer's packages missing.** `uv run setup`.
-- **A slow first answer.** Opening day 80 is quick, from its kept
+- **A slow first answer.** Opening day 86 is quick, from its kept
   checkpoint. A moment beyond it is worked out from there, about 2.5 s for
   each simulated day; the season's end takes minutes the first time, and
   the HUD says how long the simulator took for the latest request. Another
