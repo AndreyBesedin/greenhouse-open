@@ -65,3 +65,33 @@ test("a view follows its scenario's run as it is played back, the run a consumer
     await expect(page).not.toHaveURL(/set=heater/);
   });
 });
+
+test("a moment whose field fails does not stop the view following the run's clock", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  // Played back, started here if no test has yet, and playing.
+  expect((await page.request.post(`${PLAYBACK}/start`)).ok()).toBe(true);
+  // Every field asked for after the first fails.
+  let asked = 0;
+  await page.route("**/api/scenarios/climate_box/fields/climate*", (route) => {
+    asked += 1;
+    return asked === 1
+      ? route.continue()
+      : route.fulfill({ status: 500, json: { error: "a failure for the test" } });
+  });
+  await page.goto("/?scenario=climate_box&field=climate&follow=1");
+  // The moment asked for, as the address keeps it; the one drawn stays the
+  // last whose field arrived.
+  const asking = () => Number(new URL(page.url()).searchParams.get("t") ?? 0);
+
+  // Moved on once, to the clock, whose field fails; then on again, with it,
+  // and again.
+  let now = asking();
+  for (let step = 0; step < 3; step += 1) {
+    await expect.poll(asking, ARRIVES).toBeGreaterThan(now);
+    now = asking();
+  }
+  await expect(page.getByTestId("climate-failed")).toContainText("cannot be drawn");
+  expect(asked).toBeGreaterThan(2);
+});

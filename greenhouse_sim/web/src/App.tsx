@@ -280,18 +280,21 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const askedMoment = source.kind === "scenario" ? (source.time ?? 0) : null;
   const shownMoment = fieldProgress.shown?.field.timeS ?? null;
   const drawingField = fieldName !== null;
+  // A moment whose field failed has arrived as far as it will: the view
+  // moves on with the clock, and asks for the next, rather than wait on it.
+  const fieldFailed = failed(fieldProgress.latest);
   useEffect(() => {
     if (followed === null || clockMoment === null || clockMoment === askedMoment) {
       return;
     }
-    if (drawingField && shownMoment !== askedMoment) {
+    if (drawingField && shownMoment !== askedMoment && !fieldFailed) {
       return;
     }
     setPlayingClimate(false);
     setSource((current) =>
       current.kind === "scenario" ? withTime(current, clockMoment) : current,
     );
-  }, [followed, clockMoment, askedMoment, shownMoment, drawingField, setSource]);
+  }, [followed, clockMoment, askedMoment, shownMoment, drawingField, fieldFailed, setSource]);
   // What the view changes of the scenario's own run, which is the one
   // played back: any of these makes it another run.
   const anotherRun =
