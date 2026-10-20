@@ -172,3 +172,31 @@ test("the HUD folds to its header, and moves by it, never out of the window (#20
     expect(await place()).toEqual(inPlace);
   });
 });
+
+test("the panels are dark, or light if chosen, and the golden views keep theirs light (#208)", async ({
+  page,
+}) => {
+  const background = (selector: string) =>
+    page
+      .locator(selector)
+      .first()
+      .evaluate((element) => getComputedStyle(element).backgroundColor);
+  await page.goto("/?scene=example");
+  await expect(page.getByTestId("scene-status")).toContainText("Showing the example scene");
+
+  // Dark navy by default, its text light.
+  expect(await background(".info-panel")).toBe("rgba(17, 24, 39, 0.9)");
+  expect(await background(".hud")).toBe("rgba(17, 24, 39, 0.9)");
+
+  // Light, once chosen, and still so after a reload.
+  await page.getByRole("checkbox", { name: "Light panels" }).check();
+  expect(await background(".info-panel")).toBe("rgba(255, 255, 255, 0.88)");
+  await page.reload();
+  await expect(page.getByRole("checkbox", { name: "Light panels" })).toBeChecked();
+  expect(await background(".info-panel")).toBe("rgba(255, 255, 255, 0.88)");
+  await page.getByRole("checkbox", { name: "Light panels" }).uncheck();
+
+  // A golden view's caption is light whatever the viewer's panels are.
+  await page.goto("/qa/renderer?seed=42");
+  expect(await background(".qa-caption")).toBe("rgba(255, 255, 255, 0.88)");
+});
