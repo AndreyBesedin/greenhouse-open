@@ -1,4 +1,5 @@
 import { DAY_S } from "./clock";
+import { loadJson } from "./loadJson";
 import type { ScheduledCommand } from "./scene/source";
 
 // A day's noon, as a share of it.
@@ -120,14 +121,6 @@ export function ownDaily(summary: ScenarioSummary | undefined): ScheduledCommand
 export const SCENARIOS_URL = "/api/scenarios";
 
 export async function loadScenarios(fetchFn: typeof fetch = fetch): Promise<ScenariosState> {
-  try {
-    const response = await fetchFn(SCENARIOS_URL);
-    if (!response.ok) {
-      return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
-    }
-    return { status: "loaded", scenarios: parseScenarios(await response.json()) };
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return { status: "unavailable", reason };
-  }
+  const answer = await loadJson(SCENARIOS_URL, parseScenarios, fetchFn);
+  return answer.status === "loaded" ? { status: "loaded", scenarios: answer.value } : answer;
 }

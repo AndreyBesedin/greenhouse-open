@@ -1,3 +1,4 @@
+import { loadJson } from "../loadJson";
 import { PERCENT } from "../units";
 /** One of the plant lab's environments, as the simulator describes it
  * (`GET /api/plants/environments`): what a plant there experiences each day. */
@@ -58,14 +59,6 @@ export function describeEnvironment(environment: LabEnvironment): string {
 export async function loadLabEnvironments(
   fetchFn: typeof fetch = fetch,
 ): Promise<EnvironmentsState> {
-  try {
-    const response = await fetchFn(PLANT_LAB_ENVIRONMENTS_URL);
-    if (!response.ok) {
-      return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
-    }
-    return { status: "loaded", environments: labEnvironments(await response.json()) };
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return { status: "unavailable", reason };
-  }
+  const answer = await loadJson(PLANT_LAB_ENVIRONMENTS_URL, labEnvironments, fetchFn);
+  return answer.status === "loaded" ? { status: "loaded", environments: answer.value } : answer;
 }

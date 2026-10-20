@@ -1,3 +1,4 @@
+import { loadJson } from "../loadJson";
 import { type RunParts, runParameters, scenarioUrl } from "./run";
 
 /** A run's thermostat at a moment (P10.3): the heater it runs, the
@@ -71,16 +72,8 @@ export async function loadEquipment(
   url: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<EquipmentState> {
-  try {
-    const response = await fetchFn(url);
-    if (!response.ok) {
-      return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
-    }
-    return { status: "loaded", equipment: parseEquipment(await response.json()) };
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return { status: "unavailable", reason };
-  }
+  const answer = await loadJson(url, parseEquipment, fetchFn);
+  return answer.status === "loaded" ? { status: "loaded", equipment: answer.value } : answer;
 }
 
 /** The thermostat that runs its heater at the moment, if one does. */

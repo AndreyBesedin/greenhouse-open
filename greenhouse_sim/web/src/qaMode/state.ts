@@ -1,4 +1,5 @@
 import { describeTime } from "../fields/ClimateTime";
+import { isNumberRecord, isObject, loadJson } from "../loadJson";
 import { formatValue } from "../readouts";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 import {
@@ -63,14 +64,6 @@ export function runStateUrl(scenarioId: string, run: RunParts): string {
 
 const UNEXPECTED = "the run's state is not what the viewer expects";
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function isNumbers(value: unknown): value is Record<string, number> {
-  return isObject(value) && Object.values(value).every((entry) => typeof entry === "number");
-}
-
 function commandFrom(value: unknown): GivenCommand {
   if (
     !isObject(value) ||
@@ -126,7 +119,7 @@ export function parseRunState(body: unknown): RunState {
     typeof body.crop_model !== "string" ||
     typeof body.plants !== "number" ||
     typeof body.days_lived !== "number" ||
-    !isNumbers(body.levels) ||
+    !isNumberRecord(body.levels) ||
     typeof body.commands_given !== "number" ||
     !Array.isArray(body.latest_commands) ||
     !Array.isArray(body.sensors) ||
@@ -159,18 +152,8 @@ export async function loadRunState(
   url: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<RunStateState> {
-  try {
-    const response = await fetchFn(url);
-    if (!response.ok) {
-      return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
-    }
-    return { status: "loaded", state: parseRunState(await response.json()) };
-  } catch (error) {
-    return {
-      status: "unavailable",
-      reason: error instanceof Error ? error.message : String(error),
-    };
-  }
+  const answer = await loadJson(url, parseRunState, fetchFn);
+  return answer.status === "loaded" ? { status: "loaded", state: answer.value } : answer;
 }
 
 /** A level, or how far a door stands open, in %. */

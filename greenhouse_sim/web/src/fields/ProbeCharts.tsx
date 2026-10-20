@@ -1,4 +1,5 @@
 import { CHART_WIDTH, polylinePoints } from "../charts/chart";
+import { isNumberList, loadJson } from "../loadJson";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 import type { Point3 } from "../world";
 import { describeTime } from "./ClimateTime";
@@ -26,20 +27,16 @@ export type ProbeChartsState =
   | { status: "unavailable"; reason: string }
   | { status: "loaded"; probes: ClimateProbes };
 
-function isNumbers(value: unknown): value is number[] {
-  return Array.isArray(value) && value.every((item) => typeof item === "number");
-}
-
 function isReadings(value: unknown): value is Readings {
   return (
     typeof value === "object" &&
     value !== null &&
     "temperature_c" in value &&
-    isNumbers(value.temperature_c) &&
+    isNumberList(value.temperature_c) &&
     "humidity_pct" in value &&
-    isNumbers(value.humidity_pct) &&
+    isNumberList(value.humidity_pct) &&
     "speed_m_s" in value &&
-    isNumbers(value.speed_m_s)
+    isNumberList(value.speed_m_s)
   );
 }
 
@@ -50,7 +47,7 @@ export function isClimateProbes(body: unknown): body is ClimateProbes {
     typeof body === "object" &&
     body !== null &&
     "times_s" in body &&
-    isNumbers(body.times_s) &&
+    isNumberList(body.times_s) &&
     "probes" in body &&
     Array.isArray(body.probes) &&
     body.probes.every(
@@ -82,21 +79,15 @@ export async function loadProbeCharts(
   url: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<ProbeChartsState> {
-  try {
-    const response = await fetchFn(url);
-    if (!response.ok) {
-      return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
-    }
-    const body: unknown = await response.json();
-    return isClimateProbes(body)
-      ? { status: "loaded", probes: body }
-      : { status: "unavailable", reason: "the readings are not what the viewer expects" };
-  } catch (error) {
-    return {
-      status: "unavailable",
-      reason: error instanceof Error ? error.message : String(error),
-    };
+  const answer = await loadJson(url, climateProbesOf, fetchFn);
+  return answer.status === "loaded" ? { status: "loaded", probes: answer.value } : answer;
+}
+
+function climateProbesOf(body: unknown): ClimateProbes {
+  if (!isClimateProbes(body)) {
+    throw new Error("the readings are not what the viewer expects");
   }
+  return body;
 }
 
 // A chart's size in its own units.

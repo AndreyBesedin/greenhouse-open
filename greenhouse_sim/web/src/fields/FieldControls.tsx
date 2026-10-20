@@ -1,3 +1,4 @@
+import { isObject, loadJson } from "../loadJson";
 import { formatValue } from "../readouts";
 import { useLoad } from "../useLoad";
 import {
@@ -34,21 +35,20 @@ export async function loadFieldNames(
   layout?: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<FieldNames> {
-  try {
-    const response = await fetchFn(fieldNamesUrl(scenarioId, layout));
-    const body: unknown = response.ok ? await response.json() : null;
-    if (typeof body !== "object" || body === null) {
-      return { names: [], configured: null };
-    }
-    const names = "fields" in body && Array.isArray(body.fields) ? body.fields : [];
-    const configured = "configured" in body ? body.configured : null;
-    return {
-      names: names.filter((name) => typeof name === "string"),
-      configured: typeof configured === "string" ? configured : null,
-    };
-  } catch {
+  const answer = await loadJson(fieldNamesUrl(scenarioId, layout), fieldNamesOf, fetchFn);
+  return answer.status === "loaded" ? answer.value : { names: [], configured: null };
+}
+
+/** The field names an answer lists, none of what is not a name. */
+function fieldNamesOf(body: unknown): FieldNames {
+  if (!isObject(body)) {
     return { names: [], configured: null };
   }
+  const names = Array.isArray(body.fields) ? body.fields : [];
+  return {
+    names: names.filter((name) => typeof name === "string"),
+    configured: typeof body.configured === "string" ? body.configured : null,
+  };
 }
 
 const NO_FIELDS: FieldNames = { names: [], configured: null };

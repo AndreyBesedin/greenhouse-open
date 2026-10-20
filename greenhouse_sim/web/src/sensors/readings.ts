@@ -1,3 +1,4 @@
+import { isObject } from "../loadJson";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 import type { Point3 } from "../world";
 
@@ -98,10 +99,6 @@ export function sensorsUrl(
     ...(what === "observations" && run.clean === true ? ["clean=1"] : []),
     ...runParameters(run, ["weather"]),
   ]);
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 function isObservation(value: unknown): value is SensorObservation {

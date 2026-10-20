@@ -1,3 +1,4 @@
+import { loadJson } from "../loadJson";
 import { DEFAULT_WEATHER } from "../scenarios";
 import type { ScenarioSource } from "../scene/edits";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
@@ -119,20 +120,15 @@ export async function loadCheckpoints(
   url: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<CheckpointsState> {
-  try {
-    const response = await fetchFn(url);
-    if (!response.ok) {
-      return { status: "unavailable", reason: await refusal(response) };
-    }
-    const body: unknown = await response.json();
-    if (!Array.isArray(body)) {
-      throw new Error("the checkpoints are not a list");
-    }
-    return { status: "loaded", checkpoints: body.map(parseCheckpoint) };
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return { status: "unavailable", reason };
+  const answer = await loadJson(url, checkpointsOf, fetchFn, refusal);
+  return answer.status === "loaded" ? { status: "loaded", checkpoints: answer.value } : answer;
+}
+
+function checkpointsOf(body: unknown): CheckpointSummary[] {
+  if (!Array.isArray(body)) {
+    throw new Error("the checkpoints are not a list");
   }
+  return body.map(parseCheckpoint);
 }
 
 /** Where a checkpoint of a scenario's run, asked for as the climate is, is

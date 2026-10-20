@@ -1,4 +1,5 @@
 import { DAY_S } from "../clock";
+import { isNumberList, loadJson } from "../loadJson";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 
 /** A run's events in a window, in the order they happen, column by column,
@@ -54,14 +55,6 @@ export function timelineUrl(
   ]);
 }
 
-function isNumbers(value: unknown, length?: number): value is number[] {
-  return (
-    Array.isArray(value) &&
-    (length === undefined || value.length === length) &&
-    value.every((item) => typeof item === "number")
-  );
-}
-
 function isStrings(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
@@ -79,10 +72,10 @@ export function parseTimeline(body: unknown): Timeline {
     !isStrings(fields.processes) ||
     !isStrings(fields.subjects) ||
     !isStrings(fields.kinds) ||
-    !isNumbers(times) ||
-    !isNumbers(fields.process, times.length) ||
-    !isNumbers(fields.subject, times.length) ||
-    !isNumbers(fields.kind, times.length)
+    !isNumberList(times) ||
+    !isNumberList(fields.process, times.length) ||
+    !isNumberList(fields.subject, times.length) ||
+    !isNumberList(fields.kind, times.length)
   ) {
     throw new Error("the timeline is not what the viewer expects");
   }
@@ -104,16 +97,8 @@ export async function loadTimeline(
   url: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<TimelineState> {
-  try {
-    const response = await fetchFn(url);
-    if (!response.ok) {
-      return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
-    }
-    return { status: "loaded", timeline: parseTimeline(await response.json()) };
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return { status: "unavailable", reason };
-  }
+  const answer = await loadJson(url, parseTimeline, fetchFn);
+  return answer.status === "loaded" ? { status: "loaded", timeline: answer.value } : answer;
 }
 
 /** One event of a timeline, by name. */

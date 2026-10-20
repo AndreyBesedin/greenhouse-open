@@ -1,5 +1,6 @@
 import { CHART_WIDTH, polylinePoints } from "../charts/chart";
 import { DAY_S, dayStart } from "../clock";
+import { loadJson } from "../loadJson";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 
 /** The house's air as one well-mixed volume at each moment of a trace. */
@@ -79,16 +80,8 @@ export async function loadHouseAir(
   url: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<HouseAirState> {
-  try {
-    const response = await fetchFn(url);
-    if (!response.ok) {
-      return { status: "unavailable", reason: `the simulator API answered ${response.status}` };
-    }
-    return { status: "loaded", trace: parseHouseAir(await response.json()) };
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return { status: "unavailable", reason };
-  }
+  const answer = await loadJson(url, parseHouseAir, fetchFn);
+  return answer.status === "loaded" ? { status: "loaded", trace: answer.value } : answer;
 }
 
 function polyline(times: number[], values: number[], low: number, high: number): string {

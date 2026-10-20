@@ -4,6 +4,7 @@ import type { Slice, SliceQuantity } from "../fields/display";
 import { quantityScale } from "../fields/drawing";
 import { checkField, type EnvironmentField } from "../fields/field";
 import { type OpeningsAt, parseOpenings } from "../fields/openingFlows";
+import { isObject } from "../loadJson";
 import { formatValue } from "../readouts";
 import { checkScene } from "../scene/checkScene";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
@@ -157,10 +158,6 @@ export function qaReferenceView(search: string): QaReferenceView | null {
   return (QA_REFERENCE_VIEWS as readonly string[]).includes(view)
     ? (view as QaReferenceView)
     : null;
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 function scene(body: unknown, what: string): SceneSnapshot {
