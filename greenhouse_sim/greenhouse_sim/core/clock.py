@@ -13,9 +13,9 @@ day's (`days_ended`).
 """
 
 import math
-from typing import Final
 
-DAY_S: Final = 86_400.0
+# A day's length is the simulator's unit; the clock's users find it here.
+from greenhouse_sim.units import DAY_S as DAY_S
 
 
 def run_day(time_s: float) -> int:

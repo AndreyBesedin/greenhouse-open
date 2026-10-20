@@ -13,13 +13,14 @@ from greenhouse_sim.climate.psychrometrics import (
     saturation_pressure_pa,
     saturation_ratio_g_kg,
 )
-from greenhouse_sim.climate.sources import SECONDS_PER_HOUR, source_terms
+from greenhouse_sim.climate.sources import source_terms
 from greenhouse_sim.climate.transport import AirState, Transport
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.grid import air_grid
+from greenhouse_sim.units import HOUR_S
 from greenhouse_sim.world.equipment import Dehumidifier, Fan
 from greenhouse_sim.world.geometry import Vector3
 
@@ -113,7 +114,7 @@ def test_shut_off_the_air_loses_what_the_dehumidifier_takes(velocity: np.ndarray
 
     after = transport.advance(START, terms, 600, OUTSIDE)
 
-    rate_kg = DEHUMIDIFIER.removal_kg_h * 600 / SECONDS_PER_HOUR
+    rate_kg = DEHUMIDIFIER.removal_kg_h * 600 / HOUR_S
     lost = transport.water_kg(START.humidity) - transport.water_kg(after.humidity)
     assert after.removed_kg == pytest.approx(rate_kg, rel=1e-9)
     assert after.condensed_kg == 0.0
@@ -131,7 +132,7 @@ def test_a_dehumidifier_never_takes_more_than_the_air_holds() -> None:
     assert after.removed_kg <= transport.water_kg(START.humidity)
     # Its own cells are dry; the rest of the house is drying into them.
     assert after.humidity[terms.water_removed_kg_s > 0].max() < 0.01
-    assert after.removed_kg < 1000.0 * 600 / SECONDS_PER_HOUR
+    assert after.removed_kg < 1000.0 * 600 / HOUR_S
 
 
 def test_cooling_air_condenses_what_it_can_no_longer_hold() -> None:

@@ -52,10 +52,6 @@ class InsideLight:
     par_umol_m2_s: np.ndarray
 
 
-def _dot(a: Vector3, b: Vector3) -> float:
-    return a.x * b.x + a.y * b.y + a.z * b.z
-
-
 def sky_view(normal: Vector3) -> float:
     """The share of the sky a surface facing the unit `normal` sees."""
     return (1.0 + normal.z) / 2.0
@@ -157,7 +153,7 @@ class Sunlight:
         shades now."""
         light = self.outside_at(time_s)
         towards = self.sun_at(time_s).direction(self.site)
-        beam = light.dni_w_m2 * max(_dot(normal, towards), 0.0)
+        beam = light.dni_w_m2 * max(normal.dot(towards), 0.0)
         if beam > 0:
             reached = self._unshaded(points, towards) if lit is None else lit
             passed = np.where(reached, self.glazing.beam_transmittance(points, towards), 0.0)

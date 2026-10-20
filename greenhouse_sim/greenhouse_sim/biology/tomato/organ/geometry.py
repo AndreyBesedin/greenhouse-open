@@ -163,11 +163,6 @@ def _direction(azimuth: float, elevation: float) -> Vector3:
     )
 
 
-def _unit(x: float, y: float, z: float) -> Vector3:
-    length = math.hypot(x, y, z)
-    return Vector3(x=x / length, y=y / length, z=z / length)
-
-
 def _along(start: Vector3, direction: Vector3, distance: float) -> Vector3:
     return Vector3(
         x=start.x + direction.x * distance,
@@ -321,7 +316,7 @@ def organ_geometry(
             # From one point of the path to the next, as long as it is.
             laid_m += length
             node = path.laid(laid_m)
-            axis = _unit(node.x - base.x, node.y - base.y, node.z - base.z)
+            axis = Vector3(x=node.x - base.x, y=node.y - base.y, z=node.z - base.z).unit()
             transform = _pointing(base, axis)
         else:
             node = _along(base, rising, length)

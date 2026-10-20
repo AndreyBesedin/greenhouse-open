@@ -30,6 +30,7 @@ from typing import Final
 from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.domain.envelope import SurfaceCategory
+from greenhouse_sim.units import HALF_TURN_DEG
 from greenhouse_sim.weather.state import WeatherState
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.geometry import Vector3
@@ -54,7 +55,6 @@ WALL_COEFFICIENTS: Final = (0.7, 0.35, -0.5, -0.4, -0.2)
 ROOF_COEFFICIENTS: Final = (-0.7, -0.7, -0.6, -0.5, -0.4)
 # The house's pressure is bisected this many times between its openings'.
 BISECTIONS: Final = 60
-HALF_TURN_DEG: Final = 180.0
 
 
 @dataclass(frozen=True)

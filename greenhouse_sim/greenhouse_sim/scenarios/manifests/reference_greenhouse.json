@@ -1,6 +1,6 @@
 {
   "$schema": "../scenario.schema.json",
-  "schema_version": 1,
+  "schema_version": 2,
   "greenhouse_id": "reference_greenhouse",
   "name": "Reference greenhouse",
   "description": "The reference scenario: 32 tomato plants in a small three-span house with fans, a heater on a thermostat, a dehumidifier, roof vents, sensors and a camera, from spring into summer under a season's weather, 120 days",

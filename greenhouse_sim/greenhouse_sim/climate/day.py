@@ -35,8 +35,8 @@ from greenhouse_sim.climate.openings import OpeningsAt
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.transport import AirState
 from greenhouse_sim.fields.field import EnvironmentField
+from greenhouse_sim.units import HOUR_S
 
-HOUR_S: Final = 3600.0
 # How long the grid run from the start is drawn, in seconds: its first two
 # hours, after which the field comes from a later grid run.
 FROM_THE_START_S: Final = 2 * HOUR_S

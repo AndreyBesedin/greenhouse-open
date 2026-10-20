@@ -7,11 +7,12 @@ import pytest
 from pydantic import ValidationError
 
 from greenhouse_sim.climate.commands import Command, Schedule
-from greenhouse_sim.climate.sources import SECONDS_PER_HOUR, SourceTerms, source_terms
+from greenhouse_sim.climate.sources import SourceTerms, source_terms
 from greenhouse_sim.fields.field import FieldGrid
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.grid import air_grid
+from greenhouse_sim.units import HOUR_S
 from greenhouse_sim.world.equipment import Dehumidifier, Fan, Heater
 from greenhouse_sim.world.geometry import Vector3
 
@@ -136,7 +137,7 @@ def test_a_unit_gives_its_rated_effect_times_its_level_to_the_air_around_it(
 def test_a_dehumidifier_takes_its_rated_water_times_its_level_from_the_same_air() -> None:
     terms = source_terms(DEHUMIDIFIER, 0.5, GRID, SOLID)
 
-    assert terms.total_water_removed_kg_s() == pytest.approx(1.0 / SECONDS_PER_HOUR / 2)
+    assert terms.total_water_removed_kg_s() == pytest.approx(1.0 / HOUR_S / 2)
     np.testing.assert_array_equal(terms.water_removed_kg_s > 0, terms.heat_w > 0)
     assert source_terms(HEATER, 1.0, GRID, SOLID).total_water_removed_kg_s() == 0.0
 

@@ -49,10 +49,10 @@ from greenhouse_sim.climate.psychrometrics import (
 from greenhouse_sim.climate.run import KEEP_EVERY_S, LOOK_AGAIN_S, ClimateRun
 from greenhouse_sim.climate.thermostat import OFF, ON
 from greenhouse_sim.climate.transport import (
-    AIR_DENSITY_KG_M3,
     AIR_HEAT_CAPACITY_J_KG_K,
     GRAMS_PER_KG,
 )
+from greenhouse_sim.units import AIR_DENSITY_KG_M3
 from greenhouse_sim.weather.state import WeatherState
 from greenhouse_sim.world.equipment import Heater
 

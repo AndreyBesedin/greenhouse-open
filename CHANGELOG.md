@@ -71,6 +71,15 @@ breaks the conformance checks is a major version.
   `check_polls` hold a producer to the rules, and a recorded exchange
   (`tests/fixtures/consumer/exchange.json`) lets a client be built before
   any producer serves it.
+- `greenhouse-sim`: the identifier of a piece of equipment
+  (`actuator_id`), a sensor (`sensor_id`) or a door or vent (`opening_id`)
+  holds only letters, digits, `_`, `.` and `-`, as `layout.schema.json` and
+  `scenario.schema.json` now say. The API's parameters write identifiers
+  between `:` and `,`, so an item named otherwise could not be set,
+  scheduled or moved; a layout or scenario that names one is now refused
+  as it is read. Scenario manifests are in format 2 for it
+  (`schema_version`, decision 0031); a format 1 manifest is read as format
+  2, and refused only if it names an item otherwise.
 
 ## 0.2.0 - 2026-10-19
 

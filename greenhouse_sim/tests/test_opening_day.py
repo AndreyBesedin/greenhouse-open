@@ -17,14 +17,16 @@ import gzip
 import json
 import sys
 from collections.abc import Iterator
-from typing import Final
+from http import HTTPStatus
+from itertools import pairwise
+from typing import Any, Final
 
 import pytest
 
+from greenhouse_sim.api.routes import respond
 from greenhouse_sim.biology.plant.organs import Fruit
 from greenhouse_sim.biology.tomato.organ.fruit import Maturity, maturity
 from greenhouse_sim.biology.tomato.organ.topology import Plant
-from greenhouse_sim.climate.day import HOUR_S
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.organs import FruitStage
 from greenhouse_sim.scenarios.manifest_files import (
@@ -38,8 +40,14 @@ from greenhouse_sim.services.crop import forget_crops, run_crop
 from greenhouse_sim.services.fields import climate_run, field, forget_climate_runs, off_levels
 from greenhouse_sim.services.replay import _rounded
 from greenhouse_sim.services.scenarios import scenario_summaries
+from greenhouse_sim.units import HOUR_S
 
 SCENARIO: Final = "reference_greenhouse"
+# Its crop near its opening day is some 12,000 organs' entities; without a
+# day's crop, the scene draws its transplants in its place, some 3,000.
+WHOLE_CROP_ENTITIES: Final = 10_000
+# How much of a day's crop the next keeps at least, before any harvest.
+KEPT_SHARE: Final = 0.95
 # Its first day with red fruit, under its season and its thermostat (P10.3).
 OPENING: Final = 86
 
@@ -126,6 +134,29 @@ def test_kept_as_the_api_starts_the_runs_later_days_carry_on_from_it() -> None:
     assert min(before) == hour_before
     assert [m for m in off._kept if 0.0 < m < OPENING * DAY_S] == [hour_before]
     assert [c.day for c in checkpoints.checkpoints()] == [OPENING, OPENING]
+
+
+def test_the_crop_stays_whole_through_the_days_about_its_opening() -> None:
+    # The crop the viewer draws on the days the QA steps through (#197): each
+    # whole, its 32 plants' organs, none fewer than the day before's by more
+    # than a little, before the first harvest (day 91), and the opening day's
+    # as the days either side of it.
+    assert checkpoints.load_openings() == []
+    entities = []
+    for day in (83, 85, OPENING, OPENING + 1):
+        answer = respond("GET", f"/api/scenarios/{SCENARIO}/crop?t={day * DAY_S + 600:.0f}")
+        assert answer.status == HTTPStatus.OK, answer.body
+        assert isinstance(answer.body, dict)
+        crop: dict[str, Any] = answer.body
+        assert crop["simulated_day"] == day
+        organs = crop["entities"]
+        assert {e["properties"]["plant_id"] for e in organs} == {
+            f"{SCENARIO}_plant_{n:03d}" for n in range(1, 33)
+        }
+        entities.append(len(organs))
+
+    assert min(entities) > WHOLE_CROP_ENTITIES
+    assert all(later >= KEPT_SHARE * earlier for earlier, later in pairwise(entities))
 
 
 @pytest.mark.slow
