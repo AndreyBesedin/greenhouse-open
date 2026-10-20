@@ -41,19 +41,18 @@ from greenhouse_sim.climate.psychrometrics import humidity_ratio_g_kg, relative_
 from greenhouse_sim.core.rng import seeded_rng
 from greenhouse_sim.solar.position import sun_position
 from greenhouse_sim.solar.sky import clear_sky_ghi_w_m2, cloud_factor
+from greenhouse_sim.units import HOUR_S, HOURS_A_DAY
 from greenhouse_sim.weather.sources import WeatherSource
 from greenhouse_sim.weather.state import OUTSIDE_CO2_PPM, Percent, WeatherState
 from greenhouse_sim.world.site import Bearing, Site, bearing
 
-HOURS_IN_A_DAY: Final = 24.0
-SECONDS_PER_HOUR: Final = 3600.0
 # Gusts and lulls are drawn afresh this often, in seconds.
 GUST_EVERY_S: Final = 60.0
 # How many gusts' draws are kept, so that a run asking for nearby moments
 # draws each once.
 _KEPT_GUSTS: Final = 4096
 
-type Hour = Annotated[float, Field(ge=0.0, lt=HOURS_IN_A_DAY)]
+type Hour = Annotated[float, Field(ge=0.0, lt=HOURS_A_DAY)]
 
 
 @lru_cache(maxsize=_KEPT_GUSTS)
@@ -103,8 +102,8 @@ class SyntheticWeather(BaseModel):
         coldest, warmest = self.coldest_hour, self.warmest_hour
         if coldest <= hour <= warmest:
             return (1.0 - math.cos(math.pi * (hour - coldest) / (warmest - coldest))) / 2
-        since = (hour - warmest) % HOURS_IN_A_DAY
-        falling = HOURS_IN_A_DAY - (warmest - coldest)
+        since = (hour - warmest) % HOURS_A_DAY
+        falling = HOURS_A_DAY - (warmest - coldest)
         return (1.0 + math.cos(math.pi * since / falling)) / 2
 
     def source(self, site: Site, seed: int, start: datetime | None = None) -> WeatherSource:
@@ -144,7 +143,7 @@ class _Synthetic:
         # The hour on the site's clock, whatever the day's length.
         wall = moment.astimezone(self.site.zone()).replace(tzinfo=None)
         midnight = wall.replace(hour=0, minute=0, second=0, microsecond=0)
-        hour = (wall - midnight).total_seconds() / SECONDS_PER_HOUR
+        hour = (wall - midnight).total_seconds() / HOUR_S
         warmth = weather.warmth(hour)
         temperature = weather.coldest_c + (weather.warmest_c - weather.coldest_c) * warmth
         wind = weather.calmest_m_s + (weather.windiest_m_s - weather.calmest_m_s) * warmth
@@ -156,7 +155,7 @@ class _Synthetic:
             co2_ppm=weather.co2_ppm,
             wind_speed_m_s=max(wind * (1.0 + self._gusting(moment)), 0.0),
             wind_direction_deg=bearing(
-                weather.wind_from_deg + weather.veer_deg * hour / HOURS_IN_A_DAY
+                weather.wind_from_deg + weather.veer_deg * hour / HOURS_A_DAY
             ),
             barometric_pressure_hpa=self.pressure_hpa,
             global_radiation_w_m2=clear_sky_ghi_w_m2(sun_position(moment, self.site))

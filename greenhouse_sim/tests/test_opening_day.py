@@ -24,7 +24,6 @@ import pytest
 from greenhouse_sim.biology.plant.organs import Fruit
 from greenhouse_sim.biology.tomato.organ.fruit import Maturity, maturity
 from greenhouse_sim.biology.tomato.organ.topology import Plant
-from greenhouse_sim.climate.day import HOUR_S
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.organs import FruitStage
 from greenhouse_sim.scenarios.manifest_files import (
@@ -38,6 +37,7 @@ from greenhouse_sim.services.crop import forget_crops, run_crop
 from greenhouse_sim.services.fields import climate_run, field, forget_climate_runs, off_levels
 from greenhouse_sim.services.replay import _rounded
 from greenhouse_sim.services.scenarios import scenario_summaries
+from greenhouse_sim.units import HOUR_S
 
 SCENARIO: Final = "reference_greenhouse"
 # Its first day with red fruit, under its season and its thermostat (P10.3).

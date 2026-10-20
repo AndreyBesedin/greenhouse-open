@@ -31,6 +31,7 @@ from typing import Final
 from pydantic import BaseModel, ConfigDict, NonNegativeFloat
 
 from greenhouse_sim.solar.position import SunPosition
+from greenhouse_sim.units import DAYS_IN_A_YEAR, PERCENT
 
 # Haurwitz's clear sky: its scale, in W/m², and its attenuation's.
 HAURWITZ_W_M2: Final = 1098.0
@@ -41,14 +42,12 @@ HAURWITZ_ATTENUATION: Final = 0.057
 # perihelion.
 SOLAR_CONSTANT_W_M2: Final = 1361.0
 ORBIT_SHARE: Final = 0.033
-DAYS_IN_A_YEAR: Final = 365.25
 PERIHELION_DAY: Final = 3
 # Kasten and Czeplak's dimming by clouds: its share and power, and the
 # oktas a sky full of cloud has.
 CLOUD_DIMMING: Final = 0.75
 CLOUD_POWER: Final = 3.4
 OKTAS: Final = 8.0
-PERCENT: Final = 100.0
 # Erbs's diffuse share: below the first clearness, a line; to the second, a
 # polynomial, lowest power first; above it, a constant.
 DARK_CLEARNESS: Final = 0.22

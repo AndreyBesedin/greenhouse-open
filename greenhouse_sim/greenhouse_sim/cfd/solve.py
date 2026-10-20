@@ -28,10 +28,11 @@ from greenhouse_sim.cfd.openfoam import (
     write_case,
 )
 from greenhouse_sim.cfd.results import CfdResult, case_key
-from greenhouse_sim.cfd.setup import AIR_DENSITY_KG_M3, CfdSetup
+from greenhouse_sim.cfd.setup import CfdSetup
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import VECTOR_COMPONENTS, EnvironmentField, FieldGrid
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
+from greenhouse_sim.units import AIR_DENSITY_KG_M3
 
 # What made a solved field, as its source says.
 SOURCE: Final = f"openfoam:simpleFoam {OPENFOAM_VERSION}"
