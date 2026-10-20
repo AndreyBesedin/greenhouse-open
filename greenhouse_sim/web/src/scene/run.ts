@@ -1,3 +1,4 @@
+import { layoutText } from "./moves";
 import {
   apiWeather,
   dailyText,
@@ -72,7 +73,7 @@ export function runParameters(run: RunParts, parts: readonly RunPart[] = CLIMATE
   const time = asked.has("time") && run.time !== undefined && run.time > 0 ? run.time : null;
   return [
     ...(asked.has("layout") && run.layout !== undefined
-      ? [`layout=${encodeURIComponent(run.layout)}`]
+      ? [`layout=${layoutText(run.layout)}`]
       : []),
     ...(levels === "" ? [] : [`set=${levels}`]),
     ...(openings === "" ? [] : [`open=${openings}`]),

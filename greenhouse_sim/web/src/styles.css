@@ -1,3 +1,48 @@
+/* The panels' colours (#208): dark by default, light if chosen
+ * (`panelTheme.ts`). The 3D scene, its legends' colour scales and the
+ * charts' coloured lines are the same in both. */
+:root {
+  --panel-scheme: dark;
+  --panel-bg: rgb(17 24 39 / 90%);
+  --panel-text: #e5e9f0;
+  --panel-muted: #a7b1c2;
+  --panel-muted-strong: #c3cad6;
+  --panel-rule: #3d4a5f;
+  --panel-warn: #ffb380;
+  --panel-link: #8cb8ff;
+  --panel-accent: #e277b5;
+  --label-bg: rgb(17 24 39 / 85%);
+  --chart-face: #1e293b;
+  --chart-ring: #6b7a90;
+  --chart-neutral: #b8c2d1;
+  --chart-strong: #e5e9f0;
+  --chart-soft: #8794a8;
+  --chart-off: #8794a8;
+  --chart-faint: #5d6b80;
+  --chart-blue-text: #5aa9e6;
+}
+
+:root[data-panels="light"] {
+  --panel-scheme: light;
+  --panel-bg: rgb(255 255 255 / 88%);
+  --panel-text: #000000;
+  --panel-muted: #555555;
+  --panel-muted-strong: #444444;
+  --panel-rule: #cccccc;
+  --panel-warn: #8a3b12;
+  --panel-link: #1f5fbf;
+  --panel-accent: #aa3377;
+  --label-bg: rgb(255 255 255 / 85%);
+  --chart-face: #ffffff;
+  --chart-ring: #999999;
+  --chart-neutral: #555555;
+  --chart-strong: #333333;
+  --chart-soft: #888888;
+  --chart-off: #7f8c8d;
+  --chart-faint: #bbbbbb;
+  --chart-blue-text: #0072b2;
+}
+
 html,
 body,
 #root {
@@ -24,9 +69,21 @@ body {
 .scalar-legend,
 .qa-caption {
   padding: 8px 12px;
-  background: rgb(255 255 255 / 88%);
+  background: var(--panel-bg);
   border-radius: 6px;
   font-size: 13px;
+}
+
+/* Over the view, text and the browser's own controls follow the panels'
+ * theme: its inputs, selects and buttons are drawn dark on dark panels. */
+.info-panel,
+.hud,
+.inspector,
+.legends,
+.debug-label,
+.qa-caption {
+  color: var(--panel-text);
+  color-scheme: var(--panel-scheme);
 }
 
 .info-panel {
@@ -80,7 +137,7 @@ body {
 
 .build-line {
   margin: 8px 0 0;
-  color: #555555;
+  color: var(--panel-muted);
   font-size: 12px;
 }
 
@@ -112,7 +169,7 @@ body {
 
 .chooser-note {
   margin: 2px 0 4px;
-  color: #555555;
+  color: var(--panel-muted);
   font-size: 12px;
 }
 
@@ -135,7 +192,7 @@ body {
   width: 0;
   min-width: 100%;
   overflow: hidden;
-  color: #555555;
+  color: var(--panel-muted);
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -256,6 +313,56 @@ body {
   border: 0;
 }
 
+/* The view's controls (#207): a button above "What am I seeing?", and the
+ * card it, or `?`, opens: what each gesture does, by device. */
+.controls-help {
+  box-sizing: border-box;
+  width: 300px;
+  max-height: 50vh;
+  overflow: auto;
+  padding: 8px 12px;
+  background: var(--panel-bg);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.controls-help header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.controls-help h2,
+.controls-help h3 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.controls-help h3 {
+  margin-top: 6px;
+  color: var(--panel-muted-strong);
+}
+
+.controls-help dl {
+  margin: 2px 0 0;
+}
+
+.controls-help dt {
+  font-weight: 600;
+}
+
+.controls-help dd {
+  margin: 0 0 2px 12px;
+  color: var(--panel-muted-strong);
+}
+
+.controls-open kbd {
+  padding: 0 4px;
+  border: 1px solid var(--panel-muted);
+  border-radius: 3px;
+  font-size: 11px;
+}
+
 /* "What am I seeing?" (#205): a button at the top of the legends, and the
  * card it opens above them, a swatch, a name and a meaning per row. */
 .seen-in-the-view {
@@ -265,7 +372,7 @@ body {
   max-height: 50vh;
   overflow: auto;
   padding: 8px 12px;
-  background: rgb(255 255 255 / 88%);
+  background: var(--panel-bg);
   border-radius: 6px;
   font-size: 13px;
 }
@@ -291,12 +398,12 @@ body {
 
 .seen-in-the-view dd {
   margin: 0 0 4px 18px;
-  color: #444444;
+  color: var(--panel-muted-strong);
 }
 
 .seen-in-the-view p {
   margin: 6px 0 0;
-  color: #444444;
+  color: var(--panel-muted-strong);
 }
 
 .seen-glyph {
@@ -374,7 +481,7 @@ body {
   top: 0;
   left: 0;
   padding: 1px 4px;
-  background: rgb(255 255 255 / 85%);
+  background: var(--label-bg);
   border: 1px solid #ff8c1a;
   border-radius: 3px;
   font-size: 12px;
@@ -604,7 +711,7 @@ body {
 }
 
 .weather-day-chart .day-wind {
-  stroke: #555555;
+  stroke: var(--chart-neutral);
 }
 
 .weather-day-chart .day-sunshine {
@@ -624,13 +731,13 @@ body {
 }
 
 .wind-compass-ring {
-  fill: #ffffff;
-  stroke: #999999;
+  fill: var(--chart-face);
+  stroke: var(--chart-ring);
 }
 
 .wind-compass-north {
   font-size: 8px;
-  fill: #555555;
+  fill: var(--panel-muted);
 }
 
 .wind-compass-needle {
@@ -671,7 +778,7 @@ body {
 }
 
 .house-air-off {
-  stroke: #7f8c8d;
+  stroke: var(--chart-off);
   stroke-dasharray: 3 2;
 }
 
@@ -689,7 +796,7 @@ body {
   position: relative;
   height: 10px;
   margin: 2px 6px 4px;
-  border-bottom: 1px solid #888888;
+  border-bottom: 1px solid var(--chart-soft);
 }
 
 .climate-schedule-bar span {
@@ -698,13 +805,13 @@ body {
   width: 8px;
   height: 8px;
   margin-left: -4px;
-  border: 1px solid #333333;
+  border: 1px solid var(--chart-strong);
   border-radius: 50%;
-  background: #ffffff;
+  background: var(--chart-face);
 }
 
 .climate-schedule-bar span.applied {
-  background: #333333;
+  background: var(--chart-strong);
 }
 
 /* A daily command's marker is square, as it comes back every day. */
@@ -774,7 +881,7 @@ body {
   display: block;
   width: 100%;
   height: 10px;
-  border-bottom: 1px solid #cccccc;
+  border-bottom: 1px solid var(--panel-rule);
 }
 
 .timeline-ticks {
@@ -784,7 +891,7 @@ body {
 }
 
 .timeline-now {
-  stroke: #333333;
+  stroke: var(--chart-strong);
   stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
 }
@@ -804,7 +911,7 @@ body {
   display: block;
   width: 100%;
   height: 52px;
-  border: 1px solid #cccccc;
+  border: 1px solid var(--panel-rule);
 }
 
 .probe-chart polyline {
@@ -816,18 +923,18 @@ body {
 .probe-chart .probe-charts-controlled,
 .probe-charts-key .probe-charts-controlled {
   stroke: #0072b2;
-  color: #0072b2;
+  color: var(--chart-blue-text);
 }
 
 .probe-chart .probe-charts-off,
 .probe-charts-key .probe-charts-off {
-  stroke: #888888;
+  stroke: var(--chart-soft);
   stroke-dasharray: 4 3;
-  color: #888888;
+  color: var(--chart-soft);
 }
 
 .probe-chart-cursor {
-  stroke: #bbbbbb;
+  stroke: var(--chart-faint);
   vector-effect: non-scaling-stroke;
 }
 
@@ -838,7 +945,7 @@ body {
 .camera-frames {
   margin: 0 0 8px;
   padding: 0 0 8px;
-  border-bottom: 1px solid #cccccc;
+  border-bottom: 1px solid var(--panel-rule);
 }
 
 .camera-panel p {
@@ -874,7 +981,7 @@ body {
 
 /* A sensor whose due reading has not come. */
 .sensor-panel .stale {
-  color: #8a3b12;
+  color: var(--panel-warn);
 }
 
 /* QA mode's panel (P09.6), marked as QA's as the sensor's truth is: what
@@ -883,12 +990,12 @@ body {
 .qa-panel {
   margin: 0 0 8px;
   padding: 2px 6px;
-  border: 1px dashed #aa3377;
+  border: 1px dashed var(--panel-accent);
   font-variant-numeric: tabular-nums;
 }
 
 .qa-panel .stale {
-  color: #8a3b12;
+  color: var(--panel-warn);
 }
 
 /* A sensor or a camera in the developer panel, which selects it. */
@@ -896,14 +1003,14 @@ body {
   padding: 0;
   border: 0;
   background: none;
-  color: #1f5fbf;
+  color: var(--panel-link);
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
 
 .qa-panel .stale .select-link {
-  color: #8a3b12;
+  color: var(--panel-warn);
 }
 
 /* A camera's frames, as the run's log records them. */
@@ -954,18 +1061,18 @@ body {
   width: 100%;
   height: 52px;
   margin: 0 0 4px;
-  border: 1px solid #cccccc;
+  border: 1px solid var(--panel-rule);
 }
 
 .sensor-chart-off {
   fill: none;
-  stroke: #7f8c8d;
+  stroke: var(--chart-off);
   stroke-dasharray: 3 2;
 }
 
 .sensor-chart-truth {
   fill: none;
-  stroke: #888888;
+  stroke: var(--chart-soft);
   stroke-width: 1.5;
   stroke-dasharray: 4 3;
   vector-effect: non-scaling-stroke;
@@ -977,7 +1084,7 @@ body {
 
 .sensor-truth {
   padding: 2px 6px;
-  border: 1px dashed #aa3377;
+  border: 1px dashed var(--panel-accent);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1010,7 +1117,7 @@ body {
 }
 
 .plant-history .refused {
-  color: #8a3b12;
+  color: var(--panel-warn);
 }
 
 /* The plant lab's debug tree: an organ per line, scrolling on its own. */
@@ -1030,7 +1137,7 @@ body {
   padding: 0;
   border: 0;
   background: none;
-  color: #1f5fbf;
+  color: var(--panel-link);
   font: inherit;
   cursor: pointer;
 }
@@ -1040,7 +1147,7 @@ body {
 }
 
 .plant-structure .organ-detail {
-  color: #555555;
+  color: var(--panel-muted);
 }
 
 /* The panels stand in two columns at the sides of the view: the info panel
@@ -1203,4 +1310,22 @@ body {
     min-width: 0;
     width: 100%;
   }
+}
+
+/* Moving the selected equipment or sensor (#209), set off from the
+ * inspector's details below, as a sensor's reading is. */
+.move-panel {
+  margin: 0 0 8px;
+  padding: 0 0 8px;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+}
+
+.move-panel p {
+  margin: 0 0 4px;
+}
+
+.move-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }

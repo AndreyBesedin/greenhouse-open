@@ -11,7 +11,7 @@ it does not have, is refused with the reason.
 """
 
 import math
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import date
 from typing import Final
 
@@ -36,6 +36,7 @@ from greenhouse_sim.scene.snapshot import SceneSnapshot, greenhouse_scene, scene
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.weather.presets import PRESETS
 from greenhouse_sim.weather.recorded import recorded_weathers
+from greenhouse_sim.world.moves import Move, moved
 
 # The envelope's dimensions a client may change.
 DIMENSIONS: Final = ("length", "width", "spans", "bays", "eave_height", "ridge_height")
@@ -47,6 +48,9 @@ CLOUDS_MARK: Final = "@"
 MOST_CLOUD_PCT: Final = 100.0
 # And then with this and a bearing, which overrides its wind's direction.
 WIND_MARK: Final = "~"
+# What follows it in a layout's name are moves of its equipment and sensors
+# (#209): `default~heater:1.2:-0.4`.
+MOVES_MARK: Final = "~"
 FULL_TURN_DEG: Final = 360.0
 
 
@@ -210,7 +214,7 @@ def initial_scene(scenario_id: str, changes: SceneChanges | None = None) -> Scen
 def layout(scenario_id: str, name: str = DEFAULT_LAYOUT) -> dict[str, JsonValue]:
     """One of a scenario's layouts, as its file holds it, once it is checked
     to fit the scenario."""
-    return layout_document(_with_layout(scenario(scenario_id), name).layout)
+    return layout_document(changed(scenario(scenario_id), SceneChanges(layout=name)).layout)
 
 
 def equipment_levels(config: ScenarioConfig, levels: Mapping[str, float]) -> dict[str, float]:
@@ -229,9 +233,14 @@ def equipment_levels(config: ScenarioConfig, levels: Mapping[str, float]) -> dic
 
 def changed(config: ScenarioConfig, changes: SceneChanges) -> ScenarioConfig:
     """A scenario with the changes a client asks for: another of its layouts
-    and another weather, then its greenhouse's dimensions and openings."""
+    and another weather, then its greenhouse's dimensions and openings, and
+    the moves its layout's name ends with (#209), checked once all are made:
+    an item may be moved into the room a larger greenhouse makes."""
+    base, marked, written = changes.layout.partition(MOVES_MARK)
     return _with_envelope(
-        _with_weather(_with_layout(config, changes.layout), changes.weather), changes
+        _with_weather(_with_layout(config, base), changes.weather),
+        changes,
+        _moves(written) if marked else None,
     )
 
 
@@ -270,6 +279,40 @@ def _with_weather(config: ScenarioConfig, name: str) -> ScenarioConfig:
     return config.model_copy(update={"weather": weather})
 
 
+def _moves(text: str) -> list[Move]:
+    """Moves as an address writes them: `heater:1.2:-0.4,fan_left:0:2`, each
+    an item and its displacement along the world's x and y, in metres."""
+    moves = []
+    for written in text.split(","):
+        item_id, *by = written.split(":")
+        try:
+            dx, dy = (float(value) for value in by)
+        except ValueError:
+            dx = dy = math.nan
+        if not item_id or not (math.isfinite(dx) and math.isfinite(dy)):
+            raise InvalidRequest(
+                f"a move is an item and two distances, item:dx:dy, not {written!r}"
+            )
+        moves.append(Move(item_id=item_id, dx_m=dx, dy_m=dy))
+    return moves
+
+
+def layout_name(name: str) -> str:
+    """The name a run knows a layout by: the moves it ends with (#209) in the
+    order of their items, each distance as a number and none of nought, so
+    that the same moves, however they are written, make the same run. A name
+    without moves stays as it is."""
+    base, marked, written = name.partition(MOVES_MARK)
+    if not marked:
+        return name
+    moves = sorted((m for m in _moves(written) if m.dx_m or m.dy_m), key=lambda m: m.item_id)
+    if not moves:
+        return base
+    # Adding nought writes -0.0 as 0.0.
+    told = (f"{m.item_id}:{m.dx_m + 0.0!r}:{m.dy_m + 0.0!r}" for m in moves)
+    return f"{base}{MOVES_MARK}{','.join(told)}"
+
+
 def _with_layout(config: ScenarioConfig, name: str) -> ScenarioConfig:
     """The scenario with another of its layouts, read from its file: one it
     does not have is not found, and one that does not fit its greenhouse or
@@ -286,11 +329,15 @@ def _with_layout(config: ScenarioConfig, name: str) -> ScenarioConfig:
         raise InvalidRequest(f"no such layout: {error.errors()[0]['msg']}") from None
 
 
-def _with_envelope(config: ScenarioConfig, changes: SceneChanges) -> ScenarioConfig:
-    """The scenario with its greenhouse's dimensions and openings changed. The
-    envelope is checked afresh, as any description of a greenhouse is: an
+def _with_envelope(
+    config: ScenarioConfig, changes: SceneChanges, moves: Sequence[Move] | None = None
+) -> ScenarioConfig:
+    """The scenario with its greenhouse's dimensions and openings changed, and
+    its equipment and sensors moved by `moves` (`greenhouse_sim.world.moves`).
+    The envelope is checked afresh, as any description of a greenhouse is: an
     opening that no longer fits, a ridge below the eaves, or a greenhouse the
-    scenario's layout no longer fits in, is refused."""
+    scenario's layout no longer fits in, is refused; and so is a move that
+    places an item outside the greenhouse so changed."""
     unknown_sizes = sorted(set(changes.envelope) - set(DIMENSIONS))
     if unknown_sizes:
         named = ", ".join(map(repr, unknown_sizes))
@@ -301,17 +348,31 @@ def _with_envelope(config: ScenarioConfig, changes: SceneChanges) -> ScenarioCon
     if unknown:
         named = ", ".join(map(repr, unknown))
         raise InvalidRequest(f"{config.greenhouse_id} has no opening {named}")
-    if not changes.envelope and not changes.openings:
+    reshaped = envelope
+    if changes.envelope or changes.openings:
+        opened = [
+            opening.model_dump()
+            | {"opening": changes.openings.get(opening.opening_id, opening.opening)}
+            for opening in envelope.openings
+        ]
+        try:
+            reshaped = type(envelope).model_validate(
+                envelope.model_dump() | changes.envelope | {"openings": opened}
+            )
+        except ValidationError as error:
+            raise InvalidRequest(f"no such greenhouse: {error.errors()[0]['msg']}") from None
+    elif moves is None:
         return config
-    opened = [
-        opening.model_dump()
-        | {"opening": changes.openings.get(opening.opening_id, opening.opening)}
-        for opening in envelope.openings
-    ]
+    update: dict[str, object] = {"envelope": reshaped}
+    if moves is not None:
+        try:
+            update["layout"] = moved(config.layout, reshaped.origin, moves).model_dump()
+        except ValueError as error:
+            raise InvalidRequest(str(error)) from None
     try:
-        reshaped = type(envelope).model_validate(
-            envelope.model_dump() | changes.envelope | {"openings": opened}
-        )
-        return ScenarioConfig.model_validate(config.model_dump() | {"envelope": reshaped})
+        return ScenarioConfig.model_validate(config.model_dump() | update)
     except ValidationError as error:
-        raise InvalidRequest(f"no such greenhouse: {error.errors()[0]['msg']}") from None
+        found = error.errors()[0]["msg"]
+        if moves is None:
+            raise InvalidRequest(f"no such greenhouse: {found}") from None
+        raise InvalidRequest(f"moved so, {found.removeprefix('Value error, ')}") from None

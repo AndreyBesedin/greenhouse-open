@@ -21,9 +21,11 @@ import {
   PLACEHOLDER_AXES_LENGTH_M,
 } from "./emptyView";
 import { HudProbe } from "./HudProbe";
+import { MoveDrag, type MoveDragging } from "./MoveDrag";
 import type { ViewSample } from "./readouts";
 import { Section, type SectionPlane } from "./Section";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
+import type { Offset } from "./scene/moves";
 import { SceneView } from "./scene/SceneView";
 import { SunLight } from "./scene/SunLight";
 import { CLICK_TOLERANCE_PX, pickEntity } from "./selection";
@@ -74,6 +76,8 @@ export function Viewport({
   onPointer,
   onSelect,
   onProbe = null,
+  moving = null,
+  nudged = null,
   children = null,
 }: {
   snapshot: SceneSnapshot | null;
@@ -101,6 +105,11 @@ export function Viewport({
   /** While set, a click picks the point on the ground under it instead, to
    * place a probe there. */
   onProbe?: ((ground: Point3) => void) | null;
+  /** While set, the selected item is being moved (#209): a drag moves it,
+   * the camera holding still but for the wheel, and a click picks nothing. */
+  moving?: MoveDragging | null;
+  /** The selected entity drawn moved, as it is dragged. */
+  nudged?: { entityId: string; by: Offset } | null;
   /** More to draw in the world's frame, such as an environment field, which
    * clicks pass through. */
   children?: ReactNode;
@@ -110,7 +119,7 @@ export function Viewport({
   function pick(event: ThreeEvent<MouseEvent>): void {
     // Every hit along the ray reaches this group; the nearest entity decides.
     event.stopPropagation();
-    if (event.delta > CLICK_TOLERANCE_PX) {
+    if (event.delta > CLICK_TOLERANCE_PX || moving !== null) {
       return;
     }
     if (onProbe !== null) {
@@ -139,13 +148,19 @@ export function Viewport({
         raycaster.params.Line = { threshold: LINE_PICK_TOLERANCE_M };
       }}
       onPointerMissed={() => {
-        if (onProbe === null) {
+        if (onProbe === null && moving === null) {
           onSelect(null);
         }
       }}
       aria-label="3D view"
     >
-      <CameraRig request={presetRequest} initialPose={initialPose} zoomTowards={casters} />
+      <CameraRig
+        request={presetRequest}
+        initialPose={initialPose}
+        zoomTowards={casters}
+        still={moving !== null}
+      />
+      {moving !== null && <MoveDrag {...moving} />}
       <Section plane={section} />
       <HudProbe onSample={onSample} />
       <color attach="background" args={[BACKGROUND_COLOR]} />
@@ -182,6 +197,7 @@ export function Viewport({
               colouring={colouring}
               showBounds={showBounds}
               byCategory={byCategory}
+              nudged={nudged}
             />
           )}
           {/* An undrawn ground plane that reports where the pointer meets the ground. */}

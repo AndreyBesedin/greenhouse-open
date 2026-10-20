@@ -14,16 +14,22 @@ export function CameraRig({
   request,
   initialPose = null,
   zoomTowards = null,
+  still = false,
 }: {
   request: PresetRequest | null;
   initialPose?: CameraPose | null;
   /** What the wheel zooms towards, where the pointer is over it. */
   zoomTowards?: RefObject<Object3D | null> | null;
+  /** Whether drags leave the camera where it is, to move what is in view
+   * (#209): the wheel still zooms. */
+  still?: boolean;
 }) {
   const camera = useThree((state) => state.camera);
   const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);
   const controls = useRef<OrbitControls | null>(null);
+  const held = useRef(still);
+  held.current = still;
 
   useEffect(() => {
     const view = orbitControls(camera, gl.domElement, {
@@ -35,6 +41,7 @@ export function CameraRig({
     const redraw = () => invalidate();
     orbit.addEventListener("change", redraw);
     controls.current = orbit;
+    holdStill(orbit, held.current);
     moveTo(orbit, initialPose ?? CAMERA_PRESETS[DEFAULT_PRESET]);
     invalidate();
     return () => {
@@ -45,6 +52,12 @@ export function CameraRig({
   }, [camera, gl, initialPose, invalidate, zoomTowards]);
 
   useEffect(() => {
+    if (controls.current !== null) {
+      holdStill(controls.current, still);
+    }
+  }, [still]);
+
+  useEffect(() => {
     if (request !== null && controls.current !== null) {
       moveTo(controls.current, CAMERA_PRESETS[request.preset]);
       invalidate();
@@ -52,6 +65,11 @@ export function CameraRig({
   }, [request, invalidate]);
 
   return null;
+}
+
+function holdStill(controls: OrbitControls, still: boolean): void {
+  controls.enableRotate = !still;
+  controls.enablePan = !still;
 }
 
 function moveTo(controls: OrbitControls, pose: CameraPose): void {

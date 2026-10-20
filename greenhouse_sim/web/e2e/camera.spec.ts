@@ -160,3 +160,35 @@ test("over the sky, the wheel zooms towards the middle of the view, as before", 
   expect(near.z).toBeCloseTo(0, 2);
   expect(near.y).toBeLessThan(0);
 });
+
+test("the view's controls are listed on ?, or by their button, and Escape closes them (#207)", async ({
+  page,
+}) => {
+  await page.goto("/?scene=example");
+  await expect(page.getByTestId("scene-status")).toContainText("Showing the example scene");
+  const listed = page.getByRole("region", { name: "Moving around the view" });
+
+  await page.keyboard.press("?");
+  await expect(listed).toBeVisible();
+  await expect(listed).toContainText("Shift-, Ctrl- or ⌘-drag, or right-drag");
+  await expect(listed.getByRole("button", { name: "Close the controls" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(listed).toHaveCount(0);
+
+  const open = page.getByRole("button", { name: "Controls ?" });
+  await expect(open).toBeFocused();
+  await open.click();
+  await expect(listed).toBeVisible();
+  await listed.getByRole("button", { name: "Close the controls" }).click();
+  await expect(listed).toHaveCount(0);
+
+  // The view still orbits as before.
+  const camera = page.getByTestId("camera-position");
+  const before = await camera.textContent();
+  const { x, y } = await viewCentre(page);
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 80, y, { steps: 5 });
+  await page.mouse.up();
+  await expect(camera).not.toHaveText(before ?? "");
+});

@@ -1,3 +1,5 @@
+import { DEFAULT_LAYOUT } from "./scenarios";
+import { baseLayout, movesIn } from "./scene/moves";
 import type { SceneSource, SceneState } from "./scene/source";
 
 /** What a source draws; a scenario's scene is before its first day, unless
@@ -16,9 +18,13 @@ function describeSource(source: SceneSource, day = 0): string {
       return `stress scene of ${source.plants} plants`;
     case "scenario": {
       const when = day === 0 ? ", before day one" : "";
-      return source.layout === undefined
-        ? `scenario ${source.scenarioId}${when}`
-        : `scenario ${source.scenarioId} with its ${source.layout} layout${when}`;
+      // A layout with moves is its base with them (#209).
+      const base = baseLayout(source.layout);
+      const moved = Object.keys(movesIn(source.layout)).sort();
+      const layout =
+        base === undefined || base === DEFAULT_LAYOUT ? "" : ` with its ${base} layout`;
+      const moves = moved.length === 0 ? "" : `, ${moved.join(", ")} moved`;
+      return `scenario ${source.scenarioId}${layout}${moves}${when}`;
     }
     case "live":
       return `scenario ${source.scenarioId}, live`;

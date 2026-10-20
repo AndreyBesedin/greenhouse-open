@@ -60,6 +60,7 @@ from greenhouse_sim.services.scenarios import (
     SceneChanges,
     changed,
     equipment_levels,
+    layout_name,
     scenario,
 )
 from greenhouse_sim.services.stores import Store
@@ -246,7 +247,7 @@ def climate_run(
     )
     key = (
         scenario_id,
-        name,
+        layout_name(name),
         under,
         tuple(sorted(equipment_levels(config, levels or {}).items())),
         tuple(sorted((openings or {}).items())),
@@ -382,7 +383,9 @@ def _models(
     if solved is not None:
         models[CFD] = CfdAirflow(solved)
     if config.layout.equipment:
-        models[CLIMATE] = _Climate(scenario_id, layout, weather, running, openings or {}, scheduled)
+        models[CLIMATE] = _Climate(
+            scenario_id, layout_name(layout), weather, running, openings or {}, scheduled
+        )
     models[SHEAR] = _Shear()
     return models
 

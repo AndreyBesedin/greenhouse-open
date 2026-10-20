@@ -37,8 +37,9 @@ describe("the viewer's information panel", () => {
       />,
     );
 
-    // In one line, at the panel's end, under everything it holds (#206).
-    expect(html).toContain("simulator 9.8.7 · commit abc1234</p></aside>");
+    // In one line, at the panel's end, under everything it holds (#206),
+    // with the panels' theme beside it when it can be changed (#208).
+    expect(html).toContain("simulator 9.8.7 · commit abc1234</p></div></aside>");
   });
 
   it("reports the version of the simulator it ships with", () => {
