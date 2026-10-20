@@ -1,3 +1,4 @@
+import { PERCENT } from "../units";
 /** One of the plant lab's environments, as the simulator describes it
  * (`GET /api/plants/environments`): what a plant there experiences each day. */
 export interface LabEnvironment {
@@ -13,7 +14,6 @@ export type EnvironmentsState =
   | { status: "loaded"; environments: Record<string, LabEnvironment> };
 
 export const PLANT_LAB_ENVIRONMENTS_URL = "/api/plants/environments";
-const PERCENT = 100;
 
 function numberIn(fields: Record<string, unknown>, name: string, environment: string): number {
   const value = fields[name];

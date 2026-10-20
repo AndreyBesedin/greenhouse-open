@@ -1,8 +1,7 @@
 import { DAY_S, dayStart, runDay } from "../clock";
 import { latestDaily, type ScheduledCommand } from "../scene/source";
+import { PERCENT } from "../units";
 import { describeTime } from "./ClimateTime";
-
-const PERCENT = 100;
 
 /** What a command does, in words: `heater 100%`, or `heater off`. */
 export function describeCommand({ actuatorId, level }: ScheduledCommand): string {

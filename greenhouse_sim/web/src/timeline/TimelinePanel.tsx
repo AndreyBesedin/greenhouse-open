@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CHART_WIDTH } from "../charts/chart";
 
 import type { RunParts } from "../scene/run";
 import { useLoad } from "../useLoad";
@@ -15,7 +16,6 @@ import {
 
 // Each lane's strip, in its own units, and its ticks to half a unit, so that
 // a day's thousands of events are a few hundred strokes.
-const WIDTH = 240;
 const HEIGHT = 10;
 const TICKS_PER_UNIT = 2;
 // The zoom it opens at: an hour.
@@ -29,7 +29,7 @@ function ticks(timeline: Timeline, process: number): { path: string; count: numb
   for (const [at, timeS] of timeline.timesS.entries()) {
     if (timeline.process[at] === process) {
       count += 1;
-      columns.add(Math.round(((timeS - timeline.fromS) / span) * WIDTH * TICKS_PER_UNIT));
+      columns.add(Math.round(((timeS - timeline.fromS) / span) * CHART_WIDTH * TICKS_PER_UNIT));
     }
   }
   const path = [...columns].map((column) => `M${column / TICKS_PER_UNIT} 0V${HEIGHT}`).join("");
@@ -94,7 +94,7 @@ export function TimelinePanel({
 
 /** A timeline's lanes, and what each process does at the moment drawn. */
 export function TimelineLanes({ timeline, time }: { timeline: Timeline; time: number }) {
-  const cursor = ((time - timeline.fromS) / (timeline.untilS - timeline.fromS)) * WIDTH;
+  const cursor = ((time - timeline.fromS) / (timeline.untilS - timeline.fromS)) * CHART_WIDTH;
   const now = turns(timeline, time);
   return (
     <figure className="timeline-lanes" aria-label="Timeline lanes">
@@ -104,7 +104,7 @@ export function TimelineLanes({ timeline, time }: { timeline: Timeline; time: nu
           <div className="timeline-lane" key={process}>
             <span data-testid={`timeline-${process}`}>{`${process}, ${count}`}</span>
             <svg
-              viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+              viewBox={`0 0 ${CHART_WIDTH} ${HEIGHT}`}
               preserveAspectRatio="none"
               role="img"
               aria-label={`${process}: ${count} events`}

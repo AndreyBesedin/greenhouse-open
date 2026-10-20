@@ -1,3 +1,4 @@
+import { PERCENT } from "../units";
 import type { LabRun } from "./lab";
 
 /** One organ of a plant's structure, with the organs attached to it, as the
@@ -64,7 +65,6 @@ function list(value: Fields, name: string): unknown[] {
 // drawn as its fruit, and an aborted flower or fruit has dropped.
 const DRAWN_FLOWER_STAGES: ReadonlySet<unknown> = new Set(["bud", "open"]);
 const DRAWN_FRUIT_STAGES: ReadonlySet<unknown> = new Set(["attached"]);
-const PERCENT = 100;
 
 /** An organ's thermal age, its stage if it has one, and how ripe it is if
  * it has started to ripen. */
