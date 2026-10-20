@@ -18,8 +18,6 @@ its climate run takes over their air.
 """
 
 import math
-import threading
-from collections import OrderedDict
 from collections.abc import Mapping, Sequence
 from typing import Final
 
@@ -40,9 +38,9 @@ from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.fields import Commanded, RunKey, climate_run
 from greenhouse_sim.services.kept_states import House, KeptState, agreeing
-from greenhouse_sim.services.making import Kept, kept_values, made_once
 from greenhouse_sim.services.runs import checked_moment
 from greenhouse_sim.services.scenarios import SceneChanges, changed, plant_ids, scenario
+from greenhouse_sim.services.stores import Store
 from greenhouse_sim.services.sunlight import plant_light
 from greenhouse_sim.solar.plants import Crown, PlantLight
 from greenhouse_sim.solar.shadows import Shadows
@@ -50,14 +48,7 @@ from greenhouse_sim.solar.shadows import Shadows
 # How many recent runs' crops are kept.
 KEPT_CROPS: Final = 4
 
-_KEPT: Kept[RunKey, tuple[RunCrop, Schedule]] = OrderedDict()
-_KEEPING = threading.Lock()
-
-
-def forget_crops() -> None:
-    """Forget the kept crops, so that the next one asked for grows afresh."""
-    with _KEEPING:
-        _KEPT.clear()
+CROPS: Store[RunKey, tuple[RunCrop, Schedule]] = Store("crops", KEPT_CROPS)
 
 
 def run_crop(
@@ -92,9 +83,7 @@ def run_crop(
                 crop.seed(state.day, state.plants, state.lived)
         return crop, schedule
 
-    crop, _ = made_once(
-        _KEPT, _KEEPING, key, KEPT_CROPS, lambda other: _same_house(key, other), make
-    )
+    crop, _ = CROPS.made_once(key, make, lambda other: _same_house(key, other))
     return crop
 
 
@@ -102,7 +91,7 @@ def seed_kept_crops(state: KeptState) -> None:
     """Give a kept state's plants to the crops kept that agree with it."""
     if not state.plants:
         return
-    for key, (crop, schedule) in kept_values(_KEPT, _KEEPING):
+    for key, (crop, schedule) in CROPS.values():
         if state.agrees(_house(key), schedule):
             crop.seed(state.day, state.plants, state.lived)
 

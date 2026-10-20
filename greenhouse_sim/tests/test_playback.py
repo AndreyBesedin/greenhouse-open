@@ -2,7 +2,7 @@
 0041): the viewer and a consumer follow the same run, and the clock never
 passes what is worked out."""
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from datetime import timedelta
 
 import pytest
@@ -178,32 +178,26 @@ def test_a_run_played_to_its_end_stops_there(clock: Clock) -> None:
         run.stop()
 
 
-def test_the_api_starts_a_playback_and_commands_it() -> None:
-    playback.forget_playbacks()
-    try:
-        assert respond("GET", f"/api/scenarios/{SCENARIO}/playback").status == 404
-        started = respond("POST", f"/api/scenarios/{SCENARIO}/playback/start?seconds_per_day=600")
-        assert started.status == 200 and isinstance(started.body, dict)
-        assert started.body["playing"] is True
-        assert started.body["epoch"] == 0
-        assert str(started.body["run_id"]).startswith(f"{SCENARIO}-climate-")
+def test_the_api_starts_a_playback_and_commands_it(no_playbacks: Callable[[], None]) -> None:
+    assert respond("GET", f"/api/scenarios/{SCENARIO}/playback").status == 404
+    started = respond("POST", f"/api/scenarios/{SCENARIO}/playback/start?seconds_per_day=600")
+    assert started.status == 200 and isinstance(started.body, dict)
+    assert started.body["playing"] is True
+    assert started.body["epoch"] == 0
+    assert str(started.body["run_id"]).startswith(f"{SCENARIO}-climate-")
 
-        paused = respond("POST", f"/api/scenarios/{SCENARIO}/playback/pause")
-        assert isinstance(paused.body, dict) and paused.body["playing"] is False
-        paced = respond("POST", f"/api/scenarios/{SCENARIO}/playback/pace?seconds_per_day=5")
-        assert isinstance(paced.body, dict) and paced.body["seconds_per_day"] == 5
-        assert respond("POST", f"/api/scenarios/{SCENARIO}/playback/rewind").status == 404
-        assert (
-            respond("POST", f"/api/scenarios/{SCENARIO}/playback/pace?seconds_per_day=0").status
-            == 400
-        )
-        assert (
-            respond("POST", f"/api/scenarios/{SCENARIO}/playback/pace?seconds_per_day=x").status
-            == 400
-        )
-        assert respond("POST", "/api/scenarios/nowhere/playback/start").status == 404
-    finally:
-        playback.forget_playbacks()
+    paused = respond("POST", f"/api/scenarios/{SCENARIO}/playback/pause")
+    assert isinstance(paused.body, dict) and paused.body["playing"] is False
+    paced = respond("POST", f"/api/scenarios/{SCENARIO}/playback/pace?seconds_per_day=5")
+    assert isinstance(paced.body, dict) and paced.body["seconds_per_day"] == 5
+    assert respond("POST", f"/api/scenarios/{SCENARIO}/playback/rewind").status == 404
+    assert (
+        respond("POST", f"/api/scenarios/{SCENARIO}/playback/pace?seconds_per_day=0").status == 400
+    )
+    assert (
+        respond("POST", f"/api/scenarios/{SCENARIO}/playback/pace?seconds_per_day=x").status == 400
+    )
+    assert respond("POST", "/api/scenarios/nowhere/playback/start").status == 404
 
 
 @pytest.mark.slow
@@ -265,31 +259,21 @@ def test_time_spent_waiting_for_a_day_is_not_banked(clock: Clock) -> None:
     assert (ended.time_s, ended.day) == (2 * DAY_S, 1)
 
 
-def test_a_pace_is_a_finite_number_of_seconds() -> None:
-    playback.forget_playbacks()
-    try:
-        assert respond("POST", f"/api/scenarios/{SCENARIO}/playback/start").status == 200
-        for pace in ("1e309", "inf", "nan", "-1"):
-            refused = respond(
-                "POST", f"/api/scenarios/{SCENARIO}/playback/pace?seconds_per_day={pace}"
-            )
-            assert refused.status == 400, pace
-    finally:
-        playback.forget_playbacks()
+def test_a_pace_is_a_finite_number_of_seconds(no_playbacks: Callable[[], None]) -> None:
+    assert respond("POST", f"/api/scenarios/{SCENARIO}/playback/start").status == 200
+    for pace in ("1e309", "inf", "nan", "-1"):
+        refused = respond("POST", f"/api/scenarios/{SCENARIO}/playback/pace?seconds_per_day={pace}")
+        assert refused.status == 400, pace
 
 
-def test_a_start_at_a_pace_refused_starts_nothing() -> None:
-    playback.forget_playbacks()
-    try:
-        for pace in ("0", "-1", "nan"):
-            refused = respond(
-                "POST", f"/api/scenarios/{SCENARIO}/playback/start?seconds_per_day={pace}"
-            )
-            assert refused.status == 400, pace
-        assert playback.playbacks() == []
-        assert respond("GET", f"/api/scenarios/{SCENARIO}/playback").status == 404
-    finally:
-        playback.forget_playbacks()
+def test_a_start_at_a_pace_refused_starts_nothing(no_playbacks: Callable[[], None]) -> None:
+    for pace in ("0", "-1", "nan"):
+        refused = respond(
+            "POST", f"/api/scenarios/{SCENARIO}/playback/start?seconds_per_day={pace}"
+        )
+        assert refused.status == 400, pace
+    assert playback.playbacks() == []
+    assert respond("GET", f"/api/scenarios/{SCENARIO}/playback").status == 404
 
 
 def test_a_run_that_cannot_be_worked_out_is_the_simulator_s_failure(
@@ -314,8 +298,9 @@ def test_a_run_that_cannot_be_worked_out_is_the_simulator_s_failure(
         other.state()
 
 
-def test_the_runs_played_back_go_with_the_server_that_played_them() -> None:
-    playback.forget_playbacks()
+def test_the_runs_played_back_go_with_the_server_that_played_them(
+    no_playbacks: Callable[[], None],
+) -> None:
     server = create_server(0)
     playback.start(SCENARIO, 600.0)
     assert playback.state(SCENARIO).playing

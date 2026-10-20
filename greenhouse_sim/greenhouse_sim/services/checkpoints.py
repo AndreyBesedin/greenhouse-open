@@ -39,8 +39,6 @@ import gzip
 import hashlib
 import json
 import math
-import threading
-from collections import OrderedDict
 from collections.abc import Mapping, Sequence
 from typing import Final
 
@@ -58,18 +56,18 @@ from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.scenarios.manifest_files import manifest_digest, opening_day, opening_file
-from greenhouse_sim.services.crop import forget_crops, run_crop, seed_kept_crops
+from greenhouse_sim.services.crop import run_crop, seed_kept_crops
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.fields import (
     Commanded,
     climate_run,
-    forget_climate_runs,
     run_schedule,
     seed_kept_climate_runs,
 )
 from greenhouse_sim.services.kept_states import KeptState, drop, keep
 from greenhouse_sim.services.runs import checked_moment
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids, scenario
+from greenhouse_sim.services.stores import Store
 
 # The format a checkpoint is written in, which a reader refuses if it does
 # not know it.
@@ -143,26 +141,11 @@ class CheckpointSummary(BaseModel):
     plants: int
 
 
-_KEPT: OrderedDict[str, Checkpoint] = OrderedDict()
-# The scenarios' opening days among them, which are kept beside the last
-# `KEPT_CHECKPOINTS` saved or uploaded, never in their place: they are the
-# oldest, and the next fresh run of their scenario would work its days out
-# from the start without them.
-_OPENINGS: set[str] = set()
-_KEEPING = threading.Lock()
-
-
-def forget_checkpoints() -> None:
-    """Forget every checkpoint kept, the opening days among them, the states
-    runs took from them, and the runs and crops kept, which may have carried
-    on from those states."""
-    with _KEEPING:
-        for checkpoint_id in _KEPT:
-            drop(checkpoint_id)
-        _KEPT.clear()
-        _OPENINGS.clear()
-    forget_climate_runs()
-    forget_crops()
+# The last `KEPT_CHECKPOINTS` saved or uploaded, and beside them, pinned,
+# never in their place, the scenarios' opening days: they are the oldest,
+# and the next fresh run of their scenario would work its days out from the
+# start without them. A checkpoint let go takes its state with it.
+CHECKPOINTS: Store[str, Checkpoint] = Store("checkpoints", KEPT_CHECKPOINTS, on_drop=drop)
 
 
 def save_checkpoint(
@@ -210,15 +193,12 @@ def save_checkpoint(
 
 def checkpoints() -> list[CheckpointSummary]:
     """The checkpoints kept, the earliest saved first."""
-    with _KEEPING:
-        kept = list(_KEPT.items())
-    return [_summary(checkpoint_id, checkpoint) for checkpoint_id, checkpoint in kept]
+    return [_summary(checkpoint_id, kept) for checkpoint_id, kept in CHECKPOINTS.values()]
 
 
 def checkpoint(checkpoint_id: str) -> Checkpoint:
     """A checkpoint kept, as it is downloaded."""
-    with _KEEPING:
-        found = _KEPT.get(checkpoint_id)
+    found = CHECKPOINTS.get(checkpoint_id)
     if found is None:
         raise NotFound(f"no checkpoint {checkpoint_id!r}: restarting the API forgets them")
     return found
@@ -391,16 +371,9 @@ def _kept(checkpoint: Checkpoint, *, opening: bool = False) -> CheckpointSummary
             else ((window_start(checkpoint.day * DAY_S), checkpoint.house_before),)
         ),
     )
-    with _KEEPING:
-        _KEPT[checkpoint_id] = checkpoint
-        _KEPT.move_to_end(checkpoint_id)
-        if opening:
-            _OPENINGS.add(checkpoint_id)
-        keep(checkpoint_id, state)
-        while len(_KEPT) - len(_OPENINGS) > KEPT_CHECKPOINTS:
-            oldest = next(kept for kept in _KEPT if kept not in _OPENINGS)
-            del _KEPT[oldest]
-            drop(oldest)
+    # Its state first, so that a checkpoint listed always has one.
+    keep(checkpoint_id, state)
+    CHECKPOINTS.keep(checkpoint_id, checkpoint, pinned=opening)
     seed_kept_climate_runs(state)
     seed_kept_crops(state)
     return _summary(checkpoint_id, checkpoint)

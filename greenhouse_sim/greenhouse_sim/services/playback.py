@@ -51,6 +51,7 @@ from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.heat_log import heat_records
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.sensors import delivered_between, run_start
+from greenhouse_sim.services.stores import Store
 
 # Ten real seconds a simulated day by default: a season of 100 days in under
 # 17 minutes, each day long enough to watch.
@@ -430,8 +431,9 @@ def _check_pace(seconds_per_day: float) -> None:
         raise InvalidRequest("a day takes some time to play: seconds_per_day is above 0")
 
 
-_playbacks: dict[str, Playback] = {}
-_playbacks_lock = threading.Lock()
+# Every playback started, by scenario: one let go is stopped, once the day
+# under way is worked out.
+PLAYBACKS: Store[str, Playback] = Store("playbacks", on_drop=lambda _, found: found.stop())
 
 
 def start(
@@ -448,19 +450,18 @@ def start(
     the run is worked out ahead of it. A pace refused starts nothing."""
     if seconds_per_day is not None:
         _check_pace(seconds_per_day)
-    with _playbacks_lock:
-        found = _playbacks.get(scenario_id)
-        if found is None:
-            found = Playback(
-                scenario_id,
-                seconds_per_day=DEFAULT_SECONDS_PER_DAY
-                if seconds_per_day is None
-                else seconds_per_day,
-                clock=clock,
-                epochs=epochs,
-            )
-            found.begin()
-            _playbacks[scenario_id] = found
+
+    def begun(_: object) -> Playback:
+        found = Playback(
+            scenario_id,
+            seconds_per_day=DEFAULT_SECONDS_PER_DAY if seconds_per_day is None else seconds_per_day,
+            clock=clock,
+            epochs=epochs,
+        )
+        found.begin()
+        return found
+
+    found = PLAYBACKS.made_once(scenario_id, begun)
     if seconds_per_day is not None:
         found.set_pace(seconds_per_day)
     return found.state() if hold else found.command(PlaybackCommand.PLAY)
@@ -468,14 +469,12 @@ def start(
 
 def playbacks() -> list[Playback]:
     """Every playback started, in the order they were."""
-    with _playbacks_lock:
-        return list(_playbacks.values())
+    return [found for _, found in PLAYBACKS.values()]
 
 
 def playback(scenario_id: str) -> Playback:
     """The scenario's playback, if one was started."""
-    with _playbacks_lock:
-        found = _playbacks.get(scenario_id)
+    found = PLAYBACKS.get(scenario_id)
     if found is None:
         raise NotFound(f"no playback of {scenario_id!r} was started")
     return found
@@ -493,9 +492,7 @@ def set_pace(scenario_id: str, seconds_per_day: float) -> PlaybackState:
     return playback(scenario_id).set_pace(seconds_per_day)
 
 
-def forget_playbacks() -> None:
-    """Stops and forgets every playback, for tests."""
-    with _playbacks_lock:
-        for found in _playbacks.values():
-            found.stop()
-        _playbacks.clear()
+def stop_playbacks() -> None:
+    """Stops and forgets every playback, as the server that played them
+    closes."""
+    PLAYBACKS.forget()

@@ -3,6 +3,7 @@ cold spring day, once with nothing running and once heated through the
 nights and vented with the fan on through the middle of the day, its roof
 vent opened and shut by its schedule."""
 
+from collections.abc import Callable
 from http import HTTPStatus
 
 import pytest
@@ -69,16 +70,16 @@ def test_the_two_runs_diverge_as_the_night_falls() -> None:
     assert gap[by_hour[17]] < gap[by_hour[20]] - 3.0
 
 
-def test_both_runs_replay_exactly() -> None:
+def test_both_runs_replay_exactly(afresh: Callable[[], None]) -> None:
     first = _controlled(6 * HOUR_S)
-    fields.forget_climate_runs()
+    afresh()
     again = _controlled(6 * HOUR_S)
 
     assert first == again
     observed = sensors.observations(
         "climate_box", levels=HEATED, commands=SCHEDULE, until_s=1800.0, weather=SPRING
     )
-    fields.forget_climate_runs()
+    afresh()
     replayed = sensors.observations(
         "climate_box", levels=HEATED, commands=SCHEDULE, until_s=1800.0, weather=SPRING
     )
