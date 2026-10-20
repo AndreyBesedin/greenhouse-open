@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
-import { showPanels } from "./panelTheme";
+import { showPanels, storedPanelTheme } from "./panelTheme";
 import { QA_AIRFLOW_PATH } from "./qa/airflowViews";
 import { QA_GREENHOUSE_PATH } from "./qa/greenhouseViews";
 import { QA_LAYOUT_PATH } from "./qa/layoutViews";
@@ -46,9 +46,8 @@ const page =
   );
 
 // The golden views compare the scene drawn: their captions keep the light
-// panels they were drawn with (#208); the viewer shows the theme chosen.
-if (page.type !== App) {
-  showPanels("light");
-}
+// panels they were drawn with (#208); the viewer shows the theme chosen. Set
+// before the first render, so that the panels never show the other first.
+showPanels(page.type === App ? storedPanelTheme() : "light");
 
 createRoot(root).render(<StrictMode>{page}</StrictMode>);

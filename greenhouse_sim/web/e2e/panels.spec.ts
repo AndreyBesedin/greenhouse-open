@@ -188,11 +188,21 @@ test("the panels are dark, or light if chosen, and the golden views keep theirs 
   expect(await background(".info-panel")).toBe("rgba(17, 24, 39, 0.9)");
   expect(await background(".hud")).toBe("rgba(17, 24, 39, 0.9)");
 
-  // Light, once chosen, and still so after a reload.
+  // Light, once chosen, and still so after a reload: from the panels' first
+  // appearance, never flashing dark before.
   await page.getByRole("checkbox", { name: "Light panels" }).check();
   expect(await background(".info-panel")).toBe("rgba(255, 255, 255, 0.88)");
+  await page.addInitScript(() => {
+    new MutationObserver((_, observer) => {
+      if (document.querySelector(".info-panel") !== null) {
+        document.body.dataset.firstPanels = document.documentElement.dataset.panels ?? "dark";
+        observer.disconnect();
+      }
+    }).observe(document, { childList: true, subtree: true });
+  });
   await page.reload();
   await expect(page.getByRole("checkbox", { name: "Light panels" })).toBeChecked();
+  await expect(page.locator("body")).toHaveAttribute("data-first-panels", "light");
   expect(await background(".info-panel")).toBe("rgba(255, 255, 255, 0.88)");
   await page.getByRole("checkbox", { name: "Light panels" }).uncheck();
 
