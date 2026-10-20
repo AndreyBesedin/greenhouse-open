@@ -60,7 +60,8 @@ HEIGHTS_CM = {PLANT_1: (41.0, 43.5, 46.0), PLANT_2: (39.0, 41.0, 43.5)}
 RIPE_COUNTS = {PLANT_1: (0, 1, 2), PLANT_2: (0, 0, 1)}
 AIR_TEMPERATURES_C = (21.4, 22.1, 20.8)
 LATE_HUMIDITY_PCT = 78.0
-HARVESTED = {"fruit_count": 2, "mass_g": 150.0}
+# The parameters the simulator's harvests carry (`actions/effects.py`).
+HARVESTED = {"harvested_fruit_count": 2, "harvested_mass_g": 150.0}
 # One batch is cut short to show `has_more`.
 SHORT_LIMIT = 2
 
@@ -337,9 +338,10 @@ def test_every_answer_in_the_fixture_is_its_route_s_payload() -> None:
         elif path.endswith("/greenhouse"):
             GreenhouseDescription.model_validate(body)
         elif path.endswith("/observations"):
-            assert check_batch(ObservationBatch.model_validate(body)) == []
+            batch = ObservationBatch.model_validate(body)
+            assert check_batch(batch, greenhouse_id=GREENHOUSE_ID) == []
         elif path.endswith("/events"):
-            assert check_batch(EventBatch.model_validate(body)) == []
+            assert check_batch(EventBatch.model_validate(body), greenhouse_id=GREENHOUSE_ID) == []
         else:
             raise AssertionError(f"a step the interface does not describe: {path}")
 
@@ -347,8 +349,8 @@ def test_every_answer_in_the_fixture_is_its_route_s_payload() -> None:
 def test_the_fixture_s_polls_follow_the_rules_together() -> None:
     exchange = json.loads(FIXTURE.read_text())
 
-    assert check_polls(_batches(exchange, "observations")) == []
-    assert check_polls(_batches(exchange, "events")) == []
+    assert check_polls(_batches(exchange, "observations"), greenhouse_id=GREENHOUSE_ID) == []
+    assert check_polls(_batches(exchange, "events"), greenhouse_id=GREENHOUSE_ID) == []
 
 
 def test_the_fixture_shows_what_a_client_must_handle() -> None:

@@ -1,16 +1,27 @@
-import { DEFAULT_LAYOUT, type ScenariosState } from "./scenarios";
+import { DEFAULT_LAYOUT, type ScenarioSummary, type ScenariosState } from "./scenarios";
 
-/** The simulator's scenarios, each to be shown, with any of its layouts, or
- * played live. */
+/** Whether a scenario's name, identifier or description holds `filter`,
+ * whatever their case; every one does an empty filter. */
+export function scenarioMatches(scenario: ScenarioSummary, filter: string): boolean {
+  const wanted = filter.trim().toLowerCase();
+  return [scenario.name, scenario.id, scenario.description].some((text) =>
+    text.toLowerCase().includes(wanted),
+  );
+}
+
+/** The simulator's scenarios, each to be opened, with any of its layouts,
+ * or played live; those `filter` matches (`scenarioMatches`). */
 export function ScenarioList({
   state,
   shownLayout = null,
+  filter = "",
   onShow,
   onLive,
 }: {
   state: ScenariosState;
   /** The scenario on show and its layout, which its layout picker shows. */
   shownLayout?: { scenarioId: string; layout: string } | null;
+  filter?: string;
   onShow?: (scenarioId: string, layout?: string) => void;
   onLive?: (scenarioId: string) => void;
 }) {
@@ -26,6 +37,10 @@ export function ScenarioList({
       );
     case "loaded": {
       const choosing = onShow && state.scenarios.some((scenario) => scenario.layouts.length > 1);
+      const listed = state.scenarios.filter((scenario) => scenarioMatches(scenario, filter));
+      if (listed.length === 0) {
+        return <p>No scenario matches “{filter.trim()}”.</p>;
+      }
       return (
         <table>
           <caption>Scenarios</caption>
@@ -40,11 +55,15 @@ export function ScenarioList({
             </tr>
           </thead>
           <tbody>
-            {state.scenarios.map((scenario) => (
+            {listed.map((scenario) => (
               <tr key={scenario.id}>
-                {/* By name, one line each; its identifier, which addresses use, and
-                    its description, on hover. */}
-                <td title={`${scenario.id}: ${scenario.description}`}>{scenario.name}</td>
+                {/* By name, and under it its description, cut to a line until
+                    the row is hovered or focused; its identifier, which
+                    addresses use, on hover too. */}
+                <td title={`${scenario.id}: ${scenario.description}`}>
+                  <span className="scenario-name">{scenario.name}</span>
+                  <span className="scenario-description">{scenario.description}</span>
+                </td>
                 <td>{scenario.plants}</td>
                 <td>{scenario.duration_days}</td>
                 {choosing && (
@@ -72,10 +91,10 @@ export function ScenarioList({
                   <td>
                     <button
                       type="button"
-                      aria-label={`Show ${scenario.id}`}
+                      aria-label={`Open ${scenario.id}`}
                       onClick={() => onShow(scenario.id)}
                     >
-                      Show
+                      Open
                     </button>
                   </td>
                 )}

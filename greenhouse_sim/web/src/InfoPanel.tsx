@@ -1,11 +1,9 @@
 import type { ReactNode } from "react";
 
 import type { BuildInfo } from "./buildInfo";
-import { FIRST_LAB_RUN } from "./plants/lab";
-import { DEFAULT_STRESS_PLANTS } from "./qa/stressScene";
-import { ScenarioList } from "./ScenarioList";
-import { SceneStatus } from "./SceneStatus";
-import { DEFAULT_LAYOUT, openingMoment, type ScenariosState } from "./scenarios";
+import { SceneFailures } from "./SceneStatus";
+import { SourceChooser } from "./SourceChooser";
+import type { ScenariosState } from "./scenarios";
 import type { SceneSource, SceneState } from "./scene/source";
 
 export function InfoPanel({
@@ -14,6 +12,7 @@ export function InfoPanel({
   source,
   scene,
   failures = [],
+  chooseFirst = false,
   onSource,
   children,
 }: {
@@ -23,6 +22,8 @@ export function InfoPanel({
   scene: SceneState;
   /** What failed to arrive while something else is drawn in its place. */
   failures?: readonly string[];
+  /** Whether nothing has been chosen yet, so that the choice starts open. */
+  chooseFirst?: boolean;
   onSource: (source: SceneSource) => void;
   /** Display options for the scene, shown under its choice. */
   children?: ReactNode;
@@ -30,58 +31,20 @@ export function InfoPanel({
   return (
     <aside className="info-panel">
       <h1>greenhouse-sim viewer</h1>
-      <dl>
-        <dt>Simulator version</dt>
-        <dd>{build.simulatorVersion}</dd>
-        <dt>Built from commit</dt>
-        <dd>{build.sourceCommit}</dd>
-      </dl>
-      <SceneStatus source={source} state={scene} failures={failures} />
-      <p>
-        <button type="button" onClick={() => onSource({ kind: "reference" })}>
-          Reference scene
-        </button>{" "}
-        <button type="button" onClick={() => onSource({ kind: "example" })}>
-          Example scene
-        </button>{" "}
-        <button type="button" onClick={() => onSource({ kind: "fixtures" })}>
-          Fixture gallery
-        </button>{" "}
-        <button type="button" onClick={() => onSource({ kind: "plants", ...FIRST_LAB_RUN })}>
-          Plant lab
-        </button>{" "}
-        <button
-          type="button"
-          onClick={() => onSource({ kind: "stress", plants: DEFAULT_STRESS_PLANTS })}
-        >
-          Stress scene
-        </button>
-      </p>
-      {children}
-      <ScenarioList
-        state={scenarios}
-        shownLayout={
-          source.kind === "scenario"
-            ? { scenarioId: source.scenarioId, layout: source.layout ?? DEFAULT_LAYOUT }
-            : null
-        }
-        onShow={(scenarioId, layout) =>
-          onSource({
-            kind: "scenario",
-            scenarioId,
-            ...(layout === undefined || layout === DEFAULT_LAYOUT ? {} : { layout }),
-            // Shown afresh, a scenario with an opening day opens there.
-            ...(layout === undefined
-              ? (openingMoment(
-                  scenarios.status === "loaded"
-                    ? scenarios.scenarios.find((s) => s.id === scenarioId)
-                    : undefined,
-                ) ?? {})
-              : {}),
-          })
-        }
-        onLive={(scenarioId) => onSource({ kind: "live", scenarioId })}
+      <SourceChooser
+        scenarios={scenarios}
+        source={source}
+        scene={scene}
+        initiallyOpen={chooseFirst}
+        onSource={onSource}
       />
+      <SceneFailures failures={failures} />
+      {children}
+      {/* What the viewer was built from, last, in a line: QA mode's run
+          manifest says it too, beside the simulator's own (#206). */}
+      <p className="build-line" data-testid="build-line">
+        simulator {build.simulatorVersion} · commit {build.sourceCommit}
+      </p>
     </aside>
   );
 }

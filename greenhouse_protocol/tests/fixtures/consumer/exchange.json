@@ -527,8 +527,8 @@
             "source": "SIMULATION",
             "confidence": 1.0,
             "parameters": {
-              "fruit_count": 2,
-              "mass_g": 150.0
+              "harvested_fruit_count": 2,
+              "harvested_mass_g": 150.0
             }
           }
         ]

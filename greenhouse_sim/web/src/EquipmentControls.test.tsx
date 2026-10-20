@@ -3,7 +3,12 @@ import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { describeLevel, EquipmentControls, equipmentIn } from "./EquipmentControls";
+import {
+  describeEquipment,
+  describeLevel,
+  EquipmentControls,
+  equipmentIn,
+} from "./EquipmentControls";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
 import { changesQuery, searchFor, sourceFromSearch } from "./scene/source";
 
@@ -11,6 +16,7 @@ const EXAMPLE: SceneSnapshot = JSON.parse(
   readFileSync(new URL("../public/scenes/example.json", import.meta.url), "utf8"),
 );
 const ignore = () => undefined;
+const FOLDED = { open: false, onToggle: ignore };
 
 describe("a scene's equipment", () => {
   it("is its fans, heaters and dehumidifiers, each at its level, with what it does at full", () => {
@@ -32,7 +38,12 @@ describe("a scene's equipment", () => {
 
   it("each get a switch and a slider showing the level asked for, and what the scene says", () => {
     const html = renderToStaticMarkup(
-      <EquipmentControls snapshot={EXAMPLE} requested={{ heater: 0.6 }} onChange={ignore} />,
+      <EquipmentControls
+        snapshot={EXAMPLE}
+        requested={{ heater: 0.6 }}
+        fold={FOLDED}
+        onChange={ignore}
+      />,
     );
 
     expect(html).toContain('aria-label="Equipment"');
@@ -43,11 +54,33 @@ describe("a scene's equipment", () => {
     expect(html).toContain('data-testid="equipment-fan">off<');
   });
 
+  it("is folded to a line that says how each runs, as the scene drawn has it", () => {
+    const heater = { actuatorId: "heater", label: "heater", level: 1, rated: 10, unit: "kW" };
+    const fan = { actuatorId: "fan", label: "fan right", level: 0, rated: 1, unit: "m³/s" };
+    const html = renderToStaticMarkup(
+      <EquipmentControls snapshot={EXAMPLE} requested={{}} fold={FOLDED} onChange={ignore} />,
+    );
+
+    expect(html).toContain('<details class="equipment-fold">');
+    expect(html).toContain('data-testid="equipment-summary">Equipment: all off</summary>');
+    expect(describeEquipment([heater, fan, { ...fan, label: "fan left" }])).toBe(
+      "Equipment: heater 100%; fan right, fan left off",
+    );
+    expect(
+      describeEquipment([
+        { ...heater, level: 0.35 },
+        { ...fan, level: 1 },
+      ]),
+    ).toBe("Equipment: heater 35%, fan right 100%");
+  });
+
   it("leaves a scene without equipment without the panel", () => {
     const bare = { ...EXAMPLE, entities: EXAMPLE.entities.filter((e) => e.kind === "FLOOR") };
 
     expect(
-      renderToStaticMarkup(<EquipmentControls snapshot={bare} requested={{}} onChange={ignore} />),
+      renderToStaticMarkup(
+        <EquipmentControls snapshot={bare} requested={{}} fold={FOLDED} onChange={ignore} />,
+      ),
     ).toBe("");
   });
 

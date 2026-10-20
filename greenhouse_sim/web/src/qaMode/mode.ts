@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 // The address's part that turns QA mode on (P09.6): `qa=1`.
 const QA_PART = "qa=1";
@@ -20,6 +20,13 @@ export function withQaMode(search: string, on: boolean): string {
   return kept.length === 0 ? "" : `?${kept.join("&")}`;
 }
 
+/** Writes QA mode into the address, unless the address says so already. */
+function keepInAddress(on: boolean): void {
+  if (qaModeFrom(location.search) !== on) {
+    history.replaceState(null, "", `${location.pathname}${withQaMode(location.search, on)}`);
+  }
+}
+
 /**
  * Whether the viewer is in QA mode, and how to change it: read from the
  * address once and kept in it, whatever the scene's source writes there
@@ -29,11 +36,16 @@ export function withQaMode(search: string, on: boolean): string {
 export function useQaMode(): [boolean, (on: boolean) => void] {
   const [on, setOn] = useState(() => qaModeFrom(location.search));
 
+  useEffect(() => keepInAddress(on), [on]);
+
+  // Back to a page whose address was written before QA mode changed: QA
+  // mode stays as it is, and the address says so again.
+  const returned = useEffectEvent(() => keepInAddress(on));
   useEffect(() => {
-    if (qaModeFrom(location.search) !== on) {
-      history.replaceState(null, "", `${location.pathname}${withQaMode(location.search, on)}`);
-    }
-  }, [on]);
+    const listener = () => returned();
+    window.addEventListener("popstate", listener);
+    return () => window.removeEventListener("popstate", listener);
+  }, []);
 
   return [on, setOn];
 }

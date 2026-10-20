@@ -77,6 +77,16 @@ export function choose(control: HTMLSelectElement, value: string): void {
   });
 }
 
+/** Enters `text` into a text box, in place of what it held, as a person
+ * would: through the input element's own setter, since React watches the
+ * value set on the element itself. */
+export function enter(control: HTMLInputElement, text: string): void {
+  act(() => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(control, text);
+    control.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+}
+
 function only<T>(found: T[], what: string): T {
   const [first, ...more] = found;
   if (first === undefined || more.length > 0) {

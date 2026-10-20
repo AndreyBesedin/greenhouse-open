@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
-
 import { QA_REFERENCE_PATH } from "../src/qa/referencePage.ts";
+import { chooser } from "./chooser";
+import { unfold } from "./folds";
 
 // P09.9: the final QA of P09 (docs/demo.md), walked through as one scripted
 // demo of the reference greenhouse. As a browser test it runs on its own,
@@ -11,6 +12,11 @@ import { QA_REFERENCE_PATH } from "../src/qa/referencePage.ts";
 const PAUSE_MS = Number(process.env.DEMO_PAUSE_MS ?? 0);
 const ARRIVES = { timeout: 180_000 };
 const HOUR_S = 3_600;
+// The camera on the whole reference house, from south-west of it and above:
+// at 1280 × 720 the house stands between the info panel and the HUD,
+// rather than its corner at the world's origin, where the default camera
+// looks.
+const ON_THE_HOUSE = "-5:-14:11,5:4.8:1";
 const STARTED = Date.now();
 
 /** Shows a step's caption over the page, for the video, and lingers on it. */
@@ -47,9 +53,14 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   // 1. The reference scenario, seed 42, opened on its first day with red fruit.
   await page.goto("/");
   await say(page, "1. The reference greenhouse, seed 42, from the scenario list");
-  await page.getByRole("button", { name: "Show reference_greenhouse" }).click();
+  await (await chooser(page)).getByRole("button", { name: "Open reference_greenhouse" }).click();
   await expect(moment).toHaveText("day 80, 12 h 00 min", ARRIVES);
   await expect(page.getByTestId("scene-status")).toContainText("day 80,", ARRIVES);
+  await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
+  // The camera on the house from here on: the address keeps it.
+  await page.goto(`${page.url()}&camera=${ON_THE_HOUSE}`);
+  await expect(page.getByTestId("camera-position")).toHaveText("x -5.00, y -14.00, z 11.00");
+  await expect(moment).toHaveText("day 80, 12 h 00 min", ARRIVES);
   await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
   await say(page, "1. Opened on day 80, its first day with red fruit");
 
@@ -78,6 +89,7 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   await say(page, "4. A slice of the air's temperature");
 
   // 5. The equipment: the dehumidifier on, from this moment.
+  await unfold(page, "Equipment");
   await page
     .getByRole("group", { name: "Equipment" })
     .getByRole("checkbox", { name: "dehumidifier" })
@@ -91,6 +103,7 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   // moment, the run carried on rather than worked out again. The wind is
   // turned last.
   const vent = page.getByTestId("opening-roof_vent_1");
+  await unfold(page, "Openings");
   await timeOfDay.fill(String(8 * HOUR_S));
   await expect(moment).toHaveText("day 80, 8 h 00 min", ARRIVES);
   await expect(vent).toHaveText(/^0%, /, ARRIVES);
@@ -180,6 +193,7 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   await expect(compare).toBeVisible(ARRIVES);
   await say(page, "11. Day 81's start saved");
   // The schedule has the heater at 80% through the night: a branch turns it off.
+  await unfold(page, "Equipment");
   await page
     .getByRole("group", { name: "Equipment" })
     .getByRole("checkbox", { name: "heater" })
