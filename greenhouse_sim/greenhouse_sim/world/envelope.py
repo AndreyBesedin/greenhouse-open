@@ -52,6 +52,7 @@ from greenhouse_sim.world.geometry import (
     Transform,
     Vector3,
 )
+from greenhouse_sim.world.identifiers import ItemId
 
 # Where a greenhouse stands unless a scenario says otherwise: its floor corner
 # at the world's origin, its axes along the world's.
@@ -135,7 +136,7 @@ class Opening(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    opening_id: str
+    opening_id: ItemId
     kind: OpeningKind
     surface_id: str
     centre: Point2
