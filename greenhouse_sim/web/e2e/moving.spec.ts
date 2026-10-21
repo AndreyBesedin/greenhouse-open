@@ -1,7 +1,7 @@
 import { expect, type Page, type Route, test } from "@playwright/test";
-
 import type { CameraPose } from "../src/camera.ts";
 import type { Point3 } from "../src/world.ts";
+import { unfold } from "./folds";
 import { clickSky, onScreen, selectAt } from "./view";
 
 // The climate box seen from outside its right side wall, through the glass,
@@ -52,6 +52,7 @@ test("moving: the heater is dragged across the floor, undone, cancelled, and Bac
     await page.goto(`/?scenario=climate_box&camera=${cameraText(ACROSS)}`);
     await expect(status).toContainText("climate_box, day 0, 128 entities");
     // The view is coloured, as it stays while things are moved.
+    await unfold(page, "Display");
     await page.getByLabel("Colour by").selectOption("level");
     await selectAt(page, HEATER_SIDE, "climate_box_heater", ACROSS);
     await expect(offset).toHaveText("The heater stands where its layout places it.");

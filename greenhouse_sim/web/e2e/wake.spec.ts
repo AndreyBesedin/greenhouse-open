@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { unfold } from "./folds";
+
 // The P04 airflow QA case: air blown through `airflow_box` from door to door,
 // with a block on the floor between them, and without it (`&layout=open`).
 // Its streamlines are drawn from OpenFOAM's solutions, kept for each layout.
@@ -11,6 +13,7 @@ test("airflow_box's air is solved with its block, and without it", async ({ page
   await expect(status).toHaveText(
     "airflow_box_cfd (openfoam:simpleFoam v2412): 24 × 13 × 6 cells, air speed 0 to 0.60 m/s.",
   );
+  await unfold(page, "Air field");
   await expect(page.getByRole("combobox", { name: "Air field" }).locator("option")).toHaveText([
     "none",
     "uniform, the scenario's airflow",

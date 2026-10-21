@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
-
 import type { CameraPose } from "../src/camera.ts";
+import { unfold } from "./folds";
 import { selectAt } from "./view";
 
 // The compartment's main path runs across its front (x from 0 to 2 m), and
@@ -25,6 +25,7 @@ test("the compartment's paths and zones are coloured and picked by what they are
     "tomato_compartment, day 0, 896 entities",
   );
 
+  await unfold(page, "Display");
   await page.getByRole("checkbox", { name: "Categories" }).check();
   await expect(page.getByTestId("layout-category")).toHaveText([
     "planting position",

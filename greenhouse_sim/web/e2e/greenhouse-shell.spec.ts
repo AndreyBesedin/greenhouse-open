@@ -24,6 +24,7 @@ test("greenhouse-shell: a changed greenhouse is drawn to its dimensions, open an
   });
 
   await test.step("its physical dimensions are the ones asked for", async () => {
+    await unfold(page, "Display");
     await page.getByLabel("Dimensions and axis labels").check();
     await expect(page.getByTestId("debug-label")).toHaveText([
       "x",
@@ -45,6 +46,7 @@ test("greenhouse-shell: a changed greenhouse is drawn to its dimensions, open an
   });
 
   await test.step("the debug colours follow each surface's semantics", async () => {
+    await unfold(page, "Display");
     await page.getByRole("checkbox", { name: "Categories" }).check();
     await expect(page.getByTestId("category")).toHaveText([
       "floor",

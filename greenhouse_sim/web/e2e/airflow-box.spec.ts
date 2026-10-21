@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { layoutPicker } from "./chooser";
+import { unfold } from "./folds";
 
 // The P04 final QA, `airflow-box`, as a walk through the airflow QA case:
 // air blown from door to door past a block, solved with OpenFOAM, drawn as
@@ -13,6 +14,7 @@ test("its air is drawn as arrows or streamlines, solved or prescribed", async ({
   const fieldChoice = page.getByRole("combobox", { name: "Air field" });
   await page.goto("/?scenario=airflow_box");
 
+  await unfold(page, "Air field");
   await fieldChoice.selectOption("cfd");
   await expect(status).toHaveText(
     "airflow_box_cfd (openfoam:simpleFoam v2412): 24 × 13 × 6 cells, air speed 0 to 0.60 m/s.",

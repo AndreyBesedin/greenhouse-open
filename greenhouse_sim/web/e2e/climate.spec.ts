@@ -227,6 +227,7 @@ test("climate: the house's air as one volume follows the run, beside it all off"
 
   // Heated, the house warms towards 21 °C; all off, it cools towards the
   // night's 8 °C.
+  await unfold(page, "House air");
   await expect(house.getByTestId("house-air-°C")).toHaveText("Air 19.4 °C, all off 10.2 °C");
   await expect(house.getByTestId("house-air-ppm")).toHaveText("CO₂ 420.0 ppm, all off 420.0 ppm");
 });
@@ -244,6 +245,7 @@ test("climate: the time slider spans a day, a later field drawn from the whole h
   // The slider spans the day.
   await expect(run.getByRole("slider", { name: "Time of day" })).toHaveAttribute("max", "86400");
   // The house has long settled, heated, and all off at the night's 8 °C.
+  await unfold(page, "House air");
   await expect(page.getByTestId("house-air-°C")).toHaveText("Air 20.8 °C, all off 8.0 °C", {
     timeout: 30_000,
   });
@@ -260,6 +262,7 @@ test("climate: the envelope is coloured by its glass's temperature through the r
   await page.goto("/?scenario=climate_box&set=heater:1&field=climate&t=600");
   await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
 
+  await unfold(page, "Display");
   await page.getByLabel("Colour by").selectOption("surface_temperature_c");
   await expect(page.getByTestId("legend-property")).toHaveText("surface_temperature_c");
   // The front wall's glass, far from the heater, the coolest; the back

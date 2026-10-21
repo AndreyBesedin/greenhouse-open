@@ -1,5 +1,7 @@
 import { expect, type Request, test } from "@playwright/test";
 
+import { unfold } from "./folds";
+
 import { simulatedDay } from "./hud";
 import { clickAt, clickSky, onScreen, selectAt } from "./view";
 
@@ -92,6 +94,7 @@ test("overlays and colours change the view, never the simulation", async ({ page
   await expect(page.getByTestId("debug-label")).toHaveText("tomato_compartment_plant_001");
 
   const colourBy = page.getByLabel("Colour by");
+  await unfold(page, "Display");
   await colourBy.selectOption("visible_height_cm");
   await expect(page.getByTestId("legend-property")).toHaveText("visible_height_cm");
   await colourBy.selectOption("");

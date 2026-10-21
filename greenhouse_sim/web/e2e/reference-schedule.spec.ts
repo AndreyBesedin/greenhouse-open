@@ -35,6 +35,7 @@ test("reference schedule: the run vents by its own clock, its thermostat heats i
     );
     await expect(daily.first()).toBeHidden();
     await expect(heater).toHaveText("100%, 30 kW, by its thermostat at 16 °C", ARRIVES);
+    await unfold(page, "House air");
     await expect(air).toHaveText("Air 15.7 °C, all off 6.3 °C", ARRIVES);
     // The address keeps no copy of the scenario's own schedule.
     expect(page.url()).not.toContain("daily=");

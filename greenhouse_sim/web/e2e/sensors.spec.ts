@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
-
 import type { CameraPose } from "../src/camera.ts";
+import { unfold } from "./folds";
 import { selectAt } from "./view";
 
 // The climate box's CO2 sensor, a housing 8 cm wide in the middle of the
@@ -28,6 +28,7 @@ test("sensors: a sensor stands where it is placed, and the inspector shows its c
   await expect(page.getByTestId("property-latency_s")).toHaveText("60");
 
   // Coloured by category, the sensors and the camera have a legend of their own.
+  await unfold(page, "Display");
   await page.getByRole("checkbox", { name: "Categories" }).check();
   await expect(page.getByTestId("sensor-category")).toHaveText(["sensor", "camera"]);
 });

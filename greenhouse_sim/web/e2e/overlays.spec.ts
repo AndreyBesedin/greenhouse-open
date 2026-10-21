@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { unfold } from "./folds";
+
 import { DRAWN_TIMEOUT_MS, objectCount, settledObjectCount } from "./hud";
 
 // The climate box's air, small enough to draw quickly in software, with a
@@ -27,6 +29,7 @@ test("overlays over the scene are hidden and shown again without asking the simu
 
   // The field's arrows, one batch of them, leave the view with their legend,
   // and the field stays loaded.
+  await unfold(page, "Display");
   await shown.getByRole("checkbox", { name: "Air field arrows" }).uncheck();
   await expect(page.getByRole("figure", { name: "Field legend" })).toHaveCount(0);
   await expect.poll(() => objectCount(page), { timeout: DRAWN_TIMEOUT_MS }).toBe(drawn - 1);
@@ -58,6 +61,7 @@ test("a climate run's air is hidden without ending the run or moving its moment"
   await page.goto("/?scenario=climate_box&field=climate&t=600");
   await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 60_000 });
   const houseAir = page.getByRole("figure", { name: "House air" }).getByTestId("house-air-°C");
+  await unfold(page, "House air");
   await expect(houseAir).toHaveText(/^Air [\d.]+ °C, all off [\d.]+ °C$/);
   const air = await houseAir.textContent();
   const asked: string[] = [];
@@ -68,8 +72,10 @@ test("a climate run's air is hidden without ending the run or moving its moment"
 
   // Choosing no field would end the climate run; hiding its air leaves the
   // run as it stands, its equipment and its charts with it.
+  await unfold(page, "Display");
   await airField.uncheck();
   await expect(page.getByRole("figure", { name: "Field legend" })).toHaveCount(0);
+  await unfold(page, "Air field");
   await expect(page.getByRole("combobox", { name: "Air field" })).toHaveValue("climate");
   await expect(page.getByTestId("climate-time")).toHaveText("10 min");
   await expect(houseAir).toHaveText(air ?? "");
@@ -98,6 +104,7 @@ test("What am I seeing? explains what is drawn, and follows the switches (#205)"
 
   // Hidden by its switch, an overlay leaves the card, which says it is hidden.
   const shown = page.getByRole("group", { name: "Shown in the view" });
+  await unfold(page, "Display");
   await shown.getByRole("checkbox", { name: "Probes" }).uncheck();
   await expect(card.getByTestId("seen-probes")).toHaveCount(0);
   await expect(card.getByTestId("seen-hidden")).toHaveText("Hidden: probes.");

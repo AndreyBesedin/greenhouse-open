@@ -16,6 +16,7 @@ test("a scenario's CFD boundaries are drawn by category, and follow its openings
   await expect(page.getByTestId("scene-status")).toContainText("tomato_compartment");
   const legend = page.getByRole("figure", { name: "CFD boundaries" });
 
+  await unfold(page, "Air field");
   await page.getByRole("checkbox", { name: "CFD boundaries" }).check();
 
   await expect(page).toHaveURL(/\?scenario=tomato_compartment&cfd=boundaries$/);

@@ -66,6 +66,7 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
 
   // 2. The house's dimensions and the crop's layout.
   const dimensions = page.getByRole("checkbox", { name: "Dimensions and axis labels" });
+  await unfold(page, "Display");
   await dimensions.check();
   await expect(page.getByTestId("debug-label").first()).toBeVisible();
   await say(page, "2. The house measured: 12 × 9.6 m, four rows of eight plants");
@@ -83,6 +84,7 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
 
   // 4. The air: its vectors, then a slice of its temperature.
   await say(page, "4. The air as arrows: the fans' jets down the house");
+  await unfold(page, "Air field");
   await page.getByRole("radio", { name: "slice" }).check();
   await page.getByLabel("Slice of").selectOption("temperature");
   await expect(page.getByTestId("field-legend-quantity")).toContainText("temperature");

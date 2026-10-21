@@ -111,6 +111,7 @@ test("climate-actuators: the box's equipment and vent change its air, visibly an
   });
 
   await test.step("the arrows, and the temperature and humidity slices, show it", async () => {
+    await unfold(page, "Air field");
     await expect(page.getByRole("radio", { name: "arrows" })).toBeChecked();
     await page.getByRole("radio", { name: "slice" }).check();
     await page.getByRole("combobox", { name: "Slice of" }).selectOption("temperature");
