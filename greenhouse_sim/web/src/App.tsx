@@ -61,7 +61,7 @@ import type { ViewSample } from "./readouts";
 import { ScenarioPanels } from "./ScenarioPanels";
 import { WhatAmISeeing, worldAxesLength } from "./SeenInTheView";
 import { DEFAULT_LAYOUT, loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
-import { withProbes, withTime } from "./scene/edits";
+import { withProbes, withTargets, withTime } from "./scene/edits";
 import { equipmentUrl, governedLevels, loadEquipment, runningThermostat } from "./scene/equipment";
 import type { SceneEntity } from "./scene/generated/snapshotTypes";
 import {
@@ -87,6 +87,8 @@ import {
   sceneRequest,
   searchFor,
   shownBy,
+  targetsFrom,
+  targetsText,
   withItsAir,
   withOwnDaily,
 } from "./scene/source";
@@ -359,6 +361,19 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       current.kind === "scenario" ? withTime(current, clockMoment) : current,
     );
   }, [followed, clockMoment, askedMoment, shownMoment, drawingField, fieldFailed, setSource]);
+  // Followed, the run drawn changes its targets as the run played back does
+  // (#274, decision 0043), so that every part of it is asked for with them.
+  const playedTargets = playback.status === "loaded" ? targetsText(playback.state.targets) : null;
+  useEffect(() => {
+    if (followed === null || playedTargets === null) {
+      return;
+    }
+    setSource((current) =>
+      current.kind === "scenario" && targetsText(current.targets) !== playedTargets
+        ? withTargets(current, targetsFrom(playedTargets) ?? [])
+        : current,
+    );
+  }, [followed, playedTargets, setSource]);
   // What the view changes of the scenario's own run, which is the one
   // played back: any of these makes it another run.
   const playedLayout = playback.status === "loaded" ? playback.state.layout : DEFAULT_LAYOUT;

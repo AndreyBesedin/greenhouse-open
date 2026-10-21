@@ -4,6 +4,7 @@ import { contractCheck } from "../loadJson";
 import { PLAYBACK_SCHEMA } from "./generated/playbackSchema";
 import type { PlaybackState as ServedPlayback } from "./generated/playbackTypes";
 import { layoutText } from "./moves";
+import type { TargetChange } from "./source";
 
 // How often a view following a played-back run asks where its clock is.
 const POLL_MS = 1000;
@@ -30,6 +31,9 @@ export interface PlaybackState {
   playing: boolean;
   secondsPerDay: number;
   workedOutS: number;
+  /** The target changes its epoch has made, from their moments on (#274,
+   * decision 0043): a view following it asks for its run with them. */
+  targets: TargetChange[];
 }
 
 export type PlaybackLoad =
@@ -65,6 +69,7 @@ export function parsePlayback(body: unknown): PlaybackState | null {
     playing: played.playing,
     secondsPerDay: played.seconds_per_day,
     workedOutS: played.worked_out_s,
+    targets: played.targets.map(([timeS, target, valueC]) => ({ timeS, target, valueC })),
   };
 }
 

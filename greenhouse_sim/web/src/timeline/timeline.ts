@@ -51,7 +51,7 @@ export function timelineUrl(
   window: { fromS: number; untilS: number },
 ): string {
   return scenarioUrl(scenarioId, "timeline", [
-    ...runParameters(run, ["layout", "levels", "schedule", "daily"]),
+    ...runParameters(run, ["layout", "levels", "schedule", "daily", "targets"]),
     `from=${window.fromS}`,
     `t=${window.untilS}`,
   ]);

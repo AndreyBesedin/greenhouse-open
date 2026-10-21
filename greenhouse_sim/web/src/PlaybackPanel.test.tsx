@@ -16,6 +16,7 @@ const PLAYING: PlaybackState = {
   playing: true,
   secondsPerDay: 10,
   workedOutS: 4 * 86_400,
+  targets: [],
 };
 const LOADED: PlaybackLoad = { status: "loaded", state: PLAYING };
 // The run's length, as the scenario's list says it.

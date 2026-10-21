@@ -68,6 +68,17 @@ describe("a scenario's run, as the viewer asks for it", () => {
     );
   });
 
+  it("asks with its target changes after its daily commands (#274)", () => {
+    const run = runOf(
+      "?scenario=reference_greenhouse&field=climate&t=30600&daily=none&targets=25200:heating_day:24",
+    );
+
+    expect(runParameters(run)).toEqual(["daily=none", "targets=25200:heating_day:24", "t=30600"]);
+    expect(sensorsUrl(run.scenarioId, "observations", run)).toContain(
+      "targets=25200:heating_day:24",
+    );
+  });
+
   it("writes its parts in the API's order, only those asked for, and not its start", () => {
     const run = runOf(
       "?scenario=climate_box&layout=open&field=climate&t=0&set=fan:1&schedule=60:fan:0&weather=hot_day",

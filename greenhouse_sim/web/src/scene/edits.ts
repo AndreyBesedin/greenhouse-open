@@ -4,7 +4,7 @@ import { defaultSlice } from "../fields/drawing";
 import type { EnvironmentField } from "../fields/field";
 import { CLIMATE_FIELD } from "../fields/source";
 import type { Point3 } from "../world";
-import { levelsAt, openingsAt, type SceneSource, withOverride } from "./source";
+import { levelsAt, openingsAt, type SceneSource, type TargetChange, withOverride } from "./source";
 
 /** A scenario's source: what its panels change. */
 export type ScenarioSource = Extract<SceneSource, { kind: "scenario" }>;
@@ -103,6 +103,16 @@ export function withOpenings(
 export function withTime(source: ScenarioSource, seconds: number): ScenarioSource {
   const { time: _, ...rest } = source;
   return seconds > 0 ? { ...rest, time: seconds } : rest;
+}
+
+/** Its run's target changes as `changes` are: none, if there are none
+ * (#274). */
+export function withTargets(
+  source: ScenarioSource,
+  changes: readonly TargetChange[],
+): ScenarioSource {
+  const { targets: _, ...rest } = source;
+  return changes.length === 0 ? rest : { ...rest, targets: [...changes] };
 }
 
 /** Its equipment set: while a climate run is drawn past its start, an

@@ -2,7 +2,7 @@ import { contractReader, loadJson } from "../loadJson";
 import { DEFAULT_WEATHER } from "../scenarios";
 import type { ScenarioSource } from "../scene/edits";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
-import type { ScheduledCommand } from "../scene/source";
+import type { ScheduledCommand, TargetChange } from "../scene/source";
 import { CHECKPOINT_SCHEMA } from "./generated/checkpointSchema";
 import type { Commanded, CheckpointSummary as ServedCheckpoint } from "./generated/checkpointTypes";
 
@@ -26,6 +26,8 @@ export interface CheckpointSummary {
   commands: ScheduledCommand[];
   /** Its run's daily commands, or null for its scenario's own. */
   daily: ScheduledCommand[] | null;
+  /** The target changes its run made before its day (#274). */
+  targets: TargetChange[];
   day: number;
   timeS: number;
   /** How many plants it keeps, organ by organ. */
@@ -66,6 +68,7 @@ export function parseCheckpoint(body: unknown): CheckpointSummary {
     openings: checkpoint.openings,
     commands: commandsFrom(checkpoint.commands),
     daily: checkpoint.daily === null ? null : commandsFrom(checkpoint.daily),
+    targets: checkpoint.targets.map(([timeS, target, valueC]) => ({ timeS, target, valueC })),
     day: checkpoint.day,
     timeS: checkpoint.time_s,
     plants: checkpoint.plants,
@@ -182,6 +185,7 @@ export function restored(
     ...(camera === undefined ? {} : { camera }),
     ...(checkpoint.commands.length === 0 ? {} : { schedule: checkpoint.commands }),
     ...(checkpoint.daily === null ? {} : { daily: checkpoint.daily }),
+    ...(checkpoint.targets.length === 0 ? {} : { targets: checkpoint.targets }),
     ...(checkpoint.timeS > 0 ? { time: checkpoint.timeS } : {}),
   };
 }

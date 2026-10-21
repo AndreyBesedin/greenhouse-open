@@ -22,7 +22,7 @@ const ANSWER = {
   seconds_per_day: 10,
   worked_out_s: 172_800,
   every_s: 300,
-  targets: [],
+  targets: [[129_660, "heating_night", 22]],
 };
 const STATE = {
   runId: "reference_greenhouse-climate-c562c827",
@@ -34,6 +34,7 @@ const STATE = {
   playing: true,
   secondsPerDay: 10,
   workedOutS: 172_800,
+  targets: [{ timeS: 129_660, target: "heating_night", valueC: 22 }],
 };
 
 function answering(status: number, body: unknown): typeof fetch {

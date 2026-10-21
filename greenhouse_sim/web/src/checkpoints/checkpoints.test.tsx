@@ -89,6 +89,9 @@ describe("a checkpoint", () => {
       time: 86400,
     });
     expect(restored(shown, { ...CHECKPOINT, daily: [] }, "climate").daily).toEqual([]);
+    // Its target changes too, as its run made them (#274).
+    const warmer = [{ timeS: 25200, target: "heating_day", valueC: 24 }];
+    expect(restored(shown, { ...CHECKPOINT, targets: warmer }, "climate").targets).toEqual(warmer);
   });
 
   it("is listed, saved and uploaded, and a refusal says why", async () => {

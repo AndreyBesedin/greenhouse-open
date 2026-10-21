@@ -61,6 +61,9 @@ export type SceneSource =
       /** Commands at a time of day, every day of its climate run, each
        * `timeS` its time of day, in the order given (P09.2). */
       daily?: ScheduledCommand[];
+      /** Changes to its targets, each from a moment on, in the order given
+       * (#274, decision 0043). */
+      targets?: TargetChange[];
       /** Another of its fields, compared with the drawn one at the probes. */
       compare?: string;
       /** Points the drawn field is read at. */
@@ -78,6 +81,14 @@ export type SceneSource =
       levels?: Readonly<Record<string, number>>;
     }
   | { kind: "live"; scenarioId: string };
+
+/** A change to one of a run's targets, such as its heating setpoint by
+ * day, from a moment of its climate run on, in °C (#274). */
+export interface TargetChange {
+  timeS: number;
+  target: string;
+  valueC: number;
+}
 
 /** A command to a piece of equipment at a moment of a climate run. */
 export interface ScheduledCommand {
@@ -129,6 +140,7 @@ export function sourceFromSearch(search: string): SceneSource {
     const time = timeFrom(parameters.get("t"));
     const schedule = scheduleFrom(parameters.get("schedule"));
     const daily = dailyFrom(parameters.get("daily"));
+    const targets = targetsFrom(parameters.get("targets"));
     const probes = probesFrom(parameters.get("probes"));
     const camera = cameraFrom(parameters.get("camera"));
     return {
@@ -144,6 +156,7 @@ export function sourceFromSearch(search: string): SceneSource {
       ...(field && time !== null ? { time } : {}),
       ...(field && schedule !== null ? { schedule } : {}),
       ...(field && daily !== null ? { daily } : {}),
+      ...(field && targets !== null ? { targets } : {}),
       ...(field && compare && compare !== field ? { compare } : {}),
       ...(field && probes ? { probes } : {}),
       ...(parameters.get("cfd") === CFD_BOUNDARIES ? { cfdBoundaries: true as const } : {}),
@@ -266,6 +279,7 @@ function fieldQuery(source: {
   time?: number;
   schedule?: ScheduledCommand[];
   daily?: ScheduledCommand[];
+  targets?: TargetChange[];
   compare?: string;
   probes?: Point3[];
 }): string {
@@ -281,6 +295,9 @@ function fieldQuery(source: {
       ? ""
       : `&schedule=${scheduleText(source.schedule)}`,
     source.daily === undefined ? "" : `&daily=${dailyText(source.daily)}`,
+    source.targets === undefined || source.targets.length === 0
+      ? ""
+      : `&targets=${targetsText(source.targets)}`,
     source.compare === undefined ? "" : `&compare=${encodeURIComponent(source.compare)}`,
     source.probes === undefined || source.probes.length === 0
       ? ""
@@ -346,6 +363,23 @@ export function scheduleFrom(value: string | null): ScheduledCommand[] | null {
     commands.push({ timeS, actuatorId: decodeURIComponent(actuatorId), level: shown });
   }
   return commands;
+}
+
+/** Target changes as the address bar and the simulator's API both write
+ * them: `25200:heating_day:24`, in the order given (#274). */
+export function targetsText(changes: readonly TargetChange[] | undefined): string {
+  return (changes ?? [])
+    .map(({ timeS, target, valueC }) => `${timeS}:${encodeURIComponent(target)}:${valueC}`)
+    .join(",");
+}
+
+/** The target changes an address makes, or null when it makes none or says
+ * nothing readable. The simulator checks them itself. */
+export function targetsFrom(value: string | null): TargetChange[] | null {
+  const read = scheduleFrom(value);
+  return read === null
+    ? null
+    : read.map(({ timeS, actuatorId, level }) => ({ timeS, target: actuatorId, valueC: level }));
 }
 
 /** How the address and the simulator's API ask for a run without daily

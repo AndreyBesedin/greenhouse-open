@@ -6,6 +6,8 @@ import {
   type SceneSource,
   type ScheduledCommand,
   scheduleText,
+  type TargetChange,
+  targetsText,
   weatherParameter,
 } from "./source";
 
@@ -21,6 +23,8 @@ export interface RunParts {
   schedule?: readonly ScheduledCommand[] | undefined;
   /** Commands at a time of day, every day of the run. */
   daily?: readonly ScheduledCommand[] | undefined;
+  /** Changes to its targets, each from a moment on (#274). */
+  targets?: readonly TargetChange[] | undefined;
   /** Seconds into the climate run. */
   time?: number | undefined;
   /** Another weather the run is under, a preset's by name, its clouds
@@ -42,6 +46,7 @@ export const CLIMATE_PARTS: readonly RunPart[] = [
   "openings",
   "schedule",
   "daily",
+  "targets",
   "time",
   "weather",
 ];
@@ -56,13 +61,14 @@ export function scenarioRun(source: Extract<SceneSource, { kind: "scenario" }>):
     openings: source.openings,
     schedule: source.schedule,
     daily: source.daily,
+    targets: source.targets,
     time: source.time,
     weather: apiWeather(source.weather, source.clouds, source.wind),
   };
 }
 
 /** A run's parts as a route's query takes them, in this order: `layout=`,
- * `set=`, `open=`, `schedule=`, `daily=`, `t=` and `weather=`. A part not given, or
+ * `set=`, `open=`, `schedule=`, `daily=`, `targets=`, `t=` and `weather=`. A part not given, or
  * not among `parts`, is left out, and so is the run's start, `t=0`. */
 export function runParameters(run: RunParts, parts: readonly RunPart[] = CLIMATE_PARTS): string[] {
   const asked = new Set(parts);
@@ -70,6 +76,7 @@ export function runParameters(run: RunParts, parts: readonly RunPart[] = CLIMATE
   const openings = asked.has("openings") ? pairsText(run.openings) : "";
   const schedule = asked.has("schedule") ? scheduleText(run.schedule) : "";
   const daily = asked.has("daily") && run.daily !== undefined ? dailyText(run.daily) : "";
+  const targets = asked.has("targets") ? targetsText(run.targets) : "";
   const time = asked.has("time") && run.time !== undefined && run.time > 0 ? run.time : null;
   return [
     ...(asked.has("layout") && run.layout !== undefined
@@ -79,6 +86,7 @@ export function runParameters(run: RunParts, parts: readonly RunPart[] = CLIMATE
     ...(openings === "" ? [] : [`open=${openings}`]),
     ...(schedule === "" ? [] : [`schedule=${schedule}`]),
     ...(daily === "" ? [] : [`daily=${daily}`]),
+    ...(targets === "" ? [] : [`targets=${targets}`]),
     ...(time === null ? [] : [`t=${time}`]),
     ...(asked.has("weather") ? weatherParameter(run.weather) : []),
   ];
