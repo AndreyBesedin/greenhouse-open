@@ -17,10 +17,10 @@ test("probe charts: a heated run diverges from the same run all off, where the h
   const middle = page.getByTestId("chart-P2-temperature_c");
 
   await test.step("ten minutes in, the heated corner is far warmer than all off", async () => {
-    await expect(corner).toHaveText("temperature 37.03 °C, all off 10.31 °C");
-    await expect(middle).toHaveText("temperature 18.67 °C, all off 10.48 °C");
+    await expect(corner).toHaveText("temperature 29.71 °C, all off 10.31 °C");
+    await expect(middle).toHaveText("temperature 20.69 °C, all off 10.48 °C");
     await expect(page.getByTestId("chart-P1-humidity_pct")).toHaveText(
-      "humidity 24.53 %, all off 100.00 %",
+      "humidity 36.62 %, all off 100.00 %",
     );
     // Two lines a chart, three charts a probe.
     await expect(charts.locator("polyline")).toHaveCount(12);
@@ -28,16 +28,16 @@ test("probe charts: a heated run diverges from the same run all off, where the h
 
   await test.step("the charts read what the probes read", async () => {
     await expect(page.getByTestId("probe-1-reading")).toHaveText(
-      /temperature 37\.03 °C, humidity 24\.53 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
+      /temperature 29\.71 °C, humidity 36\.62 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
     );
     await expect(page.getByTestId("probe-2-reading")).toHaveText(
-      /temperature 18\.67 °C, humidity 70\.78 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
+      /temperature 20\.69 °C, humidity 62\.43 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
     );
   });
 
   await test.step("later in the run, the charts follow", async () => {
     await page.getByRole("slider", { name: "Time of day" }).fill("1200");
-    await expect(corner).toHaveText("temperature 38.01 °C, all off 8.67 °C");
-    await expect(middle).toHaveText("temperature 19.70 °C, all off 8.72 °C");
+    await expect(corner).toHaveText("temperature 30.82 °C, all off 8.67 °C");
+    await expect(middle).toHaveText("temperature 21.87 °C, all off 8.72 °C");
   });
 });

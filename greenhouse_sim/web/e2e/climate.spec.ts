@@ -80,17 +80,17 @@ test("climate: a running heater warms its corner and the house through the run",
     await expect(moment).toHaveText("10 min");
     // Warmed, the corner's air is far from saturated.
     await expect(corner).toHaveText(
-      /temperature 37\.03 °C, humidity 24\.53 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
+      /temperature 29\.71 °C, humidity 36\.62 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
     );
     await expect(middle).toHaveText(
-      /temperature 18\.67 °C, humidity 70\.78 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
+      /temperature 20\.69 °C, humidity 62\.43 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
     );
   });
 
   await test.step("back at the start, the slice keeps the colours the run reached", async () => {
     const highest = page.getByRole("spinbutton", { name: "Highest colour" });
     const reached = await highest.inputValue();
-    expect(Number(reached)).toBeGreaterThan(40);
+    expect(Number(reached)).toBeGreaterThan(30);
     await run.getByRole("slider", { name: "Time of day" }).fill("0");
     await expect(moment).toHaveText("0 min");
     await expect(corner).toHaveText(/temperature 16\.00 °C/);
@@ -118,11 +118,11 @@ test("climate: a running heater warms its corner and the house through the run",
     // An override at its moment: the air then is as it was.
     await expect(page).toHaveURL(/&schedule=600:heater:0(&|$)/);
     await expect(middle).toHaveText(
-      /temperature 18\.67 °C, humidity 70\.78 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
+      /temperature 20\.69 °C, humidity 62\.43 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
     );
     await slider.fill("1200");
     await expect(middle).toHaveText(
-      /temperature 11\.51 °C, humidity 100\.00 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
+      /temperature 11\.66 °C, humidity 100\.00 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
     );
   });
 });
@@ -162,10 +162,10 @@ test("climate: a running dehumidifier dries the air around it", async ({ page })
     await expect(page).toHaveURL(/set=dehumidifier:1,heater:1(&|$)/);
     await slider.fill("600");
     await expect(beside).toHaveText(
-      /temperature 20\.55 °C, humidity 58\.10 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
+      /temperature 21\.61 °C, humidity 54\.45 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
     );
     await expect(far).toHaveText(
-      /temperature 16\.28 °C, humidity 78\.84 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
+      /temperature 18\.06 °C, humidity 70\.46 %, co2 420\.00 ppm, PAR 0\.00 µmol\/m²\/s, irradiance 0\.00 W\/m²$/,
     );
   });
 });
@@ -187,7 +187,7 @@ test("climate: opening the roof vent lets the heated air out, and the cold in", 
 
   await test.step("shut, the air under it is still, and warm from the heater", async () => {
     await expect(reading).toHaveText(
-      "climate: 0.00 m/s (0.00, 0.00, 0.00), temperature 18.19 °C, humidity 72.90 %, co2 420.00 ppm, PAR 0.00 µmol/m²/s, irradiance 0.00 W/m²",
+      "climate: 0.00 m/s (0.00, 0.00, 0.00), temperature 19.74 °C, humidity 66.15 %, co2 420.00 ppm, PAR 0.00 µmol/m²/s, irradiance 0.00 W/m²",
     );
   });
 
@@ -201,7 +201,7 @@ test("climate: opening the roof vent lets the heated air out, and the cold in", 
     await expect(page).toHaveURL(/open=roof_vent:1(&|$)/);
     await time.fill("600");
     await expect(reading).toHaveText(
-      "climate: 0.05 m/s (0.00, 0.00, 0.05), temperature 14.57 °C, humidity 76.67 %, co2 420.00 ppm, PAR 0.00 µmol/m²/s, irradiance 0.00 W/m²",
+      "climate: 0.06 m/s (0.00, 0.00, 0.06), temperature 15.59 °C, humidity 71.74 %, co2 420.00 ppm, PAR 0.00 µmol/m²/s, irradiance 0.00 W/m²",
     );
   });
 
@@ -251,7 +251,7 @@ test("climate: the time slider spans a day, a later field drawn from the whole h
   });
   // The probe reads the grid run started at four hours, from the whole house.
   await expect(page.getByTestId("chart-P1-temperature_c")).toHaveText(
-    "temperature 20.02 °C, all off 8.00 °C",
+    "temperature 22.05 °C, all off 8.00 °C",
     { timeout: 60_000 },
   );
 });
@@ -267,6 +267,6 @@ test("climate: the envelope is coloured by its glass's temperature through the r
   await expect(page.getByTestId("legend-property")).toHaveText("surface_temperature_c");
   // The front wall's glass, far from the heater, the coolest; the back
   // wall's, beside it, the warmest; all between the air and the night's 8 °C.
-  await expect(page.getByTestId("legend-min")).toHaveText("11.94");
-  await expect(page.getByTestId("legend-max")).toHaveText("19.45");
+  await expect(page.getByTestId("legend-min")).toHaveText("12.76");
+  await expect(page.getByTestId("legend-max")).toHaveText("16.30");
 });

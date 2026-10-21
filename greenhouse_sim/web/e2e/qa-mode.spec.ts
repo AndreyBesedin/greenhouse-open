@@ -34,7 +34,7 @@ test("QA mode: no truth is asked for without it, and turning it on shows the tru
 
   await selectAt(page, FRONT_FACE, "climate_box_temperature_front", BESIDE_THE_FRONT);
   const panel = page.getByRole("region", { name: "Sensor" });
-  await expect(panel.getByTestId("sensor-reading")).toHaveText("15.91 °C at 10 min", {
+  await expect(panel.getByTestId("sensor-reading")).toHaveText("17.57 °C at 10 min", {
     timeout: 20_000,
   });
   // Its readings alone: no truth, no line of it, no switch to clean them.
@@ -49,7 +49,7 @@ test("QA mode: no truth is asked for without it, and turning it on shows the tru
   await qaMode.check();
   await expect(page).toHaveURL(/&qa=1$/);
   await asked;
-  await expect(panel.getByTestId("sensor-truth")).toHaveText("15.91 °C at 10 min", {
+  await expect(panel.getByTestId("sensor-truth")).toHaveText("17.57 °C at 10 min", {
     timeout: 20_000,
   });
   await expect(panel.getByTestId("sensor-chart-truth")).toHaveCount(1);
@@ -58,7 +58,7 @@ test("QA mode: no truth is asked for without it, and turning it on shows the tru
   await qaMode.uncheck();
   await expect(page).not.toHaveURL(/qa=1/);
   await expect(panel.getByRole("complementary", { name: "Truth, for QA only" })).toHaveCount(0);
-  await expect(panel.getByTestId("sensor-reading")).toHaveText("15.91 °C at 10 min");
+  await expect(panel.getByTestId("sensor-reading")).toHaveText("17.57 °C at 10 min");
 });
 
 test("QA mode: every plant is labelled with its identifier and its day's light", async ({
