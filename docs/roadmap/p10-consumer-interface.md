@@ -80,5 +80,5 @@ consumer polled `/consumer/v1` every 2 s, through 80 days:
   - at 30 s a day, 14 h behind, 18 h at most.
 
   Without the field, at the default 10 s a day, the scene stayed on the
-  clock's day, 1.5 days behind at most. A demo beside a consumer plays at
-  30 s a day or more with the air drawn, or follows without it.
+  clock's day, 1.5 days behind at most. A view shown beside a consumer
+  plays at 30 s a day or more with the air drawn, or follows without it.
