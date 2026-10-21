@@ -56,11 +56,11 @@ test("sensors: a clean sensor's reading through a run is the truth beside it", a
   // Ten minutes in, the heater's warmth has reached the front half of the
   // house, through glass that passes little in the night's still air. The
   // log is read once the sensor is selected, behind the run's other loads.
-  await expect(panel.getByTestId("sensor-reading")).toHaveText("15.91 °C at 10 min", {
+  await expect(panel.getByTestId("sensor-reading")).toHaveText("17.57 °C at 10 min", {
     timeout: 20_000,
   });
   await expect(panel.getByRole("complementary", { name: "Truth, for QA only" })).toBeVisible();
-  await expect(panel.getByTestId("sensor-truth")).toHaveText("15.91 °C at 10 min");
+  await expect(panel.getByTestId("sensor-truth")).toHaveText("17.57 °C at 10 min");
   // A reading a minute, on the truth's line.
   await expect(panel.locator(".sensor-chart-reading")).toHaveCount(11);
 
@@ -80,10 +80,10 @@ test("sensors: an imperfect sensor errs as configured, and the QA switch cleans 
   // Biased, drifting and noisy, to a tenth of a degree, and 30 s late: by
   // ten minutes, its latest reading is the one taken at nine. Two of its
   // samples dropped out.
-  await expect(panel.getByTestId("sensor-reading")).toHaveText("23.30 °C at 9 min", {
+  await expect(panel.getByTestId("sensor-reading")).toHaveText("22.80 °C at 9 min", {
     timeout: 20_000,
   });
-  await expect(panel.getByTestId("sensor-truth")).toHaveText("22.96 °C at 10 min");
+  await expect(panel.getByTestId("sensor-truth")).toHaveText("22.50 °C at 10 min");
   await expect(panel.locator(".sensor-chart-reading")).toHaveCount(8);
 
   await expect(panel.getByTestId("sensor-freshness")).toHaveText(
@@ -92,7 +92,7 @@ test("sensors: an imperfect sensor errs as configured, and the QA switch cleans 
 
   // The clean run's log is asked for afresh.
   await panel.getByRole("checkbox", { name: "Imperfections" }).uncheck();
-  await expect(panel.getByTestId("sensor-reading")).toHaveText("22.96 °C at 10 min", {
+  await expect(panel.getByTestId("sensor-reading")).toHaveText("22.50 °C at 10 min", {
     timeout: 20_000,
   });
   await expect(panel.locator(".sensor-chart-reading")).toHaveCount(11);

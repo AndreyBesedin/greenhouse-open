@@ -14,14 +14,22 @@ A unit standing on the floor fills the cells its body holds, which the air
 does not reach (`greenhouse_sim.cfd.geometry.CfdGeometry.solid`): it gives
 its heat to, and draws its water from, the air cells around its body
 instead: those whose centres lie within a cell of it, beside it or above it.
+
+A unit heater blows its warm air out of its front (#261): its heat is given
+to the cells that air passes through, weighted as a round jet's speed is
+(`greenhouse_sim.climate.jets`), from an outlet as wide as its front, along
+its heading. Put into the few cells around its body, a heater sized to the
+house warmed them past 100 °C in a run's first minutes, where a unit
+heater's outlet is some 40 to 70 °C; its total heat is the same either way.
 """
 
+import math
 from dataclasses import dataclass
-from typing import Self
+from typing import Final, Self
 
 import numpy as np
 
-from greenhouse_sim.climate.jets import jet_velocity
+from greenhouse_sim.climate.jets import JET_DECAY, JET_REACH_WIDTHS, jet_velocity
 from greenhouse_sim.fields.field import VECTOR_COMPONENTS, FieldGrid
 from greenhouse_sim.units import HOUR_S
 from greenhouse_sim.world.equipment import Dehumidifier, Equipment, Fan, Heater
@@ -93,6 +101,90 @@ def _around(piece: Heater | Dehumidifier, grid: FieldGrid, solid: np.ndarray) ->
     return nearest
 
 
+# How far along its heading a heater's warm air carries its heat, in
+# diameters of its outlet: the jet's core, where a round jet keeps its
+# outlet's width (`climate.jets`). An exploratory heuristic (#261), not a
+# model of a unit heater's plume: the heat is shared as the jet's speed is,
+# and stops where its core does. Chosen on the reference greenhouse's
+# 30 kW, where it keeps the warmest cells at 50 to 55 °C in a run's first
+# minutes, within a unit heater's usual outlet temperatures (3 diameters
+# gave 71 to 77 °C, 10 gave 38 to 41 °C); other heaters are not checked
+# against one.
+HEATER_JET_DIAMETERS: Final = JET_DECAY
+
+
+def _heater_jet(piece: Heater, grid: FieldGrid, solid: np.ndarray) -> np.ndarray | None:
+    """How a heater's heat is shared among the air cells of its jet: by the
+    speed a round jet from its outlet would have at each cell's centre, up
+    to `HEATER_JET_DIAMETERS` outlet diameters along its heading, or to the
+    first obstacle on its axis. Its outlet is the middle of its front, as
+    wide as its front is high or wide, whichever is less. A jet too narrow
+    for any cell's centre gives its heat to the cells its axis passes
+    through; one whose outlet an obstacle blocks has none, and its heat
+    stays around its body."""
+    axis = piece.facing()
+    diameter = min(piece.size_y, piece.size_z)
+    radius = diameter / 2
+    front = piece.size_x / 2
+    outlet = Vector3(
+        x=piece.base.x + axis.x * front,
+        y=piece.base.y + axis.y * front,
+        z=piece.base.z + piece.size_z / 2,
+    )
+    passed, reach = _axis_cells(outlet, axis, HEATER_JET_DIAMETERS * diameter, grid, solid)
+    if not passed:
+        return None
+    xs, ys, zs = grid.centres()
+    z, y, x = np.meshgrid(zs, ys, xs, indexing="ij")
+    dx, dy, dz = x - outlet.x, y - outlet.y, z - outlet.z
+    along = dx * axis.x + dy * axis.y + dz * axis.z
+    across_squared = np.maximum(dx**2 + dy**2 + dz**2 - along**2, 0.0)
+    width = np.maximum(radius, along / (2 * JET_DECAY))
+    reached = (
+        (along >= 0.0)
+        & (along <= reach)
+        & (across_squared <= (JET_REACH_WIDTHS * width) ** 2)
+        & ~solid
+    )
+    weight: np.ndarray = np.where(reached, radius / width * np.exp(-across_squared / width**2), 0.0)
+    if weight.sum() > 0.0:
+        return weight
+    for cell in passed:
+        weight[cell] = 1.0
+    return weight
+
+
+def _axis_cells(
+    outlet: Vector3, axis: Vector3, length: float, grid: FieldGrid, solid: np.ndarray
+) -> tuple[list[tuple[int, int, int]], float]:
+    """The air cells a line from `outlet` along `axis` passes through, in
+    the grid's order (z, y, x), and how far along it they reach: to
+    `length`, or to the first cell an obstacle fills, or the grid's edge.
+    Walked half the smallest cell at a time, from half that in front of the
+    outlet; none if the first cell is an obstacle's."""
+    step = min(grid.cell_size.x, grid.cell_size.y, grid.cell_size.z) / 2
+    nx, ny, nz = grid.shape
+    passed: list[tuple[int, int, int]] = []
+    along = step / 2
+    while along <= length:
+        point = (
+            outlet.x + axis.x * along,
+            outlet.y + axis.y * along,
+            outlet.z + axis.z * along,
+        )
+        index = (
+            math.floor((point[2] - grid.origin.z) / grid.cell_size.z),
+            math.floor((point[1] - grid.origin.y) / grid.cell_size.y),
+            math.floor((point[0] - grid.origin.x) / grid.cell_size.x),
+        )
+        if not (0 <= index[0] < nz and 0 <= index[1] < ny and 0 <= index[2] < nx) or solid[index]:
+            return passed, along
+        if not passed or passed[-1] != index:
+            passed.append(index)
+        along += step
+    return passed, length
+
+
 def source_terms(piece: Equipment, level: float, grid: FieldGrid, solid: np.ndarray) -> SourceTerms:
     """What a piece of equipment does to the air at a level, on a grid whose
     `solid` cells its obstacles fill."""
@@ -109,6 +201,11 @@ def source_terms(piece: Equipment, level: float, grid: FieldGrid, solid: np.ndar
     region = _around(piece, grid, solid)
     share = region / region.sum()
     if isinstance(piece, Heater):
+        jet = _heater_jet(piece, grid, solid)
+        # A heater whose outlet an obstacle blocks gives its heat around its
+        # body.
+        if jet is not None:
+            share = jet / jet.sum()
         return SourceTerms(
             grid=grid,
             velocity=terms.velocity,

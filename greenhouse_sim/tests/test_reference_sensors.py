@@ -29,10 +29,12 @@ MOST_SEASON_ERROR_C: Final = 5.0
 # to find.
 LEAST_FAULT_C: Final = 1.0
 # The run's first two hours, when its sensors read the house's air cell by
-# cell, as the grid run carries it from the start, and a minute in, when its
-# heater has warmed the cells it blows into past 100 °C.
+# cell, as the grid run carries it from the start, and its first minutes,
+# when its heater warms the cells it blows into the most.
 FROM_THE_START_S: Final = 2 * HOUR_S
-HEATER_PAST_BOILING_S: Final = (60.0, 120.0)
+HEATER_FIRST_MINUTES_S: Final = (60.0, 120.0)
+# The warmest a unit heater's outlet blows, about: some 40 to 70 °C.
+WARMEST_OUTLET_C: Final = 70.0
 
 
 def _errors_by_season_end() -> dict[str, float]:
@@ -60,15 +62,17 @@ def test_its_back_thermometer_drifts_far_enough_to_be_found() -> None:
     assert errors["temperature_front"] == 0.0
 
 
-def test_its_air_past_boiling_by_the_heater_keeps_a_humidity_the_air_can_have() -> None:
-    # A cell the heater warmed past 100 °C used to lose more water than it
-    # held, and the house's humidity cell by cell ran to ±10⁸ % (#198).
-    for time_s in HEATER_PAST_BOILING_S:
+def test_its_heater_warms_its_air_as_a_unit_heater_does_and_keeps_a_humidity_it_can_have() -> None:
+    # Its heater warmed the few cells around its body past 100 °C in the
+    # run's first minutes (#261), where they lost more water than they held
+    # and the house's humidity cell by cell ran to ±10⁸ % (#198). Its warm
+    # air spread along its jet, its warmest cell is a unit heater's outlet.
+    for time_s in HEATER_FIRST_MINUTES_S:
         air = EnvironmentField.from_document(field(RunRequest(SCENARIO), "climate", time_s=time_s))
         temperature = air.channels[AirQuantity.TEMPERATURE]
         relative = air.channels[AirQuantity.HUMIDITY]
 
-        assert np.nanmax(temperature) > 100.0
+        assert np.nanmax(temperature) < WARMEST_OUTLET_C
         assert np.all(np.isfinite(relative[np.isfinite(temperature)]))
         assert np.nanmin(relative) >= 0.0 and np.nanmax(relative) <= 100.0
 

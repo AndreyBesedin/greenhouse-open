@@ -173,18 +173,21 @@ def test_with_the_outside_warmer_and_nothing_running_the_house_warms_towards_it(
 
 
 def test_a_heaters_warmth_spreads_out_from_it_with_time() -> None:
+    # Its jet blows along the house's side (#261): in it, and 2.5 m and 5 m
+    # across from it.
     transport = _transport(STILL)
     beside = _cell(10.25, 0.75, 0.75)
-    across = _cell(8.25, 3.25, 0.75)
-    far = _cell(6.25, 3.25, 0.75)
+    across = _cell(10.25, 3.25, 0.75)
+    far = _cell(10.25, 5.75, 0.75)
     early = _advance(transport, START, HEAT_W, 30)
     later = _advance(transport, early, HEAT_W, 270)
 
-    # Half a minute in, its corner is warm, and 3 m away barely.
-    assert early[beside] > 25.0
+    # Half a minute in, its corner, in its jet, is warm, and 2.5 m across
+    # barely.
+    assert early[beside] > 22.0
     assert early[across] < 17.0
-    # Five minutes in, its warmth has reached 3 m away, and less of it 5 m
-    # away, where the cold glass still cools the air.
+    # Five minutes in, its warmth has reached 2.5 m across, and less of it 5
+    # m across, where the cold glass still cools the air.
     assert later[across] > early[across] + 1.0
     assert early[far] < START[far]
     assert later[far] - early[far] < later[across] - early[across]

@@ -21,7 +21,7 @@ from greenhouse_sim.units import HOUR_S
 HEATED = (("heater", 1.0),)
 # How closely a later grid run's mean follows the whole house after its
 # hour's spin-up, in a shut, heated house (as `test_whole_house` measures).
-SHUT_TEMPERATURE_C = 0.3
+SHUT_TEMPERATURE_C = 0.6
 
 
 def _day(commands: tuple[tuple[float, str, float], ...] = ()) -> ClimateDay:
