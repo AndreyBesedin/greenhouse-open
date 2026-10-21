@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DAY_S } from "../clock";
 import { searchFor, sourceFromSearch } from "../scene/source";
 import { render, said } from "../testing/render";
-import { ClimateTime, describeTime, onDay, playStep } from "./ClimateTime";
+import { ClimateTime, describeClimateRun, describeTime, onDay, playStep } from "./ClimateTime";
 import { fieldUrl } from "./source";
 
 const ignore = () => undefined;
@@ -232,5 +232,25 @@ describe("a climate run's moment on its way", () => {
       "Day 1, 10 min cannot be drawn; 10 min is shown.",
     );
     view.unmount();
+  });
+});
+
+describe("a climate run's moment, its section folded (#273)", () => {
+  it("says the moment drawn once it has arrived", () => {
+    expect(describeClimateRun(DAY_S + 600, DAY_S + 600, false)).toBe("Climate run: day 1, 10 min");
+  });
+
+  it("says the moment drawn and the one on its way, never the one on its way alone", () => {
+    expect(describeClimateRun(DAY_S + 600, 600, false)).toBe(
+      "Climate run: 10 min; loading day 1, 10 min…",
+    );
+    expect(describeClimateRun(600, null, false)).toBe("Climate run: loading 10 min…");
+  });
+
+  it("says the moment asked for cannot be drawn, beside the one drawn", () => {
+    expect(describeClimateRun(DAY_S + 600, 600, true)).toBe(
+      "Climate run: 10 min; day 1, 10 min cannot be drawn",
+    );
+    expect(describeClimateRun(600, null, true)).toBe("Climate run: 10 min cannot be drawn");
   });
 });

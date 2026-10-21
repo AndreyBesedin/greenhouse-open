@@ -8,7 +8,7 @@ import { CheckpointsPanel } from "./checkpoints/CheckpointsPanel";
 import { type CheckpointSummary, restored } from "./checkpoints/checkpoints";
 import { EquipmentControls } from "./EquipmentControls";
 import { ClimateSchedule } from "./fields/ClimateSchedule";
-import { ClimateTime, describeTime } from "./fields/ClimateTime";
+import { ClimateTime, describeClimateRun } from "./fields/ClimateTime";
 import type { FieldView, Slice } from "./fields/display";
 import { describeAirField, FieldControls, useFieldNames } from "./fields/FieldControls";
 import { describeProbes, FieldProbes } from "./fields/FieldProbes";
@@ -119,6 +119,8 @@ export function ScenarioPanels({
   const climate = source.field === CLIMATE_FIELD;
   const time = source.time ?? 0;
   const probed = field.status === "loaded" ? field.field : null;
+  // The moment drawn, which stays while another is on its way or failed.
+  const shownTime = probed === null ? null : probed.timeS;
   // Every group folded to the line that says how it stands (#206, #273):
   // the climate run's moment open at first, the rest folded.
   const fold = useFolds<"field" | "moment" | "house" | "equipment" | "openings" | "probes">([
@@ -182,10 +184,12 @@ export function ScenarioPanels({
       </details>
       {climate && (
         <details className="moment-fold" {...fold("moment")}>
-          <summary data-testid="moment-summary">{`Climate run: ${describeTime(time)}`}</summary>
+          <summary data-testid="moment-summary">
+            {describeClimateRun(time, shownTime, momentFailed)}
+          </summary>
           <ClimateTime
             time={time}
-            shown={field.status === "loaded" ? field.field.timeS : null}
+            shown={shownTime}
             failed={momentFailed}
             days={days}
             playing={playingClimate}

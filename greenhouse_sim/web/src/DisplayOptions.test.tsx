@@ -80,6 +80,17 @@ describe("the display options", () => {
     }
   });
 
+  it("say on the section's line which of them are hidden (#273)", () => {
+    const shown = options({ ...ALL_OVERLAYS, wind: false, probes: false }, [
+      "airField",
+      "wind",
+      "probes",
+    ]);
+    expect(shown.querySelector("summary")?.textContent).toBe(
+      "Display: no colouring; hiding wind, probes",
+    );
+  });
+
   it("offer no switches while nothing is drawn over the scene", () => {
     expect(options(ALL_OVERLAYS, []).querySelector("fieldset")).toBeNull();
   });
@@ -91,6 +102,13 @@ describe("the display options' section, folded", () => {
     expect(describeDisplay(null, off)).toBe("Display: no colouring");
     expect(describeDisplay("level", { ...off, showDimensions: true, qaMode: true })).toBe(
       "Display: coloured by level, dimensions, QA mode",
+    );
+  });
+
+  it("names the overlays hidden, every one being shown at first", () => {
+    const off = { showDimensions: false, byCategory: false, qaMode: false };
+    expect(describeDisplay(null, off, ["Wind", "Air field arrows"])).toBe(
+      "Display: no colouring; hiding wind, air field arrows",
     );
   });
 

@@ -22,14 +22,13 @@ function overlayLabel(overlay: SceneOverlay, fieldView: FieldView): string {
   return overlay === "airField" ? `Air field ${fieldView}` : SCENE_OVERLAY_LABELS[overlay];
 }
 
-/** How the scene is shown: shaded by a property, and measured; which of the
- * overlays over it are drawn; and whether the viewer is in QA mode (P09.6),
- * which shows what the simulator knows and a policy never sees. */
 /** How the view is shown, in a line, as the display options' section folded
- * says it (#273): its colouring, and which of its switches are on. */
+ * says it (#273): its colouring, which of its switches are on, and which of
+ * the overlays over the scene are hidden, every one being shown at first. */
 export function describeDisplay(
   colourBy: string | null,
   switches: { showDimensions: boolean; byCategory: boolean; qaMode: boolean },
+  hidden: readonly string[] = [],
 ): string {
   const on = [
     colourBy === null ? "no colouring" : `coloured by ${colourBy}`,
@@ -37,9 +36,13 @@ export function describeDisplay(
     ...(switches.byCategory ? ["categories"] : []),
     ...(switches.qaMode ? ["QA mode"] : []),
   ];
-  return `Display: ${on.join(", ")}`;
+  const hiding = hidden.map((label) => label.charAt(0).toLowerCase() + label.slice(1));
+  return `Display: ${on.join(", ")}${hiding.length > 0 ? `; hiding ${hiding.join(", ")}` : ""}`;
 }
 
+/** How the scene is shown: shaded by a property, and measured; which of the
+ * overlays over it are drawn; and whether the viewer is in QA mode (P09.6),
+ * which shows what the simulator knows and a policy never sees. */
 export function DisplayOptions({
   colourProperties,
   colourBy,
@@ -75,7 +78,13 @@ export function DisplayOptions({
   return (
     <details className="display-fold" {...fold("display")}>
       <summary data-testid="display-summary">
-        {describeDisplay(colourBy, { showDimensions, byCategory, qaMode })}
+        {describeDisplay(
+          colourBy,
+          { showDimensions, byCategory, qaMode },
+          drawn
+            .filter((overlay) => !overlays[overlay])
+            .map((overlay) => overlayLabel(overlay, fieldView)),
+        )}
       </summary>
       {colourProperties.length > 0 && (
         <ColourBy properties={colourProperties} value={colourBy} onChange={onColourBy} />
