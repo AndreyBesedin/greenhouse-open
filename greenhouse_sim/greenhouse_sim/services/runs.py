@@ -1,10 +1,44 @@
-"""A run's moments, as the services check them (P09.2): from its start to
-the end of its scenario's last day, on the run's clock
-(`greenhouse_sim.core.clock`)."""
+"""A run as a client asks for it, and its moments as the services check
+them (P09.2): from its start to the end of its scenario's last day, on the
+run's clock (`greenhouse_sim.core.clock`)."""
+
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 
 from greenhouse_sim.core.clock import day_start
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services.errors import InvalidRequest
+
+# A command as a request writes it: its moment, its actuator and its level.
+type Commanded = tuple[float, str, float]
+
+
+@dataclass(frozen=True)
+class RunRequest:
+    """A scenario's run as a client asks for it (audit W11, `AUDIT.6`), read
+    once by the API and taken by every service that runs one:
+
+    - its scenario, one of its layouts and a weather, each by name, or its
+      own when None;
+    - its equipment's levels and its doors' and vents' openings from the
+      start, by identifier;
+    - its commands, in the order given, those at one moment included;
+    - its daily commands, or None for its scenario's own: apart from an
+      empty tuple, which is none at all.
+
+    It names a run, and nothing of what is asked of it: the moment drawn and
+    a series' window are the services' own arguments, so the runs kept are
+    told apart without them. Each service checks it as it always has: a
+    layout, a weather or a piece of equipment the scenario does not have is
+    refused there, not here."""
+
+    scenario_id: str
+    layout: str | None = None
+    weather: str | None = None
+    levels: Mapping[str, float] = field(default_factory=dict)
+    openings: Mapping[str, float] = field(default_factory=dict)
+    commands: tuple[Commanded, ...] = ()
+    daily: tuple[Commanded, ...] | None = None
 
 
 def checked_moment(config: ScenarioConfig, time_s: float) -> float:

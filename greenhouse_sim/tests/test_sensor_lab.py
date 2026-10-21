@@ -13,6 +13,7 @@ from greenhouse_sim.airflow.prescribed import GradientAirflow
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.layout_files import load_layout
 from greenhouse_sim.services import sensors
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.layout import Layout
 from greenhouse_sim.world.sensors import Camera, PointSensor
@@ -38,7 +39,7 @@ def _sensor(sensor_id: str) -> PointSensor:
 def _readings(sensor_id: str) -> list[tuple[float, float, float]]:
     """Each of a sensor's readings through the run: when it was taken and
     delivered, in seconds from the start, and its value."""
-    log = sensors.observations("sensor_lab", until_s=HOUR_S)
+    log = sensors.observations(RunRequest("sensor_lab"), until_s=HOUR_S)
     return [
         (
             (o.timestamp - log.start).total_seconds(),
@@ -62,7 +63,9 @@ def test_a_clean_sensor_reads_the_gradient_exactly(sensor_id: str) -> None:
     expected = _gradient().temperature_at(sensor.position.x)
     readings = _readings(sensor_id)
     truth = next(
-        t for t in sensors.truth("sensor_lab", until_s=HOUR_S).sensors if t.sensor_id == sensor_id
+        t
+        for t in sensors.truth(RunRequest("sensor_lab"), until_s=HOUR_S).sensors
+        if t.sensor_id == sensor_id
     )
 
     # A sample every minute, on time, each the line's value where it stands.

@@ -18,7 +18,7 @@ its climate run takes over their air.
 """
 
 import math
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from typing import Final
 
 from pydantic import BaseModel, ConfigDict
@@ -36,9 +36,9 @@ from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.scene.plants import crop_entities
 from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
-from greenhouse_sim.services.fields import Commanded, RunKey, climate_run, house_of
+from greenhouse_sim.services.fields import RunKey, climate_run, house_of
 from greenhouse_sim.services.kept_states import KeptState, agreeing
-from greenhouse_sim.services.runs import checked_moment
+from greenhouse_sim.services.runs import RunRequest, checked_moment
 from greenhouse_sim.services.scenarios import SceneChanges, changed, plant_ids, scenario
 from greenhouse_sim.services.stores import Store
 from greenhouse_sim.services.sunlight import plant_light
@@ -51,25 +51,18 @@ KEPT_CROPS: Final = 4
 CROPS: Store[RunKey, tuple[RunCrop, Schedule]] = Store("crops", KEPT_CROPS)
 
 
-def run_crop(
-    scenario_id: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
-    watch: Stopwatch | None = None,
-) -> RunCrop:
-    """A scenario's organ-level crop through a run, asked for as its climate
-    field is: one of those kept, or a new one, carrying on from those kept
-    for the same house up to where their air differs, the parts of its days
-    timed on `watch`, for a benchmark. A scenario that grows its crop with
-    the simple daily model has none."""
-    config = scenario(scenario_id)
+def run_crop(run: RunRequest, watch: Stopwatch | None = None) -> RunCrop:
+    """A run's organ-level crop, asked for as its climate field is: one of
+    those kept, or a new one, carrying on from those kept for the same house
+    up to where their air differs, the parts of its days timed on `watch`,
+    for a benchmark. A scenario that grows its crop with the simple daily
+    model has none."""
+    config = scenario(run.scenario_id)
     if config.crop_model != CropModel.ORGAN:
-        raise NotFound(f"{scenario_id} grows its crop with the simple daily model, not by organ")
-    key, climate = climate_run(scenario_id, layout, levels, openings, commands, weather, daily)
+        raise NotFound(
+            f"{run.scenario_id} grows its crop with the simple daily model, not by organ"
+        )
+    key, climate = climate_run(run)
     schedule = climate.run.schedule
 
     def make(others: list[tuple[RunKey, tuple[RunCrop, Schedule]]]) -> tuple[RunCrop, Schedule]:
@@ -130,24 +123,15 @@ def _new_crop(key: RunKey, climate: ClimateDay, watch: Stopwatch | None = None) 
     )
 
 
-def crop_scene(
-    scenario_id: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    time_s: float = 0.0,
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
-) -> SceneSnapshot:
-    """A scenario's crop `time_s` into a run, organ by organ, as a viewer
-    draws it over the scenario's scene: each plant at its planting position,
-    as it stands once it has lived the days ended by then. Asked for as its
+def crop_scene(run: RunRequest, time_s: float = 0.0) -> SceneSnapshot:
+    """A run's crop `time_s` into it, organ by organ, as a viewer draws it
+    over the scenario's scene: each plant at its planting position, as it
+    stands once it has lived the days ended by then. Asked for as its
     climate field is, and refused as it is."""
-    checked_moment(scenario(scenario_id), time_s)
-    crop = run_crop(scenario_id, layout, levels, openings, commands, weather, daily)
+    checked_moment(scenario(run.scenario_id), time_s)
+    crop = run_crop(run)
     day = days_ended(time_s)
-    config = changed(scenario(scenario_id), SceneChanges(layout=layout or DEFAULT_LAYOUT))
+    config = changed(scenario(run.scenario_id), SceneChanges(layout=run.layout or DEFAULT_LAYOUT))
     return SceneSnapshot(
         greenhouse_id=config.greenhouse_id,
         simulated_day=day,
@@ -169,26 +153,16 @@ class CropPlant(BaseModel):
     environments: list[LocalEnvironment]
 
 
-def crop_plant(
-    scenario_id: str,
-    plant_id: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    time_s: float = 0.0,
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
-) -> CropPlant:
-    """One plant of a scenario's crop `time_s` into a run, and its days so
-    far. Asked for as its crop is, and refused as it is; a plant it does not
-    have is not found."""
-    checked_moment(scenario(scenario_id), time_s)
-    crop = run_crop(scenario_id, layout, levels, openings, commands, weather, daily)
+def crop_plant(run: RunRequest, plant_id: str, time_s: float = 0.0) -> CropPlant:
+    """One plant of a run's crop `time_s` into it, and its days so far.
+    Asked for as its crop is, and refused as it is; a plant it does not have
+    is not found."""
+    checked_moment(scenario(run.scenario_id), time_s)
+    crop = run_crop(run)
     day = days_ended(time_s)
     plant = next((plant for plant in crop.plants_on(day) if plant.plant_id == plant_id), None)
     if plant is None:
-        raise NotFound(f"{scenario_id} has no plant {plant_id!r}")
+        raise NotFound(f"{run.scenario_id} has no plant {plant_id!r}")
     return CropPlant(
         time_s=time_s,
         days=day,
@@ -210,26 +184,18 @@ class PlantsLight(BaseModel):
     daily_light_integral_mol_m2_d: dict[str, float]
 
 
-def plants_light(
-    scenario_id: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    time_s: float = 0.0,
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
-) -> PlantsLight:
-    """The light on each of a scenario's plants `time_s` into a run, asked
-    for as its climate field is, and refused as it is: with its crowns as
-    tall as its plants stand on the moment's day, where it grows its crop
-    organ by organ; or else as they stand before its first day."""
+def plants_light(run: RunRequest, time_s: float = 0.0) -> PlantsLight:
+    """The light on each of a run's plants `time_s` into it, asked for as
+    its climate field is, and refused as it is: with its crowns as tall as
+    its plants stand on the moment's day, where it grows its crop organ by
+    organ; or else as they stand before its first day."""
+    scenario_id = run.scenario_id
     checked_moment(scenario(scenario_id), time_s)
-    key, _ = climate_run(scenario_id, layout, levels, openings, commands, weather, daily)
+    key, _ = climate_run(run)
     day = run_day(time_s)
     light: CropLight
     if scenario(scenario_id).crop_model == CropModel.ORGAN:
-        crop = run_crop(scenario_id, layout, levels, openings, commands, weather, daily)
+        crop = run_crop(run)
         light = crop.light_on(day)
         par = light.par_at(time_s)
         integrals = {plant_id: crop.local(plant_id, day).par_mol_m2_day for plant_id in par}

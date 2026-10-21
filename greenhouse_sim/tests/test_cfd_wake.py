@@ -28,6 +28,7 @@ from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services import cfd, fields
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import SceneChanges, changed, scenario
 from greenhouse_sim.world.geometry import Vector3
 
@@ -137,8 +138,8 @@ def test_the_probes_hold_the_kept_solutions_values() -> None:
 
 
 def test_the_scenario_offers_its_solution_with_the_layout_asked_for() -> None:
-    blocked = fields.field(SCENARIO, "cfd")
-    unblocked = fields.field(SCENARIO, "cfd", OPEN)
+    blocked = fields.field(RunRequest(SCENARIO), "cfd")
+    unblocked = fields.field(RunRequest(SCENARIO, layout=OPEN), "cfd")
 
     assert "cfd" in fields.field_names(SCENARIO, OPEN)
     assert blocked != unblocked

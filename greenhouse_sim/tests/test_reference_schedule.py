@@ -4,6 +4,7 @@ gives daily commands of its own, and heats it by its thermostat (P10.3); and
 its sensors observe the season it makes, only through the observation
 path."""
 
+from collections.abc import Mapping
 from datetime import timedelta
 from http import HTTPStatus
 from typing import Any, Final
@@ -17,6 +18,7 @@ from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import fields, sensors
+from greenhouse_sim.services.runs import Commanded, RunRequest
 from greenhouse_sim.world.sensors import PointSensor
 
 REFERENCE = SCENARIO_REGISTRY["reference_greenhouse"]
@@ -56,9 +58,11 @@ def test_the_reference_run_vents_and_stirs_its_house_by_the_clock_and_heats_it_b
 
 
 def test_a_run_gives_its_scenarios_daily_commands_unless_it_gives_its_own() -> None:
-    own = fields.run_schedule("reference_greenhouse")
-    replaced = fields.run_schedule("reference_greenhouse", daily=[(64800.0, "heater", 1.0)])
-    none = fields.run_schedule("reference_greenhouse", daily=[])
+    own = fields.run_schedule(RunRequest("reference_greenhouse"))
+    replaced = fields.run_schedule(
+        RunRequest("reference_greenhouse", daily=((64800.0, "heater", 1.0),))
+    )
+    none = fields.run_schedule(RunRequest("reference_greenhouse", daily=()))
 
     expected = [
         (day * DAY_S + time, actuator, level)
@@ -98,16 +102,14 @@ def test_a_scenario_refuses_daily_commands_to_what_it_does_not_have() -> None:
 
 def _reading(
     time_s: float,
-    daily: list[tuple[float, str, float]] | None = None,
-    levels: dict[str, float] | None = None,
+    daily: tuple[Commanded, ...] | None = None,
+    levels: Mapping[str, float] | None = None,
 ) -> float:
     """What the front temperature sensor, a clean one, observed at `time_s`."""
     log = sensors.observations(
-        "reference_greenhouse",
-        levels=levels,
+        RunRequest("reference_greenhouse", levels=levels or {}, daily=daily),
         until_s=time_s,
         from_s=time_s - 60.0,
-        daily=daily,
     )
     return next(
         o.value
@@ -119,7 +121,7 @@ def _reading(
 
 def test_the_thermostats_setpoints_show_in_the_readings() -> None:
     small_hours, noon = _reading(SMALL_HOURS_S), _reading(NOON_S)
-    unheated = _reading(SMALL_HOURS_S, daily=[], levels=fields.off_levels("reference_greenhouse"))
+    unheated = _reading(SMALL_HOURS_S, daily=(), levels=fields.off_levels("reference_greenhouse"))
 
     # Near 16 °C at night and 18 °C by day, a sensor's error and the
     # thermostat's band either way, well above what an unheated house falls
@@ -132,9 +134,12 @@ def test_the_thermostats_setpoints_show_in_the_readings() -> None:
 def test_its_sensors_observe_only_the_run_they_belong_to_through_the_season() -> None:
     sensor = next(s for s in REFERENCE.layout.sensors if s.sensor_id == "temperature_front")
     assert isinstance(sensor, PointSensor)
-    air, run_id = fields.air_through_a_run("reference_greenhouse")
+    air, run_id = fields.air_through_a_run(RunRequest("reference_greenhouse"))
     log = sensors.observations(
-        "reference_greenhouse", until_s=SMALL_HOURS_S, from_s=SMALL_HOURS_S - 300.0, clean=True
+        RunRequest("reference_greenhouse"),
+        until_s=SMALL_HOURS_S,
+        clean=True,
+        from_s=SMALL_HOURS_S - 300.0,
     )
     observed = [o for o in log.observations if o.sensor_id == "temperature_front"]
 

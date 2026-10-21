@@ -38,6 +38,7 @@ from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.crop import run_crop
 from greenhouse_sim.services.fields import climate_run, field, off_levels
 from greenhouse_sim.services.replay import _rounded
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import scenario_summaries
 from greenhouse_sim.units import HOUR_S
 
@@ -109,13 +110,13 @@ def test_the_kept_opening_day_is_the_manifests_and_bears_red_fruit() -> None:
 def test_kept_as_the_api_starts_the_runs_later_days_carry_on_from_it() -> None:
     assert checkpoints.load_openings() == []
 
-    plants = run_crop(SCENARIO).plants_on(OPENING + 1)
-    house = climate_run(SCENARIO)[1].house
-    off = climate_run(SCENARIO, levels=off_levels(SCENARIO), daily=[])[1].house
+    plants = run_crop(RunRequest(SCENARIO)).plants_on(OPENING + 1)
+    house = climate_run(RunRequest(SCENARIO))[1].house
+    off = climate_run(RunRequest(SCENARIO, levels=off_levels(SCENARIO), daily=()))[1].house
     off.air_at((OPENING + 0.5) * DAY_S)
     # The air cell by cell in the day's first hour, its grid run started an
     # hour before the day began.
-    field(SCENARIO, "climate", time_s=OPENING * DAY_S + 20 * 60.0)
+    field(RunRequest(SCENARIO), "climate", time_s=OPENING * DAY_S + 20 * 60.0)
 
     assert len(plants) == 32
     # Only the opening day's air was worked out, from its start, in the run
@@ -156,16 +157,16 @@ def test_the_crop_stays_whole_through_the_days_about_its_opening() -> None:
 @pytest.mark.slow
 def test_replayed_from_the_runs_start_the_opening_day_is_the_one_kept() -> None:
     kept = _kept()
-    crop = run_crop(SCENARIO)
+    crop = run_crop(RunRequest(SCENARIO))
 
     assert all(_red(crop.plants_on(day)) == 0 for day in range(kept.day))
-    saved = checkpoints.save_checkpoint(SCENARIO, time_s=kept.day * DAY_S)
+    saved = checkpoints.save_checkpoint(RunRequest(SCENARIO), time_s=kept.day * DAY_S)
 
     assert _state(checkpoints.checkpoint(saved.checkpoint_id)) == _state(kept)
 
 
 def _update() -> None:
-    crop = run_crop(SCENARIO)
+    crop = run_crop(RunRequest(SCENARIO))
     day = next(day for day in range(crop.days + 1) if _red(crop.plants_on(day)) > 0)
     path = MANIFESTS_DIR / f"{SCENARIO}.json"
     manifest = json.loads(path.read_text())
@@ -174,9 +175,9 @@ def _update() -> None:
     opening_file(SCENARIO).parent.mkdir(exist_ok=True)
     # The run, and the same run with everything off, which a viewer charts
     # beside it: its thermostat's heater too.
-    for all_off, levels, daily in ((False, None, None), (True, off_levels(SCENARIO), [])):
+    for all_off, levels, daily in ((False, {}, None), (True, off_levels(SCENARIO), ())):
         saved = checkpoints.save_checkpoint(
-            SCENARIO, levels=levels, time_s=day * DAY_S, daily=daily
+            RunRequest(SCENARIO, levels=levels, daily=daily), time_s=day * DAY_S
         )
         opening_file(SCENARIO, all_off).write_bytes(
             checkpoints.opening_bytes(checkpoints.checkpoint(saved.checkpoint_id))

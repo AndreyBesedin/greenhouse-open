@@ -32,6 +32,7 @@ from greenhouse_sim.domain.organs import FruitStage
 from greenhouse_sim.records import event_id, observation_id
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services.crop import run_crop
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.units import HOUR_S
 
@@ -51,7 +52,7 @@ def crop_records(
     config = scenario(scenario_id)
     if config.crop_model != CropModel.ORGAN:
         return [], []
-    crop = run_crop(scenario_id, layout)
+    crop = run_crop(RunRequest(scenario_id, layout=layout))
     plants = crop.plants_on(day)
     before = crop.plants_on(day - 1) if day > 0 else plants
     day_start = start + timedelta(seconds=day * DAY_S)

@@ -13,6 +13,7 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.sensors.log import Freshness, SensorFreshness, freshness
 from greenhouse_sim.services import sensors
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.sensors import SensorObservations
 from greenhouse_sim.world.sensors import Camera, PointSensor
 
@@ -24,7 +25,9 @@ LATENCY_S = 30
 
 
 def _log(until_s: float, *, clean: bool = False) -> SensorObservations:
-    return sensors.observations("climate_box", levels=HEATED, until_s=until_s, clean=clean)
+    return sensors.observations(
+        RunRequest("climate_box", levels=HEATED), until_s=until_s, clean=clean
+    )
 
 
 def _freshness(until_s: float, sensor_id: str, *, clean: bool = False) -> SensorFreshness:

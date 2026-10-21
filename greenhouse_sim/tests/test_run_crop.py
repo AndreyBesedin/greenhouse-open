@@ -34,6 +34,7 @@ from greenhouse_sim.domain.organs import FruitStage
 from greenhouse_sim.domain.processes import Process
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import crop as crop_service
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import plant_ids
 from greenhouse_sim.solar.plants import Crown
 
@@ -401,7 +402,7 @@ def test_before_its_first_day_its_scene_draws_its_transplants_as_its_crop_does()
 def test_its_crop_on_a_moments_day_has_lived_the_days_ended_by_then() -> None:
     scene = _body(f"/api/scenarios/reference_greenhouse/crop?t={1.5 * DAY_S:.0f}")
     plant = _body(f"/api/scenarios/reference_greenhouse/crop/{FIRST_PLANT}?t={1.5 * DAY_S:.0f}")
-    crop = crop_service.run_crop("reference_greenhouse")
+    crop = crop_service.run_crop(RunRequest("reference_greenhouse"))
 
     assert scene["simulated_day"] == 1
     drawn = {entity["properties"]["plant_id"] for entity in scene["entities"]}
@@ -417,7 +418,7 @@ def test_its_crop_on_a_moments_day_has_lived_the_days_ended_by_then() -> None:
 
 
 def test_its_plants_share_the_houses_air_each_in_its_own_light() -> None:
-    crop = crop_service.run_crop("reference_greenhouse")
+    crop = crop_service.run_crop(RunRequest("reference_greenhouse"))
     days = [crop.local(plant_id, 0) for plant_id in plant_ids(REFERENCE)]
     house = _body("/api/scenarios/reference_greenhouse/climate/house?t=86400")
     light = _body("/api/scenarios/reference_greenhouse/climate/plants?t=43200")

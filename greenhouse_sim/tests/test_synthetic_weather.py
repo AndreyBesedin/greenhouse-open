@@ -14,6 +14,7 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.climate.psychrometrics import humidity_ratio_g_kg
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import fields, scenarios, weather
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.weather.presets import COLD_SPRING_DAY, PRESETS
 from greenhouse_sim.weather.state import WeatherState
 from greenhouse_sim.weather.synthetic import SyntheticWeather
@@ -164,8 +165,10 @@ def test_a_climate_run_under_a_preset_is_its_weathers() -> None:
     # The run starts at midnight, near 8 °C on the spring day, as on the
     # box's own night; but the spring day is drier and colder by its first
     # hour, so the house's air differs.
-    own = fields.field("climate_box", "climate", time_s=3600)
-    spring = fields.field("climate_box", "climate", time_s=3600, weather="cold_spring_day")
+    own = fields.field(RunRequest("climate_box"), "climate", time_s=3600)
+    spring = fields.field(
+        RunRequest("climate_box", weather="cold_spring_day"), "climate", time_s=3600
+    )
     outside = weather.at_a_moment("climate_box", 0.0, "cold_spring_day").weather
 
     assert own.source == spring.source

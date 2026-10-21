@@ -7,7 +7,6 @@ one's moment, and the index of its process, subject and kind in the lists
 of those, so that a day's thousands of samples stay small.
 """
 
-from collections.abc import Mapping, Sequence
 from typing import Final
 
 from pydantic import BaseModel, ConfigDict
@@ -18,8 +17,8 @@ from greenhouse_sim.core.timeline import TURNS, RunProcesses, events
 from greenhouse_sim.domain.processes import Process
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.errors import InvalidRequest
-from greenhouse_sim.services.fields import Commanded, run_schedule
-from greenhouse_sim.services.runs import checked_window
+from greenhouse_sim.services.fields import run_schedule
+from greenhouse_sim.services.runs import RunRequest, checked_window
 from greenhouse_sim.services.scenarios import SceneChanges, changed, plant_ids, scenario
 from greenhouse_sim.world.sensors import Camera, PointSensor
 
@@ -47,36 +46,29 @@ class TimelineDocument(BaseModel):
 
 
 def timeline(
-    scenario_id: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    until_s: float = 0.0,
-    daily: Sequence[Commanded] | None = None,
-    from_s: float | None = None,
+    run: RunRequest, until_s: float = 0.0, from_s: float | None = None
 ) -> TimelineDocument:
-    """A scenario's run's events from `from_s`, by default the start of the
-    day `until_s` belongs to (`services.runs`), to `until_s`: with one of
-    its layouts, its equipment at `levels` from the start, then as `daily`
-    and `commands` set it, checked as its climate's are. A window longer
-    than a day is refused."""
-    name = layout or DEFAULT_LAYOUT
-    config = changed(scenario(scenario_id), SceneChanges(layout=name))
+    """A run's events from `from_s`, by default the start of the day
+    `until_s` belongs to (`services.runs`), to `until_s`: with one of its
+    scenario's layouts, its equipment at its levels from the start, then as
+    its daily commands and its commands set it, checked as its climate's
+    are. A window longer than a day is refused."""
+    config = changed(scenario(run.scenario_id), SceneChanges(layout=run.layout or DEFAULT_LAYOUT))
     first = checked_window(config, from_s, until_s)
     if until_s - first > LONGEST_WINDOW_S:
         raise InvalidRequest(
             f"a timeline's window is a day at most, {LONGEST_WINDOW_S:.15g} s, not "
             f"{until_s - first:.15g}"
         )
-    run = RunProcesses(
-        schedule=run_schedule(scenario_id, name, levels, commands, daily),
+    processes = RunProcesses(
+        schedule=run_schedule(run),
         air_step_s=STEP_S if config.layout.equipment else None,
         plants=plant_ids(config),
         sensors=[sensor for sensor in config.layout.sensors if isinstance(sensor, PointSensor)],
         cameras=[sensor for sensor in config.layout.sensors if isinstance(sensor, Camera)],
         crop_work=config.crop_work,
     )
-    found = events(run, first, until_s)
+    found = events(processes, first, until_s)
     subjects = list(dict.fromkeys(event.subject for event in found))
     kinds = list(dict.fromkeys(event.kind for event in found))
     subject_at = {subject: index for index, subject in enumerate(subjects)}

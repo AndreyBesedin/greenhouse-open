@@ -54,6 +54,7 @@ from greenhouse_sim.services.crop_log import crop_records
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.heat_log import heat_records
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import layout_name, scenario
 from greenhouse_sim.services.sensors import delivered_between, run_start
 from greenhouse_sim.services.stores import Store
@@ -264,7 +265,7 @@ class Playback:
         self.end_s = config.duration_days * DAY_S
         self.every_s = every_s
         self.layout = layout_name(layout or DEFAULT_LAYOUT)
-        _, self.run_id = air_through_a_run(scenario_id, self.layout)
+        _, self.run_id = air_through_a_run(RunRequest(scenario_id, layout=self.layout))
         self._clock = clock
         self._lock = threading.Lock()
         self._observations = _Log(_OBSERVATIONS, self.start)

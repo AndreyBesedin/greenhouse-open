@@ -13,6 +13,7 @@ from greenhouse_sim.services import fields, sensors
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.fields import equipment_at
 from greenhouse_sim.services.run_state import LATEST_COMMANDS, RunState, run_state
+from greenhouse_sim.services.runs import RunRequest
 
 HEATED = {"heater": 1.0}
 # Ten minutes into the climate box's heated run, and noon on the reference
@@ -23,8 +24,8 @@ SECOND_NOON_S = DAY_S + NOON_S
 
 
 def test_the_clock_and_the_house_air_are_the_runs_at_the_moment() -> None:
-    state = run_state("climate_box", levels=HEATED, until_s=TEN_MINUTES_S)
-    trace = fields.house_air("climate_box", levels=HEATED, until_s=TEN_MINUTES_S)
+    state = run_state(RunRequest("climate_box", levels=HEATED), until_s=TEN_MINUTES_S)
+    trace = fields.house_air(RunRequest("climate_box", levels=HEATED), until_s=TEN_MINUTES_S)
 
     assert (state.time_s, state.day) == (TEN_MINUTES_S, 0)
     assert state.at == state.start + timedelta(seconds=TEN_MINUTES_S)
@@ -36,8 +37,8 @@ def test_the_clock_and_the_house_air_are_the_runs_at_the_moment() -> None:
 
 
 def test_the_sensors_and_cameras_stand_as_the_observation_log_says() -> None:
-    state = run_state("climate_box", levels=HEATED, until_s=TEN_MINUTES_S)
-    log = sensors.observations("climate_box", levels=HEATED, until_s=TEN_MINUTES_S)
+    state = run_state(RunRequest("climate_box", levels=HEATED), until_s=TEN_MINUTES_S)
+    log = sensors.observations(RunRequest("climate_box", levels=HEATED), until_s=TEN_MINUTES_S)
 
     assert state.run_id == log.run_id
     assert state.sensors == log.freshness
@@ -48,12 +49,12 @@ def test_the_sensors_and_cameras_stand_as_the_observation_log_says() -> None:
 
 
 def test_the_equipment_doors_and_vents_stand_as_the_commands_set_them() -> None:
-    state = run_state("reference_greenhouse", until_s=SECOND_NOON_S)
+    state = run_state(RunRequest("reference_greenhouse"), until_s=SECOND_NOON_S)
 
     # By noon its own schedule has the fans on and the roof vents fully
     # open, and its thermostat has the heater as the air needs; the door
     # stays shut.
-    heater = equipment_at("reference_greenhouse", time_s=SECOND_NOON_S).levels["heater"]
+    heater = equipment_at(RunRequest("reference_greenhouse"), time_s=SECOND_NOON_S).levels["heater"]
     assert state.levels == {
         "fan_left": 1.0,
         "fan_right": 1.0,
@@ -75,12 +76,10 @@ def test_the_equipment_doors_and_vents_stand_as_the_commands_set_them() -> None:
 
 def test_a_door_open_from_the_start_stands_open_until_commanded() -> None:
     opened = run_state(
-        "climate_box",
-        openings={"door": 0.5},
-        commands=[(300.0, "door", 0.0)],
+        RunRequest("climate_box", openings={"door": 0.5}, commands=((300.0, "door", 0.0),)),
         until_s=TEN_MINUTES_S,
     )
-    before = run_state("climate_box", openings={"door": 0.5}, until_s=TEN_MINUTES_S)
+    before = run_state(RunRequest("climate_box", openings={"door": 0.5}), until_s=TEN_MINUTES_S)
 
     assert before.levels["door"] == 0.5
     assert opened.levels["door"] == 0.0
@@ -88,7 +87,7 @@ def test_a_door_open_from_the_start_stands_open_until_commanded() -> None:
 
 
 def test_a_house_without_equipment_has_no_climate_run_to_hold_air() -> None:
-    state = run_state("airflow_box", until_s=TEN_MINUTES_S)
+    state = run_state(RunRequest("airflow_box"), until_s=TEN_MINUTES_S)
 
     assert state.house_air is None
     # Its doors stand open as its envelope has them, and nothing commands
@@ -100,11 +99,11 @@ def test_a_house_without_equipment_has_no_climate_run_to_hold_air() -> None:
 
 def test_the_state_is_refused_as_its_run_is() -> None:
     with pytest.raises(NotFound):
-        run_state("nowhere")
+        run_state(RunRequest("nowhere"))
     with pytest.raises(InvalidRequest, match="lasts from 0"):
-        run_state("climate_box", until_s=100 * DAY_S)
+        run_state(RunRequest("climate_box"), until_s=100 * DAY_S)
     with pytest.raises(InvalidRequest):
-        run_state("climate_box", levels={"sprinkler": 1.0})
+        run_state(RunRequest("climate_box", levels={"sprinkler": 1.0}))
 
 
 def test_the_api_serves_it_asked_as_the_climate_is() -> None:
@@ -112,6 +111,6 @@ def test_the_api_serves_it_asked_as_the_climate_is() -> None:
 
     assert answer.status == HTTPStatus.OK
     served = RunState.model_validate(answer.body)
-    assert served == run_state("climate_box", levels=HEATED, until_s=TEN_MINUTES_S)
+    assert served == run_state(RunRequest("climate_box", levels=HEATED), until_s=TEN_MINUTES_S)
     beyond = respond("GET", "/api/scenarios/climate_box/climate/state?t=99999999")
     assert beyond.status == HTTPStatus.BAD_REQUEST

@@ -14,6 +14,7 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import air_through_a_run, climate_run
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import SceneChanges, changed, layout_name
 from greenhouse_sim.world.equipment import Fan, Heater
 from greenhouse_sim.world.geometry import Quaternion, Transform, Vector3
@@ -123,8 +124,10 @@ def test_moves_are_written_in_a_layouts_name_and_refused_when_they_cannot_be() -
 
 
 def test_a_moved_layout_is_another_run_and_the_api_draws_it() -> None:
-    _, own = air_through_a_run("climate_box")
-    _, moved_run = air_through_a_run("climate_box", layout="default~temperature_front:0.5:0")
+    _, own = air_through_a_run(RunRequest("climate_box"))
+    _, moved_run = air_through_a_run(
+        RunRequest("climate_box", layout="default~temperature_front:0.5:0")
+    )
     assert moved_run != own
 
     response = respond(
@@ -170,7 +173,7 @@ def test_the_same_moves_however_written_are_the_same_run() -> None:
     assert layout_name(layout_name("default~heater:-1:0.5")) == "default~heater:-1.0:0.5"
 
     runs = {
-        air_through_a_run("climate_box", layout=name)[1]
+        air_through_a_run(RunRequest("climate_box", layout=name))[1]
         for name in [
             "default~heater:-1:0,temperature_front:0.5:0",
             "default~temperature_front:0.5:0,heater:-1:0",
@@ -180,8 +183,8 @@ def test_the_same_moves_however_written_are_the_same_run() -> None:
     assert len(runs) == 1
     # No moves at all is the scenario's own run.
     assert (
-        air_through_a_run("climate_box", layout="default~heater:0:0")[1]
-        == (air_through_a_run("climate_box")[1])
+        air_through_a_run(RunRequest("climate_box", layout="default~heater:0:0"))[1]
+        == (air_through_a_run(RunRequest("climate_box"))[1])
     )
 
 
@@ -192,8 +195,10 @@ def test_a_unit_moved_is_a_house_of_its_own(afresh: Callable[[], None]) -> None:
     # rearranging the room starts (#271), is worked out from its start, and
     # shares nothing with the run it was moved from.
     hour = 3600.0
-    _, own = climate_run("reference_greenhouse")
-    _, moved_run = climate_run("reference_greenhouse", "default~heater:-2.9:-0.2")
+    _, own = climate_run(RunRequest("reference_greenhouse"))
+    _, moved_run = climate_run(
+        RunRequest("reference_greenhouse", layout="default~heater:-2.9:-0.2")
+    )
 
     assert moved_run.house.volume_m3 < own.house.volume_m3
     assert moved_run.house.air_at(6 * hour) != own.house.air_at(6 * hour)
