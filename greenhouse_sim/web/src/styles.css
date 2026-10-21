@@ -1354,6 +1354,11 @@ body {
   gap: 4px;
 }
 
+.move-list {
+  margin: 0 0 6px;
+  padding-left: 18px;
+}
+
 /* Where the run followed stands across all its days (#270): its bar takes
  * the row's width, beside the moment it has reached. */
 .playback-progress {

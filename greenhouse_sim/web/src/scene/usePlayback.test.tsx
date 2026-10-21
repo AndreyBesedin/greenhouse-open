@@ -18,6 +18,7 @@ function playing(runId: string, timeS: number): Response {
   return new Response(
     JSON.stringify({
       run_id: runId,
+      layout: "default",
       epoch: 0,
       simulated_now: "2026-03-01T00:00:00Z",
       time_s: timeS,

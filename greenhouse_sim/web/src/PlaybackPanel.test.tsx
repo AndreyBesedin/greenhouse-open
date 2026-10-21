@@ -8,6 +8,7 @@ import { button, click, type Rendered, render, said } from "./testing/render";
 
 const PLAYING: PlaybackState = {
   runId: "reference_greenhouse-climate-c562c827",
+  layout: "default",
   epoch: 1,
   simulatedNow: "2026-03-02T11:00:00Z",
   timeS: 129_600,

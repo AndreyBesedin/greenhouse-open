@@ -1,9 +1,10 @@
 """Equipment and sensors moved across the floor (#209): by a displacement in
 the world's axes, turned into the greenhouse's own, heights kept, a camera
 looking the same way; written in a layout's name, refused when they do not
-fit, and another run when they do."""
+fit, and another run when they do, a unit's place another house."""
 
 import math
+from collections.abc import Callable
 from http import HTTPStatus
 from typing import Any
 
@@ -12,7 +13,7 @@ import pytest
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services.errors import InvalidRequest
-from greenhouse_sim.services.fields import air_through_a_run
+from greenhouse_sim.services.fields import air_through_a_run, climate_run
 from greenhouse_sim.services.scenarios import SceneChanges, changed, layout_name
 from greenhouse_sim.world.equipment import Fan, Heater
 from greenhouse_sim.world.geometry import Quaternion, Transform, Vector3
@@ -182,3 +183,17 @@ def test_the_same_moves_however_written_are_the_same_run() -> None:
         air_through_a_run("climate_box", layout="default~heater:0:0")[1]
         == (air_through_a_run("climate_box")[1])
     )
+
+
+def test_a_unit_moved_is_a_house_of_its_own(afresh: Callable[[], None]) -> None:
+    # Against the side wall, the reference greenhouse's heater fills two more
+    # of the grid's cells, and covers glass: the house holds less air, which
+    # differs from the start. So the run with it moved, the one a person
+    # rearranging the room starts (#271), is worked out from its start, and
+    # shares nothing with the run it was moved from.
+    hour = 3600.0
+    _, own = climate_run("reference_greenhouse")
+    _, moved_run = climate_run("reference_greenhouse", "default~heater:-2.9:-0.2")
+
+    assert moved_run.house.volume_m3 < own.house.volume_m3
+    assert moved_run.house.air_at(6 * hour) != own.house.air_at(6 * hour)
