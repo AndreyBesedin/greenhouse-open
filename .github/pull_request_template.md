@@ -1,6 +1,8 @@
 ## What changed?
 
-<!-- Keep this focused on one concern. -->
+<!-- Keep this focused on one concern. Say what changed and why, for any
+reader of the project: no one contributor's plans, events or deadlines
+(docs/engineering.md, "What a public record says"). -->
 
 ## Observable / testable result
 
