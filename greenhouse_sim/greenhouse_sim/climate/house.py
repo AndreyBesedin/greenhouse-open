@@ -193,7 +193,9 @@ class WholeHouse:
         thermostat = self.run.thermostat
         if thermostat is None or not self.run.thermostat_governs(time_s):
             return air
-        heating = thermostat.heats(air.temperature_c, air.heating, time_s)
+        heating = thermostat.heats(
+            air.temperature_c, air.heating, time_s, self.run.schedule.targets_at(time_s)
+        )
         return air if heating == air.heating else replace(air, heating=heating)
 
     def _switching_s(
@@ -206,7 +208,7 @@ class WholeHouse:
         if thermostat is None or not self.run.thermostat_governs(time_s):
             return None
         half = thermostat.band_c / 2
-        setpoint = thermostat.setpoint_c(time_s)
+        setpoint = thermostat.setpoint_c(time_s, self.run.schedule.targets_at(time_s))
         edge = setpoint + half if air.heating else setpoint - half
         reached = course.reaching_s(air.temperature_c, edge)
         return reached if reached is not None and reached < within_s else None

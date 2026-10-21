@@ -14,19 +14,30 @@ A daily command (P09.2) sets a level at a time of day, every day of a run:
 a heater on every evening, a vent open every afternoon. It is a command at
 that time on each of the run's days, before any other command at the same
 moment, so that one given for that moment alone overrides it.
+
+A target change (#274) sets one of the climate controller's targets, such
+as the heating setpoint by day, from a moment on, on the minute: the
+schedule holds them beside its commands, in their order, so that a run
+under either is the same run until the first change one gives and the
+other does not.
 """
 
 import math
 from bisect import bisect_right
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from functools import cached_property
-from typing import Annotated, Self
+from typing import Annotated, Final, Self
 
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, model_validator
 
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.domain.equipment import Target
 
 type Level = Annotated[float, Field(ge=0.0, le=1.0)]
+
+# A target changes on the minute, where the house's air is worked from
+# (`climate.house`), as its thermostat's day and night start.
+TARGET_EVERY_S: Final = 60.0
 
 
 class Command(BaseModel):
@@ -61,26 +72,48 @@ class DailyCommand(BaseModel):
         ]
 
 
+class TargetChange(BaseModel):
+    """Set one of a run's targets to `value_c` from a moment on, on the
+    minute."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    time_s: NonNegativeFloat
+    target: Target
+    value_c: float
+
+    @model_validator(mode="after")
+    def _on_the_minute(self) -> Self:
+        if self.time_s % TARGET_EVERY_S:
+            raise ValueError(f"a target changes on the minute, not at {self.time_s:.15g} s")
+        return self
+
+
 class Schedule(BaseModel):
     """The commands for a run, in the order they apply: by time, and in the
-    order given at the same time."""
+    order given at the same time; and its target changes, in the same way."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     commands: tuple[Command, ...] = ()
+    targets: tuple[TargetChange, ...] = ()
 
     @model_validator(mode="after")
     def _in_order(self) -> Self:
-        times = [command.time_s for command in self.commands]
-        if times != sorted(times):
-            raise ValueError("commands must be in the order of their times")
+        for given in (self.commands, self.targets):
+            times = [each.time_s for each in given]
+            if times != sorted(times):
+                raise ValueError("commands and target changes must be in the order of their times")
         return self
 
     @classmethod
-    def of(cls, commands: Iterable[Command]) -> Schedule:
-        """A schedule of commands given in any order: sorted by time, keeping
-        the given order at each time."""
-        return cls(commands=tuple(sorted(commands, key=lambda command: command.time_s)))
+    def of(cls, commands: Iterable[Command], targets: Iterable[TargetChange] = ()) -> Schedule:
+        """A schedule of commands and target changes given in any order:
+        sorted by time, keeping the given order at each time."""
+        return cls(
+            commands=tuple(sorted(commands, key=lambda command: command.time_s)),
+            targets=tuple(sorted(targets, key=lambda change: change.time_s)),
+        )
 
     @classmethod
     def from_start(cls, levels: dict[str, float]) -> Schedule:
@@ -153,15 +186,37 @@ class Schedule(BaseModel):
             bisect_right(self._moments, after_s) : bisect_right(self._moments, until_s)
         ]
 
+    def targets_at(self, time_s: float) -> dict[Target, float]:
+        """Each target changed by `time_s`, at the value its last change up
+        to then set; a target not yet changed is left out."""
+        changed: dict[Target, float] = {}
+        for change in self.targets[: bisect_right(self._target_times, time_s)]:
+            changed[change.target] = change.value_c
+        return changed
+
+    @cached_property
+    def _target_times(self) -> list[float]:
+        return [change.time_s for change in self.targets]
+
     def same_until(self, other: Schedule) -> float:
         """Up to when this schedule and `other` are the same: the moment of
-        the first command one gives that the other does not give in its
-        place, or infinity if they are the same throughout. A run under
-        either is the same run up to and including it."""
-        mine, theirs = self.commands, other.commands
-        differing = next(
-            (index for index, (a, b) in enumerate(zip(mine, theirs, strict=False)) if a != b),
-            min(len(mine), len(theirs)),
+        the first command or target change one gives that the other does not
+        give in its place, or infinity if they are the same throughout. A run
+        under either is the same run up to and including it."""
+        return min(
+            _first_difference_s(self.commands, other.commands),
+            _first_difference_s(self.targets, other.targets),
         )
-        moments = [command.time_s for command in (*mine[differing:], *theirs[differing:])]
-        return min(moments, default=math.inf)
+
+
+def _first_difference_s(
+    mine: Sequence[Command | TargetChange], theirs: Sequence[Command | TargetChange]
+) -> float:
+    """The moment of the first of two lists in order that one gives and the
+    other does not give in its place, or infinity if they are the same."""
+    differing = next(
+        (index for index, (a, b) in enumerate(zip(mine, theirs, strict=False)) if a != b),
+        min(len(mine), len(theirs)),
+    )
+    moments = [each.time_s for each in (*mine[differing:], *theirs[differing:])]
+    return min(moments, default=math.inf)
