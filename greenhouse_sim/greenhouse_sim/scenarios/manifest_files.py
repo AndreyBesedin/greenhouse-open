@@ -15,7 +15,7 @@ depth, rather than ignoring it.
 """
 
 import json
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Final
 
@@ -30,13 +30,9 @@ MANIFESTS_DIR: Final = Path(__file__).parent / "manifests"
 MANIFEST_SCHEMA_FILE: Final = Path(__file__).parent / "scenario.schema.json"
 # Where a manifest finds the schema, from the manifests' folder.
 SCHEMA_FROM_A_MANIFEST_FILE: Final = "../scenario.schema.json"
-# The version of the format a manifest is written in: 2 since an item's
-# identifier holds only letters, digits, `_`, `.` and `-` (#254).
-SCHEMA_VERSION: Final = 2
-# Older formats read as the current one: format 1 differs from it only in
-# the identifiers it allowed, and one that format 2 refuses is refused as
-# any field that does not fit is, by name.
-READ_AS_CURRENT: Final = frozenset({1})
+# The version of the format a manifest is written in: 3 since a scenario's
+# thermostat is the heating loop of its climate controller (P11.1).
+SCHEMA_VERSION: Final = 3
 # How many hexadecimal digits of its content's digest name a manifest's
 # version.
 DIGEST_LENGTH: Final = 16
@@ -50,6 +46,10 @@ _VERSION_KEY: Final = "schema_version"
 _NOTES_KEY: Final = "notes"
 _LAYOUT_KEY: Final = "layout"
 _OPENING_KEY: Final = "opening_day"
+_THERMOSTAT_KEY: Final = "thermostat"
+_CONTROL_KEY: Final = "control"
+# What format 3 moved from a thermostat to the control: its day and night.
+_CONTROL_TIMES: Final = frozenset({"day_from_s", "night_from_s"})
 # A manifest's fields that this module reads itself rather than handing them
 # to `ScenarioConfig`, which could not read them as written: the schema, the
 # format's version and the notes are about the file, not the greenhouse; the
@@ -117,15 +117,19 @@ def scenario_from_manifest(scenario_id: str, document: dict[str, JsonValue]) -> 
     it names. Refused, with the reason, if the manifest is in a format this
     simulator does not read, names another scenario, notes a field it does
     not have, or has a field the configuration does not."""
-    fields = {key: value for key, value in document.items() if key not in _MANIFEST_ONLY_FIELDS}
     version = document.get(_VERSION_KEY)
-    readable = isinstance(version, int) and not isinstance(version, bool)
-    if not readable or (version != SCHEMA_VERSION and version not in READ_AS_CURRENT):
-        older = ", ".join(str(each) for each in sorted(READ_AS_CURRENT))
+    if (
+        isinstance(version, bool)
+        or not isinstance(version, int)
+        or not (version == SCHEMA_VERSION or version in _MIGRATIONS)
+    ):
+        older = ", ".join(str(each) for each in sorted(_MIGRATIONS))
         raise InvalidManifest(
             f"{scenario_id}: a manifest in format {version!r}; this simulator reads "
-            f"format {SCHEMA_VERSION}, and format {older} as it"
+            f"format {SCHEMA_VERSION}, and formats {older} migrated to it"
         )
+    document = _migrated(scenario_id, document, version)
+    fields = {key: value for key, value in document.items() if key not in _MANIFEST_ONLY_FIELDS}
     if fields.get("greenhouse_id") != scenario_id:
         raise InvalidManifest(
             f"{scenario_id}: its manifest describes {fields.get('greenhouse_id')!r}"
@@ -144,6 +148,56 @@ def scenario_from_manifest(scenario_id: str, document: dict[str, JsonValue]) -> 
     if unknown:
         raise InvalidManifest(f"{scenario_id}: fields it does not have: {', '.join(unknown)}")
     return config
+
+
+def _migrated(
+    scenario_id: str, document: dict[str, JsonValue], version: int
+) -> dict[str, JsonValue]:
+    """A manifest in `version`, a format this simulator reads, as the
+    current format writes it: each older format migrated to the next in
+    turn."""
+    while version < SCHEMA_VERSION:
+        document = _MIGRATIONS[version](scenario_id, document) | {_VERSION_KEY: version + 1}
+        version += 1
+    return document
+
+
+def _from_format_1(scenario_id: str, document: dict[str, JsonValue]) -> dict[str, JsonValue]:
+    """Format 1 differs from format 2 only in the identifiers it allowed
+    (#254): an identifier format 2 does not allow is refused as any field
+    that does not fit is, by name."""
+    return document
+
+
+def _from_format_2(scenario_id: str, document: dict[str, JsonValue]) -> dict[str, JsonValue]:
+    """Format 2 wrote a heater's thermostat as `thermostat` (P10.3), which
+    format 3 writes as its control's heating loop, the thermostat's day and
+    night as the control's (P11.1); and a note on the thermostat as a note
+    on the control."""
+    if _CONTROL_KEY in document:
+        raise InvalidManifest(f"{scenario_id}: a format 2 manifest has no {_CONTROL_KEY!r}")
+    thermostat = document.get(_THERMOSTAT_KEY)
+    rest = {key: value for key, value in document.items() if key != _THERMOSTAT_KEY}
+    notes = rest.get(_NOTES_KEY)
+    if isinstance(notes, dict) and _THERMOSTAT_KEY in notes:
+        rest[_NOTES_KEY] = {
+            (_CONTROL_KEY if about == _THERMOSTAT_KEY else about): note
+            for about, note in notes.items()
+        }
+    if thermostat is None:
+        return rest
+    if not isinstance(thermostat, dict):
+        raise InvalidManifest(f"{scenario_id}: a thermostat is an object, not {thermostat!r}")
+    times = {key: value for key, value in thermostat.items() if key in _CONTROL_TIMES}
+    heating = {key: value for key, value in thermostat.items() if key not in _CONTROL_TIMES}
+    return rest | {_CONTROL_KEY: times | {"heating": heating}}
+
+
+# How each older format a manifest may be written in becomes the next.
+_MIGRATIONS: Final[dict[int, Callable[[str, dict[str, JsonValue]], dict[str, JsonValue]]]] = {
+    1: _from_format_1,
+    2: _from_format_2,
+}
 
 
 def manifest_json_schema() -> dict[str, JsonValue]:
