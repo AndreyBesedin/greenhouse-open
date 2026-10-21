@@ -14,7 +14,7 @@ research datasets into that format.
 
 Greenhouse Open v0.2.0 — Greenhouse Simulation
 
-https://github.com/user-attachments/assets/e1d71454-c96f-4b71-95f5-b8f4b9efb084
+https://github.com/user-attachments/assets/0be8188e-db84-47b0-9fbe-fec118c530b8
 
 ## Why a shared format
 
