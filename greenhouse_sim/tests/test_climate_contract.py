@@ -175,6 +175,72 @@ def test_a_heaters_heat_lies_in_its_jet_ahead_of_its_outlet() -> None:
     assert abs(zs[k] - HEATER.size_z / 2) <= GRID.cell_size.z
 
 
+def _axis_cell(along_m: float) -> tuple[int, int, int]:
+    """The cell, in the grid's order (z, y, x), that the heater's outlet's
+    axis passes `along_m` in front of its outlet."""
+    axis = HEATER.facing()
+    x = HEATER.base.x + axis.x * (HEATER.size_x / 2 + along_m)
+    y = HEATER.base.y + axis.y * (HEATER.size_x / 2 + along_m)
+    z = HEATER.base.z + HEATER.size_z / 2
+    size = GRID.cell_size
+    return (
+        int((z - GRID.origin.z) // size.z),
+        int((y - GRID.origin.y) // size.y),
+        int((x - GRID.origin.x) // size.x),
+    )
+
+
+def test_a_heaters_jet_is_warmest_on_its_axis() -> None:
+    """Shared as a round jet's speed is: across it, most on its axis."""
+    k, j, i = _axis_cell(2.0)
+    heat = source_terms(HEATER, 1.0, GRID, SOLID).heat_w
+
+    assert heat[k, j, i] > heat[k, j + 1, i] > heat[k, j + 2, i] >= 0.0
+
+
+def test_a_heater_whose_outlet_is_blocked_warms_the_air_around_its_body() -> None:
+    blocked = SOLID.copy()
+    blocked[_axis_cell(0.1)] = True
+    terms = source_terms(HEATER, 1.0, GRID, blocked)
+    xs, ys, zs = GRID.centres()
+    low, high = HEATER.fixture().bounds()
+    size = GRID.cell_size
+
+    assert terms.total_heat_w() == pytest.approx(HEATER.power_w)
+    for k, j, i in np.argwhere(terms.heat_w > 0):
+        assert low.x - size.x <= xs[i] <= high.x + size.x
+        assert low.y - size.y <= ys[j] <= high.y + size.y
+        assert low.z <= zs[k] <= high.z + size.z
+
+
+def test_a_heaters_jet_stops_at_an_obstacle_on_its_axis() -> None:
+    obstructed = SOLID.copy()
+    obstacle = _axis_cell(2.0)
+    obstructed[obstacle] = True
+    terms = source_terms(HEATER, 1.0, GRID, obstructed)
+    xs, _, _ = GRID.centres()
+
+    assert terms.total_heat_w() == pytest.approx(HEATER.power_w)
+    # Its heading is along -x: nothing beyond the obstacle is warmed.
+    assert not terms.heat_w[:, :, : obstacle[2]].any()
+    assert terms.heat_w[:, :, obstacle[2] + 1 :].any()
+    assert xs[obstacle[2]] < HEATER.base.x
+
+
+def test_a_jet_too_narrow_for_any_cell_warms_the_cells_its_axis_passes() -> None:
+    """A heater whose outlet is a few centimetres wide: no cell's centre lies
+    in its jet, so its heat goes along its axis, not back around its body."""
+    narrow = HEATER.model_copy(update={"size_y": 0.1, "size_z": 0.1})
+    terms = source_terms(narrow, 1.0, GRID, SOLID)
+    xs, _, _ = GRID.centres()
+    outlet_x = narrow.base.x + narrow.facing().x * narrow.size_x / 2
+
+    assert terms.total_heat_w() == pytest.approx(narrow.power_w)
+    heated = np.argwhere(terms.heat_w > 0)
+    assert {(k, j) for k, j, _ in heated} == {(0, 1)}
+    assert all(xs[i] <= outlet_x for _, _, i in heated)
+
+
 @pytest.mark.parametrize("piece", [FAN, HEATER, DEHUMIDIFIER], ids=IDS)
 def test_equipment_that_is_off_does_nothing(piece: Fan | Heater | Dehumidifier) -> None:
     terms = source_terms(piece, 0.0, GRID, SOLID)
