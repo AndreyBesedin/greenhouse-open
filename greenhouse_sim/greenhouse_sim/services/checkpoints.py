@@ -38,7 +38,6 @@ import dataclasses
 import gzip
 import json
 import math
-from collections.abc import Mapping, Sequence
 from typing import Final
 
 from pydantic import BaseModel, ConfigDict, JsonValue, NonNegativeInt, ValidationError
@@ -59,13 +58,12 @@ from greenhouse_sim.scenarios.manifest_files import manifest_digest, opening_day
 from greenhouse_sim.services.crop import run_crop, seed_kept_crops
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.fields import (
-    Commanded,
     climate_run,
     run_schedule,
     seed_kept_climate_runs,
 )
 from greenhouse_sim.services.kept_states import KeptState, drop, keep
-from greenhouse_sim.services.runs import checked_moment
+from greenhouse_sim.services.runs import Commanded, RunRequest, checked_moment
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids, scenario
 from greenhouse_sim.services.stores import Store
 
@@ -121,6 +119,19 @@ class Checkpoint(BaseModel):
         """A digest of its content, which names it."""
         return short_digest(self.model_dump_json(), ID_LENGTH)
 
+    def run(self) -> RunRequest:
+        """Its run, as a client would ask for it, up to its day: the
+        commands it keeps are those before it."""
+        return RunRequest(
+            self.scenario_id,
+            layout=self.layout,
+            weather=self.weather,
+            levels=self.levels,
+            openings=self.openings,
+            commands=tuple(self.commands),
+            daily=None if self.daily is None else tuple(self.daily),
+        )
+
 
 class CheckpointSummary(BaseModel):
     """A checkpoint as a client lists it: its identifier, its run's parts,
@@ -152,40 +163,32 @@ CHECKPOINTS: Store[str, tuple[Checkpoint, KeptState]] = Store(
 )
 
 
-def save_checkpoint(
-    scenario_id: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    time_s: float = 0.0,
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
-) -> CheckpointSummary:
-    """A checkpoint of a scenario's run, asked for as its climate field is,
-    at the start of the day `time_s` lies in, or ends: its state then,
-    worked out if it has not been, kept."""
+def save_checkpoint(run: RunRequest, time_s: float = 0.0) -> CheckpointSummary:
+    """A checkpoint of a run, asked for as its climate field is, at the
+    start of the day `time_s` lies in, or ends: its state then, worked out
+    if it has not been, kept."""
+    scenario_id = run.scenario_id
     config = scenario(scenario_id)
     checked_moment(config, time_s)
     day = days_ended(time_s)
     moment = day * DAY_S
-    _, climate = climate_run(scenario_id, layout, levels, openings, commands, weather, daily)
+    _, climate = climate_run(run)
     plants: list[Plant] = []
     lived: list[dict[str, LocalEnvironment]] = []
     if config.crop_model == CropModel.ORGAN:
-        crop = run_crop(scenario_id, layout, levels, openings, commands, weather, daily)
+        crop = run_crop(run)
         plants = list(crop.plants_on(day))
         lived = crop.lived_through(day)
     before = window_start(moment)
     checkpoint = Checkpoint(
         scenario_id=scenario_id,
         manifest=manifest_digest(scenario_id),
-        layout=layout or DEFAULT_LAYOUT,
-        weather=weather or DEFAULT_WEATHER,
-        levels=dict(levels or {}),
-        openings=dict(openings or {}),
-        commands=[command for command in commands if command[0] < moment],
-        daily=None if daily is None else list(daily),
+        layout=run.layout or DEFAULT_LAYOUT,
+        weather=run.weather or DEFAULT_WEATHER,
+        levels=dict(run.levels),
+        openings=dict(run.openings),
+        commands=[command for command in run.commands if command[0] < moment],
+        daily=None if run.daily is None else list(run.daily),
         day=day,
         house=climate.house.air_at(moment),
         house_before=climate.house.air_at(before) if before < moment else None,
@@ -241,15 +244,7 @@ def _checked_upload(document: JsonValue) -> Checkpoint:
             "a checkpoint keeps its house's air an hour before its day, after its run's "
             "first day, and only then"
         )
-    climate_run(
-        uploaded.scenario_id,
-        uploaded.layout,
-        uploaded.levels,
-        uploaded.openings,
-        uploaded.commands,
-        uploaded.weather,
-        uploaded.daily,
-    )
+    climate_run(uploaded.run())
     expected = plant_ids(config) if config.crop_model == CropModel.ORGAN else []
     if [plant.plant_id for plant in uploaded.plants] != expected:
         raise InvalidRequest(f"a checkpoint's plants are {uploaded.scenario_id}'s, in order")
@@ -360,13 +355,7 @@ def _kept(checkpoint: Checkpoint, *, opening: bool = False) -> CheckpointSummary
             checkpoint.weather,
             tuple(sorted(checkpoint.openings.items())),
         ),
-        schedule=run_schedule(
-            checkpoint.scenario_id,
-            checkpoint.layout,
-            checkpoint.levels,
-            checkpoint.commands,
-            checkpoint.daily,
-        ),
+        schedule=run_schedule(checkpoint.run()),
         day=checkpoint.day,
         air=checkpoint.house,
         plants=tuple(checkpoint.plants),

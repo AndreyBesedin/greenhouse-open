@@ -16,6 +16,7 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd, fields
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.grid import air_grid
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.world.geometry import Vector3
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
@@ -181,4 +182,4 @@ def test_levels_a_scenario_cannot_run_are_refused(path: str, error: str | None) 
 
 def test_the_service_refuses_levels_as_the_api_does() -> None:
     with pytest.raises(InvalidRequest):
-        fields.field("climate_box", "climate", levels={"fan": -1.0})
+        fields.field(RunRequest("climate_box", levels={"fan": -1.0}), "climate")

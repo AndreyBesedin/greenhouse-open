@@ -25,6 +25,7 @@ from greenhouse_sim.scenarios.manifest_files import manifest_digest
 from greenhouse_sim.services.crop import CROPS, crop_scene, run_crop
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import CLIMATE_RUNS, field, grid
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import initial_scene, plant_ids, scenario
 from greenhouse_sim.units import HOUR_S, HOURS_A_DAY, PERCENT
 
@@ -105,19 +106,20 @@ def simulator_costs(scenario_id: str, days: int | None = None) -> SimulatorCosts
     CROPS.forget()
     watch = Stopwatch()
     started = time.perf_counter()
-    crop = run_crop(scenario_id, watch=watch)
+    run = RunRequest(scenario_id)
+    crop = run_crop(run, watch=watch)
     plants = crop.plants_on(measured)
     days_s = time.perf_counter() - started
 
     noon = (measured - 1) * DAY_S + NOON_S
     started = time.perf_counter()
-    field(scenario_id, "climate", time_s=noon)
+    field(run, "climate", time_s=noon)
     cell_by_cell_s = time.perf_counter() - started
 
     # The crop has lived every day measured at the last one's end.
     started = time.perf_counter()
     house = initial_scene(scenario_id)
-    grown = crop_scene(scenario_id, time_s=measured * DAY_S)
+    grown = crop_scene(run, time_s=measured * DAY_S)
     frame_s = time.perf_counter() - started
     entities = [e for e in house.entities if "organ_id" not in e.properties] + grown.entities
     frame_bytes = len(house.model_dump_json()) + len(grown.model_dump_json())

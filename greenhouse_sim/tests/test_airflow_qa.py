@@ -17,6 +17,7 @@ import sys
 from pathlib import Path
 
 from greenhouse_sim.services import fields, scenarios
+from greenhouse_sim.services.runs import RunRequest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCENE_FILE = ROOT / "web" / "public" / "scenes" / "qa-airflow-box.json"
@@ -42,7 +43,7 @@ def _scene() -> object:
 
 
 def _field() -> object:
-    return fields.field(SCENARIO, "cfd").model_dump(mode="json")
+    return fields.field(RunRequest(SCENARIO), "cfd").model_dump(mode="json")
 
 
 def test_the_qa_scene_is_what_the_simulator_draws() -> None:

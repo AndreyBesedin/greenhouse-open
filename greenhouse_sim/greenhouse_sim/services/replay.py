@@ -21,7 +21,6 @@ run's first days against the digests kept in the repository
 """
 
 import json
-from collections.abc import Mapping, Sequence
 from typing import Final
 
 from pydantic import BaseModel, ConfigDict, JsonValue
@@ -30,7 +29,8 @@ from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.digests import short_digest
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.services.crop import run_crop
-from greenhouse_sim.services.fields import Commanded, climate_run
+from greenhouse_sim.services.fields import climate_run
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.sensors import observations
 from greenhouse_sim.units import HOUR_S, HOURS_A_DAY
@@ -71,25 +71,12 @@ def _rounded(value: JsonValue) -> JsonValue:
     return value
 
 
-def day_probes(
-    scenario_id: str,
-    days: int,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
-) -> list[DayProbe]:
+def day_probes(run: RunRequest, days: int) -> list[DayProbe]:
     """A run's state probed at the end of each of its first `days` days,
     asked for as its climate field is."""
-    config = scenario(scenario_id)
-    _, climate = climate_run(scenario_id, layout, levels, openings, commands, weather, daily)
-    crop = (
-        run_crop(scenario_id, layout, levels, openings, commands, weather, daily)
-        if config.crop_model == CropModel.ORGAN
-        else None
-    )
+    config = scenario(run.scenario_id)
+    _, climate = climate_run(run)
+    crop = run_crop(run) if config.crop_model == CropModel.ORGAN else None
     probes = []
     for day in range(days):
         end = (day + 1) * DAY_S
@@ -99,14 +86,8 @@ def day_probes(
             [observation.sensor_id, (hour + 1) * HOUR_S, observation.value]
             for hour in range(HOURS_A_DAY)
             for observation in observations(
-                scenario_id,
-                layout,
-                levels,
-                openings,
-                commands,
+                run,
                 until_s=day * DAY_S + (hour + 1) * HOUR_S,
-                weather=weather,
-                daily=daily,
                 from_s=day * DAY_S + (hour + 1) * HOUR_S - 1.0,
             ).observations
         ]

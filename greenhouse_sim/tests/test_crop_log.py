@@ -13,6 +13,7 @@ from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import checkpoints, crop
 from greenhouse_sim.services.crop_log import WALK_S, crop_records
 from greenhouse_sim.services.fields import air_through_a_run
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.sensors import run_start
 
 SCENARIO = "reference_greenhouse"
@@ -29,7 +30,7 @@ WALKED = {
 
 def test_a_day_s_walk_records_every_plant_at_noon_with_the_run_s_identity() -> None:
     start = run_start(SCENARIO)
-    _, run_id = air_through_a_run(SCENARIO)
+    _, run_id = air_through_a_run(RunRequest(SCENARIO))
 
     walked, harvests = crop_records(SCENARIO, 1, start, run_id)
 
@@ -50,7 +51,7 @@ def test_a_day_s_walk_records_every_plant_at_noon_with_the_run_s_identity() -> N
 
 
 def test_a_scenario_with_the_simple_crop_has_no_records_of_it() -> None:
-    _, run_id = air_through_a_run("climate_box")
+    _, run_id = air_through_a_run(RunRequest("climate_box"))
     assert crop_records("climate_box", 1, run_start("climate_box"), run_id) == ([], [])
 
 
@@ -60,7 +61,7 @@ def test_a_harvest_round_is_an_event_per_plant_picked_as_the_plant_s_history_has
     # opens the run; the round after it starts day 91.
     assert checkpoints.load_openings() == []
     start = run_start(SCENARIO)
-    _, run_id = air_through_a_run(SCENARIO)
+    _, run_id = air_through_a_run(RunRequest(SCENARIO))
 
     walked, harvests = crop_records(SCENARIO, FIRST_ROUND, start, run_id)
 
@@ -69,7 +70,7 @@ def test_a_harvest_round_is_an_event_per_plant_picked_as_the_plant_s_history_has
     assert {e.event_type for e in harvests} == {EventType.HARVEST}
     assert {e.timestamp for e in harvests} == {start + timedelta(seconds=FIRST_ROUND * DAY_S)}
     # Each event is what the round picked from its plant, by its history.
-    run = crop.run_crop(SCENARIO)
+    run = crop.run_crop(RunRequest(SCENARIO))
     before = {p.plant_id: p for p in run.plants_on(FIRST_ROUND - 1)}
     for event in harvests:
         plant = next(p for p in run.plants_on(FIRST_ROUND) if p.plant_id == event.plant_id)

@@ -22,13 +22,14 @@ from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.manifest_files import manifest_digest
 from greenhouse_sim.services.fields import house_air_at
 from greenhouse_sim.services.replay import ROUNDED_DECIMALS, DayProbe, _rounded, day_probes
+from greenhouse_sim.services.runs import RunRequest
 
 FIXTURE: Final = Path(__file__).resolve().parent / "fixtures" / "reference_replay.json"
 SCENARIO: Final = "reference_greenhouse"
 # How many of the reference run's first days are kept.
 KEPT_DAYS: Final = 3
 # The reference run's heater, off an hour into its second day: a branch.
-BRANCH: Final = [(DAY_S + 3600.0, "heater", 0.0)]
+BRANCH: Final = ((DAY_S + 3600.0, "heater", 0.0),)
 
 
 def test_the_reference_runs_first_days_replay_to_the_digests_kept() -> None:
@@ -38,14 +39,14 @@ def test_the_reference_runs_first_days_replay_to_the_digests_kept() -> None:
         "the reference scenario's manifest has changed: "
         "write its replay again with `python tests/test_replay.py --update`"
     )
-    replayed = day_probes(SCENARIO, KEPT_DAYS)
+    replayed = day_probes(RunRequest(SCENARIO), KEPT_DAYS)
     assert [probe.model_dump() for probe in replayed] == kept["days"]
 
 
 def test_a_replay_gives_the_same_digests_and_a_branch_the_same_before_its_change() -> None:
-    first = day_probes(SCENARIO, 2)
-    again = day_probes(SCENARIO, 2)
-    branch = day_probes(SCENARIO, 2, commands=BRANCH)
+    first = day_probes(RunRequest(SCENARIO), 2)
+    again = day_probes(RunRequest(SCENARIO), 2)
+    branch = day_probes(RunRequest(SCENARIO, commands=BRANCH), 2)
 
     assert again == first
     assert branch[0] == first[0]
@@ -60,11 +61,11 @@ def test_a_replay_gives_the_same_digests_after_a_viewer_scrubbed_the_run(
 ) -> None:
     # A moment between the run's minutes, asked for first, changes nothing
     # that is worked out after it.
-    fresh = day_probes(SCENARIO, 1)
+    fresh = day_probes(RunRequest(SCENARIO), 1)
     afresh()
-    house_air_at(SCENARIO, time_s=DAY_S - 30.0)
+    house_air_at(RunRequest(SCENARIO), time_s=DAY_S - 30.0)
 
-    assert day_probes(SCENARIO, 1) == fresh
+    assert day_probes(RunRequest(SCENARIO), 1) == fresh
 
 
 def test_a_probe_is_rounded_before_it_is_digested() -> None:
@@ -72,7 +73,7 @@ def test_a_probe_is_rounded_before_it_is_digested() -> None:
         "a": [round(1.0000001234, ROUNDED_DECIMALS), "x", 2],
         "b": 0.3,
     }
-    probe = day_probes(SCENARIO, 1)[0]
+    probe = day_probes(RunRequest(SCENARIO), 1)[0]
     assert isinstance(probe, DayProbe)
     assert probe.readings > 0 and probe.organs > 0
 
@@ -81,7 +82,7 @@ def _update() -> None:
     kept = {
         "scenario_id": SCENARIO,
         "manifest": manifest_digest(SCENARIO),
-        "days": [probe.model_dump() for probe in day_probes(SCENARIO, KEPT_DAYS)],
+        "days": [probe.model_dump() for probe in day_probes(RunRequest(SCENARIO), KEPT_DAYS)],
     }
     FIXTURE.parent.mkdir(exist_ok=True)
     FIXTURE.write_text(json.dumps(kept, indent=2) + "\n")

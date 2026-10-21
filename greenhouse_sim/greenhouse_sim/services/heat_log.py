@@ -32,6 +32,7 @@ from greenhouse_protocol.provenance import RecordSource
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.records import observation_id
 from greenhouse_sim.services.fields import climate_run
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.units import HOUR_S
 from greenhouse_sim.world.equipment import Heater
@@ -50,7 +51,7 @@ def heat_records(scenario_id: str, day: int, start: datetime, run_id: str) -> li
     config = scenario(scenario_id)
     if not any(isinstance(piece, Heater) for piece in config.layout.equipment):
         return []
-    _, climate = climate_run(scenario_id)
+    _, climate = climate_run(RunRequest(scenario_id))
     floor_m2 = config.envelope.length * config.envelope.width
     kind = ObservationType.HEATING_ENERGY_INCREMENT_MJ_M2
     source = RecordSource(type=SourceType.SIMULATION, source_id=run_id)

@@ -13,6 +13,7 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import air_through_a_run
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import SceneChanges, changed, layout_name
 from greenhouse_sim.world.equipment import Fan, Heater
 from greenhouse_sim.world.geometry import Quaternion, Transform, Vector3
@@ -122,8 +123,10 @@ def test_moves_are_written_in_a_layouts_name_and_refused_when_they_cannot_be() -
 
 
 def test_a_moved_layout_is_another_run_and_the_api_draws_it() -> None:
-    _, own = air_through_a_run("climate_box")
-    _, moved_run = air_through_a_run("climate_box", layout="default~temperature_front:0.5:0")
+    _, own = air_through_a_run(RunRequest("climate_box"))
+    _, moved_run = air_through_a_run(
+        RunRequest("climate_box", layout="default~temperature_front:0.5:0")
+    )
     assert moved_run != own
 
     response = respond(
@@ -169,7 +172,7 @@ def test_the_same_moves_however_written_are_the_same_run() -> None:
     assert layout_name(layout_name("default~heater:-1:0.5")) == "default~heater:-1.0:0.5"
 
     runs = {
-        air_through_a_run("climate_box", layout=name)[1]
+        air_through_a_run(RunRequest("climate_box", layout=name))[1]
         for name in [
             "default~heater:-1:0,temperature_front:0.5:0",
             "default~temperature_front:0.5:0,heater:-1:0",
@@ -179,6 +182,6 @@ def test_the_same_moves_however_written_are_the_same_run() -> None:
     assert len(runs) == 1
     # No moves at all is the scenario's own run.
     assert (
-        air_through_a_run("climate_box", layout="default~heater:0:0")[1]
-        == (air_through_a_run("climate_box")[1])
+        air_through_a_run(RunRequest("climate_box", layout="default~heater:0:0"))[1]
+        == (air_through_a_run(RunRequest("climate_box"))[1])
     )

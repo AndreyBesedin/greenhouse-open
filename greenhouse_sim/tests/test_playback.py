@@ -14,6 +14,7 @@ from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import playback, run_state, sensors
 from greenhouse_sim.services.errors import NotFound
 from greenhouse_sim.services.playback import Playback, PlaybackCommand, PlaybackFailed
+from greenhouse_sim.services.runs import RunRequest
 
 SCENARIO = "climate_box"
 EVERY_S = 300.0
@@ -106,7 +107,7 @@ def test_each_reading_is_the_one_the_viewers_sensor_log_has_then(
 
     # The viewer's log of that day, minute by minute, as the sensor panel
     # asks for it.
-    viewers = sensors.observations(SCENARIO, until_s=cut.state.time_s)
+    viewers = sensors.observations(RunRequest(SCENARIO), until_s=cut.state.time_s)
     same = [o for o in viewers.observations if o.observation_id == later.observation_id]
     assert viewers.run_id == played.run_id
     assert same == [later]
@@ -126,7 +127,7 @@ def test_the_viewers_frame_and_the_consumers_records_name_one_run_and_one_instan
     assert frame.status == 200 and isinstance(frame.body, dict)
     assert frame.body["run_id"] == now.run_id
     assert frame.body["at"] == now.simulated_now.isoformat().replace("+00:00", "Z")
-    assert run_state.run_state(SCENARIO, until_s=now.time_s).day == now.day == 1
+    assert run_state.run_state(RunRequest(SCENARIO), until_s=now.time_s).day == now.day == 1
     assert {r.source.source_id for r in cut.records} == {now.run_id}
 
 

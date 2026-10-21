@@ -15,6 +15,7 @@ from greenhouse_sim.climate.house import grid_mean
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.services import fields, sensors
 from greenhouse_sim.services.fields import _climate_day
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.units import HOUR_S
 
 HEATED = (("heater", 1.0),)
@@ -115,7 +116,7 @@ def test_a_later_grid_run_is_shared_whichever_day_starts_it_first(
 
 def test_sensors_sample_the_grid_then_the_whole_house() -> None:
     log = sensors.observations(
-        "climate_box", levels={"heater": 1.0}, until_s=3 * HOUR_S, clean=True
+        RunRequest("climate_box", levels={"heater": 1.0}), until_s=3 * HOUR_S, clean=True
     )
     by_sensor: dict[str, dict[float, float]] = {}
     for o in log.observations:
@@ -135,7 +136,7 @@ def test_sensors_sample_the_grid_then_the_whole_house() -> None:
 
 def test_probes_read_the_grid_run_that_draws_the_moment() -> None:
     probes = fields.climate_probes(
-        "climate_box", [(6.0, 3.2, 1.5)], levels={"heater": 1.0}, until_s=4.25 * HOUR_S
+        RunRequest("climate_box", levels={"heater": 1.0}), [(6.0, 3.2, 1.5)], until_s=4.25 * HOUR_S
     )
 
     assert probes.times_s[0] == 3 * HOUR_S

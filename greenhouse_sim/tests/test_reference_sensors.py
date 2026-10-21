@@ -13,6 +13,7 @@ from greenhouse_sim.domain.sensors import SensorKind
 from greenhouse_sim.fields.field import EnvironmentField
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services.fields import field
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.sensors import delivered_between
 from greenhouse_sim.world.sensors import PointSensor
 
@@ -63,7 +64,7 @@ def test_its_air_past_boiling_by_the_heater_keeps_a_humidity_the_air_can_have() 
     # A cell the heater warmed past 100 °C used to lose more water than it
     # held, and the house's humidity cell by cell ran to ±10⁸ % (#198).
     for time_s in HEATER_PAST_BOILING_S:
-        air = EnvironmentField.from_document(field(SCENARIO, "climate", time_s=time_s))
+        air = EnvironmentField.from_document(field(RunRequest(SCENARIO), "climate", time_s=time_s))
         temperature = air.channels[AirQuantity.TEMPERATURE]
         relative = air.channels[AirQuantity.HUMIDITY]
 

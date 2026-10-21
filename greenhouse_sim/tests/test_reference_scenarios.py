@@ -21,6 +21,7 @@ from greenhouse_sim.domain.layout import FixtureKind, Obstruction, ZoneKind
 from greenhouse_sim.fields.field import EnvironmentField
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services import cfd, fields
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import SceneChanges, changed, scenario
 from greenhouse_sim.world.geometry import Vector3
 
@@ -109,7 +110,7 @@ def test_the_compartments_kept_cfd_solution_is_current_and_blows_in_and_out_at_i
         )
 
     assert result.converged and field.grid == grid and field.source == SOURCE
-    assert fields.field("tomato_compartment", "cfd").source == SOURCE
+    assert fields.field(RunRequest("tomato_compartment"), "cfd").source == SOURCE
     # In through the first vent, at about the setup's speed, and out through
     # the others.
     falling = field.sample(AirQuantity.VELOCITY, below("roof_vent_1"))

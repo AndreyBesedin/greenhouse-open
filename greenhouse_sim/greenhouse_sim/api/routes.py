@@ -111,9 +111,9 @@ check; a route that comes to need one checks it first.
                                           subject and kind, in the order they
                                           happen, up to &t=600 from the start
                                           of that moment's day or &from=0, a
-                                          day at most; with ?layout=, &set=,
-                                          &schedule= and &daily= as for its
-                                          climate field
+                                          day at most; asked as its climate
+                                          field is, though its &open= and
+                                          &weather= change none of its events
     GET /api/scenarios/{id}/weather       its site, and the weather outside it &t=600
                                           seconds into a run, with the wind in
                                           the world's axes; &weather=cold_spring_day
@@ -195,6 +195,7 @@ from greenhouse_sim.services import (
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.live import InvalidSpeed, LiveCommand, LiveRun, LiveRuns
 from greenhouse_sim.services.playback import PlaybackCommand
+from greenhouse_sim.services.runs import RunRequest
 
 type Query = dict[str, list[str]]
 
@@ -248,181 +249,51 @@ def respond(method: str, path: str, body: bytes = b"") -> Response:
                 }
             )
         case ["api", "scenarios", scenario_id, "fields", field_name]:
-            layout = _last(query, "layout")
             return _answer(
-                lambda: fields.field(
-                    scenario_id,
-                    field_name,
-                    layout,
-                    _pairs(query.get("set", []), "set"),
-                    _seconds(query),
-                    _pairs(query.get("open", []), "open"),
-                    _commands(query.get("schedule", [])),
-                    daily=_daily(query),
-                    weather=_last(query, "weather"),
-                )
+                lambda: fields.field(_run(scenario_id, query), field_name, _seconds(query))
             )
         case ["api", "scenarios", scenario_id, "climate", "probes"]:
-            layout = _last(query, "layout")
             return _answer(
                 lambda: fields.climate_probes(
-                    scenario_id,
-                    _points(query.get("probes", [])),
-                    layout,
-                    _pairs(query.get("set", []), "set"),
-                    _pairs(query.get("open", []), "open"),
-                    _commands(query.get("schedule", [])),
-                    _seconds(query),
-                    daily=_daily(query),
-                    weather=_last(query, "weather"),
+                    _run(scenario_id, query), _points(query.get("probes", [])), _seconds(query)
                 )
             )
         case ["api", "scenarios", scenario_id, "climate", "house"]:
             return _answer(
-                lambda: fields.house_air(
-                    scenario_id,
-                    _last(query, "layout"),
-                    _pairs(query.get("set", []), "set"),
-                    _pairs(query.get("open", []), "open"),
-                    _commands(query.get("schedule", [])),
-                    _seconds(query),
-                    daily=_daily(query),
-                    weather=_last(query, "weather"),
-                    from_s=_since(query),
-                )
+                lambda: fields.house_air(_run(scenario_id, query), _seconds(query), _since(query))
             )
         case ["api", "scenarios", scenario_id, "climate", "glazing"]:
-            return _answer(
-                lambda: fields.glazing(
-                    scenario_id,
-                    _last(query, "layout"),
-                    _pairs(query.get("set", []), "set"),
-                    _pairs(query.get("open", []), "open"),
-                    _commands(query.get("schedule", [])),
-                    _seconds(query),
-                    daily=_daily(query),
-                    weather=_last(query, "weather"),
-                )
-            )
+            return _answer(lambda: fields.glazing(_run(scenario_id, query), _seconds(query)))
         case ["api", "scenarios", scenario_id, "climate", "openings"]:
-            return _answer(
-                lambda: fields.openings(
-                    scenario_id,
-                    _last(query, "layout"),
-                    _pairs(query.get("set", []), "set"),
-                    _pairs(query.get("open", []), "open"),
-                    _commands(query.get("schedule", [])),
-                    _seconds(query),
-                    daily=_daily(query),
-                    weather=_last(query, "weather"),
-                )
-            )
+            return _answer(lambda: fields.openings(_run(scenario_id, query), _seconds(query)))
         case ["api", "scenarios", scenario_id, "climate", "plants"]:
-            return _answer(
-                lambda: crop.plants_light(
-                    scenario_id,
-                    _last(query, "layout"),
-                    _pairs(query.get("set", []), "set"),
-                    _pairs(query.get("open", []), "open"),
-                    _commands(query.get("schedule", [])),
-                    _seconds(query),
-                    weather=_last(query, "weather"),
-                    daily=_daily(query),
-                )
-            )
+            return _answer(lambda: crop.plants_light(_run(scenario_id, query), _seconds(query)))
         case ["api", "scenarios", scenario_id, "crop"]:
-            return _answer(
-                lambda: crop.crop_scene(
-                    scenario_id,
-                    _last(query, "layout"),
-                    _pairs(query.get("set", []), "set"),
-                    _pairs(query.get("open", []), "open"),
-                    _commands(query.get("schedule", [])),
-                    _seconds(query),
-                    weather=_last(query, "weather"),
-                    daily=_daily(query),
-                )
-            )
+            return _answer(lambda: crop.crop_scene(_run(scenario_id, query), _seconds(query)))
         case ["api", "scenarios", scenario_id, "crop", plant_id]:
             return _answer(
-                lambda: crop.crop_plant(
-                    scenario_id,
-                    plant_id,
-                    _last(query, "layout"),
-                    _pairs(query.get("set", []), "set"),
-                    _pairs(query.get("open", []), "open"),
-                    _commands(query.get("schedule", [])),
-                    _seconds(query),
-                    weather=_last(query, "weather"),
-                    daily=_daily(query),
-                )
+                lambda: crop.crop_plant(_run(scenario_id, query), plant_id, _seconds(query))
             )
         case ["api", "scenarios", scenario_id, "climate", "observations"]:
             return _answer(
                 lambda: sensors.observations(
-                    scenario_id,
-                    _last(query, "layout"),
-                    _pairs(query.get("set", []), "set"),
-                    _pairs(query.get("open", []), "open"),
-                    _commands(query.get("schedule", [])),
+                    _run(scenario_id, query),
                     _seconds(query),
-                    daily=_daily(query),
                     clean=_last(query, "clean") == "1",
-                    weather=_last(query, "weather"),
                     from_s=_since(query),
                 )
             )
         case ["api", "scenarios", scenario_id, "climate", "equipment"]:
-            return _answer(
-                lambda: fields.equipment_at(
-                    scenario_id,
-                    _last(query, "layout"),
-                    _pairs(query.get("set", []), "set"),
-                    _pairs(query.get("open", []), "open"),
-                    _commands(query.get("schedule", [])),
-                    _seconds(query),
-                    weather=_last(query, "weather"),
-                    daily=_daily(query),
-                )
-            )
+            return _answer(lambda: fields.equipment_at(_run(scenario_id, query), _seconds(query)))
         case ["api", "scenarios", scenario_id, "climate", "state"]:
-            return _answer(
-                lambda: run_state.run_state(
-                    scenario_id,
-                    _last(query, "layout"),
-                    _pairs(query.get("set", []), "set"),
-                    _pairs(query.get("open", []), "open"),
-                    _commands(query.get("schedule", [])),
-                    _seconds(query),
-                    weather=_last(query, "weather"),
-                    daily=_daily(query),
-                )
-            )
+            return _answer(lambda: run_state.run_state(_run(scenario_id, query), _seconds(query)))
         case ["api", "scenarios", scenario_id, "climate", "truth"]:
             return _answer(
-                lambda: sensors.truth(
-                    scenario_id,
-                    _last(query, "layout"),
-                    _pairs(query.get("set", []), "set"),
-                    _pairs(query.get("open", []), "open"),
-                    _commands(query.get("schedule", [])),
-                    _seconds(query),
-                    daily=_daily(query),
-                    weather=_last(query, "weather"),
-                    from_s=_since(query),
-                )
+                lambda: sensors.truth(_run(scenario_id, query), _seconds(query), _since(query))
             )
         case ["api", "scenarios", scenario_id, "timeline"]:
             return _answer(
-                lambda: timeline.timeline(
-                    scenario_id,
-                    _last(query, "layout"),
-                    _pairs(query.get("set", []), "set"),
-                    _commands(query.get("schedule", [])),
-                    _seconds(query),
-                    daily=_daily(query),
-                    from_s=_since(query),
-                )
+                lambda: timeline.timeline(_run(scenario_id, query), _seconds(query), _since(query))
             )
         case ["api", "scenarios", scenario_id, "weather"]:
             return _answer(
@@ -455,16 +326,7 @@ def _posted(path: str, query: Query, body: bytes) -> Response:
     match _segments(path):
         case ["api", "scenarios", scenario_id, "checkpoints"]:
             return _answer(
-                lambda: checkpoints.save_checkpoint(
-                    scenario_id,
-                    _last(query, "layout"),
-                    _pairs(query.get("set", []), "set"),
-                    _pairs(query.get("open", []), "open"),
-                    _commands(query.get("schedule", [])),
-                    _seconds(query),
-                    weather=_last(query, "weather"),
-                    daily=_daily(query),
-                )
+                lambda: checkpoints.save_checkpoint(_run(scenario_id, query), _seconds(query))
             )
         case ["api", "checkpoints"]:
             return _answer(lambda: checkpoints.upload_checkpoint(_json(body)))
@@ -570,6 +432,24 @@ def _scene_changes(query: Query) -> scenarios.SceneChanges:
     if name is not None:
         changes["layout"] = name
     return scenarios.SceneChanges.model_validate(changes)
+
+
+def _run(scenario_id: str, query: Query) -> RunRequest:
+    """The run a query asks for of a scenario, read once: `layout=`,
+    `weather=`, `set=`, `open=`, `schedule=` and `daily=`."""
+    levels = _pairs(query.get("set", []), "set")
+    openings = _pairs(query.get("open", []), "open")
+    commands = tuple(_commands(query.get("schedule", [])))
+    daily = _daily(query)
+    return RunRequest(
+        scenario_id=scenario_id,
+        layout=_last(query, "layout"),
+        weather=_last(query, "weather"),
+        levels=levels,
+        openings=openings,
+        commands=commands,
+        daily=None if daily is None else tuple(daily),
+    )
 
 
 def _pairs(requests: list[str], name: str) -> dict[str, float]:

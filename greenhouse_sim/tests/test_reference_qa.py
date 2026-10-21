@@ -37,8 +37,8 @@ from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services import crop, fields, scenarios, weather
 from greenhouse_sim.services.checkpoints import load_openings
-from greenhouse_sim.services.fields import Commanded
 from greenhouse_sim.services.run_state import run_state
+from greenhouse_sim.services.runs import Commanded, RunRequest
 from greenhouse_sim.world.geometry import Vector3
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -178,7 +178,7 @@ def _crop_counts(day: int) -> dict[str, float]:
 def _crop_scene(day: int) -> SceneSnapshot:
     """The crop at noon on a day: it is the same through the day, as it has
     lived the days before."""
-    return crop.crop_scene(SCENARIO, time_s=day * DAY_S + 12 * HOUR_S + 40 * MINUTE_S)
+    return crop.crop_scene(RunRequest(SCENARIO), time_s=day * DAY_S + 12 * HOUR_S + 40 * MINUTE_S)
 
 
 def _house(moment: Moment, levels: dict[str, float]) -> object:
@@ -202,7 +202,8 @@ def _house(moment: Moment, levels: dict[str, float]) -> object:
 
 def _moment(moment: Moment) -> tuple[dict[str, Any], dict[str, float]]:
     """What a moment's views draw, and its probes."""
-    state = run_state(SCENARIO, commands=moment.commands, until_s=moment.time_s)
+    run = RunRequest(SCENARIO, commands=moment.commands)
+    state = run_state(run, until_s=moment.time_s)
     outside = weather.at_a_moment(SCENARIO, moment.time_s)
     assert state.house_air is not None
     probes = {
@@ -216,12 +217,12 @@ def _moment(moment: Moment) -> tuple[dict[str, Any], dict[str, float]]:
         "weather": _rounded(outside.model_dump(mode="json")),
     }
     if moment.channels:
-        document = fields.field(SCENARIO, "climate", time_s=moment.time_s, commands=moment.commands)
+        document = fields.field(run, "climate", time_s=moment.time_s)
         drawn["field"] = _field(document, moment.channels)
         if AirQuantity.VELOCITY in moment.channels:
             probes["jet_m_s"] = _speed(document, IN_THE_JET)
     if moment.openings:
-        passing = fields.openings(SCENARIO, time_s=moment.time_s, commands=moment.commands)
+        passing = fields.openings(run, time_s=moment.time_s)
         drawn["openings"] = _rounded(passing.model_dump(mode="json"))
         probes["vents_exchange_m3_s"] = sum((o.exchange_m3_s for o in passing.openings), 0.0)
     probes |= _crop_counts(days_ended(moment.time_s))

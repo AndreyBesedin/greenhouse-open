@@ -54,7 +54,7 @@ from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.kept_states import House, KeptState, agreeing
-from greenhouse_sim.services.runs import checked_moment, checked_window
+from greenhouse_sim.services.runs import Commanded, RunRequest, checked_moment, checked_window
 from greenhouse_sim.services.scenarios import (
     DEFAULT_WEATHER,
     SceneChanges,
@@ -87,8 +87,6 @@ class _Shear:
 
 
 type _Pairs = tuple[tuple[str, float], ...]
-# A command as a request writes it: its moment, its actuator and its level.
-type Commanded = tuple[float, str, float]
 
 
 def _checked(
@@ -151,19 +149,13 @@ def _schedule(levels: _Pairs, commands: tuple[Commanded, ...]) -> Schedule:
     )
 
 
-def run_schedule(
-    scenario_id: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    daily: Sequence[Commanded] | None = None,
-) -> Schedule:
-    """The schedule a scenario's climate run is given, asked for and checked
-    as its climate field is: its equipment at `levels` from the start, then
-    as `daily` and `commands` set it."""
-    config = changed(scenario(scenario_id), SceneChanges(layout=layout or DEFAULT_LAYOUT))
-    running = equipment_levels(config, levels or {})
-    return _schedule(tuple(sorted(running.items())), _checked(config, commands, daily))
+def run_schedule(run: RunRequest) -> Schedule:
+    """The schedule a run's climate is given, asked for and checked as its
+    climate field is: its equipment at its levels from the start, then as
+    its daily commands and its commands set it."""
+    config = changed(scenario(run.scenario_id), SceneChanges(layout=run.layout or DEFAULT_LAYOUT))
+    running = equipment_levels(config, run.levels)
+    return _schedule(tuple(sorted(running.items())), _checked(config, run.commands, run.daily))
 
 
 # What tells one climate run from another: its scenario, layout and weather,
@@ -227,31 +219,23 @@ def _everything_off(key: RunKey) -> ClimateDay:
     return _climate_day(scenario_id, layout, weather, off, openings, ())
 
 
-def climate_run(
-    scenario_id: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
-) -> tuple[RunKey, ClimateDay]:
-    """A scenario's climate run, asked for and checked as its climate field
-    is, with what tells it from another: the air its crop lives in, whether
-    or not its layout places equipment."""
-    name = layout or DEFAULT_LAYOUT
-    under = weather or DEFAULT_WEATHER
+def climate_run(run: RunRequest) -> tuple[RunKey, ClimateDay]:
+    """A run's climate, asked for and checked as its climate field is, with
+    what tells it from another: the air its crop lives in, whether or not
+    its layout places equipment."""
+    name = run.layout or DEFAULT_LAYOUT
+    under = run.weather or DEFAULT_WEATHER
     config = changed(
-        scenario(scenario_id),
-        SceneChanges(layout=name, weather=under, openings=dict(openings or {})),
+        scenario(run.scenario_id),
+        SceneChanges(layout=name, weather=under, openings=dict(run.openings)),
     )
     key = (
-        scenario_id,
+        run.scenario_id,
         layout_name(name),
         under,
-        tuple(sorted(equipment_levels(config, levels or {}).items())),
-        tuple(sorted((openings or {}).items())),
-        _checked(config, commands, daily),
+        tuple(sorted(equipment_levels(config, run.levels).items())),
+        tuple(sorted(run.openings.items())),
+        _checked(config, run.commands, run.daily),
     )
     return key, _climate_day(*key)
 
@@ -356,35 +340,29 @@ class _Climate:
         return _climate_day(*self.key).field(field_id, time_s)
 
 
-def _models(
-    scenario_id: str,
-    layout: str,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    weather: str = DEFAULT_WEATHER,
-    daily: Sequence[Commanded] | None = None,
-) -> dict[str, AirflowModel]:
-    """A scenario's fields by name, with one of its layouts, its equipment at
-    `levels` and then as `daily` and `commands` set it, its doors and vents
-    open as `openings` say, and its climate under a weather: its own airflow
-    first."""
+def _models(run: RunRequest) -> dict[str, AirflowModel]:
+    """A run's fields by name: its scenario's with one of its layouts, its
+    equipment at its levels and then as its daily commands and its commands
+    set it, its doors and vents open as it asks, and its climate under a
+    weather; its own airflow first."""
+    layout = run.layout or DEFAULT_LAYOUT
+    weather = run.weather or DEFAULT_WEATHER
     config = changed(
-        scenario(scenario_id),
-        SceneChanges(layout=layout, weather=weather, openings=dict(openings or {})),
+        scenario(run.scenario_id),
+        SceneChanges(layout=layout, weather=weather, openings=dict(run.openings)),
     )
-    running = equipment_levels(config, levels or {})
-    scheduled = _checked(config, commands, daily)
+    running = equipment_levels(config, run.levels)
+    scheduled = _checked(config, run.commands, run.daily)
     own = config.airflow
     models: dict[str, AirflowModel] = {own.kind: own}
     for name, pattern in PATTERNS.items():
         models.setdefault(name, pattern)
-    solved = kept_result(scenario_id, config, air_grid(config), layout)
+    solved = kept_result(run.scenario_id, config, air_grid(config), layout)
     if solved is not None:
         models[CFD] = CfdAirflow(solved)
     if config.layout.equipment:
         models[CLIMATE] = _Climate(
-            scenario_id, layout_name(layout), weather, running, openings or {}, scheduled
+            run.scenario_id, layout_name(layout), weather, running, run.openings, scheduled
         )
     models[SHEAR] = _Shear()
     return models
@@ -394,7 +372,7 @@ def field_names(scenario_id: str, layout: str | None = None) -> list[str]:
     """The fields a scenario offers with one of its layouts, by default its
     own, its own airflow first. Only its CFD solution depends on the
     layout."""
-    return list(_models(scenario_id, layout or DEFAULT_LAYOUT))
+    return list(_models(RunRequest(scenario_id, layout=layout)))
 
 
 def configured(scenario_id: str) -> str:
@@ -408,35 +386,17 @@ def grid(scenario_id: str) -> FieldGrid:
     return air_grid(scenario(scenario_id))
 
 
-def field(
-    scenario_id: str,
-    name: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    time_s: float = 0.0,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
-) -> FieldDocument:
-    """One of a scenario's fields with one of its layouts, by default its
-    own, its equipment at `levels` and then as `commands` set it, and every
-    day as `daily` sets it, its doors
-    and vents open as `openings` say, and under a weather, by default its
-    own, at `time_s` into a climate run, as it is published. A level for
-    equipment it does not have, or outside 0 to 1, is refused, as are an
+def field(run: RunRequest, name: str, time_s: float = 0.0) -> FieldDocument:
+    """One of a run's fields at `time_s` into it, as it is published: its
+    scenario's with one of its layouts, by default its own, its equipment at
+    its levels and then as its commands and daily commands set it, its doors
+    and vents open as it asks, under a weather, by default its own. A level
+    for equipment it does not have, or outside 0 to 1, is refused, as are an
     opening it does not have and a moment outside a run; a weather there is
     not is not found."""
+    scenario_id = run.scenario_id
     checked_moment(scenario(scenario_id), time_s)
-    models = _models(
-        scenario_id,
-        layout or DEFAULT_LAYOUT,
-        levels,
-        openings,
-        commands,
-        weather or DEFAULT_WEATHER,
-        daily,
-    )
+    models = _models(run)
     model = models.get(name)
     if model is None:
         known = ", ".join(models)
@@ -445,26 +405,18 @@ def field(
 
 
 def climate_probes(
-    scenario_id: str,
+    run: RunRequest,
     points: Sequence[tuple[float, float, float]],
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
     until_s: float = 0.0,
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
 ) -> ClimateProbes:
-    """What probes at `points` read of the grid run that draws a scenario's
+    """What probes at `points` read of the grid run that draws a run's
     climate at `until_s`, every `PROBE_EVERY_S` from its start to `until_s`,
-    and of the same run with everything off,
-    its doors and vents as asked. Asked as its climate field is, and refused
-    as it is; a probe outside the house's air is refused too."""
+    and of the same run with everything off, its doors and vents as asked.
+    Asked as its climate field is, and refused as it is; a probe outside the
+    house's air is refused too."""
+    scenario_id = run.scenario_id
     checked_moment(scenario(scenario_id), until_s)
-    name = layout or DEFAULT_LAYOUT
-    models = _models(
-        scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER, daily
-    )
+    models = _models(run)
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
         raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
@@ -491,27 +443,15 @@ def _moments(until_s: float, from_s: float = 0.0) -> list[float]:
     return times
 
 
-def house_air(
-    scenario_id: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    until_s: float = 0.0,
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
-    from_s: float | None = None,
-) -> HouseTrace:
+def house_air(run: RunRequest, until_s: float = 0.0, from_s: float | None = None) -> HouseTrace:
     """The house's air as one well-mixed volume (`greenhouse_sim.climate.house`)
     every `PROBE_EVERY_S` from `from_s`, by default the start of the day
-    `until_s` belongs to (`services.runs`), to `until_s` of a scenario's
-    climate run, and of the same run with everything off. Asked as its
-    climate field is, and refused as it is."""
+    `until_s` belongs to (`services.runs`), to `until_s` of a run's climate,
+    and of the same run with everything off. Asked as its climate field is,
+    and refused as it is."""
+    scenario_id = run.scenario_id
     first = checked_window(scenario(scenario_id), from_s, until_s)
-    name = layout or DEFAULT_LAYOUT
-    models = _models(
-        scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER, daily
-    )
+    models = _models(run)
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
         raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
@@ -522,30 +462,13 @@ def house_air(
     )
 
 
-def house_air_at(
-    scenario_id: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    time_s: float = 0.0,
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
-) -> HouseAir | None:
-    """The house's air as one well-mixed volume at a moment of a scenario's
-    climate run, asked as its climate field is and refused as it is; None
-    for a scenario without equipment, which has no climate run. Unlike
+def house_air_at(run: RunRequest, time_s: float = 0.0) -> HouseAir | None:
+    """The house's air as one well-mixed volume at a moment of a run's
+    climate, asked as its climate field is and refused as it is; None for a
+    scenario without equipment, which has no climate run. Unlike
     `house_air`, it works out nothing of the same run all off."""
-    checked_moment(scenario(scenario_id), time_s)
-    models = _models(
-        scenario_id,
-        layout or DEFAULT_LAYOUT,
-        levels,
-        openings,
-        commands,
-        weather or DEFAULT_WEATHER,
-        daily,
-    )
+    checked_moment(scenario(run.scenario_id), time_s)
+    models = _models(run)
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
         return None
@@ -576,114 +499,65 @@ class EquipmentAt(BaseModel):
     thermostat: ThermostatAt | None
 
 
-def equipment_at(
-    scenario_id: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    time_s: float = 0.0,
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
-) -> EquipmentAt:
-    """A scenario's equipment at a moment of its climate run, asked as its
-    climate field is and refused as it is: none for a scenario without
-    equipment, which has no climate run."""
-    checked_moment(scenario(scenario_id), time_s)
-    models = _models(
-        scenario_id,
-        layout or DEFAULT_LAYOUT,
-        levels,
-        openings,
-        commands,
-        weather or DEFAULT_WEATHER,
-        daily,
-    )
+def equipment_at(run: RunRequest, time_s: float = 0.0) -> EquipmentAt:
+    """A run's equipment at a moment of its climate, asked as its climate
+    field is and refused as it is: none for a scenario without equipment,
+    which has no climate run."""
+    checked_moment(scenario(run.scenario_id), time_s)
+    models = _models(run)
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
         return EquipmentAt(time_s=time_s, levels={}, thermostat=None)
-    run = _climate_day(*climate.key).run
-    thermostat = run.thermostat
+    worked = _climate_day(*climate.key).run
+    thermostat = worked.thermostat
     return EquipmentAt(
         time_s=time_s,
-        levels=run.levels_at(time_s),
+        levels=worked.levels_at(time_s),
         thermostat=None
         if thermostat is None
         else ThermostatAt(
             actuator_id=thermostat.actuator_id,
             setpoint_c=thermostat.setpoint_c(time_s),
-            runs=run.thermostat_governs(time_s),
+            runs=worked.thermostat_governs(time_s),
         ),
     )
 
 
-def glazing(
-    scenario_id: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    time_s: float = 0.0,
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
-) -> GlazingAt:
-    """A scenario's glazing at `time_s` into its climate run
+def glazing(run: RunRequest, time_s: float = 0.0) -> GlazingAt:
+    """A run's glazing at `time_s` into its climate
     (`greenhouse_sim.climate.glazing`): each wall's and roof slope's air,
     temperature and heat passed. Asked as its climate field is, and refused
     as it is."""
+    scenario_id = run.scenario_id
     checked_moment(scenario(scenario_id), time_s)
-    name = layout or DEFAULT_LAYOUT
-    models = _models(
-        scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER, daily
-    )
+    models = _models(run)
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
         raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
     return _climate_day(*climate.key).glazing_at(time_s)
 
 
-def openings(
-    scenario_id: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    time_s: float = 0.0,
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
-) -> OpeningsAt:
-    """What a scenario's open doors and vents pass at `time_s` into its
-    climate run, as the wind and the stack drive them
-    (`greenhouse_sim.climate.openings`). Asked as its climate field is, and
-    refused as it is."""
+def openings(run: RunRequest, time_s: float = 0.0) -> OpeningsAt:
+    """What a run's open doors and vents pass at `time_s` into its climate,
+    as the wind and the stack drive them (`greenhouse_sim.climate.openings`).
+    Asked as its climate field is, and refused as it is."""
+    scenario_id = run.scenario_id
     checked_moment(scenario(scenario_id), time_s)
-    name = layout or DEFAULT_LAYOUT
-    models = _models(
-        scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER, daily
-    )
+    models = _models(run)
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
         raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
     return _climate_day(*climate.key).openings_at(time_s)
 
 
-def air_through_a_run(
-    scenario_id: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
-) -> tuple[Callable[[float], EnvironmentField], str]:
-    """A scenario's air at each moment of a run, asked as its climate field
-    is, and refused as it is, with the run's identity: its climate run's, if
-    its layout places equipment; otherwise its own airflow, the same at
-    every moment."""
-    name = layout or DEFAULT_LAYOUT
-    models = _models(
-        scenario_id, name, levels, openings, commands, weather or DEFAULT_WEATHER, daily
-    )
+def air_through_a_run(run: RunRequest) -> tuple[Callable[[float], EnvironmentField], str]:
+    """A run's air at each of its moments, asked as its climate field is,
+    and refused as it is, with the run's identity: its climate's, if its
+    layout places equipment; otherwise its own airflow, the same at every
+    moment."""
+    scenario_id = run.scenario_id
+    name = run.layout or DEFAULT_LAYOUT
+    models = _models(run)
     air = grid(scenario_id)
     climate = models.get(CLIMATE)
     # A run of a scenario is told apart by what it is made of, whatever

@@ -44,11 +44,11 @@ from greenhouse_protocol.observation import Observation
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 
 from greenhouse_sim.core.clock import DAY_S, run_day
-from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.crop_log import crop_records
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.heat_log import heat_records
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.sensors import delivered_between, run_start
 from greenhouse_sim.services.stores import Store
@@ -252,7 +252,7 @@ class Playback:
         self.start = run_start(scenario_id)
         self.end_s = config.duration_days * DAY_S
         self.every_s = every_s
-        _, self.run_id = air_through_a_run(scenario_id, DEFAULT_LAYOUT)
+        _, self.run_id = air_through_a_run(RunRequest(scenario_id))
         self._clock = clock
         self._lock = threading.Lock()
         self._observations = _Log(_OBSERVATIONS, self.start)

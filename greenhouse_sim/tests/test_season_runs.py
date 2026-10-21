@@ -14,6 +14,7 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S, day_start, run_day
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import sensors
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.sunlight import plant_light
 from greenhouse_sim.services.weather import DAY_EVERY_S
 
@@ -79,14 +80,16 @@ def test_a_series_that_ends_before_it_begins_is_refused() -> None:
 
 
 def test_a_days_log_is_the_whole_logs_from_that_day_on() -> None:
-    whole = sensors.observations("climate_box", levels=HEATED, until_s=SECOND_DAY_S, from_s=0.0)
-    days = sensors.observations("climate_box", levels=HEATED, until_s=SECOND_DAY_S)
+    whole = sensors.observations(
+        RunRequest("climate_box", levels=HEATED), until_s=SECOND_DAY_S, from_s=0.0
+    )
+    days = sensors.observations(RunRequest("climate_box", levels=HEATED), until_s=SECOND_DAY_S)
     midnight = whole.start + timedelta(seconds=DAY_S)
 
     assert days.observations == [o for o in whole.observations if o.timestamp >= midnight]
     assert days.frames == [f for f in whole.frames if f.timestamp >= midnight]
     assert days.freshness == whole.freshness
-    truths = sensors.truth("climate_box", levels=HEATED, until_s=SECOND_DAY_S)
+    truths = sensors.truth(RunRequest("climate_box", levels=HEATED), until_s=SECOND_DAY_S)
     assert {t.times_s[0] for t in truths.sensors} == {DAY_S}
 
 
@@ -94,7 +97,9 @@ def test_a_days_log_is_the_whole_logs_from_that_day_on() -> None:
 def test_a_sensors_freshness_is_its_latest_reading_without_reading_them(until_s: float) -> None:
     """Worked out from the draws alone, it agrees with the readings
     delivered: the back thermometer drops samples and is late."""
-    log = sensors.observations("climate_box", levels=HEATED, until_s=until_s, from_s=0.0)
+    log = sensors.observations(
+        RunRequest("climate_box", levels=HEATED), until_s=until_s, from_s=0.0
+    )
     latest: dict[str, datetime] = {}
     for observation in log.observations:
         sensor_id = observation.sensor_id or ""

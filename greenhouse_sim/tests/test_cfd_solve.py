@@ -51,6 +51,7 @@ from greenhouse_sim.fields.field import EnvironmentField, FieldGrid
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services import cfd, fields
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import SceneChanges, changed, scenario
 from greenhouse_sim.units import AIR_DENSITY_KG_M3
 from greenhouse_sim.world.geometry import Vector3
@@ -363,7 +364,7 @@ def test_a_scenario_offers_its_kept_solution_among_its_fields() -> None:
     _kept_compartment()
 
     assert "cfd" in fields.field_names("tomato_compartment")
-    assert fields.field("tomato_compartment", "cfd").source == SOURCE
+    assert fields.field(RunRequest("tomato_compartment"), "cfd").source == SOURCE
     assert "cfd" not in fields.field_names("climate_box")
     assert {
         sid

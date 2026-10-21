@@ -11,6 +11,7 @@ import pytest
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.climate.house import HouseTrace
 from greenhouse_sim.services import fields, sensors
+from greenhouse_sim.services.runs import RunRequest
 
 HOUR_S = 3600.0
 SPRING = "cold_spring_day"
@@ -29,14 +30,16 @@ HEATED = {"heater": 1.0}
 
 def _controlled(until_s: float) -> HouseTrace:
     return fields.house_air(
-        "climate_box", levels=HEATED, commands=SCHEDULE, until_s=until_s, weather=SPRING
+        RunRequest("climate_box", levels=HEATED, commands=SCHEDULE, weather=SPRING),
+        until_s=until_s,
     )
 
 
 def test_a_schedule_opens_and_shuts_a_vent() -> None:
     def opened(moment: float) -> dict[str, float]:
         at = fields.openings(
-            "climate_box", levels=HEATED, commands=SCHEDULE, time_s=moment, weather=SPRING
+            RunRequest("climate_box", levels=HEATED, commands=SCHEDULE, weather=SPRING),
+            time_s=moment,
         )
         return {flow.opening_id: flow.exchange_m3_s for flow in at.openings}
 
@@ -77,11 +80,13 @@ def test_both_runs_replay_exactly(afresh: Callable[[], None]) -> None:
 
     assert first == again
     observed = sensors.observations(
-        "climate_box", levels=HEATED, commands=SCHEDULE, until_s=1800.0, weather=SPRING
+        RunRequest("climate_box", levels=HEATED, commands=SCHEDULE, weather=SPRING),
+        until_s=1800.0,
     )
     afresh()
     replayed = sensors.observations(
-        "climate_box", levels=HEATED, commands=SCHEDULE, until_s=1800.0, weather=SPRING
+        RunRequest("climate_box", levels=HEATED, commands=SCHEDULE, weather=SPRING),
+        until_s=1800.0,
     )
     assert observed == replayed
 

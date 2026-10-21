@@ -13,6 +13,7 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.sensors.air import erred, observe, reads
 from greenhouse_sim.services import sensors, weather
 from greenhouse_sim.services.grid import air_grid
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.weather.state import WeatherState
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.layout import Layout
@@ -75,7 +76,7 @@ def test_a_wind_vanes_reading_goes_round_the_compass() -> None:
 
 
 def test_its_readings_are_the_protocols_outside_observations() -> None:
-    observed = sensors.observations("climate_box", until_s=120)
+    observed = sensors.observations(RunRequest("climate_box"), until_s=120)
     outside = [o for o in observed.observations if o.sensor_id in {s.sensor_id for s in STATION}]
 
     assert check_observations(observed.observations) == []
@@ -92,7 +93,9 @@ def test_its_readings_are_the_protocols_outside_observations() -> None:
 
 
 def test_clean_its_readings_are_the_weather_the_run_is_under() -> None:
-    clean = sensors.observations("climate_box", until_s=600, clean=True, weather="cold_spring_day")
+    clean = sensors.observations(
+        RunRequest("climate_box", weather="cold_spring_day"), until_s=600, clean=True
+    )
     readings = {
         (o.sensor_id, o.timestamp): o.value
         for o in clean.observations
@@ -109,8 +112,10 @@ def test_clean_its_readings_are_the_weather_the_run_is_under() -> None:
 
 
 def test_its_truth_is_the_weather_and_its_readings_err_about_it() -> None:
-    observed = sensors.observations("climate_box", until_s=3600, weather="windy_autumn_day")
-    truth = sensors.truth("climate_box", until_s=3600, weather="windy_autumn_day")
+    observed = sensors.observations(
+        RunRequest("climate_box", weather="windy_autumn_day"), until_s=3600
+    )
+    truth = sensors.truth(RunRequest("climate_box", weather="windy_autumn_day"), until_s=3600)
     speed = next(t for t in truth.sensors if t.sensor_id == "station_wind_speed")
     readings = [o.value for o in observed.observations if o.sensor_id == "station_wind_speed"]
 

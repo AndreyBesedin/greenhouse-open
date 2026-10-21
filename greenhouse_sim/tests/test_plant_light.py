@@ -19,6 +19,7 @@ from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services import sensors
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids
 from greenhouse_sim.services.sunlight import plant_light
 from greenhouse_sim.solar.plants import (
@@ -163,7 +164,7 @@ def test_the_api_serves_each_plants_light() -> None:
 
 
 def test_par_sensors_read_the_light_in_the_sun_and_in_the_shade() -> None:
-    truth = sensors.truth("solar_lab", until_s=NOON_S)
+    truth = sensors.truth(RunRequest("solar_lab"), until_s=NOON_S)
     read = {sensor.sensor_id: sensor.values[-1] for sensor in truth.sensors}
 
     assert read["par_open"] is not None and read["par_shade"] is not None

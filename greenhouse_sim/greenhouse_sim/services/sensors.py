@@ -10,7 +10,7 @@ longer one is asked for. The run is asked for as its climate field is
 (`greenhouse_sim.services.fields`), and refused as it is.
 """
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from datetime import datetime, timedelta
 
 from greenhouse_protocol.media import CameraFrame
@@ -21,8 +21,8 @@ from greenhouse_sim.evaluation.sensor_truth import SensorTruth, sensor_truth
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.sensors.air import AirAt, WeatherAt, observe, reads, samples
 from greenhouse_sim.sensors.log import SensorFreshness, frames, freshness
-from greenhouse_sim.services.fields import Commanded, air_through_a_run
-from greenhouse_sim.services.runs import checked_window
+from greenhouse_sim.services.fields import air_through_a_run
+from greenhouse_sim.services.runs import RunRequest, checked_window
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, SceneChanges, changed, scenario
 from greenhouse_sim.world.sensors import Camera, PointSensor
 
@@ -99,27 +99,20 @@ def _weather_at(scenario_id: str, weather: str | None) -> WeatherAt:
 
 
 def observations(
-    scenario_id: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
+    run: RunRequest,
     until_s: float = 0.0,
     clean: bool = False,
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
     from_s: float | None = None,
 ) -> SensorObservations:
     """A run's observation log from `from_s`, by default the start of the
     day `until_s` belongs to (`services.runs`), to `until_s`; as clean
     sensors would have made it, if `clean`, for QA. Each sensor's freshness
     is its own at `until_s`, whatever it delivered before the log begins."""
+    scenario_id = run.scenario_id
     first = checked_window(scenario(scenario_id), from_s, until_s)
-    name = layout or DEFAULT_LAYOUT
-    air_at, run_id = air_through_a_run(
-        scenario_id, name, levels, openings, commands, weather, daily
-    )
-    weather_at = _weather_at(scenario_id, weather)
+    name = run.layout or DEFAULT_LAYOUT
+    air_at, run_id = air_through_a_run(run)
+    weather_at = _weather_at(scenario_id, run.weather)
     start = run_start(scenario_id)
     greenhouse_id = scenario(scenario_id).greenhouse_id
     point_sensors = _point_sensors(scenario_id, name)
@@ -162,7 +155,7 @@ def delivered_between(
     once, a late one in the span it arrived in."""
     config = scenario(scenario_id)
     point_sensors = _point_sensors(scenario_id, DEFAULT_LAYOUT)
-    air_at, run_id = air_through_a_run(scenario_id, DEFAULT_LAYOUT)
+    air_at, run_id = air_through_a_run(RunRequest(scenario_id))
     start = run_start(scenario_id)
     latest = max((sensor.imperfections.latency_s for sensor in point_sensors), default=0.0)
     observed = observe(
@@ -183,25 +176,15 @@ def delivered_between(
     return [o for o in observed if (o.delivered_at or o.timestamp) > after], run_id
 
 
-def sensors_at(
-    scenario_id: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    until_s: float = 0.0,
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
-) -> SensorsAt:
+def sensors_at(run: RunRequest, until_s: float = 0.0) -> SensorsAt:
     """Where a run's sensors stand at `until_s`: each point sensor's
     freshness, as its observation log gives it, and each camera's frames,
     working out none of the log's observations, which sample the house's air
     every minute. Asked for as the log is, and refused as it is."""
+    scenario_id = run.scenario_id
     checked_window(scenario(scenario_id), None, until_s)
-    name = layout or DEFAULT_LAYOUT
-    air_at, run_id = air_through_a_run(
-        scenario_id, name, levels, openings, commands, weather, daily
-    )
+    name = run.layout or DEFAULT_LAYOUT
+    air_at, run_id = air_through_a_run(run)
     start = run_start(scenario_id)
     greenhouse_id = scenario(scenario_id).greenhouse_id
     cameras = []
@@ -225,7 +208,7 @@ def sensors_at(
             scenario_id,
             _point_sensors(scenario_id, name),
             air_at,
-            _weather_at(scenario_id, weather),
+            _weather_at(scenario_id, run.weather),
             until_s,
         ),
         cameras=cameras,
@@ -255,32 +238,21 @@ def _freshness(
     )
 
 
-def truth(
-    scenario_id: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    until_s: float = 0.0,
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
-    from_s: float | None = None,
-) -> SensorTruths:
-    """What a scenario's point sensors truly sampled from `from_s`, by
-    default the start of the day `until_s` belongs to, to `until_s` of a
-    run: for evaluation and QA only."""
+def truth(run: RunRequest, until_s: float = 0.0, from_s: float | None = None) -> SensorTruths:
+    """What a run's point sensors truly sampled from `from_s`, by default
+    the start of the day `until_s` belongs to, to `until_s`: for evaluation
+    and QA only."""
+    scenario_id = run.scenario_id
     first = checked_window(scenario(scenario_id), from_s, until_s)
-    name = layout or DEFAULT_LAYOUT
-    air_at, run_id = air_through_a_run(
-        scenario_id, name, levels, openings, commands, weather, daily
-    )
+    name = run.layout or DEFAULT_LAYOUT
+    air_at, run_id = air_through_a_run(run)
     return SensorTruths(
         run_id=run_id,
         sensors=sensor_truth(
             _point_sensors(scenario_id, name),
             air_at,
             until_s,
-            _weather_at(scenario_id, weather),
+            _weather_at(scenario_id, run.weather),
             from_s=first,
         ),
     )

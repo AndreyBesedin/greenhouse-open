@@ -15,6 +15,7 @@ from greenhouse_sim.climate.commands import Command, Schedule
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.services import fields
+from greenhouse_sim.services.runs import RunRequest
 
 
 def _climate(query: str) -> EnvironmentField:
@@ -67,11 +68,13 @@ def test_the_same_schedule_replays_to_the_same_air(afresh: Callable[[], None]) -
     query = "?set=fan:0.5&schedule=120:heater:1,240:dehumidifier:1,360:fan:0&t=480"
     # Each run afresh, not found among the kept runs.
     first = fields.field(
-        "climate_box",
+        RunRequest(
+            "climate_box",
+            levels={"fan": 0.5},
+            commands=((120, "heater", 1), (240, "dehumidifier", 1), (360, "fan", 0)),
+        ),
         "climate",
-        levels={"fan": 0.5},
         time_s=480,
-        commands=[(120, "heater", 1), (240, "dehumidifier", 1), (360, "fan", 0)],
     )
     afresh()
     again = _climate(query)

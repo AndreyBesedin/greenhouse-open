@@ -14,6 +14,7 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.sensors.air import reads
 from greenhouse_sim.services import scenarios, sensors, weather
 from greenhouse_sim.services.grid import air_grid
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import SceneChanges, changed
 from greenhouse_sim.weather.recorded import (
     RecordedWeather,
@@ -164,6 +165,8 @@ def test_a_run_is_told_apart_by_its_recorded_file(tmp_path: Path) -> None:
     second = _write(tmp_path, HEADER + "\n2026-04-01T00:00Z,9,90\n")
 
     assert second.identity() != before
-    own = sensors.observations("climate_box", until_s=60).run_id
-    recorded = sensors.observations("climate_box", until_s=60, weather="example_day").run_id
+    own = sensors.observations(RunRequest("climate_box"), until_s=60).run_id
+    recorded = sensors.observations(
+        RunRequest("climate_box", weather="example_day"), until_s=60
+    ).run_id
     assert own != recorded

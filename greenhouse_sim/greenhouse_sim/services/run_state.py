@@ -9,7 +9,6 @@ internals. The run is asked for as its climate field is, and refused as it
 is. None of it is the sensors' truth, which leaves by its own path.
 """
 
-from collections.abc import Mapping, Sequence
 from datetime import datetime, timedelta
 from typing import Final
 
@@ -19,7 +18,8 @@ from greenhouse_sim.climate.commands import Command
 from greenhouse_sim.core.clock import days_ended, run_day
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.sensors.log import SensorFreshness
-from greenhouse_sim.services.fields import Commanded, equipment_at, house_air_at, run_schedule
+from greenhouse_sim.services.fields import equipment_at, house_air_at, run_schedule
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import SceneChanges, changed, plant_ids, scenario
 from greenhouse_sim.services.sensors import CameraAt, sensors_at
 
@@ -67,28 +67,19 @@ class RunState(BaseModel):
     cameras: list[CameraAt]
 
 
-def run_state(
-    scenario_id: str,
-    layout: str | None = None,
-    levels: Mapping[str, float] | None = None,
-    openings: Mapping[str, float] | None = None,
-    commands: Sequence[Commanded] = (),
-    until_s: float = 0.0,
-    weather: str | None = None,
-    daily: Sequence[Commanded] | None = None,
-) -> RunState:
-    """What each process of a scenario's run holds at `until_s`, the run
-    asked for as its climate field is: with one of its layouts, its
-    equipment at `levels` from the start, then as `daily` and `commands` set
-    it, its doors and vents open as `openings` say, under a weather."""
-    name = layout or DEFAULT_LAYOUT
-    run = (name, levels, openings, commands)
-    found = sensors_at(scenario_id, *run, until_s=until_s, weather=weather, daily=daily)
-    air = house_air_at(scenario_id, *run, time_s=until_s, weather=weather, daily=daily)
+def run_state(run: RunRequest, until_s: float = 0.0) -> RunState:
+    """What each process of a run holds at `until_s`, the run asked for as
+    its climate field is: with one of its scenario's layouts, its equipment
+    at its levels from the start, then as its daily commands and its
+    commands set it, its doors and vents open as it asks, under a
+    weather."""
+    found = sensors_at(run, until_s=until_s)
+    air = house_air_at(run, time_s=until_s)
     config = changed(
-        scenario(scenario_id), SceneChanges(layout=name, openings=dict(openings or {}))
+        scenario(run.scenario_id),
+        SceneChanges(layout=run.layout or DEFAULT_LAYOUT, openings=dict(run.openings)),
     )
-    given = run_schedule(scenario_id, name, levels, commands, daily).applied(until_s)
+    given = run_schedule(run).applied(until_s)
     # Every piece of equipment starts off, every door and vent as open as it
     # stands, until a command sets it.
     now = {piece.actuator_id: 0.0 for piece in config.layout.equipment} | {
@@ -97,7 +88,7 @@ def run_state(
     for command in given:
         now[command.actuator_id] = command.level
     # A thermostat runs its heater by the air, not by commands.
-    now |= equipment_at(scenario_id, *run, time_s=until_s, weather=weather, daily=daily).levels
+    now |= equipment_at(run, time_s=until_s).levels
     return RunState(
         run_id=found.run_id,
         start=found.start,
