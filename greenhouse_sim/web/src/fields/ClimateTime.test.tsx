@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DAY_S } from "../clock";
 import { searchFor, sourceFromSearch } from "../scene/source";
-import { render, said } from "../testing/render";
+import { button, render, said, select } from "../testing/render";
 import { ClimateTime, describeTime, onDay, playStep } from "./ClimateTime";
 import { fieldUrl } from "./source";
 
@@ -231,6 +231,96 @@ describe("a climate run's moment on its way", () => {
     expect(said(view.container, "climate-failed")).toBe(
       "Day 1, 10 min cannot be drawn; 10 min is shown.",
     );
+    view.unmount();
+  });
+});
+
+describe("a climate run's moment, in a view that follows the run played back", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function followed(props: { time: number; shown: number | null; failed?: boolean }) {
+    return (
+      <ClimateTime
+        {...props}
+        followed
+        days={14}
+        playing={false}
+        onTime={ignore}
+        onPlaying={ignore}
+      />
+    );
+  }
+
+  it("leaves play, the sliders, the day steps and the pace to the run played back, and says so", () => {
+    // The playback's play and pause are the view's (#270): a play of the
+    // climate run's own, or a slider over one day, would say a state the
+    // run is not in.
+    const view = render(followed({ time: 3 * DAY_S + 600, shown: 3 * DAY_S + 600 }));
+
+    expect(view.container.querySelectorAll("button, input, select")).toHaveLength(0);
+    expect(said(view.container, "climate-time")).toBe("day 3, 10 min");
+    expect(said(view.container, "climate-followed")).toBe(
+      "The run played back moves this moment on with its clock: play and pause it there. " +
+        "Stop following to choose the moment here, or play it.",
+    );
+    // No longer followed, its own play and sliders are back.
+    view.rerender(
+      <ClimateTime
+        time={3 * DAY_S + 600}
+        shown={3 * DAY_S + 600}
+        days={14}
+        playing={false}
+        onTime={ignore}
+        onPlaying={ignore}
+      />,
+    );
+
+    expect(button(view.container, "Play")).toBeDefined();
+    expect(view.container.querySelectorAll('input[type="range"]')).toHaveLength(2);
+    expect(select(view.container, "Pace")).toBeDefined();
+    expect(said(view.container, "climate-followed")).toBeNull();
+    view.unmount();
+  });
+
+  it("still says which moment is on its way, and which cannot be drawn", () => {
+    const view = render(followed({ time: DAY_S + 600, shown: 600 }));
+
+    expect(said(view.container, "climate-time")).toBe("10 min");
+    expect(said(view.container, "climate-pending")).toBe("Loading day 1, 10 min… 0 s");
+    expect(said(view.container, "climate-followed")).not.toBeNull();
+    view.rerender(followed({ time: DAY_S + 600, shown: 600, failed: true }));
+
+    expect(said(view.container, "climate-failed")).toBe(
+      "Day 1, 10 min cannot be drawn; 10 min is shown.",
+    );
+    view.unmount();
+  });
+
+  it("never plays on by itself: a play under way when following began stops, asking for nothing", () => {
+    const onTime = vi.fn();
+    const onPlaying = vi.fn();
+    const view = render(
+      <ClimateTime
+        time={DAY_S + 600}
+        shown={DAY_S + 600}
+        followed
+        days={14}
+        playing
+        onTime={onTime}
+        onPlaying={onPlaying}
+      />,
+    );
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+
+    expect(onPlaying).toHaveBeenCalledExactlyOnceWith(false);
+    expect(onTime).not.toHaveBeenCalled();
     view.unmount();
   });
 });

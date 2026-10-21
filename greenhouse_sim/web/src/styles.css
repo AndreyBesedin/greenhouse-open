@@ -1353,3 +1353,17 @@ body {
   flex-wrap: wrap;
   gap: 4px;
 }
+
+/* Where the run followed stands across all its days (#270): its bar takes
+ * the row's width, beside the moment it has reached. */
+.playback-progress {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.playback-progress progress {
+  flex: 1;
+  min-width: 0;
+}
