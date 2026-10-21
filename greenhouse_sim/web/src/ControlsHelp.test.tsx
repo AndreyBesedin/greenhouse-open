@@ -114,13 +114,13 @@ describe("the view's controls, listed", () => {
     // The inspector's button is called so.
     const inspector = render(
       <MovePanel
-        label="heater"
-        moving={false}
-        movedBy={null}
-        canUndo={false}
-        onMoving={() => undefined}
-        onUndo={() => undefined}
+        item={{ label: "heater", movedBy: null }}
+        draft={null}
+        onMove={() => undefined}
         onPutBack={() => undefined}
+        onPutEverythingBack={() => undefined}
+        onApply={() => undefined}
+        onCancel={() => undefined}
       />,
     );
     try {

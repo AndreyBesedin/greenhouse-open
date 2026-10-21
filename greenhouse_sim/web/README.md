@@ -65,16 +65,24 @@ such as a plant or the floor, and picks the glass only where nothing solid
 lies behind. A scenario with several layouts offers them in the scenarios table: choosing
 one shows the scenario with it, and the address keeps it (`&layout=propagation`,
 the tomato compartment's other layout).
-A selected piece of equipment or sensor can be moved across the floor
-(#209): "Move" in the inspector holds the camera still but for the wheel, and
-a drag anywhere in the view moves the item as far as the pointer goes along
-the level of its height, in 10 cm steps, kept inside the house; a weather
-station's instrument, outside it, is not held in. Escape cancels a drag, or
-stops moving. Each move made is another layout, the one moved from with the
-moves after a `~`, and another run, which the address keeps
+Equipment and sensors can be moved across the floor (#209, #271): "Move" in
+the inspector starts a session, which holds the camera still but for the
+wheel. A drag anywhere in the view moves the selected item as far as the
+pointer goes along the level of its height, in 10 cm steps, kept inside the
+house; a weather station's instrument, outside it, is not held in. A click
+selects another item to drag. Each stays where it is dropped, drawn there,
+and nothing is asked of the simulator: the panel lists the moves, each with
+"Put back", and "Put everything back" returns every item to where its
+layout places it. Moving equipment changes the house's climate, so the
+moves make a new run: "Start a new run with these moves" asks for the
+layout they make, the one moved from with the moves after a `~`
 (`&layout=default~heater:-1:0.5`, the heater a metre along the world's -x
-and half a metre along its y); "Undo move" and Back take a move back, and
-"Put back" returns the item to where its layout places it.
+and half a metre along its y), at the run's start, all at once, and Back
+takes it back. "Cancel", or Escape, leaves everything as it was; Escape
+first cancels a drag under way. While the view follows the run played back
+(`&follow=1`), applying the moves starts the playback over with that
+layout, a new run from its first day, which the view goes on following and
+a consumer reads (decision 0041).
 
 A scenario's air field, one of the environment fields the simulator publishes
 for it (`greenhouse_sim/fields/`), can be drawn over its scene: "Air field"

@@ -42,7 +42,7 @@ import { CLIMATE_FIELD, fetchField, fieldUrl } from "./fields/source";
 import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
-import { MovePanel } from "./MovePanel";
+import { type MoveDraft, MovePanel } from "./MovePanel";
 import { PlaybackPanel } from "./PlaybackPanel";
 import { usePanelTheme } from "./panelTheme";
 import { cropPlantUrl, cropUrl, loadCropPlant, ORGAN_CROP, withCrop } from "./plants/crop";
@@ -63,19 +63,18 @@ import { WhatAmISeeing, worldAxesLength } from "./SeenInTheView";
 import { DEFAULT_LAYOUT, loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
 import { withProbes, withTime } from "./scene/edits";
 import { equipmentUrl, governedLevels, loadEquipment, runningThermostat } from "./scene/equipment";
+import type { SceneEntity } from "./scene/generated/snapshotTypes";
 import {
   baseLayout,
   keptInside,
-  type MoveMade,
   movableItem,
-  movedBy,
+  movesBetween,
   movesIn,
   NO_OFFSET,
   type Offset,
   plus,
-  putBack,
+  sameLayout,
   shifted,
-  undoable,
 } from "./scene/moves";
 import { commandPlayback, followedMoment, usePlayback } from "./scene/playback";
 import { runApartFromItsMoment, runsSomething, scenarioRun } from "./scene/run";
@@ -93,6 +92,7 @@ import {
 } from "./scene/source";
 import { useLiveCommands } from "./scene/useLiveCommands";
 import { useLiveScene } from "./scene/useLiveScene";
+import { useMoveSession } from "./scene/useMoveSession";
 import { type SetSource, useSource } from "./scene/useSource";
 import { entityOfOrgan, organOf, plantOf, selectedEntity } from "./selection";
 import { CameraFrames } from "./sensors/CameraFrames";
@@ -124,19 +124,6 @@ const NO_OPENINGS: readonly string[] = [];
 // still be taken as not moved since: the HUD samples it as drawn.
 const FRAMED_STILL_M = 0.01;
 
-/** A drag moving the selected item (#209): the entity, how far it has moved
- * it, from where the scene shown places it and how far it was drawn from
- * there as the drag began (by a move let go whose scene is on its way),
- * under which layout, and whether it has been let go, its move made. */
-interface Dragged {
-  entityId: string;
-  by: Offset;
-  from: Point3;
-  before: Offset;
-  layout: string | undefined;
-  dropped: boolean;
-}
-
 function samePoint(a: Point3, b: Point3): boolean {
   return a.x === b.x && a.y === b.y && a.z === b.z;
 }
@@ -154,15 +141,6 @@ function useWindowAspect(): number {
     return () => window.removeEventListener("resize", resized);
   }, []);
   return aspect;
-}
-
-/** A scenario's view with another layout, or with its own (undefined). */
-function withLayout(source: SceneSource, layout: string | undefined): SceneSource {
-  if (source.kind !== "scenario") {
-    return source;
-  }
-  const { layout: _, ...rest } = source;
-  return layout === undefined ? rest : { ...rest, layout };
 }
 
 /** What a part of the view draws: the latest of it that loaded, kept while
@@ -250,11 +228,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const liveScenario = source.kind === "live" ? source.scenarioId : null;
   const live = useLiveScene(liveScenario);
   const commands = useLiveCommands(liveScenario);
-  // The entity whose item is being moved across the floor (#209), the drag
-  // moving it, and the moves made, the latest undone first.
-  const [movingId, setMovingId] = useState<string | null>(null);
-  const [dragged, setDragged] = useState<Dragged | null>(null);
-  const [movesMade, setMovesMade] = useState<MoveMade[]>([]);
+  // The drag moving the selected item in a Move session (#271), how far
+  // from where the session draws it.
+  const [dragging, setDragging] = useState<{ entityId: string; by: Offset } | null>(null);
 
   // What a view starts with once another is shown, chosen or come back to
   // with Back and Forward (#201): nothing selected, unless another layout of
@@ -385,8 +361,9 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   }, [followed, clockMoment, askedMoment, shownMoment, drawingField, fieldFailed, setSource]);
   // What the view changes of the scenario's own run, which is the one
   // played back: any of these makes it another run.
+  const playedLayout = playback.status === "loaded" ? playback.state.layout : DEFAULT_LAYOUT;
   const anotherRun =
-    addressed.kind === "scenario" && followed !== null ? runChanges(addressed) : [];
+    addressed.kind === "scenario" && followed !== null ? runChanges(addressed, playedLayout) : [];
   // What of the moment asked for failed to arrive, while something else of
   // it is drawn in its place: the scene and the field each say why when
   // nothing of them is drawn; the crop never says so itself; nor does a
@@ -539,12 +516,22 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // move, and whether it is being moved; the house it is kept inside.
   const movable = source.kind === "scenario" && selected !== null ? movableItem(selected) : null;
   const layoutShown = source.kind === "scenario" ? source.layout : undefined;
-  // Another selection stops moving: coming back to the item does not start
-  // it again.
-  if (movingId !== null && movingId !== selectedId) {
-    setMovingId(null);
+  // A Move session's moves, held until they are applied, all at once; while
+  // the view follows the run played back, it starts over with them.
+  const moves = useMoveSession({
+    source,
+    setSource,
+    defaultLayout: DEFAULT_LAYOUT,
+    followed,
+    onPlayback: setPlayback,
+    sceneLoading: sceneProgress.latest.status === "loading",
+  });
+  const moveSession = moves.session;
+  if (dragging !== null && (moveSession === null || moveSession.applying)) {
+    setDragging(null);
   }
-  const moving = movable !== null && movingId !== null && movingId === selectedId;
+  const moving =
+    movable !== null && selected !== null && moveSession !== null && !moveSession.applying;
   const house = useMemo(
     () => snapshot?.entities.find((entity) => entity.kind === "GREENHOUSE_BOUNDS") ?? null,
     [snapshot],
@@ -600,98 +587,106 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       current.kind === "scenario" && current.follow ? { ...current, camera: pose } : current,
     );
   }, [followed, latestBounds, aspect, followedCamera, framed, cameraAt, setSource]);
-  // The item drawn where a drag takes it: while the drag lasts, and once let
-  // go, until the scene with the item moved arrives, or fails to.
-  const nudged =
-    dragged !== null &&
-    selected !== null &&
-    dragged.entityId === selected.entity_id &&
-    dragged.layout === layoutShown &&
-    samePoint(selected.transform.position, dragged.from) &&
-    !failed(sceneProgress.latest)
-      ? dragged
-      : null;
-  // How far the item is drawn from where the scene shown places it, and how
-  // far a drag starts from there: as drawn, a move let go included, but for
-  // the drag under way.
-  const drawnBy = nudged === null ? NO_OFFSET : plus(nudged.before, nudged.by);
-  const startsBy = nudged === null || nudged.dropped ? drawnBy : nudged.before;
+  // Each item a Move session moves, by entity: where the session draws it,
+  // from where the scene shown places it, the scene of the layout the
+  // session started from; the selected item's drag under way added.
+  const itemEntities = useMemo(() => {
+    const entities = new Map<string, SceneEntity>();
+    for (const entity of snapshot?.entities ?? []) {
+      const item = movableItem(entity);
+      if (item !== null) {
+        entities.set(item, entity);
+      }
+    }
+    return entities;
+  }, [snapshot]);
+  const sessionMoves = moveSession === null ? {} : movesBetween(moveSession.from, moveSession.to);
+  const nudged: Record<string, Offset> = {};
+  for (const [item, by] of Object.entries(sessionMoves)) {
+    const entity = itemEntities.get(item);
+    if (entity !== undefined) {
+      nudged[entity.entity_id] = by;
+    }
+  }
+  const placedBy = movable === null ? null : (sessionMoves[movable] ?? null);
+  if (dragging !== null && selected !== null && dragging.entityId === selected.entity_id) {
+    nudged[dragging.entityId] = plus(placedBy ?? NO_OFFSET, dragging.by);
+  }
+  const selectedNudge = selected === null ? undefined : nudged[selected.entity_id];
   const drawnSelected =
-    selected === null || nudged === null ? selected : shifted(selected, drawnBy);
-  // How far the item stands from where its layout places it, a drag under
-  // way included.
-  const placedBy = movable === null ? null : (movesIn(layoutShown)[movable] ?? null);
-  const standsBy =
-    nudged === null || nudged.dropped
-      ? placedBy
-      : { dx: (placedBy?.dx ?? 0) + nudged.by.dx, dy: (placedBy?.dy ?? 0) + nudged.by.dy };
-  const lastMove =
-    source.kind === "scenario" ? undoable(movesMade, source.scenarioId, source.layout) : null;
-  const canUndo = lastMove !== null;
-
-  // A move made is another layout, and a page of its own in the browser's
-  // history, so that Back undoes it too.
-  function makeMove(after: string | undefined): void {
-    if (source.kind !== "scenario") {
-      return;
+    selected === null || selectedNudge === undefined ? selected : shifted(selected, selectedNudge);
+  // How far the selected item stands from where its layout places it, as the
+  // session draws it, a drag under way included.
+  const layoutMoves = movesIn(moveSession === null ? layoutShown : moveSession.to);
+  const standsBy = (() => {
+    if (movable === null) {
+      return null;
     }
-    const { scenarioId, layout: before } = source;
-    setMovesMade((made) => [...made, { scenarioId, before, after }]);
-    setSource((current) => withLayout(current, after));
-  }
-  // A drag cancelled, or let go where it began: the item drawn as it was,
-  // a move on its way still where it was let go.
-  function dragEnded(): void {
-    setDragged((was) => {
-      if (was === null || was.dropped) {
-        return was;
-      }
-      return was.before.dx === 0 && was.before.dy === 0
-        ? null
-        : { ...was, by: was.before, before: NO_OFFSET, dropped: true };
-    });
-  }
+    const placed = layoutMoves[movable] ?? null;
+    const by = dragging !== null && dragging.entityId === selected?.entity_id ? dragging.by : null;
+    const total = by === null ? placed : plus(placed ?? NO_OFFSET, by);
+    return total === null || (total.dx === 0 && total.dy === 0) ? null : total;
+  })();
+
+  // A session's moves as the Move panel lists them, by what each item is
+  // called, and what applying them does.
+  const moveDraft: MoveDraft | null =
+    moveSession === null
+      ? null
+      : {
+          moves: Object.entries(movesIn(moveSession.to))
+            .filter(([, by]) => by.dx !== 0 || by.dy !== 0)
+            .map(([item, by]) => ({ item, label: itemEntities.get(item)?.label ?? item, by })),
+          changed: moves.changed,
+          following: followed !== null,
+          applying: moveSession.applying,
+          failure: moveSession.failure,
+        };
   function dropMove(by: Offset | null): void {
-    if (source.kind !== "scenario" || movable === null || selected === null) {
-      return;
+    setDragging(null);
+    if (movable !== null && by !== null && (by.dx !== 0 || by.dy !== 0)) {
+      moves.move(movable, by);
     }
-    if (by === null || (by.dx === 0 && by.dy === 0)) {
-      dragEnded();
-      return;
-    }
-    const after = movedBy(source.layout, DEFAULT_LAYOUT, movable, by);
-    setDragged({
-      entityId: selected.entity_id,
-      by,
-      from: selected.transform.position,
-      before: startsBy,
-      layout: after,
-      dropped: true,
-    });
-    makeMove(after);
-  }
-  function undoMove(): void {
-    if (lastMove === null) {
-      return;
-    }
-    setDragged(null);
-    setMovesMade((made) => made.slice(0, -1));
-    setSource((current) => withLayout(current, lastMove.before));
   }
 
-  // Escape stops moving, unless it cancels a drag (`MoveDrag`).
+  // Escape cancels a Move session's moves, unless it cancels a drag
+  // (`MoveDrag`).
+  const drafting = moveSession !== null && !moveSession.applying;
+  const cancelMoves = moves.cancel;
   useEffect(() => {
-    if (!moving) {
+    if (!drafting) {
       return;
     }
-    function stop(event: KeyboardEvent): void {
+    function cancel(event: KeyboardEvent): void {
       if (event.key === "Escape" && !event.defaultPrevented) {
-        setMovingId(null);
+        cancelMoves();
       }
     }
-    window.addEventListener("keydown", stop);
-    return () => window.removeEventListener("keydown", stop);
-  }, [moving]);
+    window.addEventListener("keydown", cancel);
+    return () => window.removeEventListener("keydown", cancel);
+  }, [drafting, cancelMoves]);
+
+  // The Move panel: for the selected item, if it can be moved, and for a
+  // session under way, whatever is selected.
+  const movePanel =
+    source.kind === "scenario" && (movable !== null || moveDraft !== null) ? (
+      <MovePanel
+        item={
+          movable === null || selected === null
+            ? null
+            : { label: selected.label ?? movable, movedBy: standsBy }
+        }
+        draft={moveDraft}
+        onMove={() => {
+          setPlacingProbes(false);
+          moves.start();
+        }}
+        onPutBack={moves.putBack}
+        onPutEverythingBack={moves.putEverythingBack}
+        onApply={() => void moves.apply()}
+        onCancel={moves.cancel}
+      />
+    ) : null;
 
   // The run's observation log up to the moment drawn, while a sensor or a
   // camera is selected, and, in QA mode only, what its sensors truly
@@ -903,24 +898,16 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
           moving && selected !== null
             ? {
                 heightM: selected.transform.position.z,
-                // From where the item is drawn, a move on its way included.
-                shape: (by) => keptInside(by, shifted(selected, startsBy), house),
+                // From where the session draws the item.
+                shape: (by) =>
+                  keptInside(by, placedBy === null ? selected : shifted(selected, placedBy), house),
                 onDrag: (by) =>
-                  by === null || source.kind !== "scenario"
-                    ? dragEnded()
-                    : setDragged({
-                        entityId: selected.entity_id,
-                        by,
-                        from: selected.transform.position,
-                        before: startsBy,
-                        layout: source.layout,
-                        dropped: false,
-                      }),
+                  setDragging(by === null ? null : { entityId: selected.entity_id, by }),
                 onDrop: dropMove,
               }
             : null
         }
-        nudged={nudged === null ? null : { entityId: nudged.entityId, by: drawnBy }}
+        nudged={nudged}
       >
         {overlayToggles.airField && fieldLayer}
         {cfd.status === "loaded" && <CfdBoundaries geometry={cfd.geometry} />}
@@ -975,7 +962,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 changed={anotherRun}
                 onCommand={(command) => void commandPlayback(followed, command).then(setPlayback)}
                 onStart={() => void commandPlayback(followed, "start").then(setPlayback)}
-                onOwnRun={() => setSource((current) => withoutRunChanges(current))}
+                onOwnRun={() => setSource((current) => withoutRunChanges(current, playedLayout))}
                 onStop={() =>
                   setSource((current) => {
                     if (current.kind !== "scenario") {
@@ -1026,9 +1013,10 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
               />
             )}
           </InfoPanel>
-          {selected && (
+          {selected ? (
             <Inspector
-              entity={selected}
+              // Where it is drawn, a Move session's moves included.
+              entity={drawnSelected ?? selected}
               overlays={overlayToggles}
               onOverlays={setOverlayToggles}
               onClear={() => setSelectedId(null)}
@@ -1059,23 +1047,11 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                   onImperfect={setSensorsImperfect}
                 />
               )}
-              {movable !== null && (
-                <MovePanel
-                  label={selected.label ?? movable}
-                  moving={moving}
-                  movedBy={standsBy}
-                  canUndo={canUndo}
-                  onMoving={(on) => {
-                    setMovingId(on ? selected.entity_id : null);
-                    if (on) {
-                      setPlacingProbes(false);
-                    }
-                  }}
-                  onUndo={undoMove}
-                  onPutBack={() => makeMove(putBack(layoutShown, DEFAULT_LAYOUT, movable))}
-                />
-              )}
+              {movePanel}
             </Inspector>
+          ) : (
+            // A session's moves stay on show while nothing is selected.
+            movePanel !== null && <div className="inspector">{movePanel}</div>
           )}
         </div>
         <div className="panel-column at-the-end">
@@ -1128,11 +1104,12 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
 
 type ScenarioOf<S> = Extract<S, { kind: "scenario" }>;
 
-/** What a view's address changes of its scenario's own run, in words: each
- * makes the run drawn another than the one played back. */
-function runChanges(source: ScenarioOf<SceneSource>): string[] {
+/** What a view's address changes of the run played back, its scenario's own
+ * with `played` for its layout (#271), in words: each makes the run drawn
+ * another than the one played back. */
+function runChanges(source: ScenarioOf<SceneSource>, played: string): string[] {
   const changes: [boolean, string][] = [
-    [source.layout !== undefined, "its layout"],
+    [!sameLayout(source.layout, played, DEFAULT_LAYOUT), "its layout"],
     [source.weather !== undefined, "its weather"],
     [source.clouds !== undefined, "its clouds"],
     [source.wind !== undefined, "its wind"],
@@ -1145,9 +1122,9 @@ function runChanges(source: ScenarioOf<SceneSource>): string[] {
   return changes.filter(([changed]) => changed).map(([, said]) => said);
 }
 
-/** A view of its scenario's own run, as it is played back: without what
- * would make it another. */
-function withoutRunChanges(source: SceneSource): SceneSource {
+/** A view of the run played back, its scenario's own with `played` for its
+ * layout: without what would make it another. */
+function withoutRunChanges(source: SceneSource, played: string): SceneSource {
   if (source.kind !== "scenario") {
     return source;
   }
@@ -1163,5 +1140,5 @@ function withoutRunChanges(source: SceneSource): SceneSource {
     envelope: _envelope,
     ...own
   } = source;
-  return own;
+  return sameLayout(played, undefined, DEFAULT_LAYOUT) ? own : { ...own, layout: played };
 }

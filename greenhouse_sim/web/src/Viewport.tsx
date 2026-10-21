@@ -106,10 +106,11 @@ export function Viewport({
    * place a probe there. */
   onProbe?: ((ground: Point3) => void) | null;
   /** While set, the selected item is being moved (#209): a drag moves it,
-   * the camera holding still but for the wheel, and a click picks nothing. */
+   * the camera holding still but for the wheel, and a click picks another
+   * entity, to move next, or nothing. */
   moving?: MoveDragging | null;
-  /** The selected entity drawn moved, as it is dragged. */
-  nudged?: { entityId: string; by: Offset } | null;
+  /** Entities drawn moved, by identifier, as a Move session places them. */
+  nudged?: Readonly<Record<string, Offset>> | null;
   /** More to draw in the world's frame, such as an environment field, which
    * clicks pass through. */
   children?: ReactNode;
@@ -119,7 +120,16 @@ export function Viewport({
   function pick(event: ThreeEvent<MouseEvent>): void {
     // Every hit along the ray reaches this group; the nearest entity decides.
     event.stopPropagation();
-    if (event.delta > CLICK_TOLERANCE_PX || moving !== null) {
+    if (event.delta > CLICK_TOLERANCE_PX) {
+      return;
+    }
+    if (moving !== null) {
+      // Moving, a click picks what to move next; one that misses keeps the
+      // item being moved.
+      const picked = pickEntity(event.intersections);
+      if (picked !== null) {
+        onSelect(picked);
+      }
       return;
     }
     if (onProbe !== null) {

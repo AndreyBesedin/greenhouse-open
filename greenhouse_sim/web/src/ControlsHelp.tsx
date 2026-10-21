@@ -67,7 +67,7 @@ export const CONTROLS: readonly { section: string; actions: readonly Action[] }[
       },
       {
         action: "Move equipment or a sensor",
-        does: "select it, press Move in the inspector, then drag: it moves along the floor, the camera holding still but for the wheel",
+        does: "select it, press Move in the inspector, then drag: it moves along the floor, the camera holding still but for the wheel; click and drag others alike, then start a new run with the moves",
       },
       { action: "Camera presets", does: "Top, Front, Side or Isometric, in the View panel" },
       {
@@ -80,7 +80,7 @@ export const CONTROLS: readonly { section: string; actions: readonly Action[] }[
     section: "Keyboard",
     actions: [
       { action: "?", does: "open or close this list" },
-      { action: "Escape", does: "close this list; cancel a drag, or stop moving" },
+      { action: "Escape", does: "close this list; cancel a drag, or the moves" },
       { action: "Tab, then Enter or Space", does: "reach a control, open a folded panel" },
     ],
   },
