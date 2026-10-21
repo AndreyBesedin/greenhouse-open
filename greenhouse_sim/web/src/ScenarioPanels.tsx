@@ -191,6 +191,7 @@ export function ScenarioPanels({
             time={time}
             shown={shownTime}
             failed={momentFailed}
+            followed={source.follow === true}
             days={days}
             playing={playingClimate}
             onTime={setTime}

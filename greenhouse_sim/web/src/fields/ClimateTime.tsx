@@ -103,11 +103,17 @@ function sentence(text: string): string {
  * another is on its way, it says which and for how long, so that a slow
  * step is never taken for one that does nothing (#198, #202). A moment
  * that cannot be drawn stops play.
+ *
+ * Followed, the run played back moves the moment on with its clock
+ * (decision 0041), and its own play and pause are the view's: the climate
+ * run's play, sliders, day steps and pace stand aside, and say so, so that
+ * none shows a state the run is not in (#270).
  */
 export function ClimateTime({
   time,
   shown,
   failed = false,
+  followed = false,
   days,
   playing,
   onTime,
@@ -120,6 +126,9 @@ export function ClimateTime({
   /** Whether the moment asked for cannot be drawn, which the scene's status
    * says why. */
   failed?: boolean;
+  /** Whether the view follows the run played back, whose clock then moves
+   * the moment on in place of this play. */
+  followed?: boolean;
   /** How many days the run lasts. */
   days: number;
   playing: boolean;
@@ -131,13 +140,15 @@ export function ClimateTime({
   const arrived = shown === time;
   const waiting = !arrived && !failed;
   const waited = useSecondsWaited(time, waiting);
+  // Play stops at a moment that cannot be drawn, and once the view follows
+  // the run played back: two plays would move the moment on at once.
   useEffect(() => {
-    if (playing && failed) {
+    if (playing && (failed || followed)) {
       onPlaying(false);
     }
-  }, [playing, failed, onPlaying]);
+  }, [playing, failed, followed, onPlaying]);
   useEffect(() => {
-    if (!playing || !arrived) {
+    if (!playing || !arrived || followed) {
       return;
     }
     if (time >= end) {
@@ -149,28 +160,38 @@ export function ClimateTime({
       PLAY_PAUSE_MS,
     );
     return () => clearTimeout(next);
-  }, [playing, arrived, time, end, pace, onTime, onPlaying]);
+  }, [playing, arrived, followed, time, end, pace, onTime, onPlaying]);
 
   const day = runDay(time);
   const within = time - dayStart(time);
   return (
     <fieldset className="climate-time" aria-label="Climate run">
       <div className="climate-time-row">
-        <button type="button" onClick={() => onPlaying(!playing)}>
-          {playing ? "Pause" : "Play"}
-        </button>
-        <input
-          className="climate-time-slider"
-          type="range"
-          aria-label="Time of day"
-          min={day === 0 ? 0 : CLIMATE_STEP_S}
-          max={DAY_S}
-          step={CLIMATE_STEP_S}
-          value={within}
-          onChange={(event) => onTime(onDay(day, Number(event.target.value)))}
-        />
+        {!followed && (
+          <>
+            <button type="button" onClick={() => onPlaying(!playing)}>
+              {playing ? "Pause" : "Play"}
+            </button>
+            <input
+              className="climate-time-slider"
+              type="range"
+              aria-label="Time of day"
+              min={day === 0 ? 0 : CLIMATE_STEP_S}
+              max={DAY_S}
+              step={CLIMATE_STEP_S}
+              value={within}
+              onChange={(event) => onTime(onDay(day, Number(event.target.value)))}
+            />
+          </>
+        )}
         <span data-testid="climate-time">{describeTime(shown ?? time)}</span>
       </div>
+      {followed && (
+        <p className="climate-time-note" data-testid="climate-followed">
+          The run played back moves this moment on with its clock: play and pause it there. Stop
+          following to choose the moment here, or play it.
+        </p>
+      )}
       {waiting && (
         <p className="climate-time-note" data-testid="climate-pending">
           {playing ? "Playing: waiting for" : "Loading"} {describeTime(time)}… {waited} s
@@ -182,7 +203,7 @@ export function ClimateTime({
           {shown === null ? "" : `; ${describeTime(shown)} is shown`}.
         </p>
       )}
-      {days > 1 && (
+      {days > 1 && !followed && (
         <div className="climate-time-row">
           <button
             type="button"

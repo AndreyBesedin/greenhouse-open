@@ -340,7 +340,7 @@ body {
 }
 
 /* The view's controls (#207): a button above "What am I seeing?", and the
- * card it, or `?`, opens: what each gesture does, by device. */
+ * card it, or `?`, opens: each action once, with its inputs by device (#272). */
 .controls-help {
   box-sizing: border-box;
   width: 300px;
@@ -380,6 +380,30 @@ body {
 .controls-help dd {
   margin: 0 0 2px 12px;
   color: var(--panel-muted-strong);
+}
+
+/* An action's inputs, a device to a line, under the action and what it does
+ * on one line: "Orbit around the point in view" (#272). */
+.controls-moves > dt,
+.controls-moves > dd:first-of-type {
+  display: inline;
+  margin: 0;
+}
+
+.controls-moves > dd:first-of-type {
+  margin-left: 4px;
+}
+
+.controls-inputs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.controls-device {
+  display: inline-block;
+  min-width: 64px;
+  color: var(--panel-muted);
 }
 
 .controls-open kbd {
@@ -1354,4 +1378,18 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+
+/* Where the run followed stands across all its days (#270): its bar takes
+ * the row's width, beside the moment it has reached. */
+.playback-progress {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.playback-progress progress {
+  flex: 1;
+  min-width: 0;
 }

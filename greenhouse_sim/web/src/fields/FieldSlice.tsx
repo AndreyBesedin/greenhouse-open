@@ -1,8 +1,8 @@
-import { useEffect, useMemo } from "react";
 import { BufferAttribute, BufferGeometry, DoubleSide } from "three";
 
 import { type ScalarRange, scalarColor } from "../debug/scalar";
 import { threeColor } from "../scene/ShapeMesh";
+import { useDisposable } from "../useDisposable";
 import type { Slice } from "./display";
 import type { EnvironmentField } from "./field";
 import { sliceValues } from "./slice";
@@ -63,8 +63,7 @@ export function FieldSlice({
   slice: Slice;
   range: ScalarRange;
 }) {
-  const geometry = useMemo(() => sliceGeometry(field, slice, range), [field, slice, range]);
-  useEffect(() => () => geometry.dispose(), [geometry]);
+  const geometry = useDisposable(() => sliceGeometry(field, slice, range), [field, slice, range]);
   return (
     <mesh geometry={geometry} raycast={() => null}>
       <meshBasicMaterial vertexColors side={DoubleSide} transparent opacity={SLICE_OPACITY} />

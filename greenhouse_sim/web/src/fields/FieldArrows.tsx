@@ -1,9 +1,10 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import { ConeGeometry, CylinderGeometry, type InstancedMesh } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 import type { ScalarRange } from "../debug/scalar";
 import { threeColor } from "../scene/ShapeMesh";
+import { useDisposable } from "../useDisposable";
 import { fieldArrows, MATRIX_SIZE } from "./arrows";
 import type { EnvironmentField } from "./field";
 
@@ -32,8 +33,7 @@ function unitArrow() {
  * over `range`, in one draw call. */
 export function FieldArrows({ field, range }: { field: EnvironmentField; range: ScalarRange }) {
   const mesh = useRef<InstancedMesh>(null);
-  const geometry = useMemo(unitArrow, []);
-  useEffect(() => () => geometry.dispose(), [geometry]);
+  const geometry = useDisposable(unitArrow, []);
   const velocity = field.channels.velocity;
   const arrows = useMemo(
     () => (velocity === undefined ? null : fieldArrows(field, velocity, range)),

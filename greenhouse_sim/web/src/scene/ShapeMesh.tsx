@@ -1,4 +1,3 @@
-import { useEffect, useMemo } from "react";
 import {
   BoxGeometry,
   type BufferGeometry,
@@ -15,6 +14,7 @@ import {
 } from "three";
 
 import { SELECTION_COLOR } from "../debug/overlays";
+import { useDisposable } from "../useDisposable";
 import type {
   Box,
   Color,
@@ -93,8 +93,7 @@ export function solidGeometry(shape: Solid): BufferGeometry {
 
 /** A solid, drawn from the front. */
 function SolidMesh({ shape, color, glow }: { shape: Solid; color: Color; glow: object }) {
-  const geometry = useMemo(() => solidGeometry(shape), [shape]);
-  useEffect(() => () => geometry.dispose(), [geometry]);
+  const geometry = useDisposable(() => solidGeometry(shape), [shape]);
   return (
     <mesh geometry={geometry}>
       <meshStandardMaterial color={threeColor(color)} {...glow} />
@@ -104,8 +103,7 @@ function SolidMesh({ shape, color, glow }: { shape: Solid; color: Color; glow: o
 
 /** A flat polygon, drawn from both sides. */
 function PolygonMesh({ shape, color, glow }: { shape: Polygon; color: Color; glow: object }) {
-  const geometry = useMemo(() => flatGeometry(shape), [shape]);
-  useEffect(() => () => geometry.dispose(), [geometry]);
+  const geometry = useDisposable(() => flatGeometry(shape), [shape]);
   return (
     <mesh geometry={geometry}>
       <meshStandardMaterial color={threeColor(color)} side={DoubleSide} {...glow} />

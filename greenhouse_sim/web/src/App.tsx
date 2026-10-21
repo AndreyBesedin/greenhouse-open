@@ -971,6 +971,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             {followed !== null && (
               <PlaybackPanel
                 load={playback}
+                days={summary?.duration_days ?? null}
                 changed={anotherRun}
                 onCommand={(command) => void commandPlayback(followed, command).then(setPlayback)}
                 onStart={() => void commandPlayback(followed, "start").then(setPlayback)}

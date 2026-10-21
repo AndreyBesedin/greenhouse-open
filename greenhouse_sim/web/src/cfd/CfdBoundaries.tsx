@@ -1,6 +1,6 @@
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { BufferAttribute, BufferGeometry, DoubleSide } from "three";
-
+import { useDisposable } from "../useDisposable";
 import {
   type BoundaryShape,
   boundaryOutlines,
@@ -58,14 +58,13 @@ function Fill({ shape }: { shape: BoundaryShape }) {
  * and outlined in its category's colour. Clicks pass through. */
 export function CfdBoundaries({ geometry }: { geometry: CfdGeometry }) {
   const shapes = useMemo(() => geometry.boundaries.map(boundaryShape), [geometry]);
-  const outlines = useMemo(() => {
+  const outlines = useDisposable(() => {
     const { positions, colors } = boundaryOutlines(shapes);
     const lines = new BufferGeometry();
     lines.setAttribute("position", new BufferAttribute(positions, XYZ));
     lines.setAttribute("color", new BufferAttribute(colors, XYZ));
     return lines;
   }, [shapes]);
-  useEffect(() => () => outlines.dispose(), [outlines]);
   return (
     <group name="cfd-boundaries">
       {shapes.map((shape) => (

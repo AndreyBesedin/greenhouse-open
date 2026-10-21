@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import type { InstancedMesh } from "three";
-
+import { useDisposable } from "../useDisposable";
 import type { Color, SceneEntity } from "./generated/snapshotTypes";
 import { type InstancedShapeName, shapeMatrices, UNIT_SHAPES } from "./instancing";
 import { METAL, solidGeometry, threeColor } from "./ShapeMesh";
@@ -29,8 +29,7 @@ export function InstancedShapes({
 }) {
   const mesh = useRef<InstancedMesh>(null);
   // The unit shape, placed as `shapeMatrices` expects.
-  const geometry = useMemo(() => solidGeometry(UNIT_SHAPES[shape]), [shape]);
-  useEffect(() => () => geometry.dispose(), [geometry]);
+  const geometry = useDisposable(() => solidGeometry(UNIT_SHAPES[shape]), [shape]);
   const matrices = useMemo(() => shapeMatrices(entities), [entities]);
 
   useLayoutEffect(() => {
