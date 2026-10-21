@@ -131,6 +131,28 @@ export async function commandPlayback(
   return answered(response);
 }
 
+/** Changes the targets of the run played back from its clock's next minute
+ * on (#274, decision 0043), as `heating_day` to 24 °C; answered with its new
+ * state, which lists them. */
+export async function setPlaybackTargets(
+  scenarioId: string,
+  targets: Readonly<Record<string, number>>,
+  fetchFn: typeof fetch = fetch,
+): Promise<PlaybackLoad> {
+  const query = Object.entries(targets)
+    .map(([target, valueC]) => `${encodeURIComponent(target)}:${valueC}`)
+    .join(",");
+  let response: Response;
+  try {
+    response = await fetchFn(`${playbackUrl(scenarioId)}/targets?targets=${query}`, {
+      method: "POST",
+    });
+  } catch {
+    return { status: "unavailable", reason: "the simulator could not be reached" };
+  }
+  return answered(response);
+}
+
 /** The playback's clock as a moment the viewer draws: its minute, as runs
  * are drawn on whole minutes. */
 export function followedMoment(state: PlaybackState): number {

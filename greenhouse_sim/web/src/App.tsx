@@ -61,7 +61,7 @@ import type { ViewSample } from "./readouts";
 import { ScenarioPanels } from "./ScenarioPanels";
 import { WhatAmISeeing, worldAxesLength } from "./SeenInTheView";
 import { DEFAULT_LAYOUT, loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
-import { withProbes, withTargets, withTime } from "./scene/edits";
+import { withProbes, withTargets, withTargetsSet, withTime } from "./scene/edits";
 import { equipmentUrl, governedLevels, loadEquipment, runningThermostat } from "./scene/equipment";
 import type { SceneEntity } from "./scene/generated/snapshotTypes";
 import {
@@ -76,7 +76,7 @@ import {
   sameLayout,
   shifted,
 } from "./scene/moves";
-import { commandPlayback, followedMoment, usePlayback } from "./scene/playback";
+import { commandPlayback, followedMoment, setPlaybackTargets, usePlayback } from "./scene/playback";
 import { runApartFromItsMoment, runsSomething, scenarioRun } from "./scene/run";
 import {
   changesQuery,
@@ -997,6 +997,22 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 days={summary?.duration_days ?? 1}
                 loads={{ field, compared, weather, weatherDay, houseAir, probeCharts, cfd }}
                 thermostat={runningThermostat(equipment)}
+                setpoints={
+                  summary?.thermostat
+                    ? equipment.status === "loaded"
+                      ? equipment.equipment.thermostat
+                      : null
+                    : undefined
+                }
+                onTargets={(targets) => {
+                  if (followed !== null) {
+                    void setPlaybackTargets(followed, targets).then(setPlayback);
+                    return;
+                  }
+                  setSource((current) =>
+                    current.kind === "scenario" ? withTargetsSet(current, targets) : current,
+                  );
+                }}
                 momentFailed={momentFailed}
                 fieldView={fieldView}
                 fieldSlice={fieldSlice}

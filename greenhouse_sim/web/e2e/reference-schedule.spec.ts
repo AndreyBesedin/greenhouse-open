@@ -61,6 +61,41 @@ test("reference schedule: the run vents by its own clock, its thermostat heats i
 });
 
 // The final QA's sixth step: open a door, and turn the outside wind.
+test("reference targets: a heating target set from the panel heats the house to it from then on (#274)", async ({
+  page,
+}) => {
+  test.setTimeout(300_000);
+  const morning = 7 * 3600 + 30 * 60;
+  await page.goto(`/?scenario=reference_greenhouse&field=climate&t=${morning}`);
+  const targets = page.locator("details.targets-fold");
+  await expect(page.getByTestId("targets-summary")).toHaveText(
+    "Heating targets: 18 °C by day, 16 °C by night",
+    ARRIVES,
+  );
+
+  await test.step("set 24 °C by day at 7 h 30, the address keeps it as a target change", async () => {
+    await unfold(page, "Heating targets");
+    await targets.getByLabel("By day, °C").fill("24");
+    await targets.getByRole("button", { name: "Set from 7 h 30 min" }).click();
+    await expect(page).toHaveURL(new RegExp(`targets=${morning}:heating_day:24`));
+    await expect(page.getByTestId("targets-summary")).toHaveText(
+      "Heating targets: 24 °C by day, 16 °C by night",
+      ARRIVES,
+    );
+  });
+
+  await test.step("an hour later, the thermostat holds the house at 24 °C", async () => {
+    await page.getByRole("slider", { name: "Time of day" }).fill(String(morning + 3600));
+    await unfold(page, "Equipment");
+    await expect(page.getByTestId("equipment-heater")).toHaveText(
+      /by its thermostat at 24 °C$/,
+      ARRIVES,
+    );
+    await unfold(page, "House air");
+    await expect(page.getByTestId("house-air-°C")).toHaveText(/^Air 2[34]\.\d °C/, ARRIVES);
+  });
+});
+
 test("reference wind: an open door's flow turns with the wind, overridden for QA", async ({
   page,
 }) => {

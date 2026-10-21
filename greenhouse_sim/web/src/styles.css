@@ -128,6 +128,7 @@ body {
 .field-fold,
 .moment-fold,
 .house-fold,
+.targets-fold,
 .equipment-fold,
 .openings-fold,
 .probes-fold {
@@ -138,6 +139,7 @@ body {
 .field-fold > summary,
 .moment-fold > summary,
 .house-fold > summary,
+.targets-fold > summary,
 .equipment-fold > summary,
 .openings-fold > summary,
 .probes-fold > summary {
@@ -176,6 +178,7 @@ body {
 .field-fold[open] > summary,
 .moment-fold[open] > summary,
 .house-fold[open] > summary,
+.targets-fold[open] > summary,
 .equipment-fold[open] > summary,
 .openings-fold[open] > summary,
 .probes-fold[open] > summary {

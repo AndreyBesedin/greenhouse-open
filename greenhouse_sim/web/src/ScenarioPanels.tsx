@@ -15,6 +15,7 @@ import { describeProbes, FieldProbes } from "./fields/FieldProbes";
 import { describeHouseAir, HouseAir, type HouseAirState } from "./fields/HouseAir";
 import { ProbeCharts, type ProbeChartsState } from "./fields/ProbeCharts";
 import { CLIMATE_FIELD, type FieldState } from "./fields/source";
+import { TargetsPanel } from "./fields/TargetsPanel";
 import { useFolds } from "./folds";
 import { OpeningControls, openingsIn } from "./OpeningControls";
 import {
@@ -78,6 +79,8 @@ export function ScenarioPanels({
   probeHeight,
   playingClimate,
   thermostat = null,
+  setpoints,
+  onTargets,
   onSource,
   onProbes,
   onPlacing,
@@ -103,6 +106,12 @@ export function ScenarioPanels({
   playingClimate: boolean;
   /** The thermostat that runs its heater at the moment drawn, if one does. */
   thermostat?: ThermostatAt | null;
+  /** Its thermostat at the moment drawn, whether or not it runs its heater
+   * then, with its setpoints: undefined if the scenario has none, null while
+   * they are on their way (#274). */
+  setpoints?: ThermostatAt | null | undefined;
+  /** Changes its heating targets from the moment drawn on (#274). */
+  onTargets?: (targets: Record<string, number>) => void;
   onSource: (change: SetSource) => void;
   onProbes: (probes: Point3[]) => void;
   onPlacing: (placing: boolean) => void;
@@ -204,6 +213,14 @@ export function ScenarioPanels({
           <summary data-testid="house-summary">{describeHouseAir(houseAir)}</summary>
           <HouseAir state={houseAir} />
         </details>
+      )}
+      {climate && setpoints !== undefined && onTargets !== undefined && (
+        <TargetsPanel
+          thermostat={setpoints}
+          time={time}
+          followed={source.follow === true}
+          onSet={onTargets}
+        />
       )}
       {climate && (
         <ClimateSchedule
