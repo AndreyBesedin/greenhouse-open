@@ -19,6 +19,9 @@ const NO_FIELD = "";
 // A probe's coordinates, and the height clicks place probes at, move in
 // steps of this many metres.
 const PROBE_STEP_M = 0.05;
+/** The box that starts placing probes by clicking the view, as the view's
+ * controls list names it (#272). */
+export const PLACE_BY_CLICKING = "place by clicking";
 
 function signed(value: number): string {
   const text = probeValue(value);
@@ -153,7 +156,7 @@ export function FieldProbes({
             disabled={full && !placing}
             onChange={(event) => onPlacing(event.target.checked)}
           />{" "}
-          place by clicking, at
+          {PLACE_BY_CLICKING}, at
         </label>{" "}
         <input
           aria-label="Probe height"

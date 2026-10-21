@@ -49,16 +49,24 @@ export function SceneView({
   showBounds?: boolean;
   /** Colours each part of the envelope by its semantic category. */
   byCategory?: boolean;
-  /** The selected entity drawn moved along the floor, as it is dragged
-   * (#209). */
-  nudged?: { entityId: string; by: Offset } | null;
+  /** Entities drawn moved along the floor, by identifier, as a Move session
+   * places them and a drag takes them (#209, #271): each drawn on its own. */
+  nudged?: Readonly<Record<string, Offset>> | null;
 }) {
+  // Which entities are drawn moved, apart from how far, so that a drag
+  // does not batch the scene's shapes again at every step.
+  const moved = Object.keys(nudged ?? {})
+    .sort()
+    .join("\n");
   const { batches, single, glowing } = useMemo(() => {
     const glowing = highlighted(snapshot, selectedId);
+    const alone = new Set(moved === "" ? [] : moved.split("\n"));
     return {
       glowing,
       batches: shapeBatches(snapshot.entities).map(({ batch, shape, metallic, entities: all }) => {
-        const batched = all.filter((entity) => !glowing.has(entity.entity_id));
+        const batched = all.filter(
+          (entity) => !glowing.has(entity.entity_id) && !alone.has(entity.entity_id),
+        );
         return {
           batch,
           shape,
@@ -70,11 +78,11 @@ export function SceneView({
       }),
       single: snapshot.entities.filter(
         (entity) =>
-          (!isInstanced(entity) || glowing.has(entity.entity_id)) &&
+          (!isInstanced(entity) || glowing.has(entity.entity_id) || alone.has(entity.entity_id)) &&
           (showBounds || entity.kind !== "GREENHOUSE_BOUNDS"),
       ),
     };
-  }, [snapshot, selectedId, colouring, showBounds, byCategory]);
+  }, [snapshot, selectedId, colouring, showBounds, byCategory, moved]);
 
   return (
     <>
@@ -90,7 +98,7 @@ export function SceneView({
       ))}
       {single.map((entity) => {
         const { position, quaternion } = placement(entity.transform);
-        const by = nudged?.entityId === entity.entity_id ? nudged.by : null;
+        const by = nudged?.[entity.entity_id] ?? null;
         const look = {
           color: shownColor(entity, colouring, byCategory),
           selected: glowing.has(entity.entity_id),

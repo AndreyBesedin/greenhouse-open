@@ -18,6 +18,15 @@ breaks the conformance checks is a major version.
   but every run's identity does, since it covers the scenario's whole
   configuration: the reference run's id, and the digests of its manifest
   kept beside its opening days and its replay, are written again.
+- `greenhouse-sim`: a playback plays its scenario's own layout or one
+  rearranged (#271, decision 0041). `POST .../playback/restart?layout=`
+  starts it over with that layout's run from its first day, a new run with
+  its own identity and epochs, and `start` takes a layout too; its state
+  says the layout it plays. A consumer finds the new run in its list of
+  runs. The viewer's Move panel holds moves as a draft: equipment and
+  sensors dragged stay where they are dropped, and "Start a new run with
+  these moves" applies them all at once from the run's start, starting the
+  run played back over with them while the view follows it.
 - `greenhouse-sim`: the climate's 3D air takes steps up to 0.9 of the
   longest that keeps each new temperature a weighted mean of the old ones,
   not half of it: a late day of the reference greenhouse draws its air in

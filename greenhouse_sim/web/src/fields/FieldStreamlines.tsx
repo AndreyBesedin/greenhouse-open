@@ -1,5 +1,5 @@
 import { useThree } from "@react-three/fiber";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { BufferAttribute, BufferGeometry } from "three";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
@@ -7,6 +7,7 @@ import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeome
 
 import { type ScalarRange, scalarColor } from "../debug/scalar";
 import { threeColor } from "../scene/ShapeMesh";
+import { useDisposable } from "../useDisposable";
 import type { Channel, EnvironmentField } from "./field";
 import { streamlines } from "./streamlines";
 
@@ -58,6 +59,12 @@ export function streamlineGeometry(
   return geometry;
 }
 
+/** Frees what streamlines keep on the GPU: their geometry and material. */
+function releaseLines(lines: LineSegments2 | null): void {
+  lines?.geometry.dispose();
+  lines?.material.dispose();
+}
+
 /** A field's air velocity as streamlines, coloured by speed, drawn
  * `STREAMLINE_WIDTH_PX` wide on screen, in one draw call. Clicks pass
  * through. */
@@ -70,26 +77,23 @@ export function FieldStreamlines({
 }) {
   const size = useThree((state) => state.size);
   const velocity = field.channels.velocity;
-  const lines = useMemo(() => {
-    if (velocity === undefined) {
-      return null;
-    }
-    const plain = streamlineGeometry(field, velocity, range);
-    const geometry = new LineSegmentsGeometry()
-      .setPositions(plain.getAttribute("position").array as Float32Array)
-      .setColors(plain.getAttribute("color").array as Float32Array);
-    plain.dispose();
-    const material = new LineMaterial({ linewidth: STREAMLINE_WIDTH_PX, vertexColors: true });
-    const segments = new LineSegments2(geometry, material);
-    segments.raycast = () => undefined;
-    return segments;
-  }, [field, velocity, range]);
-  useEffect(
-    () => () => {
-      lines?.geometry.dispose();
-      lines?.material.dispose();
+  const lines = useDisposable(
+    () => {
+      if (velocity === undefined) {
+        return null;
+      }
+      const plain = streamlineGeometry(field, velocity, range);
+      const geometry = new LineSegmentsGeometry()
+        .setPositions(plain.getAttribute("position").array as Float32Array)
+        .setColors(plain.getAttribute("color").array as Float32Array);
+      plain.dispose();
+      const material = new LineMaterial({ linewidth: STREAMLINE_WIDTH_PX, vertexColors: true });
+      const segments = new LineSegments2(geometry, material);
+      segments.raycast = () => undefined;
+      return segments;
     },
-    [lines],
+    [field, velocity, range],
+    releaseLines,
   );
   useEffect(() => {
     lines?.material.resolution.set(size.width, size.height);

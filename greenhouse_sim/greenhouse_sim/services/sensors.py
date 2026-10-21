@@ -152,17 +152,22 @@ def observations(
 
 
 def delivered_between(
-    scenario_id: str, after_s: float | None, until_s: float, every_s: float | None = None
+    scenario_id: str,
+    after_s: float | None,
+    until_s: float,
+    every_s: float | None = None,
+    layout: str = DEFAULT_LAYOUT,
 ) -> tuple[list[Observation], str]:
     """What a scenario's own run delivered of its point sensors' readings
     after `after_s` and by `until_s`, from the run's start if `after_s` is
     None, in the order delivered, taken every `every_s` (all if None); with
-    the run's identity. Its own run: its layout, its weather and its daily
-    commands, none changed. Spans that meet end to end deliver each reading
-    once, a late one in the span it arrived in."""
+    the run's identity. Its own run: its weather and its daily commands,
+    none changed, and its own layout or `layout`, such as one rearranged.
+    Spans that meet end to end deliver each reading once, a late one in the
+    span it arrived in."""
     config = scenario(scenario_id)
-    point_sensors = _point_sensors(scenario_id, DEFAULT_LAYOUT)
-    air_at, run_id = air_through_a_run(scenario_id, DEFAULT_LAYOUT)
+    point_sensors = _point_sensors(scenario_id, layout)
+    air_at, run_id = air_through_a_run(scenario_id, layout)
     start = run_start(scenario_id)
     latest = max((sensor.imperfections.latency_s for sensor in point_sensors), default=0.0)
     observed = observe(
