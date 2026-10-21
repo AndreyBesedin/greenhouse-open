@@ -1,10 +1,13 @@
 import { expect, test } from "@playwright/test";
 
+import { unfold } from "./folds";
+
 test("a scenario's air field is chosen, loaded and drawn over its scene", async ({ page }) => {
   await page.goto("/?scenario=tomato_compartment");
   await expect(page.getByTestId("scene-status")).toContainText("tomato_compartment");
   await expect(page.getByTestId("field-status")).toHaveText("No field drawn.");
 
+  await unfold(page, "Air field");
   await page.getByRole("combobox", { name: "Air field" }).selectOption("shear");
 
   await expect(page).toHaveURL(/\?scenario=tomato_compartment&field=shear$/);
@@ -26,6 +29,7 @@ test("a field is drawn as arrows, streamlines or a slice, with a legend to match
   // In the climate box, small enough to draw quickly in software.
   await page.goto("/?scenario=climate_box&field=shear");
   await expect(page.getByTestId("field-status")).toContainText("24 × 13 × 8 cells");
+  await unfold(page, "Air field");
   await expect(page.getByRole("radio", { name: "arrows" })).toBeChecked();
   await expect(page.getByTestId("field-legend-quantity")).toHaveText("air speed (m/s)");
 
@@ -59,6 +63,7 @@ test("the prescribed airflow patterns switch at once, the scenario's own first",
   // software outlasts a check.
   await page.goto("/?scenario=climate_box");
   const fieldChoice = page.getByRole("combobox", { name: "Air field" });
+  await unfold(page, "Air field");
   await expect(fieldChoice.locator("option")).toHaveText([
     "none",
     "uniform, the scenario's airflow",
@@ -86,6 +91,7 @@ test("the compartment's air as OpenFOAM solved it is drawn as any field is", asy
   await expect(page.getByTestId("field-status")).toHaveText(
     "tomato_compartment_cfd (openfoam:simpleFoam v2412): 48 × 32 × 12 cells, air speed 0 to 0.49 m/s.",
   );
+  await unfold(page, "Air field");
   await page.getByRole("radio", { name: "streamlines" }).check();
   await expect(page.getByTestId("field-legend-quantity")).toHaveText("air speed (m/s)");
   await page.getByRole("radio", { name: "slice" }).check();

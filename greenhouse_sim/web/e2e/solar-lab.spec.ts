@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
-
 import type { CameraPose } from "../src/camera.ts";
+import { unfold } from "./folds";
 import { selectAt } from "./view";
 
 function cameraText({ position, target }: CameraPose): string {
@@ -39,6 +39,7 @@ test("solar lab: at the equinox's noon a shaded plant takes the sky's light and 
     // The sun 38° up in the south lights the scene, and has warmed the shut
     // house well above the outside, 14.4 °C then (P08.8).
     await expect(page.getByTestId("main-view")).toHaveAttribute("data-light", "sun");
+    await unfold(page, "House air");
     await expect(
       page.getByRole("figure", { name: "House air" }).getByTestId("house-air-°C"),
     ).toHaveText("Air 29.5 °C, all off 29.5 °C");
@@ -67,6 +68,7 @@ test("solar lab: at the equinox's noon a shaded plant takes the sky's light and 
       "154 W/m², 98% of it the sky's, PAR 331 µmol/m²/s",
     );
     // The house's air is the clouded run's too, cooler than under the sun.
+    await unfold(page, "House air");
     await expect(
       page.getByRole("figure", { name: "House air" }).getByTestId("house-air-°C"),
     ).toHaveText("Air 18.3 °C, all off 18.3 °C");

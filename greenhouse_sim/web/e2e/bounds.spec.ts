@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { unfold } from "./folds";
+
 import { selectAt } from "./view";
 
 // The example scene's greenhouse (the climate box) is 12 m long and 6.4 m
@@ -19,6 +21,7 @@ test("the greenhouse is measured and labelled, and its glass yields to what it e
   await page.goto("/?scene=example");
   await expect(page.getByTestId("scene-status")).toContainText("128 entities");
 
+  await unfold(page, "Display");
   await page.getByLabel("Dimensions and axis labels").check();
   await expect(page.getByTestId("debug-label")).toHaveText([
     "x",
@@ -45,6 +48,7 @@ test("the surface categories colour the envelope by what each part is", async ({
   await page.goto("/?scene=example");
   await expect(page.getByTestId("scene-status")).toContainText("128 entities");
 
+  await unfold(page, "Display");
   await page.getByRole("checkbox", { name: "Categories" }).check();
   await expect(page.getByTestId("category")).toHaveText([
     "floor",

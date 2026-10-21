@@ -148,7 +148,7 @@ export function WeatherPanel({
       : "";
   return (
     <section className="weather-panel" aria-label="Weather">
-      <details>
+      <details className="weather-fold">
         <summary className="weather-heading">
           <span data-testid="weather-summary">
             {`Outside at ${localTime(weather)}: ${temperature}, wind ${wind}.`}

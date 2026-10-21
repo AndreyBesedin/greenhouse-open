@@ -1,6 +1,7 @@
 import { ColourBy } from "./ColourBy";
 import type { OverlayToggles, SceneOverlay } from "./debug/overlays";
 import type { FieldView } from "./fields/display";
+import { useFolds } from "./folds";
 
 // What each overlay over the scene is called beside its switch; the air
 // field is called by how it is drawn.
@@ -19,6 +20,24 @@ const VIEW_ONLY = "Hiding one changes only the view, never the run or its equipm
 
 function overlayLabel(overlay: SceneOverlay, fieldView: FieldView): string {
   return overlay === "airField" ? `Air field ${fieldView}` : SCENE_OVERLAY_LABELS[overlay];
+}
+
+/** How the view is shown, in a line, as the display options' section folded
+ * says it (#273): its colouring, which of its switches are on, and which of
+ * the overlays over the scene are hidden, every one being shown at first. */
+export function describeDisplay(
+  colourBy: string | null,
+  switches: { showDimensions: boolean; byCategory: boolean; qaMode: boolean },
+  hidden: readonly string[] = [],
+): string {
+  const on = [
+    colourBy === null ? "no colouring" : `coloured by ${colourBy}`,
+    ...(switches.showDimensions ? ["dimensions"] : []),
+    ...(switches.byCategory ? ["categories"] : []),
+    ...(switches.qaMode ? ["QA mode"] : []),
+  ];
+  const hiding = hidden.map((label) => label.charAt(0).toLowerCase() + label.slice(1));
+  return `Display: ${on.join(", ")}${hiding.length > 0 ? `; hiding ${hiding.join(", ")}` : ""}`;
 }
 
 /** How the scene is shown: shaded by a property, and measured; which of the
@@ -55,8 +74,18 @@ export function DisplayOptions({
   qaMode: boolean;
   onQaMode: (on: boolean) => void;
 }) {
+  const fold = useFolds<"display">();
   return (
-    <>
+    <details className="display-fold" {...fold("display")}>
+      <summary data-testid="display-summary">
+        {describeDisplay(
+          colourBy,
+          { showDimensions, byCategory, qaMode },
+          drawn
+            .filter((overlay) => !overlays[overlay])
+            .map((overlay) => overlayLabel(overlay, fieldView)),
+        )}
+      </summary>
       {colourProperties.length > 0 && (
         <ColourBy properties={colourProperties} value={colourBy} onChange={onColourBy} />
       )}
@@ -101,6 +130,6 @@ export function DisplayOptions({
           ))}
         </fieldset>
       )}
-    </>
+    </details>
   );
 }

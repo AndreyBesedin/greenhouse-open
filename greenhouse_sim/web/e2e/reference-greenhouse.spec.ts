@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { chooser } from "./chooser";
+import { unfold } from "./folds";
 
 // The reference scenario (P09.1): one manifest boots the whole greenhouse,
 // its 32 plants, organ by organ (P09.3), its equipment, its heater on a
@@ -36,6 +37,7 @@ test("reference greenhouse: its manifest boots the whole scene, and it is listed
     await expect(page.getByTestId(`opening-${vent}`)).toHaveText(/^0%, /);
   }
 
+  await unfold(page, "Display");
   await page.getByRole("checkbox", { name: "Categories" }).check();
   await expect(page.getByTestId("sensor-category")).toHaveText(["sensor", "camera"]);
 });

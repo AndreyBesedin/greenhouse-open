@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { chooser } from "./chooser";
+import { unfold } from "./folds";
 
 import { selectAt } from "./view";
 
@@ -15,6 +16,7 @@ for (const size of [
     await page.setViewportSize(size);
     await page.goto("/?scene=example");
     await expect(page.getByTestId("scene-status")).toContainText("Showing the example scene");
+    await unfold(page, "Display");
     await page.getByLabel("Colour by").selectOption("visible_height_cm");
     await page.getByRole("button", { name: "Isometric", exact: true }).click();
     // The upper part of the canvas stays available even above the narrow dock:
@@ -74,6 +76,7 @@ test("at the usual window size, the info panel shows all of itself beside a tall
   );
   // The tallest legend there is, on the other side of the view.
   // "Surface categories", or "Categories" once the layout has some too.
+  await unfold(page, "Display");
   await page.getByRole("checkbox", { name: /categories$/i }).check();
   await expect(page.getByTestId("category")).toHaveCount(7);
 

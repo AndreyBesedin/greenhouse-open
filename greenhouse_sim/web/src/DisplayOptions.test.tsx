@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { DisplayOptions } from "./DisplayOptions";
+import { DisplayOptions, describeDisplay } from "./DisplayOptions";
 import { ALL_OVERLAYS, type OverlayToggles, type SceneOverlay } from "./debug/overlays";
 import type { FieldView } from "./fields/display";
 import { checkbox, click, type Rendered, render } from "./testing/render";
@@ -80,7 +80,62 @@ describe("the display options", () => {
     }
   });
 
+  it("say on the section's line which of them are hidden (#273)", () => {
+    const shown = options({ ...ALL_OVERLAYS, wind: false, probes: false }, [
+      "airField",
+      "wind",
+      "probes",
+    ]);
+    expect(shown.querySelector("summary")?.textContent).toBe(
+      "Display: no colouring; hiding wind, probes",
+    );
+  });
+
   it("offer no switches while nothing is drawn over the scene", () => {
     expect(options(ALL_OVERLAYS, []).querySelector("fieldset")).toBeNull();
+  });
+});
+
+describe("the display options' section, folded", () => {
+  it("says how the view is shown, its colouring and the switches on (#273)", () => {
+    const off = { showDimensions: false, byCategory: false, qaMode: false };
+    expect(describeDisplay(null, off)).toBe("Display: no colouring");
+    expect(describeDisplay("level", { ...off, showDimensions: true, qaMode: true })).toBe(
+      "Display: coloured by level, dimensions, QA mode",
+    );
+  });
+
+  it("names the overlays hidden, every one being shown at first", () => {
+    const off = { showDimensions: false, byCategory: false, qaMode: false };
+    expect(describeDisplay(null, off, ["Wind", "Air field arrows"])).toBe(
+      "Display: no colouring; hiding wind, air field arrows",
+    );
+  });
+
+  it("folds to that line at first", () => {
+    const shown = render(
+      <DisplayOptions
+        colourProperties={[]}
+        colourBy={null}
+        onColourBy={ignore}
+        showDimensions={false}
+        onShowDimensions={ignore}
+        byCategory={false}
+        onByCategory={ignore}
+        drawn={[]}
+        fieldView="arrows"
+        overlays={ALL_OVERLAYS}
+        onOverlays={ignore}
+        qaMode={false}
+        onQaMode={ignore}
+      />,
+    );
+    try {
+      const fold = shown.container.querySelector("details.display-fold");
+      expect(fold?.hasAttribute("open")).toBe(false);
+      expect(fold?.querySelector("summary")?.textContent).toBe("Display: no colouring");
+    } finally {
+      shown.unmount();
+    }
   });
 });

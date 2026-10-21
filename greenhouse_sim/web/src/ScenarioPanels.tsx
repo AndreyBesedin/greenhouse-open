@@ -8,11 +8,11 @@ import { CheckpointsPanel } from "./checkpoints/CheckpointsPanel";
 import { type CheckpointSummary, restored } from "./checkpoints/checkpoints";
 import { EquipmentControls } from "./EquipmentControls";
 import { ClimateSchedule } from "./fields/ClimateSchedule";
-import { ClimateTime } from "./fields/ClimateTime";
+import { ClimateTime, describeClimateRun } from "./fields/ClimateTime";
 import type { FieldView, Slice } from "./fields/display";
-import { FieldControls, useFieldNames } from "./fields/FieldControls";
+import { describeAirField, FieldControls, useFieldNames } from "./fields/FieldControls";
 import { describeProbes, FieldProbes } from "./fields/FieldProbes";
-import { HouseAir, type HouseAirState } from "./fields/HouseAir";
+import { describeHouseAir, HouseAir, type HouseAirState } from "./fields/HouseAir";
 import { ProbeCharts, type ProbeChartsState } from "./fields/ProbeCharts";
 import { CLIMATE_FIELD, type FieldState } from "./fields/source";
 import { useFolds } from "./folds";
@@ -56,11 +56,13 @@ export interface ScenarioLoads {
 }
 
 /**
- * A scenario's panels, in the info panel's order: its fields, its climate
- * run's moment, house air, schedule, timeline and checkpoints, its weather, the probes and their
- * charts, its CFD boundaries, and its doors, vents and equipment. Each
- * changes the scenario's source; what the view around them keeps (how the
- * field's colours run, whether a click places a probe) is the viewer's.
+ * A scenario's panels, in the info panel's order: its air field and CFD
+ * boundaries, its climate run's moment, house air, schedule, timeline and
+ * checkpoints, its weather, the probes and their charts, and its doors,
+ * vents and equipment, each a section folded to its line but the moment
+ * (#206, #273). Each changes the scenario's source; what the view around
+ * them keeps (how the field's colours run, whether a click places a probe)
+ * is the viewer's.
  */
 export function ScenarioPanels({
   source,
@@ -117,9 +119,13 @@ export function ScenarioPanels({
   const climate = source.field === CLIMATE_FIELD;
   const time = source.time ?? 0;
   const probed = field.status === "loaded" ? field.field : null;
-  // Equipment, openings and probes, each folded to the line that says how
-  // it stands (#206).
-  const fold = useFolds<"equipment" | "openings" | "probes">();
+  // The moment drawn, which stays while another is on its way or failed.
+  const shownTime = probed === null ? null : probed.timeS;
+  // Every group folded to the line that says how it stands (#206, #273):
+  // the climate run's moment open at first, the rest folded.
+  const fold = useFolds<"field" | "moment" | "house" | "equipment" | "openings" | "probes">([
+    "moment",
+  ]);
   const fieldName = source.field;
   const probing = fieldName !== undefined && probed !== null;
 
@@ -156,29 +162,49 @@ export function ScenarioPanels({
 
   return (
     <>
-      <FieldControls
-        fields={fields}
-        chosen={source.field ?? null}
-        state={field}
-        view={fieldView}
-        slice={fieldSlice}
-        onChoose={chooseField}
-        onView={chooseFieldView}
-        onSlice={chooseSlice}
-      />
-      {climate && (
-        <ClimateTime
-          time={time}
-          shown={field.status === "loaded" ? field.field.timeS : null}
-          failed={momentFailed}
-          followed={source.follow === true}
-          days={days}
-          playing={playingClimate}
-          onTime={setTime}
-          onPlaying={onPlayingClimate}
+      <details className="field-fold" {...fold("field")}>
+        <summary data-testid="field-summary">
+          {describeAirField(source.field ?? null, fieldView, source.cfdBoundaries === true)}
+        </summary>
+        <FieldControls
+          fields={fields}
+          chosen={source.field ?? null}
+          state={field}
+          view={fieldView}
+          slice={fieldSlice}
+          onChoose={chooseField}
+          onView={chooseFieldView}
+          onSlice={chooseSlice}
         />
+        <CfdControls
+          shown={source.cfdBoundaries === true}
+          state={cfd}
+          onShow={(show) => onSource(withCfdBoundaries(source, show))}
+        />
+      </details>
+      {climate && (
+        <details className="moment-fold" {...fold("moment")}>
+          <summary data-testid="moment-summary">
+            {describeClimateRun(time, shownTime, momentFailed)}
+          </summary>
+          <ClimateTime
+            time={time}
+            shown={shownTime}
+            failed={momentFailed}
+            followed={source.follow === true}
+            days={days}
+            playing={playingClimate}
+            onTime={setTime}
+            onPlaying={onPlayingClimate}
+          />
+        </details>
       )}
-      {climate && <HouseAir state={houseAir} />}
+      {climate && (
+        <details className="house-fold" {...fold("house")}>
+          <summary data-testid="house-summary">{describeHouseAir(houseAir)}</summary>
+          <HouseAir state={houseAir} />
+        </details>
+      )}
       {climate && (
         <ClimateSchedule
           schedule={source.schedule ?? []}
@@ -253,11 +279,6 @@ export function ScenarioPanels({
           {climate && <ProbeCharts state={probeCharts} time={time} />}
         </details>
       )}
-      <CfdControls
-        shown={source.cfdBoundaries === true}
-        state={cfd}
-        onShow={(show) => onSource(withCfdBoundaries(source, show))}
-      />
       {snapshot !== null && (
         <OpeningControls
           snapshot={snapshot}

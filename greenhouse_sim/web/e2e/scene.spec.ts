@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { chooser } from "./chooser";
+import { unfold } from "./folds";
 import { selectAt } from "./view";
 
 function collectErrors(page: Page): string[] {
@@ -120,10 +121,12 @@ test("Back and Forward start a view afresh, as a choice of it does (#201)", asyn
   await page.goBack();
   await expect(status).toContainText("Showing the scenario climate_box");
   await selectAt(page, plant, "climate_box_plant_001");
+  await unfold(page, "Display");
   await page.getByLabel("Colour by").selectOption("age_days");
 
   await page.goForward();
   await expect(status).toContainText("Showing the example scene");
   await expect(page.getByTestId("selected-entity")).toHaveCount(0);
+  await unfold(page, "Display");
   await expect(page.getByLabel("Colour by")).toHaveValue("");
 });

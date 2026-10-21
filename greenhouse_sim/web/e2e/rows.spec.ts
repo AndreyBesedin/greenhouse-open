@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { unfold } from "./folds";
+
 import { selectAt } from "./view";
 
 // The compartment's crop rows: eight rows of forty planting positions along
@@ -45,6 +47,7 @@ test("planting positions can be counted and measured from their coordinates", as
     ["row", "8"],
     ["position_in_row", "40"],
   ] as const) {
+    await unfold(page, "Display");
     await colourBy.selectOption(property);
     await expect(page.getByTestId("legend-min")).toHaveText("1");
     await expect(page.getByTestId("legend-max")).toHaveText(last);

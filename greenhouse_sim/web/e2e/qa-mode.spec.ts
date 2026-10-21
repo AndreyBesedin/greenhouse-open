@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
-
 import type { CameraPose } from "../src/camera.ts";
 import { cameraText } from "./cameraView";
+import { unfold } from "./folds";
 import { selectAt } from "./view";
 
 // P09.6: QA mode, off by default, is the only way the viewer asks for what
@@ -29,6 +29,7 @@ test("QA mode: no truth is asked for without it, and turning it on shows the tru
   await page.goto(HEATED_RUN);
   await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
   const qaMode = page.getByRole("checkbox", { name: "QA mode" });
+  await unfold(page, "Display");
   await expect(qaMode).not.toBeChecked();
 
   await selectAt(page, FRONT_FACE, "climate_box_temperature_front", BESIDE_THE_FRONT);
@@ -68,6 +69,7 @@ test("QA mode: every plant is labelled with its identifier and its day's light",
   const labels = page.getByTestId("debug-label");
   await expect(labels).toHaveCount(0);
 
+  await unfold(page, "Display");
   await page.getByRole("checkbox", { name: "QA mode" }).check();
   const plantLabels = labels.filter({ hasText: /^climate_box_plant_\d{3} / });
   await expect(plantLabels).toHaveCount(32, { timeout: 20_000 });
@@ -80,6 +82,7 @@ test("QA mode: a probe's label says what the field drawn holds there", async ({ 
   // The P04 airflow QA case's probes (probes.spec.ts), upstream of its block
   // and in its wake, as OpenFOAM solved it, drawn as arrows: the air's speed.
   await page.goto("/?scenario=airflow_box&field=cfd&probes=3:3.2:0.75,7:3.2:0.75&qa=1");
+  await unfold(page, "Display");
   await expect(page.getByRole("checkbox", { name: "QA mode" })).toBeChecked();
   await expect(page.getByTestId("debug-label").filter({ hasText: /^P\d/ })).toHaveText([
     "P1 0.43 m/s",
@@ -96,6 +99,7 @@ test("QA mode: the run's manifest says what it is made from, and the versions se
 }) => {
   await page.goto("/?scenario=climate_box&weather=cold_spring_day&clouds=80&qa=1");
   const panel = page.getByRole("region", { name: "QA mode" });
+  await unfold(page, "Display");
   await expect(panel.getByTestId("manifest-scenario")).toHaveText(
     /^climate_box, version [0-9a-f]{16}, format 2$/,
   );
@@ -143,6 +147,7 @@ test("QA mode: the developer panel says what each process holds at the moment", 
   await page.goto("/?scenario=climate_box&set=heater:1&field=climate&t=1200&qa=1");
   await expect(page.getByTestId("climate-time")).toHaveText("20 min", { timeout: 20_000 });
   const panel = page.getByRole("region", { name: "QA mode" });
+  await unfold(page, "Display");
   await expect(panel.getByTestId("developer-clock")).toHaveText(
     /^20 min \(2025-12-31 23:20 UTC\), run climate_box-climate-[0-9a-f]{8}$/,
     { timeout: 20_000 },

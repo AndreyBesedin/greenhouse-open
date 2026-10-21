@@ -121,18 +121,33 @@ body {
   text-align: left;
 }
 
-/* Equipment, openings and probes, each folded to the line that says how
- * it stands (#206), and what the viewer was built from, last. */
+/* Every group of the info panel a section folded to the line that says how
+ * it stands (#206, #273), with room below it; and what the viewer was built
+ * from, last. */
+.display-fold,
+.field-fold,
+.moment-fold,
+.house-fold,
 .equipment-fold,
 .openings-fold,
 .probes-fold {
   margin: 0 0 8px;
 }
 
+.display-fold > summary,
+.field-fold > summary,
+.moment-fold > summary,
+.house-fold > summary,
 .equipment-fold > summary,
 .openings-fold > summary,
 .probes-fold > summary {
   cursor: pointer;
+}
+
+/* The run played back, and its button to stop following it, apart from the
+ * sections below (#273). */
+.playback {
+  margin: 0 0 8px;
 }
 
 .build-line {
@@ -154,6 +169,17 @@ body {
 
 .source-chooser[open] > summary {
   margin: 0 0 6px;
+}
+
+/* Open, a section's line stands apart from its first control. */
+.display-fold[open] > summary,
+.field-fold[open] > summary,
+.moment-fold[open] > summary,
+.house-fold[open] > summary,
+.equipment-fold[open] > summary,
+.openings-fold[open] > summary,
+.probes-fold[open] > summary {
+  margin-bottom: 4px;
 }
 
 .source-chooser input[type="search"] {

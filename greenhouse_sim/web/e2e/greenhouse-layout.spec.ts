@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { QA_LAYOUT_PATH } from "../src/qa/layoutViews.ts";
 import { layoutPicker } from "./chooser";
+import { unfold } from "./folds";
 import { selectAt } from "./view";
 
 // P02's final QA, `greenhouse-layout`, in the browser: two layouts of one
@@ -41,6 +42,7 @@ test("greenhouse-layout: two layouts inspected, measured, clear and selected by 
   await page.goto("/?scenario=tomato_compartment");
   await expect(status).toContainText("tomato_compartment, day 0, 896 entities");
   await expect(page.getByTestId("draw-calls")).toHaveText(/^\d{2} \(/);
+  await unfold(page, "Display");
   await page.getByRole("checkbox", { name: "Categories" }).check();
   await expect(page.getByTestId("layout-category")).toHaveCount(10);
   await page.getByRole("checkbox", { name: "Categories" }).uncheck();

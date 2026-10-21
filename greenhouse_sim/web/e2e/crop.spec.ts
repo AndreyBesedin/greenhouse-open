@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import type { CameraPose } from "../src/camera.ts";
 import { chooser } from "./chooser";
+import { unfold } from "./folds";
 import { clickAt } from "./view";
 
 // The reference greenhouse's crop (P09.3): 32 transplants organ by organ,
@@ -114,6 +115,7 @@ test("crop: shown from the list, the reference greenhouse opens on its first day
   // the simulator is not still working it out when the next spec begins.
   await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
   // Its house's air beside the same run's with everything off, kept too.
+  await unfold(page, "House air");
   await expect(
     page.getByRole("figure", { name: "House air" }).getByTestId("house-air-°C"),
   ).toHaveText(/^Air [\d.]+ °C, all off [\d.]+ °C$/, ARRIVES);

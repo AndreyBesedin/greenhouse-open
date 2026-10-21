@@ -1,5 +1,7 @@
 import { expect, type Page, type Route, test } from "@playwright/test";
 
+import { unfold } from "./folds";
+
 // The climate box's runs last its 14 days (P09.2): its heater on ten minutes
 // into the first, and off an hour into the second.
 const SCHEDULE = "600:heater:1,90000:heater:0";
@@ -57,6 +59,7 @@ test("season: the time controls span the run's days, each chart its moment's day
     // Still on from the first day, until its command an hour in.
     await expect(heater).toHaveText("100%, 10 kW", ARRIVES);
     await expect(markers).toHaveCount(1);
+    await unfold(page, "House air");
     await expect(page.getByTestId("house-air")).toBeVisible();
     await run.getByRole("slider", { name: "Time of day" }).fill("3600");
     await expect(moment).toHaveText("day 1, 1 h 00 min", ARRIVES);

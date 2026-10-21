@@ -39,6 +39,20 @@ export function describeTime(seconds: number): string {
   return day === 0 ? said : `day ${day}, ${said}`;
 }
 
+/** A climate run's moment in a line, as its section folded says it (#273):
+ * the moment drawn, as `ClimateTime` shows it, and the one asked for while
+ * it is on its way or cannot be drawn, so that the line never takes a
+ * moment still loading, or one that failed, for the one in the view. */
+export function describeClimateRun(time: number, shown: number | null, failed: boolean): string {
+  if (shown === time) {
+    return `Climate run: ${describeTime(time)}`;
+  }
+  const drawn = shown === null ? "" : `${describeTime(shown)}; `;
+  return failed
+    ? `Climate run: ${drawn}${describeTime(time)} cannot be drawn`
+    : `Climate run: ${drawn}loading ${describeTime(time)}…`;
+}
+
 /** How far play moves on from a moment, at a pace (`PACES`): at the first,
  * a minute at a time through the run's first hour. */
 export function playStep(seconds: number, paceS: number = PLAY_LATER_STEP_S): number {

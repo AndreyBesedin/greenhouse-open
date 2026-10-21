@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
-
 import type { CameraPose } from "../src/camera.ts";
+import { unfold } from "./folds";
 import { selectAt } from "./view";
 
 /**
@@ -43,6 +43,8 @@ function cameraText({ position, target }: CameraPose): string {
 async function at(page: Page, address: string, seconds: number, shown: string): Promise<void> {
   await page.goto(`${address}&t=${seconds}`);
   await expect(page.getByTestId("climate-time")).toHaveText(shown, ARRIVES);
+  // Each page starts with the house's air folded (#273).
+  await unfold(page, "House air");
 }
 
 async function sensorReads(
@@ -174,6 +176,7 @@ test("weather-day: the climate box through a cold spring day", async ({ page }) 
     ];
     await page.reload();
     await expect(page.getByTestId("climate-time")).toHaveText("20 h 00 min", ARRIVES);
+    await unfold(page, "House air");
     await expect(house.getByTestId("house-air-°C")).toHaveText(first[0] ?? "");
     await expect(probe).toHaveText(first[1] ?? "", ARRIVES);
   });

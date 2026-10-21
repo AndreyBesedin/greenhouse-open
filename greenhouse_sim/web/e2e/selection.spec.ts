@@ -1,5 +1,7 @@
 import { expect, type Request, test } from "@playwright/test";
 
+import { unfold } from "./folds";
+
 import { simulatedDay } from "./hud";
 import { clickAt, clickSky, onScreen, selectAt } from "./view";
 
@@ -70,6 +72,11 @@ test("a selection stays on its entity while the live scenario plays", async ({ p
 });
 
 test("overlays and colours change the view, never the simulation", async ({ page }) => {
+  // On CI's software renderer the live scene draws 3 to 4 frames a second,
+  // and each of the six switches below waits several of them: they took 28
+  // of the default 30 s on a slow runner, before the colouring's section
+  // was even opened.
+  test.slow();
   const live = `/api/scenarios/${STILL_SCENARIO}/live`;
   await page.request.post(`${live}/pause`);
   await page.request.post(`${live}/reset`);
@@ -92,6 +99,7 @@ test("overlays and colours change the view, never the simulation", async ({ page
   await expect(page.getByTestId("debug-label")).toHaveText("tomato_compartment_plant_001");
 
   const colourBy = page.getByLabel("Colour by");
+  await unfold(page, "Display");
   await colourBy.selectOption("visible_height_cm");
   await expect(page.getByTestId("legend-property")).toHaveText("visible_height_cm");
   await colourBy.selectOption("");
