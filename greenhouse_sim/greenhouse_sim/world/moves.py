@@ -8,7 +8,10 @@ into the greenhouse's own frame and added to the item's place, its height
 kept: a unit's base, a fan's centre, a sensor's position; a camera's target
 moves with it, so that it looks the same way. Moves are data, as commands
 are: the same moves always place the same items, and a run's layout with
-them is another layout, and another run.
+them is another layout, and another run, worked out from its start. A
+heater's or a dehumidifier's body fills cells of the house's air, so where
+it stands changes the house's air from the start, and a moved run shares
+nothing with the run it was moved from (#271).
 """
 
 from collections.abc import Sequence

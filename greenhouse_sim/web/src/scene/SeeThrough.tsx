@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from "react";
 import { DoubleSide, EdgesGeometry } from "three";
 
 import { SELECTION_COLOR } from "../debug/overlays";
+import { useDisposable } from "../useDisposable";
 import type { Box, Color, Plane, Polygon } from "./generated/snapshotTypes";
 import { flatGeometry, threeColor } from "./ShapeMesh";
 
@@ -38,15 +38,8 @@ export function SeeThrough({
   dense?: boolean;
 }) {
   // Rebuilt with each new scene, which for a live scenario is once a day.
-  const faces = useMemo(() => flatGeometry(shape), [shape]);
-  const edges = useMemo(() => new EdgesGeometry(faces), [faces]);
-  useEffect(
-    () => () => {
-      faces.dispose();
-      edges.dispose();
-    },
-    [faces, edges],
-  );
+  const faces = useDisposable(() => flatGeometry(shape), [shape]);
+  const edges = useDisposable(() => new EdgesGeometry(faces), [faces]);
   const fill = threeColor(color);
   const frame = fill.clone().multiplyScalar(EDGE_SHADE);
   const lift = shape.shape === "box" ? shape.size_z / 2 : 0;

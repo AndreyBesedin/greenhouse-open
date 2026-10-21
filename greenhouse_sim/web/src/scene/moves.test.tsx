@@ -16,11 +16,12 @@ import {
   layoutWith,
   movableItem,
   movedBy,
+  movesBetween,
   movesIn,
   putBack,
+  sameLayout,
   shifted,
   snapped,
-  undoable,
 } from "./moves";
 
 // The climate box, 12 m by 6.4 m: its heater in the back right corner, 0.6
@@ -79,15 +80,31 @@ describe("moves written in a layout's name", () => {
     expect(layoutWith("default", "default", { a: { dx: -0.04, dy: 0 } })).toBe("default~a:0:0");
   });
 
-  it("are undone in the view a move led to, and in no other scenario's", () => {
-    const made = [
-      { scenarioId: "climate_box", before: "default~heater:0.5:0", after: "default~heater:1:0" },
-    ];
-    expect(undoable(made, "climate_box", "default~heater:1:0")).toBe(made[0]);
-    expect(undoable(made, "climate_box", "default~heater:0.5:0")).toBeNull();
-    // The same layout's name in another scenario, come back to with Back.
-    expect(undoable(made, "reference_greenhouse", "default~heater:1:0")).toBeNull();
-    expect(undoable([], "climate_box", undefined)).toBeNull();
+  it("name one layout however they are written, as the simulator knows it", () => {
+    // As the viewer writes it, and as a run played back says it (#271).
+    expect(sameLayout("default~heater:-1:0.5", "default~heater:-1.0:0.5", "default")).toBe(true);
+    expect(
+      sameLayout("default~fan:0:2,heater:-1:0", "default~heater:-1:0,fan:0:2", "default"),
+    ).toBe(true);
+    expect(sameLayout(undefined, "default", "default")).toBe(true);
+    expect(sameLayout("default~heater:0:0", undefined, "default")).toBe(true);
+    expect(sameLayout("default~heater:-1:0.5", "default~heater:-1:0.4", "default")).toBe(false);
+    expect(sameLayout("default~heater:-1:0.5", "default", "default")).toBe(false);
+    expect(sameLayout("benches~heater:-1:0.5", "default~heater:-1:0.5", "default")).toBe(false);
+  });
+
+  it("are drawn, in a session, as far as one layout moves each item from another", () => {
+    // A session from a layout that moves the heater: it moves the heater on,
+    // puts the fan back, and moves a sensor.
+    expect(
+      movesBetween("default~fan:0:2,heater:-1:0", "default~co2:0.3:0,heater:-1.5:0.5"),
+    ).toEqual({
+      co2: { dx: 0.3, dy: 0 },
+      fan: { dx: 0, dy: -2 },
+      heater: { dx: -0.5, dy: 0.5 },
+    });
+    expect(movesBetween("default~heater:-1:0", "default~heater:-1.0:0")).toEqual({});
+    expect(movesBetween(undefined, undefined)).toEqual({});
   });
 
   it("move what is equipment or a sensor, and nothing else", () => {

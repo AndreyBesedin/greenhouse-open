@@ -9,7 +9,9 @@ import type { SceneEntity } from "./generated/snapshotTypes";
  * item stands from where its layout places it, along the world's x and y, in
  * metres; the simulator takes moves as part of a layout's name, after this
  * mark, `default~heater:-1:0.5` (`greenhouse_sim.world.moves`), and runs the
- * house with them: another layout, and another run.
+ * house with them: another layout, and another run, from its start. A Move
+ * session holds the layout its moves make as a draft, drawn over the scene
+ * and asked of the simulator only once it is applied, all at once (#271).
  */
 export const MOVES_MARK = "~";
 // What a move snaps to, in metres.
@@ -127,25 +129,46 @@ export function putBack(
   return layoutWith(layout, defaultLayout, rest);
 }
 
-/** A move made in a scenario's view, as the layouts before and after it. */
-export interface MoveMade {
-  scenarioId: string;
-  before: string | undefined;
-  after: string | undefined;
+/** Whether two layouts' names name one layout: the same base, the scenario's
+ * own when none is named, and the same moves however written, a move of
+ * nought none. */
+export function sameLayout(
+  a: string | undefined,
+  b: string | undefined,
+  defaultLayout: string,
+): boolean {
+  if ((baseLayout(a) ?? defaultLayout) !== (baseLayout(b) ?? defaultLayout)) {
+    return false;
+  }
+  const first = movesIn(a);
+  const second = movesIn(b);
+  return [...new Set([...Object.keys(first), ...Object.keys(second)])].every((item) => {
+    const one = first[item] ?? NO_OFFSET;
+    const other = second[item] ?? NO_OFFSET;
+    return snap(one.dx) === snap(other.dx) && snap(one.dy) === snap(other.dy);
+  });
 }
 
-/** The latest move made, if it led to the view of `scenarioId` with
- * `layout`, to be undone there; null if another view is shown, such as
- * another scenario's with a layout of the same name. */
-export function undoable(
-  made: readonly MoveMade[],
-  scenarioId: string,
-  layout: string | undefined,
-): MoveMade | null {
-  const latest = made.at(-1);
-  return latest !== undefined && latest.scenarioId === scenarioId && latest.after === layout
-    ? latest
-    : null;
+/** How far each item `to` places stands from where `from` places it, by
+ * item, for those that differ: what a Move session draws of its moves over
+ * the scene of the layout it started from (#271). */
+export function movesBetween(
+  from: string | undefined,
+  to: string | undefined,
+): Readonly<Record<string, Offset>> {
+  const before = movesIn(from);
+  const after = movesIn(to);
+  const between: Record<string, Offset> = {};
+  for (const item of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    const by = snapped({
+      dx: (after[item]?.dx ?? 0) - (before[item]?.dx ?? 0),
+      dy: (after[item]?.dy ?? 0) - (before[item]?.dy ?? 0),
+    });
+    if (by.dx !== 0 || by.dy !== 0) {
+      between[item] = by;
+    }
+  }
+  return between;
 }
 
 /** The item an entity draws, by its actuator or sensor, if it can be moved. */
