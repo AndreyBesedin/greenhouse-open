@@ -83,6 +83,31 @@
       "title": "CfdSetup",
       "type": "object"
     },
+    "CirculationLoop": {
+      "additionalProperties": false,
+      "description": "Run the fans `fans` while the vents stand open at stage `from_stage`,\ncounted from 1, or beyond.",
+      "properties": {
+        "fans": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Fans",
+          "type": "array"
+        },
+        "from_stage": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "title": "From Stage",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "fans"
+      ],
+      "title": "CirculationLoop",
+      "type": "object"
+    },
     "ClimateSettings": {
       "additionalProperties": false,
       "description": "A scenario's starting air, glazing, infiltration and mixing.",
@@ -200,6 +225,72 @@
       "title": "ConstantWeather",
       "type": "object"
     },
+    "Control": {
+      "additionalProperties": false,
+      "description": "A greenhouse's climate controller: its loops, a day from\n`day_from_s` and a night from `night_from_s`, times of a run's day on\nthe minute that every loop's targets share, and the dead band\n`dead_band_c` that keeps heating and venting apart: in each period, the\nvents' first stage closes above the temperature the heater switches off\nat by at least that much.",
+      "properties": {
+        "day_from_s": {
+          "$ref": "#/$defs/TimeOfDay",
+          "default": 25200.0
+        },
+        "night_from_s": {
+          "$ref": "#/$defs/TimeOfDay",
+          "default": 68400.0
+        },
+        "dead_band_c": {
+          "default": 1.0,
+          "exclusiveMinimum": 0,
+          "title": "Dead Band C",
+          "type": "number"
+        },
+        "heating": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HeatingLoop"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "venting": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VentingLoop"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "circulation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CirculationLoop"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "dehumidifying": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DehumidifyingLoop"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "Control",
+      "type": "object"
+    },
     "CropModel": {
       "description": "How a scenario's run grows its crop: by the simple daily model,\nthrough the engine, or organ by organ (`greenhouse_sim.core.crop`).",
       "enum": [
@@ -273,6 +364,48 @@
         "level"
       ],
       "title": "DailyCommand",
+      "type": "object"
+    },
+    "DehumidifyingLoop": {
+      "additionalProperties": false,
+      "description": "Dry the house's air to `target_pct` relative humidity: the\ndehumidifier `actuator_id` on above the target by half `band_pct`, off\nbelow it by as much. With `vents_when_drier`, the vents' first stage\nopens too, while this loop is on, the heater off, and the air outside is\ndrier than the house's: its humidity ratio lower by `drier_by_g_kg`,\nuntil it is lower by less than that less `drier_band_g_kg`.",
+      "properties": {
+        "actuator_id": {
+          "title": "Actuator Id",
+          "type": "string"
+        },
+        "target_pct": {
+          "$ref": "#/$defs/HumidityPct"
+        },
+        "band_pct": {
+          "default": 5.0,
+          "exclusiveMinimum": 0,
+          "title": "Band Pct",
+          "type": "number"
+        },
+        "vents_when_drier": {
+          "default": true,
+          "title": "Vents When Drier",
+          "type": "boolean"
+        },
+        "drier_by_g_kg": {
+          "default": 1.0,
+          "exclusiveMinimum": 0,
+          "title": "Drier By G Kg",
+          "type": "number"
+        },
+        "drier_band_g_kg": {
+          "default": 0.5,
+          "exclusiveMinimum": 0,
+          "title": "Drier Band G Kg",
+          "type": "number"
+        }
+      },
+      "required": [
+        "actuator_id",
+        "target_pct"
+      ],
+      "title": "DehumidifyingLoop",
       "type": "object"
     },
     "Envelope": {
@@ -374,9 +507,45 @@
       "title": "GradientAirflow",
       "type": "object"
     },
+    "HeatingLoop": {
+      "additionalProperties": false,
+      "description": "Heat the house's air with the heater `actuator_id` to `day_c` by day\nand `night_c` by night: on below the setpoint by half `band_c`, off above\nit by as much (decision 0042's thermostat).",
+      "properties": {
+        "actuator_id": {
+          "title": "Actuator Id",
+          "type": "string"
+        },
+        "day_c": {
+          "title": "Day C",
+          "type": "number"
+        },
+        "night_c": {
+          "title": "Night C",
+          "type": "number"
+        },
+        "band_c": {
+          "default": 1.0,
+          "exclusiveMinimum": 0,
+          "title": "Band C",
+          "type": "number"
+        }
+      },
+      "required": [
+        "actuator_id",
+        "day_c",
+        "night_c"
+      ],
+      "title": "HeatingLoop",
+      "type": "object"
+    },
     "Hour": {
       "exclusiveMaximum": 24,
       "minimum": 0.0,
+      "type": "number"
+    },
+    "HumidityPct": {
+      "exclusiveMaximum": 100.0,
+      "exclusiveMinimum": 0.0,
       "type": "number"
     },
     "Level": {
@@ -708,6 +877,11 @@
       "title": "Site",
       "type": "object"
     },
+    "StageLevel": {
+      "exclusiveMinimum": 0.0,
+      "maximum": 1.0,
+      "type": "number"
+    },
     "SyntheticWeather": {
       "additionalProperties": false,
       "description": "A day of weather, each day alike: its coldest and warmest temperatures\nand their hours, its humidity at the coldest, its CO2, its calmest and\nwindiest winds, the direction the wind blows from at midnight and how\nfar it veers clockwise by the next (backing if negative), its gusts' size\nas a share of the wind's speed, its cloud cover and its pressure.",
@@ -796,45 +970,6 @@
       "title": "SyntheticWeather",
       "type": "object"
     },
-    "Thermostat": {
-      "additionalProperties": false,
-      "description": "Heat the house's air to `day_c` from `day_from_s` and to `night_c`\nfrom `night_from_s`, times of a run's day, with the heater `actuator_id`,\non below the setpoint by half `band_c` and off above it by as much.",
-      "properties": {
-        "actuator_id": {
-          "title": "Actuator Id",
-          "type": "string"
-        },
-        "day_c": {
-          "title": "Day C",
-          "type": "number"
-        },
-        "night_c": {
-          "title": "Night C",
-          "type": "number"
-        },
-        "day_from_s": {
-          "$ref": "#/$defs/TimeOfDay",
-          "default": 25200.0
-        },
-        "night_from_s": {
-          "$ref": "#/$defs/TimeOfDay",
-          "default": 68400.0
-        },
-        "band_c": {
-          "default": 1.0,
-          "exclusiveMinimum": 0,
-          "title": "Band C",
-          "type": "number"
-        }
-      },
-      "required": [
-        "actuator_id",
-        "day_c",
-        "night_c"
-      ],
-      "title": "Thermostat",
-      "type": "object"
-    },
     "TimeOfDay": {
       "exclusiveMaximum": 86400.0,
       "minimum": 0.0,
@@ -912,6 +1047,70 @@
       "title": "Vector3",
       "type": "object"
     },
+    "VentStage": {
+      "additionalProperties": false,
+      "description": "A stage of the vents: open to `level` once the air passes the venting\nsetpoint by `above_c`.",
+      "properties": {
+        "above_c": {
+          "minimum": 0,
+          "title": "Above C",
+          "type": "number"
+        },
+        "level": {
+          "$ref": "#/$defs/StageLevel"
+        }
+      },
+      "required": [
+        "above_c",
+        "level"
+      ],
+      "title": "VentStage",
+      "type": "object"
+    },
+    "VentingLoop": {
+      "additionalProperties": false,
+      "description": "Vent the house's air through the vents `vents`, to `day_c` by day and\n`night_c` by night, in `stages`: each opens when the air passes the\nsetpoint plus its `above_c`, and closes when the air falls back below\nthat by `band_c`.",
+      "properties": {
+        "vents": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Vents",
+          "type": "array"
+        },
+        "day_c": {
+          "title": "Day C",
+          "type": "number"
+        },
+        "night_c": {
+          "title": "Night C",
+          "type": "number"
+        },
+        "band_c": {
+          "default": 1.0,
+          "exclusiveMinimum": 0,
+          "title": "Band C",
+          "type": "number"
+        },
+        "stages": {
+          "items": {
+            "$ref": "#/$defs/VentStage"
+          },
+          "minItems": 1,
+          "title": "Stages",
+          "type": "array"
+        }
+      },
+      "required": [
+        "vents",
+        "day_c",
+        "night_c",
+        "stages"
+      ],
+      "title": "VentingLoop",
+      "type": "object"
+    },
     "VortexAirflow": {
       "additionalProperties": false,
       "description": "One roll across the house, turning about its length.",
@@ -986,10 +1185,10 @@
       "title": "Daily",
       "type": "array"
     },
-    "thermostat": {
+    "control": {
       "anyOf": [
         {
-          "$ref": "#/$defs/Thermostat"
+          "$ref": "#/$defs/Control"
         },
         {
           "type": "null"
@@ -1301,7 +1500,7 @@
       "type": "string"
     },
     "schema_version": {
-      "const": 2
+      "const": 3
     },
     "opening_day": {
       "type": "integer",

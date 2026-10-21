@@ -62,7 +62,9 @@ def test_every_manifest_names_its_schema_its_format_and_its_layout(scenario_id: 
 def test_a_manifest_in_a_format_it_does_not_read_is_refused() -> None:
     for version in (SCHEMA_VERSION + 1, 0, None, "2", True):
         document = _manifest("climate_box") | {"schema_version": version}
-        with pytest.raises(InvalidManifest, match="this simulator reads format 2, and format 1"):
+        with pytest.raises(
+            InvalidManifest, match="this simulator reads format 3, and formats 1, 2 migrated to it"
+        ):
             scenario_from_manifest("climate_box", document)
 
 
@@ -78,6 +80,53 @@ def test_a_format_1_manifest_is_read_as_format_2_its_identifiers_held_to_it() ->
     named_so = older | {"envelope": older["envelope"] | {"openings": renamed}}
     with pytest.raises(ValidationError, match="opening_id"):
         scenario_from_manifest("climate_box", named_so)
+
+
+def _with_a_thermostat(document: dict[str, Any], version: int) -> dict[str, Any]:
+    """A format 3 manifest written as format 1 or 2 wrote it: its control's
+    heating loop as a thermostat, with its control's day and night, and its
+    note on its control as one on its thermostat."""
+    control = document["control"]
+    thermostat = control["heating"] | {
+        "day_from_s": control["day_from_s"],
+        "night_from_s": control["night_from_s"],
+    }
+
+    def renamed(written: dict[str, Any], value: Any) -> dict[str, Any]:
+        return {
+            ("thermostat" if key == "control" else key): (value if key == "control" else each)
+            for key, each in written.items()
+        }
+
+    notes = renamed(document["notes"], document["notes"]["control"])
+    return renamed(document, thermostat) | {"schema_version": version, "notes": notes}
+
+
+@pytest.mark.parametrize("version", [1, 2])
+def test_an_older_manifest_has_its_thermostat_read_as_its_controls_heating_loop(
+    version: int,
+) -> None:
+    """Format 3 writes a heater's thermostat as its control's heating loop
+    (P11.1); a format 1 or 2 manifest with one is migrated to it, its note
+    on the thermostat a note on the control."""
+    current = _manifest("reference_greenhouse")
+    older = _with_a_thermostat(current, version)
+
+    assert "control" not in older
+    assert older["notes"]["thermostat"] == current["notes"]["control"]
+    assert (
+        scenario_from_manifest("reference_greenhouse", older)
+        == SCENARIO_REGISTRY["reference_greenhouse"]
+    )
+
+
+def test_a_thermostat_is_refused_in_format_3_and_a_control_before_it() -> None:
+    current = _manifest("reference_greenhouse")
+    thermostat = _with_a_thermostat(current, 2)["thermostat"]
+    with pytest.raises(InvalidManifest, match="fields it does not have: thermostat"):
+        scenario_from_manifest("reference_greenhouse", current | {"thermostat": thermostat})
+    with pytest.raises(InvalidManifest, match="a format 2 manifest has no 'control'"):
+        scenario_from_manifest("reference_greenhouse", current | {"schema_version": 2})
 
 
 def test_a_manifest_of_another_scenario_is_refused() -> None:

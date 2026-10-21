@@ -1,7 +1,7 @@
 # P11: Climate setpoints
 
-**Status:** proposed, for review. Nothing is built yet. The open questions
-are at the end.
+**Status:** in progress: P11.1 is in review, the rest is proposed. The
+open questions are at the end.
 Part of the [simulator roadmap](README.md).
 
 ## Goal
@@ -104,12 +104,48 @@ keeps it.
 
 | Step | What | Status |
 | --- | --- | --- |
-| P11.1 | **The controller as data:** `climate/control.py` holds the loops, their targets, bands and stages, and checks them (the dead band between heating and venting, stages in order, times of day on the minute). A manifest's `thermostat` becomes its `control`, in the manifest's next format, with a migration of the one before. | Proposed |
+| P11.1 | **The controller as data:** `climate/control.py` holds the loops, their targets, bands and stages, and checks them (the dead band between heating and venting, stages in order, times of day on the minute). A manifest's `thermostat` becomes its `control`, in the manifest's next format, with a migration of the one before. | In review |
 | P11.2 | **The house decides every loop exactly:** the next switch is the earliest moment any loop's edge is reached. The house's course through a stretch gains its humidity, so that a relative humidity's edge is found too. The grid follows each device a loop runs. Checkpoints keep each loop's state, in checkpoint format 3; a format 2 checkpoint, whose run has the heating loop alone, is read with the other loops off. **With the heating loop alone, a run is today's run, to the last digit.** | Proposed |
 | P11.3 | **Targets as a run's input:** a `&targets=` parameter on every route that makes or keeps a run, wherever `&daily=` is read today: the climate's, the crop's, the timeline's, the observations', the playback's and a checkpoint's. It is read once and checked (refused with the reason, as commands are), it is part of the run's identity, and a checkpoint keeps it, so that it is restored as the same run. The audit's run request (W11) would make this one change in one place. The equipment route says which loop runs each device, its state and its target at the moment. | Proposed |
 | P11.4 | **The viewer:** a Targets panel (heating and venting, each by day and by night, and humidity) that keeps its values in the address, and passes them on every run's request. The Equipment panel names the loop that runs each device. The timeline shows the loops' switches in the air's lane. | Proposed |
 | P11.5 | **The reference greenhouse by its targets, not the clock:** its daily vent and fan commands give way to venting and humidity targets in its manifest. Its run changes, so its opening day, replay, reference views and screenshots are written again, and the changelog says that its identity changes. This waits until after the 20–22 October demo, since consumers follow its current run. | Proposed |
 | P11.6 | **The QA scenario** (below), run and recorded. | Proposed |
+
+### P11.1 as built
+
+- **One day and one night for every loop.** `Control` holds the times its
+  day and night start, on the minute, and each loop its targets for both,
+  as the fifth open question proposes. The heating loop is decision
+  0042's thermostat: `Control.thermostat()` gives the runtime thermostat a
+  run follows, so the run does not change.
+- **The dead band, by the edges.** In each period, the vents' first stage
+  closes, at its opening temperature less the venting band, above the
+  temperature at which the heater switches off, the heating setpoint plus
+  half its band, by at least `dead_band_c` (1 °C by default). Each loop
+  switches by its own rule at the same moment from the same air, so a
+  period's change of targets cannot leave the heater on while a vent opens.
+- **Stages are data.** A venting loop has one stage or more, each opening
+  further at a higher temperature than the one before. How many the
+  reference greenhouse has, and where, is for P11.5, which gives its run
+  venting targets.
+- **What each loop reads is run.** Circulation follows a venting loop's
+  stages and needs one. A dehumidifying loop that vents needs one too.
+  Its band lies between dry air and saturation. It vents only into drier
+  air: the outside's humidity ratio lower by a margin (1 g/kg by default),
+  with a band narrower than the margin (0.5 g/kg).
+- **A scenario's control runs its own devices:** its heaters, fans and
+  dehumidifiers, and its vents (any opening but a door). It takes no
+  daily commands to them. Until P11.2, a scenario's control may hold its
+  heating loop alone. A manifest with another loop is refused with that
+  reason, after its devices are checked.
+- **Manifest format 3.** It writes the thermostat as `control.heating`,
+  and the thermostat's day and night as the control's. Formats 1 and 2 are
+  migrated as they are read, a note on the thermostat becoming one on the
+  control. A run's identity covers its scenario's whole configuration, so
+  every run id changes, though no run does. So P11.1 lands after the
+  20–22 October demo, as P11.5 does.
+- **No decision record yet.** P11's direction becomes one with P11.2, once
+  the open questions below are answered.
 
 ## Acceptance
 

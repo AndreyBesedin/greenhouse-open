@@ -207,15 +207,18 @@ def test_the_same_run_decides_the_same_however_it_is_worked_out() -> None:
 
 
 def test_a_thermostat_runs_one_of_the_scenarios_heaters_and_takes_no_daily_commands() -> None:
+    """A scenario's thermostat is its control's heating loop (P11.1)."""
+
     def config(**changes: object) -> ScenarioConfig:
         return ScenarioConfig.model_validate(BOX.model_dump() | changes)
 
-    assert config(thermostat=AT_16.model_dump()).thermostat == AT_16
+    heating = {"actuator_id": "heater", "day_c": 16.0, "night_c": 16.0}
+    assert config(control={"heating": heating}).thermostat == AT_16
     with pytest.raises(ValidationError, match="runs one of its heaters, not 'fan'"):
-        config(thermostat=AT_16.model_copy(update={"actuator_id": "fan"}).model_dump())
+        config(control={"heating": heating | {"actuator_id": "fan"}})
     daily = DailyCommand(time_of_day_s=0.0, actuator_id="heater", level=1.0)
     with pytest.raises(ValidationError, match="daily commands to it would take it over"):
-        config(thermostat=AT_16.model_dump(), daily=[daily.model_dump()])
+        config(control={"heating": heating}, daily=[daily.model_dump()])
 
 
 def test_the_reference_greenhouses_run_with_everything_off_runs_no_heater() -> None:

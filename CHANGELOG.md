@@ -7,6 +7,17 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: scenario manifests are in format 3 (P11.1). A
+  scenario's `thermostat` is now the heating loop of its climate
+  controller, `control`, which holds its loops, their targets, bands and
+  stages, and checks them (`climate.control`): heating, venting in stages,
+  circulation and dehumidifying, a dead band kept between heating and
+  venting. A scenario runs its heating loop alone until the house decides
+  every loop (P11.2); the others are refused until then. Manifests in
+  formats 1 and 2 are migrated as they are read. The runs do not change,
+  but every run's identity does, since it covers the scenario's whole
+  configuration: the reference run's id, and the digests of its manifest
+  kept beside its opening days and its replay, are written again.
 - `greenhouse-sim`: a playback plays its scenario's own layout or one
   rearranged (#271, decision 0041). `POST .../playback/restart?layout=`
   starts it over with that layout's run from its first day, a new run with

@@ -13,18 +13,20 @@ from pydantic import (
 from greenhouse_sim.airflow.prescribed import PrescribedAirflow, UniformAirflow
 from greenhouse_sim.cfd.setup import CfdSetup
 from greenhouse_sim.climate.commands import DailyCommand
+from greenhouse_sim.climate.control import Control
 from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.climate.thermostat import Thermostat
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.core.crop import CropWork
 from greenhouse_sim.domain.crop import CropModel
+from greenhouse_sim.domain.envelope import OpeningKind
 from greenhouse_sim.weather.recorded import RecordedWeather
 from greenhouse_sim.weather.seasonal import SeasonalWeather
 from greenhouse_sim.weather.sources import Clouded, ConstantWeather, RunWeather, Winded
 from greenhouse_sim.weather.state import Percent
 from greenhouse_sim.weather.synthetic import SyntheticWeather
 from greenhouse_sim.world.envelope import Envelope
-from greenhouse_sim.world.equipment import Heater
+from greenhouse_sim.world.equipment import Dehumidifier, Fan, Heater
 from greenhouse_sim.world.layout import Layout, inside_the_greenhouse, outside_the_greenhouse
 from greenhouse_sim.world.site import DEFAULT_SITE, Bearing, Site
 
@@ -55,9 +57,12 @@ class ScenarioConfig(BaseModel):
     # The commands its runs give its equipment, doors and vents at a time of
     # day, every day, unless a run is given daily commands of its own (P09.4).
     daily: list[DailyCommand] = []
-    # A thermostat on its heater, which runs it by the house's air from the
-    # start, in place of daily commands to it (P10.3); none by default.
-    thermostat: Thermostat | None = None
+    # Its climate controller (P11): the loops that run its heater, vents,
+    # fans and dehumidifier by the house's air from the start, in place of
+    # daily commands to them; none by default. Its heating loop is the
+    # thermostat on its heater (P10.3); until the house decides every loop
+    # (P11.2), it is the only loop a scenario may have.
+    control: Control | None = None
     start_date: date
     duration_days: PositiveInt
     random_seed: NonNegativeInt
@@ -167,20 +172,54 @@ class ScenarioConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def _its_thermostat_runs_a_heater_of_its_own(self) -> Self:
-        if self.thermostat is None:
+    def _its_control_runs_what_it_has(self) -> Self:
+        control = self.control
+        if control is None:
             return self
-        heaters = {
-            piece.actuator_id for piece in self.layout.equipment if isinstance(piece, Heater)
-        }
-        actuator = self.thermostat.actuator_id
-        if actuator not in heaters:
-            raise ValueError(f"a thermostat runs one of its heaters, not {actuator!r}")
-        if any(command.actuator_id == actuator for command in self.daily):
+        if control.heating is not None:
+            self._runs(control.heating.actuator_id, Heater, "heating loop", "heaters")
+        if control.dehumidifying is not None:
+            self._runs(
+                control.dehumidifying.actuator_id,
+                Dehumidifier,
+                "dehumidifying loop",
+                "dehumidifiers",
+            )
+        for fan in control.circulation.fans if control.circulation is not None else []:
+            self._runs(fan, Fan, "circulation loop", "fans")
+        vents = {o.opening_id for o in self.envelope.openings if o.kind != OpeningKind.DOOR}
+        for vent in control.venting.vents if control.venting is not None else []:
+            if vent not in vents:
+                raise ValueError(f"a venting loop runs its vents, not {vent!r}")
+        commanded = sorted({c.actuator_id for c in self.daily} & set(control.runs()))
+        if commanded:
+            them = "it" if len(commanded) == 1 else "them"
             raise ValueError(
-                f"its thermostat runs {actuator!r}: daily commands to it would take it over"
+                f"its control runs {', '.join(commanded)}: daily commands to {them} would take "
+                f"{them} over"
+            )
+        later = [loop for loop in control.loops() if loop != "heating"]
+        if later:
+            raise ValueError(
+                f"a scenario's control runs its heating loop alone until the house decides "
+                f"every loop (P11.2), not its {', '.join(later)}"
             )
         return self
+
+    def _runs(self, actuator_id: str, kind: type, loop: str, kinds: str) -> None:
+        """Refuse a loop's device unless it is one of this scenario's
+        equipment, of the kind the loop runs."""
+        if not any(
+            isinstance(piece, kind) and piece.actuator_id == actuator_id
+            for piece in self.layout.equipment
+        ):
+            raise ValueError(f"a {loop} runs one of its {kinds}, not {actuator_id!r}")
+
+    @property
+    def thermostat(self) -> Thermostat | None:
+        """The thermostat its runs follow: its control's heating loop, if it
+        has one (`climate.control`)."""
+        return None if self.control is None else self.control.thermostat()
 
     @model_validator(mode="after")
     def _every_plant_has_a_planting_position(self) -> Self:
