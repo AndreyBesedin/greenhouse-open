@@ -14,14 +14,21 @@ A unit standing on the floor fills the cells its body holds, which the air
 does not reach (`greenhouse_sim.cfd.geometry.CfdGeometry.solid`): it gives
 its heat to, and draws its water from, the air cells around its body
 instead: those whose centres lie within a cell of it, beside it or above it.
+
+A unit heater blows its warm air out of its front (#261): its heat is given
+to the cells that air passes through, weighted as a round jet's speed is
+(`greenhouse_sim.climate.jets`), from an outlet as wide as its front, along
+its heading. Put into the few cells around its body, a heater sized to the
+house warmed them past 100 °C in a run's first minutes, where a unit
+heater's outlet is some 40 to 70 °C; its total heat is the same either way.
 """
 
 from dataclasses import dataclass
-from typing import Self
+from typing import Final, Self
 
 import numpy as np
 
-from greenhouse_sim.climate.jets import jet_velocity
+from greenhouse_sim.climate.jets import JET_DECAY, JET_REACH_WIDTHS, jet_velocity
 from greenhouse_sim.fields.field import VECTOR_COMPONENTS, FieldGrid
 from greenhouse_sim.units import HOUR_S
 from greenhouse_sim.world.equipment import Dehumidifier, Equipment, Fan, Heater
@@ -93,6 +100,42 @@ def _around(piece: Heater | Dehumidifier, grid: FieldGrid, solid: np.ndarray) ->
     return nearest
 
 
+# How far along its heading a heater's warm air carries its heat, in
+# diameters of its outlet: the jet's core, where a round jet keeps its
+# outlet's width (`climate.jets`). On the reference greenhouse's 30 kW it
+# keeps its warmest cells at 50 to 55 °C in a run's first minutes, within a
+# unit heater's usual outlet temperatures.
+HEATER_JET_DIAMETERS: Final = JET_DECAY
+
+
+def _heater_jet(piece: Heater, grid: FieldGrid, solid: np.ndarray) -> np.ndarray:
+    """How a heater's heat is shared among the air cells of its jet: by the
+    speed a round jet from its outlet would have at each cell's centre, up
+    to `HEATER_JET_DIAMETERS` outlet diameters along its heading. Its outlet
+    is the middle of its front, as wide as its front is high or wide,
+    whichever is less."""
+    axis = piece.facing()
+    diameter = min(piece.size_y, piece.size_z)
+    radius = diameter / 2
+    front = piece.size_x / 2
+    xs, ys, zs = grid.centres()
+    z, y, x = np.meshgrid(zs, ys, xs, indexing="ij")
+    dx = x - (piece.base.x + axis.x * front)
+    dy = y - (piece.base.y + axis.y * front)
+    dz = z - (piece.base.z + piece.size_z / 2)
+    along = dx * axis.x + dy * axis.y + dz * axis.z
+    across_squared = np.maximum(dx**2 + dy**2 + dz**2 - along**2, 0.0)
+    width = np.maximum(radius, along / (2 * JET_DECAY))
+    reached = (
+        (along >= 0.0)
+        & (along <= HEATER_JET_DIAMETERS * diameter)
+        & (across_squared <= (JET_REACH_WIDTHS * width) ** 2)
+        & ~solid
+    )
+    weight: np.ndarray = np.where(reached, radius / width * np.exp(-across_squared / width**2), 0.0)
+    return weight
+
+
 def source_terms(piece: Equipment, level: float, grid: FieldGrid, solid: np.ndarray) -> SourceTerms:
     """What a piece of equipment does to the air at a level, on a grid whose
     `solid` cells its obstacles fill."""
@@ -109,6 +152,10 @@ def source_terms(piece: Equipment, level: float, grid: FieldGrid, solid: np.ndar
     region = _around(piece, grid, solid)
     share = region / region.sum()
     if isinstance(piece, Heater):
+        jet = _heater_jet(piece, grid, solid)
+        # A heater whose outlet faces a wall gives its heat around its body.
+        if jet.sum() > 0.0:
+            share = jet / jet.sum()
         return SourceTerms(
             grid=grid,
             velocity=terms.velocity,

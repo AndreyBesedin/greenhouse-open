@@ -423,7 +423,9 @@ device's source terms scale with its level and vanish when it is off.
     cells within a cell of its body, beside it or above it, shared evenly.
     It never uses the cells its body fills, as the CFD mesh removes them
     (`CfdGeometry.solid`). A unit hemmed in by other solids uses the
-    nearest air cell.
+    nearest air cell. Since #261, a heater gives its heat to the cells its
+    warm air blows through instead: ahead of its front, along its heading,
+    weighted as a round jet's speed is, over its jet's core.
   - **Not yet:** a fan adds nothing until its jet (P05.2), and water
     removal is capped by what the air holds once the air holds water
     (P05.4).

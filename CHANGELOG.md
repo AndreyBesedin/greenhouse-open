@@ -7,6 +7,16 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: a heater gives its heat to the air its outlet blows
+  through, along its heading over its jet's core, weighted as a round jet's
+  speed is, rather than to the few cells around its body (#261). In the
+  reference greenhouse's first minutes its warmest cells were 102 to 108 °C
+  and are now 50 to 55 °C, a unit heater's outlet. Its total heat is the
+  same, and so is the house's air, which the run follows after its first
+  two hours: the reference run's day 0 replay digest changes, and its later
+  days and opening days do not. In a shut house the grid's mean now runs
+  about half a degree above the whole house's, its heat kept from the cold
+  glass.
 - `greenhouse-sim`: scenario manifests are in format 3 (P11.1). A
   scenario's `thermostat` is now the heating loop of its climate
   controller, `control`, which holds its loops, their targets, bands and

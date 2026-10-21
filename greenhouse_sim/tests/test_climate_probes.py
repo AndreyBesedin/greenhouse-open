@@ -68,7 +68,7 @@ def test_the_controlled_and_uncontrolled_runs_diverge_where_the_equipment_acts()
     assert corner["controlled"]["temperature_c"][0] == corner["all_off"]["temperature_c"][0]
     beside = corner["controlled"]["temperature_c"][-1] - corner["all_off"]["temperature_c"][-1]
     across = middle["controlled"]["temperature_c"][-1] - middle["all_off"]["temperature_c"][-1]
-    assert beside > 20.0
+    assert beside > 15.0
     assert 3.0 < across < beside
 
 

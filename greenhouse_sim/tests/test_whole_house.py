@@ -29,13 +29,15 @@ BOX = SCENARIO_REGISTRY["climate_box"]
 SEALED = {"glazing_u_w_m2k": 0.0, "infiltration_per_h": 0.0, "infiltration_per_h_per_m_s": 0.0}
 DAY_S = 86_400.0
 # How closely the whole house follows the grid run's mean, as measured on
-# the climate box: in a shut house its temperature to a few tenths of a
-# degree; with condensation on the cold glass, which only the grid has
-# beside the glass, its water to a gram and a half a kilogram; with a vent
+# the climate box: in a shut house its temperature to about half a degree,
+# its heater's warm air carried along its jet, away from the glass that
+# cools the grid's air beside it (#261); with condensation on the cold
+# glass, which only the grid has beside the glass, its water to a gram and
+# a half a kilogram; with a vent
 # open, which on the grid exchanges the cooler air beside it, to three and a
 # half degrees, on a still night, when the vent is most of what the heater
 # loses.
-SHUT_TEMPERATURE_C = 0.3
+SHUT_TEMPERATURE_C = 0.6
 CONDENSING_WATER_G_KG = 1.5
 VENTING_TEMPERATURE_C = 3.5
 
