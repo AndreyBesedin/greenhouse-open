@@ -14,6 +14,7 @@ const CHECKPOINT = parseCheckpoint({
   openings: {},
   commands: [[600, "heater", 1]],
   daily: null,
+  targets: [],
   day: 1,
   time_s: 86400,
   plants: 0,

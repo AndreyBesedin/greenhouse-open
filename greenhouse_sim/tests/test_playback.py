@@ -178,7 +178,9 @@ def test_a_restart_with_another_layout_plays_its_run_from_its_start_as_a_new_run
     clock.now += 5.0
     # Its records are its run's, from its start, as a consumer reads them.
     cut = played.records_after(0, ALL)
-    expected, _ = sensors.delivered_between(SCENARIO, None, DAY_S / 2, EVERY_S, MOVED_NAME)
+    expected, _ = sensors.delivered_between(
+        RunRequest(SCENARIO, layout=MOVED_NAME), None, DAY_S / 2, EVERY_S
+    )
     assert [r for r in cut.records if r.sensor_id] == expected
     assert {r.source.source_id for r in cut.records} == {moved.run_id}
 
@@ -345,7 +347,7 @@ def test_a_start_at_a_pace_refused_starts_nothing(no_playbacks: Callable[[], Non
 def test_a_run_that_cannot_be_worked_out_is_the_simulator_s_failure(
     clock: Clock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def broken(*_: object) -> None:
+    def broken(*_: object, **__: object) -> None:
         raise ArithmeticError("a numerical failure")
 
     monkeypatch.setattr("greenhouse_sim.services.playback.delivered_between", broken)
@@ -354,7 +356,7 @@ def test_a_run_that_cannot_be_worked_out_is_the_simulator_s_failure(
     with pytest.raises(PlaybackFailed):
         run.state()
 
-    def refused(*_: object) -> None:
+    def refused(*_: object, **__: object) -> None:
         raise NotFound("no such run")
 
     monkeypatch.setattr("greenhouse_sim.services.playback.delivered_between", refused)

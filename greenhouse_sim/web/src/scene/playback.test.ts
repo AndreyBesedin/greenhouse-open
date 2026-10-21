@@ -22,6 +22,7 @@ const ANSWER = {
   seconds_per_day: 10,
   worked_out_s: 172_800,
   every_s: 300,
+  targets: [],
 };
 const STATE = {
   runId: "reference_greenhouse-climate-c562c827",

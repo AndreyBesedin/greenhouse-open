@@ -28,7 +28,7 @@ HEATER_W: Final = 30_000.0
 
 def _day(scenario_id: str, day: int) -> list[Observation]:
     _, run_id = air_through_a_run(RunRequest(scenario_id))
-    return heat_records(scenario_id, day, run_start(scenario_id), run_id)
+    return heat_records(RunRequest(scenario_id), day, run_start(scenario_id), run_id)
 
 
 def _mj_m2(joules: float) -> float:

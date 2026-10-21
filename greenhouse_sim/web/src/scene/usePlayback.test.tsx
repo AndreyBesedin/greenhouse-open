@@ -30,6 +30,7 @@ function playing(runId: string, timeS: number): Response {
       seconds_per_day: 10,
       worked_out_s: 86_400,
       every_s: 300,
+      targets: [],
     }),
   );
 }

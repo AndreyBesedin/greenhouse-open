@@ -44,15 +44,16 @@ MISCOUNTS: Final = (-1, 1)
 
 
 def crop_records(
-    scenario_id: str, day: int, start: datetime, run_id: str, layout: str | None = None
+    run: RunRequest, day: int, start: datetime, run_id: str
 ) -> tuple[list[Observation], list[Event]]:
-    """The harvests and the walk through the crop of a scenario's own run,
-    with its own layout or `layout`, on its day `day`, which starts `day`
-    days after `start`: none if the scenario grows no organ-level crop."""
-    config = scenario(scenario_id)
+    """The harvests and the walk through the crop of a run, such as a
+    scenario's own with a layout rearranged or targets changed, on its day
+    `day`, which starts `day` days after `start`, each named by `run_id`:
+    none if the scenario grows no organ-level crop."""
+    config = scenario(run.scenario_id)
     if config.crop_model != CropModel.ORGAN:
         return [], []
-    crop = run_crop(RunRequest(scenario_id, layout=layout))
+    crop = run_crop(run)
     plants = crop.plants_on(day)
     before = crop.plants_on(day - 1) if day > 0 else plants
     day_start = start + timedelta(seconds=day * DAY_S)

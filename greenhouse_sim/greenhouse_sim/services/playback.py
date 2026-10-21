@@ -28,6 +28,14 @@ its start: a new run, with an identity of its own, counting its own epochs.
 There is one playback a scenario, whose run a viewer following it can
 rearrange. A command given in the viewer makes another run, which the
 playback does not follow.
+
+Its run's targets, such as the heating setpoint by day, can be changed
+while it plays (#274, decision 0043): from the clock's next minute on, in
+the same run and epoch, its records from then on worked out again under
+them while the clock waits at that minute. A record delivered is never
+rewritten, since the run is the same until the change. The changes are part
+of its state, so that a viewer following it draws the same run, and a
+restart, a new epoch of the scenario's own run, makes none.
 """
 
 import gzip
@@ -36,8 +44,8 @@ import os
 import threading
 from bisect import bisect_right
 from collections import OrderedDict
-from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
@@ -48,13 +56,14 @@ from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 
+from greenhouse_sim.climate.commands import TARGET_EVERY_S
 from greenhouse_sim.core.clock import DAY_S, run_day
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.crop_log import crop_records
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
-from greenhouse_sim.services.fields import air_through_a_run
+from greenhouse_sim.services.fields import air_through_a_run, run_schedule
 from greenhouse_sim.services.heat_log import heat_records
-from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.runs import Commanded, RunRequest
 from greenhouse_sim.services.scenarios import layout_name, scenario
 from greenhouse_sim.services.sensors import delivered_between, run_start
 from greenhouse_sim.services.stores import Store
@@ -154,6 +163,10 @@ class PlaybackState(BaseModel):
     seconds_per_day: float
     worked_out_s: float
     every_s: float
+    # The target changes its epoch has made (#274, decision 0043), each its
+    # moment in seconds, its target and its value in °C, as a run's
+    # `&targets=` writes them.
+    targets: list[tuple[float, str, float]] = []
 
 
 @dataclass(frozen=True)
@@ -280,6 +293,15 @@ class Playback:
         self._playing = False
         self._seconds_per_day = seconds_per_day
         self._since = clock()
+        # The target changes its epoch has made, in the order made; while
+        # one is worked into the run, the moment from which its records are
+        # worked again, which the clock does not pass meanwhile; and how
+        # many changes there have been, so that a day worked out under the
+        # targets before is not published.
+        self._targets: tuple[Commanded, ...] = ()
+        self._again_from: float | None = None
+        self._changes = 0
+        self._changed = threading.Event()
         self._stopped = threading.Event()
         self._failure: Exception | None = None
         self._worker = threading.Thread(
@@ -327,9 +349,29 @@ class Playback:
                 return False
             self._stopped.wait(WAIT_STEP_S)
 
+    def _run(self) -> RunRequest:
+        """The run it plays: its scenario's own, with its layout and its
+        epoch's target changes."""
+        return RunRequest(self.scenario_id, layout=self.layout, targets=self._targets)
+
+    def _next_day(self) -> int:
+        """The day to work out next: the day a target change is worked into,
+        if one is, or the day after the last worked out."""
+        if self._again_from is not None:
+            return min(len(self._worked), int(self._again_from // DAY_S))
+        return len(self._worked)
+
     def _work(self) -> None:
-        for day in range(round(self.end_s / DAY_S)):
-            if self._stopped.is_set() or not self.work_day(day):
+        days = round(self.end_s / DAY_S)
+        while not self._stopped.is_set():
+            with self._lock:
+                day, run, changes = self._next_day(), self._run(), self._changes
+                self._changed.clear()
+            if day >= days:
+                # Every day worked out, until a change has some worked again.
+                self._changed.wait(WAIT_STEP_S)
+                continue
+            if not self._work_day(day, run, changes):
                 return
 
     def work_day(self, day: int) -> bool:
@@ -337,23 +379,29 @@ class Playback:
         after the last published: its sensors' readings, its crop's walk and
         harvests, and the heat its heaters gave. Whether it could, any
         failure kept and said by `state` rather than lost with the worker."""
+        with self._lock:
+            run, changes = self._run(), self._changes
+        return self._work_day(day, run, changes)
+
+    def _work_day(self, day: int, run: RunRequest, changes: int) -> bool:
+        """Works day `day` of `run` out, as `work_day` does, and publishes
+        it unless the targets changed meanwhile: in place of the day and those
+        after it, if they were worked out under the targets before."""
         try:
             readings, run_id = delivered_between(
-                self.scenario_id,
+                run,
                 None if day == 0 else day * DAY_S,
                 (day + 1) * DAY_S,
                 self.every_s,
-                self.layout,
+                named=self.run_id if run.targets else None,
             )
-            walked, harvests = crop_records(
-                self.scenario_id, day, self.start, self.run_id, self.layout
-            )
-            heated = heat_records(self.scenario_id, day, self.start, self.run_id, self.layout)
+            walked, harvests = crop_records(run, day, self.start, self.run_id)
+            heated = heat_records(run, day, self.start, self.run_id)
         except Exception as error:
             with self._lock:
                 self._failure = error
             return False
-        if run_id != self.run_id:
+        if not run.targets and run_id != self.run_id:
             with self._lock:
                 self._failure = RuntimeError(f"its run is another now: {run_id}")
             return False
@@ -364,11 +412,16 @@ class Playback:
         events = sorted(harvests, key=lambda e: (e.timestamp, e.plant_id or ""))
         worked = (self._observations.packed(observations), self._events.packed(events))
         with self._lock:
+            if changes != self._changes:
+                # Worked out under targets changed since: worked again.
+                return True
             # The clock moved as far as it could before this day: from now
             # on it moves into it. Time it spent waiting is not banked,
             # however often anyone asked meanwhile.
             self._advance()
+            del self._worked[day:]
             self._worked.append(worked)
+            self._again_from = None
         return True
 
     def _advance(self) -> None:
@@ -377,8 +430,10 @@ class Playback:
         now = self._clock()
         if self._playing:
             worked_out = len(self._worked) * DAY_S
+            if self._again_from is not None:
+                worked_out = min(worked_out, self._again_from)
             moved = self._time_s + (now - self._since) * DAY_S / self._seconds_per_day
-            self._time_s = min(moved, worked_out, self.end_s)
+            self._time_s = max(self._time_s, min(moved, worked_out, self.end_s))
             if self._time_s >= self.end_s:
                 self._playing = False
         self._since = now
@@ -402,6 +457,7 @@ class Playback:
             seconds_per_day=self._seconds_per_day,
             worked_out_s=len(self._worked) * DAY_S,
             every_s=self.every_s,
+            targets=list(self._targets),
         )
 
     def state(self) -> PlaybackState:
@@ -425,7 +481,38 @@ class Playback:
                         self._epochs.started(self.run_id, self._epoch)
                     self._time_s = 0.0
                     self._playing = True
+                    # The scenario's own run again, without the changes.
+                    if self._targets:
+                        self._work_again_from(self._targets[0][0])
+                        self._targets = ()
             return self._state()
+
+    def set_targets(self, targets: Mapping[str, float]) -> PlaybackState:
+        """Changes its run's targets from the clock's next minute on, in the
+        same run and epoch (decision 0043): its records from then on are
+        worked out again under them, the clock waiting at that minute until
+        they are. Refused as a run's target changes are, or once the run has
+        ended."""
+        if not targets:
+            raise InvalidRequest("targets wants target:celsius pairs, and none was given")
+        with self._lock:
+            self._advance()
+            moment = (math.floor(self._time_s / TARGET_EVERY_S) + 1) * TARGET_EVERY_S
+            if moment > self.end_s:
+                raise InvalidRequest("the run has ended: its targets change no more")
+            changed = (*self._targets, *((moment, name, value) for name, value in targets.items()))
+            # Checked as a run's target changes are; refused, nothing changes.
+            run_schedule(replace(self._run(), targets=changed))
+            self._targets = changed
+            self._work_again_from(moment)
+            return self._state()
+
+    def _work_again_from(self, moment_s: float) -> None:
+        """Has its records from `moment_s` on worked out again, the clock
+        waiting there meanwhile."""
+        self._changes += 1
+        self._again_from = moment_s if self._again_from is None else min(self._again_from, moment_s)
+        self._changed.set()
 
     def set_pace(self, seconds_per_day: float) -> PlaybackState:
         """Plays a simulated day in `seconds_per_day` real seconds."""
@@ -564,6 +651,12 @@ def command(scenario_id: str, command: PlaybackCommand, layout: str | None = Non
 
 def set_pace(scenario_id: str, seconds_per_day: float) -> PlaybackState:
     return playback(scenario_id).set_pace(seconds_per_day)
+
+
+def set_targets(scenario_id: str, targets: Mapping[str, float]) -> PlaybackState:
+    """Changes the targets of the run the scenario's playback plays, from
+    its clock's next minute on (#274, decision 0043)."""
+    return playback(scenario_id).set_targets(targets)
 
 
 def stop_playbacks() -> None:

@@ -13,7 +13,7 @@ import {
 const ANSWER = {
   time_s: 3600,
   levels: { fan_left: 0, fan_right: 0, heater: 1, dehumidifier: 0 },
-  thermostat: { actuator_id: "heater", setpoint_c: 16, runs: true },
+  thermostat: { actuator_id: "heater", setpoint_c: 16, day_c: 18, night_c: 16, runs: true },
 };
 
 function answering(body: unknown, status = 200): typeof fetch {

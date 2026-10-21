@@ -29,6 +29,7 @@ const BODY = {
   openings: { door: 1 },
   commands: [[3600, "heater", 0]],
   daily: null,
+  targets: [],
   day: 1,
   time_s: 86400,
   plants: 32,

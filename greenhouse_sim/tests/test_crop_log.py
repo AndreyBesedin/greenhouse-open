@@ -32,7 +32,7 @@ def test_a_day_s_walk_records_every_plant_at_noon_with_the_run_s_identity() -> N
     start = run_start(SCENARIO)
     _, run_id = air_through_a_run(RunRequest(SCENARIO))
 
-    walked, harvests = crop_records(SCENARIO, 1, start, run_id)
+    walked, harvests = crop_records(RunRequest(SCENARIO), 1, start, run_id)
 
     assert harvests == []  # no harvest round starts day 1
     assert len(walked) == 32 * len(WALKED)
@@ -41,7 +41,7 @@ def test_a_day_s_walk_records_every_plant_at_noon_with_the_run_s_identity() -> N
     assert {o.source.source_id for o in walked} == {run_id}
     assert check_observations(walked) == []
     # The same walk again is the same: its errors are drawn from the seed.
-    assert crop_records(SCENARIO, 1, start, run_id)[0] == walked
+    assert crop_records(RunRequest(SCENARIO), 1, start, run_id)[0] == walked
     # Transplants a day on: no fruit yet, some height. A walk can miss a
     # fruit or count one twice, but counts none where there is none.
     heights = [o.value for o in walked if o.observation_type == ObservationType.VISIBLE_HEIGHT_CM]
@@ -52,7 +52,7 @@ def test_a_day_s_walk_records_every_plant_at_noon_with_the_run_s_identity() -> N
 
 def test_a_scenario_with_the_simple_crop_has_no_records_of_it() -> None:
     _, run_id = air_through_a_run(RunRequest("climate_box"))
-    assert crop_records("climate_box", 1, run_start("climate_box"), run_id) == ([], [])
+    assert crop_records(RunRequest("climate_box"), 1, run_start("climate_box"), run_id) == ([], [])
 
 
 @pytest.mark.slow
@@ -63,7 +63,7 @@ def test_a_harvest_round_is_an_event_per_plant_picked_as_the_plant_s_history_has
     start = run_start(SCENARIO)
     _, run_id = air_through_a_run(RunRequest(SCENARIO))
 
-    walked, harvests = crop_records(SCENARIO, FIRST_ROUND, start, run_id)
+    walked, harvests = crop_records(RunRequest(SCENARIO), FIRST_ROUND, start, run_id)
 
     assert harvests, "the first round after the opening day picks red fruit"
     assert check_events(harvests) == []

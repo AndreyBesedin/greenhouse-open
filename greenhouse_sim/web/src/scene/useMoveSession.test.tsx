@@ -92,6 +92,7 @@ function playbackAnswer(layout: string): Response {
       seconds_per_day: 10,
       worked_out_s: 0,
       every_s: 300,
+      targets: [],
     }),
   );
 }

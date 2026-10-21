@@ -37,7 +37,13 @@ from greenhouse_sim.airflow.contract import AirflowModel
 from greenhouse_sim.airflow.prescribed import PATTERNS
 from greenhouse_sim.cfd.geometry import CfdGeometry, cfd_geometry
 from greenhouse_sim.cfd.results import CfdAirflow, kept_result
-from greenhouse_sim.climate.commands import Command, DailyCommand, Schedule
+from greenhouse_sim.climate.commands import (
+    TARGET_EVERY_S,
+    Command,
+    DailyCommand,
+    Schedule,
+    TargetChange,
+)
 from greenhouse_sim.climate.day import ClimateDay, window_start
 from greenhouse_sim.climate.glazing import GlazingAt, glazed_cells
 from greenhouse_sim.climate.house import HouseAir, HouseTrace, house_trace
@@ -47,6 +53,7 @@ from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.vents import Vent
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.digests import short_digest
+from greenhouse_sim.domain.equipment import Target
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument, FieldGrid
 from greenhouse_sim.fields.synthetic import shear_field
 from greenhouse_sim.scenarios.config import ScenarioConfig
@@ -73,6 +80,9 @@ CFD: Final = "cfd"
 CLIMATE: Final = "climate"
 # How many recent climate runs are kept.
 KEPT_RUNS: Final = 8
+# A heating setpoint a run may be given (#274): above freezing, and below
+# what a crop survives.
+SETPOINT_RANGE_C: Final = (0.0, 40.0)
 # Probes read a climate run this often, in seconds.
 PROBE_EVERY_S: Final = 60.0
 # How many hexadecimal digits of its digest name a climate run.
@@ -135,9 +145,11 @@ def _checked(
     return (*each_day, *commands)
 
 
-def _schedule(levels: _Pairs, commands: tuple[Commanded, ...]) -> Schedule:
+def _schedule(
+    levels: _Pairs, commands: tuple[Commanded, ...], targets: tuple[Commanded, ...] = ()
+) -> Schedule:
     """A climate run's schedule: its equipment's levels from the start, then
-    its commands, checked."""
+    its commands, and its target changes, checked."""
     return Schedule.of(
         [
             *Schedule.from_start(dict(levels)).commands,
@@ -145,8 +157,38 @@ def _schedule(levels: _Pairs, commands: tuple[Commanded, ...]) -> Schedule:
                 Command(time_s=time, actuator_id=actuator, level=level)
                 for time, actuator, level in commands
             ),
-        ]
+        ],
+        [
+            TargetChange(time_s=time, target=Target(target), value_c=value)
+            for time, target, value in targets
+        ],
     )
+
+
+def _checked_targets(config: ScenarioConfig, targets: Sequence[Commanded]) -> tuple[Commanded, ...]:
+    """A run's target changes (#274), checked: one to a target its
+    scenario's controller does not have, outside `SETPOINT_RANGE_C`, at a
+    moment outside a run, or not on the minute, is refused."""
+    if not targets:
+        return ()
+    if config.thermostat is None:
+        raise InvalidRequest(f"{config.greenhouse_id} has no heating loop whose target to change")
+    names = ", ".join(target.value for target in Target)
+    low, high = SETPOINT_RANGE_C
+    length = config.run_length_s()
+    for time, target, value in targets:
+        if target not in Target:
+            raise InvalidRequest(f"a target is one of {names}, not {target!r}")
+        if not low <= value <= high:
+            raise InvalidRequest(
+                f"a heating setpoint lies from {low:.15g} to {high:.15g} °C, not {value:.15g}"
+            )
+        if not 0.0 <= time <= length or time % TARGET_EVERY_S:
+            raise InvalidRequest(
+                f"a target changes on the minute, within the run, 0 to {length:.15g} s, not at "
+                f"{time:.15g} s"
+            )
+    return tuple(targets)
 
 
 def run_schedule(run: RunRequest) -> Schedule:
@@ -155,13 +197,17 @@ def run_schedule(run: RunRequest) -> Schedule:
     its daily commands and its commands set it."""
     config = changed(scenario(run.scenario_id), SceneChanges(layout=run.layout or DEFAULT_LAYOUT))
     running = equipment_levels(config, run.levels)
-    return _schedule(tuple(sorted(running.items())), _checked(config, run.commands, run.daily))
+    return _schedule(
+        tuple(sorted(running.items())),
+        _checked(config, run.commands, run.daily),
+        _checked_targets(config, run.targets),
+    )
 
 
 # What tells one climate run from another: its scenario, layout and weather,
-# its equipment's levels and its doors' and vents' from the start, and its
-# commands after it.
-type RunKey = tuple[str, str, str, _Pairs, _Pairs, tuple[Commanded, ...]]
+# its equipment's levels and its doors' and vents' from the start, its
+# commands after it, and its target changes.
+type RunKey = tuple[str, str, str, _Pairs, _Pairs, tuple[Commanded, ...], tuple[Commanded, ...]]
 CLIMATE_RUNS: Store[RunKey, ClimateDay] = Store("climate runs", KEPT_RUNS)
 
 
@@ -172,15 +218,17 @@ def _climate_day(
     levels: _Pairs,
     openings: _Pairs,
     commands: tuple[Commanded, ...],
+    targets: tuple[Commanded, ...] = (),
 ) -> ClimateDay:
     """A scenario's climate run through a day (`greenhouse_sim.climate.day`),
     with one of its layouts, under a weather, its
     equipment set to `levels` from the start and then as `commands` set it,
+    its targets changed as `targets` change them,
     and its doors and vents open as `openings` say: one of the `KEPT_RUNS`
     kept, or a new one, carrying on from those kept for the same house under
     the same weather up to where their schedules differ, as an override's
     does."""
-    key = (scenario_id, layout, weather, levels, openings, commands)
+    key = (scenario_id, layout, weather, levels, openings, commands, targets)
 
     def make(others: list[tuple[RunKey, ClimateDay]]) -> ClimateDay:
         run = ClimateDay(_new_climate_run(*key))
@@ -198,7 +246,7 @@ def house_of(key: RunKey) -> House:
     """A run's house, as its key names it: its scenario, layout and weather,
     and its doors and vents open from the start. Runs of the same house are
     the same air until their schedules differ."""
-    scenario_id, layout, weather, _, openings, _ = key
+    scenario_id, layout, weather, _, openings, *_ = key
     return scenario_id, layout, weather, openings
 
 
@@ -214,9 +262,9 @@ def off_levels(scenario_id: str) -> dict[str, float]:
 def _everything_off(key: RunKey) -> ClimateDay:
     """The run `key` names with everything off: its house, under its
     weather, its doors and vents as open from the start, and nothing run."""
-    scenario_id, layout, weather, _, openings, _ = key
+    scenario_id, layout, weather, _, openings, *_ = key
     off = tuple(sorted(off_levels(scenario_id).items()))
-    return _climate_day(scenario_id, layout, weather, off, openings, ())
+    return _climate_day(scenario_id, layout, weather, off, openings, (), ())
 
 
 def climate_run(run: RunRequest) -> tuple[RunKey, ClimateDay]:
@@ -236,6 +284,7 @@ def climate_run(run: RunRequest) -> tuple[RunKey, ClimateDay]:
         tuple(sorted(equipment_levels(config, run.levels).items())),
         tuple(sorted(run.openings.items())),
         _checked(config, run.commands, run.daily),
+        _checked_targets(config, run.targets),
     )
     return key, _climate_day(*key)
 
@@ -275,6 +324,7 @@ def _new_climate_run(
     levels: _Pairs,
     openings: _Pairs,
     commands: tuple[Commanded, ...],
+    targets: tuple[Commanded, ...] = (),
 ) -> ClimateRun:
     """A scenario's climate run, from its start. Its doors and vents are those
     open at the start, or opened by a command at a later moment."""
@@ -300,7 +350,7 @@ def _new_climate_run(
     return ClimateRun(
         base=config.airflow,
         equipment=config.layout.equipment,
-        schedule=_schedule(levels, commands),
+        schedule=_schedule(levels, commands, targets),
         settings=config.climate,
         grid=grid,
         solid=geometry.solid(),
@@ -324,14 +374,16 @@ class _Climate:
         levels: Mapping[str, float],
         openings: Mapping[str, float],
         commands: tuple[Commanded, ...],
+        targets: tuple[Commanded, ...] = (),
     ):
-        self.key = (
+        self.key: RunKey = (
             scenario_id,
             layout,
             weather,
             tuple(sorted(levels.items())),
             tuple(sorted(openings.items())),
             commands,
+            targets,
         )
 
     def field(self, field_id: str, grid: FieldGrid, time_s: float = 0.0) -> EnvironmentField:
@@ -353,6 +405,7 @@ def _models(run: RunRequest) -> dict[str, AirflowModel]:
     )
     running = equipment_levels(config, run.levels)
     scheduled = _checked(config, run.commands, run.daily)
+    targets = _checked_targets(config, run.targets)
     own = config.airflow
     models: dict[str, AirflowModel] = {own.kind: own}
     for name, pattern in PATTERNS.items():
@@ -362,7 +415,7 @@ def _models(run: RunRequest) -> dict[str, AirflowModel]:
         models[CFD] = CfdAirflow(solved)
     if config.layout.equipment:
         models[CLIMATE] = _Climate(
-            run.scenario_id, layout_name(layout), weather, running, run.openings, scheduled
+            run.scenario_id, layout_name(layout), weather, running, run.openings, scheduled, targets
         )
     models[SHEAR] = _Shear()
     return models
@@ -477,13 +530,17 @@ def house_air_at(run: RunRequest, time_s: float = 0.0) -> HouseAir | None:
 
 class ThermostatAt(BaseModel):
     """A run's thermostat at a moment (`climate.thermostat`): the heater it
-    runs, the temperature it heats the house's air to then, and whether it
-    runs the heater then, or a command to the heater has taken it over."""
+    runs, the temperature it heats the house's air to then, its setpoints by
+    day and by night then, as the run's target changes have left them
+    (#274), and whether it runs the heater then, or a command to the heater
+    has taken it over."""
 
     model_config = ConfigDict(frozen=True)
 
     actuator_id: str
     setpoint_c: float
+    day_c: float
+    night_c: float
     runs: bool
 
 
@@ -510,6 +567,7 @@ def equipment_at(run: RunRequest, time_s: float = 0.0) -> EquipmentAt:
         return EquipmentAt(time_s=time_s, levels={}, thermostat=None)
     worked = _climate_day(*climate.key).run
     thermostat = worked.thermostat
+    targets = worked.schedule.targets_at(time_s)
     return EquipmentAt(
         time_s=time_s,
         levels=worked.levels_at(time_s),
@@ -517,7 +575,9 @@ def equipment_at(run: RunRequest, time_s: float = 0.0) -> EquipmentAt:
         if thermostat is None
         else ThermostatAt(
             actuator_id=thermostat.actuator_id,
-            setpoint_c=thermostat.setpoint_c(time_s),
+            setpoint_c=thermostat.setpoint_c(time_s, targets),
+            day_c=thermostat.setpoints_c(targets)[0],
+            night_c=thermostat.setpoints_c(targets)[1],
             runs=worked.thermostat_governs(time_s),
         ),
     )
@@ -571,7 +631,10 @@ def air_through_a_run(run: RunRequest) -> tuple[Callable[[float], EnvironmentFie
         # A run under recorded weather is told apart by its file's content.
         under = config.weather
         recorded = under.identity() if isinstance(under, RecordedWeather) else ""
-        digest = _digest(repr(climate.key) + recorded + config.model_dump_json())
+        # A run whose targets are its scenario's own is named as it was before
+        # runs had target changes (#274), so its identity stays.
+        named = climate.key if climate.key[-1] else climate.key[:-1]
+        digest = _digest(repr(named) + recorded + config.model_dump_json())
         return (lambda time_s: day.sampled(f"{scenario_id}_{CLIMATE}", time_s)), (
             f"{scenario_id}-climate-{digest}"
         )
