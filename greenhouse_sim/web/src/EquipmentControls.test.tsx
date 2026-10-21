@@ -39,7 +39,7 @@ describe("a scene's equipment", () => {
 
   it("says when a thermostat runs one, and at what it aims", () => {
     const heater = { actuatorId: "heater", label: "heater", level: 1, rated: 30, unit: "kW" };
-    const thermostat = { actuatorId: "heater", setpointC: 16, runs: true };
+    const thermostat = { actuatorId: "heater", setpointC: 16, dayC: 18, nightC: 16, runs: true };
 
     expect(describeRun(heater, thermostat)).toBe("100%, 30 kW, by its thermostat at 16 °C");
     expect(describeRun({ ...heater, level: 0 }, thermostat)).toBe(

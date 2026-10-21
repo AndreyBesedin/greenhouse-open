@@ -145,22 +145,24 @@ def observations(
 
 
 def delivered_between(
-    scenario_id: str,
+    run: RunRequest,
     after_s: float | None,
     until_s: float,
     every_s: float | None = None,
-    layout: str = DEFAULT_LAYOUT,
+    named: str | None = None,
 ) -> tuple[list[Observation], str]:
-    """What a scenario's own run delivered of its point sensors' readings
-    after `after_s` and by `until_s`, from the run's start if `after_s` is
-    None, in the order delivered, taken every `every_s` (all if None); with
-    the run's identity. Its own run: its weather and its daily commands,
-    none changed, and its own layout or `layout`, such as one rearranged.
-    Spans that meet end to end deliver each reading once, a late one in the
-    span it arrived in."""
+    """What a run delivered of its point sensors' readings after `after_s`
+    and by `until_s`, from the run's start if `after_s` is None, in the order
+    delivered, taken every `every_s` (all if None); with the run's identity.
+    The run is such as a scenario's own, with a layout rearranged or targets
+    changed. Each reading is named by `named`, by default the run's
+    identity: a playback names those of a run whose targets it changed by
+    its epoch's run (decision 0043). Spans that meet end to end deliver each
+    reading once, a late one in the span it arrived in."""
+    scenario_id = run.scenario_id
     config = scenario(scenario_id)
-    point_sensors = _point_sensors(scenario_id, layout)
-    air_at, run_id = air_through_a_run(RunRequest(scenario_id, layout=layout))
+    point_sensors = _point_sensors(scenario_id, run.layout or DEFAULT_LAYOUT)
+    air_at, run_id = air_through_a_run(run)
     start = run_start(scenario_id)
     latest = max((sensor.imperfections.latency_s for sensor in point_sensors), default=0.0)
     observed = observe(
@@ -169,9 +171,9 @@ def delivered_between(
         until_s,
         start=start,
         greenhouse_id=config.greenhouse_id,
-        run_id=run_id,
+        run_id=named or run_id,
         seed=config.random_seed,
-        weather_at=_weather_at(scenario_id, None),
+        weather_at=_weather_at(scenario_id, run.weather),
         from_s=0.0 if after_s is None else max(0.0, after_s - latest),
         every_s=every_s,
     )

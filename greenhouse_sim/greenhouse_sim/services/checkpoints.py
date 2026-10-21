@@ -6,8 +6,8 @@ A checkpoint is a run's state at the start of one of its days:
 - **the run it belongs to:** its scenario, and the version of the
   scenario's manifest it was made with; its layout and weather, by name;
   its equipment's levels and its doors' and vents' openings from the start;
-  the commands it gave before that day; and its daily commands, or none
-  given, for its scenario's own;
+  the commands it gave before that day, and its target changes (#274); and
+  its daily commands, or none given, for its scenario's own;
 - **its house's air** then (`greenhouse_sim.climate.house`), and an hour
   before its day began, where the field of the day's first hour starts its
   grid run from (`greenhouse_sim.climate.day.window_start`): without it, a
@@ -68,8 +68,11 @@ from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids, scenar
 from greenhouse_sim.services.stores import Store
 
 # The format a checkpoint is written in, which a reader refuses if it does
-# not know it.
-CHECKPOINT_FORMAT: Final = 2
+# not know it: 3 since a checkpoint keeps its run's target changes (#274).
+CHECKPOINT_FORMAT: Final = 3
+# The format before, read as this one: a format 2 checkpoint's run changed
+# no target.
+READ_AS_CURRENT: Final = 2
 # How many checkpoints are kept, the last saved or uploaded.
 KEPT_CHECKPOINTS: Final = 16
 # How many hexadecimal digits of its content's digest name a checkpoint.
@@ -104,6 +107,9 @@ class Checkpoint(BaseModel):
     # and level; and its daily commands, or none given, for its scenario's.
     commands: list[Commanded] = []
     daily: list[Commanded] | None = None
+    # The target changes its run made before its day (#274), each its
+    # moment, target and value in °C (format 3).
+    targets: list[Commanded] = []
     day: NonNegativeInt
     house: HouseAir
     # Its house's air an hour before its day began, where its day's first
@@ -130,6 +136,7 @@ class Checkpoint(BaseModel):
             openings=self.openings,
             commands=tuple(self.commands),
             daily=None if self.daily is None else tuple(self.daily),
+            targets=tuple(self.targets),
         )
 
 
@@ -147,6 +154,7 @@ class CheckpointSummary(BaseModel):
     openings: dict[str, float]
     commands: list[Commanded]
     daily: list[Commanded] | None
+    targets: list[Commanded]
     day: int
     time_s: float
     plants: int
@@ -189,6 +197,7 @@ def save_checkpoint(run: RunRequest, time_s: float = 0.0) -> CheckpointSummary:
         openings=dict(run.openings),
         commands=[command for command in run.commands if command[0] < moment],
         daily=None if run.daily is None else list(run.daily),
+        targets=[change for change in run.targets if change[0] < moment],
         day=day,
         house=climate.house.air_at(moment),
         house_before=climate.house.air_at(before) if before < moment else None,
@@ -220,11 +229,17 @@ def upload_checkpoint(document: JsonValue) -> CheckpointSummary:
 
 def _checked_upload(document: JsonValue) -> Checkpoint:
     """A checkpoint uploaded, checked as `upload_checkpoint` says."""
-    if isinstance(document, dict) and document.get("checkpoint_format") != CHECKPOINT_FORMAT:
-        raise InvalidRequest(
-            f"a checkpoint in format {document.get('checkpoint_format')!r}; this simulator "
-            f"reads format {CHECKPOINT_FORMAT}"
-        )
+    if isinstance(document, dict):
+        written_in = document.get("checkpoint_format")
+        if written_in == READ_AS_CURRENT:
+            if "targets" in document:
+                raise InvalidRequest("a format 2 checkpoint keeps no target changes")
+            document = document | {"checkpoint_format": CHECKPOINT_FORMAT}
+        elif written_in != CHECKPOINT_FORMAT:
+            raise InvalidRequest(
+                f"a checkpoint in format {written_in!r}; this simulator reads format "
+                f"{CHECKPOINT_FORMAT}, and format {READ_AS_CURRENT} as it"
+            )
     try:
         uploaded = Checkpoint.model_validate(document)
     except ValidationError as error:
@@ -384,6 +399,7 @@ def _summary(checkpoint_id: str, checkpoint: Checkpoint) -> CheckpointSummary:
         openings=checkpoint.openings,
         commands=checkpoint.commands,
         daily=checkpoint.daily,
+        targets=checkpoint.targets,
         day=checkpoint.day,
         time_s=checkpoint.day * DAY_S,
         plants=len(checkpoint.plants),

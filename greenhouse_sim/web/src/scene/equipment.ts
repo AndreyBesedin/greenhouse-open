@@ -9,6 +9,10 @@ import { type RunParts, runParameters, scenarioUrl } from "./run";
 export interface ThermostatAt {
   actuatorId: string;
   setpointC: number;
+  /** Its setpoints by day and by night at the moment, as the run's target
+   * changes have left them (#274). */
+  dayC: number;
+  nightC: number;
   runs: boolean;
 }
 
@@ -51,6 +55,8 @@ export function parseEquipment(body: unknown): EquipmentAt {
         : {
             actuatorId: thermostat.actuator_id,
             setpointC: thermostat.setpoint_c,
+            dayC: thermostat.day_c,
+            nightC: thermostat.night_c,
             runs: thermostat.runs,
           },
   };

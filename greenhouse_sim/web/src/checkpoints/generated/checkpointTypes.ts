@@ -24,6 +24,7 @@ export interface CheckpointSummary {
   };
   commands: Commanded[];
   daily: Commanded[] | null;
+  targets: Commanded[];
   day: number;
   time_s: number;
   plants: number;

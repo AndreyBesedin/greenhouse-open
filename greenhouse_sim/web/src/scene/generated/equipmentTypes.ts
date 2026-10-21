@@ -15,11 +15,15 @@ export interface EquipmentAt {
 }
 /**
  * A run's thermostat at a moment (`climate.thermostat`): the heater it
- * runs, the temperature it heats the house's air to then, and whether it
- * runs the heater then, or a command to the heater has taken it over.
+ * runs, the temperature it heats the house's air to then, its setpoints by
+ * day and by night then, as the run's target changes have left them
+ * (#274), and whether it runs the heater then, or a command to the heater
+ * has taken it over.
  */
 export interface ThermostatAt {
   actuator_id: string;
   setpoint_c: number;
+  day_c: number;
+  night_c: number;
   runs: boolean;
 }

@@ -41,7 +41,10 @@ check; a route that comes to need one checks it first.
                                           &daily=64800:heater:1 every day at
                                           that time of day, in place of its
                                           scenario's own, or &daily=none for
-                                          none,
+                                          none, &targets=3600:heating_day:24
+                                          its heating setpoint by day 24 °C
+                                          from that moment on, on the minute
+                                          (#274),
                                           &open=roof_vent:1 with its vents
                                           open, and &t=600 that many seconds
                                           into the run, to its last day's end,
@@ -172,6 +175,10 @@ check; a route that comes to need one checks it first.
                                           started over with another layout:
                                           its run, from its start (#271)
     POST /api/scenarios/{id}/playback/pace?seconds_per_day=5
+    POST /api/scenarios/{id}/playback/targets?targets=heating_day:24,heating_night:18
+                                          its run's targets changed from its
+                                          clock's next minute on, in the same
+                                          run and epoch (#274, decision 0043)
 """
 
 import json
@@ -338,6 +345,12 @@ def _posted(path: str, query: Query, body: bytes) -> Response:
         case ["api", "scenarios", scenario_id, "playback", "start"]:
             layout = _last(query, "layout")
             return _answer(lambda: playback.start(scenario_id, _pace(query), layout=layout))
+        case ["api", "scenarios", scenario_id, "playback", "targets"]:
+            return _answer(
+                lambda: playback.set_targets(
+                    scenario_id, _pairs(query.get("targets", []), "targets")
+                )
+            )
         case ["api", "scenarios", scenario_id, "playback", "pace"]:
             return _answer(lambda: playback.set_pace(scenario_id, _pace(query) or 0.0))
         case ["api", "scenarios", scenario_id, "playback", action]:
@@ -443,11 +456,12 @@ def _scene_changes(query: Query) -> scenarios.SceneChanges:
 
 def _run(scenario_id: str, query: Query) -> RunRequest:
     """The run a query asks for of a scenario, read once: `layout=`,
-    `weather=`, `set=`, `open=`, `schedule=` and `daily=`."""
+    `weather=`, `set=`, `open=`, `schedule=`, `daily=` and `targets=`."""
     levels = _pairs(query.get("set", []), "set")
     openings = _pairs(query.get("open", []), "open")
     commands = tuple(_commands(query.get("schedule", [])))
     daily = _daily(query)
+    targets = tuple(_commands(query.get("targets", []), "targets", "seconds:target:celsius"))
     return RunRequest(
         scenario_id=scenario_id,
         layout=_last(query, "layout"),
@@ -456,6 +470,7 @@ def _run(scenario_id: str, query: Query) -> RunRequest:
         openings=openings,
         commands=commands,
         daily=None if daily is None else tuple(daily),
+        targets=targets,
     )
 
 
@@ -473,9 +488,12 @@ def _pairs(requests: list[str], name: str) -> dict[str, float]:
     return pairs
 
 
-def _commands(requests: list[str], name: str = "schedule") -> list[tuple[float, str, float]]:
+def _commands(
+    requests: list[str], name: str = "schedule", shape: str = "seconds:actuator:level"
+) -> list[tuple[float, str, float]]:
     """`schedule=seconds:actuator:level,…` as commands, in the order given;
-    or `daily=`, at those seconds into each day."""
+    or `daily=`, at those seconds into each day; or `targets=` (#274), each
+    a target changed to a value, in °C, from those seconds on."""
     commands = []
     for request in ",".join(requests).split(","):
         if not request:
@@ -485,9 +503,7 @@ def _commands(requests: list[str], name: str = "schedule") -> list[tuple[float, 
         try:
             commands.append((float(time), actuator, float(level)))
         except ValueError:
-            raise InvalidRequest(
-                f"{name} wants seconds:actuator:level commands, not {request!r}"
-            ) from None
+            raise InvalidRequest(f"{name} wants {shape} commands, not {request!r}") from None
     return commands
 
 

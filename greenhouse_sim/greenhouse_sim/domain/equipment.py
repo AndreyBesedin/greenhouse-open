@@ -12,3 +12,11 @@ class ActuatorKind(StrEnum):
     HEATER = "heater"
     # Takes water out of the air around it, and warms it a little.
     DEHUMIDIFIER = "dehumidifier"
+
+
+class Target(StrEnum):
+    """What a run's target change sets (#274): the climate controller's
+    heating setpoint by day, or by night (`climate.control`)."""
+
+    HEATING_DAY = "heating_day"
+    HEATING_NIGHT = "heating_night"
