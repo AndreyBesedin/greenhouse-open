@@ -173,6 +173,24 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   await expect(page.getByTestId("scene-status")).toContainText("day 87,", ARRIVES);
   await say(page, "9. A day on: each plant drawn from seed 42, its fruit ripening");
 
+  // New in 0.3.0 (#274): a heating target set from the panel, held from the
+  // moment drawn on, at night here, as the thermostat then heats to it.
+  const targets = page.locator("details.targets-fold");
+  await unfold(page, "Heating targets");
+  await expect(page.getByTestId("targets-summary")).toHaveText(
+    "Heating targets: 18 °C by day, 16 °C by night",
+    ARRIVES,
+  );
+  await targets.getByLabel("By night, °C").fill("22");
+  await targets.getByRole("button", { name: /^Set from day 87, / }).click();
+  await expect(page).toHaveURL(/targets=\d+:heating_night:22/);
+  await unfold(page, "Equipment");
+  await expect(page.getByTestId("equipment-heater")).toHaveText(
+    /by its thermostat at 22 °C$/,
+    ARRIVES,
+  );
+  await say(page, "New in 0.3.0: the night's heating target raised to 22 °C, from now on");
+
   // 10. A harvest, by hand in the plant lab, in the plant's history.
   await page.goto("/?plants=lab&day=85");
   await expect(page.getByTestId("scene-status")).toContainText("day 85", ARRIVES);
