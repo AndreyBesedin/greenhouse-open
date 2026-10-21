@@ -100,7 +100,7 @@ def _new_crop(key: RunKey, climate: ClimateDay, watch: Stopwatch | None = None) 
     """A run's crop from its first day: the scenario's transplants, in its
     climate run's house air and its sunlight, its crowns grown day by day;
     the parts of its days timed on `watch`, if given."""
-    scenario_id, layout, weather, _, openings, _ = key
+    scenario_id, layout, weather, _, openings, *_ = key
     config = changed(
         scenario(scenario_id),
         SceneChanges(layout=layout, weather=weather, openings=dict(openings)),

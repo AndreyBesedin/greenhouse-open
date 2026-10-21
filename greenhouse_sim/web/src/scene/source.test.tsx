@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { SceneStatus } from "../SceneStatus";
+import { withTargets } from "./edits";
 import { SNAPSHOT_SCHEMA } from "./generated/snapshotSchema";
 import type { SceneSnapshot } from "./generated/snapshotTypes";
 import { placement } from "./placement";
@@ -293,5 +294,36 @@ describe("following a run as it is played back", () => {
     expect(sourceFromSearch("?scenario=reference_greenhouse&follow=0")).not.toHaveProperty(
       "follow",
     );
+  });
+});
+
+describe("a run's target changes (#274)", () => {
+  it("are kept in the address in the order given, as the simulator's API writes them", () => {
+    const search =
+      "?scenario=reference_greenhouse&field=climate&t=30600&targets=25200:heating_day:24,68400:heating_night:18";
+    const source = sourceFromSearch(search);
+
+    expect(source).toMatchObject({
+      targets: [
+        { timeS: 25200, target: "heating_day", valueC: 24 },
+        { timeS: 68400, target: "heating_night", valueC: 18 },
+      ],
+    });
+    expect(searchFor(source)).toBe(search);
+    // Unreadable, they are left out: the run is its scenario's own.
+    expect(
+      sourceFromSearch("?scenario=reference_greenhouse&field=climate&targets=x"),
+    ).not.toHaveProperty("targets");
+  });
+
+  it("follow the run played back, and none is none", () => {
+    const source = sourceFromSearch("?scenario=reference_greenhouse&field=climate&follow=1");
+    if (source.kind !== "scenario") {
+      throw new Error("not a scenario");
+    }
+    const changes = [{ timeS: 21660, target: "heating_night", valueC: 22 }];
+
+    expect(withTargets(source, changes).targets).toEqual(changes);
+    expect(withTargets(withTargets(source, changes), [])).not.toHaveProperty("targets");
   });
 });

@@ -4,6 +4,7 @@ import { contractCheck } from "../loadJson";
 import { PLAYBACK_SCHEMA } from "./generated/playbackSchema";
 import type { PlaybackState as ServedPlayback } from "./generated/playbackTypes";
 import { layoutText } from "./moves";
+import type { TargetChange } from "./source";
 
 // How often a view following a played-back run asks where its clock is.
 const POLL_MS = 1000;
@@ -30,6 +31,9 @@ export interface PlaybackState {
   playing: boolean;
   secondsPerDay: number;
   workedOutS: number;
+  /** The target changes its epoch has made, from their moments on (#274,
+   * decision 0043): a view following it asks for its run with them. */
+  targets: TargetChange[];
 }
 
 export type PlaybackLoad =
@@ -65,6 +69,7 @@ export function parsePlayback(body: unknown): PlaybackState | null {
     playing: played.playing,
     secondsPerDay: played.seconds_per_day,
     workedOutS: played.worked_out_s,
+    targets: played.targets.map(([timeS, target, valueC]) => ({ timeS, target, valueC })),
   };
 }
 
@@ -120,6 +125,28 @@ export async function commandPlayback(
   let response: Response;
   try {
     response = await fetchFn(`${playbackUrl(scenarioId)}/${command}${query}`, { method: "POST" });
+  } catch {
+    return { status: "unavailable", reason: "the simulator could not be reached" };
+  }
+  return answered(response);
+}
+
+/** Changes the targets of the run played back from its clock's next minute
+ * on (#274, decision 0043), as `heating_day` to 24 °C; answered with its new
+ * state, which lists them. */
+export async function setPlaybackTargets(
+  scenarioId: string,
+  targets: Readonly<Record<string, number>>,
+  fetchFn: typeof fetch = fetch,
+): Promise<PlaybackLoad> {
+  const query = Object.entries(targets)
+    .map(([target, valueC]) => `${encodeURIComponent(target)}:${valueC}`)
+    .join(",");
+  let response: Response;
+  try {
+    response = await fetchFn(`${playbackUrl(scenarioId)}/targets?targets=${query}`, {
+      method: "POST",
+    });
   } catch {
     return { status: "unavailable", reason: "the simulator could not be reached" };
   }

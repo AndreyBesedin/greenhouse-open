@@ -31,6 +31,7 @@ from greenhouse_sim.api.server import create_server
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import playback
 from greenhouse_sim.services.playback import Epochs, PlaybackCommand
+from greenhouse_sim.services.runs import RunRequest
 
 SCENARIO = "climate_box"
 PACKAGE = Path(__file__).resolve().parents[1] / "greenhouse_sim"
@@ -270,8 +271,9 @@ def test_the_run_s_events_reach_a_consumer_by_the_clock(
     # A harvest an hour into each day after the first, as the crop's log
     # would give it, in place of the climate box's simple crop's none.
     def harvest(
-        scenario_id: str, day: int, start: datetime, run_id: str, layout: str | None = None
+        run: RunRequest, day: int, start: datetime, run_id: str
     ) -> tuple[list[Observation], list[Event]]:
+        scenario_id = run.scenario_id
         if day == 0:
             return [], []
         at = start + timedelta(seconds=day * DAY_S + 3600)

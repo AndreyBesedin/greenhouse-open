@@ -74,6 +74,13 @@ export const CHECKPOINT_SCHEMA = {
       ],
       "title": "Daily"
     },
+    "targets": {
+      "items": {
+        "$ref": "#/$defs/Commanded"
+      },
+      "title": "Targets",
+      "type": "array"
+    },
     "day": {
       "title": "Day",
       "type": "integer"
@@ -96,6 +103,7 @@ export const CHECKPOINT_SCHEMA = {
     "openings",
     "commands",
     "daily",
+    "targets",
     "day",
     "time_s",
     "plants"

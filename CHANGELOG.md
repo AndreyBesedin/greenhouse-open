@@ -7,6 +7,16 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: a run's heating setpoints can change from a moment on
+  (#274, decision 0043): `&targets=3600:heating_day:24` on every route that
+  makes or keeps a run, its thermostat heating to the targets in force,
+  each change part of the run. A playback's run is steered while it plays
+  by `POST .../playback/targets?targets=heating_day:24`, from its clock's
+  next minute, in the same run and epoch; its state lists the changes. The
+  equipment route gives the thermostat's setpoints by day and by night.
+  Checkpoints are in format 3, keeping a run's target changes; format 2 is
+  read as one that made none, and the opening days are written again in
+  format 3. Runs that change no target keep their identity.
 - `greenhouse-sim`: scenario manifests are in format 3 (P11.1). A
   scenario's `thermostat` is now the heating loop of its climate
   controller, `control`, which holds its loops, their targets, bands and

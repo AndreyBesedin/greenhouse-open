@@ -238,3 +238,40 @@ test("followed, the house is framed as the latest scene has it, again as the win
     expect(camera()).toBe(narrow);
   });
 });
+
+test("followed, a target the run played back changed is asked for with every part of it (#274, decision 0043)", async ({
+  page,
+}) => {
+  // The run played back as its playback says it stands: its night's heating
+  // target changed at 6 h 01 by whoever reached the simulator's API.
+  const change = 6 * 3600 + 60;
+  const played = {
+    scenario_id: "climate_box",
+    run_id: "climate_box-climate-00000000",
+    layout: "default",
+    epoch: 0,
+    greenhouse_id: "climate_box",
+    started_at: "2026-03-01T00:00:00Z",
+    simulated_now: "2026-03-01T07:00:00Z",
+    time_s: 7 * 3600,
+    day: 0,
+    playing: false,
+    seconds_per_day: 10,
+    worked_out_s: DAY_S,
+    every_s: 300,
+    targets: [[change, "heating_night", 22]],
+  };
+  await page.route(`**${PLAYBACK}`, (route) => route.fulfill({ json: played }));
+  const asked: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/fields/climate")) {
+      asked.push(request.url());
+    }
+  });
+
+  await page.goto("/?scenario=climate_box&field=climate&follow=1");
+
+  const written = `targets=${change}:heating_night:22`;
+  await expect(page).toHaveURL(new RegExp(written), ARRIVES);
+  await expect.poll(() => asked.some((url) => url.includes(written)), ARRIVES).toBe(true);
+});

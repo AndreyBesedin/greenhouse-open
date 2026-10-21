@@ -199,6 +199,7 @@ test("moving while following the run played back: applied, the playback starts o
     seconds_per_day: 10,
     worked_out_s: 3 * 86_400,
     every_s: 300,
+    targets: [],
   };
   let played = own;
   const restarts: string[] = [];

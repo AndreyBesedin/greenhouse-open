@@ -39,6 +39,9 @@ class RunRequest:
     openings: Mapping[str, float] = field(default_factory=dict)
     commands: tuple[Commanded, ...] = ()
     daily: tuple[Commanded, ...] | None = None
+    # Its target changes (#274), as a request writes them: each its moment,
+    # its target and the value it sets, in °C.
+    targets: tuple[Commanded, ...] = ()
 
 
 def checked_moment(config: ScenarioConfig, time_s: float) -> float:

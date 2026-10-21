@@ -7,6 +7,7 @@ export const FOLDS = {
   "Air field": "field-fold",
   "Climate run": "moment-fold",
   "House air": "house-fold",
+  "Heating targets": "targets-fold",
   Weather: "weather-fold",
   Equipment: "equipment-fold",
   Openings: "openings-fold",

@@ -14,6 +14,7 @@ const CHECKPOINT = parseCheckpoint({
   openings: {},
   commands: [[600, "heater", 1]],
   daily: null,
+  targets: [],
   day: 1,
   time_s: 86400,
   plants: 0,
@@ -63,6 +64,8 @@ describe("a branch comparison", () => {
       schedule: [{ timeS: 600, actuatorId: "heater", level: 1 }],
       time: 93660,
     });
+    const warmer = [{ timeS: 25200, target: "heating_day", valueC: 24 }];
+    expect(checkpointRun({ ...CHECKPOINT, targets: warmer }, 93660).targets).toEqual(warmer);
     expect(checkpointRun({ ...CHECKPOINT, daily: [], weather: "default@80" }, 0)).toEqual({
       schedule: CHECKPOINT.commands,
       daily: [],

@@ -53,6 +53,7 @@ changes course is a new record that supersedes the old one.
 | [0039](0039-develop-with-uv-one-workspace-a-command-for-each-task.md) | Develop with uv: one workspace, a command for each task | Accepted |
 | [0041](0041-one-run-for-the-viewer-and-a-consumer-played-back-against-one-clock.md) | One run for the viewer and a consumer, played back against one clock | Accepted |
 | [0042](0042-a-season-a-thermostat-and-the-heat-it-gives-as-a-modelled-record.md) | A season, a thermostat, and the heat it gives as a modelled record | Accepted |
+| [0043](0043-a-target-changed-while-a-run-plays-steers-it-from-then-on.md) | A target changed while a run plays steers it from then on | Accepted |
 
 ## Template
 

@@ -60,7 +60,16 @@ def _levels(query: str, scenario_id: str = "climate_box") -> dict[str, float]:
 def test_a_run_is_its_parts_and_not_its_moment() -> None:
     parts = [part.name for part in dataclasses.fields(RunRequest)]
 
-    assert parts == ["scenario_id", "layout", "weather", "levels", "openings", "commands", "daily"]
+    assert parts == [
+        "scenario_id",
+        "layout",
+        "weather",
+        "levels",
+        "openings",
+        "commands",
+        "daily",
+        "targets",
+    ]
 
 
 def test_a_run_asked_for_at_other_moments_and_windows_is_one_run(

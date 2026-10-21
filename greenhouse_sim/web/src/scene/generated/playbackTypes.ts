@@ -21,4 +21,5 @@ export interface PlaybackState {
   seconds_per_day: number;
   worked_out_s: number;
   every_s: number;
+  targets: [number, string, number][];
 }

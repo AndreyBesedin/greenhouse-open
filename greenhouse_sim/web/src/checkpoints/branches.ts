@@ -15,6 +15,7 @@ export function checkpointRun(checkpoint: CheckpointSummary, time: number): RunP
     ...(Object.keys(checkpoint.openings).length === 0 ? {} : { openings: checkpoint.openings }),
     ...(checkpoint.commands.length === 0 ? {} : { schedule: checkpoint.commands }),
     ...(checkpoint.daily === null ? {} : { daily: checkpoint.daily }),
+    ...(checkpoint.targets.length === 0 ? {} : { targets: checkpoint.targets }),
     ...(checkpoint.weather === DEFAULT_WEATHER ? {} : { weather: checkpoint.weather }),
     time,
   };
