@@ -1,23 +1,16 @@
 import { inWorld } from "../debug/dimensions";
 import type { OverlayPrimitive } from "../debug/overlays";
-import { loadJson } from "../loadJson";
+import { contractReader, loadJson } from "../loadJson";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
+import { OPENINGS_SCHEMA } from "./generated/openingsSchema";
+import type { OpeningFlow, OpeningsAt } from "./generated/openingsTypes";
 
-/** What an open door or vent passes at a moment: its net flow into the
- * house (m³/s, negative out), and what it exchanges each way besides. */
-export interface OpeningFlow {
-  opening_id: string;
-  net_m3_s: number;
-  exchange_m3_s: number;
-}
-
-/** What each open door and vent passes at a moment of a climate run, as the
- * simulator sends it (`GET /api/scenarios/{id}/climate/openings`). */
-export interface OpeningsAt {
-  time_s: number;
-  openings: OpeningFlow[];
-}
+// What each open door and vent passes at a moment of a climate run, as the
+// simulator sends it (`GET /api/scenarios/{id}/climate/openings`): its net
+// flow into the house (m³/s, negative out), and what it exchanges each way
+// besides.
+export type { OpeningFlow, OpeningsAt };
 
 export type OpeningsState =
   | { status: "none" }
@@ -45,33 +38,11 @@ export function openingsUrl(scenarioId: string, run: RunParts): string {
   return scenarioUrl(scenarioId, "climate/openings", runParameters(run));
 }
 
-function isFlow(value: unknown): value is OpeningFlow {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const fields = value as Record<string, unknown>;
-  return (
-    typeof fields.opening_id === "string" &&
-    typeof fields.net_m3_s === "number" &&
-    typeof fields.exchange_m3_s === "number"
-  );
-}
-
 /** What the openings pass, checked rather than trusted. */
-export function parseOpenings(body: unknown): OpeningsAt {
-  if (typeof body !== "object" || body === null) {
-    throw new Error("the openings are not what the viewer expects");
-  }
-  const fields = body as Record<string, unknown>;
-  if (
-    typeof fields.time_s !== "number" ||
-    !Array.isArray(fields.openings) ||
-    !fields.openings.every(isFlow)
-  ) {
-    throw new Error("the openings are not what the viewer expects");
-  }
-  return { time_s: fields.time_s, openings: fields.openings };
-}
+export const parseOpenings = contractReader<OpeningsAt>(
+  OPENINGS_SCHEMA,
+  "the openings are not what the viewer expects",
+);
 
 /** Fetches what the openings pass at a moment; every failure becomes a
  * state. */

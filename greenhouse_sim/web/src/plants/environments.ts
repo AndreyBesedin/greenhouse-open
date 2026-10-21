@@ -1,5 +1,8 @@
-import { loadJson } from "../loadJson";
+import { contractReader, loadJson } from "../loadJson";
 import { PERCENT } from "../units";
+import { LAB_ENVIRONMENTS_SCHEMA } from "./generated/labEnvironmentsSchema";
+import type { LabEnvironments } from "./generated/labEnvironmentsTypes";
+
 /** One of the plant lab's environments, as the simulator describes it
  * (`GET /api/plants/environments`): what a plant there experiences each day. */
 export interface LabEnvironment {
@@ -16,35 +19,23 @@ export type EnvironmentsState =
 
 export const PLANT_LAB_ENVIRONMENTS_URL = "/api/plants/environments";
 
-function numberIn(fields: Record<string, unknown>, name: string, environment: string): number {
-  const value = fields[name];
-  if (typeof value !== "number") {
-    throw new Error(`${environment}'s ${name} is not a number`);
-  }
-  return value;
-}
+const readEnvironments = contractReader<LabEnvironments>(
+  LAB_ENVIRONMENTS_SCHEMA,
+  "the environments are not what the viewer expects",
+);
 
 /** The lab's environments by name, checked rather than trusted. */
 export function labEnvironments(body: unknown): Record<string, LabEnvironment> {
-  if (typeof body !== "object" || body === null || Array.isArray(body)) {
-    throw new Error("the environments are not an object");
-  }
   return Object.fromEntries(
-    Object.entries(body).map(([name, value]) => {
-      if (typeof value !== "object" || value === null) {
-        throw new Error(`${name} is not an environment`);
-      }
-      const fields = value as Record<string, unknown>;
-      return [
-        name,
-        {
-          meanTemperatureC: numberIn(fields, "mean_temperature_c", name),
-          parMolM2Day: numberIn(fields, "par_mol_m2_day", name),
-          co2Ppm: numberIn(fields, "co2_ppm", name),
-          waterStatus: numberIn(fields, "water_status", name),
-        },
-      ];
-    }),
+    Object.entries(readEnvironments(body)).map(([name, environment]) => [
+      name,
+      {
+        meanTemperatureC: environment.mean_temperature_c,
+        parMolM2Day: environment.par_mol_m2_day,
+        co2Ppm: environment.co2_ppm,
+        waterStatus: environment.water_status,
+      },
+    ]),
   );
 }
 

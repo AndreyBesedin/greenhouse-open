@@ -24,9 +24,12 @@ const SIMULATOR_API = simulatorApi(
 
 // How much of the handwritten code the unit tests run, in %, at least. The
 // 3D drawing, the QA pages and App, which the browser tests run, count as
-// not covered.
+// not covered. The branches' floor was lowered from 57 when the hand checks
+// of the simulator's answers, whose branches the tests ran nearly all of,
+// gave way to the generated contracts, which are not counted (AUDIT.8, W12):
+// 58.9% of branches before, 55.1% after, with no test taken away.
 const COVERED_STATEMENTS_PCT = 65;
-const COVERED_BRANCHES_PCT = 57;
+const COVERED_BRANCHES_PCT = 55;
 const COVERED_FUNCTIONS_PCT = 60;
 const COVERED_LINES_PCT = 66;
 

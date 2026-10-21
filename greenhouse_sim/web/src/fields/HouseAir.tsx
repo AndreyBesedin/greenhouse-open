@@ -1,24 +1,14 @@
 import { CHART_WIDTH, polylinePoints } from "../charts/chart";
 import { DAY_S, dayStart } from "../clock";
-import { loadJson } from "../loadJson";
+import { contractReader, loadJson } from "../loadJson";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
+import { HOUSE_AIR_SCHEMA } from "./generated/houseAirSchema";
+import type { HouseSeries, HouseTrace } from "./generated/houseAirTypes";
 
-/** The house's air as one well-mixed volume at each moment of a trace. */
-export interface HouseSeries {
-  temperature_c: number[];
-  humidity_pct: number[];
-  co2_ppm: number[];
-  removed_kg: number[];
-  condensed_kg: number[];
-}
-
-/** The house's air through a climate run, and through the same run with
- * everything off, at seconds from its start (`GET .../climate/house`). */
-export interface HouseTrace {
-  times_s: number[];
-  controlled: HouseSeries;
-  all_off: HouseSeries;
-}
+// The house's air as one well-mixed volume at each moment of a trace,
+// through a climate run, and through the same run with everything off, at
+// seconds from its start (`GET .../climate/house`).
+export type { HouseSeries, HouseTrace };
 
 export type HouseAirState =
   | { status: "none" }
@@ -26,7 +16,6 @@ export type HouseAirState =
   | { status: "unavailable"; reason: string }
   | { status: "loaded"; trace: HouseTrace };
 
-const SERIES = ["temperature_c", "humidity_pct", "co2_ppm", "removed_kg", "condensed_kg"] as const;
 // Each quantity's chart, in its own units, and how its range is written.
 const HEIGHT = 28;
 const RANGE_DECIMALS = 1;
@@ -62,37 +51,19 @@ export function houseAirUrl(scenarioId: string, run: RunParts): string {
   return scenarioUrl(scenarioId, "climate/house", runParameters(run));
 }
 
-function isSeries(value: unknown, length: number): value is HouseSeries {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const fields = value as Record<string, unknown>;
-  return SERIES.every((name) => {
-    const series = fields[name];
-    return (
-      Array.isArray(series) &&
-      series.length === length &&
-      series.every((item) => typeof item === "number")
-    );
-  });
-}
+const UNEXPECTED = "the house's air is not what the viewer expects";
+const readHouseAir = contractReader<HouseTrace>(HOUSE_AIR_SCHEMA, UNEXPECTED);
 
-/** A house trace, checked rather than trusted. */
+/** A house trace, checked rather than trusted: each series has a value at
+ * each of its moments. */
 export function parseHouseAir(body: unknown): HouseTrace {
-  if (typeof body !== "object" || body === null) {
-    throw new Error("the house's air is not what the viewer expects");
+  const trace = readHouseAir(body);
+  const moments = trace.times_s.length;
+  const series = [trace.controlled, trace.all_off].flatMap((run) => Object.values(run));
+  if (series.some((values) => values.length !== moments)) {
+    throw new Error(UNEXPECTED);
   }
-  const fields = body as Record<string, unknown>;
-  const times = fields.times_s;
-  if (
-    !Array.isArray(times) ||
-    !times.every((time) => typeof time === "number") ||
-    !isSeries(fields.controlled, times.length) ||
-    !isSeries(fields.all_off, times.length)
-  ) {
-    throw new Error("the house's air is not what the viewer expects");
-  }
-  return { times_s: times, controlled: fields.controlled, all_off: fields.all_off };
+  return trace;
 }
 
 /** Fetches the house's air through a run; every failure becomes a state. */

@@ -1,0 +1,619 @@
+// Generated from greenhouse_sim/biology/tomato/organ/plant.schema.json by `npm run generate`.
+// Do not edit: change the simulator's types and regenerate.
+
+export const PLANT_SCHEMA = {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Axis": {
+      "additionalProperties": false,
+      "properties": {
+        "born_tt": {
+          "minimum": 0,
+          "title": "Born Tt",
+          "type": "number"
+        },
+        "axis_id": {
+          "title": "Axis Id",
+          "type": "string"
+        },
+        "phytomers": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Phytomer"
+          },
+          "title": "Phytomers",
+          "type": "array"
+        }
+      },
+      "required": [
+        "born_tt",
+        "axis_id",
+        "phytomers"
+      ],
+      "title": "Axis",
+      "type": "object"
+    },
+    "Flower": {
+      "additionalProperties": false,
+      "properties": {
+        "born_tt": {
+          "minimum": 0,
+          "title": "Born Tt",
+          "type": "number"
+        },
+        "flower_id": {
+          "title": "Flower Id",
+          "type": "string"
+        },
+        "rank": {
+          "exclusiveMinimum": 0,
+          "title": "Rank",
+          "type": "integer"
+        },
+        "stage": {
+          "$ref": "#/$defs/FlowerStage",
+          "default": "bud"
+        },
+        "fruit": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Fruit"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "born_tt",
+        "flower_id",
+        "rank",
+        "stage",
+        "fruit"
+      ],
+      "title": "Flower",
+      "type": "object"
+    },
+    "FlowerStage": {
+      "enum": [
+        "bud",
+        "open",
+        "set",
+        "aborted"
+      ],
+      "title": "FlowerStage",
+      "type": "string"
+    },
+    "Fruit": {
+      "additionalProperties": false,
+      "properties": {
+        "born_tt": {
+          "minimum": 0,
+          "title": "Born Tt",
+          "type": "number"
+        },
+        "fruit_id": {
+          "title": "Fruit Id",
+          "type": "string"
+        },
+        "diameter_mm": {
+          "minimum": 0,
+          "title": "Diameter Mm",
+          "type": "number"
+        },
+        "final_diameter_mm": {
+          "minimum": 0,
+          "title": "Final Diameter Mm",
+          "type": "number"
+        },
+        "mass_g": {
+          "minimum": 0,
+          "title": "Mass G",
+          "type": "number"
+        },
+        "breaker_tt": {
+          "minimum": 0,
+          "title": "Breaker Tt",
+          "type": "number"
+        },
+        "ripeness": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Ripeness",
+          "type": "number"
+        },
+        "stage": {
+          "$ref": "#/$defs/FruitStage",
+          "default": "attached"
+        }
+      },
+      "required": [
+        "born_tt",
+        "fruit_id",
+        "diameter_mm",
+        "final_diameter_mm",
+        "mass_g",
+        "breaker_tt",
+        "ripeness",
+        "stage"
+      ],
+      "title": "Fruit",
+      "type": "object"
+    },
+    "FruitStage": {
+      "description": "Where a fruit is in its life, from set to picked.",
+      "enum": [
+        "attached",
+        "aborted",
+        "harvested"
+      ],
+      "title": "FruitStage",
+      "type": "string"
+    },
+    "HarvestFruit": {
+      "additionalProperties": false,
+      "description": "Pick one fruit.",
+      "properties": {
+        "kind": {
+          "const": "harvest_fruit",
+          "default": "harvest_fruit",
+          "title": "Kind",
+          "type": "string"
+        },
+        "fruit_id": {
+          "title": "Fruit Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "fruit_id"
+      ],
+      "title": "HarvestFruit",
+      "type": "object"
+    },
+    "HarvestTruss": {
+      "additionalProperties": false,
+      "description": "Cut a truss: pick its fruits, and drop the flowers it still bears.",
+      "properties": {
+        "kind": {
+          "const": "harvest_truss",
+          "default": "harvest_truss",
+          "title": "Kind",
+          "type": "string"
+        },
+        "truss_id": {
+          "title": "Truss Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "truss_id"
+      ],
+      "title": "HarvestTruss",
+      "type": "object"
+    },
+    "Internode": {
+      "additionalProperties": false,
+      "properties": {
+        "born_tt": {
+          "minimum": 0,
+          "title": "Born Tt",
+          "type": "number"
+        },
+        "internode_id": {
+          "title": "Internode Id",
+          "type": "string"
+        },
+        "length_cm": {
+          "minimum": 0,
+          "title": "Length Cm",
+          "type": "number"
+        },
+        "diameter_mm": {
+          "minimum": 0,
+          "title": "Diameter Mm",
+          "type": "number"
+        },
+        "final_length_cm": {
+          "minimum": 0,
+          "title": "Final Length Cm",
+          "type": "number"
+        },
+        "final_diameter_mm": {
+          "minimum": 0,
+          "title": "Final Diameter Mm",
+          "type": "number"
+        }
+      },
+      "required": [
+        "born_tt",
+        "internode_id",
+        "length_cm",
+        "diameter_mm",
+        "final_length_cm",
+        "final_diameter_mm"
+      ],
+      "title": "Internode",
+      "type": "object"
+    },
+    "Leaf": {
+      "additionalProperties": false,
+      "properties": {
+        "born_tt": {
+          "minimum": 0,
+          "title": "Born Tt",
+          "type": "number"
+        },
+        "leaf_id": {
+          "title": "Leaf Id",
+          "type": "string"
+        },
+        "length_cm": {
+          "minimum": 0,
+          "title": "Length Cm",
+          "type": "number"
+        },
+        "final_length_cm": {
+          "minimum": 0,
+          "title": "Final Length Cm",
+          "type": "number"
+        },
+        "stage": {
+          "$ref": "#/$defs/LeafStage",
+          "default": "expanding"
+        }
+      },
+      "required": [
+        "born_tt",
+        "leaf_id",
+        "length_cm",
+        "final_length_cm",
+        "stage"
+      ],
+      "title": "Leaf",
+      "type": "object"
+    },
+    "LeafStage": {
+      "description": "Where a leaf is in its life.",
+      "enum": [
+        "expanding",
+        "mature",
+        "removed"
+      ],
+      "title": "LeafStage",
+      "type": "string"
+    },
+    "LowerStem": {
+      "additionalProperties": false,
+      "description": "Lower the stem, laying its lowest standing internodes down along the\nrow; they must be bare, their leaves removed and their trusses cut.",
+      "properties": {
+        "kind": {
+          "const": "lower_stem",
+          "default": "lower_stem",
+          "title": "Kind",
+          "type": "string"
+        },
+        "internodes": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "title": "Internodes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "internodes"
+      ],
+      "title": "LowerStem",
+      "type": "object"
+    },
+    "Phytomer": {
+      "additionalProperties": false,
+      "properties": {
+        "born_tt": {
+          "minimum": 0,
+          "title": "Born Tt",
+          "type": "number"
+        },
+        "phytomer_id": {
+          "title": "Phytomer Id",
+          "type": "string"
+        },
+        "rank": {
+          "exclusiveMinimum": 0,
+          "title": "Rank",
+          "type": "integer"
+        },
+        "internode": {
+          "$ref": "#/$defs/Internode"
+        },
+        "leaf": {
+          "$ref": "#/$defs/Leaf"
+        },
+        "truss": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Truss"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "born_tt",
+        "phytomer_id",
+        "rank",
+        "internode",
+        "leaf",
+        "truss"
+      ],
+      "title": "Phytomer",
+      "type": "object"
+    },
+    "PlantAction": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/RemoveLeaf"
+        },
+        {
+          "$ref": "#/$defs/HarvestFruit"
+        },
+        {
+          "$ref": "#/$defs/HarvestTruss"
+        },
+        {
+          "$ref": "#/$defs/LowerStem"
+        }
+      ]
+    },
+    "PlantEvent": {
+      "additionalProperties": false,
+      "description": "An action done to a plant, or asked of it and refused.",
+      "properties": {
+        "thermal_time": {
+          "minimum": 0,
+          "title": "Thermal Time",
+          "type": "number"
+        },
+        "action": {
+          "$ref": "#/$defs/PlantAction"
+        },
+        "applied": {
+          "title": "Applied",
+          "type": "boolean"
+        },
+        "note": {
+          "title": "Note",
+          "type": "string"
+        },
+        "organs": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Organs",
+          "type": "array"
+        },
+        "harvested_g": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Harvested G",
+          "type": "number"
+        }
+      },
+      "required": [
+        "thermal_time",
+        "action",
+        "applied",
+        "note",
+        "organs",
+        "harvested_g"
+      ],
+      "title": "PlantEvent",
+      "type": "object"
+    },
+    "PlantTraits": {
+      "additionalProperties": false,
+      "description": "How one plant differs from its crop's typical plant: a factor on each\nof the crop's values (1 for a typical plant), its turn about its stem,\nand the latent vigour its factors share.",
+      "properties": {
+        "vigour": {
+          "default": 0,
+          "title": "Vigour",
+          "type": "number"
+        },
+        "phyllochron_scale": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "title": "Phyllochron Scale",
+          "type": "number"
+        },
+        "internode_length_scale": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "title": "Internode Length Scale",
+          "type": "number"
+        },
+        "stem_diameter_scale": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "title": "Stem Diameter Scale",
+          "type": "number"
+        },
+        "leaf_length_scale": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "title": "Leaf Length Scale",
+          "type": "number"
+        },
+        "leaf_insertion_scale": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "title": "Leaf Insertion Scale",
+          "type": "number"
+        },
+        "leaf_droop_scale": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "title": "Leaf Droop Scale",
+          "type": "number"
+        },
+        "rotation_rad": {
+          "default": 0,
+          "exclusiveMaximum": 6.283185307179586,
+          "minimum": 0,
+          "title": "Rotation Rad",
+          "type": "number"
+        }
+      },
+      "required": [
+        "vigour",
+        "phyllochron_scale",
+        "internode_length_scale",
+        "stem_diameter_scale",
+        "leaf_length_scale",
+        "leaf_insertion_scale",
+        "leaf_droop_scale",
+        "rotation_rad"
+      ],
+      "title": "PlantTraits",
+      "type": "object"
+    },
+    "RemoveLeaf": {
+      "additionalProperties": false,
+      "description": "Prune a leaf off the plant.",
+      "properties": {
+        "kind": {
+          "const": "remove_leaf",
+          "default": "remove_leaf",
+          "title": "Kind",
+          "type": "string"
+        },
+        "leaf_id": {
+          "title": "Leaf Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "leaf_id"
+      ],
+      "title": "RemoveLeaf",
+      "type": "object"
+    },
+    "Truss": {
+      "additionalProperties": false,
+      "properties": {
+        "born_tt": {
+          "minimum": 0,
+          "title": "Born Tt",
+          "type": "number"
+        },
+        "truss_id": {
+          "title": "Truss Id",
+          "type": "string"
+        },
+        "number": {
+          "exclusiveMinimum": 0,
+          "title": "Number",
+          "type": "integer"
+        },
+        "final_flower_count": {
+          "exclusiveMinimum": 0,
+          "title": "Final Flower Count",
+          "type": "integer"
+        },
+        "flowers": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Flower"
+          },
+          "title": "Flowers",
+          "type": "array"
+        }
+      },
+      "required": [
+        "born_tt",
+        "truss_id",
+        "number",
+        "final_flower_count",
+        "flowers"
+      ],
+      "title": "Truss",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One plant, organ by organ, and the thermal time it has accumulated.",
+  "properties": {
+    "born_tt": {
+      "minimum": 0,
+      "title": "Born Tt",
+      "type": "number"
+    },
+    "plant_id": {
+      "title": "Plant Id",
+      "type": "string"
+    },
+    "thermal_time": {
+      "minimum": 0,
+      "title": "Thermal Time",
+      "type": "number"
+    },
+    "stem": {
+      "$ref": "#/$defs/Axis"
+    },
+    "seed": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Seed",
+      "type": "integer"
+    },
+    "traits": {
+      "$ref": "#/$defs/PlantTraits",
+      "default": {
+        "vigour": 0,
+        "phyllochron_scale": 1,
+        "internode_length_scale": 1,
+        "stem_diameter_scale": 1,
+        "leaf_length_scale": 1,
+        "leaf_insertion_scale": 1,
+        "leaf_droop_scale": 1,
+        "rotation_rad": 0
+      }
+    },
+    "laid_internodes": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Laid Internodes",
+      "type": "integer"
+    },
+    "history": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/PlantEvent"
+      },
+      "title": "History",
+      "type": "array"
+    }
+  },
+  "required": [
+    "born_tt",
+    "plant_id",
+    "thermal_time",
+    "stem",
+    "seed",
+    "traits",
+    "laid_internodes",
+    "history"
+  ],
+  "title": "Plant",
+  "type": "object"
+};

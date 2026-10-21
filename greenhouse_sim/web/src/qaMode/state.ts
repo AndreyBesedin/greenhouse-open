@@ -1,15 +1,11 @@
 import { describeTime } from "../fields/ClimateTime";
-import { isNumberRecord, isObject, loadJson } from "../loadJson";
+import { contractReader, loadJson } from "../loadJson";
 import { formatValue } from "../readouts";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
-import {
-  type CameraFrame,
-  isFrame,
-  isFreshness,
-  type SensorFreshness,
-  secondsInto,
-} from "../sensors/readings";
+import { type CameraFrame, type SensorFreshness, secondsInto } from "../sensors/readings";
 import { PERCENT } from "../units";
+import { RUN_STATE_SCHEMA } from "./generated/runStateSchema";
+import type { RunState as ServedState } from "./generated/runStateTypes";
 
 /** A command a run gave its equipment, a door or a vent, at a moment. */
 export interface GivenCommand {
@@ -62,87 +58,41 @@ export function runStateUrl(scenarioId: string, run: RunParts): string {
   return scenarioUrl(scenarioId, "climate/state", runParameters(run));
 }
 
-const UNEXPECTED = "the run's state is not what the viewer expects";
-
-function commandFrom(value: unknown): GivenCommand {
-  if (
-    !isObject(value) ||
-    typeof value.time_s !== "number" ||
-    typeof value.actuator_id !== "string" ||
-    typeof value.level !== "number"
-  ) {
-    throw new Error(UNEXPECTED);
-  }
-  return { timeS: value.time_s, actuatorId: value.actuator_id, level: value.level };
-}
-
-function cameraFrom(value: unknown): CameraState {
-  if (
-    !isObject(value) ||
-    typeof value.sensor_id !== "string" ||
-    typeof value.frames !== "number" ||
-    !(value.latest === null || isFrame(value.latest))
-  ) {
-    throw new Error(UNEXPECTED);
-  }
-  return { sensorId: value.sensor_id, frames: value.frames, latest: value.latest };
-}
-
-function houseAirFrom(value: unknown): RunState["houseAir"] {
-  if (value === null) {
-    return null;
-  }
-  if (
-    !isObject(value) ||
-    typeof value.temperature_c !== "number" ||
-    typeof value.humidity_pct !== "number" ||
-    typeof value.co2_ppm !== "number"
-  ) {
-    throw new Error(UNEXPECTED);
-  }
-  return {
-    temperatureC: value.temperature_c,
-    humidityPct: value.humidity_pct,
-    co2Ppm: value.co2_ppm,
-  };
-}
+const readState = contractReader<ServedState>(
+  RUN_STATE_SCHEMA,
+  "the run's state is not what the viewer expects",
+);
 
 /** A run's state, checked rather than trusted. */
 export function parseRunState(body: unknown): RunState {
-  if (
-    !isObject(body) ||
-    typeof body.run_id !== "string" ||
-    typeof body.start !== "string" ||
-    typeof body.at !== "string" ||
-    typeof body.time_s !== "number" ||
-    typeof body.day !== "number" ||
-    typeof body.crop_model !== "string" ||
-    typeof body.plants !== "number" ||
-    typeof body.days_lived !== "number" ||
-    !isNumberRecord(body.levels) ||
-    typeof body.commands_given !== "number" ||
-    !Array.isArray(body.latest_commands) ||
-    !Array.isArray(body.sensors) ||
-    !body.sensors.every(isFreshness) ||
-    !Array.isArray(body.cameras)
-  ) {
-    throw new Error(UNEXPECTED);
-  }
+  const served = readState(body);
+  const air = served.house_air;
   return {
-    runId: body.run_id,
-    start: body.start,
-    at: body.at,
-    timeS: body.time_s,
-    day: body.day,
-    houseAir: houseAirFrom(body.house_air),
-    cropModel: body.crop_model,
-    plants: body.plants,
-    daysLived: body.days_lived,
-    levels: body.levels,
-    commandsGiven: body.commands_given,
-    latestCommands: body.latest_commands.map(commandFrom),
-    sensors: body.sensors,
-    cameras: body.cameras.map(cameraFrom),
+    runId: served.run_id,
+    start: served.start,
+    at: served.at,
+    timeS: served.time_s,
+    day: served.day,
+    houseAir:
+      air === null
+        ? null
+        : { temperatureC: air.temperature_c, humidityPct: air.humidity_pct, co2Ppm: air.co2_ppm },
+    cropModel: served.crop_model,
+    plants: served.plants,
+    daysLived: served.days_lived,
+    levels: served.levels,
+    commandsGiven: served.commands_given,
+    latestCommands: served.latest_commands.map((command) => ({
+      timeS: command.time_s,
+      actuatorId: command.actuator_id,
+      level: command.level,
+    })),
+    sensors: served.sensors,
+    cameras: served.cameras.map((camera) => ({
+      sensorId: camera.sensor_id,
+      frames: camera.frames,
+      latest: camera.latest,
+    })),
   };
 }
 

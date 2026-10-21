@@ -1,24 +1,15 @@
-import { loadJson } from "../loadJson";
+import { contractReader, loadJson } from "../loadJson";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
-
-/** A glazed surface at a moment: the mean air against it, its own
- * temperature, and the heat it passes out of the house (negative in). */
-export interface SurfaceTemperature {
-  surface_id: string;
-  air_c: number;
-  surface_c: number;
-  loss_w: number;
-}
+import { GLAZING_SCHEMA } from "./generated/glazingSchema";
+import type { GlazingAt, SurfaceTemperature } from "./generated/glazingTypes";
 
 /** The glazing at a moment of a climate run, as the simulator sends it
- * (`GET /api/scenarios/{id}/climate/glazing`). */
-export interface Glazing {
-  time_s: number;
-  outside_c: number;
-  u_w_m2k: number;
-  surfaces: SurfaceTemperature[];
-}
+ * (`GET /api/scenarios/{id}/climate/glazing`): at each glazed surface, the
+ * mean air against it, its own temperature, and the heat it passes out of
+ * the house (negative in). */
+export type Glazing = GlazingAt;
+export type { SurfaceTemperature };
 
 export type GlazingState =
   | { status: "none" }
@@ -30,7 +21,6 @@ export type GlazingState =
  * inspector. */
 export const SURFACE_TEMPERATURE = "surface_temperature_c";
 export const GLASS_LOSS = "glass_loss_w";
-const SURFACE_NUMBERS = ["air_c", "surface_c", "loss_w"] as const;
 const DECIMALS = 100;
 
 /** Where a scenario's glazing at a moment of its climate run is published,
@@ -39,39 +29,11 @@ export function glazingUrl(scenarioId: string, run: RunParts): string {
   return scenarioUrl(scenarioId, "climate/glazing", runParameters(run));
 }
 
-function isSurface(value: unknown): value is SurfaceTemperature {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const fields = value as Record<string, unknown>;
-  return (
-    typeof fields.surface_id === "string" &&
-    SURFACE_NUMBERS.every((name) => typeof fields[name] === "number")
-  );
-}
-
 /** The glazing, checked rather than trusted. */
-export function parseGlazing(body: unknown): Glazing {
-  if (typeof body !== "object" || body === null) {
-    throw new Error("the glazing is not what the viewer expects");
-  }
-  const fields = body as Record<string, unknown>;
-  if (
-    typeof fields.time_s !== "number" ||
-    typeof fields.outside_c !== "number" ||
-    typeof fields.u_w_m2k !== "number" ||
-    !Array.isArray(fields.surfaces) ||
-    !fields.surfaces.every(isSurface)
-  ) {
-    throw new Error("the glazing is not what the viewer expects");
-  }
-  return {
-    time_s: fields.time_s,
-    outside_c: fields.outside_c,
-    u_w_m2k: fields.u_w_m2k,
-    surfaces: fields.surfaces,
-  };
-}
+export const parseGlazing = contractReader<Glazing>(
+  GLAZING_SCHEMA,
+  "the glazing is not what the viewer expects",
+);
 
 /** Fetches the glazing at a moment; every failure becomes a state. */
 export async function loadGlazing(

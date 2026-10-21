@@ -31,13 +31,21 @@ const HOUSE = (temperature: number[]) => ({
   all_off: SERIES(temperature),
 });
 const LOG = (values: number[]) => ({
+  run_id: "climate_box-climate-0",
   start: "2026-01-01T00:00:00+00:00",
   observations: values.map((value, index) => ({
+    observation_id: `observation_${index}`,
+    greenhouse_id: "climate_box",
+    compartment_id: null,
+    plant_id: null,
     sensor_id: "temperature_front",
-    observation_type: "AIR_TEMPERATURE_C",
+    observation_type: "air_temperature_c",
     timestamp: new Date(Date.UTC(2026, 0, 2, 2, index)).toISOString(),
     value,
+    source: { type: "SIMULATION", source_id: null },
   })),
+  freshness: [],
+  frames: [],
 });
 
 describe("a branch comparison", () => {

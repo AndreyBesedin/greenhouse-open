@@ -1,5 +1,7 @@
-import { isNumberRecord, loadJson } from "../loadJson";
+import { contractReader, loadJson } from "../loadJson";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
+import { PLANTS_LIGHT_SCHEMA } from "./generated/plantsLightSchema";
+import type { PlantsLight as ServedLight } from "./generated/plantsLightTypes";
 
 // PAR is shown to whole micromoles, a day's light to tenths of a mole.
 const PAR_DECIMALS = 0;
@@ -28,20 +30,19 @@ export function plantsLightUrl(scenarioId: string, run: RunParts): string {
   return scenarioUrl(scenarioId, "climate/plants", runParameters(run));
 }
 
+const readLight = contractReader<ServedLight>(
+  PLANTS_LIGHT_SCHEMA,
+  "the plants' light is not what the viewer expects",
+);
+
 /** A plants' light response, checked rather than trusted. */
 export function parsePlantsLight(body: unknown): PlantsLight {
-  if (typeof body !== "object" || body === null) {
-    throw new Error("the plants' light is not what the viewer expects");
-  }
-  const { time_s, par_umol_m2_s, daily_light_integral_mol_m2_d } = body as Record<string, unknown>;
-  if (
-    typeof time_s !== "number" ||
-    !isNumberRecord(par_umol_m2_s) ||
-    !isNumberRecord(daily_light_integral_mol_m2_d)
-  ) {
-    throw new Error("the plants' light is not what the viewer expects");
-  }
-  return { timeS: time_s, par: par_umol_m2_s, dailyLight: daily_light_integral_mol_m2_d };
+  const light = readLight(body);
+  return {
+    timeS: light.time_s,
+    par: light.par_umol_m2_s,
+    dailyLight: light.daily_light_integral_mol_m2_d,
+  };
 }
 
 /** Fetches the light on a scenario's plants at a moment of a run, from its

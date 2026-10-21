@@ -256,16 +256,36 @@ describe("a selected sensor", () => {
   });
 
   it("reads the log's freshness and frames with its observations", async () => {
+    // The log's records whole, as the simulator sends them.
+    const source = { type: "SIMULATION", source_id: null };
+    const observations = READINGS.observations.map((observation, index) => ({
+      observation_id: `observation_${index}`,
+      greenhouse_id: "climate_box",
+      compartment_id: null,
+      plant_id: null,
+      source,
+      ...observation,
+    }));
+    const frames = READINGS.frames.map((frame) => ({
+      ...frame,
+      greenhouse_id: "climate_box",
+      compartment_id: null,
+      intrinsics: { ...frame.intrinsics, ppx: 320, ppy: 240, distortion: [0, 0, 0, 0, 0] },
+      source,
+      delivered_at: null,
+      capture_ids: [],
+    }));
     const answers: Record<string, unknown> = {
       observations: {
         run_id: READINGS.runId,
         start: START,
-        observations: READINGS.observations,
+        observations,
         freshness: READINGS.freshness,
-        frames: READINGS.frames,
+        frames,
       },
       truth: { run_id: READINGS.runId, sensors: READINGS.truths },
     };
+    const read = { ...READINGS, observations, frames };
     const asked: string[] = [];
     const fetchFn = (async (url: string) => {
       asked.push(url);
@@ -278,7 +298,7 @@ describe("a selected sensor", () => {
       fetchFn,
     );
 
-    expect(state).toEqual({ status: "loaded", readings: READINGS });
+    expect(state).toEqual({ status: "loaded", readings: read });
     expect(asked).toEqual([
       "/api/scenarios/climate_box/climate/observations",
       "/api/scenarios/climate_box/climate/truth",
@@ -291,7 +311,7 @@ describe("a selected sensor", () => {
       fetchFn,
     );
     expect(asked).toEqual(["/api/scenarios/climate_box/climate/observations"]);
-    expect(observed).toEqual({ status: "loaded", readings: { ...READINGS, truths: [] } });
+    expect(observed).toEqual({ status: "loaded", readings: { ...read, truths: [] } });
   });
 
   it("names a request with its truth apart from one without", () => {

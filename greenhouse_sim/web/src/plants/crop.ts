@@ -1,7 +1,9 @@
 import { DAY_S, daysEnded } from "../clock";
-import { loadJson } from "../loadJson";
+import { contractReader, loadJson } from "../loadJson";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import { runParameters, type ScenarioRun, scenarioUrl } from "../scene/run";
+import { CROP_PLANT_SCHEMA } from "./generated/cropPlantSchema";
+import type { CropPlant as ServedPlant } from "./generated/cropPlantTypes";
 import { type OrganNode, organTree, type PlantEvent, plantHistory } from "./structure";
 
 /** How a scenario whose runs grow its crop organ by organ says so
@@ -72,51 +74,31 @@ export function cropPlantUrl(run: ScenarioRun, plantId: string): string {
   );
 }
 
-function plantDay(value: unknown): PlantDay {
-  if (typeof value !== "object" || value === null) {
-    throw new Error("a plant's day is not an object");
-  }
-  const { mean_temperature_c, par_mol_m2_day, co2_ppm, water_status } = value as Record<
-    string,
-    unknown
-  >;
-  if (
-    typeof mean_temperature_c !== "number" ||
-    typeof par_mol_m2_day !== "number" ||
-    typeof co2_ppm !== "number" ||
-    typeof water_status !== "number"
-  ) {
-    throw new Error("a plant's day is not what the viewer expects");
-  }
-  return {
-    temperature: mean_temperature_c,
-    light: par_mol_m2_day,
-    co2: co2_ppm,
-    water: water_status,
-  };
-}
+const readCropPlant = contractReader<ServedPlant>(
+  CROP_PLANT_SCHEMA,
+  "the plant is not what the viewer expects",
+);
 
-/** A plant of a run's crop, checked rather than trusted. */
+/** A plant of a run's crop, checked rather than trusted: with a day lived
+ * for each of its days. */
 export function parseCropPlant(body: unknown): CropPlant {
-  if (typeof body !== "object" || body === null) {
-    throw new Error("the plant is not what the viewer expects");
-  }
-  const { days, structure, environments } = body as Record<string, unknown>;
-  if (!Number.isInteger(days) || !Array.isArray(environments) || environments.length !== days) {
+  const { days, structure, environments } = readCropPlant(body);
+  if (environments.length !== days) {
     throw new Error("the plant's days are not what the viewer expects");
   }
   const tree = organTree(structure);
-  const thermalTime = (structure as Record<string, unknown>).thermal_time;
-  if (typeof thermalTime !== "number") {
-    throw new Error("the plant's thermal time is not a number");
-  }
   return {
     plantId: tree.id,
-    days: days as number,
-    thermalTime,
+    days,
+    thermalTime: structure.thermal_time,
     tree,
     history: plantHistory(structure),
-    environments: environments.map(plantDay),
+    environments: environments.map((day) => ({
+      temperature: day.mean_temperature_c,
+      light: day.par_mol_m2_day,
+      co2: day.co2_ppm,
+      water: day.water_status,
+    })),
   };
 }
 

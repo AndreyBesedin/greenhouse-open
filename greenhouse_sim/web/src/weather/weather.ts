@@ -1,37 +1,25 @@
 import { dayEnd, runDay } from "../clock";
 import { inWorld } from "../debug/dimensions";
 import type { OverlayPrimitive } from "../debug/overlays";
-import { isObject, loadJson } from "../loadJson";
+import { contractReader, loadJson } from "../loadJson";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import { runParameters, scenarioUrl } from "../scene/run";
 import { PERCENT } from "../units";
 import type { Point3 } from "../world";
+import { WEATHER_DAY_SCHEMA } from "./generated/weatherDaySchema";
+import type { WeatherThroughADay } from "./generated/weatherDayTypes";
+import { WEATHER_SCHEMA } from "./generated/weatherSchema";
+import type {
+  OutsideLight,
+  WeatherAtAMoment as ServedWeather,
+  Site,
+  WeatherState,
+} from "./generated/weatherTypes";
 
-/** Where a scenario's world lies on the Earth: its latitude and longitude in
- * degrees, its elevation, its time zone, and the compass bearing its x axis
- * points to. */
-export interface Site {
-  latitude_deg: number;
-  longitude_deg: number;
-  elevation_m: number;
-  time_zone: string;
-  x_bearing_deg: number;
-}
-
-/** The weather outside at a moment, named as the protocol's outside
- * observation types are; the wind's direction is the one it blows from, in
- * degrees clockwise from north. */
-export interface WeatherState {
-  air_temperature_c: number;
-  relative_humidity_pct: number;
-  co2_ppm: number;
-  wind_speed_m_s: number;
-  /** Null when it is not known, as in a recording without a wind vane's. */
-  wind_direction_deg: number | null;
-  barometric_pressure_hpa: number;
-  global_radiation_w_m2: number;
-  cloud_cover_pct: number;
-}
+// Where a scenario's world lies on the Earth, the weather outside at a
+// moment, and the sun's and the sky's light then, as the simulator publishes
+// them; the wind's direction is the one it blows from.
+export type { OutsideLight, Site, WeatherState };
 
 /** Where the sun stands at a moment: its elevation above the horizon and its
  * azimuth, clockwise from north, in degrees. */
@@ -39,18 +27,6 @@ export interface SunPosition {
   elevation_deg: number;
   azimuth_deg: number;
 }
-
-/** The sun's and the sky's light outside at a moment: its global
- * horizontal irradiance, its beam's direct normal irradiance and the diffuse
- * sky's on a level surface, in W/m², and its PAR, in µmol/m²/s. */
-export interface OutsideLight {
-  ghi_w_m2: number;
-  dni_w_m2: number;
-  dhi_w_m2: number;
-  par_umol_m2_s: number;
-}
-
-const LIGHT_NUMBERS = ["ghi_w_m2", "dni_w_m2", "dhi_w_m2", "par_umol_m2_s"] as const;
 
 /** A scenario's weather at a moment of a run, as the simulator sends it
  * (`GET /api/scenarios/{id}/weather`): with the wind's velocity in the
@@ -92,16 +68,6 @@ export type WeatherDayState =
   | { status: "unavailable"; reason: string }
   | { status: "loaded"; day: WeatherDay };
 
-const SITE_NUMBERS = ["latitude_deg", "longitude_deg", "elevation_m", "x_bearing_deg"] as const;
-const WEATHER_NUMBERS = [
-  "air_temperature_c",
-  "relative_humidity_pct",
-  "co2_ppm",
-  "wind_speed_m_s",
-  "barometric_pressure_hpa",
-  "global_radiation_w_m2",
-  "cloud_cover_pct",
-] as const;
 // The sixteen points of the compass, from north clockwise.
 const COMPASS_POINTS = [
   "N",
@@ -147,107 +113,54 @@ export function weatherDayUrl(scenarioId: string, time: number, weather?: string
   );
 }
 
-function isPoint(value: unknown): value is Point3 {
-  return (
-    isObject(value) &&
-    typeof value.x === "number" &&
-    typeof value.y === "number" &&
-    typeof value.z === "number"
-  );
+const readWeatherDay = contractReader<WeatherThroughADay>(
+  WEATHER_DAY_SCHEMA,
+  "the day's weather is not what the viewer expects",
+);
+const readWeather = contractReader<ServedWeather>(
+  WEATHER_SCHEMA,
+  "the weather is not what the viewer expects",
+);
+
+/** Where the sun stands, without what the viewer does not show of it. */
+function sunOf({ elevation_deg, azimuth_deg }: SunPosition): SunPosition {
+  return { elevation_deg, azimuth_deg };
 }
 
-function isSun(value: unknown): value is SunPosition {
-  return (
-    isObject(value) &&
-    typeof value.elevation_deg === "number" &&
-    typeof value.azimuth_deg === "number"
-  );
-}
-
-function isWeatherState(value: unknown): value is WeatherState {
-  return (
-    isObject(value) &&
-    WEATHER_NUMBERS.every((name) => typeof value[name] === "number") &&
-    (typeof value.wind_direction_deg === "number" || value.wind_direction_deg === null)
-  );
-}
-
-/** A day's weather, checked rather than trusted. */
+/** A day's weather, checked rather than trusted: at each of its moments, the
+ * weather and the sun. */
 export function parseWeatherDay(body: unknown): WeatherDay {
+  const day = readWeatherDay(body);
+  const moments = day.times_s.length;
   if (
-    !isObject(body) ||
-    typeof body.start !== "string" ||
-    !Array.isArray(body.times_s) ||
-    !body.times_s.every((time) => typeof time === "number") ||
-    !Array.isArray(body.weather) ||
-    !body.weather.every(isWeatherState) ||
-    body.weather.length !== body.times_s.length ||
-    !Array.isArray(body.sun) ||
-    !body.sun.every(isSun) ||
-    !Array.isArray(body.sun_directions) ||
-    !body.sun_directions.every(isPoint) ||
-    body.sun.length !== body.times_s.length ||
-    body.sun_directions.length !== body.times_s.length
+    day.weather.length !== moments ||
+    day.sun.length !== moments ||
+    day.sun_directions.length !== moments
   ) {
     throw new Error("the day's weather is not what the viewer expects");
   }
   return {
-    start: body.start,
-    timesS: body.times_s,
-    weather: body.weather,
-    sun: body.sun.map((sun) => ({
-      elevation_deg: sun.elevation_deg,
-      azimuth_deg: sun.azimuth_deg,
-    })),
-    sunDirections: body.sun_directions,
+    start: day.start,
+    timesS: day.times_s,
+    weather: day.weather,
+    sun: day.sun.map(sunOf),
+    sunDirections: day.sun_directions,
   };
 }
 
 /** A weather response, checked rather than trusted. */
 export function parseWeather(body: unknown): WeatherAtAMoment {
-  if (
-    !isObject(body) ||
-    !isObject(body.site) ||
-    typeof body.site.time_zone !== "string" ||
-    !isObject(body.weather) ||
-    typeof body.moment !== "string" ||
-    typeof body.time_s !== "number" ||
-    !isPoint(body.wind_m_s) ||
-    !isObject(body.sun) ||
-    typeof body.sun.elevation_deg !== "number" ||
-    typeof body.sun.azimuth_deg !== "number" ||
-    !isPoint(body.sun_direction) ||
-    !isObject(body.light)
-  ) {
-    throw new Error("the weather is not what the viewer expects");
-  }
-  const { site, light, weather } = body;
-  if (!isSite(site) || !isOutsideLight(light) || !isWeatherState(weather)) {
-    throw new Error("the weather is not what the viewer expects");
-  }
+  const served = readWeather(body);
   return {
-    site,
-    moment: body.moment,
-    timeS: body.time_s,
-    weather,
-    windMS: body.wind_m_s,
-    sun: { elevation_deg: body.sun.elevation_deg, azimuth_deg: body.sun.azimuth_deg },
-    sunDirection: body.sun_direction,
-    light,
+    site: served.site,
+    moment: served.moment,
+    timeS: served.time_s,
+    weather: served.weather,
+    windMS: served.wind_m_s,
+    sun: sunOf(served.sun),
+    sunDirection: served.sun_direction,
+    light: served.light,
   };
-}
-
-function isSite(value: Record<string, unknown>): value is Record<string, unknown> & Site {
-  return (
-    typeof value.time_zone === "string" &&
-    SITE_NUMBERS.every((name) => typeof value[name] === "number")
-  );
-}
-
-function isOutsideLight(
-  value: Record<string, unknown>,
-): value is Record<string, unknown> & OutsideLight {
-  return LIGHT_NUMBERS.every((name) => typeof value[name] === "number");
 }
 
 /** Fetches a scenario's weather through its runs' first day, from its

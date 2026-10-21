@@ -11,9 +11,7 @@
       "!**/package-lock.json",
       "!greenhouse_sim/web/public/scenes/**",
       "!greenhouse_sim/web/public/fields/**",
-      "!greenhouse_sim/web/src/scene/generated/**",
-      "!greenhouse_sim/web/src/fields/generated/**",
-      "!greenhouse_sim/web/src/cfd/generated/**"
+      "!greenhouse_sim/web/src/**/generated/**"
     ]
   },
   "formatter": {

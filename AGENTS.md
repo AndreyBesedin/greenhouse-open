@@ -48,10 +48,9 @@ fails when it drifts from its source.
 - `uv.lock`, every Python dependency's version for development and CI:
   `uv lock`, after a `pyproject.toml` changes (decision 0039). CI's
   `uv sync --locked` fails while it is out of step.
-- The viewer's contracts in `greenhouse_sim/web/src/scene/generated/`,
-  `greenhouse_sim/web/src/fields/generated/` and
-  `greenhouse_sim/web/src/cfd/generated/`: `npm run generate` in
-  `greenhouse_sim/web`, from the schemas below.
+- The viewer's contracts, in a `generated/` folder beside the module that
+  reads each, such as `greenhouse_sim/web/src/scene/generated/`: `npm run
+  generate` in `greenhouse_sim/web`, from the schemas below.
 - The schemas beside their models, such as
   `greenhouse_sim/greenhouse_sim/scene/snapshot.schema.json`,
   `greenhouse_sim/greenhouse_sim/scenarios/scenario.schema.json` and each

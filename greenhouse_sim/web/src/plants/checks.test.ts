@@ -10,9 +10,9 @@ describe("the lab's checks", () => {
   });
 
   it("are refused when they cannot be read", () => {
-    expect(() => labChecks([])).toThrow("no day or no problems");
+    expect(() => labChecks([])).toThrow("the checks are not what the viewer expects");
     expect(() => labChecks({ day: 1, problems: { p01: [3] } })).toThrow(
-      "p01's problems are not a list of text",
+      "the checks are not what the viewer expects",
     );
   });
 

@@ -186,15 +186,19 @@ test("moving while following the run played back: applied, the playback starts o
   // start. The playback other tests follow is left as it is; the simulator's
   // own restart with a layout is the API's tests'.
   const own = {
+    scenario_id: "climate_box",
     run_id: "climate_box-climate-00000000",
     layout: "default",
     epoch: 0,
+    greenhouse_id: "climate_box",
+    started_at: "2026-03-01T00:00:00Z",
     simulated_now: "2026-03-03T05:00:00Z",
     time_s: 2 * 86_400 + 5 * 3600,
     day: 2,
     playing: false,
     seconds_per_day: 10,
     worked_out_s: 3 * 86_400,
+    every_s: 300,
   };
   let played = own;
   const restarts: string[] = [];

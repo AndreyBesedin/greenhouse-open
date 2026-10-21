@@ -12,15 +12,28 @@ import {
   parseCropPlant,
   withCrop,
 } from "./crop";
+import type { Plant } from "./generated/plantTypes";
 import { describeDays, PlantDays } from "./PlantDays";
 
 const PLANT_ID = "reference_greenhouse_plant_001";
 // A plant of one phytomer that has borne a fruit and had it picked, as the
 // simulator's crop writes it.
-const STRUCTURE = {
+const STRUCTURE: Plant = {
   born_tt: 0,
   plant_id: PLANT_ID,
   thermal_time: 900,
+  seed: 1,
+  traits: {
+    vigour: 1,
+    phyllochron_scale: 1,
+    internode_length_scale: 1,
+    stem_diameter_scale: 1,
+    leaf_length_scale: 1,
+    leaf_insertion_scale: 1,
+    leaf_droop_scale: 1,
+    rotation_rad: 0,
+  },
+  laid_internodes: 0,
   stem: {
     born_tt: 0,
     axis_id: `${PLANT_ID}_stem`,
@@ -29,8 +42,21 @@ const STRUCTURE = {
         born_tt: 0,
         phytomer_id: `${PLANT_ID}_n01`,
         rank: 1,
-        internode: { born_tt: 0, internode_id: `${PLANT_ID}_n01_internode`, length_cm: 5 },
-        leaf: { born_tt: 0, leaf_id: `${PLANT_ID}_n01_leaf`, length_cm: 20, stage: "mature" },
+        internode: {
+          born_tt: 0,
+          internode_id: `${PLANT_ID}_n01_internode`,
+          length_cm: 5,
+          diameter_mm: 8,
+          final_length_cm: 6,
+          final_diameter_mm: 10,
+        },
+        leaf: {
+          born_tt: 0,
+          leaf_id: `${PLANT_ID}_n01_leaf`,
+          length_cm: 20,
+          final_length_cm: 40,
+          stage: "mature",
+        },
         truss: null,
       },
     ],
@@ -41,6 +67,8 @@ const STRUCTURE = {
       action: { kind: "harvest_fruit", fruit_id: `${PLANT_ID}_t01_fr01` },
       applied: true,
       note: `harvested ${PLANT_ID}_t01_fr01, 98 g`,
+      organs: [`${PLANT_ID}_t01_fr01`],
+      harvested_g: 98,
     },
   ],
 };

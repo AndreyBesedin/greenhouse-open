@@ -17,11 +17,13 @@ for the selected item.
    - its URL, built from the run with `scenarioUrl` and `runParameters`
      (`greenhouse_sim/web/src/scene/run.ts`), so that it asks for the run
      the view shows;
-   - a `parse` function that checks the body and throws "… is not what the
-     viewer expects", and a `load(url, fetchFn = fetch)` that turns a
-     refusal into "the simulator API answered N". The scene, the fields and
-     the CFD geometry are checked against their published schemas instead
-     (`greenhouse_sim/web/src/scene/checkScene.ts`).
+   - a `parse` function that reads the body with its contract's reader,
+     `contractReader(SCHEMA, "… is not what the viewer expects")`
+     (`greenhouse_sim/web/src/loadJson.ts`), and turns the snake_case
+     answer into the camelCase interface; and a `load(url, fetchFn =
+     fetch)` that asks with `loadJson`, which turns a refusal into "the
+     simulator API answered N". The route's answer is published as a
+     schema first ([an API route](add-an-api-route.md)).
 2. **The panel**, such as
    `greenhouse_sim/web/src/timeline/TimelinePanel.tsx`. Either it loads its
    own data when it is opened, with `useLoad`
@@ -66,7 +68,8 @@ uv run browser-tests e2e/timeline.spec.ts              # TEST_PORT_OFFSET=20 bes
   first one left.
 - **CI draws in software,** at a few frames a second: long specs set their
   own timeout, and screenshot baselines are drawn by CI only.
-- **A contract checked against a schema** (rather than by hand) is listed
-  in `greenhouse_sim/web/scripts/generateContractSources.ts`; `npm run
-  generate` writes its sources, and `greenhouse_sim/web/src/contracts.test.ts`
-  fails when they drift.
+- **A contract** is listed in
+  `greenhouse_sim/web/scripts/generateContractSources.ts`; `npm run
+  generate` writes its types and schema into its area's `generated/`
+  folder, and `greenhouse_sim/web/src/contracts.test.ts` fails when they
+  drift.

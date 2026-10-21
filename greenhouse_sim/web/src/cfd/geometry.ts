@@ -1,11 +1,8 @@
-import Ajv2020 from "ajv/dist/2020";
-import { loadJson } from "../loadJson";
+import { contractCheck, loadJson } from "../loadJson";
 import { CFD_GEOMETRY_SCHEMA } from "./generated/geometrySchema";
 import type { CfdGeometry } from "./generated/geometryTypes";
 
-const validate = new Ajv2020({ allErrors: true, strict: true }).compile<CfdGeometry>(
-  CFD_GEOMETRY_SCHEMA,
-);
+const checkGeometry = contractCheck<CfdGeometry>(CFD_GEOMETRY_SCHEMA, "the geometry");
 
 export type CfdGeometryState =
   | { status: "none" }
@@ -26,13 +23,8 @@ export function cfdGeometryUrl(scenarioId: string, changes: string): string {
 export function checkCfdGeometry(
   body: unknown,
 ): { ok: true; geometry: CfdGeometry } | { ok: false; problems: string[] } {
-  if (validate(body)) {
-    return { ok: true, geometry: body };
-  }
-  const problems = (validate.errors ?? []).map(
-    (error) => `${error.instancePath || "the geometry"} ${error.message ?? "is not valid"}`,
-  );
-  return { ok: false, problems };
+  const checked = checkGeometry(body);
+  return checked.ok ? { ok: true, geometry: checked.value } : checked;
 }
 
 /** Fetches and checks a CFD geometry; every failure becomes a state to show. */
