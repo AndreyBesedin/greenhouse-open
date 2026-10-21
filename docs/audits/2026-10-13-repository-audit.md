@@ -178,7 +178,7 @@ code at `467821f`; *review*, reproduced by a review and not again here.
 | `AUDIT.5` There is no recipe, for a person or an assistant | corrected | read | now | W6 (#164), W14 (#263) |
 | `AUDIT.6` The run request is written out 22 times | corrected | read | next | W11 |
 | `AUDIT.7` Five caches, five locks, and what they share | corrected | read | next | W9 (#253) |
-| `AUDIT.8` The viewer validates by hand what the simulator could publish | corrected | read | next | W12 |
+| `AUDIT.8` The viewer validates by hand what the simulator could publish | corrected | read | next | W12 (#264, #267, #281, #282) |
 | `AUDIT.9` Small Python toolboxes worth naming | corrected | read | when touched | W13 (#256, #257, #259) |
 | `AUDIT.10` The layering between subpackages is not checked | corrected | read | decide | D3 (decision 0037 and its ratchet, #182) |
 | `AUDIT.11` Ruff checks five rule families | confirmed | run | when touched | W15 |
