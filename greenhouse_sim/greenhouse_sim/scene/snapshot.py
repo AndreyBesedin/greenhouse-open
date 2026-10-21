@@ -28,7 +28,7 @@ from greenhouse_sim.domain.crop import FruitStatus
 from greenhouse_sim.domain.envelope import OpeningKind, SurfaceCategory
 from greenhouse_sim.domain.equipment import ActuatorKind
 from greenhouse_sim.domain.layout import FixtureKind, Material, Obstruction, ZoneKind
-from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
+from greenhouse_sim.json_schemas import answer_json_schema
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.units import METRES_PER_CENTIMETRE
 from greenhouse_sim.world.envelope import Envelope, Gutter, Member, OpeningPanel, Surface
@@ -546,26 +546,7 @@ def _plant_entity(plant: PlantWorld, envelope: Envelope, position: PlantingPosit
 
 def snapshot_json_schema() -> dict[str, JsonValue]:
     """The JSON Schema a viewer validates snapshots against, published as
-    `snapshot.schema.json` next to this module.
-
-    It describes snapshots as the simulator sends them, so every field with a
-    default is still required: a viewer never has to supply one. Pydantic
-    marks tagged unions with OpenAPI's `discriminator` keyword, which is not
-    JSON Schema. The `oneOf` and each shape's constant `shape` already say the
-    same, so the published schema leaves the keyword out.
-    """
-    schema = _without_discriminators(SceneSnapshot.model_json_schema(mode="serialization"))
-    assert isinstance(schema, dict)
-    return {"$schema": JSON_SCHEMA_DIALECT, **schema}
-
-
-def _without_discriminators(value: JsonValue) -> JsonValue:
-    if isinstance(value, dict):
-        return {
-            key: _without_discriminators(item)
-            for key, item in value.items()
-            if not (key == "discriminator" and isinstance(item, dict) and "propertyName" in item)
-        }
-    if isinstance(value, list):
-        return [_without_discriminators(item) for item in value]
-    return value
+    `snapshot.schema.json` next to this module: as the simulator sends them,
+    every field with a default still required, so that a viewer never has
+    to supply one (`answer_json_schema`)."""
+    return answer_json_schema(SceneSnapshot)
