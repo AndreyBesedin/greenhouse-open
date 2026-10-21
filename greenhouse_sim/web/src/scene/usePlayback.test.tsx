@@ -19,6 +19,7 @@ function playing(runId: string, timeS: number): Response {
     JSON.stringify({
       scenario_id: "climate_box",
       run_id: runId,
+      layout: "default",
       epoch: 0,
       greenhouse_id: "climate_box",
       started_at: "2026-03-01T00:00:00Z",

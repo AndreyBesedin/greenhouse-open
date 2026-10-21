@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { contractCheck } from "../loadJson";
 import { PLAYBACK_SCHEMA } from "./generated/playbackSchema";
 import type { PlaybackState as ServedPlayback } from "./generated/playbackTypes";
+import { layoutText } from "./moves";
 
 // How often a view following a played-back run asks where its clock is.
 const POLL_MS = 1000;
@@ -11,13 +12,17 @@ const NOT_FOUND = 404;
 
 /**
  * A scenario's own run played back against one clock (P10.2, decision
- * 0041), as the simulator says it stands: the run, its epoch, the instant
- * its clock has reached and that as seconds into the run, its day, whether
- * it plays and how fast, and how far ahead its records are worked out. A
- * consumer reads the same run by the same identity and clock.
+ * 0041), as the simulator says it stands: the run, its layout (its own, or
+ * one rearranged, #271), its epoch, the instant its clock has reached and
+ * that as seconds into the run, its day, whether it plays and how fast, and
+ * how far ahead its records are worked out. A consumer reads the same run
+ * by the same identity and clock.
  */
 export interface PlaybackState {
   runId: string;
+  /** Its layout, by the name a run knows it by: `default`, or one with
+   * moves, `default~heater:-1.0:0.5`. */
+  layout: string;
   epoch: number;
   simulatedNow: string;
   timeS: number;
@@ -52,6 +57,7 @@ export function parsePlayback(body: unknown): PlaybackState | null {
   const played = checked.value;
   return {
     runId: played.run_id,
+    layout: played.layout,
     epoch: played.epoch,
     simulatedNow: played.simulated_now,
     timeS: played.time_s,
@@ -101,15 +107,19 @@ async function answered(response: Response): Promise<PlaybackLoad> {
     : { status: "loaded", state };
 }
 
-/** Starts the scenario's playback, or tells it to play, pause or start over. */
+/** Starts the scenario's playback, or tells it to play, pause or start over;
+ * started over with a layout, it plays that layout's run from its start, a
+ * new run (#271). */
 export async function commandPlayback(
   scenarioId: string,
   command: PlaybackCommand | "start",
   fetchFn: typeof fetch = fetch,
+  layout?: string,
 ): Promise<PlaybackLoad> {
+  const query = layout === undefined ? "" : `?layout=${layoutText(layout)}`;
   let response: Response;
   try {
-    response = await fetchFn(`${playbackUrl(scenarioId)}/${command}`, { method: "POST" });
+    response = await fetchFn(`${playbackUrl(scenarioId)}/${command}${query}`, { method: "POST" });
   } catch {
     return { status: "unavailable", reason: "the simulator could not be reached" };
   }

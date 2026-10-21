@@ -111,3 +111,10 @@ thread of its own is a live runner that never shows what is not worked out.
 - Worth revisiting if a run's day ever costs more than its pace, when a
   playback worked out entirely before it plays is the same design with its
   clock started last.
+- Added on 2026-10-21 (#271): a playback plays one run of its scenario,
+  with the scenario's own layout or one rearranged, its equipment and
+  sensors moved (`world.moves`). Started over with another layout, it
+  plays that layout's run from its start: a new run, with an identity of
+  its own and the epoch its own count gives it. The run played before is
+  no longer served, so a consumer finds the new one in the list of runs
+  and reads it from its first day.

@@ -2,14 +2,15 @@
 // Do not edit: change the simulator's types and regenerate.
 
 /**
- * Where a playback stands: the run it plays, its epoch, its clock, both
- * as the instant it has reached and as seconds into the run, as the viewer
- * asks for a moment; whether it plays and how fast; and how far ahead of
- * it the run's records are worked out.
+ * Where a playback stands: the run it plays, its layout and its epoch,
+ * its clock, both as the instant it has reached and as seconds into the
+ * run, as the viewer asks for a moment; whether it plays and how fast; and
+ * how far ahead of it the run's records are worked out.
  */
 export interface PlaybackState {
   scenario_id: string;
   run_id: string;
+  layout: string;
   epoch: number;
   greenhouse_id: string;
   started_at: string;

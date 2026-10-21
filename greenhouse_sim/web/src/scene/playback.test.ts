@@ -11,6 +11,7 @@ import {
 const ANSWER = {
   scenario_id: "reference_greenhouse",
   run_id: "reference_greenhouse-climate-c562c827",
+  layout: "default",
   epoch: 0,
   greenhouse_id: "reference_greenhouse",
   started_at: "2026-02-28T23:00:00Z",
@@ -24,6 +25,7 @@ const ANSWER = {
 };
 const STATE = {
   runId: "reference_greenhouse-climate-c562c827",
+  layout: "default",
   epoch: 0,
   simulatedNow: "2026-03-02T11:00:30Z",
   timeS: 129_630,
@@ -42,6 +44,8 @@ describe("a run played back, as the viewer reads it", () => {
     expect(parsePlayback(ANSWER)).toEqual(STATE);
     expect(parsePlayback({ ...ANSWER, time_s: "late" })).toBeNull();
     expect(parsePlayback({ ...ANSWER, run_id: undefined })).toBeNull();
+    // Which layout it plays is part of it (#271).
+    expect(parsePlayback({ ...ANSWER, layout: undefined })).toBeNull();
     expect(parsePlayback(null)).toBeNull();
   });
 
@@ -91,10 +95,14 @@ describe("a run played back, as the viewer reads it", () => {
       state: STATE,
     });
     await commandPlayback("reference_greenhouse", "pause", fetchFn);
+    // Started over with a layout, its moves written as an address writes
+    // them (#271).
+    await commandPlayback("reference_greenhouse", "restart", fetchFn, "default~heater:-1:0.5");
 
     expect(vi.mocked(fetchFn).mock.calls.map(([url, init]) => [url, init?.method])).toEqual([
       [`${playbackUrl("reference_greenhouse")}/start`, "POST"],
       [`${playbackUrl("reference_greenhouse")}/pause`, "POST"],
+      [`${playbackUrl("reference_greenhouse")}/restart?layout=default~heater:-1:0.5`, "POST"],
     ]);
   });
 });

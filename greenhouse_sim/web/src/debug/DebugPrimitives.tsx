@@ -2,6 +2,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import { ArrowHelper, Box3, Box3Helper, Vector3 } from "three";
 
+import { useDisposable } from "../useDisposable";
 import { type Point3, worldToViewer } from "../world";
 import type { Bounds, OverlayPrimitive } from "./overlays";
 
@@ -43,7 +44,7 @@ export function DebugArrow({
   length: number;
   color: string;
 }) {
-  const arrow = useMemo(() => {
+  const arrow = useDisposable(() => {
     const headLength = length * ARROW_HEAD_LENGTH_SHARE;
     return new ArrowHelper(
       vector(direction).normalize(),
@@ -54,16 +55,14 @@ export function DebugArrow({
       headLength * ARROW_HEAD_WIDTH_SHARE,
     );
   }, [origin, direction, length, color]);
-  useEffect(() => () => arrow.dispose(), [arrow]);
   return <primitive object={arrow} />;
 }
 
 export function DebugBox({ bounds, color }: { bounds: Bounds; color: string }) {
-  const box = useMemo(
+  const box = useDisposable(
     () => new Box3Helper(new Box3(vector(bounds.min), vector(bounds.max)), color),
     [bounds, color],
   );
-  useEffect(() => () => box.dispose(), [box]);
   return <primitive object={box} />;
 }
 

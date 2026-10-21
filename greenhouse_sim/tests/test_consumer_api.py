@@ -134,6 +134,33 @@ def test_a_restart_is_a_new_epoch_and_a_stale_cursor_is_answered_empty(clock: Cl
     assert check_polls([before, stale, again]) == []
 
 
+def test_a_playback_rearranged_is_a_new_run_a_consumer_reads_from_its_first_day(
+    clock: Clock,
+) -> None:
+    # The viewer following the run moves the heater and starts the run over
+    # with it (#271): the consumer's run is gone, and the scenario's new run
+    # is listed in its place, from its first day.
+    first = _run_id()
+    clock.now += 5.0
+    before = ObservationBatch.model_validate(_get(f"{PREFIX}/runs/{first}/observations"))
+    assert before.records
+
+    playback.command(SCENARIO, PlaybackCommand.RESTART, "default~heater:-1:0.5")
+
+    (run,) = RunList.model_validate(_get(f"{PREFIX}/runs")).runs
+    assert run.run_id != first and run.scenario == SCENARIO
+    assert (run.epoch, run.clock.day, run.clock.simulated_now) == (0, 0, run.started_at)
+    gone = consumer_respond("GET", f"{PREFIX}/runs/{first}/observations?after={before.next}")
+    assert gone is not None and gone.status == 404
+    assert playback.playback(SCENARIO).wait_for(1, timeout_s=120)
+    clock.now += 5.0
+    batch = ObservationBatch.model_validate(_get(f"{PREFIX}/runs/{run.run_id}/observations"))
+    assert batch.records and batch.epoch == 0
+    assert {r.source.source_id for r in batch.records} == {run.run_id}
+    assert min(r.delivered_at or r.timestamp for r in batch.records) == run.started_at
+    assert check_batch(batch) == [] and check_polls([batch]) == []
+
+
 def test_events_are_a_log_of_their_own(clock: Clock) -> None:
     clock.now += 5.0
     events = EventBatch.model_validate(_get(f"{PREFIX}/runs/{_run_id()}/events?after=0"))
@@ -243,7 +270,7 @@ def test_the_run_s_events_reach_a_consumer_by_the_clock(
     # A harvest an hour into each day after the first, as the crop's log
     # would give it, in place of the climate box's simple crop's none.
     def harvest(
-        scenario_id: str, day: int, start: datetime, run_id: str
+        scenario_id: str, day: int, start: datetime, run_id: str, layout: str | None = None
     ) -> tuple[list[Observation], list[Event]]:
         if day == 0:
             return [], []

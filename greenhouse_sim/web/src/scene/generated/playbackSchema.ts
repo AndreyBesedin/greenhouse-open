@@ -3,7 +3,7 @@
 
 export const PLAYBACK_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "Where a playback stands: the run it plays, its epoch, its clock, both\nas the instant it has reached and as seconds into the run, as the viewer\nasks for a moment; whether it plays and how fast; and how far ahead of\nit the run's records are worked out.",
+  "description": "Where a playback stands: the run it plays, its layout and its epoch,\nits clock, both as the instant it has reached and as seconds into the\nrun, as the viewer asks for a moment; whether it plays and how fast; and\nhow far ahead of it the run's records are worked out.",
   "properties": {
     "scenario_id": {
       "title": "Scenario Id",
@@ -11,6 +11,10 @@ export const PLAYBACK_SCHEMA = {
     },
     "run_id": {
       "title": "Run Id",
+      "type": "string"
+    },
+    "layout": {
+      "title": "Layout",
       "type": "string"
     },
     "epoch": {
@@ -59,6 +63,7 @@ export const PLAYBACK_SCHEMA = {
   "required": [
     "scenario_id",
     "run_id",
+    "layout",
     "epoch",
     "greenhouse_id",
     "started_at",
