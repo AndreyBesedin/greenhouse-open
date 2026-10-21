@@ -1,7 +1,8 @@
 # P11: Climate setpoints
 
-**Status:** in progress: P11.1 is in review, the rest is proposed. The
-open questions are at the end.
+**Status:** in progress: P11.1 is done, and P11.3 for the heating loop's
+targets, released in 0.3.0; the rest is proposed. The open questions are
+at the end.
 Part of the [simulator roadmap](README.md).
 
 ## Goal
@@ -104,11 +105,11 @@ keeps it.
 
 | Step | What | Status |
 | --- | --- | --- |
-| P11.1 | **The controller as data:** `climate/control.py` holds the loops, their targets, bands and stages, and checks them (the dead band between heating and venting, stages in order, times of day on the minute). A manifest's `thermostat` becomes its `control`, in the manifest's next format, with a migration of the one before. | In review |
+| P11.1 | **The controller as data:** `climate/control.py` holds the loops, their targets, bands and stages, and checks them (the dead band between heating and venting, stages in order, times of day on the minute). A manifest's `thermostat` becomes its `control`, in the manifest's next format, with a migration of the one before. | Done (#283) |
 | P11.2 | **The house decides every loop exactly:** the next switch is the earliest moment any loop's edge is reached. The house's course through a stretch gains its humidity, so that a relative humidity's edge is found too. The grid follows each device a loop runs. Checkpoints keep each loop's state, in checkpoint format 3; a format 2 checkpoint, whose run has the heating loop alone, is read with the other loops off. **With the heating loop alone, a run is today's run, to the last digit.** | Proposed |
-| P11.3 | **Targets as a run's input:** a `&targets=` parameter on every route that makes or keeps a run, wherever `&daily=` is read today: the climate's, the crop's, the timeline's, the observations', the playback's and a checkpoint's. It is read once and checked (refused with the reason, as commands are), it is part of the run's identity, and a checkpoint keeps it, so that it is restored as the same run. The audit's run request (W11) would make this one change in one place. The equipment route says which loop runs each device, its state and its target at the moment. | In review: the heating loop's targets, changed from a moment on (#274, decision 0043) |
+| P11.3 | **Targets as a run's input:** a `&targets=` parameter on every route that makes or keeps a run, wherever `&daily=` is read today: the climate's, the crop's, the timeline's, the observations', the playback's and a checkpoint's. It is read once and checked (refused with the reason, as commands are), it is part of the run's identity, and a checkpoint keeps it, so that it is restored as the same run. The audit's run request (W11) would make this one change in one place. The equipment route says which loop runs each device, its state and its target at the moment. | Done for the heating loop's targets, changed from a moment on (#284, #274, decision 0043) |
 | P11.4 | **The viewer:** a Targets panel (heating and venting, each by day and by night, and humidity) that keeps its values in the address, and passes them on every run's request. The Equipment panel names the loop that runs each device. The timeline shows the loops' switches in the air's lane. | Proposed |
-| P11.5 | **The reference greenhouse by its targets, not the clock:** its daily vent and fan commands give way to venting and humidity targets in its manifest. Its run changes, so its opening day, replay, reference views and screenshots are written again, and the changelog says that its identity changes. This waits until after the 20–22 October demo, since consumers follow its current run. | Proposed |
+| P11.5 | **The reference greenhouse by its targets, not the clock:** its daily vent and fan commands give way to venting and humidity targets in its manifest. Its run changes, so its opening day, replay, reference views and screenshots are written again, and the changelog says that its identity changes. Consumers follow its run, so when it switches is decided first. | Proposed |
 | P11.6 | **The QA scenario** (below), run and recorded. | Proposed |
 
 ### P11.1 as built
@@ -142,8 +143,8 @@ keeps it.
   and the thermostat's day and night as the control's. Formats 1 and 2 are
   migrated as they are read, a note on the thermostat becoming one on the
   control. A run's identity covers its scenario's whole configuration, so
-  every run id changes, though no run does. So P11.1 lands after the
-  20–22 October demo, as P11.5 does.
+  every run id changes, though no run does. It landed on 21 October, the
+  reference run's id going from `…-76516b75` to `…-0b54199d`.
 - **No decision record yet.** P11's direction becomes one with P11.2, once
   the open questions below are answered.
 
@@ -209,8 +210,8 @@ In the viewer, on the reference greenhouse, after P11.5:
    command does, and a playback's run is steered while it plays, in the
    same run and epoch (decision 0043).
 6. **The address:** the syntax of `&targets=` is for P11.3.
-7. **When the reference greenhouse switches over:** after the demo is
-   proposed, since its run is the one consumers follow.
+7. **When the reference greenhouse switches over:** its run is the one
+   consumers follow, so the switch is announced to them first.
 
 CO₂ and light targets come after this project, as the roadmap records:
 each needs equipment the simulator does not have yet.

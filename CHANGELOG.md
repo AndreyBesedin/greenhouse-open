@@ -7,6 +7,32 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+## 0.3.0 - 2026-10-21
+
+The reference greenhouse's run played back against one clock, which the
+viewer and a consumer follow (P10), under a season, with a thermostat on
+its heater; the consumer interface in the protocol; and the climate
+controller's first steps (P11): the controller as data, and heating
+targets changed from a moment on, from the viewer or through the
+simulator's API. Every run's identity changes, and scenario manifests and
+checkpoints are in format 3; manifests in formats 1 and 2, and format 2
+checkpoints, are still read.
+
+- The viewer follows a scenario's own run as it is played back (#245):
+  its moment moves with the playback's clock, its own play and sliders
+  stand aside while it follows (#270), and a "Heating targets" section sets
+  the run's heating setpoints from the moment drawn, or the run played
+  back's from its next minute (#274). Every group of its info panel folds
+  to a line that says how it stands (#273), the controls list each action
+  once (#272), and the crop stays drawn under the sun, its geometries
+  disposed once nothing draws them (#269).
+- `greenhouse-sim`: every answer of the API that the viewer reads is
+  published as a JSON Schema beside the service that gives it
+  (`greenhouse_sim/services/*.schema.json` and its kin, W12), and the viewer
+  reads each answer by its schema, refusing one that does not fit.
+- `greenhouse-sim`: the API reads the run a request asks for once, for
+  every route that makes or keeps one (W11): the timeline, which ignored
+  `&open=` and `&weather=`, now refuses a malformed one as the others do.
 - `greenhouse-sim`: a heater gives its heat to the air its outlet blows
   through, along its heading over its jet's core, weighted as a round jet's
   speed is, rather than to the few cells around its body (#261). In the
@@ -17,6 +43,16 @@ breaks the conformance checks is a major version.
   days and opening days do not. In a shut house the grid's mean now runs
   about half a degree above the whole house's, its heat kept from the cold
   glass.
+- `greenhouse-sim`: a run's heating setpoints can change from a moment on
+  (#274, decision 0043): `&targets=3600:heating_day:24` on every route that
+  makes or keeps a run, its thermostat heating to the targets in force,
+  each change part of the run. A playback's run is steered while it plays
+  by `POST .../playback/targets?targets=heating_day:24`, from its clock's
+  next minute, in the same run and epoch; its state lists the changes. The
+  equipment route gives the thermostat's setpoints by day and by night.
+  Checkpoints are in format 3, keeping a run's target changes; format 2 is
+  read as one that made none, and the opening days are written again in
+  format 3. Runs that change no target keep their identity.
 - `greenhouse-sim`: scenario manifests are in format 3 (P11.1). A
   scenario's `thermostat` is now the heating loop of its climate
   controller, `control`, which holds its loops, their targets, bands and
@@ -101,15 +137,6 @@ breaks the conformance checks is a major version.
   night, in place of the cold spring day every day and the heater by the
   clock. Its run is another: its identity, its opening day and its numbers
   change.
-- `greenhouse-protocol`: the consumer interface
-  (`greenhouse_protocol.contracts.consumer`, decision 0040, P10.1): how a
-  client reads a running producer, whatever it is. Routes under
-  `/consumer/v1` answer a run's identity, epoch and clock, its greenhouse
-  description, and its observations and events after a cursor, in delivery
-  order, with nothing from after the run's clock. `check_batch` and
-  `check_polls` hold a producer to the rules, and a recorded exchange
-  (`tests/fixtures/consumer/exchange.json`) lets a client be built before
-  any producer serves it.
 - `greenhouse-sim`: the identifier of a piece of equipment
   (`actuator_id`), a sensor (`sensor_id`) or a door or vent (`opening_id`)
   holds only letters, digits, `_`, `.` and `-`, as `layout.schema.json` and
