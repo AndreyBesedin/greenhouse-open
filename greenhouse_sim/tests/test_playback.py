@@ -4,6 +4,7 @@ passes what is worked out."""
 
 from collections.abc import Callable, Iterator
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
 from greenhouse_protocol.enums import ObservationType
@@ -13,10 +14,15 @@ from greenhouse_sim.api.server import create_server
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import playback, run_state, sensors
 from greenhouse_sim.services.errors import NotFound
-from greenhouse_sim.services.playback import Playback, PlaybackCommand, PlaybackFailed
+from greenhouse_sim.services.fields import air_through_a_run
+from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand, PlaybackFailed
 from greenhouse_sim.services.runs import RunRequest
 
 SCENARIO = "climate_box"
+# The climate box with its heater moved a metre along x and half one along y,
+# as the viewer writes it, and as a run knows it (#271).
+MOVED = "default~heater:-1:0.5"
+MOVED_NAME = "default~heater:-1.0:0.5"
 EVERY_S = 300.0
 # Every record there is, in one batch.
 ALL = 10**6
@@ -148,6 +154,65 @@ def test_a_restart_is_a_new_epoch_of_the_same_run_from_its_start(
     again = played.records_after(0, ALL)
     assert again.state.epoch == 1
     assert again.records == before.records
+
+
+def test_a_restart_with_another_layout_plays_its_run_from_its_start_as_a_new_run(
+    clock: Clock, tmp_path: Path, no_playbacks: Callable[[], None]
+) -> None:
+    # A viewer following the run rearranges the room (#271): the playback
+    # starts over with the layout, playing its run, whose epochs it counts
+    # as their own file does.
+    epochs = Epochs(tmp_path)
+    own = playback.start(SCENARIO, 10.0, clock=clock, epochs=epochs)
+    assert playback.playback(SCENARIO).wait_for(1, timeout_s=120)
+    clock.now += 5.0
+
+    moved = playback.command(SCENARIO, PlaybackCommand.RESTART, MOVED)
+
+    assert moved.layout == MOVED_NAME and own.layout == "default"
+    assert moved.run_id == air_through_a_run(RunRequest(SCENARIO, layout=MOVED))[1] != own.run_id
+    assert (moved.epoch, moved.time_s, moved.playing) == (0, 0.0, True)
+    assert [found.run_id for found in playback.playbacks()] == [moved.run_id]
+    played = playback.playback(SCENARIO)
+    assert played.wait_for(1, timeout_s=120)
+    clock.now += 5.0
+    # Its records are its run's, from its start, as a consumer reads them.
+    cut = played.records_after(0, ALL)
+    expected, _ = sensors.delivered_between(SCENARIO, None, DAY_S / 2, EVERY_S, MOVED_NAME)
+    assert [r for r in cut.records if r.sensor_id] == expected
+    assert {r.source.source_id for r in cut.records} == {moved.run_id}
+
+    # The same layout, however written, is a restart of the same run; its
+    # own layout again, a new epoch of the run played first.
+    again = playback.command(SCENARIO, PlaybackCommand.RESTART, "default~heater:-1.0:0.50")
+    assert (again.run_id, again.epoch) == (moved.run_id, 1)
+    back = playback.command(SCENARIO, PlaybackCommand.RESTART, "default")
+    assert (back.run_id, back.layout, back.epoch, back.time_s) == (own.run_id, "default", 1, 0.0)
+    assert Epochs(tmp_path).next(moved.run_id) == 2
+
+
+def test_the_api_starts_a_playback_over_with_a_layout_and_refuses_one_it_cannot_play(
+    no_playbacks: Callable[[], None],
+) -> None:
+    path = f"/api/scenarios/{SCENARIO}/playback"
+    started = respond("POST", f"{path}/start?seconds_per_day=600&layout={MOVED}")
+    assert started.status == 200 and isinstance(started.body, dict)
+    assert started.body["layout"] == MOVED_NAME
+    own = respond("POST", f"{path}/restart?layout=default")
+    assert own.status == 200 and isinstance(own.body, dict)
+    assert (own.body["layout"], own.body["time_s"]) == ("default", 0.0)
+
+    for refused, status in [
+        (f"{path}/restart?layout=default~boiler:1:0", 400),
+        (f"{path}/restart?layout=default~heater:99:0", 400),
+        (f"{path}/restart?layout=nowhere", 404),
+        (f"{path}/play?layout={MOVED}", 400),
+    ]:
+        assert respond("POST", refused).status == status, refused
+    # Refused, the run played back plays on.
+    state = respond("GET", path)
+    assert isinstance(state.body, dict) and state.body["run_id"] == own.body["run_id"]
+    assert [found.layout for found in playback.playbacks()] == ["default"]
 
 
 def test_a_playback_stopped_works_out_nothing_more(clock: Clock) -> None:

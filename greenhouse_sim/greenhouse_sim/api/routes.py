@@ -162,10 +162,15 @@ check; a route that comes to need one checks it first.
     GET /api/scenarios/{id}/playback      its own run played back against one
                                           clock, which the viewer and a
                                           consumer follow (P10.2): the run,
-                                          its epoch, the clock
+                                          its layout, its epoch, the clock
     POST /api/scenarios/{id}/playback/start?seconds_per_day=10
-                                          started, or played on, at that pace
+                                          started, or played on, at that pace;
+                                          &layout=default~heater:-1:0.5 with
+                                          that layout, rearranged
     POST /api/scenarios/{id}/playback/play, /pause, /restart (a new epoch)
+    POST /api/scenarios/{id}/playback/restart?layout=default~heater:-1:0.5
+                                          started over with another layout:
+                                          its run, from its start (#271)
     POST /api/scenarios/{id}/playback/pace?seconds_per_day=5
 """
 
@@ -331,13 +336,15 @@ def _posted(path: str, query: Query, body: bytes) -> Response:
         case ["api", "checkpoints"]:
             return _answer(lambda: checkpoints.upload_checkpoint(_json(body)))
         case ["api", "scenarios", scenario_id, "playback", "start"]:
-            return _answer(lambda: playback.start(scenario_id, _pace(query)))
+            layout = _last(query, "layout")
+            return _answer(lambda: playback.start(scenario_id, _pace(query), layout=layout))
         case ["api", "scenarios", scenario_id, "playback", "pace"]:
             return _answer(lambda: playback.set_pace(scenario_id, _pace(query) or 0.0))
         case ["api", "scenarios", scenario_id, "playback", action]:
             if action not in PlaybackCommand:
                 return _error(HTTPStatus.NOT_FOUND, f"no playback command {action!r}")
-            return _answer(lambda: playback.command(scenario_id, PlaybackCommand(action)))
+            layout = _last(query, "layout")
+            return _answer(lambda: playback.command(scenario_id, PlaybackCommand(action), layout))
         case _:
             return _error(HTTPStatus.METHOD_NOT_ALLOWED, f"{path!r} only answers GET")
 

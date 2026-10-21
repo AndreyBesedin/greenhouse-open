@@ -1,61 +1,87 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/** One way to move around the view, or to act in it: the input, and what
- * it does. */
-export interface Control {
+import { PLACE_BY_CLICKING } from "./fields/FieldProbes";
+
+/** The inputs that do an action on one kind of device. */
+export interface Input {
+  device: "Mouse" | "Trackpad" | "Touch";
   input: string;
+}
+
+/** One thing a person can do in the view, once: what it is, and either the
+ * inputs that do it on each device, or how to do it. */
+export interface Action {
+  action: string;
   does: string;
+  inputs?: readonly Input[];
 }
 
 /**
  * What the view's controls do (#207), as `orbit.ts` sets them up: three's
  * OrbitControls with its own mouse and touch bindings, no keys, and the wheel
- * aimed at the point under the pointer. Listed as they are, never more:
+ * aimed at the point under the pointer. Each action once, with the inputs
+ * that do it on a mouse, a trackpad or a touch screen, and each mode with
+ * how to start it (#272). Listed as they are, never more:
  * `ControlsHelp.test.tsx` holds the controls to it.
  */
-export const CONTROLS: readonly { device: string; controls: readonly Control[] }[] = [
+export const CONTROLS: readonly { section: string; actions: readonly Action[] }[] = [
   {
-    device: "Mouse",
-    controls: [
-      { input: "Drag", does: "orbit around the point in view" },
-      { input: "Shift-, Ctrl- or ⌘-drag, or right-drag", does: "pan" },
-      { input: "Scroll", does: "zoom, towards what is under the pointer" },
-      { input: "Middle-drag", does: "zoom" },
-    ],
-  },
-  {
-    device: "Trackpad",
-    controls: [
-      { input: "Two-finger scroll, or pinch", does: "zoom" },
-      { input: "Shift- or ⌘-drag, or two-finger click and drag", does: "pan" },
-    ],
-  },
-  {
-    device: "Touch",
-    controls: [
-      { input: "One finger", does: "orbit" },
-      { input: "Two fingers", does: "pinch to zoom, move together to pan" },
-    ],
-  },
-  {
-    device: "In the view",
-    controls: [
-      { input: "Click", does: "select what is under the pointer; click empty space to clear it" },
-      { input: "Click, while placing probes", does: "place a probe" },
+    section: "Camera",
+    actions: [
       {
-        input: "Drag, while moving equipment or a sensor",
-        does: "move it along the floor; the camera holds still but for the wheel",
+        action: "Orbit",
+        does: "around the point in view",
+        inputs: [
+          { device: "Mouse", input: "drag" },
+          { device: "Trackpad", input: "click and drag" },
+          { device: "Touch", input: "one finger" },
+        ],
       },
-      { input: "Top, Front, Side, Isometric", does: "the View panel's camera presets" },
-      { input: "The View panel's header", does: "fold it, or drag it elsewhere" },
+      {
+        action: "Pan",
+        does: "across the view",
+        inputs: [
+          { device: "Mouse", input: "Shift-, Ctrl- or ⌘-drag, or right-drag" },
+          { device: "Trackpad", input: "Shift- or ⌘-drag, or two-finger click and drag" },
+          { device: "Touch", input: "two fingers, moved together" },
+        ],
+      },
+      {
+        action: "Zoom",
+        does: "in and out, the wheel towards what is under the pointer",
+        inputs: [
+          { device: "Mouse", input: "scroll, or middle-drag" },
+          { device: "Trackpad", input: "two-finger scroll, or pinch" },
+          { device: "Touch", input: "pinch" },
+        ],
+      },
     ],
   },
   {
-    device: "Keyboard",
-    controls: [
-      { input: "?", does: "open or close this list" },
-      { input: "Escape", does: "close this list; cancel a drag, or stop moving" },
-      { input: "Tab, then Enter or Space", does: "reach a control, open a folded panel" },
+    section: "In the view",
+    actions: [
+      { action: "Select", does: "click what is under the pointer; click empty space to clear it" },
+      {
+        action: "Place a probe",
+        does: `with an air field shown, tick “${PLACE_BY_CLICKING}” in the Probes section, then click the floor`,
+      },
+      {
+        action: "Move equipment or a sensor",
+        does: "select it, press Move in the inspector, then drag: it moves along the floor, the camera holding still but for the wheel; click and drag others alike, then start a new run with the moves",
+      },
+      { action: "Camera presets", does: "Top, Front, Side or Isometric, in the View panel" },
+      {
+        action: "The View panel",
+        does: "drag its header elsewhere, or click it to fold the panel",
+      },
+    ],
+  },
+  {
+    section: "Keyboard",
+    actions: [
+      { action: "?", does: "open or close this list" },
+      { action: "Escape", does: "close this list; cancel a drag, or the moves" },
+      { action: "Tab, then Enter or Space", does: "reach a control, open a folded panel" },
     ],
   },
 ];
@@ -132,14 +158,25 @@ export function ControlsHelp() {
           ×
         </button>
       </header>
-      {CONTROLS.map(({ device, controls }) => (
-        <div key={device} data-testid={`controls-${device.toLowerCase().replaceAll(" ", "-")}`}>
-          <h3>{device}</h3>
+      {CONTROLS.map(({ section, actions }) => (
+        <div key={section} data-testid={`controls-${section.toLowerCase().replaceAll(" ", "-")}`}>
+          <h3>{section}</h3>
           <dl>
-            {controls.map(({ input, does }) => (
-              <div key={input}>
-                <dt>{input}</dt>
+            {actions.map(({ action, does, inputs }) => (
+              <div key={action} className={inputs === undefined ? undefined : "controls-moves"}>
+                <dt>{action}</dt>
                 <dd>{does}</dd>
+                {inputs !== undefined && (
+                  <dd>
+                    <ul className="controls-inputs">
+                      {inputs.map(({ device, input }) => (
+                        <li key={device}>
+                          <span className="controls-device">{device}</span> {input}
+                        </li>
+                      ))}
+                    </ul>
+                  </dd>
+                )}
               </div>
             ))}
           </dl>

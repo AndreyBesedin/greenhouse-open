@@ -44,14 +44,17 @@ DECIMALS: Final = 3
 EVERY_S: Final = HOUR_S
 
 
-def heat_records(scenario_id: str, day: int, start: datetime, run_id: str) -> list[Observation]:
+def heat_records(
+    scenario_id: str, day: int, start: datetime, run_id: str, layout: str | None = None
+) -> list[Observation]:
     """The heat a scenario's own run's heaters gave its house's air on its day
-    `day`, which starts `day` days after `start`: a record at the end of
-    each of its hours, or none if it has no heater."""
+    `day`, which starts `day` days after `start`, with its own layout or
+    `layout`: a record at the end of each of its hours, or none if it has no
+    heater."""
     config = scenario(scenario_id)
     if not any(isinstance(piece, Heater) for piece in config.layout.equipment):
         return []
-    _, climate = climate_run(RunRequest(scenario_id))
+    _, climate = climate_run(RunRequest(scenario_id, layout=layout))
     floor_m2 = config.envelope.length * config.envelope.width
     kind = ObservationType.HEATING_ENERGY_INCREMENT_MJ_M2
     source = RecordSource(type=SourceType.SIMULATION, source_id=run_id)

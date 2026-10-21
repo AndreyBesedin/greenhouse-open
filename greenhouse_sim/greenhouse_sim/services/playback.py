@@ -20,9 +20,14 @@ reads. Beside them, the crop's walk and harvests (`crop_log`) and the heat
 its heaters gave each day (`heat_log`). A day's records are kept as
 compressed JSON, read back as asked for.
 
-The run is the scenario's own: its layout, weather and daily commands, as
-the viewer draws it when nothing is changed. A command given in the viewer
-makes another run, which the playback does not follow.
+The run is the scenario's own: its weather and daily commands, as the
+viewer draws it when nothing is changed, and its own layout, or one of its
+layouts rearranged, its equipment and sensors moved (`world.moves`, #271).
+A playback started over with another layout plays that layout's run from
+its start: a new run, with an identity of its own, counting its own epochs.
+There is one playback a scenario, whose run a viewer following it can
+rearrange. A command given in the viewer makes another run, which the
+playback does not follow.
 """
 
 import gzip
@@ -44,12 +49,13 @@ from greenhouse_protocol.observation import Observation
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 
 from greenhouse_sim.core.clock import DAY_S, run_day
+from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.crop_log import crop_records
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.heat_log import heat_records
 from greenhouse_sim.services.runs import RunRequest
-from greenhouse_sim.services.scenarios import scenario
+from greenhouse_sim.services.scenarios import layout_name, scenario
 from greenhouse_sim.services.sensors import delivered_between, run_start
 from greenhouse_sim.services.stores import Store
 
@@ -126,15 +132,18 @@ class PlaybackCommand(StrEnum):
 
 
 class PlaybackState(BaseModel):
-    """Where a playback stands: the run it plays, its epoch, its clock, both
-    as the instant it has reached and as seconds into the run, as the viewer
-    asks for a moment; whether it plays and how fast; and how far ahead of
-    it the run's records are worked out."""
+    """Where a playback stands: the run it plays, its layout and its epoch,
+    its clock, both as the instant it has reached and as seconds into the
+    run, as the viewer asks for a moment; whether it plays and how fast; and
+    how far ahead of it the run's records are worked out."""
 
     model_config = ConfigDict(frozen=True)
 
     scenario_id: str
     run_id: str
+    # The layout its run has, by the name a run knows it by
+    # (`scenarios.layout_name`): its scenario's own, or one rearranged.
+    layout: str
     epoch: int
     greenhouse_id: str
     started_at: datetime
@@ -233,13 +242,16 @@ def delivered(record: Observation | Event) -> datetime:
 
 
 class Playback:
-    """One scenario's own run, worked out ahead of a clock that plays over
-    it; see the module."""
+    """One scenario's own run, with its own layout or `layout`, worked out
+    ahead of a clock that plays over it; see the module. A layout the
+    scenario does not have is not found, and moves that do not fit it are
+    refused, as a climate run's are."""
 
     def __init__(
         self,
         scenario_id: str,
         *,
+        layout: str | None = None,
         seconds_per_day: float = DEFAULT_SECONDS_PER_DAY,
         every_s: float = CONSUMER_CADENCE_S,
         clock: Callable[[], float] = monotonic,
@@ -252,7 +264,8 @@ class Playback:
         self.start = run_start(scenario_id)
         self.end_s = config.duration_days * DAY_S
         self.every_s = every_s
-        _, self.run_id = air_through_a_run(RunRequest(scenario_id))
+        self.layout = layout_name(layout or DEFAULT_LAYOUT)
+        _, self.run_id = air_through_a_run(RunRequest(scenario_id, layout=self.layout))
         self._clock = clock
         self._lock = threading.Lock()
         self._observations = _Log(_OBSERVATIONS, self.start)
@@ -277,12 +290,30 @@ class Playback:
         """Starts working the run's days out, ahead of the clock."""
         self._worker.start()
 
-    def stop(self) -> None:
+    def plays(self, layout: str | None) -> bool:
+        """Whether it plays the run of `layout`: its own, when None."""
+        return layout is None or layout_name(layout) == self.layout
+
+    def rearranged(self, layout: str) -> Playback:
+        """A playback of the same scenario with `layout`, at the same pace and
+        cadence, on the same clock, counting the epochs of its own run where
+        this one counts its: not begun. A layout refused makes none."""
+        return Playback(
+            self.scenario_id,
+            layout=layout,
+            seconds_per_day=self._seconds_per_day,
+            every_s=self.every_s,
+            clock=self._clock,
+            epochs=self._epochs,
+        )
+
+    def stop(self, *, wait: bool = True) -> None:
         """Stops working days out, once the one under way is: it returns when
-        the worker has, so that nothing of the run goes on being worked out
-        beside whatever comes next, such as another run of the same crop."""
+        the worker has, unless told not to wait, so that nothing of the run
+        goes on being worked out beside whatever comes next, such as another
+        run of the same crop."""
         self._stopped.set()
-        if self._worker.is_alive() and self._worker is not threading.current_thread():
+        if wait and self._worker.is_alive() and self._worker is not threading.current_thread():
             self._worker.join()
 
     def wait_for(self, days: int, timeout_s: float | None = None) -> bool:
@@ -312,9 +343,12 @@ class Playback:
                 None if day == 0 else day * DAY_S,
                 (day + 1) * DAY_S,
                 self.every_s,
+                self.layout,
             )
-            walked, harvests = crop_records(self.scenario_id, day, self.start, self.run_id)
-            heated = heat_records(self.scenario_id, day, self.start, self.run_id)
+            walked, harvests = crop_records(
+                self.scenario_id, day, self.start, self.run_id, self.layout
+            )
+            heated = heat_records(self.scenario_id, day, self.start, self.run_id, self.layout)
         except Exception as error:
             with self._lock:
                 self._failure = error
@@ -357,6 +391,7 @@ class Playback:
         return PlaybackState(
             scenario_id=self.scenario_id,
             run_id=self.run_id,
+            layout=self.layout,
             epoch=self._epoch,
             greenhouse_id=self.greenhouse_id,
             started_at=self.start,
@@ -440,20 +475,25 @@ def start(
     scenario_id: str,
     seconds_per_day: float | None = None,
     *,
+    layout: str | None = None,
     hold: bool = False,
     clock: Callable[[], float] = monotonic,
     epochs: Epochs | None = None,
 ) -> PlaybackState:
     """The scenario's playback, started, at `seconds_per_day` if given: the
-    one already started, or a new one from the run's start, on `clock`;
-    playing, unless `hold`, when its clock waits for a play command while
-    the run is worked out ahead of it. A pace refused starts nothing."""
+    one already started, or a new one from the run's start, on `clock`, of
+    its own layout or `layout`; playing, unless `hold`, when its clock waits
+    for a play command while the run is worked out ahead of it. One started
+    with another layout than `layout` starts over with it, as a restart
+    with a layout does (`command`). A pace or a layout refused starts
+    nothing."""
     if seconds_per_day is not None:
         _check_pace(seconds_per_day)
 
     def begun(_: object) -> Playback:
         found = Playback(
             scenario_id,
+            layout=layout,
             seconds_per_day=DEFAULT_SECONDS_PER_DAY if seconds_per_day is None else seconds_per_day,
             clock=clock,
             epochs=epochs,
@@ -462,9 +502,33 @@ def start(
         return found
 
     found = PLAYBACKS.made_once(scenario_id, begun)
+    if not found.plays(layout):
+        found = _rearranged(found, layout or DEFAULT_LAYOUT)
     if seconds_per_day is not None:
         found.set_pace(seconds_per_day)
     return found.state() if hold else found.command(PlaybackCommand.PLAY)
+
+
+# Held while a playback is put in another's place, so that two requests
+# starting a scenario's playback over with a layout make one.
+_REARRANGING = threading.Lock()
+
+
+def _rearranged(found: Playback, layout: str) -> Playback:
+    """The scenario's playback with `layout` in place of the one it has, as
+    `found` was: begun, and the one it replaces stopped, without waiting for
+    the day it is working out, so that the new run starts at once. One put
+    in its place meanwhile with `layout` is kept; a layout refused leaves the
+    playback as it was."""
+    with _REARRANGING:
+        current = PLAYBACKS.get(found.scenario_id) or found
+        if current.plays(layout):
+            return current
+        replacing = current.rearranged(layout)
+        replacing.begin()
+        PLAYBACKS.keep(found.scenario_id, replacing)
+    current.stop(wait=False)
+    return replacing
 
 
 def playbacks() -> list[Playback]:
@@ -484,8 +548,18 @@ def state(scenario_id: str) -> PlaybackState:
     return playback(scenario_id).state()
 
 
-def command(scenario_id: str, command: PlaybackCommand) -> PlaybackState:
-    return playback(scenario_id).command(command)
+def command(scenario_id: str, command: PlaybackCommand, layout: str | None = None) -> PlaybackState:
+    """Tells the scenario's playback to play, pause or start over. Started
+    over with a layout it does not play, it plays that layout's run from its
+    start, a new run, as the epoch its own count gives it: so a viewer that
+    follows it rearranges the run played back (#271). Only a restart takes
+    a layout."""
+    found = playback(scenario_id)
+    if layout is not None and command != PlaybackCommand.RESTART:
+        raise InvalidRequest(f"only a restart takes a layout, not {command.value}")
+    if not found.plays(layout):
+        return _rearranged(found, layout or DEFAULT_LAYOUT).command(PlaybackCommand.PLAY)
+    return found.command(command)
 
 
 def set_pace(scenario_id: str, seconds_per_day: float) -> PlaybackState:
