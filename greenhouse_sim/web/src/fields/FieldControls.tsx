@@ -63,6 +63,18 @@ export function useFieldNames(scenarioId: string, layout?: string): FieldNames {
   return listed.status === "loaded" ? listed : NO_FIELDS;
 }
 
+/** The air field in a line, as its section folded says how it stands
+ * (#273): which field is drawn, and how, and whether the CFD boundaries
+ * are drawn over it. */
+export function describeAirField(
+  chosen: string | null,
+  view: FieldView,
+  cfdBoundaries: boolean,
+): string {
+  const field = chosen === null ? "none" : `${chosen}, as ${view}`;
+  return `Air field: ${field}${cfdBoundaries ? "; CFD boundaries drawn" : ""}`;
+}
+
 /** Which of the scenario's environment fields is drawn over its scene, how,
  * and what the drawn one holds. */
 export function FieldControls({

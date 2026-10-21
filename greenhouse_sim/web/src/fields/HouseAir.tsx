@@ -36,6 +36,26 @@ const CHARTED: readonly { name: string; unit: string; of: (s: HouseSeries) => nu
   { name: "CO₂", unit: "ppm", of: (s) => s.co2_ppm },
 ];
 
+/** The house's air in a line, as its section folded says how it stands
+ * (#273): its latest temperature, humidity and CO₂, as charted. */
+export function describeHouseAir(state: HouseAirState): string {
+  switch (state.status) {
+    case "none":
+      return "House air";
+    case "loading":
+      return "House air: mixing…";
+    case "unavailable":
+      return "House air: cannot be read";
+    case "loaded": {
+      const latest = CHARTED.map(({ unit, of }) => {
+        const value = of(state.trace.controlled).at(-1);
+        return value === undefined ? null : `${value.toFixed(RANGE_DECIMALS)} ${unit}`;
+      }).filter((part) => part !== null);
+      return latest.length === 0 ? "House air" : `House air: ${latest.join(", ")}`;
+    }
+  }
+}
+
 /** Where the house's air through a run is published, asked for as the
  * climate is, up to the moment drawn from the start of its day. */
 export function houseAirUrl(scenarioId: string, run: RunParts): string {

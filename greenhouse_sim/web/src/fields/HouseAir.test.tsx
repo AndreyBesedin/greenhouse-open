@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { HouseAir, houseAirUrl, loadHouseAir, parseHouseAir } from "./HouseAir";
+import { describeHouseAir, HouseAir, houseAirUrl, loadHouseAir, parseHouseAir } from "./HouseAir";
 
 const SERIES = (temperature: number[]) => ({
   temperature_c: temperature,
@@ -42,6 +42,16 @@ describe("the house's air", () => {
       reason: "the simulator API answered 404",
     });
     expect(() => parseHouseAir({ ...BODY, times_s: [0, 60] })).toThrow("not what the viewer");
+  });
+
+  it("says in a line, folded, where the run's air has reached (#273)", () => {
+    expect(describeHouseAir({ status: "loaded", trace: parseHouseAir(BODY) })).toBe(
+      "House air: 15.6 °C, 85.0 %, 420.0 ppm",
+    );
+    expect(describeHouseAir({ status: "loading" })).toBe("House air: mixing…");
+    expect(describeHouseAir({ status: "unavailable", reason: "no" })).toBe(
+      "House air: cannot be read",
+    );
   });
 
   it("charts the run beside the same run all off, saying where each has reached", () => {

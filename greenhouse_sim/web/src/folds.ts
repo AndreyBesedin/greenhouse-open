@@ -7,10 +7,13 @@ export interface Fold {
   onToggle: (event: SyntheticEvent<HTMLDetailsElement>) => void;
 }
 
-/** Panels' folds by name, each folded at first, and kept as they are while
- * the panels themselves come and go, as a day's scene loads. */
-export function useFolds<Name extends string>(): (name: Name) => Fold {
-  const [open, setOpen] = useState<ReadonlySet<Name>>(() => new Set());
+/** Panels' folds by name, each folded at first but those named open, and
+ * kept as they are while the panels themselves come and go, as a day's
+ * scene loads. */
+export function useFolds<Name extends string>(
+  initiallyOpen: readonly Name[] = [],
+): (name: Name) => Fold {
+  const [open, setOpen] = useState<ReadonlySet<Name>>(() => new Set(initiallyOpen));
   return (name) => ({
     open: open.has(name),
     onToggle: (event) => {
