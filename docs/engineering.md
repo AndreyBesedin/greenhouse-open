@@ -84,14 +84,19 @@ rewritten.
 
 Commit messages, pull request titles and descriptions, issues, review
 comments and replies, the changelog, release notes and tags are the
-project's public record (decision 0044). Each describes the change for any
-reader of the project:
+project's public record (decision 0044). They are written for any reader
+of the project, and together they say:
 
 - **what** changed, and **why**: the problem in the code, or the project's
   goal it serves;
 - the **result**, and **how it was evaluated**: tests, measurements, the QA
   it passed;
 - what **limits** it or is left: bottlenecks, known gaps, follow-ups.
+
+Each record says what its form holds. A title or a tag names the change,
+an issue or a review comment states a problem before there is a result,
+and a commit body, a pull request description, the changelog and the
+release notes carry all three.
 
 The project is not built for any one contributor, so a record leaves out a
 particular person's or organisation's plans, events, deadlines, commercial
@@ -141,11 +146,13 @@ planning tool or document.
   do each finding's work.
 - **Public documents describe this open project only.** Product plans,
   business strategy, customer information and the names or internals of
-  private systems stay out, and no contributor's plans or deadlines
-  ([what a public record says](#what-a-public-record-says)). Applications that build on these packages are
-  "downstream applications". `tests/test_publishable.py` rejects known private
-  names and citations of documents that are not in this repository. It is a
-  backstop, not a substitute for writing the documents for a public reader.
+  private systems stay out, and so do any one contributor's plans, events,
+  deadlines, commercial needs and requests
+  ([what a public record says](#what-a-public-record-says)). Applications
+  that build on these packages are "downstream applications".
+  `tests/test_publishable.py` rejects known private names and citations of
+  documents that are not in this repository. It is a backstop, not a
+  substitute for writing the documents for a public reader.
 
 ## Solo-developer review policy
 

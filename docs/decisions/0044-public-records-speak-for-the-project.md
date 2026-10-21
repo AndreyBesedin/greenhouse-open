@@ -20,8 +20,8 @@ reader, while what changed, why and how it was checked still do.
 
 ## Decision
 
-Every public record of the project describes the change for any reader of
-the project:
+Every public record of the project is written for any reader of the
+project. Together the records say:
 
 - **what** changed, and **why**: the problem in the code, or the project's
   goal it serves;
@@ -29,7 +29,12 @@ the project:
   the QA it passed;
 - what **limits** it or is left: bottlenecks, known gaps, follow-ups.
 
-It leaves out any particular person's or organisation's plans, events,
+Each record says what its form holds: a title or a tag names the change,
+an issue or a review comment states a problem before there is a result,
+and a commit body, a pull request description, the changelog and the
+release notes carry all three.
+
+Every record leaves out any particular person's or organisation's plans, events,
 deadlines, commercial needs and requests. A choice the maintainer made is
 recorded as the project's decision, with its reasons, in the record or in
 a decision record, not as someone's wish. A use case is named generically,

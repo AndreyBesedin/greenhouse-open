@@ -28,7 +28,7 @@ scopes and how to mark a breaking change.
 
 A commit message or pull request says what changed, why, what it achieved
 and how it was checked, for any reader of the project, not for whoever
-asked for it: no one contributor's plans, events or deadlines
+asked for it: no one contributor's plans, events, deadlines, commercial needs or requests
 ([what a public record says](docs/engineering.md#what-a-public-record-says),
 decision 0044).
 

@@ -105,8 +105,8 @@ the reply and the report, and let the user decide.
 
 Replies, commit messages and the description are the project's public
 record: they say what changed, why and how it was checked, for any reader
-of the project, and leave out the plans, events, deadlines and requests of
-whoever asked for the work (decision 0044). The report in step 6 is where
+of the project, and leave out the plans, events, deadlines, commercial
+needs and requests of whoever asked for the work (decision 0044). The report in step 6 is where
 the user hears about their own plans.
 
 - One reply per thread. Fixed: what changed, in which commit, and which test covers
