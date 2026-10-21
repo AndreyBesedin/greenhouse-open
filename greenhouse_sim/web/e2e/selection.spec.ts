@@ -72,6 +72,11 @@ test("a selection stays on its entity while the live scenario plays", async ({ p
 });
 
 test("overlays and colours change the view, never the simulation", async ({ page }) => {
+  // On CI's software renderer the live scene draws 3 to 4 frames a second,
+  // and each of the six switches below waits several of them: they took 28
+  // of the default 30 s on a slow runner, before the colouring's section
+  // was even opened.
+  test.slow();
   const live = `/api/scenarios/${STILL_SCENARIO}/live`;
   await page.request.post(`${live}/pause`);
   await page.request.post(`${live}/reset`);
