@@ -1,6 +1,6 @@
-import { useEffect, useMemo } from "react";
 import { ConeGeometry, CylinderGeometry } from "three";
 
+import { useDisposable } from "../useDisposable";
 import type { Color, Cylinder } from "./generated/snapshotTypes";
 import { threeColor } from "./ShapeMesh";
 
@@ -21,7 +21,7 @@ const SIDES = 16;
  */
 export function FanArrow({ housing, color }: { housing: Cylinder; color: Color }) {
   const { radius, height } = housing;
-  const shaft = useMemo(
+  const shaft = useDisposable(
     () =>
       new CylinderGeometry(
         SHAFT_RADIUS * radius,
@@ -33,19 +33,12 @@ export function FanArrow({ housing, color }: { housing: Cylinder; color: Color }
         .translate(0, 0, height + (SHAFT_LENGTH * radius) / 2),
     [radius, height],
   );
-  const head = useMemo(
+  const head = useDisposable(
     () =>
       new ConeGeometry(HEAD_RADIUS * radius, HEAD_LENGTH * radius, SIDES)
         .rotateX(ALONG_Z)
         .translate(0, 0, height + SHAFT_LENGTH * radius + (HEAD_LENGTH * radius) / 2),
     [radius, height],
-  );
-  useEffect(
-    () => () => {
-      shaft.dispose();
-      head.dispose();
-    },
-    [shaft, head],
   );
   const shown = threeColor(color);
   return (
