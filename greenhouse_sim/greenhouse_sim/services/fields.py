@@ -168,7 +168,9 @@ def _schedule(
 def _checked_targets(config: ScenarioConfig, targets: Sequence[Commanded]) -> tuple[Commanded, ...]:
     """A run's target changes (#274), checked: one to a target its
     scenario's controller does not have, outside `SETPOINT_RANGE_C`, at a
-    moment outside a run, or not on the minute, is refused."""
+    moment outside a run, or not on the minute, is refused. In the order
+    they apply, by moment and as given at a moment, so that the same
+    changes asked for in another order make the same run."""
     if not targets:
         return ()
     if config.thermostat is None:
@@ -188,7 +190,7 @@ def _checked_targets(config: ScenarioConfig, targets: Sequence[Commanded]) -> tu
                 f"a target changes on the minute, within the run, 0 to {length:.15g} s, not at "
                 f"{time:.15g} s"
             )
-    return tuple(targets)
+    return tuple(sorted(targets, key=lambda change: change[0]))
 
 
 def run_schedule(run: RunRequest) -> Schedule:

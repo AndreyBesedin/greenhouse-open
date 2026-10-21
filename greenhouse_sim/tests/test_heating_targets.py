@@ -107,6 +107,15 @@ def test_another_target_makes_another_run_and_the_same_targets_the_same() -> Non
     assert air_through_a_run(RunRequest(SCENARIO, targets=()))[1] == own_id
 
 
+def test_the_same_target_changes_asked_for_in_another_order_make_the_same_run() -> None:
+    later = (DAY_FROM_S + HOUR_S, "heating_day", 20.0)
+    in_order = RunRequest(SCENARIO, targets=(*WARMER, later))
+    reversed_ = RunRequest(SCENARIO, targets=(later, *WARMER))
+
+    assert climate_run(reversed_)[0] == climate_run(in_order)[0]
+    assert air_through_a_run(reversed_)[1] == air_through_a_run(in_order)[1]
+
+
 @pytest.mark.parametrize(
     ("targets", "refused"),
     [
@@ -180,10 +189,13 @@ def test_a_target_set_while_the_run_plays_steers_it_from_the_next_minute() -> No
     change = (6 * HOUR_S + 60.0, "heating_night", 22.0)
     assert steered.targets == [change]
     assert (steered.run_id, steered.epoch) == (before.run_id, before.epoch)
+    # Worked out, under its targets as they are, only up to the change.
+    assert steered.worked_out_s == change[0]
 
     clock.now = 12.0
     assert played.state().time_s == change[0]
     assert played.work_day(0)
+    assert played.state().worked_out_s == DAY_S
     # It plays on from there: the time it waited is not banked.
     clock.now = 13.0
     assert played.state().time_s == change[0] + HOUR_S
@@ -195,5 +207,9 @@ def test_a_target_set_while_the_run_plays_steers_it_from_the_next_minute() -> No
     warmer = heat_records(RunRequest(SCENARIO, targets=(change,)), 0, start, before.run_id)
     assert [record.value for record in warmer[:6]] == [record.value for record in own[:6]]
     assert warmer[6].value > own[6].value
+    # What it delivers after the change is the steered run's, though the day
+    # was read back before it.
+    delivered_heat = [r for r in again.records if r.observation_id == warmer[6].observation_id]
+    assert [r.value for r in delivered_heat] == [warmer[6].value]
     # Started over, it is the scenario's own run again.
     assert played.command(PlaybackCommand.RESTART).targets == []

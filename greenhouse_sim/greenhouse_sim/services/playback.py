@@ -200,7 +200,9 @@ class _Log[R: (Observation, Event)]:
         self._start = start
         self._lock = threading.Lock()
         self.days: list[_Packed] = []
-        self._read_back: OrderedDict[int, list[R]] = OrderedDict()
+        # Each day read back, with the packed day it was read from: a day
+        # worked out again under changed targets is another, read afresh.
+        self._read_back: OrderedDict[int, tuple[_Packed, list[R]]] = OrderedDict()
 
     def packed(self, records: Sequence[R]) -> _Packed:
         return _Packed(
@@ -235,12 +237,12 @@ class _Log[R: (Observation, Event)]:
         """A day's records, read back, the latest few kept so."""
         with self._lock:
             held = self._read_back.get(index)
-            if held is not None:
+            if held is not None and held[0] is day:
                 self._read_back.move_to_end(index)
-                return held
+                return held[1]
         records: list[R] = self._adapter.validate_json(gzip.decompress(day.packed))
         with self._lock:
-            self._read_back[index] = records
+            self._read_back[index] = (day, records)
             while len(self._read_back) > DAYS_READ_BACK:
                 self._read_back.popitem(last=False)
         return records
@@ -343,8 +345,8 @@ class Playback:
         deadline = None if timeout_s is None else monotonic() + timeout_s
         while True:
             with self._lock:
-                if len(self._worked) >= days or self._failure is not None:
-                    return len(self._worked) >= days
+                if self._worked_out_s() >= days * DAY_S or self._failure is not None:
+                    return self._worked_out_s() >= days * DAY_S
             if self._stopped.is_set() or (deadline is not None and monotonic() > deadline):
                 return False
             self._stopped.wait(WAIT_STEP_S)
@@ -429,14 +431,17 @@ class Playback:
         pace, as far as the records are worked out and the run lasts."""
         now = self._clock()
         if self._playing:
-            worked_out = len(self._worked) * DAY_S
-            if self._again_from is not None:
-                worked_out = min(worked_out, self._again_from)
             moved = self._time_s + (now - self._since) * DAY_S / self._seconds_per_day
-            self._time_s = max(self._time_s, min(moved, worked_out, self.end_s))
+            self._time_s = max(self._time_s, min(moved, self._worked_out_s(), self.end_s))
             if self._time_s >= self.end_s:
                 self._playing = False
         self._since = now
+
+    def _worked_out_s(self) -> float:
+        """How far its records are worked out under its targets as they are:
+        its days, but none past a target change still being worked in."""
+        worked_out = len(self._worked) * DAY_S
+        return worked_out if self._again_from is None else min(worked_out, self._again_from)
 
     def _state(self) -> PlaybackState:
         if self._failure is not None:
@@ -455,7 +460,7 @@ class Playback:
             day=run_day(self._time_s),
             playing=self._playing,
             seconds_per_day=self._seconds_per_day,
-            worked_out_s=len(self._worked) * DAY_S,
+            worked_out_s=self._worked_out_s(),
             every_s=self.every_s,
             targets=list(self._targets),
         )
