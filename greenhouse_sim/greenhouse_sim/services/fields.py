@@ -435,6 +435,22 @@ def configured(scenario_id: str) -> str:
     return scenario(scenario_id).airflow.kind
 
 
+class FieldNames(BaseModel):
+    """The fields a scenario offers with one of its layouts, its own airflow
+    first, and the name of its own airflow."""
+
+    model_config = ConfigDict(frozen=True)
+
+    fields: list[str]
+    configured: str
+
+
+def offered_fields(scenario_id: str, layout: str | None = None) -> FieldNames:
+    """The fields a scenario offers with one of its layouts, and its own
+    airflow, as the viewer lists them to choose from."""
+    return FieldNames(fields=field_names(scenario_id, layout), configured=configured(scenario_id))
+
+
 def grid(scenario_id: str) -> FieldGrid:
     """The grid a scenario's fields cover: its greenhouse's air under the
     gutters."""
