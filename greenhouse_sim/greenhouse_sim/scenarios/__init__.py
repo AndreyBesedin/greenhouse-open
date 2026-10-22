@@ -1,9 +1,8 @@
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.scenarios.manifest_files import load_manifest, manifest_ids
 
-# Every scenario, read from its manifest (`scenarios/manifests/`).
-SCENARIO_REGISTRY: dict[str, ScenarioConfig] = {
-    scenario_id: load_manifest(scenario_id) for scenario_id in manifest_ids()
-}
+# Every packaged scenario, read from its manifest (`scenarios/manifests/`),
+# as `catalogue.PACKAGED` holds it.
+SCENARIO_REGISTRY: dict[str, ScenarioConfig] = dict(PACKAGED.configs)
 
 __all__ = ["ScenarioConfig", "SCENARIO_REGISTRY"]
