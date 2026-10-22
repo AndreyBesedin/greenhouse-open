@@ -35,6 +35,7 @@ check = "greenhouse_dev.commands:main"
 viewer-checks = "greenhouse_dev.commands:main"
 browser-tests = "greenhouse_dev.commands:main"
 record-demo = "greenhouse_dev.commands:main"
+release = "greenhouse_dev.commands:main"
 
 # The tools that check the packages, pinned; `uv run` installs them with the
 # packages, and CI with `uv sync --locked`.

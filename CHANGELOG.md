@@ -7,6 +7,15 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- Releases: a release is a pull request from a `build/release-<version>`
+  branch that the repository's owner merges, opened by the owner or a
+  release manager listed in `.github/release-managers`; the `Release`
+  workflow then tags its merge commit and publishes the GitHub release with
+  the changelog's section (decision 0045). `uv run release prepare
+  <version>` moves the three packages, the protocol's range and the
+  changelog to the version and locks; `uv run release video <url>` points
+  the README's demo at an uploaded video. The release skill
+  (`.claude/skills/release/SKILL.md`) walks through it.
 - `uv run record-demo` cuts the walk-through's recording for the README:
   from the moment the walk-through's opening shot, the house and its crop,
   is drawn, at twice the speed, as an MP4 under GitHub's upload limit, with

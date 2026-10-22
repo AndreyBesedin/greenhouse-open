@@ -1,0 +1,76 @@
+name: Release
+
+# A release pull request, from a `build/release-<version>` branch, that the
+# repository's owner merges is tagged and published (decision 0045): its
+# merge commit is tagged `v<version>`, and the GitHub release carries the
+# changelog's section for the version. `scripts/release.py verify` says
+# what else it must be: opened by the owner or a release manager
+# (`.github/release-managers`), every package at the version, the
+# protocol's range moved with them, the changelog dated, the tag new. A
+# release pull request that fails it is merged but not released, and this
+# run says why.
+#
+# The merge commit's own workflow and script run here, as the owner merged
+# them, with a token that can push a tag: a fork's pull request gets a
+# read-only one, and is never released.
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  release:
+    name: tag and publish the release
+    if: >-
+      github.event.pull_request.merged
+      && startsWith(github.event.pull_request.head.ref, 'build/release-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      # The commit the merge put on `main`, not the pull request's test
+      # merge, with the tags, to refuse one that exists.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+
+      - name: Check the release
+        id: release
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          MERGED_BY: ${{ github.event.pull_request.merged_by.login }}
+          OWNER: ${{ github.repository_owner }}
+        run: >-
+          python scripts/release.py verify --branch "$BRANCH" --author "$AUTHOR"
+          --merged-by "$MERGED_BY" --owner "$OWNER" >> "$GITHUB_OUTPUT"
+
+      - name: Tag the merge commit
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag --annotate "v$VERSION" --message "greenhouse-open $VERSION. See CHANGELOG.md."
+          git push origin "v$VERSION"
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          python scripts/release.py notes "$VERSION" > "$RUNNER_TEMP/notes.md"
+          gh release create "v$VERSION" --verify-tag \
+            --title "greenhouse-open $VERSION" --notes-file "$RUNNER_TEMP/notes.md"

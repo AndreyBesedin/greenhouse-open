@@ -166,6 +166,10 @@ def _check() -> int:
     return _become([sys.executable, str(SCRIPTS / "check.py"), *_arguments()])
 
 
+def _release() -> int:
+    return _become([sys.executable, str(SCRIPTS / "release.py"), *_arguments()])
+
+
 def _viewer_checks() -> int:
     npm = _viewer()
     for script in ("lint", "typecheck", "coverage", "build"):
@@ -211,6 +215,7 @@ COMMANDS: dict[str, Command] = {
     "record-demo": Command(
         _record_demo, "record the demo's walk-through as a video, cut for the README"
     ),
+    "release": Command(_release, "prepare a release's versions, changelog and README video"),
 }
 
 
