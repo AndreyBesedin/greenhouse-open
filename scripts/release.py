@@ -5,7 +5,8 @@ its tag (decision 0045).
     uv run release video https://github.com/user-attachments/assets/<id>
     uv run release notes 0.4.0           # the GitHub release's notes
     python scripts/release.py verify --branch build/release-0.4.0 \\
-        --author <login> --merged-by <login> --owner <login>
+        --author <login> --merged-by <login> --owner <login> \\
+        --commit <merge commit> --base <the pull request's base commit>
 
 `prepare` moves the three packages to the version, and the simulator's and
 the adapters' range of the protocol with them, makes the changelog's
@@ -13,7 +14,8 @@ Unreleased entries the version's, dated, and locks. `video` points the
 README's demo at a video uploaded to GitHub, captioned with the packages'
 version. `verify` is what the release workflow checks of a merged release
 pull request before it tags its merge commit, and prints `version=<version>`
-for the workflow's next steps. Standard library only: the workflow runs it
+for the workflow's next steps; a tag already on that commit passes, so that
+a run that tagged but did not publish can be run again. Standard library only: the workflow runs it
 with a bare Python.
 """
 
@@ -24,7 +26,7 @@ import datetime
 import re
 import subprocess
 import sys
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,7 +43,8 @@ DEMO = "## Demo"
 # The first line of every GitHub release's notes, above the changelog's.
 NOTES_INTRO = "Not on PyPI yet: install from a clone, see the README."
 
-_VERSION = re.compile(r"(\d+)\.(\d+)\.(\d+)")
+# Semantic versioning's: ASCII digits, no leading zero.
+_VERSION = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
 _PROJECT_VERSION = re.compile(r'^version = "([^"]*)"$', re.MULTILINE)
 _PROTOCOL_RANGE = re.compile(r'"greenhouse-protocol[<>=!~][^"]*"')
 _HEADING = re.compile(r"^## ", re.MULTILINE)
@@ -157,9 +160,9 @@ def notes(version: str, root: Path = ROOT) -> str:
     return f"{NOTES_INTRO}\n\n{entries}\n"
 
 
-def release_managers(root: Path = ROOT) -> set[str]:
-    """The GitHub logins listed as release managers, one a line."""
-    lines = (root / RELEASE_MANAGERS).read_text().splitlines()
+def release_managers(listed: str) -> set[str]:
+    """The GitHub logins a release managers' list names, one a line."""
+    lines = listed.splitlines()
     return {line.strip() for line in lines if line.strip() and not line.startswith("#")}
 
 
@@ -168,20 +171,28 @@ def problems(
     author: str,
     merged_by: str,
     owner: str,
-    tags: Sequence[str],
+    *,
+    managers: set[str],
+    tags: Mapping[str, str],
+    commit: str,
     root: Path = ROOT,
 ) -> list[str]:
-    """Why a merged release pull request is not tagged; none when it is."""
+    """Why a merged release pull request is not tagged; none when it is.
+
+    `managers` are the release managers as listed before the pull request,
+    which cannot then add its own author; `tags` maps each `v*` tag to the
+    commit it tags, and `commit` is the merge's."""
     version = current_version(root)
     found = []
     if branch != f"{RELEASE_BRANCH}{version}":
         found.append(f"branch {branch} does not release {version}, the packages' version")
     if merged_by != owner:
         found.append(f"merged by {merged_by}: only the repository's owner, {owner}, releases")
-    if author != owner and author not in release_managers(root):
+    if author != owner and author not in managers:
         found.append(f"opened by {author}, who is neither {owner} nor in {RELEASE_MANAGERS}")
-    if f"v{version}" in tags:
-        found.append(f"v{version} is already tagged")
+    tagged = tags.get(f"v{version}")
+    if tagged is not None and tagged != commit:
+        found.append(f"v{version} is already tagged, on {tagged[:12]}")
     released = [tag.removeprefix("v") for tag in tags if _VERSION.fullmatch(tag.removeprefix("v"))]
     later = [tag for tag in released if parse_version(tag) > parse_version(version)]
     if later:
@@ -191,17 +202,33 @@ def problems(
             found.append(f"{package} does not depend on the protocol as {protocol_range(version)}")
     try:
         notes(version, root)
-        _section((root / CHANGELOG).read_text(), UNRELEASED)
+        changelog = (root / CHANGELOG).read_text()
+        body, end = _section(changelog, UNRELEASED)
+        if changelog[body:end].strip():
+            found.append(f"{CHANGELOG}'s Unreleased entries would be left out of the notes")
     except Refused as refused:
         found.append(str(refused))
     return found
 
 
-def _tags(root: Path) -> list[str]:
-    listed = subprocess.run(
-        ["git", "tag", "--list", "v*"], cwd=root, check=True, capture_output=True, text=True
-    )
-    return listed.stdout.split()
+def _git(root: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(["git", *arguments], cwd=root, capture_output=True, text=True)
+
+
+def _tags(root: Path) -> dict[str, str]:
+    """Each `v*` tag and the commit it tags, an annotated tag's peeled."""
+    listing = "--format=%(refname:short) %(*objectname) %(objectname)"
+    listed = _git(root, "for-each-ref", listing, "refs/tags/v*")
+    if listed.returncode:
+        raise Refused(f"the tags cannot be read: {listed.stderr.strip()}")
+    # A lightweight tag has no peeled commit: its own object is the commit.
+    return {name: commit for name, commit, *_ in map(str.split, listed.stdout.splitlines())}
+
+
+def managers_at(revision: str, root: Path = ROOT) -> set[str]:
+    """The release managers listed at `revision`; none where it has no list."""
+    shown = _git(root, "show", f"{revision}:{RELEASE_MANAGERS.as_posix()}")
+    return release_managers(shown.stdout) if shown.returncode == 0 else set()
 
 
 def _lock(root: Path) -> None:
@@ -218,7 +245,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
     commands.add_parser("video", help="the README's demo video").add_argument("url")
     commands.add_parser("notes", help="the GitHub release's notes").add_argument("version")
     verifying = commands.add_parser("verify", help="a merged release pull request, to tag")
-    for option in ("--branch", "--author", "--merged-by", "--owner"):
+    for option in ("--branch", "--author", "--merged-by", "--owner", "--commit", "--base"):
         verifying.add_argument(option, required=True)
     args = parser.parse_args(arguments)
     try:
@@ -231,8 +258,16 @@ def main(arguments: Sequence[str] | None = None) -> int:
         elif args.command == "notes":
             print(notes(args.version, ROOT), end="")
         else:
-            tags = _tags(ROOT)
-            found = problems(args.branch, args.author, args.merged_by, args.owner, tags, ROOT)
+            found = problems(
+                args.branch,
+                args.author,
+                args.merged_by,
+                args.owner,
+                managers=managers_at(args.base, ROOT),
+                tags=_tags(ROOT),
+                commit=args.commit,
+                root=ROOT,
+            )
             if found:
                 print("Not released:\n" + "\n".join(f"- {line}" for line in found), file=sys.stderr)
                 return 1

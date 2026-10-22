@@ -31,13 +31,17 @@ Anyone with write access could also tag a commit as a release.
   to the next one that may break it, the changelog's Unreleased entries
   under the version and its date, and the lock.
 - **The repository's owner, or a release manager** listed in
-  `.github/release-managers`, opens it. **The owner merges it.**
+  `.github/release-managers`, opens it. The workflow reads the list as it
+  stood before the pull request, so that a pull request cannot add its own
+  author. **The owner merges it.**
 - **CI tags it.** When the owner merges a release pull request,
   `.github/workflows/release.yml` checks it (`scripts/release.py verify`),
   tags its merge commit `v<version>`, annotated, and publishes the GitHub
-  release with the changelog's section as its notes. A release pull request
-  merged by anyone else, opened by anyone else, or failing the check is
-  merged but not released, and the workflow's run says why.
+  release with the changelog's section as its notes, once nothing is left
+  under Unreleased. A release pull request merged by anyone else, opened by
+  anyone else, or failing the check is merged but not released, and the
+  workflow's run says why. Each step skips what an earlier run did, so a run
+  is run again as it is.
 - **The demo video is recorded from the release's branch** with `uv run
   record-demo`. The walk-through marks when its opening shot is drawn, with
   the house and its crop in view. The command cuts the recording from

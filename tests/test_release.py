@@ -3,8 +3,11 @@ decision 0045), on a copy of the files it edits, and on the repository's
 own."""
 
 import datetime
+import os
 import re
+import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -92,7 +95,9 @@ def test_prepare_moves_the_packages_and_dates_the_unreleased_entries(root: Path)
     }
 
 
-@pytest.mark.parametrize("version", ["0.3.0", "0.2.9", "0.4", "v0.4.0"])
+@pytest.mark.parametrize(
+    "version", ["0.3.0", "0.2.9", "0.4", "v0.4.0", "00.4.0", "0.04.0", "0.\u0664.0"]
+)
 def test_prepare_refuses_a_version_that_does_not_follow(root: Path, version: str) -> None:
     with pytest.raises(Refused):
         release.prepare(version, DAY, root)
@@ -174,29 +179,46 @@ def released(root: Path) -> Path:
     return root
 
 
-@pytest.mark.parametrize("author", [OWNER, "manager"])
-def test_a_release_the_owner_merged_is_tagged(root: Path, author: str) -> None:
-    found = release.problems(
-        "build/release-0.4.0", author, OWNER, OWNER, ["v0.1.0", "v0.3.0"], released(root)
+MERGE = "a" * 40
+EARLIER = "b" * 40
+TAGGED = {"v0.1.0": "c" * 40, "v0.3.0": EARLIER}
+
+
+def merged(
+    root: Path,
+    branch: str = "build/release-0.4.0",
+    author: str = OWNER,
+    merged_by: str = OWNER,
+    tags: dict[str, str] = TAGGED,
+) -> list[str]:
+    """Why a release pull request merged as 0.4.0's would not be tagged."""
+    return release.problems(
+        branch, author, merged_by, OWNER, managers={"manager"}, tags=tags, commit=MERGE, root=root
     )
 
-    assert found == []
+
+@pytest.mark.parametrize("author", [OWNER, "manager"])
+def test_a_release_the_owner_merged_is_tagged(root: Path, author: str) -> None:
+    assert merged(released(root), author=author) == []
+
+
+def test_a_release_already_tagged_on_its_merge_is_checked_again(root: Path) -> None:
+    # A run that tagged, then failed to publish, is run again.
+    assert merged(released(root), tags={**TAGGED, "v0.4.0": MERGE}) == []
 
 
 @pytest.mark.parametrize(
-    ("branch", "author", "merged_by", "tags", "problem"),
+    ("change", "problem"),
     [
-        ("build/release-0.4.0", OWNER, "manager", [], "only the repository's owner, owner"),
-        ("build/release-0.4.0", "someone", OWNER, [], "opened by someone, who is neither"),
-        ("build/release-0.3.9", OWNER, OWNER, [], "does not release 0.4.0"),
-        ("build/release-0.4.0", OWNER, OWNER, ["v0.4.0"], "v0.4.0 is already tagged"),
-        ("build/release-0.4.0", OWNER, OWNER, ["v0.5.0"], "does not follow 0.5.0"),
+        ({"merged_by": "manager"}, "only the repository's owner, owner"),
+        ({"author": "someone"}, "opened by someone, who is neither"),
+        ({"branch": "build/release-0.3.9"}, "does not release 0.4.0"),
+        ({"tags": {**TAGGED, "v0.4.0": EARLIER}}, f"v0.4.0 is already tagged, on {EARLIER[:12]}"),
+        ({"tags": {**TAGGED, "v0.5.0": EARLIER}}, "does not follow 0.5.0"),
     ],
 )
-def test_a_release_is_not_tagged(
-    root: Path, branch: str, author: str, merged_by: str, tags: list[str], problem: str
-) -> None:
-    found = release.problems(branch, author, merged_by, OWNER, tags, released(root))
+def test_a_release_is_not_tagged(root: Path, change: dict[str, Any], problem: str) -> None:
+    found = merged(released(root), **change)
 
     assert len(found) == 1 and problem in found[0]
 
@@ -206,19 +228,78 @@ def test_a_release_whose_protocol_range_was_left_behind_is_not_tagged(root: Path
     behind = root / "greenhouse_sim" / "pyproject.toml"
     behind.write_text(behind.read_text().replace(">=0.4.0,<0.5", ">=0.3.0,<0.4"))
 
-    found = release.problems("build/release-0.4.0", OWNER, OWNER, OWNER, [], root)
-
-    assert found == [
+    assert merged(root) == [
         'greenhouse_sim does not depend on the protocol as "greenhouse-protocol>=0.4.0,<0.5"'
     ]
+
+
+def test_a_release_with_entries_left_under_unreleased_is_not_tagged(root: Path) -> None:
+    # Merged in after the release was prepared: its notes would leave it out.
+    changelog = released(root) / "CHANGELOG.md"
+    late = "## Unreleased\n\n- A change merged since.\n"
+    changelog.write_text(changelog.read_text().replace("## Unreleased\n", late, 1))
+
+    assert merged(root) == ["CHANGELOG.md's Unreleased entries would be left out of the notes"]
+
+
+def git(repo: Path, *arguments: str) -> str:
+    return subprocess.run(
+        ("git", *arguments), cwd=repo, check=True, capture_output=True, text=True
+    ).stdout.strip()
+
+
+@pytest.fixture
+def repository(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A repository of its own. A git hook runs with `GIT_DIR` and its kin
+    set to the repository it runs in, which would carry these commands
+    there (tests/test_pr_risk.py)."""
+    for name in [name for name in os.environ if name.startswith("GIT_")]:
+        monkeypatch.delenv(name)
+    git(tmp_path, "init", "-q", "-b", "main")
+    git(tmp_path, "config", "user.name", "t")
+    git(tmp_path, "config", "user.email", "t@example.com")
+    return tmp_path
+
+
+def commit(repo: Path, message: str) -> str:
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "--allow-empty", "-m", message)
+    return git(repo, "rev-parse", "HEAD")
+
+
+def test_the_managers_are_read_as_listed_before_the_release(repository: Path) -> None:
+    before_any = commit(repository, "no list yet")
+    listed = repository / release.RELEASE_MANAGERS
+    listed.parent.mkdir()
+    listed.write_text("# Release managers.\nmanager\n")
+    base = commit(repository, "a manager")
+    # The release pull request adds its own author: not a manager by it.
+    listed.write_text("# Release managers.\nmanager\nsomeone\n")
+    commit(repository, "build: release 0.4.0")
+
+    assert release.managers_at(base, repository) == {"manager"}
+    assert release.managers_at("HEAD", repository) == {"manager", "someone"}
+    assert release.managers_at(before_any, repository) == set()
+
+
+def test_the_tags_are_read_with_the_commits_they_tag(repository: Path) -> None:
+    first = commit(repository, "first")
+    git(repository, "tag", "--annotate", "v0.1.0", "--message", "0.1.0")
+    second = commit(repository, "second")
+    git(repository, "tag", "v0.2.0")
+    git(repository, "tag", "other")
+
+    assert release._tags(repository) == {"v0.1.0": first, "v0.2.0": second}
 
 
 def test_verify_prints_the_version_for_the_workflow(
     root: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setattr(release, "ROOT", released(root))
-    monkeypatch.setattr(release, "_tags", lambda root: ["v0.1.0", "v0.3.0"])
+    monkeypatch.setattr(release, "_tags", lambda root: TAGGED)
+    monkeypatch.setattr(release, "managers_at", lambda revision, root: set())
     arguments = ["--branch", "build/release-0.4.0", "--author", OWNER, "--owner", OWNER]
+    arguments += ["--commit", MERGE, "--base", EARLIER]
 
     assert release.main(["verify", *arguments, "--merged-by", OWNER]) == 0
     assert capsys.readouterr().out == "version=0.4.0\n"
@@ -235,4 +316,5 @@ def test_the_repositorys_packages_are_released_together() -> None:
         text = (release.ROOT / package / "pyproject.toml").read_text()
         assert release.protocol_range(version) in text
     assert release.notes(version).startswith(release.NOTES_INTRO)
-    assert all(re.fullmatch(r"[A-Za-z0-9-]+", login) for login in release.release_managers())
+    listed = release.release_managers((release.ROOT / release.RELEASE_MANAGERS).read_text())
+    assert all(re.fullmatch(r"[A-Za-z0-9-]+", login) for login in listed)

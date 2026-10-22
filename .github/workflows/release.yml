@@ -4,11 +4,13 @@ name: Release
 # repository's owner merges is tagged and published (decision 0045): its
 # merge commit is tagged `v<version>`, and the GitHub release carries the
 # changelog's section for the version. `scripts/release.py verify` says
-# what else it must be: opened by the owner or a release manager
-# (`.github/release-managers`), every package at the version, the
-# protocol's range moved with them, the changelog dated, the tag new. A
+# what else it must be: opened by the owner or a release manager, as
+# `.github/release-managers` listed them before it, every package at the
+# version, the protocol's range moved with them, the changelog dated with
+# nothing left under Unreleased, the tag new or already on this merge. A
 # release pull request that fails it is merged but not released, and this
-# run says why.
+# run says why. Each step skips what an earlier run of it did, so a run
+# that failed on GitHub's side is run again as it is.
 #
 # The merge commit's own workflow and script run here, as the owner merged
 # them, with a token that can push a tag: a fork's pull request gets a
@@ -53,14 +55,21 @@ jobs:
           AUTHOR: ${{ github.event.pull_request.user.login }}
           MERGED_BY: ${{ github.event.pull_request.merged_by.login }}
           OWNER: ${{ github.repository_owner }}
+          COMMIT: ${{ github.event.pull_request.merge_commit_sha }}
+          BASE: ${{ github.event.pull_request.base.sha }}
         run: >-
           python scripts/release.py verify --branch "$BRANCH" --author "$AUTHOR"
-          --merged-by "$MERGED_BY" --owner "$OWNER" >> "$GITHUB_OUTPUT"
+          --merged-by "$MERGED_BY" --owner "$OWNER" --commit "$COMMIT" --base "$BASE"
+          >> "$GITHUB_OUTPUT"
 
       - name: Tag the merge commit
         env:
           VERSION: ${{ steps.release.outputs.version }}
         run: |
+          if git rev-parse --quiet --verify "refs/tags/v$VERSION" > /dev/null; then
+            echo "v$VERSION already tags this merge commit."
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag --annotate "v$VERSION" --message "greenhouse-open $VERSION. See CHANGELOG.md."
@@ -71,6 +80,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.release.outputs.version }}
         run: |
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            echo "v$VERSION is already published."
+            exit 0
+          fi
           python scripts/release.py notes "$VERSION" > "$RUNNER_TEMP/notes.md"
           gh release create "v$VERSION" --verify-tag \
             --title "greenhouse-open $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
