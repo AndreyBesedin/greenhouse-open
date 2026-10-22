@@ -391,6 +391,15 @@ CI runs it in four jobs at once, one per part (`--only protocol`, `sim`,
 `adapters` or `root`), and gathers them as the one required check,
 `repository checks`.
 
+A pull request that changes documentation alone (any `*.md`, `docs/`,
+`LICENSE`, `NOTICE`) needs only the root's part, whose tests hold the
+documents to their citations and publishability: CI's first job, `what the
+change needs`, finds it so (`scripts/check.py --plan`), and the other
+packages' parts, the viewer, browser and visual checks and the
+lowest-dependencies job skip their work. A rename counts both its paths.
+A push to main checks everything. The pre-push hook does the same for the
+commits it pushes (`uv run check --fast --pushed`).
+
 For a change to the viewer, run the steps CI runs in its `viewer checks` and
 `browser tests` jobs:
 
