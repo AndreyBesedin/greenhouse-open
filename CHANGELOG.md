@@ -7,6 +7,13 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: the packaged scenarios are read once into an
+  unchanging catalogue (`scenarios.catalogue.PACKAGED`), each with its
+  manifest's digest, opening day and layouts; a catalogue of one's own
+  (`Catalogue`) registers other scenarios beside them, never in their
+  place. `SCENARIO_REGISTRY` holds the packaged scenarios as before. The
+  first step of one `Simulator` object owning the simulator's state
+  (decision 0048, AUDIT.15).
 - `greenhouse-sim`: the services log, at INFO, each run and value they
   make (with how long it took and how many kept ones it was made from),
   keep, take over from a checkpoint's kept states, and let go (past their

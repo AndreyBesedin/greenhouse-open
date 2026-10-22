@@ -3,6 +3,7 @@ from typing import Annotated, Self
 
 from pydantic import (
     BaseModel,
+    ConfigDict,
     Field,
     NonNegativeInt,
     PositiveFloat,
@@ -40,6 +41,10 @@ class ScenarioConfig(BaseModel):
     Which management policy runs against it, and with what thresholds, is
     not part of the world. That is the caller's choice about a run.
     """
+
+    # A scenario does not change once made, as a catalogue knows it by its
+    # version (decision 0048): another is made from it (`model_copy`).
+    model_config = ConfigDict(frozen=True)
 
     greenhouse_id: str
     name: str
