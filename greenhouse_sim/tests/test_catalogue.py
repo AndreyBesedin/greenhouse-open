@@ -5,6 +5,7 @@ catalogue, never in place of a packaged one nor of another registered."""
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
+from pydantic import ValidationError
 
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import (
@@ -55,6 +56,8 @@ def test_the_packaged_scenarios_never_change() -> None:
 
     with pytest.raises(TypeError):
         PACKAGED.configs["climate_box"] = config  # type: ignore[index]
+    with pytest.raises(ValidationError, match="frozen"):
+        SCENARIO_REGISTRY["climate_box"].random_seed = 7  # type: ignore[misc]
     reseeded = PACKAGED.with_config(config.model_copy(update={"random_seed": 7}))
 
     assert PACKAGED.configs["climate_box"] is config
