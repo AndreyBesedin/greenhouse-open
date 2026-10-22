@@ -122,6 +122,12 @@ export const CONTRACTS: readonly Contract[] = [
     "EQUIPMENT_SCHEMA",
   ),
   contract(
+    `${SERVICES}/field_names.schema.json`,
+    "FieldNames",
+    ["src/fields", "fieldNames"],
+    "FIELD_NAMES_SCHEMA",
+  ),
+  contract(
     `${SERVICES}/timeline.schema.json`,
     "TimelineDocument",
     ["src/timeline", "timeline"],

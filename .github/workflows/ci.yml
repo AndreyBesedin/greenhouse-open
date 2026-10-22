@@ -17,18 +17,50 @@ concurrency:
 # Each job's timeout is about twice its longest run, so that one that hangs
 # stops instead of holding a runner for GitHub's six hours.
 jobs:
+  # What a pull request needs checked. One that changes documentation alone
+  # needs the root's checks, which hold the documents to their citations and
+  # publishability, and nothing that builds or tests the code
+  # (`scripts/check.py`). A push to main checks everything, and so does
+  # every job when this one fails: its outputs are then empty.
+  changes:
+    name: what the change needs
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      parts: ${{ steps.plan.outputs.parts }}
+      documentation_only: ${{ steps.plan.outputs.documentation_only }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # The runner's own Python: the plan needs the standard library only.
+      - name: Plan the checks
+        id: plan
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ -n "$BASE_SHA" ]; then
+            python3 scripts/check.py --plan --changed "$BASE_SHA" "$HEAD_SHA" | tee -a "$GITHUB_OUTPUT"
+          else
+            python3 scripts/check.py --plan | tee -a "$GITHUB_OUTPUT"
+          fi
+
   # The repository checks in four jobs at once, a part of
   # `scripts/check.py` each: the three packages and the cross-package
   # checks at the root. The simulator's tests run in a process per core.
   check:
     name: repository checks (${{ matrix.part }})
+    needs: changes
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       # Every part runs to its end, so that one run shows every failure.
       fail-fast: false
       matrix:
-        part: [protocol, sim, adapters, root]
+        part: ${{ fromJSON(needs.changes.outputs.parts || '["protocol", "sim", "adapters", "root"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -64,6 +96,8 @@ jobs:
 
   lowest:
     name: lowest dependencies
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.documentation_only != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -89,8 +123,12 @@ jobs:
           (cd greenhouse_protocol && ../.venv/bin/python -m pytest -q)
           (cd greenhouse_adapters && ../.venv/bin/python -m pytest -q)
 
+  # A job skipped by its condition reports success, which the ruleset's
+  # required check accepts.
   viewer:
     name: viewer checks
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.documentation_only != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -124,9 +162,14 @@ jobs:
   # The browser tests, in lanes that run at once, each on a machine of its
   # own with a simulator of its own (decision 0032). A lane is named for the
   # stage of `playwright.config.ts` it starts at; the configuration refuses
-  # a lane it does not cut, and runs none unless all of them are here.
+  # a lane it does not cut, and runs none unless all of them are here. The
+  # ruleset requires each lane by its name, which a job skipped before its
+  # matrix expands does not report: for documentation alone, each lane runs
+  # and skips its steps.
   browser:
     name: browser tests (${{ matrix.lane }})
+    needs: changes
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -139,14 +182,17 @@ jobs:
         working-directory: greenhouse_sim/web
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: needs.changes.outputs.documentation_only != 'true'
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: needs.changes.outputs.documentation_only != 'true'
         with:
           node-version-file: greenhouse_sim/web/.nvmrc
           cache: npm
           cache-dependency-path: greenhouse_sim/web/package-lock.json
 
       - name: Install the viewer's dependencies
+        if: needs.changes.outputs.documentation_only != 'true'
         run: npm ci
 
       # The browser tests serve the simulator's API, so they need the Python
@@ -155,19 +201,23 @@ jobs:
       # .python-version names, and the workspace at the versions uv.lock
       # pins (decision 0039).
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        if: needs.changes.outputs.documentation_only != 'true'
         with:
           version-file: uv.lock
           enable-cache: true
           cache-dependency-glob: uv.lock
 
       - name: Install the simulator
+        if: needs.changes.outputs.documentation_only != 'true'
         working-directory: .
         run: uv sync --locked --no-editable --no-dev
 
       - name: Install Chromium
+        if: needs.changes.outputs.documentation_only != 'true'
         run: npx playwright install --with-deps chromium
 
       - name: Browser tests
+        if: needs.changes.outputs.documentation_only != 'true'
         run: npm run e2e
         env:
           PYTHON: ${{ github.workspace }}/.venv/bin/python
@@ -186,6 +236,8 @@ jobs:
 
   visual:
     name: visual checks
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.documentation_only != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     # Screenshots are compared in a pinned image, so the fonts and software

@@ -271,7 +271,8 @@ Ruff formatting is the source of truth. Do not hand-format around it.
 The Python baseline is:
 
 - Python 3.14+;
-- Ruff formatting and linting;
+- Ruff formatting and linting, with one set of rules: `ruff.toml` and each
+  package's `pyproject.toml` say the same (`tests/test_lint_config.py`);
 - strict mypy;
 - pytest;
 - explicit types at package and architectural boundaries.
@@ -398,6 +399,15 @@ rely on another file's having run first, in the same process or at all.
 CI runs it in four jobs at once, one per part (`--only protocol`, `sim`,
 `adapters` or `root`), and gathers them as the one required check,
 `repository checks`.
+
+A pull request that changes documentation alone (any `*.md`, `docs/`,
+`LICENSE`, `NOTICE`) needs only the root's part, whose tests hold the
+documents to their citations and publishability: CI's first job, `what the
+change needs`, finds it so (`scripts/check.py --plan`), and the other
+packages' parts, the viewer, browser and visual checks and the
+lowest-dependencies job skip their work. A rename counts both its paths.
+A push to main checks everything. The pre-push hook does the same for the
+commits it pushes (`uv run check --fast --pushed`).
 
 For a change to the viewer, run the steps CI runs in its `viewer checks` and
 `browser tests` jobs:

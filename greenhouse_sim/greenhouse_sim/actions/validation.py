@@ -39,8 +39,7 @@ def validate_action(world: GreenhouseWorld, action: RequestedAction) -> ActionRe
         visible_height = plant.stem_length_cm - plant.lowered_length_cm
         if not (0 < action.amount_cm <= visible_height):
             return ActionResult(accepted=False, reason="lowering amount exceeds visible height")
-    elif isinstance(action, ScheduleInspectionAction):
-        if not action.reason.strip():
-            return ActionResult(accepted=False, reason="inspection reason is required")
+    elif isinstance(action, ScheduleInspectionAction) and not action.reason.strip():
+        return ActionResult(accepted=False, reason="inspection reason is required")
 
     return ActionResult(accepted=True)

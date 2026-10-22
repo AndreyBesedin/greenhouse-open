@@ -1,4 +1,4 @@
-import { isObject, loadJson } from "../loadJson";
+import { contractReader, loadJson } from "../loadJson";
 import { formatValue } from "../readouts";
 import { useLoad } from "../useLoad";
 import {
@@ -10,6 +10,8 @@ import {
   type SliceQuantity,
 } from "./display";
 import { sliceQuantities } from "./drawing";
+import { FIELD_NAMES_SCHEMA } from "./generated/fieldNamesSchema";
+import type { FieldNames as ServedFieldNames } from "./generated/fieldNamesTypes";
 import { sliceExtent } from "./slice";
 import { type FieldState, layoutQuery } from "./source";
 
@@ -28,6 +30,17 @@ function fieldNamesUrl(scenarioId: string, layout?: string): string {
   return `/api/scenarios/${encodeURIComponent(scenarioId)}/fields${layoutQuery(layout)}`;
 }
 
+const readFieldNames = contractReader<ServedFieldNames>(
+  FIELD_NAMES_SCHEMA,
+  "the scenario's fields are not what the viewer expects",
+);
+
+/** The field names an answer lists, checked rather than trusted. */
+export function parseFieldNames(body: unknown): FieldNames {
+  const { fields, configured } = readFieldNames(body);
+  return { names: fields, configured };
+}
+
 /** The fields a scenario offers with one of its layouts, and which is its own
  * airflow (`GET /api/scenarios/{id}/fields`), or none if they cannot be read. */
 export async function loadFieldNames(
@@ -35,20 +48,8 @@ export async function loadFieldNames(
   layout?: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<FieldNames> {
-  const answer = await loadJson(fieldNamesUrl(scenarioId, layout), fieldNamesOf, fetchFn);
+  const answer = await loadJson(fieldNamesUrl(scenarioId, layout), parseFieldNames, fetchFn);
   return answer.status === "loaded" ? answer.value : { names: [], configured: null };
-}
-
-/** The field names an answer lists, none of what is not a name. */
-function fieldNamesOf(body: unknown): FieldNames {
-  if (!isObject(body)) {
-    return { names: [], configured: null };
-  }
-  const names = Array.isArray(body.fields) ? body.fields : [];
-  return {
-    names: names.filter((name) => typeof name === "string"),
-    configured: typeof body.configured === "string" ? body.configured : null,
-  };
 }
 
 const NO_FIELDS: FieldNames = { names: [], configured: null };

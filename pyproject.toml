@@ -55,7 +55,7 @@ dev = [
 # pin below follows it, by hand, on Dependabot's pull request
 # (tests/test_pins.py fails until it does).
 toolchain = [
-    "uv==0.13.1",
+    "uv==0.13.5",
     "poetry-core==2.5.0",
 ]
 

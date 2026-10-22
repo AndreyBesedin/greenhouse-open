@@ -39,7 +39,7 @@ from greenhouse_sim.scenarios.manifest_files import MANIFEST_SCHEMA_FILE, manife
 from greenhouse_sim.scene.snapshot import snapshot_json_schema
 from greenhouse_sim.services.checkpoints import CheckpointSummary
 from greenhouse_sim.services.crop import CropPlant, PlantsLight
-from greenhouse_sim.services.fields import EquipmentAt
+from greenhouse_sim.services.fields import EquipmentAt, FieldNames
 from greenhouse_sim.services.live import LiveState
 from greenhouse_sim.services.plants import LabChecks
 from greenhouse_sim.services.playback import PlaybackState
@@ -68,6 +68,7 @@ ANSWERS: Final[dict[Path, type[object]]] = {
     SERVICES / "weather.schema.json": WeatherAtAMoment,
     SERVICES / "weather_day.schema.json": WeatherThroughADay,
     SERVICES / "equipment.schema.json": EquipmentAt,
+    SERVICES / "field_names.schema.json": FieldNames,
     SERVICES / "timeline.schema.json": TimelineDocument,
     SERVICES / "checkpoint.schema.json": CheckpointSummary,
     SERVICES / "playback.schema.json": PlaybackState,

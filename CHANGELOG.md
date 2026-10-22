@@ -22,6 +22,12 @@ breaks the conformance checks is a major version.
   is drawn, at twice the speed, as an MP4 under GitHub's upload limit, with
   its first frame saved beside it to check. It needs ffmpeg. The
   walk-through lingers 3 s on each caption.
+- `greenhouse-sim`: the list of a scenario's fields
+  (`GET /api/scenarios/{id}/fields`) is published as a JSON Schema too
+  (`services/field_names.schema.json`), the last of the API's answers the
+  viewer read by hand (W12). The viewer reads it by its schema, and lists
+  no fields from an answer that does not fit, as it did from one it could
+  not read. The answer itself is unchanged.
 
 ## 0.3.0 - 2026-10-21
 

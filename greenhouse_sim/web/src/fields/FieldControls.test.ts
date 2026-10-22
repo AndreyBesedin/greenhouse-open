@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { describeAirField, loadFieldNames } from "./FieldControls";
+import { describeAirField, loadFieldNames, parseFieldNames } from "./FieldControls";
 
 describe("a scenario's fields", () => {
   it("are listed with its own airflow and layout, and none if they cannot be read", async () => {
@@ -20,6 +20,31 @@ describe("a scenario's fields", () => {
     expect(asked).toEqual(["/api/scenarios/airflow_box/fields?layout=open"]);
     expect(listed).toEqual({ names: ["uniform", "cfd"], configured: "uniform" });
     expect(missing).toEqual({ names: [], configured: null });
+  });
+
+  it("are read against the contract the simulator publishes, and none from an answer it refuses", async () => {
+    const answering = (body: unknown) => async () =>
+      new Response(JSON.stringify(body), { status: 200 });
+
+    expect(parseFieldNames({ fields: ["buoyancy", "cfd"], configured: "buoyancy" })).toEqual({
+      names: ["buoyancy", "cfd"],
+      configured: "buoyancy",
+    });
+    expect(() => parseFieldNames({ fields: ["buoyancy", 3], configured: "buoyancy" })).toThrow(
+      "the scenario's fields are not what the viewer expects",
+    );
+    for (const refused of [
+      { fields: ["buoyancy", 3], configured: "buoyancy" },
+      { fields: ["buoyancy"] },
+      { fields: "buoyancy", configured: "buoyancy" },
+      { fields: ["buoyancy"], configured: null },
+      ["buoyancy"],
+    ]) {
+      expect(await loadFieldNames("tomato_compartment", undefined, answering(refused))).toEqual({
+        names: [],
+        configured: null,
+      });
+    }
   });
 });
 
