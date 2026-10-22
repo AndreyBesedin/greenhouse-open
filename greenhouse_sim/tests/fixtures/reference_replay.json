@@ -4,16 +4,16 @@
   "days": [
     {
       "day": 0,
-      "digest": "fcf3ccca93680930",
-      "house_temperature_c": 16.07,
+      "digest": "35ea72337d429560",
+      "house_temperature_c": 16.08,
       "house_humidity_pct": 41.1,
       "organs": 870,
-      "thermal_time_cd": 237.01,
+      "thermal_time_cd": 237.0,
       "readings": 264
     },
     {
       "day": 1,
-      "digest": "4b97c9b678e18d8d",
+      "digest": "59f953ba40fc18ed",
       "house_temperature_c": 15.99,
       "house_humidity_pct": 38.5,
       "organs": 918,
@@ -22,7 +22,7 @@
     },
     {
       "day": 2,
-      "digest": "cf0e517f49792690",
+      "digest": "4c117a55f654e14b",
       "house_temperature_c": 15.67,
       "house_humidity_pct": 37.0,
       "organs": 980,

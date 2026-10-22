@@ -258,6 +258,6 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   // viewer ends them.
   await page.goto("about:blank");
   await page.goto(`${QA_REFERENCE_PATH}?view=noon`);
-  await expect(page.getByTestId("qa-probes")).toContainText("house air 28.11 °C", ARRIVES);
+  await expect(page.getByTestId("qa-probes")).toContainText("house air 28.14 °C", ARRIVES);
   await say(page, "12. The golden views, as CI compares them, with their state probes");
 });

@@ -105,6 +105,19 @@ def test_the_roofs_structure_covers_a_twentieth_of_the_climate_boxs_plan() -> No
     assert light.sunlight.diffuse_passed == pytest.approx(DIFFUSE_TRANSMITTANCE * (1 - expected))
 
 
+def test_a_girder_under_the_rafters_covers_the_plan_once() -> None:
+    # The reference greenhouse's two gable frames have six rafters, 6 cm wide
+    # over 1.6 m each. On its two inner frames a girder 10 cm wide lies
+    # under the same 9.6 m, and seen from above it covers them. Add the eave
+    # gutters' inner halves, 10 cm, and the two valley gutters, 20 cm,
+    # along the 12 m house; the plan is 12 m by 9.6 m.
+    expected = (2 * 0.06 * 9.6 + 2 * 0.10 * 9.6 + 2 * 0.1 * 12.0 + 2 * 0.2 * 12.0) / (12.0 * 9.6)
+
+    assert roof_shading(SCENARIO_REGISTRY["reference_greenhouse"].envelope) == pytest.approx(
+        expected
+    )
+
+
 def test_clouds_soften_the_shadows() -> None:
     # The plants behind the crates against those in the open, at noon.
     def contrast(weather: str) -> float:

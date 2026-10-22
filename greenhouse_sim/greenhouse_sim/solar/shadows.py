@@ -1,7 +1,7 @@
 """What shades the sun's beam inside the greenhouse (P08.5, P08.6).
 
-- **What casts shadows:** the greenhouse's structure, its posts and rafters
-  (round bars) and its gutters (channels, `world.envelope`), every fixture
+- **What casts shadows:** the greenhouse's structure, its posts, rafters
+  and girders (round bars) and its gutters (channels, `world.envelope`), every fixture
   of its layout that obstructs light (`Obstruction.LIGHT`): crop gutters,
   benches, slabs, rails, pipes and obstacles; and its plants' crowns
   (`solar.plants`). Equipment obstructs no light, and casts none.
@@ -11,12 +11,12 @@
   one's own frame, vectorised over many points at once. A point inside a
   solid is in its shadow.
 - **The diffuse sky** is shaded by the structure as a whole (P08.7): by
-  the share of the house's plan its rafters and gutters cover, seen from
+  the share of the house's plan its rafters, girders and gutters cover, seen from
   above (`roof_shading`), the same everywhere inside. What stands inside,
   fixtures and crowns, shades the diffuse sky not at all.
 """
 
-import math
+import itertools
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Final
@@ -214,18 +214,39 @@ class Shadows:
 
 def roof_shading(envelope: Envelope) -> float:
     """The share of a house's plan its roof's structure covers, seen from
-    above: each rafter's and girder's width along its run across the house,
-    and each gutter's width, as far as it lies over the house, along its
-    length. The posts, upright, cover next to nothing."""
+    above: each frame's rafters and girders, their width along their run
+    across the house, where one lies over another (a girder under the
+    rafters) the widest only; and each gutter's width, as far as it lies
+    over the house, along its length. The posts, upright, cover next to
+    nothing."""
     low_y, high_y = 0.0, envelope.width
-    covered = 0.0
+    # Each frame's members lie along its line across the house: the stretch
+    # of it each covers, and how wide.
+    frames: dict[int, list[tuple[float, float, float]]] = {}
     for member in envelope.members():
         _, bar = member.solid()
-        run = math.hypot(member.end.x - member.start.x, member.end.y - member.start.y)
-        covered += 2 * bar.radius * run
+        low, high = sorted((member.start.y, member.end.y))
+        if high > low:
+            frames.setdefault(member.frame, []).append((low, high, 2 * bar.radius))
+    covered = sum(_covered_along(strips) for strips in frames.values())
     for gutter in envelope.gutters():
         _, channel = gutter.solid()
         y = gutter.start.y
         inside = min(y + channel.size_y / 2, high_y) - max(y - channel.size_y / 2, low_y)
         covered += max(inside, 0.0) * channel.size_x
     return covered / (envelope.length * envelope.width)
+
+
+def _covered_along(strips: list[tuple[float, float, float]]) -> float:
+    """The area strips along one line cover, each from `low` to `high` and
+    `width` wide: between each two of their ends, the widest of those
+    there."""
+    ends = sorted({end for low, high, _ in strips for end in (low, high)})
+    return sum(
+        (after - before)
+        * max(
+            (width for low, high, width in strips if low <= before and after <= high),
+            default=0.0,
+        )
+        for before, after in itertools.pairwise(ends)
+    )
