@@ -7,6 +7,7 @@ checkpoint's own format."""
 
 import dataclasses
 import json
+import logging
 from collections.abc import Callable
 from http import HTTPStatus
 from typing import Final
@@ -17,7 +18,7 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services import checkpoints
-from greenhouse_sim.services.fields import CLIMATE_RUNS, EquipmentAt, climate_run
+from greenhouse_sim.services.fields import EquipmentAt, climate_run
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER
 from greenhouse_sim.units import HOUR_S
@@ -72,18 +73,30 @@ def test_a_run_is_its_parts_and_not_its_moment() -> None:
     ]
 
 
+def _climate_runs_made(caplog: pytest.LogCaptureFixture) -> list[str]:
+    """The climate runs the services made, as their log names them."""
+    return [
+        getattr(record, "label", "")
+        for record in caplog.records
+        if (getattr(record, "store", None), getattr(record, "event", None))
+        == ("climate runs", "made")
+    ]
+
+
 def test_a_run_asked_for_at_other_moments_and_windows_is_one_run(
-    afresh: Callable[[], None],
+    afresh: Callable[[], None], caplog: pytest.LogCaptureFixture
 ) -> None:
+    caplog.set_level(logging.INFO, logger="greenhouse_sim")
     asked = "/api/scenarios/climate_box/climate/house?set=heater:1&schedule=600:fan:1"
     assert respond("GET", f"{asked}&t=0").status == HTTPStatus.OK
-    runs = {key for key, _ in CLIMATE_RUNS.values()}
+    assert _climate_runs_made(caplog)
+    caplog.clear()
 
     for moment in ("t=300", "t=1200", "t=1200&from=600"):
         assert respond("GET", f"{asked}&{moment}").status == HTTPStatus.OK
     assert respond("GET", asked.replace("house", "equipment") + "&t=900").status == HTTPStatus.OK
 
-    assert {key for key, _ in CLIMATE_RUNS.values()} == runs
+    assert _climate_runs_made(caplog) == []
 
 
 def test_commands_keep_their_order_same_time_ones_too() -> None:

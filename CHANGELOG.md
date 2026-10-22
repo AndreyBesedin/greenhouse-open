@@ -7,6 +7,13 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: the services log, at INFO, each run and value they
+  make (with how long it took and how many kept ones it was made from),
+  keep, take over from a checkpoint's kept states, and let go (past their
+  bound, dropped, or forgotten), each named by its scenario and a digest of
+  what tells it apart (AUDIT.14). As a library the package prints nothing
+  until an application configures logging; the local API does, at INFO for
+  the simulator, beside each request's line.
 - Releases: a release is a pull request from a `build/release-<version>`
   branch that the repository's owner merges, opened by the owner or a
   release manager listed in `.github/release-managers`. The owner then tags

@@ -560,7 +560,9 @@ def _check_pace(seconds_per_day: float) -> None:
 
 # Every playback started, by scenario: one let go is stopped, once the day
 # under way is worked out.
-PLAYBACKS: Store[str, Playback] = Store("playbacks", on_drop=lambda _, found: found.stop())
+PLAYBACKS: Store[str, Playback] = Store(
+    "playbacks", on_drop=lambda _, found: found.stop(), label=str
+)
 
 
 def start(

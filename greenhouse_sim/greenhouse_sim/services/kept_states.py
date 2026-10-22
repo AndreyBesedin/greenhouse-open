@@ -60,7 +60,7 @@ class KeptState:
 
 
 # Each kept as long as its checkpoint is.
-STATES: Store[str, KeptState] = Store("kept states")
+STATES: Store[str, KeptState] = Store("kept states", label=str)
 
 
 def keep(key: str, state: KeptState) -> None:
