@@ -9,6 +9,7 @@ from http import HTTPStatus
 import pytest
 
 from greenhouse_sim.api.routes import respond
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.solar.position import sun_position
 from greenhouse_sim.world.site import DEFAULT_SITE, Site
 
@@ -100,10 +101,10 @@ def test_a_moment_without_a_time_zone_is_refused() -> None:
         sun_position(datetime(2026, 3, 20, 12), DEFAULT_SITE)
 
 
-def test_the_api_serves_the_sun_with_the_weather() -> None:
+def test_the_api_serves_the_sun_with_the_weather(simulator: Simulator) -> None:
     # 12:45 in Amsterdam on 1 January, 11:45 UTC: about solar noon.
-    noon = respond("GET", "/api/scenarios/climate_box/weather?t=45900")
-    midnight = respond("GET", "/api/scenarios/climate_box/weather")
+    noon = respond(simulator, "GET", "/api/scenarios/climate_box/weather?t=45900")
+    midnight = respond(simulator, "GET", "/api/scenarios/climate_box/weather")
     body = json.loads(json.dumps(noon.body))
 
     assert noon.status == HTTPStatus.OK
@@ -114,8 +115,10 @@ def test_the_api_serves_the_sun_with_the_weather() -> None:
     assert json.loads(json.dumps(midnight.body))["sun"]["elevation_deg"] < 0
 
 
-def test_the_api_serves_the_suns_path_through_the_day() -> None:
-    body = json.loads(json.dumps(respond("GET", "/api/scenarios/climate_box/weather/day").body))
+def test_the_api_serves_the_suns_path_through_the_day(simulator: Simulator) -> None:
+    body = json.loads(
+        json.dumps(respond(simulator, "GET", "/api/scenarios/climate_box/weather/day").body)
+    )
     up = [
         (time, sun)
         for time, sun in zip(body["times_s"], body["sun"], strict=True)

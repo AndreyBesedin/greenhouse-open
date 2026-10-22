@@ -7,6 +7,13 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: the runs played back and the cursors given to
+  consumers are a simulator's own (decision 0048): the API's server makes
+  its simulator, answers every request from it and closes it as it closes.
+  A playback stopped leaves the day it is working out at its next moment,
+  rather than finishing the day, so the API stopped with a run playing
+  back exits at once rather than after the day (some ten seconds for the
+  reference greenhouse).
 - `greenhouse-sim`: the packaged scenarios are read once into an
   unchanging catalogue (`scenarios.catalogue.PACKAGED`), each with its
   manifest's digest, opening day and layouts; a catalogue of one's own

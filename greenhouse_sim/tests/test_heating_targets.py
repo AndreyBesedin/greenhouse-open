@@ -24,6 +24,7 @@ from greenhouse_sim.services.heat_log import heat_records
 from greenhouse_sim.services.playback import Playback, PlaybackCommand
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.sensors import run_start
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import HOUR_S
 
 SCENARIO: Final = "reference_greenhouse"
@@ -44,8 +45,8 @@ class Clock:
         return self.now
 
 
-def _equipment(query: str) -> Any:
-    response = respond("GET", f"/api/scenarios/{SCENARIO}/climate/equipment?{query}")
+def _equipment(simulator: Simulator, query: str) -> Any:
+    response = respond(simulator, "GET", f"/api/scenarios/{SCENARIO}/climate/equipment?{query}")
     assert response.status == HTTPStatus.OK, response.body
     return response.body
 
@@ -79,7 +80,7 @@ def test_the_thermostat_heats_to_its_targets_as_changed() -> None:
     assert not thermostat.heats(23.0, False, DAY_FROM_S)
 
 
-def test_the_house_is_heated_to_a_target_set_and_says_its_setpoints() -> None:
+def test_the_house_is_heated_to_a_target_set_and_says_its_setpoints(simulator: Simulator) -> None:
     """Set to 24 °C from 7 h, the house's air is within the thermostat's band
     of it by 8 h 30, where the scenario's own 18 °C holds it near 18."""
     half_band = 0.5
@@ -90,9 +91,11 @@ def test_the_house_is_heated_to_a_target_set_and_says_its_setpoints() -> None:
 
     assert abs(own.temperature_c - 18.0) <= half_band
     assert abs(warmer.temperature_c - 24.0) <= half_band
-    said = _equipment(f"t={moment:.0f}&targets={DAY_FROM_S:.0f}:heating_day:24")["thermostat"]
+    said = _equipment(simulator, f"t={moment:.0f}&targets={DAY_FROM_S:.0f}:heating_day:24")[
+        "thermostat"
+    ]
     assert (said["setpoint_c"], said["day_c"], said["night_c"]) == (24.0, 24.0, 16.0)
-    assert _equipment(f"t={moment:.0f}")["thermostat"]["day_c"] == 18.0
+    assert _equipment(simulator, f"t={moment:.0f}")["thermostat"]["day_c"] == 18.0
 
 
 def test_another_target_makes_another_run_and_the_same_targets_the_same() -> None:
@@ -126,16 +129,22 @@ def test_the_same_target_changes_asked_for_in_another_order_make_the_same_run() 
         (f"{200 * DAY_S:.0f}:heating_day:24", "within the run"),
     ],
 )
-def test_a_target_change_that_does_not_fit_is_refused(targets: str, refused: str) -> None:
-    response = respond("GET", f"/api/scenarios/{SCENARIO}/climate/equipment?t=60&targets={targets}")
+def test_a_target_change_that_does_not_fit_is_refused(
+    simulator: Simulator, targets: str, refused: str
+) -> None:
+    response = respond(
+        simulator, "GET", f"/api/scenarios/{SCENARIO}/climate/equipment?t=60&targets={targets}"
+    )
 
     assert response.status == HTTPStatus.BAD_REQUEST
     assert refused in str(response.body)
 
 
-def test_a_scenario_without_a_heating_loop_has_no_target_to_change() -> None:
+def test_a_scenario_without_a_heating_loop_has_no_target_to_change(simulator: Simulator) -> None:
     response = respond(
-        "GET", "/api/scenarios/climate_box/climate/equipment?t=60&targets=60:heating_day:24"
+        simulator,
+        "GET",
+        "/api/scenarios/climate_box/climate/equipment?t=60&targets=60:heating_day:24",
     )
 
     assert response.body == {"error": "climate_box has no heating loop whose target to change"}

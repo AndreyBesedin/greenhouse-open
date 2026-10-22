@@ -13,13 +13,14 @@ from greenhouse_sim.scene.snapshot import (
     SceneEntityKind,
     SceneSnapshot,
 )
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Box, Cylinder
 
 EQUIPMENT_KINDS = {SceneEntityKind.FAN, SceneEntityKind.HEATER, SceneEntityKind.DEHUMIDIFIER}
 
 
-def _scene(scenario_id: str, query: str = "") -> SceneSnapshot:
-    response = respond("GET", f"/api/scenarios/{scenario_id}/scene{query}")
+def _scene(simulator: Simulator, scenario_id: str, query: str = "") -> SceneSnapshot:
+    response = respond(simulator, "GET", f"/api/scenarios/{scenario_id}/scene{query}")
     assert response.status == 200, response.body
     return SceneSnapshot.model_validate(response.body)
 
@@ -28,8 +29,10 @@ def _equipment(scene: SceneSnapshot) -> dict[str, SceneEntity]:
     return {e.entity_id: e for e in scene.entities if e.kind in EQUIPMENT_KINDS}
 
 
-def test_the_climate_box_draws_its_equipment_off_with_its_rated_capacity() -> None:
-    equipment = _equipment(_scene("climate_box"))
+def test_the_climate_box_draws_its_equipment_off_with_its_rated_capacity(
+    simulator: Simulator,
+) -> None:
+    equipment = _equipment(_scene(simulator, "climate_box"))
     fan = equipment["climate_box_fan"]
     heater = equipment["climate_box_heater"]
     dehumidifier = equipment["climate_box_dehumidifier"]
@@ -56,8 +59,8 @@ def test_the_climate_box_draws_its_equipment_off_with_its_rated_capacity() -> No
     assert fan.label == "fan"
 
 
-def test_a_piece_is_drawn_as_its_shape_where_it_stands() -> None:
-    equipment = _equipment(_scene("climate_box"))
+def test_a_piece_is_drawn_as_its_shape_where_it_stands(simulator: Simulator) -> None:
+    equipment = _equipment(_scene(simulator, "climate_box"))
     fan = equipment["climate_box_fan"]
     heater = equipment["climate_box_heater"]
 
@@ -69,8 +72,10 @@ def test_a_piece_is_drawn_as_its_shape_where_it_stands() -> None:
     assert (heater.transform.position.x, heater.transform.position.y) == (11.2, 0.7)
 
 
-def test_a_client_sets_levels_and_running_equipment_shows_its_kinds_colour() -> None:
-    equipment = _equipment(_scene("climate_box", "?set=fan:1,heater:0.5"))
+def test_a_client_sets_levels_and_running_equipment_shows_its_kinds_colour(
+    simulator: Simulator,
+) -> None:
+    equipment = _equipment(_scene(simulator, "climate_box", "?set=fan:1,heater:0.5"))
     fan = equipment["climate_box_fan"]
     heater = equipment["climate_box_heater"]
     dehumidifier = equipment["climate_box_dehumidifier"]
@@ -96,14 +101,14 @@ def test_a_client_sets_levels_and_running_equipment_shows_its_kinds_colour() -> 
     ids=["unknown", "above full", "below off", "not a number", "not a pair", "none there"],
 )
 def test_a_level_for_equipment_a_scenario_lacks_or_out_of_range_is_refused(
-    scenario_id: str, query: str, error: str
+    simulator: Simulator, scenario_id: str, query: str, error: str
 ) -> None:
-    response = respond("GET", f"/api/scenarios/{scenario_id}/scene{query}")
+    response = respond(simulator, "GET", f"/api/scenarios/{scenario_id}/scene{query}")
 
     assert response.status == 400
     assert response.body == {"error": error}
 
 
-def test_scenarios_without_equipment_draw_none() -> None:
+def test_scenarios_without_equipment_draw_none(simulator: Simulator) -> None:
     for scenario_id in ("tomato_compartment", "airflow_box"):
-        assert _equipment(_scene(scenario_id)) == {}
+        assert _equipment(_scene(simulator, scenario_id)) == {}
