@@ -1,4 +1,4 @@
-# 0046: One action format, and a plan that carries it out
+# 0046: One action format, and a plan a run's gateway carries out
 
 **Status:** Proposed. It becomes Accepted, or is changed, in the pull
 request that starts its implementation (P13.1, [P13](../roadmap/p13-actions.md)).
@@ -32,13 +32,14 @@ greenhouse, and neither is moving its equipment, which edits the
 installation the run is of (#295). They stay outside this decision.
 
 Acting on a greenhouse is to be a core part of the project: people,
-control policies and agents trained to control it will act through it, and
-an executor may be a person, a robot or a climate computer, as well as the
-simulator. Some actions are due at an hour, as commands and target changes
+control policies and agents trained to control it will act through it, on
+a simulated greenhouse and on a physical installation alike, and an action
+may be carried out by the simulator, a climate computer, a robot or a
+person. Some actions are due at an hour, as commands and target changes
 are today; others are to be done in an order, or side by side, as soon as
 can be, or within a while. Being late matters, and for some actions being
 late is failing: a robot picking a moving target that has passed has
-missed it.
+missed it. And who may do what is to be checked by design, in one place.
 
 ## Decision
 
@@ -54,12 +55,13 @@ organ crop's, are not actions: nothing proposes or plans them, and they
 report no outcome.
 
 **A plan carries actions out.** A plan is a set of planned actions, each an
-action with its identifier, its timing, what it waits for and what to do
-if it is late:
+action with its identifier, its timing, what it waits for, what to do if it
+is late, and who proposed it:
 
 - **its timing:** at an instant; in a window, no earlier and no later than
-  two instants; or as soon as it can. A planned action may recur (every
-  day at a time, every n days), as daily commands and crop work do today;
+  two instants; or as soon as it can. Any instant: the format bakes in no
+  resolution. A planned action may recur (every day at a time, every n
+  days), as daily commands and crop work do today;
 - **what it waits for:** the planned actions that must be done first. The
   plan is a directed graph without cycles: actions with no order between
   them may be carried out side by side;
@@ -67,54 +69,96 @@ if it is late:
   late, skip it, carry out a fallback action instead, as a planned action
   of its own with its own outcome, or abort the rest of the plan. A
   critical action is skipped when late and its dependents are cancelled;
-- **who may carry it out,** by kind or by identity, and who proposed it: a
-  person, a policy, a scenario's own schedule.
+- **who may carry it out,** by kind or by identity;
+- **who proposed it:** a principal, a person, a policy, a scenario's own
+  schedule, by identity.
 
 At one instant, actions are carried out in a fixed order: recurring ones
 first, then by the plan revision that gave them and their place in it, as
-commands at one moment are today, so that a run under a plan is
+commands at one moment are today, so that a simulated run under a plan is
 deterministic.
+
+**A plan belongs to a run, and a run is the protocol's.** A run is what
+the consumer interface already names (decision 0040): a run id, its epoch
+and its clock. A simulated run is one, as today. A physical installation
+serves one too: one run for each configuration of its equipment, so that
+changed equipment makes a new run, as it does for a simulated one; its
+epoch rising each time its gateway starts again; its clock the wall
+clock. A run that has finished, and a recorded one, cannot be acted on
+(`ActionNotExecutable`).
+
+**A gateway carries the plan; executors carry out actions.** Each run has a
+gateway, its local endpoint, which:
+
+- holds the run's plan and its revisions, and schedules its actions;
+- applies the lateness rules, since it alone knows what was due when;
+- authorises (below);
+- writes the outcome log;
+- serves the run's read side, the consumer interface's observations,
+  events and outcomes, and its write side, plans given, revised and
+  cancelled.
+
+Behind it, an executor only carries out one action it is assigned, at an
+instant, and reports when it started and finished, and whether it was
+done, failed or refused because the greenhouse was not as the action
+needed. It says which kinds it carries out, which instants it can honour
+for each, and how many actions it can carry out at once. The simulated run
+is an executor; so are a climate computer, a robot and a person with a
+task list. The protocol has the two contracts, one for a gateway and one
+for an executor; its execution contract becomes the second.
+
+**Checks happen at two moments.** When a plan is given, the gateway
+refuses, as outcomes recorded then: what is ill-formed, what its
+principal may not do, a kind no executor carries out, a device, plant or
+target the run does not have, and an instant no executor can honour; a
+window or an as-soon-as-possible action starts at the first instant one
+can. When an action falls due, the gateway checks its authorisation again,
+since rights may have changed, and the executor checks the greenhouse: a
+truss to cut that has not grown is refused then, not when the plan was
+given.
+
+**Authorisation by design, in the gateway alone.** Every action carries its
+principal. Authorisation groups grant action kinds to principals,
+optionally limited to targets: devices, plants, a controller's targets.
+The gateway is the one place they are enforced; a refusal is an outcome,
+with its reason. Executors and sensors hold no rights: they trust the
+gateway's channel, which must be authenticated. Who defines the groups is
+the deployment's: a platform may manage them and hand them to its
+gateway. The simulator's gateway has one group, the local operator,
+allowed everything, so the mechanism exists from the start.
 
 **One outcome record.** Each planned action ends in one outcome: carried
 out, carried out late, missed, refused (and why), failed, cancelled, or
-superseded by a later revision. It names its action and plan; when the
-action was due, when it started and finished, and when its outcome was
-decided, which every outcome has and which orders the log; its executor,
-by kind and identity; and its effect, typed by the action's kind.
-Outcomes are records of their own, in a log of their own with the
+superseded by a later revision. It names its action, plan and principal;
+when the action was due, when it started and finished, and when its
+outcome was decided, which every outcome has and which orders the log; its
+executor, by kind and identity; and its effect, typed by the action's
+kind. Outcomes are records of their own, in a log of their own with the
 consumer interface's cursor rules. A carried-out action's effect is still
 the event it produced (a harvest stays a `HARVEST` event, naming its
 action). A control policy and a training loop read outcomes and
 observations; neither reads anything else.
 
-**One executor contract.** The protocol's execution contract becomes the
-only one: an executor says which kinds it carries out, takes a plan or a
-revision of one from an instant on, and writes outcomes as time passes.
-It refuses at once what it can never do (a kind it does not carry out, a
-device, plant or target it does not have, an instant it does not admit),
-and checks the greenhouse's state when an action is due: a fruit that is
-not there yet is refused then, if it is still not there, not when the plan
-is given. A recorded history raises
-`ActionNotExecutable`. The simulator's run implements it, replacing the
-engine's executor (decision 0035).
+**A revision steers from then on: the gateway's rule.** A revision given to
+a run's gateway replaces, from the next instant its executors can honour,
+the actions not yet started; what was started or done keeps its outcome.
+For a simulated run this is decision 0043 for every kind: the same run id
+and epoch, records before the change unchanged, the clock waiting until
+the rest of the day is worked out again. For a physical run the clock is
+the wall clock, and from then on is from now. A plan given before a
+simulated run starts is part of the run's request and identity, as
+commands and target changes are today.
 
-**A revision steers from then on.** A plan given before a run starts is
-part of the run's request and identity, as commands and target changes are
-today. A revision given while the run plays replaces the actions not yet
-started from the clock's next admissible instant, in the same run and
-epoch, as decision 0043 has it for targets; what was carried out before
-stands.
-
-**Run identities stay.** A plan made only of what today's schedule can say,
-levels and openings at instants, daily commands, target changes and a
-scenario's crop work, has the identity the run has today, so no run id,
-replay digest or kept opening day changes. A plan that says more is
-another run.
+**Simulated run identities stay.** A plan made only of what today's
+schedule can say, levels and openings at instants, daily commands, target
+changes and a scenario's crop work, has the identity the run has today, so
+no run id, replay digest or kept opening day changes. A plan that says
+more is another run.
 
 **Acting is an interface of its own.** The consumer interface stays
 read-only, its routes `GET` (decision 0040), and what it reaches stays
-observed (decision 0036): submitting a plan is a separate actuation
-contract in the protocol, with its own routes and rights.
+observed (decision 0036): giving a plan is the gateway's write side, an
+actuation contract of its own in the protocol.
 
 ## Consequences
 
@@ -125,9 +169,18 @@ contract in the protocol, with its own routes and rights.
   removed, step by step ([P13](../roadmap/p13-actions.md)). The address's
   `&set=`, `&schedule=`, `&daily=` and `&targets=` stay as short spellings
   of a plan, read into it.
+- The simulator ships a gateway, in process: its playback, which owns its
+  run's plan, outcome log and one authorisation group, with the simulated
+  run as its executor. A physical site runs a gateway of its own with real
+  executors behind it, through the same two contracts.
+- Today's simulated executor carries out crop work at a day's start only,
+  where the organ crop steps, and so refuses a crop action due at any
+  other instant when the plan is given. The format does not change when it
+  learns to: crop work within the day is a project of its own, recorded on
+  the roadmap.
 - Decision 0043's "targets are not records" no longer holds once outcomes
   are records: a target changed is an outcome a consumer reads. Its
-  steering, from then on in the same run and epoch, holds for every kind.
+  steering holds for every kind, as the gateway's rule.
 - P11's actuation interface, which P10 left out, is this one.
 - The protocol's version moves (a minor version, below 1.0) with the
   first step that changes it, which keeps the old names as deprecated
@@ -136,8 +189,11 @@ contract in the protocol, with its own routes and rights.
 - The run's organ crop has no water in its root zone: its plants' water
   status is always full. The run refuses `water` until a rung of the crop
   models it, rather than report a watering that changes nothing.
-- An executor with durations and limited hands, such as a simulated robot,
-  is needed for lateness to arise in the simulator at all: its operator
+- An executor with durations and limited hands, a simulated robot, is
+  needed for lateness to arise in the simulator at all: its operator
   carries actions out at once.
-- Worth revisiting if a kind needs timing the plan cannot express, or if
-  outcomes and events turn out to say the same thing twice.
+- How a gateway and its executors and sensors authenticate each other is
+  a requirement here, not a design: the transport is a deployment's.
+- Worth revisiting if a kind needs timing the plan cannot express, if
+  outcomes and events turn out to say the same thing twice, or if one
+  enforcement point proves too coarse for a deployment.
