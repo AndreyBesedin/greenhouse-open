@@ -83,8 +83,9 @@ export function contractReader<T>(schema: SchemaObject, refusal: string): (body:
   };
 }
 
-// What has no contract is read by hand: the field names, which their route
-// writes itself, and the reference QA's file, which a test writes.
+// What has no contract is read by hand: the reference QA's file, which a
+// test writes rather than a service, and whose parts are each checked
+// against their own contracts.
 
 /** Whether a value read from the wire is an object, to read its fields. */
 export function isObject(value: unknown): value is Record<string, unknown> {

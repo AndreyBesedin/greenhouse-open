@@ -253,13 +253,7 @@ def respond(method: str, path: str, body: bytes = b"") -> Response:
         case ["api", "scenarios", scenario_id, "scene"]:
             return _answer(lambda: scenarios.initial_scene(scenario_id, _scene_changes(query)))
         case ["api", "scenarios", scenario_id, "fields"]:
-            layout = _last(query, "layout")
-            return _answer(
-                lambda: {
-                    "fields": list(fields.field_names(scenario_id, layout)),
-                    "configured": fields.configured(scenario_id),
-                }
-            )
+            return _answer(lambda: fields.offered_fields(scenario_id, _last(query, "layout")))
         case ["api", "scenarios", scenario_id, "fields", field_name]:
             return _answer(
                 lambda: fields.field(_run(scenario_id, query), field_name, _seconds(query))

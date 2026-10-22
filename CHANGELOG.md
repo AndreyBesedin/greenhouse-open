@@ -7,6 +7,13 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: the list of a scenario's fields
+  (`GET /api/scenarios/{id}/fields`) is published as a JSON Schema too
+  (`services/field_names.schema.json`), the last of the API's answers the
+  viewer read by hand (W12). The viewer reads it by its schema, and lists
+  no fields from an answer that does not fit, as it did from one it could
+  not read. The answer itself is unchanged.
+
 ## 0.3.0 - 2026-10-21
 
 The reference greenhouse's run played back against one clock, which the
