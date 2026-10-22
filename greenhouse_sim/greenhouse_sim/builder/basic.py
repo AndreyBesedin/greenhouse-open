@@ -7,7 +7,7 @@ from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.geometry import Point2
 from greenhouse_sim.world.identifiers import ItemId
 from greenhouse_sim.world.layout import Layout
-from greenhouse_sim.world.rows import CropRows, RowSupport, TOMATO_GUTTER
+from greenhouse_sim.world.rows import TOMATO_GUTTER, CropRows, RowSupport
 
 
 class BasicSetup(BaseModel):
