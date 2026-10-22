@@ -18,9 +18,12 @@ import os
 import shutil
 import subprocess
 import sys
+import tomllib
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+
+from greenhouse_dev import demo_video
 
 ROOT = Path(__file__).resolve().parents[2]
 WEB = ROOT / "greenhouse_sim" / "web"
@@ -29,6 +32,8 @@ SCRIPTS = ROOT / "scripts"
 NODE_NEEDED = int((WEB / ".nvmrc").read_text().strip())
 # Where `uv run record-demo` finds the video Playwright recorded.
 DEMO_VIDEOS = WEB / "test-results" / "demo"
+# The simulator's version, which the demo's video is named for.
+SIMULATOR_PYPROJECT = ROOT / "greenhouse_sim" / "pyproject.toml"
 
 
 class Unready(RuntimeError):
@@ -122,12 +127,31 @@ def _demo() -> int:
     return _become([sys.executable, str(SCRIPTS / "demo.py"), *_arguments()])
 
 
+def _ffmpeg() -> str:
+    """ffmpeg's path: it cuts the demo's video (`greenhouse_dev.demo_video`)."""
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg is None:
+        raise Unready(
+            "ffmpeg cuts the demo's video and is not on the path: `brew install ffmpeg`, "
+            "`sudo apt install ffmpeg`, or https://ffmpeg.org/download.html."
+        )
+    return ffmpeg
+
+
 def _record_demo() -> int:
+    ffmpeg = _ffmpeg()
     code = _run([_viewer(), "run", "demo:record", "--", *_arguments()], WEB)
     videos = sorted(DEMO_VIDEOS.rglob("*.webm"), key=lambda video: video.stat().st_mtime)
-    if code == 0 and videos:
-        print(f"\nThe video: {videos[-1]}")
-    return code
+    if code or not videos:
+        return code or 1
+    version = tomllib.loads(SIMULATOR_PYPROJECT.read_text())["project"]["version"]
+    print(f"\nThe recording: {videos[-1]}")
+    try:
+        video, first_frame = demo_video.cut(ffmpeg, videos[-1], version)
+    except demo_video.Uncut as failed:
+        raise Unready(str(failed)) from None
+    print(f"The video, cut for the README: {video}\nIts first frame, its preview: {first_frame}")
+    return 0
 
 
 def _api() -> int:
@@ -140,6 +164,10 @@ def _viewer_server() -> int:
 
 def _check() -> int:
     return _become([sys.executable, str(SCRIPTS / "check.py"), *_arguments()])
+
+
+def _release() -> int:
+    return _become([sys.executable, str(SCRIPTS / "release.py"), *_arguments()])
 
 
 def _viewer_checks() -> int:
@@ -184,7 +212,10 @@ COMMANDS: dict[str, Command] = {
     "check": Command(_check, "the repository's Python checks, as CI runs them; --fast as a push"),
     "viewer-checks": Command(_viewer_checks, "the viewer's lint, type check, unit tests and build"),
     "browser-tests": Command(_browser_tests, "the viewer's browser tests, against the simulator"),
-    "record-demo": Command(_record_demo, "record the demo's walk-through as a video"),
+    "record-demo": Command(
+        _record_demo, "record the demo's walk-through as a video, cut for the README"
+    ),
+    "release": Command(_release, "prepare a release's versions, changelog and README video"),
 }
 
 
