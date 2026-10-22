@@ -7,6 +7,28 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: the services log, at INFO, each run and value they
+  make (with how long it took and how many kept ones it was made from),
+  keep, take over from a checkpoint's kept states, and let go (past their
+  bound, dropped, or forgotten), each named by its scenario and a digest of
+  what tells it apart (AUDIT.14). As a library the package prints nothing
+  until an application configures logging; the local API does, at INFO for
+  the simulator, beside each request's line.
+- Releases: a release is a pull request from a `build/release-<version>`
+  branch that the repository's owner merges, opened by the owner or a
+  release manager listed in `.github/release-managers`. The owner then tags
+  its merge commit with `uv run release tag <pull request>`, and the tag's
+  push runs the `Release` workflow, which publishes the GitHub release with
+  the changelog's section (decision 0045). Both check the release first.
+  `uv run release prepare <version>` moves the three packages, the
+  protocol's range and the changelog to the version and locks; `uv run
+  release video <url>` points the README's demo at an uploaded video. The
+  release skill (`.claude/skills/release/SKILL.md`) walks through it.
+- `uv run record-demo` cuts the walk-through's recording for the README:
+  from the moment the walk-through's opening shot, the house and its crop,
+  is drawn, at twice the speed, as an MP4 under GitHub's upload limit, with
+  its first frame saved beside it to check. It needs ffmpeg. The
+  walk-through lingers 3 s on each caption.
 - `greenhouse-sim`: the list of a scenario's fields
   (`GET /api/scenarios/{id}/fields`) is published as a JSON Schema too
   (`services/field_names.schema.json`), the last of the API's answers the

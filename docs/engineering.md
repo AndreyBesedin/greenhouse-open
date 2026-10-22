@@ -194,6 +194,14 @@ pass. The rest wait for a review: when the risk gate holds one, review
 the diff and approve the pull request's latest commit, which the gate
 takes as the acknowledgement (decision 0034).
 
+A release takes the same path, as a pull request from a
+`build/release-<version>` branch that the owner merges. The owner then tags
+its merge commit with `uv run release tag`, and the tag's push publishes the
+GitHub release (decision 0045); a tag ruleset, `tags: owner only`, lets no
+one else create, move or delete a tag. Its versions, changelog and README
+video are prepared with `uv run release`, and its steps are the release
+skill's (`.claude/skills/release/SKILL.md`).
+
 GitHub settings require a pull request for `main` and CI checks. The `main`
 ruleset names its required checks: a renamed CI job, or a new browser-test
 lane, takes its new name there too. Do not require a human approval, or
@@ -296,6 +304,14 @@ history that the roadmap or a commit already records. A private helper whose
 name and types say all of this needs no docstring. For where a change goes
 in the first place, and the files and tests it involves, see the recipes in
 [`docs/guides/`](guides/README.md).
+
+### Logging
+
+A module logs through `logging.getLogger(__name__)`; the package's root has
+a `NullHandler`, and only an application (the local API's `main`) configures
+where the log goes. The services log at INFO what they make, keep, take over
+and let go, with `store` and `event` in each record's `extra`, so that a test
+asks the log what was made (`caplog`) rather than reading a store's insides.
 
 ### Name the numbers that carry meaning
 

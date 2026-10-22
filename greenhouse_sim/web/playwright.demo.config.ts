@@ -11,9 +11,9 @@ import {
 // P09.9's demo video: the final QA's walk-through (`e2e/demo.spec.ts`),
 // recorded by Playwright as it plays, on this machine's graphics card, so
 // that each release can record it again (`npm run demo:record`). The video
-// is written under `test-results/demo/`; uploading it is done by hand
-// (docs/demo.md). PYTHON names an interpreter that has greenhouse-sim
-// installed (`simulatorServer`).
+// is written under `test-results/demo/`, where `uv run record-demo` cuts it
+// for the README; uploading it is done by hand (docs/demo.md). PYTHON names
+// an interpreter that has greenhouse-sim installed (`simulatorServer`).
 // Its preview's port, unless TEST_PORT_OFFSET moves it.
 const OWN_PREVIEW_PORT = 4320;
 const PREVIEW_PORT = testPort(OWN_PREVIEW_PORT);

@@ -187,8 +187,6 @@ def _check_identities_are_unique(
 def _check_scoping(records: Sequence[CanonicalRecord], kind: str) -> list[str]:
     """A record says what it describes: a greenhouse, one of its
     compartments, or one plant. It must at least name its greenhouse."""
-    violations = []
-    for record in records:
-        if not record.greenhouse_id.strip():
-            violations.append(f"a {kind} names no greenhouse")
-    return violations
+    return [
+        f"a {kind} names no greenhouse" for record in records if not record.greenhouse_id.strip()
+    ]

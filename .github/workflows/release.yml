@@ -1,0 +1,67 @@
+name: Release
+
+# A release's tag publishes it (decision 0045). The repository's owner
+# merges a release pull request, from a `build/release-<version>` branch,
+# then tags its merge commit `v<version>` with `uv run release tag <pull
+# request>`; the `tags: owner only` ruleset lets no one else create, move
+# or delete a tag. On the tag's push, `scripts/release.py verify` checks it
+# again: the owner pushed it, on the merge commit of a release pull request
+# the owner merged, opened by the owner or a release manager as
+# `.github/release-managers` listed them before it, every package at the
+# tag's version, the protocol's range moved with them, the changelog dated
+# with nothing left under Unreleased. Then the GitHub release is published
+# with the changelog's section for the version. A tag that fails the check
+# is not published, and this run says why. Publishing skips a release
+# already published, so a run that failed on GitHub's side is run again as
+# it is.
+on:
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  release:
+    name: publish the release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      # The tagged commit, with the history and the tags the check reads.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+
+      - name: Check the release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          TAGGED_BY: ${{ github.actor }}
+          OWNER: ${{ github.repository_owner }}
+        run: >-
+          python scripts/release.py verify --tag "$TAG" --tagged-by "$TAGGED_BY"
+          --owner "$OWNER" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            echo "v$VERSION is already published."
+            exit 0
+          fi
+          python scripts/release.py notes "$VERSION" > "$RUNNER_TEMP/notes.md"
+          gh release create "v$VERSION" --verify-tag \
+            --title "greenhouse-open $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
