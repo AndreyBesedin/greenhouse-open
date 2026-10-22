@@ -32,7 +32,7 @@ OCT_29 = SEP_5 + 54  # clocks go back: 02:00-02:59 local happens twice
 
 
 def _row(datenum: float, **values: object) -> list[object]:
-    cells: dict[str, object] = {column: "NaN" for column in HEADER}
+    cells: dict[str, object] = dict.fromkeys(HEADER, "NaN")
     cells.update(datenum=datenum, date=None, time=None)
     cells.update(values)
     return [cells[column] for column in HEADER]

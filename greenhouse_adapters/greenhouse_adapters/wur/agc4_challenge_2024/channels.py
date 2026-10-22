@@ -148,7 +148,7 @@ ZERO_PLACEHOLDER_MAX = 1e-9
 # Channels whose source codes are recoded to domain values. A code that is
 # not listed is refused rather than guessed.
 RECODED: dict[str, dict[float, float]] = {
-    # channel_info: "1 = on, 2 = out"
+    # The dataset's channel_info says 1 is on and 2 is out.
     "compartment/co2_actuation_state": {1.0: 1.0, 2.0: 0.0},
 }
 

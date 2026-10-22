@@ -56,6 +56,7 @@ changes course is a new record that supersedes the old one.
 | [0043](0043-a-target-changed-while-a-run-plays-steers-it-from-then-on.md) | A target changed while a run plays steers it from then on | Accepted |
 | [0044](0044-public-records-speak-for-the-project.md) | Public records speak for the project | Accepted |
 | [0045](0045-a-release-is-a-pull-request-the-owner-merges.md) | A release is a pull request the owner merges and tags, and CI publishes it | Accepted |
+| [0047](0047-python-lint-rules-a-family-at-a-time.md) | Python lint rules, a family at a time | Accepted |
 
 ## Template
 

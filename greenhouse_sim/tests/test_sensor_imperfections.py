@@ -172,7 +172,7 @@ def test_clean_readings_are_the_truth_for_qa() -> None:
     }
 
     back = [o.value for o in observed.observations if o.sensor_id == "temperature_back"]
-    assert back == [value for value in truth["temperature_back"].values]
+    assert back == list(truth["temperature_back"].values)
 
 
 def test_the_climate_boxs_imperfect_sensor_errs_as_configured() -> None:
