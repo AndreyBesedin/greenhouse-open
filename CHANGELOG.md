@@ -7,6 +7,15 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: an envelope may name the gutter lines that keep a post
+  on its inner frames (`inner_posts`). A lattice girder under the gutters
+  then carries the gutters between, from post to post, drawn and shading
+  the sun like the other members. The reference greenhouse's posts inside
+  the house now stand at the side walls only, and the tomato compartment's
+  leave its middle path, so that no post stands on a pipe rail between the
+  rows (#302). Both scenarios' runs have new identities, and the reference
+  greenhouse's kept opening day, replay and QA views were worked out again.
+  Every other scenario and its runs are unchanged.
 - `greenhouse-sim`: the services log, at INFO, each run and value they
   make (with how long it took and how many kept ones it was made from),
   keep, take over from a checkpoint's kept states, and let go (past their

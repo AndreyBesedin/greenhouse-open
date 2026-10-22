@@ -214,9 +214,9 @@ class Shadows:
 
 def roof_shading(envelope: Envelope) -> float:
     """The share of a house's plan its roof's structure covers, seen from
-    above: each rafter's width along its run across the span, and each
-    gutter's width, as far as it lies over the house, along its length. The
-    posts, upright, cover next to nothing."""
+    above: each rafter's and girder's width along its run across the house,
+    and each gutter's width, as far as it lies over the house, along its
+    length. The posts, upright, cover next to nothing."""
     low_y, high_y = 0.0, envelope.width
     covered = 0.0
     for member in envelope.members():

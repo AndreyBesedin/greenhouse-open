@@ -26,7 +26,11 @@ The length is divided into bays. A structural frame stands at each end of
 every bay: a post at every gutter line, from the floor to the eaves, and a
 rafter up each roof slope. Frames are numbered from the front end wall (x = 0),
 starting at 0, and each is placed at its own multiple of the bay spacing, so
-nothing drifts along the house.
+nothing drifts along the house. A house may keep the floor inside it clear of
+posts, as a Venlo house with trellis girders does: on its inner frames, only
+the gutter lines it names keep a post, and the gutters between rest on a
+lattice girder under the eaves, from post to post. The gable frames keep a
+post at every gutter line, in their walls.
 
 Openings are rectangles on a host surface, given in the host's own x-y plane,
 with an open fraction from 0 (closed) to 1. Vents are top-hung: hinged along
@@ -36,6 +40,7 @@ boundary: what airflow will pass through (P04). The host's surface is not cut:
 an opening lies on it.
 """
 
+import itertools
 import math
 from typing import Annotated, Final, Self
 
@@ -75,7 +80,12 @@ MOST_SPANS_BY_BAYS: Final = 2_000
 # of their own: the scene draws them so, and they shade the sun so.
 GUTTER_WIDTH_M: Final = 0.2
 GUTTER_DEPTH_M: Final = 0.15
-MEMBER_RADII_M: Final = {MemberKind.POST: 0.05, MemberKind.RAFTER: 0.03}
+MEMBER_RADII_M: Final = {
+    MemberKind.POST: 0.05,
+    MemberKind.RAFTER: 0.03,
+    # A lattice girder's chords, as one bar.
+    MemberKind.GIRDER: 0.05,
+}
 
 _ALONG = Vector3(x=1.0, y=0.0, z=0.0)
 _BACK_ALONG = Vector3(x=-1.0, y=0.0, z=0.0)
@@ -276,6 +286,12 @@ class Envelope(BaseModel):
     spans: Annotated[PositiveInt, Field(le=MOST_SPANS)] = 1
     # Bays one after another along the length, each as long as the others.
     bays: Annotated[PositiveInt, Field(le=MOST_BAYS)] = 1
+    # On the frames inside the house, the gutter lines that keep a post,
+    # rising from 0, the right side wall's, to `spans`, the left's; girders
+    # carry the gutters between. None: a post at every gutter line. Left out
+    # of the dump while None, so that a house without girders, and its runs'
+    # identities, stay as they were.
+    inner_posts: Annotated[list[int] | None, Field(exclude_if=lambda posts: posts is None)] = None
     # Doors and vents, each on one of the envelope's surfaces.
     openings: list[Opening] = []
     # Places the greenhouse's frame in the world.
@@ -287,6 +303,21 @@ class Envelope(BaseModel):
             raise ValueError(
                 f"{self.spans} spans of {self.bays} bays; a greenhouse has at most "
                 f"{MOST_SPANS_BY_BAYS} of them"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _inner_posts_cross_the_house(self) -> Self:
+        posts = self.inner_posts
+        if posts is not None and (
+            not posts
+            or posts[0] != 0
+            or posts[-1] != self.spans
+            or any(low >= high for low, high in itertools.pairwise(posts))
+        ):
+            raise ValueError(
+                f"the inner posts {posts} must rise from gutter line 0 to {self.spans}, "
+                "one post to a line"
             )
         return self
 
@@ -487,13 +518,20 @@ class Envelope(BaseModel):
 
     def members(self) -> list[Member]:
         """The structural frames: at every bay line, a post at every gutter
-        line and a rafter up each roof slope, from the eaves to the ridge."""
+        line and a rafter up each roof slope, from the eaves to the ridge. On
+        the inner frames of a house with `inner_posts`, a post at those lines
+        only, and a girder from post to post where lines lie between, hung
+        under the gutters it carries."""
         eave, ridge = self.eave_height, self.ridge_height
         half_span = self.span_width / 2
+        girder_z = eave - GUTTER_DEPTH_M - MEMBER_RADII_M[MemberKind.GIRDER]
+        every_line = list(range(self.spans + 1))
         members: list[Member] = []
         for frame in range(self.bays + 1):
             x = self._frame_position(frame)
-            for index in range(self.spans + 1):
+            gable = frame in (0, self.bays)
+            posted = every_line if gable or self.inner_posts is None else self.inner_posts
+            for index in posted:
                 y = self._span_edge(index)
                 members.append(
                     Member(
@@ -504,6 +542,17 @@ class Envelope(BaseModel):
                         end=Vector3(x=x, y=y, z=eave),
                     )
                 )
+            for low, high in itertools.pairwise(posted):
+                if high - low > 1:
+                    members.append(
+                        Member(
+                            member_id=f"frame_{frame}_girder_{low}_{high}",
+                            kind=MemberKind.GIRDER,
+                            frame=frame,
+                            start=Vector3(x=x, y=self._span_edge(low), z=girder_z),
+                            end=Vector3(x=x, y=self._span_edge(high), z=girder_z),
+                        )
+                    )
             for index in range(self.spans):
                 span_start = self._span_edge(index)
                 ridge_point = Vector3(x=x, y=span_start + half_span, z=ridge)
