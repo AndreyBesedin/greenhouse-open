@@ -7,6 +7,13 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: the services log, at INFO, each run and value they
+  make (with how long it took and how many kept ones it was made from),
+  keep, take over from a checkpoint's kept states, and let go (past their
+  bound, dropped, or forgotten), each named by its scenario and a digest of
+  what tells it apart (AUDIT.14). As a library the package prints nothing
+  until an application configures logging; the local API does, at INFO for
+  the simulator, beside each request's line.
 - `greenhouse-sim`: the list of a scenario's fields
   (`GET /api/scenarios/{id}/fields`) is published as a JSON Schema too
   (`services/field_names.schema.json`), the last of the API's answers the

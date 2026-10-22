@@ -167,7 +167,7 @@ class CheckpointSummary(BaseModel):
 # Each with the state it was kept with: let go, it takes that state with it,
 # and not one the same checkpoint, uploaded again meanwhile, keeps since.
 CHECKPOINTS: Store[str, tuple[Checkpoint, KeptState]] = Store(
-    "checkpoints", KEPT_CHECKPOINTS, on_drop=lambda key, kept: drop(key, kept[1])
+    "checkpoints", KEPT_CHECKPOINTS, on_drop=lambda key, kept: drop(key, kept[1]), label=str
 )
 
 

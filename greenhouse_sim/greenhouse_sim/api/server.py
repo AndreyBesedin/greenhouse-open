@@ -23,6 +23,7 @@ to give it, as a `Server-Timing` header's `sim` metric, in milliseconds
 import argparse
 import faulthandler
 import json
+import logging
 import signal
 import sys
 import time
@@ -61,6 +62,9 @@ READ_TIMEOUT_S: Final = 30.0
 # its fields and its CFD boundaries at once, and its browser tests open
 # several viewers together; past this, macOS refuses a connection outright.
 PENDING_CONNECTIONS: Final = 64
+# The simulator's own log, beside each request's line on stderr: when, from
+# which module, and what it says.
+LOG_FORMAT: Final = "%(asctime)s %(name)s: %(message)s"
 
 
 class SimulatorServer(ThreadingHTTPServer):
@@ -243,6 +247,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="how fast a played-back run's clock plays a simulated day",
     )
     args = parser.parse_args(argv)
+    # What the simulator's services make, keep, take over and let go, at
+    # INFO (AUDIT.14); other libraries' warnings only.
+    logging.basicConfig(level=logging.WARNING, format=LOG_FORMAT, stream=sys.stderr)
+    logging.getLogger("greenhouse_sim").setLevel(logging.INFO)
     # `kill -USR1 <pid>` prints every thread's stack to stderr and leaves
     # the server running, to see where a busy or stuck one is.
     faulthandler.register(signal.SIGUSR1, all_threads=True)

@@ -29,7 +29,7 @@ from greenhouse_sim.solar.shadows import Shadows
 # How many scenarios' sunlight, under a layout and a weather, are kept.
 KEPT_SUNLIGHT: Final = 8
 
-SUNLIGHT: Store[tuple[str, str, str], PlantLight] = Store("sunlight", KEPT_SUNLIGHT)
+SUNLIGHT: Store[tuple[str, str, str], PlantLight] = Store("sunlight", KEPT_SUNLIGHT, label="/".join)
 
 
 def first_crowns(config: ScenarioConfig) -> list[Crown]:

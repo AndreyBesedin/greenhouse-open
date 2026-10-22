@@ -297,6 +297,14 @@ name and types say all of this needs no docstring. For where a change goes
 in the first place, and the files and tests it involves, see the recipes in
 [`docs/guides/`](guides/README.md).
 
+### Logging
+
+A module logs through `logging.getLogger(__name__)`; the package's root has
+a `NullHandler`, and only an application (the local API's `main`) configures
+where the log goes. The services log at INFO what they make, keep, take over
+and let go, with `store` and `event` in each record's `extra`, so that a test
+asks the log what was made (`caplog`) rather than reading a store's insides.
+
 ### Name the numbers that carry meaning
 
 A number that encodes a modelling assumption, a rate, a threshold, a range, a
