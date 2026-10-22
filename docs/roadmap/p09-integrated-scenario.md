@@ -1,8 +1,11 @@
 # P09: Integrated greenhouse scenario, replay and release QA
 
-**Status:** done: P09.1 to P09.9, released as 0.2.0 and again in 0.3.0.
-The README plays the walk-through of the final QA, whose twelve steps run
-in CI as a browser test (`e2e/demo.spec.ts`). Part of the
+**Status:** in progress: P09.1 to P09.8 done, and P09.9 released as 0.2.0
+and again in 0.3.0, but for the longer video its section 9 plans, which
+the README links by its thumbnail. The acceptance criteria are met. The
+README plays the short cut of the final QA's walk-through, which also runs
+in CI as a browser test (`e2e/demo.spec.ts`), checking one visible result
+a step rather than every check the final QA lists. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -284,7 +287,7 @@ run in their own Playwright project, as the plant lab's and the sun's do.
 | P09.6 | `feat(qa): add QA mode with truth overlays` | Done |
 | P09.7 | `test(e2e): add integrated visual regression suite` | Done |
 | P09.8 | `perf(sim): add representative performance benchmark` | Done |
-| P09.9 | `docs(release): document local demo and QA protocol` | Done |
+| P09.9 | `docs(release): document local demo and QA protocol` | In progress |
 
 ### P09.1: Scenarios as manifests
 
@@ -947,14 +950,14 @@ A reviewer should be able to:
   simulator's time for the latest request in the HUD (P09.8).
 - [x] Every major subsystem has its own QA scenario, and the integrated one
   exercises them together: each project's final QA from P00 to P08, and
-  `reference-greenhouse-v1` above, walked through in CI.
+  `reference-greenhouse-v1` above, whose walk-through runs in CI.
 - [x] No external service is needed to run the reference simulation: its
   weather is the manifest's seeded season, and the simulator and the
   viewer run on the one machine.
 - [x] Performance measurements identify the next real bottleneck before any
-  rewrite in another language: P09.8's report names it, the sun's heat in
-  the house's air and the schedule's scan, and neither asks for another
-  language.
+  rewrite in another language: P09.8's report names it, the house's air,
+  91% of a simulated day; profiling the air found the sun's heat in it and
+  the schedule's scan, and neither asks for another language (P09.8).
 
 ## Known approximations
 
