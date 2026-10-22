@@ -16,6 +16,10 @@ Read only the policies relevant to the change:
 - [Address-review skill](.claude/skills/address-review/SKILL.md) when answering
   a review of a pull request: how to judge findings, fix with regression tests,
   reply on and resolve threads, and keep the risk gate's tick honest.
+- [Release skill](.claude/skills/release/SKILL.md) when making a release:
+  who may, the version, the changelog against what merged, the release
+  pull request, the demo video, and the owner's tag, which CI publishes
+  (decision 0045).
 
 ## Working in this repository
 
