@@ -24,10 +24,11 @@ def _touches_model_state(source: str) -> list[int]:
     """Line numbers that read `plant_model` or import the model's state types."""
     lines = []
     for node in ast.walk(ast.parse(source)):
-        if isinstance(node, ast.Attribute) and node.attr == "plant_model":
-            lines.append(node.lineno)
-        elif isinstance(node, ast.ImportFrom) and node.module == STATE_MODULE:
-            lines.append(node.lineno)
+        match node:
+            case ast.Attribute(attr="plant_model"):
+                lines.append(node.lineno)
+            case ast.ImportFrom(module=module) if module == STATE_MODULE:
+                lines.append(node.lineno)
     return lines
 
 

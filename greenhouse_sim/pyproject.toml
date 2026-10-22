@@ -20,7 +20,11 @@ line-length = 100
 target-version = "py314"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+# A range is written as a number line (`low < value < high`), and a named
+# constant is compared with the number it should be: SIM300 would turn
+# both around.
+ignore = ["SIM300"]
 
 [tool.mypy]
 python_version = "3.14"

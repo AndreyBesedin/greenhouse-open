@@ -263,7 +263,8 @@ Ruff formatting is the source of truth. Do not hand-format around it.
 The Python baseline is:
 
 - Python 3.14+;
-- Ruff formatting and linting;
+- Ruff formatting and linting, with one set of rules: `ruff.toml` and each
+  package's `pyproject.toml` say the same (`tests/test_lint_config.py`);
 - strict mypy;
 - pytest;
 - explicit types at package and architectural boundaries.

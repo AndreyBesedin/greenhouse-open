@@ -238,9 +238,12 @@ def _structure_problems(plant: Plant) -> list[str]:
     for kind, organ_id, _, organ in plant.organs():
         if organ.born_tt > plant.thermal_time:
             problems.append(f"{organ_id} appeared after the plant's thermal time")
-        if kind == OrganKind.FLOWER and isinstance(organ, Flower):
-            if (organ.fruit is not None) != (organ.stage == FlowerStage.SET):
-                problems.append(f"{organ_id} has a fruit if and only if it set")
+        if (
+            kind == OrganKind.FLOWER
+            and isinstance(organ, Flower)
+            and (organ.fruit is not None) != (organ.stage == FlowerStage.SET)
+        ):
+            problems.append(f"{organ_id} has a fruit if and only if it set")
     trusses = 0
     previous_born = 0.0
     for expected_rank, phytomer in enumerate(plant.stem.phytomers, start=1):

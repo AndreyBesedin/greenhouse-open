@@ -41,9 +41,13 @@ def layer_sources() -> list[Path]:
 def _layer(path: Path) -> tuple[str, str] | None:
     """The package and layer a module belongs to, if it is in one."""
     parts = path.resolve().relative_to(ROOT).parts
-    if len(parts) >= 3 and parts[0] in PACKAGES and parts[1] == parts[0]:
-        if parts[2] in (API, SERVICES):
-            return parts[0], parts[2]
+    if (
+        len(parts) >= 3
+        and parts[0] in PACKAGES
+        and parts[1] == parts[0]
+        and parts[2] in (API, SERVICES)
+    ):
+        return parts[0], parts[2]
     return None
 
 
@@ -68,10 +72,7 @@ def layer_violations(source: str, package: str, layer: str) -> list[tuple[int, s
         top = name.split(".")[0]
         if layer == API:
             reaches_inward = top in PACKAGES and not (
-                name == own
-                or name.startswith(f"{own}.")
-                or name == services
-                or name.startswith(f"{services}.")
+                name in (own, services) or name.startswith((f"{own}.", f"{services}."))
             )
             if reaches_inward:
                 violations.append((line, f"the API imports {name}; it may reach only {services}"))
