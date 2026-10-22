@@ -91,6 +91,16 @@ epoch rising each time its gateway starts again; its clock the wall
 clock. A run that has finished, and a recorded one, cannot be acted on
 (`ActionNotExecutable`).
 
+**What is still to come is carried.** When a run ends and the next run of
+the same installation begins, its equipment changed or its gateway started
+again into a new epoch, the gateway carries the actions not yet resolved
+into it, each checked again against the new configuration, its executors
+and the authorisation in force: one that no longer applies is refused,
+with the reason, and the others keep their ids, principals and
+dependencies. A run that ends for good leaves nothing to carry: its
+pending actions are cancelled. Reviewing what was carried is a consumer's
+or a platform's matter.
+
 **A gateway carries the plan; executors carry out actions.** Each run has a
 gateway, its local endpoint, which:
 
@@ -99,8 +109,11 @@ gateway, its local endpoint, which:
 - authorises (below);
 - writes the outcome log;
 - serves the run's read side, the consumer interface's observations,
-  events and outcomes, and its write side, plans given, revised and
-  cancelled.
+  events and outcomes, and the actions not yet resolved as they stand,
+  listed and filtered; and its write side, plans given and revised, and
+  actions cancelled, a whole plan or those chosen, each cancellation an
+  outcome naming who made it, its dependents following the plan's rule
+  for a failed prerequisite.
 
 Behind it, an executor only carries out one action it is assigned, at an
 instant, and reports when it started and finished, and whether it was
@@ -134,7 +147,9 @@ plants, a controller's targets. The gateway is the one place they are
 enforced; a refusal is an outcome, with its reason. The groups'
 configuration is versioned, and an input of the run: the version a
 simulated run starts with is part of its request, and each change takes
-effect from an instant and is recorded, so a replay decides the same. Executors and sensors hold no rights: they trust the
+effect from an instant and is recorded, so a replay decides the same.
+Grants go no further than kinds and targets: limits by time or quantity
+are a business's rules, which a platform enforces before it submits. Executors and sensors hold no rights: they trust the
 gateway's channel, which must be authenticated. Who defines the groups is
 the deployment's: a platform may manage them and hand them to its
 gateway. The simulator's gateway has one group, the local operator,
@@ -195,7 +210,9 @@ actuation contract of its own in the protocol.
   the roadmap.
 - Decision 0043's "targets are not records" no longer holds once outcomes
   are records: a target changed is an outcome a consumer reads. Its
-  steering holds for every kind, as the gateway's rule.
+  steering holds for every kind, as the gateway's rule. Its restart "without
+  the changes" holds for what was carried out before the restart, which a
+  new epoch does not repeat; what was still to come is carried into it.
 - P11's actuation interface, which P10 left out, is this one.
 - The protocol's version moves (a minor version, below 1.0) with the
   first step that changes it, which keeps the old names as deprecated
