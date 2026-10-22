@@ -104,11 +104,11 @@ planned action.
 
 ```
 PlannedAction
-  action_id: ItemId                 unique in its plan
+  action_id: ActionId               unique in its plan
   action: Action
   timing: At(at) | Window(not_before, not_after) | Asap(deadline: optional)
-  every: Recurrence(period, from, until: optional) | None
-  after: tuple[ItemId, ...]         planned actions that must be done first
+  every: Recurrence(period, count | until) | None   applied to the timing, below
+  after: tuple[ActionId, ...]       planned actions that must be done first
   if_prerequisite_fails: cancel | proceed          cancel by default
   lateness: Lateness
   expected_duration_s: optional     what the planner expects; the executor reports what it took
@@ -122,6 +122,13 @@ Principal
 ExecutorRef
   kind: ExecutorKind                the simulated run, a person, a robot, a climate computer
   id: str | None                    which one; None allows any of the kind
+
+ActionId                          the protocol's own: letters, digits, '_', '.', '-'
+
+ActionRef                           how an outcome or an assignment names what it is about
+  action_id: ActionId
+  occurrence: int | None            which occurrence of a recurring action, from 0
+  fallback: bool                    the action's fallback rather than the action
 
 Lateness
   tolerance_s: 0                    how late still counts as on time
@@ -147,9 +154,13 @@ Plan
   the minute is today; a `Window` or `Asap` with no such instant in it is
   refused too. Crop work within the day is
   [recorded on the roadmap](#crop-work-within-the-day).
-- **Recurrence** expands to one planned action per occurrence, each with
-  its own id (`{action_id}@{n}`) and its own outcome, as
-  `DailyCommand.through` expands today.
+- **Recurrence** has one anchor, the planned action's timing: occurrence
+  `n`, from 0, is that timing moved by `n` periods (its instant, its
+  window, its deadline), until `count` occurrences or the instant `until`.
+  Each occurrence is a planned action with its own outcome, named
+  `ActionRef(action_id, occurrence=n)`, as `DailyCommand.through` expands
+  today. `{action_id}@{n}` and `{action_id}/fallback` spell them for
+  people; the records keep the structure.
 - **The graph.** `after` makes the plan a directed graph without cycles,
   checked when a plan is given, with its ids unique and every prerequisite
   in it. Actions with no path between them may run side by side. Edges
@@ -161,12 +172,16 @@ Plan
   since which occurrence is meant is not said. The graph is checked once
   more as expanded.
 - **A fallback** is a planned action of its own, derived as occurrences
-  are: `{action_id}/fallback`, due at once when its action is missed, with
-  no fallback of its own. It has its own outcome, which the missed one
-  names (`fallback_id`).
-- **One order at one instant.** Recurring actions first (as daily commands
-  come first today), then by revision, then by place in the plan. A later
-  `set_level` to one device at one instant wins, as a later command does.
+  are: `ActionRef(action_id, fallback=True)`, due at once when its action
+  is missed, with no fallback of its own. It has its own outcome, which
+  the missed one names.
+- **One order at one instant,** across every plan the run has. Recurring
+  actions first (as daily commands come first today); then by the order
+  in which the gateway accepted the revisions that gave them, each
+  accepted revision taking the gateway's next sequence number (for a
+  simulated run, plans given before it starts in the order its request
+  lists them); then by place in the plan. A later `set_level` to one
+  device at one instant wins, as a later command does.
 - **Revisions.** A plan given again with its `plan_id` and a higher
   revision replaces, from an instant on, the actions not yet started: one
   dropped is superseded, one started or done keeps its outcome (below).
@@ -177,15 +192,35 @@ Plan
 Grant
   kinds: frozenset[ActionKind]
   targets: TargetSelector | None    devices, plants or rows, a controller's targets; all if None
+  on_behalf_of: tuple[Principal, ...] = ()   principals it may propose actions for
+  manage_plans: bool = False        may revise or cancel plans other principals gave
 
 AuthorisationGroup
   group_id
   principals: tuple[Principal, ...]
   grants: tuple[Grant, ...]
+
+AuthorisationConfig
+  version: int
+  groups: tuple[AuthorisationGroup, ...]
 ```
 
 - Every planned action carries its principal, and a principal may carry
   out what any of its groups grants it: an action's kind, on its targets.
+- **The submitter is bound.** `submit(plan, by=...)` takes the caller's
+  principal as its channel or the API authenticated it, never as the plan
+  says. Each planned action's `proposed_by` is `by`, unless `by` holds a
+  grant `on_behalf_of` that principal, as a platform proposing for its
+  users would; otherwise the plan is refused whole. A plan's revisions and
+  cancellations come from its owner, the principal that gave its first
+  revision, or from one with `manage_plans`.
+- **Authorisation is an input of the run.** The configuration has a
+  version. The one in force when a simulated run starts is part of its
+  request, and so of its identity; a change while a run plays takes
+  effect from an instant, as a revision does, and the gateway records its
+  version and instant beside the plan's revisions, in its state and in
+  checkpoints. So a replay makes the same decisions, and a physical
+  gateway keeps the same record for whoever audits it.
 - **The gateway is the one enforcement point.** It checks when a plan is
   given, and again when each action falls due, since rights may have
   changed in between; either refusal is an outcome, `refused`, with its
@@ -229,16 +264,20 @@ executor exists.
 
 ```
 ActionOutcome                       a record, frozen
-  outcome_id, run_id, epoch, plan_id, revision, action_id
+  outcome_id, run_id, epoch, plan_id, revision
+  ref: ActionRef                    the action, occurrence or fallback it is about
+  action: Action                    what was asked, as it was asked
+  timing: At | Window | Asap        when it was asked for, as it was asked
   principal: Principal              who asked for it
-  status: executed | late | missed | refused | failed | cancelled | superseded
-  due: Instant | Window             when it was due
+  status: executed | late | missed | refused | failed | cancelled | superseded | unconfirmed
+  due: Instant | Window | None      when it fell due; None for an as-soon-as-possible
+                                    action cancelled or superseded before it could start
   started_at, finished_at: Instant | None    when it ran, if it ran
   resolved_at: Instant              when its outcome was decided: always set
   delivered_at: Instant | None      when it reached the log, if later
   executor: ExecutorRef | None      who carried it out
   reason: str | None                why it was refused, failed, missed or cancelled
-  fallback_id: str | None           the fallback carried out instead, if any
+  fallback: ActionRef | None        the fallback carried out instead, if any
   effect: ActionEffect | None       what it did, typed by its action's kind
   event_id: str | None              the event it produced, if any
 
@@ -253,6 +292,10 @@ ActionEffect, one per kind, by `kind`:
 observations and events: an action missed, refused or superseded before
 it ran has no `started_at`, but has the instant its outcome was decided,
 and none is delivered after the clock.
+
+An outcome carries the action it is about, as it was asked: a consumer
+that did not give the plan, reading a `superseded` or `refused` outcome,
+knows what was not done without asking for the revision that dropped it.
 
 Every planned action, every occurrence and every fallback ends in exactly
 one outcome. Outcomes are a third log beside observations and events, with
@@ -269,10 +312,14 @@ RunGateway (Protocol)               greenhouse_protocol.contracts.gateway
   run() -> RunDescriptor            the run it serves, as the consumer interface has it
   submit(plan, *, by: Principal) -> Receipt
       a plan, or its next revision, from the next instant its executors
-      can honour; what is refused at once comes back in the receipt and
-      as outcomes
-  cancel(plan_id, action_ids | None, *, by: Principal) -> Receipt
-  plan(plan_id) -> PlanState        each action: waiting, assigned, started, or its outcome
+      can honour. A malformed plan is refused whole: the receipt lists its
+      errors, nothing of it is accepted, and no outcome is written. A
+      well-formed plan is accepted, with its sequence number; those of
+      its actions refused at once are listed and written as outcomes
+  cancel(plan_id, action_refs | None, *, by: Principal) -> Receipt
+  plan(plan_id, revision=None) -> PlanState
+      a revision, the latest by default, with each action: waiting,
+      assigned, started, or its outcome; every revision is kept
   outcomes(after) -> OutcomeBatch   the outcome log, with the consumer interface's cursor
   raises ActionNotExecutable        a finished or recorded run
 
@@ -280,11 +327,14 @@ ActionExecutor (Protocol)           greenhouse_protocol.contracts.execution
   kinds() -> frozenset[ActionKind]  the kinds it carries out
   honours(kind, instant) -> bool    the instants it can carry a kind out at
   capacity() -> int                 how many actions at once
-  perform(assignment) -> None       start this action at its instant
+  longest_duration_s(kind) -> float how long a kind may take, at most
+  perform(assignment) -> None       start this action at its instant; idempotent
+  revoke(assignment_id) -> Revocation   revoked (not started), or started, or finished
+  status(assignment_id) -> AssignmentStatus  received, started, finished, or unknown
   reports(after) -> tuple[ExecutionReport, ...]
 
 Assignment
-  assignment_id, run_id, action_id, action: Action, at: Instant, deadline: Instant | None
+  assignment_id, run_id, ref: ActionRef, action: Action, at: Instant, deadline: Instant | None
 
 ExecutionReport
   assignment_id
@@ -299,8 +349,36 @@ gateway. Outcomes are not returned by `submit`: they are written as the
 clock passes and read from the log, by a consumer or by a training loop
 alike.
 
+Between a gateway and an executor that may lose a message, as a physical
+one may:
+
+- **An assignment is carried out at most once.** An executor that receives
+  an assignment id again answers as before and never performs it twice,
+  so a gateway may send it again when unsure it arrived.
+- **A gateway sends an assignment shortly before its instant,** by a lead
+  time each executor states, so that what is cancelled or superseded is
+  rarely already in an executor's hands.
+- **Revocation decides the race.** Cancelling or superseding an action
+  already assigned revokes the assignment. If the executor answers that it
+  had not started, the outcome is `cancelled` or `superseded`; if it had,
+  the outcome follows its report, and the plan's state notes that the
+  cancellation came too late.
+- **A lost report is resolved, not waited for.** An assignment's report is
+  due by its deadline, or its instant, plus the executor's longest
+  duration for its kind. Past that, the gateway asks for its status; if
+  the executor cannot be reached, the outcome is `unconfirmed`, which what
+  waits for it treats as failed. A report that arrives later is kept in the
+  plan's state, not written as a second outcome.
+
+The simulated run loses nothing, so it never needs these; the contract's
+conformance tests exercise them with an executor that drops messages.
+
 **Checks happen at two moments.** When a plan is given, the gateway
-refuses at once: an ill-formed plan or graph, what its principal may not
+refuses it whole, by its receipt, if it is malformed: its schema,
+duplicate ids, a prerequisite not in it, a cycle as given or as expanded,
+a window that closes before it opens, an action proposed for another
+principal without a grant to. It then refuses, as outcomes, each
+well-formed action that cannot be carried out: what its principal may not
 do, a kind no executor carries out, a device, plant or target the run does
 not have, an instant no executor honours. When an action falls due, the
 gateway checks its authorisation again, and the executor checks the
@@ -401,10 +479,10 @@ within the day; the action format needs no change for it.
 
 | Step | What | Commit title | Status |
 | --- | --- | --- | --- |
-| P13.1 | The protocol's types and contracts: `Action`, `PlannedAction`, `Plan`, `Principal`, `Grant`, `AuthorisationGroup`, `ActionOutcome`, `ActionEffect`, `ExecutorRef`, `Assignment`, `ExecutionReport`, the gateway and executor contracts and `ActionNotExecutable`; checks (ids, the graph as given and as expanded, windows, grants, one outcome per action) as conformance functions and their tests; the published JSON Schemas. The old names stay as deprecated aliases; the protocol's minor version moves and the changelog says what each became. Decision 0046 accepted. | `feat(protocol): one action, plan, gateway and executor format` | Proposed |
+| P13.1 | The protocol's types and contracts: `Action`, `ActionId`, `ActionRef`, `PlannedAction`, `Plan`, `Principal`, `Grant`, `AuthorisationGroup`, `AuthorisationConfig`, `ActionOutcome`, `ActionEffect`, `ExecutorRef`, `Assignment`, `ExecutionReport`, the gateway and executor contracts (revocation, status, at most once) and `ActionNotExecutable`; checks (a malformed plan refused whole, the graph as given and as expanded, recurrences, grants and delegation, the order across plans, one outcome per action) as conformance functions and their tests, the executor's with one that drops messages; the published JSON Schemas. The old names stay as deprecated aliases; the protocol's minor version moves and the changelog says what each became. Decision 0046 accepted. | `feat(protocol): one action, plan, gateway and executor format` | Proposed |
 | P13.2 | The run carries out a plan of today's kinds: levels, openings, daily commands and targets become a plan internally; `RunRequest` holds it; the address's spellings are read into it. Every run id, replay digest and kept opening day unchanged. Checkpoints in a new format, format 3 read. | `refactor(sim): the run carries out its schedule as a plan` | Proposed |
 | P13.3 | The simulator's gateway: the playback holds its run's plan and revisions, schedules them onto the run as its executor, writes the outcome log and serves it on the consumer interface; steering as the gateway's rule. The gateway contract's conformance tests run against it. | `feat(sim): the playback as its run's gateway` | Proposed |
-| P13.4 | Authorisation in the gateway: principals on every planned action, groups and grants, checked when a plan is given and when each action falls due, refusals as outcomes; the local operator group. | `feat(sim): the gateway authorises every action` | Proposed |
+| P13.4 | Authorisation in the gateway: principals on every planned action, bound to the authenticated submitter or granted on its behalf; plan ownership; groups and grants in a versioned configuration, an input of the run, its changes recorded; checked when a plan is given and when each action falls due, refusals as outcomes; the local operator group. | `feat(sim): the gateway authorises every action` | Proposed |
 | P13.5 | Crop actions on the run: `harvest`, `lower`, `remove_leaf`, `inspect` at a day's start, refused at other instants and `water` refused, with their reasons; the organ model's `PlantAction` renamed `PlantOperation`; the plant lab and crop work give them; events name their actions. | `feat(sim): crop actions and their outcomes on the run` | Proposed |
 | P13.6 | The graph, windows and lateness, with a simulated executor whose actions take time and which has a number of hands, so that `late`, `missed`, fallbacks and cancelled dependents happen, deterministically. | `feat(sim): plans with order, windows and lateness` | Proposed |
 | P13.7 | The gateway's write side and its routes: give a plan before a run, steer a playing one, cancel, read the plan in force; the playback's targets route becomes an alias. | `feat(api): give, steer and read a run's plan` | Proposed |
@@ -433,7 +511,16 @@ within the day; the action format needs no change for it.
   consumer interface's rules (`check_polls`).
 - [ ] An action its principal may not carry out is refused when the plan is
   given; one whose rights are withdrawn before it falls due is refused
-  then. No executor contract method takes a principal.
+  then, and a replay from a checkpoint refuses it again. No executor
+  contract method takes a principal.
+- [ ] A plan whose actions name a principal other than its authenticated
+  submitter, without a grant on its behalf, is refused whole; so is a
+  malformed plan, by its receipt, with no outcome written.
+- [ ] Actions of different plans at one instant run in the gateway's order
+  of acceptance, the same every time.
+- [ ] On an executor that drops messages: no assignment is carried out
+  twice, a revoked one that had not started is cancelled, and one whose
+  report never comes is `unconfirmed`, with what waits for it cancelled.
 - [ ] An action refused when due, because the greenhouse is not as it
   needed, is refused then, not when the plan was given; one no executor
   can carry out, or not at its instant, is refused at once.
@@ -462,7 +549,8 @@ consumer following:
    with a harvest: refused when given, as not authorised.
 6. Give a plan with a vent opening at 15:00 as a principal allowed to set
    levels, then withdraw that grant at 14:30: the opening is refused at
-   15:00, its outcome saying so.
+   15:00, its outcome saying so, and the change's version and instant are
+   in the plan's state.
 7. Steer the playing run: a revision drops the vent's window before it
    opens. It is superseded; the run id and epoch stay; nothing delivered
    before changes.

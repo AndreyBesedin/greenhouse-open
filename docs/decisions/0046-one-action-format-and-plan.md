@@ -73,10 +73,14 @@ is late, and who proposed it:
 - **who proposed it:** a principal, a person, a policy, a scenario's own
   schedule, by identity.
 
-At one instant, actions are carried out in a fixed order: recurring ones
-first, then by the plan revision that gave them and their place in it, as
-commands at one moment are today, so that a simulated run under a plan is
-deterministic.
+At one instant, actions are carried out in a fixed order, across every
+plan the run has: recurring ones first, then by the order in which the
+gateway accepted the revisions that gave them, then by their place in it,
+as commands at one moment are today, so that a simulated run under its
+plans is deterministic. A recurring action has one anchor, its timing,
+moved by its period for each occurrence. Actions are named by the
+protocol's own identifiers; an occurrence or a fallback by its action's
+and its place.
 
 **A plan belongs to a run, and a run is the protocol's.** A run is what
 the consumer interface already names (decision 0040): a run id, its epoch
@@ -102,34 +106,45 @@ Behind it, an executor only carries out one action it is assigned, at an
 instant, and reports when it started and finished, and whether it was
 done, failed or refused because the greenhouse was not as the action
 needed. It says which kinds it carries out, which instants it can honour
-for each, and how many actions it can carry out at once. The simulated run
+for each, how many actions it can carry out at once, and how long each
+may take. An assignment is carried out at most once, even if it is sent
+again; one revoked before it started is not carried out; and one whose
+report never comes is resolved as unconfirmed, not waited for. The simulated run
 is an executor; so are a climate computer, a robot and a person with a
 task list. The protocol has the two contracts, one for a gateway and one
 for an executor; its execution contract becomes the second.
 
 **Checks happen at two moments.** When a plan is given, the gateway
-refuses, as outcomes recorded then: what is ill-formed, what its
-principal may not do, a kind no executor carries out, a device, plant or
-target the run does not have, and an instant no executor can honour; a
-window or an as-soon-as-possible action starts at the first instant one
+refuses a malformed one whole, by its receipt, writing no outcome; and
+refuses, as outcomes recorded then, each well-formed action its principal
+may not carry out, of a kind no executor carries out, on a device, plant
+or target the run does not have, or at an instant no executor can honour;
+a window or an as-soon-as-possible action starts at the first instant one
 can. When an action falls due, the gateway checks its authorisation again,
 since rights may have changed, and the executor checks the greenhouse: a
 truss to cut that has not grown is refused then, not when the plan was
 given.
 
 **Authorisation by design, in the gateway alone.** Every action carries its
-principal. Authorisation groups grant action kinds to principals,
-optionally limited to targets: devices, plants, a controller's targets.
-The gateway is the one place they are enforced; a refusal is an outcome,
-with its reason. Executors and sensors hold no rights: they trust the
+principal, and that principal is the plan's authenticated submitter
+unless the submitter is granted to propose on its behalf; a plan's
+revisions and cancellations are its owner's. Authorisation groups grant
+action kinds to principals, optionally limited to targets: devices,
+plants, a controller's targets. The gateway is the one place they are
+enforced; a refusal is an outcome, with its reason. The groups'
+configuration is versioned, and an input of the run: the version a
+simulated run starts with is part of its request, and each change takes
+effect from an instant and is recorded, so a replay decides the same. Executors and sensors hold no rights: they trust the
 gateway's channel, which must be authenticated. Who defines the groups is
 the deployment's: a platform may manage them and hand them to its
 gateway. The simulator's gateway has one group, the local operator,
 allowed everything, so the mechanism exists from the start.
 
 **One outcome record.** Each planned action ends in one outcome: carried
-out, carried out late, missed, refused (and why), failed, cancelled, or
-superseded by a later revision. It names its action, plan and principal;
+out, carried out late, missed, refused (and why), failed, cancelled,
+superseded by a later revision, or unconfirmed when its executor never
+reported. It carries its action as it was asked, and names its plan and
+principal;
 when the action was due, when it started and finished, and when its
 outcome was decided, which every outcome has and which orders the log; its
 executor, by kind and identity; and its effect, typed by the action's
