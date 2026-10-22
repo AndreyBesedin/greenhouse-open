@@ -1,24 +1,22 @@
 name: Release
 
-# A release pull request, from a `build/release-<version>` branch, that the
-# repository's owner merges is tagged and published (decision 0045): its
-# merge commit is tagged `v<version>`, and the GitHub release carries the
-# changelog's section for the version. `scripts/release.py verify` says
-# what else it must be: opened by the owner or a release manager, as
+# A release's tag publishes it (decision 0045). The repository's owner
+# merges a release pull request, from a `build/release-<version>` branch,
+# then tags its merge commit `v<version>` with `uv run release tag <pull
+# request>`; the `tags: owner only` ruleset lets no one else create, move
+# or delete a tag. On the tag's push, `scripts/release.py verify` checks it
+# again: the owner pushed it, on the merge commit of a release pull request
+# the owner merged, opened by the owner or a release manager as
 # `.github/release-managers` listed them before it, every package at the
-# version, the protocol's range moved with them, the changelog dated with
-# nothing left under Unreleased, the tag new or already on this merge. A
-# release pull request that fails it is merged but not released, and this
-# run says why. Each step skips what an earlier run of it did, so a run
-# that failed on GitHub's side is run again as it is.
-#
-# The merge commit's own workflow and script run here, as the owner merged
-# them, with a token that can push a tag: a fork's pull request gets a
-# read-only one, and is never released.
+# tag's version, the protocol's range moved with them, the changelog dated
+# with nothing left under Unreleased. Then the GitHub release is published
+# with the changelog's section for the version. A tag that fails the check
+# is not published, and this run says why. Publishing skips a release
+# already published, so a run that failed on GitHub's side is run again as
+# it is.
 on:
-  pull_request:
-    types: [closed]
-    branches: [main]
+  push:
+    tags: ["v*"]
 
 concurrency:
   group: release
@@ -28,20 +26,16 @@ permissions: {}
 
 jobs:
   release:
-    name: tag and publish the release
-    if: >-
-      github.event.pull_request.merged
-      && startsWith(github.event.pull_request.head.ref, 'build/release-')
+    name: publish the release
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: write
+      pull-requests: read
     steps:
-      # The commit the merge put on `main`, not the pull request's test
-      # merge, with the tags, to refuse one that exists.
+      # The tagged commit, with the history and the tags the check reads.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
           fetch-depth: 0
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -51,29 +45,13 @@ jobs:
       - name: Check the release
         id: release
         env:
-          BRANCH: ${{ github.event.pull_request.head.ref }}
-          AUTHOR: ${{ github.event.pull_request.user.login }}
-          MERGED_BY: ${{ github.event.pull_request.merged_by.login }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          TAGGED_BY: ${{ github.actor }}
           OWNER: ${{ github.repository_owner }}
-          COMMIT: ${{ github.event.pull_request.merge_commit_sha }}
-          BASE: ${{ github.event.pull_request.base.sha }}
         run: >-
-          python scripts/release.py verify --branch "$BRANCH" --author "$AUTHOR"
-          --merged-by "$MERGED_BY" --owner "$OWNER" --commit "$COMMIT" --base "$BASE"
-          >> "$GITHUB_OUTPUT"
-
-      - name: Tag the merge commit
-        env:
-          VERSION: ${{ steps.release.outputs.version }}
-        run: |
-          if git rev-parse --quiet --verify "refs/tags/v$VERSION" > /dev/null; then
-            echo "v$VERSION already tags this merge commit."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag --annotate "v$VERSION" --message "greenhouse-open $VERSION. See CHANGELOG.md."
-          git push origin "v$VERSION"
+          python scripts/release.py verify --tag "$TAG" --tagged-by "$TAGGED_BY"
+          --owner "$OWNER" >> "$GITHUB_OUTPUT"
 
       - name: Publish the GitHub release
         env:

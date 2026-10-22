@@ -1,21 +1,25 @@
 ---
 name: release
-description: Make a release of greenhouse-open end to end - check who may release, choose the version, bring the changelog up to what was merged, prepare the release branch (versions, protocol range, dated changelog, lock), open the release pull request, record and cut the demo video, get it uploaded and into the README, hand the pull request to the owner to merge, and confirm that CI tagged and published it. Use this whenever the user asks to release, cut, ship, tag or publish a version ("release 0.4.0", "let's do a release", "bump the version"), to prepare a release pull request, or to record or update the README's demo video for a release.
+description: Make a release of greenhouse-open end to end - check who may release, choose the version, bring the changelog up to what was merged, prepare the release branch (versions, protocol range, dated changelog, lock), open the release pull request, record and cut the demo video, get it uploaded and into the README, hand the pull request to the owner to merge, tag the merge as the owner, and confirm that CI published it. Use this whenever the user asks to release, cut, ship, tag or publish a version ("release 0.4.0", "let's do a release", "bump the version"), to prepare a release pull request, or to record or update the README's demo video for a release.
 ---
 
 # Make a release
 
-A release is a pull request that the repository's owner merges. CI then tags
-it and publishes it (decision 0045). The deliverable is that pull request,
-complete and green, with its demo video in the README. After the owner's
-merge, it is the tag and the GitHub release that the workflow made, checked
-and reported. The commands are in `references/commands.md`.
+A release is a pull request that the repository's owner merges. The owner
+then tags its merge commit, and CI publishes the tag as a GitHub release
+(decision 0045). The deliverable is that pull request, complete and green,
+with its demo video in the README. After the owner's merge, it is the tag,
+pushed through `uv run release tag`, and the GitHub release that the
+workflow made, checked and reported. The commands are in
+`references/commands.md`.
 
-Never push to `main`, push a `v*` tag, run `gh release create`, merge the
-release pull request or tick its manual-review box. `main` takes only
-merged pull requests. The tag and the GitHub release are the workflow's,
-after the owner's merge. The merge and the tick are the owner's. Doing any
-of them by hand skips the review that a release is for.
+Never push to `main`, merge the release pull request, or tick its
+manual-review box. Never make a tag except with `uv run release tag`, and
+never run `gh release create`. `main` takes only merged pull requests. The
+merge, the tick and the tag are the owner's: the tag ruleset lets no one
+else make a tag, and the command checks the release before it tags. The
+GitHub release is the workflow's. Doing any of them by hand skips the
+review that a release is for.
 
 ## 1. Who may release
 
@@ -23,7 +27,7 @@ Read the GitHub login that `gh` acts as, the repository's owner, and
 `.github/release-managers` as it is on `origin/main`. Go on only if the
 login is the owner's or is listed there. Otherwise stop, and say who may
 release: a login is added to the list by a pull request that the owner
-merges. The workflow refuses a release pull request opened by anyone else
+merges. The release's check refuses a pull request opened by anyone else,
 whatever this step finds, so a pull request made anyway is wasted.
 
 ## 2. Is `main` ready
@@ -146,17 +150,24 @@ request.
   reviewed is no longer the diff, and the first line of your report says
   that you unticked it.
 - Tell the owner what is left: read the diff, tick, and merge with a merge
-  commit. The workflow does the rest.
+  commit, then the tag (step 8).
 
 ## 8. After the merge
 
-- Watch the `Release` workflow's run for the merge. Then check that the tag
-  `v<version>` points at the merge commit, and that the GitHub release is
-  the latest, with the changelog's section as its notes.
-- If the run failed, its log says why. A refusal, such as a range left
-  behind or a missing date, is fixed by a pull request from a branch of the
-  same name, `build/release-<version>`, which the owner merges in turn.
-  Only a failure on GitHub's side is re-run. If the workflow itself is
-  broken, tell the owner: a tag made by hand is theirs to ask for.
+- **The tag.** When `gh` acts as the owner, fetch, check out the merge
+  commit (detached) in the worktree, and run `uv run release tag <n>`. It
+  checks the release and pushes `v<version>`, annotated. When `gh` acts as
+  a release manager, ask the owner to run that command, and give it to
+  them with the pull request's number.
+- If `tag` refuses, it says why. A refusal, such as a range left behind or
+  entries left under Unreleased, is fixed by a pull request from a branch
+  of the same name, `build/release-<version>`, which the owner merges and
+  tags in turn.
+- **The release.** The tag's push runs the `Release` workflow. Watch it,
+  then check that the GitHub release is the latest, on `v<version>`, with
+  the changelog's section as its notes. If the run failed, its log says
+  why. Only a failure on GitHub's side is run again. If the workflow
+  itself is broken, tell the owner: a release published by hand is theirs
+  to ask for.
 - Report: the tag, the release's URL, the video's URL, and anything left.
   Then remove the worktree and its local branch.

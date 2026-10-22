@@ -18,7 +18,7 @@ Read only the policies relevant to the change:
   reply on and resolve threads, and keep the risk gate's tick honest.
 - [Release skill](.claude/skills/release/SKILL.md) when making a release:
   who may, the version, the changelog against what merged, the release
-  pull request, the demo video, and what CI does once the owner merges it
+  pull request, the demo video, and the owner's tag, which CI publishes
   (decision 0045).
 
 ## Working in this repository

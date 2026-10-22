@@ -97,10 +97,12 @@ gh pr view <n> --json body --jq .body                    # the manual-review box
 ## After the merge
 
 ```bash
-gh run list --workflow release.yml --limit 1
-gh run watch <run-id>
+gh pr view <n> --json mergeCommit --jq .mergeCommit.oid  # the merge commit
 git fetch origin --tags
-git rev-parse "v<version>^{commit}"                      # the merge commit
+git switch --detach <the merge commit>
+uv run release tag <n>                                   # the owner only: checks, tags, pushes
+gh run list --workflow release.yml --limit 1             # the tag's push started it
+gh run watch <run-id>
 gh release view "v<version>" --json tagName,isLatest,url,body
 gh run view <run-id> --log-failed                        # why a release was refused
 gh run rerun <run-id>                                    # only for a failure on GitHub's side

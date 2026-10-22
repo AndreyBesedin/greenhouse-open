@@ -184,35 +184,48 @@ EARLIER = "b" * 40
 TAGGED = {"v0.1.0": "c" * 40, "v0.3.0": EARLIER}
 
 
+def pull(**change: Any) -> dict[str, Any]:
+    """GitHub's answer for release pull request #7, merged by the owner."""
+    answer = {
+        "number": 7,
+        "merged_at": "2026-11-02T10:00:00Z",
+        "head": {"ref": "build/release-0.4.0"},
+        "user": {"login": OWNER},
+        "merged_by": {"login": OWNER},
+        "merge_commit_sha": MERGE,
+        "base": {"sha": EARLIER},
+    }
+    return answer | change
+
+
 def merged(
     root: Path,
-    branch: str = "build/release-0.4.0",
-    author: str = OWNER,
-    merged_by: str = OWNER,
+    tagged_by: str = OWNER,
     tags: dict[str, str] = TAGGED,
+    **change: Any,
 ) -> list[str]:
-    """Why a release pull request merged as 0.4.0's would not be tagged."""
-    return release.problems(
-        branch, author, merged_by, OWNER, managers={"manager"}, tags=tags, commit=MERGE, root=root
-    )
+    """Why release pull request #7, merged as 0.4.0's, would not be tagged."""
+    merge = release.Merge.of(pull(**change))
+    return release.problems(merge, OWNER, tagged_by, managers={"manager"}, tags=tags, root=root)
 
 
 @pytest.mark.parametrize("author", [OWNER, "manager"])
 def test_a_release_the_owner_merged_is_tagged(root: Path, author: str) -> None:
-    assert merged(released(root), author=author) == []
+    assert merged(released(root), user={"login": author}) == []
 
 
 def test_a_release_already_tagged_on_its_merge_is_checked_again(root: Path) -> None:
-    # A run that tagged, then failed to publish, is run again.
+    # The workflow, after the owner's tag, or a run of either again.
     assert merged(released(root), tags={**TAGGED, "v0.4.0": MERGE}) == []
 
 
 @pytest.mark.parametrize(
     ("change", "problem"),
     [
-        ({"merged_by": "manager"}, "only the repository's owner, owner"),
-        ({"author": "someone"}, "opened by someone, who is neither"),
-        ({"branch": "build/release-0.3.9"}, "does not release 0.4.0"),
+        ({"merged_by": {"login": "manager"}}, "merged by manager: only the repository's owner"),
+        ({"tagged_by": "manager"}, "tagged by manager: only the repository's owner"),
+        ({"user": {"login": "someone"}}, "opened by someone, who is neither"),
+        ({"head": {"ref": "build/release-0.3.9"}}, "does not release 0.4.0"),
         ({"tags": {**TAGGED, "v0.4.0": EARLIER}}, f"v0.4.0 is already tagged, on {EARLIER[:12]}"),
         ({"tags": {**TAGGED, "v0.5.0": EARLIER}}, "does not follow 0.5.0"),
     ],
@@ -221,6 +234,11 @@ def test_a_release_is_not_tagged(root: Path, change: dict[str, Any], problem: st
     found = merged(released(root), **change)
 
     assert len(found) == 1 and problem in found[0]
+
+
+def test_a_pull_request_not_merged_is_not_released() -> None:
+    with pytest.raises(Refused, match="#7 is not merged"):
+        release.Merge.of(pull(merged_at=None, merged_by=None))
 
 
 def test_a_release_whose_protocol_range_was_left_behind_is_not_tagged(root: Path) -> None:
@@ -292,19 +310,110 @@ def test_the_tags_are_read_with_the_commits_they_tag(repository: Path) -> None:
     assert release._tags(repository) == {"v0.1.0": first, "v0.2.0": second}
 
 
-def test_verify_prints_the_version_for_the_workflow(
+def answering(answers: dict[str, Any]) -> Any:
+    """`release._gh`, answering each `gh` call from `answers`."""
+
+    def gh(*arguments: str) -> Any:
+        return answers[" ".join(arguments)]
+
+    return gh
+
+
+def test_verify_prints_the_version_of_the_tag_pushed(
     root: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setattr(release, "ROOT", released(root))
-    monkeypatch.setattr(release, "_tags", lambda root: TAGGED)
+    monkeypatch.setattr(release, "_head", lambda root: MERGE)
+    monkeypatch.setattr(release, "_tags", lambda root: {**TAGGED, "v0.4.0": MERGE})
     monkeypatch.setattr(release, "managers_at", lambda revision, root: set())
-    arguments = ["--branch", "build/release-0.4.0", "--author", OWNER, "--owner", OWNER]
-    arguments += ["--commit", MERGE, "--base", EARLIER]
+    pulls = f"api repos/{{owner}}/{{repo}}/commits/{MERGE}/pulls"
+    monkeypatch.setattr(
+        release,
+        "_gh",
+        answering(
+            {
+                pulls: [{"number": 6, "merge_commit_sha": EARLIER}, pull()],
+                "api repos/{owner}/{repo}/pulls/7": pull(),
+            }
+        ),
+    )
+    verify = ["verify", "--owner", OWNER, "--tagged-by", OWNER]
 
-    assert release.main(["verify", *arguments, "--merged-by", OWNER]) == 0
+    assert release.main([*verify, "--tag", "v0.4.0"]) == 0
     assert capsys.readouterr().out == "version=0.4.0\n"
-    assert release.main(["verify", *arguments, "--merged-by", "manager"]) == 1
-    assert "only the repository's owner" in capsys.readouterr().err
+    assert release.main([*verify, "--tag", "v0.4.1"]) == 1
+    assert "tag v0.4.1 does not name 0.4.0" in capsys.readouterr().err
+
+
+@pytest.fixture
+def merged_release(
+    root: Path, repository: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, Path]:
+    """Release pull request #7 merged in a repository of its own, which
+    pushes to a bare `origin`; its base lists the managers."""
+    base = commit(repository, "the managers")
+    released(repository)
+    merge = commit(repository, "Merge pull request #7")
+    origin = repository.with_name(f"{repository.name}-origin")
+    git(repository, "init", "-q", "--bare", str(origin))
+    git(repository, "remote", "add", "origin", str(origin))
+    git(repository, "push", "-q", "origin", "main")
+    monkeypatch.setattr(release, "ROOT", repository)
+    answer = pull(merge_commit_sha=merge, base={"sha": base})
+    monkeypatch.setattr(
+        release,
+        "_gh",
+        answering(
+            {
+                "api repos/{owner}/{repo}/pulls/7": answer,
+                "api repos/{owner}/{repo}": {"owner": {"login": OWNER}},
+                "api user": {"login": OWNER},
+            }
+        ),
+    )
+    return repository, origin
+
+
+def test_the_owner_tags_the_merge_and_pushes_the_tag(merged_release: tuple[Path, Path]) -> None:
+    repository, origin = merged_release
+
+    assert release.main(["tag", "7"]) == 0
+
+    merge = git(repository, "rev-parse", "HEAD")
+    assert git(origin, "rev-parse", "v0.4.0^{commit}") == merge
+    assert git(origin, "cat-file", "-t", "v0.4.0") == "tag"
+    # Once tagged, the same command again changes nothing.
+    assert release.main(["tag", "7"]) == 0
+    assert git(origin, "rev-parse", "v0.4.0^{commit}") == merge
+
+
+def test_a_release_manager_does_not_tag(
+    merged_release: tuple[Path, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _, origin = merged_release
+    answers = release._gh
+    monkeypatch.setattr(
+        release, "_gh", lambda *a: {"login": "manager"} if a == ("api", "user") else answers(*a)
+    )
+
+    assert release.main(["tag", "7"]) == 1
+
+    assert "tagged by manager: only the repository's owner" in capsys.readouterr().err
+    assert git(origin, "tag", "--list") == ""
+
+
+def test_a_release_is_tagged_only_from_its_merge(
+    merged_release: tuple[Path, Path], capsys: pytest.CaptureFixture[str]
+) -> None:
+    repository, origin = merged_release
+    git(repository, "switch", "-q", "--detach", "HEAD~1")
+
+    assert release.main(["tag", "7"]) == 1
+
+    assert "check out #7's merge first" in capsys.readouterr().err
+    assert git(origin, "tag", "--list") == ""
 
 
 def test_the_repositorys_packages_are_released_together() -> None:

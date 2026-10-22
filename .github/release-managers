@@ -1,6 +1,5 @@
 # Who may open a release pull request (decision 0045), one GitHub login a
-# line, besides the repository's owner. The owner alone merges it: only a
-# release pull request the owner merges is tagged and published
-# (.github/workflows/release.yml), which reads this list as it stood
+# line, besides the repository's owner. The owner alone merges and tags
+# it; the release's check (scripts/release.py) reads this list as it stood
 # before the release pull request. Adding a login here is a change to
 # .github/, which the pull request risk gate holds for the owner's review.
