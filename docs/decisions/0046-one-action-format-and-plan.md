@@ -67,15 +67,18 @@ is late, and who proposed it:
   them may be carried out side by side;
 - **if it is late:** a tolerance, and what to do past it: carry it out
   late, skip it, carry out a fallback action instead, as a planned action
-  of its own with its own outcome, or abort the rest of the plan. A
-  critical action is skipped when late and its dependents are cancelled;
+  of its own with its own outcome, or abort the rest of the plan; or,
+  for a critical action, miss it and cancel everything that waits for
+  it, as one of those choices rather than a flag beside them;
 - **who may carry it out,** by kind or by identity;
 - **who proposed it:** a principal, a person, a policy, a scenario's own
   schedule, by identity.
 
 At one instant, actions are carried out in a fixed order, across every
-plan the run has: recurring ones first, then by the order in which the
-gateway accepted the revisions that gave them, then by their place in it,
+plan the run has: a stable topological order, a prerequisite always
+first; among actions with no order between them, recurring ones first,
+then by the order in which the gateway accepted the revisions that gave
+them, then by their place in it,
 as commands at one moment are today, so that a simulated run under its
 plans is deterministic. A recurring action has one anchor, its timing,
 moved by its period for each occurrence. Actions are named by the
@@ -97,7 +100,9 @@ again into a new epoch, the gateway carries the actions not yet resolved
 into it, each checked again against the new configuration, its executors
 and the authorisation in force: one that no longer applies is refused,
 with the reason, and the others keep their ids, principals and
-dependencies. A run that ends for good leaves nothing to carry: its
+dependencies. An action already assigned keeps its assignment, whose
+executor is asked before anything is assigned again, so nothing is
+carried out twice. A run that ends for good leaves nothing to carry: its
 pending actions are cancelled. Reviewing what was carried is a consumer's
 or a platform's matter.
 

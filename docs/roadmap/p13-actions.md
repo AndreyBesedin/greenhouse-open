@@ -67,8 +67,13 @@ flowchart LR
   must still allow it. One that no longer applies is `refused`, with that
   reason; the others keep their ids, principals and dependencies, and what
   waits for a refused one follows its plan's rule for a failed
-  prerequisite. A run that ends for good, finished or recorded, leaves
-  nothing to carry: its pending actions are `cancelled`, with that reason.
+  prerequisite. An action already assigned keeps its assignment: the new
+  run restores its assignment id and asks its executor's status before
+  scheduling anything. One that had not started is revoked, then carried
+  and assigned again; one that had started is not assigned again, and its
+  outcome follows its report. A run that ends for good, finished or
+  recorded, leaves nothing to carry: its pending actions are `cancelled`,
+  with that reason.
   Reviewing what was carried is a consumer's or a platform's matter, not
   the gateway's.
 - **The gateway** is a run's local endpoint, and the only one that decides:
@@ -145,10 +150,10 @@ ActionRef                           how an outcome or an assignment names what i
 
 Lateness
   tolerance_s: 0                    how late still counts as on time
-  on_late: run_late | skip | fallback | abort_plan     run_late by default
+  on_late: run_late | skip | critical | fallback | abort_plan     run_late by default
   fallback: Action | None           carried out instead, when on_late is fallback,
-                                    as the planned action `{action_id}/fallback`
-  critical: false                   skip when late, cancel what waits for it
+                                    as the planned action `{action_id}/fallback`;
+                                    given only then
 
 Plan
   plan_id, run_id, revision: int
@@ -188,13 +193,16 @@ Plan
   are: `ActionRef(action_id, fallback=True)`, due at once when its action
   is missed, with no fallback of its own. It has its own outcome, which
   the missed one names.
-- **One order at one instant,** across every plan the run has. Recurring
-  actions first (as daily commands come first today); then by the order
-  in which the gateway accepted the revisions that gave them, each
-  accepted revision taking the gateway's next sequence number (for a
-  simulated run, plans given before it starts in the order its request
-  lists them); then by place in the plan. A later `set_level` to one
-  device at one instant wins, as a later command does.
+- **One order at one instant,** across every plan the run has: a stable
+  topological order, so that a prerequisite always comes before what
+  waits for it, whatever their places. Among actions with no order
+  between them: recurring ones first (as daily commands come first
+  today); then by the order in which the gateway accepted the revisions
+  that gave them, each accepted revision taking the gateway's next
+  sequence number (for a simulated run, plans given before it starts in
+  the order its request lists them); then by place in the plan. A later
+  `set_level` to one device at one instant wins, as a later command
+  does.
 - **Revisions.** A plan given again with its `plan_id` and a higher
   revision replaces, from an instant on, the actions not yet started: one
   dropped is superseded, one started or done keeps its outcome (below).
@@ -226,7 +234,10 @@ AuthorisationConfig
   grant `on_behalf_of` that principal, as a platform proposing for its
   users would; otherwise the plan is refused whole. A plan's revisions and
   cancellations come from its owner, the principal that gave its first
-  revision, or from one with `manage_plans`.
+  revision, or from one with `manage_plans`. A manager's revision keeps
+  the owner's actions it leaves unchanged, with their principals; only
+  the actions it adds or changes are bound to the manager, and checked
+  against the manager's rights.
 - **Authorisation is an input of the run.** The configuration has a
   version. The one in force when a simulated run starts is part of its
   request, and so of its identity; a change while a run plays takes
@@ -262,13 +273,15 @@ what was due when, decides; the executor only reports times. Then:
 | --- | --- | --- | --- |
 | `run_late` | assigns it as soon as it can | `late`, with the delay | waits, then goes on |
 | `skip` | nothing | `missed` | as `if_prerequisite_fails` says |
+| `critical` | nothing | `missed` | cancelled, whatever `if_prerequisite_fails` says |
 | `fallback` | assigns `{action_id}/fallback` instead | `missed`, naming the fallback, which has its own outcome | as `if_prerequisite_fails` says |
 | `abort_plan` | nothing, and assigns nothing else of the plan | `missed` | every action not started: `cancelled` |
 
-`critical` is `skip` with every action that waits for it cancelled. A robot
-to pick a fruit on a moving line within two seconds of its pass is
-`At(pass)`, tolerance 2 s, critical: past that it is missed, and the
-placing that waits for it is cancelled rather than done on nothing.
+`critical` is one choice among the others, not a flag beside them, so an
+action cannot be critical and run late at once. A robot to pick a fruit on
+a moving line within two seconds of its pass is `At(pass)`, tolerance
+2 s, `on_late: critical`: past that it is missed, and the placing that
+waits for it is cancelled rather than done on nothing.
 
 The simulated run carries every action out at once, so on its own an
 action is late only when its instant has passed as the plan is given. A
@@ -350,7 +363,10 @@ RunGateway (Protocol)               greenhouse_protocol.contracts.gateway
 
 ActionKey
   plan_id
+  revision: int                     the revision the caller saw the action in
   ref: ActionRef                    occurrence None: every occurrence still to come
+                                    a key whose action a later revision replaced is
+                                    stale: refused in the receipt, nothing cancelled
 
 ActionState                         an action not yet resolved, as it stands
   plan_id, revision, ref: ActionRef
@@ -368,6 +384,7 @@ ActionExecutor (Protocol)           greenhouse_protocol.contracts.execution
   honours(kind, instant) -> bool    the instants it can carry a kind out at
   capacity() -> int                 how many actions at once
   longest_duration_s(kind) -> float how long a kind may take, at most
+  lead_time_s(kind) -> float        how long before its instant it wants an assignment
   perform(assignment) -> None       start this action at its instant; idempotent
   revoke(assignment_id) -> Revocation   revoked (not started), or started, or finished
   status(assignment_id) -> AssignmentStatus  received, started, finished, or unknown
@@ -403,9 +420,9 @@ one may:
 - **An assignment is carried out at most once.** An executor that receives
   an assignment id again answers as before and never performs it twice,
   so a gateway may send it again when unsure it arrived.
-- **A gateway sends an assignment shortly before its instant,** by a lead
-  time each executor states, so that what is cancelled or superseded is
-  rarely already in an executor's hands.
+- **A gateway sends an assignment shortly before its instant,** by the
+  lead time its executor states for its kind (`lead_time_s`), so that what
+  is cancelled or superseded is rarely already in an executor's hands.
 - **Revocation decides the race.** Cancelling or superseding an action
   already assigned revokes the assignment. If the executor answers that it
   had not started, the outcome is `cancelled` or `superseded`; if it had,
@@ -578,8 +595,19 @@ within the day; the action format needs no change for it.
 - [ ] A plan whose actions name a principal other than its authenticated
   submitter, without a grant on its behalf, is refused whole; so is a
   malformed plan, by its receipt, with no outcome written.
-- [ ] Actions of different plans at one instant run in the gateway's order
-  of acceptance, the same every time.
+- [ ] Actions at one instant run in a stable topological order, a
+  prerequisite before what waits for it whatever its place, and actions of
+  different plans in the gateway's order of acceptance, the same every
+  time.
+- [ ] `on_late` is one choice, `critical` among them; a plan that gives a
+  fallback without choosing it is malformed.
+- [ ] A manager's revision keeps the owner's unchanged actions and their
+  principals, and checks only what it adds or changes against its own
+  rights.
+- [ ] A cancellation key from a revision a later one replaced is stale:
+  refused in the receipt, nothing cancelled.
+- [ ] An executor states its lead time for each kind, and a gateway sends no
+  assignment earlier than that before its instant.
 - [ ] On an executor that drops messages: no assignment is carried out
   twice, a revoked one that had not started is cancelled, and one whose
   report never comes is `unconfirmed`, with what waits for it cancelled.
@@ -600,7 +628,8 @@ within the day; the action format needs no change for it.
   actions are carried, checked again: one whose target no longer exists,
   whose kind or instant no executor honours, or which its principal may no
   longer do is refused with that reason, the others keep their ids,
-  principals and dependencies. A run that ends for good cancels its
+  principals and dependencies; one already assigned keeps its assignment
+  and is not carried out twice. A run that ends for good cancels its
   pending actions.
 - [ ] A finished or recorded run refuses a plan with `ActionNotExecutable`.
 - [ ] A control policy runs on the run through the loop above.
