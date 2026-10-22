@@ -2,7 +2,7 @@ line-length = 100
 target-version = "py314"
 
 [lint]
-select = ["E", "F", "I", "UP", "B", "SIM"]
+select = ["E", "F", "I", "UP", "B", "SIM", "PERF"]
 # A range is written as a number line (`low < value < high`), and a named
 # constant is compared with the number it should be: SIM300 would turn
 # both around.
