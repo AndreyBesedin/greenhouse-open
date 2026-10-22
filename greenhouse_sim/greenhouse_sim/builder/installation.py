@@ -77,7 +77,10 @@ def assess_installation(draft: InstallationDraft) -> list[Finding]:
 
     outside = outside_the_greenhouse(draft.layout, draft.envelope)
     if outside:
-        report("error", "outside_envelope", f"Items outside the greenhouse: {', '.join(outside[:3])}")
+        report(
+            "error", "outside_envelope",
+            f"Items outside the greenhouse: {', '.join(outside[:3])}",
+        )
     inside = inside_the_greenhouse(draft.layout, draft.envelope)
     if inside:
         report("error", "weather_station_inside", f"Weather station must be outside: {inside[0]}")
@@ -89,18 +92,25 @@ def assess_installation(draft: InstallationDraft) -> list[Finding]:
         assigned = {row.row for row in draft.row_crops}
         missing = [row for row in range(1, rows.rows + 1) if row not in assigned]
         if missing:
-            report("error", "unassigned_rows", f"Choose a crop for rows: {', '.join(map(str, missing))}")
+            report(
+                "error", "unassigned_rows",
+                f"Choose a crop for rows: {', '.join(map(str, missing))}",
+            )
         planted = {position.row for position in draft.layout.planting_positions()}
         empty = [row for row in range(1, rows.rows + 1) if row not in planted]
         if empty:
-            report("error", "empty_rows", f"No planting positions remain in rows: {', '.join(map(str, empty))}")
+            report(
+                "error", "empty_rows",
+                f"No planting positions remain in rows: {', '.join(map(str, empty))}",
+            )
         # Today ScenarioConfig has one variety and one CropModel for all rows.
         kinds = {(row.model_id, row.model_revision, row.variety) for row in draft.row_crops}
         if len(kinds) > 1:
             report(
                 "error",
                 "mixed_crops_not_runnable",
-                "Different row crops can be drafted, but current simulations grow one model and variety.",
+                "Different row crops can be drafted, but simulations currently grow "
+                "one model and variety.",
             )
 
     if not any(opening.kind == OpeningKind.DOOR for opening in draft.envelope.openings):
