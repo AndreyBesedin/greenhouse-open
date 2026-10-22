@@ -111,6 +111,7 @@ adds a visible or measurable result.
 | [P09](p09-integrated-scenario.md) | Integrated greenhouse scenario, replay and release QA | In progress |
 | [P10](p10-consumer-interface.md) | A consumer's interface to a running simulation | Done |
 | [P11](p11-climate-setpoints.md) | Climate setpoints: targets that run the house's equipment | In progress |
+| [P13](p13-actions.md) | One action format, and a plan that carries it out | Proposed |
 
 A project's document is added when its first pull request lands.
 

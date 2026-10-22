@@ -55,6 +55,7 @@ changes course is a new record that supersedes the old one.
 | [0042](0042-a-season-a-thermostat-and-the-heat-it-gives-as-a-modelled-record.md) | A season, a thermostat, and the heat it gives as a modelled record | Accepted |
 | [0043](0043-a-target-changed-while-a-run-plays-steers-it-from-then-on.md) | A target changed while a run plays steers it from then on | Accepted |
 | [0044](0044-public-records-speak-for-the-project.md) | Public records speak for the project | Accepted |
+| [0046](0046-one-action-format-and-plan.md) | One action format, and a plan that carries it out | Proposed |
 
 ## Template
 
