@@ -78,7 +78,8 @@ def assess_installation(draft: InstallationDraft) -> list[Finding]:
     outside = outside_the_greenhouse(draft.layout, draft.envelope)
     if outside:
         report(
-            "error", "outside_envelope",
+            "error",
+            "outside_envelope",
             f"Items outside the greenhouse: {', '.join(outside[:3])}",
         )
     inside = inside_the_greenhouse(draft.layout, draft.envelope)
@@ -93,14 +94,16 @@ def assess_installation(draft: InstallationDraft) -> list[Finding]:
         missing = [row for row in range(1, rows.rows + 1) if row not in assigned]
         if missing:
             report(
-                "error", "unassigned_rows",
+                "error",
+                "unassigned_rows",
                 f"Choose a crop for rows: {', '.join(map(str, missing))}",
             )
         planted = {position.row for position in draft.layout.planting_positions()}
         empty = [row for row in range(1, rows.rows + 1) if row not in planted]
         if empty:
             report(
-                "error", "empty_rows",
+                "error",
+                "empty_rows",
                 f"No planting positions remain in rows: {', '.join(map(str, empty))}",
             )
         # Today ScenarioConfig has one variety and one CropModel for all rows.
