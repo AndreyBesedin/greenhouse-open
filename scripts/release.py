@@ -229,9 +229,12 @@ def problems(
     later = [tag for tag in released if parse_version(tag) > parse_version(version)]
     if later:
         found.append(f"{version} does not follow {max(later, key=parse_version)}, already tagged")
-    for package in PROTOCOL_DEPENDENTS:
-        if protocol_range(version) not in (root / package / "pyproject.toml").read_text():
-            found.append(f"{package} does not depend on the protocol as {protocol_range(version)}")
+    expected = protocol_range(version)
+    found.extend(
+        f"{package} does not depend on the protocol as {expected}"
+        for package in PROTOCOL_DEPENDENTS
+        if expected not in (root / package / "pyproject.toml").read_text()
+    )
     try:
         notes(version, root)
         changelog = (root / CHANGELOG).read_text()
