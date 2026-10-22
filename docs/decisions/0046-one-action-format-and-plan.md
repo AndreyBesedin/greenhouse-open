@@ -47,8 +47,11 @@ to what: a kind, its targets by identifier and its parameters, one
 discriminated union (`kind`). The kinds are those above under one name
 each: a device's level, a target's value, watering, harvesting (the ripe
 fruit, a fruit, a truss), lowering, removing a leaf, inspecting. A new
-kind is added to the union; no other action type exists, in the protocol,
-the simulator, its API or its viewer.
+kind is added to the union. No other type of action, one that is
+proposed, planned or reported, exists in the protocol, the simulator, its
+API or its viewer. A model's own operations inside a rung, such as the
+organ crop's, are not actions: nothing proposes or plans them, and they
+report no outcome.
 
 **A plan carries actions out.** A plan is a set of planned actions, each an
 action with its identifier, its timing, what it waits for and what to do
@@ -61,11 +64,11 @@ if it is late:
   plan is a directed graph without cycles: actions with no order between
   them may be carried out side by side;
 - **if it is late:** a tolerance, and what to do past it: carry it out
-  late, skip it, carry out a fallback action instead, or abort the rest of
-  the plan. A critical action is skipped when late and its dependents are
-  cancelled;
-- **who may carry it out,** and who proposed it: a person, a policy, a
-  scenario's own schedule.
+  late, skip it, carry out a fallback action instead, as a planned action
+  of its own with its own outcome, or abort the rest of the plan. A
+  critical action is skipped when late and its dependents are cancelled;
+- **who may carry it out,** by kind or by identity, and who proposed it: a
+  person, a policy, a scenario's own schedule.
 
 At one instant, actions are carried out in a fixed order: recurring ones
 first, then by the plan revision that gave them and their place in it, as
@@ -74,9 +77,11 @@ deterministic.
 
 **One outcome record.** Each planned action ends in one outcome: carried
 out, carried out late, missed, refused (and why), failed, cancelled, or
-superseded by a later revision. It names its action and plan, when the
-action was due and when it started and finished, its executor and its
-effect. Outcomes are records of their own, in a log of their own with the
+superseded by a later revision. It names its action and plan; when the
+action was due, when it started and finished, and when its outcome was
+decided, which every outcome has and which orders the log; its executor,
+by kind and identity; and its effect, typed by the action's kind.
+Outcomes are records of their own, in a log of their own with the
 consumer interface's cursor rules. A carried-out action's effect is still
 the event it produced (a harvest stays a `HARVEST` event, naming its
 action). A control policy and a training loop read outcomes and
@@ -84,8 +89,12 @@ observations; neither reads anything else.
 
 **One executor contract.** The protocol's execution contract becomes the
 only one: an executor says which kinds it carries out, takes a plan or a
-revision of one from an instant on, refuses what it cannot do as refused
-outcomes, and writes outcomes as time passes. A recorded history raises
+revision of one from an instant on, and writes outcomes as time passes.
+It refuses at once what it can never do (a kind it does not carry out, a
+device, plant or target it does not have, an instant it does not admit),
+and checks the greenhouse's state when an action is due: a fruit that is
+not there yet is refused then, if it is still not there, not when the plan
+is given. A recorded history raises
 `ActionNotExecutable`. The simulator's run implements it, replacing the
 engine's executor (decision 0035).
 
@@ -120,8 +129,13 @@ contract in the protocol, with its own routes and rights.
   are records: a target changed is an outcome a consumer reads. Its
   steering, from then on in the same run and epoch, holds for every kind.
 - P11's actuation interface, which P10 left out, is this one.
-- The protocol's version moves (a minor version, below 1.0), and its
-  changelog says what each old name became.
+- The protocol's version moves (a minor version, below 1.0) with the
+  first step that changes it, which keeps the old names as deprecated
+  aliases and says in the changelog what each became; the step that
+  removes them moves it again.
+- The run's organ crop has no water in its root zone: its plants' water
+  status is always full. The run refuses `water` until a rung of the crop
+  models it, rather than report a watering that changes nothing.
 - An executor with durations and limited hands, such as a simulated robot,
   is needed for lateness to arise in the simulator at all: its operator
   carries actions out at once.

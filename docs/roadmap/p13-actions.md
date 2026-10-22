@@ -67,13 +67,18 @@ PlannedAction
   if_prerequisite_fails: cancel | proceed          cancel by default
   lateness: Lateness
   expected_duration_s: optional     what the planner expects; the executor reports what it took
-  executed_by: tuple[ExecutorKind, ...] | None     who may carry it out; anyone if None
+  executed_by: tuple[ExecutorRef, ...] | None      who may carry it out; anyone if None
   proposed_by: Proposer             a person, a policy, a schedule, a scenario; with an id
+
+ExecutorRef
+  kind: ExecutorKind                a simulated operator, a person, a robot, a climate computer
+  id: str | None                    which one; None allows any of the kind
 
 Lateness
   tolerance_s: 0                    how late still counts as on time
   on_late: run_late | skip | fallback | abort_plan     run_late by default
-  fallback: Action | None           carried out instead, when on_late is fallback
+  fallback: Action | None           carried out instead, when on_late is fallback,
+                                    as the planned action `{action_id}/fallback`
   critical: false                   skip when late, cancel what waits for it
 
 Plan
@@ -94,7 +99,18 @@ Plan
   `DailyCommand.through` expands today.
 - **The graph.** `after` makes the plan a directed graph without cycles,
   checked when a plan is given, with its ids unique and every prerequisite
-  in it. Actions with no path between them may run side by side.
+  in it. Actions with no path between them may run side by side. Edges
+  between recurring actions expand with them: between two of the same
+  period, occurrence `n` waits for occurrence `n` (`lower@3` for
+  `harvest@3`); a recurring action may wait for a one-off one, each
+  occurrence for it. A one-off action waiting for a recurring one, and
+  recurring ones of different periods waiting for each other, are refused,
+  since which occurrence is meant is not said. The graph is checked once
+  more as expanded.
+- **A fallback** is a planned action of its own, derived as occurrences
+  are: `{action_id}/fallback`, due at once when its action is missed, with
+  no fallback of its own. It has its own outcome, which the missed one
+  names (`fallback_id`).
 - **One order at one instant.** Recurring actions first (as daily commands
   come first today), then by revision, then by place in the plan. A later
   `set_level` to one device at one instant wins, as a later command does.
@@ -113,7 +129,7 @@ gone, or what it waits for finished too late. Then:
 | --- | --- | --- | --- |
 | `run_late` | carries it out as soon as it can | `late`, with the delay | waits, then goes on |
 | `skip` | nothing | `missed` | as `if_prerequisite_fails` says |
-| `fallback` | carries out the fallback action instead | `missed`, naming the fallback's outcome | as `if_prerequisite_fails` says |
+| `fallback` | carries out `{action_id}/fallback` instead | `missed`, naming the fallback, which has its own outcome | as `if_prerequisite_fails` says |
 | `abort_plan` | nothing, and starts nothing else of the plan | `missed` | every action not started: `cancelled` |
 
 `critical` is `skip` with every action that waits for it cancelled. A robot
@@ -133,12 +149,26 @@ ActionOutcome                       a record, frozen
   outcome_id, greenhouse_id, plan_id, revision, action_id
   status: executed | late | missed | refused | failed | cancelled | superseded
   due: Instant | Window             when it was due
-  started_at, finished_at: Instant | None
-  executor: ExecutorKind | None     who carried it out
+  started_at, finished_at: Instant | None    when it ran, if it ran
+  resolved_at: Instant              when its outcome was decided: always set
+  delivered_at: Instant | None      when it reached the log, if later
+  executor: ExecutorRef | None      who carried it out
   reason: str | None                why it was refused, failed, missed or cancelled
-  effect: dict                      what it did: the harvested mass, the level set
+  fallback_id: str | None           the fallback carried out instead, if any
+  effect: ActionEffect | None       what it did, typed by its action's kind
   event_id: str | None              the event it produced, if any
+
+ActionEffect, one per kind, by `kind`:
+  level_set(device_id, level)               target_set(target, value, unit)
+  harvested(fruit_count, fresh_mass_g)      lowered(by_cm)
+  leaf_removed(leaf_id)                     watered(amount_ml)
+  inspected()
 ```
+
+`resolved_at` orders the log, as `delivered_at`, or the timestamp, orders
+observations and events: an action missed, refused or superseded before
+it ran has no `started_at`, but has the instant its outcome was decided,
+and none is delivered after the clock.
 
 Every planned action, and every occurrence of a recurring one, ends in
 exactly one outcome. Outcomes are a third log beside observations and
@@ -158,8 +188,8 @@ ActionExecutor (Protocol)
   kinds() -> frozenset[str]               the kinds it carries out
   admissible(kind, instant) -> bool       the instants a kind may start at
   submit(plan, *, from_: Instant) -> Receipt
-      the plan, or its next revision, in force from `from_`; the actions it
-      cannot take are refused at once, as outcomes, with the reason
+      the plan, or its next revision, in force from `from_`; what it can
+      never do is refused at once, as outcomes, with the reason
   cancel(plan_id, action_ids | None, *, from_: Instant) -> Receipt
   plan(plan_id) -> PlanState              each action: waiting, due, started, or its outcome
   raises ActionNotExecutable              a recorded history, which cannot be acted on
@@ -167,6 +197,15 @@ ActionExecutor (Protocol)
 
 Outcomes are not returned by `submit`: they are written as the clock
 passes, and read from the log, by a consumer or by a training loop alike.
+
+Checks happen twice. **When a plan is given:** its shape and its graph,
+the kinds the executor carries out, the devices, plants and targets it
+has, the instants it admits, and who may carry each action out; what
+fails is refused at once. **When an action is due:** the greenhouse's
+state, a fruit or truss to harvest, a leaf to remove, room to lower a
+stem into, as `actions/validation.py` checks today; what fails is refused
+then, with `resolved_at` its due instant. A plan may name a truss that
+will have grown by the time it is due.
 
 ### The run as the executor
 
@@ -188,8 +227,15 @@ passes, and read from the log, by a consumer or by a training loop alike.
   checkpoint format; format 3, with commands and target changes, is read
   as a plan of them.
 - **The organ crop** takes `harvest`, `lower` and `remove_leaf` at a day's
-  start, through its own `PlantAction`, which stays the crop model's inner
-  step; the plant lab gives the same actions.
+  start. It turns each into its own operation on a plant, which is the
+  crop rung's inner step, not an action: no one proposes or plans it, and
+  it reports no outcome. P13.3 renames the organ model's `PlantAction` to
+  `PlantOperation` so that the code says so. The plant lab gives the same
+  actions.
+- **Watering** is refused by the run, with the reason: its organ crop has
+  no water in its root zone, and its plants' water status is always full
+  (`biology/plant/environment.py`). It becomes a kind the run carries out
+  when a rung of the crop models the root zone.
 - **The controller** keeps its loops (P11). `set_target` changes their
   targets; `set_level` takes a device out of their hands, and `auto` gives
   it back.
@@ -228,26 +274,27 @@ run when the interface leaves the machine is a question below.
 | Today | Becomes | Removed in |
 | --- | --- | --- |
 | `RequestedAction` and its four types, `ActionResult` | `Action`; a refusal is a `refused` outcome | P13.7 |
-| `ActionExecutionAdapter`, `ActionOutcome`, `ExecutionStatus` | the executor contract and the outcome record above | P13.1 |
+| `ActionExecutionAdapter`, `ActionOutcome`, `ExecutionStatus` | the executor contract and the outcome record above | deprecated in P13.1, removed in P13.7 |
 | `greenhouse_sim.executor` (`ActionExecutor`, `SimulatedOperatorExecutor`, `executor_for`), `SimulationEngine.apply_actions` | the run as the executor; the simulated operator its first kind of executor | P13.7 |
 | `Command`, `&set=`, `&open=`, `&schedule=` | `set_level` at an instant | the types in P13.2; the spellings stay |
 | `DailyCommand`, `&daily=` | `set_level` every day at a time | P13.2 |
 | `TargetChange`, `&targets=` | `set_target` at an instant, on the minute | P13.2 |
 | `POST /api/scenarios/{id}/playback/targets` | a plan revision given to the playing run | P13.5, an alias for one release |
 | `LabAction`, `&act=` | `harvest`, `lower`, `remove_leaf` at a day's start | P13.3 |
+| The organ model's `PlantAction` | the crop rung's inner operation, `PlantOperation` | renamed in P13.3 |
 | `CropWork` | a standing plan's recurring `harvest` (`ripe`) and `lower` (`to_head_room_m`) on every plant | P13.3; its manifest spelling with P11.5 |
 
 ## Steps
 
 | Step | What | Commit title | Status |
 | --- | --- | --- | --- |
-| P13.1 | The format: `Action`, `PlannedAction`, `Plan`, `ActionOutcome`, the executor contract and `ActionNotExecutable`, with checks (ids, the graph, windows, one outcome per action) as conformance functions and their tests; the published JSON Schemas. Decision 0046 accepted. | `feat(protocol): one action, plan and outcome format` | Proposed |
+| P13.1 | The format: `Action`, `PlannedAction`, `Plan`, `ActionOutcome`, `ActionEffect`, the executor contract and `ActionNotExecutable`, with checks (ids, the graph as given and as expanded, windows, one outcome per action) as conformance functions and their tests; the published JSON Schemas. The old names stay as deprecated aliases; the protocol's minor version moves and the changelog says what each became. Decision 0046 accepted. | `feat(protocol): one action, plan and outcome format` | Proposed |
 | P13.2 | The run carries out a plan of today's kinds: levels, openings, daily commands and targets become a plan internally; `RunRequest` holds it; the address's spellings are read into it. Every run id, replay digest and kept opening day unchanged. Checkpoints in a new format, format 3 read. | `refactor(sim): the run carries out its schedule as a plan` | Proposed |
-| P13.3 | Crop actions on the run: `harvest`, `lower`, `remove_leaf`, `water`, `inspect` at a day's start; the plant lab and crop work give them; events name their actions; the outcome log, served to consumers. | `feat(sim): crop actions and their outcomes on the run` | Proposed |
+| P13.3 | Crop actions on the run: `harvest`, `lower`, `remove_leaf`, `inspect` at a day's start, `water` refused with its reason; the organ model's `PlantAction` renamed `PlantOperation`; the plant lab and crop work give them; events name their actions; the outcome log, served to consumers. | `feat(sim): crop actions and their outcomes on the run` | Proposed |
 | P13.4 | The graph, windows and lateness on the run, with a simulated executor whose actions take time and share hands, so that `late`, `missed`, fallbacks and cancelled dependents happen, deterministically. | `feat(sim): plans with order, windows and lateness` | Proposed |
 | P13.5 | The actuation contract and its routes: give a plan before a run, steer a playing one, read the plan in force; the playback's targets route becomes an alias. | `feat(api): give, steer and read a run's plan` | Proposed |
 | P13.6 | The viewer: the Equipment, Openings and Targets panels and the plant lab write one plan; a plan lane in the timeline shows what was due, what happened and why. | `feat(viewer): one plan, and its outcomes in the timeline` | Proposed |
-| P13.7 | The old paths removed: the engine's actions, `greenhouse_sim.executor`, `RequestedAction`, `ActionResult`, `LabAction`; the close-the-loop example as a policy loop on the run; the protocol's minor version and the changelog. | `refactor: one way to act on a greenhouse` | Proposed |
+| P13.7 | The old paths removed: the engine's actions, `greenhouse_sim.executor`, the deprecated aliases (`RequestedAction`, `ActionResult` and the old execution names), `LabAction`; the close-the-loop example as a policy loop on the run; the protocol's minor version moves again, and the changelog says so. | `refactor: one way to act on a greenhouse` | Proposed |
 | P13.8 | The QA scenario below, run and recorded. | `test(e2e): a plan carried out, late and on time` | Proposed |
 
 ## Acceptance criteria
@@ -264,8 +311,12 @@ run when the interface leaves the machine is a question below.
   simultaneous actions in the documented order.
 - [ ] Each lateness policy gives the documented outcomes, its dependents
   included, on the simulated executor with durations.
-- [ ] Every planned action ends in exactly one outcome, and the outcome log
-  keeps the consumer interface's rules (`check_polls`).
+- [ ] Every planned action, every occurrence and every fallback ends in
+  exactly one outcome with its `resolved_at`, and the outcome log keeps the
+  consumer interface's rules (`check_polls`).
+- [ ] An action refused when due, because the greenhouse is not as it
+  needed, is refused then, not when the plan was given; one the executor
+  can never carry out is refused at once.
 - [ ] A revision steers a playing run from the clock's next admissible
   instant, in the same run and epoch, for every kind.
 - [ ] A recorded history refuses a plan with `ActionNotExecutable`.
