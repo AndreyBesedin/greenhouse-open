@@ -7,7 +7,6 @@ previous value on its undo stack and preview changes before committing.
 from collections.abc import Iterable
 
 from greenhouse_sim.builder.installation import InstallationDraft, RowCrop
-from greenhouse_sim.world.identifiers import ITEM_ID_PATTERN
 
 
 def assign_crop_to_rows(
