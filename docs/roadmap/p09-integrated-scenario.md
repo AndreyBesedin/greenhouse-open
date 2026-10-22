@@ -1,8 +1,9 @@
 # P09: Integrated greenhouse scenario, replay and release QA
 
-**Status:** in progress: P09.1 to P09.8 done; P09.9 released as 0.2.0,
-while the README's demo video and the acceptance criteria are still open.
-Part of the [simulator roadmap](README.md).
+**Status:** done: P09.1 to P09.9, released as 0.2.0 and again in 0.3.0.
+The README plays the walk-through of the final QA, whose twelve steps run
+in CI as a browser test (`e2e/demo.spec.ts`). Part of the
+[simulator roadmap](README.md).
 
 ## Goal
 
@@ -283,7 +284,7 @@ run in their own Playwright project, as the plant lab's and the sun's do.
 | P09.6 | `feat(qa): add QA mode with truth overlays` | Done |
 | P09.7 | `test(e2e): add integrated visual regression suite` | Done |
 | P09.8 | `perf(sim): add representative performance benchmark` | Done |
-| P09.9 | `docs(release): document local demo and QA protocol` | In progress |
+| P09.9 | `docs(release): document local demo and QA protocol` | Done |
 
 ### P09.1: Scenarios as manifests
 
@@ -932,16 +933,28 @@ A reviewer should be able to:
 
 ## Acceptance criteria
 
-- [ ] One command starts the simulator and the viewer locally.
-- [ ] The reference scenario is data-driven and versioned.
-- [ ] The same seed and configuration reproduce the QA results within
-  stated numerical and rendering tolerances.
-- [ ] The viewer gives enough diagnostics to understand a failure.
-- [ ] Every major subsystem has its own QA scenario, and the integrated one
-  exercises them together.
-- [ ] No external service is needed to run the reference simulation.
-- [ ] Performance measurements identify the next real bottleneck before any
-  rewrite in another language.
+- [x] One command starts the simulator and the viewer locally: `uv run
+  demo` (P09.9, `tests/test_demo.py`).
+- [x] The reference scenario is data-driven and versioned: its manifest
+  (`scenarios/manifests/reference_greenhouse.json`), with its schema's
+  version and the migrations from earlier ones (P09.1).
+- [x] The same seed and configuration reproduce the QA results within
+  stated numerical and rendering tolerances: the replay's digests
+  (`tests/test_replay.py`), and the golden views' screenshots and probes,
+  compared in a pinned container (P09.7, decision 0014).
+- [x] The viewer gives enough diagnostics to understand a failure: QA
+  mode's truth beside the sensors and its developer panel (P09.6), and the
+  simulator's time for the latest request in the HUD (P09.8).
+- [x] Every major subsystem has its own QA scenario, and the integrated one
+  exercises them together: each project's final QA from P00 to P08, and
+  `reference-greenhouse-v1` above, walked through in CI.
+- [x] No external service is needed to run the reference simulation: its
+  weather is the manifest's seeded season, and the simulator and the
+  viewer run on the one machine.
+- [x] Performance measurements identify the next real bottleneck before any
+  rewrite in another language: P09.8's report names it, the sun's heat in
+  the house's air and the schedule's scan, and neither asks for another
+  language.
 
 ## Known approximations
 

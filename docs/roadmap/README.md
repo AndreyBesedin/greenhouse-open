@@ -108,7 +108,7 @@ adds a visible or measurable result.
 | [P06](p06-virtual-sensors.md) | Virtual sensors and the observation layer | Done |
 | [P07](p07-external-weather.md) | External weather and greenhouse boundary coupling | Done |
 | [P08](p08-sun-and-radiation.md) | Sun position, glazing and radiation propagation | Done |
-| [P09](p09-integrated-scenario.md) | Integrated greenhouse scenario, replay and release QA | In progress |
+| [P09](p09-integrated-scenario.md) | Integrated greenhouse scenario, replay and release QA | Done |
 | [P10](p10-consumer-interface.md) | A consumer's interface to a running simulation | Done |
 | [P11](p11-climate-setpoints.md) | Climate setpoints: targets that run the house's equipment | In progress |
 
