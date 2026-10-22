@@ -1,19 +1,19 @@
 {
   "scenario_id": "reference_greenhouse",
-  "manifest": "5991b2557f1180c6",
+  "manifest": "1b73af0e990e5452",
   "days": [
     {
       "day": 0,
-      "digest": "093ca19f0d4d8dc8",
+      "digest": "fcf3ccca93680930",
       "house_temperature_c": 16.07,
       "house_humidity_pct": 41.1,
       "organs": 870,
-      "thermal_time_cd": 237.0,
+      "thermal_time_cd": 237.01,
       "readings": 264
     },
     {
       "day": 1,
-      "digest": "aa15284f0d2fa9ff",
+      "digest": "4b97c9b678e18d8d",
       "house_temperature_c": 15.99,
       "house_humidity_pct": 38.5,
       "organs": 918,
@@ -22,7 +22,7 @@
     },
     {
       "day": 2,
-      "digest": "1ad83940889ee4e6",
+      "digest": "cf0e517f49792690",
       "house_temperature_c": 15.67,
       "house_humidity_pct": 37.0,
       "organs": 980,

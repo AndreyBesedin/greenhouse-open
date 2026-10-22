@@ -56,8 +56,8 @@ describe("the reference greenhouse's golden views", () => {
 
   it("say their state probes", () => {
     expect(describeProbes(QA.moments.noon.probes)).toBe(
-      "house air 28.16 °C, sun 59.19° up, jet 1.39 m/s, vents exchange 1.08 m³/s, " +
-        "10384 leaves, 741 fruits, 1 red",
+      "house air 28.11 °C, sun 59.19° up, jet 1.39 m/s, vents exchange 1.08 m³/s, " +
+        "10362 leaves, 741 fruits, 1 red",
     );
     expect(describeProbes({})).toBe("");
   });

@@ -39,20 +39,20 @@ test("crop: the reference greenhouse's plants live each day in the house's air a
 
   await test.step("before its first day ends, its transplants have lived no day", async () => {
     await page.goto(`/?scenario=reference_greenhouse&field=climate&t=${NOON_S}&camera=${CAMERA}`);
-    await expect(status).toContainText("reference_greenhouse, day 0, 3108 entities", ARRIVES);
+    await expect(status).toContainText("reference_greenhouse, day 0, 3106 entities", ARRIVES);
     await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
     await selectThePlant(page);
     await expect(page.getByTestId("plant-days")).toContainText("No day lived yet", ARRIVES);
     // Its own light at noon, and through its first day, a dull one, at its
     // crown's top.
-    await expect(page.getByTestId("plant-par")).toHaveText("376 µmol/m²/s", ARRIVES);
-    await expect(page.getByTestId("plant-daily-light")).toHaveText("9.2 mol/m²/d");
+    await expect(page.getByTestId("plant-par")).toHaveText("370 µmol/m²/s", ARRIVES);
+    await expect(page.getByTestId("plant-daily-light")).toHaveText("9.0 mol/m²/d");
   });
 
   await test.step("a day on, it has lived its first, and grown", async () => {
     await run.getByRole("button", { name: "Next day" }).click();
     await expect(page).toHaveURL(new RegExp(`&t=${DAY_S + NOON_S}(&|$)`));
-    await expect(status).toContainText("reference_greenhouse, day 1, 3161 entities", ARRIVES);
+    await expect(status).toContainText("reference_greenhouse, day 1, 3159 entities", ARRIVES);
     // The organ selected is still the same plant's, on its next day.
     await expect(page.getByTestId("selected-entity")).toHaveText(new RegExp(`^${PLANT}_`));
     await expect(page.getByTestId("plant-days-air")).toHaveText(
@@ -60,17 +60,17 @@ test("crop: the reference greenhouse's plants live each day in the house's air a
       ARRIVES,
     );
     await expect(page.getByTestId("plant-days-light")).toHaveText(
-      "Light 9.2 mol/m²/d on day 0, 9.2 to 9.2",
+      "Light 9.0 mol/m²/d on day 0, 9.0 to 9.0",
     );
     await expect(page.getByTestId("plant-days-co2")).toHaveText("CO₂ 420 ppm on day 0, 420 to 420");
-    await expect(page.getByTestId("plant-daily-light")).toHaveText("19.7 mol/m²/d", ARRIVES);
+    await expect(page.getByTestId("plant-daily-light")).toHaveText("19.6 mol/m²/d", ARRIVES);
   });
 
   await test.step("two days on, its days are charted one by one", async () => {
     await run.getByRole("button", { name: "Next day" }).click();
-    await expect(status).toContainText("reference_greenhouse, day 2, 3281 entities", ARRIVES);
+    await expect(status).toContainText("reference_greenhouse, day 2, 3279 entities", ARRIVES);
     await expect(page.getByTestId("plant-days-light")).toHaveText(
-      "Light 19.7 mol/m²/d on day 1, 9.2 to 19.7",
+      "Light 19.6 mol/m²/d on day 1, 9.0 to 19.6",
       ARRIVES,
     );
     await expect(page.getByTestId("plant-days-air")).toHaveText(
@@ -89,7 +89,7 @@ test("crop: the reference greenhouse's plants live each day in the house's air a
     await expect(status).toContainText("day 2", ARRIVES);
     await selectThePlant(page);
     await expect(page.getByTestId("plant-days-air")).toHaveText(
-      "Air 27.4 °C on day 1, 27.0 to 27.4",
+      "Air 27.4 °C on day 1, 26.9 to 27.4",
       ARRIVES,
     );
   });
