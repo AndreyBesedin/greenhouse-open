@@ -125,7 +125,7 @@ def test_a_layout_is_given_as_its_file_holds_it() -> None:
 def runs() -> Iterator[LiveRuns]:
     runs = LiveRuns(seconds_per_day=60.0)
     yield runs
-    runs.stop()
+    runs.close()
 
 
 @pytest.mark.parametrize(
