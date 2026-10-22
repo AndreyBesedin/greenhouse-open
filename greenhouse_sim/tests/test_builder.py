@@ -2,7 +2,9 @@ import pytest
 from pydantic import ValidationError
 
 from greenhouse_sim.builder.basic import BasicSetup, basic_installation
+from greenhouse_sim.builder.batch import assign_crop_to_rows
 from greenhouse_sim.builder.installation import InstallationDraft, RowCrop, assess_installation
+from greenhouse_sim.builder.portable import export_installation, import_installation
 
 
 def _values(**changes: object) -> BasicSetup:
@@ -98,3 +100,56 @@ def test_basic_form_rejects_impossible_sizes(field: str, value: float) -> None:
     else:
         with pytest.raises(ValidationError):
             basic_installation(_values(**{field: value}))
+
+
+def test_portable_installation_import_export_needs_no_store() -> None:
+    draft = basic_installation(_values())
+    document = export_installation(draft)
+
+    assert '"format": "greenhouse-open.installation"' in document
+    assert '"format_version": 1' in document
+    assert import_installation(document) == draft
+
+
+def test_import_refuses_incompatible_or_invalid_installation() -> None:
+    document = export_installation(basic_installation(_values()))
+
+    with pytest.raises(ValueError, match="not a supported"):
+        import_installation(document.replace('"format_version": 1', '"format_version": 2'))
+    with pytest.raises(ValueError, match="not a supported"):
+        import_installation('{"unexpected": "document"}')
+    with pytest.raises(ValueError, match="not a supported"):
+        import_installation("{not json}")
+
+
+def test_batch_assignment_changes_selected_rows_once() -> None:
+    original = basic_installation(_values(rows=3))
+    result = assign_crop_to_rows(
+        original, [3, 2, 2], model_id="tomato.simple", variety="beefsteak"
+    )
+
+    assert result.row_crops[0] == original.row_crops[0]
+    assert [crop.variety for crop in result.row_crops] == [
+        "cherry_tomato",
+        "beefsteak",
+        "beefsteak",
+    ]
+    assert all(crop.variety == "cherry_tomato" for crop in original.row_crops)
+    assert (
+        assign_crop_to_rows(result, [2, 3], model_id="tomato.simple", variety="beefsteak")
+        == result
+    )
+
+
+def test_batch_assignment_is_atomic_on_invalid_selection_or_crop() -> None:
+    original = basic_installation(_values(rows=3))
+    before = original.model_dump_json()
+
+    with pytest.raises(ValueError, match="between 1 and 3"):
+        assign_crop_to_rows(original, [1, 4], model_id="tomato.simple", variety="beefsteak")
+    with pytest.raises(ValueError, match="select at least"):
+        assign_crop_to_rows(original, [], model_id="tomato.simple", variety="beefsteak")
+    with pytest.raises(ValidationError, match="model_id"):
+        assign_crop_to_rows(original, [1, 2], model_id="invalid model", variety="beefsteak")
+
+    assert original.model_dump_json() == before
