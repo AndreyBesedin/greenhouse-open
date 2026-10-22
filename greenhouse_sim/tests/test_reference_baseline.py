@@ -238,7 +238,7 @@ def _summary(
 
 
 def _counts(values: Iterable[str]) -> dict[str, Json]:
-    return {value: count for value, count in sorted(Counter(values).items())}
+    return dict(sorted(Counter(values).items()))
 
 
 def _digest(value: Json) -> str:

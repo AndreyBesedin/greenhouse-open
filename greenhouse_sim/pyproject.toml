@@ -20,11 +20,15 @@ line-length = 100
 target-version = "py314"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM", "PERF", "ERA", "PIE"]
+select = ["E", "F", "I", "UP", "B", "SIM", "PERF", "ERA", "PIE", "C4"]
 # A range is written as a number line (`low < value < high`), and a named
 # constant is compared with the number it should be: SIM300 would turn
 # both around.
 ignore = ["SIM300"]
+
+[tool.ruff.lint.flake8-comprehensions]
+# A record's defaults read best as `dict(name=value)`, as the tests write them.
+allow-dict-calls-with-keyword-arguments = true
 
 [tool.mypy]
 python_version = "3.14"
