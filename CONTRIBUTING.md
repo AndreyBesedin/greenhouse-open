@@ -41,7 +41,9 @@ Chromium and the repository's git hooks. The pre-commit hook handles fast
 file hygiene, Ruff fixes and formatting, the named-numbers check, and Biome
 for viewer files, which needs the viewer's packages for any commit that
 touches `greenhouse_sim/web/`, a README fix included. The pre-push hook runs
-the repository's fast Python check suite.
+the repository's fast Python check suite, and only its root part for commits
+that change documentation alone; CI does the same for such a pull request
+([docs/engineering.md](docs/engineering.md)).
 
 You can run the same checks manually:
 

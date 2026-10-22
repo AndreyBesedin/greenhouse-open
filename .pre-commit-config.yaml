@@ -56,10 +56,11 @@ repos:
         exclude: ^greenhouse_sim/web/package-lock\.json$
 
       # Through uv, with the workspace's own Python and tools, whichever
-      # Python the shell has (decision 0039).
+      # Python the shell has (decision 0039). Commits that change
+      # documentation alone run the root's checks only (scripts/check.py).
       - id: fast-project-checks
         name: fast repository checks
-        entry: uv run check --fast
+        entry: uv run check --fast --pushed
         language: system
         pass_filenames: false
         stages: [pre-push]
