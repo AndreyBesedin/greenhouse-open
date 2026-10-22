@@ -7,6 +7,12 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `uv run record-demo` cuts the walk-through's recording for the README:
+  from the moment the walk-through's opening shot, the house and its crop,
+  is drawn, at twice the speed, as an MP4 under GitHub's upload limit, with
+  its first frame saved beside it to check. It needs ffmpeg. The
+  walk-through lingers 3 s on each caption.
+
 ## 0.3.0 - 2026-10-21
 
 The reference greenhouse's run played back against one clock, which the

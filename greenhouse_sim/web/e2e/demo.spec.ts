@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import { expect, type Page, test } from "@playwright/test";
 import { QA_REFERENCE_PATH } from "../src/qa/referencePage.ts";
 import { chooser } from "./chooser";
@@ -8,6 +9,12 @@ import { unfold } from "./folds";
 // after the other day-by-day specs; `npm run demo:record` records it as a
 // video (playwright.demo.config.ts), lingering on each step for
 // DEMO_PAUSE_MS and captioning it.
+//
+// The video starts with the page, blank until the house is drawn: the
+// moment the opening shot is ready, in seconds into the video, is written
+// beside it as OPENING_MARK, from which `uv run record-demo` cuts it
+// (tools/greenhouse_dev/demo_video.py), so that its first frame, the
+// README's preview, shows the whole house.
 
 const PAUSE_MS = Number(process.env.DEMO_PAUSE_MS ?? 0);
 const ARRIVES = { timeout: 180_000 };
@@ -18,6 +25,7 @@ const HOUR_S = 3_600;
 // looks.
 const ON_THE_HOUSE = "-5:-14:11,5:4.8:1";
 const STARTED = Date.now();
+const OPENING_MARK = "opening.json";
 
 /** Shows a step's caption over the page, for the video, and lingers on it. */
 async function say(page: Page, caption: string): Promise<void> {
@@ -45,7 +53,9 @@ async function linger(page: Page): Promise<void> {
   }
 }
 
-test("the reference greenhouse's demo walks through P09's final QA", async ({ page }) => {
+test("the reference greenhouse's demo walks through P09's final QA", async ({ page }, testInfo) => {
+  // The video started with the page, a moment before the test's body.
+  const recording = Date.now();
   test.setTimeout(900_000);
   const moment = page.getByTestId("climate-time");
   const run = page.getByRole("group", { name: "Climate run" });
@@ -62,6 +72,12 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   await expect(page.getByTestId("camera-position")).toHaveText("x -5.00, y -14.00, z 11.00");
   await expect(moment).toHaveText("day 86, 12 h 00 min", ARRIVES);
   await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
+  // The house is drawn before its crop: the opening shot waits for both.
+  await expect(page.getByTestId("scene-status")).toContainText("day 86,", ARRIVES);
+  await writeFile(
+    testInfo.outputPath(OPENING_MARK),
+    JSON.stringify({ opening_s: (Date.now() - recording) / 1000 }),
+  );
   await say(page, "1. Opened on day 86, its first day with red fruit");
 
   // 2. The house's dimensions and the crop's layout.

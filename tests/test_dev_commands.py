@@ -6,6 +6,7 @@ import re
 import shutil
 import sys
 import tomllib
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
@@ -76,6 +77,30 @@ def test_a_command_that_cannot_run_yet_says_what_to_do(
 
     assert stopped.value.code == 1
     assert capsys.readouterr().err.startswith(f"Node {commands.NODE_NEEDED} and npm are needed")
+
+
+def test_the_demos_recording_says_it_needs_ffmpeg_before_it_records(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # The cut needs ffmpeg once the walk-through has played, minutes later:
+    # without it, nothing is recorded.
+    found = shutil.which
+    ran: list[Sequence[str]] = []
+
+    def run(command: Sequence[str], *args: object, **kwargs: object) -> int:
+        ran.append(command)
+        return 0
+
+    monkeypatch.setattr(shutil, "which", lambda name: None if name == "ffmpeg" else found(name))
+    monkeypatch.setattr(commands, "_run", run)
+    monkeypatch.setattr(sys, "argv", ["/workspace/.venv/bin/record-demo"])
+
+    with pytest.raises(SystemExit) as stopped:
+        commands.main()
+
+    assert stopped.value.code == 1
+    assert capsys.readouterr().err.startswith("ffmpeg cuts the demo's video")
+    assert ran == []
 
 
 def test_the_demos_help_needs_no_viewer(
