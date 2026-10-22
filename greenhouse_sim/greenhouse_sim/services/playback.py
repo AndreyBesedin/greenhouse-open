@@ -354,6 +354,11 @@ class Playback:
         """Works no other moment out."""
         self._stopped.set()
 
+    @property
+    def working(self) -> bool:
+        """Whether its worker is still working days out."""
+        return self._worker.is_alive()
+
     def finish(self, deadline: float) -> None:
         """Waits for the worker to end, until `deadline` (`time.monotonic`)
         at most, logged past it."""
@@ -428,6 +433,8 @@ class Playback:
             if self._stopped.is_set():
                 return False
             heated = heat_records(run, day, self.start, self.run_id)
+            if self._stopped.is_set():
+                return False
         except Stopped:
             return False
         except Exception as error:
@@ -597,20 +604,33 @@ class Playbacks:
     they are stopped or closed. Once closed, it starts none."""
 
     def __init__(self) -> None:
-        self._store: Store[str, Playback] = Store(
-            "playbacks", on_drop=lambda _, found: found.stop(), label=str
-        )
-        # Held while a playback is put in another's place, so that two
-        # requests starting a scenario's playback over with a layout make one.
+        self._store: Store[str, Playback] = Store("playbacks", on_drop=self._let_go, label=str)
+        # Held while a playback is added, or put in another's place, so that
+        # two requests starting a scenario's playback over with a layout make
+        # one, and none is added once they are closed.
         self.rearranging = threading.Lock()
+        # Those replaced still working, waited for when they all stop.
         self._replaced: list[Playback] = []
+        # While they all stop: when, for every one let go meanwhile.
+        self._stopping_by: float | None = None
         self._closed = False
+
+    def _let_go(self, _: str, found: Playback) -> None:
+        """Stops a playback let go: by the deadline of all of them, while
+        they all stop, or its own."""
+        deadline = self._stopping_by
+        found.stop(wait=False)
+        found.finish(monotonic() + STOP_WAIT_S if deadline is None else deadline)
+
+    def refuse_if_closed(self) -> None:
+        """Under `rearranging`: a playback is added to none closed."""
+        if self._closed:
+            raise RuntimeError("the playbacks are closed")
 
     def made_once(self, scenario_id: str, begun: Callable[[object], Playback]) -> Playback:
         with self.rearranging:
-            if self._closed:
-                raise RuntimeError("the playbacks are closed")
-        return self._store.made_once(scenario_id, begun)
+            self.refuse_if_closed()
+            return self._store.made_once(scenario_id, begun)
 
     def get(self, scenario_id: str) -> Playback | None:
         return self._store.get(scenario_id)
@@ -620,8 +640,10 @@ class Playbacks:
         return [found for _, found in self._store.values()]
 
     def replace(self, scenario_id: str, replacing: Playback, replaced: Playback) -> None:
-        """Keeps `replacing` in `replaced`'s place, under `rearranging`."""
+        """Keeps `replacing` in `replaced`'s place, under `rearranging`; those
+        replaced before that have stopped are let go."""
         self._store.keep(scenario_id, replacing)
+        self._replaced = [found for found in self._replaced if found.working]
         self._replaced.append(replaced)
 
     def stop(self) -> None:
@@ -630,10 +652,14 @@ class Playbacks:
         with self.rearranging:
             stopping = [*self.all(), *self._replaced]
             self._replaced.clear()
-        deadline = monotonic() + STOP_WAIT_S
-        for found in stopping:
-            found.tell_to_stop()
-        self._store.forget()
+            deadline = monotonic() + STOP_WAIT_S
+            for found in stopping:
+                found.tell_to_stop()
+            self._stopping_by = deadline
+            try:
+                self._store.forget()
+            finally:
+                self._stopping_by = None
         for found in stopping:
             found.finish(deadline)
 
@@ -691,6 +717,7 @@ def _rearranged(simulator: Simulator, found: Playback, layout: str) -> Playback:
     playback as it was."""
     playbacks = simulator.playbacks
     with playbacks.rearranging:
+        playbacks.refuse_if_closed()
         current = playbacks.get(found.scenario_id) or found
         if current.plays(layout):
             return current

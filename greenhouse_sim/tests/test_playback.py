@@ -14,7 +14,7 @@ from greenhouse_protocol.enums import ObservationType
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.api.server import create_server
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.services import playback, run_state, sensors
+from greenhouse_sim.services import heat_log, playback, run_state, sensors
 from greenhouse_sim.services.errors import NotFound
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand, PlaybackFailed
@@ -439,3 +439,107 @@ def test_a_playback_stopped_leaves_the_day_it_was_working_out(
 
     assert time.monotonic() - stopping < STOPS_WITHIN_S
     assert not _working("reference_greenhouse")
+
+
+# How long a test waits for a thread it expects to finish.
+WAIT_S = 5.0
+# A shorter bound on stopping, for the tests of it.
+QUICK_STOP_WAIT_S = 0.3
+
+
+def test_a_simulator_closed_while_a_playback_is_being_added_leaves_none_working(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    simulator = Simulator()
+    adding, added = threading.Event(), threading.Event()
+    made_once = simulator.playbacks._store.made_once
+
+    def held(*args: object, **kwargs: object) -> Playback:
+        adding.set()
+        added.wait(WAIT_S)
+        return made_once(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(simulator.playbacks._store, "made_once", held)
+    errors: list[BaseException] = []
+
+    def starting() -> None:
+        try:
+            playback.start(simulator, SCENARIO, 600.0, hold=True)
+        except RuntimeError as error:
+            errors.append(error)
+
+    start = threading.Thread(target=starting)
+    start.start()
+    assert adding.wait(WAIT_S)
+    close = threading.Thread(target=simulator.close)
+    close.start()
+    time.sleep(0.1)
+    added.set()
+    start.join(WAIT_S)
+    close.join(WAIT_S)
+
+    assert simulator.closed
+    assert simulator.playbacks.all() == []
+    assert not _working(SCENARIO)
+
+
+def test_closing_with_playbacks_stuck_in_a_moment_is_bounded_once_for_all(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(playback, "STOP_WAIT_S", QUICK_STOP_WAIT_S)
+    release = threading.Event()
+
+    def stuck(*args: object, **kwargs: object) -> object:
+        release.wait(WAIT_S)
+        raise RuntimeError("let go")
+
+    monkeypatch.setattr(playback, "delivered_between", stuck)
+    simulator = Simulator()
+    for scenario_id in ("climate_box", "airflow_box", "sensor_lab"):
+        playback.start(simulator, scenario_id, 600.0, hold=True)
+    try:
+        closing = time.monotonic()
+        simulator.close()
+        took = time.monotonic() - closing
+    finally:
+        release.set()
+
+    assert took < 2 * QUICK_STOP_WAIT_S
+
+
+def test_a_playback_stopped_while_its_heat_is_worked_out_publishes_no_day(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    simulator = Simulator()
+
+    def stopped_meanwhile(*args: object, **kwargs: object) -> object:
+        for found in simulator.playbacks.all():
+            found.tell_to_stop()
+        return heat_log.heat_records(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(playback, "heat_records", stopped_meanwhile)
+    try:
+        # Its own scenario, which no other test here plays back.
+        playback.start(simulator, "airflow_box", 600.0, hold=True)
+        found = playback.playback(simulator, "airflow_box")
+        found.finish(time.monotonic() + WAIT_S)
+
+        assert found.state().worked_out_s == 0.0
+    finally:
+        simulator.close()
+
+
+def test_playbacks_replaced_are_let_go_once_they_have_stopped() -> None:
+    with Simulator() as simulator:
+        playback.start(simulator, SCENARIO, 600.0, hold=True)
+        for step in range(4):
+            playback.command(
+                simulator, SCENARIO, PlaybackCommand.RESTART, f"default~heater:-1:0.{step + 1}"
+            )
+            deadline = time.monotonic() + WAIT_S
+            while any(found.working for found in simulator.playbacks._replaced):
+                assert time.monotonic() < deadline
+                time.sleep(0.01)
+
+        # Each replaced one let go once it stopped, at the next replacement.
+        assert len(simulator.playbacks._replaced) == 1
