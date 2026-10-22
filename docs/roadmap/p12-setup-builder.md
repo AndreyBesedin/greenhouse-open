@@ -5,11 +5,14 @@
 ## Purpose
 
 Author and revise an installation in the browser, starting from an empty
-greenhouse or copying a repository template. A person should be able to edit
-every supported declarative greenhouse property without editing Python or
-JSON, preview the scene, receive actionable validation feedback, save an
-unfinished version, and eventually start a simulation from a published
-revision. Keep the headless simulator independent of the editor.
+greenhouse, importing a portable file, or copying a repository template.
+A person should be able to edit every supported declarative greenhouse
+property without editing Python or JSON, preview the scene, batch-edit
+multiple rows or pieces of equipment, receive actionable feedback, save an
+unfinished version, and import/export it without a database or Git.
+After installation editing, a separate lightweight scenario screen selects
+where, when and under what weather to simulate it. Keep the headless
+simulator independent of the editor.
 
 ## Existing foundations and constraints
 
@@ -30,6 +33,11 @@ revision. Keep the headless simulator independent of the editor.
 - Today's supported tomato simulations are the simple daily model and the
   organ-level model. Their code and parameters are not independent,
   versioned, user-editable model assets.
+- `world.site.Site` already holds latitude, longitude, elevation,
+  IANA time zone and world x-axis bearing for sun and wind directions.
+  `weather.presets.PRESETS` provides synthetic weather cases, not a
+  regional historical forecast. Site selection alone does not supply
+  credible local weather.
 
 ## Design boundaries
 
@@ -45,16 +53,22 @@ revision. Keep the headless simulator independent of the editor.
    crops, must have an explicit compatibility adapter to `ScenarioConfig`.
 3. **Portable canonical data.** Keep JSON as the authoritative interchange
    format initially, consistent with the existing manifests and layouts.
-   YAML can be an optional view/import-export format, not another canonical
-   model. Code-backed plant models are referenced, never embedded or
-   executed as uploaded source in the browser/API.
+   Export/import a versioned `greenhouse-open.installation` JSON document
+   independently of Git, the local database, paths and schema migrations
+   in an existing environment. Import creates or replaces an explicit draft
+   only with user confirmation, never a published object or active run.
+   This file contains the complete installation definition, including
+   crop references, but not arbitrary Python implementations. A referenced
+   model must be installed to run. A future ZIP bundle may include
+   versioned declarative model assets. YAML can be a later optional
+   representation, not another canonical model.
 4. **Drafts vs publication.** A local SQLite store will hold editable drafts
    and revisions as validated JSON documents plus metadata, not a
-   hand-normalized copy of every nested model field. Export is a portable
-   installation bundle with pinned model references; promotion to the shared
-   open-source catalogue is a reviewed Git pull request. Repository files
-   remain the authority for published templates and models. No live Git
-   write is part of a simulator step.
+   hand-normalized copy of every nested model field. Import/export is an
+   independent capability available to offline and database-free workflows.
+   Promotion to the shared open-source catalogue is an optional reviewed
+   Git pull request. Repository files remain the authority for published
+   templates and models. No live Git write is part of a simulator step.
 5. **Readiness is graduated.** Invalid values are refused by Pydantic;
    cross-object violations prevent running or publishing but can be
    preserved as drafts. Absence of doors, heating, roof vents or fans raises
@@ -64,36 +78,57 @@ revision. Keep the headless simulator independent of the editor.
    URL semantics, seeds, snapshots, checkpoints, and consumer replay stay
    unchanged. The editor is an optional mode. Preview uses the existing
    scene generator, not a second mesh renderer.
+7. **Batch operations are first-class.** Selecting many rows, fixtures or
+   equipment items and assigning properties, copying or distributing
+   them is a domain operation, not repeated UI form submissions. Each
+   operation validates its full target set and yields one undoable result.
+   The editor previews placement and warnings before applying a batch.
 
 ## Proposed user flow
 
-1. **Choose a starting point:** empty greenhouse, or clone a published
-   template. Cloning records its source revision; the original remains
-   immutable.
+1. **Choose a starting point:** empty greenhouse, import a portable
+   `.greenhouse.json` file, or clone a published template. Cloning records
+   its source revision; the original remains immutable. No Git connection
+   or existing SQLite state is required to import a standalone installation.
 2. **Basic structure form:** name; greenhouse length and width; roof
    eave/ridge height; spans and structural bays; number of crop rows;
    plants per row, pitch, row spacing and support height. Clearly
    distinguish *roof spans*, *crop rows* and *service lanes*. For now the
    footprint is rectangular with pitched multi-span roofs.
 3. **Planting:** each row gets exactly one plant-model revision and variety.
-   Different rows may make different choices in a draft. The editor must
-   clearly report that the runtime currently supports only one model and
-   variety per scenario. Parameter variants of an existing model become
-   possible before brand-new biological implementations.
-4. **Preview and edit:** reuse the existing 3D scene; select an envelope
-   surface, row, fixture or piece of equipment to edit its fields. Add
-   roof vents and doors to surfaces; add fans, heaters, dehumidifiers,
-   sensors, walkways, zones and fixtures through category palettes.
-   Explicitly position items in the greenhouse's metre, right-handed,
-   z-up coordinate system. Show coverage and geometry violations inline.
-5. **Validate, save and simulate:** save unfinished drafts at any step.
-   Present errors and warnings with a link to the item and property. Only
-   a fully resolved, supported scenario may start a run. A revision
-   selected by a run does not change if someone edits the draft.
-6. **Publish/share:** export/install a portable bundle locally, or propose
-   a reviewed Git PR containing its declaration and pinned model assets.
-   Track source, author-supplied modelling assumptions, versions and
-   research citations.
+   Support selecting all rows, a range, or arbitrary rows and applying a
+   crop choice to them in one action. A row may have a different crop from
+   its neighbours in the draft, but the editor must report that the current
+   runtime can grow only one model and variety per scenario. Parameter
+   variants of an existing model come before new biological implementations.
+4. **Preview and edit:** reuse the existing 3D scene; select envelope
+   surfaces, rows, fixtures and equipment to edit their fields. Add roof
+   vents and doors to surfaces; add fans, heaters, dehumidifiers, sensors,
+   walkways, zones and fixtures through category palettes. Support batch
+   generation (N vents evenly across chosen roof surfaces), duplication
+   (repeat selected sensors or fans with an offset), and bulk property edits
+   (height, spacing, model or variety). Every batch has a preview, a clear
+   affected-item count, deterministic names, collision warnings, an atomic
+   commit and a single undo. Explicitly position items in metres in the
+   greenhouse's right-handed, z-up frame.
+5. **Validate and save:** save incomplete drafts at any step, including
+   configurations that are not yet runnable. Present errors and warnings
+   linked to their objects and properties. Import/export without a
+   database and independent of Git. A draft edit never changes a run.
+6. **Configure scenario (after installation):** offer three simple sections:
+   **Location** (site/region preset: latitude, longitude, elevation,
+   time zone; house orientation in Advanced), **Period** (start date and
+   duration in days), and **Weather** (synthetic weather preset or scenario
+   default; richer recorded/seasonal sources later). Do not derive weather
+   from the region alone or label synthetic weather as locally observed.
+   Resolve these settings and the pinned installation into a runnable
+   `ScenarioConfig`. More climate, control and crop-work parameters live
+   under Advanced and can be progressively promoted to the simple form.
+7. **Simulate:** only a validated, supported, version-pinned scenario may
+   start a run. It uses the current run/clock, observation and scene stack.
+8. **Share/publish:** export an installation file for direct sharing, or
+   optionally propose a Git PR containing its declaration and pinned model
+   assets. Track source, research assumptions, versions and citations.
 
 An **advanced properties** panel should expose every editable declarative
 field the simulator supports, even when no dedicated widget exists. A JSON
@@ -130,24 +165,26 @@ forms can author scientifically bounded parameterizations of those models.
 
 | Gate | Work | Acceptance |
 | --- | --- | --- |
-| **12.0 Authoring foundation** | Typed installation draft reusing `Envelope`/`Layout`, basic structure generator, row references, geometry/readiness findings | JSON round-trip, representative valid and invalid inputs, no changes to packaged scenarios |
-| **12.1 Runtime resolution and storage** | Separate installation/scenario/run identity, a resolver into the existing `ScenarioConfig`, local SQLite draft revisions and immutable run snapshots; schema publication | Save, reopen, edit and revert; launch supported homogeneous draft; existing scenarios and replay identical |
-| **12.2 Structure wizard and viewer** | Route for Setup Builder, blank/template launch, form, scene preview, editable row properties and advanced schema fields | End-to-end create/preview/save/reopen; no regression in viewer screenshot QA |
-| **12.3 Equipment and opening editor** | Reusable typed catalogue, surface-mounted doors/vents, climate units, sensors, fixtures, move/rotate with property inspector | Geometry/identifier conflicts explained and repairable; existing layout fields editable |
-| **12.4 Plant-model assets** | Model registry, schema-driven parameter forms, forked drafts, versioned parameter assets and citations | Edit a tomato parameter set, save, compare, export and reproduce the same run using a pinned version |
+| **12.0 Authoring foundation** | Typed installation drafts, basic generator, row crop references, readiness findings, portable JSON import/export, first atomic bulk crop assignment | JSON round-trip, invalid-input checks, no packaged scenario changes, no database dependency |
+| **12.1 Resolution and storage** | Installation/scenario/run identity, resolver into existing `ScenarioConfig`, tiny scenario defaults, local SQLite draft revisions and immutable run snapshots; publish schemas | Save/reopen/revert; export/import without SQLite; launch supported homogeneous scenario; old scenarios/replay unchanged |
+| **12.2 Wizard, preview and scenario UI** | Setup Builder route, blank/template/import launch, structure form, existing scene preview, row batch selection and three-part location/period/weather step | Create/preview/import/export/save/reopen/run; keyboard flow and browser QA |
+| **12.3 Batch equipment and opening editor** | Typed catalogue, surface-mounted doors/vents, climate units, sensors, fixtures, multiple selection, array/clone/distribute, property inspector, atomic undo | Batch placement with valid geometry and stable IDs; collisions explained, rejected or previewed; schema fields editable |
+| **12.4 Plant-model assets** | Model registry, schema-driven parameter forms, forked drafts, versioned parameter assets and citations | Edit a tomato parameter set, save, compare, export and reproduce a run using a pinned version |
 | **12.5 Row-specific runtime support** | Generalize current `CropRows` and `ScenarioConfig` limitations, crop model contract and scene/checkpoint/log handling | Different models/varieties per row reproducibly simulated, or explicitly refused for unsupported combinations |
-| **12.6 Publication and completeness** | Export/import bundle, reviewed Git publishing, templates, parity checklist between JSON schemas and UI | Re-import produces equal models and scene; every supported declarative field is reachable via the UI or advanced editor |
+| **12.6 Publication and completeness** | Optional reviewed Git publication, portable bundles with declarative model assets, templates, parity checklist between schemas and UI | Re-import yields same installation and model references; all supported declarative fields reachable through UI or advanced editor |
 
 ### Gate 12.0 scope and limitations
 
-The first additive backend slice defines `builder.InstallationDraft` and
-`basic_installation`. It generates the rectangular pitched greenhouse and
-homogeneous row geometry, records a crop reference for each row, and reports
-missing doors, vents and heating as warnings. It does **not** persist drafts,
-resolve crop model IDs, publish schemas, instantiate arbitrary per-row crop
-models or run them. A draft can be round-tripped without modifying any
-existing scenario files. Full compatibility with `ScenarioConfig` is the
-explicit next gate.
+The first additive backend slice defines `builder.InstallationDraft`,
+`basic_installation`, `import_installation`, `export_installation` and
+`assign_crop_to_rows`. It generates rectangular pitched greenhouses and
+homogeneous row geometry, records crop references, warns about missing
+facilities, exports/imports a portable versioned file and edits a group of
+rows atomically. It does **not** persist drafts, resolve crop model IDs,
+publish schemas, generate bulk equipment, instantiate arbitrary per-row
+crop models or run them. The standalone JSON document round-trips without
+Git, SQLite or changes to packaged scenarios. Compatibility with
+`ScenarioConfig` is the next gate.
 
 ## Test and review expectations
 
@@ -155,9 +192,13 @@ explicit next gate.
   out-of-envelope fixtures, duplicate identifiers, missing crop assignments,
   missing optional equipment and schema round-trip.
 - Integration tests: drafts to `ScenarioConfig`, stable run digests, seed
-  determinism, migrations of persisted versions and model reference failures.
+  determinism, portable document versions, missing model references,
+  imports without a database, and migrations of persisted draft versions.
+- Batch tests: selected rows retain unselected assignments, stable placement
+  identifiers, deterministic spacing, empty/invalid selections, all-or-nothing
+  validation, geometry collisions, one undo for a complete batch.
 - Viewer tests: keyboard forms, selected geometry, undo/redo, unfinished
-  drafts, validation messages, and advanced-property parity.
+  drafts, validation messages, scenario settings and advanced-property parity.
 - Safety: unknown fields rejected, no arbitrary code execution or path
   traversal, bounded revision size, atomic persistence, immutable published
   assets and no draft mutation during simulation.
