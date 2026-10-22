@@ -1,12 +1,15 @@
 """A run's heating targets changed from a moment on (#274): its thermostat
 heats to them from then, the house's air within its band; the changes are
 part of the run, so that another target makes another run and the same
-targets the same run; a checkpoint keeps those before its day; and a
+targets the same run; a checkpoint keeps those before its day; a
 playback's run, steered while it plays, keeps its identity and epoch and
-rewrites nothing it delivered (decision 0043)."""
+rewrites nothing it delivered (decision 0043); and started over with its
+equipment moved, it keeps them (decision 0049)."""
 
 import json
+from collections.abc import Callable
 from http import HTTPStatus
+from pathlib import Path
 from typing import Any, Final
 
 import pytest
@@ -17,12 +20,13 @@ from greenhouse_sim.climate.commands import Command, Schedule, TargetChange
 from greenhouse_sim.climate.thermostat import Thermostat
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.equipment import Target
-from greenhouse_sim.services import checkpoints
+from greenhouse_sim.services import checkpoints, playback
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import air_through_a_run, climate_run, house_air_at
 from greenhouse_sim.services.heat_log import heat_records
-from greenhouse_sim.services.playback import Playback, PlaybackCommand
+from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.scenarios import layout_name
 from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.units import HOUR_S
 
@@ -32,6 +36,8 @@ DAY_FROM_S: Final = 7 * HOUR_S
 WARMER: Final = ((DAY_FROM_S, "heating_day", 24.0),)
 EVERY_S: Final = 300.0
 ALL: Final = 10**6
+# Its right fan moved, as the viewer writes it (#271).
+FAN_MOVED: Final = "default~fan_right:-0.2:-2.9"
 
 
 class Clock:
@@ -213,3 +219,42 @@ def test_a_target_set_while_the_run_plays_steers_it_from_the_next_minute() -> No
     assert [r.value for r in delivered_heat] == [warmer[6].value]
     # Started over, it is the scenario's own run again.
     assert played.command(PlaybackCommand.RESTART).targets == []
+
+
+def test_a_run_started_over_with_moves_keeps_its_target_changes(
+    tmp_path: Path, no_playbacks: Callable[[], None]
+) -> None:
+    """Moving equipment while the run plays starts it over from its first
+    day, the same run rearranged: a target changed in it holds from its
+    moment in the new run too (decision 0049). Started over as it is, the
+    run drops its changes, as decision 0043 has it."""
+    clock = Clock()
+    path = f"/api/scenarios/{SCENARIO}/playback"
+    playback.start(SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
+    change = (60.0, "heating_day", 24.0)
+    assert playback.set_targets(SCENARIO, {"heating_day": 24.0}).targets == [change]
+
+    moved = respond("POST", f"{path}/restart?layout={FAN_MOVED}")
+
+    assert moved.status == HTTPStatus.OK and isinstance(moved.body, dict)
+    moved_layout = layout_name(FAN_MOVED)
+    assert (moved.body["layout"], moved.body["epoch"]) == (moved_layout, 0)
+    assert (moved.body["time_s"], moved.body["targets"]) == (0.0, [list(change)])
+    # What it delivers is the rearranged run with the change: the same heat
+    # through the night, more once the day's target holds.
+    played = playback.playback(SCENARIO)
+    assert played.wait_for(1, timeout_s=300)
+    clock.now += 24.0
+    delivered = {r.observation_id: r.value for r in played.records_after(0, ALL).records}
+    start, run_id = run_start(SCENARIO), str(moved.body["run_id"])
+    with_change = RunRequest(SCENARIO, layout=moved_layout, targets=(change,))
+    kept = heat_records(with_change, 0, start, run_id)
+    dropped = heat_records(RunRequest(SCENARIO, layout=moved_layout), 0, start, run_id)
+    assert [delivered[record.observation_id] for record in kept] == [r.value for r in kept]
+    night = int(DAY_FROM_S // HOUR_S)
+    assert [r.value for r in kept[:night]] == [r.value for r in dropped[:night]]
+    assert sum(r.value for r in kept) > sum(r.value for r in dropped)
+
+    again = respond("POST", f"{path}/restart")
+    assert isinstance(again.body, dict)
+    assert (again.body["layout"], again.body["targets"]) == (moved_layout, [])

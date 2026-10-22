@@ -35,7 +35,9 @@ the same run and epoch, its records from then on worked out again under
 them while the clock waits at that minute. A record delivered is never
 rewritten, since the run is the same until the change. The changes are part
 of its state, so that a viewer following it draws the same run, and a
-restart, a new epoch of the scenario's own run, makes none.
+restart, a new epoch of the scenario's own run, makes none. Started over
+with its equipment moved, the run keeps them, each at its moment: the same
+run, rearranged (decision 0049).
 """
 
 import gzip
@@ -163,9 +165,10 @@ class PlaybackState(BaseModel):
     seconds_per_day: float
     worked_out_s: float
     every_s: float
-    # The target changes its epoch has made (#274, decision 0043), each its
-    # moment in seconds, its target and its value in °C, as a run's
-    # `&targets=` writes them.
+    # The target changes its epoch's run has (#274, decision 0043): those it
+    # made, and those of a run it was started over from with moves (decision
+    # 0049), each its moment in seconds, its target and its value in °C, as
+    # a run's `&targets=` writes them.
     targets: list[tuple[float, str, float]] = []
 
 
@@ -257,16 +260,18 @@ def delivered(record: Observation | Event) -> datetime:
 
 
 class Playback:
-    """One scenario's own run, with its own layout or `layout`, worked out
-    ahead of a clock that plays over it; see the module. A layout the
-    scenario does not have is not found, and moves that do not fit it are
-    refused, as a climate run's are."""
+    """One scenario's own run, with its own layout or `layout`, and the
+    target changes `targets` from their moments on, worked out ahead of a
+    clock that plays over it; see the module. A layout the scenario does
+    not have is not found, and moves that do not fit it are refused, as are
+    target changes, as a climate run's are."""
 
     def __init__(
         self,
         scenario_id: str,
         *,
         layout: str | None = None,
+        targets: Sequence[Commanded] = (),
         seconds_per_day: float = DEFAULT_SECONDS_PER_DAY,
         every_s: float = CONSUMER_CADENCE_S,
         clock: Callable[[], float] = monotonic,
@@ -281,6 +286,9 @@ class Playback:
         self.every_s = every_s
         self.layout = layout_name(layout or DEFAULT_LAYOUT)
         _, self.run_id = air_through_a_run(RunRequest(scenario_id, layout=self.layout))
+        if targets:
+            # Checked as a run's target changes are; refused, nothing starts.
+            run_schedule(RunRequest(scenario_id, layout=self.layout, targets=tuple(targets)))
         self._clock = clock
         self._lock = threading.Lock()
         self._observations = _Log(_OBSERVATIONS, self.start)
@@ -295,12 +303,12 @@ class Playback:
         self._playing = False
         self._seconds_per_day = seconds_per_day
         self._since = clock()
-        # The target changes its epoch has made, in the order made; while
-        # one is worked into the run, the moment from which its records are
-        # worked again, which the clock does not pass meanwhile; and how
-        # many changes there have been, so that a day worked out under the
-        # targets before is not published.
-        self._targets: tuple[Commanded, ...] = ()
+        # The target changes its epoch has made, in the order made, after
+        # those it started with; while one is worked into the run, the
+        # moment from which its records are worked again, which the clock
+        # does not pass meanwhile; and how many changes there have been, so
+        # that a day worked out under the targets before is not published.
+        self._targets: tuple[Commanded, ...] = tuple(targets)
         self._again_from: float | None = None
         self._changes = 0
         self._changed = threading.Event()
@@ -320,11 +328,15 @@ class Playback:
 
     def rearranged(self, layout: str) -> Playback:
         """A playback of the same scenario with `layout`, at the same pace and
-        cadence, on the same clock, counting the epochs of its own run where
-        this one counts its: not begun. A layout refused makes none."""
+        cadence, on the same clock, with the same target changes, counting the
+        epochs of its own run where this one counts its: not begun. A layout
+        refused makes none."""
+        with self._lock:
+            targets = self._targets
         return Playback(
             self.scenario_id,
             layout=layout,
+            targets=targets,
             seconds_per_day=self._seconds_per_day,
             every_s=self.every_s,
             clock=self._clock,
@@ -645,9 +657,11 @@ def state(scenario_id: str) -> PlaybackState:
 def command(scenario_id: str, command: PlaybackCommand, layout: str | None = None) -> PlaybackState:
     """Tells the scenario's playback to play, pause or start over. Started
     over with a layout it does not play, it plays that layout's run from its
-    start, a new run, as the epoch its own count gives it: so a viewer that
-    follows it rearranges the run played back (#271). Only a restart takes
-    a layout."""
+    start, a new run, as the epoch its own count gives it, with the target
+    changes the run had: so a viewer that follows it rearranges the run
+    played back (#271, decision 0049). Started over with its own layout, it
+    is the scenario's own run again, without them. Only a restart takes a
+    layout."""
     found = playback(scenario_id)
     if layout is not None and command != PlaybackCommand.RESTART:
         raise InvalidRequest(f"only a restart takes a layout, not {command.value}")
