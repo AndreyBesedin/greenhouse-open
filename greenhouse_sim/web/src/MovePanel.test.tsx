@@ -110,24 +110,37 @@ describe("moving equipment and sensors", () => {
     expect(container.querySelector('[data-testid="move-confirm"]')).toBeNull();
   });
 
-  it("goes back to the moves on Escape in the question, which the session's own Escape then leaves alone", () => {
+  it("goes back to the moves on Escape anywhere in the session while it asks, which the view's own Escape then leaves alone", () => {
     const done: string[] = [];
     shown = render(panel(DRAFT, done));
     const { container } = shown;
-    click(button(container, "Start a new run with these moves"));
-    const pressed = new KeyboardEvent("keydown", {
-      key: "Escape",
-      bubbles: true,
-      cancelable: true,
-    });
+    const escapeOn = (target: Element): KeyboardEvent => {
+      const pressed = new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      });
+      act(() => {
+        target.dispatchEvent(pressed);
+      });
+      return pressed;
+    };
+    const asking = () => container.querySelector('[data-testid="move-confirm"]') !== null;
 
-    act(() => {
-      button(container, "Start the new run").dispatchEvent(pressed);
-    });
-
-    // Handled here: the view's Escape, which cancels the moves, sees it done.
-    expect(pressed.defaultPrevented).toBe(true);
-    expect(container.querySelector('[data-testid="move-confirm"]')).toBeNull();
+    // Not asking, Escape is the view's: it cancels the moves.
+    expect(escapeOn(button(container, "Put the heater back")).defaultPrevented).toBe(false);
+    // Asking, from the question, a move's button, or the fold's summary, it
+    // goes back to the moves; handled, the view's Escape finds it done.
+    for (const where of [
+      () => button(container, "Start the new run"),
+      () => button(container, "Put the heater back"),
+      () => container.querySelector(".move-details summary") as Element,
+    ]) {
+      click(button(container, "Start a new run with these moves"));
+      expect(asking()).toBe(true);
+      expect(escapeOn(where()).defaultPrevented).toBe(true);
+      expect(asking()).toBe(false);
+    }
     expect(done).toEqual([]);
   });
 

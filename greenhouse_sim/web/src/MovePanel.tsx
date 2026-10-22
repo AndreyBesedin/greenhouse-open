@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { type Offset, SNAP_DECIMALS, SNAP_M } from "./scene/moves";
 
@@ -38,8 +38,8 @@ export interface MoveDraft {
  * each to be put back. Moving equipment changes the house's climate, so the
  * moves make a new run from its first day, which keeps the run's target
  * changes (decision 0049). "Start a new run with these moves" asks first,
- * then applies them all at once (#305); "Cancel", or Escape, leaves
- * everything as it was.
+ * then applies them all at once (#305); Escape while it asks returns to the
+ * moves. "Cancel", or Escape, leaves everything as it was.
  */
 export function MovePanel({
   item,
@@ -131,15 +131,26 @@ function Session({
     }
     asked.current = asking;
   }, [asking]);
-  // Escape in the question goes back to the moves, rather than cancel them.
-  function backOnEscape(event: KeyboardEvent<HTMLButtonElement>): void {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      setConfirming(false);
+  // Escape while it asks goes back to the moves, wherever in the session
+  // the keyboard is, rather than cancel them: handled here, the view's own
+  // Escape, on the window, finds it done.
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const session = root.current;
+    if (!asking || session === null) {
+      return;
     }
-  }
+    function back(event: KeyboardEvent): void {
+      if (event.key === "Escape" && !event.defaultPrevented) {
+        event.preventDefault();
+        setConfirming(false);
+      }
+    }
+    session.addEventListener("keydown", back);
+    return () => session.removeEventListener("keydown", back);
+  }, [asking]);
   return (
-    <>
+    <div className="move-session" ref={root}>
       <p data-testid="move-new-run">{newRun(following)}</p>
       <details className="move-details">
         <summary>How moving works</summary>
@@ -185,7 +196,6 @@ function Session({
               ref={confirm}
               type="button"
               disabled={!changed}
-              onKeyDown={backOnEscape}
               onClick={() => {
                 setConfirming(false);
                 onApply();
@@ -193,7 +203,7 @@ function Session({
             >
               Start the new run
             </button>
-            <button type="button" onKeyDown={backOnEscape} onClick={() => setConfirming(false)}>
+            <button type="button" onClick={() => setConfirming(false)}>
               Back to the moves
             </button>
           </div>
@@ -220,6 +230,6 @@ function Session({
           </button>
         </div>
       )}
-    </>
+    </div>
   );
 }
