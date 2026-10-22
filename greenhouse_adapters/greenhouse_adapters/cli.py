@@ -51,9 +51,9 @@ type Commands = argparse._SubParsersAction[argparse.ArgumentParser]
 
 
 # Other installed packages can add subcommands by declaring an entry point
-# in this group whose target takes the subparsers object, for example
-#     [project.entry-points."greenhouse_data.commands"]
-#     load = "mypackage.cli:add_load_command"
+# in this group whose target takes the subparsers object: in a package's
+# `pyproject.toml`, a `[project.entry-points."greenhouse_data.commands"]`
+# table with, for example, `load` naming `mypackage.cli:add_load_command`.
 COMMAND_PLUGINS = "greenhouse_data.commands"
 
 # What a command meets in the data or the network, not in its own code: said
