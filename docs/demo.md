@@ -231,7 +231,16 @@ uv run record-demo
 ```
 
 plays it with a caption on each step, lingering on each, and records it as
-video under `greenhouse_sim/web/test-results/demo/`, whose path it prints, so that each release can record it
-again. GitHub plays a video in the README only when it hosts it, an MP4 or
-WebM uploaded through an issue or a pull request, under 10 MB: the README
-plays a short cut, and links a longer one. Uploading them is done by hand.
+video under `greenhouse_sim/web/test-results/demo/`, so that each release can
+record it again. The recording starts with the page, blank until the house
+is drawn; the walk-through notes when its opening shot is ready, the house
+and its crop in view, and the command cuts the recording from there with
+ffmpeg, at twice the speed, into `greenhouse-open-<version>.mp4`, and saves
+its first frame as a PNG beside it. GitHub shows a README's video by its
+first frame until it plays, so that frame should show the whole house.
+
+GitHub plays a video in the README only when it hosts it, an MP4 or WebM
+uploaded through an issue or a pull request, under 10 MB, and the upload is
+done by hand. A release records it from its own branch and uploads it to its
+pull request (decision 0045, and the release skill,
+`.claude/skills/release/SKILL.md`).

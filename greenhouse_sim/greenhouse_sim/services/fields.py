@@ -27,6 +27,7 @@ its start, beside the same run with everything off
 start.
 """
 
+import logging
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from typing import Final
@@ -70,10 +71,12 @@ from greenhouse_sim.services.scenarios import (
     layout_name,
     scenario,
 )
-from greenhouse_sim.services.stores import Store
+from greenhouse_sim.services.stores import Store, digest_label
 from greenhouse_sim.services.sunlight import plant_light
 from greenhouse_sim.weather.recorded import RecordedWeather
 from greenhouse_sim.world.geometry import Vector3
+
+logger = logging.getLogger(__name__)
 
 SHEAR: Final = "shear"
 CFD: Final = "cfd"
@@ -210,7 +213,14 @@ def run_schedule(run: RunRequest) -> Schedule:
 # its equipment's levels and its doors' and vents' from the start, its
 # commands after it, and its target changes.
 type RunKey = tuple[str, str, str, _Pairs, _Pairs, tuple[Commanded, ...], tuple[Commanded, ...]]
-CLIMATE_RUNS: Store[RunKey, ClimateDay] = Store("climate runs", KEPT_RUNS)
+
+
+def run_label(key: RunKey) -> str:
+    """A kept run's name in the log: its scenario, and a digest of the rest."""
+    return f"{key[0]} {digest_label(key)}"
+
+
+CLIMATE_RUNS: Store[RunKey, ClimateDay] = Store("climate runs", KEPT_RUNS, label=run_label)
 
 
 def _climate_day(
@@ -236,9 +246,17 @@ def _climate_day(
         run = ClimateDay(_new_climate_run(*key))
         for _, other in others:
             run.carry_on_from(other)
-        for state in agreeing(house_of(key), run.run.schedule):
+        taken_over = agreeing(house_of(key), run.run.schedule)
+        for state in taken_over:
             for moment, air in state.airs():
                 run.house.seed(moment, air)
+        if taken_over:
+            logger.info(
+                "climate runs: %s takes over the kept states of days %s",
+                run_label(key),
+                ", ".join(str(state.day) for state in taken_over),
+                extra={"store": CLIMATE_RUNS.name, "event": "taken over", "label": run_label(key)},
+            )
         return run
 
     return CLIMATE_RUNS.made_once(key, make, lambda other: house_of(other) == house_of(key))

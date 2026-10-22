@@ -18,18 +18,43 @@ order to keep.
 Every store is listed as it is made, so that `forget_everything` forgets
 them all, as a test asks for a clean slate: the stores made last, which
 build on those made before, first.
+
+A store logs, at INFO, each value it makes, with how long it took and how
+many related values it was made from, each it is given to keep, and each
+it lets go, with why (AUDIT.14). Each record carries the store's name and
+what happened (`store`, `event`), so that a test asks the log what was
+made rather than reading a store's insides.
 """
 
+import logging
 import threading
+import time
 import weakref
 from collections import OrderedDict
 from collections.abc import Callable, Hashable
 from concurrent.futures import Future
-from typing import Any
+from typing import Any, Literal
+
+from greenhouse_sim.digests import short_digest
+
+logger = logging.getLogger(__name__)
+
+# How many hexadecimal digits name a kept value in the log.
+LABEL_DIGITS = 8
+
+# Why a value was let go: past its store's bound, dropped by its service,
+# or forgotten with everything else.
+type LetGo = Literal["past the bound", "dropped", "forgotten"]
 
 
 def _never(key: object) -> bool:
     return False
+
+
+def digest_label(key: object) -> str:
+    """A kept value's name in the log: a digest of its key, short, the same
+    for the same key in any process."""
+    return f"#{short_digest(repr(key), LABEL_DIGITS)}"
 
 
 class Store[K: Hashable, V]:
@@ -42,10 +67,12 @@ class Store[K: Hashable, V]:
         name: str,
         bound: int | None = None,
         on_drop: Callable[[K, V], None] | None = None,
+        label: Callable[[K], str] = digest_label,
     ) -> None:
         self.name = name
         self._bound = bound
         self._on_drop = on_drop
+        self._label = label
         self._kept: OrderedDict[K, Future[V]] = OrderedDict()
         self._pinned: set[K] = set()
         self._lock = threading.Lock()
@@ -72,11 +99,13 @@ class Store[K: Hashable, V]:
             else:
                 self._kept.move_to_end(key)
                 dropped = []
-        self._dropped(dropped)
+        self._dropped(dropped, "past the bound")
         if not mine:
             return promised.result()
+        started = time.perf_counter()
         try:
-            value = make(_made(others))
+            from_kept = _made(others)
+            value = make(from_kept)
         except BaseException as error:
             promised.set_exception(error)
             with self._lock:
@@ -84,6 +113,11 @@ class Store[K: Hashable, V]:
                     del self._kept[key]
             raise
         promised.set_result(value)
+        self._log(
+            "made",
+            key,
+            f"in {time.perf_counter() - started:.2f} s, from {len(from_kept)} kept",
+        )
         return value
 
     def keep(self, key: K, value: V, *, pinned: bool = False) -> None:
@@ -97,7 +131,8 @@ class Store[K: Hashable, V]:
             if pinned:
                 self._pinned.add(key)
             dropped = self._over_bound()
-        self._dropped(dropped)
+        self._log("kept", key, "pinned" if pinned else "")
+        self._dropped(dropped, "past the bound")
 
     def get(self, key: K) -> V | None:
         """The value kept for `key`, once made, or None."""
@@ -126,7 +161,7 @@ class Store[K: Hashable, V]:
                 return
             del self._kept[key]
             self._pinned.discard(key)
-        self._dropped([(key, promised)])
+        self._dropped([(key, promised)], "dropped")
 
     def forget(self) -> None:
         """Let every value kept go, the pinned ones too."""
@@ -134,7 +169,7 @@ class Store[K: Hashable, V]:
             dropped = list(self._kept.items())
             self._kept.clear()
             self._pinned.clear()
-        self._dropped(dropped)
+        self._dropped(dropped, "forgotten")
 
     def _over_bound(self) -> list[tuple[K, Future[V]]]:
         """Let go of the oldest unpinned values past the bound: under the lock."""
@@ -147,12 +182,26 @@ class Store[K: Hashable, V]:
             dropped.append((oldest, self._kept.pop(oldest)))
         return dropped
 
-    def _dropped(self, dropped: list[tuple[K, Future[V]]]) -> None:
-        """Hand what was let go to `on_drop`: outside the lock."""
+    def _dropped(self, dropped: list[tuple[K, Future[V]]], why: LetGo) -> None:
+        """Log what was let go, by its key alone, and hand it to `on_drop`:
+        outside the lock. Only `on_drop` waits for a value still being made."""
+        for key, _ in dropped:
+            self._log("let go", key, why)
         if self._on_drop is None:
             return
         for key, value in _made(dropped):
             self._on_drop(key, value)
+
+    def _log(self, event: str, key: K, detail: str) -> None:
+        label = self._label(key)
+        logger.info(
+            "%s: %s %s%s",
+            self.name,
+            event,
+            label,
+            f" ({detail})" if detail else "",
+            extra={"store": self.name, "event": event, "label": label},
+        )
 
 
 # Every store made, as long as it lasts: the services' last as long as the

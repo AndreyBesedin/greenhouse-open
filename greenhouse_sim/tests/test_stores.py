@@ -5,6 +5,7 @@ making fails not kept; the latest kept up to a bound, beside those pinned;
 what is let go handed on outside the lock; and everything forgotten at
 once, the stores made last first."""
 
+import logging
 import re
 import threading
 from collections.abc import Callable
@@ -13,8 +14,9 @@ from pathlib import Path
 
 import pytest
 
+from greenhouse_sim.digests import short_digest
 from greenhouse_sim.services import fields
-from greenhouse_sim.services.stores import Store, forget_everything
+from greenhouse_sim.services.stores import LABEL_DIGITS, Store, digest_label, forget_everything
 
 # Long enough for a thread that is not stalled to finish.
 WAIT_S = 5.0
@@ -137,6 +139,80 @@ def test_a_value_whose_making_fails_is_not_kept() -> None:
 
     assert store.values() == []
     assert store.made_once("a", _making("A")) == "A"
+
+
+def _logged(caplog: pytest.LogCaptureFixture, store: str) -> list[tuple[str, str]]:
+    """What a store logged: each event, and the value's label."""
+    return [
+        (getattr(record, "event", ""), getattr(record, "label", ""))
+        for record in caplog.records
+        if getattr(record, "store", None) == store
+    ]
+
+
+def test_a_store_logs_what_it_makes_keeps_and_lets_go(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO, logger="greenhouse_sim")
+    store: Store[str, str] = Store("logged", 1, label=str)
+    store.made_once("a", _making("A"))
+    store.made_once("a", _making("again"))
+    store.keep("b", "B")
+    store.drop("b")
+    store.made_once("c", _making("C"))
+    store.forget()
+
+    assert _logged(caplog, "logged") == [
+        ("made", "a"),
+        ("kept", "b"),
+        ("let go", "a"),
+        ("let go", "b"),
+        ("made", "c"),
+        ("let go", "c"),
+    ]
+    reasons = [
+        record.getMessage()
+        for record in caplog.records
+        if getattr(record, "event", None) == "let go"
+    ]
+    assert [reason.rsplit("(", 1)[1] for reason in reasons] == [
+        "past the bound)",
+        "dropped)",
+        "forgotten)",
+    ]
+
+
+def test_a_value_still_being_made_is_let_go_without_waiting_for_it(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # Logged, a value let go is named by its key: the request that let it go
+    # waits for no other request's making, as AUDIT.29 asks.
+    caplog.set_level(logging.INFO, logger="greenhouse_sim")
+    store: Store[str, str] = Store("slow", 1, label=str)
+    started, finish = threading.Event(), threading.Event()
+
+    def slow(others: list[tuple[str, str]]) -> str:
+        started.set()
+        finish.wait(WAIT_S)
+        return "A"
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(store.made_once, "a", slow)
+        assert started.wait(WAIT_S)
+        other = pool.submit(store.made_once, "b", _making("B"))
+        try:
+            assert other.result(timeout=WAIT_S) == "B"
+            assert not first.done()
+        finally:
+            finish.set()
+        assert first.result(timeout=WAIT_S) == "A"
+    assert ("let go", "a") in _logged(caplog, "slow")
+
+
+def test_a_kept_value_is_named_in_the_log_by_a_digest_of_its_key() -> None:
+    key = ("climate_box", "default", ("heater", 1.0))
+
+    assert digest_label(key) == f"#{short_digest(repr(key), LABEL_DIGITS)}"
+    assert digest_label(key) == digest_label(("climate_box", "default", ("heater", 1.0)))
+    assert digest_label(key) != digest_label(("climate_box", "default", ("heater", 0.0)))
 
 
 def test_everything_is_forgotten_at_once_the_stores_made_last_first(

@@ -36,7 +36,7 @@ from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.scene.plants import crop_entities
 from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
-from greenhouse_sim.services.fields import RunKey, climate_run, house_of
+from greenhouse_sim.services.fields import RunKey, climate_run, house_of, run_label
 from greenhouse_sim.services.kept_states import KeptState, agreeing
 from greenhouse_sim.services.runs import RunRequest, checked_moment
 from greenhouse_sim.services.scenarios import SceneChanges, changed, plant_ids, scenario
@@ -48,7 +48,7 @@ from greenhouse_sim.solar.shadows import Shadows
 # How many recent runs' crops are kept.
 KEPT_CROPS: Final = 4
 
-CROPS: Store[RunKey, tuple[RunCrop, Schedule]] = Store("crops", KEPT_CROPS)
+CROPS: Store[RunKey, tuple[RunCrop, Schedule]] = Store("crops", KEPT_CROPS, label=run_label)
 
 
 def run_crop(run: RunRequest, watch: Stopwatch | None = None) -> RunCrop:
