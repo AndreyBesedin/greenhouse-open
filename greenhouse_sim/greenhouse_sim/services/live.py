@@ -15,6 +15,7 @@ viewer sees it. A client commands a run through `LiveRuns`, by scenario,
 and is answered with the run's new state, its frame without the scene.
 """
 
+import logging
 import threading
 from datetime import UTC, datetime, time, timedelta
 from enum import StrEnum
@@ -37,6 +38,11 @@ DAY_START: Final = time(12, 0)
 LIVE_SIMULATION_ID: Final = "sim_live"
 # How much faster than the server's pace a run may play.
 SPEEDS: Final = (0.25, 0.5, 1.0, 2.0, 4.0, 8.0)
+# How long a run stopped is waited for: the day it is working out finishes
+# first, which takes far less.
+STOP_WAIT_S: Final = 10.0
+
+logger = logging.getLogger(__name__)
 
 
 class LiveCommand(StrEnum):
@@ -92,7 +98,9 @@ class LiveRun:
         self._world = self._engine.initialize(self._plant_ids, greenhouse_id=config.greenhouse_id)
         self._frame = self._describe(sequence=0, day=0)
         self._published_at = monotonic()
-        self._thread = threading.Thread(target=self._pace, daemon=True)
+        self._thread = threading.Thread(
+            target=self._pace, name=f"live run of {config.greenhouse_id}", daemon=True
+        )
 
     @property
     def stopped(self) -> bool:
@@ -102,9 +110,15 @@ class LiveRun:
         self._thread.start()
 
     def stop(self) -> None:
+        """Stops pacing the run, and waits for its thread to end: a day it is
+        working out is finished first."""
         self._stopped.set()
         with self._changed:
             self._changed.notify_all()
+        if self._thread.is_alive() and self._thread is not threading.current_thread():
+            self._thread.join(STOP_WAIT_S)
+            if self._thread.is_alive():
+                logger.warning("%s did not stop within %g s", self._thread.name, STOP_WAIT_S)
 
     def latest(self) -> LiveFrame:
         with self._changed:
@@ -206,15 +220,18 @@ class LiveRun:
 class LiveRuns:
     """One shared run per scenario, started when a viewer first asks for it.
     Clients reach a run by its scenario's identifier: one that is not
-    registered is not found."""
+    registered is not found. Once closed, they start no other."""
 
     def __init__(self, *, seconds_per_day: float = DEFAULT_SECONDS_PER_DAY) -> None:
         self._seconds_per_day = seconds_per_day
         self._runs: dict[str, LiveRun] = {}
         self._lock = threading.Lock()
+        self._closed = False
 
     def run_for(self, config: ScenarioConfig) -> LiveRun:
         with self._lock:
+            if self._closed:
+                raise RuntimeError("the live runs are closed")
             run = self._runs.get(config.greenhouse_id)
             if run is None:
                 run = LiveRun(config, seconds_per_day=self._seconds_per_day)
@@ -246,7 +263,10 @@ class LiveRuns:
             raise InvalidSpeed()
         return run.set_speed(multiplier).state()
 
-    def stop(self) -> None:
+    def close(self) -> None:
+        """Stops every run, waiting for each, and starts none after."""
         with self._lock:
-            for run in self._runs.values():
-                run.stop()
+            self._closed = True
+            runs = list(self._runs.values())
+        for run in runs:
+            run.stop()

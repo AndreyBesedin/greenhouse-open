@@ -3,6 +3,7 @@
 import errno
 import json
 import threading
+import time
 import urllib.error
 import urllib.request
 from collections.abc import Iterator
@@ -22,6 +23,8 @@ NOON_ON_DAY_ZERO = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
 
 # Fast enough that a playing run moves on many times while a test waits.
 QUICK_SECONDS_PER_DAY = 0.01
+# How long a run's thread outlives its pacing, in a test of waiting for it.
+LINGER_S = 0.2
 # How long a test waits to see that a paused run does not move.
 QUIET_SECONDS = 0.2
 
@@ -247,7 +250,7 @@ def test_an_unknown_scenario_has_no_live_stream(server: SimulatorServer) -> None
 def runs() -> Iterator[LiveRuns]:
     runs = LiveRuns(seconds_per_day=60.0)
     yield runs
-    runs.stop()
+    runs.close()
 
 
 @pytest.mark.parametrize(
@@ -322,11 +325,47 @@ def test_a_command_over_http_reaches_the_stream(server: SimulatorServer) -> None
 
 def test_closing_the_server_stops_its_live_runs() -> None:
     server = create_server(port=0, seconds_per_day=0.05)
-    run = server.live.run_for(CONFIG)
+    run = server.simulator.live.run_for(CONFIG)
 
     server.server_close()
 
     assert run.stopped
+    assert not _pacing(CONFIG.greenhouse_id)
+
+
+def _pacing(scenario_id: str) -> bool:
+    """Whether a live run of the scenario is still being paced by a thread."""
+    return any(thread.name == f"live run of {scenario_id}" for thread in threading.enumerate())
+
+
+class _SlowToFinish(LiveRun):
+    """A run whose thread outlives its pacing a little, as one finishing a
+    day would."""
+
+    def _pace(self) -> None:
+        super()._pace()
+        time.sleep(LINGER_S)
+
+
+def test_a_run_stopped_has_finished_with_its_thread() -> None:
+    run = _SlowToFinish(CONFIG, seconds_per_day=QUICK_SECONDS_PER_DAY)
+    run.start()
+    assert _pacing(CONFIG.greenhouse_id)
+
+    run.stop()
+
+    assert not _pacing(CONFIG.greenhouse_id)
+
+
+def test_live_runs_closed_start_no_other() -> None:
+    runs = LiveRuns(seconds_per_day=QUICK_SECONDS_PER_DAY)
+    run = runs.run_for(CONFIG)
+
+    runs.close()
+
+    assert run.stopped and not _pacing(CONFIG.greenhouse_id)
+    with pytest.raises(RuntimeError, match="closed"):
+        runs.run_for(CONFIG)
 
 
 def test_a_port_already_taken_is_reported_as_such() -> None:
