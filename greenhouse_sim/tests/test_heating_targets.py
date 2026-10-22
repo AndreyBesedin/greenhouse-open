@@ -258,3 +258,25 @@ def test_a_run_started_over_with_moves_keeps_its_target_changes(
     again = respond("POST", f"{path}/restart")
     assert isinstance(again.body, dict)
     assert (again.body["layout"], again.body["targets"]) == (moved_layout, [])
+
+
+def test_a_target_changed_while_moves_replace_the_playback_is_kept(
+    tmp_path: Path, no_playbacks: Callable[[], None]
+) -> None:
+    """A request that found the playback before moves replaced it, and
+    changes its targets only once the replacement has taken them, is not
+    lost: the playback replaced hands the change to the one in its place,
+    which plays the moved run with it (decision 0049)."""
+    clock = Clock()
+    playback.start(SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
+    replaced = playback.playback(SCENARIO)
+    # A restart with moves has made the playback to put in its place, its
+    # targets taken, and not yet put it there.
+    replacing = replaced.rearranged(layout_name(FAN_MOVED))
+
+    late = replaced.set_targets({"heating_day": 24.0})
+
+    change = (60.0, "heating_day", 24.0)
+    assert (late.layout, late.targets) == (layout_name(FAN_MOVED), [change])
+    assert replacing.state().targets == [change]
+    assert replaced.state().targets == []

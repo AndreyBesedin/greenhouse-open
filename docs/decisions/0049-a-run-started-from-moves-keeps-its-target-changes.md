@@ -29,6 +29,10 @@ run again.
   It plays the new layout's run with them from its first day, and its state
   lists them (`PlaybackState.targets`). The run keeps the new layout's
   identity, as a steered run keeps its own (decision 0043).
+- **No change acknowledged meanwhile is lost.** The API answers requests on
+  threads of their own. A target change, a pace or a command asked of the
+  playback being replaced, by a request that found it before the
+  replacement took its targets, is handed to the one in its place.
 - **A restart with the layout it plays is unchanged.** It is a new epoch of
   the scenario's own run, without the changes (decision 0043).
 - **The viewer keeps them too.** Applied, the moves change the run drawn's

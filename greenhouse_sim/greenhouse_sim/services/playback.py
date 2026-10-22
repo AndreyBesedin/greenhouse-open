@@ -314,6 +314,10 @@ class Playback:
         self._changed = threading.Event()
         self._stopped = threading.Event()
         self._failure: Exception | None = None
+        # The playback made to take its place, once one has taken its target
+        # changes (`rearranged`): every change asked of it from then on is
+        # that one's, so that none it acknowledges is lost.
+        self._successor: Playback | None = None
         self._worker = threading.Thread(
             target=self._work, name=f"playback of {self.run_id}", daemon=True
         )
@@ -329,19 +333,22 @@ class Playback:
     def rearranged(self, layout: str) -> Playback:
         """A playback of the same scenario with `layout`, at the same pace and
         cadence, on the same clock, with the same target changes, counting the
-        epochs of its own run where this one counts its: not begun. A layout
-        refused makes none."""
+        epochs of its own run where this one counts its: not begun. From then
+        on this one hands it every change asked of it, such as a target
+        changed by a request already under way, so that the run played next
+        has it. A layout refused makes none, and this one goes on as it was."""
         with self._lock:
-            targets = self._targets
-        return Playback(
-            self.scenario_id,
-            layout=layout,
-            targets=targets,
-            seconds_per_day=self._seconds_per_day,
-            every_s=self.every_s,
-            clock=self._clock,
-            epochs=self._epochs,
-        )
+            replacing = Playback(
+                self.scenario_id,
+                layout=layout,
+                targets=self._targets,
+                seconds_per_day=self._seconds_per_day,
+                every_s=self.every_s,
+                clock=self._clock,
+                epochs=self._epochs,
+            )
+            self._successor = replacing
+        return replacing
 
     def stop(self, *, wait: bool = True) -> None:
         """Stops working days out, once the one under way is: it returns when
@@ -484,45 +491,55 @@ class Playback:
 
     def command(self, command: PlaybackCommand) -> PlaybackState:
         """Plays on, holds the clock, or starts the run over as a new epoch,
-        playing; answers with the new state."""
+        playing; answers with the new state. Once replaced, the one in its
+        place does."""
         with self._lock:
-            self._advance()
-            match command:
-                case PlaybackCommand.PLAY:
-                    self._playing = self._time_s < self.end_s
-                case PlaybackCommand.PAUSE:
-                    self._playing = False
-                case PlaybackCommand.RESTART:
-                    self._epoch += 1
-                    if self._epochs is not None:
-                        self._epochs.started(self.run_id, self._epoch)
-                    self._time_s = 0.0
-                    self._playing = True
-                    # The scenario's own run again, without the changes.
-                    if self._targets:
-                        self._work_again_from(self._targets[0][0])
-                        self._targets = ()
-            return self._state()
+            successor = self._successor
+            if successor is None:
+                self._advance()
+                match command:
+                    case PlaybackCommand.PLAY:
+                        self._playing = self._time_s < self.end_s
+                    case PlaybackCommand.PAUSE:
+                        self._playing = False
+                    case PlaybackCommand.RESTART:
+                        self._epoch += 1
+                        if self._epochs is not None:
+                            self._epochs.started(self.run_id, self._epoch)
+                        self._time_s = 0.0
+                        self._playing = True
+                        # The scenario's own run again, without the changes.
+                        if self._targets:
+                            self._work_again_from(self._targets[0][0])
+                            self._targets = ()
+                return self._state()
+        return successor.command(command)
 
     def set_targets(self, targets: Mapping[str, float]) -> PlaybackState:
         """Changes its run's targets from the clock's next minute on, in the
         same run and epoch (decision 0043): its records from then on are
         worked out again under them, the clock waiting at that minute until
         they are. Refused as a run's target changes are, or once the run has
-        ended."""
+        ended. Once replaced, the one in its place changes them."""
         if not targets:
             raise InvalidRequest("targets wants target:celsius pairs, and none was given")
         with self._lock:
-            self._advance()
-            moment = (math.floor(self._time_s / TARGET_EVERY_S) + 1) * TARGET_EVERY_S
-            if moment > self.end_s:
-                raise InvalidRequest("the run has ended: its targets change no more")
-            changed = (*self._targets, *((moment, name, value) for name, value in targets.items()))
-            # Checked as a run's target changes are; refused, nothing changes.
-            run_schedule(replace(self._run(), targets=changed))
-            self._targets = changed
-            self._work_again_from(moment)
-            return self._state()
+            successor = self._successor
+            if successor is None:
+                self._advance()
+                moment = (math.floor(self._time_s / TARGET_EVERY_S) + 1) * TARGET_EVERY_S
+                if moment > self.end_s:
+                    raise InvalidRequest("the run has ended: its targets change no more")
+                changed = (
+                    *self._targets,
+                    *((moment, name, value) for name, value in targets.items()),
+                )
+                # Checked as a run's target changes are; refused, nothing changes.
+                run_schedule(replace(self._run(), targets=changed))
+                self._targets = changed
+                self._work_again_from(moment)
+                return self._state()
+        return successor.set_targets(targets)
 
     def _work_again_from(self, moment_s: float) -> None:
         """Has its records from `moment_s` on worked out again, the clock
@@ -532,12 +549,16 @@ class Playback:
         self._changed.set()
 
     def set_pace(self, seconds_per_day: float) -> PlaybackState:
-        """Plays a simulated day in `seconds_per_day` real seconds."""
+        """Plays a simulated day in `seconds_per_day` real seconds; once
+        replaced, the one in its place does."""
         _check_pace(seconds_per_day)
         with self._lock:
-            self._advance()
-            self._seconds_per_day = seconds_per_day
-            return self._state()
+            successor = self._successor
+            if successor is None:
+                self._advance()
+                self._seconds_per_day = seconds_per_day
+                return self._state()
+        return successor.set_pace(seconds_per_day)
 
     def _cut(self, after: int, limit: int) -> tuple[PlaybackState, list[tuple[_Packed, _Packed]]]:
         if after < 0 or limit < 1:
