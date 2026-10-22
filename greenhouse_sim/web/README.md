@@ -73,16 +73,20 @@ house; a weather station's instrument, outside it, is not held in. A click
 selects another item to drag. Each stays where it is dropped, drawn there,
 and nothing is asked of the simulator: the panel lists the moves, each with
 "Put back", and "Put everything back" returns every item to where its
-layout places it. Moving equipment changes the house's climate, so the
-moves make a new run: "Start a new run with these moves" asks for the
+layout places it. The panel says in a line what applying the moves does,
+the details folded under "How moving works". Moving equipment changes the
+house's climate, so the moves make a new run: "Start a new run with these
+moves" asks first, in the panel, and "Start the new run" asks for the
 layout they make, the one moved from with the moves after a `~`
 (`&layout=default~heater:-1:0.5`, the heater a metre along the world's -x
 and half a metre along its y), at the run's start, all at once, and Back
-takes it back. "Cancel", or Escape, leaves everything as it was; Escape
-first cancels a drag under way. While the view follows the run played back
-(`&follow=1`), applying the moves starts the playback over with that
-layout, a new run from its first day, which the view goes on following and
-a consumer reads (decision 0041).
+takes it back; "Back to the moves", or Escape, returns to them (#305). The
+new run keeps the run's heating target changes, each at its moment
+(`&targets=`, decision 0049). "Cancel", or Escape, leaves everything as it
+was; Escape first cancels a drag under way. While the view follows the run
+played back (`&follow=1`), applying the moves starts the playback over with
+that layout, a new run from its first day with the same target changes,
+which the view goes on following and a consumer reads (decision 0041).
 
 A scenario's air field, one of the environment fields the simulator publishes
 for it (`greenhouse_sim/fields/`), can be drawn over its scene: "Air field"
