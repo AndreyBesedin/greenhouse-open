@@ -6,7 +6,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
 
@@ -15,6 +15,7 @@ import pytest
 from greenhouse_sim.api.routes import control
 from greenhouse_sim.api.server import SimulatorServer, create_server
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.services import live
 from greenhouse_sim.services.live import SPEEDS, LiveFrame, LiveRun, LiveRuns
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
@@ -25,6 +26,10 @@ NOON_ON_DAY_ZERO = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
 QUICK_SECONDS_PER_DAY = 0.01
 # How long a run's thread outlives its pacing, in a test of waiting for it.
 LINGER_S = 0.2
+# How long a test waits for a thread it expects to finish.
+WAIT_S = 5.0
+# How long a test gives a thread it expects to be still waiting.
+STILL_WAITING_S = 0.3
 # How long a test waits to see that a paused run does not move.
 QUIET_SECONDS = 0.2
 
@@ -377,3 +382,51 @@ def test_a_port_already_taken_is_reported_as_such() -> None:
         taken.server_close()
 
     assert raised.value.errno == errno.EADDRINUSE
+
+
+def test_stopping_a_run_stuck_in_a_day_gives_up_in_time_and_says_so(
+    held_in_a_day: Callable[[LiveRun, threading.Event], threading.Event],
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    monkeypatch.setattr(live, "STOP_WAIT_S", STILL_WAITING_S)
+    release = threading.Event()
+    run = LiveRun(CONFIG, seconds_per_day=QUICK_SECONDS_PER_DAY)
+    begun = held_in_a_day(run, release)
+    run.start()
+    try:
+        assert begun.wait(WAIT_S)
+        stopping = threading.Thread(target=run.stop)
+        stopping.start()
+        stopping.join(WAIT_S)
+
+        assert not stopping.is_alive()
+        assert "live run of climate_box did not stop within" in caplog.text
+    finally:
+        release.set()
+        run.stop()
+    assert not _pacing(CONFIG.greenhouse_id)
+
+
+def test_closing_live_runs_tells_each_to_stop_before_waiting_for_any(
+    held_in_a_day: Callable[[LiveRun, threading.Event], threading.Event],
+) -> None:
+    runs = LiveRuns(seconds_per_day=QUICK_SECONDS_PER_DAY)
+    release = threading.Event()
+    first = runs.run_for(CONFIG)
+    second = runs.run_for(SCENARIO_REGISTRY["airflow_box"])
+    begun = [held_in_a_day(run, release) for run in (first, second)]
+    closing = threading.Thread(target=runs.close)
+    try:
+        assert all(day.wait(WAIT_S) for day in begun)
+        closing.start()
+        closing.join(STILL_WAITING_S)
+
+        # Both told before either is waited for: neither starts another day.
+        assert closing.is_alive()
+        assert first.stopped and second.stopped
+    finally:
+        release.set()
+    closing.join(WAIT_S)
+    assert not closing.is_alive()
+    assert not _pacing(CONFIG.greenhouse_id) and not _pacing("airflow_box")

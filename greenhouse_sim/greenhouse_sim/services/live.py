@@ -38,8 +38,8 @@ DAY_START: Final = time(12, 0)
 LIVE_SIMULATION_ID: Final = "sim_live"
 # How much faster than the server's pace a run may play.
 SPEEDS: Final = (0.25, 0.5, 1.0, 2.0, 4.0, 8.0)
-# How long a run stopped is waited for: the day it is working out finishes
-# first, which takes far less.
+# How long stopping waits for runs, in all: a day each is working out
+# finishes first, which takes far less.
 STOP_WAIT_S: Final = 10.0
 
 logger = logging.getLogger(__name__)
@@ -110,15 +110,30 @@ class LiveRun:
         self._thread.start()
 
     def stop(self) -> None:
-        """Stops pacing the run, and waits for its thread to end: a day it is
-        working out is finished first."""
+        """Stops pacing the run, and waits for its thread to end, a day it is
+        working out finished first: `STOP_WAIT_S` at most, logged past it."""
+        self.tell_to_stop()
+        self.finish(monotonic() + STOP_WAIT_S)
+
+    def tell_to_stop(self) -> None:
+        """The run starts no other day; the one it is working out goes on."""
         self._stopped.set()
-        with self._changed:
-            self._changed.notify_all()
-        if self._thread.is_alive() and self._thread is not threading.current_thread():
-            self._thread.join(STOP_WAIT_S)
-            if self._thread.is_alive():
-                logger.warning("%s did not stop within %g s", self._thread.name, STOP_WAIT_S)
+
+    def finish(self, deadline: float) -> None:
+        """Wakes the run's thread if it waits for a change, and waits for it to
+        end, until `deadline` (`time.monotonic`) at most: a thread working a
+        day out holds the run, and sees it is to stop once the day is done."""
+        if self._changed.acquire(timeout=max(0.0, deadline - monotonic())):
+            try:
+                self._changed.notify_all()
+            finally:
+                self._changed.release()
+        thread = self._thread
+        if not thread.is_alive() or thread is threading.current_thread():
+            return
+        thread.join(max(0.0, deadline - monotonic()))
+        if thread.is_alive():
+            logger.warning("%s did not stop within %g s", thread.name, STOP_WAIT_S)
 
     def latest(self) -> LiveFrame:
         with self._changed:
@@ -264,9 +279,14 @@ class LiveRuns:
         return run.set_speed(multiplier).state()
 
     def close(self) -> None:
-        """Stops every run, waiting for each, and starts none after."""
+        """Stops every run, and starts none after: each is told before any is
+        waited for, so that none starts another day meanwhile, and all of
+        them are waited for `STOP_WAIT_S` at most."""
         with self._lock:
             self._closed = True
             runs = list(self._runs.values())
+        deadline = monotonic() + STOP_WAIT_S
         for run in runs:
-            run.stop()
+            run.tell_to_stop()
+        for run in runs:
+            run.finish(deadline)

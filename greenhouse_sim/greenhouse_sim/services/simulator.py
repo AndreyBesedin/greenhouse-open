@@ -34,12 +34,15 @@ class Simulator:
         return self._closed
 
     def close(self) -> None:
-        """Stops the live runs and waits for them; closing again does nothing."""
+        """Stops the live runs and waits for them. A close asked for while
+        another is under way waits for it; one asked for after does nothing."""
         with self._closing:
             if self._closed:
                 return
-            self._closed = True
-        self.live.close()
+            try:
+                self.live.close()
+            finally:
+                self._closed = True
 
     def __enter__(self) -> Self:
         return self

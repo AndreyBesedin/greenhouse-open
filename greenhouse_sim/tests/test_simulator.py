@@ -2,17 +2,24 @@
 its live runs, closed with it; made by the server, or given to it."""
 
 import threading
+import time
+from collections.abc import Callable
 
 import pytest
 
 from greenhouse_sim.api.server import create_server
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED, Catalogue
+from greenhouse_sim.services.live import LiveRun
 from greenhouse_sim.services.simulator import Simulator
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
 # Quick enough for a run to step while a test looks.
 QUICK_SECONDS_PER_DAY = 0.01
+# How long a test waits for a thread it expects to finish.
+WAIT_S = 5.0
+# How long a test gives a thread it expects to be still waiting.
+STILL_WAITING_S = 0.3
 
 
 def _pacing() -> list[str]:
@@ -75,3 +82,29 @@ def test_a_server_leaves_a_simulator_it_was_given_to_its_giver() -> None:
         assert server.simulator is simulator
         assert not simulator.closed and not run.stopped
     assert run.stopped and _pacing() == []
+
+
+def test_a_second_close_waits_for_the_first(
+    held_in_a_day: Callable[[LiveRun, threading.Event], threading.Event],
+) -> None:
+    simulator = Simulator(seconds_per_day=QUICK_SECONDS_PER_DAY)
+    run = simulator.live.run_for(CONFIG)
+    release = threading.Event()
+    begun = held_in_a_day(run, release)
+    first = threading.Thread(target=simulator.close)
+    second = threading.Thread(target=simulator.close)
+    try:
+        assert begun.wait(WAIT_S)
+        first.start()
+        deadline = time.monotonic() + WAIT_S
+        while not run.stopped and time.monotonic() < deadline:
+            time.sleep(0.01)
+        second.start()
+        second.join(STILL_WAITING_S)
+
+        assert second.is_alive()
+    finally:
+        release.set()
+    first.join(WAIT_S)
+    second.join(WAIT_S)
+    assert simulator.closed and _pacing() == []
