@@ -39,6 +39,13 @@ splits them into lanes). The Biome hook needs the viewer's packages, from
 included.
 Commits and pull request titles follow Conventional Commits
 (`type(scope): summary`, decision 0002), and every commit is signed off.
+Commit messages, pull request descriptions, issues, review replies, the
+changelog and release notes are written for any reader of the project
+and say, as far as each can hold it, what changed, why, the result, how it
+was evaluated and what limits it. They leave out any one contributor's
+plans, events, deadlines, commercial needs and requests, including those
+of the person the agent works for
+(`docs/engineering.md`, "What a public record says", decision 0044).
 
 ### Generated files
 
@@ -213,6 +220,9 @@ sensor physics, numerical methods or model parameters:
   Avoid silent fallbacks that make incomplete results appear valid.
 - Flag credentials, private datasets or information entering public artifacts,
   unsafe input handling and surprising new dependency or license obligations.
+- Flag a commit message, PR description, changelog entry or document that
+  ties the work to one contributor's plans, events, deadlines, commercial needs or requests
+  (decision 0044).
 
 ### 8. Scope, documentation and contributor experience
 

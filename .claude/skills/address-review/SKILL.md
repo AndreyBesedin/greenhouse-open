@@ -103,6 +103,12 @@ the reply and the report, and let the user decide.
 
 ## 5. Answer every thread, then the description
 
+Replies, commit messages and the description are the project's public
+record: they say what changed, why and how it was checked, for any reader
+of the project, and leave out the plans, events, deadlines, commercial
+needs and requests of whoever asked for the work (decision 0044). The report in step 6 is where
+the user hears about their own plans.
+
 - One reply per thread. Fixed: what changed, in which commit, and which test covers
   it. Deferred: where it went (clean-up doc, issue, PR). Declined: the evidence,
   briefly and without defensiveness. Sign the reply with the agent's name, such as

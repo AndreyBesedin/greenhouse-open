@@ -74,9 +74,46 @@ when that is clearer. Leave the scope out for a change across the repository.
 - Give the pull request title the same format. GitHub uses it as the merge
   commit's description, and as the commit message itself when a pull request
   is squash-merged.
+- Write the body, and the pull request's description, for any reader of
+  the project, as [the next section](#what-a-public-record-says) says.
 
 Commits before this convention used plain imperative summaries. They are not
 rewritten.
+
+## What a public record says
+
+Commit messages, pull request titles and descriptions, issues, review
+comments and replies, the changelog, release notes and tags are the
+project's public record (decision 0044). They are written for any reader
+of the project, and together they say:
+
+- **what** changed, and **why**: the problem in the code, or the project's
+  goal it serves;
+- the **result**, and **how it was evaluated**: tests, measurements, the QA
+  it passed;
+- what **limits** it or is left: bottlenecks, known gaps, follow-ups.
+
+Each record says what its form holds. A title or a tag names the change,
+an issue or a review comment states a problem before there is a result,
+and a commit body, a pull request description, the changelog and the
+release notes carry all three.
+
+The project is not built for any one contributor, so a record leaves out a
+particular person's or organisation's plans, events, deadlines, commercial
+needs and requests. A choice the maintainer made is recorded as the
+project's decision, with its reasons, not as someone's wish:
+
+| Instead of | Write |
+| --- | --- |
+| for their launch next week, as requested | the result, and how it was checked |
+| merge after the trade show | merge once consumers can take new run ids |
+| you chose to merge it now | decided: merged ahead of its QA, which follows |
+| what the customer's dashboard needs | what a consumer reading the run needs |
+
+A use case is named generically, as downstream applications are ("a
+consumer following a run beside the viewer"). Dates and versions stay as
+facts, never as someone's deadline. Records written before this rule are
+not rewritten.
 
 ## Roadmap and decision records
 
@@ -109,10 +146,13 @@ planning tool or document.
   do each finding's work.
 - **Public documents describe this open project only.** Product plans,
   business strategy, customer information and the names or internals of
-  private systems stay out. Applications that build on these packages are
-  "downstream applications". `tests/test_publishable.py` rejects known private
-  names and citations of documents that are not in this repository. It is a
-  backstop, not a substitute for writing the documents for a public reader.
+  private systems stay out, and so do any one contributor's plans, events,
+  deadlines, commercial needs and requests
+  ([what a public record says](#what-a-public-record-says)). Applications
+  that build on these packages are "downstream applications".
+  `tests/test_publishable.py` rejects known private names and citations of
+  documents that are not in this repository. It is a backstop, not a
+  substitute for writing the documents for a public reader.
 
 ## Solo-developer review policy
 
