@@ -29,15 +29,23 @@ There is one playback a scenario, whose run a viewer following it can
 rearrange. A command given in the viewer makes another run, which the
 playback does not follow.
 
+Its run carries out a plan (P13.3, decision 0046): it holds its run's
+plans in the protocol's gateway, on its clock, with the run as the executor
+(`gateway`). An action the gateway gives the run joins the run's plan from
+its moment on, and the run's records from then on are worked out again
+under it while the clock waits there; when the clock passes the moment, the
+action is done, and its outcome written to the run's log of them, which a
+consumer reads. A record delivered is never rewritten, since the run is the
+same until the change.
+
 Its run's targets, such as the heating setpoint by day, can be changed
 while it plays (#274, decision 0043): from the clock's next minute on, in
-the same run and epoch, its records from then on worked out again under
-them while the clock waits at that minute. A record delivered is never
-rewritten, since the run is the same until the change. The changes are part
-of its state, so that a viewer following it draws the same run, and a
-restart, a new epoch of the scenario's own run, makes none. Started over
-with its equipment moved, the run keeps them, each at its moment: the same
-run, rearranged (decision 0049).
+the same run and epoch, as the local operator's plan of them, revised. They
+are part of its state, so that a viewer following it draws the same run. A
+restart, a new epoch of the scenario's own run, cancels what is pending and
+forgets the plans, and a run played to its end cancels what is left of
+them. Started over with its equipment moved, the run keeps its target
+changes, each at its moment: the same run, rearranged (decision 0049).
 """
 
 import gzip
@@ -55,8 +63,12 @@ from pathlib import Path
 from time import monotonic
 from typing import TYPE_CHECKING, Final
 
+from greenhouse_protocol.actions import Action, SetTarget
+from greenhouse_protocol.contracts.consumer import OutcomeBatch
+from greenhouse_protocol.contracts.memory_gateway import InMemoryGateway
 from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
+from greenhouse_protocol.plan import At, ExecutorKind, ExecutorRef, Plan, PlannedAction
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 
 from greenhouse_sim.climate.commands import TARGET_EVERY_S
@@ -66,9 +78,16 @@ from greenhouse_sim.services.climate_runs import run_schedule
 from greenhouse_sim.services.crop_log import crop_records
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.fields import air_through_a_run
+from greenhouse_sim.services.gateway import (
+    LOCAL_AUTHORISATION,
+    LOCAL_OPERATOR,
+    RunExecutor,
+    run_items,
+    run_kinds,
+)
 from greenhouse_sim.services.heat_log import heat_records
-from greenhouse_sim.services.runs import Commanded, RunPlan, RunRequest
-from greenhouse_sim.services.scenarios import layout_name, scenario
+from greenhouse_sim.services.runs import Commanded, PlannedAt, RunPlan, RunRequest
+from greenhouse_sim.services.scenarios import SceneChanges, changed, layout_name, scenario
 from greenhouse_sim.services.sensors import Stopped, delivered_between, run_start
 from greenhouse_sim.services.stores import Store
 
@@ -94,6 +113,8 @@ WAIT_STEP_S: Final = 0.05
 # How long stopping waits for playbacks, in all: one stops at the moment it
 # is working out, which takes far less.
 STOP_WAIT_S: Final = 10.0
+# The local operator's plan of a run's target changes, revised at each.
+TARGETS_PLAN: Final = "targets"
 
 _OBSERVATIONS: Final = TypeAdapter(list[Observation])
 _EVENTS: Final = TypeAdapter(list[Event])
@@ -176,10 +197,10 @@ class PlaybackState(BaseModel):
     seconds_per_day: float
     worked_out_s: float
     every_s: float
-    # The target changes its epoch's run has (#274, decision 0043): those it
-    # made, and those of a run it was started over from with moves (decision
-    # 0049), each its moment in seconds, its target and its value in °C, as
-    # a run's `&targets=` writes them.
+    # The target changes its epoch's run has (#274, decision 0043), those
+    # given it and those of a run it was started over from with moves
+    # (decision 0049), as its plan holds them: each its moment in seconds,
+    # its target and its value in °C, as a run's `&targets=` writes them.
     targets: list[tuple[float, str, float]] = []
 
 
@@ -321,15 +342,38 @@ class Playback:
         self._playing = False
         self._seconds_per_day = seconds_per_day
         self._since = clock()
-        # The target changes its epoch has made, in the order made, after
-        # those it started with; while one is worked into the run, the
-        # moment from which its records are worked again, which the clock
-        # does not pass meanwhile; and how many changes there have been, so
-        # that a day worked out under the targets before is not published.
-        self._targets: tuple[Commanded, ...] = tuple(targets)
+        # While a change of its plan is worked into the run, the moment from
+        # which its records are worked again, which the clock does not pass
+        # meanwhile; and how many changes there have been, so that a day
+        # worked out under the plan before is not published.
         self._again_from: float | None = None
         self._changes = 0
         self._changed = threading.Event()
+        # Its run's plans, in the protocol's gateway on its clock, with the
+        # run as the executor; and the local operator's plan of target
+        # changes, as last revised.
+        played = changed(simulator.catalogue, config, SceneChanges(layout=self.layout))
+        self._executor = RunExecutor(
+            self.start,
+            self.end_s,
+            kinds=run_kinds(played),
+            changed=self._work_again_from,
+            refuses=self._refusal,
+        )
+        self._gateway = InMemoryGateway(
+            LOCAL_AUTHORISATION,
+            self.start,
+            executor=self._executor,
+            executor_ref=ExecutorRef(kind=ExecutorKind.SIMULATED_RUN, id=self.run_id),
+            items=run_items(played),
+            greenhouse_id=self.greenhouse_id,
+            run_id=self.run_id,
+        )
+        self._gateway.epoch = self._epoch
+        self._targets_planned: tuple[PlannedAction, ...] = ()
+        self._targets_revision = 0
+        if targets:
+            self._plan_targets(targets)
         self._stopped = threading.Event()
         self._failure: Exception | None = None
         # The playback made to take its place, once one has taken its target
@@ -360,7 +404,7 @@ class Playback:
                 self._simulator,
                 self.scenario_id,
                 layout=layout,
-                targets=self._targets,
+                targets=self._executor.plan().targeted(),
                 seconds_per_day=self._seconds_per_day,
                 every_s=self.every_s,
                 clock=self._clock,
@@ -411,9 +455,53 @@ class Playback:
     def _run(self) -> RunRequest:
         """The run it plays: its scenario's own, with its layout and its
         epoch's target changes."""
-        return RunRequest(
-            self.scenario_id, layout=self.layout, plan=RunPlan.requested(targets=self._targets)
+        return RunRequest(self.scenario_id, layout=self.layout, plan=self._executor.plan())
+
+    def _refusal(self, action: Action, at_s: float) -> str | None:
+        """Why its run would refuse `action` at `at_s` seconds, as a run's
+        plan is checked; None if it carries it out."""
+        try:
+            run_schedule(
+                self._simulator.catalogue,
+                RunRequest(
+                    self.scenario_id,
+                    layout=self.layout,
+                    plan=RunPlan(actions=(PlannedAt(at_s=at_s, action=action),)),
+                ),
+            )
+        except InvalidRequest as refused:
+            return refused.message
+        return None
+
+    def _plan_targets(self, changes: Sequence[Commanded]) -> None:
+        """Gives its gateway the local operator's target changes so far and
+        `changes`, as the next revision of their plan. Checked first, as a
+        run's target changes are."""
+        given = len(self._targets_planned)
+        added = tuple(
+            PlannedAction(
+                action_id=f"target_{given + n}",
+                action=SetTarget.model_validate({"target": name, "value_c": value}),
+                timing=At(at=self._executor.instant(moment)),
+                proposed_by=LOCAL_OPERATOR,
+            )
+            for n, (moment, name, value) in enumerate(changes)
         )
+        planned = (*self._targets_planned, *added)
+        receipt = self._gateway.submit(
+            Plan(
+                plan_id=TARGETS_PLAN,
+                run_id=self.run_id,
+                epoch=self._epoch,
+                revision=self._targets_revision + 1,
+                actions=planned,
+            ),
+            by=LOCAL_OPERATOR,
+        )
+        if not receipt.accepted:
+            raise InvalidRequest("; ".join(receipt.errors))
+        self._targets_planned = planned
+        self._targets_revision += 1
 
     def _next_day(self) -> int:
         """The day to work out next: the day a target change is worked into,
@@ -455,7 +543,7 @@ class Playback:
                 None if day == 0 else day * DAY_S,
                 (day + 1) * DAY_S,
                 every_s=self.every_s,
-                named=self.run_id if run.plan.targeted() else None,
+                named=self.run_id if run.plan.actions else None,
                 stop=self._stopped,
             )
             if self._stopped.is_set():
@@ -472,7 +560,7 @@ class Playback:
             with self._lock:
                 self._failure = error
             return False
-        if not run.plan.targeted() and run_id != self.run_id:
+        if not run.plan.actions and run_id != self.run_id:
             with self._lock:
                 self._failure = RuntimeError(f"its run is another now: {run_id}")
             return False
@@ -505,6 +593,11 @@ class Playback:
             if self._time_s >= self.end_s:
                 self._playing = False
         self._since = now
+        # Its gateway on the same clock: what falls due by now, done; and,
+        # once the run has ended, what is left of its plans cancelled.
+        self._gateway.advance(self._executor.instant(self._time_s))
+        if self._time_s >= self.end_s and not self._gateway.finished:
+            self._gateway.finish()
 
     def _worked_out_s(self) -> float:
         """How far its records are worked out under its targets as they are:
@@ -531,7 +624,7 @@ class Playback:
             seconds_per_day=self._seconds_per_day,
             worked_out_s=self._worked_out_s(),
             every_s=self.every_s,
-            targets=list(self._targets),
+            targets=list(self._executor.plan().targeted()),
         )
 
     def state(self) -> PlaybackState:
@@ -558,10 +651,14 @@ class Playback:
                             self._epochs.started(self.run_id, self._epoch)
                         self._time_s = 0.0
                         self._playing = True
-                        # The scenario's own run again, without the changes.
-                        if self._targets:
-                            self._work_again_from(self._targets[0][0])
-                            self._targets = ()
+                        # The scenario's own run again: what was pending is
+                        # cancelled, as the first outcomes of the new epoch,
+                        # and the plans and their actions forgotten.
+                        self._gateway.restart(continue_clock=False)
+                        self._gateway.epoch = self._epoch
+                        self._executor.forget()
+                        self._targets_planned = ()
+                        self._targets_revision = 0
                 return self._state()
         return successor.command(command)
 
@@ -580,17 +677,18 @@ class Playback:
                 moment = (math.floor(self._time_s / TARGET_EVERY_S) + 1) * TARGET_EVERY_S
                 if moment > self.end_s:
                     raise InvalidRequest("the run has ended: its targets change no more")
-                changed = (
-                    *self._targets,
-                    *((moment, name, value) for name, value in targets.items()),
-                )
+                changes = tuple((moment, name, value) for name, value in targets.items())
                 # Checked as a run's target changes are; refused, nothing changes.
                 run_schedule(
                     self._simulator.catalogue,
-                    replace(self._run(), plan=RunPlan.requested(targets=changed)),
+                    replace(
+                        self._run(),
+                        plan=RunPlan.requested(
+                            targets=(*self._executor.plan().targeted(), *changes)
+                        ),
+                    ),
                 )
-                self._targets = changed
-                self._work_again_from(moment)
+                self._plan_targets(changes)
                 return self._state()
         return successor.set_targets(targets)
 
@@ -628,6 +726,16 @@ class Playback:
             [observations for observations, _ in worked], after, limit, state.time_s
         )
         return RecordsAfter(records=records, next=next_, has_more=more, state=state)
+
+    def outcomes_after(self, after: int, limit: int) -> tuple[OutcomeBatch, PlaybackState]:
+        """The outcomes of its run's actions written after position `after`
+        of their log, by the clock, at most `limit` of them; and the state
+        they were cut at."""
+        if after < 0 or limit < 1:
+            raise InvalidRequest("a position is 0 or more, and a limit 1 or more")
+        with self._lock:
+            self._advance()
+            return self._gateway.outcomes(after, limit), self._state()
 
     def events_after(self, after: int, limit: int) -> RecordsAfter[Event]:
         """The events delivered after position `after` of the run's log of

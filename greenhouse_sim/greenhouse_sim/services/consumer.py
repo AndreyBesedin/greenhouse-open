@@ -5,10 +5,11 @@ decision 0041).
 
 A run here is a playback: its identity is its run's, its epoch the
 playback's, and its clock the playback's. A consumer reaches observed
-records only: what the run's sensors delivered by the clock, and what
-happened in it. Nothing here reads the run's truth, its model state, its
-scene, or anything of QA mode; the consumer's routes reach the simulator
-through this module alone, and a test holds both to that.
+records only: what the run's sensors delivered by the clock, what happened
+in it, and the outcomes of the actions its plans gave it (P13.3). Nothing
+here reads the run's truth, its model state, its scene, or anything of QA
+mode; the consumer's routes reach the simulator through this module alone,
+and a test holds both to that.
 
 A cursor counts the records delivered in one epoch of one log. A cursor the
 producer never gave in the current epoch, one kept from an epoch before, is
@@ -27,6 +28,7 @@ from greenhouse_protocol.contracts.consumer import (
     FIRST_CURSOR,
     EventBatch,
     ObservationBatch,
+    OutcomeBatch,
     RunClock,
     RunDescriptor,
     RunList,
@@ -190,6 +192,28 @@ def events(
         simulated_now=cut.state.simulated_now,
         has_more=cut.has_more if known else False,
         events=cut.records if known else (),
+    )
+
+
+def outcomes(
+    reads: Reads, run_id: str, after: int | None = None, limit: int | None = None
+) -> OutcomeBatch:
+    """The outcomes of a run's actions written after the cursor, by its
+    clock, in the order written, from the first if no cursor is given: each
+    action done, refused, cancelled or replaced, and why."""
+    cursor = _cursor(after)
+    cut, state = _played(reads, run_id).outcomes_after(cursor, _limit(limit))
+    known = reads.cursors.knows(run_id, "outcomes", state.epoch, cursor)
+    if known:
+        reads.cursors.give(run_id, "outcomes", state.epoch, cut.next)
+    return OutcomeBatch(
+        run_id=run_id,
+        epoch=state.epoch,
+        after=cursor,
+        next=cut.next if known else cursor,
+        simulated_now=state.simulated_now,
+        has_more=cut.has_more if known else False,
+        outcomes=cut.outcomes if known else (),
     )
 
 

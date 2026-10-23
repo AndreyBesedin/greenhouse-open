@@ -7,6 +7,23 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: a playback is its run's gateway (P13.3, decision
+  0046). It holds its run's plans in the protocol's reference gateway, on
+  its clock, with the run as the executor (`services.gateway`). An action
+  joins the run's plan as soon as it is given, its records are worked out
+  again from its moment, and its outcome is written as the clock passes
+  it. The run refuses what it cannot carry out when it falls due. A
+  restart cancels what is pending, as the new epoch's first outcomes, and
+  a run played to its end cancels what is left. The targets route is the
+  local operator's plan, with its checks and messages as before. The
+  consumer interface serves the outcome log:
+  `GET /consumer/v1/runs/{run_id}/outcomes`.
+- `greenhouse-protocol`: the reference gateway acts through any executor
+  on its clock (`ClockedExecutor`), names it (`executor_ref`), knows a
+  run's controller targets from its items, and takes plans again when it
+  is started over after it finished. `check_gateway(continues_clock=False)`
+  holds a gateway whose run never continues its clock to every scenario
+  but that one.
 - `greenhouse-sim`: a run carries out a plan (P13.2, decision 0046).
   `RunRequest.plan` holds the protocol's `set_level` and `set_target`
   actions, each at a moment of the run or every day. The address's

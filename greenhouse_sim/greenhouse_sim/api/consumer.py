@@ -6,6 +6,7 @@
     GET /consumer/v1/runs/{run_id}/greenhouse          -> GreenhouseDescription
     GET /consumer/v1/runs/{run_id}/observations?after= -> ObservationBatch
     GET /consumer/v1/runs/{run_id}/events?after=       -> EventBatch
+    GET /consumer/v1/runs/{run_id}/outcomes?after=     -> OutcomeBatch
 
 `limit=` caps a batch, which the simulator caps lower too. An unknown run
 or path is `404`, a cursor or limit that is not a whole number `400`, and
@@ -60,6 +61,12 @@ def consumer_respond(reads: consumer.Reads, method: str, path: str) -> Response 
         case ["runs", run_id, "events"]:
             return _answer(
                 lambda: consumer.events(
+                    reads, run_id, _whole(query, "after"), _whole(query, "limit")
+                )
+            )
+        case ["runs", run_id, "outcomes"]:
+            return _answer(
+                lambda: consumer.outcomes(
                     reads, run_id, _whole(query, "after"), _whole(query, "limit")
                 )
             )
