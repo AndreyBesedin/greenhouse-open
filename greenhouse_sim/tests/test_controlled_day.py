@@ -11,7 +11,7 @@ import pytest
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.climate.house import HouseTrace
 from greenhouse_sim.services import climate_readings, sensors
-from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.runs import RunPlan, RunRequest
 from greenhouse_sim.services.simulator import Simulator
 
 HOUR_S = 3600.0
@@ -32,7 +32,9 @@ HEATED = {"heater": 1.0}
 def _controlled(simulator: Simulator, until_s: float) -> HouseTrace:
     return climate_readings.house_air(
         simulator,
-        RunRequest("climate_box", levels=HEATED, commands=SCHEDULE, weather=SPRING),
+        RunRequest(
+            "climate_box", levels=HEATED, weather=SPRING, plan=RunPlan.requested(commands=SCHEDULE)
+        ),
         until_s=until_s,
     )
 
@@ -41,7 +43,12 @@ def test_a_schedule_opens_and_shuts_a_vent(simulator: Simulator) -> None:
     def opened(moment: float) -> dict[str, float]:
         at = climate_readings.openings(
             simulator,
-            RunRequest("climate_box", levels=HEATED, commands=SCHEDULE, weather=SPRING),
+            RunRequest(
+                "climate_box",
+                levels=HEATED,
+                weather=SPRING,
+                plan=RunPlan.requested(commands=SCHEDULE),
+            ),
             time_s=moment,
         )
         return {flow.opening_id: flow.exchange_m3_s for flow in at.openings}
@@ -84,13 +91,17 @@ def test_both_runs_replay_exactly(simulator: Simulator, afresh: Callable[[], Non
     assert first == again
     observed = sensors.observations(
         simulator,
-        RunRequest("climate_box", levels=HEATED, commands=SCHEDULE, weather=SPRING),
+        RunRequest(
+            "climate_box", levels=HEATED, weather=SPRING, plan=RunPlan.requested(commands=SCHEDULE)
+        ),
         until_s=1800.0,
     )
     afresh()
     replayed = sensors.observations(
         simulator,
-        RunRequest("climate_box", levels=HEATED, commands=SCHEDULE, weather=SPRING),
+        RunRequest(
+            "climate_box", levels=HEATED, weather=SPRING, plan=RunPlan.requested(commands=SCHEDULE)
+        ),
         until_s=1800.0,
     )
     assert observed == replayed

@@ -38,7 +38,7 @@ import dataclasses
 import gzip
 import json
 import math
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from pydantic import BaseModel, ConfigDict, JsonValue, NonNegativeInt, ValidationError
 
@@ -58,7 +58,7 @@ from greenhouse_sim.services.climate_runs import climate_run, run_schedule, seed
 from greenhouse_sim.services.crop import run_crop, seed_kept_crops
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.kept_states import KeptState, keep
-from greenhouse_sim.services.runs import Commanded, RunRequest, checked_moment
+from greenhouse_sim.services.runs import Commanded, RunPlan, RunRequest, checked_moment
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids, scenario, version
 from greenhouse_sim.services.stores import Store
 
@@ -67,11 +67,15 @@ if TYPE_CHECKING:
     from greenhouse_sim.services.simulator import Simulator
 
 # The format a checkpoint is written in, which a reader refuses if it does
-# not know it: 3 since a checkpoint keeps its run's target changes (#274).
-CHECKPOINT_FORMAT: Final = 3
-# The format before, read as this one: a format 2 checkpoint's run changed
-# no target.
-READ_AS_CURRENT: Final = 2
+# not know it: 4 since a checkpoint keeps its run's plan (P13.2), not its
+# commands and target changes.
+CHECKPOINT_FORMAT: Final = 4
+# The formats before, each read as the one after it: a format 2
+# checkpoint's run changed no target (#274), and a format 3 checkpoint's
+# commands, daily commands and target changes are its run's plan.
+WITHOUT_TARGETS: Final = 2
+WITH_COMMANDS: Final = 3
+READ_AS_CURRENT: Final = (WITHOUT_TARGETS, WITH_COMMANDS)
 # How many checkpoints are kept, the last saved or uploaded.
 KEPT_CHECKPOINTS: Final = 16
 # How many hexadecimal digits of its content's digest name a checkpoint.
@@ -103,13 +107,10 @@ class Checkpoint(BaseModel):
     weather: str = DEFAULT_WEATHER
     levels: dict[str, float] = {}
     openings: dict[str, float] = {}
-    # The commands the run gave before its day, each its moment, actuator
-    # and level; and its daily commands, or none given, for its scenario's.
-    commands: list[Commanded] = []
-    daily: list[Commanded] | None = None
-    # The target changes its run made before its day (#274), each its
-    # moment, target and value in °C (format 3).
-    targets: list[Commanded] = []
+    # Its run's plan as it stood for the days before: its actions before its
+    # day, and what it does every day, or None for its scenario's own
+    # (format 4).
+    plan: RunPlan = RunPlan()
     day: NonNegativeInt
     house: HouseAir
     # Its house's air an hour before its day began, where its day's first
@@ -127,16 +128,14 @@ class Checkpoint(BaseModel):
 
     def run(self) -> RunRequest:
         """Its run, as a client would ask for it, up to its day: the
-        commands it keeps are those before it."""
+        actions its plan keeps are those before it."""
         return RunRequest(
             self.scenario_id,
             layout=self.layout,
             weather=self.weather,
             levels=self.levels,
             openings=self.openings,
-            commands=tuple(self.commands),
-            daily=None if self.daily is None else tuple(self.daily),
-            targets=tuple(self.targets),
+            plan=self.plan,
         )
 
 
@@ -202,9 +201,7 @@ def save_checkpoint(
         weather=run.weather or DEFAULT_WEATHER,
         levels=dict(run.levels),
         openings=dict(run.openings),
-        commands=[command for command in run.commands if command[0] < moment],
-        daily=None if run.daily is None else list(run.daily),
-        targets=[change for change in run.targets if change[0] < moment],
+        plan=run.plan.before(moment).validated(),
         day=day,
         house=climate.house.air_at(moment),
         house_before=climate.house.air_at(before) if before < moment else None,
@@ -236,23 +233,33 @@ def upload_checkpoint(simulator: Simulator, document: JsonValue) -> CheckpointSu
     return _kept(simulator, _checked_upload(simulator, document))
 
 
-def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
-    """A checkpoint uploaded, checked as `upload_checkpoint` says."""
+def read_checkpoint(document: JsonValue) -> Checkpoint:
+    """A checkpoint as it is written, in this simulator's format or one it
+    reads as it (`READ_AS_CURRENT`), as this format holds it. Refused if it
+    is not one, or is in a format this simulator does not read."""
     if isinstance(document, dict):
         written_in = document.get("checkpoint_format")
-        if written_in == READ_AS_CURRENT:
-            if "targets" in document:
-                raise InvalidRequest("a format 2 checkpoint keeps no target changes")
-            document = document | {"checkpoint_format": CHECKPOINT_FORMAT}
-        elif written_in != CHECKPOINT_FORMAT:
+        if written_in != CHECKPOINT_FORMAT and written_in not in READ_AS_CURRENT:
+            read = " and ".join(str(earlier) for earlier in READ_AS_CURRENT)
             raise InvalidRequest(
                 f"a checkpoint in format {written_in!r}; this simulator reads format "
-                f"{CHECKPOINT_FORMAT}, and format {READ_AS_CURRENT} as it"
+                f"{CHECKPOINT_FORMAT}, and formats {read} as it"
             )
+        if written_in == WITHOUT_TARGETS:
+            if "targets" in document:
+                raise InvalidRequest("a format 2 checkpoint keeps no target changes")
+            written_in = WITH_COMMANDS
+        if written_in == WITH_COMMANDS:
+            document = _planned(document)
     try:
-        uploaded = Checkpoint.model_validate(document)
+        return Checkpoint.model_validate(document)
     except ValidationError as error:
         raise InvalidRequest(f"not a checkpoint: {error.errors()[0]['msg']}") from None
+
+
+def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
+    """A checkpoint uploaded, checked as `upload_checkpoint` says."""
+    uploaded = read_checkpoint(document)
     config = scenario(simulator.catalogue, uploaded.scenario_id)
     if uploaded.manifest != version(simulator.catalogue, uploaded.scenario_id):
         raise InvalidRequest(
@@ -402,6 +409,54 @@ def _kept(
     return _summary(checkpoint_id, checkpoint)
 
 
+def _planned(document: dict[str, JsonValue]) -> dict[str, JsonValue]:
+    """A format 3 checkpoint as format 4 writes it: its commands, daily
+    commands and target changes, its run's plan of them. Refused, as any
+    checkpoint that is not one, if they are not what format 3 wrote."""
+    # As format 3 wrote them, or anything else: whatever is not refused below.
+    commands: Any = document.get("commands", [])
+    daily: Any = document.get("daily")
+    targets: Any = document.get("targets", [])
+    try:
+        plan: dict[str, JsonValue] = {
+            "actions": [
+                *(
+                    {"at_s": at, "action": _set_level(device, level)}
+                    for at, device, level in commands
+                ),
+                *(
+                    {"at_s": at, "action": {"kind": "set_target", "target": name, "value_c": value}}
+                    for at, name, value in targets
+                ),
+            ],
+            "daily": None
+            if daily is None
+            else [
+                {"time_of_day_s": time, "action": _set_level(device, level)}
+                for time, device, level in daily
+            ],
+        }
+    except TypeError, ValueError:
+        raise InvalidRequest(
+            "not a checkpoint: its commands, daily commands and target changes are each a "
+            "moment, a name and a number"
+        ) from None
+    kept = {name: value for name, value in document.items() if name not in _FORMAT_3_PLAN}
+    return kept | {"checkpoint_format": CHECKPOINT_FORMAT, "plan": plan}
+
+
+# What a format 3 checkpoint wrote of its run's plan.
+_FORMAT_3_PLAN: Final = ("commands", "daily", "targets")
+
+
+def _set_level(device_id: JsonValue, level: JsonValue) -> dict[str, JsonValue]:
+    return {"kind": "set_level", "device_id": device_id, "level": level}
+
+
+def _listed(commanded: tuple[Commanded, ...] | None) -> list[Commanded] | None:
+    return None if commanded is None else list(commanded)
+
+
 def _summary(checkpoint_id: str, checkpoint: Checkpoint) -> CheckpointSummary:
     return CheckpointSummary(
         checkpoint_id=checkpoint_id,
@@ -410,9 +465,9 @@ def _summary(checkpoint_id: str, checkpoint: Checkpoint) -> CheckpointSummary:
         weather=checkpoint.weather,
         levels=checkpoint.levels,
         openings=checkpoint.openings,
-        commands=checkpoint.commands,
-        daily=checkpoint.daily,
-        targets=checkpoint.targets,
+        commands=list(checkpoint.plan.commanded()),
+        daily=_listed(checkpoint.plan.daily_commanded()),
+        targets=list(checkpoint.plan.targeted()),
         day=checkpoint.day,
         time_s=checkpoint.day * DAY_S,
         plants=len(checkpoint.plants),

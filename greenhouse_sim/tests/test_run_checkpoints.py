@@ -17,7 +17,7 @@ from greenhouse_sim.services import checkpoints, kept_states
 from greenhouse_sim.services.climate_runs import climate_run
 from greenhouse_sim.services.crop import run_crop
 from greenhouse_sim.services.errors import InvalidRequest
-from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.runs import RunPlan, RunRequest
 from greenhouse_sim.services.simulator import Simulator
 
 PLANT = "reference_greenhouse_plant_001"
@@ -64,7 +64,7 @@ def test_a_checkpoint_keeps_a_runs_state_at_the_start_of_its_day(simulator: Simu
     assert kept.plants == list(crop.plants_on(1))
     assert kept.lived == crop.lived_through(1)
     assert kept.manifest == manifest_digest("reference_greenhouse")
-    assert (kept.layout, kept.weather, kept.daily) == ("default", "default", None)
+    assert (kept.layout, kept.weather, kept.plan.daily) == ("default", "default", None)
     assert checkpoints.checkpoints(simulator) == [saved]
 
 
@@ -76,8 +76,10 @@ def test_it_keeps_the_commands_given_before_its_day_and_its_daily_ones(
         RunRequest(
             "climate_box",
             levels={"fan": 1.0},
-            commands=((600.0, "heater", 1.0), (DAY_S + 600.0, "heater", 0.0)),
-            daily=((64800.0, "heater", 1.0),),
+            plan=RunPlan.requested(
+                commands=((600.0, "heater", 1.0), (DAY_S + 600.0, "heater", 0.0)),
+                daily=((64800.0, "heater", 1.0),),
+            ),
         ),
         time_s=DAY_S + 60.0,
     )
@@ -145,8 +147,12 @@ def test_a_branch_shares_every_day_before_its_own(
     trunk_days = trunk.environments(PLANT, 2)
 
     _restarted(simulator, afresh)
-    branch = run_crop(simulator, RunRequest("reference_greenhouse", commands=BRANCH))
-    house = climate_run(simulator, RunRequest("reference_greenhouse", commands=BRANCH))[1].house
+    branch = run_crop(
+        simulator, RunRequest("reference_greenhouse", plan=RunPlan.requested(commands=BRANCH))
+    )
+    house = climate_run(
+        simulator, RunRequest("reference_greenhouse", plan=RunPlan.requested(commands=BRANCH))
+    )[1].house
     branch_days = branch.environments(PLANT, 2)
 
     assert branch_days[0] == trunk_days[0]
@@ -156,7 +162,10 @@ def test_a_branch_shares_every_day_before_its_own(
     assert [m for m in house._kept if 0.0 < m < DAY_S - HOUR_S] == []
     # A run that differs before the checkpoint's day takes nothing over.
     other = run_crop(
-        simulator, RunRequest("reference_greenhouse", commands=((HOUR_S, "heater", 1.0),))
+        simulator,
+        RunRequest(
+            "reference_greenhouse", plan=RunPlan.requested(commands=((HOUR_S, "heater", 1.0),))
+        ),
     )
     assert other.environments(PLANT, 1)[0] != trunk_days[0]
 

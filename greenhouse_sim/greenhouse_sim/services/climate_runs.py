@@ -173,8 +173,8 @@ def run_schedule(catalogue: Scenarios, run: RunRequest) -> Schedule:
     running = equipment_levels(config, run.levels)
     return _schedule(
         tuple(sorted(running.items())),
-        checked_commands(config, run.commands, run.daily),
-        checked_targets(config, run.targets),
+        checked_commands(config, run.plan.commanded(), run.plan.daily_commanded()),
+        checked_targets(config, run.plan.targeted()),
     )
 
 
@@ -271,8 +271,8 @@ def climate_run(simulator: Simulator, run: RunRequest) -> tuple[RunKey, ClimateD
         under,
         tuple(sorted(equipment_levels(config, run.levels).items())),
         tuple(sorted(run.openings.items())),
-        checked_commands(config, run.commands, run.daily),
-        checked_targets(config, run.targets),
+        checked_commands(config, run.plan.commanded(), run.plan.daily_commanded()),
+        checked_targets(config, run.plan.targeted()),
     )
     return key, climate_day(simulator, key)
 
