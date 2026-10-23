@@ -31,12 +31,15 @@ import traceback
 from collections.abc import Callable, Sequence
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Final, cast
 
 from greenhouse_sim.api.consumer import consumer_respond
 from greenhouse_sim.api.responses import Response
 from greenhouse_sim.api.routes import control, live_stream, respond
 from greenhouse_sim.services import checkpoints, playback
+from greenhouse_sim.services.drafts import DraftStore, store_at
+from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.live import DEFAULT_SECONDS_PER_DAY, LiveRun, LiveRuns
 from greenhouse_sim.services.simulator import Simulator
 
@@ -44,6 +47,9 @@ LOOPBACK: Final = "127.0.0.1"
 # What a client is told when the simulator fails on its request unexpectedly.
 UNEXPECTED_FAILURE: Final = "the simulator failed to answer; its log says why"
 DEFAULT_PORT: Final = 8765
+# Where the installations' drafts are kept unless the command line says
+# otherwise (decision 0051): a file of the user's, beside no repository.
+DEFAULT_DRAFTS: Final = Path.home() / ".greenhouse-sim" / "drafts.sqlite3"
 # How long a quiet stream waits before sending a keep-alive comment.
 KEEPALIVE_SECONDS: Final = 15.0
 # How soon a viewer's browser should try again after losing the stream.
@@ -77,14 +83,21 @@ class SimulatorServer(ThreadingHTTPServer):
     request_queue_size = PENDING_CONNECTIONS
 
     def __init__(
-        self, port: int, simulator: Simulator | None = None, *, seconds_per_day: float
+        self,
+        port: int,
+        simulator: Simulator | None = None,
+        *,
+        seconds_per_day: float,
+        drafts: DraftStore | None = None,
     ) -> None:
         # Before binding: a server that fails to bind closes itself, which
         # closes a simulator it made, and then raises the bind's own error.
         # Nothing has started yet.
         self._makes_simulator = simulator is None
         self.simulator = (
-            Simulator(seconds_per_day=seconds_per_day) if simulator is None else simulator
+            Simulator(seconds_per_day=seconds_per_day, drafts=drafts)
+            if simulator is None
+            else simulator
         )
         super().__init__((LOOPBACK, port), _Handler)
         # The scenarios' kept opening days, so that their runs' later days
@@ -231,11 +244,12 @@ def create_server(
     *,
     seconds_per_day: float = DEFAULT_SECONDS_PER_DAY,
     simulator: Simulator | None = None,
+    drafts: DraftStore | None = None,
 ) -> SimulatorServer:
     """A server on the loopback interface; port 0 picks a free port. It makes
-    its own simulator, live runs paced at `seconds_per_day`, unless it is
-    given one."""
-    return SimulatorServer(port, simulator, seconds_per_day=seconds_per_day)
+    its own simulator, live runs paced at `seconds_per_day`, keeping drafts
+    in `drafts` if given, unless it is given a simulator."""
+    return SimulatorServer(port, simulator, seconds_per_day=seconds_per_day, drafts=drafts)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -265,7 +279,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=playback.DEFAULT_SECONDS_PER_DAY,
         help="how fast a played-back run's clock plays a simulated day",
     )
+    parser.add_argument(
+        "--drafts",
+        type=Path,
+        default=DEFAULT_DRAFTS,
+        help="the SQLite file the installations' drafts are kept in, made if missing",
+    )
     args = parser.parse_args(argv)
+    try:
+        drafts = store_at(args.drafts)
+    except InvalidRequest as error:
+        parser.error(error.message)
     # What the simulator's services make, keep, take over and let go, at
     # INFO (AUDIT.14); other libraries' warnings only.
     logging.basicConfig(level=logging.WARNING, format=LOG_FORMAT, stream=sys.stderr)
@@ -274,7 +298,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     # the server running, to see where a busy or stuck one is.
     faulthandler.register(signal.SIGUSR1, all_threads=True)
 
-    server = create_server(args.port, seconds_per_day=args.seconds_per_day)
+    server = create_server(args.port, seconds_per_day=args.seconds_per_day, drafts=drafts)
     host, port = server.server_address[:2]
     print(f"greenhouse-sim API on http://{host!s}:{port}/api", flush=True)
     for scenario_id in args.play:

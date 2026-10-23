@@ -127,25 +127,29 @@ class SceneChanges(BaseModel):
 def scenario_summaries(catalogue: Scenarios) -> list[ScenarioSummary]:
     """Every scenario the catalogue knows, as a client lists them: the
     packaged ones first, then those registered."""
-    return [
-        ScenarioSummary(
-            id=entry.config.greenhouse_id,
-            name=entry.config.name,
-            description=entry.config.description,
-            plants=entry.config.rows * entry.config.columns,
-            duration_days=entry.config.duration_days,
-            crop_model=entry.config.crop_model.value,
-            daily=entry.config.daily,
-            openings=[opening.opening_id for opening in entry.config.envelope.openings],
-            opening_day=entry.opening_day,
-            layouts=list(entry.layouts),
-            weathers=weather_names(),
-            thermostat=None
-            if entry.config.thermostat is None
-            else entry.config.thermostat.actuator_id,
-        )
-        for entry in _entries(catalogue)
-    ]
+    return [_summary(entry) for entry in _entries(catalogue)]
+
+
+def scenario_summary(catalogue: Scenarios, scenario_id: str) -> ScenarioSummary:
+    """One scenario the catalogue knows, as a client lists it."""
+    return _summary(_entry(catalogue, scenario_id))
+
+
+def _summary(entry: CatalogueEntry) -> ScenarioSummary:
+    return ScenarioSummary(
+        id=entry.config.greenhouse_id,
+        name=entry.config.name,
+        description=entry.config.description,
+        plants=entry.config.rows * entry.config.columns,
+        duration_days=entry.config.duration_days,
+        crop_model=entry.config.crop_model.value,
+        daily=entry.config.daily,
+        openings=[opening.opening_id for opening in entry.config.envelope.openings],
+        opening_day=entry.opening_day,
+        layouts=list(entry.layouts),
+        weathers=weather_names(),
+        thermostat=None if entry.config.thermostat is None else entry.config.thermostat.actuator_id,
+    )
 
 
 def _entries(catalogue: Scenarios) -> list[CatalogueEntry]:
@@ -264,13 +268,13 @@ def changed(catalogue: Scenarios, config: ScenarioConfig, changes: SceneChanges)
     an item may be moved into the room a larger greenhouse makes."""
     base, marked, written = changes.layout.partition(MOVES_MARK)
     return _with_envelope(
-        _with_weather(_with_layout(catalogue, config, base), changes.weather),
+        with_weather(_with_layout(catalogue, config, base), changes.weather),
         changes,
         _moves(written) if marked else None,
     )
 
 
-def _with_weather(config: ScenarioConfig, name: str) -> ScenarioConfig:
+def with_weather(config: ScenarioConfig, name: str) -> ScenarioConfig:
     """The scenario under a preset or a recorded weather, or its own; any
     other is not found. A name may end with `@` and a cloud cover, from 0 to
     100 %, which overrides the weather's (`cold_spring_day@80`): a QA
@@ -286,7 +290,7 @@ def _with_weather(config: ScenarioConfig, name: str) -> ScenarioConfig:
             bearing = math.nan
         if not 0.0 <= bearing < FULL_TURN_DEG:
             raise InvalidRequest(f"a wind blows from a bearing from 0 to 360°, not {wind!r}")
-        return _with_weather(config, rest).model_copy(update={"wind_from_deg": bearing})
+        return with_weather(config, rest).model_copy(update={"wind_from_deg": bearing})
     base, override, clouds = name.partition(CLOUDS_MARK)
     if override:
         try:
@@ -295,7 +299,7 @@ def _with_weather(config: ScenarioConfig, name: str) -> ScenarioConfig:
             cover = math.nan
         if not 0.0 <= cover <= MOST_CLOUD_PCT:
             raise InvalidRequest(f"a cloud cover runs from 0 to 100 %, not {clouds!r}")
-        return _with_weather(config, base).model_copy(update={"cloud_cover_pct": cover})
+        return with_weather(config, base).model_copy(update={"cloud_cover_pct": cover})
     if name == DEFAULT_WEATHER:
         return config
     weather = PRESETS.get(name) or recorded_weathers().get(name)
