@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import pytest
 from greenhouse_protocol.enums import ObservationType, SourceType
@@ -88,8 +88,8 @@ def test_timestamp_helpers_normalise_dutch_local_time_to_utc() -> None:
     with pytest.raises(ValueError):
         parse_offset_timestamp("2024-09-03 00:00:00")
     # local noon is 10:00Z in summer time and 11:00Z in winter time
-    assert local_noon(datetime(2024, 10, 7).date()) == datetime(2024, 10, 7, 10, tzinfo=UTC)
-    assert local_noon(datetime(2024, 11, 5).date()) == datetime(2024, 11, 5, 11, tzinfo=UTC)
+    assert local_noon(date(2024, 10, 7)) == datetime(2024, 10, 7, 10, tzinfo=UTC)
+    assert local_noon(date(2024, 11, 5)) == datetime(2024, 11, 5, 11, tzinfo=UTC)
     # Excel serial 45174.5 is 2023-09-05 12:00 local (CEST)
     assert excel_serial_to_utc(45174.5) == datetime(2023, 9, 5, 10, tzinfo=UTC)
 
