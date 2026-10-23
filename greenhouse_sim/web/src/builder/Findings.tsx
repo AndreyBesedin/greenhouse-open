@@ -42,7 +42,9 @@ export function Findings({ assessment }: { assessment: Assessment }) {
           {[...errors, ...warnings].map((found) => (
             <li
               key={found.code}
-              className={`builder-finding-${found.severity}`}
+              className={
+                found.severity === "error" ? "builder-finding-error" : "builder-finding-warning"
+              }
               data-code={found.code}
             >
               <strong>{found.severity === "error" ? "Error" : "Warning"}:</strong> {found.message}
