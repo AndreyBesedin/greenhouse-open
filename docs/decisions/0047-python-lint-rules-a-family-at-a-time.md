@@ -43,6 +43,7 @@ The families as they stand:
 | `PLR0917` | on, in place of `PLR0913` | Five positional parameters at most, the rest keyword-only: a call then names each of them, which is what a long argument list puts at risk. `PLR0913` counts keyword-only parameters too, and stays off |
 | `RUF`, `ARG` | next, a pull request each | |
 | `TRY`, `D1` | not planned | the messages built in `raise`, and docstrings written by judgment, are this codebase's choice |
+| `C901` | not planned | Its findings are flat lists of rules, each a branch: the API's route table, a plant's structural checks, an upload's or a workbook's checks. Split into functions they would scatter the rules, not simplify them |
 
 Other families wait for a reason: a defect one of them would have caught.
 
