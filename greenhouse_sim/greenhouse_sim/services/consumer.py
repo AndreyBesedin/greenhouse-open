@@ -14,10 +14,13 @@ A cursor counts the records delivered in one epoch of one log. A cursor the
 producer never gave in the current epoch, one kept from an epoch before, is
 answered with an empty batch at the same position, so that a client sees
 the epoch change and starts again from the beginning.
+
+What it reads is a simulator's (decision 0048), as `Reads` names it: the
+runs it plays back, and the cursors it has given; nothing else of it.
 """
 
 import threading
-from typing import Final
+from typing import Final, Protocol
 
 from greenhouse_protocol.contracts.consumer import (
     CONSUMER_PREFIX,
@@ -31,9 +34,8 @@ from greenhouse_protocol.contracts.consumer import (
 from greenhouse_protocol.enums import SourceType
 from greenhouse_protocol.greenhouse import GreenhouseDescription, GreenhouseLayout, Plant
 
-from greenhouse_sim.services import playback
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
-from greenhouse_sim.services.playback import Playback, PlaybackState
+from greenhouse_sim.services.playback import Playback, Playbacks, PlaybackState
 from greenhouse_sim.services.scenarios import plant_ids, scenario
 
 # The most records a batch holds, whatever a client asks for.
@@ -53,50 +55,7 @@ def _descriptor(state: PlaybackState) -> RunDescriptor:
     )
 
 
-def runs() -> RunList:
-    """The runs a consumer can follow: every playback started."""
-    return RunList(runs=tuple(_descriptor(found.state()) for found in playback.playbacks()))
-
-
-def _played(run_id: str) -> Playback:
-    for found in playback.playbacks():
-        if found.run_id == run_id:
-            return found
-    raise NotFound(f"no run {run_id!r}")
-
-
-def run(run_id: str) -> RunDescriptor:
-    """A run's identity, epoch and clock."""
-    return _descriptor(_played(run_id).state())
-
-
-def greenhouse(run_id: str) -> GreenhouseDescription:
-    """The greenhouse a run describes: its plants, row by row, as the
-    scenario lays them out, described when its run starts."""
-    found = _played(run_id)
-    config = scenario(found.scenario_id)
-    plants = tuple(
-        Plant(
-            plant_id=plant_id,
-            variety=config.variety,
-            row=index // config.columns + 1,
-            position_in_row=index % config.columns + 1,
-        )
-        for index, plant_id in enumerate(plant_ids(config))
-    )
-    return GreenhouseDescription(
-        greenhouse_id=config.greenhouse_id,
-        name=config.name,
-        description=config.description,
-        source_type=SourceType.SIMULATION,
-        crop=config.variety,
-        layout=GreenhouseLayout(kind="grid", rows=config.rows, columns=config.columns),
-        plants=plants,
-        created_at=found.start,
-    )
-
-
-class _Given:
+class Cursors:
     """The cursors given in each log of each run, in its current epoch."""
 
     def __init__(self) -> None:
@@ -119,7 +78,58 @@ class _Given:
             held[1].add(cursor)
 
 
-_given = _Given()
+class Reads(Protocol):
+    """What a consumer reads of a simulator: the runs it plays back, and
+    the cursors it has given."""
+
+    @property
+    def playbacks(self) -> Playbacks: ...
+
+    @property
+    def cursors(self) -> Cursors: ...
+
+
+def runs(reads: Reads) -> RunList:
+    """The runs a consumer can follow: every playback started."""
+    return RunList(runs=tuple(_descriptor(found.state()) for found in reads.playbacks.all()))
+
+
+def _played(reads: Reads, run_id: str) -> Playback:
+    for found in reads.playbacks.all():
+        if found.run_id == run_id:
+            return found
+    raise NotFound(f"no run {run_id!r}")
+
+
+def run(reads: Reads, run_id: str) -> RunDescriptor:
+    """A run's identity, epoch and clock."""
+    return _descriptor(_played(reads, run_id).state())
+
+
+def greenhouse(reads: Reads, run_id: str) -> GreenhouseDescription:
+    """The greenhouse a run describes: its plants, row by row, as the
+    scenario lays them out, described when its run starts."""
+    found = _played(reads, run_id)
+    config = scenario(found.scenario_id)
+    plants = tuple(
+        Plant(
+            plant_id=plant_id,
+            variety=config.variety,
+            row=index // config.columns + 1,
+            position_in_row=index % config.columns + 1,
+        )
+        for index, plant_id in enumerate(plant_ids(config))
+    )
+    return GreenhouseDescription(
+        greenhouse_id=config.greenhouse_id,
+        name=config.name,
+        description=config.description,
+        source_type=SourceType.SIMULATION,
+        crop=config.variety,
+        layout=GreenhouseLayout(kind="grid", rows=config.rows, columns=config.columns),
+        plants=plants,
+        created_at=found.start,
+    )
 
 
 def _limit(limit: int | None) -> int:
@@ -131,17 +141,17 @@ def _limit(limit: int | None) -> int:
 
 
 def observations(
-    run_id: str, after: int | None = None, limit: int | None = None
+    reads: Reads, run_id: str, after: int | None = None, limit: int | None = None
 ) -> ObservationBatch:
     """The observations a run's sensors delivered after the cursor, by its
     clock, in delivery order, from the first if no cursor is given."""
     cursor = _cursor(after)
-    cut = _played(run_id).records_after(cursor, _limit(limit))
+    cut = _played(reads, run_id).records_after(cursor, _limit(limit))
     # Judged by the epoch the records were cut in, which a restart between
     # a look at the epoch and the cut could not change.
-    known = _given.knows(run_id, "observations", cut.state.epoch, cursor)
+    known = reads.cursors.knows(run_id, "observations", cut.state.epoch, cursor)
     if known:
-        _given.give(run_id, "observations", cut.state.epoch, cut.next)
+        reads.cursors.give(run_id, "observations", cut.state.epoch, cut.next)
     return ObservationBatch(
         run_id=run_id,
         epoch=cut.state.epoch,
@@ -153,15 +163,17 @@ def observations(
     )
 
 
-def events(run_id: str, after: int | None = None, limit: int | None = None) -> EventBatch:
+def events(
+    reads: Reads, run_id: str, after: int | None = None, limit: int | None = None
+) -> EventBatch:
     """The events delivered in a run after the cursor, by its clock, in
     delivery order, from the first if no cursor is given: its crop's
     harvests."""
     cursor = _cursor(after)
-    cut = _played(run_id).events_after(cursor, _limit(limit))
-    known = _given.knows(run_id, "events", cut.state.epoch, cursor)
+    cut = _played(reads, run_id).events_after(cursor, _limit(limit))
+    known = reads.cursors.knows(run_id, "events", cut.state.epoch, cursor)
     if known:
-        _given.give(run_id, "events", cut.state.epoch, cut.next)
+        reads.cursors.give(run_id, "events", cut.state.epoch, cut.next)
     return EventBatch(
         run_id=run_id,
         epoch=cut.state.epoch,

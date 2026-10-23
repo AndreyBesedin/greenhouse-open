@@ -41,6 +41,7 @@ run, rearranged (decision 0049).
 """
 
 import gzip
+import logging
 import math
 import os
 import threading
@@ -52,7 +53,7 @@ from datetime import datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
 from time import monotonic
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
@@ -67,8 +68,14 @@ from greenhouse_sim.services.fields import air_through_a_run, run_schedule
 from greenhouse_sim.services.heat_log import heat_records
 from greenhouse_sim.services.runs import Commanded, RunRequest
 from greenhouse_sim.services.scenarios import layout_name, scenario
-from greenhouse_sim.services.sensors import delivered_between, run_start
+from greenhouse_sim.services.sensors import Stopped, delivered_between, run_start
 from greenhouse_sim.services.stores import Store
+
+if TYPE_CHECKING:
+    # Typed only: the simulator owns the playbacks, and imports this module.
+    from greenhouse_sim.services.simulator import Simulator
+
+logger = logging.getLogger(__name__)
 
 # Ten real seconds a simulated day by default: a season of 100 days in under
 # 17 minutes, each day long enough to watch.
@@ -83,6 +90,9 @@ FIRST_EPOCH: Final = 0
 DAYS_READ_BACK: Final = 4
 # How often a wait for worked-out days looks again.
 WAIT_STEP_S: Final = 0.05
+# How long stopping waits for playbacks, in all: one stops at the moment it
+# is working out, which takes far less.
+STOP_WAIT_S: Final = 10.0
 
 _OBSERVATIONS: Final = TypeAdapter(list[Observation])
 _EVENTS: Final = TypeAdapter(list[Event])
@@ -351,13 +361,32 @@ class Playback:
         return replacing
 
     def stop(self, *, wait: bool = True) -> None:
-        """Stops working days out, once the one under way is: it returns when
-        the worker has, unless told not to wait, so that nothing of the run
-        goes on being worked out beside whatever comes next, such as another
-        run of the same crop."""
+        """Stops working days out, the one under way left at its next moment:
+        it returns when the worker has, `STOP_WAIT_S` at most, unless told
+        not to wait, so that nothing of the run goes on being worked out
+        beside whatever comes next, such as another run of the same crop."""
+        self.tell_to_stop()
+        if wait:
+            self.finish(monotonic() + STOP_WAIT_S)
+
+    def tell_to_stop(self) -> None:
+        """Works no other moment out."""
         self._stopped.set()
-        if wait and self._worker.is_alive() and self._worker is not threading.current_thread():
-            self._worker.join()
+
+    @property
+    def working(self) -> bool:
+        """Whether its worker is still working days out."""
+        return self._worker.is_alive()
+
+    def finish(self, deadline: float) -> None:
+        """Waits for the worker to end, until `deadline` (`time.monotonic`)
+        at most, logged past it."""
+        worker = self._worker
+        if not worker.is_alive() or worker is threading.current_thread():
+            return
+        worker.join(max(0.0, deadline - monotonic()))
+        if worker.is_alive():
+            logger.warning("%s did not stop within %g s", worker.name, STOP_WAIT_S)
 
     def wait_for(self, days: int, timeout_s: float | None = None) -> bool:
         """Whether `days` days are worked out, waiting up to `timeout_s`."""
@@ -415,9 +444,18 @@ class Playback:
                 (day + 1) * DAY_S,
                 self.every_s,
                 named=self.run_id if run.targets else None,
+                stop=self._stopped,
             )
+            if self._stopped.is_set():
+                return False
             walked, harvests = crop_records(run, day, self.start, self.run_id)
+            if self._stopped.is_set():
+                return False
             heated = heat_records(run, day, self.start, self.run_id)
+            if self._stopped.is_set():
+                return False
+        except Stopped:
+            return False
         except Exception as error:
             with self._lock:
                 self._failure = error
@@ -591,14 +629,82 @@ def _check_pace(seconds_per_day: float) -> None:
         raise InvalidRequest("a day takes some time to play: seconds_per_day is above 0")
 
 
-# Every playback started, by scenario: one let go is stopped, once the day
-# under way is worked out.
-PLAYBACKS: Store[str, Playback] = Store(
-    "playbacks", on_drop=lambda _, found: found.stop(), label=str
-)
+class Playbacks:
+    """A simulator's playbacks (decision 0048): one a scenario, by its
+    identifier; one let go is stopped, at the moment it is working out. One
+    rearranged into another is stopped without being waited for, so that
+    the new run starts at once, and is waited for as they all are, when
+    they are stopped or closed. Once closed, it starts none."""
+
+    def __init__(self) -> None:
+        self._store: Store[str, Playback] = Store("playbacks", on_drop=self._let_go, label=str)
+        # Held while a playback is added, or put in another's place, so that
+        # two requests starting a scenario's playback over with a layout make
+        # one, and none is added once they are closed.
+        self.rearranging = threading.Lock()
+        # Those replaced still working, waited for when they all stop.
+        self._replaced: list[Playback] = []
+        # While they all stop: when, for every one let go meanwhile.
+        self._stopping_by: float | None = None
+        self._closed = False
+
+    def _let_go(self, _: str, found: Playback) -> None:
+        """Stops a playback let go: by the deadline of all of them, while
+        they all stop, or its own."""
+        deadline = self._stopping_by
+        found.stop(wait=False)
+        found.finish(monotonic() + STOP_WAIT_S if deadline is None else deadline)
+
+    def refuse_if_closed(self) -> None:
+        """Under `rearranging`: a playback is added to none closed."""
+        if self._closed:
+            raise RuntimeError("the playbacks are closed")
+
+    def made_once(self, scenario_id: str, begun: Callable[[object], Playback]) -> Playback:
+        with self.rearranging:
+            self.refuse_if_closed()
+            return self._store.made_once(scenario_id, begun)
+
+    def get(self, scenario_id: str) -> Playback | None:
+        return self._store.get(scenario_id)
+
+    def all(self) -> list[Playback]:
+        """Every playback started, in the order they were."""
+        return [found for _, found in self._store.values()]
+
+    def replace(self, scenario_id: str, replacing: Playback, replaced: Playback) -> None:
+        """Keeps `replacing` in `replaced`'s place, under `rearranging`; those
+        replaced before that have stopped are let go."""
+        self._store.keep(scenario_id, replacing)
+        self._replaced = [found for found in self._replaced if found.working]
+        self._replaced.append(replaced)
+
+    def stop(self) -> None:
+        """Stops and forgets every playback: each is told before any is
+        waited for, and all are waited for `STOP_WAIT_S` at most."""
+        with self.rearranging:
+            stopping = [*self.all(), *self._replaced]
+            self._replaced.clear()
+            deadline = monotonic() + STOP_WAIT_S
+            for found in stopping:
+                found.tell_to_stop()
+            self._stopping_by = deadline
+            try:
+                self._store.forget()
+            finally:
+                self._stopping_by = None
+        for found in stopping:
+            found.finish(deadline)
+
+    def close(self) -> None:
+        """Stops every playback, and starts none after."""
+        with self.rearranging:
+            self._closed = True
+        self.stop()
 
 
 def start(
+    simulator: Simulator,
     scenario_id: str,
     seconds_per_day: float | None = None,
     *,
@@ -628,54 +734,48 @@ def start(
         found.begin()
         return found
 
-    found = PLAYBACKS.made_once(scenario_id, begun)
+    found = simulator.playbacks.made_once(scenario_id, begun)
     if not found.plays(layout):
-        found = _rearranged(found, layout or DEFAULT_LAYOUT)
+        found = _rearranged(simulator, found, layout or DEFAULT_LAYOUT)
     if seconds_per_day is not None:
         found.set_pace(seconds_per_day)
     return found.state() if hold else found.command(PlaybackCommand.PLAY)
 
 
-# Held while a playback is put in another's place, so that two requests
-# starting a scenario's playback over with a layout make one.
-_REARRANGING = threading.Lock()
-
-
-def _rearranged(found: Playback, layout: str) -> Playback:
+def _rearranged(simulator: Simulator, found: Playback, layout: str) -> Playback:
     """The scenario's playback with `layout` in place of the one it has, as
     `found` was: begun, and the one it replaces stopped, without waiting for
     the day it is working out, so that the new run starts at once. One put
     in its place meanwhile with `layout` is kept; a layout refused leaves the
     playback as it was."""
-    with _REARRANGING:
-        current = PLAYBACKS.get(found.scenario_id) or found
+    playbacks = simulator.playbacks
+    with playbacks.rearranging:
+        playbacks.refuse_if_closed()
+        current = playbacks.get(found.scenario_id) or found
         if current.plays(layout):
             return current
         replacing = current.rearranged(layout)
         replacing.begin()
-        PLAYBACKS.keep(found.scenario_id, replacing)
+        playbacks.replace(found.scenario_id, replacing, current)
     current.stop(wait=False)
     return replacing
 
 
-def playbacks() -> list[Playback]:
-    """Every playback started, in the order they were."""
-    return [found for _, found in PLAYBACKS.values()]
-
-
-def playback(scenario_id: str) -> Playback:
+def playback(simulator: Simulator, scenario_id: str) -> Playback:
     """The scenario's playback, if one was started."""
-    found = PLAYBACKS.get(scenario_id)
+    found = simulator.playbacks.get(scenario_id)
     if found is None:
         raise NotFound(f"no playback of {scenario_id!r} was started")
     return found
 
 
-def state(scenario_id: str) -> PlaybackState:
-    return playback(scenario_id).state()
+def state(simulator: Simulator, scenario_id: str) -> PlaybackState:
+    return playback(simulator, scenario_id).state()
 
 
-def command(scenario_id: str, command: PlaybackCommand, layout: str | None = None) -> PlaybackState:
+def command(
+    simulator: Simulator, scenario_id: str, command: PlaybackCommand, layout: str | None = None
+) -> PlaybackState:
     """Tells the scenario's playback to play, pause or start over. Started
     over with a layout it does not play, it plays that layout's run from its
     start, a new run, as the epoch its own count gives it, with the target
@@ -683,25 +783,27 @@ def command(scenario_id: str, command: PlaybackCommand, layout: str | None = Non
     played back (#271, decision 0049). Started over with its own layout, it
     is the scenario's own run again, without them. Only a restart takes a
     layout."""
-    found = playback(scenario_id)
+    found = playback(simulator, scenario_id)
     if layout is not None and command != PlaybackCommand.RESTART:
         raise InvalidRequest(f"only a restart takes a layout, not {command.value}")
     if not found.plays(layout):
-        return _rearranged(found, layout or DEFAULT_LAYOUT).command(PlaybackCommand.PLAY)
+        replacing = _rearranged(simulator, found, layout or DEFAULT_LAYOUT)
+        return replacing.command(PlaybackCommand.PLAY)
     return found.command(command)
 
 
-def set_pace(scenario_id: str, seconds_per_day: float) -> PlaybackState:
-    return playback(scenario_id).set_pace(seconds_per_day)
+def set_pace(simulator: Simulator, scenario_id: str, seconds_per_day: float) -> PlaybackState:
+    return playback(simulator, scenario_id).set_pace(seconds_per_day)
 
 
-def set_targets(scenario_id: str, targets: Mapping[str, float]) -> PlaybackState:
+def set_targets(
+    simulator: Simulator, scenario_id: str, targets: Mapping[str, float]
+) -> PlaybackState:
     """Changes the targets of the run the scenario's playback plays, from
     its clock's next minute on (#274, decision 0043)."""
-    return playback(scenario_id).set_targets(targets)
+    return playback(simulator, scenario_id).set_targets(targets)
 
 
-def stop_playbacks() -> None:
-    """Stops and forgets every playback, as the server that played them
-    closes."""
-    PLAYBACKS.forget()
+def stop_playbacks(simulator: Simulator) -> None:
+    """Stops and forgets every playback of the simulator's."""
+    simulator.playbacks.stop()
