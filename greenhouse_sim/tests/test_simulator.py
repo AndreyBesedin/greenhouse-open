@@ -15,7 +15,9 @@ from greenhouse_sim.api.server import create_server
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED, Catalogue
 from greenhouse_sim.services import playback
+from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.live import LiveRun
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
@@ -152,6 +154,45 @@ def test_a_scenario_registered_with_a_simulator_is_answered_by_it_alone() -> Non
         assert respond(other, "GET", "/api/scenarios/drafted_box/climate/house?t=0").status == (
             HTTPStatus.NOT_FOUND
         )
+
+
+def test_two_simulators_registering_one_identifier_each_run_their_own() -> None:
+    """Two simulators, each with a scenario of its own under one identifier
+    (#318's review): each answers its own house's air, under its own run's
+    identity, worked out in climate runs of its own; never the other's,
+    kept."""
+    warm = CONFIG.climate.model_copy(update={"start_temperature_c": 24.0})
+    cold = CONFIG.climate.model_copy(update={"start_temperature_c": 8.0})
+    house = "/api/scenarios/drafted_box/climate/house?t=0"
+    with Simulator() as simulator, Simulator() as other:
+        simulator.catalogue.register(
+            CONFIG.model_copy(update={"greenhouse_id": "drafted_box", "climate": warm})
+        )
+        other.catalogue.register(
+            CONFIG.model_copy(update={"greenhouse_id": "drafted_box", "climate": cold})
+        )
+
+        first = respond(simulator, "GET", house)
+        second = respond(other, "GET", house)
+
+        assert (first.status, second.status) == (HTTPStatus.OK, HTTPStatus.OK)
+        assert _first_air(first.body) == pytest.approx(24.0)
+        assert _first_air(second.body) == pytest.approx(8.0)
+        run = RunRequest("drafted_box")
+        assert air_through_a_run(simulator, run)[1] != air_through_a_run(other, run)[1]
+        assert simulator.climate_runs is not other.climate_runs
+        assert len(simulator.climate_runs.values()) == len(other.climate_runs.values()) >= 1
+
+
+def _first_air(trace: object) -> float:
+    """The house's air temperature at its first moment, as the API answers
+    its trace."""
+    assert isinstance(trace, dict)
+    controlled = trace["controlled"]
+    assert isinstance(controlled, dict)
+    first = controlled["temperature_c"][0]
+    assert isinstance(first, float)
+    return first
 
 
 # What would hold state for the whole process, made as a module is
