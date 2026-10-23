@@ -222,7 +222,7 @@ def test_a_solution_is_read_onto_the_grid_by_its_cells_centres(tmp_path: Path) -
 
     velocity = field.channels[AirQuantity.VELOCITY]
     pressure = field.channels[AirQuantity.PRESSURE]
-    xs, ys, zs = SMALL.centres()
+    _, ys, zs = SMALL.centres()
     assert field.source == SOURCE and field.field_id == "box_cfd"
     for (i, j, k), (x, p) in solved.items():
         assert velocity[k, j, i].tolist() == pytest.approx([x, 2 * ys[j], -zs[k]])

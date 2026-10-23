@@ -170,7 +170,7 @@ def test_the_notes_are_the_versions_changelog_section(root: Path) -> None:
         f"{release.NOTES_INTRO}\n\nWhat 0.3.0 holds.\n\n- An entry of 0.3.0.\n"
     )
     assert release.notes("0.2.0", root).endswith("\n\n- An entry of 0.2.0.\n")
-    with pytest.raises(Refused, match="no dated section for 0.4.0"):
+    with pytest.raises(Refused, match=r"no dated section for 0\.4\.0"):
         release.notes("0.4.0", root)
 
 

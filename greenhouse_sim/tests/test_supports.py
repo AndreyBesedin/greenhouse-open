@@ -2,6 +2,7 @@
 size, on legs, with a slab on top, and the planting positions on it."""
 
 import math
+from itertools import pairwise
 
 import pytest
 from pydantic import ValidationError
@@ -88,7 +89,7 @@ def test_legs_are_never_further_apart_than_their_spacing(leg_spacing: float, leg
     )
 
     assert len(xs) == legs
-    assert max(b - a for a, b in zip(xs, xs[1:], strict=False)) <= leg_spacing + 1e-12
+    assert max(b - a for a, b in pairwise(xs)) <= leg_spacing + 1e-12
 
 
 def test_a_hung_support_has_no_legs() -> None:

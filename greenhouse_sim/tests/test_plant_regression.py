@@ -26,10 +26,11 @@ DECIMALS = 1
 
 # A pruned and harvested plant: its lowest leaves off, its first truss cut,
 # and its stem lowered over them.
-_TENDED = tuple(
-    LabAction(day=80, plant_id="p01", kind="remove_leaf", target=f"p01_n{rank:02d}_leaf")
-    for rank in range(1, 9)
-) + (
+_TENDED = (
+    *(
+        LabAction(day=80, plant_id="p01", kind="remove_leaf", target=f"p01_n{rank:02d}_leaf")
+        for rank in range(1, 9)
+    ),
     LabAction(day=85, plant_id="p01", kind="harvest_truss", target="p01_t01"),
     LabAction(day=85, plant_id="p01", kind="lower_stem", target="8"),
 )

@@ -7,6 +7,7 @@ observation - the current state - and each change after the first recorded
 value is also a SPACING event - the intervention that caused it."""
 
 from collections.abc import Iterable, Iterator
+from itertools import pairwise
 
 from greenhouse_protocol.enums import EventSource, EventType, ObservationType
 from greenhouse_protocol.event import Event
@@ -27,7 +28,7 @@ def spacing_events(
         ),
         key=lambda o: o.timestamp,
     )
-    for before, after in zip(densities, densities[1:], strict=False):
+    for before, after in pairwise(densities):
         if after.value == before.value:
             continue
         yield Event(

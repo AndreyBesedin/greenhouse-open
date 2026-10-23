@@ -23,6 +23,7 @@ from bisect import bisect_right
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from itertools import pairwise
 from typing import Final, Literal, Protocol
 
 from pydantic import PositiveFloat
@@ -127,7 +128,7 @@ class WeatherSeries:
         naive = [moment for moment in moments if moment.utcoffset() is None]
         if naive:
             raise ValueError(f"a record's moment has no time zone: {naive[0].isoformat()}")
-        for before, after in zip(moments, moments[1:], strict=False):
+        for before, after in pairwise(moments):
             if after <= before:
                 raise ValueError(
                     f"records are in order of time: {after.isoformat()} follows "
