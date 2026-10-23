@@ -224,7 +224,7 @@ def _migrated(
     return document
 
 
-def _from_format_1(scenario_id: str, document: dict[str, JsonValue]) -> dict[str, JsonValue]:
+def _from_format_1(_scenario_id: str, document: dict[str, JsonValue]) -> dict[str, JsonValue]:
     """Format 1 differs from format 2 only in the identifiers it allowed
     (#254): an identifier format 2 does not allow is refused as any field
     that does not fit is, by name."""

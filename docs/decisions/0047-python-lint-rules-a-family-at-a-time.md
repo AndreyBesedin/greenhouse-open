@@ -42,7 +42,7 @@ The families as they stand:
 | `DTZ` | on | `DTZ001` in the tests: a test builds a wall-clock time on purpose, to see it refused, or as a dataset's rows give it; and the adapters' Excel epoch, wall-clock by nature, says so on its line |
 | `PLR0917` | on, in place of `PLR0913` | Five positional parameters at most, the rest keyword-only: a call then names each of them, which is what a long argument list puts at risk. `PLR0913` counts keyword-only parameters too, and stays off |
 | `RUF` | on | The prose's typeset characters are allowed in strings, docstrings and comments: the minus sign (−5 °C), the times sign (24 × 13 cells), a density's ρ and a prime (′) |
-| `ARG` | next | |
+| `ARG` | on | `ARG002`: a method takes what its protocol asks of every implementation, used or not (a weather kind's `source` its seed and start, a stem path's `rising` how much it has laid down), and its class meets the protocol by shape, which Ruff cannot see. `ARG` in the tests: a stand-in takes the arguments of what it stands in for, and a test asks for a fixture by naming it. A function's unused argument stays a finding: those found were dead, and are gone |
 | `TRY`, `D1` | not planned | the messages built in `raise`, and docstrings written by judgment, are this codebase's choice |
 | `C901` | not planned | Its findings are flat lists of rules, each a branch: the API's route table, a plant's structural checks, an upload's or a workbook's checks. Split into functions they would scatter the rules, not simplify them |
 
