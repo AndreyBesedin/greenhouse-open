@@ -6,21 +6,33 @@ they were, and a checkpoint's run the run it was saved from, in the
 checkpoint's own format."""
 
 import dataclasses
+import gzip
 import json
 import logging
 from collections.abc import Callable
 from http import HTTPStatus
-from typing import Final
+from typing import Any, Final, get_args
 
 import pytest
+from greenhouse_protocol.actions import HEATING_SETPOINT_RANGE_C, SetLevel, SetTarget
+from pydantic import ValidationError
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.domain.equipment import Target
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
+from greenhouse_sim.scenarios.manifest_files import opening_file
 from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.climate_readings import EquipmentAt
-from greenhouse_sim.services.climate_runs import climate_run
-from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.climate_runs import SETPOINT_RANGE_C, climate_run
+from greenhouse_sim.services.errors import InvalidRequest
+from greenhouse_sim.services.runs import (
+    Commanded,
+    PlannedAt,
+    PlannedDaily,
+    RunPlan,
+    RunRequest,
+)
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import HOUR_S
@@ -50,6 +62,8 @@ MALFORMED: Final = {
     "schedule=60:fan": "schedule wants seconds:actuator:level commands, not '60:fan'",
     "daily=60:fan": "daily wants seconds:actuator:level commands, not '60:fan'",
 }
+# The scenario whose opening days are kept, in format 3.
+REFERENCE: Final = "reference_greenhouse"
 # 9 h, when the reference greenhouse's daily commands have its fans on.
 MORNING_S: Final = 9 * HOUR_S
 
@@ -69,9 +83,7 @@ def test_a_run_is_its_parts_and_not_its_moment() -> None:
         "weather",
         "levels",
         "openings",
-        "commands",
-        "daily",
-        "targets",
+        "plan",
     ]
 
 
@@ -118,7 +130,9 @@ def test_no_daily_commands_are_not_the_scenarios_own(simulator: Simulator) -> No
     assert none["fan_left"] == 0.0
     assert (
         climate_run(simulator, RunRequest("reference_greenhouse"))[0]
-        != climate_run(simulator, RunRequest("reference_greenhouse", daily=()))[0]
+        != climate_run(
+            simulator, RunRequest("reference_greenhouse", plan=RunPlan.requested(daily=()))
+        )[0]
     )
 
 
@@ -150,8 +164,7 @@ def test_a_checkpoints_run_is_the_run_it_was_saved_from(
         "climate_box",
         levels={"heater": 1.0},
         openings={},
-        commands=((600.0, "fan", 1.0), (600.0, "fan", 0.0)),
-        daily=(),
+        plan=RunPlan.requested(commands=((600.0, "fan", 1.0), (600.0, "fan", 0.0)), daily=()),
     )
     saved = checkpoints.save_checkpoint(simulator, run, time_s=DAY_S)
     kept = checkpoints.checkpoint(simulator, saved.checkpoint_id)
@@ -160,9 +173,145 @@ def test_a_checkpoints_run_is_the_run_it_was_saved_from(
     # In the checkpoint's own format, which uploads read (`CHECKPOINT_FORMAT`).
     document = json.loads(kept.model_dump_json())
     assert document["checkpoint_format"] == checkpoints.CHECKPOINT_FORMAT
-    assert {name: document[name] for name in ("layout", "weather", "commands", "daily")} == {
+    assert {name: document[name] for name in ("layout", "weather", "plan")} == {
         "layout": DEFAULT_LAYOUT,
         "weather": DEFAULT_WEATHER,
-        "commands": [[600.0, "fan", 1.0], [600.0, "fan", 0.0]],
-        "daily": [],
+        "plan": {
+            "actions": [
+                {"at_s": 600.0, "action": {"kind": "set_level", "device_id": "fan", "level": 1.0}},
+                {"at_s": 600.0, "action": {"kind": "set_level", "device_id": "fan", "level": 0.0}},
+            ],
+            "daily": [],
+        },
     }
+
+
+def test_a_runs_plan_is_the_protocols_actions_of_what_it_asks() -> None:
+    """Each command, daily command and target change a request writes is
+    the protocol's own action (P13.2): a device's level, or a heating
+    target, at its moment or every day."""
+    plan = RunPlan.requested(
+        commands=((60.0, "fan", 1.0),),
+        daily=((64800.0, "heater", 0.5),),
+        targets=((3600.0, "heating_day", 24.0),),
+    ).validated()
+
+    assert plan.actions == (
+        PlannedAt(at_s=60.0, action=SetLevel(device_id="fan", level=1.0)),
+        PlannedAt(at_s=3600.0, action=SetTarget(target="heating_day", value_c=24.0)),
+    )
+    assert plan.daily == (
+        PlannedDaily(time_of_day_s=64800.0, action=SetLevel(device_id="heater", level=0.5)),
+    )
+    # And back as the request wrote them, which name its run (decision 0042).
+    assert plan.commanded() == ((60.0, "fan", 1.0),)
+    assert plan.daily_commanded() == ((64800.0, "heater", 0.5),)
+    assert plan.targeted() == ((3600.0, "heating_day", 24.0),)
+
+
+def test_a_plan_is_checked_by_the_run_that_carries_it_out(simulator: Simulator) -> None:
+    """As a request writes it, a plan is not checked; the run checks it in
+    its own words, and the protocol's rules hold it once it is."""
+    asked = RunPlan.requested(commands=((60.0, "fan", 2.0),))
+
+    with pytest.raises(InvalidRequest, match="a level runs from 0 to 1: fan"):
+        climate_run(simulator, RunRequest("climate_box", plan=asked))
+    with pytest.raises(ValidationError):
+        asked.validated()
+
+
+def test_a_device_handed_back_to_its_control_loop_is_refused_until_a_run_can(
+    simulator: Simulator,
+) -> None:
+    auto = RunPlan(
+        actions=(PlannedAt(at_s=60.0, action=SetLevel(device_id="heater", level="auto")),)
+    )
+
+    with pytest.raises(InvalidRequest, match=r"does not yet hand a device back .*\(auto\)"):
+        climate_run(simulator, RunRequest("climate_box", plan=auto))
+
+
+@pytest.mark.parametrize("all_off", [False, True])
+def test_a_format_3_checkpoint_is_read_as_its_runs_plan(
+    simulator: Simulator, all_off: bool
+) -> None:
+    """The kept opening days are written in format 3: their commands, daily
+    commands and target changes are read as their run's plan, which names
+    the run they were saved from."""
+    written = json.loads(gzip.decompress(opening_file(REFERENCE, all_off).read_bytes()))
+    assert written["checkpoint_format"] == checkpoints.WITH_COMMANDS
+
+    read = checkpoints.read_checkpoint(written)
+
+    assert read.checkpoint_format == checkpoints.CHECKPOINT_FORMAT
+    assert read.plan.commanded() == tuple(tuple(each) for each in written["commands"])
+    assert read.plan.targeted() == tuple(tuple(each) for each in written["targets"])
+    assert read.plan.daily_commanded() == (
+        None if written["daily"] is None else tuple(tuple(each) for each in written["daily"])
+    )
+    saved_from = RunRequest(
+        REFERENCE,
+        levels=written["levels"],
+        plan=RunPlan.requested(daily=None if written["daily"] is None else ()),
+    )
+    assert climate_run(simulator, read.run())[0] == climate_run(simulator, saved_from)[0]
+
+
+@pytest.mark.parametrize(
+    ("plan", "said"),
+    [
+        ({"commands": [[60.0, "fan"]]}, "each a moment, a name and a number"),
+        ({"commands": 3}, "each a moment, a name and a number"),
+        ({"commands": [{"0": 0, "fan": 0, "1": 0}]}, "each a moment, a name and a number"),
+        ({"targets": [["x"]]}, "each a moment, a name and a number"),
+        ({"daily": [[0.0, "fan", 1.0, "more"]]}, "each a moment, a name and a number"),
+        ({"plan": {}}, "a format 3 checkpoint keeps no plan"),
+        # Held to the protocol's rules as it is read, by the field at fault.
+        ({"commands": [[0.0, "fan", 2.0]]}, "plan.actions.0.action.set_level.level"),
+        ({"targets": [[60.0, "venting_day", 20.0]]}, "plan.actions.0.action.set_target.target"),
+    ],
+)
+def test_a_format_3_checkpoint_whose_plan_is_not_one_is_refused(
+    plan: dict[str, Any], said: str
+) -> None:
+    written = json.loads(gzip.decompress(opening_file(REFERENCE).read_bytes()))
+
+    with pytest.raises(InvalidRequest, match="not a checkpoint") as refused:
+        checkpoints.read_checkpoint(written | plan)
+    assert said in refused.value.message
+
+
+def test_a_format_3_checkpoints_plan_is_the_one_its_run_would_be_saved_with() -> None:
+    """Commands, daily commands and target changes as format 3 wrote them
+    are read as the plan a checkpoint of the same run keeps in format 4,
+    which then downloads and uploads as itself."""
+    commands: list[Commanded] = [(600.0, "roof_vent_1", 1.0), (600.0, "roof_vent_1", 0.5)]
+    daily: list[Commanded] = [(64800.0, "fan_1", 1.0)]
+    targets: list[Commanded] = [(86400.0, "heating_night", 12.0), (3600.0, "heating_day", 20.0)]
+    written = json.loads(gzip.decompress(opening_file(REFERENCE).read_bytes()))
+    as_written = {
+        name: [list(each) for each in part]
+        for name, part in (("commands", commands), ("daily", daily), ("targets", targets))
+    }
+
+    read = checkpoints.read_checkpoint(written | as_written)
+
+    saved = RunPlan.requested(commands=commands, daily=daily, targets=targets).validated()
+    assert read.plan == saved
+    downloaded = json.loads(read.model_dump_json())
+    assert checkpoints.read_checkpoint(downloaded).identifier() == read.identifier()
+
+
+def test_a_runs_targets_are_the_protocols() -> None:
+    """A target a run changes, and the range it takes, are the protocol's
+    `set_target`'s, so that a plan the run checked is one the protocol
+    holds too."""
+    assert {target.value for target in Target} == set(
+        get_args(SetTarget.model_fields["target"].annotation)
+    )
+    assert SETPOINT_RANGE_C == HEATING_SETPOINT_RANGE_C
+
+
+def test_a_checkpoint_in_a_format_no_simulator_wrote_names_those_it_reads() -> None:
+    with pytest.raises(InvalidRequest, match="reads format 4, and formats 2 and 3 as it"):
+        checkpoints.read_checkpoint({"checkpoint_format": 1})

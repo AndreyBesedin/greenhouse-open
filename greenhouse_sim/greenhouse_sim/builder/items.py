@@ -57,6 +57,8 @@ FEWEST_TO_SPACE: Final = 3
 _NUMBERED: Final = re.compile(r"_\d+$")
 # Which of an item's fields its identifier is.
 _ID_FIELDS: Final = ("actuator_id", "sensor_id", "zone_id", "fixture_id", "opening_id")
+# The path of an installation's count of crop rows (`set_value`).
+ROW_COUNT: Final = "layout.crop_rows.rows"
 
 # What stands in the house: a piece of equipment, a sensor, a zone, or a
 # fixture placed one by one.
@@ -259,12 +261,16 @@ def set_field(
 def set_value(draft: Installation, path: str, value: JsonValue) -> Installation:
     """One field of the installation given a value, by its path from the
     top, as its file writes it: `envelope.length`, `layout.crop_rows.rows`.
-    The installation is checked whole, as a file of it is read; refused if
-    it has no field there, or its models refuse the value."""
+    Fewer crop rows take the crops of the rows they no longer have with
+    them, in the same edit. The installation is checked whole, as a file of
+    it is read; refused if it has no field there, or its models refuse the
+    value."""
     if not path:
         raise ValueError("name a field")
     fields = draft.model_dump()
     _with_value(fields, path.split("."), value, draft.installation_id, path)
+    if path == ROW_COUNT and isinstance(value, int) and not isinstance(value, bool):
+        fields["row_crops"] = [crop for crop in draft.row_crops if crop.row <= value]
     return Installation.model_validate(fields)
 
 

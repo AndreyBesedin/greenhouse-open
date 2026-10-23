@@ -14,7 +14,7 @@ from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.processes import Process
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED
-from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.runs import RunPlan, RunRequest
 from greenhouse_sim.services.scenarios import plant_ids
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.timeline import TimelineDocument, timeline
@@ -30,7 +30,9 @@ EVENINGS = ((64_800.0, "fan_right", 1.0),)
 def _second_day() -> TimelineDocument:
     return timeline(
         PACKAGED,
-        RunRequest("reference_greenhouse", commands=HEATER_ON, daily=EVENINGS),
+        RunRequest(
+            "reference_greenhouse", plan=RunPlan.requested(commands=HEATER_ON, daily=EVENINGS)
+        ),
         until_s=2 * DAY_S,
         from_s=DAY_S,
     )
@@ -70,7 +72,9 @@ def test_at_a_moment_commands_go_first_then_the_air_plants_sensors_and_cameras()
     midnight = 2 * DAY_S
     document = timeline(
         PACKAGED,
-        RunRequest("reference_greenhouse", commands=((midnight, "heater", 0.0),)),
+        RunRequest(
+            "reference_greenhouse", plan=RunPlan.requested(commands=((midnight, "heater", 0.0),))
+        ),
         until_s=midnight,
         from_s=DAY_S,
     )

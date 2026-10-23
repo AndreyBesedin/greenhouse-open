@@ -40,7 +40,7 @@ from greenhouse_sim.services.climate_runs import climate_run, off_levels
 from greenhouse_sim.services.crop import run_crop
 from greenhouse_sim.services.fields import field
 from greenhouse_sim.services.replay import _rounded
-from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.runs import RunPlan, RunRequest
 from greenhouse_sim.services.scenarios import scenario_summaries
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import HOUR_S
@@ -60,7 +60,7 @@ pytestmark = pytest.mark.usefixtures("afresh")
 
 
 def _kept(all_off: bool = False) -> checkpoints.Checkpoint:
-    return checkpoints.Checkpoint.model_validate(
+    return checkpoints.read_checkpoint(
         json.loads(gzip.decompress(opening_file(SCENARIO, all_off).read_bytes()))
     )
 
@@ -97,11 +97,11 @@ def test_the_kept_opening_day_is_the_manifests_and_bears_red_fruit() -> None:
     assert _red(kept.plants) > 0
     # Beside it, the same run with everything off, as a viewer charts it.
     off = _kept(all_off=True)
-    assert (off.day, off.manifest, off.daily, off.commands, off.levels) == (
+    assert (off.day, off.manifest, off.plan.daily, off.plan.actions, off.levels) == (
         day,
         kept.manifest,
-        [],
-        [],
+        (),
+        (),
         off_levels(PACKAGED, SCENARIO),
     )
     assert off.house.temperature_c < kept.house.temperature_c
@@ -116,7 +116,10 @@ def test_kept_as_the_api_starts_the_runs_later_days_carry_on_from_it(simulator: 
     plants = run_crop(simulator, RunRequest(SCENARIO)).plants_on(OPENING + 1)
     house = climate_run(simulator, RunRequest(SCENARIO))[1].house
     off = climate_run(
-        simulator, RunRequest(SCENARIO, levels=off_levels(PACKAGED, SCENARIO), daily=())
+        simulator,
+        RunRequest(
+            SCENARIO, levels=off_levels(PACKAGED, SCENARIO), plan=RunPlan.requested(daily=())
+        ),
     )[1].house
     off.air_at((OPENING + 0.5) * DAY_S)
     # The air cell by cell in the day's first hour, its grid run started an
@@ -184,7 +187,9 @@ def _update(simulator: Simulator) -> None:
     # beside it: its thermostat's heater too.
     for all_off, levels, daily in ((False, {}, None), (True, off_levels(PACKAGED, SCENARIO), ())):
         saved = checkpoints.save_checkpoint(
-            simulator, RunRequest(SCENARIO, levels=levels, daily=daily), time_s=day * DAY_S
+            simulator,
+            RunRequest(SCENARIO, levels=levels, plan=RunPlan.requested(daily=daily)),
+            time_s=day * DAY_S,
         )
         opening_file(SCENARIO, all_off).write_bytes(
             checkpoints.opening_bytes(checkpoints.checkpoint(simulator, saved.checkpoint_id))

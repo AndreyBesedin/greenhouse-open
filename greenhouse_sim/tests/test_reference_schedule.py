@@ -19,7 +19,7 @@ from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import climate_runs, fields, sensors
-from greenhouse_sim.services.runs import Commanded, RunRequest
+from greenhouse_sim.services.runs import Commanded, RunPlan, RunRequest
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.sensors import PointSensor
 
@@ -62,9 +62,14 @@ def test_the_reference_run_vents_and_stirs_its_house_by_the_clock_and_heats_it_b
 def test_a_run_gives_its_scenarios_daily_commands_unless_it_gives_its_own() -> None:
     own = climate_runs.run_schedule(PACKAGED, RunRequest("reference_greenhouse"))
     replaced = climate_runs.run_schedule(
-        PACKAGED, RunRequest("reference_greenhouse", daily=((64800.0, "heater", 1.0),))
+        PACKAGED,
+        RunRequest(
+            "reference_greenhouse", plan=RunPlan.requested(daily=((64800.0, "heater", 1.0),))
+        ),
     )
-    none = climate_runs.run_schedule(PACKAGED, RunRequest("reference_greenhouse", daily=()))
+    none = climate_runs.run_schedule(
+        PACKAGED, RunRequest("reference_greenhouse", plan=RunPlan.requested(daily=()))
+    )
 
     expected = [
         (day * DAY_S + time, actuator, level)
@@ -113,7 +118,9 @@ def _reading(
     """What the front temperature sensor, a clean one, observed at `time_s`."""
     log = sensors.observations(
         simulator,
-        RunRequest("reference_greenhouse", levels=levels or {}, daily=daily),
+        RunRequest(
+            "reference_greenhouse", levels=levels or {}, plan=RunPlan.requested(daily=daily)
+        ),
         until_s=time_s,
         from_s=time_s - 60.0,
     )

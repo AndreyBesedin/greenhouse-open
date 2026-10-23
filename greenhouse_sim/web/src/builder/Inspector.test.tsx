@@ -30,7 +30,11 @@ const HOUSE = {
     ],
   },
   layout: {
-    crop_rows: { rows: 2 },
+    crop_rows: {
+      rows: 2,
+      pair_gap: 0.4,
+      support: { kind: "crop_gutter", height: 0.5, width: 0.3, depth: 0.12 },
+    },
     equipment: [
       {
         actuator_id: "heater_1",
@@ -117,6 +121,19 @@ describe("the builder's inspector (P12.3)", () => {
       path: "kind",
       value: "side_vent",
     });
+  });
+
+  it("shows the fields of a model the rows may hold, and sets an emptied field that may be none to null", () => {
+    const { within, onEdit } = show(null);
+
+    expect(control(within, "Support Height").value).toBe("0.5");
+    typeAndEnter(control(within, "Pair Gap"), "");
+    typeAndEnter(control(within, "Support Height"), "0.6");
+
+    expect(onEdit.mock.calls.map(([edit]) => edit)).toEqual([
+      { edit: "set_value", path: "layout.crop_rows.pair_gap", value: null },
+      { edit: "set_value", path: "layout.crop_rows.support.height", value: 0.6 },
+    ]);
   });
 
   it("shows the house's fields when no one item is chosen, each set by its path", () => {

@@ -1,7 +1,7 @@
 # P13: One action format, and a plan a run's gateway carries out
 
-**Status:** planned. The design is accepted (decision 0046), its questions
-[decided](#decided), and P13.1 starts its implementation. Part of the
+**Status:** in progress. The design is accepted (decision 0046), its
+questions [decided](#decided); P13.1 and P13.2 are done. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -580,7 +580,8 @@ within the day; the action format needs no change for it.
 | `RequestedAction` and its four types, `ActionResult` | `Action`; a refusal is a `refused` outcome | deprecated in P13.1, removed in P13.9 |
 | `ActionExecutionAdapter`, `ActionOutcome`, `ExecutionStatus` | the gateway and executor contracts and the outcome record above | deprecated in P13.1, removed in P13.9 |
 | `greenhouse_sim.executor` (`ActionExecutor`, `SimulatedOperatorExecutor`, `executor_for`), `SimulationEngine.apply_actions` | the simulator's gateway, with the run as its executor | P13.9 |
-| `Command`, `&set=`, `&open=`, `&schedule=` | `set_level` at an instant | the types in P13.2; the spellings stay |
+| `Command`, `&schedule=` | `set_level` at an instant | P13.2; the spelling stays |
+| `&set=`, `&open=` | where a run starts from, beside its plan, as its layout and weather are | settled in P13.2: unchanged |
 | `DailyCommand`, `&daily=` | `set_level` every day at a time | P13.2 |
 | `TargetChange`, `&targets=` | `set_target` at an instant, on the minute | P13.2 |
 | `POST /api/scenarios/{id}/playback/targets` | a plan revision given to the playback's gateway | P13.7, an alias for one release |
@@ -593,7 +594,7 @@ within the day; the action format needs no change for it.
 | Step | What | Commit title | Status |
 | --- | --- | --- | --- |
 | P13.1 | The protocol's types and contracts: `Action`, `ActionId`, `ActionRef`, `PlannedAction`, `Plan`, `Principal`, `Grant`, `AuthorisationGroup`, `AuthorisationConfig`, `ActionOutcome`, `ActionEffect`, `ExecutorRef`, `Assignment`, `ExecutionReport`, the gateway and executor contracts (revocation, status, at most once; listing the actions as they stand, `ActionKey`, `ActionState`; cancelling chosen actions; the epoch on every write; the gateway's limits; carrying actions into a run that continues the clock, as `RunDescriptor.continues_from` says, and dropping them from one that starts over) and `ActionNotExecutable`; checks (a malformed or stale plan refused whole, the graph checked as given, recurrences bounded, grants and delegation, the order across plans, one outcome per action) as conformance functions and their tests, the executor's with one that drops messages, and the gateway's with an in-memory gateway on a clock that continues; the published JSON Schemas. The old names stay, deprecated; the changelog says what each became, and the version moves at the next release (decision 0045). | `feat(protocol): one action, plan, gateway and executor format` | Done: the records (#323) and the contracts |
-| P13.2 | The run carries out a plan of today's kinds: levels, openings, daily commands and targets become a plan internally; `RunRequest` holds it; the address's spellings are read into it. Every run id, replay digest and kept opening day unchanged. Checkpoints in a new format, format 3 read. | `refactor(sim): the run carries out its schedule as a plan` | Planned |
+| P13.2 | The run carries out a plan of today's kinds: levels, openings, daily commands and targets become a plan internally; `RunRequest` holds it; the address's spellings are read into it. Every run id, replay digest and kept opening day unchanged. Checkpoints in a new format, format 3 read. | `refactor(sim): the run carries out its schedule as a plan` | Done |
 | P13.3 | The simulator's gateway: the playback holds its run's plan and revisions, schedules them onto the run as its executor, writes the outcome log and serves it on the consumer interface; steering as the gateway's rule; the actions as they stand, cancelling chosen ones, and dropping them when the playback starts over. The gateway contract's conformance tests run against it. | `feat(sim): the playback as its run's gateway` | Planned |
 | P13.4 | Authorisation in the gateway: principals on every planned action, bound to the authenticated submitter or granted on its behalf; plan ownership; groups and grants in a versioned configuration, an input of the run, its changes recorded; checked when a plan is given and when each action falls due, refusals as outcomes; the local operator group. | `feat(sim): the gateway authorises every action` | Planned |
 | P13.5 | Crop actions on the run: `harvest`, `lower`, `remove_leaf`, `inspect` at a day's start, refused at other instants and `water` refused, with their reasons; the organ model's `PlantAction` renamed `PlantOperation`; the plant lab and crop work give them; events name their actions. | `feat(sim): crop actions and their outcomes on the run` | Planned |
@@ -779,6 +780,43 @@ What the design left to its first step, as P13.1 settles it:
 - **A refusal for withdrawn rights** may come when the assignment is to be
   sent, its executor's lead time before the action falls due, or when it
   falls due; both are after the withdrawal and by the due instant.
+
+## Settled in P13.2
+
+- **A run's plan** (`greenhouse_sim.services.runs.RunPlan`) is the
+  protocol's actions on the run's own clock: each at a moment, in seconds
+  from the run's start, or every day at a time of day. `RunRequest` holds
+  it beside its scenario, layout and weather. The address's `&schedule=`,
+  `&daily=` and `&targets=` are read into it as they are written, and the
+  run checks it in its own words, as an executor refuses what it cannot
+  carry out; once checked, it holds to the protocol's rules
+  (`RunPlan.validated`). Without daily actions of its own, a run's plan is
+  its scenario's standing plan, its manifest's daily commands.
+- **Where a run starts from is not its plan.** Its devices' levels and its
+  doors' and vents' openings from the start (`&set=`, `&open=`) stay its
+  request's, as its layout and weather are. A `set_level` at the run's
+  start is one more action after them: `&schedule=0:fan:1` was already a
+  run other than `&set=fan:1`, and each keeps its id.
+- **At one moment,** what a run does every day comes before what it does
+  that day alone, as the gateway orders recurring actions before one-off
+  ones, and of two levels for one device the later is kept.
+- **The same plan, the same run.** A plan names its run by its actions as
+  today's schedule wrote them, so every run id, replay digest and kept
+  opening day stays; nine runs' ids are pinned in
+  `greenhouse_sim/tests/test_run_identity.py`.
+- **Checkpoints** are written in format 4, which keeps the run's plan.
+  Format 3's commands, daily commands and target changes are read as its
+  plan, and format 2 as format 3 (`checkpoints.read_checkpoint`); the kept
+  opening days stay in format 3, read so. A checkpoint uploaded is held to
+  the protocol's rules as it is read, and refused by the field at fault. A
+  checkpoint's identifier is a digest of its content, so each has another
+  in format 4, the opening days' too; its summary, which the viewer reads,
+  is unchanged.
+- **`auto`** is refused by the run until a step hands a device back to its
+  control loop.
+- **The climate run's schedule** (`greenhouse_sim.climate.commands`) is
+  what the run makes of its plan: the executor's inner steps, as the organ
+  crop's operations are.
 
 ## Decided
 
