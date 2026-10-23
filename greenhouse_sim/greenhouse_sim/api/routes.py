@@ -198,12 +198,23 @@ check; a route that comes to need one checks it first.
                                           as the body gives them, registered
                                           and listed with the others
 
+    POST /api/builder/basic               a first draft from the builder's
+                                          first form's values, the body,
+                                          assessed (P12.2)
+    POST /api/builder/assess              an installation's file, the body,
+                                          read and assessed as it stands
+    POST /api/builder/scene               the house an installation's file,
+                                          the body, describes, as a scene
+
 A change to a draft made on a revision that is no longer its latest is
 refused as a conflict (409), as is a draft's run under a scenario's name
-already taken.
+already taken. The first form's values and an installation's file are
+refused (400) with `problems` beside the `error`: each field at fault, by
+its path, and what is wrong with it.
 """
 
 import json
+import math
 from collections.abc import Callable, Sequence
 from http import HTTPStatus
 from typing import Final
@@ -213,6 +224,7 @@ from pydantic import BaseModel
 
 from greenhouse_sim.api.responses import JsonValue, Response
 from greenhouse_sim.services import (
+    builder,
     cfd,
     checkpoints,
     climate_readings,
@@ -421,6 +433,12 @@ def _posted(simulator: Simulator, path: str, query: Query, body: bytes) -> Respo
             )
         case ["api", "checkpoints"]:
             return _answer(lambda: checkpoints.upload_checkpoint(simulator, _json(body)))
+        case ["api", "builder", "basic"]:
+            return _answer(lambda: builder.basic(_json(body)))
+        case ["api", "builder", "assess"]:
+            return _answer(lambda: builder.assess(_text(body)))
+        case ["api", "builder", "scene"]:
+            return _answer(lambda: builder.scene(_text(body)))
         case ["api", "drafts", draft_id, "save"]:
             return _answer(
                 lambda: drafts.save(simulator, draft_id, _text(body), _revision(query, "on"))
@@ -465,10 +483,21 @@ def _json(body: bytes) -> JsonValue:
     """A request's body, read as JSON: standard JSON, whose numbers are all
     finite, not Python's, which reads `NaN` and `Infinity` too."""
     try:
-        parsed: JsonValue = json.loads(body, parse_constant=_not_a_number)
+        parsed: JsonValue = json.loads(body, parse_constant=_not_a_number, parse_float=_finite)
     except ValueError:
         raise InvalidRequest("the body is not JSON") from None
+    except RecursionError:
+        raise InvalidRequest("the body is JSON nested too deeply to read") from None
     return parsed
+
+
+def _finite(written: str) -> float:
+    """A number as JSON writes it, refused if Python reads it as infinite,
+    as it reads `1e999`."""
+    number = float(written)
+    if not math.isfinite(number):
+        raise InvalidRequest(f"the body holds {written}, too large a number")
+    return number
 
 
 def _text(body: bytes) -> str:
@@ -541,6 +570,11 @@ def _answer(
 
 def _refusal(error: ServiceError) -> Response:
     status = next(status for kind, status in _REFUSALS if isinstance(error, kind))
+    if isinstance(error, InvalidRequest) and error.problems:
+        problems: list[JsonValue] = [
+            {"field": field, "message": message} for field, message in error.problems
+        ]
+        return Response(status, {"error": error.message, "problems": problems})
     return _error(status, error.message)
 
 

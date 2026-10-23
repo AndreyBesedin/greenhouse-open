@@ -42,7 +42,9 @@ from greenhouse_sim.builder.portable import InstallationFileError, import_instal
 from greenhouse_sim.scenarios.catalogue import SCENARIO_ID, ScenarioRefused
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.installation import CannotRun, Installation, scenario_house
-from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound
+from greenhouse_sim.scenarios.manifest_files import SCHEMA_VERSION
+from greenhouse_sim.services.builder import refused_file
+from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound, first_reason
 from greenhouse_sim.services.scenarios import (
     DEFAULT_WEATHER,
     ScenarioSummary,
@@ -69,14 +71,16 @@ _NOT_IN_A_SCENARIO_ID: Final = re.compile(r"[^a-z0-9_]")
 
 
 class DraftAnswer(BaseModel):
-    """A draft at a revision, as an editor opens it: its installation, and
-    what stops it running, or what it lacks."""
+    """A draft at a revision, as an editor opens it: its installation, the
+    format a file of it is written in, and what stops it running, or what it
+    lacks."""
 
     model_config = ConfigDict(frozen=True)
 
     draft_id: str
     revision: int
     saved_at: datetime
+    schema_version: int = SCHEMA_VERSION
     installation: Installation
     findings: list[Finding]
 
@@ -170,7 +174,7 @@ def save(simulator: Simulator, draft_id: str, file: str, on: int | None) -> Draf
     try:
         installation = import_installation(file)
     except InstallationFileError as error:
-        raise InvalidRequest(str(error)) from None
+        raise refused_file(error) from None
     if installation.installation_id != draft_id:
         raise InvalidRequest(
             f"the file holds the installation {installation.installation_id!r}, "
@@ -182,7 +186,7 @@ def save(simulator: Simulator, draft_id: str, file: str, on: int | None) -> Draf
         raise Conflict(str(error)) from None
     except InstallationFileError as error:
         # As the store writes it, the file may not be read back.
-        raise InvalidRequest(str(error)) from None
+        raise refused_file(error) from None
     logger.info(
         "drafts: saved %s, revision %d",
         draft_id,
@@ -246,7 +250,7 @@ def run(
     try:
         asked = DraftRun.model_validate(settings)
     except ValidationError as error:
-        raise InvalidRequest(f"not a draft's run: {_first(error)}") from None
+        raise InvalidRequest(f"not a draft's run: {first_reason(error)}") from None
     try:
         house = scenario_house(kept.installation)
         own = _NOT_IN_A_SCENARIO_ID.sub("_", f"{draft_id.lower()}_r{kept.revision}")
@@ -265,7 +269,7 @@ def run(
     except CannotRun as error:
         raise InvalidRequest(f"draft {draft_id!r} cannot run: {error}") from None
     except ValidationError as error:
-        raise InvalidRequest(f"draft {draft_id!r} cannot run: {_first(error)}") from None
+        raise InvalidRequest(f"draft {draft_id!r} cannot run: {first_reason(error)}") from None
     config = with_weather(config, asked.weather)
     try:
         entry = simulator.catalogue.register(config)
@@ -311,11 +315,3 @@ def _answer(kept: Revision) -> DraftAnswer:
         installation=kept.installation,
         findings=assess_installation(kept.installation),
     )
-
-
-def _first(error: ValidationError) -> str:
-    """A refusal's first reason, by the field at fault."""
-    first = error.errors()[0]
-    where = ".".join(str(part) for part in first["loc"])
-    more = f" (and {error.error_count() - 1} more)" if error.error_count() > 1 else ""
-    return f"{where}: {first['msg']}{more}" if where else f"{first['msg']}{more}"

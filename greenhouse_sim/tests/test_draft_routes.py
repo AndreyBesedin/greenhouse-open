@@ -127,6 +127,24 @@ def test_a_draft_is_reverted_and_deleted(simulator: Simulator) -> None:
     assert _ask(simulator, "GET", f"/api/drafts/{DRAFT}")[0] == HTTPStatus.NOT_FOUND
 
 
+def test_a_file_saved_with_faults_is_refused_by_every_field_at_fault(
+    simulator: Simulator,
+) -> None:
+    document = json.loads(export_installation(_house()))
+    document["envelope"]["length"] = -1
+    document["row_crops"][1]["crop_model"] = "tomato.simple"
+
+    status, answered = _ask(
+        simulator, "POST", f"/api/drafts/{DRAFT}/save", json.dumps(document).encode()
+    )
+
+    assert status == HTTPStatus.BAD_REQUEST
+    assert [problem["field"] for problem in answered["problems"]] == [
+        "envelope.length",
+        "row_crops[1].crop_model",
+    ]
+
+
 @pytest.mark.parametrize(
     ("method", "path", "body", "status", "said"),
     [

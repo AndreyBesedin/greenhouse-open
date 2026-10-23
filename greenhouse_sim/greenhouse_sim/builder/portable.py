@@ -13,6 +13,7 @@ and holds no code.
 """
 
 import json
+import math
 from pathlib import Path
 from typing import Final
 
@@ -73,9 +74,13 @@ def import_installation(text: str) -> Installation:
             [Problem(field="", message=f"larger than {MAX_IMPORT_BYTES} bytes")]
         )
     try:
-        document = json.loads(text, parse_constant=_not_json)
+        document = json.loads(text, parse_constant=_not_json, parse_float=_finite)
     except (json.JSONDecodeError, _NotJson) as error:
         raise InstallationFileError([Problem(field="", message=f"not JSON: {error}")]) from None
+    except RecursionError:
+        raise InstallationFileError(
+            [Problem(field="", message="not JSON this simulator reads: nested too deeply")]
+        ) from None
     if not isinstance(document, dict):
         raise InstallationFileError([Problem(field="", message="not a JSON object")])
     version = document.get(_VERSION_KEY)
@@ -120,6 +125,15 @@ class _NotJson(ValueError):
 
 def _not_json(constant: str) -> float:
     raise _NotJson(f"{constant} is not a JSON number")
+
+
+def _finite(written: str) -> float:
+    """A number as JSON writes it, refused if Python reads it as infinite,
+    as it reads `1e999`: no number of a greenhouse's is."""
+    number = float(written)
+    if not math.isfinite(number):
+        raise _NotJson(f"{written} is too large a number")
+    return number
 
 
 def installation_json_schema() -> dict[str, JsonValue]:
