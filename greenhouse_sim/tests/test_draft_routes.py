@@ -74,7 +74,13 @@ def test_a_draft_is_saved_reopened_and_listed_revision_by_revision(simulator: Si
     assert _ask(simulator, "GET", "/api/drafts") == (HTTPStatus.OK, [])
 
     status, first = _save(simulator, _house())
-    assert (status, first["revision"]) == (HTTPStatus.OK, 1)
+    # The builder's answer about an installation, naming the draft and its
+    # revision.
+    assert (status, first["draft"]["draft_id"], first["draft"]["revision"]) == (
+        HTTPStatus.OK,
+        DRAFT,
+        1,
+    )
     # What it lacks, as warnings: it can run.
     assert {found["code"] for found in first["findings"]} == {
         "no_door",
@@ -83,7 +89,7 @@ def test_a_draft_is_saved_reopened_and_listed_revision_by_revision(simulator: Si
         "no_fans",
     }
     status, second = _save(simulator, _house(name="Renamed"), on=1)
-    assert (status, second["revision"]) == (HTTPStatus.OK, 2)
+    assert (status, second["draft"]["revision"]) == (HTTPStatus.OK, 2)
 
     status, listed = _ask(simulator, "GET", "/api/drafts")
     assert [(each["draft_id"], each["name"], each["revision"]) for each in listed] == [
@@ -115,7 +121,7 @@ def test_a_draft_is_reverted_and_deleted(simulator: Simulator) -> None:
     _save(simulator, _house(name="Changed"), on=1)
 
     status, reverted = _ask(simulator, "POST", f"/api/drafts/{DRAFT}/revert?revision=1&on=2")
-    assert (status, reverted["revision"], reverted["installation"]["name"]) == (
+    assert (status, reverted["draft"]["revision"], reverted["installation"]["name"]) == (
         HTTPStatus.OK,
         3,
         "Test house",

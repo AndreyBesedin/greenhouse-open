@@ -9,8 +9,10 @@ answers with it read, so that an editor sends back what it is given.
 """
 
 import json
+from datetime import datetime
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, JsonValue, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError
 
 from greenhouse_sim.builder.basic import BasicSetup, basic_installation
 from greenhouse_sim.builder.edits import Edit
@@ -28,15 +30,28 @@ from greenhouse_sim.services.errors import InvalidRequest, every_reason, first_r
 from greenhouse_sim.services.scenarios import scenario
 
 
+class DraftRevision(BaseModel):
+    """The draft an installation is kept as, and its revision."""
+
+    model_config = ConfigDict(frozen=True)
+
+    draft_id: str
+    revision: int
+    saved_at: datetime
+
+
 class Assessed(BaseModel):
     """An installation, the format a file of it is written in, and what
-    stops it running, or what it lacks."""
+    stops it running, or what it lacks; and, if it is a draft's, the draft
+    and the revision it is (`services.drafts`). One answer for both, so that
+    the contract published for it describes an installation once."""
 
     model_config = ConfigDict(frozen=True)
 
     schema_version: int = SCHEMA_VERSION
     installation: Installation
     findings: list[Finding]
+    draft: Annotated[DraftRevision | None, Field(exclude_if=lambda draft: draft is None)] = None
 
 
 def basic(values: JsonValue) -> Assessed:
