@@ -237,7 +237,14 @@ For the simulator specifically:
   `greenhouse_sim.domain`, which depends on nothing else of the simulator,
   while a contract's own vocabulary stays with its contract
   ([decision 0025](decisions/0025-shared-vocabulary-in-a-domain-package-and-a-generic-plant.md),
-  enforced by `tests/test_domain.py`).
+  enforced by `tests/test_domain.py`);
+- a simulator's state is one object, a `Simulator`, passed explicitly
+  ([decision 0048](decisions/0048-a-simulators-state-is-one-object-passed-explicitly.md)):
+  a service that keeps or plays runs takes `simulator`, one that only looks
+  a scenario up takes the `catalogue` it looks in, and a pure helper takes
+  neither. No module keeps state for the whole process: no store, lock or
+  thread made as it is imported (`tests/test_simulator.py`). A test asks
+  for the module's `simulator`, or makes its own.
 
 ## APIs
 

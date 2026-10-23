@@ -20,15 +20,36 @@ line-length = 100
 target-version = "py314"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM", "PERF", "ERA", "PIE", "C4"]
+select = ["E", "F", "I", "UP", "B", "SIM", "PERF", "ERA", "PIE", "C4", "N", "DTZ", "PLR0917", "RUF", "ARG"]
 # A range is written as a number line (`low < value < high`), and a named
 # constant is compared with the number it should be: SIM300 would turn
 # both around.
-ignore = ["SIM300"]
+# N818: an exception is named for what happened (`NotFound`,
+# `InvalidManifest`, `SetupRefused`), as the standard library's own are
+# (`StopIteration`, `KeyboardInterrupt`), and the protocol's are its users'.
+# ARG002: a method takes what its protocol asks of every implementation, used
+# or not: a weather kind's `source` its seed and start, a stem path's `rising`
+# how much it has laid down, an airflow model's `field` its moment. The
+# classes meet their protocols by shape, which Ruff cannot see.
+ignore = ["SIM300", "N818", "ARG002"]
+# The prose sets quantities as they are typeset: a minus sign (−5 °C),
+# the times sign (24 × 13 cells), a density's ρ and a prime (′).
+allowed-confusables = ["−", "×", "ρ", "′"]
 
 [tool.ruff.lint.flake8-comprehensions]
 # A record's defaults read best as `dict(name=value)`, as the tests write them.
 allow-dict-calls-with-keyword-arguments = true
+
+[tool.ruff.lint.pep8-naming]
+# http.server's handlers name their methods for the request's: `do_GET`.
+extend-ignore-names = ["do_*"]
+
+[tool.ruff.lint.per-file-ignores]
+# DTZ001 in the tests: a test builds a wall-clock time on purpose, to see
+# it refused, or as a dataset's own rows give it. ARG in the tests: a
+# stand-in takes the arguments of what it stands in for, and a test asks for
+# a fixture by naming it, for what the fixture does.
+"tests/**" = ["DTZ001", "ARG"]
 
 [tool.mypy]
 python_version = "3.14"

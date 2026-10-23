@@ -2,6 +2,7 @@
 is one the organs or the plant's form give."""
 
 import math
+from itertools import pairwise
 
 import pytest
 
@@ -78,7 +79,7 @@ def test_internodes_stack_up_the_stem_as_long_and_thick_as_they_are() -> None:
         assert isinstance(shape.shape, Cylinder)
         assert shape.shape.height == pytest.approx(internode.length_cm * METRES_PER_CM)
         assert shape.shape.radius == pytest.approx(internode.diameter_mm * METRES_PER_MM / 2)
-    for below, above in zip(shapes, shapes[1:], strict=False):
+    for below, above in pairwise(shapes):
         assert _close(_end(below), above.transform.position)
 
 
@@ -115,7 +116,7 @@ def test_a_leaf_is_a_petiole_a_rachis_and_its_leaflets_joined_end_to_end() -> No
     stalk = [shapes[f"{leaf}_petiole"]] + [shapes[f"{leaf}_rachis{n}"] for n in range(1, pairs + 1)]
     node = _end(shapes["p01_n04_internode"])
     assert _close(stalk[0].transform.position, node)
-    for before, after in zip(stalk, stalk[1:], strict=False):
+    for before, after in pairwise(stalk):
         assert _close(_end(before), after.transform.position)
     # Each pair where one segment meets the next, the terminal leaflet at the tip.
     for pair, segment in enumerate(stalk[:-1], start=1):
@@ -204,7 +205,7 @@ def test_successive_leaves_turn_about_the_stem_by_the_golden_angle() -> None:
         petiole = _axis(shapes[f"{phytomer.leaf.leaf_id}_petiole"], Z)
         azimuths.append(math.atan2(petiole.y, petiole.x))
 
-    for before, after in zip(azimuths, azimuths[1:], strict=False):
+    for before, after in pairwise(azimuths):
         turn = (after - before) % (2 * math.pi)
         assert turn == pytest.approx(GOLDEN_ANGLE_RAD)
 

@@ -29,7 +29,7 @@ day's moments, as on the run's clock (`greenhouse_sim.core.clock`).
 
 import math
 from collections.abc import Iterator, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Final
 
 from greenhouse_sim.climate.commands import Schedule
@@ -72,7 +72,7 @@ class RunProcesses:
     plants: Sequence[str]
     sensors: Sequence[PointSensor]
     cameras: Sequence[Camera]
-    crop_work: CropWork = CropWork()
+    crop_work: CropWork = field(default_factory=CropWork)
 
 
 def within(moment: float, from_s: float, until_s: float) -> bool:

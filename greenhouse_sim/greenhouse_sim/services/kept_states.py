@@ -64,8 +64,10 @@ class KeptState:
         return house == self.house and schedule.same_until(self.schedule) >= self.moment_s
 
 
-# Each kept as long as its checkpoint is.
-STATES: Store[str, KeptState] = Store("kept states", label=str)
+def new_store() -> Store[str, KeptState]:
+    """A simulator's kept states (decision 0048), each kept as long as its
+    checkpoint is."""
+    return Store("kept states", label=str)
 
 
 def keep(simulator: Simulator, key: str, state: KeptState) -> None:

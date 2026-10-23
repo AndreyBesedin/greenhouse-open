@@ -110,7 +110,7 @@ def test_the_whole_house_takes_the_grids_total(simulator: Simulator) -> None:
 
 
 def test_by_day_the_sun_warms_the_shut_house_on_the_grid_too(simulator: Simulator) -> None:
-    day = _climate_day(simulator, "solar_lab", "default", "default", (), (), ())
+    day = _climate_day(simulator, ("solar_lab", "default", "default", (), (), (), ()))
     field = day.field("noon", AFTERNOON_S)
     house = day.house.air_at(AFTERNOON_S)
     temperature = field.channels[AirQuantity.TEMPERATURE][~day.run.solid]

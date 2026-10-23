@@ -46,7 +46,7 @@ class SimulatedOperatorExecutor:
         day: int,
         timestamp: datetime,
     ) -> tuple[GreenhouseWorld, Event]:
-        return apply_action(world, action, config, day=day, timestamp=timestamp)
+        return apply_action(world, action, config, timestamp=timestamp)
 
 
 def executor_for(executor_type: ActionExecutorType) -> ActionExecutor:

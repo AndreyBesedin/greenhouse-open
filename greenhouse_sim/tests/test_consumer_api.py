@@ -272,7 +272,7 @@ def test_a_consumer_follows_a_progressing_run_over_http(
 
 
 def _fetch(url: str) -> Mapping[str, object]:
-    with urllib.request.urlopen(url, timeout=30) as answer:  # noqa: S310 - the test's own loopback server
+    with urllib.request.urlopen(url, timeout=30) as answer:
         body = json.loads(answer.read())
     assert isinstance(body, dict)
     return body

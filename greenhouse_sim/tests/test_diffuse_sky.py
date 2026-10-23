@@ -5,6 +5,7 @@ QA override, and the sky's light inside past the roof's structure."""
 import json
 from datetime import UTC, datetime
 from http import HTTPStatus
+from itertools import pairwise
 
 import numpy as np
 import pytest
@@ -47,7 +48,7 @@ def test_erbss_diffuse_share_is_continuous_and_falls_as_the_sky_clears() -> None
     clearness = np.linspace(0.0, 1.0, 101)
     shares = [diffuse_share(k) for k in clearness]
     # Erbs's polynomial dips a little below its floor just short of 0.8.
-    assert all(later <= earlier + 1e-3 for earlier, later in zip(shares, shares[1:], strict=False))
+    assert all(later <= earlier + 1e-3 for earlier, later in pairwise(shares))
     assert diffuse_share(0.0) == 1.0
     assert diffuse_share(0.9) == pytest.approx(0.165)
 

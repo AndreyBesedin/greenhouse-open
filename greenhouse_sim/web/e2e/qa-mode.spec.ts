@@ -101,7 +101,7 @@ test("QA mode: the run's manifest says what it is made from, and the versions se
   const panel = page.getByRole("region", { name: "QA mode" });
   await unfold(page, "Display");
   await expect(panel.getByTestId("manifest-scenario")).toHaveText(
-    /^climate_box, version [0-9a-f]{16}, format 3$/,
+    /^climate_box, version [0-9a-f]{16}, format 4$/,
   );
   await expect(panel.getByTestId("manifest-seed")).toHaveText("1201");
   await expect(panel.getByTestId("manifest-season")).toHaveText("from 2026-01-01, 14 days");

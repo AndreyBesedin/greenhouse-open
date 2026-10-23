@@ -146,7 +146,13 @@ def observations(
         start=start,
         observations=observed,
         freshness=_freshness(
-            simulator.catalogue, scenario_id, point_sensors, air_at, weather_at, until_s, clean
+            simulator.catalogue,
+            scenario_id,
+            point_sensors,
+            air_at,
+            weather_at,
+            until_s=until_s,
+            clean=clean,
         ),
         frames=frames(
             _cameras(simulator.catalogue, scenario_id, name),
@@ -168,6 +174,7 @@ def delivered_between(
     run: RunRequest,
     after_s: float | None,
     until_s: float,
+    *,
     every_s: float | None = None,
     named: str | None = None,
     stop: threading.Event | None = None,
@@ -254,7 +261,7 @@ def sensors_at(simulator: Simulator, run: RunRequest, until_s: float = 0.0) -> S
             _point_sensors(simulator.catalogue, scenario_id, name),
             air_at,
             _weather_at(simulator.catalogue, scenario_id, run.weather),
-            until_s,
+            until_s=until_s,
         ),
         cameras=cameras,
     )
@@ -266,6 +273,7 @@ def _freshness(
     point_sensors: Sequence[PointSensor],
     air_at: AirAt,
     weather_at: WeatherAt,
+    *,
     until_s: float,
     clean: bool = False,
 ) -> list[SensorFreshness]:

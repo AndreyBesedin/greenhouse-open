@@ -35,7 +35,6 @@ def test_water_action_increases_the_reservoir_and_records_an_event() -> None:
         world,
         WaterPlantAction(plant_id=PLANT_ID, amount_ml=200),
         CONFIG,
-        day=1,
         timestamp=TIMESTAMP,
     )
 
@@ -51,7 +50,6 @@ def test_water_action_does_not_exceed_capacity() -> None:
         world,
         WaterPlantAction(plant_id=PLANT_ID, amount_ml=CONFIG.water_capacity_ml * 2),
         CONFIG,
-        day=1,
         timestamp=TIMESTAMP,
     )
 
@@ -66,7 +64,7 @@ def test_harvest_action_removes_ripe_fruit_and_tracks_cumulative_mass() -> None:
     expected_mass = sum(f.mass_g for f in ripe_before)
 
     updated_world, event = apply_action(
-        world, HarvestPlantAction(plant_id=PLANT_ID), CONFIG, day=61, timestamp=TIMESTAMP
+        world, HarvestPlantAction(plant_id=PLANT_ID), CONFIG, timestamp=TIMESTAMP
     )
 
     updated_plant = updated_world.plant(PLANT_ID)
@@ -87,7 +85,6 @@ def test_lower_action_increases_lowered_length() -> None:
         world,
         LowerPlantAction(plant_id=PLANT_ID, amount_cm=10),
         CONFIG,
-        day=61,
         timestamp=TIMESTAMP,
     )
 
@@ -102,7 +99,6 @@ def test_schedule_inspection_records_an_event_without_mutating_the_world() -> No
         world,
         ScheduleInspectionAction(plant_id=PLANT_ID, reason="inconsistent moisture reading"),
         CONFIG,
-        day=1,
         timestamp=TIMESTAMP,
     )
 

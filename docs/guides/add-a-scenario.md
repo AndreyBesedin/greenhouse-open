@@ -6,17 +6,27 @@ The simulator finds both by their file names, the API lists the scenario, and
 the viewer opens it with `?scenario=<id>`. Nothing registers it by hand.
 The reference greenhouse was added this way (commit `ca527ae`).
 
+That makes a packaged scenario, which every simulator knows
+(`scenarios.catalogue.PACKAGED`). A scenario made while a simulator runs, as
+a setup builder makes one, is registered with that simulator alone
+(`simulator.catalogue.register(config)`, decision 0048): under an identifier
+of its own, never a packaged one's, with its layout in its configuration and
+no opening day.
+
 ## Steps
 
 1. **Its layout:** `greenhouse_sim/greenhouse_sim/scenarios/layouts/<id>/default.json`,
    started from a sibling's, with `"$schema": "../../layout.schema.json"`.
-   It places as many planting positions as the manifest's rows times its
-   columns. See [add a layout](add-a-layout.md) for what a layout file
-   must be.
+   Its crop rows are the scenario's plants: so many rows of so many
+   planting positions. See [add a layout](add-a-layout.md) for what a
+   layout file must be.
 2. **Its manifest:** `greenhouse_sim/greenhouse_sim/scenarios/manifests/<id>.json`,
-   with `"$schema": "../scenario.schema.json"`, `"schema_version": 1`, a
-   `greenhouse_id` equal to its file's name, and `"layout": "default"`
-   written out. The schema (`greenhouse_sim/greenhouse_sim/scenarios/scenario.schema.json`)
+   with `"$schema": "../scenario.schema.json"`, `"schema_version": 4`, a
+   `greenhouse_id` equal to its file's name, and its house as an
+   `installation` ([decision 0050](../decisions/0050-an-installation-is-the-house-part-of-a-scenario.md)):
+   an `installation_id`, a `name`, its `envelope`, `"layout": "default"`
+   and a crop for every row, `row_crops`, each with its `row`,
+   `crop_model` and `variety`, the same for all rows. The schema (`greenhouse_sim/greenhouse_sim/scenarios/scenario.schema.json`)
    names the fields it must have and refuses any it does not know, at any
    depth. Its `random_seed` is its own, apart from every other scenario's.
    Its `notes` explain its numbers, by field.

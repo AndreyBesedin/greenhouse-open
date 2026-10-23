@@ -3,6 +3,7 @@ plant lab's run, day by day."""
 
 import math
 from http import HTTPStatus
+from itertools import pairwise
 
 import pytest
 
@@ -140,7 +141,7 @@ def test_an_organ_grows_along_an_s_curve_to_its_final_size() -> None:
     assert curve[10] == pytest.approx((1 + initial) / 2)
     assert curve[-1] == 1.0
     assert growth_fraction(expansion * 3, initial, PARAMS) == 1.0
-    gains = [after - before for before, after in zip(curve, curve[1:], strict=False)]
+    gains = [after - before for before, after in pairwise(curve)]
     # Slow, then fast, then slow again.
     assert gains[0] < gains[9] and gains[-1] < gains[10]
 
