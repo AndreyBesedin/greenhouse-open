@@ -230,15 +230,15 @@ export function Builder() {
       }
       return;
     }
-    const { installation, revision, schema_version } = answer.value;
+    const { installation, draft, schema_version } = answer.value;
     begin(
       asked,
       {
         schemaVersion: schema_version,
         history: begun(installation),
-        saved: { draftId, revision, installation },
+        saved: { draftId, revision: draft.revision, installation },
       },
-      `Opened ${installation.name}, revision ${revision}.`,
+      `Opened ${installation.name}, revision ${draft.revision}.`,
     );
   }
 
@@ -340,12 +340,14 @@ export function Builder() {
       setStatus(`It is not saved: ${answer.problem}`);
       return;
     }
-    const { revision, installation, draft_id } = answer.value;
+    const { installation, draft } = answer.value;
     // What was saved, whatever was edited while it was on its way.
     setEditing((now) =>
-      now === null ? now : { ...now, saved: { draftId: draft_id, revision, installation } },
+      now === null
+        ? now
+        : { ...now, saved: { draftId: draft.draft_id, revision: draft.revision, installation } },
     );
-    setStatus(`Saved as revision ${revision}.`);
+    setStatus(`Saved as revision ${draft.revision}.`);
     await refreshDrafts();
   }
 

@@ -171,10 +171,10 @@ code at `467821f`; *review*, reproduced by a review and not again here.
 
 | Finding | Status | Checked | Priority | Work |
 | --- | --- | --- | --- | --- |
-| `AUDIT.1` Two simulation paths, and the contracts belong to the older one | corrected | read | decide | D1 (decision 0035, #180), P10 |
-| `AUDIT.2` Models are chosen by code, not by the manifest | corrected | read | P10 | P10 |
-| `AUDIT.3` A new device touches ten files | corrected | read | P10 | P10 |
-| `AUDIT.4` One model's parameters sit at the top of every scenario | confirmed | read | P10 | P10 |
+| `AUDIT.1` Two simulation paths, and the contracts belong to the older one | corrected | read | decide | D1 (decision 0035, #180), P10 as [P14](../roadmap/p14-models-by-manifest.md) |
+| `AUDIT.2` Models are chosen by code, not by the manifest | corrected | read | P10 | P10 as [P14](../roadmap/p14-models-by-manifest.md) |
+| `AUDIT.3` A new device touches ten files | corrected | read | P10 | P10 as [P14](../roadmap/p14-models-by-manifest.md) |
+| `AUDIT.4` One model's parameters sit at the top of every scenario | confirmed | read | P10 | P10 as [P14](../roadmap/p14-models-by-manifest.md) |
 | `AUDIT.5` There is no recipe, for a person or an assistant | corrected | read | now | W6 (#164), W14 (#263) |
 | `AUDIT.6` The run request is written out 22 times | corrected | read | next | W11 (#280) |
 | `AUDIT.7` Five caches, five locks, and what they share | corrected | read | next | W9 (#253) |
@@ -197,7 +197,7 @@ code at `467821f`; *review*, reproduced by a review and not again here.
 | `AUDIT.24` The packages admit a pydantic that writes observations differently | new | run | **now** | W3 (#160) |
 | `AUDIT.25` What a client sends is checked for shape, not sense | new | review | now | W4 (#165, #166, #167, #192) |
 | `AUDIT.26` Ground truth leaves by the API, which says it never does | new | read | decide | D2 (decision 0036, #181) |
-| `AUDIT.27` The protocol's records are checked unevenly | new | read | next | W3 (#168, #174), a decision for the rest |
+| `AUDIT.27` The protocol's records are checked unevenly | new | read | next | W3 (#168, #174), decision 0046 and P13.1 for the rest (#323, #326) |
 | `AUDIT.28` The adapters' command line and canonical tier | new | read | next | W2 (#161, the command line), #187, #188, #189, #190 |
 | `AUDIT.29` The kept runs stall the server, and the openings go first | new | run | now | W5 (#163, #191) |
 | `AUDIT.30` Documents that no longer describe the code | new | read | now | W6 (#164) |

@@ -42,10 +42,9 @@ builder.
 - `ScenarioConfig` grows one `CropModel` and one variety over
   `rows × columns` positions, and `CropRows` repeats one row pattern.
 - Two tomato models, simple and organ by organ. Their parameters are code,
-  not versioned assets yet: the audit's project for models chosen by the
-  manifest (`AUDIT.1` to `AUDIT.4`, after decision 0035, named P10 in the
-  audit's work plan before the roadmap's P10 took the consumer interface)
-  is where they become so.
+  not versioned assets yet: [P14](p14-models-by-manifest.md), the audit's
+  project for models chosen by the manifest (`AUDIT.1` to `AUDIT.4`, named
+  P10 in the audit's work plan), is where they become so.
 - `world.site.Site` (latitude, longitude, elevation, time zone, the house's
   bearing) and the weather presets, which are synthetic: a site alone
   supplies no local weather.
@@ -121,7 +120,7 @@ to describe a house.
 | P12.1 | A manifest holds or names an installation, by a manifest migration; a draft resolved into a scenario and registered at runtime; drafts and revisions kept locally | A packaged scenario's run id unchanged by the migration; a draft without errors runs; drafts saved, reopened and reverted; files exchanged without the store | Done |
 | P12.2 | The builder in the viewer: start, house form, preview, rows chosen together, the scenario step | Create, preview, import, export, save, reopen and run a house in the browser, by keyboard too; its browser QA | Done: the builder page at `/builder` (a start from the form, a draft, a file or a scenario's house; rows chosen together; undo and redo; save, export, and the scenario step and run), with its browser tests. The findings are listed by the rows they concern; shown on the house, and every field reached, with P12.3's property inspector |
 | P12.3 | Equipment and openings: palettes, surface-mounted doors and vents, many items placed, copied and spaced at once, a property inspector | Items placed many at a time with valid geometry and stable ids; collisions explained or refused; every field editable | In progress: the simulator's edits of many items at once (`builder.items`), its findings of items that collide, and the API's `POST /api/builder/edit` |
-| P12.4 | Crop model parameters as versioned assets, edited by schema-driven forms | A tomato parameter set edited, saved, compared, exported, and a run reproduced from its version | Proposed, building on the audit's project for models chosen by the manifest |
+| P12.4 | Crop model parameters as versioned assets, edited by schema-driven forms | A tomato parameter set edited, saved, compared, exported, and a run reproduced from its version | Proposed, building on [P14](p14-models-by-manifest.md), models chosen by the manifest |
 | P12.5 | Rows of different crops run | Different models or varieties per row simulated reproducibly, or refused by name | Proposed |
 | P12.6 | Publication: a reviewed pull request from the builder, files carrying their models' parameter versions, every model field reachable | A re-imported installation is the same, with the same model references | Proposed |
 
