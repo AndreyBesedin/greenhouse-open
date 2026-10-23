@@ -14,6 +14,24 @@ breaks the conformance checks is a major version.
   rather than finishing the day, so the API stopped with a run playing
   back exits at once rather than after the day (some ten seconds for the
   reference greenhouse).
+- `greenhouse-sim`: an envelope may name the gutter lines that keep a post
+  on its inner frames (`inner_posts`). A lattice girder under the gutters
+  then carries the gutters between, from post to post, drawn and shading
+  the sun like the other members. The reference greenhouse's posts inside
+  the house now stand at the side walls only, and the tomato compartment's
+  leave its middle path, so that no post stands on a pipe rail between the
+  rows (#302). Both scenarios' runs have new identities, and the reference
+  greenhouse's kept opening day, replay and QA views were worked out again.
+  Every other scenario and its runs are unchanged.
+- Viewer and `greenhouse-sim`: moves applied to equipment keep the run's
+  heating target changes. A playback started over with another layout
+  keeps them, each at its moment, and lists them in its state; the viewer
+  keeps `&targets=` in the address, followed or not. A restart with the
+  layout it plays drops them as before (decision 0049). The Move panel
+  says in a line what applying the moves does, the details folded under
+  "How moving works", and "Start a new run with these moves" asks first,
+  in the panel: "Start the new run" applies them, "Back to the moves" or
+  Escape returns to them (#305).
 - `greenhouse-sim`: the packaged scenarios are read once into an
   unchanging catalogue (`scenarios.catalogue.PACKAGED`), each with its
   manifest's digest, opening day and layouts; a catalogue of one's own
