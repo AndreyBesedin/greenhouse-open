@@ -270,11 +270,19 @@ def test_a_run_being_made_holds_up_no_request_for_another_scenario(
 ) -> None:
     # A branch of a run whose air a long request is working out waits for
     # it to carry on; a request for another scenario's run does not wait.
-    base = fields._climate_day(simulator, "climate_box", "default", "default", (), (), ())
-    branch_key = ("climate_box", "default", "default", (), (), ((3600.0, "heater", 1.0),))
+    base = fields._climate_day(simulator, ("climate_box", "default", "default", (), (), (), ()))
+    branch_key: fields.RunKey = (
+        "climate_box",
+        "default",
+        "default",
+        (),
+        (),
+        ((3600.0, "heater", 1.0),),
+        (),
+    )
     with ThreadPoolExecutor(max_workers=2) as pool:
         with base.house._working:
-            branch = pool.submit(fields._climate_day, simulator, *branch_key)
+            branch = pool.submit(fields._climate_day, simulator, branch_key)
             asked = threading.Event()
             for _ in range(int(WAIT_S / POLL_S)):
                 if branch_key in simulator.climate_runs or branch.done() or asked.wait(POLL_S):
@@ -282,12 +290,7 @@ def test_a_run_being_made_holds_up_no_request_for_another_scenario(
             other = pool.submit(
                 fields._climate_day,
                 simulator,
-                "climate_box",
-                "default",
-                "cold_spring_day",
-                (),
-                (),
-                (),
+                ("climate_box", "default", "cold_spring_day", (), (), (), ()),
             )
             other.result(timeout=WAIT_S)
         branch.result(timeout=WAIT_S)

@@ -26,7 +26,7 @@ SHUT_TEMPERATURE_C = 0.6
 
 
 def _day(simulator: Simulator, commands: tuple[tuple[float, str, float], ...] = ()) -> ClimateDay:
-    return _climate_day(simulator, "climate_box", "default", "default", HEATED, (), commands)
+    return _climate_day(simulator, ("climate_box", "default", "default", HEATED, (), commands, ()))
 
 
 @pytest.mark.parametrize(

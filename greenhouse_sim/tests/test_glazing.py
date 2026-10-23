@@ -174,7 +174,7 @@ def test_the_climate_box_heated_settles_where_its_still_glass_passes_the_heaters
     simulator: Simulator,
 ) -> None:
     house = _climate_day(
-        simulator, "climate_box", "default", "default", (("heater", 1.0),), (), ()
+        simulator, ("climate_box", "default", "default", (("heater", 1.0),), (), (), ())
     ).house
     still_u = glazing_u_w_m2k(SINGLE_GLASS, 0.0)
 
