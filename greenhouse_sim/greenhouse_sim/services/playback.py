@@ -67,7 +67,7 @@ from greenhouse_sim.services.crop_log import crop_records
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.heat_log import heat_records
-from greenhouse_sim.services.runs import Commanded, RunRequest
+from greenhouse_sim.services.runs import Commanded, RunPlan, RunRequest
 from greenhouse_sim.services.scenarios import layout_name, scenario
 from greenhouse_sim.services.sensors import Stopped, delivered_between, run_start
 from greenhouse_sim.services.stores import Store
@@ -303,7 +303,9 @@ class Playback:
             # Checked as a run's target changes are; refused, nothing starts.
             run_schedule(
                 simulator.catalogue,
-                RunRequest(scenario_id, layout=self.layout, targets=tuple(targets)),
+                RunRequest(
+                    scenario_id, layout=self.layout, plan=RunPlan.requested(targets=targets)
+                ),
             )
         self._clock = clock
         self._lock = threading.Lock()
@@ -409,7 +411,9 @@ class Playback:
     def _run(self) -> RunRequest:
         """The run it plays: its scenario's own, with its layout and its
         epoch's target changes."""
-        return RunRequest(self.scenario_id, layout=self.layout, targets=self._targets)
+        return RunRequest(
+            self.scenario_id, layout=self.layout, plan=RunPlan.requested(targets=self._targets)
+        )
 
     def _next_day(self) -> int:
         """The day to work out next: the day a target change is worked into,
@@ -451,7 +455,7 @@ class Playback:
                 None if day == 0 else day * DAY_S,
                 (day + 1) * DAY_S,
                 every_s=self.every_s,
-                named=self.run_id if run.targets else None,
+                named=self.run_id if run.plan.targeted() else None,
                 stop=self._stopped,
             )
             if self._stopped.is_set():
@@ -468,7 +472,7 @@ class Playback:
             with self._lock:
                 self._failure = error
             return False
-        if not run.targets and run_id != self.run_id:
+        if not run.plan.targeted() and run_id != self.run_id:
             with self._lock:
                 self._failure = RuntimeError(f"its run is another now: {run_id}")
             return False
@@ -581,7 +585,10 @@ class Playback:
                     *((moment, name, value) for name, value in targets.items()),
                 )
                 # Checked as a run's target changes are; refused, nothing changes.
-                run_schedule(self._simulator.catalogue, replace(self._run(), targets=changed))
+                run_schedule(
+                    self._simulator.catalogue,
+                    replace(self._run(), plan=RunPlan.requested(targets=changed)),
+                )
                 self._targets = changed
                 self._work_again_from(moment)
                 return self._state()

@@ -112,7 +112,7 @@ adds a visible or measurable result.
 | [P10](p10-consumer-interface.md) | A consumer's interface to a running simulation | Done |
 | [P11](p11-climate-setpoints.md) | Climate setpoints: targets that run the house's equipment | In progress |
 | [P12](p12-setup-builder.md) | The setup builder: greenhouse installations authored, assessed and exchanged | In progress |
-| [P13](p13-actions.md) | One action format, and a plan a run's gateway carries out | Planned |
+| [P13](p13-actions.md) | One action format, and a plan a run's gateway carries out | In progress |
 | [P14](p14-models-by-manifest.md) | Models chosen by the manifest, from a registry | Proposed |
 
 A project's document is added when its first pull request lands.

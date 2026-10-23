@@ -14,7 +14,7 @@ from greenhouse_sim.services import climate_readings, sensors
 from greenhouse_sim.services.climate_readings import equipment_at
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.run_state import LATEST_COMMANDS, RunState, run_state
-from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.runs import RunPlan, RunRequest
 from greenhouse_sim.services.simulator import Simulator
 
 HEATED = {"heater": 1.0}
@@ -85,7 +85,11 @@ def test_the_equipment_doors_and_vents_stand_as_the_commands_set_them(simulator:
 def test_a_door_open_from_the_start_stands_open_until_commanded(simulator: Simulator) -> None:
     opened = run_state(
         simulator,
-        RunRequest("climate_box", openings={"door": 0.5}, commands=((300.0, "door", 0.0),)),
+        RunRequest(
+            "climate_box",
+            openings={"door": 0.5},
+            plan=RunPlan.requested(commands=((300.0, "door", 0.0),)),
+        ),
         until_s=TEN_MINUTES_S,
     )
     before = run_state(

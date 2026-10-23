@@ -104,7 +104,7 @@ from greenhouse_sim.services import (
     timeline,
 )
 from greenhouse_sim.services.errors import InvalidRequest
-from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.runs import RunPlan, RunRequest
 from greenhouse_sim.services.simulator import Simulator
 
 # How a query asks for a run without daily commands, its scenario's too.
@@ -209,21 +209,22 @@ def get(simulator: Simulator, segments: list[str], query: Query) -> Response | N
 
 def run_request(scenario_id: str, query: Query) -> RunRequest:
     """The run a query asks for of a scenario, read once: `layout=`,
-    `weather=`, `set=`, `open=`, `schedule=`, `daily=` and `targets=`."""
+    `weather=`, where it starts from (`set=`, `open=`), and its plan
+    (`schedule=`, `daily=`, `targets=`), as written; the run checks it."""
     levels = pairs(query.get("set", []), "set")
     openings = pairs(query.get("open", []), "open")
-    commands = tuple(_commands(query.get("schedule", [])))
-    daily = _daily(query)
-    targets = tuple(_commands(query.get("targets", []), "targets", "seconds:target:celsius"))
+    plan = RunPlan.requested(
+        commands=_commands(query.get("schedule", [])),
+        daily=_daily(query),
+        targets=_commands(query.get("targets", []), "targets", "seconds:target:celsius"),
+    )
     return RunRequest(
         scenario_id=scenario_id,
         layout=last(query, "layout"),
         weather=last(query, "weather"),
         levels=levels,
         openings=openings,
-        commands=commands,
-        daily=None if daily is None else tuple(daily),
-        targets=targets,
+        plan=plan,
     )
 
 
