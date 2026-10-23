@@ -2,12 +2,33 @@ import { useId } from "react";
 
 import type { Finding } from "./generated/assessedTypes";
 
+/** What the simulator says a draft needs: its findings, or why it could
+ * not say; nothing while it is being asked. */
+export type Assessment =
+  | { status: "asked" }
+  | { status: "assessed"; findings: readonly Finding[] }
+  | { status: "failed"; problem: string };
+
 /** What stops a draft running, and what it lacks: a sentence on whether it
- * runs, then each finding, errors first, with the rows it concerns. */
-export function Findings({ findings }: { findings: readonly Finding[] }) {
+ * runs, then each finding, errors first. Until the simulator answers, or
+ * if it cannot, it says so rather than show the findings of an edit
+ * before. */
+export function Findings({ assessment }: { assessment: Assessment }) {
   const heading = useId();
-  const errors = findings.filter((found) => found.severity === "error");
-  const warnings = findings.filter((found) => found.severity === "warning");
+  if (assessment.status !== "assessed") {
+    return (
+      <section className="builder-findings" aria-labelledby={heading}>
+        <h2 id={heading}>What it needs</h2>
+        <p data-testid="builder-runnable">
+          {assessment.status === "asked"
+            ? "Being assessed…"
+            : `It cannot be assessed: ${assessment.problem}`}
+        </p>
+      </section>
+    );
+  }
+  const errors = assessment.findings.filter((found) => found.severity === "error");
+  const warnings = assessment.findings.filter((found) => found.severity === "warning");
   return (
     <section className="builder-findings" aria-labelledby={heading}>
       <h2 id={heading}>What it needs</h2>
@@ -16,7 +37,7 @@ export function Findings({ findings }: { findings: readonly Finding[] }) {
           ? "It can run."
           : `${errors.length === 1 ? "One error stops" : `${errors.length} errors stop`} it running.`}
       </p>
-      {findings.length > 0 && (
+      {assessment.findings.length > 0 && (
         <ul>
           {[...errors, ...warnings].map((found) => (
             <li

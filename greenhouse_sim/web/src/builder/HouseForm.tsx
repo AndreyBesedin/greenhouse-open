@@ -52,6 +52,8 @@ export function HouseForm({
               name={field.name}
               type={field.kind === "text" ? "text" : "number"}
               step={field.kind === "integer" ? 1 : "any"}
+              min={field.minimum}
+              max={field.maximum}
               required={field.required}
               value={entered[field.name] ?? ""}
               onChange={(event) => setEntered({ ...entered, [field.name]: event.target.value })}

@@ -18,6 +18,10 @@ export interface FormField {
   /** A choice's values, in the schema's order. */
   choices: string[];
   required: boolean;
+  /** A number's bounds, where the schema gives them, as an input takes
+   * them; an exclusive minimum is left to the simulator to say. */
+  minimum?: number;
+  maximum?: number;
 }
 
 function resolved(schema: Record<string, unknown>, property: unknown): Record<string, unknown> {
@@ -50,7 +54,15 @@ export function formFields(schema: Record<string, unknown>): FormField[] {
             ? "number"
             : "text";
     const title = typeof field.title === "string" ? field.title : name;
-    return { name, title, kind, choices, required: required.has(name) };
+    return {
+      name,
+      title,
+      kind,
+      choices,
+      required: required.has(name),
+      ...(typeof field.minimum === "number" ? { minimum: field.minimum } : {}),
+      ...(typeof field.maximum === "number" ? { maximum: field.maximum } : {}),
+    };
   });
 }
 

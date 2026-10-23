@@ -74,16 +74,19 @@ describe("the builder's parts (P12.2)", () => {
   it("say whether a draft runs, its errors first", () => {
     shown = render(
       <Findings
-        findings={[
-          { severity: "warning", code: "no_door", message: "No door.", items: [], rows: [] },
-          {
-            severity: "error",
-            code: "unassigned_rows",
-            message: "No crop chosen for rows 2.",
-            items: [],
-            rows: [2],
-          },
-        ]}
+        assessment={{
+          status: "assessed",
+          findings: [
+            { severity: "warning", code: "no_door", message: "No door.", items: [], rows: [] },
+            {
+              severity: "error",
+              code: "unassigned_rows",
+              message: "No crop chosen for rows 2.",
+              items: [],
+              rows: [2],
+            },
+          ],
+        }}
       />,
     );
 
@@ -92,7 +95,15 @@ describe("the builder's parts (P12.2)", () => {
       "unassigned_rows",
       "no_door",
     ]);
-    shown.rerender(<Findings findings={[]} />);
+    shown.rerender(<Findings assessment={{ status: "assessed", findings: [] }} />);
     expect(said(shown.container, "builder-runnable")).toBe("It can run.");
+    // Until it is assessed, or if it cannot be, no findings of an edit before.
+    shown.rerender(<Findings assessment={{ status: "asked" }} />);
+    expect(said(shown.container, "builder-runnable")).toBe("Being assessed…");
+    shown.rerender(<Findings assessment={{ status: "failed", problem: "the API answered 502" }} />);
+    expect(said(shown.container, "builder-runnable")).toBe(
+      "It cannot be assessed: the API answered 502",
+    );
+    expect(shown.container.querySelectorAll("li")).toHaveLength(0);
   });
 });

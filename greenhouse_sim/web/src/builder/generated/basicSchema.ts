@@ -70,22 +70,26 @@ export const BASIC_SETUP_SCHEMA = {
     "spans": {
       "default": 1,
       "exclusiveMinimum": 0,
+      "maximum": 100,
       "title": "Spans",
       "type": "integer"
     },
     "bays": {
       "default": 1,
       "exclusiveMinimum": 0,
+      "maximum": 200,
       "title": "Bays",
       "type": "integer"
     },
     "rows": {
       "exclusiveMinimum": 0,
+      "maximum": 1000,
       "title": "Crop rows",
       "type": "integer"
     },
     "plants_per_row": {
       "exclusiveMinimum": 0,
+      "maximum": 10000,
       "title": "Plants per row",
       "type": "integer"
     },

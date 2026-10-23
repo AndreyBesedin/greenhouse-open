@@ -9,11 +9,17 @@ from pydantic import BaseModel, ConfigDict, Field, JsonValue, PositiveFloat, Pos
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
 from greenhouse_sim.scenarios.installation import Installation, RowCrop
-from greenhouse_sim.world.envelope import Envelope
+from greenhouse_sim.world.envelope import MOST_BAYS, MOST_SPANS, Envelope
 from greenhouse_sim.world.geometry import Point2
 from greenhouse_sim.world.identifiers import ItemId
 from greenhouse_sim.world.layout import Layout
-from greenhouse_sim.world.rows import TOMATO_GUTTER, CropRows, RowSupport
+from greenhouse_sim.world.rows import (
+    MOST_POSITIONS_PER_ROW,
+    MOST_ROWS,
+    TOMATO_GUTTER,
+    CropRows,
+    RowSupport,
+)
 
 # A house the first form starts from: a small single-span one of two rows,
 # as the climate box is (published as the form's schema's example).
@@ -51,10 +57,11 @@ class BasicSetup(BaseModel):
     width_m: PositiveFloat = Field(title="Width (m)")
     eave_height_m: PositiveFloat = Field(title="Height to the gutters (m)")
     ridge_height_m: PositiveFloat = Field(title="Height to the ridge (m)")
-    spans: PositiveInt = Field(default=1, title="Spans")
-    bays: PositiveInt = Field(default=1, title="Bays")
-    rows: PositiveInt = Field(title="Crop rows")
-    plants_per_row: PositiveInt = Field(title="Plants per row")
+    # Bounded as the envelope and the rows are, before either is made.
+    spans: PositiveInt = Field(default=1, le=MOST_SPANS, title="Spans")
+    bays: PositiveInt = Field(default=1, le=MOST_BAYS, title="Bays")
+    rows: PositiveInt = Field(le=MOST_ROWS, title="Crop rows")
+    plants_per_row: PositiveInt = Field(le=MOST_POSITIONS_PER_ROW, title="Plants per row")
     plant_pitch_m: PositiveFloat = Field(title="Between plants (m)")
     row_spacing_m: PositiveFloat = Field(title="Between rows (m)")
     support_height_m: PositiveFloat = Field(title="Gutter height (m)")
