@@ -1665,7 +1665,7 @@
       "type": "array"
     },
     "schema_version": {
-      "const": 3
+      "const": 4
     },
     "$schema": {
       "type": "string"
@@ -1678,6 +1678,6 @@
     "envelope",
     "layout"
   ],
-  "title": "InstallationDraft",
+  "title": "Installation",
   "type": "object"
 }

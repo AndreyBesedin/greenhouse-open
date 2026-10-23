@@ -4,7 +4,9 @@ database or a repository (P12.0, decision 0050).
 The file holds a draft's fields, written as a scenario's manifest writes
 the same parts, and the version of the manifests' format, which it shares
 with them (`manifest_files.SCHEMA_VERSION`): a format change to the house
-part of a manifest changes this file with it. Like a manifest it may name
+part of a manifest changes this file with it. Format 4, which put a
+manifest's house in an installation, left the installation as format 3
+wrote it, so a file in either is read. Like a manifest it may name
 its JSON Schema, `installation.schema.json` beside this module, and is
 refused if it has a field a draft does not. It names a crop by its model,
 and holds no code.
@@ -16,8 +18,8 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict, JsonValue, ValidationError
 
-from greenhouse_sim.builder.installation import InstallationDraft
 from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
+from greenhouse_sim.scenarios.installation import Installation
 from greenhouse_sim.scenarios.manifest_files import SCHEMA_VERSION, unknown_fields
 
 INSTALLATION_SCHEMA_FILE: Final = Path(__file__).parent / "installation.schema.json"
@@ -26,6 +28,9 @@ INSTALLATION_SCHEMA_FILE: Final = Path(__file__).parent / "installation.schema.j
 MAX_IMPORT_BYTES: Final = 8_000_000
 _SCHEMA_KEY: Final = "$schema"
 _VERSION_KEY: Final = "schema_version"
+# The first format an installation's file was written in; it has not
+# changed since.
+FIRST_FORMAT: Final = 3
 
 
 class Problem(BaseModel):
@@ -51,17 +56,17 @@ class InstallationFileError(ValueError):
         super().__init__(f"not a greenhouse installation file: {where}{first.message}{more}")
 
 
-def export_installation(draft: InstallationDraft) -> str:
+def export_installation(draft: Installation) -> str:
     """The file of a draft, its rows' crops included. A draft holding a
     number JSON cannot write, such as NaN, is not written."""
     document = {_VERSION_KEY: SCHEMA_VERSION, **draft.model_dump(mode="json")}
     return json.dumps(document, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
 
 
-def import_installation(text: str) -> InstallationDraft:
+def import_installation(text: str) -> Installation:
     """The draft a file holds. Refused with its problems if it is too
     large, not JSON (NaN and infinities included, which JSON has not), in
-    another format's version, not a draft, or has a field, at any depth,
+    a format it is not read in, not a draft, or has a field, at any depth,
     that a draft does not."""
     if len(text.encode("utf-8")) > MAX_IMPORT_BYTES:
         raise InstallationFileError(
@@ -74,12 +79,19 @@ def import_installation(text: str) -> InstallationDraft:
     if not isinstance(document, dict):
         raise InstallationFileError([Problem(field="", message="not a JSON object")])
     version = document.get(_VERSION_KEY)
-    if isinstance(version, bool) or version != SCHEMA_VERSION:
+    if (
+        isinstance(version, bool)
+        or not isinstance(version, int)
+        or not FIRST_FORMAT <= version <= SCHEMA_VERSION
+    ):
         raise InstallationFileError(
             [
                 Problem(
                     field=_VERSION_KEY,
-                    message=f"format {version!r}; this simulator reads format {SCHEMA_VERSION}",
+                    message=(
+                        f"format {version!r}; this simulator reads formats {FIRST_FORMAT} "
+                        f"to {SCHEMA_VERSION}"
+                    ),
                 )
             ]
         )
@@ -87,7 +99,7 @@ def import_installation(text: str) -> InstallationDraft:
         key: value for key, value in document.items() if key not in (_VERSION_KEY, _SCHEMA_KEY)
     }
     try:
-        draft = InstallationDraft.model_validate(fields)
+        draft = Installation.model_validate(fields)
     except ValidationError as error:
         raise InstallationFileError(
             [Problem(field=_path(each["loc"]), message=each["msg"]) for each in error.errors()]
@@ -114,7 +126,7 @@ def installation_json_schema() -> dict[str, JsonValue]:
     """The JSON Schema an installation's file follows, published as
     `installation.schema.json`: a draft's, with the format's version and
     the schema's name."""
-    schema = InstallationDraft.model_json_schema()
+    schema = Installation.model_json_schema()
     properties = schema["properties"]
     properties[_VERSION_KEY] = {"const": SCHEMA_VERSION}
     properties[_SCHEMA_KEY] = {"type": "string"}

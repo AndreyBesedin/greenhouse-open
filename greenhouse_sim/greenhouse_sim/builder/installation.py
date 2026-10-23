@@ -1,11 +1,10 @@
-"""An installation draft, and what stops it running (P12.0, decision 0050).
+"""What stops an installation's draft running (P12.0, decision 0050).
 
-A draft is made of the simulator's own models: an `Envelope`, a `Layout`,
-and for each crop row the `CropModel` and variety it grows, the parts of a
-scenario's manifest that describe the house. A value no greenhouse can have
-is refused as the models refuse it. What only the parts together get wrong,
-such as a row reaching through a wall, is a finding instead, so that a
-draft can be kept and edited until it can run.
+A draft is an installation (`greenhouse_sim.scenarios.installation`) being
+authored: a value no greenhouse can have is refused as the models refuse
+it, and what only the parts together get wrong, such as a row reaching
+through a wall, is a finding here instead, so that a draft can be kept and
+edited until it can run.
 
 A draft may give rows different crops, although a run grows one model and
 one variety (`ScenarioConfig`); the assessment says so rather than refuse it.
@@ -13,64 +12,16 @@ one variety (`ScenarioConfig`); the assessment says so rather than refuse it.
 
 from typing import Final, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, PositiveInt, ValidationInfo, field_validator
+from pydantic import BaseModel, ConfigDict
 
-from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.envelope import OpeningKind
 from greenhouse_sim.domain.equipment import ActuatorKind
-from greenhouse_sim.world.envelope import Envelope
-from greenhouse_sim.world.identifiers import ItemId
-from greenhouse_sim.world.layout import Layout, inside_the_greenhouse, outside_the_greenhouse
+from greenhouse_sim.scenarios.installation import Installation
+from greenhouse_sim.world.layout import inside_the_greenhouse, outside_the_greenhouse
 
 # How many of the items a finding concerns its message names; it counts the
 # rest, and lists every one in its `items`.
 NAMED_IN_A_MESSAGE: Final = 3
-
-
-class RowCrop(BaseModel):
-    """The crop one row grows: its model and its variety. Rows are numbered
-    from 1, as `CropRows` numbers them."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    row: PositiveInt
-    crop_model: CropModel
-    variety: str = Field(min_length=1)
-
-
-class InstallationDraft(BaseModel):
-    """A greenhouse as authored: no weather, period, control or policy,
-    which are a scenario's."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    installation_id: ItemId
-    name: str = Field(min_length=1)
-    envelope: Envelope
-    layout: Layout
-    row_crops: list[RowCrop] = []
-
-    # Checked as the field, so that a refusal points at it; the layout,
-    # before it, is read already, unless it was refused itself.
-    @field_validator("row_crops")
-    @classmethod
-    def _each_row_has_one_crop_at_most(
-        cls, crops: list[RowCrop], info: ValidationInfo
-    ) -> list[RowCrop]:
-        first: dict[int, int] = {}
-        for index, crop in enumerate(crops):
-            if crop.row in first:
-                raise ValueError(
-                    f"row {crop.row} has more than one crop, at [{first[crop.row]}] and [{index}]"
-                )
-            first[crop.row] = index
-        layout = info.data.get("layout")
-        if isinstance(layout, Layout):
-            total = 0 if layout.crop_rows is None else layout.crop_rows.rows
-            beyond = sorted(crop.row for crop in crops if crop.row > total)
-            if beyond:
-                raise ValueError(f"crops for rows {beyond}, beyond the layout's {total} rows")
-        return crops
 
 
 class Finding(BaseModel):
@@ -95,7 +46,7 @@ def named(things: list[str]) -> str:
     return shown if more <= 0 else f"{shown} and {more} more"
 
 
-def assess_installation(draft: InstallationDraft) -> list[Finding]:
+def assess_installation(draft: Installation) -> list[Finding]:
     """What stops a draft running, as errors, and what a greenhouse usually
     has that it lacks, as warnings: a research house may do without a
     door, vents, a heater or fans."""
@@ -125,7 +76,7 @@ def assess_installation(draft: InstallationDraft) -> list[Finding]:
     return findings
 
 
-def _crop_findings(draft: InstallationDraft) -> list[Finding]:
+def _crop_findings(draft: Installation) -> list[Finding]:
     rows = draft.layout.crop_rows
     if rows is None:
         return [
@@ -171,7 +122,7 @@ def _crop_findings(draft: InstallationDraft) -> list[Finding]:
     return findings
 
 
-def _missing_equipment(draft: InstallationDraft) -> list[Finding]:
+def _missing_equipment(draft: Installation) -> list[Finding]:
     openings = draft.envelope.openings
     equipment = {piece.kind for piece in draft.layout.equipment}
     missing = [

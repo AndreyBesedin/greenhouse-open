@@ -563,6 +563,47 @@
       "exclusiveMinimum": 0.0,
       "type": "number"
     },
+    "Installation": {
+      "additionalProperties": false,
+      "description": "A greenhouse as authored: no weather, period, control or policy,\nwhich are a scenario's.",
+      "properties": {
+        "installation_id": {
+          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
+          "pattern": "^[A-Za-z0-9_.-]+$",
+          "title": "Installation Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "envelope": {
+          "$ref": "#/$defs/Envelope"
+        },
+        "layout": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "default": "default",
+          "description": "The name of one of the scenario's layout files."
+        },
+        "row_crops": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RowCrop"
+          },
+          "title": "Row Crops",
+          "type": "array"
+        }
+      },
+      "required": [
+        "installation_id",
+        "name",
+        "envelope"
+      ],
+      "title": "Installation",
+      "type": "object"
+    },
     "Level": {
       "maximum": 1.0,
       "minimum": 0.0,
@@ -732,6 +773,32 @@
         "file"
       ],
       "title": "RecordedWeather",
+      "type": "object"
+    },
+    "RowCrop": {
+      "additionalProperties": false,
+      "description": "The crop one row grows: its model and its variety. Rows are numbered\nfrom 1, as `CropRows` numbers them.",
+      "properties": {
+        "row": {
+          "exclusiveMinimum": 0,
+          "title": "Row",
+          "type": "integer"
+        },
+        "crop_model": {
+          "$ref": "#/$defs/CropModel"
+        },
+        "variety": {
+          "minLength": 1,
+          "title": "Variety",
+          "type": "string"
+        }
+      },
+      "required": [
+        "row",
+        "crop_model",
+        "variety"
+      ],
+      "title": "RowCrop",
       "type": "object"
     },
     "SeasonalWeather": {
@@ -1166,24 +1233,6 @@
       "title": "Description",
       "type": "string"
     },
-    "variety": {
-      "title": "Variety",
-      "type": "string"
-    },
-    "rows": {
-      "exclusiveMinimum": 0,
-      "title": "Rows",
-      "type": "integer"
-    },
-    "columns": {
-      "exclusiveMinimum": 0,
-      "title": "Columns",
-      "type": "integer"
-    },
-    "crop_model": {
-      "$ref": "#/$defs/CropModel",
-      "default": "simple"
-    },
     "crop_work": {
       "$ref": "#/$defs/CropWork",
       "default": {
@@ -1225,15 +1274,6 @@
       "minimum": 0,
       "title": "Random Seed",
       "type": "integer"
-    },
-    "envelope": {
-      "$ref": "#/$defs/Envelope"
-    },
-    "layout": {
-      "type": "string",
-      "pattern": "^[a-z0-9_]+$",
-      "default": "default",
-      "description": "The name of one of the scenario's layout files."
     },
     "airflow": {
       "$ref": "#/$defs/PrescribedAirflow",
@@ -1511,11 +1551,14 @@
       "title": "Height Noise Cm",
       "type": "number"
     },
+    "installation": {
+      "$ref": "#/$defs/Installation"
+    },
     "$schema": {
       "type": "string"
     },
     "schema_version": {
-      "const": 3
+      "const": 4
     },
     "opening_day": {
       "type": "integer",
@@ -1535,13 +1578,10 @@
     "greenhouse_id",
     "name",
     "description",
-    "variety",
-    "rows",
-    "columns",
     "start_date",
     "duration_days",
     "random_seed",
-    "envelope"
+    "installation"
   ],
   "title": "ScenarioConfig",
   "type": "object",

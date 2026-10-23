@@ -6,13 +6,13 @@ returns a new draft, so that an editor keeps the one before for its undo.
 
 from collections.abc import Iterable
 
-from greenhouse_sim.builder.installation import InstallationDraft, RowCrop
 from greenhouse_sim.domain.crop import CropModel
+from greenhouse_sim.scenarios.installation import Installation, RowCrop
 
 
 def assign_crop_to_rows(
-    draft: InstallationDraft, rows: Iterable[int], *, crop_model: CropModel, variety: str
-) -> InstallationDraft:
+    draft: Installation, rows: Iterable[int], *, crop_model: CropModel, variety: str
+) -> Installation:
     """A draft whose chosen rows grow one crop, every other row as before.
     Refused, changing nothing, if no row is chosen, if a row is not one of
     the layout's, or if the crop is not one a row can grow. Choosing a row
