@@ -7,6 +7,14 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: what the setup builder asks of the API besides its
+  drafts (P12.2): `POST /api/builder/basic` makes a first draft from its
+  first form's values, `POST /api/builder/assess` reads and assesses an
+  installation's file as it is being edited, and `POST /api/builder/scene`
+  draws the house it describes, as a scene, to preview it. Each answers
+  with the installation and the format a file of it is written in, as a
+  draft's answer now does too, so that an editor sends back what it is
+  given.
 - `greenhouse-sim`: the API keeps the installations' drafts and runs them
   (P12.1): `GET /api/drafts`, `GET /api/drafts/{id}` with what stops it
   running, its `revisions`, and `POST` to `save` an installation's file,

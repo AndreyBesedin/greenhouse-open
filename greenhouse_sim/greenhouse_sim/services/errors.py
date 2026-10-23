@@ -5,6 +5,8 @@ where it helps, what would be accepted instead. An interface turns each kind
 into its own answer, such as an HTTP status; a service never chooses one.
 """
 
+from pydantic import ValidationError
+
 
 class ServiceError(Exception):
     """A request a service could not carry out, and why."""
@@ -25,3 +27,12 @@ class InvalidRequest(ServiceError):
 class Conflict(ServiceError):
     """The request was made on what has changed since, or would make
     something already made otherwise."""
+
+
+def first_reason(error: ValidationError) -> str:
+    """Why a model refused what it was given, in a sentence: its first
+    reason, by the field at fault, and how many more there are."""
+    first = error.errors()[0]
+    where = ".".join(str(part) for part in first["loc"])
+    more = f" (and {error.error_count() - 1} more)" if error.error_count() > 1 else ""
+    return f"{where}: {first['msg']}{more}" if where else f"{first['msg']}{more}"

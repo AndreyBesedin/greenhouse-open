@@ -198,6 +198,14 @@ check; a route that comes to need one checks it first.
                                           as the body gives them, registered
                                           and listed with the others
 
+    POST /api/builder/basic               a first draft from the builder's
+                                          first form's values, the body,
+                                          assessed (P12.2)
+    POST /api/builder/assess              an installation's file, the body,
+                                          read and assessed as it stands
+    POST /api/builder/scene               the house an installation's file,
+                                          the body, describes, as a scene
+
 A change to a draft made on a revision that is no longer its latest is
 refused as a conflict (409), as is a draft's run under a scenario's name
 already taken.
@@ -213,6 +221,7 @@ from pydantic import BaseModel
 
 from greenhouse_sim.api.responses import JsonValue, Response
 from greenhouse_sim.services import (
+    builder,
     cfd,
     checkpoints,
     climate_readings,
@@ -421,6 +430,12 @@ def _posted(simulator: Simulator, path: str, query: Query, body: bytes) -> Respo
             )
         case ["api", "checkpoints"]:
             return _answer(lambda: checkpoints.upload_checkpoint(simulator, _json(body)))
+        case ["api", "builder", "basic"]:
+            return _answer(lambda: builder.basic(_json(body)))
+        case ["api", "builder", "assess"]:
+            return _answer(lambda: builder.assess(_text(body)))
+        case ["api", "builder", "scene"]:
+            return _answer(lambda: builder.scene(_text(body)))
         case ["api", "drafts", draft_id, "save"]:
             return _answer(
                 lambda: drafts.save(simulator, draft_id, _text(body), _revision(query, "on"))
