@@ -20,3 +20,8 @@ class NotFound(ServiceError):
 
 class InvalidRequest(ServiceError):
     """The request cannot be met as it stands."""
+
+
+class Conflict(ServiceError):
+    """The request was made on what has changed since, or would make
+    something already made otherwise."""

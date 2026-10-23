@@ -179,6 +179,28 @@ check; a route that comes to need one checks it first.
                                           its run's targets changed from its
                                           clock's next minute on, in the same
                                           run and epoch (#274, decision 0043)
+    GET /api/drafts                       the installations' drafts kept, each
+                                          at its latest revision (P12.1,
+                                          decision 0051)
+    GET /api/drafts/{id}                  one, its installation and what stops
+                                          it running; ?revision=2 an earlier
+                                          revision
+    GET /api/drafts/{id}/revisions        its revisions, the first first
+    POST /api/drafts/{id}/save?on=3       an installation's file, the body,
+                                          saved as its next revision, made on
+                                          revision 3; without on, a new draft
+    POST /api/drafts/{id}/revert?revision=1&on=3
+                                          an earlier revision saved again as
+                                          its latest
+    POST /api/drafts/{id}/delete?on=3     forgotten with its revisions
+    POST /api/drafts/{id}/run?revision=2  run as a scenario of its own, with
+                                          its period, site, seed and weather
+                                          as the body gives them, registered
+                                          and listed with the others
+
+A change to a draft made on a revision that is no longer its latest is
+refused as a conflict (409), as is a draft's run under a scenario's name
+already taken.
 """
 
 import json
@@ -195,6 +217,7 @@ from greenhouse_sim.services import (
     checkpoints,
     climate_readings,
     crop,
+    drafts,
     fields,
     plants,
     playback,
@@ -205,7 +228,7 @@ from greenhouse_sim.services import (
     timeline,
     weather,
 )
-from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
+from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.live import InvalidSpeed, LiveCommand, LiveRun, LiveRuns
 from greenhouse_sim.services.playback import PlaybackCommand
 from greenhouse_sim.services.runs import RunRequest
@@ -214,10 +237,15 @@ from greenhouse_sim.services.simulator import Simulator
 type Query = dict[str, list[str]]
 
 
+# The largest revision a query may name: the largest whole number a draft's
+# store keeps (SQLite's).
+MOST_REVISION: Final = 2**63 - 1
+
 # How each kind of service error is answered; the first that matches.
 _REFUSALS: Final = (
     (NotFound, HTTPStatus.NOT_FOUND),
     (InvalidRequest, HTTPStatus.BAD_REQUEST),
+    (Conflict, HTTPStatus.CONFLICT),
 )
 
 
@@ -236,6 +264,12 @@ def respond(simulator: Simulator, method: str, path: str, body: bytes = b"") -> 
             return _answer(system.version)
         case ["api", "scenarios"]:
             return _answer(lambda: scenarios.scenario_summaries(simulator.catalogue))
+        case ["api", "drafts"]:
+            return _answer(lambda: drafts.drafts(simulator))
+        case ["api", "drafts", draft_id]:
+            return _answer(lambda: drafts.draft(simulator, draft_id, _revision(query, "revision")))
+        case ["api", "drafts", draft_id, "revisions"]:
+            return _answer(lambda: drafts.revisions(simulator, draft_id))
         case ["api", "plants", "scene"]:
             return _answer(lambda: plants.scene(_lab_run(query)))
         case ["api", "plants", "structure"]:
@@ -387,6 +421,22 @@ def _posted(simulator: Simulator, path: str, query: Query, body: bytes) -> Respo
             )
         case ["api", "checkpoints"]:
             return _answer(lambda: checkpoints.upload_checkpoint(simulator, _json(body)))
+        case ["api", "drafts", draft_id, "save"]:
+            return _answer(
+                lambda: drafts.save(simulator, draft_id, _text(body), _revision(query, "on"))
+            )
+        case ["api", "drafts", draft_id, "revert"]:
+            return _answer(
+                lambda: drafts.revert(
+                    simulator, draft_id, _named(query, "revision"), _named(query, "on")
+                )
+            )
+        case ["api", "drafts", draft_id, "delete"]:
+            return _answer(lambda: drafts.delete(simulator, draft_id, _named(query, "on")))
+        case ["api", "drafts", draft_id, "run"]:
+            return _answer(
+                lambda: drafts.run(simulator, draft_id, _revision(query, "revision"), _json(body))
+            )
         case ["api", "scenarios", scenario_id, "playback", "start"]:
             layout = _last(query, "layout")
             return _answer(
@@ -419,6 +469,14 @@ def _json(body: bytes) -> JsonValue:
     except ValueError:
         raise InvalidRequest("the body is not JSON") from None
     return parsed
+
+
+def _text(body: bytes) -> str:
+    """A request's body, as the UTF-8 text it is sent in."""
+    try:
+        return body.decode("utf-8")
+    except UnicodeDecodeError:
+        raise InvalidRequest("the body is not UTF-8 text") from None
 
 
 def _not_a_number(name: str) -> JsonValue:
@@ -658,6 +716,30 @@ def _pace(query: Query) -> float | None:
         return float(given)
     except ValueError:
         raise InvalidRequest(f"seconds_per_day is a number, not {given!r}") from None
+
+
+def _revision(query: Query, name: str) -> int | None:
+    """The revision a query names by `name`, a whole number from 1; None if
+    it names none."""
+    text = _last(query, name)
+    if text is None:
+        return None
+    # Its digits counted before they are read: a number too long to read,
+    # or to keep, is refused as any other.
+    whole = text.isascii() and text.isdigit() and len(text) <= len(str(MOST_REVISION))
+    if not whole or not 1 <= int(text) <= MOST_REVISION:
+        raise InvalidRequest(
+            f"{name} is a revision, a whole number from 1 to {MOST_REVISION}, not {text!r}"
+        )
+    return int(text)
+
+
+def _named(query: Query, name: str) -> int:
+    """The revision a query must name by `name`."""
+    revision = _revision(query, name)
+    if revision is None:
+        raise InvalidRequest(f"the request names no revision as {name}")
+    return revision
 
 
 def _last(query: Query, name: str) -> str | None:

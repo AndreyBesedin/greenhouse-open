@@ -2,7 +2,8 @@
 
 A `Simulator` owns what a simulator keeps and runs: the scenarios it knows,
 packaged and registered (`scenarios.catalogue`), its live runs, the runs it
-plays back, and the cursors it has given consumers. The server makes one,
+plays back, the cursors it has given consumers, and the installations'
+drafts it is given a store of (`builder.drafts`, decision 0051). The server makes one,
 or is given one; a test makes its own. Closing it stops what it runs,
 waiting for each run's thread, and it starts nothing after.
 
@@ -16,6 +17,7 @@ import threading
 from types import TracebackType
 from typing import Self
 
+from greenhouse_sim.builder.drafts import DraftStore
 from greenhouse_sim.scenarios.catalogue import Catalogue
 from greenhouse_sim.services import checkpoints, climate_runs, crop, kept_states, sunlight
 from greenhouse_sim.services.consumer import Cursors
@@ -29,8 +31,12 @@ class Simulator:
         catalogue: Catalogue | None = None,
         *,
         seconds_per_day: float = DEFAULT_SECONDS_PER_DAY,
+        drafts: DraftStore | None = None,
     ) -> None:
         self.catalogue = Catalogue() if catalogue is None else catalogue
+        # Where the drafts it is asked for are kept, if anywhere: a file of
+        # its user's, which outlives it, and which it never forgets.
+        self.drafts = drafts
         self.live = LiveRuns(self.catalogue, seconds_per_day=seconds_per_day)
         self.playbacks = Playbacks()
         self.cursors = Cursors()

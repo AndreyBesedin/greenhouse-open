@@ -1,7 +1,6 @@
 # P12: The setup builder
 
-**Status:** in progress: P12.0 is done, P12.1 under way; the rest is
-proposed.
+**Status:** in progress: P12.0 and P12.1 are done; the rest is proposed.
 Part of the [simulator roadmap](README.md).
 
 ## Goal
@@ -118,7 +117,7 @@ to describe a house.
 | Step | Work | Accepted when | Status |
 | --- | --- | --- | --- |
 | P12.0 | An installation drafted from a form's values, assessed, edited many rows at a time, exchanged as a file; decision 0050 | A file reads back as the draft it was written from; a refused file names its fields; findings name their items and rows; no packaged scenario changes | Done |
-| P12.1 | A manifest holds or names an installation, by a manifest migration; a draft resolved into a scenario and registered at runtime; drafts and revisions kept locally | A packaged scenario's run id unchanged by the migration; a draft without errors runs; drafts saved, reopened and reverted; files exchanged without the store | In progress: the manifest holds its installation (format 4); drafts kept (decision 0051); a draft run follows, after decision 0048's series |
+| P12.1 | A manifest holds or names an installation, by a manifest migration; a draft resolved into a scenario and registered at runtime; drafts and revisions kept locally | A packaged scenario's run id unchanged by the migration; a draft without errors runs; drafts saved, reopened and reverted; files exchanged without the store | Done |
 | P12.2 | The builder in the viewer: start, house form, preview, rows chosen together, the scenario step | Create, preview, import, export, save, reopen and run a house in the browser, by keyboard too; its browser QA | Proposed |
 | P12.3 | Equipment and openings: palettes, surface-mounted doors and vents, many items placed, copied and spaced at once, a property inspector | Items placed many at a time with valid geometry and stable ids; collisions explained or refused; every field editable | Proposed |
 | P12.4 | Crop model parameters as versioned assets, edited by schema-driven forms | A tomato parameter set edited, saved, compared, exported, and a run reproduced from its version | Proposed, building on the audit's project for models chosen by the manifest |
@@ -139,7 +138,7 @@ the file (`export_installation`, `import_installation`, refusing with a
 It keeps no draft, resolves nothing into a scenario, places no equipment,
 and runs no row of another crop; P12.1 to P12.5 do.
 
-### P12.1: the manifest's installation
+### P12.1: the manifest's installation, drafts kept, and drafts run
 
 A manifest in format 4 holds its house as an installation, under
 `installation`: its id and name, its envelope, its layout by name (a
@@ -167,10 +166,23 @@ Drafts and their revisions are kept in a local SQLite file (decision
 revision saved in an older format is read as the file is. A change names
 the revision it was made on and is refused if another was saved since.
 
-Next: a draft resolved into a scenario, with a site, a period and a
-weather, registered with the simulator's catalogue at runtime, and run;
-and the API's routes to the drafts, which the builder in the viewer
-(P12.2) uses.
+The API keeps them (`services.drafts`): drafts are listed, opened at any
+revision with what stops them running, saved from an installation's file,
+reverted and deleted, a change on a stale revision answered as a conflict
+(409). The server keeps them in `~/.greenhouse-sim/drafts.sqlite3`, or the
+file `--drafts` names; where its default cannot be made, it keeps none.
+
+A draft runs as a scenario of its own (`POST /api/drafts/{id}/run`): its
+installation at a revision, with a start date and days (a year and a day
+at most), a site, a seed and a weather by name, registered with the
+simulator answering (decision 0048) as `<draft>_r<revision>` or the name
+given. It is then listed, drawn and run as any scenario is. A draft the
+assessment finds errors in is refused with each, and a run under a
+packaged scenario's name, or one registered otherwise, is a conflict.
+
+The browser tests' server keeps drafts in that default file too: a test
+that saves one gives the server a file of its own, so as never to write
+to the user's.
 
 ### P12.4 and the models chosen by the manifest
 

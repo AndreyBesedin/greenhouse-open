@@ -7,6 +7,16 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: the API keeps the installations' drafts and runs them
+  (P12.1): `GET /api/drafts`, `GET /api/drafts/{id}` with what stops it
+  running, its `revisions`, and `POST` to `save` an installation's file,
+  `revert` and `delete`, a change on a stale revision answered `409
+  Conflict`. `POST /api/drafts/{id}/run` registers a draft at a revision
+  as a scenario of its own, with a period, a site, a seed and a weather,
+  which is then listed, drawn and run as any scenario is; a draft with
+  errors is refused with each. The server keeps drafts in
+  `~/.greenhouse-sim/drafts.sqlite3` unless `--drafts` names another file;
+  where that default cannot be made, it starts keeping none.
 - `greenhouse-protocol`: one format for acting on a greenhouse (decision
   0046, P13.1), as records, their checks and their published JSON Schemas
   (`greenhouse_protocol/schemas/`). New modules, all additive:
