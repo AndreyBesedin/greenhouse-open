@@ -3,16 +3,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DAY_S } from "../clock";
+import { latestDaily, levelsAt, withOverride } from "../scene/edits";
 import { runsSomething, scenarioRun } from "../scene/run";
 import {
-  latestDaily,
-  levelsAt,
   type ScheduledCommand,
   scheduleFrom,
   scheduleText,
   searchFor,
   sourceFromSearch,
-  withOverride,
 } from "../scene/source";
 import { sensorsUrl } from "../sensors/readings";
 import { button, click, type Rendered, render, said } from "../testing/render";

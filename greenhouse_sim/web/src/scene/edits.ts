@@ -8,7 +8,7 @@ import { defaultSlice } from "../fields/drawing";
 import type { EnvironmentField } from "../fields/field";
 import { CLIMATE_FIELD } from "../fields/source";
 import type { Point3 } from "../world";
-import { levelsAt, openingsAt, type SceneSource, type TargetChange, withOverride } from "./source";
+import { type SceneSource, type ScheduledCommand, scheduleText, type TargetChange } from "./source";
 
 /** A scenario's source: what its panels change. */
 export type ScenarioSource = Extract<SceneSource, { kind: "scenario" }>;
@@ -167,4 +167,152 @@ export function withRepeated(source: ScenarioSource, index: number): ScenarioSou
   }
   const repeated = { ...command, timeS: command.timeS % DAY_S };
   return { ...withoutCommand(source, index), daily: [...(source.daily ?? []), repeated] };
+}
+
+/** A scenario's source with its scenario's own daily commands, `own`, where
+ * it gives none of its own (P09.4). */
+export function withOwnDaily<S extends { daily?: ScheduledCommand[] }>(
+  source: S,
+  own: readonly ScheduledCommand[],
+): S {
+  return source.daily === undefined && own.length > 0 ? { ...source, daily: [...own] } : source;
+}
+
+/** A scenario's source keeping its daily commands only where they differ
+ * from its scenario's own, `own`: the address keeps a change, not a copy. */
+export function keptDaily<S extends { daily?: ScheduledCommand[] }>(
+  source: S,
+  own: readonly ScheduledCommand[],
+): S {
+  if (source.daily === undefined || scheduleText(source.daily) !== scheduleText(own)) {
+    return source;
+  }
+  const { daily: _, ...rest } = source;
+  return rest as S;
+}
+
+/** A daily command's latest moment by `now`, in seconds into the run, or
+ * null if its time of day has not yet come on the run's first day. */
+export function latestDaily(command: ScheduledCommand, now: number): number | null {
+  return now < command.timeS
+    ? null
+    : Math.floor((now - command.timeS) / DAY_S) * DAY_S + command.timeS;
+}
+
+/** A scenario's equipment's levels at the moment of its climate run drawn:
+ * those set from the start, then its commands up to that moment, in time
+ * order, the later winning at a moment; its daily commands at a moment
+ * before the others then, as the simulator applies them. */
+export function levelsAt(source: {
+  levels?: Readonly<Record<string, number>>;
+  schedule?: readonly ScheduledCommand[];
+  daily?: readonly ScheduledCommand[];
+  time?: number;
+}): Record<string, number> {
+  const now = source.time ?? 0;
+  const levels: Record<string, number> = { ...(source.levels ?? {}) };
+  const daily = (source.daily ?? []).flatMap((command) => {
+    const timeS = latestDaily(command, now);
+    return timeS === null ? [] : [{ ...command, timeS }];
+  });
+  const applied = [...daily, ...(source.schedule ?? [])]
+    .map((command, order) => ({ command, order }))
+    .filter(({ command }) => command.timeS <= now)
+    .sort((a, b) => a.command.timeS - b.command.timeS || a.order - b.order);
+  for (const { command } of applied) {
+    levels[command.actuatorId] = command.level;
+  }
+  return levels;
+}
+
+/** How far each of `openingIds` stands open at the moment drawn, as the
+ * source says: from the start, as its openings set them, then as its
+ * commands to them do. One the source says nothing of is left out. */
+export function openingsAt(
+  source: {
+    levels?: Readonly<Record<string, number>>;
+    openings?: Readonly<Record<string, number>>;
+    schedule?: readonly ScheduledCommand[];
+    daily?: readonly ScheduledCommand[];
+    time?: number;
+  },
+  openingIds: readonly string[],
+): Record<string, number> {
+  const commanded = levelsAt(source);
+  const standing: Record<string, number> = { ...(source.openings ?? {}) };
+  for (const openingId of openingIds) {
+    const level = commanded[openingId];
+    if (level !== undefined) {
+      standing[openingId] = level;
+    }
+  }
+  return standing;
+}
+
+/** The schedule with an override at a moment: each actuator's command at
+ * that moment replaced by the level it is set to, kept in time order. */
+export function withOverride(
+  schedule: readonly ScheduledCommand[],
+  timeS: number,
+  levels: Readonly<Record<string, number>>,
+): ScheduledCommand[] {
+  const kept = schedule.filter(
+    (command) => !(command.timeS === timeS && command.actuatorId in levels),
+  );
+  const added = Object.entries(levels).map(([actuatorId, level]) => ({ timeS, actuatorId, level }));
+  return [...kept, ...added]
+    .map((command, order) => ({ command, order }))
+    .sort((a, b) => a.command.timeS - b.command.timeS || a.order - b.order)
+    .map(({ command }) => command);
+}
+
+/** A scenario's source with its equipment, and its doors and vents,
+ * `openingIds`, at the levels they stand at at the moment drawn: its
+ * commands to an opening open it that far, as the simulator's do; and the
+ * levels `governed` by a thermostat as the run has them. */
+export function standingAt<
+  S extends {
+    levels?: Readonly<Record<string, number>>;
+    openings?: Readonly<Record<string, number>>;
+    schedule?: readonly ScheduledCommand[];
+    daily?: readonly ScheduledCommand[];
+    time?: number;
+  },
+>(source: S, openingIds: readonly string[], governed: Readonly<Record<string, number>> = {}): S {
+  const doors = new Set(openingIds);
+  const standing = Object.entries({ ...levelsAt(source), ...governed });
+  return {
+    ...source,
+    levels: Object.fromEntries(standing.filter(([id]) => !doors.has(id))),
+    openings: {
+      ...(source.openings ?? {}),
+      ...Object.fromEntries(standing.filter(([id]) => doors.has(id))),
+    },
+  };
+}
+
+/** The scenario on show with another of its layouts keeps the weather it is
+ * run under, and how its air is drawn, probed and compared, so that the two
+ * layouts' air can be compared; any other choice starts afresh. */
+export function withItsAir(shown: SceneSource, chosen: SceneSource): SceneSource {
+  if (
+    shown.kind !== "scenario" ||
+    chosen.kind !== "scenario" ||
+    shown.scenarioId !== chosen.scenarioId
+  ) {
+    return chosen;
+  }
+  const { weather, clouds, wind, field, fieldView, slice, compare, probes, cfdBoundaries } = shown;
+  return {
+    ...chosen,
+    ...(weather === undefined ? {} : { weather }),
+    ...(clouds === undefined ? {} : { clouds }),
+    ...(wind === undefined ? {} : { wind }),
+    ...(field === undefined ? {} : { field }),
+    ...(fieldView === undefined ? {} : { fieldView }),
+    ...(slice === undefined ? {} : { slice }),
+    ...(compare === undefined ? {} : { compare }),
+    ...(probes === undefined ? {} : { probes }),
+    ...(cfdBoundaries === undefined ? {} : { cfdBoundaries }),
+  };
 }
