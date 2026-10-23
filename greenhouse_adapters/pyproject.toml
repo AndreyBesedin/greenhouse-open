@@ -24,7 +24,7 @@ line-length = 100
 target-version = "py314"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM", "PERF", "ERA", "PIE", "C4", "N"]
+select = ["E", "F", "I", "UP", "B", "SIM", "PERF", "ERA", "PIE", "C4", "N", "DTZ"]
 # A range is written as a number line (`low < value < high`), and a named
 # constant is compared with the number it should be: SIM300 would turn
 # both around.
@@ -40,6 +40,11 @@ allow-dict-calls-with-keyword-arguments = true
 [tool.ruff.lint.pep8-naming]
 # http.server's handlers name their methods for the request's: `do_GET`.
 extend-ignore-names = ["do_*"]
+
+[tool.ruff.lint.per-file-ignores]
+# DTZ001 in the tests: a test builds a wall-clock time on purpose, to see
+# it refused, or as a dataset's own rows give it.
+"tests/**" = ["DTZ001"]
 
 [tool.mypy]
 python_version = "3.14"

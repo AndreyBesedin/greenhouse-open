@@ -332,6 +332,12 @@ def _lock(root: Path) -> None:
     subprocess.run(["uv", "lock"], cwd=root, check=True)
 
 
+def _today() -> datetime.date:
+    """Today, where the release is made: the local date, read from an aware
+    clock."""
+    return datetime.datetime.now(datetime.UTC).astimezone().date()
+
+
 def main(arguments: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     commands = parser.add_subparsers(dest="command", required=True)
@@ -348,7 +354,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
     args = parser.parse_args(arguments)
     try:
         if args.command == "prepare":
-            changed = prepare(args.version, args.date or datetime.date.today(), ROOT)
+            changed = prepare(args.version, args.date or _today(), ROOT)
             print("Changed: " + ", ".join(str(path) for path in changed))
             _lock(ROOT)
         elif args.command == "video":

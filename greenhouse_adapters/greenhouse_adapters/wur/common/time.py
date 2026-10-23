@@ -8,7 +8,9 @@ from zoneinfo import ZoneInfo
 
 WUR_LOCAL_TIMEZONE = ZoneInfo("Europe/Amsterdam")
 
-_EXCEL_EPOCH = datetime(1899, 12, 30)
+# Excel counts days of Dutch wall-clock time from this one, which
+# `_local_to_utc` then places in its zone.
+_EXCEL_EPOCH = datetime(1899, 12, 30)  # noqa: DTZ001
 # MATLAB datenum 1 is 1 January of year 0; Python ordinal 1 is 1 January of
 # year 1, 366 days later.
 _MATLAB_ORDINAL_OFFSET = 366
