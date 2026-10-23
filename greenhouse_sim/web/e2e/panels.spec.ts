@@ -267,3 +267,19 @@ test("each side's panels fold to a stripe at the view's edge, and open as they w
     await expect(info).toBeVisible();
   });
 });
+
+test("a side's stripe stands at its panel's edge, however long a line of the panel (#304)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  // Followed, the climate run's note is a line far longer than the panel.
+  await page.goto("/?scenario=climate_box&field=climate&follow=1");
+  await expect(page.getByTestId("climate-time")).toBeVisible({ timeout: 30_000 });
+  const panel = await page.locator(".info-panel").boundingBox();
+  const stripe = await page.getByTestId("info-stripe").boundingBox();
+  const hud = await page.locator(".hud").boundingBox();
+  const viewStripe = await page.getByTestId("view-stripe").boundingBox();
+
+  expect((stripe?.x ?? 0) - ((panel?.x ?? 0) + (panel?.width ?? 0))).toBeLessThan(12);
+  expect((hud?.x ?? 0) - ((viewStripe?.x ?? 0) + (viewStripe?.width ?? 0))).toBeLessThan(12);
+});

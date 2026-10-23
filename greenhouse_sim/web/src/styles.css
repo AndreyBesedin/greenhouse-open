@@ -1253,6 +1253,13 @@ body {
   flex-shrink: 0;
 }
 
+/* The info panel's column is as wide as its widest panel, never as long as
+ * a line of it would run unwrapped, so that its stripe stands at the
+ * panel's edge. */
+.panel-side > .panel-column:not(.at-the-end) {
+  max-width: 444px;
+}
+
 .panel-side.folded > .panel-column {
   position: absolute;
   visibility: hidden;
