@@ -88,6 +88,16 @@ export function firstDraft(values: BasicSetup, fetchFn: typeof fetch = fetch) {
   return posted(`${BUILDER_URL}/basic`, JSON.stringify(values), readAssessed, fetchFn);
 }
 
+/** A scenario's house as an installation, assessed, named as the scenario
+ * is, for the builder to copy. */
+export function scenarioHouse(
+  scenarioId: string,
+  fetchFn: typeof fetch = fetch,
+): Promise<Loaded<Assessed>> {
+  const url = `/api/scenarios/${encodeURIComponent(scenarioId)}/installation`;
+  return loadJson(url, readAssessed, fetchFn, refusal);
+}
+
 /** An installation's file read and assessed as it stands. */
 export function assess(file: string, fetchFn: typeof fetch = fetch) {
   return posted(`${BUILDER_URL}/assess`, file, readAssessed, fetchFn);

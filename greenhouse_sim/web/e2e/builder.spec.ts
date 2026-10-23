@@ -132,3 +132,29 @@ test("builder: values no greenhouse can have are refused by field", async ({ pag
   );
   await expect(page.getByRole("heading", { name: "A new house" })).toBeVisible();
 });
+
+test("builder: a scenario's house copied under an identifier of its own, and saved", async ({
+  page,
+}) => {
+  const id = `climate_copy_${Date.now()}`;
+  const status = page.getByTestId("builder-status");
+  await page.goto("/builder");
+  const copy = page.locator(".builder-copy");
+  await copy.getByLabel("Scenario").selectOption({ label: "Climate box" });
+  await expect(copy.getByLabel("The copy's identifier")).toHaveValue("climate_box_copy");
+  await copy.getByLabel("The copy's identifier").fill(id);
+  await copy.getByRole("button", { name: "Copy its house" }).click();
+
+  await expect(status).toHaveText(`Copied Climate box's house as ${id}; not saved yet.`, ARRIVES);
+  await expect(page.getByTestId("builder-draft")).toHaveText(
+    `Climate box (copy) (${id}), not saved`,
+  );
+  // Its door, vents, heater and fans come with it: nothing it lacks.
+  await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
+  await expect(page.locator(".builder-findings li")).toHaveCount(0);
+  await expect(page.locator(".builder-rows tbody tr")).toHaveCount(2);
+  await expect(page.getByTestId("builder-view").locator("canvas")).toBeVisible(ARRIVES);
+
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(status).toHaveText("Saved as revision 1.", ARRIVES);
+});

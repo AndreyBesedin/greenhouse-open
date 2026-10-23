@@ -342,7 +342,7 @@ Without the API, the page says so and how to start it.
 
 `/builder` authors a greenhouse (P12.2): a house drafted from a first form,
 whose fields the simulator publishes (`builder/basic.schema.json`), a draft
-opened or a file imported; its rows given a crop many at a time, each edit
+opened, a file imported, or a scenario's house copied; its rows given a crop many at a time, each edit
 undone (or Ctrl/⌘+Z) and redone in one step; what stops it running shown
 as it changes, and the house drawn as the simulator draws it. A draft is
 saved revision by revision in the API's drafts file (`--drafts`, by

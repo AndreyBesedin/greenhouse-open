@@ -198,6 +198,9 @@ check; a route that comes to need one checks it first.
                                           as the body gives them, registered
                                           and listed with the others
 
+    GET /api/scenarios/{id}/installation  a scenario's house as an
+                                          installation, assessed, for the
+                                          builder to copy (P12.2)
     POST /api/builder/basic               a first draft from the builder's
                                           first form's values, the body,
                                           assessed (P12.2)
@@ -276,6 +279,8 @@ def respond(simulator: Simulator, method: str, path: str, body: bytes = b"") -> 
             return _answer(system.version)
         case ["api", "scenarios"]:
             return _answer(lambda: scenarios.scenario_summaries(simulator.catalogue))
+        case ["api", "scenarios", scenario_id, "installation"]:
+            return _answer(lambda: builder.scenario_house(simulator.catalogue, scenario_id))
         case ["api", "drafts"]:
             return _answer(lambda: drafts.drafts(simulator))
         case ["api", "drafts", draft_id]:

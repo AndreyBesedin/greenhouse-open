@@ -10,8 +10,11 @@ so that a draft can be kept and edited until it can run.
 A run grows one crop model and one variety, over its layout's rows times
 their planting positions (`ScenarioConfig`): `scenario_house` gives a
 scenario those fields from its installation, and refuses an installation a
-run cannot grow yet.
+run cannot grow yet; `scenario_installation` gives the installation back
+from a scenario whose crop fills its layout's rows.
 """
+
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveInt, ValidationInfo, field_validator
 
@@ -19,6 +22,11 @@ from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.identifiers import ItemId
 from greenhouse_sim.world.layout import Layout
+
+if TYPE_CHECKING:
+    # Typed only: the configuration's module reads manifests, which hold
+    # installations.
+    from greenhouse_sim.scenarios.config import ScenarioConfig
 
 
 class RowCrop(BaseModel):
@@ -71,6 +79,10 @@ class CannotRun(ValueError):
     """An installation a run cannot grow yet, and why."""
 
 
+class CannotCopy(ValueError):
+    """A scenario whose house an installation cannot hold as it is, and why."""
+
+
 class ScenarioHouse(BaseModel):
     """The fields of a scenario its installation gives: its house, and its
     crop as `ScenarioConfig` holds it, the layout's rows times their
@@ -110,4 +122,33 @@ def scenario_house(installation: Installation) -> ScenarioHouse:
         columns=rows.positions_per_row,
         crop_model=crop_model,
         variety=variety,
+    )
+
+
+def scenario_installation(config: ScenarioConfig) -> Installation:
+    """A scenario's house as an installation, named as the scenario is: its
+    envelope, its layout, and every crop row growing the scenario's crop.
+    Refused if the scenario plants fewer positions than its layout's rows
+    hold: an installation's crop grows every position of a row, and the
+    copy would plant them all."""
+    crop_rows = config.layout.crop_rows
+    if crop_rows is not None and (config.rows, config.columns) != (
+        crop_rows.rows,
+        crop_rows.positions_per_row,
+    ):
+        raise CannotCopy(
+            f"its crop of {config.rows} rows of {config.columns} plants does not fill "
+            f"its layout's {crop_rows.rows} rows of {crop_rows.positions_per_row} positions, "
+            "as an installation's crop does"
+        )
+    rows = 0 if crop_rows is None else crop_rows.rows
+    return Installation(
+        installation_id=config.greenhouse_id,
+        name=config.name,
+        envelope=config.envelope,
+        layout=config.layout,
+        row_crops=[
+            RowCrop(row=row, crop_model=config.crop_model, variety=config.variety)
+            for row in range(1, rows + 1)
+        ],
     )

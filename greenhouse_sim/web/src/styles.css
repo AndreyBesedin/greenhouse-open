@@ -1567,6 +1567,7 @@ body {
 }
 
 .builder-form button,
+.builder-copy button,
 .builder-identity button,
 .builder-run button {
   margin-top: 8px;
