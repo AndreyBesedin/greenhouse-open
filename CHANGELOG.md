@@ -15,6 +15,12 @@ breaks the conformance checks is a major version.
   exchanged as a file in the manifests' format version, with its JSON
   Schema, `builder/installation.schema.json`. A refused file names each
   field at fault. Nothing in the packaged scenarios changes.
+- `greenhouse-sim`: a layout's crop rows are bounded, as an envelope's spans
+  and bays are: at most 1,000 rows, 10,000 positions a row and 100,000
+  positions in all, and a run of pipes at most 1,000 pipes, so that a small
+  file cannot ask for a crop too large to lay out. A row's support shorter
+  than its two end legs stands on one leg, at its middle, where laying it
+  out divided by zero.
 - `greenhouse-sim`: an envelope may name the gutter lines that keep a post
   on its inner frames (`inner_posts`). A lattice girder under the gutters
   then carries the gutters between, from post to post, drawn and shading

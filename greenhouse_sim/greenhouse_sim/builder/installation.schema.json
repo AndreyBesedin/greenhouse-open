@@ -194,11 +194,13 @@
         },
         "rows": {
           "exclusiveMinimum": 0,
+          "maximum": 1000,
           "title": "Rows",
           "type": "integer"
         },
         "positions_per_row": {
           "exclusiveMinimum": 0,
+          "maximum": 10000,
           "title": "Positions Per Row",
           "type": "integer"
         },
@@ -954,6 +956,7 @@
         },
         "count": {
           "exclusiveMinimum": 0,
+          "maximum": 1000,
           "title": "Count",
           "type": "integer"
         },
