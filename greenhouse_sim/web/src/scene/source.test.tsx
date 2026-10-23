@@ -4,19 +4,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { SceneStatus } from "../SceneStatus";
-import { withTargets } from "./edits";
+import { withItsAir, withTargets } from "./edits";
 import { SNAPSHOT_SCHEMA } from "./generated/snapshotSchema";
 import type { SceneSnapshot } from "./generated/snapshotTypes";
 import { placement } from "./placement";
 import { RENDERERS } from "./renderers";
-import {
-  apiWeather,
-  loadScene,
-  type SceneSource,
-  searchFor,
-  sourceFromSearch,
-  withItsAir,
-} from "./source";
+import { loadScene } from "./sceneLoad";
+import { apiWeather, type SceneSource, searchFor, sourceFromSearch } from "./source";
 
 const EXAMPLE_TEXT = readFileSync(
   new URL("../../public/scenes/example.json", import.meta.url),

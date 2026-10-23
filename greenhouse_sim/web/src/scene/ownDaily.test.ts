@@ -1,16 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { ownDaily } from "../scenarios";
-import { type ScenarioSource, withoutDaily } from "./edits";
+import { keptDaily, type ScenarioSource, standingAt, withOwnDaily, withoutDaily } from "./edits";
 import { runParameters } from "./run";
-import {
-  keptDaily,
-  type ScheduledCommand,
-  searchFor,
-  sourceFromSearch,
-  standingAt,
-  withOwnDaily,
-} from "./source";
+import { type ScheduledCommand, searchFor, sourceFromSearch } from "./source";
 
 // The reference run's heater on every evening and set back at night, as a
 // scenario's own daily commands (P09.4).

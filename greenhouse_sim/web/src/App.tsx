@@ -41,19 +41,12 @@ import type { ViewSample } from "./readouts";
 import { ScenarioPanels } from "./ScenarioPanels";
 import { WhatAmISeeing } from "./SeenInTheView";
 import { DEFAULT_LAYOUT, loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
-import { withProbes, withTargetsSet } from "./scene/edits";
+import { keptDaily, withItsAir, withOwnDaily, withProbes, withTargetsSet } from "./scene/edits";
 import { runningThermostat } from "./scene/equipment";
 import { baseLayout } from "./scene/moves";
 import { commandPlayback, setPlaybackTargets } from "./scene/playback";
 import { runApartFromItsMoment, scenarioRun } from "./scene/run";
-import {
-  keptDaily,
-  type SceneSource,
-  searchFor,
-  shownBy,
-  withItsAir,
-  withOwnDaily,
-} from "./scene/source";
+import { type SceneSource, searchFor, shownBy } from "./scene/source";
 import { useDrawnSnapshot } from "./scene/useDrawnSnapshot";
 import { useFollow, withoutRunChanges } from "./scene/useFollow";
 import { useFollowFraming } from "./scene/useFollowFraming";
