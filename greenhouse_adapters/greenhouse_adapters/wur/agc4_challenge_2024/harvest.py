@@ -190,8 +190,8 @@ def _sampled_plants(rows: Sequence[_Row]) -> list[SampledPlant]:
                 compartment_code=code,
                 label=str(label).strip(),
                 fresh_weight_g=weight,
-                fruit_count=int(round(count)),
-                red_fruit_count=int(round(red_count)) if red_count is not None else None,
+                fruit_count=round(count),
+                red_fruit_count=round(red_count) if red_count is not None else None,
                 red_fresh_weight_g=red_weight,
             )
         )

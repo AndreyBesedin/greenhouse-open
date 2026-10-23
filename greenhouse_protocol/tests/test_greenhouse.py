@@ -143,7 +143,7 @@ def test_all_plants_lists_unassigned_plants_before_compartment_plants() -> None:
 
 
 def test_compartment_ids_must_be_unique_within_a_greenhouse() -> None:
-    with pytest.raises(ValidationError, match="duplicate compartment ids.*3.06"):
+    with pytest.raises(ValidationError, match=r"duplicate compartment ids.*3\.06"):
         _make_greenhouse(
             compartments=[
                 Compartment(compartment_id="3.06", name="one"),
@@ -153,7 +153,7 @@ def test_compartment_ids_must_be_unique_within_a_greenhouse() -> None:
 
 
 def test_plant_ids_must_be_unique_across_the_whole_greenhouse() -> None:
-    with pytest.raises(ValidationError, match="duplicate plant ids.*plant_001"):
+    with pytest.raises(ValidationError, match=r"duplicate plant ids.*plant_001"):
         _make_greenhouse(
             plants=[_plant("plant_001")],
             compartments=[

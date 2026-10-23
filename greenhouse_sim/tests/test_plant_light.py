@@ -64,7 +64,7 @@ def test_each_plant_has_a_crown_about_its_stem_as_tall_as_it_shows() -> None:
     ]
     # Before its first day each plant shows 20 cm of stem.
     assert [crown.height_m for crown in lab_crowns] == pytest.approx([0.2] * len(lab_crowns))
-    transform, shape = lab_crowns[0].solid()
+    _, shape = lab_crowns[0].solid()
     assert shape.radius * 2 == pytest.approx(CROWN_DIAMETER_M)
     # A crown shades what lies under it, and its top does not shade itself.
     shadows = Shadows([crown.solid() for crown in lab_crowns])

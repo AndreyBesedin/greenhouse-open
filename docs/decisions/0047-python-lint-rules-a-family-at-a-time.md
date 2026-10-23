@@ -41,7 +41,8 @@ The families as they stand:
 | `N` | on | `N818`: an exception is named for what happened (`NotFound`, `InvalidManifest`), as the standard library's own are, and the protocol's are its users'; `do_*`, which `http.server` names its handlers' methods, is no mixed case to fix |
 | `DTZ` | on | `DTZ001` in the tests: a test builds a wall-clock time on purpose, to see it refused, or as a dataset's rows give it; and the adapters' Excel epoch, wall-clock by nature, says so on its line |
 | `PLR0917` | on, in place of `PLR0913` | Five positional parameters at most, the rest keyword-only: a call then names each of them, which is what a long argument list puts at risk. `PLR0913` counts keyword-only parameters too, and stays off |
-| `RUF`, `ARG` | next, a pull request each | |
+| `RUF` | on | The prose's typeset characters are allowed in strings, docstrings and comments: the minus sign (−5 °C), the times sign (24 × 13 cells), a density's ρ and a prime (′) |
+| `ARG` | next | |
 | `TRY`, `D1` | not planned | the messages built in `raise`, and docstrings written by judgment, are this codebase's choice |
 | `C901` | not planned | Its findings are flat lists of rules, each a branch: the API's route table, a plant's structural checks, an upload's or a workbook's checks. Split into functions they would scatter the rules, not simplify them |
 

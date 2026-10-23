@@ -11,6 +11,7 @@ import hashlib
 import pathlib
 import re
 import subprocess
+from itertools import pairwise
 
 import pytest
 
@@ -71,7 +72,7 @@ def _normalised(word: str) -> str:
 def _name_digests(line: str) -> set[str]:
     words = re.findall(r"[\w-]+", line)
     candidates = {_normalised(w) for w in words}
-    candidates |= {_normalised(a + b) for a, b in zip(words, words[1:], strict=False)}
+    candidates |= {_normalised(a + b) for a, b in pairwise(words)}
     candidates |= {_normalised(part) for w in words for part in w.split("-")}
     return {hashlib.sha256(c.encode()).hexdigest() for c in candidates}
 

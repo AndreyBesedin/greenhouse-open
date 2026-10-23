@@ -9,6 +9,7 @@ fruit's colour is its ripeness's: green, through yellow and orange, to red.
 """
 
 from collections.abc import Mapping, Sequence
+from itertools import pairwise
 from typing import Final
 
 from greenhouse_sim.biology.plant.organs import Fruit, Organ
@@ -51,7 +52,7 @@ SIZE_DECIMALS: Final = 2
 
 def fruit_color(ripeness: float) -> Color:
     """The colour of a fruit this ripe."""
-    for (below, low), (above, high) in zip(RIPENING_COLORS, RIPENING_COLORS[1:], strict=False):
+    for (below, low), (above, high) in pairwise(RIPENING_COLORS):
         if ripeness <= above:
             share = (ripeness - below) / (above - below)
             return Color(

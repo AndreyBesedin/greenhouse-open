@@ -94,7 +94,7 @@ def test_heating_and_venting_keep_their_dead_band_by_day_and_by_night(
         _control(venting=narrow)
 
     assert _control(venting=VENTING.model_dump(), dead_band_c=1.5).venting == VENTING
-    with pytest.raises(ValidationError, match="within the dead band of 1.75"):
+    with pytest.raises(ValidationError, match=r"within the dead band of 1\.75"):
         _control(venting=VENTING.model_dump(), dead_band_c=1.75)
 
 

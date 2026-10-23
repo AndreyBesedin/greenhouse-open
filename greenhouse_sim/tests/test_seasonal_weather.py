@@ -4,6 +4,7 @@ seed, each day its own clouds, a synthetic day's shape between, and nothing
 that jumps at midnight; and the reference greenhouse under it."""
 
 from datetime import date, datetime, timedelta
+from itertools import pairwise
 
 import pytest
 from pydantic import ValidationError
@@ -66,7 +67,7 @@ def test_spring_warms_into_summer_and_no_two_days_are_alike() -> None:
     # away, once the season is taken out.
     usual = [STEADY.temperatures_c(SEED, day)[1] for day in days]
     shifts = [high - base for high, base in zip(highs, usual, strict=True)]
-    next_day = sum(abs(a - b) for a, b in zip(shifts, shifts[1:], strict=False))
+    next_day = sum(abs(a - b) for a, b in pairwise(shifts))
     month_on = sum(abs(a - b) for a, b in zip(shifts, shifts[30:], strict=False))
     assert next_day / (len(shifts) - 1) < month_on / (len(shifts) - 30)
 
@@ -106,8 +107,8 @@ def test_nothing_jumps_from_one_day_to_the_next() -> None:
     temperatures = [state.air_temperature_c for state in states]
     humidities = [state.relative_humidity_pct for state in states]
 
-    assert max(abs(b - a) for a, b in zip(temperatures, temperatures[1:], strict=False)) < 0.5
-    assert max(abs(b - a) for a, b in zip(humidities, humidities[1:], strict=False)) < 3.0
+    assert max(abs(b - a) for a, b in pairwise(temperatures)) < 0.5
+    assert max(abs(b - a) for a, b in pairwise(humidities)) < 3.0
 
 
 def test_the_evening_cools_from_the_days_warmest_to_the_next_days_coldest() -> None:

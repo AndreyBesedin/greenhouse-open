@@ -240,7 +240,7 @@ def test_a_download_is_fetched_verified_and_kept(tmp_path: Path) -> None:
 
 
 def test_an_interrupted_download_resumes_from_its_partial_file(tmp_path: Path) -> None:
-    layout, destination = _with_partial(tmp_path, PAYLOAD[:HALF])
+    layout, _ = _with_partial(tmp_path, PAYLOAD[:HALF])
     provider = Provider(_ranged)
 
     path = ArtifactResolver(layout, mirrors=[_upstream(provider)]).resolve(
