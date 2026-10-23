@@ -217,6 +217,41 @@ describe("the builder's equipment, sensors, doors and vents (P12.3)", () => {
     expect(button(within, "Space evenly").disabled).toBe(true);
   });
 
+  it("places walkways, zones and fixtures from the palette, as it does equipment", () => {
+    const { within, onEdit } = show();
+
+    choose(select(within, "What"), "walkway");
+    enter(field(within, "How many"), "2");
+    enter(field(within, "Step along x (m)"), "4");
+    click(button(within, "Place"));
+    choose(select(within, "What"), "keep_out_zone");
+    click(button(within, "Place"));
+
+    expect(onEdit.mock.calls.map(([edit, said]) => [edit, said])).toEqual([
+      [
+        {
+          edit: "place_items",
+          item: {
+            primitive: "walkway",
+            fixture_id: "walkway",
+            start: { x: 1, y: 1 },
+            end: { x: 5, y: 1 },
+            width: 0.8,
+          },
+          count: 2,
+          step: { x: 4, y: 0, z: 0 },
+        },
+        "Placed 2 walkways.",
+      ],
+      [
+        expect.objectContaining({
+          item: expect.objectContaining({ zone_id: "keep_out_zone", kind: "keep_out" }),
+        }),
+        "Placed 1 keep out zone.",
+      ],
+    ]);
+  });
+
   it("copies or spaces items of one kind only: in the house or on a surface", () => {
     const { within } = show();
 
@@ -224,7 +259,7 @@ describe("the builder's equipment, sensors, doors and vents (P12.3)", () => {
     click(chosen(within, "vent_1"));
 
     expect(() => button(within, "Copy")).toThrow();
-    expect(within.textContent).toContain("Choose equipment and sensors, or doors and vents");
+    expect(within.textContent).toContain("Choose items in the house, or doors and vents");
     expect(button(within, "Remove").disabled).toBe(false);
   });
 

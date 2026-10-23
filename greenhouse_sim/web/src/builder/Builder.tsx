@@ -30,7 +30,7 @@ import { HouseIdentity } from "./HouseIdentity";
 import { begun, edited, type History, redone, undone } from "./history";
 import { Inspector } from "./Inspector";
 import { Items } from "./Items";
-import { listed as listedItems } from "./palette";
+import { drawnAs } from "./palette";
 import { RowCrops } from "./RowCrops";
 import { RunStep } from "./RunStep";
 
@@ -488,11 +488,14 @@ export function Builder() {
       color: FINDING_COLOR,
     }));
   const [only] = chosen.size === 1 ? [...chosen] : [];
-  const items =
-    present === null ? new Set<string>() : new Set(listedItems(present).map((item) => item.id));
+  // A pipe run is drawn as its pipes, a rail as its tubes: a click on one
+  // chooses the run or the rail, which is drawn selected by its first.
+  const drawn = present === null ? new Map<string, string[]>() : drawnAs(present);
+  const drawing = new Map([...drawn].flatMap(([item, parts]) => parts.map((part) => [part, item])));
   function picked(entityId: string | null): void {
     const id = entityId?.startsWith(prefix) ? entityId.slice(prefix.length) : null;
-    setChosen(new Set(id !== null && items.has(id) ? [id] : []));
+    const item = id === null ? undefined : drawing.get(id);
+    setChosen(new Set(item === undefined ? [] : [item]));
   }
 
   const changed = unsaved(editing);
@@ -666,7 +669,7 @@ export function Builder() {
             initialPose={pose}
             onSample={ignore}
             onPointer={ignore}
-            selectedId={only === undefined ? null : `${prefix}${only}`}
+            selectedId={only === undefined ? null : `${prefix}${drawn.get(only)?.[0] ?? only}`}
             overlays={outlined}
             onSelect={picked}
           />
