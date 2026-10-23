@@ -17,6 +17,7 @@ import { DRAFT_SCHEMA } from "./generated/draftSchema";
 import { DRAFTS_SCHEMA } from "./generated/draftsSchema";
 import type { DraftsListed } from "./generated/draftsTypes";
 import type { DraftAnswer } from "./generated/draftTypes";
+import type { Edit } from "./generated/editTypes";
 
 export const BUILDER_URL = "/api/builder";
 export const DRAFTS_URL = "/api/drafts";
@@ -101,6 +102,22 @@ export function scenarioHouse(
 /** An installation's file read and assessed as it stands. */
 export function assess(file: string, fetchFn: typeof fetch = fetch) {
   return posted(`${BUILDER_URL}/assess`, file, readAssessed, fetchFn);
+}
+
+/** An edit of many items (P12.3) made on an installation, in the format
+ * given: the installation it makes, assessed, or why the simulator refused
+ * the edit. The installation edited is not changed, for an undo. */
+export function edit(
+  schemaVersion: number,
+  installation: Installation,
+  change: Edit,
+  fetchFn: typeof fetch = fetch,
+): Promise<Answered<Assessed>> {
+  const body = JSON.stringify({
+    file: { schema_version: schemaVersion, ...installation },
+    edit: change,
+  });
+  return posted(`${BUILDER_URL}/edit`, body, readAssessed, fetchFn);
 }
 
 /** The house an installation's file describes, as a scene. */

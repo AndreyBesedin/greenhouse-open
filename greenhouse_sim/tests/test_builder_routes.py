@@ -267,3 +267,89 @@ def test_an_installations_file_with_an_infinite_number_is_refused(simulator: Sim
             HTTPStatus.BAD_REQUEST,
             True,
         ), answered
+
+
+# A vent midway up a slope of the form's house, 1.58 m from eave to ridge.
+VENT: dict[str, Any] = {
+    "opening_id": "vent",
+    "kind": "roof_vent",
+    "surface_id": "roof_1_right",
+    "centre": {"x": 0.0, "y": 0.0},
+    "width": 1.0,
+    "height": 0.6,
+}
+
+
+def _edit(simulator: Simulator, answered: dict[str, Any], edit: dict[str, Any]) -> tuple[int, Any]:
+    body = {"file": json.loads(_file(answered)), "edit": edit}
+    return _post(simulator, "/api/builder/edit", json.dumps(body))
+
+
+def test_an_edit_of_many_items_answers_the_installation_it_makes_assessed(
+    simulator: Simulator,
+) -> None:
+    status, first = _post(simulator, "/api/builder/basic", json.dumps(FORM))
+    spread = {
+        "edit": "spread_openings",
+        "opening": VENT,
+        "surfaces": ["roof_1_right", "roof_2_left"],
+        "count": 4,
+    }
+
+    status, edited = _edit(simulator, first, spread)
+
+    assert status == HTTPStatus.OK
+    openings = edited["installation"]["envelope"]["openings"]
+    assert [(o["opening_id"], o["surface_id"]) for o in openings][::4] == [
+        ("vent_1", "roof_1_right"),
+        ("vent_5", "roof_2_left"),
+    ]
+    assert len(openings) == 8
+    assert "no_vents" not in {finding["code"] for finding in edited["findings"]}
+    # What it answers is a file an editor sends back, for the next edit.
+    removed = {"edit": "remove_items", "items": ["vent_1", "vent_5"]}
+    status, fewer = _edit(simulator, edited, removed)
+    assert (status, len(fewer["installation"]["envelope"]["openings"])) == (HTTPStatus.OK, 6)
+
+
+@pytest.mark.parametrize(
+    ("edit", "said"),
+    [
+        ({"edit": "remove_items", "items": ["heater_9"]}, "the edit is refused: no item heater_9"),
+        (
+            {
+                "edit": "place_openings",
+                "opening": VENT | {"centre": {"x": 5.8, "y": 0.0}},
+                "surfaces": ["roof_1_right"],
+            },
+            "vent_1 does not fit on roof_1_right",
+        ),
+        (
+            {"edit": "space_items", "items": ["a", "b"], "axis": "w"},
+            "not an edit: edit.space_items.axis",
+        ),
+        ({"edit": "paint", "items": []}, "not an edit: edit"),
+    ],
+)
+def test_an_edit_refused_or_no_edit_at_all_says_why(
+    simulator: Simulator, edit: dict[str, Any], said: str
+) -> None:
+    status, first = _post(simulator, "/api/builder/basic", json.dumps(FORM))
+
+    status, answer = _edit(simulator, first, edit)
+
+    assert (status, said in answer["error"]) == (HTTPStatus.BAD_REQUEST, True), answer
+
+
+def test_an_edit_on_a_file_that_is_no_installation_is_refused_by_its_field(
+    simulator: Simulator,
+) -> None:
+    body = {
+        "file": {"schema_version": SCHEMA_VERSION, "name": "No house"},
+        "edit": {"edit": "remove_items", "items": ["x"]},
+    }
+
+    status, answer = _post(simulator, "/api/builder/edit", json.dumps(body))
+
+    assert status == HTTPStatus.BAD_REQUEST
+    assert {problem["field"] for problem in answer["problems"]} >= {"installation_id", "envelope"}

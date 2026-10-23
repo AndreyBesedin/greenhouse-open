@@ -7,6 +7,16 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim` and the viewer: `POST /api/builder/edit` makes an edit
+  of many items (P12.3) on an installation's file, the body's `file`, and
+  answers the installation it makes, assessed. The edit, the body's
+  `edit`, is one of `builder.items`'s, told apart by its `edit`
+  (`place_items`, `repeat_items`, `space_items`, `place_openings`,
+  `spread_openings`, `repeat_openings`, `space_openings`, `set_field`,
+  `remove_items`), and its JSON Schema is published as
+  `builder/edit.schema.json`, from which the viewer's types are generated.
+  A body that is no edit is refused by its fields, and an edit the
+  installation refuses with the reason.
 - `greenhouse-sim`: the local API's routes are a module for each area of
   what it answers (`greenhouse_sim.api.routes`: `system`, `scenarios`,
   `runs`, `checkpoints`, `playback`, `live`, `lab` and `builder`), each

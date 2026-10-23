@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { firstDraft, installationFile, openDraft, refusal, saveDraft } from "./api";
+import { edit, firstDraft, installationFile, openDraft, refusal, saveDraft } from "./api";
 import type { Installation } from "./generated/assessedTypes";
+import type { Edit } from "./generated/editTypes";
 
 function answering(status: number, body: unknown, asked: Request[] = []): typeof fetch {
   return async (input, init) => {
@@ -47,6 +48,21 @@ describe("the builder's side of the API (P12.2)", () => {
     expect(await refusal(new Response("not JSON", { status: 502 }))).toBe(
       "the simulator API answered 502",
     );
+  });
+
+  it("sends an edit with the installation's file it is made on", async () => {
+    const asked: Request[] = [];
+    const change: Edit = { edit: "remove_items", items: ["heater_1"] };
+
+    const answer = await edit(4, HOUSE, change, answering(400, { error: "no item" }, asked));
+
+    expect(answer).toEqual({ ok: false, problem: "no item" });
+    const [sent] = asked;
+    expect(new URL(sent?.url ?? "").pathname).toBe("/api/builder/edit");
+    expect(await sent?.json()).toEqual({
+      file: { schema_version: 4, installation_id: "house", name: "House" },
+      edit: change,
+    });
   });
 
   it("refuses an answer that is not what its contract says", async () => {
