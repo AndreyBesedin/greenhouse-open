@@ -2,12 +2,19 @@ line-length = 100
 target-version = "py314"
 
 [lint]
-select = ["E", "F", "I", "UP", "B", "SIM", "PERF", "ERA", "PIE", "C4"]
+select = ["E", "F", "I", "UP", "B", "SIM", "PERF", "ERA", "PIE", "C4", "N"]
 # A range is written as a number line (`low < value < high`), and a named
 # constant is compared with the number it should be: SIM300 would turn
 # both around.
-ignore = ["SIM300"]
+# N818: an exception is named for what happened (`NotFound`,
+# `InvalidManifest`, `SetupRefused`), as the standard library's own are
+# (`StopIteration`, `KeyboardInterrupt`), and the protocol's are its users'.
+ignore = ["SIM300", "N818"]
 
 [lint.flake8-comprehensions]
 # A record's defaults read best as `dict(name=value)`, as the tests write them.
 allow-dict-calls-with-keyword-arguments = true
+
+[lint.pep8-naming]
+# http.server's handlers name their methods for the request's: `do_GET`.
+extend-ignore-names = ["do_*"]

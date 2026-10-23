@@ -38,7 +38,8 @@ The families as they stand:
 | `E`, `F`, `I`, `UP`, `B` | on, since 0.1.0 | |
 | `SIM` | on (#292) | `SIM300`: a range is written as a number line (`low < value < high`), and a named constant is compared with the number it should be |
 | `PERF`, `ERA`, `PIE`, `C4` | on | `C408` allows `dict(name=value)`, which the tests use for a record's defaults |
-| `N`, `DTZ`, `RUF`, `ARG`, `C901`, `PLR0913` | next, a pull request each | `PLR0913` once the services take one run request (W11, done) |
+| `N` | on | `N818`: an exception is named for what happened (`NotFound`, `InvalidManifest`), as the standard library's own are, and the protocol's are its users'; `do_*`, which `http.server` names its handlers' methods, is no mixed case to fix |
+| `DTZ`, `RUF`, `ARG`, `C901`, `PLR0913` | next, a pull request each | `PLR0913` once the services take one run request (W11, done) |
 | `TRY`, `D1` | not planned | the messages built in `raise`, and docstrings written by judgment, are this codebase's choice |
 
 Other families wait for a reason: a defect one of them would have caught.
