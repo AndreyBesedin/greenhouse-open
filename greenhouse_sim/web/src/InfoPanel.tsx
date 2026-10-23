@@ -5,7 +5,8 @@ import type { PanelTheme } from "./panelTheme";
 import { SceneFailures } from "./SceneStatus";
 import { SourceChooser } from "./SourceChooser";
 import type { ScenariosState } from "./scenarios";
-import type { SceneSource, SceneState } from "./scene/source";
+import type { SceneState } from "./scene/sceneLoad";
+import type { SceneSource } from "./scene/source";
 
 export function InfoPanel({
   build,

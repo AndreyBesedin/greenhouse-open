@@ -240,7 +240,15 @@ function HudBody({
           {sample ? formatMemory(sample.geometries, sample.textures, sample.heapBytes) : PENDING}
         </dd>
         <dt>Simulator</dt>
-        <dd data-testid="simulator-time">{simulator ? describeSimulatorTime(simulator) : "—"}</dd>
+        {/* On one line, its path cut short and given whole on hover, so that
+            the panel keeps its height whatever the latest request (#301). */}
+        <dd
+          className="hud-simulator"
+          data-testid="simulator-time"
+          title={simulator ? describeSimulatorTime(simulator) : undefined}
+        >
+          {simulator ? describeSimulatorTime(simulator) : "—"}
+        </dd>
         {live && (
           <>
             <dt>Stream</dt>

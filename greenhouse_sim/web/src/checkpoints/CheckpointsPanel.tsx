@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { daysEnded } from "../clock";
 import type { RunParts } from "../scene/run";
@@ -58,6 +58,7 @@ export function CheckpointsPanel({
   // Asked for again after each checkpoint made.
   const [made, setMade] = useState(0);
   const [working, setWorking] = useState<string | null>(null);
+  const picker = useRef<HTMLInputElement>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const state = useLoad(
     open ? { url: CHECKPOINTS_URL, made } : null,
@@ -98,21 +99,29 @@ export function CheckpointsPanel({
       >
         Save day {day}'s start
       </button>{" "}
-      <label>
-        Upload{" "}
-        <input
-          type="file"
-          accept="application/json,.json"
-          aria-label="Upload a checkpoint"
-          disabled={working !== null}
-          onChange={(event) => {
-            const file = event.currentTarget.files?.[0];
-            if (file !== undefined) {
-              void file.text().then((text) => make("Uploading…", uploadCheckpoint(text, fetchFn)));
-            }
-          }}
-        />
-      </label>
+      {/* The browser draws its own file picker's button and status in its own
+          language: the viewer's button, in its words, opens it instead (#303). */}
+      <button type="button" disabled={working !== null} onClick={() => picker.current?.click()}>
+        Upload a checkpoint
+      </button>
+      <input
+        ref={picker}
+        type="file"
+        accept="application/json,.json"
+        hidden
+        tabIndex={-1}
+        aria-hidden
+        disabled={working !== null}
+        onChange={(event) => {
+          const input = event.currentTarget;
+          const file = input.files?.[0];
+          if (file !== undefined) {
+            void file.text().then((text) => make("Uploading…", uploadCheckpoint(text, fetchFn)));
+          }
+          // The same file chosen again is uploaded again.
+          input.value = "";
+        }}
+      />
       {working !== null && <p data-testid="checkpoints-working">{working}</p>}
       {problem !== null && (
         <p role="alert" data-testid="checkpoints-problem">
