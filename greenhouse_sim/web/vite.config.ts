@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 import { DEFAULT_SIMULATOR_API_PORT, simulatorApi } from "./simulatorApi.ts";
+import { BUNDLE_BUDGET_KB, bundleBudget } from "./src/bundleBudget.ts";
 
 // The viewer ships with the simulator, so it reports the simulator's version
 // rather than keeping a second one in step.
@@ -33,10 +34,6 @@ const COVERED_BRANCHES_PCT = 55;
 const COVERED_FUNCTIONS_PCT = 60;
 const COVERED_LINES_PCT = 66;
 
-// Three.js alone is about a megabyte minified. The viewer is a local
-// development tool, so a single chunk of this size is fine.
-const CHUNK_SIZE_WARNING_KB = 1500;
-
 // The commit the viewer was built from, when built inside a git checkout.
 function sourceCommit(): string {
   try {
@@ -47,8 +44,11 @@ function sourceCommit(): string {
 }
 
 export default defineConfig({
-  plugins: [react()],
-  build: { chunkSizeWarningLimit: CHUNK_SIZE_WARNING_KB },
+  // Three.js alone is about a megabyte minified. The viewer is a local
+  // development tool, so a single chunk of this size is fine; the build fails
+  // over the viewer's budget, rather than warn under it (AUDIT.20).
+  plugins: [react(), bundleBudget()],
+  build: { chunkSizeWarningLimit: BUNDLE_BUDGET_KB.js },
   // Forward /api to the simulator, so the page and the API share an origin.
   server: { proxy: { "/api": SIMULATOR_API } },
   preview: { proxy: { "/api": SIMULATOR_API } },
