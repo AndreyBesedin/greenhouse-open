@@ -28,16 +28,22 @@ for the selected item.
    `greenhouse_sim/web/src/timeline/TimelinePanel.tsx`. Either it loads its
    own data when it is opened, with `useLoad`
    (`greenhouse_sim/web/src/useLoad.ts`) and nothing asked while it is
-   closed, or `greenhouse_sim/web/src/App.tsx` loads the data, because the
-   scene needs it too, and passes it down. `useLoadProgress` keeps what was
-   last drawn while the next answer is on its way.
+   closed, or a hook beside its feature loads it, taking the run drawn and
+   returning its loads, such as `greenhouse_sim/web/src/fields/useClimateLoads.ts`,
+   and `greenhouse_sim/web/src/App.tsx` calls it and passes the data down,
+   because the scene needs it too (AUDIT.17). `useLoadProgress` keeps what
+   was last drawn while the next answer is on its way.
 3. **Its place:** among the scenario's panels in
    `greenhouse_sim/web/src/ScenarioPanels.tsx`, in its order; in the
    inspector (`greenhouse_sim/web/src/Inspector.tsx`), for a selected item;
    or folded to its summary line with `greenhouse_sim/web/src/folds.ts`.
 4. **Its styles** in `greenhouse_sim/web/src/styles.css`, in a commented
-   block, with colours only as the panels' `var(--panel-…)` tokens, which
-   `greenhouse_sim/web/src/styles.test.ts` checks.
+   block, with colours only as the panels' `var(--panel-…)` tokens. Its
+   classes are lowercase words joined by hyphens, the first naming its
+   feature (`weather-day-chart`). A new feature's first word is added to
+   `FEATURES` in `greenhouse_sim/web/src/styles.test.ts`, which checks
+   both, and also that every class is named by some source. The build fails
+   over the viewer's weight budget (`greenhouse_sim/web/src/bundleBudget.ts`).
 5. **Unit tests** beside it, such as
    `greenhouse_sim/web/src/timeline/timeline.test.tsx`: the URL it asks
    for, a body parsed and one refused, a failed answer, and the markup

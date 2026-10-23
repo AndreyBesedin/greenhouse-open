@@ -40,6 +40,19 @@ breaks the conformance checks is a major version.
   digest of its content, is new, so a checkpoint saved before is refused as
   one of another version of its scenario, and the reference greenhouse's
   kept opening day was written again, changed in that digest alone.
+- `greenhouse-sim`: each simulator keeps what it keeps, its climate runs,
+  crops, sunlight, checkpoints and kept states, in stores of its own, made
+  with it and forgotten with it (`Simulator.forget`, decision 0048): no
+  store, lock or thread is made as a module is imported, and a test
+  holds that. `stores.forget_everything` is gone. A scenario registered
+  with a simulator now runs there as a packaged one does.
+- `greenhouse-sim`: a scenario is looked up in the catalogue of the
+  simulator answering (decision 0048): the services that look scenarios up
+  take it, and a scenario registered with one simulator is listed and run
+  by that one alone. Versions, opening days and layouts come from the
+  catalogue's entries rather than from the manifests' files.
+  `SCENARIO_REGISTRY` is read-only now, the packaged scenarios as
+  `catalogue.PACKAGED` holds them.
 - `greenhouse-sim`: `greenhouse_sim.builder`, the setup builder's first step
   (P12.0, decision 0050). An installation, the house part of a scenario
   (its envelope, its layout and the crop each row grows), is drafted from a
@@ -54,19 +67,6 @@ breaks the conformance checks is a major version.
   file cannot ask for a crop too large to lay out. A row's support shorter
   than its two end legs stands on one leg, at its middle, where laying it
   out divided by zero.
-- `greenhouse-sim`: each simulator keeps what it keeps, its climate runs,
-  crops, sunlight, checkpoints and kept states, in stores of its own, made
-  with it and forgotten with it (`Simulator.forget`, decision 0048): no
-  store, lock or thread is made as a module is imported, and a test
-  holds that. `stores.forget_everything` is gone. A scenario registered
-  with a simulator now runs there as a packaged one does.
-- `greenhouse-sim`: a scenario is looked up in the catalogue of the
-  simulator answering (decision 0048): the services that look scenarios up
-  take it, and a scenario registered with one simulator is listed and run
-  by that one alone. Versions, opening days and layouts come from the
-  catalogue's entries rather than from the manifests' files.
-  `SCENARIO_REGISTRY` is read-only now, the packaged scenarios as
-  `catalogue.PACKAGED` holds them.
 - `greenhouse-sim`: every service that reads or keeps runs takes the
   simulator it keeps them in, and reaches its climate runs, crops,
   sunlight, checkpoints and kept states through it; so does a playback,
