@@ -1,0 +1,99 @@
+{
+  "$schema": "../scenario.schema.json",
+  "schema_version": 3,
+  "greenhouse_id": "tomato_compartment",
+  "name": "Tomato compartment",
+  "description": "Reference scenario: a 24 by 16 m Venlo-style compartment of 320 high-wire tomato plants in eight rows, 28 days",
+  "notes": {
+    "scenario": "The reference scenario of P05.0: a production compartment for high-wire tomato, the scale and shape the simulator's later projects are about.",
+    "envelope": "Six 4 m bays and four 4 m spans, 6 m to the gutters: a Venlo-style roof. Inside the house, a lattice girder under the gutters spans the two middle spans of each frame, so that no post stands in the middle path between the rows. A vent near each span's ridge, along the middle of the house, stands a fifth open; a sliding door in the front gable lets trolleys in, shut.",
+    "layout": "Eight rows along the house, 1.6 m apart, of 40 plants at 0.5 m, on hanging gutters under crop wires 4 m up, with a pipe rail in each path between them. A main path runs across the front, past the door, and a side path along each side wall, by its heating pipes; the back is kept for service, with an irrigation unit that robots keep out of. Its other layout, propagation, raises the same rows on benches.",
+    "airflow": "Convection: two rolls across the house, rising up its middle.",
+    "weather": "A mild winter's day with the prevailing wind of the Dutch coast: a moderate south-westerly breeze."
+  },
+  "variety": "cherry_tomato",
+  "rows": 8,
+  "columns": 40,
+  "start_date": "2026-01-01",
+  "duration_days": 28,
+  "random_seed": 2401,
+  "envelope": {
+    "length": 24.0,
+    "width": 16.0,
+    "eave_height": 6.0,
+    "ridge_height": 6.8,
+    "spans": 4,
+    "bays": 6,
+    "inner_posts": [0, 1, 3, 4],
+    "openings": [
+      {
+        "opening_id": "roof_vent_1",
+        "kind": "roof_vent",
+        "surface_id": "roof_1_right",
+        "centre": {
+          "x": 0.0,
+          "y": 0.5
+        },
+        "width": 6.0,
+        "height": 1.0,
+        "opening": 0.2
+      },
+      {
+        "opening_id": "roof_vent_2",
+        "kind": "roof_vent",
+        "surface_id": "roof_2_right",
+        "centre": {
+          "x": 0.0,
+          "y": 0.5
+        },
+        "width": 6.0,
+        "height": 1.0,
+        "opening": 0.2
+      },
+      {
+        "opening_id": "roof_vent_3",
+        "kind": "roof_vent",
+        "surface_id": "roof_3_right",
+        "centre": {
+          "x": 0.0,
+          "y": 0.5
+        },
+        "width": 6.0,
+        "height": 1.0,
+        "opening": 0.2
+      },
+      {
+        "opening_id": "roof_vent_4",
+        "kind": "roof_vent",
+        "surface_id": "roof_4_right",
+        "centre": {
+          "x": 0.0,
+          "y": 0.5
+        },
+        "width": 6.0,
+        "height": 1.0,
+        "opening": 0.2
+      },
+      {
+        "opening_id": "door_front",
+        "kind": "door",
+        "surface_id": "end_wall_front",
+        "centre": {
+          "x": 8.0,
+          "y": 1.5
+        },
+        "width": 3.0,
+        "height": 3.0
+      }
+    ]
+  },
+  "layout": "default",
+  "airflow": {
+    "kind": "buoyancy"
+  },
+  "weather": {
+    "kind": "constant",
+    "wind_speed_m_s": 4.0,
+    "wind_direction_deg": 225.0
+  }
+}

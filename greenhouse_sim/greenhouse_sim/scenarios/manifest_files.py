@@ -63,6 +63,16 @@ _CONTROL_TIMES: Final = frozenset({"day_from_s", "night_from_s"})
 # What format 3 wrote of a scenario's house as fields of its own, which
 # format 4 holds as its installation.
 _FORMAT_3_HOUSE: Final = frozenset(ScenarioHouse.model_fields)
+# What a format 3 note on one of those fields is about in format 4: the part
+# of the installation the field became.
+_FORMAT_3_NOTES: Final = {
+    "envelope": "installation.envelope",
+    "layout": "installation.layout",
+    "rows": "installation.layout",
+    "columns": "installation.layout",
+    "crop_model": "installation.row_crops",
+    "variety": "installation.row_crops",
+}
 # A manifest's fields that this module reads itself rather than handing them
 # to `ScenarioConfig`, which could not read them as written: the schema, the
 # format's version and the notes are about the file, not the greenhouse; the
@@ -71,6 +81,13 @@ _FORMAT_3_HOUSE: Final = frozenset(ScenarioHouse.model_fields)
 # a viewer opens the scenario's run, not part of its world.
 _MANIFEST_ONLY_FIELDS: Final = frozenset(
     {_SCHEMA_KEY, _VERSION_KEY, _NOTES_KEY, _INSTALLATION_KEY, _OPENING_KEY}
+)
+# What a note may be about: the scenario, one of the manifest's fields, or a
+# field of its installation, by its path (`installation.envelope`).
+_NOTED: Final = frozenset(
+    {WHOLE_SCENARIO, _OPENING_KEY, _INSTALLATION_KEY}
+    | (set(ScenarioConfig.model_fields) - _FORMAT_3_HOUSE)
+    | {f"{_INSTALLATION_KEY}.{name}" for name in Installation.model_fields}
 )
 # How Pydantic's schema points to a model it defines, once, under `$defs`:
 # `{"$ref": "#/$defs/<model>"}`, wherever the model is used.
@@ -158,7 +175,7 @@ def scenario_from_manifest(scenario_id: str, document: dict[str, JsonValue]) -> 
     notes = document.get(_NOTES_KEY, {})
     if not isinstance(notes, dict) or not all(isinstance(note, str) for note in notes.values()):
         raise InvalidManifest(f"{scenario_id}: notes are written by what each is about")
-    unnoted = set(notes) - {WHOLE_SCENARIO, _OPENING_KEY, *ScenarioConfig.model_fields}
+    unnoted = set(notes) - _NOTED
     if unnoted:
         raise InvalidManifest(f"{scenario_id}: notes on what it does not have: {sorted(unnoted)}")
     installation = _installation(scenario_id, document.get(_INSTALLATION_KEY))
@@ -242,10 +259,12 @@ def _from_format_3(scenario_id: str, document: dict[str, JsonValue]) -> dict[str
     """Format 3 wrote a scenario's house as fields of its own: its envelope,
     its layout's name, its rows and columns of plants, and the crop model
     and variety they grow. Format 4 holds them as its installation (P12.1,
-    decision 0050), named for the scenario, every row growing that crop,
-    where the format 3 fields stood. Its rows and columns are its layout's
+    decision 0050), named for the scenario and called as it is (by its
+    identifier if it has no name), every row growing that crop, where the
+    format 3 fields stood; and a note on one of them is a note on the part
+    of the installation it became. Its rows and columns are its layout's
     crop rows and their planting positions now, and a manifest whose are not
-    is refused, naming both."""
+    is refused, naming both, as is a crop no row can grow."""
     if _INSTALLATION_KEY in document:
         raise InvalidManifest(f"{scenario_id}: a format 3 manifest has no {_INSTALLATION_KEY!r}")
     layout = document.get(_LAYOUT_KEY, DEFAULT_LAYOUT)
@@ -263,13 +282,18 @@ def _from_format_3(scenario_id: str, document: dict[str, JsonValue]) -> dict[str
             f"{scenario_id}: its {planted[0]!r} rows of {planted[1]!r} plants are not its "
             f"layout's crop rows, {laid}"
         )
-    crop: dict[str, JsonValue] = {
-        "crop_model": document.get("crop_model", CropModel.SIMPLE.value),
-        "variety": document.get("variety"),
-    }
+    crop_model = document.get("crop_model", CropModel.SIMPLE.value)
+    if crop_model not in tuple(CropModel):
+        models = ", ".join(CropModel)
+        raise InvalidManifest(f"{scenario_id}: a crop model is one of {models}, not {crop_model!r}")
+    variety = document.get("variety")
+    if not isinstance(variety, str) or not variety:
+        raise InvalidManifest(f"{scenario_id}: a crop's variety is named, not {variety!r}")
+    crop: dict[str, JsonValue] = {"crop_model": crop_model, "variety": variety}
+    name = document.get("name")
     written: dict[str, JsonValue] = {
         "installation_id": scenario_id,
-        "name": document.get("name"),
+        "name": name if isinstance(name, str) and name else scenario_id,
         "envelope": document.get("envelope"),
         _LAYOUT_KEY: layout,
         "row_crops": [{"row": row, **crop} for row in range(1, crop_rows.rows + 1)],
@@ -283,9 +307,22 @@ def _from_format_3(scenario_id: str, document: dict[str, JsonValue]) -> dict[str
     for key, value in document.items():
         if key in _FORMAT_3_HOUSE:
             migrated.setdefault(_INSTALLATION_KEY, installation)
+        elif key == _NOTES_KEY and isinstance(value, dict):
+            migrated[key] = _notes_from_format_3(value)
         else:
             migrated[key] = value
     return migrated
+
+
+def _notes_from_format_3(notes: dict[str, JsonValue]) -> dict[str, JsonValue]:
+    """Format 3's notes, each on a house field now on the part of the
+    installation it became; two on one part, one after the other."""
+    moved: dict[str, JsonValue] = {}
+    for about, note in notes.items():
+        part = _FORMAT_3_NOTES.get(about, about)
+        earlier = moved.get(part)
+        moved[part] = note if earlier is None else f"{earlier} {note}"
+    return moved
 
 
 # How each older format a manifest may be written in becomes the next.
@@ -325,7 +362,15 @@ def manifest_json_schema() -> dict[str, JsonValue]:
         "default": DEFAULT_LAYOUT,
         "description": "The name of one of the scenario's layout files.",
     }
-    installation["required"] = [name for name in installation["required"] if name != _LAYOUT_KEY]
+    installation["required"] = [
+        *(name for name in installation["required"] if name != _LAYOUT_KEY),
+        "row_crops",
+    ]
+    # Every crop row grows a crop in a scenario (`scenario_house`), so a
+    # manifest's installation has at least one.
+    crops = installation["properties"]["row_crops"]
+    del crops["default"]
+    crops["minItems"] = 1
     schema["$defs"][Installation.__name__] = installation
     properties[_INSTALLATION_KEY] = {"$ref": f"{_DEFINITION_REFERENCE}{Installation.__name__}"}
     # The fields a manifest has besides the configuration's.
