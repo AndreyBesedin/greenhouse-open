@@ -91,3 +91,28 @@ test("info panel: every group a section folded to its line, the panel fitting a 
     expect(touching).toEqual([]);
   });
 });
+
+test("info panel: the sections sit in titled cards by topic (#306)", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(FOLLOWED);
+  await expect(page.getByTestId("climate-time")).toBeVisible({ timeout: 20_000 });
+  const panel = page.locator(".info-panel");
+  const card = (title: string) => panel.getByRole("region", { name: title, exact: true });
+
+  await expect(panel.locator(".panel-card-title")).toHaveText([
+    "Simulation",
+    "House",
+    "Equipment",
+    "Outside",
+  ]);
+  await expect(card("Simulation").getByRole("region", { name: "Run played back" })).toBeVisible();
+  await expect(card("Simulation").locator("details.moment-fold")).toBeVisible();
+  await expect(card("Simulation").locator("details.timeline")).toBeVisible();
+  await expect(card("Simulation").locator("details.checkpoints")).toBeVisible();
+  await expect(card("House").locator("details.field-fold")).toBeVisible();
+  await expect(card("House").locator("details.house-fold")).toBeVisible();
+  await expect(card("Equipment").locator("details.probes-fold")).toBeVisible();
+  await expect(card("Equipment").locator("details.openings-fold")).toBeVisible();
+  await expect(card("Equipment").locator("details.equipment-fold")).toBeVisible();
+  await expect(card("Outside").getByRole("region", { name: "Weather" })).toBeVisible();
+});

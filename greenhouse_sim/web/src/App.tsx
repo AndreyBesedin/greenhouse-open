@@ -418,25 +418,6 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                   }
                 />
               )}
-              {followed !== null && (
-                <PlaybackPanel
-                  load={playback}
-                  days={summary?.duration_days ?? null}
-                  changed={anotherRun}
-                  onCommand={(command) => void commandPlayback(followed, command).then(setPlayback)}
-                  onStart={() => void commandPlayback(followed, "start").then(setPlayback)}
-                  onOwnRun={() => setSource((current) => withoutRunChanges(current, playedLayout))}
-                  onStop={() =>
-                    setSource((current) => {
-                      if (current.kind !== "scenario") {
-                        return current;
-                      }
-                      const { follow: _, ...rest } = current;
-                      return rest;
-                    })
-                  }
-                />
-              )}
               {source.kind === "scenario" && (
                 <ScenarioPanels
                   source={source}
@@ -474,7 +455,31 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                   onProbeHeight={setProbeHeight}
                   onPlayingClimate={setPlayingClimate}
                   onOwnRange={() => setFieldRange(null)}
-                />
+                >
+                  {followed !== null && (
+                    <PlaybackPanel
+                      load={playback}
+                      days={summary?.duration_days ?? null}
+                      changed={anotherRun}
+                      onCommand={(command) =>
+                        void commandPlayback(followed, command).then(setPlayback)
+                      }
+                      onStart={() => void commandPlayback(followed, "start").then(setPlayback)}
+                      onOwnRun={() =>
+                        setSource((current) => withoutRunChanges(current, playedLayout))
+                      }
+                      onStop={() =>
+                        setSource((current) => {
+                          if (current.kind !== "scenario") {
+                            return current;
+                          }
+                          const { follow: _, ...rest } = current;
+                          return rest;
+                        })
+                      }
+                    />
+                  )}
+                </ScenarioPanels>
               )}
               {source.kind === "plants" && (
                 <LabPanels
