@@ -289,18 +289,21 @@ class Playback:
         epochs: Epochs | None = None,
     ) -> None:
         self._simulator = simulator
-        config = scenario(scenario_id)
+        config = scenario(simulator.catalogue, scenario_id)
         _check_pace(seconds_per_day)
         self.scenario_id = scenario_id
         self.greenhouse_id = config.greenhouse_id
-        self.start = run_start(scenario_id)
+        self.start = run_start(simulator.catalogue, scenario_id)
         self.end_s = config.duration_days * DAY_S
         self.every_s = every_s
         self.layout = layout_name(layout or DEFAULT_LAYOUT)
         _, self.run_id = air_through_a_run(simulator, RunRequest(scenario_id, layout=self.layout))
         if targets:
             # Checked as a run's target changes are; refused, nothing starts.
-            run_schedule(RunRequest(scenario_id, layout=self.layout, targets=tuple(targets)))
+            run_schedule(
+                simulator.catalogue,
+                RunRequest(scenario_id, layout=self.layout, targets=tuple(targets)),
+            )
         self._clock = clock
         self._lock = threading.Lock()
         self._observations = _Log(_OBSERVATIONS, self.start)
@@ -577,7 +580,7 @@ class Playback:
                     *((moment, name, value) for name, value in targets.items()),
                 )
                 # Checked as a run's target changes are; refused, nothing changes.
-                run_schedule(replace(self._run(), targets=changed))
+                run_schedule(self._simulator.catalogue, replace(self._run(), targets=changed))
                 self._targets = changed
                 self._work_again_from(moment)
                 return self._state()

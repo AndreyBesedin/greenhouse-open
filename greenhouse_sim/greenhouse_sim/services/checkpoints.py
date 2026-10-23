@@ -52,9 +52,8 @@ from greenhouse_sim.climate.psychrometrics import saturation_ratio_g_kg
 from greenhouse_sim.core.clock import DAY_S, days_ended
 from greenhouse_sim.digests import short_digest
 from greenhouse_sim.domain.crop import CropModel
-from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
-from greenhouse_sim.scenarios.manifest_files import manifest_digest, opening_day, opening_file
+from greenhouse_sim.scenarios.manifest_files import opening_file
 from greenhouse_sim.services.crop import run_crop, seed_kept_crops
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.fields import (
@@ -64,7 +63,7 @@ from greenhouse_sim.services.fields import (
 )
 from greenhouse_sim.services.kept_states import STATES, KeptState, keep
 from greenhouse_sim.services.runs import Commanded, RunRequest, checked_moment
-from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids, scenario
+from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids, scenario, version
 from greenhouse_sim.services.stores import Store
 
 if TYPE_CHECKING:
@@ -101,7 +100,8 @@ class Checkpoint(BaseModel):
 
     checkpoint_format: int = CHECKPOINT_FORMAT
     scenario_id: str
-    # The digest of its scenario's manifest (`manifest_digest`).
+    # Its scenario's version: its manifest's digest, if packaged
+    # (`CatalogueEntry.version`).
     manifest: str
     layout: str = DEFAULT_LAYOUT
     weather: str = DEFAULT_WEATHER
@@ -184,7 +184,7 @@ def save_checkpoint(
     start of the day `time_s` lies in, or ends: its state then, worked out
     if it has not been, kept."""
     scenario_id = run.scenario_id
-    config = scenario(scenario_id)
+    config = scenario(simulator.catalogue, scenario_id)
     checked_moment(config, time_s)
     day = days_ended(time_s)
     moment = day * DAY_S
@@ -198,7 +198,7 @@ def save_checkpoint(
     before = window_start(moment)
     checkpoint = Checkpoint(
         scenario_id=scenario_id,
-        manifest=manifest_digest(scenario_id),
+        manifest=version(simulator.catalogue, scenario_id),
         layout=run.layout or DEFAULT_LAYOUT,
         weather=run.weather or DEFAULT_WEATHER,
         levels=dict(run.levels),
@@ -254,8 +254,8 @@ def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
         uploaded = Checkpoint.model_validate(document)
     except ValidationError as error:
         raise InvalidRequest(f"not a checkpoint: {error.errors()[0]['msg']}") from None
-    config = scenario(uploaded.scenario_id)
-    if uploaded.manifest != manifest_digest(uploaded.scenario_id):
+    config = scenario(simulator.catalogue, uploaded.scenario_id)
+    if uploaded.manifest != version(simulator.catalogue, uploaded.scenario_id):
         raise InvalidRequest(
             f"a checkpoint made with another version of {uploaded.scenario_id}'s manifest"
         )
@@ -344,7 +344,8 @@ def load_opening(simulator: Simulator, scenario_id: str) -> list[CheckpointSumma
     run's with everything off, which a viewer charts beside it, each
     uploaded, so that both runs' later days carry on from them. None if it
     names none; refused, as an upload is, if one does not fit its run."""
-    if opening_day(scenario_id) is None:
+    entry = simulator.catalogue.entry(scenario_id)
+    if entry is None or entry.opening_day is None:
         return []
     return [
         _kept(
@@ -362,7 +363,7 @@ def load_openings(simulator: Simulator) -> list[str]:
     """Keep every scenario's opening day that fits its run, as the API
     starts; the reasons the others are refused, by scenario."""
     refused = []
-    for scenario_id in SCENARIO_REGISTRY:
+    for scenario_id in simulator.catalogue.ids():
         try:
             load_opening(simulator, scenario_id)
         except ServiceError as error:
@@ -383,7 +384,7 @@ def _kept(
             checkpoint.weather,
             tuple(sorted(checkpoint.openings.items())),
         ),
-        schedule=run_schedule(checkpoint.run()),
+        schedule=run_schedule(simulator.catalogue, checkpoint.run()),
         day=checkpoint.day,
         air=checkpoint.house,
         plants=tuple(checkpoint.plants),

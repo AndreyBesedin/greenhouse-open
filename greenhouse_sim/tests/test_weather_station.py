@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from greenhouse_sim.domain.sensors import SensorKind
 from greenhouse_sim.fields.synthetic import shear_field
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.sensors.air import erred, observe, reads
 from greenhouse_sim.services import sensors, weather
 from greenhouse_sim.services.grid import air_grid
@@ -105,7 +106,7 @@ def test_clean_its_readings_are_the_weather_the_run_is_under(simulator: Simulato
 
     for (_, taken), value in readings.items():
         seconds = (taken - clean.start).total_seconds()
-        outside = weather.at_a_moment("climate_box", seconds, "cold_spring_day").weather
+        outside = weather.at_a_moment(PACKAGED, "climate_box", seconds, "cold_spring_day").weather
         assert value == pytest.approx(outside.air_temperature_c)
     # Cooling towards the spring day's dawn.
     values = list(readings.values())

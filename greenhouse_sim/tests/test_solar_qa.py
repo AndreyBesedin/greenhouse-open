@@ -26,6 +26,7 @@ import pytest
 
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services import scenarios, weather
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER
@@ -96,7 +97,7 @@ def _rounded(value: object, decimals: int = DECIMALS) -> object:
 
 
 def _scene() -> object:
-    return _rounded(scenarios.initial_scene(SCENARIO).model_dump(mode="json"))
+    return _rounded(scenarios.initial_scene(PACKAGED, SCENARIO).model_dump(mode="json"))
 
 
 def _par_field(simulator: Simulator, time_s: float) -> object:
@@ -116,12 +117,14 @@ def _light(simulator: Simulator) -> object:
     return {
         "views": {
             name: {
-                "weather": _rounded(weather.at_a_moment(SCENARIO, time_s).model_dump(mode="json")),
+                "weather": _rounded(
+                    weather.at_a_moment(PACKAGED, SCENARIO, time_s).model_dump(mode="json")
+                ),
                 "field": _par_field(simulator, time_s),
             }
             for name, time_s in VIEWS.items()
         },
-        "day": _rounded(weather.through_the_day(SCENARIO).model_dump(mode="json")),
+        "day": _rounded(weather.through_the_day(PACKAGED, SCENARIO).model_dump(mode="json")),
     }
 
 

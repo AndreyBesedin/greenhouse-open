@@ -26,6 +26,7 @@ from greenhouse_sim.cfd.results import kept_result
 from greenhouse_sim.cfd.solve import solve
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services import cfd, fields
 from greenhouse_sim.services.runs import RunRequest
@@ -119,8 +120,8 @@ def probes(field: EnvironmentField) -> Probes:
 
 
 def _kept(layout: str) -> EnvironmentField:
-    config = changed(scenario(SCENARIO), SceneChanges(layout=layout))
-    result = kept_result(SCENARIO, config, fields.grid(SCENARIO), layout)
+    config = changed(PACKAGED, scenario(PACKAGED, SCENARIO), SceneChanges(layout=layout))
+    result = kept_result(SCENARIO, config, fields.grid(PACKAGED, SCENARIO), layout)
     assert result is not None, STALE
     assert result.converged
     return EnvironmentField.from_document(result.field)
@@ -156,11 +157,11 @@ def test_the_scenario_offers_its_solution_with_the_layout_asked_for(simulator: S
 def test_openfoam_solves_air_turning_around_the_block_and_a_wake_behind_it(
     tmp_path: Path,
 ) -> None:
-    config = scenario(SCENARIO)
-    blocked = solve(cfd.geometry(SCENARIO), config.cfd, tmp_path / "default")
+    config = scenario(PACKAGED, SCENARIO)
+    blocked = solve(cfd.geometry(PACKAGED, SCENARIO), config.cfd, tmp_path / "default")
     unblocked = solve(
-        cfd.geometry(SCENARIO, SceneChanges(layout=OPEN)),
-        changed(config, SceneChanges(layout=OPEN)).cfd,
+        cfd.geometry(PACKAGED, SCENARIO, SceneChanges(layout=OPEN)),
+        changed(PACKAGED, config, SceneChanges(layout=OPEN)).cfd,
         tmp_path / OPEN,
         OPEN,
     )

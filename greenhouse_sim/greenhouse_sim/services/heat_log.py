@@ -55,7 +55,7 @@ def heat_records(
     starts `day` days after `start`, such as a scenario's own run with a
     layout rearranged or targets changed, each named by `run_id`: a record
     at the end of each of its hours, or none if it has no heater."""
-    config = scenario(run.scenario_id)
+    config = scenario(simulator.catalogue, run.scenario_id)
     if not any(isinstance(piece, Heater) for piece in config.layout.equipment):
         return []
     _, climate = climate_run(simulator, run)

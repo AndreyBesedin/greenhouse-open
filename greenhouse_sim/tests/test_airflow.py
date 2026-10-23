@@ -19,6 +19,7 @@ from greenhouse_sim.cfd.solve import SOURCE as CFD_SOURCE
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldGrid
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import fields
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Vector3
@@ -32,7 +33,7 @@ def _solved() -> CfdAirflow:
     result = kept_result(
         "tomato_compartment",
         SCENARIO_REGISTRY["tomato_compartment"],
-        fields.grid("tomato_compartment"),
+        fields.grid(PACKAGED, "tomato_compartment"),
     )
     assert result is not None, "tomato_compartment's kept CFD result is missing or stale"
     return CfdAirflow(result)
@@ -160,7 +161,8 @@ def test_each_scenario_names_its_own_airflow_which_it_offers_first(simulator: Si
     }
     for scenario_id, kind in kinds.items():
         assert fields.field_names(simulator, scenario_id)[0] == kind
-        assert fields.configured(scenario_id) == kind
+        assert fields.configured(PACKAGED, scenario_id) == kind
         assert math.isclose(
-            fields.grid(scenario_id).maximum.z, SCENARIO_REGISTRY[scenario_id].envelope.eave_height
+            fields.grid(PACKAGED, scenario_id).maximum.z,
+            SCENARIO_REGISTRY[scenario_id].envelope.eave_height,
         )

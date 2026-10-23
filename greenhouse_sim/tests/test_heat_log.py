@@ -12,6 +12,7 @@ from greenhouse_protocol.enums import ObservationType, SourceType
 from greenhouse_protocol.observation import Observation
 
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.fields import air_through_a_run, climate_run
 from greenhouse_sim.services.heat_log import heat_records
@@ -29,7 +30,9 @@ HEATER_W: Final = 30_000.0
 
 def _day(simulator: Simulator, scenario_id: str, day: int) -> list[Observation]:
     _, run_id = air_through_a_run(simulator, RunRequest(scenario_id))
-    return heat_records(simulator, RunRequest(scenario_id), day, run_start(scenario_id), run_id)
+    return heat_records(
+        simulator, RunRequest(scenario_id), day, run_start(PACKAGED, scenario_id), run_id
+    )
 
 
 def _mj_m2(joules: float) -> float:
@@ -39,7 +42,7 @@ def _mj_m2(joules: float) -> float:
 def test_an_hours_heat_is_an_increment_at_its_end_from_the_runs_house(simulator: Simulator) -> None:
     _, run_id = air_through_a_run(simulator, RunRequest(SCENARIO))
     house = climate_run(simulator, RunRequest(SCENARIO))[1].house
-    start = run_start(SCENARIO)
+    start = run_start(PACKAGED, SCENARIO)
 
     records = _day(simulator, SCENARIO, 1)
 

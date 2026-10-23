@@ -21,6 +21,7 @@ from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.evaluation.sensor_truth import SensorTruth, sensor_truth
 from greenhouse_sim.fields.field import EnvironmentField
+from greenhouse_sim.scenarios.catalogue import Scenarios
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.sensors.air import AirAt, WeatherAt, observe, reads, samples
 from greenhouse_sim.sensors.log import SensorFreshness, frames, freshness
@@ -82,26 +83,30 @@ class SensorTruths(BaseModel):
     sensors: list[SensorTruth]
 
 
-def run_start(scenario_id: str) -> datetime:
+def run_start(catalogue: Scenarios, scenario_id: str) -> datetime:
     """The instant a scenario's runs start: its start date's midnight at its
     site."""
-    return scenario(scenario_id).run_start()
+    return scenario(catalogue, scenario_id).run_start()
 
 
-def _point_sensors(scenario_id: str, layout: str) -> list[PointSensor]:
-    config = changed(scenario(scenario_id), SceneChanges(layout=layout))
+def _point_sensors(catalogue: Scenarios, scenario_id: str, layout: str) -> list[PointSensor]:
+    config = changed(catalogue, scenario(catalogue, scenario_id), SceneChanges(layout=layout))
     return [sensor for sensor in config.layout.sensors if isinstance(sensor, PointSensor)]
 
 
-def _cameras(scenario_id: str, layout: str) -> list[Camera]:
-    config = changed(scenario(scenario_id), SceneChanges(layout=layout))
+def _cameras(catalogue: Scenarios, scenario_id: str, layout: str) -> list[Camera]:
+    config = changed(catalogue, scenario(catalogue, scenario_id), SceneChanges(layout=layout))
     return [sensor for sensor in config.layout.sensors if isinstance(sensor, Camera)]
 
 
-def _weather_at(scenario_id: str, weather: str | None) -> WeatherAt:
+def _weather_at(catalogue: Scenarios, scenario_id: str, weather: str | None) -> WeatherAt:
     """The weather a scenario's run is under, on its clock: its own, or a
     preset's."""
-    config = changed(scenario(scenario_id), SceneChanges(weather=weather or DEFAULT_WEATHER))
+    config = changed(
+        catalogue,
+        scenario(catalogue, scenario_id),
+        SceneChanges(weather=weather or DEFAULT_WEATHER),
+    )
     return config.run_weather().at
 
 
@@ -117,13 +122,13 @@ def observations(
     sensors would have made it, if `clean`, for QA. Each sensor's freshness
     is its own at `until_s`, whatever it delivered before the log begins."""
     scenario_id = run.scenario_id
-    first = checked_window(scenario(scenario_id), from_s, until_s)
+    first = checked_window(scenario(simulator.catalogue, scenario_id), from_s, until_s)
     name = run.layout or DEFAULT_LAYOUT
     air_at, run_id = air_through_a_run(simulator, run)
-    weather_at = _weather_at(scenario_id, run.weather)
-    start = run_start(scenario_id)
-    greenhouse_id = scenario(scenario_id).greenhouse_id
-    point_sensors = _point_sensors(scenario_id, name)
+    weather_at = _weather_at(simulator.catalogue, scenario_id, run.weather)
+    start = run_start(simulator.catalogue, scenario_id)
+    greenhouse_id = scenario(simulator.catalogue, scenario_id).greenhouse_id
+    point_sensors = _point_sensors(simulator.catalogue, scenario_id, name)
     observed = observe(
         point_sensors,
         air_at,
@@ -131,7 +136,7 @@ def observations(
         start=start,
         greenhouse_id=greenhouse_id,
         run_id=run_id,
-        seed=scenario(scenario_id).random_seed,
+        seed=scenario(simulator.catalogue, scenario_id).random_seed,
         clean=clean,
         weather_at=weather_at,
         from_s=first,
@@ -140,9 +145,11 @@ def observations(
         run_id=run_id,
         start=start,
         observations=observed,
-        freshness=_freshness(scenario_id, point_sensors, air_at, weather_at, until_s, clean),
+        freshness=_freshness(
+            simulator.catalogue, scenario_id, point_sensors, air_at, weather_at, until_s, clean
+        ),
         frames=frames(
-            _cameras(scenario_id, name),
+            _cameras(simulator.catalogue, scenario_id, name),
             until_s,
             start=start,
             greenhouse_id=greenhouse_id,
@@ -176,12 +183,12 @@ def delivered_between(
     no other moment's air is worked out: `Stopped` is raised instead, so
     that a playback stopped does not finish the day it was working out."""
     scenario_id = run.scenario_id
-    config = scenario(scenario_id)
-    point_sensors = _point_sensors(scenario_id, run.layout or DEFAULT_LAYOUT)
+    config = scenario(simulator.catalogue, scenario_id)
+    point_sensors = _point_sensors(simulator.catalogue, scenario_id, run.layout or DEFAULT_LAYOUT)
     air_at, run_id = air_through_a_run(simulator, run)
     if stop is not None:
         air_at = _until_stopped(air_at, stop)
-    start = run_start(scenario_id)
+    start = run_start(simulator.catalogue, scenario_id)
     latest = max((sensor.imperfections.latency_s for sensor in point_sensors), default=0.0)
     observed = observe(
         point_sensors,
@@ -191,7 +198,7 @@ def delivered_between(
         greenhouse_id=config.greenhouse_id,
         run_id=named or run_id,
         seed=config.random_seed,
-        weather_at=_weather_at(scenario_id, run.weather),
+        weather_at=_weather_at(simulator.catalogue, scenario_id, run.weather),
         from_s=0.0 if after_s is None else max(0.0, after_s - latest),
         every_s=every_s,
     )
@@ -219,13 +226,13 @@ def sensors_at(simulator: Simulator, run: RunRequest, until_s: float = 0.0) -> S
     working out none of the log's observations, which sample the house's air
     every minute. Asked for as the log is, and refused as it is."""
     scenario_id = run.scenario_id
-    checked_window(scenario(scenario_id), None, until_s)
+    checked_window(scenario(simulator.catalogue, scenario_id), None, until_s)
     name = run.layout or DEFAULT_LAYOUT
     air_at, run_id = air_through_a_run(simulator, run)
-    start = run_start(scenario_id)
-    greenhouse_id = scenario(scenario_id).greenhouse_id
+    start = run_start(simulator.catalogue, scenario_id)
+    greenhouse_id = scenario(simulator.catalogue, scenario_id).greenhouse_id
     cameras = []
-    for camera in _cameras(scenario_id, name):
+    for camera in _cameras(simulator.catalogue, scenario_id, name):
         taken = samples(camera, until_s)
         latest = frames(
             [camera],
@@ -242,10 +249,11 @@ def sensors_at(simulator: Simulator, run: RunRequest, until_s: float = 0.0) -> S
         run_id=run_id,
         start=start,
         freshness=_freshness(
+            simulator.catalogue,
             scenario_id,
-            _point_sensors(scenario_id, name),
+            _point_sensors(simulator.catalogue, scenario_id, name),
             air_at,
-            _weather_at(scenario_id, run.weather),
+            _weather_at(simulator.catalogue, scenario_id, run.weather),
             until_s,
         ),
         cameras=cameras,
@@ -253,6 +261,7 @@ def sensors_at(simulator: Simulator, run: RunRequest, until_s: float = 0.0) -> S
 
 
 def _freshness(
+    catalogue: Scenarios,
     scenario_id: str,
     point_sensors: Sequence[PointSensor],
     air_at: AirAt,
@@ -268,8 +277,8 @@ def _freshness(
     return freshness(
         point_sensors,
         until_s,
-        start=run_start(scenario_id),
-        seed=scenario(scenario_id).random_seed,
+        start=run_start(catalogue, scenario_id),
+        seed=scenario(catalogue, scenario_id).random_seed,
         unavailable=unavailable,
         clean=clean,
     )
@@ -282,16 +291,16 @@ def truth(
     the start of the day `until_s` belongs to, to `until_s`: for evaluation
     and QA only."""
     scenario_id = run.scenario_id
-    first = checked_window(scenario(scenario_id), from_s, until_s)
+    first = checked_window(scenario(simulator.catalogue, scenario_id), from_s, until_s)
     name = run.layout or DEFAULT_LAYOUT
     air_at, run_id = air_through_a_run(simulator, run)
     return SensorTruths(
         run_id=run_id,
         sensors=sensor_truth(
-            _point_sensors(scenario_id, name),
+            _point_sensors(simulator.catalogue, scenario_id, name),
             air_at,
             until_s,
-            _weather_at(scenario_id, run.weather),
+            _weather_at(simulator.catalogue, scenario_id, run.weather),
             from_s=first,
         ),
     )

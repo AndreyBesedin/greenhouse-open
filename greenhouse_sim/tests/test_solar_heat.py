@@ -14,6 +14,7 @@ from greenhouse_sim.climate.house import WholeHouse
 from greenhouse_sim.climate.run import SOLAR_HEAT_SHARE, ClimateRun
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import _climate_day
 from greenhouse_sim.services.grid import air_grid
@@ -34,7 +35,7 @@ def _lab_run(simulator: Simulator, *, sunlit: bool) -> ClimateRun:
         schedule=Schedule.from_start({}),
         settings=LAB.climate,
         grid=grid,
-        solid=cfd.geometry("solar_lab").solid(),
+        solid=cfd.geometry(PACKAGED, "solar_lab").solid(),
         weather=LAB.run_weather(),
         sunlight=plant_light(simulator, "solar_lab", "default", "default").sunlight
         if sunlit

@@ -15,6 +15,7 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.simulator import Simulator
@@ -193,7 +194,7 @@ def _box_run(weather: RunWeather) -> ClimateRun:
         schedule=Schedule.from_start({}),
         settings=BOX.climate,
         grid=air_grid(BOX),
-        solid=cfd.geometry("climate_box").solid(),
+        solid=cfd.geometry(PACKAGED, "climate_box").solid(),
         weather=weather,
     )
 
@@ -216,7 +217,7 @@ def test_a_run_follows_the_outside_as_it_changes() -> None:
     warming = WeatherSeries(
         [(start, outside), (start + HOUR, outside.model_copy(update={"air_temperature_c": 28.0}))]
     )
-    solid = cfd.geometry("climate_box").solid()
+    solid = cfd.geometry(PACKAGED, "climate_box").solid()
 
     warmed = _box_run(RunWeather(warming, start)).temperature_at(3600)[~solid].mean()
     steady = _box_run(BOX.run_weather()).temperature_at(3600)[~solid].mean()

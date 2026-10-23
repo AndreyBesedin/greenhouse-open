@@ -10,6 +10,7 @@ from greenhouse_protocol.enums import EventType, ObservationType
 
 from greenhouse_sim.biology.tomato.organ.topology import HarvestFruit
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import checkpoints, crop
 from greenhouse_sim.services.crop_log import WALK_S, crop_records
 from greenhouse_sim.services.fields import air_through_a_run
@@ -32,7 +33,7 @@ WALKED = {
 def test_a_day_s_walk_records_every_plant_at_noon_with_the_run_s_identity(
     simulator: Simulator,
 ) -> None:
-    start = run_start(SCENARIO)
+    start = run_start(PACKAGED, SCENARIO)
     _, run_id = air_through_a_run(simulator, RunRequest(SCENARIO))
 
     walked, harvests = crop_records(simulator, RunRequest(SCENARIO), 1, start, run_id)
@@ -56,7 +57,7 @@ def test_a_day_s_walk_records_every_plant_at_noon_with_the_run_s_identity(
 def test_a_scenario_with_the_simple_crop_has_no_records_of_it(simulator: Simulator) -> None:
     _, run_id = air_through_a_run(simulator, RunRequest("climate_box"))
     assert crop_records(
-        simulator, RunRequest("climate_box"), 1, run_start("climate_box"), run_id
+        simulator, RunRequest("climate_box"), 1, run_start(PACKAGED, "climate_box"), run_id
     ) == ([], [])
 
 
@@ -67,7 +68,7 @@ def test_a_harvest_round_is_an_event_per_plant_picked_as_the_plant_s_history_has
     # From the kept opening day, 86, the first with red fruit, as the viewer
     # opens the run; the round after it starts day 91.
     assert checkpoints.load_openings(simulator) == []
-    start = run_start(SCENARIO)
+    start = run_start(PACKAGED, SCENARIO)
     _, run_id = air_through_a_run(simulator, RunRequest(SCENARIO))
 
     walked, harvests = crop_records(simulator, RunRequest(SCENARIO), FIRST_ROUND, start, run_id)

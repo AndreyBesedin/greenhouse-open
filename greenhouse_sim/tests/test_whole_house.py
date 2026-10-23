@@ -18,6 +18,7 @@ from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.house import HouseAir, WholeHouse, grid_mean
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import _climate_day
 from greenhouse_sim.services.grid import air_grid
@@ -90,7 +91,7 @@ def _shut(levels: dict[str, float], weather: object = None) -> WholeHouse:
             schedule=Schedule.from_start(levels),
             settings=config.climate.model_copy(update=SEALED),
             grid=air_grid(config),
-            solid=cfd.geometry("climate_box").solid(),
+            solid=cfd.geometry(PACKAGED, "climate_box").solid(),
             weather=config.run_weather(),
         )
     )

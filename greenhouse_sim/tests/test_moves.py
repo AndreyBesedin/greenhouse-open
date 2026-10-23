@@ -12,6 +12,7 @@ import pytest
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import air_through_a_run, climate_run
 from greenhouse_sim.services.runs import RunRequest
@@ -35,7 +36,7 @@ TURNED = Transform(
 
 
 def _item(layout_name: str, item_id: str) -> object:
-    config = changed(REFERENCE, SceneChanges(layout=layout_name))
+    config = changed(PACKAGED, REFERENCE, SceneChanges(layout=layout_name))
     return next(
         item
         for item in [*config.layout.equipment, *config.layout.sensors]
@@ -121,7 +122,7 @@ def test_moves_are_written_in_a_layouts_name_and_refused_when_they_cannot_be() -
         ("default~heater:99:0", "moved so, outside the greenhouse: heater"),
     ]:
         with pytest.raises(InvalidRequest, match=refused):
-            changed(REFERENCE, SceneChanges(layout=name))
+            changed(PACKAGED, REFERENCE, SceneChanges(layout=name))
 
 
 def test_a_moved_layout_is_another_run_and_the_api_draws_it(simulator: Simulator) -> None:
@@ -149,7 +150,7 @@ def test_moves_are_checked_in_the_greenhouse_as_its_dimensions_change_it(
     simulator: Simulator,
 ) -> None:
     def heater_x(name: str, length_m: float) -> float:
-        config = changed(BOX, SceneChanges(layout=name, envelope={"length": length_m}))
+        config = changed(PACKAGED, BOX, SceneChanges(layout=name, envelope={"length": length_m}))
         heater = next(p for p in config.layout.equipment if isinstance(p, Heater))
         return heater.base.x
 

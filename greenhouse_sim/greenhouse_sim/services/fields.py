@@ -57,6 +57,7 @@ from greenhouse_sim.digests import short_digest
 from greenhouse_sim.domain.equipment import Target
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument, FieldGrid
 from greenhouse_sim.fields.synthetic import shear_field
+from greenhouse_sim.scenarios.catalogue import Scenarios
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
@@ -200,11 +201,15 @@ def _checked_targets(config: ScenarioConfig, targets: Sequence[Commanded]) -> tu
     return tuple(sorted(targets, key=lambda change: change[0]))
 
 
-def run_schedule(run: RunRequest) -> Schedule:
+def run_schedule(catalogue: Scenarios, run: RunRequest) -> Schedule:
     """The schedule a run's climate is given, asked for and checked as its
     climate field is: its equipment at its levels from the start, then as
     its daily commands and its commands set it."""
-    config = changed(scenario(run.scenario_id), SceneChanges(layout=run.layout or DEFAULT_LAYOUT))
+    config = changed(
+        catalogue,
+        scenario(catalogue, run.scenario_id),
+        SceneChanges(layout=run.layout or DEFAULT_LAYOUT),
+    )
     running = equipment_levels(config, run.levels)
     return _schedule(
         tuple(sorted(running.items())),
@@ -281,12 +286,12 @@ def house_of(key: RunKey) -> House:
     return scenario_id, layout, weather, openings
 
 
-def off_levels(scenario_id: str) -> dict[str, float]:
+def off_levels(catalogue: Scenarios, scenario_id: str) -> dict[str, float]:
     """The levels that switch off, from the start, what a scenario's run
     would otherwise run by itself: its thermostat's heater, at 0
     (`climate.thermostat`). With no daily commands and no others, its run
     has everything off."""
-    thermostat = scenario(scenario_id).thermostat
+    thermostat = scenario(catalogue, scenario_id).thermostat
     return {} if thermostat is None else {thermostat.actuator_id: 0.0}
 
 
@@ -294,7 +299,7 @@ def _everything_off(simulator: Simulator, key: RunKey) -> ClimateDay:
     """The run `key` names with everything off: its house, under its
     weather, its doors and vents as open from the start, and nothing run."""
     scenario_id, layout, weather, _, openings, *_ = key
-    off = tuple(sorted(off_levels(scenario_id).items()))
+    off = tuple(sorted(off_levels(simulator.catalogue, scenario_id).items()))
     return _climate_day(simulator, scenario_id, layout, weather, off, openings, (), ())
 
 
@@ -305,7 +310,8 @@ def climate_run(simulator: Simulator, run: RunRequest) -> tuple[RunKey, ClimateD
     name = run.layout or DEFAULT_LAYOUT
     under = run.weather or DEFAULT_WEATHER
     config = changed(
-        scenario(run.scenario_id),
+        simulator.catalogue,
+        scenario(simulator.catalogue, run.scenario_id),
         SceneChanges(layout=name, weather=under, openings=dict(run.openings)),
     )
     key = (
@@ -361,14 +367,17 @@ def _new_climate_run(
     """A scenario's climate run, from its start. Its doors and vents are those
     open at the start, or opened by a command at a later moment."""
     config = changed(
-        scenario(scenario_id),
+        simulator.catalogue,
+        scenario(simulator.catalogue, scenario_id),
         SceneChanges(layout=layout, weather=weather, openings=dict(openings)),
     )
     known = {opening.opening_id for opening in config.envelope.openings}
     commanded = {actuator for _, actuator, _ in commands if actuator in known}
     # Every door or vent the run opens, fully, for the cells against it.
     opened = changed(
-        config, SceneChanges(openings={**dict(openings), **dict.fromkeys(commanded, 1.0)})
+        simulator.catalogue,
+        config,
+        SceneChanges(openings={**dict(openings), **dict.fromkeys(commanded, 1.0)}),
     )
     grid = air_grid(config)
     geometry = cfd_geometry(scenario_id, config, grid)
@@ -421,7 +430,7 @@ class _Climate:
         )
 
     def field(self, field_id: str, grid: FieldGrid, time_s: float = 0.0) -> EnvironmentField:
-        if grid != air_grid(scenario(self.key[0])):
+        if grid != air_grid(scenario(self._simulator.catalogue, self.key[0])):
             raise ValueError("a climate run is drawn on its own grid")
         return _climate_day(self._simulator, *self.key).field(field_id, time_s)
 
@@ -434,7 +443,8 @@ def _models(simulator: Simulator, run: RunRequest) -> dict[str, AirflowModel]:
     layout = run.layout or DEFAULT_LAYOUT
     weather = run.weather or DEFAULT_WEATHER
     config = changed(
-        scenario(run.scenario_id),
+        simulator.catalogue,
+        scenario(simulator.catalogue, run.scenario_id),
         SceneChanges(layout=layout, weather=weather, openings=dict(run.openings)),
     )
     running = equipment_levels(config, run.levels)
@@ -469,9 +479,9 @@ def field_names(simulator: Simulator, scenario_id: str, layout: str | None = Non
     return list(_models(simulator, RunRequest(scenario_id, layout=layout)))
 
 
-def configured(scenario_id: str) -> str:
+def configured(catalogue: Scenarios, scenario_id: str) -> str:
     """The name of a scenario's own airflow."""
-    return scenario(scenario_id).airflow.kind
+    return scenario(catalogue, scenario_id).airflow.kind
 
 
 class FieldNames(BaseModel):
@@ -488,14 +498,15 @@ def offered_fields(simulator: Simulator, scenario_id: str, layout: str | None = 
     """The fields a scenario offers with one of its layouts, and its own
     airflow, as the viewer lists them to choose from."""
     return FieldNames(
-        fields=field_names(simulator, scenario_id, layout), configured=configured(scenario_id)
+        fields=field_names(simulator, scenario_id, layout),
+        configured=configured(simulator.catalogue, scenario_id),
     )
 
 
-def grid(scenario_id: str) -> FieldGrid:
+def grid(catalogue: Scenarios, scenario_id: str) -> FieldGrid:
     """The grid a scenario's fields cover: its greenhouse's air under the
     gutters."""
-    return air_grid(scenario(scenario_id))
+    return air_grid(scenario(catalogue, scenario_id))
 
 
 def field(simulator: Simulator, run: RunRequest, name: str, time_s: float = 0.0) -> FieldDocument:
@@ -507,13 +518,15 @@ def field(simulator: Simulator, run: RunRequest, name: str, time_s: float = 0.0)
     opening it does not have and a moment outside a run; a weather there is
     not is not found."""
     scenario_id = run.scenario_id
-    checked_moment(scenario(scenario_id), time_s)
+    checked_moment(scenario(simulator.catalogue, scenario_id), time_s)
     models = _models(simulator, run)
     model = models.get(name)
     if model is None:
         known = ", ".join(models)
         raise NotFound(f"scenario {scenario_id!r} has no field {name!r}; it has {known}")
-    return model.field(f"{scenario_id}_{name}", grid(scenario_id), time_s).document()
+    return model.field(
+        f"{scenario_id}_{name}", grid(simulator.catalogue, scenario_id), time_s
+    ).document()
 
 
 def climate_probes(
@@ -528,12 +541,12 @@ def climate_probes(
     Asked as its climate field is, and refused as it is; a probe outside the
     house's air is refused too."""
     scenario_id = run.scenario_id
-    checked_moment(scenario(scenario_id), until_s)
+    checked_moment(scenario(simulator.catalogue, scenario_id), until_s)
     models = _models(simulator, run)
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
         raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
-    air = grid(scenario_id)
+    air = grid(simulator.catalogue, scenario_id)
     probed = [Vector3(x=x, y=y, z=z) for x, y, z in points]
     outside = [point for point in probed if not air.contains(point)]
     if outside:
@@ -565,7 +578,7 @@ def house_air(
     and of the same run with everything off. Asked as its climate field is,
     and refused as it is."""
     scenario_id = run.scenario_id
-    first = checked_window(scenario(scenario_id), from_s, until_s)
+    first = checked_window(scenario(simulator.catalogue, scenario_id), from_s, until_s)
     models = _models(simulator, run)
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
@@ -582,7 +595,7 @@ def house_air_at(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> 
     climate, asked as its climate field is and refused as it is; None for a
     scenario without equipment, which has no climate run. Unlike
     `house_air`, it works out nothing of the same run all off."""
-    checked_moment(scenario(run.scenario_id), time_s)
+    checked_moment(scenario(simulator.catalogue, run.scenario_id), time_s)
     models = _models(simulator, run)
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
@@ -622,7 +635,7 @@ def equipment_at(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> 
     """A run's equipment at a moment of its climate, asked as its climate
     field is and refused as it is: none for a scenario without equipment,
     which has no climate run."""
-    checked_moment(scenario(run.scenario_id), time_s)
+    checked_moment(scenario(simulator.catalogue, run.scenario_id), time_s)
     models = _models(simulator, run)
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
@@ -651,7 +664,7 @@ def glazing(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> Glazi
     temperature and heat passed. Asked as its climate field is, and refused
     as it is."""
     scenario_id = run.scenario_id
-    checked_moment(scenario(scenario_id), time_s)
+    checked_moment(scenario(simulator.catalogue, scenario_id), time_s)
     models = _models(simulator, run)
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
@@ -664,7 +677,7 @@ def openings(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> Open
     as the wind and the stack drive them (`greenhouse_sim.climate.openings`).
     Asked as its climate field is, and refused as it is."""
     scenario_id = run.scenario_id
-    checked_moment(scenario(scenario_id), time_s)
+    checked_moment(scenario(simulator.catalogue, scenario_id), time_s)
     models = _models(simulator, run)
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
@@ -682,7 +695,7 @@ def air_through_a_run(
     scenario_id = run.scenario_id
     name = run.layout or DEFAULT_LAYOUT
     models = _models(simulator, run)
-    air = grid(scenario_id)
+    air = grid(simulator.catalogue, scenario_id)
     climate = models.get(CLIMATE)
     # A run of a scenario is told apart by what it is made of, whatever
     # drives its air: a manifest or a layout changed, such as its weather or
@@ -690,7 +703,9 @@ def air_through_a_run(
     if isinstance(climate, _Climate):
         day = _climate_day(simulator, *climate.key)
         config = changed(
-            scenario(scenario_id), SceneChanges(layout=climate.key[1], weather=climate.key[2])
+            simulator.catalogue,
+            scenario(simulator.catalogue, scenario_id),
+            SceneChanges(layout=climate.key[1], weather=climate.key[2]),
         )
         # A run under recorded weather is told apart by its file's content.
         under = config.weather
@@ -702,7 +717,9 @@ def air_through_a_run(
         return (lambda time_s: day.sampled(f"{scenario_id}_{CLIMATE}", time_s)), (
             f"{scenario_id}-climate-{digest}"
         )
-    config = changed(scenario(scenario_id), SceneChanges(layout=name))
+    config = changed(
+        simulator.catalogue, scenario(simulator.catalogue, scenario_id), SceneChanges(layout=name)
+    )
     own = config.airflow.field(f"{scenario_id}_{config.airflow.kind}", air)
     digest = _digest(config.model_dump_json())
     return (lambda _: own), f"{scenario_id}-{config.airflow.kind}-{digest}"

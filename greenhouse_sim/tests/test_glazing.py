@@ -25,6 +25,7 @@ from greenhouse_sim.climate.house import WholeHouse
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import _climate_day
 from greenhouse_sim.services.grid import air_grid
@@ -34,7 +35,7 @@ from greenhouse_sim.weather.state import WeatherState
 
 BOX = SCENARIO_REGISTRY["climate_box"]
 GRID = air_grid(BOX)
-SOLID = cfd.geometry("climate_box").solid()
+SOLID = cfd.geometry(PACKAGED, "climate_box").solid()
 SINGLE_GLASS = 6.0
 NIGHT = BOX.run_weather().at(0.0)
 

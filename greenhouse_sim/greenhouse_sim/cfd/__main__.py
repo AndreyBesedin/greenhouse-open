@@ -20,6 +20,7 @@ from pathlib import Path
 from greenhouse_sim.cfd.openfoam import MeshFailed, mesh
 from greenhouse_sim.cfd.runner import OpenFoamUnavailable
 from greenhouse_sim.cfd.solve import SolveFailed
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.errors import ServiceError
 from greenhouse_sim.services.scenarios import SceneChanges
@@ -60,7 +61,7 @@ def main(arguments: list[str] | None = None) -> int:
     if args.solve:
         return _solve(parser, args.scenario, args.directory, changes)
     try:
-        written = cfd.write_case(args.scenario, args.directory, changes)
+        written = cfd.write_case(PACKAGED, args.scenario, args.directory, changes)
     except ServiceError as error:
         parser.error(error.message)
     print(f"wrote {len(written)} files of {args.scenario}'s case to {args.directory}")
@@ -81,7 +82,7 @@ def _solve(
     parser: argparse.ArgumentParser, scenario: str, directory: Path, changes: SceneChanges
 ) -> int:
     try:
-        solved = cfd.solve(scenario, directory, changes)
+        solved = cfd.solve(PACKAGED, scenario, directory, changes)
     except ServiceError as error:
         parser.error(error.message)
     except (OpenFoamUnavailable, SolveFailed) as error:

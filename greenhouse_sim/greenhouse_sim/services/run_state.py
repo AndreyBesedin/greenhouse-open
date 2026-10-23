@@ -80,10 +80,11 @@ def run_state(simulator: Simulator, run: RunRequest, until_s: float = 0.0) -> Ru
     found = sensors_at(simulator, run, until_s=until_s)
     air = house_air_at(simulator, run, time_s=until_s)
     config = changed(
-        scenario(run.scenario_id),
+        simulator.catalogue,
+        scenario(simulator.catalogue, run.scenario_id),
         SceneChanges(layout=run.layout or DEFAULT_LAYOUT, openings=dict(run.openings)),
     )
-    given = run_schedule(run).applied(until_s)
+    given = run_schedule(simulator.catalogue, run).applied(until_s)
     # Every piece of equipment starts off, every door and vent as open as it
     # stands, until a command sets it.
     now = {piece.actuator_id: 0.0 for piece in config.layout.equipment} | {

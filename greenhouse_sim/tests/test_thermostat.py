@@ -15,6 +15,7 @@ from greenhouse_sim.climate.house import WholeHouse
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.thermostat import OFF, ON, Thermostat
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import climate_run, equipment_at, house_air, off_levels
@@ -54,7 +55,7 @@ def _day(
             schedule=schedule or Schedule(),
             settings=config.climate.model_copy(update=SEALED if sealed else {}),
             grid=air_grid(config),
-            solid=cfd.geometry("climate_box").solid(),
+            solid=cfd.geometry(PACKAGED, "climate_box").solid(),
             weather=config.run_weather(),
             thermostat=thermostat,
         )
@@ -228,10 +229,12 @@ def test_the_reference_greenhouses_run_with_everything_off_runs_no_heater(
     _, day = climate_run(simulator, RunRequest("reference_greenhouse"))
     _, off = climate_run(
         simulator,
-        RunRequest("reference_greenhouse", levels=off_levels("reference_greenhouse"), daily=()),
+        RunRequest(
+            "reference_greenhouse", levels=off_levels(PACKAGED, "reference_greenhouse"), daily=()
+        ),
     )
 
-    assert off_levels("reference_greenhouse") == {"heater": 0.0}
+    assert off_levels(PACKAGED, "reference_greenhouse") == {"heater": 0.0}
     assert off.house.heated_j(0.0, HOUR_S) == 0.0
     assert day.house.heated_j(0.0, HOUR_S) > 0.0
     trace = house_air(simulator, RunRequest("reference_greenhouse"), until_s=HOUR_S)

@@ -20,6 +20,7 @@ from greenhouse_sim.climate.commands import Command, Schedule, TargetChange
 from greenhouse_sim.climate.thermostat import Thermostat
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.equipment import Target
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import checkpoints, playback
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import air_through_a_run, climate_run, house_air_at
@@ -227,7 +228,7 @@ def test_a_target_set_while_the_run_plays_steers_it_from_the_next_minute(
     again = played.records_after(0, ALL)
     assert again.records[: len(delivered.records)] == delivered.records
 
-    start = run_start(SCENARIO)
+    start = run_start(PACKAGED, SCENARIO)
     own = heat_records(simulator, RunRequest(SCENARIO), 0, start, before.run_id)
     warmer = heat_records(
         simulator, RunRequest(SCENARIO, targets=(change,)), 0, start, before.run_id
@@ -267,7 +268,7 @@ def test_a_run_started_over_with_moves_keeps_its_target_changes(
     assert played.wait_for(1, timeout_s=300)
     clock.now += 24.0
     delivered = {r.observation_id: r.value for r in played.records_after(0, ALL).records}
-    start, run_id = run_start(SCENARIO), str(moved.body["run_id"])
+    start, run_id = run_start(PACKAGED, SCENARIO), str(moved.body["run_id"])
     with_change = RunRequest(SCENARIO, layout=moved_layout, targets=(change,))
     kept = heat_records(simulator, with_change, 0, start, run_id)
     dropped = heat_records(simulator, RunRequest(SCENARIO, layout=moved_layout), 0, start, run_id)

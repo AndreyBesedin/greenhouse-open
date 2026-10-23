@@ -58,7 +58,11 @@ def plant_light(simulator: Simulator, scenario_id: str, layout: str, weather: st
     light on each of its plants: one of those kept, or a new one."""
 
     def make(_: object) -> PlantLight:
-        config = changed(scenario(scenario_id), SceneChanges(layout=layout, weather=weather))
+        config = changed(
+            simulator.catalogue,
+            scenario(simulator.catalogue, scenario_id),
+            SceneChanges(layout=layout, weather=weather),
+        )
         plant_crowns = first_crowns(config)
         sunlight = Sunlight(
             config.site,
