@@ -104,11 +104,21 @@ test("builder: a house drafted, edited, saved, exported, run, reopened and impor
     mimeType: "application/json",
     buffer: readFileSync(exported),
   });
+  // A draft of that identifier is kept: renamed, it is saved as another.
   await expect(status).toHaveText(
-    `Imported The test house from ${download.suggestedFilename()}; not saved yet.`,
+    `Imported The test house from ${download.suggestedFilename()}; not saved yet. ` +
+      `A draft ${id} is kept already: rename this one to save it.`,
     ARRIVES,
   );
   await expect(page.getByTestId("builder-draft")).toHaveText(`The test house (${id}), not saved`);
+  const identity = page.locator(".builder-identity");
+  await identity.getByLabel("Identifier").fill(`${id}_b`);
+  await identity.getByRole("button", { name: "Rename" }).click();
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(status).toHaveText("Saved as revision 1.", ARRIVES);
+  await expect(page.getByTestId("builder-draft")).toHaveText(
+    `The test house (${id}_b), revision 1`,
+  );
 });
 
 test("builder: values no greenhouse can have are refused by field", async ({ page }) => {

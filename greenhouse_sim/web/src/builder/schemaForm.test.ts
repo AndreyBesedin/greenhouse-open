@@ -18,6 +18,7 @@ describe("a form read from the schema the simulator publishes (P12.2)", () => {
     expect(fields.find((field) => field.name === "spans")).toMatchObject({
       kind: "integer",
       required: false,
+      maximum: 100,
     });
     expect(fields.find((field) => field.name === "crop_model")).toMatchObject({
       kind: "choice",
