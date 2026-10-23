@@ -2,10 +2,13 @@
 a pitched house of equal spans and bays, and parallel rows of one crop
 (P12.0)."""
 
+from typing import Final
+
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    JsonValue,
     PositiveFloat,
     PositiveInt,
     ValidationInfo,
@@ -13,6 +16,7 @@ from pydantic import (
 )
 
 from greenhouse_sim.domain.crop import CropModel
+from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
 from greenhouse_sim.scenarios.installation import Installation, RowCrop
 from greenhouse_sim.world.envelope import (
     HIGHEST_M,
@@ -34,31 +38,55 @@ from greenhouse_sim.world.rows import (
     RowSupport,
 )
 
+# A house the first form starts from: a small single-span one of two rows,
+# as the climate box is (published as the form's schema's example).
+STARTING_HOUSE: Final[dict[str, JsonValue]] = {
+    "installation_id": "my_greenhouse",
+    "name": "My greenhouse",
+    "length_m": 12.0,
+    "width_m": 6.4,
+    "eave_height_m": 4.0,
+    "ridge_height_m": 4.8,
+    "spans": 1,
+    "bays": 3,
+    "rows": 2,
+    "plants_per_row": 16,
+    "plant_pitch_m": 0.5,
+    "row_spacing_m": 1.6,
+    "support_height_m": 0.3,
+    "crop_model": "simple",
+    "variety": "cherry_tomato",
+}
+
 
 class BasicSetup(BaseModel):
-    """The values of the builder's first form, in metres. Each is checked
-    as the envelope and the rows check what it becomes, before either is
-    made, so that a value refused is refused by the form's own field: their
-    bounds, and their rules between two values, held by the second."""
+    """The values of the builder's first form, in metres. Each field's title
+    is the form's label for it, and the schema's example the house the form
+    starts from. Each is checked as the envelope and the rows check what it
+    becomes, before either is made, so that a value refused is refused by
+    the form's own field: their bounds, and their rules between two values,
+    held by the second."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(
+        frozen=True, extra="forbid", json_schema_extra={"examples": [STARTING_HOUSE]}
+    )
 
-    installation_id: ItemId
-    name: str = Field(min_length=1)
-    length_m: PositiveFloat = Field(le=LONGEST_SIDE_M)
-    width_m: PositiveFloat = Field(le=LONGEST_SIDE_M)
-    eave_height_m: PositiveFloat = Field(le=HIGHEST_M)
-    ridge_height_m: PositiveFloat = Field(le=HIGHEST_M)
-    spans: PositiveInt = Field(default=1, le=MOST_SPANS)
-    bays: PositiveInt = Field(default=1, le=MOST_BAYS)
-    rows: PositiveInt = Field(le=MOST_ROWS)
-    plants_per_row: PositiveInt = Field(le=MOST_POSITIONS_PER_ROW)
-    plant_pitch_m: PositiveFloat
-    row_spacing_m: PositiveFloat
+    installation_id: ItemId = Field(title="Identifier")
+    name: str = Field(min_length=1, title="Name")
+    length_m: PositiveFloat = Field(le=LONGEST_SIDE_M, title="Length (m)")
+    width_m: PositiveFloat = Field(le=LONGEST_SIDE_M, title="Width (m)")
+    eave_height_m: PositiveFloat = Field(le=HIGHEST_M, title="Height to the gutters (m)")
+    ridge_height_m: PositiveFloat = Field(le=HIGHEST_M, title="Height to the ridge (m)")
+    spans: PositiveInt = Field(default=1, le=MOST_SPANS, title="Spans")
+    bays: PositiveInt = Field(default=1, le=MOST_BAYS, title="Bays")
+    rows: PositiveInt = Field(le=MOST_ROWS, title="Crop rows")
+    plants_per_row: PositiveInt = Field(le=MOST_POSITIONS_PER_ROW, title="Plants per row")
+    plant_pitch_m: PositiveFloat = Field(title="Between plants (m)")
+    row_spacing_m: PositiveFloat = Field(title="Between rows (m)")
     # A tomato gutter's top, above its depth.
-    support_height_m: float = Field(gt=TOMATO_GUTTER.depth)
-    crop_model: CropModel
-    variety: str = Field(min_length=1)
+    support_height_m: float = Field(gt=TOMATO_GUTTER.depth, title="Gutter height (m)")
+    crop_model: CropModel = Field(title="Crop model")
+    variety: str = Field(min_length=1, title="Variety")
 
     @field_validator("ridge_height_m")
     @classmethod
@@ -99,6 +127,13 @@ class BasicSetup(BaseModel):
                 f"rows {spacing} m apart are too close for gutters {TOMATO_GUTTER.width} m wide"
             )
         return spacing
+
+
+def basic_json_schema() -> dict[str, JsonValue]:
+    """The JSON Schema of the first form's values, published as
+    `basic.schema.json`: what a client sends, so that a field with a default
+    may be left out."""
+    return {"$schema": JSON_SCHEMA_DIALECT, **BasicSetup.model_json_schema()}
 
 
 def basic_installation(values: BasicSetup) -> Installation:

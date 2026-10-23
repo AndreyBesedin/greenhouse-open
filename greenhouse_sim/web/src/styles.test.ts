@@ -62,6 +62,8 @@ const FEATURES = new Set([
   "hud",
   "legends",
   "build",
+  // The setup builder's page (P12.2).
+  "builder",
   "debug",
   "select",
   // Choosing what is shown, and how.

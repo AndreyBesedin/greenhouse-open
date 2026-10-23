@@ -1514,3 +1514,111 @@ body {
   flex: 1;
   min-width: 0;
 }
+
+/* The setup builder (P12.2): its forms and findings in a column beside the
+ * house it draws. */
+.builder {
+  display: grid;
+  grid-template-columns: minmax(320px, 440px) 1fr;
+  height: 100vh;
+}
+
+.builder-side {
+  overflow-y: auto;
+  padding: 12px 16px;
+  background: var(--panel-bg);
+  color: var(--panel-text);
+  color-scheme: var(--panel-scheme);
+  border-right: 1px solid var(--panel-rule);
+  font-size: 14px;
+}
+
+.builder-side h1 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.builder-side h2 {
+  margin: 16px 0 6px;
+  font-size: 15px;
+}
+
+.builder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.builder-status {
+  min-height: 1.4em;
+  color: var(--panel-muted-strong);
+}
+
+.builder-status a {
+  color: var(--panel-link);
+}
+
+.builder-field {
+  display: grid;
+  grid-template-columns: 1fr 9em;
+  gap: 8px;
+  align-items: center;
+  margin: 4px 0;
+}
+
+.builder-form button,
+.builder-identity button,
+.builder-run button {
+  margin-top: 8px;
+}
+
+.builder-findings ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.builder-finding-error {
+  color: var(--panel-warn);
+}
+
+.builder-finding-warning {
+  color: var(--panel-muted);
+}
+
+.builder-rows table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.builder-rows th,
+.builder-rows td {
+  padding: 2px 6px;
+  border-bottom: 1px solid var(--panel-rule);
+  text-align: left;
+}
+
+.builder-give {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+  margin-top: 8px;
+}
+
+.builder-give-field {
+  display: grid;
+  gap: 2px;
+}
+
+.builder-note {
+  color: var(--panel-muted);
+}
+
+.builder-view {
+  position: relative;
+  min-width: 0;
+}
+
+.builder-view > .builder-note {
+  padding: 16px;
+}

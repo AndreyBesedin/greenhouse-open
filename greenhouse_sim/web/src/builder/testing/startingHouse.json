@@ -1,0 +1,107 @@
+{
+  "schema_version": 4,
+  "installation": {
+    "installation_id": "my_greenhouse",
+    "name": "My greenhouse",
+    "envelope": {
+      "length": 12.0,
+      "width": 6.4,
+      "eave_height": 4.0,
+      "ridge_height": 4.8,
+      "spans": 1,
+      "bays": 3,
+      "openings": [],
+      "origin": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "w": 1.0,
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      }
+    },
+    "layout": {
+      "crop_rows": {
+        "origin": {
+          "x": 2.25,
+          "y": 2.4000000000000004
+        },
+        "heading": 0.0,
+        "rows": 2,
+        "positions_per_row": 16,
+        "plant_pitch": 0.5,
+        "row_spacing": 1.6,
+        "pair_gap": null,
+        "support": {
+          "kind": "crop_gutter",
+          "height": 0.3,
+          "width": 0.3,
+          "depth": 0.12,
+          "overhang": 0.25,
+          "offset": 0.0,
+          "material": null,
+          "leg_spacing": 2.0,
+          "leg_radius": 0.02,
+          "slab": {
+            "width": 0.2,
+            "height": 0.075,
+            "material": "substrate"
+          }
+        },
+        "rails": null,
+        "wires": null
+      },
+      "placed": [],
+      "zones": [],
+      "equipment": [],
+      "sensors": []
+    },
+    "row_crops": [
+      {
+        "row": 1,
+        "crop_model": "simple",
+        "variety": "cherry_tomato"
+      },
+      {
+        "row": 2,
+        "crop_model": "simple",
+        "variety": "cherry_tomato"
+      }
+    ]
+  },
+  "findings": [
+    {
+      "severity": "warning",
+      "code": "no_door",
+      "message": "No door.",
+      "items": [],
+      "rows": []
+    },
+    {
+      "severity": "warning",
+      "code": "no_vents",
+      "message": "No vent.",
+      "items": [],
+      "rows": []
+    },
+    {
+      "severity": "warning",
+      "code": "no_heating",
+      "message": "No heater.",
+      "items": [],
+      "rows": []
+    },
+    {
+      "severity": "warning",
+      "code": "no_fans",
+      "message": "No circulation fan.",
+      "items": [],
+      "rows": []
+    }
+  ]
+}
