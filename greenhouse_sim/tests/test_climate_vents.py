@@ -18,6 +18,7 @@ from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import climate_vents
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.scenarios import SceneChanges, changed
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.weather.sources import ConstantWeather
 from greenhouse_sim.world.geometry import Vector3
 
@@ -132,21 +133,23 @@ def test_the_draught_goes_out_of_a_warmer_house_and_into_a_cooler_one() -> None:
     assert _draught(_run({})) == 0.0
 
 
-def _climate(query: str) -> EnvironmentField:
-    response = respond("GET", f"/api/scenarios/climate_box/fields/climate{query}")
+def _climate(simulator: Simulator, query: str) -> EnvironmentField:
+    response = respond(simulator, "GET", f"/api/scenarios/climate_box/fields/climate{query}")
     assert response.status == 200, response.body
     return EnvironmentField.from_document(FieldDocument.model_validate(response.body))
 
 
-def test_a_climate_is_served_with_its_vents_open_as_asked() -> None:
-    closed = _climate("?set=heater:1&t=600")
-    opened = _climate("?set=heater:1&t=600&open=roof_vent:1")
+def test_a_climate_is_served_with_its_vents_open_as_asked(simulator: Simulator) -> None:
+    closed = _climate(simulator, "?set=heater:1&t=600")
+    opened = _climate(simulator, "?set=heater:1&t=600&open=roof_vent:1")
 
     closed_t = closed.sample(AirQuantity.TEMPERATURE, UNDER_THE_VENT)
     opened_t = opened.sample(AirQuantity.TEMPERATURE, UNDER_THE_VENT)
     assert isinstance(closed_t, float) and isinstance(opened_t, float)
     assert opened_t < closed_t - 3.0
-    response = respond("GET", "/api/scenarios/climate_box/fields/climate?open=skylight:1")
+    response = respond(
+        simulator, "GET", "/api/scenarios/climate_box/fields/climate?open=skylight:1"
+    )
     assert (response.status, response.body) == (
         400,
         {"error": "climate_box has no opening 'skylight'"},

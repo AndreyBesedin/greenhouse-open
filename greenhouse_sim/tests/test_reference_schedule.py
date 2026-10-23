@@ -19,6 +19,7 @@ from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import fields, sensors
 from greenhouse_sim.services.runs import Commanded, RunRequest
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.sensors import PointSensor
 
 REFERENCE = SCENARIO_REGISTRY["reference_greenhouse"]
@@ -33,8 +34,8 @@ def _own() -> list[tuple[float, str, float]]:
     return [(c.time_of_day_s, c.actuator_id, c.level) for c in REFERENCE.daily]
 
 
-def _body(path: str) -> dict[str, Any]:
-    response = respond("GET", path)
+def _body(simulator: Simulator, path: str) -> dict[str, Any]:
+    response = respond(simulator, "GET", path)
     assert response.status == HTTPStatus.OK, response.body
     assert isinstance(response.body, dict)
     return response.body
@@ -77,14 +78,16 @@ def test_a_run_gives_its_scenarios_daily_commands_unless_it_gives_its_own() -> N
     assert none.commands == ()
 
 
-def test_the_api_reads_daily_none_as_none_and_leaves_out_none_as_its_own() -> None:
-    own = _body("/api/scenarios/reference_greenhouse/timeline?t=86400")
-    none = _body("/api/scenarios/reference_greenhouse/timeline?t=86400&daily=none")
+def test_the_api_reads_daily_none_as_none_and_leaves_out_none_as_its_own(
+    simulator: Simulator,
+) -> None:
+    own = _body(simulator, "/api/scenarios/reference_greenhouse/timeline?t=86400")
+    none = _body(simulator, "/api/scenarios/reference_greenhouse/timeline?t=86400&daily=none")
     commands = own["processes"].index("commands")
 
     assert own["process"].count(commands) == len(REFERENCE.daily)
     assert none["process"].count(commands) == 0
-    summaries = respond("GET", "/api/scenarios").body
+    summaries = respond(simulator, "GET", "/api/scenarios").body
     assert isinstance(summaries, list)
     reference = next(
         s for s in summaries if isinstance(s, dict) and s["id"] == REFERENCE.greenhouse_id
@@ -155,20 +158,24 @@ def test_its_sensors_observe_only_the_run_they_belong_to_through_the_season() ->
     )
 
 
-def _door_flow(weather: str) -> float:
+def _door_flow(simulator: Simulator, weather: str) -> float:
     body = _body(
-        f"/api/scenarios/reference_greenhouse/climate/openings?t=43200&open=door:1&weather={weather}"
+        simulator,
+        f"/api/scenarios/reference_greenhouse/climate/openings?t=43200&open=door:1&weather={weather}",
     )
     return float(next(o["net_m3_s"] for o in body["openings"] if o["opening_id"] == "door"))
 
 
-def test_the_winds_direction_can_be_overridden_for_qa_and_an_open_door_follows_it() -> None:
-    own = _body("/api/scenarios/reference_greenhouse/weather?t=43200")["weather"]
-    east = _body("/api/scenarios/reference_greenhouse/weather?t=43200&weather=default~90")[
-        "weather"
-    ]
+def test_the_winds_direction_can_be_overridden_for_qa_and_an_open_door_follows_it(
+    simulator: Simulator,
+) -> None:
+    own = _body(simulator, "/api/scenarios/reference_greenhouse/weather?t=43200")["weather"]
+    east = _body(
+        simulator, "/api/scenarios/reference_greenhouse/weather?t=43200&weather=default~90"
+    )["weather"]
     clouded = _body(
-        "/api/scenarios/reference_greenhouse/weather?t=43200&weather=cold_spring_day@80~0"
+        simulator,
+        "/api/scenarios/reference_greenhouse/weather?t=43200&weather=cold_spring_day@80~0",
     )["weather"]
 
     # Only its direction turns: its speed is its own, and so is the rest.
@@ -179,10 +186,10 @@ def test_the_winds_direction_can_be_overridden_for_qa_and_an_open_door_follows_i
     # From the west, its own at noon, the wind blows in through the front
     # door; from the north, the house draws out through it.
     assert own["wind_direction_deg"] == 270.0
-    assert _door_flow("default") > 10.0
-    assert _door_flow("default~0") < 0.0
+    assert _door_flow(simulator, "default") > 10.0
+    assert _door_flow(simulator, "default~0") < 0.0
     for refused in ("default~360", "default~-5", "default~east"):
         response = respond(
-            "GET", f"/api/scenarios/reference_greenhouse/weather?t=0&weather={refused}"
+            simulator, "GET", f"/api/scenarios/reference_greenhouse/weather?t=0&weather={refused}"
         )
         assert response.status == HTTPStatus.BAD_REQUEST

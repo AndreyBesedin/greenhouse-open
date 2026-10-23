@@ -17,6 +17,7 @@ class MemberKind(StrEnum):
 
     POST = "post"
     RAFTER = "rafter"
+    GIRDER = "girder"
 
 
 class OpeningKind(StrEnum):

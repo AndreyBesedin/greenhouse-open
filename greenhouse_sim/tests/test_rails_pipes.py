@@ -5,10 +5,11 @@ overhead where they cross a walkway."""
 import pytest
 from pydantic import ValidationError
 
+from greenhouse_sim.domain.envelope import MemberKind
 from greenhouse_sim.domain.layout import FixtureKind, Obstruction
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scene.snapshot import SceneEntityKind, greenhouse_scene
-from greenhouse_sim.world.envelope import Envelope
+from greenhouse_sim.world.envelope import MEMBER_RADII_M, Envelope
 from greenhouse_sim.world.fixtures import Fixture, PipePrimitive, PipeRunPrimitive, WalkwayPrimitive
 from greenhouse_sim.world.geometry import Cylinder, Point2, Vector3
 from greenhouse_sim.world.layout import WALKWAY_HEADROOM_M, Layout
@@ -185,3 +186,39 @@ def test_the_compartment_has_rails_between_its_rows_wires_above_them_and_heating
     assert count[FixtureKind.WIRE] == 8
     assert count[FixtureKind.PIPE] == 2 * 4
     assert all(Obstruction.MOVEMENT in f.obstructs for f in fixtures if f.kind == FixtureKind.RAIL)
+
+
+@pytest.mark.parametrize(
+    "scenario_id",
+    sorted(
+        scenario_id
+        for scenario_id, config in SCENARIO_REGISTRY.items()
+        if config.layout is not None
+        and any(fixture.kind == FixtureKind.RAIL for fixture in config.layout.fixtures())
+    ),
+)
+def test_no_post_stands_on_a_rail_a_trolley_rides(scenario_id: str) -> None:
+    """A trolley rides a rail from end to end: every post stands clear of
+    the band between a rail's tubes, as far as the rail runs."""
+    config = SCENARIO_REGISTRY[scenario_id]
+    assert config.layout is not None
+    tubes: dict[str, list[Fixture]] = {}
+    for fixture in config.layout.fixtures():
+        if fixture.kind == FixtureKind.RAIL:
+            tubes.setdefault(fixture.fixture_id.rsplit("_", 1)[0], []).append(fixture)
+    post_radius = MEMBER_RADII_M[MemberKind.POST]
+    posts = [m for m in config.envelope.members() if m.kind == MemberKind.POST]
+
+    for rail, pair in tubes.items():
+        axes = [_axis(tube) for tube in pair]
+        reach = post_radius + PIPE_RAIL.tube_radius
+        low_x = min(min(start.x, end.x) for start, end in axes) - reach
+        high_x = max(max(start.x, end.x) for start, end in axes) + reach
+        low_y = min(start.y for start, _ in axes) - reach
+        high_y = max(start.y for start, _ in axes) + reach
+        on_it = [
+            post.member_id
+            for post in posts
+            if low_x <= post.start.x <= high_x and low_y <= post.start.y <= high_y
+        ]
+        assert on_it == [], f"{rail} of {scenario_id} runs into {on_it}"

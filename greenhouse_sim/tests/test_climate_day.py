@@ -16,6 +16,7 @@ from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.services import fields, sensors
 from greenhouse_sim.services.fields import _climate_day
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import HOUR_S
 
 HEATED = (("heater", 1.0),)
@@ -144,9 +145,11 @@ def test_probes_read_the_grid_run_that_draws_the_moment() -> None:
     assert len(probes.times_s) == 76
 
 
-def test_the_api_takes_a_run_a_day_long() -> None:
-    late = respond("GET", "/api/scenarios/climate_box/fields/climate?t=86400")
-    house = respond("GET", "/api/scenarios/climate_box/climate/house?t=86400&set=heater:1")
+def test_the_api_takes_a_run_a_day_long(simulator: Simulator) -> None:
+    late = respond(simulator, "GET", "/api/scenarios/climate_box/fields/climate?t=86400")
+    house = respond(
+        simulator, "GET", "/api/scenarios/climate_box/climate/house?t=86400&set=heater:1"
+    )
     body = json.loads(json.dumps(house.body))
 
     assert late.status == house.status == HTTPStatus.OK
