@@ -24,6 +24,7 @@ from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.domain.organs import FruitStage
 from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services import plants
+from greenhouse_sim.services.simulator import Simulator
 
 PARAMS = DevelopmentParams()
 RESPONSES = TOMATO_RESPONSES
@@ -147,8 +148,8 @@ def test_anything_that_says_each_plants_day_serves_as_its_environment() -> None:
     assert plant.thermal_time == pytest.approx(transplants.TRANSPLANT_CD + 5 * 14.0 + 5 * 6.0)
 
 
-def test_the_lab_keeps_its_plants_in_the_environment_asked_for() -> None:
-    answer = respond("GET", "/api/plants/environments")
+def test_the_lab_keeps_its_plants_in_the_environment_asked_for(simulator: Simulator) -> None:
+    answer = respond(simulator, "GET", "/api/plants/environments")
     cool = plants.structure(plants.LabRun(day=60, environment="cool_dim"))
     warm = plants.structure(plants.LabRun(day=60, environment="warm_bright"))
 
@@ -162,10 +163,14 @@ def test_the_lab_keeps_its_plants_in_the_environment_asked_for() -> None:
     assert _ripeness(warm) > _ripeness(cool)
 
 
-def test_two_environments_side_by_side_alternate_along_the_row_and_diverge() -> None:
+def test_two_environments_side_by_side_alternate_along_the_row_and_diverge(
+    simulator: Simulator,
+) -> None:
     run = plants.LabRun(day=60, environment="cool_dim", versus="warm_bright")
     scene = SceneSnapshot.model_validate(
-        respond("GET", "/api/plants/scene?day=60&environment=cool_dim&versus=warm_bright").body
+        respond(
+            simulator, "GET", "/api/plants/scene?day=60&environment=cool_dim&versus=warm_bright"
+        ).body
     )
     by_plant = {
         e.properties["plant_id"]: e.properties["environment"]
@@ -186,8 +191,8 @@ def test_two_environments_side_by_side_alternate_along_the_row_and_diverge() -> 
 
 
 @pytest.mark.parametrize("query", ["environment=tropical", "versus=tropical"])
-def test_an_environment_the_lab_does_not_have_is_refused(query: str) -> None:
-    answer = respond("GET", f"/api/plants/scene?{query}")
+def test_an_environment_the_lab_does_not_have_is_refused(simulator: Simulator, query: str) -> None:
+    answer = respond(simulator, "GET", f"/api/plants/scene?{query}")
 
     assert answer.status == HTTPStatus.BAD_REQUEST
     assert answer.body == {

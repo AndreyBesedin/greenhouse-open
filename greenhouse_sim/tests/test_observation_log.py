@@ -15,6 +15,7 @@ from greenhouse_sim.sensors.log import Freshness, SensorFreshness, freshness
 from greenhouse_sim.services import sensors
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.sensors import SensorObservations
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.sensors import Camera, PointSensor
 
 HEATED = {"heater": 1.0}
@@ -155,8 +156,10 @@ def test_a_camera_takes_a_frame_every_cadence_and_the_log_records_its_metadata()
     assert latest.modalities == (CaptureModality.RGB, CaptureModality.DEPTH)
 
 
-def test_the_api_serves_the_log_with_its_freshness_and_frames() -> None:
-    response = respond("GET", "/api/scenarios/climate_box/climate/observations?set=heater:1&t=600")
+def test_the_api_serves_the_log_with_its_freshness_and_frames(simulator: Simulator) -> None:
+    response = respond(
+        simulator, "GET", "/api/scenarios/climate_box/climate/observations?set=heater:1&t=600"
+    )
     served = SensorObservations.model_validate(response.body)
 
     assert response.status == 200

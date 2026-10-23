@@ -15,6 +15,7 @@ from greenhouse_sim.domain.processes import Process
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import plant_ids
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.timeline import TimelineDocument, timeline
 from greenhouse_sim.world.sensors import Camera, PointSensor
 
@@ -99,9 +100,15 @@ def test_a_run_that_works_no_climate_has_no_air_events() -> None:
     assert document.processes.index(Process.AIR) not in document.process
 
 
-def test_its_route_refuses_a_window_over_a_day_and_commands_as_the_climates() -> None:
-    longer = respond("GET", f"/api/scenarios/climate_box/timeline?t={2 * DAY_S:.0f}&from=0")
-    late = respond("GET", "/api/scenarios/climate_box/timeline?t=600&daily=86400:heater:1")
+def test_its_route_refuses_a_window_over_a_day_and_commands_as_the_climates(
+    simulator: Simulator,
+) -> None:
+    longer = respond(
+        simulator, "GET", f"/api/scenarios/climate_box/timeline?t={2 * DAY_S:.0f}&from=0"
+    )
+    late = respond(
+        simulator, "GET", "/api/scenarios/climate_box/timeline?t=600&daily=86400:heater:1"
+    )
 
     assert (longer.status, longer.body) == (
         HTTPStatus.BAD_REQUEST,
@@ -116,15 +123,15 @@ def test_its_route_refuses_a_window_over_a_day_and_commands_as_the_climates() ->
     )
 
 
-def _served(query: str) -> dict[str, Any]:
-    response = respond("GET", f"/api/scenarios/climate_box/timeline?{query}")
+def _served(simulator: Simulator, query: str) -> dict[str, Any]:
+    response = respond(simulator, "GET", f"/api/scenarios/climate_box/timeline?{query}")
     assert response.status == HTTPStatus.OK, response.body
     assert isinstance(response.body, dict)
     return response.body
 
 
-def test_its_route_serves_the_document() -> None:
-    body = _served("t=600&set=heater:1&schedule=300:fan:1")
+def test_its_route_serves_the_document(simulator: Simulator) -> None:
+    body = _served(simulator, "t=600&set=heater:1&schedule=300:fan:1")
 
     assert body["processes"] == [process.value for process in Process]
     commands = [
