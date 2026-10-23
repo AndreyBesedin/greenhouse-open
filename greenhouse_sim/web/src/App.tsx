@@ -1,173 +1,78 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { type BuildInfo, buildInfo } from "./buildInfo";
 import { ControlsHelp } from "./ControlsHelp";
-import { type CameraPose, framing, type PresetName, type PresetRequest } from "./camera";
+import type { PresetName, PresetRequest } from "./camera";
 import { CfdBoundaries } from "./cfd/CfdBoundaries";
 import { CfdLegend } from "./cfd/CfdLegend";
-import { cfdGeometryUrl, loadCfdGeometry } from "./cfd/geometry";
-import { daysEnded } from "./clock";
+import { useCfdBoundaries } from "./cfd/useCfdBoundaries";
 import { DisplayOptions } from "./DisplayOptions";
 import { CategoryLegend } from "./debug/CategoryLegend";
 import { categoriesIn } from "./debug/categories";
-import { sceneDimensionOverlays } from "./debug/dimensions";
-import {
-  ALL_OVERLAYS,
-  type OverlayToggles,
-  sceneOverlaysDrawn,
-  selectionOverlays,
-  shownPrimitives,
-} from "./debug/overlays";
+import { sceneOverlaysDrawn } from "./debug/overlays";
 import { ScalarLegend } from "./debug/ScalarLegend";
-import type { ScalarRange } from "./debug/scalar";
-import { colouringBy, scalarProperties } from "./debug/scalar";
+import { useDisplayOptions } from "./debug/useDisplayOptions";
+import { useSceneOverlays } from "./debug/useSceneOverlays";
 import { arrowSpacing } from "./fields/arrows";
-import type { FieldView } from "./fields/display";
-import { defaultSlice, type HeldRanges, heldThrough, quantityScale } from "./fields/drawing";
 import { FieldArrows } from "./fields/FieldArrows";
 import { FieldLegend } from "./fields/FieldLegend";
 import { FieldSlice } from "./fields/FieldSlice";
 import { FieldStreamlines } from "./fields/FieldStreamlines";
-import { glazingUrl, loadGlazing, withGlazing } from "./fields/glazing";
-import { houseAirUrl, loadHouseAir } from "./fields/HouseAir";
-import {
-  loadOpenings,
-  openingFlowOverlays,
-  openingsUrl,
-  withOpeningFlows,
-} from "./fields/openingFlows";
-import { loadProbeCharts, probeChartsUrl } from "./fields/ProbeCharts";
-import { MAX_PROBES, probeOverlays } from "./fields/probes";
-import { CLIMATE_FIELD, fetchField, fieldUrl } from "./fields/source";
+import { MAX_PROBES } from "./fields/probes";
+import { CLIMATE_FIELD } from "./fields/source";
+import { useClimateLoads } from "./fields/useClimateLoads";
+import { useFieldDrawing } from "./fields/useFieldDrawing";
 import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
-import { type MoveDraft, MovePanel } from "./MovePanel";
+import { MovePanel } from "./MovePanel";
+import { PanelSide } from "./PanelSide";
 import { PlaybackPanel } from "./PlaybackPanel";
+import { usePanelFolds } from "./panelFolds";
 import { usePanelTheme } from "./panelTheme";
-import { cropPlantUrl, cropUrl, loadCropPlant, ORGAN_CROP, withCrop } from "./plants/crop";
-import type { GrowthSpeed } from "./plants/LabControls";
 import { LabPanels } from "./plants/LabPanels";
-import { type LabRun, PLANT_LAB_LAST_DAY, PLANT_LAB_POSE } from "./plants/lab";
-import { describePlantLight, loadPlantsLight, plantsLightUrl } from "./plants/light";
-import { plantNameOverlays } from "./plants/names";
+import { type LabRun, PLANT_LAB_POSE } from "./plants/lab";
 import { PlantDays } from "./plants/PlantDays";
 import { PlantLight } from "./plants/PlantLight";
-import { loadRunManifest, loadServedVersion, runManifestUrl, VERSION_URL } from "./qaMode/manifest";
+import { useLabPlay } from "./plants/useLabPlay";
+import { usePlantLoads } from "./plants/usePlantLoads";
 import { useQaMode } from "./qaMode/mode";
 import { QaPanel } from "./qaMode/QaPanel";
-import { loadRunState, runStateUrl } from "./qaMode/state";
+import { useQaLoads } from "./qaMode/useQaLoads";
 import type { ViewSample } from "./readouts";
 import { ScenarioPanels } from "./ScenarioPanels";
-import { WhatAmISeeing, worldAxesLength } from "./SeenInTheView";
+import { WhatAmISeeing } from "./SeenInTheView";
 import { DEFAULT_LAYOUT, loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
-import { withProbes, withTargets, withTargetsSet, withTime } from "./scene/edits";
-import { equipmentUrl, governedLevels, loadEquipment, runningThermostat } from "./scene/equipment";
-import type { SceneEntity } from "./scene/generated/snapshotTypes";
-import {
-  baseLayout,
-  keptInside,
-  movableItem,
-  movesBetween,
-  movesIn,
-  NO_OFFSET,
-  type Offset,
-  plus,
-  sameLayout,
-  shifted,
-} from "./scene/moves";
-import { commandPlayback, followedMoment, setPlaybackTargets, usePlayback } from "./scene/playback";
-import { runApartFromItsMoment, runsSomething, scenarioRun } from "./scene/run";
-import {
-  changesQuery,
-  fetchScene,
-  keptDaily,
-  loadScene,
-  type SceneSource,
-  sceneRequest,
-  searchFor,
-  shownBy,
-  targetsFrom,
-  targetsText,
-  withItsAir,
-  withOwnDaily,
-} from "./scene/source";
+import { keptDaily, withItsAir, withOwnDaily, withProbes, withTargetsSet } from "./scene/edits";
+import { runningThermostat } from "./scene/equipment";
+import { baseLayout } from "./scene/moves";
+import { commandPlayback, setPlaybackTargets } from "./scene/playback";
+import { runApartFromItsMoment, scenarioRun } from "./scene/run";
+import { type SceneSource, searchFor, shownBy } from "./scene/source";
+import { useDrawnSnapshot } from "./scene/useDrawnSnapshot";
+import { useFollow, withoutRunChanges } from "./scene/useFollow";
+import { useFollowFraming } from "./scene/useFollowFraming";
 import { useLiveCommands } from "./scene/useLiveCommands";
 import { useLiveScene } from "./scene/useLiveScene";
-import { useMoveSession } from "./scene/useMoveSession";
+import { useMoveDrag } from "./scene/useMoveDrag";
+import { useSceneLoads } from "./scene/useSceneLoads";
 import { type SetSource, useSource } from "./scene/useSource";
 import { entityOfOrgan, organOf, plantOf, selectedEntity } from "./selection";
 import { CameraFrames } from "./sensors/CameraFrames";
 import { CameraView } from "./sensors/CameraView";
-import { cameraOf, frustumOverlays } from "./sensors/camera";
-import { loadSensorReadings, sensorsKey } from "./sensors/readings";
+import { cameraOf } from "./sensors/camera";
 import { SensorPanel } from "./sensors/SensorPanel";
+import { useSensorReadings } from "./sensors/useSensorReadings";
 import { useSimulatorTime } from "./simulatorTime";
-import { type Pending, type Progress, useLoad, useLoadProgress } from "./useLoad";
+import { drawn, failed, failureOf, useLoad } from "./useLoad";
 import { Viewport } from "./Viewport";
-import { sceneSunlight, sunPathOverlays } from "./weather/sunlight";
-import {
-  loadWeather,
-  loadWeatherDay,
-  sunOverlays,
-  weatherDayUrl,
-  weatherUrl,
-  windOverlays,
-} from "./weather/weather";
+import { useWeatherLoads } from "./weather/useWeatherLoads";
 import type { Point3 } from "./world";
 
-const MILLISECONDS_PER_SECOND = 1000;
 // A clicked probe is placed this high above the ground, until changed: about
 // a crop's height.
 const DEFAULT_PROBE_HEIGHT_M = 1;
 const EMPTY_PROBES: Point3[] = [];
-const NO_OPENINGS: readonly string[] = [];
-// How near the camera may stand to the pose framed for it, in metres, and
-// still be taken as not moved since: the HUD samples it as drawn.
-const FRAMED_STILL_M = 0.01;
-
-function samePoint(a: Point3, b: Point3): boolean {
-  return a.x === b.x && a.y === b.y && a.z === b.z;
-}
-
-function samePose(a: CameraPose, b: CameraPose): boolean {
-  return samePoint(a.position, b.position) && samePoint(a.target, b.target);
-}
-
-/** The window's width over its height, as it changes. */
-function useWindowAspect(): number {
-  const [aspect, setAspect] = useState(() => window.innerWidth / window.innerHeight);
-  useEffect(() => {
-    const resized = () => setAspect(window.innerWidth / window.innerHeight);
-    window.addEventListener("resize", resized);
-    return () => window.removeEventListener("resize", resized);
-  }, []);
-  return aspect;
-}
-
-/** What a part of the view draws: the latest of it that loaded, kept while
- * the next is on its way and when the next fails, or else how its latest
- * request stands. */
-function drawn<T extends { status: string }>({ shown, latest }: Progress<T>): T | Pending {
-  return shown ?? latest;
-}
-
-/** Whether a part's latest request failed. */
-function failed(latest: { status: string }): boolean {
-  return latest.status === "unavailable" || latest.status === "rejected";
-}
-
-/** Why a part's latest request failed, in words, if it did. */
-function failureOf(part: string, latest: { status: string }): string | null {
-  if (latest.status === "unavailable" && "reason" in latest) {
-    return `the ${part} is not available (${String(latest.reason)})`;
-  }
-  if (latest.status === "rejected" && "problems" in latest && Array.isArray(latest.problems)) {
-    return `the ${part} was refused (${latest.problems.join("; ")})`;
-  }
-  return null;
-}
-
 export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [addressed, setAddressed] = useSource();
   // Opened with nothing chosen, at the bare address, the viewer starts with
@@ -175,6 +80,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [chooseFirst] = useState(() => searchFor(addressed) === "");
   // How the panels look (#208): dark unless the person chose light.
   const [panelTheme, setPanelTheme] = usePanelTheme();
+  // The sides whose panels are folded to a stripe at the view's edge (#304).
+  const [folded, toggleFold, unfold] = usePanelFolds();
   // Whether the viewer shows what the simulator knows and a policy never
   // sees (P09.6): only QA mode asks for truth.
   const [qaMode, setQaMode] = useQaMode();
@@ -207,32 +114,16 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // Whether a click places a probe, and how high.
   const [placingProbes, setPlacingProbes] = useState(false);
   const [playingClimate, setPlayingClimate] = useState(false);
-  // Whether sensors' readings are shown as they err, or, in QA mode, as clean
-  // ones'.
-  const [sensorsImperfect, setSensorsImperfect] = useState(true);
   const [probeHeight, setProbeHeight] = useState(DEFAULT_PROBE_HEIGHT_M);
-  // A range the viewer chose for the field's colours, in place of its own.
-  const [fieldRange, setFieldRange] = useState<ScalarRange | null>(null);
-  // The colour ranges a climate run's moments have reached, so far.
-  const [heldRanges, setHeldRanges] = useState<HeldRanges | null>(null);
   const [presetRequest, setPresetRequest] = useState<PresetRequest | null>(null);
   const [sample, setSample] = useState<ViewSample | null>(null);
   const [pointer, setPointer] = useState<Point3 | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [overlayToggles, setOverlayToggles] = useState<OverlayToggles>(ALL_OVERLAYS);
-  const [colourBy, setColourBy] = useState<string | null>(null);
-  const [showDimensions, setShowDimensions] = useState(false);
-  const [byCategory, setByCategory] = useState(false);
-  // The plant lab's play, its speed in days a second, and its plants' names.
-  const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState<GrowthSpeed>(1);
+  // Whether the plant lab names its plants.
   const [showPlantNames, setShowPlantNames] = useState(false);
   const liveScenario = source.kind === "live" ? source.scenarioId : null;
   const live = useLiveScene(liveScenario);
   const commands = useLiveCommands(liveScenario);
-  // The drag moving the selected item in a Move session (#271), how far
-  // from where the session draws it.
-  const [dragging, setDragging] = useState<{ entityId: string; by: Offset } | null>(null);
 
   // What a view starts with once another is shown, chosen or come back to
   // with Back and Forward (#201): nothing selected, unless another layout of
@@ -255,45 +146,11 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     }
     setPlaying(false);
     setPlayingClimate(false);
-    setColourBy(null);
+    display.setColourBy(null);
     if (to.kind !== "scenario" || to.probes === undefined) {
       setPlacingProbes(false);
     }
   }
-  // Another scene, scenario, layout or the lab, however it came to be shown.
-  const [lastShown, setLastShown] = useState(source);
-  if (shownBy(source) !== shownBy(lastShown)) {
-    setLastShown(source);
-    startAfresh(lastShown, source);
-  }
-
-  // A scenario reopened by its sliders, or the plant lab on another day,
-  // keeps its scene on show until the next arrives; any other change of
-  // scene starts from loading.
-  const openingIds = summary?.openings ?? NO_OPENINGS;
-  // A thermostat runs its heater by the house's air (P10.3), which only the
-  // run knows: the scene draws the heater as the run has it at the moment.
-  const equipment = useLoad(
-    source.kind === "scenario" && summary?.thermostat
-      ? equipmentUrl(source.scenarioId, scenarioRun(source))
-      : null,
-    loadEquipment,
-  );
-  const governed = governedLevels(equipment);
-  const sceneAsked = sceneRequest(source, openingIds, governed);
-  const sceneProgress = useLoadProgress(
-    sceneAsked,
-    (_url, fetchFn) => loadScene(source, fetchFn, openingIds, governed),
-    {
-      group:
-        source.kind === "scenario"
-          ? `scenario ${source.scenarioId}`
-          : source.kind === "plants"
-            ? "plants"
-            : (sceneAsked ?? ""),
-    },
-  );
-  const scene = drawn(sceneProgress);
 
   // The scenario's run drawn, every part of which is asked for under its
   // layout, equipment, openings, schedule, moment and weather; and the same
@@ -302,83 +159,39 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const climate = source.kind === "scenario" && source.field === CLIMATE_FIELD ? run : null;
   // The moment drawn, in seconds into the climate run.
   const moment = run?.time ?? 0;
-  // A climate run, apart from its moments: its colours keep the widest range
-  // its moments have reached, so that a slice keeps its colours as the run
-  // plays and goes back. Another run starts afresh.
+  // A climate run, apart from its moments, whose colours its field keeps.
   const climateRun = climate === null ? null : runApartFromItsMoment(climate);
   const probes = source.kind === "scenario" ? (source.probes ?? EMPTY_PROBES) : EMPTY_PROBES;
 
-  // A crop grown organ by organ, as it stands at the moment drawn, in place
-  // of its transplants once a day has ended; the last stays on show until
-  // the next day's arrives, and when the next day's fails.
-  const organCrop = summary?.crop_model === ORGAN_CROP;
-  const cropProgress = useLoadProgress(
-    run === null || !organCrop || daysEnded(moment) === 0 ? null : cropUrl(run),
-    fetchScene,
-    { group: run === null ? "" : `crop ${run.scenarioId}` },
-  );
+  const { equipment, sceneProgress, cropProgress, organCrop } = useSceneLoads(source, summary, run);
+  const scene = drawn(sceneProgress);
   const crop = drawn(cropProgress);
-
-  // The scenario's field, drawn over its scene, and another compared with it
-  // at the probes; the last of each stays on show until the next arrives,
-  // and the field's when the next fails.
+  const {
+    fieldProgress,
+    field,
+    compared,
+    fieldView,
+    loadedField,
+    fieldSlice,
+    scaleQuantity,
+    fieldScale,
+    fieldColours,
+    setFieldRange,
+  } = useFieldDrawing(source, run, climateRun);
   const fieldName = source.kind === "scenario" ? (source.field ?? null) : null;
-  const fieldProgress = useLoadProgress(
-    run === null || fieldName === null ? null : fieldUrl(run.scenarioId, fieldName, run),
-    fetchField,
-    {
-      onAnswer: (state) => {
-        if (climateRun !== null && state.status === "loaded") {
-          setHeldRanges((held) => heldThrough(held, climateRun, state.field));
-        }
-      },
-    },
-  );
-  const field = drawn(fieldProgress);
 
-  // A run followed as it is played back (P10.2, decision 0041): the moment
-  // drawn is the playback's clock, in whole minutes, moved on once the moment
-  // asked for before has arrived, so that a slow day is never skipped past
-  // half drawn; the run's own play stands aside.
-  const followed = source.kind === "scenario" && source.follow ? source.scenarioId : null;
-  const [playback, setPlayback] = usePlayback(followed);
-  const clockMoment = playback.status === "loaded" ? followedMoment(playback.state) : null;
-  const askedMoment = source.kind === "scenario" ? (source.time ?? 0) : null;
-  const shownMoment = fieldProgress.shown?.field.timeS ?? null;
-  const drawingField = fieldName !== null;
-  // A moment whose field failed has arrived as far as it will: the view
-  // moves on with the clock, and asks for the next, rather than wait on it.
-  const fieldFailed = failed(fieldProgress.latest);
-  useEffect(() => {
-    if (followed === null || clockMoment === null || clockMoment === askedMoment) {
-      return;
-    }
-    if (drawingField && shownMoment !== askedMoment && !fieldFailed) {
-      return;
-    }
-    setPlayingClimate(false);
-    setSource((current) =>
-      current.kind === "scenario" ? withTime(current, clockMoment) : current,
-    );
-  }, [followed, clockMoment, askedMoment, shownMoment, drawingField, fieldFailed, setSource]);
-  // Followed, the run drawn changes its targets as the run played back does
-  // (#274, decision 0043), so that every part of it is asked for with them.
-  const playedTargets = playback.status === "loaded" ? targetsText(playback.state.targets) : null;
-  useEffect(() => {
-    if (followed === null || playedTargets === null) {
-      return;
-    }
-    setSource((current) =>
-      current.kind === "scenario" && targetsText(current.targets) !== playedTargets
-        ? withTargets(current, targetsFrom(playedTargets) ?? [])
-        : current,
-    );
-  }, [followed, playedTargets, setSource]);
-  // What the view changes of the scenario's own run, which is the one
-  // played back: any of these makes it another run.
-  const playedLayout = playback.status === "loaded" ? playback.state.layout : DEFAULT_LAYOUT;
-  const anotherRun =
-    addressed.kind === "scenario" && followed !== null ? runChanges(addressed, playedLayout) : [];
+  // A run followed as it is played back (P10.2, decision 0041); the run's own
+  // play stands aside as the clock moves the moment drawn on.
+  const stopClimatePlay = useCallback(() => setPlayingClimate(false), []);
+  const { followed, playback, setPlayback, playedLayout, anotherRun } = useFollow({
+    source,
+    addressed,
+    setSource,
+    drawingField: fieldName !== null,
+    fieldShownMoment: fieldProgress.shown?.field.timeS ?? null,
+    fieldFailed: failed(fieldProgress.latest),
+    onClockMoved: stopClimatePlay,
+  });
   // What of the moment asked for failed to arrive, while something else of
   // it is drawn in its place: the scene and the field each say why when
   // nothing of them is drawn; the crop never says so itself; nor does a
@@ -392,73 +205,10 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const momentFailed = [sceneProgress, cropProgress, fieldProgress].some(({ latest }) =>
     failed(latest),
   );
-  const compareName = source.kind === "scenario" ? (source.compare ?? null) : null;
-  const compared = useLoad(
-    run === null || compareName === null ? null : fieldUrl(run.scenarioId, compareName, run),
-    fetchField,
-  );
-
-  // In QA mode, the simulator's version and commit, as it says itself, and
-  // what the scenario's run drawn is made from.
-  const served = useLoad(qaMode ? VERSION_URL : null, loadServedVersion);
-  const runManifest = useLoad(
-    !qaMode || run === null ? null : runManifestUrl(run.scenarioId, run),
-    loadRunManifest,
-  );
-  // In QA mode, what each process of the run drawn holds at its moment; the
-  // last stays on show until the next arrives.
-  const runState = useLoad(
-    !qaMode || run === null ? null : runStateUrl(run.scenarioId, run),
-    loadRunState,
-    { group: run === null ? "" : `state ${run.scenarioId}` },
-  );
-
-  // The weather outside a scenario at the moment drawn, and through its
-  // day, for its chart.
-  const weather = useLoad(
-    run === null ? null : weatherUrl(run.scenarioId, moment, run.weather),
-    loadWeather,
-  );
-  const weatherDay = useLoad(
-    run === null ? null : weatherDayUrl(run.scenarioId, moment, run.weather),
-    loadWeatherDay,
-  );
-
-  // What the probes read through the climate run drawn, and through the
-  // same run all off, up to the moment drawn.
-  const probeCharts = useLoad(
-    climate === null || probes.length === 0
-      ? null
-      : probeChartsUrl(climate.scenarioId, { ...climate, probes }),
-    loadProbeCharts,
-  );
-  // The house's air as one volume through the climate run drawn, and the
-  // same run all off, up to the moment drawn.
-  const houseAir = useLoad(
-    climate === null ? null : houseAirUrl(climate.scenarioId, climate),
-    loadHouseAir,
-  );
-  // The glazing at the moment drawn, each wall's and roof slope's
-  // temperature, for "Colour by".
-  const glazing = useLoad(
-    climate === null ? null : glazingUrl(climate.scenarioId, climate),
-    loadGlazing,
-  );
-  // What the open doors and vents pass at the moment drawn, for "Colour by"
-  // and their arrows.
-  const openingFlows = useLoad(
-    climate === null ? null : openingsUrl(climate.scenarioId, climate),
-    loadOpenings,
-  );
-
-  // The boundaries a CFD solver is given, changed as the scene is, drawn
-  // over it when asked for; the last stays on show until the next arrives.
-  // How hard its equipment runs does not change them.
-  const cfdUrl =
-    source.kind === "scenario" && source.cfdBoundaries
-      ? cfdGeometryUrl(source.scenarioId, changesQuery({ ...source, levels: {} }, "?"))
-      : null;
-  const cfd = useLoad(cfdUrl, loadCfdGeometry);
+  const { served, runManifest, runState } = useQaLoads(qaMode, run);
+  const { weather, weatherDay } = useWeatherLoads(run);
+  const { probeCharts, houseAir, glazing, openingFlows } = useClimateLoads(climate, probes);
+  const cfd = useCfdBoundaries(source);
 
   // A click on the view places probes too: placing stops once all are placed.
   function setProbes(next: Point3[]): void {
@@ -491,370 +241,84 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const shown = source.kind === "live" ? live.scene : scene;
   const shownSnapshot = shown.status === "loaded" ? shown.snapshot : null;
   const grown = crop.status === "loaded" ? crop.snapshot : null;
-  // The scene, its crop as it stands at the moment drawn, its glazed
-  // surfaces carrying their temperatures and its open doors and vents their
-  // flows while a climate run is drawn.
-  const snapshot = useMemo(() => {
-    if (shownSnapshot === null) {
-      return null;
-    }
-    const cropped = grown === null ? shownSnapshot : withCrop(shownSnapshot, grown);
-    const glazed = glazing.status === "loaded" ? withGlazing(cropped, glazing.glazing) : cropped;
-    return openingFlows.status === "loaded"
-      ? withOpeningFlows(glazed, openingFlows.openings)
-      : glazed;
-  }, [shownSnapshot, grown, glazing, openingFlows]);
-  const flowing = openingFlows.status === "loaded" ? openingFlows.openings : null;
+  const snapshot = useDrawnSnapshot(shownSnapshot, grown, glazing, openingFlows);
   // Overlays and colours are worked out from the scene, which they only read.
   const selected = selectedEntity(snapshot, selectedId);
   // The plant selected: a plant drawn whole, or any part of one.
   const selectedPlant =
     selected === null ? null : selected.kind === "PLANT" ? selected.entity_id : plantOf(selected);
-  // The light on the plants at the moment drawn, while a plant is selected
-  // in a climate run's view, or in QA mode, which labels every plant with
-  // it; the last stays on show until the next arrives.
-  const plantsLight = useLoad(
-    climate === null || (selectedPlant === null && !qaMode)
-      ? null
-      : plantsLightUrl(climate.scenarioId, climate),
-    loadPlantsLight,
-  );
-  // The plant selected in a crop grown organ by organ, as it stands at the
-  // moment drawn, with each day it lived.
-  const cropPlant = useLoad(
-    run === null || !organCrop || selectedPlant === null ? null : cropPlantUrl(run, selectedPlant),
-    loadCropPlant,
-  );
+  const { plantsLight, cropPlant } = usePlantLoads({
+    run,
+    climate,
+    organCrop,
+    selectedPlant,
+    qaMode,
+  });
   const selectedCamera = selected === null ? null : cameraOf(selected);
 
-  // The selected item, if it is equipment or a sensor a scenario's view can
-  // move, and whether it is being moved; the house it is kept inside.
-  const movable = source.kind === "scenario" && selected !== null ? movableItem(selected) : null;
-  const layoutShown = source.kind === "scenario" ? source.layout : undefined;
-  // A Move session's moves, held until they are applied, all at once; while
-  // the view follows the run played back, it starts over with them.
-  const moves = useMoveSession({
+  useFollowFraming({
+    followed,
+    latestScene: sceneProgress.latest,
+    camera: source.kind === "scenario" ? source.camera : undefined,
+    cameraAt: sample?.camera ?? null,
+    setSource,
+  });
+  // Equipment and sensors moved in a Move session (#209, #271), and the
+  // Move panel, for the selected item if it can be moved and for a session
+  // under way, whatever is selected; starting one stops placing probes.
+  const {
+    nudged,
+    drawnSelected,
+    panel: movePanelProps,
+    drag,
+  } = useMoveDrag({
     source,
     setSource,
-    defaultLayout: DEFAULT_LAYOUT,
     followed,
     onPlayback: setPlayback,
     sceneLoading: sceneProgress.latest.status === "loading",
+    snapshot,
+    selected,
+    onStart: () => setPlacingProbes(false),
   });
-  const moveSession = moves.session;
-  if (dragging !== null && (moveSession === null || moveSession.applying)) {
-    setDragging(null);
-  }
-  const moving =
-    movable !== null && selected !== null && moveSession !== null && !moveSession.applying;
-  const house = useMemo(
-    () => snapshot?.entities.find((entity) => entity.kind === "GREENHOUSE_BOUNDS") ?? null,
-    [snapshot],
-  );
-  // A run followed without a camera of its own is shown whole, its house
-  // framed, rather than from its corner at the world's origin, where the
-  // presets look; the address keeps the pose. Framed from the scene the
-  // latest request asked for, never one kept on show while another envelope
-  // is on its way; framed again as the window changes shape, as when it is
-  // moved beside a consumer's, while the camera stands where it was framed,
-  // never once a person has moved it.
-  const latestScene = sceneProgress.latest;
-  const latestBounds = useMemo(() => {
-    const bounds =
-      latestScene.status === "loaded"
-        ? latestScene.snapshot.entities.find((entity) => entity.kind === "GREENHOUSE_BOUNDS")
-        : undefined;
-    return bounds?.shape.shape === "box"
-      ? {
-          base: bounds.transform.position,
-          size: { x: bounds.shape.size_x, y: bounds.shape.size_y, z: bounds.shape.size_z },
-        }
-      : null;
-  }, [latestScene]);
-  const aspect = useWindowAspect();
-  const followedCamera = source.kind === "scenario" ? source.camera : undefined;
-  // The pose last framed here, to tell it from one a person chose.
-  const [framed, setFramed] = useState<CameraPose | null>(null);
-  const cameraAt = sample?.camera ?? null;
-  useEffect(() => {
-    if (followed === null || latestBounds === null) {
-      return;
-    }
-    const untouched =
-      followedCamera === undefined ||
-      (framed !== null &&
-        samePose(followedCamera, framed) &&
-        cameraAt !== null &&
-        Math.hypot(
-          cameraAt.x - framed.position.x,
-          cameraAt.y - framed.position.y,
-          cameraAt.z - framed.position.z,
-        ) < FRAMED_STILL_M);
-    if (!untouched) {
-      return;
-    }
-    const pose = framing(latestBounds.base, latestBounds.size, aspect);
-    if (followedCamera !== undefined && samePose(followedCamera, pose)) {
-      return;
-    }
-    setFramed(pose);
-    setSource((current) =>
-      current.kind === "scenario" && current.follow ? { ...current, camera: pose } : current,
-    );
-  }, [followed, latestBounds, aspect, followedCamera, framed, cameraAt, setSource]);
-  // Each item a Move session moves, by entity: where the session draws it,
-  // from where the scene shown places it, the scene of the layout the
-  // session started from; the selected item's drag under way added.
-  const itemEntities = useMemo(() => {
-    const entities = new Map<string, SceneEntity>();
-    for (const entity of snapshot?.entities ?? []) {
-      const item = movableItem(entity);
-      if (item !== null) {
-        entities.set(item, entity);
-      }
-    }
-    return entities;
-  }, [snapshot]);
-  const sessionMoves = moveSession === null ? {} : movesBetween(moveSession.from, moveSession.to);
-  const nudged: Record<string, Offset> = {};
-  for (const [item, by] of Object.entries(sessionMoves)) {
-    const entity = itemEntities.get(item);
-    if (entity !== undefined) {
-      nudged[entity.entity_id] = by;
-    }
-  }
-  const placedBy = movable === null ? null : (sessionMoves[movable] ?? null);
-  if (dragging !== null && selected !== null && dragging.entityId === selected.entity_id) {
-    nudged[dragging.entityId] = plus(placedBy ?? NO_OFFSET, dragging.by);
-  }
-  const selectedNudge = selected === null ? undefined : nudged[selected.entity_id];
-  const drawnSelected =
-    selected === null || selectedNudge === undefined ? selected : shifted(selected, selectedNudge);
-  // How far the selected item stands from where its layout places it, as the
-  // session draws it, a drag under way included.
-  const layoutMoves = movesIn(moveSession === null ? layoutShown : moveSession.to);
-  const standsBy = (() => {
-    if (movable === null) {
-      return null;
-    }
-    const placed = layoutMoves[movable] ?? null;
-    const by = dragging !== null && dragging.entityId === selected?.entity_id ? dragging.by : null;
-    const total = by === null ? placed : plus(placed ?? NO_OFFSET, by);
-    return total === null || (total.dx === 0 && total.dy === 0) ? null : total;
-  })();
+  const movePanel = movePanelProps === null ? null : <MovePanel {...movePanelProps} />;
 
-  // A session's moves as the Move panel lists them, by what each item is
-  // called, and what applying them does.
-  const moveDraft: MoveDraft | null =
-    moveSession === null
-      ? null
-      : {
-          moves: Object.entries(movesIn(moveSession.to))
-            .filter(([, by]) => by.dx !== 0 || by.dy !== 0)
-            .map(([item, by]) => ({ item, label: itemEntities.get(item)?.label ?? item, by })),
-          changed: moves.changed,
-          following: followed !== null,
-          applying: moveSession.applying,
-          failure: moveSession.failure,
-        };
-  function dropMove(by: Offset | null): void {
-    setDragging(null);
-    if (movable !== null && by !== null && (by.dx !== 0 || by.dy !== 0)) {
-      moves.move(movable, by);
-    }
-  }
-
-  // Escape cancels a Move session's moves, unless it cancels a drag
-  // (`MoveDrag`).
-  const drafting = moveSession !== null && !moveSession.applying;
-  const cancelMoves = moves.cancel;
-  useEffect(() => {
-    if (!drafting) {
-      return;
-    }
-    function cancel(event: KeyboardEvent): void {
-      if (event.key === "Escape" && !event.defaultPrevented) {
-        cancelMoves();
-      }
-    }
-    window.addEventListener("keydown", cancel);
-    return () => window.removeEventListener("keydown", cancel);
-  }, [drafting, cancelMoves]);
-
-  // The Move panel: for the selected item, if it can be moved, and for a
-  // session under way, whatever is selected.
-  const movePanel =
-    source.kind === "scenario" && (movable !== null || moveDraft !== null) ? (
-      <MovePanel
-        item={
-          movable === null || selected === null
-            ? null
-            : { label: selected.label ?? movable, movedBy: standsBy }
-        }
-        draft={moveDraft}
-        onMove={() => {
-          setPlacingProbes(false);
-          moves.start();
-        }}
-        onPutBack={moves.putBack}
-        onPutEverythingBack={moves.putEverythingBack}
-        onApply={() => void moves.apply()}
-        onCancel={moves.cancel}
-      />
-    ) : null;
-
-  // The run's observation log up to the moment drawn, while a sensor or a
-  // camera is selected, and, in QA mode only, what its sensors truly
-  // sampled; as clean sensors would have made it, if QA mode asks.
-  const sensorSelected = selected?.kind === "SENSOR" || selected?.kind === "CAMERA";
-  const sensorRun = sensorSelected ? run : null;
-  const clean = qaMode && !sensorsImperfect;
-  const sensorReadings = useLoad(
-    sensorRun === null
-      ? null
-      : { scenarioId: sensorRun.scenarioId, run: { ...sensorRun, clean }, truth: qaMode },
-    loadSensorReadings,
-    { key: sensorsKey },
-  );
-
-  // What the sensors read through the same run all off, when something runs.
-  const offReadings = useLoad(
-    sensorRun === null || !runsSomething(sensorRun)
-      ? null
-      : {
-          scenarioId: sensorRun.scenarioId,
-          run: {
-            ...sensorRun,
-            levels: undefined,
-            schedule: undefined,
-            daily: [],
-            clean,
-          },
-          truth: false,
-        },
-    loadSensorReadings,
-    { key: sensorsKey },
-  );
+  // The run's observation log while a sensor or a camera is selected.
+  const sensors = useSensorReadings(selected, run, qaMode);
 
   // Every plant's name, in the plant lab if asked for, and in a scenario's
   // view in QA mode, with its day's light in a climate run's.
   const showingNames =
     (source.kind === "plants" && showPlantNames) || (source.kind === "scenario" && qaMode);
-  const lightOn = qaMode && plantsLight.status === "loaded" ? plantsLight.light : null;
-  const probedField = field.status === "loaded" ? field.field : null;
-  const outside = weather.status === "loaded" ? weather.weather : null;
+  const display = useDisplayOptions(snapshot);
   // A climate run's view is lit by the sun, and shows its path through the
-  // day; every other view keeps the fixed light, so that it draws as before.
+  // day.
   const sunlit = source.kind === "scenario" && source.field === CLIMATE_FIELD;
-  const sunlight = useMemo(
-    () =>
-      !sunlit || snapshot === null || outside === null ? null : sceneSunlight(snapshot, outside),
-    [sunlit, snapshot, outside],
-  );
-  const sunsDay = sunlit && weatherDay.status === "loaded" ? weatherDay.day : null;
-  // Playing, the lab moves on a day once the day asked for is on show, at
-  // most as fast as its speed, and stops on its last day.
-  const labDay = source.kind === "plants" ? source.day : null;
-  const shownDay = snapshot === null ? null : snapshot.simulated_day;
-  useEffect(() => {
-    if (!playing || labDay === null || shownDay !== labDay) {
-      return;
-    }
-    if (labDay >= PLANT_LAB_LAST_DAY) {
-      setPlaying(false);
-      return;
-    }
-    const next = window.setTimeout(() => {
-      setSource((current) => {
-        if (current.kind !== "plants") {
-          return current;
-        }
-        return { ...current, day: labDay + 1 };
-      });
-    }, MILLISECONDS_PER_SECOND / speed);
-    return () => window.clearTimeout(next);
-  }, [playing, labDay, shownDay, speed, setSource]);
-  const colourProperties = useMemo(
-    () => (snapshot === null ? [] : scalarProperties(snapshot)),
-    [snapshot],
-  );
-  const colouring = useMemo(
-    () => (snapshot === null || colourBy === null ? null : colouringBy(snapshot, colourBy)),
-    [snapshot, colourBy],
-  );
-  // How the field is drawn, and the scale its colours run over: air speed for
-  // arrows and streamlines, the slice's quantity for a slice.
-  const fieldView: FieldView =
-    source.kind === "scenario" ? (source.fieldView ?? "arrows") : "arrows";
-  const loadedField = field.status === "loaded" ? field.field : null;
-  // Worked out once for each field and choice, not on every render: the
-  // layers redraw, and trace streamlines afresh, whenever these change.
-  const askedSlice = source.kind === "scenario" ? source.slice : undefined;
-  const fieldSlice = useMemo(
-    () =>
-      fieldView === "slice" && loadedField !== null
-        ? (askedSlice ?? defaultSlice(loadedField))
-        : null,
-    [fieldView, loadedField, askedSlice],
-  );
-  const scaleQuantity = fieldSlice === null ? "speed" : fieldSlice.quantity;
-  // The sun's two halves load on their own: the sun now, above the horizon
-  // only, and its day's path; the card says which of them is drawn.
-  const sunNow = useMemo(
-    () => (snapshot === null || outside === null ? [] : sunOverlays(snapshot, outside)),
-    [snapshot, outside],
-  );
-  const sunPath = useMemo(
-    () => (snapshot === null || sunsDay === null ? [] : sunPathOverlays(snapshot, sunsDay)),
-    [snapshot, sunsDay],
-  );
-  // What each overlay over the scene draws, shown or hidden: hiding one
-  // leaves out its primitives, never what they are drawn from.
-  const scenePrimitives = useMemo(
-    () => ({
-      openingFlows:
-        snapshot === null || flowing === null ? [] : openingFlowOverlays(snapshot, flowing),
-      wind: snapshot === null || outside === null ? [] : windOverlays(snapshot, outside),
-      sun: [...sunNow, ...sunPath],
-      cameraViews: snapshot === null ? [] : frustumOverlays(snapshot),
-      probes:
-        probedField === null
-          ? []
-          : probeOverlays(probes, probedField, qaMode ? scaleQuantity : null),
-    }),
-    [snapshot, flowing, outside, sunNow, sunPath, probes, probedField, qaMode, scaleQuantity],
-  );
-  const overlays = useMemo(
-    () => [
-      ...(drawnSelected === null ? [] : selectionOverlays(drawnSelected, overlayToggles)),
-      ...(snapshot !== null && showDimensions ? sceneDimensionOverlays(snapshot) : []),
-      ...(snapshot !== null && showingNames
-        ? plantNameOverlays(snapshot, (plantId) =>
-            lightOn === null ? null : (describePlantLight(lightOn, plantId)?.day ?? null),
-          )
-        : []),
-      ...shownPrimitives(scenePrimitives, overlayToggles),
-    ],
-    [
-      drawnSelected,
-      overlayToggles,
+  const { sunlight, sunNow, sunPath, scenePrimitives, overlays, kindsShown, axesLengthM } =
+    useSceneOverlays({
       snapshot,
-      showDimensions,
+      sunlit,
+      outside: weather.status === "loaded" ? weather.weather : null,
+      sunsDay: sunlit && weatherDay.status === "loaded" ? weatherDay.day : null,
+      flowing: openingFlows.status === "loaded" ? openingFlows.openings : null,
+      probes,
+      probedField: field.status === "loaded" ? field.field : null,
+      probeQuantity: qaMode ? scaleQuantity : null,
+      drawnSelected,
+      toggles: display.toggles,
+      showDimensions: display.showDimensions,
       showingNames,
-      lightOn,
-      scenePrimitives,
-    ],
-  );
-
-  const fieldScale = useMemo(
-    () => (loadedField === null ? null : quantityScale(loadedField, scaleQuantity)),
-    [loadedField, scaleQuantity],
-  );
-  const heldRange =
-    heldRanges !== null && heldRanges.run === climateRun
-      ? heldRanges.ranges[scaleQuantity]
-      : undefined;
-  const fieldColours = fieldScale === null ? null : (fieldRange ?? heldRange ?? fieldScale.range);
+      lightOn: qaMode && plantsLight.status === "loaded" ? plantsLight.light : null,
+    });
+  // The plant lab's play, a day at a time once the day asked for is on show.
+  const shownDay = snapshot === null ? null : snapshot.simulated_day;
+  const { playing, setPlaying, speed, setSpeed } = useLabPlay(source, shownDay, setSource);
+  // Another scene, scenario, layout or the lab, however it came to be shown.
+  const [lastShown, setLastShown] = useState(source);
+  if (shownBy(source) !== shownBy(lastShown)) {
+    setLastShown(source);
+    startAfresh(lastShown, source);
+  }
   const fieldLayer =
     loadedField === null || fieldColours === null ? null : fieldView === "streamlines" ? (
       <FieldStreamlines field={loadedField} range={fieldColours} />
@@ -866,13 +330,6 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // The overlays over the scene that have something to draw, which the
   // display options switch and "What am I seeing?" explains (#205).
   const overlaysDrawn = sceneOverlaysDrawn(scenePrimitives, fieldLayer !== null);
-  // The kinds the scene holds, and how long its world axes are, for what the
-  // card says the scene draws; the empty view draws its own axes.
-  const kindsShown = useMemo(
-    () => (snapshot === null ? null : new Set(snapshot.entities.map((entity) => entity.kind))),
-    [snapshot],
-  );
-  const axesLengthM = useMemo(() => worldAxesLength(snapshot), [snapshot]);
 
   const liveStatus: LiveStatus | null =
     source.kind === "live"
@@ -889,10 +346,10 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         snapshot={snapshot}
         presetRequest={presetRequest}
         selectedId={selectedId}
-        colouring={colouring}
+        colouring={display.colouring}
         overlays={overlays}
-        showBounds={showDimensions}
-        byCategory={byCategory}
+        showBounds={display.showDimensions}
+        byCategory={display.byCategory}
         sunlight={sunlight}
         initialPose={
           source.kind === "plants"
@@ -905,30 +362,18 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         onPointer={setPointer}
         onSelect={setSelectedId}
         onProbe={
-          placingProbes && probedField !== null
+          placingProbes && field.status === "loaded"
             ? (ground) => setProbes([...probes, { ...ground, z: probeHeight }])
             : null
         }
-        moving={
-          moving && selected !== null
-            ? {
-                heightM: selected.transform.position.z,
-                // From where the session draws the item.
-                shape: (by) =>
-                  keptInside(by, placedBy === null ? selected : shifted(selected, placedBy), house),
-                onDrag: (by) =>
-                  setDragging(by === null ? null : { entityId: selected.entity_id, by }),
-                onDrop: dropMove,
-              }
-            : null
-        }
+        moving={drag}
         nudged={nudged}
       >
-        {overlayToggles.airField && fieldLayer}
+        {display.toggles.airField && fieldLayer}
         {cfd.status === "loaded" && <CfdBoundaries geometry={cfd.geometry} />}
       </Viewport>
       <div className="viewer-panels">
-        <div className="panel-column">
+        <PanelSide side="info" folded={folded.has("info")} onToggle={() => toggleFold("info")}>
           <InfoPanel
             build={build}
             scenarios={scenarios}
@@ -942,17 +387,17 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
           >
             {snapshot !== null && (
               <DisplayOptions
-                colourProperties={colourProperties}
-                colourBy={colourBy}
-                onColourBy={setColourBy}
-                showDimensions={showDimensions}
-                onShowDimensions={setShowDimensions}
-                byCategory={byCategory}
-                onByCategory={setByCategory}
+                colourProperties={display.colourProperties}
+                colourBy={display.colourBy}
+                onColourBy={display.setColourBy}
+                showDimensions={display.showDimensions}
+                onShowDimensions={display.setShowDimensions}
+                byCategory={display.byCategory}
+                onByCategory={display.setByCategory}
                 drawn={overlaysDrawn}
                 fieldView={fieldView}
-                overlays={overlayToggles}
-                onOverlays={setOverlayToggles}
+                overlays={display.toggles}
+                onOverlays={display.setToggles}
                 qaMode={qaMode}
                 onQaMode={setQaMode}
               />
@@ -967,25 +412,6 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                   snapshot === null
                     ? null
                     : (id) => setSelectedId(`${snapshot.greenhouse_id}_${id}`)
-                }
-              />
-            )}
-            {followed !== null && (
-              <PlaybackPanel
-                load={playback}
-                days={summary?.duration_days ?? null}
-                changed={anotherRun}
-                onCommand={(command) => void commandPlayback(followed, command).then(setPlayback)}
-                onStart={() => void commandPlayback(followed, "start").then(setPlayback)}
-                onOwnRun={() => setSource((current) => withoutRunChanges(current, playedLayout))}
-                onStop={() =>
-                  setSource((current) => {
-                    if (current.kind !== "scenario") {
-                      return current;
-                    }
-                    const { follow: _, ...rest } = current;
-                    return rest;
-                  })
                 }
               />
             )}
@@ -1026,7 +452,31 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 onProbeHeight={setProbeHeight}
                 onPlayingClimate={setPlayingClimate}
                 onOwnRange={() => setFieldRange(null)}
-              />
+              >
+                {followed !== null && (
+                  <PlaybackPanel
+                    load={playback}
+                    days={summary?.duration_days ?? null}
+                    changed={anotherRun}
+                    onCommand={(command) =>
+                      void commandPlayback(followed, command).then(setPlayback)
+                    }
+                    onStart={() => void commandPlayback(followed, "start").then(setPlayback)}
+                    onOwnRun={() =>
+                      setSource((current) => withoutRunChanges(current, playedLayout))
+                    }
+                    onStop={() =>
+                      setSource((current) => {
+                        if (current.kind !== "scenario") {
+                          return current;
+                        }
+                        const { follow: _, ...rest } = current;
+                        return rest;
+                      })
+                    }
+                  />
+                )}
+              </ScenarioPanels>
             )}
             {source.kind === "plants" && (
               <LabPanels
@@ -1048,14 +498,14 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             <Inspector
               // Where it is drawn, a Move session's moves included.
               entity={drawnSelected ?? selected}
-              overlays={overlayToggles}
-              onOverlays={setOverlayToggles}
+              overlays={display.toggles}
+              onOverlays={display.setToggles}
               onClear={() => setSelectedId(null)}
             >
               {snapshot !== null && selectedCamera !== null && (
                 <>
                   <CameraView snapshot={snapshot} spec={selectedCamera} />
-                  <CameraFrames cameraId={selectedCamera.cameraId} state={sensorReadings} />
+                  <CameraFrames cameraId={selectedCamera.cameraId} state={sensors.readings} />
                 </>
               )}
               {selectedPlant !== null && <PlantLight plantId={selectedPlant} state={plantsLight} />}
@@ -1070,12 +520,12 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 <SensorPanel
                   sensorId={String(selected.properties.sensor_id)}
                   unit={String(selected.properties.unit)}
-                  state={sensorReadings}
-                  allOff={offReadings}
+                  state={sensors.readings}
+                  allOff={sensors.allOff}
                   until={moment}
                   qa={qaMode}
-                  imperfect={sensorsImperfect}
-                  onImperfect={setSensorsImperfect}
+                  imperfect={sensors.imperfect}
+                  onImperfect={sensors.setImperfect}
                 />
               )}
               {movePanel}
@@ -1084,8 +534,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             // A session's moves stay on show while nothing is selected.
             movePanel !== null && <div className="inspector">{movePanel}</div>
           )}
-        </div>
-        <div className="panel-column at-the-end">
+        </PanelSide>
+        <PanelSide side="view" folded={folded.has("view")} onToggle={() => toggleFold("view")}>
           <Hud
             sample={sample}
             pointer={pointer}
@@ -1095,29 +545,29 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             onCommand={commands.send}
           />
           <div className="legends">
-            <ControlsHelp />
+            <ControlsHelp onShow={() => unfold("view")} />
             <WhatAmISeeing
               view={{
                 drawn: overlaysDrawn,
-                overlays: overlayToggles,
+                overlays: display.toggles,
                 fieldView,
                 fieldScale,
                 fieldArrowSpacing: loadedField === null ? 1 : arrowSpacing(loadedField.grid.cells),
                 sun: { now: sunNow.length > 0, path: sunPath.length > 0 },
-                colourBy: colouring?.property ?? null,
-                byCategory: byCategory && snapshot !== null,
+                colourBy: display.colouring?.property ?? null,
+                byCategory: display.byCategory && snapshot !== null,
                 cfdBoundaries: cfd.status === "loaded",
-                dimensions: showDimensions && snapshot !== null,
+                dimensions: display.showDimensions && snapshot !== null,
                 kinds: kindsShown,
                 axesLengthM,
               }}
             />
-            {byCategory && snapshot !== null && (
+            {display.byCategory && snapshot !== null && (
               <CategoryLegend categories={categoriesIn(snapshot)} />
             )}
-            {colouring && <ScalarLegend colouring={colouring} />}
+            {display.colouring && <ScalarLegend colouring={display.colouring} />}
             {cfd.status === "loaded" && <CfdLegend geometry={cfd.geometry} />}
-            {fieldScale !== null && overlayToggles.airField && (
+            {fieldScale !== null && display.toggles.airField && (
               <FieldLegend
                 title={fieldScale.title}
                 unit={fieldScale.unit}
@@ -1127,49 +577,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
               />
             )}
           </div>
-        </div>
+        </PanelSide>
       </div>
     </main>
   );
-}
-
-type ScenarioOf<S> = Extract<S, { kind: "scenario" }>;
-
-/** What a view's address changes of the run played back, its scenario's own
- * with `played` for its layout (#271), in words: each makes the run drawn
- * another than the one played back. */
-function runChanges(source: ScenarioOf<SceneSource>, played: string): string[] {
-  const changes: [boolean, string][] = [
-    [!sameLayout(source.layout, played, DEFAULT_LAYOUT), "its layout"],
-    [source.weather !== undefined, "its weather"],
-    [source.clouds !== undefined, "its clouds"],
-    [source.wind !== undefined, "its wind"],
-    [(source.schedule?.length ?? 0) > 0, "its commands"],
-    [source.daily !== undefined, "its daily commands"],
-    [source.levels !== undefined, "its equipment"],
-    [source.openings !== undefined, "its openings"],
-    [source.envelope !== undefined, "its dimensions"],
-  ];
-  return changes.filter(([changed]) => changed).map(([, said]) => said);
-}
-
-/** A view of the run played back, its scenario's own with `played` for its
- * layout: without what would make it another. */
-function withoutRunChanges(source: SceneSource, played: string): SceneSource {
-  if (source.kind !== "scenario") {
-    return source;
-  }
-  const {
-    layout: _layout,
-    weather: _weather,
-    clouds: _clouds,
-    wind: _wind,
-    schedule: _schedule,
-    daily: _daily,
-    levels: _levels,
-    openings: _openings,
-    envelope: _envelope,
-    ...own
-  } = source;
-  return sameLayout(played, undefined, DEFAULT_LAYOUT) ? own : { ...own, layout: played };
 }

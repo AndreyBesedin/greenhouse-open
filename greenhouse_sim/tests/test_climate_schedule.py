@@ -16,16 +16,17 @@ from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.services import fields
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 
 
-def _climate(query: str) -> EnvironmentField:
-    response = respond("GET", f"/api/scenarios/climate_box/fields/climate{query}")
+def _climate(simulator: Simulator, query: str) -> EnvironmentField:
+    response = respond(simulator, "GET", f"/api/scenarios/climate_box/fields/climate{query}")
     assert response.status == 200, response.body
     return EnvironmentField.from_document(FieldDocument.model_validate(response.body))
 
 
-def _temperature(query: str) -> np.ndarray:
-    return _climate(query).channels[AirQuantity.TEMPERATURE]
+def _temperature(simulator: Simulator, query: str) -> np.ndarray:
+    return _climate(simulator, query).channels[AirQuantity.TEMPERATURE]
 
 
 def _same_air(first: np.ndarray, second: np.ndarray) -> None:
@@ -35,9 +36,9 @@ def _same_air(first: np.ndarray, second: np.ndarray) -> None:
     np.testing.assert_allclose(first, second, rtol=0, atol=1e-5)
 
 
-def test_scheduled_commands_switch_the_equipment_on_their_own() -> None:
-    scheduled = _climate("?schedule=60:fan:1,120:heater:1&t=600")
-    started = _climate("?set=fan:1,heater:1&t=600")
+def test_scheduled_commands_switch_the_equipment_on_their_own(simulator: Simulator) -> None:
+    scheduled = _climate(simulator, "?schedule=60:fan:1,120:heater:1&t=600")
+    started = _climate(simulator, "?set=fan:1,heater:1&t=600")
 
     assert np.abs(scheduled.channels[AirQuantity.VELOCITY]).max() > 4.0
     # Switched on a minute or two late, the house is a little cooler.
@@ -47,27 +48,43 @@ def test_scheduled_commands_switch_the_equipment_on_their_own() -> None:
             started.channels[AirQuantity.TEMPERATURE] - scheduled.channels[AirQuantity.TEMPERATURE]
         ).mean()
     )
-    assert np.abs(_climate("?schedule=60:fan:1&t=30").channels[AirQuantity.VELOCITY]).max() == 0.0
-
-
-def test_an_override_takes_effect_from_its_moment_on() -> None:
-    overridden = "?set=heater:1&schedule=300:heater:0"
-
-    _same_air(_temperature(f"{overridden}&t=300"), _temperature("?set=heater:1&t=300"))
     assert (
-        _temperature(f"{overridden}&t=600").mean() < _temperature("?set=heater:1&t=600").mean() - 3
+        np.abs(_climate(simulator, "?schedule=60:fan:1&t=30").channels[AirQuantity.VELOCITY]).max()
+        == 0.0
     )
 
 
-def test_the_later_command_at_a_moment_wins() -> None:
-    _same_air(_temperature("?schedule=0:heater:1,0:heater:0&t=300"), _temperature("?t=300"))
-    _same_air(_temperature("?set=heater:1&schedule=0:heater:0&t=300"), _temperature("?t=300"))
+def test_an_override_takes_effect_from_its_moment_on(simulator: Simulator) -> None:
+    overridden = "?set=heater:1&schedule=300:heater:0"
+
+    _same_air(
+        _temperature(simulator, f"{overridden}&t=300"),
+        _temperature(simulator, "?set=heater:1&t=300"),
+    )
+    assert (
+        _temperature(simulator, f"{overridden}&t=600").mean()
+        < _temperature(simulator, "?set=heater:1&t=600").mean() - 3
+    )
 
 
-def test_the_same_schedule_replays_to_the_same_air(afresh: Callable[[], None]) -> None:
+def test_the_later_command_at_a_moment_wins(simulator: Simulator) -> None:
+    _same_air(
+        _temperature(simulator, "?schedule=0:heater:1,0:heater:0&t=300"),
+        _temperature(simulator, "?t=300"),
+    )
+    _same_air(
+        _temperature(simulator, "?set=heater:1&schedule=0:heater:0&t=300"),
+        _temperature(simulator, "?t=300"),
+    )
+
+
+def test_the_same_schedule_replays_to_the_same_air(
+    simulator: Simulator, afresh: Callable[[], None]
+) -> None:
     query = "?set=fan:0.5&schedule=120:heater:1,240:dehumidifier:1,360:fan:0&t=480"
     # Each run afresh, not found among the kept runs.
     first = fields.field(
+        simulator,
         RunRequest(
             "climate_box",
             levels={"fan": 0.5},
@@ -77,7 +94,7 @@ def test_the_same_schedule_replays_to_the_same_air(afresh: Callable[[], None]) -
         time_s=480,
     )
     afresh()
-    again = _climate(query)
+    again = _climate(simulator, query)
 
     for quantity in (AirQuantity.VELOCITY, AirQuantity.TEMPERATURE, AirQuantity.HUMIDITY):
         np.testing.assert_array_equal(
@@ -103,8 +120,10 @@ def test_the_same_schedule_replays_to_the_same_air(afresh: Callable[[], None]) -
     ],
     ids=["unknown", "above full", "after the run", "before it", "not a moment", "no level"],
 )
-def test_commands_a_scenario_cannot_run_are_refused(query: str, error: str) -> None:
-    response = respond("GET", f"/api/scenarios/climate_box/fields/climate{query}")
+def test_commands_a_scenario_cannot_run_are_refused(
+    simulator: Simulator, query: str, error: str
+) -> None:
+    response = respond(simulator, "GET", f"/api/scenarios/climate_box/fields/climate{query}")
 
     assert (response.status, response.body) == (400, {"error": error})
 

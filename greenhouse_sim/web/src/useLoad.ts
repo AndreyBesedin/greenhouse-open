@@ -177,3 +177,26 @@ function useAnswers<R, T extends Settled>(
 
   return { key, group, answer, loaded };
 }
+
+/** What a part of the view draws: the latest of it that loaded, kept while
+ * the next is on its way and when the next fails, or else how its latest
+ * request stands. */
+export function drawn<T extends Settled>({ shown, latest }: Progress<T>): T | Pending {
+  return shown ?? latest;
+}
+
+/** Whether a part's latest request failed. */
+export function failed(latest: Settled): boolean {
+  return latest.status === "unavailable" || latest.status === "rejected";
+}
+
+/** Why a part's latest request failed, in words, if it did. */
+export function failureOf(part: string, latest: Settled): string | null {
+  if (latest.status === "unavailable" && "reason" in latest) {
+    return `the ${part} is not available (${String(latest.reason)})`;
+  }
+  if (latest.status === "rejected" && "problems" in latest && Array.isArray(latest.problems)) {
+    return `the ${part} was refused (${latest.problems.join("; ")})`;
+  }
+  return null;
+}

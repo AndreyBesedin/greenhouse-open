@@ -13,7 +13,7 @@ it here.
 
 from collections.abc import Sequence
 from datetime import datetime, timedelta
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 import numpy as np
 from greenhouse_protocol.enums import EventSource, EventType, ObservationType, SourceType
@@ -36,6 +36,10 @@ from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.units import HOUR_S
 
+if TYPE_CHECKING:
+    # Typed only: the simulator imports the services that take it.
+    from greenhouse_sim.services.simulator import Simulator
+
 # When the day's walk through the crop is, in seconds into its day: noon.
 WALK_S: Final = 12 * HOUR_S
 CM_PER_M: Final = 100.0
@@ -44,16 +48,16 @@ MISCOUNTS: Final = (-1, 1)
 
 
 def crop_records(
-    run: RunRequest, day: int, start: datetime, run_id: str
+    simulator: Simulator, run: RunRequest, day: int, start: datetime, run_id: str
 ) -> tuple[list[Observation], list[Event]]:
     """The harvests and the walk through the crop of a run, such as a
     scenario's own with a layout rearranged or targets changed, on its day
     `day`, which starts `day` days after `start`, each named by `run_id`:
     none if the scenario grows no organ-level crop."""
-    config = scenario(run.scenario_id)
+    config = scenario(simulator.catalogue, run.scenario_id)
     if config.crop_model != CropModel.ORGAN:
         return [], []
-    crop = run_crop(run)
+    crop = run_crop(simulator, run)
     plants = crop.plants_on(day)
     before = crop.plants_on(day - 1) if day > 0 else plants
     day_start = start + timedelta(seconds=day * DAY_S)

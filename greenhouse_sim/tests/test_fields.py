@@ -25,8 +25,10 @@ from greenhouse_sim.fields.field import (
     FieldGrid,
 )
 from greenhouse_sim.fields.synthetic import shear_field, shear_temperature, shear_velocity
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import fields
 from greenhouse_sim.services.grid import CELL_M
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Vector3
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -138,14 +140,14 @@ def test_a_field_published_and_read_back_is_the_same_to_single_precision() -> No
         assert np.allclose(read.channels[quantity], values, atol=1e-5)
 
 
-def test_a_scenario_offers_its_fields_over_its_greenhouses_air() -> None:
-    answer = respond("GET", "/api/scenarios/tomato_compartment/fields/shear")
-    missing = respond("GET", "/api/scenarios/tomato_compartment/fields/wind")
-    nowhere = respond("GET", "/api/scenarios/gh_999/fields/shear")
+def test_a_scenario_offers_its_fields_over_its_greenhouses_air(simulator: Simulator) -> None:
+    answer = respond(simulator, "GET", "/api/scenarios/tomato_compartment/fields/shear")
+    missing = respond(simulator, "GET", "/api/scenarios/tomato_compartment/fields/wind")
+    nowhere = respond(simulator, "GET", "/api/scenarios/gh_999/fields/shear")
     document = FieldDocument.model_validate(answer.body)
 
     assert answer.status == HTTPStatus.OK
-    assert document.grid == fields.grid("tomato_compartment")
+    assert document.grid == fields.grid(PACKAGED, "tomato_compartment")
     # Up to the compartment's gutters, 6 m above its floor.
     assert document.grid.maximum.z == pytest.approx(6.0)
     assert max(document.grid.cell_size.x, document.grid.cell_size.y) <= CELL_M
@@ -157,9 +159,9 @@ def test_a_scenario_offers_its_fields_over_its_greenhouses_air() -> None:
         },
     )
     assert nowhere.status == HTTPStatus.NOT_FOUND
-    listed = respond("GET", "/api/scenarios/tomato_compartment/fields")
+    listed = respond(simulator, "GET", "/api/scenarios/tomato_compartment/fields")
     assert (listed.status, listed.body) == (
         HTTPStatus.OK,
         {"fields": ["buoyancy", "uniform", "vortex", "cfd", "shear"], "configured": "buoyancy"},
     )
-    assert respond("GET", "/api/scenarios/gh_999/fields").status == HTTPStatus.NOT_FOUND
+    assert respond(simulator, "GET", "/api/scenarios/gh_999/fields").status == HTTPStatus.NOT_FOUND

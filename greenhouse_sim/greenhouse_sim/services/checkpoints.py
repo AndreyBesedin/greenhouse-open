@@ -38,7 +38,7 @@ import dataclasses
 import gzip
 import json
 import math
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 from pydantic import BaseModel, ConfigDict, JsonValue, NonNegativeInt, ValidationError
 
@@ -52,9 +52,8 @@ from greenhouse_sim.climate.psychrometrics import saturation_ratio_g_kg
 from greenhouse_sim.core.clock import DAY_S, days_ended
 from greenhouse_sim.digests import short_digest
 from greenhouse_sim.domain.crop import CropModel
-from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
-from greenhouse_sim.scenarios.manifest_files import manifest_digest, opening_day, opening_file
+from greenhouse_sim.scenarios.manifest_files import opening_file
 from greenhouse_sim.services.crop import run_crop, seed_kept_crops
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.fields import (
@@ -62,10 +61,14 @@ from greenhouse_sim.services.fields import (
     run_schedule,
     seed_kept_climate_runs,
 )
-from greenhouse_sim.services.kept_states import KeptState, drop, keep
+from greenhouse_sim.services.kept_states import STATES, KeptState, keep
 from greenhouse_sim.services.runs import Commanded, RunRequest, checked_moment
-from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids, scenario
+from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids, scenario, version
 from greenhouse_sim.services.stores import Store
+
+if TYPE_CHECKING:
+    # Typed only: the simulator imports the services that take it.
+    from greenhouse_sim.services.simulator import Simulator
 
 # The format a checkpoint is written in, which a reader refuses if it does
 # not know it: 3 since a checkpoint keeps its run's target changes (#274).
@@ -97,7 +100,8 @@ class Checkpoint(BaseModel):
 
     checkpoint_format: int = CHECKPOINT_FORMAT
     scenario_id: str
-    # The digest of its scenario's manifest (`manifest_digest`).
+    # Its scenario's version: its manifest's digest, if packaged
+    # (`CatalogueEntry.version`).
     manifest: str
     layout: str = DEFAULT_LAYOUT
     weather: str = DEFAULT_WEATHER
@@ -166,31 +170,35 @@ class CheckpointSummary(BaseModel):
 # start without them. A checkpoint let go takes its state with it.
 # Each with the state it was kept with: let go, it takes that state with it,
 # and not one the same checkpoint, uploaded again meanwhile, keeps since.
+# Its states are the module's too, until each simulator makes its own stores
+# (decision 0048).
 CHECKPOINTS: Store[str, tuple[Checkpoint, KeptState]] = Store(
-    "checkpoints", KEPT_CHECKPOINTS, on_drop=lambda key, kept: drop(key, kept[1]), label=str
+    "checkpoints", KEPT_CHECKPOINTS, on_drop=lambda key, kept: STATES.drop(key, kept[1]), label=str
 )
 
 
-def save_checkpoint(run: RunRequest, time_s: float = 0.0) -> CheckpointSummary:
+def save_checkpoint(
+    simulator: Simulator, run: RunRequest, time_s: float = 0.0
+) -> CheckpointSummary:
     """A checkpoint of a run, asked for as its climate field is, at the
     start of the day `time_s` lies in, or ends: its state then, worked out
     if it has not been, kept."""
     scenario_id = run.scenario_id
-    config = scenario(scenario_id)
+    config = scenario(simulator.catalogue, scenario_id)
     checked_moment(config, time_s)
     day = days_ended(time_s)
     moment = day * DAY_S
-    _, climate = climate_run(run)
+    _, climate = climate_run(simulator, run)
     plants: list[Plant] = []
     lived: list[dict[str, LocalEnvironment]] = []
     if config.crop_model == CropModel.ORGAN:
-        crop = run_crop(run)
+        crop = run_crop(simulator, run)
         plants = list(crop.plants_on(day))
         lived = crop.lived_through(day)
     before = window_start(moment)
     checkpoint = Checkpoint(
         scenario_id=scenario_id,
-        manifest=manifest_digest(scenario_id),
+        manifest=version(simulator.catalogue, scenario_id),
         layout=run.layout or DEFAULT_LAYOUT,
         weather=run.weather or DEFAULT_WEATHER,
         levels=dict(run.levels),
@@ -204,30 +212,32 @@ def save_checkpoint(run: RunRequest, time_s: float = 0.0) -> CheckpointSummary:
         plants=plants,
         lived=lived,
     )
-    return _kept(checkpoint)
+    return _kept(simulator, checkpoint)
 
 
-def checkpoints() -> list[CheckpointSummary]:
+def checkpoints(simulator: Simulator) -> list[CheckpointSummary]:
     """The checkpoints kept, the earliest saved first."""
-    return [_summary(checkpoint_id, kept) for checkpoint_id, (kept, _) in CHECKPOINTS.values()]
+    return [
+        _summary(checkpoint_id, kept) for checkpoint_id, (kept, _) in simulator.checkpoints.values()
+    ]
 
 
-def checkpoint(checkpoint_id: str) -> Checkpoint:
+def checkpoint(simulator: Simulator, checkpoint_id: str) -> Checkpoint:
     """A checkpoint kept, as it is downloaded."""
-    found = CHECKPOINTS.get(checkpoint_id)
+    found = simulator.checkpoints.get(checkpoint_id)
     if found is None:
         raise NotFound(f"no checkpoint {checkpoint_id!r}: restarting the API forgets them")
     return found[0]
 
 
-def upload_checkpoint(document: JsonValue) -> CheckpointSummary:
+def upload_checkpoint(simulator: Simulator, document: JsonValue) -> CheckpointSummary:
     """A checkpoint uploaded, checked, and kept. Refused if it is not one,
     is in a format this simulator does not read, was made with another
     version of its scenario's manifest, or does not fit its scenario's run."""
-    return _kept(_checked_upload(document))
+    return _kept(simulator, _checked_upload(simulator, document))
 
 
-def _checked_upload(document: JsonValue) -> Checkpoint:
+def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
     """A checkpoint uploaded, checked as `upload_checkpoint` says."""
     if isinstance(document, dict):
         written_in = document.get("checkpoint_format")
@@ -244,8 +254,8 @@ def _checked_upload(document: JsonValue) -> Checkpoint:
         uploaded = Checkpoint.model_validate(document)
     except ValidationError as error:
         raise InvalidRequest(f"not a checkpoint: {error.errors()[0]['msg']}") from None
-    config = scenario(uploaded.scenario_id)
-    if uploaded.manifest != manifest_digest(uploaded.scenario_id):
+    config = scenario(simulator.catalogue, uploaded.scenario_id)
+    if uploaded.manifest != version(simulator.catalogue, uploaded.scenario_id):
         raise InvalidRequest(
             f"a checkpoint made with another version of {uploaded.scenario_id}'s manifest"
         )
@@ -259,7 +269,7 @@ def _checked_upload(document: JsonValue) -> Checkpoint:
             "a checkpoint keeps its house's air an hour before its day, after its run's "
             "first day, and only then"
         )
-    climate_run(uploaded.run())
+    climate_run(simulator, uploaded.run())
     expected = plant_ids(config) if config.crop_model == CropModel.ORGAN else []
     if [plant.plant_id for plant in uploaded.plants] != expected:
         raise InvalidRequest(f"a checkpoint's plants are {uploaded.scenario_id}'s, in order")
@@ -328,18 +338,20 @@ def opening_bytes(checkpoint: Checkpoint) -> bytes:
     return gzip.compress(checkpoint.model_dump_json().encode(), mtime=0)
 
 
-def load_opening(scenario_id: str) -> list[CheckpointSummary]:
+def load_opening(simulator: Simulator, scenario_id: str) -> list[CheckpointSummary]:
     """Keep a scenario's opening day, as its manifest names it and the files
     beside it hold it (`opening_file`): its run's checkpoint, and the same
     run's with everything off, which a viewer charts beside it, each
     uploaded, so that both runs' later days carry on from them. None if it
     names none; refused, as an upload is, if one does not fit its run."""
-    if opening_day(scenario_id) is None:
+    entry = simulator.catalogue.entry(scenario_id)
+    if entry is None or entry.opening_day is None:
         return []
     return [
         _kept(
+            simulator,
             _checked_upload(
-                json.loads(gzip.decompress(opening_file(scenario_id, off).read_bytes()))
+                simulator, json.loads(gzip.decompress(opening_file(scenario_id, off).read_bytes()))
             ),
             opening=True,
         )
@@ -347,19 +359,21 @@ def load_opening(scenario_id: str) -> list[CheckpointSummary]:
     ]
 
 
-def load_openings() -> list[str]:
+def load_openings(simulator: Simulator) -> list[str]:
     """Keep every scenario's opening day that fits its run, as the API
     starts; the reasons the others are refused, by scenario."""
     refused = []
-    for scenario_id in SCENARIO_REGISTRY:
+    for scenario_id in simulator.catalogue.ids():
         try:
-            load_opening(scenario_id)
+            load_opening(simulator, scenario_id)
         except ServiceError as error:
             refused.append(f"{scenario_id}'s opening day: {error.message}")
     return refused
 
 
-def _kept(checkpoint: Checkpoint, *, opening: bool = False) -> CheckpointSummary:
+def _kept(
+    simulator: Simulator, checkpoint: Checkpoint, *, opening: bool = False
+) -> CheckpointSummary:
     """Keep a checkpoint, and its state for the runs that agree with it; a
     scenario's opening day beside the others, never evicted."""
     checkpoint_id = checkpoint.identifier()
@@ -370,7 +384,7 @@ def _kept(checkpoint: Checkpoint, *, opening: bool = False) -> CheckpointSummary
             checkpoint.weather,
             tuple(sorted(checkpoint.openings.items())),
         ),
-        schedule=run_schedule(checkpoint.run()),
+        schedule=run_schedule(simulator.catalogue, checkpoint.run()),
         day=checkpoint.day,
         air=checkpoint.house,
         plants=tuple(checkpoint.plants),
@@ -382,10 +396,10 @@ def _kept(checkpoint: Checkpoint, *, opening: bool = False) -> CheckpointSummary
         ),
     )
     # Its state first, so that a checkpoint listed always has one.
-    keep(checkpoint_id, state)
-    CHECKPOINTS.keep(checkpoint_id, (checkpoint, state), pinned=opening)
-    seed_kept_climate_runs(state)
-    seed_kept_crops(state)
+    keep(simulator, checkpoint_id, state)
+    simulator.checkpoints.keep(checkpoint_id, (checkpoint, state), pinned=opening)
+    seed_kept_climate_runs(simulator, state)
+    seed_kept_crops(simulator, state)
     return _summary(checkpoint_id, checkpoint)
 
 

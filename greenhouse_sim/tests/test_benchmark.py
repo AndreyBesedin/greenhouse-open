@@ -12,6 +12,7 @@ from greenhouse_sim import benchmark
 from greenhouse_sim.core.stopwatch import Stopwatch, timed
 from greenhouse_sim.services.benchmark import DayCosts, bottleneck, simulator_costs
 from greenhouse_sim.services.errors import InvalidRequest
+from greenhouse_sim.services.simulator import Simulator
 
 # The report kept in the repository, beside these tests: CI installs the
 # simulator as a package, out of the checkout.
@@ -40,10 +41,10 @@ MACHINE = {"platform", "cpu", "cores", "memory_gib", "python"}
 
 
 @pytest.fixture(scope="module")
-def one_day(afresh_module: Callable[[], None]) -> dict[str, Any]:
+def one_day(simulator: Simulator, afresh_module: Callable[[], None]) -> dict[str, Any]:
     """The benchmark's report on the reference run's first day, worked out
     afresh: nothing another test kept gives the run its days."""
-    return benchmark.report(days=1)
+    return benchmark.report(simulator, days=1)
 
 
 def _has_every_measure(report: dict[str, Any]) -> None:
@@ -84,10 +85,10 @@ def test_the_kept_report_has_every_measure() -> None:
     assert kept["machine"]["cpu"]
 
 
-def test_a_benchmark_measures_days_its_run_has() -> None:
+def test_a_benchmark_measures_days_its_run_has(simulator: Simulator) -> None:
     for days in (0, 121):
         with pytest.raises(InvalidRequest, match="a benchmark measures 1 to 120"):
-            simulator_costs("reference_greenhouse", days)
+            simulator_costs(simulator, "reference_greenhouse", days)
 
 
 def test_the_bottleneck_is_the_costliest_part_of_a_day() -> None:
@@ -104,7 +105,7 @@ def test_the_command_compares_the_latest_report_with_the_kept_one(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
 ) -> None:
     kept = json.loads(KEPT_REPORT.read_text())
-    monkeypatch.setattr(benchmark, "report", lambda days: kept | {"days": days})
+    monkeypatch.setattr(benchmark, "report", lambda simulator, days: kept | {"days": days})
     copy = tmp_path / "simulator.json"
     copy.write_text(KEPT_REPORT.read_text())
 
@@ -124,7 +125,7 @@ def test_without_a_kept_report_the_command_compares_with_nothing(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     kept = json.loads(KEPT_REPORT.read_text())
-    monkeypatch.setattr(benchmark, "report", lambda days: kept)
+    monkeypatch.setattr(benchmark, "report", lambda simulator, days: kept)
     monkeypatch.setattr(benchmark, "CHECKOUT_REPORT", Path("/nowhere/benchmarks/simulator.json"))
 
     benchmark.main([])

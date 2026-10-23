@@ -121,6 +121,27 @@ body {
   text-align: left;
 }
 
+/* The info panel's sections grouped in outlined cards by topic (#306), each
+ * card's title on its outline, so that a card costs next to no height. */
+.panel-card {
+  margin: 10px 0 4px;
+  padding: 2px 6px 4px;
+  border: 1px solid var(--panel-rule);
+  border-radius: 4px;
+}
+
+.panel-card-title {
+  width: fit-content;
+  margin: -0.75em 0 0;
+  padding: 0 4px;
+  background: var(--panel-bg);
+  color: var(--panel-muted);
+  font-size: 0.7em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 /* Every group of the info panel a section folded to the line that says how
  * it stands (#206, #273), with room below it; and what the viewer was built
  * from, last. */
@@ -277,6 +298,14 @@ body {
 .hud dd {
   margin: 0;
   font-variant-numeric: tabular-nums;
+}
+
+/* The latest request's path on one line, cut short (#301). */
+.hud .hud-simulator {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .hud .time-controls {
@@ -702,6 +731,11 @@ body {
 .climate-time-note {
   margin: 0;
   font-size: 0.85em;
+}
+
+/* While nothing loads, the line keeps its height, unseen (#301). */
+.climate-time-idle {
+  visibility: hidden;
 }
 
 /* The weather outside: a line, with a compass beside it, opening on its
@@ -1227,6 +1261,55 @@ body {
   min-width: 0;
 }
 
+/* Each side's panels, beside the stripe along their inner edge that folds
+ * them (#304). Folded, the panels leave the layout but stay drawn, unseen,
+ * so that they open again as they were, scrolled where they were. */
+.panel-side {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+
+.panel-side.at-the-end {
+  flex-shrink: 0;
+}
+
+/* The info panel's column is as wide as its widest panel, never as long as
+ * a line of it would run unwrapped, so that its stripe stands at the
+ * panel's edge. */
+.panel-side > .panel-column:not(.at-the-end) {
+  max-width: 444px;
+}
+
+.panel-side.folded > .panel-column {
+  position: absolute;
+  visibility: hidden;
+}
+
+/* A tab at the top of the side's inner edge, beside its panel's head: no
+ * taller, so that it never stands over the view a click is meant for. */
+.panel-stripe {
+  flex: none;
+  align-self: flex-start;
+  width: 14px;
+  height: 96px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: var(--panel-rule);
+  color: var(--panel-text);
+  font-size: 10px;
+  cursor: pointer;
+  opacity: 0.7;
+  pointer-events: auto;
+}
+
+.panel-stripe:hover,
+.panel-stripe:focus-visible {
+  background: var(--panel-accent);
+  opacity: 1;
+}
+
 /* The HUD's column keeps its width, so that its readings stay on one line
  * each: the info panel's column gives way instead, however long a line of
  * it would run unwrapped, which is what its width asks for. */
@@ -1308,9 +1391,20 @@ body {
     pointer-events: auto;
   }
 
-  /* The columns dissolve: their panels stack in the dock, one under another. */
-  .panel-column {
+  /* The columns dissolve: their panels stack in the dock, one under another,
+   * and nothing folds them there. */
+  .panel-column,
+  .panel-side {
     display: contents;
+  }
+
+  .panel-side.folded > .panel-column {
+    position: static;
+    visibility: visible;
+  }
+
+  .panel-stripe {
+    display: none;
   }
 
   .viewer-panels .panel-column > * {

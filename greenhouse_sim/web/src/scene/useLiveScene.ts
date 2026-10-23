@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { type LiveConnection, type LiveFrame, liveUrl, parseLiveFrame } from "./live";
-import type { SceneState } from "./source";
+import type { SceneState } from "./sceneLoad";
 
 // After an error response, such as a 502 from the dev server's proxy while the
 // API is down, EventSource gives up for good; the viewer tries again itself.

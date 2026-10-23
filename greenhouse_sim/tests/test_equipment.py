@@ -11,6 +11,7 @@ from greenhouse_sim.cfd.geometry import BoundaryCategory
 from greenhouse_sim.domain.equipment import ActuatorKind
 from greenhouse_sim.domain.layout import Obstruction, ZoneKind
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.equipment import Dehumidifier, Equipment, Fan, Heater
@@ -174,7 +175,7 @@ def test_the_climate_box_holds_a_fan_a_heater_and_a_dehumidifier() -> None:
 
 
 def test_the_climate_box_meshes_its_units_as_obstacles_but_not_its_fan() -> None:
-    geometry = cfd.geometry("climate_box")
+    geometry = cfd.geometry(PACKAGED, "climate_box")
     obstacles = {
         boundary.name: boundary.mesh_faces for boundary in geometry.of(BoundaryCategory.OBSTACLE)
     }

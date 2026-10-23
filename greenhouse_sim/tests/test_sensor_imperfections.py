@@ -17,6 +17,7 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.sensors.air import observe
 from greenhouse_sim.services import sensors
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.sensors import Imperfections, PointSensor
 
@@ -160,14 +161,14 @@ def test_turning_noise_on_moves_no_dropout() -> None:
     assert [o.timestamp for o in noisy] == [o.timestamp for o in quiet]
 
 
-def test_clean_readings_are_the_truth_for_qa() -> None:
+def test_clean_readings_are_the_truth_for_qa(simulator: Simulator) -> None:
     observed = sensors.observations(
-        RunRequest("climate_box", levels={"heater": 1.0}), until_s=600, clean=True
+        simulator, RunRequest("climate_box", levels={"heater": 1.0}), until_s=600, clean=True
     )
     truth = {
         t.sensor_id: t
         for t in sensors.truth(
-            RunRequest("climate_box", levels={"heater": 1.0}), until_s=600
+            simulator, RunRequest("climate_box", levels={"heater": 1.0}), until_s=600
         ).sensors
     }
 
@@ -175,11 +176,13 @@ def test_clean_readings_are_the_truth_for_qa() -> None:
     assert back == list(truth["temperature_back"].values)
 
 
-def test_the_climate_boxs_imperfect_sensor_errs_as_configured() -> None:
+def test_the_climate_boxs_imperfect_sensor_errs_as_configured(simulator: Simulator) -> None:
     observed = sensors.observations(
-        RunRequest("climate_box", levels={"heater": 1.0}), until_s=600
+        simulator, RunRequest("climate_box", levels={"heater": 1.0}), until_s=600
     ).observations
-    truth = sensors.truth(RunRequest("climate_box", levels={"heater": 1.0}), until_s=600).sensors
+    truth = sensors.truth(
+        simulator, RunRequest("climate_box", levels={"heater": 1.0}), until_s=600
+    ).sensors
     back = [o for o in observed if o.sensor_id == "temperature_back"]
     true_back = dict(
         zip(

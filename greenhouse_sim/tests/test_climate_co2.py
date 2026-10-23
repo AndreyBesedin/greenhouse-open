@@ -12,21 +12,25 @@ from greenhouse_sim.climate.vents import Vent
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import climate_vents
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.scenarios import SceneChanges, changed
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Vector3
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
 GRID = air_grid(CONFIG)
-SOLID = cfd.geometry("climate_box").solid()
+SOLID = cfd.geometry(PACKAGED, "climate_box").solid()
 AIR = ~SOLID
 
 
 def _vents(openings: dict[str, float]) -> list[Vent]:
-    config = changed(CONFIG, SceneChanges(openings=openings))
-    return climate_vents(config, cfd.geometry("climate_box", SceneChanges(openings=openings)))
+    config = changed(PACKAGED, CONFIG, SceneChanges(openings=openings))
+    return climate_vents(
+        config, cfd.geometry(PACKAGED, "climate_box", SceneChanges(openings=openings))
+    )
 
 
 def _run(
@@ -40,7 +44,7 @@ def _run(
     leaks = {"infiltration_per_h": 0.0, "infiltration_per_h_per_m_s": 0.0} if sealed else {}
     settings = CONFIG.climate.model_copy(update={"start_co2_ppm": start_co2_ppm} | leaks)
     return ClimateRun(
-        base=changed(CONFIG, SceneChanges(openings=openings)).airflow,
+        base=changed(PACKAGED, CONFIG, SceneChanges(openings=openings)).airflow,
         equipment=CONFIG.layout.equipment,
         schedule=Schedule.from_start(levels),
         settings=settings,
@@ -71,8 +75,8 @@ def test_an_open_vent_draws_the_houses_co2_towards_the_outsides() -> None:
     assert CONFIG.run_weather().at(0.0).co2_ppm < means[-1] < means[0] < 800.0
 
 
-def test_the_climate_publishes_its_co2() -> None:
-    response = respond("GET", "/api/scenarios/climate_box/fields/climate?t=60")
+def test_the_climate_publishes_its_co2(simulator: Simulator) -> None:
+    response = respond(simulator, "GET", "/api/scenarios/climate_box/fields/climate?t=60")
     field = EnvironmentField.from_document(FieldDocument.model_validate(response.body))
 
     assert field.sample(AirQuantity.CO2, Vector3(x=6.0, y=3.2, z=1.5)) == pytest.approx(420.0)

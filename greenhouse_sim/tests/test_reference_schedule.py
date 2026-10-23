@@ -17,8 +17,10 @@ from greenhouse_sim.climate.commands import DailyCommand
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import fields, sensors
 from greenhouse_sim.services.runs import Commanded, RunRequest
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.sensors import PointSensor
 
 REFERENCE = SCENARIO_REGISTRY["reference_greenhouse"]
@@ -33,8 +35,8 @@ def _own() -> list[tuple[float, str, float]]:
     return [(c.time_of_day_s, c.actuator_id, c.level) for c in REFERENCE.daily]
 
 
-def _body(path: str) -> dict[str, Any]:
-    response = respond("GET", path)
+def _body(simulator: Simulator, path: str) -> dict[str, Any]:
+    response = respond(simulator, "GET", path)
     assert response.status == HTTPStatus.OK, response.body
     assert isinstance(response.body, dict)
     return response.body
@@ -58,11 +60,11 @@ def test_the_reference_run_vents_and_stirs_its_house_by_the_clock_and_heats_it_b
 
 
 def test_a_run_gives_its_scenarios_daily_commands_unless_it_gives_its_own() -> None:
-    own = fields.run_schedule(RunRequest("reference_greenhouse"))
+    own = fields.run_schedule(PACKAGED, RunRequest("reference_greenhouse"))
     replaced = fields.run_schedule(
-        RunRequest("reference_greenhouse", daily=((64800.0, "heater", 1.0),))
+        PACKAGED, RunRequest("reference_greenhouse", daily=((64800.0, "heater", 1.0),))
     )
-    none = fields.run_schedule(RunRequest("reference_greenhouse", daily=()))
+    none = fields.run_schedule(PACKAGED, RunRequest("reference_greenhouse", daily=()))
 
     expected = [
         (day * DAY_S + time, actuator, level)
@@ -77,14 +79,16 @@ def test_a_run_gives_its_scenarios_daily_commands_unless_it_gives_its_own() -> N
     assert none.commands == ()
 
 
-def test_the_api_reads_daily_none_as_none_and_leaves_out_none_as_its_own() -> None:
-    own = _body("/api/scenarios/reference_greenhouse/timeline?t=86400")
-    none = _body("/api/scenarios/reference_greenhouse/timeline?t=86400&daily=none")
+def test_the_api_reads_daily_none_as_none_and_leaves_out_none_as_its_own(
+    simulator: Simulator,
+) -> None:
+    own = _body(simulator, "/api/scenarios/reference_greenhouse/timeline?t=86400")
+    none = _body(simulator, "/api/scenarios/reference_greenhouse/timeline?t=86400&daily=none")
     commands = own["processes"].index("commands")
 
     assert own["process"].count(commands) == len(REFERENCE.daily)
     assert none["process"].count(commands) == 0
-    summaries = respond("GET", "/api/scenarios").body
+    summaries = respond(simulator, "GET", "/api/scenarios").body
     assert isinstance(summaries, list)
     reference = next(
         s for s in summaries if isinstance(s, dict) and s["id"] == REFERENCE.greenhouse_id
@@ -101,12 +105,14 @@ def test_a_scenario_refuses_daily_commands_to_what_it_does_not_have() -> None:
 
 
 def _reading(
+    simulator: Simulator,
     time_s: float,
     daily: tuple[Commanded, ...] | None = None,
     levels: Mapping[str, float] | None = None,
 ) -> float:
     """What the front temperature sensor, a clean one, observed at `time_s`."""
     log = sensors.observations(
+        simulator,
         RunRequest("reference_greenhouse", levels=levels or {}, daily=daily),
         until_s=time_s,
         from_s=time_s - 60.0,
@@ -119,9 +125,14 @@ def _reading(
     )
 
 
-def test_the_thermostats_setpoints_show_in_the_readings() -> None:
-    small_hours, noon = _reading(SMALL_HOURS_S), _reading(NOON_S)
-    unheated = _reading(SMALL_HOURS_S, daily=(), levels=fields.off_levels("reference_greenhouse"))
+def test_the_thermostats_setpoints_show_in_the_readings(simulator: Simulator) -> None:
+    small_hours, noon = _reading(simulator, SMALL_HOURS_S), _reading(simulator, NOON_S)
+    unheated = _reading(
+        simulator,
+        SMALL_HOURS_S,
+        daily=(),
+        levels=fields.off_levels(PACKAGED, "reference_greenhouse"),
+    )
 
     # Near 16 °C at night and 18 °C by day, a sensor's error and the
     # thermostat's band either way, well above what an unheated house falls
@@ -131,11 +142,14 @@ def test_the_thermostats_setpoints_show_in_the_readings() -> None:
     assert small_hours > unheated + 5.0
 
 
-def test_its_sensors_observe_only_the_run_they_belong_to_through_the_season() -> None:
+def test_its_sensors_observe_only_the_run_they_belong_to_through_the_season(
+    simulator: Simulator,
+) -> None:
     sensor = next(s for s in REFERENCE.layout.sensors if s.sensor_id == "temperature_front")
     assert isinstance(sensor, PointSensor)
-    air, run_id = fields.air_through_a_run(RunRequest("reference_greenhouse"))
+    air, run_id = fields.air_through_a_run(simulator, RunRequest("reference_greenhouse"))
     log = sensors.observations(
+        simulator,
         RunRequest("reference_greenhouse"),
         until_s=SMALL_HOURS_S,
         clean=True,
@@ -155,20 +169,24 @@ def test_its_sensors_observe_only_the_run_they_belong_to_through_the_season() ->
     )
 
 
-def _door_flow(weather: str) -> float:
+def _door_flow(simulator: Simulator, weather: str) -> float:
     body = _body(
-        f"/api/scenarios/reference_greenhouse/climate/openings?t=43200&open=door:1&weather={weather}"
+        simulator,
+        f"/api/scenarios/reference_greenhouse/climate/openings?t=43200&open=door:1&weather={weather}",
     )
     return float(next(o["net_m3_s"] for o in body["openings"] if o["opening_id"] == "door"))
 
 
-def test_the_winds_direction_can_be_overridden_for_qa_and_an_open_door_follows_it() -> None:
-    own = _body("/api/scenarios/reference_greenhouse/weather?t=43200")["weather"]
-    east = _body("/api/scenarios/reference_greenhouse/weather?t=43200&weather=default~90")[
-        "weather"
-    ]
+def test_the_winds_direction_can_be_overridden_for_qa_and_an_open_door_follows_it(
+    simulator: Simulator,
+) -> None:
+    own = _body(simulator, "/api/scenarios/reference_greenhouse/weather?t=43200")["weather"]
+    east = _body(
+        simulator, "/api/scenarios/reference_greenhouse/weather?t=43200&weather=default~90"
+    )["weather"]
     clouded = _body(
-        "/api/scenarios/reference_greenhouse/weather?t=43200&weather=cold_spring_day@80~0"
+        simulator,
+        "/api/scenarios/reference_greenhouse/weather?t=43200&weather=cold_spring_day@80~0",
     )["weather"]
 
     # Only its direction turns: its speed is its own, and so is the rest.
@@ -179,10 +197,10 @@ def test_the_winds_direction_can_be_overridden_for_qa_and_an_open_door_follows_i
     # From the west, its own at noon, the wind blows in through the front
     # door; from the north, the house draws out through it.
     assert own["wind_direction_deg"] == 270.0
-    assert _door_flow("default") > 10.0
-    assert _door_flow("default~0") < 0.0
+    assert _door_flow(simulator, "default") > 10.0
+    assert _door_flow(simulator, "default~0") < 0.0
     for refused in ("default~360", "default~-5", "default~east"):
         response = respond(
-            "GET", f"/api/scenarios/reference_greenhouse/weather?t=0&weather={refused}"
+            simulator, "GET", f"/api/scenarios/reference_greenhouse/weather?t=0&weather={refused}"
         )
         assert response.status == HTTPStatus.BAD_REQUEST

@@ -18,9 +18,11 @@ from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.house import HouseAir, WholeHouse, grid_mean
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import _climate_day
 from greenhouse_sim.services.grid import air_grid
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.weather.presets import COLD_SPRING_DAY
 from greenhouse_sim.world.equipment import Heater
 
@@ -43,9 +45,11 @@ VENTING_TEMPERATURE_C = 3.5
 
 
 def _run(
-    levels: tuple[tuple[str, float], ...] = (), openings: tuple[tuple[str, float], ...] = ()
+    simulator: Simulator,
+    levels: tuple[tuple[str, float], ...] = (),
+    openings: tuple[tuple[str, float], ...] = (),
 ) -> ClimateRun:
-    return _climate_day("climate_box", "default", "default", levels, openings, ()).run
+    return _climate_day(simulator, "climate_box", "default", "default", levels, openings, ()).run
 
 
 @pytest.mark.parametrize(
@@ -54,9 +58,10 @@ def _run(
     ids=["nothing", "heater", "dehumidifier", "heater and fan"],
 )
 def test_in_a_shut_house_it_follows_the_grid_runs_mean(
+    simulator: Simulator,
     levels: tuple[tuple[str, float], ...],
 ) -> None:
-    run = _run(levels)
+    run = _run(simulator, levels)
     house = WholeHouse(run)
 
     for moment in (1800.0, 3600.0):
@@ -68,8 +73,8 @@ def test_in_a_shut_house_it_follows_the_grid_runs_mean(
         assert mixed.removed_kg == pytest.approx(mean.removed_kg, rel=1e-6)
 
 
-def test_with_a_vent_open_it_follows_the_grid_runs_mean_more_loosely() -> None:
-    run = _run((("heater", 1.0),), (("roof_vent", 1.0),))
+def test_with_a_vent_open_it_follows_the_grid_runs_mean_more_loosely(simulator: Simulator) -> None:
+    run = _run(simulator, (("heater", 1.0),), (("roof_vent", 1.0),))
     mixed, mean = WholeHouse(run).air_at(3600.0), grid_mean(run, 3600.0)
 
     assert mixed.temperature_c == pytest.approx(mean.temperature_c, abs=VENTING_TEMPERATURE_C)
@@ -86,7 +91,7 @@ def _shut(levels: dict[str, float], weather: object = None) -> WholeHouse:
             schedule=Schedule.from_start(levels),
             settings=config.climate.model_copy(update=SEALED),
             grid=air_grid(config),
-            solid=cfd.geometry("climate_box").solid(),
+            solid=cfd.geometry(PACKAGED, "climate_box").solid(),
             weather=config.run_weather(),
         )
     )
@@ -110,8 +115,8 @@ def test_shut_off_from_the_outside_the_water_it_loses_is_removed_or_condensed() 
     assert later.removed_kg > 0
 
 
-def test_it_follows_the_weather_through_a_day() -> None:
-    house = _climate_day("climate_box", "default", "cold_spring_day", (), (), ()).house
+def test_it_follows_the_weather_through_a_day(simulator: Simulator) -> None:
+    house = _climate_day(simulator, "climate_box", "default", "cold_spring_day", (), (), ()).house
     dawn, afternoon = house.air_at(6.5 * 3600), house.air_at(15.5 * 3600)
 
     # Shut and unheated, the house follows the outside through its glass,
@@ -124,25 +129,29 @@ def test_it_follows_the_weather_through_a_day() -> None:
     )
 
 
-def test_requests_at_once_work_the_house_out_one_at_a_time() -> None:
+def test_requests_at_once_work_the_house_out_one_at_a_time(simulator: Simulator) -> None:
     # A viewer asks for several moments of one kept run at once: each waits
     # for the others, and all find the air a single request would.
-    house = WholeHouse(_run((("heater", 1.0),)))
+    house = WholeHouse(_run(simulator, (("heater", 1.0),)))
     times = [3600.0 * hour for hour in range(1, 9)]
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         together = list(pool.map(house.air_at, times))
 
-    alone = WholeHouse(_run((("heater", 1.0),)))
+    alone = WholeHouse(_run(simulator, (("heater", 1.0),)))
     assert together == [alone.air_at(time_s) for time_s in times]
 
 
-def test_it_takes_over_anothers_air_up_to_where_their_schedules_differ() -> None:
+def test_it_takes_over_anothers_air_up_to_where_their_schedules_differ(
+    simulator: Simulator,
+) -> None:
     hour = 3600.0
     heated = ((2 * hour, "heater", 1.0),)
-    first = WholeHouse(_run())
+    first = WholeHouse(_run(simulator))
     first.air_at(4 * hour)
-    second = WholeHouse(_climate_day("climate_box", "default", "default", (), (), heated).run)
+    second = WholeHouse(
+        _climate_day(simulator, "climate_box", "default", "default", (), (), heated).run
+    )
 
     second.carry_on_from(first)
 
@@ -156,17 +165,19 @@ def test_it_takes_over_anothers_air_up_to_where_their_schedules_differ() -> None
 
 
 def test_it_carries_on_from_another_without_waiting_for_a_request_working_it_on(
+    simulator: Simulator,
     finishes_beside_held: Callable[[AbstractContextManager[bool], Callable[[], object]], bool],
 ) -> None:
-    first = WholeHouse(_run())
+    first = WholeHouse(_run(simulator))
     first.air_at(2 * 3600.0)
-    second = WholeHouse(_run())
+    second = WholeHouse(_run(simulator))
 
     assert finishes_beside_held(first._working, lambda: second.carry_on_from(first))
     assert second._kept.keys() == first._kept.keys()
 
 
 def test_it_takes_over_what_another_works_out_after_it_carried_on(
+    simulator: Simulator,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # A branch made while a request works its source on does not wait for
@@ -174,8 +185,10 @@ def test_it_takes_over_what_another_works_out_after_it_carried_on(
     # schedules differ, is the branch's air too, and is not worked out again.
     hour = 3600.0
     heated = ((4 * hour, "heater", 1.0),)
-    first = WholeHouse(_run())
-    second = WholeHouse(_climate_day("climate_box", "default", "default", (), (), heated).run)
+    first = WholeHouse(_run(simulator))
+    second = WholeHouse(
+        _climate_day(simulator, "climate_box", "default", "default", (), (), heated).run
+    )
     second.carry_on_from(first)
     first.air_at(3 * hour)
 
@@ -187,6 +200,7 @@ def test_it_takes_over_what_another_works_out_after_it_carried_on(
 
 
 def test_it_waits_for_another_working_the_stretch_it_needs_and_no_longer(
+    simulator: Simulator,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Its source is working the very stretch it needs when it is asked: it
@@ -194,8 +208,10 @@ def test_it_waits_for_another_working_the_stretch_it_needs_and_no_longer(
     # as soon as the source is past it, not when the source is done.
     hour = 3600.0
     heated = ((2 * hour, "heater", 1.0),)
-    first = WholeHouse(_run())
-    second = WholeHouse(_climate_day("climate_box", "default", "default", (), (), heated).run)
+    first = WholeHouse(_run(simulator))
+    second = WholeHouse(
+        _climate_day(simulator, "climate_box", "default", "default", (), (), heated).run
+    )
     second.carry_on_from(first)
     advance = first._advance
 
@@ -220,11 +236,11 @@ def test_it_waits_for_another_working_the_stretch_it_needs_and_no_longer(
     assert taken == first.air_at(2 * hour)
 
 
-def test_its_air_is_the_same_whatever_moments_were_asked_for_before() -> None:
+def test_its_air_is_the_same_whatever_moments_were_asked_for_before(simulator: Simulator) -> None:
     # A viewer scrubbing a run asks for moments between its minutes: the air
     # later is worked out from the minutes kept, never from those, under a
     # weather and a sun that change through the stretch.
-    run = _climate_day("climate_box", "default", "cold_spring_day", (), (), ()).run
+    run = _climate_day(simulator, "climate_box", "default", "cold_spring_day", (), (), ()).run
     scrubbed = WholeHouse(run)
     for moment in (90.0, 3_599.5, 43_230.0):
         scrubbed.air_at(moment)
@@ -235,8 +251,8 @@ def test_its_air_is_the_same_whatever_moments_were_asked_for_before() -> None:
     assert all(moment % 60.0 == 0 for moment in scrubbed._kept)
 
 
-def test_its_mean_through_a_stretch_weighs_each_minute_alike() -> None:
-    house = _climate_day("climate_box", "default", "cold_spring_day", (), (), ()).house
+def test_its_mean_through_a_stretch_weighs_each_minute_alike(simulator: Simulator) -> None:
+    house = _climate_day(simulator, "climate_box", "default", "cold_spring_day", (), (), ()).house
     minutes = [house.air_at(60.0 * minute) for minute in range(1441)]
     day = house.mean_between(0.0, DAY_S)
 
@@ -255,8 +271,8 @@ def test_its_mean_through_a_stretch_weighs_each_minute_alike() -> None:
         house.mean_between(DAY_S, DAY_S)
 
 
-def test_it_runs_a_day_in_well_under_a_second() -> None:
-    house = WholeHouse(_run((("heater", 1.0),)))
+def test_it_runs_a_day_in_well_under_a_second(simulator: Simulator) -> None:
+    house = WholeHouse(_run(simulator, (("heater", 1.0),)))
     house.air_at(60.0)
 
     started = time.perf_counter()
@@ -264,8 +280,10 @@ def test_it_runs_a_day_in_well_under_a_second() -> None:
     assert time.perf_counter() - started < 1.0
 
 
-def test_the_api_serves_the_houses_air_beside_the_run_all_off() -> None:
-    response = respond("GET", "/api/scenarios/climate_box/climate/house?set=heater:1&t=600")
+def test_the_api_serves_the_houses_air_beside_the_run_all_off(simulator: Simulator) -> None:
+    response = respond(
+        simulator, "GET", "/api/scenarios/climate_box/climate/house?set=heater:1&t=600"
+    )
     body = json.loads(json.dumps(response.body))
 
     assert response.status == HTTPStatus.OK
@@ -285,6 +303,6 @@ def test_the_api_serves_the_houses_air_beside_the_run_all_off() -> None:
     ],
 )
 def test_the_api_refuses_the_houses_air_as_it_refuses_the_climate(
-    path: str, status: HTTPStatus
+    simulator: Simulator, path: str, status: HTTPStatus
 ) -> None:
-    assert respond("GET", path).status == status
+    assert respond(simulator, "GET", path).status == status

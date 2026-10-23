@@ -16,6 +16,7 @@ module looks at neither.
 """
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.biology.tomato.organ.topology import Plant
@@ -23,6 +24,10 @@ from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services.stores import Store
+
+if TYPE_CHECKING:
+    # Typed only: the simulator imports the services that take it.
+    from greenhouse_sim.services.simulator import Simulator
 
 # A run's house: its scenario, layout and weather, by name, and its doors'
 # and vents' openings from the start, sorted.
@@ -63,19 +68,19 @@ class KeptState:
 STATES: Store[str, KeptState] = Store("kept states", label=str)
 
 
-def keep(key: str, state: KeptState) -> None:
+def keep(simulator: Simulator, key: str, state: KeptState) -> None:
     """Keep a state, under its checkpoint's identifier."""
-    STATES.keep(key, state)
+    simulator.states.keep(key, state)
 
 
-def drop(key: str, state: KeptState) -> None:
+def drop(simulator: Simulator, key: str, state: KeptState) -> None:
     """Keep a checkpoint's state no longer: `state`, if it is still the one
     kept; not one kept since, as the same checkpoint uploaded again keeps."""
-    STATES.drop(key, state)
+    simulator.states.drop(key, state)
 
 
-def agreeing(house: House, schedule: Schedule) -> list[KeptState]:
+def agreeing(simulator: Simulator, house: House, schedule: Schedule) -> list[KeptState]:
     """The kept states a run of `house` under `schedule` takes over, from
     its earliest day."""
-    states = [state for _, state in STATES.values() if state.agrees(house, schedule)]
+    states = [state for _, state in simulator.states.values() if state.agrees(house, schedule)]
     return sorted(states, key=lambda s: s.day)

@@ -21,24 +21,27 @@ from greenhouse_sim.cfd.geometry import CfdGeometry, cfd_geometry
 from greenhouse_sim.cfd.openfoam import SetupRefused, write_mesh_case
 from greenhouse_sim.cfd.results import CfdResult, keep
 from greenhouse_sim.cfd.solve import solve as solve_case
+from greenhouse_sim.scenarios.catalogue import Scenarios
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.scenarios import SceneChanges, changed, scenario
 
 
-def geometry(scenario_id: str, changes: SceneChanges | None = None) -> CfdGeometry:
+def geometry(
+    catalogue: Scenarios, scenario_id: str, changes: SceneChanges | None = None
+) -> CfdGeometry:
     """The CFD geometry of a scenario, changed as a client asks."""
-    config = changed(scenario(scenario_id), changes or SceneChanges())
+    config = changed(catalogue, scenario(catalogue, scenario_id), changes or SceneChanges())
     return cfd_geometry(scenario_id, config, air_grid(config))
 
 
 def write_case(
-    scenario_id: str, directory: Path, changes: SceneChanges | None = None
+    catalogue: Scenarios, scenario_id: str, directory: Path, changes: SceneChanges | None = None
 ) -> list[Path]:
     """Write the OpenFOAM case that meshes a scenario's CFD geometry into
     `directory`, and return the files written. Its `Allmesh` script meshes
     it, wherever OpenFOAM is."""
-    return write_mesh_case(geometry(scenario_id, changes), directory)
+    return write_mesh_case(geometry(catalogue, scenario_id, changes), directory)
 
 
 @dataclass(frozen=True)
@@ -49,16 +52,20 @@ class Solved:
     kept: Path | None
 
 
-def solve(scenario_id: str, directory: Path, changes: SceneChanges | None = None) -> Solved:
+def solve(
+    catalogue: Scenarios, scenario_id: str, directory: Path, changes: SceneChanges | None = None
+) -> Solved:
     """Solve a scenario's air with OpenFOAM in `directory`, as its
     configuration's setup drives it, and keep the result if only its layout
     was changed, if anything. A scenario its setup cannot drive is
     refused."""
     changes = changes or SceneChanges()
     as_configured = not changes.envelope and not changes.openings
-    config = changed(scenario(scenario_id), changes)
+    config = changed(catalogue, scenario(catalogue, scenario_id), changes)
     try:
-        result = solve_case(geometry(scenario_id, changes), config.cfd, directory, changes.layout)
+        result = solve_case(
+            geometry(catalogue, scenario_id, changes), config.cfd, directory, changes.layout
+        )
     except SetupRefused as refusal:
         raise InvalidRequest(str(refusal)) from None
     return Solved(result=result, kept=keep(result) if as_configured else None)

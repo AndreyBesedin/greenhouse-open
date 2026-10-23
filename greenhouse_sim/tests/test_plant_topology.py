@@ -16,6 +16,7 @@ from greenhouse_sim.domain.organs import FlowerStage
 from greenhouse_sim.scene.plants import plant_entities
 from greenhouse_sim.scene.snapshot import SceneEntityKind, SceneSnapshot
 from greenhouse_sim.services import plants
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Transform, Vector3
 
 PLANT = young_plant("p01")
@@ -199,8 +200,11 @@ def test_the_scene_draws_each_organ_where_the_plant_stands_and_says_what_it_is()
     assert leaflet.properties["stage"] == "mature"
 
 
-def test_the_plant_lab_answers_with_its_scene_and_structure() -> None:
-    scene, structure = respond("GET", "/api/plants/scene"), respond("GET", "/api/plants/structure")
+def test_the_plant_lab_answers_with_its_scene_and_structure(simulator: Simulator) -> None:
+    scene, structure = (
+        respond(simulator, "GET", "/api/plants/scene"),
+        respond(simulator, "GET", "/api/plants/structure"),
+    )
 
     assert scene.status == structure.status == HTTPStatus.OK
     assert Plant.model_validate(structure.body) == plants.structure()

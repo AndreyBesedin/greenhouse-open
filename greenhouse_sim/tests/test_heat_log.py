@@ -12,11 +12,13 @@ from greenhouse_protocol.enums import ObservationType, SourceType
 from greenhouse_protocol.observation import Observation
 
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.fields import air_through_a_run, climate_run
 from greenhouse_sim.services.heat_log import heat_records
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.sensors import run_start
+from greenhouse_sim.services.simulator import Simulator
 
 SCENARIO: Final = "reference_greenhouse"
 # Its floor, 12 m by 9.6 m.
@@ -26,21 +28,23 @@ HOUR_S: Final = 3600.0
 HEATER_W: Final = 30_000.0
 
 
-def _day(scenario_id: str, day: int) -> list[Observation]:
-    _, run_id = air_through_a_run(RunRequest(scenario_id))
-    return heat_records(RunRequest(scenario_id), day, run_start(scenario_id), run_id)
+def _day(simulator: Simulator, scenario_id: str, day: int) -> list[Observation]:
+    _, run_id = air_through_a_run(simulator, RunRequest(scenario_id))
+    return heat_records(
+        simulator, RunRequest(scenario_id), day, run_start(PACKAGED, scenario_id), run_id
+    )
 
 
 def _mj_m2(joules: float) -> float:
     return joules / 1e6 / FLOOR_M2
 
 
-def test_an_hours_heat_is_an_increment_at_its_end_from_the_runs_house() -> None:
-    _, run_id = air_through_a_run(RunRequest(SCENARIO))
-    house = climate_run(RunRequest(SCENARIO))[1].house
-    start = run_start(SCENARIO)
+def test_an_hours_heat_is_an_increment_at_its_end_from_the_runs_house(simulator: Simulator) -> None:
+    _, run_id = air_through_a_run(simulator, RunRequest(SCENARIO))
+    house = climate_run(simulator, RunRequest(SCENARIO))[1].house
+    start = run_start(PACKAGED, SCENARIO)
 
-    records = _day(SCENARIO, 1)
+    records = _day(simulator, SCENARIO, 1)
 
     assert {r.observation_type for r in records} == {ObservationType.HEATING_ENERGY_INCREMENT_MJ_M2}
     assert [r.timestamp for r in records] == [
@@ -63,18 +67,20 @@ def test_an_hours_heat_is_an_increment_at_its_end_from_the_runs_house() -> None:
     assert check_observations(records) == []
 
 
-def test_a_heater_no_one_runs_gives_no_heat_and_a_house_without_one_no_record() -> None:
+def test_a_heater_no_one_runs_gives_no_heat_and_a_house_without_one_no_record(
+    simulator: Simulator,
+) -> None:
     # The climate box's heater is off until commanded; the airflow box has none.
-    assert [r.value for r in _day("climate_box", 0)] == [0.0] * 24
-    assert _day("airflow_box", 0) == []
+    assert [r.value for r in _day(simulator, "climate_box", 0)] == [0.0] * 24
+    assert _day(simulator, "airflow_box", 0) == []
 
 
 @pytest.mark.slow
-def test_a_cold_spell_takes_far_more_heat_than_a_june_day() -> None:
+def test_a_cold_spell_takes_far_more_heat_than_a_june_day(simulator: Simulator) -> None:
     # From the kept opening day, as the viewer and a playback carry on.
-    checkpoints.load_openings()
-    march = [sum(r.value for r in _day(SCENARIO, day)) for day in range(3)]
-    june = [sum(r.value for r in _day(SCENARIO, day)) for day in range(110, 113)]
+    checkpoints.load_openings(simulator)
+    march = [sum(r.value for r in _day(simulator, SCENARIO, day)) for day in range(3)]
+    june = [sum(r.value for r in _day(simulator, SCENARIO, day)) for day in range(110, 113)]
 
     assert min(march) > 4 * max(june)
     # Every day differs: the heater follows the weather, not a schedule.

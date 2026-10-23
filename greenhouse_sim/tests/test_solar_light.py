@@ -17,6 +17,7 @@ from greenhouse_sim.domain.air import AIR_UNITS, AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services.grid import air_grid
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.solar.glass import NORMAL_TRANSMITTANCE
 from greenhouse_sim.solar.inside import Sunlight, sky_view
 from greenhouse_sim.solar.position import SunPosition, sun_position
@@ -199,17 +200,21 @@ def test_a_climate_runs_field_carries_the_light() -> None:
     assert night.sample(AirQuantity.PAR, MIDDLE) == pytest.approx(0.0)
 
 
-def test_the_api_serves_the_climates_light_and_the_skys() -> None:
+def test_the_api_serves_the_climates_light_and_the_skys(simulator: Simulator) -> None:
     # 10:00 in Amsterdam on 1 January, a low sun, under a clear spring sky.
     response = respond(
-        "GET", "/api/scenarios/climate_box/fields/climate?t=36000&weather=cold_spring_day"
+        simulator,
+        "GET",
+        "/api/scenarios/climate_box/fields/climate?t=36000&weather=cold_spring_day",
     )
     document = FieldDocument.model_validate(response.body)
     field = EnvironmentField.from_document(document)
     weather = json.loads(
         json.dumps(
             respond(
-                "GET", "/api/scenarios/climate_box/weather?t=36000&weather=cold_spring_day"
+                simulator,
+                "GET",
+                "/api/scenarios/climate_box/weather?t=36000&weather=cold_spring_day",
             ).body
         )
     )

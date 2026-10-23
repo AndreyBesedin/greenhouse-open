@@ -23,6 +23,7 @@ from greenhouse_sim.scenarios.manifest_files import manifest_digest
 from greenhouse_sim.services.fields import house_air_at
 from greenhouse_sim.services.replay import ROUNDED_DECIMALS, DayProbe, _rounded, day_probes
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 
 FIXTURE: Final = Path(__file__).resolve().parent / "fixtures" / "reference_replay.json"
 SCENARIO: Final = "reference_greenhouse"
@@ -32,21 +33,23 @@ KEPT_DAYS: Final = 3
 BRANCH: Final = ((DAY_S + 3600.0, "heater", 0.0),)
 
 
-def test_the_reference_runs_first_days_replay_to_the_digests_kept() -> None:
+def test_the_reference_runs_first_days_replay_to_the_digests_kept(simulator: Simulator) -> None:
     kept = json.loads(FIXTURE.read_text())
 
     assert kept["manifest"] == manifest_digest(SCENARIO), (
         "the reference scenario's manifest has changed: "
         "write its replay again with `python tests/test_replay.py --update`"
     )
-    replayed = day_probes(RunRequest(SCENARIO), KEPT_DAYS)
+    replayed = day_probes(simulator, RunRequest(SCENARIO), KEPT_DAYS)
     assert [probe.model_dump() for probe in replayed] == kept["days"]
 
 
-def test_a_replay_gives_the_same_digests_and_a_branch_the_same_before_its_change() -> None:
-    first = day_probes(RunRequest(SCENARIO), 2)
-    again = day_probes(RunRequest(SCENARIO), 2)
-    branch = day_probes(RunRequest(SCENARIO, commands=BRANCH), 2)
+def test_a_replay_gives_the_same_digests_and_a_branch_the_same_before_its_change(
+    simulator: Simulator,
+) -> None:
+    first = day_probes(simulator, RunRequest(SCENARIO), 2)
+    again = day_probes(simulator, RunRequest(SCENARIO), 2)
+    branch = day_probes(simulator, RunRequest(SCENARIO, commands=BRANCH), 2)
 
     assert again == first
     assert branch[0] == first[0]
@@ -57,32 +60,35 @@ def test_a_replay_gives_the_same_digests_and_a_branch_the_same_before_its_change
 
 
 def test_a_replay_gives_the_same_digests_after_a_viewer_scrubbed_the_run(
+    simulator: Simulator,
     afresh: Callable[[], None],
 ) -> None:
     # A moment between the run's minutes, asked for first, changes nothing
     # that is worked out after it.
-    fresh = day_probes(RunRequest(SCENARIO), 1)
+    fresh = day_probes(simulator, RunRequest(SCENARIO), 1)
     afresh()
-    house_air_at(RunRequest(SCENARIO), time_s=DAY_S - 30.0)
+    house_air_at(simulator, RunRequest(SCENARIO), time_s=DAY_S - 30.0)
 
-    assert day_probes(RunRequest(SCENARIO), 1) == fresh
+    assert day_probes(simulator, RunRequest(SCENARIO), 1) == fresh
 
 
-def test_a_probe_is_rounded_before_it_is_digested() -> None:
+def test_a_probe_is_rounded_before_it_is_digested(simulator: Simulator) -> None:
     assert _rounded({"a": [1.0000001234, "x", 2], "b": 0.1 + 0.2}) == {
         "a": [round(1.0000001234, ROUNDED_DECIMALS), "x", 2],
         "b": 0.3,
     }
-    probe = day_probes(RunRequest(SCENARIO), 1)[0]
+    probe = day_probes(simulator, RunRequest(SCENARIO), 1)[0]
     assert isinstance(probe, DayProbe)
     assert probe.readings > 0 and probe.organs > 0
 
 
-def _update() -> None:
+def _update(simulator: Simulator) -> None:
     kept = {
         "scenario_id": SCENARIO,
         "manifest": manifest_digest(SCENARIO),
-        "days": [probe.model_dump() for probe in day_probes(RunRequest(SCENARIO), KEPT_DAYS)],
+        "days": [
+            probe.model_dump() for probe in day_probes(simulator, RunRequest(SCENARIO), KEPT_DAYS)
+        ],
     }
     FIXTURE.parent.mkdir(exist_ok=True)
     FIXTURE.write_text(json.dumps(kept, indent=2) + "\n")
@@ -97,7 +103,8 @@ def test_large_numbers_are_told_apart_by_their_run_not_their_machine() -> None:
 
 
 if __name__ == "__main__":
-    if sys.argv[1:] != ["--update"]:
-        raise SystemExit("usage: python tests/test_replay.py --update")
-    _update()
-    print(f"wrote {FIXTURE}")
+    with Simulator() as simulator:
+        if sys.argv[1:] != ["--update"]:
+            raise SystemExit("usage: python tests/test_replay.py --update")
+        _update(simulator)
+        print(f"wrote {FIXTURE}")

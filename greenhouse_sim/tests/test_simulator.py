@@ -4,12 +4,15 @@ its live runs, closed with it; made by the server, or given to it."""
 import threading
 import time
 from collections.abc import Callable
+from http import HTTPStatus
 
 import pytest
 
+from greenhouse_sim.api.routes import respond
 from greenhouse_sim.api.server import create_server
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED, Catalogue
+from greenhouse_sim.services import playback
 from greenhouse_sim.services.live import LiveRun
 from greenhouse_sim.services.simulator import Simulator
 
@@ -108,3 +111,42 @@ def test_a_second_close_waits_for_the_first(
     first.join(WAIT_S)
     second.join(WAIT_S)
     assert simulator.closed and _pacing() == []
+
+
+def test_closing_a_simulator_stops_its_playbacks_and_starts_none_after() -> None:
+    simulator = Simulator()
+    playback.start(simulator, "climate_box", 600.0)
+
+    simulator.close()
+
+    assert simulator.playbacks.all() == []
+    assert not any(thread.name.startswith("playback of") for thread in threading.enumerate())
+    with pytest.raises(RuntimeError, match="closed"):
+        playback.start(simulator, "climate_box", 600.0)
+
+
+def test_each_simulator_plays_its_own_runs_back() -> None:
+    with Simulator() as simulator, Simulator() as other:
+        playback.start(simulator, "climate_box", 600.0, hold=True)
+
+        assert [found.scenario_id for found in simulator.playbacks.all()] == ["climate_box"]
+        assert other.playbacks.all() == []
+        assert simulator.cursors is not other.cursors
+
+
+def test_a_scenario_registered_with_a_simulator_is_answered_by_it_alone() -> None:
+    drafted = CONFIG.model_copy(update={"greenhouse_id": "drafted_box"})
+    with Simulator() as simulator, Simulator() as other:
+        simulator.catalogue.register(drafted)
+
+        listed = respond(simulator, "GET", "/api/scenarios").body
+        assert isinstance(listed, list)
+        assert [summary["id"] for summary in listed if isinstance(summary, dict)][-1] == (
+            "drafted_box"
+        )
+        assert respond(simulator, "GET", "/api/scenarios/drafted_box/climate/house?t=0").status == (
+            HTTPStatus.OK
+        )
+        assert respond(other, "GET", "/api/scenarios/drafted_box/climate/house?t=0").status == (
+            HTTPStatus.NOT_FOUND
+        )

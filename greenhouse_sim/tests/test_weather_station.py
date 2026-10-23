@@ -10,10 +10,12 @@ from pydantic import ValidationError
 from greenhouse_sim.domain.sensors import SensorKind
 from greenhouse_sim.fields.synthetic import shear_field
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.sensors.air import erred, observe, reads
 from greenhouse_sim.services import sensors, weather
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.weather.state import WeatherState
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.layout import Layout
@@ -75,8 +77,8 @@ def test_a_wind_vanes_reading_goes_round_the_compass() -> None:
     assert erred(vane, 100.0, 0.0, 0, seed=1) == (105.0, False)
 
 
-def test_its_readings_are_the_protocols_outside_observations() -> None:
-    observed = sensors.observations(RunRequest("climate_box"), until_s=120)
+def test_its_readings_are_the_protocols_outside_observations(simulator: Simulator) -> None:
+    observed = sensors.observations(simulator, RunRequest("climate_box"), until_s=120)
     outside = [o for o in observed.observations if o.sensor_id in {s.sensor_id for s in STATION}]
 
     assert check_observations(observed.observations) == []
@@ -92,9 +94,9 @@ def test_its_readings_are_the_protocols_outside_observations() -> None:
     assert {freshness[s.sensor_id] for s in STATION} == {"fresh"}
 
 
-def test_clean_its_readings_are_the_weather_the_run_is_under() -> None:
+def test_clean_its_readings_are_the_weather_the_run_is_under(simulator: Simulator) -> None:
     clean = sensors.observations(
-        RunRequest("climate_box", weather="cold_spring_day"), until_s=600, clean=True
+        simulator, RunRequest("climate_box", weather="cold_spring_day"), until_s=600, clean=True
     )
     readings = {
         (o.sensor_id, o.timestamp): o.value
@@ -104,18 +106,20 @@ def test_clean_its_readings_are_the_weather_the_run_is_under() -> None:
 
     for (_, taken), value in readings.items():
         seconds = (taken - clean.start).total_seconds()
-        outside = weather.at_a_moment("climate_box", seconds, "cold_spring_day").weather
+        outside = weather.at_a_moment(PACKAGED, "climate_box", seconds, "cold_spring_day").weather
         assert value == pytest.approx(outside.air_temperature_c)
     # Cooling towards the spring day's dawn.
     values = list(readings.values())
     assert values == sorted(values, reverse=True)
 
 
-def test_its_truth_is_the_weather_and_its_readings_err_about_it() -> None:
+def test_its_truth_is_the_weather_and_its_readings_err_about_it(simulator: Simulator) -> None:
     observed = sensors.observations(
-        RunRequest("climate_box", weather="windy_autumn_day"), until_s=3600
+        simulator, RunRequest("climate_box", weather="windy_autumn_day"), until_s=3600
     )
-    truth = sensors.truth(RunRequest("climate_box", weather="windy_autumn_day"), until_s=3600)
+    truth = sensors.truth(
+        simulator, RunRequest("climate_box", weather="windy_autumn_day"), until_s=3600
+    )
     speed = next(t for t in truth.sensors if t.sensor_id == "station_wind_speed")
     readings = [o.value for o in observed.observations if o.sensor_id == "station_wind_speed"]
 

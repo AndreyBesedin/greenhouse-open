@@ -27,6 +27,7 @@ from typing import Final
 
 from greenhouse_sim.scenarios.manifest_files import FIRST_SCENARIO
 from greenhouse_sim.services.benchmark import costs_json, simulator_costs
+from greenhouse_sim.services.simulator import Simulator
 
 # The report kept in the repository, beside the package's source: found only
 # when the simulator runs from a checkout, not installed as a package.
@@ -77,9 +78,11 @@ def peak_memory_mib() -> float:
     return round(peak * scale / MEBIBYTE, 1)
 
 
-def report(days: int | None = None, scenario_id: str = FIRST_SCENARIO) -> dict[str, object]:
+def report(
+    simulator: Simulator, days: int | None = None, scenario_id: str = FIRST_SCENARIO
+) -> dict[str, object]:
     """The benchmark's report: when, on what, and what it measured."""
-    costs = json.loads(costs_json(simulator_costs(scenario_id, days)))
+    costs = json.loads(costs_json(simulator_costs(simulator, scenario_id, days)))
     return {
         "recorded": datetime.date.today().isoformat(),
         "machine": machine(),
@@ -121,7 +124,8 @@ def main(arguments: list[str] | None = None) -> None:
     parsed = parser.parse_args(arguments)
     if parsed.record and parsed.report is None:
         parser.error("no kept report here to keep it as: name one with --report")
-    latest = report(parsed.days)
+    with Simulator() as simulator:
+        latest = report(simulator, parsed.days)
     path: Path | None = parsed.report
     kept = json.loads(path.read_text()) if path is not None and path.exists() else None
     print(compared(latest, kept))

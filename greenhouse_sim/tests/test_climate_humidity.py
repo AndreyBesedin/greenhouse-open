@@ -18,15 +18,17 @@ from greenhouse_sim.climate.transport import AirState, Transport
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.grid import air_grid
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import HOUR_S
 from greenhouse_sim.world.equipment import Dehumidifier, Fan
 from greenhouse_sim.world.geometry import Vector3
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
 GRID = air_grid(CONFIG)
-SOLID = cfd.geometry("climate_box").solid()
+SOLID = cfd.geometry(PACKAGED, "climate_box").solid()
 AIR = ~SOLID
 NX, NY, NZ = GRID.shape
 FAN = next(piece for piece in CONFIG.layout.equipment if isinstance(piece, Fan))
@@ -159,8 +161,8 @@ def test_uniform_water_stays_uniform_in_the_fans_flow() -> None:
     np.testing.assert_array_equal(after.humidity[AIR], START.humidity[AIR])
 
 
-def _climate(query: str) -> EnvironmentField:
-    response = respond("GET", f"/api/scenarios/climate_box/fields/climate{query}")
+def _climate(simulator: Simulator, query: str) -> EnvironmentField:
+    response = respond(simulator, "GET", f"/api/scenarios/climate_box/fields/climate{query}")
     assert response.status == 200, response.body
     return EnvironmentField.from_document(FieldDocument.model_validate(response.body))
 
@@ -171,9 +173,11 @@ def _relative(field: EnvironmentField, x: float, y: float, z: float) -> float:
     return value
 
 
-def test_the_climate_publishes_relative_humidity_drying_around_a_running_dehumidifier() -> None:
-    start = _climate("")
-    dried = _climate("?set=dehumidifier:1&t=600")
+def test_the_climate_publishes_relative_humidity_drying_around_a_running_dehumidifier(
+    simulator: Simulator,
+) -> None:
+    start = _climate(simulator, "")
+    dried = _climate(simulator, "?set=dehumidifier:1&t=600")
     beside, far = (6.0, 5.3, 0.75), (2.0, 1.0, 0.75)
 
     assert start.channels[AirQuantity.HUMIDITY] == pytest.approx(85.0)
