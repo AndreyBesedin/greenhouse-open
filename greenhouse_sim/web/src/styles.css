@@ -279,6 +279,14 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* The latest request's path on one line, cut short (#301). */
+.hud .hud-simulator {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .hud .time-controls {
   align-items: center;
   margin: 8px 0 0;
@@ -702,6 +710,11 @@ body {
 .climate-time-note {
   margin: 0;
   font-size: 0.85em;
+}
+
+/* While nothing loads, the line keeps its height, unseen (#301). */
+.climate-time-idle {
+  visibility: hidden;
 }
 
 /* The weather outside: a line, with a compass beside it, opening on its
