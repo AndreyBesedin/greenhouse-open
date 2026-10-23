@@ -119,9 +119,11 @@ def test_a_house_leaks_faster_in_a_wind() -> None:
 
 
 def test_opening_a_vent_under_dry_outside_air_dries_the_house(simulator: Simulator) -> None:
-    shut = _climate_day(simulator, "climate_box", "default", "cold_spring_day", (), (), ()).run
+    shut = _climate_day(
+        simulator, ("climate_box", "default", "cold_spring_day", (), (), (), ())
+    ).run
     venting = _climate_day(
-        simulator, "climate_box", "default", "cold_spring_day", (), (("roof_vent", 1.0),), ()
+        simulator, ("climate_box", "default", "cold_spring_day", (), (("roof_vent", 1.0),), (), ())
     ).run
 
     assert (

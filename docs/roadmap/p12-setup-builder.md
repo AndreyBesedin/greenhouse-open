@@ -1,6 +1,7 @@
 # P12: The setup builder
 
-**Status:** in progress: P12.0 is done; the rest is proposed.
+**Status:** in progress: P12.0 is done, P12.1 under way; the rest is
+proposed.
 Part of the [simulator roadmap](README.md).
 
 ## Goal
@@ -117,7 +118,7 @@ to describe a house.
 | Step | Work | Accepted when | Status |
 | --- | --- | --- | --- |
 | P12.0 | An installation drafted from a form's values, assessed, edited many rows at a time, exchanged as a file; decision 0050 | A file reads back as the draft it was written from; a refused file names its fields; findings name their items and rows; no packaged scenario changes | Done |
-| P12.1 | A manifest holds or names an installation, by a manifest migration; a draft resolved into a scenario and registered at runtime; drafts and revisions kept locally | A packaged scenario's run id unchanged by the migration; a draft without errors runs; drafts saved, reopened and reverted; files exchanged without the store | Proposed, after decision 0048's series |
+| P12.1 | A manifest holds or names an installation, by a manifest migration; a draft resolved into a scenario and registered at runtime; drafts and revisions kept locally | A packaged scenario's run id unchanged by the migration; a draft without errors runs; drafts saved, reopened and reverted; files exchanged without the store | In progress: the manifest holds its installation (format 4); drafts kept (decision 0051); a draft run follows, after decision 0048's series |
 | P12.2 | The builder in the viewer: start, house form, preview, rows chosen together, the scenario step | Create, preview, import, export, save, reopen and run a house in the browser, by keyboard too; its browser QA | Proposed |
 | P12.3 | Equipment and openings: palettes, surface-mounted doors and vents, many items placed, copied and spaced at once, a property inspector | Items placed many at a time with valid geometry and stable ids; collisions explained or refused; every field editable | Proposed |
 | P12.4 | Crop model parameters as versioned assets, edited by schema-driven forms | A tomato parameter set edited, saved, compared, exported, and a run reproduced from its version | Proposed, building on the audit's project for models chosen by the manifest |
@@ -127,7 +128,8 @@ to describe a house.
 ### P12.0: what it does, and what it leaves
 
 `greenhouse_sim.builder` holds the draft (`InstallationDraft`: an
-installation id, a name, an `Envelope`, a `Layout`, a `RowCrop` per row),
+installation id, a name, an `Envelope`, a `Layout`, a `RowCrop` per row;
+`scenarios.installation.Installation` since P12.1),
 its assessment (`assess_installation`, `Finding`s with a code, a message,
 and the items and rows concerned), the first form's draft
 (`basic_installation`), one edit of many rows (`assign_crop_to_rows`) and
@@ -136,6 +138,39 @@ the file (`export_installation`, `import_installation`, refusing with a
 
 It keeps no draft, resolves nothing into a scenario, places no equipment,
 and runs no row of another crop; P12.1 to P12.5 do.
+
+### P12.1: the manifest's installation
+
+A manifest in format 4 holds its house as an installation, under
+`installation`: its id and name, its envelope, its layout by name (a
+scenario's layouts stay files of their own, with their alternatives), and
+the crop every row grows. The installation's model,
+`scenarios.installation.Installation`, moved from the builder, which
+imports it. `scenario_house` gives a scenario its house from it, the
+layout's crop rows and their planting positions as the run's rows and
+columns, and refuses an installation a run cannot grow: no crop rows, a
+row without a crop, rows of different crops (P12.5).
+
+A format 3 manifest is migrated: its house fields become its installation,
+named for its scenario, every row growing its crop. The packaged manifests
+are written in format 4, read to configurations equal to format 3's, so
+every run id and replay digest stays. A manifest's version, its content's
+digest, changes, and with it the kept opening day's and the checkpoints'
+manifest field.
+
+A manifest naming an installation's file, rather than holding it, waits
+for something that needs it: a draft is run by registering its scenario
+with the simulator, not by writing a manifest.
+
+Drafts and their revisions are kept in a local SQLite file (decision
+0051, `builder.drafts`), each revision its installation's file, so that a
+revision saved in an older format is read as the file is. A change names
+the revision it was made on and is refused if another was saved since.
+
+Next: a draft resolved into a scenario, with a site, a period and a
+weather, registered with the simulator's catalogue at runtime, and run;
+and the API's routes to the drafts, which the builder in the viewer
+(P12.2) uses.
 
 ### P12.4 and the models chosen by the manifest
 
@@ -174,8 +209,6 @@ scene and its first day match the reference greenhouse's.
 
 ## Open questions
 
-- Drafts kept in a local SQLite file first, or as files beside the
-  packaged scenarios; either keeps the same document and revision contract.
 - Whether a row's crop belongs on an explicit row object rather than beside
   `CropRows`, which repeats one row; P12.5 migrates rather than keeping
   both.

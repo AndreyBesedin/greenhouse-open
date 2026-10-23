@@ -38,8 +38,13 @@ The families as they stand:
 | `E`, `F`, `I`, `UP`, `B` | on, since 0.1.0 | |
 | `SIM` | on (#292) | `SIM300`: a range is written as a number line (`low < value < high`), and a named constant is compared with the number it should be |
 | `PERF`, `ERA`, `PIE`, `C4` | on | `C408` allows `dict(name=value)`, which the tests use for a record's defaults |
-| `N`, `DTZ`, `RUF`, `ARG`, `C901`, `PLR0913` | next, a pull request each | `PLR0913` once the services take one run request (W11, done) |
+| `N` | on | `N818`: an exception is named for what happened (`NotFound`, `InvalidManifest`), as the standard library's own are, and the protocol's are its users'; `do_*`, which `http.server` names its handlers' methods, is no mixed case to fix |
+| `DTZ` | on | `DTZ001` in the tests: a test builds a wall-clock time on purpose, to see it refused, or as a dataset's rows give it; and the adapters' Excel epoch, wall-clock by nature, says so on its line |
+| `PLR0917` | on, in place of `PLR0913` | Five positional parameters at most, the rest keyword-only: a call then names each of them, which is what a long argument list puts at risk. `PLR0913` counts keyword-only parameters too, and stays off |
+| `RUF` | on | The prose's typeset characters are allowed in strings, docstrings and comments: the minus sign (−5 °C), the times sign (24 × 13 cells), a density's ρ and a prime (′) |
+| `ARG` | on | `ARG002`: a method takes what its protocol asks of every implementation, used or not (a weather kind's `source` its seed and start, a stem path's `rising` how much it has laid down), and its class meets the protocol by shape, which Ruff cannot see. `ARG` in the tests: a stand-in takes the arguments of what it stands in for, and a test asks for a fixture by naming it. A function's unused argument stays a finding: those found were dead, and are gone |
 | `TRY`, `D1` | not planned | the messages built in `raise`, and docstrings written by judgment, are this codebase's choice |
+| `C901` | not planned | Its findings are flat lists of rules, each a branch: the API's route table, a plant's structural checks, an upload's or a workbook's checks. Split into functions they would scatter the rules, not simplify them |
 
 Other families wait for a reason: a defect one of them would have caught.
 

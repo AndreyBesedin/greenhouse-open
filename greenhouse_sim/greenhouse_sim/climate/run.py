@@ -125,6 +125,7 @@ class ClimateRun:
     def __init__(
         self,
         base: AirflowModel,
+        *,
         equipment: Sequence[Equipment],
         schedule: Schedule,
         settings: ClimateSettings,
@@ -203,16 +204,16 @@ class ClimateRun:
         levels is shared with this run, as it is the same."""
         later = ClimateRun(
             self.base,
-            self.equipment,
-            self.schedule,
-            self.settings,
-            self.grid,
-            self.solid,
-            self.weather,
-            self.vents,
-            self.glazed,
-            self.sunlight,
-            self.thermostat,
+            equipment=self.equipment,
+            schedule=self.schedule,
+            settings=self.settings,
+            grid=self.grid,
+            solid=self.solid,
+            weather=self.weather,
+            vents=self.vents,
+            glazed=self.glazed,
+            sunlight=self.sunlight,
+            thermostat=self.thermostat,
         )
         later._steady = self._steady
         later._steadying = self._steadying

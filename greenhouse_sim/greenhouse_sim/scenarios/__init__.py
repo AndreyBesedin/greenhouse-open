@@ -8,4 +8,4 @@ from greenhouse_sim.scenarios.config import ScenarioConfig
 # looks up are its catalogue's (decision 0048).
 SCENARIO_REGISTRY: Mapping[str, ScenarioConfig] = PACKAGED.configs
 
-__all__ = ["ScenarioConfig", "SCENARIO_REGISTRY"]
+__all__ = ["SCENARIO_REGISTRY", "ScenarioConfig"]

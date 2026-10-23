@@ -93,6 +93,7 @@ def _fruit_at(
     fruit: Fruit,
     previous_tt: float,
     thermal_time: float,
+    *,
     params: TrussParams,
     growth: float,
 ) -> Fruit:
@@ -116,6 +117,7 @@ def _flower_at(
     flower: Flower,
     previous_tt: float,
     thermal_time: float,
+    *,
     params: TrussParams,
     growth: float,
 ) -> Flower:
@@ -124,7 +126,9 @@ def _flower_at(
     if flower.stage == FlowerStage.ABORTED:
         return flower
     if flower.stage == FlowerStage.SET and flower.fruit is not None:
-        fruit = _fruit_at(plant, flower.fruit, previous_tt, thermal_time, params, growth)
+        fruit = _fruit_at(
+            plant, flower.fruit, previous_tt, thermal_time, params=params, growth=growth
+        )
         return flower.model_copy(update={"fruit": fruit})
     opens_at = flower.born_tt + params.anthesis_cd
     decided_at = opens_at + params.set_decision_cd
@@ -142,7 +146,7 @@ def _flower_at(
         params.fruits,
     )
     # A fruit set within this step may already have reached its own moment.
-    fruit = _fruit_at(plant, fruit, decided_at, thermal_time, params, growth)
+    fruit = _fruit_at(plant, fruit, decided_at, thermal_time, params=params, growth=growth)
     return flower.model_copy(update={"stage": FlowerStage.SET, "fruit": fruit})
 
 
@@ -151,6 +155,7 @@ def grown_truss(
     truss: Truss,
     previous_tt: float,
     thermal_time: float,
+    *,
     params: TrussParams,
     growth: float = 1.0,
 ) -> Truss:
@@ -167,7 +172,7 @@ def grown_truss(
             Flower(flower_id=flower_id(plant.plant_id, truss.number, rank), rank=rank, born_tt=born)
         )
     grown = tuple(
-        _flower_at(plant, truss, flower, previous_tt, thermal_time, params, growth)
+        _flower_at(plant, truss, flower, previous_tt, thermal_time, params=params, growth=growth)
         for flower in flowers
     )
     return truss.model_copy(update={"flowers": grown})

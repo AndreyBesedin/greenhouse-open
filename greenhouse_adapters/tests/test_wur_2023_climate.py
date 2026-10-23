@@ -183,8 +183,19 @@ def _empty_destructive_workbook() -> bytes:
     sheet.title = "All Data"
     sheet.append(["Sowing date", None, "2023-08-15"])
     sheet.append(
-        ["DAS", "Date", "Phase", "Plant density (p/m2)", "Treatment", "Variety", "EC", "Light"]
-        + ["Sample name", "Sample n", "Plant height"]
+        [
+            "DAS",
+            "Date",
+            "Phase",
+            "Plant density (p/m2)",
+            "Treatment",
+            "Variety",
+            "EC",
+            "Light",
+            "Sample name",
+            "Sample n",
+            "Plant height",
+        ]
     )
     buffer = BytesIO()
     book.save(buffer)

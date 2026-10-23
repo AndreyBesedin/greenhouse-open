@@ -28,7 +28,7 @@ VENT_OPENINGS = (0.0, 0.5, 1.0)
 
 
 def _greenhouse(
-    length: float, width: float, spans: int, bays: int, eave: float, ridge: float, vent: float
+    *, length: float, width: float, spans: int, bays: int, eave: float, ridge: float, vent: float
 ) -> Envelope:
     """A greenhouse of these dimensions, with a roof vent near its first ridge."""
     envelope = Envelope(
@@ -55,7 +55,9 @@ def _greenhouse(
 
 
 GREENHOUSES = [
-    _greenhouse(length, width, spans, bays, eave, ridge, vent)
+    _greenhouse(
+        length=length, width=width, spans=spans, bays=bays, eave=eave, ridge=ridge, vent=vent
+    )
     for (length, width, spans, bays, (eave, ridge), vent) in itertools.product(
         LENGTHS, WIDTHS, SPANS, BAYS, HEIGHTS, VENT_OPENINGS
     )

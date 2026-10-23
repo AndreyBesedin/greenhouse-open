@@ -31,7 +31,7 @@ SEP_18 = datetime(2023, 9, 18)
 
 
 def _row(
-    day: datetime, treatment: str, ec: str, light: str, leaves_g: object, trusses: int
+    day: datetime, treatment: str, ec: str, light: str, *, leaves_g: object, trusses: int
 ) -> tuple[object, ...]:
     """A cherry sample, the first of its treatment, 25 plants per square
     metre: on 4 September in the transplant phase, 28 days after sowing,
@@ -44,10 +44,10 @@ def _row(
 # Two copies of one untreated plant, listed under two treatments' names, then
 # two treated samples, one of them with a measurement not made.
 ROWS = (
-    _row(SEP_4, "No treatment", "EC3", "ML", 12.5, 0),
-    _row(SEP_4, "No treatment", "EC5", "HL", 12.5, 0),
-    _row(SEP_18, "EC3 ML", "EC3", "ML", 80.0, 2),
-    _row(SEP_18, "EC5 HL", "EC5", "HL", "N/A", 3),
+    _row(SEP_4, "No treatment", "EC3", "ML", leaves_g=12.5, trusses=0),
+    _row(SEP_4, "No treatment", "EC5", "HL", leaves_g=12.5, trusses=0),
+    _row(SEP_18, "EC3 ML", "EC3", "ML", leaves_g=80.0, trusses=2),
+    _row(SEP_18, "EC5 HL", "EC5", "HL", leaves_g="N/A", trusses=3),
 )
 
 

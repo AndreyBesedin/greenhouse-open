@@ -4,7 +4,7 @@ warmth and veers steadily, and gusts the same for the same seed; and a
 scenario run under one by name."""
 
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from http import HTTPStatus
 
 import pytest
@@ -24,7 +24,7 @@ from greenhouse_sim.world.site import DEFAULT_SITE
 
 # Midnight in Amsterdam on a winter's day, and a still copy of the spring
 # day, whose wind follows its curve exactly.
-MIDNIGHT = DEFAULT_SITE.midnight(datetime(2026, 4, 14).date())
+MIDNIGHT = DEFAULT_SITE.midnight(date(2026, 4, 14))
 STILL = COLD_SPRING_DAY.model_copy(update={"gustiness": 0.0})
 SEED = 1201
 

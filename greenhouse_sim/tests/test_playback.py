@@ -188,7 +188,7 @@ def test_a_restart_with_another_layout_plays_its_run_from_its_start_as_a_new_run
     # Its records are its run's, from its start, as a consumer reads them.
     cut = played.records_after(0, ALL)
     expected, _ = sensors.delivered_between(
-        simulator, RunRequest(SCENARIO, layout=MOVED_NAME), None, DAY_S / 2, EVERY_S
+        simulator, RunRequest(SCENARIO, layout=MOVED_NAME), None, DAY_S / 2, every_s=EVERY_S
     )
     assert [r for r in cut.records if r.sensor_id] == expected
     assert {r.source.source_id for r in cut.records} == {moved.run_id}

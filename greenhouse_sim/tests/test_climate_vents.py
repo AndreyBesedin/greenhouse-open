@@ -161,7 +161,7 @@ def test_a_climate_is_served_with_its_vents_open_as_asked(simulator: Simulator) 
 
 def test_each_vents_cells_lie_against_its_face_and_it_knows_its_way_out() -> None:
     vents = {vent.opening_id: vent for vent in _vents({"roof_vent": 1, "side_vent": 1, "door": 1})}
-    nx, ny, nz = GRID.shape
+    *_, nz = GRID.shape
 
     # The roof vent over the top layer, out upwards; the side vent in the
     # right side wall, at y = 0; the door in the front gable, at x = 0.

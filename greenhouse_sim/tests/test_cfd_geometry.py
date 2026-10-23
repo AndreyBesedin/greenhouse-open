@@ -89,7 +89,7 @@ def _selection(dictionary: str, name: str) -> tuple[Vector3, Vector3]:
 
 def _footprint(obstacle: Boundary, grid: FieldGrid, face: Face) -> int:
     """How many of a face's mesh faces an obstacle standing on it removes."""
-    axis, far, (first, second) = FACES[face]
+    axis, far, _ = FACES[face]
     level = getattr(grid.maximum if far else grid.origin, axis)
     side = getattr(obstacle.box.maximum if far else obstacle.box.minimum, axis)
     if abs(side - level) > 1e-9:

@@ -84,7 +84,8 @@ def report(
     """The benchmark's report: when, on what, and what it measured."""
     costs = json.loads(costs_json(simulator_costs(simulator, scenario_id, days)))
     return {
-        "recorded": datetime.date.today().isoformat(),
+        # The day where it is recorded, read from an aware clock.
+        "recorded": datetime.datetime.now(datetime.UTC).astimezone().date().isoformat(),
         "machine": machine(),
         **costs,
         "peak_memory_mib": peak_memory_mib(),

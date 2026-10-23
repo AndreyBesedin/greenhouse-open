@@ -155,8 +155,12 @@ def test_a_cold_spell_cools_the_glass_at_once_and_the_air_more_slowly() -> None:
     night = NIGHT
     frost = night.model_copy(update={"air_temperature_c": -4.0})
     spell = WeatherSeries(
-        [(start, night), (start + timedelta(minutes=10), night)]
-        + [(start + timedelta(minutes=11), frost), (start + timedelta(hours=1), frost)]
+        [
+            (start, night),
+            (start + timedelta(minutes=10), night),
+            (start + timedelta(minutes=11), frost),
+            (start + timedelta(hours=1), frost),
+        ]
     )
     run = _run(spell, {"heater": 1.0})
 
@@ -174,7 +178,7 @@ def test_the_climate_box_heated_settles_where_its_still_glass_passes_the_heaters
     simulator: Simulator,
 ) -> None:
     house = _climate_day(
-        simulator, "climate_box", "default", "default", (("heater", 1.0),), (), ()
+        simulator, ("climate_box", "default", "default", (("heater", 1.0),), (), (), ())
     ).house
     still_u = glazing_u_w_m2k(SINGLE_GLASS, 0.0)
 

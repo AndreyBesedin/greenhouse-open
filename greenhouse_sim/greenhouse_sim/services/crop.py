@@ -52,7 +52,10 @@ if TYPE_CHECKING:
 # How many recent runs' crops are kept.
 KEPT_CROPS: Final = 4
 
-CROPS: Store[RunKey, tuple[RunCrop, Schedule]] = Store("crops", KEPT_CROPS, label=run_label)
+
+def new_store() -> Store[RunKey, tuple[RunCrop, Schedule]]:
+    """A simulator's crops: the latest `KEPT_CROPS` (decision 0048)."""
+    return Store("crops", KEPT_CROPS, label=run_label)
 
 
 def run_crop(simulator: Simulator, run: RunRequest, watch: Stopwatch | None = None) -> RunCrop:

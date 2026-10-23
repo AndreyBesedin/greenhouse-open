@@ -356,9 +356,13 @@ def test_nothing_in_the_simulator_imports_its_api() -> None:
         for path in PACKAGE.rglob("*.py")
         if not path.relative_to(PACKAGE).as_posix().startswith("api/")
         for node in ast.walk(ast.parse(path.read_text()))
-        if isinstance(node, ast.ImportFrom)
-        and (node.module or "").startswith("greenhouse_sim.api")
-        or isinstance(node, ast.Import)
-        and any(alias.name.startswith("greenhouse_sim.api") for alias in node.names)
+        if (
+            isinstance(node, ast.ImportFrom)
+            and (node.module or "").startswith("greenhouse_sim.api")
+        )
+        or (
+            isinstance(node, ast.Import)
+            and any(alias.name.startswith("greenhouse_sim.api") for alias in node.names)
+        )
     )
     assert not importers, importers

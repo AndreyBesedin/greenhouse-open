@@ -1665,7 +1665,9 @@
       "type": "array"
     },
     "schema_version": {
-      "const": 3
+      "type": "integer",
+      "minimum": 3,
+      "maximum": 4
     },
     "$schema": {
       "type": "string"
@@ -1678,6 +1680,6 @@
     "envelope",
     "layout"
   ],
-  "title": "InstallationDraft",
+  "title": "Installation",
   "type": "object"
 }

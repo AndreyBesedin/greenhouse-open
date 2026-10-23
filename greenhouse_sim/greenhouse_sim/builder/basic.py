@@ -4,8 +4,8 @@ a pitched house of equal spans and bays, and parallel rows of one crop
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt
 
-from greenhouse_sim.builder.installation import InstallationDraft, RowCrop
 from greenhouse_sim.domain.crop import CropModel
+from greenhouse_sim.scenarios.installation import Installation, RowCrop
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.geometry import Point2
 from greenhouse_sim.world.identifiers import ItemId
@@ -35,14 +35,14 @@ class BasicSetup(BaseModel):
     variety: str = Field(min_length=1)
 
 
-def basic_installation(values: BasicSetup) -> InstallationDraft:
+def basic_installation(values: BasicSetup) -> Installation:
     """The draft the form's values describe: the rows, on tomato gutters at
     the height asked, centred in the house's plan, every row growing the
     crop chosen. Nothing else is placed, no door, vent or equipment, which
     the assessment then reports missing."""
     along = (values.plants_per_row - 1) * values.plant_pitch_m
     across = (values.rows - 1) * values.row_spacing_m
-    return InstallationDraft(
+    return Installation(
         installation_id=values.installation_id,
         name=values.name,
         envelope=Envelope(

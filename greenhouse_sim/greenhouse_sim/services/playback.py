@@ -449,7 +449,7 @@ class Playback:
                 run,
                 None if day == 0 else day * DAY_S,
                 (day + 1) * DAY_S,
-                self.every_s,
+                every_s=self.every_s,
                 named=self.run_id if run.targets else None,
                 stop=self._stopped,
             )

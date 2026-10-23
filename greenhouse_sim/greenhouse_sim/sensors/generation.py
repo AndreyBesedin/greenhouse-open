@@ -31,10 +31,12 @@ def generate_observations(
     source = RecordSource(type=SourceType.SIMULATION, source_id=simulation_id)
 
     observations: list[Observation] = [
-        _air_temperature_observation(world, config, day, timestamp, rng, source)
+        _air_temperature_observation(world, config, timestamp, rng=rng, source=source)
     ]
     for plant in world.plants:
-        observations.extend(_plant_observations(world, plant, config, day, timestamp, rng, source))
+        observations.extend(
+            _plant_observations(world, plant, config, timestamp, rng=rng, source=source)
+        )
 
     return ObservationGeneration(observations=observations)
 
@@ -42,8 +44,8 @@ def generate_observations(
 def _air_temperature_observation(
     world: GreenhouseWorld,
     config: ScenarioConfig,
-    day: int,
     timestamp: datetime,
+    *,
     rng: np.random.Generator,
     source: RecordSource,
 ) -> Observation:
@@ -65,8 +67,8 @@ def _plant_observations(
     world: GreenhouseWorld,
     plant: PlantWorld,
     config: ScenarioConfig,
-    day: int,
     timestamp: datetime,
+    *,
     rng: np.random.Generator,
     source: RecordSource,
 ) -> list[Observation]:

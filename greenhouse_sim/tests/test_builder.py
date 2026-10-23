@@ -9,11 +9,7 @@ from pydantic import ValidationError
 
 from greenhouse_sim.builder.basic import BasicSetup, basic_installation
 from greenhouse_sim.builder.batch import assign_crop_to_rows
-from greenhouse_sim.builder.installation import (
-    InstallationDraft,
-    RowCrop,
-    assess_installation,
-)
+from greenhouse_sim.builder.installation import assess_installation
 from greenhouse_sim.builder.portable import (
     MAX_IMPORT_BYTES,
     InstallationFileError,
@@ -22,6 +18,7 @@ from greenhouse_sim.builder.portable import (
 )
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.installation import Installation, RowCrop
 from greenhouse_sim.scenarios.manifest_files import SCHEMA_VERSION
 
 
@@ -46,7 +43,7 @@ def _values(**changes: object) -> BasicSetup:
     return BasicSetup.model_validate(data | changes)
 
 
-def _codes(draft: InstallationDraft) -> set[str]:
+def _codes(draft: Installation) -> set[str]:
     return {finding.code for finding in assess_installation(draft)}
 
 
@@ -77,7 +74,7 @@ def test_a_packaged_scenarios_house_lacks_nothing() -> None:
     reference = SCENARIO_REGISTRY["reference_greenhouse"]
     rows = reference.layout.crop_rows
     assert rows is not None
-    draft = InstallationDraft(
+    draft = Installation(
         installation_id="reference",
         name=reference.name,
         envelope=reference.envelope,
@@ -141,10 +138,10 @@ def test_a_row_given_two_crops_or_none_of_the_layouts_is_refused() -> None:
     data = basic_installation(_values()).model_dump()
 
     with pytest.raises(ValidationError, match=r"row 1 has more than one crop, at \[0\] and \[2\]"):
-        InstallationDraft.model_validate(data | {"row_crops": data["row_crops"] * 2})
+        Installation.model_validate(data | {"row_crops": data["row_crops"] * 2})
     beyond = [{"row": 3, "crop_model": "organ", "variety": "cherry"}]
     with pytest.raises(ValidationError, match=r"rows \[3\], beyond the layout's 2 rows"):
-        InstallationDraft.model_validate(data | {"row_crops": beyond})
+        Installation.model_validate(data | {"row_crops": beyond})
 
 
 @pytest.mark.parametrize(
@@ -182,6 +179,18 @@ def test_a_file_carries_the_manifests_format_and_reads_back_the_same() -> None:
     assert import_installation(named) == draft
 
 
+def test_a_file_written_in_format_3_reads_as_it_did() -> None:
+    """Format 4 put a manifest's house in an installation, and left the
+    installation as format 3 wrote it."""
+    draft = basic_installation(_values())
+    document = json.loads(export_installation(draft)) | {"schema_version": 3}
+
+    assert import_installation(json.dumps(document)) == draft
+    for version in (2, 0):
+        with pytest.raises(InstallationFileError, match="reads formats 3 to"):
+            import_installation(json.dumps(document | {"schema_version": version}))
+
+
 def test_a_file_refused_says_which_field_is_at_fault() -> None:
     document = json.loads(export_installation(basic_installation(_values())))
     document["envelope"]["length"] = -1
@@ -206,9 +215,18 @@ def test_a_file_refused_says_which_field_is_at_fault() -> None:
         ('{"unexpected": "document"}', "schema_version", "format None"),
         (json.dumps({"schema_version": SCHEMA_VERSION + 1}), "schema_version", "format"),
         (json.dumps({"schema_version": True}), "schema_version", "format True"),
+        (json.dumps({"schema_version": "4"}), "schema_version", "format '4'"),
         (" " * (MAX_IMPORT_BYTES + 1), "", "larger than"),
     ],
-    ids=["not json", "not an object", "no version", "a later version", "a boolean", "too large"],
+    ids=[
+        "not json",
+        "not an object",
+        "no version",
+        "a later version",
+        "a boolean",
+        "a string",
+        "too large",
+    ],
 )
 def test_a_file_that_is_no_installation_is_refused(text: str, field: str, said: str) -> None:
     with pytest.raises(InstallationFileError) as refused:

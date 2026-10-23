@@ -149,7 +149,7 @@ def test_a_live_command_answers_with_the_runs_new_state(
 
 def test_a_live_run_plays_at_the_speeds_it_offers_and_no_other(runs: LiveRuns) -> None:
     assert [runs.set_speed("climate_box", speed).speed for speed in SPEEDS] == list(SPEEDS)
-    with pytest.raises(InvalidSpeed, match="multiplier must be one of 0.25, 0.5, 1, 2, 4, 8"):
+    with pytest.raises(InvalidSpeed, match=r"multiplier must be one of 0\.25, 0\.5, 1, 2, 4, 8"):
         runs.set_speed("climate_box", 3.0)
     assert issubclass(InvalidSpeed, InvalidRequest)
 

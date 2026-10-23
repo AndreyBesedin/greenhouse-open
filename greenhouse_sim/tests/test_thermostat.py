@@ -4,6 +4,7 @@ moment the house's air reaches its band's edge, which the grid run follows;
 the heat it gives counted as it runs; a command to its heater taking it
 over; and the same switching for the same run, however it is worked out."""
 
+from itertools import pairwise
 from typing import Final
 
 import pytest
@@ -115,7 +116,7 @@ def test_in_the_cold_its_heater_runs_longer_than_in_mild_weather() -> None:
     assert cold_j > 1.5 * mild_j > 0
     # In mild weather it switches on and off, more than once.
     levels = _levels(mild, 6 * HOUR_S)
-    switches = sum(1 for a, b in zip(levels, levels[1:], strict=False) if a != b)
+    switches = sum(1 for a, b in pairwise(levels) if a != b)
     assert switches >= 4
 
 
