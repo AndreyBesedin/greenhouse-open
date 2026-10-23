@@ -73,7 +73,7 @@ test("moving: two items moved in one session are held until applied, then make o
     await selectAt(page, HEATER_SIDE, "climate_box_heater", ACROSS);
     await move.getByRole("button", { name: "Move", exact: true }).click();
     await expect(move.getByTestId("move-new-run")).toHaveText(
-      "Moving equipment changes the house's climate, so it is a new run: applying these moves starts it from its first day.",
+      "Drag equipment or a sensor in the view to move it. Applying the moves starts the run again from its first day.",
     );
 
     await drag(page, HEATER_FOOT, MOVED_FOOT);
@@ -98,6 +98,7 @@ test("moving: two items moved in one session are held until applied, then make o
 
   await test.step("applied, both moves make one new run, from its start", async () => {
     await move.getByRole("button", { name: "Start a new run with these moves" }).click();
+    await move.getByRole("button", { name: "Start the new run" }).click();
 
     await expect(page).toHaveURL(BOTH_MOVED);
     expect(new URL(page.url()).searchParams.get("t")).toBeNull();
@@ -229,7 +230,7 @@ test("moving while following the run played back: applied, the playback starts o
     await selectAt(page, HEATER_SIDE, "climate_box_heater", ACROSS);
     await move.getByRole("button", { name: "Move", exact: true }).click();
     await expect(move.getByTestId("move-new-run")).toContainText(
-      "The run played back starts over with them, and the view follows it.",
+      "Applying the moves starts the run played back again from its first day, and the view follows it.",
     );
     await drag(page, HEATER_FOOT, MOVED_FOOT);
     await expect(page.getByTestId("selected-position")).toHaveText("x 10.20, y 1.20, z 0.00");
@@ -239,6 +240,7 @@ test("moving while following the run played back: applied, the playback starts o
 
   await test.step("applied, the playback starts over with the layout, and the view follows its new run from its start", async () => {
     await move.getByRole("button", { name: "Start a new run with these moves" }).click();
+    await move.getByRole("button", { name: "Start the new run" }).click();
 
     await expect(page).toHaveURL(HEATER_MOVED);
     expect(restarts).toEqual([
