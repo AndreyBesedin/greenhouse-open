@@ -34,6 +34,8 @@ from greenhouse_sim.world.zones import Strip
 # A walkway is drawn as a slab this thick on the floor: a path poured a little
 # above it, which keeps the two apart for every viewer.
 WALKWAY_THICKNESS_M: Final = 0.02
+# No run of pipes is longer: more describe one too large to draw.
+MOST_PIPES_IN_A_RUN: Final = 1_000
 
 _UP: Final = Vector3(x=0.0, y=0.0, z=1.0)
 
@@ -257,7 +259,7 @@ class PipeRunPrimitive(_Primitive):
     start: Vector3
     end: Vector3
     radius: PositiveFloat
-    count: PositiveInt
+    count: Annotated[PositiveInt, Field(le=MOST_PIPES_IN_A_RUN)]
     step: Vector3
 
     @model_validator(mode="after")

@@ -149,6 +149,18 @@ def test_pipes_of_a_run_that_would_touch_are_refused() -> None:
         )
 
 
+def test_a_run_of_more_pipes_than_any_house_has_is_refused() -> None:
+    with pytest.raises(ValidationError, match="less than or equal to 1000"):
+        PipeRunPrimitive(
+            fixture_id="heating",
+            start=Vector3(x=0.5, y=0.3, z=0.1),
+            end=Vector3(x=15.5, y=0.3, z=0.1),
+            radius=0.025,
+            count=1_001,
+            step=Vector3(x=0.0, y=0.0, z=0.1),
+        )
+
+
 def test_a_pipe_may_cross_a_walkway_overhead_but_not_below_head_height() -> None:
     def across(height: float) -> PipePrimitive:
         return PipePrimitive(

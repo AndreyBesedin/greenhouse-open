@@ -91,6 +91,37 @@ def test_legs_are_never_further_apart_than_their_spacing(leg_spacing: float, leg
     assert max(b - a for a, b in zip(xs, xs[1:], strict=False)) <= leg_spacing + 1e-12
 
 
+def test_a_support_too_short_for_two_legs_stands_on_one_at_its_middle() -> None:
+    # One position, 1 cm of overhang and no slab: the support is 2 cm long,
+    # less than its two end legs' 4 cm, which would cross.
+    short = ROWS.model_copy(
+        update={
+            "positions_per_row": 1,
+            "support": TOMATO_GUTTER.model_copy(
+                update={"overhang": 0.01, "leg_spacing": 1.0, "slab": None}
+            ),
+        }
+    )
+    legs = [f for f in short.fixtures() if f.fixture_id.startswith("row_1_support_1_leg")]
+
+    assert [leg.fixture_id for leg in legs] == ["row_1_support_1_leg_1"]
+    assert legs[0].transform.position.x == pytest.approx(ROWS.origin.x)
+
+
+@pytest.mark.parametrize(
+    ("changes", "said"),
+    [
+        ({"rows": 1_001}, "less than or equal to 1000"),
+        ({"positions_per_row": 10_001}, "less than or equal to 10000"),
+        ({"rows": 1_000, "positions_per_row": 101, "row_spacing": 1.6}, "at most 100000"),
+    ],
+    ids=["rows", "positions per row", "positions"],
+)
+def test_a_crop_too_large_to_grow_is_refused(changes: dict[str, float], said: str) -> None:
+    with pytest.raises(ValidationError, match=said):
+        CropRows.model_validate(ROWS.model_dump() | changes)
+
+
 def test_a_hung_support_has_no_legs() -> None:
     hung = ROWS.model_copy(
         update={"support": TOMATO_GUTTER.model_copy(update={"leg_spacing": None})}
