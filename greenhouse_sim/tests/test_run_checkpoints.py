@@ -18,6 +18,7 @@ from greenhouse_sim.services.crop import run_crop
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import climate_run
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 
 PLANT = "reference_greenhouse_plant_001"
 HOUR_S = 3600.0
@@ -42,8 +43,8 @@ def _restarted(afresh: Callable[[], None]) -> None:
         checkpoints.upload_checkpoint(document)
 
 
-def _body(method: str, path: str, body: bytes = b"") -> Any:
-    response = respond(method, path, body)
+def _body(simulator: Simulator, method: str, path: str, body: bytes = b"") -> Any:
+    response = respond(simulator, method, path, body)
     assert response.status == HTTPStatus.OK, response.body
     return response.body
 
@@ -83,16 +84,18 @@ def test_it_keeps_the_commands_given_before_its_day_and_its_daily_ones() -> None
     assert saved.levels == {"fan": 1.0}
 
 
-def test_a_restored_run_carries_on_as_the_original_does(afresh: Callable[[], None]) -> None:
+def test_a_restored_run_carries_on_as_the_original_does(
+    simulator: Simulator, afresh: Callable[[], None]
+) -> None:
     later = f"/api/scenarios/reference_greenhouse/crop/{PLANT}?t={2 * DAY_S:.0f}"
-    original = _body("GET", later)
+    original = _body(simulator, "GET", later)
     original_air = climate_run(RunRequest("reference_greenhouse"))[1].house.air_at(
         2 * DAY_S + HOUR_S
     )
     checkpoints.save_checkpoint(RunRequest("reference_greenhouse"), time_s=DAY_S)
 
     _restarted(afresh)
-    restored = _body("GET", later)
+    restored = _body(simulator, "GET", later)
     house = climate_run(RunRequest("reference_greenhouse"))[1].house
 
     assert restored == original
@@ -102,17 +105,18 @@ def test_a_restored_run_carries_on_as_the_original_does(afresh: Callable[[], Non
 
 
 def test_a_restored_run_draws_its_days_first_hour_from_the_checkpoint(
+    simulator: Simulator,
     afresh: Callable[[], None],
 ) -> None:
     first_hour = DAY_S + 20 * 60.0
     original = _body(
-        "GET", f"/api/scenarios/reference_greenhouse/fields/climate?t={first_hour:.0f}"
+        simulator, "GET", f"/api/scenarios/reference_greenhouse/fields/climate?t={first_hour:.0f}"
     )
     checkpoints.save_checkpoint(RunRequest("reference_greenhouse"), time_s=DAY_S)
 
     _restarted(afresh)
     restored = _body(
-        "GET", f"/api/scenarios/reference_greenhouse/fields/climate?t={first_hour:.0f}"
+        simulator, "GET", f"/api/scenarios/reference_greenhouse/fields/climate?t={first_hour:.0f}"
     )
     house = climate_run(RunRequest("reference_greenhouse"))[1].house
 
@@ -162,41 +166,45 @@ def test_the_opening_days_are_kept_beside_the_last_checkpoints_saved() -> None:
     assert len(kept - openings) == checkpoints.KEPT_CHECKPOINTS
 
 
-def test_a_checkpoint_downloads_and_uploads_as_it_was(afresh: Callable[[], None]) -> None:
-    saved = _body("POST", f"/api/scenarios/reference_greenhouse/checkpoints?t={DAY_S:.0f}")
-    downloaded = _body("GET", f"/api/checkpoints/{saved['checkpoint_id']}")
-    listed = _body("GET", "/api/checkpoints")
+def test_a_checkpoint_downloads_and_uploads_as_it_was(
+    simulator: Simulator, afresh: Callable[[], None]
+) -> None:
+    saved = _body(
+        simulator, "POST", f"/api/scenarios/reference_greenhouse/checkpoints?t={DAY_S:.0f}"
+    )
+    downloaded = _body(simulator, "GET", f"/api/checkpoints/{saved['checkpoint_id']}")
+    listed = _body(simulator, "GET", "/api/checkpoints")
 
     afresh()
-    assert respond("GET", "/api/checkpoints").body == []
-    uploaded = _body("POST", "/api/checkpoints", json.dumps(downloaded).encode())
+    assert respond(simulator, "GET", "/api/checkpoints").body == []
+    uploaded = _body(simulator, "POST", "/api/checkpoints", json.dumps(downloaded).encode())
 
     assert uploaded == saved
     assert listed == [saved]
-    assert _body("GET", "/api/checkpoints") == [saved]
+    assert _body(simulator, "GET", "/api/checkpoints") == [saved]
 
 
-def _refusal(document: Any) -> str:
-    response = respond("POST", "/api/checkpoints", json.dumps(document).encode())
+def _refusal(simulator: Simulator, document: Any) -> str:
+    response = respond(simulator, "POST", "/api/checkpoints", json.dumps(document).encode())
     assert response.status == HTTPStatus.BAD_REQUEST
     assert isinstance(response.body, dict)
     return str(response.body["error"])
 
 
-def test_a_checkpoint_no_run_could_reach_is_refused() -> None:
+def test_a_checkpoint_no_run_could_reach_is_refused(simulator: Simulator) -> None:
     saved = checkpoints.save_checkpoint(RunRequest("reference_greenhouse"), time_s=2 * DAY_S)
     good = checkpoints.checkpoint(saved.checkpoint_id).model_dump(mode="json")
     house = good["house"]
     plant = good["plants"][0]
 
-    assert "-300 °C" in _refusal(good | {"house": house | {"temperature_c": -300.0}})
-    assert "g/kg of water" in _refusal(good | {"house": house | {"humidity_g_kg": -5.0}})
-    assert "ppm of CO₂" in _refusal(good | {"house": house | {"co2_ppm": 1e300}})
-    assert "before it" in _refusal(good | {"house_before": house | {"co2_ppm": -1.0}})
+    assert "-300 °C" in _refusal(simulator, good | {"house": house | {"temperature_c": -300.0}})
+    assert "g/kg of water" in _refusal(simulator, good | {"house": house | {"humidity_g_kg": -5.0}})
+    assert "ppm of CO₂" in _refusal(simulator, good | {"house": house | {"co2_ppm": 1e300}})
+    assert "before it" in _refusal(simulator, good | {"house_before": house | {"co2_ppm": -1.0}})
     # A plant older than the days it lived, as a later day's crop with its
     # days cut to fit an earlier one's would be.
     older = plant | {"thermal_time": plant["thermal_time"] + 50.0}
-    assert "add up to" in _refusal(good | {"plants": [older, *good["plants"][1:]]})
+    assert "add up to" in _refusal(simulator, good | {"plants": [older, *good["plants"][1:]]})
     # Numbers JSON has none for reach the service from Python only.
     hot = [
         {plant_id: day[plant_id] | {"mean_temperature_c": math.inf} for plant_id in day}
@@ -222,24 +230,26 @@ def test_a_clean_slate_forgets_the_runs_that_took_a_checkpoints_state(
     assert climate_run(RunRequest("reference_greenhouse"))[1] is not seeded
 
 
-def test_a_checkpoint_that_does_not_fit_its_run_is_refused() -> None:
+def test_a_checkpoint_that_does_not_fit_its_run_is_refused(simulator: Simulator) -> None:
     saved = checkpoints.save_checkpoint(RunRequest("reference_greenhouse"), time_s=DAY_S)
     good = checkpoints.checkpoint(saved.checkpoint_id).model_dump(mode="json")
 
-    assert "another version" in _refusal(good | {"manifest": "0" * 16})
-    assert "format 1" in _refusal(good | {"checkpoint_format": 1})
-    assert "an hour before its day" in _refusal(good | {"house_before": None})
-    assert "plants are reference_greenhouse's" in _refusal(good | {"plants": good["plants"][1:]})
-    assert "lived 1 days" in _refusal(good | {"lived": []})
-    assert "days 0 to 120" in _refusal(good | {"day": 121})
-    assert "has no equipment 'boiler'" in _refusal(good | {"levels": {"boiler": 1.0}})
-    assert "not a checkpoint" in _refusal({"checkpoint_format": 2})
-    garbled = respond("POST", "/api/checkpoints", b"{")
+    assert "another version" in _refusal(simulator, good | {"manifest": "0" * 16})
+    assert "format 1" in _refusal(simulator, good | {"checkpoint_format": 1})
+    assert "an hour before its day" in _refusal(simulator, good | {"house_before": None})
+    assert "plants are reference_greenhouse's" in _refusal(
+        simulator, good | {"plants": good["plants"][1:]}
+    )
+    assert "lived 1 days" in _refusal(simulator, good | {"lived": []})
+    assert "days 0 to 120" in _refusal(simulator, good | {"day": 121})
+    assert "has no equipment 'boiler'" in _refusal(simulator, good | {"levels": {"boiler": 1.0}})
+    assert "not a checkpoint" in _refusal(simulator, {"checkpoint_format": 2})
+    garbled = respond(simulator, "POST", "/api/checkpoints", b"{")
     assert (garbled.status, garbled.body) == (
         HTTPStatus.BAD_REQUEST,
         {"error": "the body is not JSON"},
     )
-    missing = respond("GET", "/api/checkpoints/nothing")
+    missing = respond(simulator, "GET", "/api/checkpoints/nothing")
     assert missing.status == HTTPStatus.NOT_FOUND
 
 

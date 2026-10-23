@@ -16,6 +16,7 @@ from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import air_through_a_run, climate_run
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import SceneChanges, changed, layout_name
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.equipment import Fan, Heater
 from greenhouse_sim.world.geometry import Quaternion, Transform, Vector3
 from greenhouse_sim.world.moves import Move, moved
@@ -123,7 +124,7 @@ def test_moves_are_written_in_a_layouts_name_and_refused_when_they_cannot_be() -
             changed(REFERENCE, SceneChanges(layout=name))
 
 
-def test_a_moved_layout_is_another_run_and_the_api_draws_it() -> None:
+def test_a_moved_layout_is_another_run_and_the_api_draws_it(simulator: Simulator) -> None:
     _, own = air_through_a_run(RunRequest("climate_box"))
     _, moved_run = air_through_a_run(
         RunRequest("climate_box", layout="default~temperature_front:0.5:0")
@@ -131,18 +132,22 @@ def test_a_moved_layout_is_another_run_and_the_api_draws_it() -> None:
     assert moved_run != own
 
     response = respond(
-        "GET", "/api/scenarios/reference_greenhouse/scene?layout=default~heater:-1:0.5"
+        simulator, "GET", "/api/scenarios/reference_greenhouse/scene?layout=default~heater:-1:0.5"
     )
     assert response.status == HTTPStatus.OK
     assert isinstance(response.body, dict)
     scene: dict[str, Any] = response.body
     heater = next(e for e in scene["entities"] if e["entity_id"].endswith("_heater"))
     assert heater["transform"]["position"] == {"x": 10.2, "y": 1.2, "z": 0.0}
-    refused = respond("GET", "/api/scenarios/reference_greenhouse/scene?layout=default~heater:99:0")
+    refused = respond(
+        simulator, "GET", "/api/scenarios/reference_greenhouse/scene?layout=default~heater:99:0"
+    )
     assert refused.status == HTTPStatus.BAD_REQUEST
 
 
-def test_moves_are_checked_in_the_greenhouse_as_its_dimensions_change_it() -> None:
+def test_moves_are_checked_in_the_greenhouse_as_its_dimensions_change_it(
+    simulator: Simulator,
+) -> None:
     def heater_x(name: str, length_m: float) -> float:
         config = changed(BOX, SceneChanges(layout=name, envelope={"length": length_m}))
         heater = next(p for p in config.layout.equipment if isinstance(p, Heater))
@@ -156,7 +161,9 @@ def test_moves_are_checked_in_the_greenhouse_as_its_dimensions_change_it() -> No
     with pytest.raises(InvalidRequest, match="no such greenhouse"):
         heater_x("default", 11.0)
     # The layout route serves a moved layout, as its own file would be.
-    served = respond("GET", "/api/scenarios/climate_box/layout?layout=default~heater:-1:0.5")
+    served = respond(
+        simulator, "GET", "/api/scenarios/climate_box/layout?layout=default~heater:-1:0.5"
+    )
     assert served.status == HTTPStatus.OK
     assert isinstance(served.body, dict)
     document: dict[str, Any] = served.body

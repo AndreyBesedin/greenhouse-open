@@ -40,6 +40,7 @@ from greenhouse_sim.domain.layout import Obstruction
 from greenhouse_sim.fields.field import FieldGrid
 from greenhouse_sim.services import cfd, fields
 from greenhouse_sim.services.scenarios import SceneChanges, scenario
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Vector3
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -247,18 +248,25 @@ def test_the_case_meshes_the_grid_and_takes_only_the_steps_it_needs() -> None:
     ]
 
 
-def test_a_scenarios_cfd_geometry_is_served_changed_as_its_scene_is() -> None:
-    answer = respond("GET", "/api/scenarios/tomato_compartment/cfd/geometry")
+def test_a_scenarios_cfd_geometry_is_served_changed_as_its_scene_is(simulator: Simulator) -> None:
+    answer = respond(simulator, "GET", "/api/scenarios/tomato_compartment/cfd/geometry")
     opened = respond(
-        "GET", "/api/scenarios/tomato_compartment/cfd/geometry?open=door_front:1,roof_vent_2:0"
+        simulator,
+        "GET",
+        "/api/scenarios/tomato_compartment/cfd/geometry?open=door_front:1,roof_vent_2:0",
     )
 
     assert answer.status == HTTPStatus.OK
     assert CfdGeometry.model_validate(answer.body) == COMPARTMENT
     assert CfdGeometry.model_validate(opened.body) == cfd.geometry("tomato_compartment", OPENED)
-    assert respond("GET", "/api/scenarios/gh_999/cfd/geometry").status == HTTPStatus.NOT_FOUND
     assert (
-        respond("GET", "/api/scenarios/tomato_compartment/cfd/geometry?open=hatch:1").status
+        respond(simulator, "GET", "/api/scenarios/gh_999/cfd/geometry").status
+        == HTTPStatus.NOT_FOUND
+    )
+    assert (
+        respond(
+            simulator, "GET", "/api/scenarios/tomato_compartment/cfd/geometry?open=hatch:1"
+        ).status
         == HTTPStatus.BAD_REQUEST
     )
 

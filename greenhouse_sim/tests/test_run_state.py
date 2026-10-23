@@ -14,6 +14,7 @@ from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.fields import equipment_at
 from greenhouse_sim.services.run_state import LATEST_COMMANDS, RunState, run_state
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 
 HEATED = {"heater": 1.0}
 # Ten minutes into the climate box's heated run, and noon on the reference
@@ -106,11 +107,13 @@ def test_the_state_is_refused_as_its_run_is() -> None:
         run_state(RunRequest("climate_box", levels={"sprinkler": 1.0}))
 
 
-def test_the_api_serves_it_asked_as_the_climate_is() -> None:
-    answer = respond("GET", "/api/scenarios/climate_box/climate/state?set=heater:1&t=600")
+def test_the_api_serves_it_asked_as_the_climate_is(simulator: Simulator) -> None:
+    answer = respond(
+        simulator, "GET", "/api/scenarios/climate_box/climate/state?set=heater:1&t=600"
+    )
 
     assert answer.status == HTTPStatus.OK
     served = RunState.model_validate(answer.body)
     assert served == run_state(RunRequest("climate_box", levels=HEATED), until_s=TEN_MINUTES_S)
-    beyond = respond("GET", "/api/scenarios/climate_box/climate/state?t=99999999")
+    beyond = respond(simulator, "GET", "/api/scenarios/climate_box/climate/state?t=99999999")
     assert beyond.status == HTTPStatus.BAD_REQUEST
