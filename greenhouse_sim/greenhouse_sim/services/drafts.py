@@ -37,13 +37,12 @@ from greenhouse_sim.builder.drafts import (
     StaleDraft,
 )
 from greenhouse_sim.builder.drafts import DraftStore as DraftStore
-from greenhouse_sim.builder.installation import Finding, assess_installation
+from greenhouse_sim.builder.installation import assess_installation
 from greenhouse_sim.builder.portable import InstallationFileError, import_installation
 from greenhouse_sim.scenarios.catalogue import SCENARIO_ID, ScenarioRefused
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.scenarios.installation import CannotRun, Installation, scenario_house
-from greenhouse_sim.scenarios.manifest_files import SCHEMA_VERSION
-from greenhouse_sim.services.builder import refused_file
+from greenhouse_sim.scenarios.installation import CannotRun, scenario_house
+from greenhouse_sim.services.builder import Assessed, DraftRevision, refused_file
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound, first_reason
 from greenhouse_sim.services.scenarios import (
     DEFAULT_WEATHER,
@@ -68,21 +67,6 @@ LATEST_START: Final = date(2199, 12, 31)
 # What of a draft's identifier a scenario's cannot have, which its run's
 # name writes as `_`.
 _NOT_IN_A_SCENARIO_ID: Final = re.compile(r"[^a-z0-9_]")
-
-
-class DraftAnswer(BaseModel):
-    """A draft at a revision, as an editor opens it: its installation, the
-    format a file of it is written in, and what stops it running, or what it
-    lacks."""
-
-    model_config = ConfigDict(frozen=True)
-
-    draft_id: str
-    revision: int
-    saved_at: datetime
-    schema_version: int = SCHEMA_VERSION
-    installation: Installation
-    findings: list[Finding]
 
 
 class DraftListed(BaseModel):
@@ -149,7 +133,7 @@ def drafts(simulator: Simulator) -> list[DraftListed]:
     ]
 
 
-def draft(simulator: Simulator, draft_id: str, revision: int | None = None) -> DraftAnswer:
+def draft(simulator: Simulator, draft_id: str, revision: int | None = None) -> Assessed:
     """A draft at a revision, by default its latest."""
     return _answer(_opened(_store(simulator), draft_id, revision))
 
@@ -166,7 +150,7 @@ def revisions(simulator: Simulator, draft_id: str) -> list[RevisionListed]:
     ]
 
 
-def save(simulator: Simulator, draft_id: str, file: str, on: int | None) -> DraftAnswer:
+def save(simulator: Simulator, draft_id: str, file: str, on: int | None) -> Assessed:
     """An installation's file saved as a draft's next revision, made on
     revision `on`, or as a new draft if None. Refused if the file is not an
     installation, or one of another draft, and as a conflict if `on` is no
@@ -196,7 +180,7 @@ def save(simulator: Simulator, draft_id: str, file: str, on: int | None) -> Draf
     return _answer(saved)
 
 
-def revert(simulator: Simulator, draft_id: str, revision: int, on: int) -> DraftAnswer:
+def revert(simulator: Simulator, draft_id: str, revision: int, on: int) -> Assessed:
     """A draft's earlier revision saved again as its latest, made on
     revision `on`."""
     try:
@@ -307,11 +291,11 @@ def _unreadable(draft_id: str, revision: int | None, error: InstallationFileErro
     return f"draft {draft_id!r}: {which} is kept as a file this simulator cannot read: {error}"
 
 
-def _answer(kept: Revision) -> DraftAnswer:
-    return DraftAnswer(
-        draft_id=kept.draft_id,
-        revision=kept.revision,
-        saved_at=kept.saved_at,
+def _answer(kept: Revision) -> Assessed:
+    """A draft at a revision, as an editor opens it: the builder's answer
+    about its installation, which names the draft and the revision."""
+    return Assessed(
         installation=kept.installation,
         findings=assess_installation(kept.installation),
+        draft=DraftRevision(draft_id=kept.draft_id, revision=kept.revision, saved_at=kept.saved_at),
     )
