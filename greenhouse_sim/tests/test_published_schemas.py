@@ -43,7 +43,7 @@ from greenhouse_sim.services.builder import Assessed
 from greenhouse_sim.services.checkpoints import CheckpointSummary
 from greenhouse_sim.services.climate_readings import EquipmentAt
 from greenhouse_sim.services.crop import CropPlant, PlantsLight
-from greenhouse_sim.services.drafts import DraftAnswer, DraftListed
+from greenhouse_sim.services.drafts import DraftListed
 from greenhouse_sim.services.fields import FieldNames
 from greenhouse_sim.services.live import LiveState
 from greenhouse_sim.services.plants import LabChecks
@@ -83,9 +83,8 @@ ANSWERS: Final[dict[Path, type[object]]] = {
     SERVICES / "lab_checks.schema.json": LabChecks,
     SERVICES / "lab_environments.schema.json": dict[str, LocalEnvironment],
     # The setup builder's (P12.2): what it is answered of an installation,
-    # and the drafts.
+    # a draft's too, and the drafts.
     SERVICES / "builder.schema.json": Assessed,
-    SERVICES / "draft.schema.json": DraftAnswer,
     SERVICES / "drafts.schema.json": list[DraftListed],
     PACKAGE / "biology" / "tomato" / "organ" / "plant.schema.json": Plant,
     CLIMATE / "house.schema.json": HouseTrace,

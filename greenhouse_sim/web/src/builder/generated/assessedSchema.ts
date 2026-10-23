@@ -452,6 +452,31 @@ export const ASSESSED_SCHEMA = {
       "title": "Dehumidifier",
       "type": "object"
     },
+    "DraftRevision": {
+      "description": "The draft an installation is kept as, and its revision.",
+      "properties": {
+        "draft_id": {
+          "title": "Draft Id",
+          "type": "string"
+        },
+        "revision": {
+          "title": "Revision",
+          "type": "integer"
+        },
+        "saved_at": {
+          "format": "date-time",
+          "title": "Saved At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "draft_id",
+        "revision",
+        "saved_at"
+      ],
+      "title": "DraftRevision",
+      "type": "object"
+    },
     "Envelope": {
       "description": "A greenhouse's envelope, in metres, no larger than any greenhouse.",
       "properties": {
@@ -1774,7 +1799,7 @@ export const ASSESSED_SCHEMA = {
       "type": "string"
     }
   },
-  "description": "An installation, the format a file of it is written in, and what\nstops it running, or what it lacks.",
+  "description": "An installation, the format a file of it is written in, and what\nstops it running, or what it lacks; and, if it is a draft's, the draft\nand the revision it is (`services.drafts`). One answer for both, so that\nthe contract published for it describes an installation once.",
   "properties": {
     "schema_version": {
       "default": 4,
@@ -1790,6 +1815,17 @@ export const ASSESSED_SCHEMA = {
       },
       "title": "Findings",
       "type": "array"
+    },
+    "draft": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DraftRevision"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [

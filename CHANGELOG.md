@@ -47,10 +47,12 @@ breaks the conformance checks is a major version.
   drafts (P12.2): `POST /api/builder/basic` makes a first draft from its
   first form's values, `POST /api/builder/assess` reads and assesses an
   installation's file as it is being edited, and `POST /api/builder/scene`
-  draws the house it describes, as a scene, to preview it. Each answers
-  with the installation and the format a file of it is written in, as a
-  draft's answer now does too, so that an editor sends back what it is
-  given. A form or a file refused, there or as a draft is saved, names
+  draws the house it describes, as a scene, to preview it. The first two
+  answer with the installation, the format a file of it is written in and
+  its findings, so that an editor sends back what it is given; a draft's
+  answer is the same, with a `draft` naming the draft and the revision, so
+  that one published schema (`services/builder.schema.json`) describes an
+  installation once. A form or a file refused, there or as a draft is saved, names
   every field at fault in its answer's `problems`, as the form or the file
   names it: the form checks what the envelope and the rows would refuse,
   such as a ridge below the eaves, before either is made.

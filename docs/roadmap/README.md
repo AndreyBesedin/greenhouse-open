@@ -113,6 +113,7 @@ adds a visible or measurable result.
 | [P11](p11-climate-setpoints.md) | Climate setpoints: targets that run the house's equipment | In progress |
 | [P12](p12-setup-builder.md) | The setup builder: greenhouse installations authored, assessed and exchanged | In progress |
 | [P13](p13-actions.md) | One action format, and a plan a run's gateway carries out | In progress |
+| [P14](p14-models-by-manifest.md) | Models chosen by the manifest, from a registry | Proposed |
 
 A project's document is added when its first pull request lands.
 
@@ -235,7 +236,8 @@ scaling work reaches: a run's numbers that depend on the moments asked for
 before, the adapters' storage, the protocol's pydantic floor, the
 services' lock. Then come checks that do not depend on the tests' order,
 the run request and the viewer's contracts, four decisions, and one
-roadmap project, P10, for models chosen by the manifest. The
+roadmap project for models chosen by the manifest, which the audit calls
+P10 and the roadmap [P14](p14-models-by-manifest.md). The
 [audits](../audits/README.md) folder indexes them all.
 
 **Test suite and CI time** (recorded 2026-10-08, scheduled after P09). A
