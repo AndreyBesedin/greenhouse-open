@@ -6,8 +6,10 @@ plays back, and the cursors it has given consumers. The server makes one,
 or is given one; a test makes its own. Closing it stops what it runs,
 waiting for each run's thread, and it starts nothing after.
 
-The rest of what the services keep moves onto it a step at a time, as the
-decision says; until then the module's stores are every simulator's.
+The services that keep runs reach what they keep through it: its climate
+runs, crops, sunlight, checkpoints and the states runs take over from them.
+Until the decision's last step these are the services' module stores,
+every simulator's; then each simulator makes its own.
 """
 
 import threading
@@ -15,6 +17,7 @@ from types import TracebackType
 from typing import Self
 
 from greenhouse_sim.scenarios.catalogue import Catalogue
+from greenhouse_sim.services import checkpoints, crop, fields, kept_states, sunlight
 from greenhouse_sim.services.consumer import Cursors
 from greenhouse_sim.services.live import DEFAULT_SECONDS_PER_DAY, LiveRuns
 from greenhouse_sim.services.playback import Playbacks
@@ -31,6 +34,13 @@ class Simulator:
         self.live = LiveRuns(seconds_per_day=seconds_per_day)
         self.playbacks = Playbacks()
         self.cursors = Cursors()
+        # What the services keep: the modules' stores, every simulator's,
+        # until each simulator makes its own (decision 0048).
+        self.climate_runs = fields.CLIMATE_RUNS
+        self.crops = crop.CROPS
+        self.sunlight = sunlight.SUNLIGHT
+        self.checkpoints = checkpoints.CHECKPOINTS
+        self.states = kept_states.STATES
         self._closing = threading.Lock()
         self._closed = False
 

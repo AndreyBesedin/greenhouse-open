@@ -35,6 +35,7 @@ from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import sensors
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 from pydantic import ValidationError
 
 CONFIG = SCENARIO_REGISTRY["tomato_compartment"]
@@ -211,7 +212,8 @@ def _frame(**overrides: object) -> CameraFrame:
 
 
 def test_the_simulators_camera_frames_conform() -> None:
-    log = sensors.observations(RunRequest("climate_box"), until_s=300)
+    with Simulator() as simulator:
+        log = sensors.observations(simulator, RunRequest("climate_box"), until_s=300)
 
     assert len(log.frames) == 6
     assert check_frames(log.frames) == []

@@ -7,6 +7,12 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: every service that reads or keeps runs takes the
+  simulator it keeps them in, and reaches its climate runs, crops,
+  sunlight, checkpoints and kept states through it; so does a playback,
+  which works its days out in its simulator's (decision 0048). The stores
+  are still the services' modules', every simulator's, until each
+  simulator makes its own.
 - `greenhouse-sim`: the runs played back and the cursors given to
   consumers are a simulator's own (decision 0048): the API's server makes
   its simulator, answers every request from it and closes it as it closes.

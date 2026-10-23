@@ -25,19 +25,23 @@ DROPPED_AT_S = 19 * 60
 LATENCY_S = 30
 
 
-def _log(until_s: float, *, clean: bool = False) -> SensorObservations:
+def _log(simulator: Simulator, until_s: float, *, clean: bool = False) -> SensorObservations:
     return sensors.observations(
-        RunRequest("climate_box", levels=HEATED), until_s=until_s, clean=clean
+        simulator, RunRequest("climate_box", levels=HEATED), until_s=until_s, clean=clean
     )
 
 
-def _freshness(until_s: float, sensor_id: str, *, clean: bool = False) -> SensorFreshness:
-    return next(f for f in _log(until_s, clean=clean).freshness if f.sensor_id == sensor_id)
+def _freshness(
+    simulator: Simulator, until_s: float, sensor_id: str, *, clean: bool = False
+) -> SensorFreshness:
+    return next(
+        f for f in _log(simulator, until_s, clean=clean).freshness if f.sensor_id == sensor_id
+    )
 
 
-def test_the_log_is_append_only_and_in_the_order_delivered() -> None:
-    earlier = _log(300).observations
-    later = _log(600).observations
+def test_the_log_is_append_only_and_in_the_order_delivered(simulator: Simulator) -> None:
+    earlier = _log(simulator, 300).observations
+    later = _log(simulator, 600).observations
     delivered = [o.delivered_at for o in later]
 
     assert later[: len(earlier)] == earlier
@@ -45,10 +49,10 @@ def test_the_log_is_append_only_and_in_the_order_delivered() -> None:
     assert delivered == sorted(d for d in delivered if d is not None)
 
 
-def test_a_reading_is_in_the_log_only_once_delivered() -> None:
+def test_a_reading_is_in_the_log_only_once_delivered(simulator: Simulator) -> None:
     # The CO2 sensor's readings come a minute after they are taken.
     def co2(until_s: float) -> list[float]:
-        log = _log(until_s)
+        log = _log(simulator, until_s)
         return [
             (o.timestamp - log.start).total_seconds()
             for o in log.observations
@@ -60,8 +64,8 @@ def test_a_reading_is_in_the_log_only_once_delivered() -> None:
     assert co2(179) == [0.0, 60.0]
 
 
-def test_the_dropped_sample_is_the_one_the_test_expects() -> None:
-    log = _log(DROPPED_AT_S + 2 * 60)
+def test_the_dropped_sample_is_the_one_the_test_expects(simulator: Simulator) -> None:
+    log = _log(simulator, DROPPED_AT_S + 2 * 60)
     taken = {
         (o.timestamp - log.start).total_seconds()
         for o in log.observations
@@ -86,32 +90,36 @@ def test_the_dropped_sample_is_the_one_the_test_expects() -> None:
     ids=["before it is due", "once due", "until the next", "the next come"],
 )
 def test_a_sensor_is_stale_exactly_while_a_due_reading_has_not_come(
-    until_s: float, due_s: float, state: Freshness
+    simulator: Simulator, until_s: float, due_s: float, state: Freshness
 ) -> None:
-    log = _log(until_s)
+    log = _log(simulator, until_s)
     freshness = next(f for f in log.freshness if f.sensor_id == "temperature_back")
 
     assert freshness.state == state
     assert freshness.due_at == log.start + timedelta(seconds=due_s)
 
 
-def test_a_sensor_waits_until_its_first_reading_is_due() -> None:
-    state = _freshness(59, "co2")
+def test_a_sensor_waits_until_its_first_reading_is_due(simulator: Simulator) -> None:
+    state = _freshness(simulator, 59, "co2")
 
     assert (state.state, state.due_at, state.latest_at) == (Freshness.WAITING, None, None)
-    assert _freshness(60, "co2").state == Freshness.FRESH
+    assert _freshness(simulator, 60, "co2").state == Freshness.FRESH
 
 
-def test_a_clean_sensor_is_never_stale_and_a_sensor_of_nothing_is_unavailable() -> None:
+def test_a_clean_sensor_is_never_stale_and_a_sensor_of_nothing_is_unavailable(
+    simulator: Simulator,
+) -> None:
     for until_s in (0, 600, DROPPED_AT_S + LATENCY_S):
-        assert _freshness(until_s, "temperature_front").state == Freshness.FRESH
+        assert _freshness(simulator, until_s, "temperature_front").state == Freshness.FRESH
         # Clean, the back sensor drops nothing and is on time.
-        assert _freshness(until_s, "temperature_back", clean=True).state == Freshness.FRESH
+        assert (
+            _freshness(simulator, until_s, "temperature_back", clean=True).state == Freshness.FRESH
+        )
         # The sun's light gives PAR (P08.6): the PAR sensor reads too.
-        assert _freshness(until_s, "par").state == Freshness.FRESH
+        assert _freshness(simulator, until_s, "par").state == Freshness.FRESH
     # A sensor whose quantity nothing in the run gives will never read, which
     # is not having missed a reading.
-    log = _log(600)
+    log = _log(simulator, 600)
     par = next(
         s
         for s in SCENARIO_REGISTRY["climate_box"].layout.sensors
@@ -127,8 +135,10 @@ def test_a_clean_sensor_is_never_stale_and_a_sensor_of_nothing_is_unavailable() 
     assert state.state == Freshness.UNAVAILABLE
 
 
-def test_a_camera_takes_a_frame_every_cadence_and_the_log_records_its_metadata() -> None:
-    log = _log(600)
+def test_a_camera_takes_a_frame_every_cadence_and_the_log_records_its_metadata(
+    simulator: Simulator,
+) -> None:
+    log = _log(simulator, 600)
     (camera,) = [
         s for s in SCENARIO_REGISTRY["climate_box"].layout.sensors if isinstance(s, Camera)
     ]
@@ -163,6 +173,6 @@ def test_the_api_serves_the_log_with_its_freshness_and_frames(simulator: Simulat
     served = SensorObservations.model_validate(response.body)
 
     assert response.status == 200
-    assert served == _log(600)
+    assert served == _log(simulator, 600)
     assert isinstance(response.body, dict)
     assert '"modalities":["RGB","DEPTH"]' in json.dumps(response.body, separators=(",", ":"))

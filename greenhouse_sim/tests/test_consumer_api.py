@@ -295,7 +295,7 @@ def test_the_run_s_events_reach_a_consumer_by_the_clock(
     # A harvest an hour into each day after the first, as the crop's log
     # would give it, in place of the climate box's simple crop's none.
     def harvest(
-        run: RunRequest, day: int, start: datetime, run_id: str
+        simulator: Simulator, run: RunRequest, day: int, start: datetime, run_id: str
     ) -> tuple[list[Observation], list[Event]]:
         scenario_id = run.scenario_id
         if day == 0:

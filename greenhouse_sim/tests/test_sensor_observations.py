@@ -32,9 +32,11 @@ MOMENTS = [0.0, 60.0, 120.0, 180.0, 240.0, 300.0]
 HEATED = {"heater": 1.0, "fan": 1.0}
 
 
-def _observed(sensor_id: str | None = None, *, clean: bool = False) -> list[Observation]:
+def _observed(
+    simulator: Simulator, sensor_id: str | None = None, *, clean: bool = False
+) -> list[Observation]:
     observed = sensors.observations(
-        RunRequest("climate_box", levels=HEATED), until_s=300, clean=clean
+        simulator, RunRequest("climate_box", levels=HEATED), until_s=300, clean=clean
     ).observations
     return [o for o in observed if sensor_id is None or o.sensor_id == sensor_id]
 
@@ -58,7 +60,7 @@ def test_a_clean_sensor_reports_the_air_where_it_stands_at_each_of_its_samples(
     simulator: Simulator,
 ) -> None:
     # The climate box's front temperature sensor is clean.
-    observed = _observed("temperature_front")
+    observed = _observed(simulator, "temperature_front")
     position = _sensor("temperature_front").position
 
     # The published field is in 32-bit floats; a sensor reads the run's own.
@@ -73,8 +75,8 @@ def test_a_clean_sensor_reports_the_air_where_it_stands_at_each_of_its_samples(
     assert [o.delivered_at for o in observed] == [o.timestamp for o in observed]
 
 
-def test_each_kind_reports_its_own_quantity() -> None:
-    latest = {o.sensor_id: o for o in _observed()}
+def test_each_kind_reports_its_own_quantity(simulator: Simulator) -> None:
+    latest = {o.sensor_id: o for o in _observed(simulator)}
 
     assert latest["humidity_front"].observation_type == ObservationType.RELATIVE_HUMIDITY_PCT
     assert latest["co2"].observation_type == ObservationType.CO2_PPM
@@ -84,18 +86,22 @@ def test_each_kind_reports_its_own_quantity() -> None:
     assert latest["anemometer"].value > 3.0
 
 
-def test_a_par_sensor_reads_the_suns_light_and_none_at_night() -> None:
-    truth = sensors.truth(RunRequest("climate_box", levels=HEATED), until_s=300)
+def test_a_par_sensor_reads_the_suns_light_and_none_at_night(simulator: Simulator) -> None:
+    truth = sensors.truth(simulator, RunRequest("climate_box", levels=HEATED), until_s=300)
     par = next(s for s in truth.sensors if s.sensor_id == "par")
 
     # The climate box's runs start at midnight.
     assert par.values == [0.0] * len(MOMENTS)
-    assert [o.value for o in _observed("par")] == [0.0] * len(MOMENTS)
+    assert [o.value for o in _observed(simulator, "par")] == [0.0] * len(MOMENTS)
     assert par.observation_type == ObservationType.PAR_UMOL_M2_S
 
 
-def test_observations_conform_to_the_protocol_and_name_their_sensor_and_run() -> None:
-    observed = sensors.observations(RunRequest("climate_box", levels={"heater": 1.0}), until_s=300)
+def test_observations_conform_to_the_protocol_and_name_their_sensor_and_run(
+    simulator: Simulator,
+) -> None:
+    observed = sensors.observations(
+        simulator, RunRequest("climate_box", levels={"heater": 1.0}), until_s=300
+    )
 
     assert check_observations(observed.observations) == []
     assert {o.sensor_id for o in observed.observations} == {
@@ -117,21 +123,25 @@ def test_observations_conform_to_the_protocol_and_name_their_sensor_and_run() ->
     assert delivered == sorted(delivered)
 
 
-def test_another_run_is_another_source() -> None:
-    heated = sensors.observations(RunRequest("climate_box", levels={"heater": 1.0}), until_s=60)
-    unheated = sensors.observations(RunRequest("climate_box"), until_s=60)
+def test_another_run_is_another_source(simulator: Simulator) -> None:
+    heated = sensors.observations(
+        simulator, RunRequest("climate_box", levels={"heater": 1.0}), until_s=60
+    )
+    unheated = sensors.observations(simulator, RunRequest("climate_box"), until_s=60)
 
     assert heated.run_id != unheated.run_id
     assert (
         heated.run_id
-        == sensors.observations(RunRequest("climate_box", levels={"heater": 1.0})).run_id
+        == sensors.observations(simulator, RunRequest("climate_box", levels={"heater": 1.0})).run_id
     )
 
 
-def test_the_truth_is_what_a_clean_sensor_observed() -> None:
-    observed = _observed(clean=True)
+def test_the_truth_is_what_a_clean_sensor_observed(simulator: Simulator) -> None:
+    observed = _observed(simulator, clean=True)
 
-    for truth in sensors.truth(RunRequest("climate_box", levels=HEATED), until_s=300).sensors:
+    for truth in sensors.truth(
+        simulator, RunRequest("climate_box", levels=HEATED), until_s=300
+    ).sensors:
         readings = [o.value for o in observed if o.sensor_id == truth.sensor_id]
         assert readings == [value for value in truth.values if value is not None]
         assert truth.times_s == MOMENTS

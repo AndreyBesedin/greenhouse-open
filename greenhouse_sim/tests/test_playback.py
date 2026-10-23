@@ -47,10 +47,10 @@ def clock() -> Clock:
 
 
 @pytest.fixture
-def played(clock: Clock) -> Iterator[Playback]:
+def played(simulator: Simulator, clock: Clock) -> Iterator[Playback]:
     """The climate box's run, its first two days worked out and no more, a
     day played in 10 real seconds."""
-    run = Playback(SCENARIO, seconds_per_day=10.0, every_s=EVERY_S, clock=clock)
+    run = Playback(simulator, SCENARIO, seconds_per_day=10.0, every_s=EVERY_S, clock=clock)
     run.begin()
     assert run.wait_for(2, timeout_s=120)
     run.stop()
@@ -106,7 +106,7 @@ def test_a_consumer_reads_the_records_delivered_by_the_clock_once_each_in_order(
 
 
 def test_each_reading_is_the_one_the_viewers_sensor_log_has_then(
-    played: Playback, clock: Clock
+    simulator: Simulator, played: Playback, clock: Clock
 ) -> None:
     played.command(PlaybackCommand.PLAY)
     clock.now += 12.0
@@ -116,7 +116,7 @@ def test_each_reading_is_the_one_the_viewers_sensor_log_has_then(
 
     # The viewer's log of that day, minute by minute, as the sensor panel
     # asks for it.
-    viewers = sensors.observations(RunRequest(SCENARIO), until_s=cut.state.time_s)
+    viewers = sensors.observations(simulator, RunRequest(SCENARIO), until_s=cut.state.time_s)
     same = [o for o in viewers.observations if o.observation_id == later.observation_id]
     assert viewers.run_id == played.run_id
     assert same == [later]
@@ -136,7 +136,9 @@ def test_the_viewers_frame_and_the_consumers_records_name_one_run_and_one_instan
     assert frame.status == 200 and isinstance(frame.body, dict)
     assert frame.body["run_id"] == now.run_id
     assert frame.body["at"] == now.simulated_now.isoformat().replace("+00:00", "Z")
-    assert run_state.run_state(RunRequest(SCENARIO), until_s=now.time_s).day == now.day == 1
+    assert (
+        run_state.run_state(simulator, RunRequest(SCENARIO), until_s=now.time_s).day == now.day == 1
+    )
     assert {r.source.source_id for r in cut.records} == {now.run_id}
 
 
@@ -173,7 +175,11 @@ def test_a_restart_with_another_layout_plays_its_run_from_its_start_as_a_new_run
     moved = playback.command(simulator, SCENARIO, PlaybackCommand.RESTART, MOVED)
 
     assert moved.layout == MOVED_NAME and own.layout == "default"
-    assert moved.run_id == air_through_a_run(RunRequest(SCENARIO, layout=MOVED))[1] != own.run_id
+    assert (
+        moved.run_id
+        == air_through_a_run(simulator, RunRequest(SCENARIO, layout=MOVED))[1]
+        != own.run_id
+    )
     assert (moved.epoch, moved.time_s, moved.playing) == (0, 0.0, True)
     assert [found.run_id for found in simulator.playbacks.all()] == [moved.run_id]
     played = playback.playback(simulator, SCENARIO)
@@ -182,7 +188,7 @@ def test_a_restart_with_another_layout_plays_its_run_from_its_start_as_a_new_run
     # Its records are its run's, from its start, as a consumer reads them.
     cut = played.records_after(0, ALL)
     expected, _ = sensors.delivered_between(
-        RunRequest(SCENARIO, layout=MOVED_NAME), None, DAY_S / 2, EVERY_S
+        simulator, RunRequest(SCENARIO, layout=MOVED_NAME), None, DAY_S / 2, EVERY_S
     )
     assert [r for r in cut.records if r.sensor_id] == expected
     assert {r.source.source_id for r in cut.records} == {moved.run_id}
@@ -223,8 +229,8 @@ def test_the_api_starts_a_playback_over_with_a_layout_and_refuses_one_it_cannot_
     assert [found.layout for found in simulator.playbacks.all()] == ["default"]
 
 
-def test_a_playback_stopped_works_out_nothing_more(clock: Clock) -> None:
-    run = Playback(SCENARIO, seconds_per_day=10.0, every_s=EVERY_S, clock=clock)
+def test_a_playback_stopped_works_out_nothing_more(simulator: Simulator, clock: Clock) -> None:
+    run = Playback(simulator, SCENARIO, seconds_per_day=10.0, every_s=EVERY_S, clock=clock)
     run.begin()
     assert run.wait_for(1, timeout_s=120)
 
@@ -237,8 +243,8 @@ def test_a_playback_stopped_works_out_nothing_more(clock: Clock) -> None:
     assert run._worker.name == f"playback of {run.run_id}"
 
 
-def test_a_run_played_to_its_end_stops_there(clock: Clock) -> None:
-    run = Playback(SCENARIO, seconds_per_day=1.0, every_s=DAY_S, clock=clock)
+def test_a_run_played_to_its_end_stops_there(simulator: Simulator, clock: Clock) -> None:
+    run = Playback(simulator, SCENARIO, seconds_per_day=1.0, every_s=DAY_S, clock=clock)
     run.begin()
     try:
         assert run.wait_for(14, timeout_s=300)
@@ -291,7 +297,7 @@ def test_the_reference_greenhouse_s_second_day_is_one_run_for_the_viewer_and_a_c
 ) -> None:
     # The demo's scenario, by its own schedule and weather: a day on, at
     # noon, the viewer's frame and the consumer's latest record agree.
-    run = Playback("reference_greenhouse", seconds_per_day=10.0, clock=clock)
+    run = Playback(simulator, "reference_greenhouse", seconds_per_day=10.0, clock=clock)
     run.begin()
     try:
         assert run.wait_for(2, timeout_s=300)
@@ -326,9 +332,9 @@ def test_the_reference_greenhouse_s_second_day_is_one_run_for_the_viewer_and_a_c
         run.stop()
 
 
-def test_time_spent_waiting_for_a_day_is_not_banked(clock: Clock) -> None:
+def test_time_spent_waiting_for_a_day_is_not_banked(simulator: Simulator, clock: Clock) -> None:
     # Days published by hand, at moments the test chooses.
-    run = Playback(SCENARIO, seconds_per_day=10.0, clock=clock)
+    run = Playback(simulator, SCENARIO, seconds_per_day=10.0, clock=clock)
     assert run.work_day(0)
     run.command(PlaybackCommand.PLAY)
     clock.now += 30.0
@@ -370,13 +376,13 @@ def test_a_start_at_a_pace_refused_starts_nothing(
 
 
 def test_a_run_that_cannot_be_worked_out_is_the_simulator_s_failure(
-    clock: Clock, monkeypatch: pytest.MonkeyPatch
+    simulator: Simulator, clock: Clock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     def broken(*_: object, **__: object) -> None:
         raise ArithmeticError("a numerical failure")
 
     monkeypatch.setattr("greenhouse_sim.services.playback.delivered_between", broken)
-    run = Playback(SCENARIO, clock=clock)
+    run = Playback(simulator, SCENARIO, clock=clock)
     assert not run.work_day(0)
     with pytest.raises(PlaybackFailed):
         run.state()
@@ -385,7 +391,7 @@ def test_a_run_that_cannot_be_worked_out_is_the_simulator_s_failure(
         raise NotFound("no such run")
 
     monkeypatch.setattr("greenhouse_sim.services.playback.delivered_between", refused)
-    other = Playback(SCENARIO, clock=clock)
+    other = Playback(simulator, SCENARIO, clock=clock)
     assert not other.work_day(0)
     with pytest.raises(NotFound):
         other.state()
@@ -508,6 +514,7 @@ def test_closing_with_playbacks_stuck_in_a_moment_is_bounded_once_for_all(
 
 
 def test_a_playback_stopped_while_its_heat_is_worked_out_publishes_no_day(
+    simulator: Simulator,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     simulator = Simulator()

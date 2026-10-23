@@ -21,7 +21,7 @@ run's first days against the digests kept in the repository
 """
 
 import json
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 from pydantic import BaseModel, ConfigDict, JsonValue
 
@@ -34,6 +34,10 @@ from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.sensors import observations
 from greenhouse_sim.units import HOUR_S, HOURS_A_DAY
+
+if TYPE_CHECKING:
+    # Typed only: the simulator imports the services that take it.
+    from greenhouse_sim.services.simulator import Simulator
 
 # Probes' numbers are rounded to this many decimals before they are digested,
 # and to this many significant digits: a season's heat in joules has eleven
@@ -71,12 +75,12 @@ def _rounded(value: JsonValue) -> JsonValue:
     return value
 
 
-def day_probes(run: RunRequest, days: int) -> list[DayProbe]:
+def day_probes(simulator: Simulator, run: RunRequest, days: int) -> list[DayProbe]:
     """A run's state probed at the end of each of its first `days` days,
     asked for as its climate field is."""
     config = scenario(run.scenario_id)
-    _, climate = climate_run(run)
-    crop = run_crop(run) if config.crop_model == CropModel.ORGAN else None
+    _, climate = climate_run(simulator, run)
+    crop = run_crop(simulator, run) if config.crop_model == CropModel.ORGAN else None
     probes = []
     for day in range(days):
         end = (day + 1) * DAY_S
@@ -86,6 +90,7 @@ def day_probes(run: RunRequest, days: int) -> list[DayProbe]:
             [observation.sensor_id, (hour + 1) * HOUR_S, observation.value]
             for hour in range(HOURS_A_DAY)
             for observation in observations(
+                simulator,
                 run,
                 until_s=day * DAY_S + (hour + 1) * HOUR_S,
                 from_s=day * DAY_S + (hour + 1) * HOUR_S - 1.0,
