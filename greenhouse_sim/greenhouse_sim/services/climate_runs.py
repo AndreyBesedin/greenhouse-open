@@ -18,6 +18,8 @@ from collections.abc import Sequence
 from dataclasses import replace
 from typing import TYPE_CHECKING, Final
 
+from greenhouse_protocol.actions import HEATING_SETPOINT_RANGE_C
+
 from greenhouse_sim.cfd.geometry import CfdGeometry, cfd_geometry
 from greenhouse_sim.climate.commands import (
     TARGET_EVERY_S,
@@ -60,8 +62,8 @@ logger = logging.getLogger(__name__)
 # How many recent climate runs are kept.
 KEPT_RUNS: Final = 8
 # A heating setpoint a run may be given (#274): above freezing, and below
-# what a crop survives.
-SETPOINT_RANGE_C: Final = (0.0, 40.0)
+# what a crop survives; the protocol's, wherever a setpoint is set.
+SETPOINT_RANGE_C: Final = HEATING_SETPOINT_RANGE_C
 
 
 type _Pairs = tuple[tuple[str, float], ...]

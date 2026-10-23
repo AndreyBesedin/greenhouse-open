@@ -23,7 +23,7 @@ class PlannedAt(BaseModel):
     """An action of a run's plan, at a moment of the run: seconds from its
     start."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     at_s: float
     action: Annotated[SetLevel | SetTarget, Field(discriminator="kind")]
@@ -33,7 +33,7 @@ class PlannedDaily(BaseModel):
     """A device's level that a run's plan sets every day of the run, at a
     time of day: seconds from its midnight."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     time_of_day_s: float
     action: SetLevel
@@ -57,7 +57,7 @@ class RunPlan(BaseModel):
     vents' openings, is its request's, not its plan's: an action at the
     run's start is one more after them."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     actions: tuple[PlannedAt, ...] = ()
     daily: tuple[PlannedDaily, ...] | None = None
@@ -130,7 +130,9 @@ class RunPlan(BaseModel):
         """The plan with each action held to the protocol's own rules, its
         numbers as the protocol writes them; refused, as the protocol
         refuses, if one breaks them."""
-        return type(self).model_validate(self.model_dump())
+        # As a request wrote them, its numbers may not be the floats the
+        # protocol's fields are typed with until they are validated.
+        return type(self).model_validate(self.model_dump(warnings=False))
 
 
 def _level(device_id: str, level: float) -> SetLevel:

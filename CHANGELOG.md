@@ -15,8 +15,10 @@ breaks the conformance checks is a major version.
   `&open=`) stays the request's, beside its plan. Every run id, replay
   digest and kept opening day is unchanged. Checkpoints are written in
   format 4, which keeps the run's plan. Formats 3 and 2 are read as it,
-  the kept opening days among them, and a checkpoint's summary is
-  unchanged.
+  the kept opening days among them; an uploaded checkpoint's plan is
+  refused, by the field at fault, if it breaks the protocol's rules. A
+  checkpoint's identifier, a digest of its content, changes with the
+  format, the kept opening days' too. Its summary is unchanged.
 - `greenhouse-sim`: the local API's routes are a module for each area of
   what it answers (`greenhouse_sim.api.routes`: `system`, `scenarios`,
   `runs`, `checkpoints`, `playback`, `live`, `lab` and `builder`), each

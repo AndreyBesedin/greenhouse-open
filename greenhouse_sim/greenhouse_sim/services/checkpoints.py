@@ -38,7 +38,7 @@ import dataclasses
 import gzip
 import json
 import math
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Final
 
 from pydantic import BaseModel, ConfigDict, JsonValue, NonNegativeInt, ValidationError
 
@@ -56,7 +56,7 @@ from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.scenarios.manifest_files import opening_file
 from greenhouse_sim.services.climate_runs import climate_run, run_schedule, seed_kept_climate_runs
 from greenhouse_sim.services.crop import run_crop, seed_kept_crops
-from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
+from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError, first_reason
 from greenhouse_sim.services.kept_states import KeptState, keep
 from greenhouse_sim.services.runs import Commanded, RunPlan, RunRequest, checked_moment
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids, scenario, version
@@ -254,7 +254,7 @@ def read_checkpoint(document: JsonValue) -> Checkpoint:
     try:
         return Checkpoint.model_validate(document)
     except ValidationError as error:
-        raise InvalidRequest(f"not a checkpoint: {error.errors()[0]['msg']}") from None
+        raise InvalidRequest(f"not a checkpoint: {first_reason(error)}") from None
 
 
 def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
@@ -413,40 +413,49 @@ def _planned(document: dict[str, JsonValue]) -> dict[str, JsonValue]:
     """A format 3 checkpoint as format 4 writes it: its commands, daily
     commands and target changes, its run's plan of them. Refused, as any
     checkpoint that is not one, if they are not what format 3 wrote."""
-    # As format 3 wrote them, or anything else: whatever is not refused below.
-    commands: Any = document.get("commands", [])
-    daily: Any = document.get("daily")
-    targets: Any = document.get("targets", [])
-    try:
-        plan: dict[str, JsonValue] = {
-            "actions": [
-                *(
-                    {"at_s": at, "action": _set_level(device, level)}
-                    for at, device, level in commands
-                ),
-                *(
-                    {"at_s": at, "action": {"kind": "set_target", "target": name, "value_c": value}}
-                    for at, name, value in targets
-                ),
-            ],
-            "daily": None
-            if daily is None
-            else [
-                {"time_of_day_s": time, "action": _set_level(device, level)}
-                for time, device, level in daily
-            ],
-        }
-    except TypeError, ValueError:
-        raise InvalidRequest(
-            "not a checkpoint: its commands, daily commands and target changes are each a "
-            "moment, a name and a number"
-        ) from None
+    if "plan" in document:
+        raise InvalidRequest("not a checkpoint: a format 3 checkpoint keeps no plan")
+    commands = _written(document.get("commands", []))
+    daily = None if document.get("daily") is None else _written(document["daily"])
+    targets = _written(document.get("targets", []))
+    plan: dict[str, JsonValue] = {
+        "actions": [
+            *({"at_s": at, "action": _set_level(device, level)} for at, device, level in commands),
+            *(
+                {"at_s": at, "action": {"kind": "set_target", "target": name, "value_c": value}}
+                for at, name, value in targets
+            ),
+        ],
+        "daily": None
+        if daily is None
+        else [
+            {"time_of_day_s": time, "action": _set_level(device, level)}
+            for time, device, level in daily
+        ],
+    }
     kept = {name: value for name, value in document.items() if name not in _FORMAT_3_PLAN}
     return kept | {"checkpoint_format": CHECKPOINT_FORMAT, "plan": plan}
 
 
 # What a format 3 checkpoint wrote of its run's plan.
 _FORMAT_3_PLAN: Final = ("commands", "daily", "targets")
+
+
+def _written(entries: JsonValue) -> list[list[JsonValue]]:
+    """Commands as format 3 wrote them: a list of a moment, a name and a
+    number each, refused otherwise."""
+    if not isinstance(entries, list) or not all(
+        isinstance(entry, list) and len(entry) == len(_COMMANDED) for entry in entries
+    ):
+        raise InvalidRequest(
+            "not a checkpoint: its commands, daily commands and target changes are each a "
+            "moment, a name and a number"
+        )
+    return [entry for entry in entries if isinstance(entry, list)]
+
+
+# A command's parts, as format 3 wrote each.
+_COMMANDED: Final = ("moment", "name", "number")
 
 
 def _set_level(device_id: JsonValue, level: JsonValue) -> dict[str, JsonValue]:

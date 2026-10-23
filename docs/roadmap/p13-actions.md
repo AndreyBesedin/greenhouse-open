@@ -807,8 +807,11 @@ What the design left to its first step, as P13.1 settles it:
 - **Checkpoints** are written in format 4, which keeps the run's plan.
   Format 3's commands, daily commands and target changes are read as its
   plan, and format 2 as format 3 (`checkpoints.read_checkpoint`); the kept
-  opening days stay in format 3, read so. A checkpoint's summary, which
-  the viewer reads, is unchanged.
+  opening days stay in format 3, read so. A checkpoint uploaded is held to
+  the protocol's rules as it is read, and refused by the field at fault. A
+  checkpoint's identifier is a digest of its content, so each has another
+  in format 4, the opening days' too; its summary, which the viewer reads,
+  is unchanged.
 - **`auto`** is refused by the run until a step hands a device back to its
   control loop.
 - **The climate run's schedule** (`greenhouse_sim.climate.commands`) is
