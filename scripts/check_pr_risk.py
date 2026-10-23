@@ -94,11 +94,11 @@ SENSITIVE_FILES = {
     "greenhouse_sim/greenhouse_sim/services/sensors.py",
     "greenhouse_sim/greenhouse_sim/services/checkpoints.py",
     "greenhouse_sim/greenhouse_sim/api/server.py",
-    "greenhouse_sim/greenhouse_sim/api/routes.py",
 }
 # Folders whose every file is a boundary: the scripts that check and merge
-# pull requests, this gate among them.
-SENSITIVE_FOLDERS = ("scripts/",)
+# pull requests, this gate among them, and the API's routes, a module for
+# each area of what it answers.
+SENSITIVE_FOLDERS = ("scripts/", "greenhouse_sim/greenhouse_sim/api/routes/")
 # Data the simulator keeps and compares its runs with: replacing it is not
 # counted in lines, which a regenerated file has thousands of or, gzipped,
 # none, but always asks for a review.

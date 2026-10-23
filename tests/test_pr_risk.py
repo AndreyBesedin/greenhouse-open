@@ -9,6 +9,7 @@ from scripts.check_pr_risk import (
     KEPT_DATA_FOLDERS,
     ROOT,
     SENSITIVE_FILES,
+    SENSITIVE_FOLDERS,
     _changed_code_lines,
     _changed_files,
     _risk_reasons,
@@ -33,6 +34,10 @@ def test_every_sensitive_path_exists() -> None:
     assert not missing, f"sensitive paths that no longer exist: {missing}"
 
 
+def test_every_sensitive_folder_exists() -> None:
+    assert [folder for folder in SENSITIVE_FOLDERS if not (ROOT / folder).is_dir()] == []
+
+
 def test_every_kept_data_folder_exists() -> None:
     assert [folder for folder in KEPT_DATA_FOLDERS if not (ROOT / folder).is_dir()] == []
 
@@ -48,6 +53,7 @@ def test_a_change_where_truth_or_uploads_pass_asks_for_review() -> None:
     for path in (
         "greenhouse_sim/greenhouse_sim/services/sensors.py",
         "greenhouse_sim/greenhouse_sim/api/server.py",
+        "greenhouse_sim/greenhouse_sim/api/routes/runs.py",
         "greenhouse_sim/tests/test_sensor_observations.py",
     ):
         reasons = _risk_reasons([path], 3)

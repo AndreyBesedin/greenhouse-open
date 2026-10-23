@@ -17,7 +17,8 @@ def test_every_api_reaches_its_package_only_through_its_services() -> None:
 def test_the_check_covers_the_simulators_api_and_services() -> None:
     covered = {path.relative_to(ROOT).as_posix() for path in layer_sources()}
 
-    assert "greenhouse_sim/greenhouse_sim/api/routes.py" in covered
+    assert "greenhouse_sim/greenhouse_sim/api/routes/__init__.py" in covered
+    assert "greenhouse_sim/greenhouse_sim/api/routes/runs.py" in covered
     assert "greenhouse_sim/greenhouse_sim/services/scenarios.py" in covered
 
 

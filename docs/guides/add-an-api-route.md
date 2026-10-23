@@ -6,7 +6,7 @@ a service and answers with its result or its refusal; the service holds the
 logic ([decision 0021](../decisions/0021-routes-are-the-interface-services-hold-the-logic.md),
 and the APIs section of [the engineering conventions](../engineering.md#apis)).
 The timeline's route is an example (commit `3f33ace`): a domain module, a
-service, an arm in `respond`, and their tests.
+service, an arm among a run's routes, and their tests.
 
 ## Steps
 
@@ -24,21 +24,28 @@ service, an arm in `respond`, and their tests.
    - each refusal an `InvalidRequest` or a `NotFound`
      (`greenhouse_sim/greenhouse_sim/services/errors.py`), with a message
      the client can act on. A client that needs another answer gets a new
-     subclass of `ServiceError`, and a row in `_REFUSALS` in
-     `greenhouse_sim/greenhouse_sim/api/routes.py`, before its base class.
-3. **The route**, in `greenhouse_sim/greenhouse_sim/api/routes.py`:
-   - a `case [...]` arm in `respond` for a GET, or in `_posted` for a POST,
+     subclass of `ServiceError`, and a row in `REFUSALS` in
+     `greenhouse_sim/greenhouse_sim/api/routes/shared.py`, before its base
+     class.
+3. **The route**, in the module of `greenhouse_sim/greenhouse_sim/api/routes/`
+   for its area (a run's reads in `runs.py`, the builder's in `builder.py`;
+   the package's docstring lists them):
+   - a `case [...]` arm in its `get` for a GET, or in its `post` for a POST,
      before `case _`. A literal segment's arm goes before an arm that
-     captures any segment in the same place;
-   - the query read with the helpers beside it (`_last`, `_pairs`,
-     `_commands`, `_daily`, `_seconds`, `_since`), and a new syntax read by
-     a new helper there, which raises `InvalidRequest`;
-   - the call wrapped in `_answer`, which answers a model, a list of models
+     captures any segment in the same place. A new area is a module of its
+     own, with its `get` or `post` in `GETS` or `POSTS` in the package's
+     `__init__.py`;
+   - the query read with the helpers in `shared.py` (`last`, `pairs`,
+     `seconds`, `since`, `whole`) or beside the area's routes (a run's
+     `run_request` in `runs.py`), and a new syntax read by a new helper,
+     which raises `InvalidRequest`;
+   - the call wrapped in `answer`, which answers a model, a list of models
      or a dictionary, and turns a service's error into its status.
-4. **The route's line in the table** at the top of
-   `greenhouse_sim/greenhouse_sim/api/routes.py`: its method and path, and
-   what it answers. `greenhouse_sim/tests/test_route_table.py` fails when
-   the table and the routes disagree.
+4. **The route's line in the table** at the top of its module: its method
+   and path, and what it answers.
+   `greenhouse_sim/tests/test_route_table.py` fails when a module's table
+   and its routes disagree, or when `respond` does not ask a module that
+   answers routes.
 5. **Its tests:** the service called directly, and the route through
    `respond(simulator, "GET", "/api/scenarios/climate_box/…")`, its status
    and body, refusals included, as `greenhouse_sim/tests/test_timeline.py`
@@ -79,6 +86,6 @@ uv run check --fast
   in `greenhouse_sim/web/scripts/generateContractSources.ts`, and its
   loader reads the body with `contractReader`
   (`greenhouse_sim/web/src/loadJson.ts`).
-- **The risk gate:** `greenhouse_sim/greenhouse_sim/api/routes.py` is a
-  sensitive file, so the pull request asks for a manual review of its whole
+- **The risk gate:** every module of `greenhouse_sim/greenhouse_sim/api/routes/`
+  is sensitive, so the pull request asks for a manual review of its whole
   diff.
