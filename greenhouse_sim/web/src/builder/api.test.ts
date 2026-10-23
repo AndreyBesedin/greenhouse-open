@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { firstDraft, installationFile, openDraft, refusal, saveDraft } from "./api";
@@ -11,6 +14,11 @@ function answering(status: number, body: unknown, asked: Request[] = []): typeof
 }
 
 const HOUSE = { installation_id: "house", name: "House" } as unknown as Installation;
+// The builder's answer about an installation, as the simulator sends it.
+const ASSESSED = JSON.parse(
+  readFileSync(join(process.cwd(), "src/builder/testing/startingHouse.json"), "utf8"),
+);
+const KEPT = { draft_id: "house", revision: 2, saved_at: "2026-10-23T12:00:00Z" };
 
 describe("the builder's side of the API (P12.2)", () => {
   it("writes an installation's file as an import reads it", () => {
@@ -51,6 +59,18 @@ describe("the builder's side of the API (P12.2)", () => {
 
   it("refuses an answer that is not what its contract says", async () => {
     const opened = await openDraft("house", 2, answering(200, { draft_id: "house" }));
+
+    expect(opened).toEqual({ status: "unavailable", reason: "not a draft" });
+  });
+
+  it("opens a draft as the builder's answer about its installation, naming it", async () => {
+    const opened = await openDraft("house", 2, answering(200, { ...ASSESSED, draft: KEPT }));
+
+    expect(opened).toEqual({ status: "loaded", value: { ...ASSESSED, draft: KEPT } });
+  });
+
+  it("refuses, as a draft, an answer about an installation that names none", async () => {
+    const opened = await openDraft("house", 2, answering(200, ASSESSED));
 
     expect(opened).toEqual({ status: "unavailable", reason: "not a draft" });
   });

@@ -184,12 +184,6 @@ export const CONTRACTS: readonly Contract[] = [
     "ASSESSED_SCHEMA",
   ),
   contract(
-    `${SERVICES}/draft.schema.json`,
-    "DraftAnswer",
-    ["src/builder", "draft"],
-    "DRAFT_SCHEMA",
-  ),
-  contract(
     `${SERVICES}/drafts.schema.json`,
     "DraftsListed",
     ["src/builder", "drafts"],
