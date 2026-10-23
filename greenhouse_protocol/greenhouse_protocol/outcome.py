@@ -13,6 +13,7 @@ until the simulator carries this format out (P13).
 """
 
 from enum import StrEnum
+from itertools import pairwise
 from typing import Annotated, Final, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
@@ -227,6 +228,6 @@ def _on_its_targets(action: Action, effect: ActionEffect) -> bool:
 def _check_order(*moments: tuple[str, Instant | None]) -> None:
     """Instants that come in this order, those that are set."""
     known = [(name, at) for name, at in moments if at is not None]
-    for (earlier, first), (later, second) in zip(known, known[1:], strict=False):
+    for (earlier, first), (later, second) in pairwise(known):
         if second < first:
             raise ValueError(f"an outcome is {later} no earlier than it is {earlier}")
