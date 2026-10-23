@@ -17,6 +17,7 @@ from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.grid import air_grid
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.weather.seasonal import SeasonalWeather
 from greenhouse_sim.weather.sources import ConstantWeather, RunWeather, WeatherSeries
 from greenhouse_sim.weather.state import WeatherState
@@ -223,8 +224,8 @@ def test_a_run_follows_the_outside_as_it_changes() -> None:
     assert warmed > steady + 1.0
 
 
-def test_the_api_serves_a_scenarios_site_and_weather_at_a_moment() -> None:
-    response = respond("GET", "/api/scenarios/tomato_compartment/weather?t=600")
+def test_the_api_serves_a_scenarios_site_and_weather_at_a_moment(simulator: Simulator) -> None:
+    response = respond(simulator, "GET", "/api/scenarios/tomato_compartment/weather?t=600")
     body = json.loads(json.dumps(response.body))
 
     assert response.status == HTTPStatus.OK
@@ -244,9 +245,9 @@ def test_the_api_serves_a_scenarios_site_and_weather_at_a_moment() -> None:
     ],
 )
 def test_the_api_refuses_a_moment_outside_a_run_or_an_unknown_scenario(
-    path: str, status: HTTPStatus
+    simulator: Simulator, path: str, status: HTTPStatus
 ) -> None:
-    assert respond("GET", path).status == status
+    assert respond(simulator, "GET", path).status == status
 
 
 def test_every_weather_quantity_is_a_protocol_outside_observation_type() -> None:

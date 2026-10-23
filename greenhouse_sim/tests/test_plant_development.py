@@ -22,6 +22,7 @@ from greenhouse_sim.domain.organs import LeafStage
 from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services import plants
 from greenhouse_sim.services.errors import InvalidRequest
+from greenhouse_sim.services.simulator import Simulator
 
 PARAMS = DevelopmentParams()
 REFERENCE = plants.ENVIRONMENTS[plants.REFERENCE]
@@ -191,10 +192,10 @@ def test_an_organ_keeps_its_identity_from_one_day_to_the_next() -> None:
     assert len(born_later) > len(born_earlier)
 
 
-def test_the_lab_shows_its_plant_on_any_day_of_its_run() -> None:
-    scene = respond("GET", "/api/plants/scene?day=12")
-    structure = respond("GET", "/api/plants/structure?day=12")
-    first_day = respond("GET", "/api/plants/scene")
+def test_the_lab_shows_its_plant_on_any_day_of_its_run(simulator: Simulator) -> None:
+    scene = respond(simulator, "GET", "/api/plants/scene?day=12")
+    structure = respond(simulator, "GET", "/api/plants/structure?day=12")
+    first_day = respond(simulator, "GET", "/api/plants/scene")
 
     assert scene.status == structure.status == first_day.status == HTTPStatus.OK
     assert SceneSnapshot.model_validate(scene.body).simulated_day == 12
@@ -210,9 +211,11 @@ def test_the_lab_shows_its_plant_on_any_day_of_its_run() -> None:
         ("day=soon", "day wants a whole number, not 'soon'"),
     ],
 )
-def test_a_day_outside_the_labs_run_is_refused(query: str, reason: str) -> None:
+def test_a_day_outside_the_labs_run_is_refused(
+    simulator: Simulator, query: str, reason: str
+) -> None:
     for path in ("scene", "structure"):
-        response = respond("GET", f"/api/plants/{path}?{query}")
+        response = respond(simulator, "GET", f"/api/plants/{path}?{query}")
         assert response.status == HTTPStatus.BAD_REQUEST
         assert response.body == {"error": reason}
     with pytest.raises(InvalidRequest):

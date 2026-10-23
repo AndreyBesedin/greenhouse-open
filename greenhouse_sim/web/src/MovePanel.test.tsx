@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { act } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { type MoveDraft, MovePanel } from "./MovePanel";
@@ -48,13 +49,19 @@ describe("moving equipment and sensors", () => {
     expect(done).toEqual(["move"]);
   });
 
-  it("says up front that its moves make a new run, lists them, and applies or cancels them", () => {
+  it("says in a line what its moves do, the rest folded, lists them, and puts them back or cancels them", () => {
     const done: string[] = [];
     shown = render(panel(DRAFT, done));
     const { container } = shown;
 
     expect(container.querySelector('[data-testid="move-new-run"]')?.textContent).toBe(
-      "Moving equipment changes the house's climate, so it is a new run: applying these moves starts it from its first day.",
+      "Drag equipment or a sensor in the view to move it. Applying the moves starts the run again from its first day.",
+    );
+    const details = container.querySelector<HTMLDetailsElement>(".move-details");
+    expect(details?.open).toBe(false);
+    expect(details?.querySelector("summary")?.textContent).toBe("How moving works");
+    expect(details?.querySelector(".move-hint")?.textContent).toContain(
+      "the moves make a new run, which keeps the heating targets changed in the run.",
     );
     expect(container.querySelector('[data-testid="move-offset"]')?.textContent).toBe(
       "The heater stands −1.0 m along x and +0.5 m along y from where its layout places it.",
@@ -72,9 +79,69 @@ describe("moving equipment and sensors", () => {
     );
     click(button(container, "Put the CO2 sensor back"));
     click(button(container, "Put everything back"));
-    click(button(container, "Start a new run with these moves"));
     click(button(container, "Cancel"));
-    expect(done).toEqual(["put back co2", "put everything back", "apply", "cancel"]);
+    expect(done).toEqual(["put back co2", "put everything back", "cancel"]);
+  });
+
+  it("asks before its moves start a new run: confirmed, it applies them; taken back, they stay", () => {
+    const done: string[] = [];
+    shown = render(panel(DRAFT, done));
+    const { container } = shown;
+    const startIt = button(container, "Start a new run with these moves");
+
+    click(startIt);
+    // Asked, not applied, the question taking the keyboard's focus.
+    expect(done).toEqual([]);
+    expect(container.querySelector('[data-testid="move-confirm"]')?.textContent).toBe(
+      "The run starts again from its first day with these moves; the moment reached is left behind.",
+    );
+    expect(container.querySelector(".move-confirm legend")?.textContent).toBe("Start a new run?");
+    expect(document.activeElement).toBe(button(container, "Start the new run"));
+    expect(container.querySelector('[data-testid="move-list"]')).not.toBeNull();
+
+    click(button(container, "Back to the moves"));
+    expect(done).toEqual([]);
+    expect(container.querySelector('[data-testid="move-confirm"]')).toBeNull();
+    expect(document.activeElement).toBe(button(container, "Start a new run with these moves"));
+
+    click(button(container, "Start a new run with these moves"));
+    click(button(container, "Start the new run"));
+    expect(done).toEqual(["apply"]);
+    expect(container.querySelector('[data-testid="move-confirm"]')).toBeNull();
+  });
+
+  it("goes back to the moves on Escape anywhere in the session while it asks, which the view's own Escape then leaves alone", () => {
+    const done: string[] = [];
+    shown = render(panel(DRAFT, done));
+    const { container } = shown;
+    const escapeOn = (target: Element): KeyboardEvent => {
+      const pressed = new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      });
+      act(() => {
+        target.dispatchEvent(pressed);
+      });
+      return pressed;
+    };
+    const asking = () => container.querySelector('[data-testid="move-confirm"]') !== null;
+
+    // Not asking, Escape is the view's: it cancels the moves.
+    expect(escapeOn(button(container, "Put the heater back")).defaultPrevented).toBe(false);
+    // Asking, from the question, a move's button, or the fold's summary, it
+    // goes back to the moves; handled, the view's Escape finds it done.
+    for (const where of [
+      () => button(container, "Start the new run"),
+      () => button(container, "Put the heater back"),
+      () => container.querySelector(".move-details summary") as Element,
+    ]) {
+      click(button(container, "Start a new run with these moves"));
+      expect(asking()).toBe(true);
+      expect(escapeOn(where()).defaultPrevented).toBe(true);
+      expect(asking()).toBe(false);
+    }
+    expect(done).toEqual([]);
   });
 
   it("applies nothing that changes nothing, and puts back nothing that is not moved", () => {
@@ -94,7 +161,11 @@ describe("moving equipment and sensors", () => {
     const { container } = shown;
 
     expect(container.querySelector('[data-testid="move-new-run"]')?.textContent).toContain(
-      "The run played back starts over with them, and the view follows it.",
+      "Applying the moves starts the run played back again from its first day, and the view follows it.",
+    );
+    click(button(container, "Start a new run with these moves"));
+    expect(container.querySelector('[data-testid="move-confirm"]')?.textContent).toMatch(
+      /^The run played back starts again from its first day/,
     );
     shown.rerender(panel({ ...DRAFT, following: true, applying: true }));
     expect(button(container, "Starting the new run…").disabled).toBe(true);

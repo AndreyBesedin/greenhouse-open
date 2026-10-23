@@ -13,7 +13,8 @@ from greenhouse_sim.domain.envelope import MemberKind, SurfaceCategory
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scene.snapshot import SceneEntityKind, scene_snapshot
-from greenhouse_sim.world.envelope import Envelope, Surface
+from greenhouse_sim.services.simulator import Simulator
+from greenhouse_sim.world.envelope import GUTTER_DEPTH_M, Envelope, Surface
 from greenhouse_sim.world.envelope_checks import Point, inverted_surfaces, outline, shared_edges
 from greenhouse_sim.world.geometry import Quaternion, Transform, Vector3
 
@@ -327,6 +328,54 @@ def test_posts_stand_on_the_gutter_lines_and_rafters_climb_to_the_ridges() -> No
             assert member.start.x == member.end.x
 
 
+# Three 3.2 m spans, three 4 m bays, its inner frames' gutters carried by a
+# girder from one side wall to the other.
+GIRDERED = Envelope(
+    length=12.0, width=9.6, eave_height=4.0, ridge_height=4.7, spans=3, bays=3, inner_posts=[0, 3]
+)
+
+
+def test_inner_frames_keep_posts_at_the_named_lines_and_a_girder_between() -> None:
+    members = GIRDERED.members()
+    posts = {(m.frame, round(m.start.y, 6)) for m in members if m.kind == MemberKind.POST}
+    girders = [m for m in members if m.kind == MemberKind.GIRDER]
+
+    # The gable frames keep a post at every gutter line, in their walls.
+    assert {y for frame, y in posts if frame in (0, 3)} == {0.0, 3.2, 6.4, 9.6}
+    # The inner frames, only at the side walls.
+    assert {y for frame, y in posts if frame in (1, 2)} == {0.0, 9.6}
+    assert [m.member_id for m in girders] == ["frame_1_girder_0_3", "frame_2_girder_0_3"]
+    for girder in girders:
+        # From wall to wall, along the frame, hung under the gutters.
+        assert (girder.start.y, girder.end.y) == (0.0, 9.6)
+        assert girder.start.x == girder.end.x
+        _, bar = girder.solid()
+        assert girder.start.z == girder.end.z == pytest.approx(4.0 - GUTTER_DEPTH_M - bar.radius)
+    # The rafters are as they were.
+    assert sum(m.kind == MemberKind.RAFTER for m in members) == 4 * 2 * 3
+
+
+def test_a_girder_spans_only_where_lines_lie_between_posts() -> None:
+    house = VENLO.model_copy(update={"inner_posts": [0, 1, 4, 5]})
+    girders = {m.member_id for m in house.members() if m.frame == 1 and m.kind == MemberKind.GIRDER}
+
+    assert girders == {"frame_1_girder_1_4"}
+
+
+def test_a_house_with_a_post_at_every_line_is_dumped_as_before() -> None:
+    """Without inner posts named, the configuration's dump, which names its
+    runs, has no word of them."""
+    assert "inner_posts" not in VENLO.model_dump_json()
+    assert "inner_posts" in GIRDERED.model_dump_json()
+    assert VENLO.members() == VENLO.model_copy(update={"inner_posts": None}).members()
+
+
+@pytest.mark.parametrize("inner_posts", [[], [1, 3], [0, 2], [0, 1, 1, 3], [0, 2, 1, 3], [0, 4]])
+def test_inner_posts_must_rise_from_one_side_wall_to_the_other(inner_posts: list[int]) -> None:
+    with pytest.raises(ValidationError, match="must rise from gutter line 0 to 3"):
+        GIRDERED.model_validate({**GIRDERED.model_dump(), "inner_posts": inner_posts})
+
+
 @pytest.mark.parametrize(
     "changes",
     [
@@ -344,7 +393,7 @@ def test_an_envelope_is_no_larger_than_a_greenhouse(changes: dict[str, float]) -
         Envelope.model_validate(HOUSE.model_dump() | changes)
 
 
-def test_the_api_refuses_an_envelope_larger_than_a_greenhouse() -> None:
-    response = respond("GET", "/api/scenarios/climate_box/scene?envelope=length:1e308")
+def test_the_api_refuses_an_envelope_larger_than_a_greenhouse(simulator: Simulator) -> None:
+    response = respond(simulator, "GET", "/api/scenarios/climate_box/scene?envelope=length:1e308")
 
     assert response.status == HTTPStatus.BAD_REQUEST

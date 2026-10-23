@@ -10,6 +10,7 @@ longer one is asked for. The run is asked for as its climate field is
 (`greenhouse_sim.services.fields`), and refused as it is.
 """
 
+import threading
 from collections.abc import Sequence
 from datetime import datetime, timedelta
 
@@ -18,6 +19,7 @@ from greenhouse_protocol.observation import Observation
 from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.evaluation.sensor_truth import SensorTruth, sensor_truth
+from greenhouse_sim.fields.field import EnvironmentField
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.sensors.air import AirAt, WeatherAt, observe, reads, samples
 from greenhouse_sim.sensors.log import SensorFreshness, frames, freshness
@@ -144,12 +146,17 @@ def observations(
     )
 
 
+class Stopped(Exception):
+    """Readings no longer wanted: the work asking for them was stopped."""
+
+
 def delivered_between(
     run: RunRequest,
     after_s: float | None,
     until_s: float,
     every_s: float | None = None,
     named: str | None = None,
+    stop: threading.Event | None = None,
 ) -> tuple[list[Observation], str]:
     """What a run delivered of its point sensors' readings after `after_s`
     and by `until_s`, from the run's start if `after_s` is None, in the order
@@ -158,11 +165,15 @@ def delivered_between(
     changed. Each reading is named by `named`, by default the run's
     identity: a playback names those of a run whose targets it changed by
     its epoch's run (decision 0043). Spans that meet end to end deliver each
-    reading once, a late one in the span it arrived in."""
+    reading once, a late one in the span it arrived in. Once `stop` is set,
+    no other moment's air is worked out: `Stopped` is raised instead, so
+    that a playback stopped does not finish the day it was working out."""
     scenario_id = run.scenario_id
     config = scenario(scenario_id)
     point_sensors = _point_sensors(scenario_id, run.layout or DEFAULT_LAYOUT)
     air_at, run_id = air_through_a_run(run)
+    if stop is not None:
+        air_at = _until_stopped(air_at, stop)
     start = run_start(scenario_id)
     latest = max((sensor.imperfections.latency_s for sensor in point_sensors), default=0.0)
     observed = observe(
@@ -181,6 +192,18 @@ def delivered_between(
         return observed, run_id
     after = start + timedelta(seconds=after_s)
     return [o for o in observed if (o.delivered_at or o.timestamp) > after], run_id
+
+
+def _until_stopped(air_at: AirAt, stop: threading.Event) -> AirAt:
+    """`air_at`, raising `Stopped` once `stop` is set rather than working
+    another moment out."""
+
+    def checked(moment_s: float) -> EnvironmentField:
+        if stop.is_set():
+            raise Stopped("stopped before the moment's air was worked out")
+        return air_at(moment_s)
+
+    return checked
 
 
 def sensors_at(run: RunRequest, until_s: float = 0.0) -> SensorsAt:

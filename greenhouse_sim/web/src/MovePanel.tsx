@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from "react";
+
 import { type Offset, SNAP_DECIMALS, SNAP_M } from "./scene/moves";
 
 /** A distance moved along an axis, signed, to the snap. */
@@ -31,11 +33,13 @@ export interface MoveDraft {
  * Moving equipment and sensors across the floor (#209, #271). "Move" starts
  * a session: each item selected and dragged in the view moves, in 10 cm
  * steps, inside the house, and stays where it is dropped, drawn there, while
- * nothing is asked of the simulator. The session lists the moves, each to be
- * put back, and says what applying them does: moving equipment changes the
- * house's climate, so they make a new run, from its first day. "Start a new
- * run with these moves" applies them all at once; "Cancel", or Escape,
- * leaves everything as it was.
+ * nothing is asked of the simulator. The session says in a line what
+ * applying the moves does, the rest folded under it, and lists the moves,
+ * each to be put back. Moving equipment changes the house's climate, so the
+ * moves make a new run from its first day, which keeps the run's target
+ * changes (decision 0049). "Start a new run with these moves" asks first,
+ * then applies them all at once (#305); Escape while it asks returns to the
+ * moves. "Cancel", or Escape, leaves everything as it was.
  */
 export function MovePanel({
   item,
@@ -86,6 +90,13 @@ export function MovePanel({
   );
 }
 
+/** Its moves' new run, said in a line before anything is moved. */
+function newRun(following: boolean): string {
+  return following
+    ? "Drag equipment or a sensor in the view to move it. Applying the moves starts the run played back again from its first day, and the view follows it."
+    : "Drag equipment or a sensor in the view to move it. Applying the moves starts the run again from its first day.";
+}
+
 function Session({
   draft,
   onPutBack,
@@ -100,18 +111,55 @@ function Session({
   onCancel: () => void;
 }) {
   const { moves, changed, following, applying, failure } = draft;
+  // Applying asks first, in the panel: the run starts again from its first
+  // day, which no Back of the view's own undoes for the run played back.
+  const [confirming, setConfirming] = useState(false);
+  const asking = confirming && !applying;
+  useEffect(() => {
+    if (applying) {
+      setConfirming(false);
+    }
+  }, [applying]);
+  const confirm = useRef<HTMLButtonElement>(null);
+  const apply = useRef<HTMLButtonElement>(null);
+  const asked = useRef(false);
+  useEffect(() => {
+    if (asking) {
+      confirm.current?.focus();
+    } else if (asked.current) {
+      apply.current?.focus();
+    }
+    asked.current = asking;
+  }, [asking]);
+  // Escape while it asks goes back to the moves, wherever in the session
+  // the keyboard is, rather than cancel them: handled here, the view's own
+  // Escape, on the window, finds it done.
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const session = root.current;
+    if (!asking || session === null) {
+      return;
+    }
+    function back(event: KeyboardEvent): void {
+      if (event.key === "Escape" && !event.defaultPrevented) {
+        event.preventDefault();
+        setConfirming(false);
+      }
+    }
+    session.addEventListener("keydown", back);
+    return () => session.removeEventListener("keydown", back);
+  }, [asking]);
   return (
-    <>
-      <p data-testid="move-new-run">
-        Moving equipment changes the house's climate, so it is a new run: applying these moves
-        starts it from its first day.
-        {following && " The run played back starts over with them, and the view follows it."}
-      </p>
-      <p className="move-hint">
-        Select equipment or a sensor and drag in the view: it moves as far as the pointer does,
-        along the floor, in 10 cm steps, and stays inside the house. Escape cancels a drag, or the
-        moves.
-      </p>
+    <div className="move-session" ref={root}>
+      <p data-testid="move-new-run">{newRun(following)}</p>
+      <details className="move-details">
+        <summary>How moving works</summary>
+        <p className="move-hint">
+          Moving equipment changes the house's climate, so the moves make a new run, which keeps the
+          heating targets changed in the run. An item moves as far as the pointer does, along the
+          floor, in 10 cm steps, and stays inside the house. Escape cancels a drag, or the moves.
+        </p>
+      </details>
       {moves.length === 0 ? (
         <p data-testid="move-list">Everything stands where its layout places it.</p>
       ) : (
@@ -136,21 +184,52 @@ function Session({
           The run played back could not start over: {failure}.
         </p>
       )}
-      <div className="move-actions">
-        <button type="button" disabled={!changed || applying} onClick={onApply}>
-          {applying ? "Starting the new run…" : "Start a new run with these moves"}
-        </button>
-        <button
-          type="button"
-          disabled={moves.length === 0 || applying}
-          onClick={onPutEverythingBack}
-        >
-          Put everything back
-        </button>
-        <button type="button" disabled={applying} onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
-    </>
+      {asking ? (
+        <fieldset className="move-confirm" aria-describedby="move-confirm-question">
+          <legend>Start a new run?</legend>
+          <p id="move-confirm-question" data-testid="move-confirm">
+            {following ? "The run played back" : "The run"} starts again from its first day with
+            these moves; the moment reached is left behind.
+          </p>
+          <div className="move-actions">
+            <button
+              ref={confirm}
+              type="button"
+              disabled={!changed}
+              onClick={() => {
+                setConfirming(false);
+                onApply();
+              }}
+            >
+              Start the new run
+            </button>
+            <button type="button" onClick={() => setConfirming(false)}>
+              Back to the moves
+            </button>
+          </div>
+        </fieldset>
+      ) : (
+        <div className="move-actions">
+          <button
+            ref={apply}
+            type="button"
+            disabled={!changed || applying}
+            onClick={() => setConfirming(true)}
+          >
+            {applying ? "Starting the new run…" : "Start a new run with these moves"}
+          </button>
+          <button
+            type="button"
+            disabled={moves.length === 0 || applying}
+            onClick={onPutEverythingBack}
+          >
+            Put everything back
+          </button>
+          <button type="button" disabled={applying} onClick={onCancel}>
+            Cancel
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

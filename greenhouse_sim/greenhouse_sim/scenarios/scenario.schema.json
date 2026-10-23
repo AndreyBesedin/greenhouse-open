@@ -449,6 +449,21 @@
           "title": "Bays",
           "type": "integer"
         },
+        "inner_posts": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Inner Posts"
+        },
         "openings": {
           "default": [],
           "items": {

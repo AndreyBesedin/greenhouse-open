@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { type RenderedHook, renderHook } from "../testing/renderHook";
 import type { PlaybackLoad } from "./playback";
-import type { SceneSource } from "./source";
+import type { SceneSource, TargetChange } from "./source";
 import { type MoveSessionControls, useMoveSession } from "./useMoveSession";
 import type { SetSource } from "./useSource";
 
@@ -16,6 +16,8 @@ const AT_NOON: SceneSource = {
   time: 2 * 86_400 + 43_200,
 };
 const BOTH_MOVED = "default~co2:0.3:0,heater:-1:0.5";
+// Its day's heating target raised from its first day's 7 h on (#274).
+const WARMER: TargetChange = { timeS: 25_200, target: "heating_day", valueC: 24 };
 
 interface Props {
   source: SceneSource;
@@ -76,7 +78,7 @@ function session({
   };
 }
 
-function playbackAnswer(layout: string): Response {
+function playbackAnswer(layout: string, targets: [number, string, number][] = []): Response {
   return new Response(
     JSON.stringify({
       scenario_id: "climate_box",
@@ -92,7 +94,7 @@ function playbackAnswer(layout: string): Response {
       seconds_per_day: 10,
       worked_out_s: 0,
       every_s: 300,
-      targets: [],
+      targets,
     }),
   );
 }
@@ -223,5 +225,43 @@ describe("a Move session", () => {
       to: "default~heater:-1:0.5",
       failure: "the simulator answered 400",
     });
+  });
+
+  it("keeps the run's target changes in its new run (decision 0049)", async () => {
+    const view = session({ source: { ...AT_NOON, targets: [WARMER] } });
+    current = view;
+    act(() => view.hook.current.start());
+    act(() => view.hook.current.move("heater", { dx: -1, dy: 0.5 }));
+
+    await act(async () => view.hook.current.apply());
+
+    expect(view.changes).toEqual([
+      {
+        kind: "scenario",
+        scenarioId: "climate_box",
+        field: "climate",
+        targets: [WARMER],
+        layout: "default~heater:-1:0.5",
+      },
+    ]);
+  });
+
+  it("following, keeps the target changes the run played back starts over with", async () => {
+    const fetchFn = vi.fn(async () =>
+      playbackAnswer("default~heater:-1.0:0.5", [[25_200, "heating_day", 24]]),
+    );
+    const view = session({
+      followed: "climate_box",
+      fetchFn: fetchFn as unknown as typeof fetch,
+      source: { ...AT_NOON, targets: [WARMER] },
+    });
+    current = view;
+    act(() => view.hook.current.start());
+    act(() => view.hook.current.move("heater", { dx: -1, dy: 0.5 }));
+
+    await act(async () => view.hook.current.apply());
+
+    expect(view.played).toMatchObject([{ status: "loaded", state: { targets: [WARMER] } }]);
+    expect(view.changes).toMatchObject([{ layout: "default~heater:-1:0.5", targets: [WARMER] }]);
   });
 });

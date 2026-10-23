@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.domain.envelope import OpeningKind
 from greenhouse_sim.scene.snapshot import SceneSnapshot
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.envelope import Envelope, Opening
 from greenhouse_sim.world.geometry import Point2, Vector3
 
@@ -160,9 +161,9 @@ def test_a_door_slides_along_its_wall_just_outside_it() -> None:
         assert _host_distance(envelope, "end_wall_front", corner) < 0
 
 
-def test_the_api_opens_a_scenarios_vent_and_refuses_what_cannot_open() -> None:
+def test_the_api_opens_a_scenarios_vent_and_refuses_what_cannot_open(simulator: Simulator) -> None:
     def vent(query: str) -> dict[str, str | int | float | bool]:
-        response = respond("GET", f"/api/scenarios/climate_box/scene{query}")
+        response = respond(simulator, "GET", f"/api/scenarios/climate_box/scene{query}")
         scene = SceneSnapshot.model_validate(response.body)
         [entity] = [e for e in scene.entities if e.entity_id == "climate_box_roof_vent"]
         return entity.properties
@@ -175,6 +176,6 @@ def test_the_api_opens_a_scenarios_vent_and_refuses_what_cannot_open() -> None:
     assert vent("?open=roof_vent:1")["open_fraction"] == 1.0
     assert vent("?open=roof_vent:1")["aperture_m2"] == pytest.approx(curtain)
     for query in ["?open=roof_vent:2", "?open=nope:1", "?open=roof_vent:wide"]:
-        response = respond("GET", f"/api/scenarios/climate_box/scene{query}")
+        response = respond(simulator, "GET", f"/api/scenarios/climate_box/scene{query}")
         assert response.status == 400
         assert isinstance(response.body, dict) and response.body["error"]
