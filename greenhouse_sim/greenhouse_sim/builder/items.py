@@ -128,7 +128,8 @@ def place_openings(
     plane, named after its identifier. Refused if no surface is chosen, one
     is not the envelope's, or more than one would stand in one place."""
     surfaces = _chosen_surfaces(draft.envelope, surface_ids)
-    _check_count(count * len(surfaces), step is not None and step != _ON_THE_SPOT)
+    # One on each surface needs no step: only several on one surface do.
+    _check_count(count * len(surfaces), count == 1 or (step is not None and step != _ON_THE_SPOT))
     names = iter(_numbered([opening.opening_id] * (count * len(surfaces)), names_taken(draft)))
     by = step or _ON_THE_SPOT
     added = [
