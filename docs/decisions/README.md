@@ -57,7 +57,7 @@ changes course is a new record that supersedes the old one.
 | [0044](0044-public-records-speak-for-the-project.md) | Public records speak for the project | Accepted |
 | [0048](0048-a-simulators-state-is-one-object-passed-explicitly.md) | A simulator's state is one object, passed explicitly | Accepted |
 | [0045](0045-a-release-is-a-pull-request-the-owner-merges.md) | A release is a pull request the owner merges and tags, and CI publishes it | Accepted |
-| [0046](0046-one-action-format-and-plan.md) | One action format, and a plan a run's gateway carries out | Proposed |
+| [0046](0046-one-action-format-and-plan.md) | One action format, and a plan a run's gateway carries out | Accepted |
 | [0047](0047-python-lint-rules-a-family-at-a-time.md) | Python lint rules, a family at a time | Accepted |
 
 ## Template

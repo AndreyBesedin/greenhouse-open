@@ -1,7 +1,6 @@
 # 0046: One action format, and a plan a run's gateway carries out
 
-**Status:** Proposed. It becomes Accepted, or is changed, in the pull
-request that starts its implementation (P13.1, [P13](../roadmap/p13-actions.md)).
+**Status:** Accepted
 **Date:** 2026-10-22
 
 ## Context
@@ -97,7 +96,9 @@ clock. A run that has finished, and a recorded one, cannot be acted on
 **What is still to come goes on with the clock, or is dropped with it.**
 When a run ends and the next run or epoch of the same installation
 begins, what becomes of the actions not yet resolved is a property of the
-clock, not of the producer:
+clock, not of the producer. The gateway that starts it says which, in its
+descriptor, by naming the run and epoch whose clock it continues or
+nothing; it is not inferred from timestamps:
 
 - **The clock continues:** the next one starts where the previous one's
   clock had reached, as a physical installation's does when its gateway
@@ -149,11 +150,14 @@ refuses a malformed one whole, by its receipt, writing no outcome; and
 refuses, as outcomes recorded then, each well-formed action its principal
 may not carry out, of a kind no executor carries out, on a device, plant
 or target the run does not have, or at an instant no executor can honour;
-a window or an as-soon-as-possible action starts at the first instant one
-can. When an action falls due, the gateway checks its authorisation again,
-since rights may have changed, and the executor checks the greenhouse: a
-truss to cut that has not grown is refused then, not when the plan was
-given.
+a window or an as-soon-as-possible action starts at the earliest instant
+one can, so the same plan starts each action at the same instant. A plan
+and every write name the epoch they are made in, and one naming an epoch
+that has ended is refused as stale. The gateway checks an action's
+authorisation again when it sends its assignment and when it falls due,
+since rights may have changed, revoking an assignment already sent; and
+the executor checks the greenhouse: a truss to cut that has not grown is
+refused then, not when the plan was given.
 
 **Authorisation by design, in the gateway alone.** Every action carries its
 principal, and that principal is the plan's authenticated submitter

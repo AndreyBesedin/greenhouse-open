@@ -1,7 +1,8 @@
 # P13: One action format, and a plan a run's gateway carries out
 
-**Status:** proposed, with decision 0046; its questions are
-[decided](#decided). Part of the [simulator roadmap](README.md).
+**Status:** planned. The design is accepted (decision 0046), its questions
+[decided](#decided), and P13.1 starts its implementation. Part of the
+[simulator roadmap](README.md).
 
 ## Goal
 
@@ -60,8 +61,10 @@ flowchart LR
   to the run.
 - **What is still to come goes on with the clock, or is dropped with
   it.** When a run ends and the next run or epoch of the same installation
-  begins, the gateway asks whether its clock continues the previous one's
-  (`continues`, in the gateway contract below):
+  begins, its gateway, which starts it, says whether its clock continues
+  the previous one's: the new run's or epoch's descriptor names the run
+  and epoch it continues (`continues_from`, in the gateway contract
+  below), or nothing when it starts over. Timestamps are not compared:
   - **It continues,** starting where the previous clock had reached: a
     physical installation's gateway started again into a new epoch, or
     its equipment changed into a new run, the wall clock going on. The
@@ -114,7 +117,7 @@ fields:
 | Kind | Fields | Today |
 | --- | --- | --- |
 | `set_level` | `device_id`, `level`: 0 to 1, or `auto` to hand the device back to its control loop | `Command`, `DailyCommand`, `&set=`, `&open=`, `&schedule=`, `&daily=`: equipment and openings |
-| `set_target` | `target` (a controller's target: `heating_day`, `heating_night`, more with P11), `value`, `unit` | `TargetChange`, `&targets=`, the playback's targets route |
+| `set_target` | a union by `target`, each with its own unit and range: `heating_day` and `heating_night` in °C, from 0 to 40 (today's `SETPOINT_RANGE_C`); venting and humidity targets with P11 | `TargetChange`, `&targets=`, the playback's targets route |
 | `water` | `plant_id`, `amount_ml`, at most `MAX_WATER_AMOUNT_ML` | `WaterPlantAction` |
 | `harvest` | `plant_id`, `scope`: `ripe` (every ripe fruit), `fruit` or `truss`, with its organ's id | `HarvestPlantAction`, the lab's `harvest_fruit` and `harvest_truss`, crop work's harvest round |
 | `lower` | `plant_id`, one of `by_cm`, `by_internodes`, `to_head_room_m` | `LowerPlantAction`, the lab's `lower_stem`, crop work's lowering round |
@@ -134,7 +137,7 @@ PlannedAction
   action_id: ActionId               unique in its plan
   action: Action
   timing: At(at) | Window(not_before, not_after) | Asap(deadline: optional)
-  every: Recurrence(period, count | until) | None   applied to the timing, below
+  every: Recurrence(period > 0, count >= 1 | until) | None   applied to the timing, below
   after: tuple[ActionId, ...]       planned actions that must be done first
   if_prerequisite_fails: cancel | proceed          cancel by default
   lateness: Lateness
@@ -165,14 +168,17 @@ Lateness
                                     given only then
 
 Plan
-  plan_id, run_id, revision: int
+  plan_id, run_id, epoch, revision: int     the epoch it is given in: a write
+                                            naming an epoch that has ended is stale
   actions: tuple[PlannedAction, ...]
 ```
 
 - **Timing.** Any instant: the format bakes in no resolution. `At` is due
-  at its instant. `Window` may start at any instant between its two that an
-  executor can honour. `Asap` starts at the first such instant after what
-  it waits for is done, before its deadline if it has one.
+  at its instant. `Window` starts at the earliest instant between its two
+  that an executor can honour, and is free to take it; `Asap` at the
+  earliest such instant after what it waits for is done, before its
+  deadline if it has one. No other choice is left to a gateway, so the
+  same plan starts each action at the same instant, run after run.
 - **What executors honour.** Each executor says, for each kind, at which
   instants it can carry it out. Today's simulated run takes a level at any
   second, a target on the minute (`TARGET_EVERY_S`), and crop work at a
@@ -196,8 +202,13 @@ Plan
   `harvest@3`); a recurring action may wait for a one-off one, each
   occurrence for it. A one-off action waiting for a recurring one, and
   recurring ones of different periods waiting for each other, are refused,
-  since which occurrence is meant is not said. The graph is checked once
-  more as expanded.
+  since which occurrence is meant is not said. With these rules the
+  expanded graph has a cycle only if the plan as given has one, so the
+  graph is checked as given, without expanding every occurrence. A
+  recurrence's period is positive, its count at least one or its `until`
+  after its first occurrence, and a gateway states how many occurrences
+  and actions a plan may have (`limits()`), refusing one beyond them
+  whole.
 - **A fallback** is a planned action of its own, derived as occurrences
   are: `ActionRef(action_id, fallback=True)`, due at once when its action
   is missed, with no fallback of its own. It has its own outcome, which
@@ -302,7 +313,7 @@ executor exists.
 
 ```
 ActionOutcome                       a record, frozen
-  outcome_id, run_id, epoch, plan_id, revision
+  outcome_id, greenhouse_id, run_id, epoch, plan_id, revision
   ref: ActionRef                    the action, occurrence or fallback it is about
   action: Action                    what was asked, as it was asked
   timing: At | Window | Asap        when it was asked for, as it was asked
@@ -358,8 +369,11 @@ RunGateway (Protocol)               greenhouse_protocol.contracts.gateway
   cancel(keys: tuple[ActionKey, ...], *, by: Principal) -> Receipt
       the chosen actions, from any of the run's plans: an occurrence, or
       every occurrence still to come of a recurring action
-  cancel_plan(plan_id, *, by: Principal) -> Receipt
-      every action of a plan not yet resolved
+  cancel_plan(plan_id, revision, epoch, *, by: Principal) -> Receipt
+      every action of a plan not yet resolved, if its revision and epoch
+      are still the ones in force; otherwise stale, refused, nothing
+      cancelled
+  limits() -> GatewayLimits         occurrences and actions a plan may have
   actions(*, states=None, kinds=None, targets=None, plan_id=None)
       -> tuple[ActionState, ...]
       every action not yet resolved, as it stands, filtered; the outcome
@@ -370,14 +384,16 @@ RunGateway (Protocol)               greenhouse_protocol.contracts.gateway
   outcomes(after) -> OutcomeBatch   the outcome log, with the consumer interface's cursor
   raises ActionNotExecutable        a finished or recorded run
 
-continues(previous: RunDescriptor, next: RunDescriptor) -> bool
-    whether the next run or epoch continues the previous one's clock:
-    next.started_at >= previous.clock.simulated_now, where the previous
-    clock stood when it ended. If so, the gateway carries the actions not
-    yet resolved into it; if not, it started over, and they are cancelled
+RunDescriptor.continues_from: (run_id, epoch) | None
+    set by the gateway that starts a run or epoch: the run and epoch whose
+    clock it continues, into which the actions not yet resolved are
+    carried; None when it starts its clock over from the run's start, and
+    they are cancelled. Added to the consumer interface's descriptor, which
+    a consumer reads to know the same
 
 ActionKey
   plan_id
+  epoch: int                        the epoch the caller saw the action in
   revision: int                     the revision the caller saw the action in
   ref: ActionRef                    occurrence None: every occurrence still to come
                                     a key whose action a later revision replaced is
@@ -439,10 +455,11 @@ one may:
   lead time its executor states for its kind (`lead_time_s`), so that what
   is cancelled or superseded is rarely already in an executor's hands.
 - **Revocation decides the race.** Cancelling or superseding an action
-  already assigned revokes the assignment. If the executor answers that it
-  had not started, the outcome is `cancelled` or `superseded`; if it had,
-  the outcome follows its report, and the plan's state notes that the
-  cancellation came too late.
+  already assigned revokes the assignment, and so does refusing it after
+  it was sent, its authorisation withdrawn. If the executor answers that it
+  had not started, the outcome is `cancelled`, `superseded` or `refused`;
+  if it had, the outcome follows its report, and the plan's state notes
+  that the cancellation or the refusal came too late.
 - **A lost report is resolved, not waited for.** An assignment's report is
   due by its deadline, or its instant, plus the executor's longest
   duration for its kind. Past that, the gateway asks for its status; if
@@ -460,8 +477,10 @@ a window that closes before it opens, an action proposed for another
 principal without a grant to. It then refuses, as outcomes, each
 well-formed action that cannot be carried out: what its principal may not
 do, a kind no executor carries out, a device, plant or target the run does
-not have, an instant no executor honours. When an action falls due, the
-gateway checks its authorisation again, and the executor checks the
+not have, an instant no executor honours. Its authorisation is checked
+again when its assignment is sent and when it falls due; a refusal after
+the assignment was sent revokes it, by the rule above. When it falls due,
+the executor checks the
 greenhouse, as `actions/validation.py` checks today: a fruit or truss to
 harvest, a leaf to remove, room to lower a stem into; what fails is
 refused then, with `resolved_at` its due instant. A plan may name a truss
@@ -573,16 +592,16 @@ within the day; the action format needs no change for it.
 
 | Step | What | Commit title | Status |
 | --- | --- | --- | --- |
-| P13.1 | The protocol's types and contracts: `Action`, `ActionId`, `ActionRef`, `PlannedAction`, `Plan`, `Principal`, `Grant`, `AuthorisationGroup`, `AuthorisationConfig`, `ActionOutcome`, `ActionEffect`, `ExecutorRef`, `Assignment`, `ExecutionReport`, the gateway and executor contracts (revocation, status, at most once; listing the actions as they stand, `ActionKey`, `ActionState`; cancelling chosen actions; carrying actions into a run that continues the clock, `continues`, and dropping them from one that starts over) and `ActionNotExecutable`; checks (a malformed plan refused whole, the graph as given and as expanded, recurrences, grants and delegation, the order across plans, one outcome per action) as conformance functions and their tests, the executor's with one that drops messages, and the gateway's with an in-memory gateway on a clock that continues; the published JSON Schemas. The old names stay as deprecated aliases; the protocol's minor version moves and the changelog says what each became. Decision 0046 accepted. | `feat(protocol): one action, plan, gateway and executor format` | Proposed |
-| P13.2 | The run carries out a plan of today's kinds: levels, openings, daily commands and targets become a plan internally; `RunRequest` holds it; the address's spellings are read into it. Every run id, replay digest and kept opening day unchanged. Checkpoints in a new format, format 3 read. | `refactor(sim): the run carries out its schedule as a plan` | Proposed |
-| P13.3 | The simulator's gateway: the playback holds its run's plan and revisions, schedules them onto the run as its executor, writes the outcome log and serves it on the consumer interface; steering as the gateway's rule; the actions as they stand, cancelling chosen ones, and dropping them when the playback starts over. The gateway contract's conformance tests run against it. | `feat(sim): the playback as its run's gateway` | Proposed |
-| P13.4 | Authorisation in the gateway: principals on every planned action, bound to the authenticated submitter or granted on its behalf; plan ownership; groups and grants in a versioned configuration, an input of the run, its changes recorded; checked when a plan is given and when each action falls due, refusals as outcomes; the local operator group. | `feat(sim): the gateway authorises every action` | Proposed |
-| P13.5 | Crop actions on the run: `harvest`, `lower`, `remove_leaf`, `inspect` at a day's start, refused at other instants and `water` refused, with their reasons; the organ model's `PlantAction` renamed `PlantOperation`; the plant lab and crop work give them; events name their actions. | `feat(sim): crop actions and their outcomes on the run` | Proposed |
-| P13.6 | The graph, windows and lateness, with a simulated executor whose actions take time and which has a number of hands, so that `late`, `missed`, fallbacks and cancelled dependents happen, deterministically. | `feat(sim): plans with order, windows and lateness` | Proposed |
-| P13.7 | The gateway's write side and its routes: give a plan before a run, steer a playing one, list the actions as they stand, cancel a plan or chosen actions, read the plan in force; the playback's targets route becomes an alias. | `feat(api): give, steer and read a run's plan` | Proposed |
-| P13.8 | The viewer: the Equipment, Openings and Targets panels and the plant lab write one plan; a plan lane in the timeline shows what was due, what happened and why. | `feat(viewer): one plan, and its outcomes in the timeline` | Proposed |
-| P13.9 | The old paths removed: the engine's actions, `greenhouse_sim.executor`, the deprecated aliases (`RequestedAction`, `ActionResult` and the old execution names), `LabAction`; the close-the-loop example as a policy loop on the run; the protocol's minor version moves again, and the changelog says so. | `refactor: one way to act on a greenhouse` | Proposed |
-| P13.10 | The QA scenario below, run and recorded. | `test(e2e): a plan carried out, late, on time and refused` | Proposed |
+| P13.1 | The protocol's types and contracts: `Action`, `ActionId`, `ActionRef`, `PlannedAction`, `Plan`, `Principal`, `Grant`, `AuthorisationGroup`, `AuthorisationConfig`, `ActionOutcome`, `ActionEffect`, `ExecutorRef`, `Assignment`, `ExecutionReport`, the gateway and executor contracts (revocation, status, at most once; listing the actions as they stand, `ActionKey`, `ActionState`; cancelling chosen actions; the epoch on every write; the gateway's limits; carrying actions into a run that continues the clock, as `RunDescriptor.continues_from` says, and dropping them from one that starts over) and `ActionNotExecutable`; checks (a malformed or stale plan refused whole, the graph checked as given, recurrences bounded, grants and delegation, the order across plans, one outcome per action) as conformance functions and their tests, the executor's with one that drops messages, and the gateway's with an in-memory gateway on a clock that continues; the published JSON Schemas. The old names stay as deprecated aliases; the protocol's minor version moves and the changelog says what each became. | `feat(protocol): one action, plan, gateway and executor format` | Planned |
+| P13.2 | The run carries out a plan of today's kinds: levels, openings, daily commands and targets become a plan internally; `RunRequest` holds it; the address's spellings are read into it. Every run id, replay digest and kept opening day unchanged. Checkpoints in a new format, format 3 read. | `refactor(sim): the run carries out its schedule as a plan` | Planned |
+| P13.3 | The simulator's gateway: the playback holds its run's plan and revisions, schedules them onto the run as its executor, writes the outcome log and serves it on the consumer interface; steering as the gateway's rule; the actions as they stand, cancelling chosen ones, and dropping them when the playback starts over. The gateway contract's conformance tests run against it. | `feat(sim): the playback as its run's gateway` | Planned |
+| P13.4 | Authorisation in the gateway: principals on every planned action, bound to the authenticated submitter or granted on its behalf; plan ownership; groups and grants in a versioned configuration, an input of the run, its changes recorded; checked when a plan is given and when each action falls due, refusals as outcomes; the local operator group. | `feat(sim): the gateway authorises every action` | Planned |
+| P13.5 | Crop actions on the run: `harvest`, `lower`, `remove_leaf`, `inspect` at a day's start, refused at other instants and `water` refused, with their reasons; the organ model's `PlantAction` renamed `PlantOperation`; the plant lab and crop work give them; events name their actions. | `feat(sim): crop actions and their outcomes on the run` | Planned |
+| P13.6 | The graph, windows and lateness, with a simulated executor whose actions take time and which has a number of hands, so that `late`, `missed`, fallbacks and cancelled dependents happen, deterministically. | `feat(sim): plans with order, windows and lateness` | Planned |
+| P13.7 | The gateway's write side and its routes: give a plan before a run, steer a playing one, list the actions as they stand, cancel a plan or chosen actions, read the plan in force; the playback's targets route becomes an alias. | `feat(api): give, steer and read a run's plan` | Planned |
+| P13.8 | The viewer: the Equipment, Openings and Targets panels and the plant lab write one plan; a plan lane in the timeline shows what was due, what happened and why. | `feat(viewer): one plan, and its outcomes in the timeline` | Planned |
+| P13.9 | The old paths removed: the engine's actions, `greenhouse_sim.executor`, the deprecated aliases (`RequestedAction`, `ActionResult` and the old execution names), `LabAction`; the close-the-loop example as a policy loop on the run; the protocol's minor version moves again, and the changelog says so. | `refactor: one way to act on a greenhouse` | Planned |
+| P13.10 | The QA scenario below, run and recorded. | `test(e2e): a plan carried out, late, on time and refused` | Planned |
 
 ## Acceptance criteria
 
@@ -619,8 +638,18 @@ within the day; the action format needs no change for it.
 - [ ] A manager's revision keeps the owner's unchanged actions and their
   principals, and checks only what it adds or changes against its own
   rights.
-- [ ] A cancellation key from a revision a later one replaced is stale:
-  refused in the receipt, nothing cancelled.
+- [ ] A cancellation key, or a whole-plan cancellation, from a revision a
+  later one replaced, or from an epoch that has ended, is stale: refused
+  in the receipt, nothing cancelled; a plan given for an ended epoch is
+  refused whole.
+- [ ] A window or an as-soon-as-possible action starts at the earliest
+  instant an executor can honour, the same in every run.
+- [ ] A recurrence with a period that is not positive, or a plan beyond the
+  gateway's limits, is refused whole; the graph is checked without
+  expanding its occurrences.
+- [ ] A `set_target` outside its target's unit or range is malformed.
+- [ ] An assignment already sent whose authorisation is withdrawn before it
+  falls due is revoked: refused if it had not started.
 - [ ] An executor states its lead time for each kind, and a gateway sends no
   assignment earlier than that before its instant.
 - [ ] On an executor that drops messages: no assignment is carried out
@@ -639,8 +668,9 @@ within the day; the action format needs no change for it.
   naming who cancelled it; one already assigned is revoked; what waits for
   it is cancelled unless its plan says `proceed`; one the caller may not
   cancel is refused in the receipt and left as it was.
-- [ ] When the next run or epoch continues the previous one's clock
-  (`continues`), its pending actions are carried, checked again: one whose
+- [ ] When the next run or epoch continues the previous one's clock, as
+  its gateway says (`continues_from`), its pending actions are carried,
+  checked again: one whose
   target no longer exists, whose kind or instant no executor honours, or
   which its principal may no longer do is refused with that reason, the
   others keep their ids, principals and dependencies; one already assigned
