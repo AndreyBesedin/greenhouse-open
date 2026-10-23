@@ -21,6 +21,7 @@ from greenhouse_protocol.enums import EventSource, EventType, ObservationType, S
 from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.provenance import RecordSource
+from greenhouse_protocol.run import RunEpoch
 
 START = datetime(2026, 3, 1, 12, 0, tzinfo=UTC)
 NOW = START + timedelta(days=1)
@@ -85,6 +86,24 @@ def _run(**overrides: object) -> RunDescriptor:
 def test_a_run_descriptor_speaks_the_interface_version_by_default() -> None:
     assert _run().interface_version == CONSUMER_INTERFACE_VERSION
     assert check_run(_run()) == []
+
+
+def test_a_run_says_whose_clock_it_continues_and_says_nothing_otherwise() -> None:
+    starts_over = _run()
+    continues = _run(epoch=3, continues_from=RunEpoch(run_id="run_1", epoch=2))
+    another_run = _run(continues_from=RunEpoch(run_id="run_0", epoch=5))
+
+    assert "continues_from" not in starts_over.model_dump_json()
+    assert RunDescriptor.model_validate_json(starts_over.model_dump_json()) == starts_over
+    assert RunDescriptor.model_validate_json(continues.model_dump_json()) == continues
+    assert continues.continues_from == RunEpoch(run_id="run_1", epoch=2)
+    assert another_run.continues_from == RunEpoch(run_id="run_0", epoch=5)
+
+
+@pytest.mark.parametrize("source_epoch", [3, 4])
+def test_a_run_continues_only_an_earlier_epoch_of_its_own(source_epoch: int) -> None:
+    with pytest.raises(ValidationError, match="continues an epoch before it"):
+        _run(epoch=3, continues_from=RunEpoch(run_id="run_1", epoch=source_epoch))
 
 
 def test_a_run_that_reads_before_it_started_is_refused() -> None:

@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "ActionKind": {
+      "enum": [
+        "set_level",
+        "set_target",
+        "water",
+        "harvest",
+        "lower",
+        "remove_leaf",
+        "inspect"
+      ],
+      "title": "ActionKind",
+      "type": "string"
+    },
+    "AuthorisationGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "group_id": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "principals": {
+          "items": {
+            "$ref": "#/$defs/Principal"
+          },
+          "title": "Principals",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "grants": {
+          "items": {
+            "$ref": "#/$defs/Grant"
+          },
+          "title": "Grants",
+          "type": "array"
+        }
+      },
+      "required": [
+        "group_id",
+        "principals",
+        "grants"
+      ],
+      "title": "AuthorisationGroup",
+      "type": "object"
+    },
+    "Grant": {
+      "additionalProperties": false,
+      "properties": {
+        "kinds": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ActionKind"
+          },
+          "title": "Kinds",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "targets": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TargetSelector"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "on_behalf_of": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Principal"
+          },
+          "title": "On Behalf Of",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "manage_plans": {
+          "default": false,
+          "title": "Manage Plans",
+          "type": "boolean"
+        }
+      },
+      "title": "Grant",
+      "type": "object"
+    },
+    "Identifier": {
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9_.-]+$",
+      "type": "string"
+    },
+    "Name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "Principal": {
+      "additionalProperties": false,
+      "description": "Who asks for an action, by identity: a person, a control policy, a\nschedule, a scenario's own plan, a platform.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/PrincipalKind"
+        },
+        "id": {
+          "$ref": "#/$defs/Name"
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ],
+      "title": "Principal",
+      "type": "object"
+    },
+    "PrincipalKind": {
+      "enum": [
+        "person",
+        "policy",
+        "schedule",
+        "scenario",
+        "platform"
+      ],
+      "title": "PrincipalKind",
+      "type": "string"
+    },
+    "TargetSelector": {
+      "additionalProperties": false,
+      "description": "The targets a grant is limited to, by kind of target: an action's\ndevices must all be among `devices`, its plants among `plants`, its\ncontroller targets among `targets`. A kind left None is not limited.",
+      "properties": {
+        "devices": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Devices"
+        },
+        "plants": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Plants"
+        },
+        "targets": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Targets"
+        }
+      },
+      "title": "TargetSelector",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "minimum": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "groups": {
+      "items": {
+        "$ref": "#/$defs/AuthorisationGroup"
+      },
+      "title": "Groups",
+      "type": "array"
+    }
+  },
+  "required": [
+    "version",
+    "groups"
+  ],
+  "title": "AuthorisationConfig",
+  "type": "object"
+}

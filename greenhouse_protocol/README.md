@@ -18,16 +18,31 @@ implement. Part of [greenhouse-open](../README.md). Apache-2.0.
   source states about mounting.
 - `GreenhouseDescription`, `Compartment`, `Plant`: what a producer states
   about a greenhouse's structure.
-- `RequestedAction` and `ActionOutcome`: what someone wants done, and what
-  happened when an executor tried.
+- **Acting on a greenhouse** (decision 0046):
+  - `Action` (`actions`): what is to be done, to what, one union by kind;
+  - `Plan` (`plan`): a run's planned actions, each with its timing, what it
+    waits for, what to do if it is late, and its principal;
+  - `AuthorisationConfig` (`authorisation`): who may do what, which a run's
+    gateway enforces;
+  - `ActionOutcome` (`outcome`): what became of each planned action;
+  - `Assignment` and `ExecutionReport` (`assignment`): what a gateway and
+    an executor exchange.
+
+  Their JSON Schemas are published in the package (`schemas/`).
+- `RequestedAction` (`action`) and the `ActionOutcome` of `execution`:
+  deprecated, replaced by the above, and kept as they are until the
+  simulator carries the new format out.
 
 Chronology is the timestamp alone, always timezone-aware: every record
 refuses a naive time (`greenhouse_protocol.instant.Instant`).
 
 What was observed or happened cannot be edited: observations, events,
-captures, frames and sensors are frozen. A greenhouse description, an action
-and an outcome can be, by assigning a field, and each edit is checked as the
-record was when built; a refused edit leaves the record as it was. A
+captures, frames and sensors are frozen, and so are the records of acting
+on a greenhouse: actions, plans, outcomes, assignments, reports and
+authorisation configurations. A greenhouse description, and the deprecated
+`RequestedAction` and `execution.ActionOutcome`, can be, by assigning a
+field, and each edit is checked as the record was when built; a refused
+edit leaves the record as it was. A
 description's plants, compartments and layout are values that an edit
 replaces, so that the description checks it.
 
@@ -37,7 +52,9 @@ replaces, so that the description checks it.
   Every query takes `up_to`, the temporal-honesty boundary: a decision made
   at T must not see a record from after T.
 - `execution`: how an approved action reaches whatever carries it out, and
-  how an environment that cannot execute (a recorded history) refuses.
+  how an environment that cannot execute (a recorded history) refuses. Its
+  `ActionExecutionAdapter` is deprecated: a run's gateway and its executors
+  replace it (decision 0046).
 - `conformance`: checks any producer's output must pass - unambiguous
   timestamps, unique identities, real numbers rather than placeholders -
   as plain functions returning a list of violations.

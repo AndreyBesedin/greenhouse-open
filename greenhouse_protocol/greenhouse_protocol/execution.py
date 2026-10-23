@@ -8,6 +8,10 @@ not proof that an action happened.
 The outcome names its executor rather than the caller inferring one from a
 simulation's configuration: who carried an action out is something the
 executing side knows and the deciding side is told.
+
+Deprecated (decision 0046): `greenhouse_protocol.outcome` replaces this
+outcome, one record for every way a planned action can end. It stays, as it
+is, until the simulator carries the new format out, and goes then (P13).
 """
 
 from enum import StrEnum
