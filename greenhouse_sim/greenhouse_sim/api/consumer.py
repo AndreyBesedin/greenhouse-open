@@ -31,7 +31,7 @@ from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceErro
 _PREFIX: Final = [segment for segment in consumer.ROUTES_PREFIX.split("/") if segment]
 
 
-def consumer_respond(method: str, path: str) -> Response | None:
+def consumer_respond(reads: consumer.Reads, method: str, path: str) -> Response | None:
     """The consumer interface's answer to a request, if `path` is one of
     its routes; None for any other path."""
     url = urlsplit(path)
@@ -46,20 +46,22 @@ def consumer_respond(method: str, path: str) -> Response | None:
     query = parse_qs(url.query, keep_blank_values=True)
     match segments[len(_PREFIX) :]:
         case ["runs"]:
-            return _answer(consumer.runs)
+            return _answer(lambda: consumer.runs(reads))
         case ["runs", run_id]:
-            return _answer(lambda: consumer.run(run_id))
+            return _answer(lambda: consumer.run(reads, run_id))
         case ["runs", run_id, "greenhouse"]:
-            return _answer(lambda: consumer.greenhouse(run_id))
+            return _answer(lambda: consumer.greenhouse(reads, run_id))
         case ["runs", run_id, "observations"]:
             return _answer(
                 lambda: consumer.observations(
-                    run_id, _whole(query, "after"), _whole(query, "limit")
+                    reads, run_id, _whole(query, "after"), _whole(query, "limit")
                 )
             )
         case ["runs", run_id, "events"]:
             return _answer(
-                lambda: consumer.events(run_id, _whole(query, "after"), _whole(query, "limit"))
+                lambda: consumer.events(
+                    reads, run_id, _whole(query, "after"), _whole(query, "limit")
+                )
             )
         case _:
             return _detail(HTTPStatus.NOT_FOUND, f"no consumer route {url.path!r}")

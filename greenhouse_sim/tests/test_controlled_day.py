@@ -12,6 +12,7 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.climate.house import HouseTrace
 from greenhouse_sim.services import fields, sensors
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 
 HOUR_S = 3600.0
 SPRING = "cold_spring_day"
@@ -99,6 +100,8 @@ def test_both_runs_replay_exactly(afresh: Callable[[], None]) -> None:
         ("3600:roof_vent:2", HTTPStatus.BAD_REQUEST),
     ],
 )
-def test_the_api_takes_commands_to_doors_and_vents(schedule: str, status: HTTPStatus) -> None:
+def test_the_api_takes_commands_to_doors_and_vents(
+    simulator: Simulator, schedule: str, status: HTTPStatus
+) -> None:
     path = f"/api/scenarios/climate_box/climate/openings?schedule={schedule}&t=4000"
-    assert respond("GET", path).status == status
+    assert respond(simulator, "GET", path).status == status

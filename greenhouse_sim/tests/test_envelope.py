@@ -13,6 +13,7 @@ from greenhouse_sim.domain.envelope import MemberKind, SurfaceCategory
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scene.snapshot import SceneEntityKind, scene_snapshot
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.envelope import GUTTER_DEPTH_M, Envelope, Surface
 from greenhouse_sim.world.envelope_checks import Point, inverted_surfaces, outline, shared_edges
 from greenhouse_sim.world.geometry import Quaternion, Transform, Vector3
@@ -392,7 +393,7 @@ def test_an_envelope_is_no_larger_than_a_greenhouse(changes: dict[str, float]) -
         Envelope.model_validate(HOUSE.model_dump() | changes)
 
 
-def test_the_api_refuses_an_envelope_larger_than_a_greenhouse() -> None:
-    response = respond("GET", "/api/scenarios/climate_box/scene?envelope=length:1e308")
+def test_the_api_refuses_an_envelope_larger_than_a_greenhouse(simulator: Simulator) -> None:
+    response = respond(simulator, "GET", "/api/scenarios/climate_box/scene?envelope=length:1e308")
 
     assert response.status == HTTPStatus.BAD_REQUEST

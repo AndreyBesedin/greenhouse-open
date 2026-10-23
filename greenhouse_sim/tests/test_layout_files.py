@@ -21,6 +21,7 @@ from greenhouse_sim.scenarios.layout_files import (
     load_layout,
 )
 from greenhouse_sim.scene.snapshot import SceneEntityKind, SceneSnapshot
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.layout import Layout
 
 ALL_LAYOUTS = [
@@ -85,8 +86,10 @@ def test_the_compartments_propagation_layout_carries_the_same_rows_on_benches() 
     assert {p.point.z for p in benches.planting_positions()} == {0.8}
 
 
-def test_the_api_shows_a_scenario_with_another_of_its_layouts() -> None:
-    response = respond("GET", "/api/scenarios/tomato_compartment/scene?layout=propagation")
+def test_the_api_shows_a_scenario_with_another_of_its_layouts(simulator: Simulator) -> None:
+    response = respond(
+        simulator, "GET", "/api/scenarios/tomato_compartment/scene?layout=propagation"
+    )
     snapshot = SceneSnapshot.model_validate(response.body)
     kinds = {entity.kind for entity in snapshot.entities}
 
@@ -95,8 +98,10 @@ def test_the_api_shows_a_scenario_with_another_of_its_layouts() -> None:
     assert SceneEntityKind.CROP_GUTTER not in kinds
 
 
-def test_the_api_writes_a_scenarios_layout_as_its_file_holds_it() -> None:
-    response = respond("GET", "/api/scenarios/tomato_compartment/layout?layout=propagation")
+def test_the_api_writes_a_scenarios_layout_as_its_file_holds_it(simulator: Simulator) -> None:
+    response = respond(
+        simulator, "GET", "/api/scenarios/tomato_compartment/layout?layout=propagation"
+    )
 
     assert response.status == HTTPStatus.OK
     assert response.body == json.loads(
@@ -132,9 +137,9 @@ def test_the_api_writes_a_scenarios_layout_as_its_file_holds_it() -> None:
     ],
 )
 def test_the_api_refuses_a_layout_it_cannot_show(
-    path: str, status: HTTPStatus, reason: str
+    simulator: Simulator, path: str, status: HTTPStatus, reason: str
 ) -> None:
-    response = respond("GET", path)
+    response = respond(simulator, "GET", path)
 
     assert response.status == status
     assert isinstance(response.body, dict)
