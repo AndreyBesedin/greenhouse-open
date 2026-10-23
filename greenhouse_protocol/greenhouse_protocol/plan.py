@@ -38,7 +38,7 @@ class Principal(BaseModel):
     """Who asks for an action, by identity: a person, a control policy, a
     schedule, a scenario's own plan, a platform."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     kind: PrincipalKind
     id: Name
@@ -55,7 +55,7 @@ class ExecutorRef(BaseModel):
     """Who carries an action out: a kind of executor, and which one, or any
     of the kind when `id` is None."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     kind: ExecutorKind
     id: Name | None = None
@@ -64,7 +64,7 @@ class ExecutorRef(BaseModel):
 class At(BaseModel):
     """Due at an instant."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     kind: Literal["at"] = "at"
     at: Instant
@@ -74,7 +74,7 @@ class Window(BaseModel):
     """Due between two instants: it starts at the earliest one in them an
     executor can honour and is free to take."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     kind: Literal["window"] = "window"
     not_before: Instant
@@ -91,7 +91,7 @@ class Asap(BaseModel):
     """As soon as what it waits for is done, before its deadline if it has
     one."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     kind: Literal["asap"] = "asap"
     deadline: Instant | None = None
@@ -105,7 +105,18 @@ class Recurrence(BaseModel):
     from 0, is the planned action's timing moved by `n` periods. The timing
     is its one anchor."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+        allow_inf_nan=False,
+        # One end, as the published schema says it too.
+        json_schema_extra={
+            "oneOf": [
+                {"properties": {"count": {"type": "integer"}}, "required": ["count"]},
+                {"properties": {"until": {"type": "string"}}, "required": ["until"]},
+            ]
+        },
+    )
 
     period: timedelta
     count: Annotated[int, Field(ge=1)] | None = None
@@ -132,7 +143,20 @@ class OnLate(StrEnum):
 
 
 class Lateness(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+        allow_inf_nan=False,
+        # A fallback exactly with its choice, as the published schema says it too.
+        json_schema_extra={
+            "if": {"properties": {"on_late": {"const": "fallback"}}, "required": ["on_late"]},
+            "then": {
+                "required": ["fallback"],
+                "properties": {"fallback": {"not": {"type": "null"}}},
+            },
+            "else": {"properties": {"fallback": {"type": "null"}}},
+        },
+    )
 
     # How late still counts as on time.
     tolerance_s: Annotated[float, Field(ge=0.0)] = 0.0
@@ -154,7 +178,7 @@ class IfPrerequisiteFails(StrEnum):
 
 
 class PlannedAction(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     action_id: ActionId
     action: Action
@@ -213,7 +237,7 @@ class Plan(BaseModel):
     edges the plan, expanded occurrence by occurrence, has a cycle only if it
     has one as given, so it is checked as given."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     plan_id: Identifier
     run_id: Name
@@ -292,7 +316,7 @@ class ActionKey(BaseModel):
     has ended, is stale: refused, and nothing cancelled. An occurrence of
     None, for a recurring action, means every occurrence still to come."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     plan_id: Identifier
     epoch: Annotated[int, Field(ge=0)]
@@ -311,7 +335,7 @@ class ActionState(BaseModel):
     """An action not yet resolved, as it stands: what a gateway lists. Once
     resolved, it is an outcome in the outcome log, not a state."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     plan_id: Identifier
     revision: Annotated[int, Field(ge=1)]

@@ -58,8 +58,13 @@ def test_a_report_of_each_status() -> None:
     [
         (dict(status=ReportStatus.DONE, started_at=TEN), "start and its finish"),
         (dict(status=ReportStatus.FAILED), "says why"),
+        (dict(status=ReportStatus.FAILED, reason="stuck"), "was attempted"),
+        (dict(status=ReportStatus.REFUSED, reason="no", finished_at=TEN), "that finished started"),
         (dict(status=ReportStatus.REFUSED, reason="no", started_at=TEN), "never started"),
-        (dict(status=ReportStatus.FAILED, reason="no", effect=Lowered(by_cm=1)), "no effect"),
+        (
+            dict(status=ReportStatus.FAILED, reason="no", started_at=TEN, effect=Lowered(by_cm=1)),
+            "no effect",
+        ),
         (
             dict(status=ReportStatus.DONE, started_at=TEN, finished_at=TEN - MINUTE),
             "finishes no earlier",

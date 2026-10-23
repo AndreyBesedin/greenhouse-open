@@ -757,6 +757,15 @@ What the design left to its first step, as P13.1 settles it:
   that every descriptor written before reads and writes as it did.
 - **An executor's report** has a `status` of `done`, `failed` or
   `refused` (`ReportStatus`), apart from the deprecated `ExecutionStatus`.
+- **The published schemas** say what JSON Schema can of the checks across a
+  record's fields: a lowering's one measure, a harvest's organ with its
+  scope, a fallback with its choice, a recurrence's one end. What it
+  cannot, a plan's graph and an outcome's agreement with its status, the
+  records and the conformance checks hold. Checking documents against the
+  schemas with a JSON Schema validator in the tests waits for that
+  validator as a development dependency: a follow-up.
+- **Numbers are finite** in every record of acting on a greenhouse: JSON
+  has no infinity and no NaN.
 - **The reference implementation** is in the package, beside the store's
   (`contracts/memory_gateway`, as `contracts/memory`): an in-memory gateway
   on a clock that continues, and an executor into which a lost send and an

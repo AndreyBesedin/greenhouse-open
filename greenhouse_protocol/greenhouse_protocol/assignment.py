@@ -23,7 +23,7 @@ type Name = Annotated[str, StringConstraints(min_length=1)]
 
 
 class Assignment(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     assignment_id: Identifier
     run_id: Name
@@ -51,7 +51,7 @@ class ExecutionReport(BaseModel):
     """An executor's report of an assignment: done, with its start and
     finish; failed, with why; or refused before it started, with why."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     assignment_id: Identifier
     status: ReportStatus
@@ -69,6 +69,10 @@ class ExecutionReport(BaseModel):
             raise ValueError(f"a {self.status} report says why")
         if self.status == ReportStatus.REFUSED and self.started_at is not None:
             raise ValueError("a refused assignment never started")
+        if self.status == ReportStatus.FAILED and self.started_at is None:
+            raise ValueError("a failed assignment was attempted: it has its start")
+        if self.finished_at is not None and self.started_at is None:
+            raise ValueError(f"a {self.status} report that finished started")
         if self.effect is not None and self.status != ReportStatus.DONE:
             raise ValueError(f"a {self.status} report has no effect")
         if (

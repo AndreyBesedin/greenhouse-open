@@ -17,7 +17,15 @@ from typing import Annotated, Final, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-from greenhouse_protocol.actions import Action, ActionKind, ActionRef, Identifier
+from greenhouse_protocol.actions import (
+    Action,
+    ActionKind,
+    ActionRef,
+    Identifier,
+    RemoveLeaf,
+    SetLevel,
+    SetTarget,
+)
 from greenhouse_protocol.instant import Instant
 from greenhouse_protocol.plan import ExecutorRef, Principal, Timing, Window
 
@@ -48,7 +56,7 @@ NOT_STARTED: Final = frozenset(
 
 
 class LevelSet(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     kind: Literal["level_set"] = "level_set"
     device_id: Name
@@ -56,7 +64,7 @@ class LevelSet(BaseModel):
 
 
 class TargetSet(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     kind: Literal["target_set"] = "target_set"
     target: Name
@@ -64,14 +72,14 @@ class TargetSet(BaseModel):
 
 
 class Watered(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     kind: Literal["watered"] = "watered"
     amount_ml: Annotated[float, Field(ge=0.0)]
 
 
 class Harvested(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     kind: Literal["harvested"] = "harvested"
     fruit_count: Annotated[int, Field(ge=0)]
@@ -79,21 +87,21 @@ class Harvested(BaseModel):
 
 
 class Lowered(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     kind: Literal["lowered"] = "lowered"
     by_cm: Annotated[float, Field(ge=0.0)]
 
 
 class LeafRemoved(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     kind: Literal["leaf_removed"] = "leaf_removed"
     leaf_id: Name
 
 
 class Inspected(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     kind: Literal["inspected"] = "inspected"
 
@@ -124,7 +132,7 @@ class ActionOutcome(BaseModel):
     always set and orders the log; `due` is None only for an
     as-soon-as-possible action dropped before it could start."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     outcome_id: Identifier
     greenhouse_id: Name
@@ -158,6 +166,10 @@ class ActionOutcome(BaseModel):
                 raise ValueError(f"a {status} outcome has its start, its finish and its executor")
         elif not (self.reason or "").strip():
             raise ValueError(f"a {status} outcome says why")
+        if status == OutcomeStatus.FAILED and (self.started_at is None or self.executor is None):
+            raise ValueError("a failed outcome was attempted: it has its start and its executor")
+        if self.finished_at is not None and self.started_at is None:
+            raise ValueError(f"a {status} outcome that finished started")
         if status in NOT_STARTED and (self.started_at is not None or self.executor is not None):
             raise ValueError(f"a {status} outcome never started, and has no executor")
         if self.cancelled_by is not None and status not in {
@@ -165,8 +177,14 @@ class ActionOutcome(BaseModel):
             OutcomeStatus.SUPERSEDED,
         }:
             raise ValueError(f"a {status} outcome was not cancelled by anyone")
-        if self.fallback is not None and status != OutcomeStatus.MISSED:
-            raise ValueError(f"a {status} outcome had no fallback carried out instead")
+        if self.fallback is not None:
+            if status != OutcomeStatus.MISSED:
+                raise ValueError(f"a {status} outcome had no fallback carried out instead")
+            own = ActionRef(
+                action_id=self.ref.action_id, occurrence=self.ref.occurrence, fallback=True
+            )
+            if self.ref.fallback or self.fallback != own:
+                raise ValueError(f"a missed {self.ref}'s fallback is {own}, not {self.fallback}")
         if self.effect is not None:
             if status not in RAN:
                 raise ValueError(f"a {status} outcome has no effect")
@@ -175,6 +193,8 @@ class ActionOutcome(BaseModel):
                     f"a {self.action.kind} action's effect is {EFFECT_OF[self.action.kind]}, "
                     f"not {self.effect.kind}"
                 )
+            if not _on_its_targets(self.action, self.effect):
+                raise ValueError(f"an outcome's effect acts on what its action does: {self.effect}")
         if self.due is None and not (
             self.timing.kind == "asap"
             and status in {OutcomeStatus.REFUSED, OutcomeStatus.CANCELLED, OutcomeStatus.SUPERSEDED}
@@ -189,6 +209,19 @@ class ActionOutcome(BaseModel):
             ("delivered", self.delivered_at),
         )
         return self
+
+
+def _on_its_targets(action: Action, effect: ActionEffect) -> bool:
+    """Whether an effect names the device, target or leaf its action does."""
+    match action, effect:
+        case SetLevel(device_id=asked), LevelSet(device_id=done):
+            return asked == done
+        case SetTarget(target=asked), TargetSet(target=done):
+            return asked == done
+        case RemoveLeaf(leaf_id=asked), LeafRemoved(leaf_id=done):
+            return asked == done
+        case _:
+            return True
 
 
 def _check_order(*moments: tuple[str, Instant | None]) -> None:

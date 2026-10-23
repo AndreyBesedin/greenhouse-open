@@ -170,6 +170,23 @@
     },
     "Harvest": {
       "additionalProperties": false,
+      "else": {
+        "properties": {
+          "organ_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "organ_id"
+        ]
+      },
+      "if": {
+        "properties": {
+          "scope": {
+            "const": "ripe"
+          }
+        }
+      },
       "properties": {
         "kind": {
           "const": "harvest",
@@ -199,6 +216,13 @@
         "plant_id",
         "scope"
       ],
+      "then": {
+        "properties": {
+          "organ_id": {
+            "type": "null"
+          }
+        }
+      },
       "title": "Harvest",
       "type": "object"
     },
@@ -345,6 +369,38 @@
     "Lower": {
       "additionalProperties": false,
       "description": "Lower a plant's stem: by so many centimetres, by so many internodes,\nor until its top has so much head room under its wire. Exactly one.",
+      "oneOf": [
+        {
+          "properties": {
+            "by_cm": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "by_cm"
+          ]
+        },
+        {
+          "properties": {
+            "by_internodes": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "by_internodes"
+          ]
+        },
+        {
+          "properties": {
+            "to_head_room_m": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "to_head_room_m"
+          ]
+        }
+      ],
       "properties": {
         "kind": {
           "const": "lower",

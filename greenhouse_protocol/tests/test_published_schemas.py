@@ -73,6 +73,23 @@ def test_each_published_schema_is_its_records_export(file_name: str) -> None:
     )
 
 
+def test_the_schemas_say_what_a_record_refuses_across_its_fields() -> None:
+    """What JSON Schema can say of the checks across a record's fields, the
+    published schemas say too; what it cannot (a plan's graph, an outcome's
+    agreement with its status) the records and the conformance checks do."""
+    defs = json.loads((SCHEMAS_DIR / "plan.schema.json").read_text())["$defs"]
+
+    assert [sorted(case["required"]) for case in defs["Lower"]["oneOf"]] == [
+        ["by_cm"],
+        ["by_internodes"],
+        ["to_head_room_m"],
+    ]
+    assert defs["Harvest"]["if"] == {"properties": {"scope": {"const": "ripe"}}}
+    assert defs["Harvest"]["else"]["required"] == ["organ_id"]
+    assert defs["Lateness"]["then"]["required"] == ["fallback"]
+    assert [case["required"] for case in defs["Recurrence"]["oneOf"]] == [["count"], ["until"]]
+
+
 def test_no_schema_is_published_outside_the_list() -> None:
     assert {path.name for path in SCHEMAS_DIR.glob("*.schema.json")} == set(PUBLISHED)
 

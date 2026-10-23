@@ -61,6 +61,8 @@ def test_each_kind_is_read_by_its_kind(document: dict[str, object], kind: type) 
         {"kind": "inspect", "plant_id": "p30", "reason": "   "},
         {"kind": "prune", "plant_id": "p30"},
         {"kind": "water", "plant_id": "p30", "amount_ml": 500, "at": "noon"},
+        {"kind": "lower", "plant_id": "p30", "by_cm": float("inf")},
+        {"kind": "set_level", "device_id": "heater", "level": float("nan")},
     ],
 )
 def test_what_an_action_cannot_say_is_refused(document: dict[str, object]) -> None:

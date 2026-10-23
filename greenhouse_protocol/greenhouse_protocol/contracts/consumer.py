@@ -103,9 +103,9 @@ it; `tests/test_consumer_fixture.py` writes it and holds it to the rules.
 
 from collections.abc import Iterable
 from datetime import datetime
-from typing import Final
+from typing import Final, Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from greenhouse_protocol.contracts.conformance import (
     check_events,
@@ -161,6 +161,16 @@ class RunDescriptor(BaseModel):
     # clock going on. None when its clock starts at the run's start, as a
     # simulated run's restart does; left out of its JSON then.
     continues_from: RunEpoch | None = Field(default=None, exclude_if=lambda value: value is None)
+
+    @model_validator(mode="after")
+    def _continues_an_earlier_epoch(self) -> Self:
+        source = self.continues_from
+        if source is not None and source.run_id == self.run_id and source.epoch >= self.epoch:
+            raise ValueError(
+                f"run {self.run_id!r} epoch {self.epoch} continues an epoch before it, "
+                f"not epoch {source.epoch}"
+            )
+        return self
 
 
 class RunList(BaseModel):
