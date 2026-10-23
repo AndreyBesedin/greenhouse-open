@@ -7,6 +7,12 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim` and the viewer: a scenario's house as the builder's
+  start (P12.2). `GET /api/scenarios/{id}/installation` answers a
+  scenario's house as an installation, assessed, as its manifest holds it
+  with its layout written out (`scenarios.installation.scenario_installation`);
+  the builder copies it under an identifier of its own, so that the
+  scenario itself is never changed.
 - viewer: the setup builder, `/builder` (P12.2). A house is drafted from
   the first form, which reads its fields from the simulator's published
   schema, opened from the drafts or imported from a file; its rows are

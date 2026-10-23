@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
 import { greenhouseExtent, qaGreenhousePose } from "../qa/greenhouseViews";
+import type { ScenarioSummary } from "../scenarios";
 import { loadScenarios } from "../scenarios";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import { Viewport } from "../Viewport";
@@ -14,7 +14,9 @@ import {
   type RunSettings,
   runDraft,
   saveDraft,
+  scenarioHouse,
 } from "./api";
+import { CopyScenario } from "./CopyScenario";
 import { type Crop, withCrop } from "./edits";
 import { Findings } from "./Findings";
 import type { Finding, Installation } from "./generated/assessedTypes";
@@ -60,7 +62,7 @@ export function Builder() {
   const [findings, setFindings] = useState<readonly Finding[]>([]);
   const [snapshot, setSnapshot] = useState<SceneSnapshot | null>(null);
   const [drafts, setDrafts] = useState<readonly DraftListed[] | null>(null);
-  const [weathers, setWeathers] = useState<readonly string[]>([]);
+  const [scenarios, setScenarios] = useState<readonly ScenarioSummary[]>([]);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [ran, setRan] = useState<Ran | null>(null);
@@ -78,7 +80,7 @@ export function Builder() {
     void refreshDrafts();
     void loadScenarios().then((answer) => {
       if (answer.status === "loaded") {
-        setWeathers(answer.scenarios[0]?.weathers ?? []);
+        setScenarios(answer.scenarios);
       }
     });
   }, [refreshDrafts]);
@@ -155,6 +157,22 @@ export function Builder() {
         saved: { revision, installation },
       },
       `Opened ${installation.name}, revision ${revision}.`,
+    );
+  }
+
+  async function copyHouse(scenario: ScenarioSummary, draftId: string): Promise<void> {
+    setBusy(true);
+    const answer = await scenarioHouse(scenario.id);
+    setBusy(false);
+    if (answer.status !== "loaded") {
+      setStatus(`${scenario.name}'s house cannot be copied: ${answer.reason}`);
+      return;
+    }
+    const { installation, schema_version } = answer.value;
+    const copied = { ...installation, installation_id: draftId, name: `${scenario.name} (copy)` };
+    begin(
+      { draftId, schemaVersion: schema_version, history: begun(copied), saved: null },
+      `Copied ${scenario.name}'s house as ${draftId}; not saved yet.`,
     );
   }
 
@@ -346,6 +364,11 @@ export function Builder() {
         {editing === null ? (
           <>
             <HouseForm busy={busy} onDraft={(values) => void draftHouse(values)} />
+            <CopyScenario
+              scenarios={scenarios}
+              busy={busy}
+              onCopy={(scenario, draftId) => void copyHouse(scenario, draftId)}
+            />
             <section className="builder-start" aria-label="Drafts kept">
               <h2>Or open one</h2>
               {drafts === null ? (
@@ -389,7 +412,7 @@ export function Builder() {
             <Findings findings={findings} />
             <RowCrops installation={editing.history.present} onGive={give} />
             <RunStep
-              weathers={weathers}
+              weathers={scenarios[0]?.weathers ?? []}
               disabled={runWhy !== "" || busy}
               why={runWhy}
               onRun={(settings) => void run(settings)}

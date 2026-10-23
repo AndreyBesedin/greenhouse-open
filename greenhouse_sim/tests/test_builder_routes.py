@@ -12,10 +12,12 @@ import pytest
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.builder.portable import export_installation
+from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.installation import Installation
-from greenhouse_sim.scenarios.manifest_files import SCHEMA_VERSION
+from greenhouse_sim.scenarios.manifest_files import MANIFESTS_DIR, SCHEMA_VERSION, manifest_ids
 from greenhouse_sim.scene.snapshot import SceneEntityKind
 from greenhouse_sim.services.simulator import Simulator
+from greenhouse_sim.world.envelope import Envelope
 
 FORM: dict[str, Any] = {
     "installation_id": "my_greenhouse",
@@ -141,3 +143,32 @@ def test_a_file_exported_reads_back_through_the_builder(simulator: Simulator) ->
     status, assessed = _post(simulator, "/api/builder/assess", exported)
 
     assert (status, assessed["installation"]) == (HTTPStatus.OK, first["installation"])
+
+
+@pytest.mark.parametrize("scenario_id", manifest_ids())
+def test_a_scenarios_house_is_its_manifests_installation(
+    simulator: Simulator, scenario_id: str
+) -> None:
+    """For the builder to copy, as the manifest holds it, its layout written
+    out; and assessed."""
+    held = json.loads((MANIFESTS_DIR / f"{scenario_id}.json").read_text())["installation"]
+
+    answer = respond(simulator, "GET", f"/api/scenarios/{scenario_id}/installation")
+
+    assert answer.status == HTTPStatus.OK
+    answered: Any = answer.body
+    installation = answered["installation"]
+    for part in ("installation_id", "name", "row_crops"):
+        assert installation[part] == held[part]
+    # Written sparsely in the manifest, as the model reads it here.
+    assert installation["envelope"] == Envelope.model_validate(held["envelope"]).model_dump(
+        mode="json"
+    )
+    assert installation["layout"] == SCENARIO_REGISTRY[scenario_id].layout.model_dump(mode="json")
+    assert all(found["severity"] == "warning" for found in answered["findings"])
+
+
+def test_no_scenario_has_no_house(simulator: Simulator) -> None:
+    answer = respond(simulator, "GET", "/api/scenarios/nowhere/installation")
+
+    assert answer.status == HTTPStatus.NOT_FOUND
