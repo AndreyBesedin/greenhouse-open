@@ -7,6 +7,15 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- viewer: the builder's equipment, sensors, doors and vents (P12.3). They
+  are listed with their kind and place, and chosen many at once to be
+  copied at a step, spaced evenly, given one value for a field, or
+  removed. A palette places fans, heaters, dehumidifiers and sensors
+  several at a step, and doors and vents on the walls or roof slopes
+  chosen, at a step or spread evenly along each, the surfaces read from
+  the house the simulator draws. Each is one edit the simulator makes
+  (`POST /api/builder/edit`) and is undone in one step; an edit answered
+  once the draft has changed is dropped, so that no edit is lost.
 - `greenhouse-sim` and the viewer: `POST /api/builder/edit` makes an edit
   of many items (P12.3) on an installation's file, the body's `file`, and
   answers the installation it makes, assessed. The edit, the body's
