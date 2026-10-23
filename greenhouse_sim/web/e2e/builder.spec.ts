@@ -158,3 +158,41 @@ test("builder: a scenario's house copied under an identifier of its own, and sav
   await page.getByRole("button", { name: "Save" }).click();
   await expect(status).toHaveText("Saved as revision 1.", ARRIVES);
 });
+
+test("builder: vents spread along the roof and heaters placed at a step, each undone in one step", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const status = page.getByTestId("builder-status");
+  const items = page.locator(".builder-items");
+  const palette = page.locator(".builder-palette");
+
+  await page.goto("/builder");
+  await page.locator(".builder-form").getByLabel("Identifier").fill(`items_${Date.now()}`);
+  await page.getByRole("button", { name: "Draft this house" }).click();
+  await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
+  await expect(page.getByTestId("builder-view").locator("canvas")).toBeVisible(ARRIVES);
+
+  // A row of four roof vents along each slope of the first span, in one edit.
+  await palette.getByLabel("What").selectOption("roof_vent");
+  await palette.getByLabel("roof 1 right").check(ARRIVES);
+  await palette.getByLabel("roof 1 left").check();
+  await palette.getByRole("button", { name: "Place" }).click();
+  await expect(status).toHaveText("Placed 4 roof vents on 2 surfaces.", ARRIVES);
+  await expect(items.locator("tbody tr")).toHaveCount(8);
+  await expect(page.locator(".builder-findings li")).not.toContainText(["Warning: No vent."]);
+
+  // Three heaters along the house, two metres apart, by the right wall.
+  await palette.getByLabel("What").selectOption("heater");
+  await palette.getByLabel("y (m)", { exact: true }).fill("0.6");
+  await palette.getByLabel("How many", { exact: true }).fill("3");
+  await palette.getByLabel("Step along x (m)").fill("2");
+  await palette.getByRole("button", { name: "Place" }).click();
+  await expect(status).toHaveText("Placed 3 heaters.", ARRIVES);
+  await expect(items.locator("tbody tr")).toHaveCount(11);
+  await expect(items.getByRole("cell", { name: "heater_3", exact: true })).toBeVisible();
+
+  // Undone: the heaters go in one step, the vents stay.
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(items.locator("tbody tr")).toHaveCount(8);
+});

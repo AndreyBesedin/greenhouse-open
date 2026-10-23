@@ -1586,16 +1586,57 @@ body {
   color: var(--panel-muted);
 }
 
-.builder-rows table {
+.builder-rows table,
+.builder-items table {
   border-collapse: collapse;
   width: 100%;
 }
 
 .builder-rows th,
-.builder-rows td {
+.builder-rows td,
+.builder-items th,
+.builder-items td {
   padding: 2px 6px;
   border-bottom: 1px solid var(--panel-rule);
   text-align: left;
+}
+
+/* The items chosen, and the palette: what is done with the one, and what
+ * the other places (P12.3). */
+.builder-chosen,
+.builder-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+  margin-top: 12px;
+  padding: 8px;
+  border: 1px solid var(--panel-rule);
+  border-radius: 4px;
+}
+
+.builder-chosen > legend,
+.builder-palette > h3 {
+  width: 100%;
+  margin: 0;
+  font-size: inherit;
+  font-weight: 600;
+}
+
+.builder-surfaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  width: 100%;
+  margin: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--panel-rule);
+}
+
+.builder-give-field:has(> input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .builder-give {
@@ -1609,6 +1650,11 @@ body {
 .builder-give-field {
   display: grid;
   gap: 2px;
+}
+
+.builder-chosen > .builder-give {
+  width: 100%;
+  margin-top: 0;
 }
 
 .builder-note {

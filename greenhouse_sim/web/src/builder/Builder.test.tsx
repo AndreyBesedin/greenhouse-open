@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { button, click, enter, type Rendered, render, said } from "../testing/render";
+import { button, choose, click, enter, type Rendered, render, said } from "../testing/render";
 import { Builder } from "./Builder";
 
 // The simulator's first draft of the form's starting house, as it answers it.
@@ -59,6 +59,60 @@ async function settled(): Promise<void> {
   });
 }
 
+/** A simulator whose edits of many items are held until `release` is
+ * called, each answering the house it was sent with one heater more. */
+function holdingEdits(): { release: () => void } {
+  let release = () => {};
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.startsWith("/api/builder/basic") || url.startsWith("/api/builder/assess")) {
+      return answer(STARTING_HOUSE);
+    }
+    if (url.startsWith("/api/builder/edit")) {
+      const { file } = JSON.parse(String(init?.body));
+      const { schema_version, ...installation } = file;
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const heater = {
+        actuator_id: "heater_1",
+        // As the simulator answers it: every field, its defaults too.
+        heading: 0,
+        kind: "heater",
+        base: { x: 1, y: 1, z: 0 },
+        size_x: 0.6,
+        size_y: 0.8,
+        size_z: 1.2,
+        power_w: 10_000,
+      };
+      const layout = { ...installation.layout, equipment: [heater] };
+      return answer({ schema_version, installation: { ...installation, layout }, findings: [] });
+    }
+    if (url.startsWith("/api/drafts")) {
+      return answer([]);
+    }
+    return answer({ error: "not here" }, 404);
+  });
+  return {
+    release: () => release(),
+  };
+}
+
+function placeAHeater(within: HTMLElement): void {
+  const what = within.querySelector<HTMLSelectElement>(".builder-palette select");
+  if (what === null) {
+    throw new Error("no palette");
+  }
+  choose(what, "heater");
+  click(button(within, "Place"));
+}
+
+function items(within: HTMLElement): string[] {
+  return [...within.querySelectorAll(".builder-items tbody tr td:nth-child(2)")].map(
+    (cell) => cell.textContent ?? "",
+  );
+}
+
 function rows(within: HTMLElement): string[] {
   return [...within.querySelectorAll(".builder-rows tbody tr")].map((row) => row.textContent ?? "");
 }
@@ -105,6 +159,45 @@ describe("the setup builder (P12.2)", () => {
       "My greenhouse (my_greenhouse), revision 1, changed since",
     );
     expect(button(page, "Undo").disabled).toBe(false);
+  });
+
+  it("keeps an edit of many items the simulator made as one step to undo (P12.3)", async () => {
+    const edits = holdingEdits();
+    shown = render(<Builder />);
+    const page = shown.container;
+    await settled();
+    click(button(page, "Draft this house"));
+    await settled();
+
+    placeAHeater(page);
+    edits.release();
+    await settled();
+
+    expect(items(page)).toEqual(["heater_1"]);
+    expect(said(page, "builder-status")).toBe("Placed 1 heater.");
+    click(button(page, "Undo"));
+    expect(items(page)).toEqual([]);
+  });
+
+  it("drops an edit of many items answered once the draft changed, losing no edit (P12.3)", async () => {
+    const edits = holdingEdits();
+    shown = render(<Builder />);
+    const page = shown.container;
+    await settled();
+    click(button(page, "Draft this house"));
+    await settled();
+
+    placeAHeater(page);
+    await settled();
+    give(page, 1, "roma");
+    edits.release();
+    await settled();
+
+    expect(items(page)).toEqual([]);
+    expect(rows(page)[0]).toBe("1simpleroma");
+    expect(said(page, "builder-status")).toBe(
+      "The draft changed while that edit was on its way: make it again.",
+    );
   });
 
   it("drops a save's answer that arrives once the draft is left", async () => {
