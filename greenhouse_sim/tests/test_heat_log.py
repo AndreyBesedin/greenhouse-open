@@ -14,7 +14,8 @@ from greenhouse_protocol.observation import Observation
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import checkpoints
-from greenhouse_sim.services.fields import air_through_a_run, climate_run
+from greenhouse_sim.services.climate_runs import climate_run
+from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.heat_log import heat_records
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.sensors import run_start

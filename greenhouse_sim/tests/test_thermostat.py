@@ -19,7 +19,8 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services import cfd
-from greenhouse_sim.services.fields import climate_run, equipment_at, house_air, off_levels
+from greenhouse_sim.services.climate_readings import equipment_at, house_air
+from greenhouse_sim.services.climate_runs import climate_run, off_levels
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.run_state import run_state
 from greenhouse_sim.services.runs import RunRequest

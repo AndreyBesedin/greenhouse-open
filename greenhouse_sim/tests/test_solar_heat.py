@@ -16,7 +16,7 @@ from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
-from greenhouse_sim.services.fields import _climate_day
+from greenhouse_sim.services.climate_runs import climate_day
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.sunlight import plant_light
@@ -110,7 +110,7 @@ def test_the_whole_house_takes_the_grids_total(simulator: Simulator) -> None:
 
 
 def test_by_day_the_sun_warms_the_shut_house_on_the_grid_too(simulator: Simulator) -> None:
-    day = _climate_day(simulator, ("solar_lab", "default", "default", (), (), (), ()))
+    day = climate_day(simulator, ("solar_lab", "default", "default", (), (), (), ()))
     field = day.field("noon", AFTERNOON_S)
     house = day.house.air_at(AFTERNOON_S)
     temperature = field.channels[AirQuantity.TEMPERATURE][~day.run.solid]

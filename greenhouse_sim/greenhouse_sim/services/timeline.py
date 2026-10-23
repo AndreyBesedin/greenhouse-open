@@ -17,8 +17,8 @@ from greenhouse_sim.core.timeline import TURNS, RunProcesses, events
 from greenhouse_sim.domain.processes import Process
 from greenhouse_sim.scenarios.catalogue import Scenarios
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
+from greenhouse_sim.services.climate_runs import run_schedule
 from greenhouse_sim.services.errors import InvalidRequest
-from greenhouse_sim.services.fields import run_schedule
 from greenhouse_sim.services.runs import RunRequest, checked_window
 from greenhouse_sim.services.scenarios import SceneChanges, changed, plant_ids, scenario
 from greenhouse_sim.world.sensors import Camera, PointSensor

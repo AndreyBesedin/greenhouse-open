@@ -10,7 +10,7 @@ import pytest
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.climate.house import HouseTrace
-from greenhouse_sim.services import fields, sensors
+from greenhouse_sim.services import climate_readings, sensors
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
 
@@ -30,7 +30,7 @@ HEATED = {"heater": 1.0}
 
 
 def _controlled(simulator: Simulator, until_s: float) -> HouseTrace:
-    return fields.house_air(
+    return climate_readings.house_air(
         simulator,
         RunRequest("climate_box", levels=HEATED, commands=SCHEDULE, weather=SPRING),
         until_s=until_s,
@@ -39,7 +39,7 @@ def _controlled(simulator: Simulator, until_s: float) -> HouseTrace:
 
 def test_a_schedule_opens_and_shuts_a_vent(simulator: Simulator) -> None:
     def opened(moment: float) -> dict[str, float]:
-        at = fields.openings(
+        at = climate_readings.openings(
             simulator,
             RunRequest("climate_box", levels=HEATED, commands=SCHEDULE, weather=SPRING),
             time_s=moment,

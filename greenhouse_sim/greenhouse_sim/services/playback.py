@@ -62,9 +62,10 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter
 from greenhouse_sim.climate.commands import TARGET_EVERY_S
 from greenhouse_sim.core.clock import DAY_S, run_day
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
+from greenhouse_sim.services.climate_runs import run_schedule
 from greenhouse_sim.services.crop_log import crop_records
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
-from greenhouse_sim.services.fields import air_through_a_run, run_schedule
+from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.heat_log import heat_records
 from greenhouse_sim.services.runs import Commanded, RunRequest
 from greenhouse_sim.services.scenarios import layout_name, scenario

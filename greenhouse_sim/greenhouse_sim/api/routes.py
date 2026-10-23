@@ -193,6 +193,7 @@ from greenhouse_sim.api.responses import JsonValue, Response
 from greenhouse_sim.services import (
     cfd,
     checkpoints,
+    climate_readings,
     crop,
     fields,
     plants,
@@ -274,7 +275,7 @@ def respond(simulator: Simulator, method: str, path: str, body: bytes = b"") -> 
             )
         case ["api", "scenarios", scenario_id, "climate", "probes"]:
             return _answer(
-                lambda: fields.climate_probes(
+                lambda: climate_readings.climate_probes(
                     simulator,
                     _run(scenario_id, query),
                     _points(query.get("probes", [])),
@@ -283,17 +284,21 @@ def respond(simulator: Simulator, method: str, path: str, body: bytes = b"") -> 
             )
         case ["api", "scenarios", scenario_id, "climate", "house"]:
             return _answer(
-                lambda: fields.house_air(
+                lambda: climate_readings.house_air(
                     simulator, _run(scenario_id, query), _seconds(query), _since(query)
                 )
             )
         case ["api", "scenarios", scenario_id, "climate", "glazing"]:
             return _answer(
-                lambda: fields.glazing(simulator, _run(scenario_id, query), _seconds(query))
+                lambda: climate_readings.glazing(
+                    simulator, _run(scenario_id, query), _seconds(query)
+                )
             )
         case ["api", "scenarios", scenario_id, "climate", "openings"]:
             return _answer(
-                lambda: fields.openings(simulator, _run(scenario_id, query), _seconds(query))
+                lambda: climate_readings.openings(
+                    simulator, _run(scenario_id, query), _seconds(query)
+                )
             )
         case ["api", "scenarios", scenario_id, "climate", "plants"]:
             return _answer(
@@ -321,7 +326,9 @@ def respond(simulator: Simulator, method: str, path: str, body: bytes = b"") -> 
             )
         case ["api", "scenarios", scenario_id, "climate", "equipment"]:
             return _answer(
-                lambda: fields.equipment_at(simulator, _run(scenario_id, query), _seconds(query))
+                lambda: climate_readings.equipment_at(
+                    simulator, _run(scenario_id, query), _seconds(query)
+                )
             )
         case ["api", "scenarios", scenario_id, "climate", "state"]:
             return _answer(

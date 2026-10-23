@@ -13,8 +13,9 @@ import pytest
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED
+from greenhouse_sim.services.climate_runs import climate_run
 from greenhouse_sim.services.errors import InvalidRequest
-from greenhouse_sim.services.fields import air_through_a_run, climate_run
+from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import SceneChanges, changed, layout_name
 from greenhouse_sim.services.simulator import Simulator

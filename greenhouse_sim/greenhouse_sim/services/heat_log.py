@@ -31,7 +31,7 @@ from greenhouse_protocol.provenance import RecordSource
 
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.records import observation_id
-from greenhouse_sim.services.fields import climate_run
+from greenhouse_sim.services.climate_runs import climate_run
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.units import HOUR_S

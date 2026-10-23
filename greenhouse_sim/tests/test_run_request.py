@@ -18,7 +18,8 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services import checkpoints
-from greenhouse_sim.services.fields import EquipmentAt, climate_run
+from greenhouse_sim.services.climate_readings import EquipmentAt
+from greenhouse_sim.services.climate_runs import climate_run
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER
 from greenhouse_sim.services.simulator import Simulator

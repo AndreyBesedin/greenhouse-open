@@ -20,7 +20,7 @@ from typing import Final
 
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.manifest_files import manifest_digest
-from greenhouse_sim.services.fields import house_air_at
+from greenhouse_sim.services.climate_readings import house_air_at
 from greenhouse_sim.services.replay import ROUNDED_DECIMALS, DayProbe, _rounded, day_probes
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
