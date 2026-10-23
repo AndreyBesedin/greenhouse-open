@@ -31,7 +31,7 @@ class Simulator:
         seconds_per_day: float = DEFAULT_SECONDS_PER_DAY,
     ) -> None:
         self.catalogue = Catalogue() if catalogue is None else catalogue
-        self.live = LiveRuns(seconds_per_day=seconds_per_day)
+        self.live = LiveRuns(self.catalogue, seconds_per_day=seconds_per_day)
         self.playbacks = Playbacks()
         self.cursors = Cursors()
         # What the services keep: the modules' stores, every simulator's,

@@ -25,6 +25,7 @@ from typing import Final
 from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.core.engine import SimulationEngine
+from greenhouse_sim.scenarios.catalogue import Scenarios
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scene.snapshot import SceneSnapshot, scene_snapshot
 from greenhouse_sim.services.errors import InvalidRequest
@@ -237,7 +238,10 @@ class LiveRuns:
     Clients reach a run by its scenario's identifier: one that is not
     registered is not found. Once closed, they start no other."""
 
-    def __init__(self, *, seconds_per_day: float = DEFAULT_SECONDS_PER_DAY) -> None:
+    def __init__(
+        self, catalogue: Scenarios, *, seconds_per_day: float = DEFAULT_SECONDS_PER_DAY
+    ) -> None:
+        self._catalogue = catalogue
         self._seconds_per_day = seconds_per_day
         self._runs: dict[str, LiveRun] = {}
         self._lock = threading.Lock()
@@ -256,7 +260,7 @@ class LiveRuns:
 
     def run(self, scenario_id: str) -> LiveRun:
         """The scenario's shared run, started if it was not."""
-        return self.run_for(scenario(scenario_id))
+        return self.run_for(scenario(self._catalogue, scenario_id))
 
     def command(self, scenario_id: str, command: LiveCommand) -> LiveState:
         """Tells the scenario's run to play, pause, step or reset, and answers

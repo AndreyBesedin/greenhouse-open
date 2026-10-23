@@ -13,6 +13,7 @@ from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd, fields
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.grid import air_grid
@@ -55,7 +56,7 @@ def _run(levels: dict[str, float]) -> ClimateRun:
         schedule=Schedule.from_start(levels),
         settings=CONFIG.climate,
         grid=GRID,
-        solid=cfd.geometry("climate_box").solid(),
+        solid=cfd.geometry(PACKAGED, "climate_box").solid(),
         weather=WEATHER,
     )
 
@@ -110,7 +111,7 @@ def test_the_fans_level_sets_how_much_it_adds(simulator: Simulator) -> None:
 
 def test_the_equipment_reaches_the_air_only_through_its_source_terms(simulator: Simulator) -> None:
     run = _run({"fan": 1.0, "heater": 1.0, "dehumidifier": 1.0})
-    solid = cfd.geometry("climate_box").solid()
+    solid = cfd.geometry(PACKAGED, "climate_box").solid()
     field = run.field("climate_box_climate", GRID)
     base = CONFIG.airflow.field("climate_box_uniform", GRID).channels[AirQuantity.VELOCITY]
     flow = conserving(face_flows(GRID, base + run.terms_at(0.0).velocity, solid), solid)

@@ -78,7 +78,7 @@ def _rounded(value: JsonValue) -> JsonValue:
 def day_probes(simulator: Simulator, run: RunRequest, days: int) -> list[DayProbe]:
     """A run's state probed at the end of each of its first `days` days,
     asked for as its climate field is."""
-    config = scenario(run.scenario_id)
+    config = scenario(simulator.catalogue, run.scenario_id)
     _, climate = climate_run(simulator, run)
     crop = run_crop(simulator, run) if config.crop_model == CropModel.ORGAN else None
     probes = []

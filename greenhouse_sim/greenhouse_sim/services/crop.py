@@ -61,7 +61,7 @@ def run_crop(simulator: Simulator, run: RunRequest, watch: Stopwatch | None = No
     up to where their air differs, the parts of its days timed on `watch`,
     for a benchmark. A scenario that grows its crop with the simple daily
     model has none."""
-    config = scenario(run.scenario_id)
+    config = scenario(simulator.catalogue, run.scenario_id)
     if config.crop_model != CropModel.ORGAN:
         raise NotFound(
             f"{run.scenario_id} grows its crop with the simple daily model, not by organ"
@@ -108,7 +108,8 @@ def _new_crop(
     the parts of its days timed on `watch`, if given."""
     scenario_id, layout, weather, _, openings, *_ = key
     config = changed(
-        scenario(scenario_id),
+        simulator.catalogue,
+        scenario(simulator.catalogue, scenario_id),
         SceneChanges(layout=layout, weather=weather, openings=dict(openings)),
     )
     sunlight = plant_light(simulator, scenario_id, layout, weather).sunlight
@@ -134,10 +135,14 @@ def crop_scene(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> Sc
     over the scenario's scene: each plant at its planting position, as it
     stands once it has lived the days ended by then. Asked for as its
     climate field is, and refused as it is."""
-    checked_moment(scenario(run.scenario_id), time_s)
+    checked_moment(scenario(simulator.catalogue, run.scenario_id), time_s)
     crop = run_crop(simulator, run)
     day = days_ended(time_s)
-    config = changed(scenario(run.scenario_id), SceneChanges(layout=run.layout or DEFAULT_LAYOUT))
+    config = changed(
+        simulator.catalogue,
+        scenario(simulator.catalogue, run.scenario_id),
+        SceneChanges(layout=run.layout or DEFAULT_LAYOUT),
+    )
     return SceneSnapshot(
         greenhouse_id=config.greenhouse_id,
         simulated_day=day,
@@ -165,7 +170,7 @@ def crop_plant(
     """One plant of a run's crop `time_s` into it, and its days so far.
     Asked for as its crop is, and refused as it is; a plant it does not have
     is not found."""
-    checked_moment(scenario(run.scenario_id), time_s)
+    checked_moment(scenario(simulator.catalogue, run.scenario_id), time_s)
     crop = run_crop(simulator, run)
     day = days_ended(time_s)
     plant = next((plant for plant in crop.plants_on(day) if plant.plant_id == plant_id), None)
@@ -198,11 +203,11 @@ def plants_light(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> 
     its plants stand on the moment's day, where it grows its crop organ by
     organ; or else as they stand before its first day."""
     scenario_id = run.scenario_id
-    checked_moment(scenario(scenario_id), time_s)
+    checked_moment(scenario(simulator.catalogue, scenario_id), time_s)
     key, _ = climate_run(simulator, run)
     day = run_day(time_s)
     light: CropLight
-    if scenario(scenario_id).crop_model == CropModel.ORGAN:
+    if scenario(simulator.catalogue, scenario_id).crop_model == CropModel.ORGAN:
         crop = run_crop(simulator, run)
         light = crop.light_on(day)
         par = light.par_at(time_s)

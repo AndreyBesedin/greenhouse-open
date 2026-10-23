@@ -21,12 +21,11 @@ from pydantic import BaseModel, ConfigDict
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.core.crop import HOUSE_AIR, PLANTS_DAYS, PLANTS_LIGHT
 from greenhouse_sim.core.stopwatch import Stopwatch
-from greenhouse_sim.scenarios.manifest_files import manifest_digest
 from greenhouse_sim.services.crop import crop_scene, run_crop
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import field, grid
 from greenhouse_sim.services.runs import RunRequest
-from greenhouse_sim.services.scenarios import initial_scene, plant_ids, scenario
+from greenhouse_sim.services.scenarios import initial_scene, plant_ids, scenario, version
 from greenhouse_sim.units import HOUR_S, HOURS_A_DAY, PERCENT
 
 if TYPE_CHECKING:
@@ -101,7 +100,7 @@ def simulator_costs(
     """A scenario's run's costs, its first `days` days worked out from its
     start, by default its whole season. Only a scenario that grows its crop
     organ by organ has the plants' days to measure."""
-    config = scenario(scenario_id)
+    config = scenario(simulator.catalogue, scenario_id)
     measured = config.duration_days if days is None else days
     if not 1 <= measured <= config.duration_days:
         raise InvalidRequest(
@@ -124,7 +123,7 @@ def simulator_costs(
 
     # The crop has lived every day measured at the last one's end.
     started = time.perf_counter()
-    house = initial_scene(scenario_id)
+    house = initial_scene(simulator.catalogue, scenario_id)
     grown = crop_scene(simulator, run, time_s=measured * DAY_S)
     frame_s = time.perf_counter() - started
     entities = [e for e in house.entities if "organ_id" not in e.properties] + grown.entities
@@ -136,10 +135,10 @@ def simulator_costs(
         plants_days_s=watch.seconds[PLANTS_DAYS] / measured,
         total_s=days_s / measured,
     )
-    cells = grid(scenario_id).cells
+    cells = grid(simulator.catalogue, scenario_id).cells
     return SimulatorCosts(
         scenario_id=scenario_id,
-        manifest_version=manifest_digest(scenario_id),
+        manifest_version=version(simulator.catalogue, scenario_id),
         days=measured,
         days_s=days_s,
         per_day=per_day,

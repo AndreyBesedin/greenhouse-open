@@ -17,6 +17,7 @@ from greenhouse_sim.climate.commands import DailyCommand
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import fields, sensors
 from greenhouse_sim.services.runs import Commanded, RunRequest
 from greenhouse_sim.services.simulator import Simulator
@@ -59,11 +60,11 @@ def test_the_reference_run_vents_and_stirs_its_house_by_the_clock_and_heats_it_b
 
 
 def test_a_run_gives_its_scenarios_daily_commands_unless_it_gives_its_own() -> None:
-    own = fields.run_schedule(RunRequest("reference_greenhouse"))
+    own = fields.run_schedule(PACKAGED, RunRequest("reference_greenhouse"))
     replaced = fields.run_schedule(
-        RunRequest("reference_greenhouse", daily=((64800.0, "heater", 1.0),))
+        PACKAGED, RunRequest("reference_greenhouse", daily=((64800.0, "heater", 1.0),))
     )
-    none = fields.run_schedule(RunRequest("reference_greenhouse", daily=()))
+    none = fields.run_schedule(PACKAGED, RunRequest("reference_greenhouse", daily=()))
 
     expected = [
         (day * DAY_S + time, actuator, level)
@@ -127,7 +128,10 @@ def _reading(
 def test_the_thermostats_setpoints_show_in_the_readings(simulator: Simulator) -> None:
     small_hours, noon = _reading(simulator, SMALL_HOURS_S), _reading(simulator, NOON_S)
     unheated = _reading(
-        simulator, SMALL_HOURS_S, daily=(), levels=fields.off_levels("reference_greenhouse")
+        simulator,
+        SMALL_HOURS_S,
+        daily=(),
+        levels=fields.off_levels(PACKAGED, "reference_greenhouse"),
     )
 
     # Near 16 °C at night and 18 °C by day, a sensor's error and the

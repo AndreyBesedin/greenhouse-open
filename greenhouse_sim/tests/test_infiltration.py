@@ -15,6 +15,7 @@ from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.climate.transport import Transport
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import _climate_day
 from greenhouse_sim.services.grid import air_grid
@@ -23,7 +24,7 @@ from greenhouse_sim.weather.sources import ConstantWeather, RunWeather
 
 BOX = SCENARIO_REGISTRY["climate_box"]
 GRID = air_grid(BOX)
-SOLID = cfd.geometry("climate_box").solid()
+SOLID = cfd.geometry(PACKAGED, "climate_box").solid()
 AIR = ~SOLID
 NX, NY, NZ = GRID.shape
 HOUR_S = 3600.0

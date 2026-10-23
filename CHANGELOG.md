@@ -7,6 +7,13 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: a scenario is looked up in the catalogue of the
+  simulator answering (decision 0048): the services that look scenarios up
+  take it, and a scenario registered with one simulator is listed and run
+  by that one alone. Versions, opening days and layouts come from the
+  catalogue's entries rather than from the manifests' files.
+  `SCENARIO_REGISTRY` is read-only now, the packaged scenarios as
+  `catalogue.PACKAGED` holds them.
 - `greenhouse-sim`: `greenhouse_sim.builder`, the setup builder's first step
   (P12.0, decision 0050). An installation, the house part of a scenario
   (its envelope, its layout and the crop each row grows), is drafted from a

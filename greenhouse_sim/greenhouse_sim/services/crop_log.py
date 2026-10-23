@@ -54,7 +54,7 @@ def crop_records(
     scenario's own with a layout rearranged or targets changed, on its day
     `day`, which starts `day` days after `start`, each named by `run_id`:
     none if the scenario grows no organ-level crop."""
-    config = scenario(run.scenario_id)
+    config = scenario(simulator.catalogue, run.scenario_id)
     if config.crop_model != CropModel.ORGAN:
         return [], []
     crop = run_crop(simulator, run)

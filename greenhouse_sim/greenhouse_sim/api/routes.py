@@ -234,7 +234,7 @@ def respond(simulator: Simulator, method: str, path: str, body: bytes = b"") -> 
         case ["api", "version"]:
             return _answer(system.version)
         case ["api", "scenarios"]:
-            return _answer(scenarios.scenario_summaries)
+            return _answer(lambda: scenarios.scenario_summaries(simulator.catalogue))
         case ["api", "plants", "scene"]:
             return _answer(lambda: plants.scene(_lab_run(query)))
         case ["api", "plants", "structure"]:
@@ -251,9 +251,17 @@ def respond(simulator: Simulator, method: str, path: str, body: bytes = b"") -> 
         case ["api", "scenarios", scenario_id, "playback"]:
             return _answer(lambda: playback.state(simulator, scenario_id))
         case ["api", "scenarios", scenario_id, "manifest"]:
-            return _answer(lambda: scenarios.run_manifest(scenario_id, _last(query, "weather")))
+            return _answer(
+                lambda: scenarios.run_manifest(
+                    simulator.catalogue, scenario_id, _last(query, "weather")
+                )
+            )
         case ["api", "scenarios", scenario_id, "scene"]:
-            return _answer(lambda: scenarios.initial_scene(scenario_id, _scene_changes(query)))
+            return _answer(
+                lambda: scenarios.initial_scene(
+                    simulator.catalogue, scenario_id, _scene_changes(query)
+                )
+            )
         case ["api", "scenarios", scenario_id, "fields"]:
             return _answer(
                 lambda: fields.offered_fields(simulator, scenario_id, _last(query, "layout"))
@@ -327,20 +335,26 @@ def respond(simulator: Simulator, method: str, path: str, body: bytes = b"") -> 
             )
         case ["api", "scenarios", scenario_id, "timeline"]:
             return _answer(
-                lambda: timeline.timeline(_run(scenario_id, query), _seconds(query), _since(query))
+                lambda: timeline.timeline(
+                    simulator.catalogue, _run(scenario_id, query), _seconds(query), _since(query)
+                )
             )
         case ["api", "scenarios", scenario_id, "weather"]:
             return _answer(
-                lambda: weather.at_a_moment(scenario_id, _seconds(query), _last(query, "weather"))
+                lambda: weather.at_a_moment(
+                    simulator.catalogue, scenario_id, _seconds(query), _last(query, "weather")
+                )
             )
         case ["api", "scenarios", scenario_id, "weather", "day"]:
             return _answer(
                 lambda: weather.through_the_day(
-                    scenario_id, _last(query, "weather"), _seconds(query)
+                    simulator.catalogue, scenario_id, _last(query, "weather"), _seconds(query)
                 )
             )
         case ["api", "scenarios", scenario_id, "cfd", "geometry"]:
-            return _answer(lambda: cfd.geometry(scenario_id, _scene_changes(query)))
+            return _answer(
+                lambda: cfd.geometry(simulator.catalogue, scenario_id, _scene_changes(query))
+            )
         case ["api", "checkpoints"]:
             return _answer(lambda: checkpoints.checkpoints(simulator))
         case ["api", "checkpoints", checkpoint_id]:
@@ -348,8 +362,8 @@ def respond(simulator: Simulator, method: str, path: str, body: bytes = b"") -> 
         case ["api", "scenarios", scenario_id, "layout"]:
             name = _last(query, "layout")
             if name is None:
-                return _answer(lambda: scenarios.layout(scenario_id))
-            return _answer(lambda: scenarios.layout(scenario_id, name))
+                return _answer(lambda: scenarios.layout(simulator.catalogue, scenario_id))
+            return _answer(lambda: scenarios.layout(simulator.catalogue, scenario_id, name))
         case _:
             return _error(HTTPStatus.NOT_FOUND, f"nothing at {path!r}")
 

@@ -16,6 +16,7 @@ import json
 import sys
 from pathlib import Path
 
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import fields, scenarios
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
@@ -40,7 +41,7 @@ def _rounded(value: object) -> object:
 
 
 def _scene() -> object:
-    return _rounded(scenarios.initial_scene(SCENARIO).model_dump(mode="json"))
+    return _rounded(scenarios.initial_scene(PACKAGED, SCENARIO).model_dump(mode="json"))
 
 
 def _field(simulator: Simulator) -> object:

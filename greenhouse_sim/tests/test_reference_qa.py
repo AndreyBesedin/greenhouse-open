@@ -34,6 +34,7 @@ import pytest
 from greenhouse_sim.core.clock import DAY_S, days_ended
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services import crop, fields, scenarios, weather
 from greenhouse_sim.services.checkpoints import load_openings
@@ -188,9 +189,10 @@ def _house(moment: Moment, levels: dict[str, float]) -> object:
     """The house as the viewer draws it at the moment, its equipment at its
     levels and its doors and vents as open as they stand; without its crop,
     which the crop's day gives."""
-    config = scenarios.scenario(SCENARIO)
+    config = scenarios.scenario(PACKAGED, SCENARIO)
     equipment = {piece.actuator_id for piece in config.layout.equipment}
     scene = scenarios.initial_scene(
+        PACKAGED,
         SCENARIO,
         scenarios.SceneChanges(
             levels={key: level for key, level in levels.items() if key in equipment},
@@ -207,7 +209,7 @@ def _moment(simulator: Simulator, moment: Moment) -> tuple[dict[str, Any], dict[
     """What a moment's views draw, and its probes."""
     run = RunRequest(SCENARIO, commands=moment.commands)
     state = run_state(simulator, run, until_s=moment.time_s)
-    outside = weather.at_a_moment(SCENARIO, moment.time_s)
+    outside = weather.at_a_moment(PACKAGED, SCENARIO, moment.time_s)
     assert state.house_air is not None
     probes = {
         "house_air_c": state.house_air.temperature_c,
@@ -247,7 +249,9 @@ def _document(simulator: Simulator) -> dict[str, Any]:
             for day in days
         },
         "sun_path": _rounded(
-            weather.through_the_day(SCENARIO, time_s=OPENING_DAY * DAY_S).model_dump(mode="json")
+            weather.through_the_day(PACKAGED, SCENARIO, time_s=OPENING_DAY * DAY_S).model_dump(
+                mode="json"
+            )
         ),
     }
 

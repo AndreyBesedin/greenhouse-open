@@ -13,6 +13,7 @@ from pydantic import ValidationError
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.climate.psychrometrics import humidity_ratio_g_kg
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import fields, scenarios, weather
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
@@ -156,7 +157,7 @@ def test_a_day_that_does_not_warm_and_cool_is_refused(
 
 
 def test_every_scenario_can_be_run_under_any_preset() -> None:
-    for summary in scenarios.scenario_summaries():
+    for summary in scenarios.scenario_summaries(PACKAGED):
         # Its own, the presets, then the recorded days (P07.7).
         assert summary.weathers[: len(PRESETS) + 1] == ["default", *PRESETS]
 
@@ -170,7 +171,7 @@ def test_a_climate_run_under_a_preset_is_its_weathers(simulator: Simulator) -> N
     spring = fields.field(
         simulator, RunRequest("climate_box", weather="cold_spring_day"), "climate", time_s=3600
     )
-    outside = weather.at_a_moment("climate_box", 0.0, "cold_spring_day").weather
+    outside = weather.at_a_moment(PACKAGED, "climate_box", 0.0, "cold_spring_day").weather
 
     assert own.source == spring.source
     assert own.channels != spring.channels
@@ -211,5 +212,5 @@ def test_the_api_serves_the_weather_through_the_runs_first_day(simulator: Simula
     assert min(temperatures) == pytest.approx(4.0)
     assert max(temperatures) == pytest.approx(16.0)
     # Its own weather is the same all day.
-    own = weather.through_the_day("climate_box")
+    own = weather.through_the_day(PACKAGED, "climate_box")
     assert {state.air_temperature_c for state in own.weather} == {8.0}

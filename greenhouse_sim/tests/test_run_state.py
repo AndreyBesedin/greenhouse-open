@@ -9,6 +9,7 @@ import pytest
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.climate.commands import Command
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import fields, sensors
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.fields import equipment_at
@@ -32,7 +33,7 @@ def test_the_clock_and_the_house_air_are_the_runs_at_the_moment(simulator: Simul
 
     assert (state.time_s, state.day) == (TEN_MINUTES_S, 0)
     assert state.at == state.start + timedelta(seconds=TEN_MINUTES_S)
-    assert state.start == sensors.run_start("climate_box")
+    assert state.start == sensors.run_start(PACKAGED, "climate_box")
     assert state.house_air is not None
     assert state.house_air.temperature_c == pytest.approx(trace.controlled.temperature_c[-1])
     assert state.house_air.humidity_pct == pytest.approx(trace.controlled.humidity_pct[-1])

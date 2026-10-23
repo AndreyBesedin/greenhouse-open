@@ -11,6 +11,7 @@ import pytest
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services.scenarios import SceneChanges, changed
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.sunlight import plant_light
@@ -86,7 +87,7 @@ def test_the_clouds_override_dims_any_weather_from_its_own_sky(simulator: Simula
     assert clouded.global_radiation_w_m2 == pytest.approx(100.0)
     assert clouded.cloud_cover_pct == 100.0
     # And the scenario keeps the override.
-    config = changed(SCENARIO_REGISTRY["solar_lab"], SceneChanges(weather="default@80"))
+    config = changed(PACKAGED, SCENARIO_REGISTRY["solar_lab"], SceneChanges(weather="default@80"))
     assert config.cloud_cover_pct == 80.0
     assert config.run_weather().at(0.0).cloud_cover_pct == 80.0
 

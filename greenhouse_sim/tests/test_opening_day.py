@@ -28,6 +28,7 @@ from greenhouse_sim.biology.tomato.organ.fruit import Maturity, maturity
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.organs import FruitStage
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.scenarios.manifest_files import (
     MANIFESTS_DIR,
     manifest_digest,
@@ -100,12 +101,12 @@ def test_the_kept_opening_day_is_the_manifests_and_bears_red_fruit() -> None:
         kept.manifest,
         [],
         [],
-        off_levels(SCENARIO),
+        off_levels(PACKAGED, SCENARIO),
     )
     assert off.house.temperature_c < kept.house.temperature_c
-    listed = next(s for s in scenario_summaries() if s.id == SCENARIO)
+    listed = next(s for s in scenario_summaries(PACKAGED) if s.id == SCENARIO)
     assert listed.opening_day == day
-    assert [s.opening_day for s in scenario_summaries() if s.id != SCENARIO] == [None] * 5
+    assert [s.opening_day for s in scenario_summaries(PACKAGED) if s.id != SCENARIO] == [None] * 5
 
 
 def test_kept_as_the_api_starts_the_runs_later_days_carry_on_from_it(simulator: Simulator) -> None:
@@ -113,9 +114,9 @@ def test_kept_as_the_api_starts_the_runs_later_days_carry_on_from_it(simulator: 
 
     plants = run_crop(simulator, RunRequest(SCENARIO)).plants_on(OPENING + 1)
     house = climate_run(simulator, RunRequest(SCENARIO))[1].house
-    off = climate_run(simulator, RunRequest(SCENARIO, levels=off_levels(SCENARIO), daily=()))[
-        1
-    ].house
+    off = climate_run(
+        simulator, RunRequest(SCENARIO, levels=off_levels(PACKAGED, SCENARIO), daily=())
+    )[1].house
     off.air_at((OPENING + 0.5) * DAY_S)
     # The air cell by cell in the day's first hour, its grid run started an
     # hour before the day began.
@@ -180,7 +181,7 @@ def _update(simulator: Simulator) -> None:
     opening_file(SCENARIO).parent.mkdir(exist_ok=True)
     # The run, and the same run with everything off, which a viewer charts
     # beside it: its thermostat's heater too.
-    for all_off, levels, daily in ((False, {}, None), (True, off_levels(SCENARIO), ())):
+    for all_off, levels, daily in ((False, {}, None), (True, off_levels(PACKAGED, SCENARIO), ())):
         saved = checkpoints.save_checkpoint(
             simulator, RunRequest(SCENARIO, levels=levels, daily=daily), time_s=day * DAY_S
         )

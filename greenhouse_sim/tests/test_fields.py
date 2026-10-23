@@ -25,6 +25,7 @@ from greenhouse_sim.fields.field import (
     FieldGrid,
 )
 from greenhouse_sim.fields.synthetic import shear_field, shear_temperature, shear_velocity
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import fields
 from greenhouse_sim.services.grid import CELL_M
 from greenhouse_sim.services.simulator import Simulator
@@ -146,7 +147,7 @@ def test_a_scenario_offers_its_fields_over_its_greenhouses_air(simulator: Simula
     document = FieldDocument.model_validate(answer.body)
 
     assert answer.status == HTTPStatus.OK
-    assert document.grid == fields.grid("tomato_compartment")
+    assert document.grid == fields.grid(PACKAGED, "tomato_compartment")
     # Up to the compartment's gutters, 6 m above its floor.
     assert document.grid.maximum.z == pytest.approx(6.0)
     assert max(document.grid.cell_size.x, document.grid.cell_size.y) <= CELL_M
