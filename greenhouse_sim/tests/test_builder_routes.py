@@ -216,6 +216,22 @@ def test_no_scenario_has_no_house(simulator: Simulator) -> None:
     assert answer.status == HTTPStatus.NOT_FOUND
 
 
+def test_a_scenario_planting_part_of_its_layout_is_not_copied() -> None:
+    """A copy would plant every position of each row: one plant in a layout
+    of two rows of sixteen would run as thirty-two."""
+    one_plant = SCENARIO_REGISTRY["climate_box"].model_copy(
+        update={"greenhouse_id": "one_plant", "rows": 1, "columns": 1}
+    )
+    with Simulator() as fresh:
+        fresh.catalogue.register(one_plant)
+
+        answer = respond(fresh, "GET", "/api/scenarios/one_plant/installation")
+
+    answered: Any = answer.body
+    assert answer.status == HTTPStatus.BAD_REQUEST
+    assert "1 rows of 1 plants does not fill its layout's 2 rows of 16" in answered["error"]
+
+
 @pytest.mark.parametrize(
     ("path", "body", "said"),
     [

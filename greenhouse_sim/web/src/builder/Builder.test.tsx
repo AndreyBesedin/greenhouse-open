@@ -141,4 +141,23 @@ describe("the setup builder (P12.2)", () => {
     expect(confirm).toHaveBeenCalledOnce();
     expect(said(page, "builder-draft")).toBe("My greenhouse (my_greenhouse), not saved");
   });
+
+  it("says why no scenario's house can be copied, and lists them again when asked", async () => {
+    const asked: string[] = [];
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      const url = String(input);
+      asked.push(url);
+      return url.startsWith("/api/drafts") ? answer([]) : answer({ error: "busy" }, 503);
+    });
+    shown = render(<Builder />);
+    const page = shown.container;
+    await settled();
+
+    expect(said(page, "builder-scenarios")).toBe(
+      "The scenarios cannot be listed: the simulator API answered 503",
+    );
+    click(button(page, "List the scenarios again"));
+    await settled();
+    expect(asked.filter((url) => url.startsWith("/api/scenarios"))).toHaveLength(2);
+  });
 });

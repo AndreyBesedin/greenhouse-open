@@ -14,7 +14,11 @@ from greenhouse_sim.builder.basic import BasicSetup, basic_installation
 from greenhouse_sim.builder.installation import Finding, assess_installation
 from greenhouse_sim.builder.portable import InstallationFileError, import_installation
 from greenhouse_sim.scenarios.catalogue import Scenarios
-from greenhouse_sim.scenarios.installation import Installation, scenario_installation
+from greenhouse_sim.scenarios.installation import (
+    CannotCopy,
+    Installation,
+    scenario_installation,
+)
 from greenhouse_sim.scenarios.manifest_files import SCHEMA_VERSION
 from greenhouse_sim.scene.snapshot import SceneSnapshot, greenhouse_scene
 from greenhouse_sim.services.errors import InvalidRequest, every_reason, first_reason
@@ -54,8 +58,13 @@ def basic(values: JsonValue) -> Assessed:
 def scenario_house(catalogue: Scenarios, scenario_id: str) -> Assessed:
     """A scenario's house as an installation, assessed, named as the
     scenario is, for the builder to copy: the scenario itself is never
-    changed. Not found if there is no such scenario."""
-    return _assessed(scenario_installation(scenario(catalogue, scenario_id)))
+    changed. Not found if there is no such scenario, and refused if its
+    house is not one an installation holds as it is."""
+    try:
+        installation = scenario_installation(scenario(catalogue, scenario_id))
+    except CannotCopy as reason:
+        raise InvalidRequest(str(reason)) from None
+    return _assessed(installation)
 
 
 def assess(file: str) -> Assessed:

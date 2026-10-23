@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
+import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { ScenarioSummary } from "../scenarios";
 import { button, click, enter, type Rendered, render, said } from "../testing/render";
+import { CopyScenario } from "./CopyScenario";
 import { Findings } from "./Findings";
 import type { Installation } from "./generated/assessedTypes";
 import { HouseForm } from "./HouseForm";
@@ -105,5 +108,29 @@ describe("the builder's parts (P12.2)", () => {
       "It cannot be assessed: the API answered 502",
     );
     expect(shown.container.querySelectorAll("li")).toHaveLength(0);
+  });
+
+  it("copy a scenario's house only under an identifier the simulator takes", () => {
+    const scenario = { id: "climate_box", name: "Climate box" } as ScenarioSummary;
+    const onCopy = vi.fn();
+    shown = render(<CopyScenario scenarios={[scenario]} busy={false} onCopy={onCopy} />);
+    const identifier = input(shown.container, "The copy's identifier");
+    const copy = button(shown.container, "Copy its house");
+    expect(identifier.value).toBe("climate_box_copy");
+
+    enter(identifier, "my copy");
+    expect(identifier.getAttribute("aria-invalid")).toBe("true");
+    expect(copy.disabled).toBe(true);
+    expect(shown.container.textContent).toContain("letters, digits, '_', '.' and '-' only");
+    act(() => {
+      shown?.container
+        .querySelector("form")
+        ?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+    expect(onCopy).not.toHaveBeenCalled();
+
+    enter(identifier, "my_copy");
+    click(copy);
+    expect(onCopy).toHaveBeenCalledExactlyOnceWith(scenario, "my_copy");
   });
 });

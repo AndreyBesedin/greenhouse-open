@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { greenhouseExtent, qaGreenhousePose } from "../qa/greenhouseViews";
-import type { ScenarioSummary } from "../scenarios";
+import type { ScenarioSummary, ScenariosState } from "../scenarios";
 import { loadScenarios } from "../scenarios";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import { Viewport } from "../Viewport";
@@ -95,7 +95,7 @@ export function Builder() {
   const [snapshot, setSnapshot] = useState<SceneSnapshot | null>(null);
   const [drawProblem, setDrawProblem] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<readonly DraftListed[] | null>(null);
-  const [scenarios, setScenarios] = useState<readonly ScenarioSummary[]>([]);
+  const [scenarios, setScenarios] = useState<ScenariosState>({ status: "loading" });
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [ran, setRan] = useState<Ran | null>(null);
@@ -112,14 +112,17 @@ export function Builder() {
     }
   }, []);
 
+  // The scenarios whose house can be copied, or why they cannot be listed.
+  const listScenarios = useCallback(async () => {
+    setScenarios({ status: "loading" });
+    setScenarios(await loadScenarios());
+  }, []);
+  const listed = scenarios.status === "loaded" ? scenarios.scenarios : [];
+
   useEffect(() => {
     void refreshDrafts();
-    void loadScenarios().then((answer) => {
-      if (answer.status === "loaded") {
-        setScenarios(answer.scenarios);
-      }
-    });
-  }, [refreshDrafts]);
+    void listScenarios();
+  }, [refreshDrafts, listScenarios]);
 
   // What the draft shown needs, each time it changes; a request for an
   // edit since replaced is cancelled.
@@ -473,11 +476,23 @@ export function Builder() {
         {editing === null ? (
           <>
             <HouseForm busy={busy} onDraft={(values) => void draftHouse(values)} />
-            <CopyScenario
-              scenarios={scenarios}
-              busy={busy}
-              onCopy={(scenario, draftId) => void copyHouse(scenario, draftId)}
-            />
+            {scenarios.status === "unavailable" ? (
+              <section className="builder-copy" aria-label="Copy a scenario's house">
+                <h2>Or copy a scenario's house</h2>
+                <p className="builder-note" data-testid="builder-scenarios">
+                  The scenarios cannot be listed: {scenarios.reason}
+                </p>
+                <button type="button" disabled={busy} onClick={() => void listScenarios()}>
+                  List the scenarios again
+                </button>
+              </section>
+            ) : (
+              <CopyScenario
+                scenarios={listed}
+                busy={busy}
+                onCopy={(scenario, draftId) => void copyHouse(scenario, draftId)}
+              />
+            )}
             <section className="builder-start" aria-label="Drafts kept">
               <h2>Or open one</h2>
               {drafts === null ? (
@@ -527,7 +542,7 @@ export function Builder() {
             <Findings assessment={assessment} />
             <RowCrops installation={editing.history.present} onGive={give} />
             <RunStep
-              weathers={scenarios[0]?.weathers ?? []}
+              weathers={listed[0]?.weathers ?? []}
               disabled={runWhy !== "" || busy}
               why={runWhy}
               onRun={(settings) => void run(settings)}
