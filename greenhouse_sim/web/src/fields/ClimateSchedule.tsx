@@ -1,5 +1,6 @@
 import { DAY_S, dayStart, runDay } from "../clock";
-import { latestDaily, type ScheduledCommand } from "../scene/source";
+import { latestDaily } from "../scene/edits";
+import type { ScheduledCommand } from "../scene/source";
 import { PERCENT } from "../units";
 import { describeTime } from "./ClimateTime";
 

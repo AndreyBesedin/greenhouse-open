@@ -89,15 +89,14 @@ class SimulatorServer(ThreadingHTTPServer):
         super().__init__((LOOPBACK, port), _Handler)
         # The scenarios' kept opening days, so that their runs' later days
         # need not be worked out from their starts.
-        for refused in checkpoints.load_openings():
+        for refused in checkpoints.load_openings(self.simulator):
             print(f"not kept: {refused}", file=sys.stderr)
 
     def server_close(self) -> None:
-        # It accepts no request once its socket is closed; then the runs
-        # played back go with the server that played them, and the simulator
-        # with the server that made it.
+        # It accepts no request once its socket is closed; then the simulator
+        # goes with the server that made it, its live runs and playbacks
+        # stopped.
         super().server_close()
-        playback.stop_playbacks()
         if self._makes_simulator:
             self.simulator.close()
 
@@ -107,7 +106,7 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         started = time.perf_counter()
-        consumers = self._safely(lambda: consumer_respond("GET", self.path))
+        consumers = self._safely(lambda: consumer_respond(self._simulator, "GET", self.path))
         if consumers is not None:
             self._send(consumers, started)
             return
@@ -117,11 +116,11 @@ class _Handler(BaseHTTPRequestHandler):
         elif stream is not None:
             self._send(stream, started)
         else:
-            self._send(self._safely(lambda: respond("GET", self.path)), started)
+            self._send(self._safely(lambda: respond(self._simulator, "GET", self.path)), started)
 
     def do_POST(self) -> None:
         started = time.perf_counter()
-        consumers = self._safely(lambda: consumer_respond("POST", self.path))
+        consumers = self._safely(lambda: consumer_respond(self._simulator, "POST", self.path))
         if consumers is not None:
             self._send(consumers, started)
             return
@@ -131,7 +130,7 @@ class _Handler(BaseHTTPRequestHandler):
             if isinstance(body, Response):
                 response = body
             else:
-                response = self._safely(lambda: respond("POST", self.path, body))
+                response = self._safely(lambda: respond(self._simulator, "POST", self.path, body))
         self._send(response, started)
 
     def do_PUT(self) -> None:
@@ -167,8 +166,12 @@ class _Handler(BaseHTTPRequestHandler):
         return body
 
     @property
+    def _simulator(self) -> Simulator:
+        return cast(SimulatorServer, self.server).simulator
+
+    @property
     def _live(self) -> LiveRuns:
-        return cast(SimulatorServer, self.server).simulator.live
+        return self._simulator.live
 
     def _safely[T](self, answer: Callable[[], T]) -> T | Response:
         """The route's answer, or a 500 if the simulator failed unexpectedly."""
@@ -276,6 +279,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"greenhouse-sim API on http://{host!s}:{port}/api", flush=True)
     for scenario_id in args.play:
         played = playback.start(
+            server.simulator,
             scenario_id,
             args.play_seconds_per_day,
             hold=args.hold,

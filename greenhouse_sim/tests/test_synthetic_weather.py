@@ -15,6 +15,7 @@ from greenhouse_sim.climate.psychrometrics import humidity_ratio_g_kg
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import fields, scenarios, weather
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.weather.presets import COLD_SPRING_DAY, PRESETS
 from greenhouse_sim.weather.state import WeatherState
 from greenhouse_sim.weather.synthetic import SyntheticWeather
@@ -160,14 +161,14 @@ def test_every_scenario_can_be_run_under_any_preset() -> None:
         assert summary.weathers[: len(PRESETS) + 1] == ["default", *PRESETS]
 
 
-def test_a_climate_run_under_a_preset_is_its_weathers() -> None:
+def test_a_climate_run_under_a_preset_is_its_weathers(simulator: Simulator) -> None:
     config = SCENARIO_REGISTRY["climate_box"]
     # The run starts at midnight, near 8 °C on the spring day, as on the
     # box's own night; but the spring day is drier and colder by its first
     # hour, so the house's air differs.
-    own = fields.field(RunRequest("climate_box"), "climate", time_s=3600)
+    own = fields.field(simulator, RunRequest("climate_box"), "climate", time_s=3600)
     spring = fields.field(
-        RunRequest("climate_box", weather="cold_spring_day"), "climate", time_s=3600
+        simulator, RunRequest("climate_box", weather="cold_spring_day"), "climate", time_s=3600
     )
     outside = weather.at_a_moment("climate_box", 0.0, "cold_spring_day").weather
 
@@ -176,8 +177,12 @@ def test_a_climate_run_under_a_preset_is_its_weathers() -> None:
     assert outside.relative_humidity_pct < config.run_weather().at(0.0).relative_humidity_pct
 
 
-def test_the_api_serves_a_scenario_under_a_preset_and_refuses_an_unknown_one() -> None:
-    preset = respond("GET", "/api/scenarios/climate_box/weather?weather=cold_spring_day&t=600")
+def test_the_api_serves_a_scenario_under_a_preset_and_refuses_an_unknown_one(
+    simulator: Simulator,
+) -> None:
+    preset = respond(
+        simulator, "GET", "/api/scenarios/climate_box/weather?weather=cold_spring_day&t=600"
+    )
     body = json.loads(json.dumps(preset.body))
 
     assert preset.status == HTTPStatus.OK
@@ -189,11 +194,13 @@ def test_the_api_serves_a_scenario_under_a_preset_and_refuses_an_unknown_one() -
         "/api/scenarios/climate_box/climate/probes?probes=6:3.2:1&weather=foggy",
         "/api/scenarios/climate_box/climate/observations?weather=foggy",
     ):
-        assert respond("GET", path).status == HTTPStatus.NOT_FOUND, path
+        assert respond(simulator, "GET", path).status == HTTPStatus.NOT_FOUND, path
 
 
-def test_the_api_serves_the_weather_through_the_runs_first_day() -> None:
-    response = respond("GET", "/api/scenarios/climate_box/weather/day?weather=cold_spring_day")
+def test_the_api_serves_the_weather_through_the_runs_first_day(simulator: Simulator) -> None:
+    response = respond(
+        simulator, "GET", "/api/scenarios/climate_box/weather/day?weather=cold_spring_day"
+    )
     body = json.loads(json.dumps(response.body))
 
     assert response.status == HTTPStatus.OK

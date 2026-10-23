@@ -8,7 +8,8 @@ import { ScenarioList } from "./ScenarioList";
 import { SceneStatus } from "./SceneStatus";
 import { DEFAULT_LAYOUT, openingMoment, type ScenariosState } from "./scenarios";
 import { baseLayout } from "./scene/moves";
-import type { SceneSource, SceneState } from "./scene/source";
+import type { SceneState } from "./scene/sceneLoad";
+import type { SceneSource } from "./scene/source";
 
 /** A scene or the plant lab, to be chosen by name. */
 interface Choice {

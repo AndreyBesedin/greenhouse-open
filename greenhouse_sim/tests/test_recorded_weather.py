@@ -16,6 +16,7 @@ from greenhouse_sim.services import scenarios, sensors, weather
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import SceneChanges, changed
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.weather.recorded import (
     RecordedWeather,
     WeatherFileError,
@@ -159,14 +160,14 @@ def test_the_example_day_is_a_scenarios_weather_by_name() -> None:
     assert all(0 < state.relative_humidity_pct <= 100 for state in day.weather)
 
 
-def test_a_run_is_told_apart_by_its_recorded_file(tmp_path: Path) -> None:
+def test_a_run_is_told_apart_by_its_recorded_file(simulator: Simulator, tmp_path: Path) -> None:
     first = _write(tmp_path, HEADER + "\n2026-04-01T00:00Z,8,90\n")
     before = first.identity()
     second = _write(tmp_path, HEADER + "\n2026-04-01T00:00Z,9,90\n")
 
     assert second.identity() != before
-    own = sensors.observations(RunRequest("climate_box"), until_s=60).run_id
+    own = sensors.observations(simulator, RunRequest("climate_box"), until_s=60).run_id
     recorded = sensors.observations(
-        RunRequest("climate_box", weather="example_day"), until_s=60
+        simulator, RunRequest("climate_box", weather="example_day"), until_s=60
     ).run_id
     assert own != recorded

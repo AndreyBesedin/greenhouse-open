@@ -17,6 +17,7 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import _climate_day
 from greenhouse_sim.services.grid import air_grid
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.sunlight import plant_light
 
 LAB = SCENARIO_REGISTRY["solar_lab"]
@@ -25,7 +26,7 @@ NOON_S = 12 * 3600 + 50 * 60
 AFTERNOON_S = NOON_S + 3600
 
 
-def _lab_run(*, sunlit: bool) -> ClimateRun:
+def _lab_run(simulator: Simulator, *, sunlit: bool) -> ClimateRun:
     grid = air_grid(LAB)
     return ClimateRun(
         base=LAB.airflow,
@@ -35,12 +36,16 @@ def _lab_run(*, sunlit: bool) -> ClimateRun:
         grid=grid,
         solid=cfd.geometry("solar_lab").solid(),
         weather=LAB.run_weather(),
-        sunlight=plant_light("solar_lab", "default", "default").sunlight if sunlit else None,
+        sunlight=plant_light(simulator, "solar_lab", "default", "default").sunlight
+        if sunlit
+        else None,
     )
 
 
-def test_the_air_above_the_floor_takes_seventy_percent_of_its_light_as_heat() -> None:
-    run = _lab_run(sunlit=True)
+def test_the_air_above_the_floor_takes_seventy_percent_of_its_light_as_heat(
+    simulator: Simulator,
+) -> None:
+    run = _lab_run(simulator, sunlit=True)
     assert run.sunlight is not None
     floor = run.sunlight.floor_irradiance(NOON_S)
     size = run.grid.cell_size
@@ -68,9 +73,9 @@ def test_the_air_above_the_floor_takes_seventy_percent_of_its_light_as_heat() ->
     assert run.solar_heat_total_w(NOON_S) == pytest.approx(float(heat.sum()))
 
 
-def test_at_night_the_sun_adds_nothing() -> None:
-    run = _lab_run(sunlit=True)
-    dark = _lab_run(sunlit=False)
+def test_at_night_the_sun_adds_nothing(simulator: Simulator) -> None:
+    run = _lab_run(simulator, sunlit=True)
+    dark = _lab_run(simulator, sunlit=False)
 
     assert run.solar_heat_w(600.0) is None
     assert run.solar_heat_total_w(600.0) == 0.0
@@ -78,20 +83,22 @@ def test_at_night_the_sun_adds_nothing() -> None:
     assert WholeHouse(run).air_at(3600.0) == WholeHouse(dark).air_at(3600.0)
 
 
-def test_a_weather_without_light_adds_nothing_by_day() -> None:
+def test_a_weather_without_light_adds_nothing_by_day(simulator: Simulator) -> None:
     # The climate box's own weather, constant, gives no light: its runs keep
     # every number they had before the sun.
     box = SCENARIO_REGISTRY["climate_box"]
     nx, ny, _ = air_grid(box).shape
-    floor = plant_light("climate_box", "default", "default").sunlight.floor_irradiance(NOON_S)
+    floor = plant_light(simulator, "climate_box", "default", "default").sunlight.floor_irradiance(
+        NOON_S
+    )
 
     assert floor.shape == (ny, nx)
     assert not floor.any()
 
 
-def test_the_whole_house_takes_the_grids_total() -> None:
-    run = _lab_run(sunlit=True)
-    dark = _lab_run(sunlit=False)
+def test_the_whole_house_takes_the_grids_total(simulator: Simulator) -> None:
+    run = _lab_run(simulator, sunlit=True)
+    dark = _lab_run(simulator, sunlit=False)
     house, unlit = WholeHouse(run), WholeHouse(dark)
 
     # Shut, on a clear equinox day, the house warms by noon well above the
@@ -101,8 +108,8 @@ def test_the_whole_house_takes_the_grids_total() -> None:
     assert unlit.air_at(NOON_S).temperature_c == pytest.approx(outside, abs=1.5)
 
 
-def test_by_day_the_sun_warms_the_shut_house_on_the_grid_too() -> None:
-    day = _climate_day("solar_lab", "default", "default", (), (), ())
+def test_by_day_the_sun_warms_the_shut_house_on_the_grid_too(simulator: Simulator) -> None:
+    day = _climate_day(simulator, "solar_lab", "default", "default", (), (), ())
     field = day.field("noon", AFTERNOON_S)
     house = day.house.air_at(AFTERNOON_S)
     temperature = field.channels[AirQuantity.TEMPERATURE][~day.run.solid]
@@ -117,9 +124,9 @@ def test_by_day_the_sun_warms_the_shut_house_on_the_grid_too() -> None:
     assert layers[0] > layers[1]
 
 
-def test_the_api_serves_the_sunlit_houses_air() -> None:
-    response = respond("GET", f"/api/scenarios/solar_lab/climate/house?t={NOON_S}")
-    weather = respond("GET", f"/api/scenarios/solar_lab/weather?t={NOON_S}")
+def test_the_api_serves_the_sunlit_houses_air(simulator: Simulator) -> None:
+    response = respond(simulator, "GET", f"/api/scenarios/solar_lab/climate/house?t={NOON_S}")
+    weather = respond(simulator, "GET", f"/api/scenarios/solar_lab/weather?t={NOON_S}")
     body = json.loads(json.dumps(response.body))
     outside = json.loads(json.dumps(weather.body))["weather"]["air_temperature_c"]
 

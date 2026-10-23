@@ -18,6 +18,7 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import _climate_day
 from greenhouse_sim.services.grid import air_grid
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.weather.sources import ConstantWeather, RunWeather
 
 BOX = SCENARIO_REGISTRY["climate_box"]
@@ -116,10 +117,10 @@ def test_a_house_leaks_faster_in_a_wind() -> None:
     assert windy_co2 < calm_co2 - 50.0
 
 
-def test_opening_a_vent_under_dry_outside_air_dries_the_house() -> None:
-    shut = _climate_day("climate_box", "default", "cold_spring_day", (), (), ()).run
+def test_opening_a_vent_under_dry_outside_air_dries_the_house(simulator: Simulator) -> None:
+    shut = _climate_day(simulator, "climate_box", "default", "cold_spring_day", (), (), ()).run
     venting = _climate_day(
-        "climate_box", "default", "cold_spring_day", (), (("roof_vent", 1.0),), ()
+        simulator, "climate_box", "default", "cold_spring_day", (), (("roof_vent", 1.0),), ()
     ).run
 
     assert (

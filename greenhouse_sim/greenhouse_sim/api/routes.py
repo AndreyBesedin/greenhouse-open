@@ -208,6 +208,7 @@ from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceErro
 from greenhouse_sim.services.live import InvalidSpeed, LiveCommand, LiveRun, LiveRuns
 from greenhouse_sim.services.playback import PlaybackCommand
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 
 type Query = dict[str, list[str]]
 
@@ -219,10 +220,11 @@ _REFUSALS: Final = (
 )
 
 
-def respond(method: str, path: str, body: bytes = b"") -> Response:
+def respond(simulator: Simulator, method: str, path: str, body: bytes = b"") -> Response:
+    """The answer to a request, from `simulator` (decision 0048)."""
     query = parse_qs(urlsplit(path).query)
     if method == "POST":
-        return _posted(path, query, body)
+        return _posted(simulator, path, query, body)
     if method != "GET":
         return _error(HTTPStatus.METHOD_NOT_ALLOWED, f"{path!r} only answers GET")
 
@@ -247,42 +249,62 @@ def respond(method: str, path: str, body: bytes = b"") -> Response:
                 }
             )
         case ["api", "scenarios", scenario_id, "playback"]:
-            return _answer(lambda: playback.state(scenario_id))
+            return _answer(lambda: playback.state(simulator, scenario_id))
         case ["api", "scenarios", scenario_id, "manifest"]:
             return _answer(lambda: scenarios.run_manifest(scenario_id, _last(query, "weather")))
         case ["api", "scenarios", scenario_id, "scene"]:
             return _answer(lambda: scenarios.initial_scene(scenario_id, _scene_changes(query)))
         case ["api", "scenarios", scenario_id, "fields"]:
-            return _answer(lambda: fields.offered_fields(scenario_id, _last(query, "layout")))
+            return _answer(
+                lambda: fields.offered_fields(simulator, scenario_id, _last(query, "layout"))
+            )
         case ["api", "scenarios", scenario_id, "fields", field_name]:
             return _answer(
-                lambda: fields.field(_run(scenario_id, query), field_name, _seconds(query))
+                lambda: fields.field(
+                    simulator, _run(scenario_id, query), field_name, _seconds(query)
+                )
             )
         case ["api", "scenarios", scenario_id, "climate", "probes"]:
             return _answer(
                 lambda: fields.climate_probes(
-                    _run(scenario_id, query), _points(query.get("probes", [])), _seconds(query)
+                    simulator,
+                    _run(scenario_id, query),
+                    _points(query.get("probes", [])),
+                    _seconds(query),
                 )
             )
         case ["api", "scenarios", scenario_id, "climate", "house"]:
             return _answer(
-                lambda: fields.house_air(_run(scenario_id, query), _seconds(query), _since(query))
+                lambda: fields.house_air(
+                    simulator, _run(scenario_id, query), _seconds(query), _since(query)
+                )
             )
         case ["api", "scenarios", scenario_id, "climate", "glazing"]:
-            return _answer(lambda: fields.glazing(_run(scenario_id, query), _seconds(query)))
+            return _answer(
+                lambda: fields.glazing(simulator, _run(scenario_id, query), _seconds(query))
+            )
         case ["api", "scenarios", scenario_id, "climate", "openings"]:
-            return _answer(lambda: fields.openings(_run(scenario_id, query), _seconds(query)))
+            return _answer(
+                lambda: fields.openings(simulator, _run(scenario_id, query), _seconds(query))
+            )
         case ["api", "scenarios", scenario_id, "climate", "plants"]:
-            return _answer(lambda: crop.plants_light(_run(scenario_id, query), _seconds(query)))
+            return _answer(
+                lambda: crop.plants_light(simulator, _run(scenario_id, query), _seconds(query))
+            )
         case ["api", "scenarios", scenario_id, "crop"]:
-            return _answer(lambda: crop.crop_scene(_run(scenario_id, query), _seconds(query)))
+            return _answer(
+                lambda: crop.crop_scene(simulator, _run(scenario_id, query), _seconds(query))
+            )
         case ["api", "scenarios", scenario_id, "crop", plant_id]:
             return _answer(
-                lambda: crop.crop_plant(_run(scenario_id, query), plant_id, _seconds(query))
+                lambda: crop.crop_plant(
+                    simulator, _run(scenario_id, query), plant_id, _seconds(query)
+                )
             )
         case ["api", "scenarios", scenario_id, "climate", "observations"]:
             return _answer(
                 lambda: sensors.observations(
+                    simulator,
                     _run(scenario_id, query),
                     _seconds(query),
                     clean=_last(query, "clean") == "1",
@@ -290,12 +312,18 @@ def respond(method: str, path: str, body: bytes = b"") -> Response:
                 )
             )
         case ["api", "scenarios", scenario_id, "climate", "equipment"]:
-            return _answer(lambda: fields.equipment_at(_run(scenario_id, query), _seconds(query)))
+            return _answer(
+                lambda: fields.equipment_at(simulator, _run(scenario_id, query), _seconds(query))
+            )
         case ["api", "scenarios", scenario_id, "climate", "state"]:
-            return _answer(lambda: run_state.run_state(_run(scenario_id, query), _seconds(query)))
+            return _answer(
+                lambda: run_state.run_state(simulator, _run(scenario_id, query), _seconds(query))
+            )
         case ["api", "scenarios", scenario_id, "climate", "truth"]:
             return _answer(
-                lambda: sensors.truth(_run(scenario_id, query), _seconds(query), _since(query))
+                lambda: sensors.truth(
+                    simulator, _run(scenario_id, query), _seconds(query), _since(query)
+                )
             )
         case ["api", "scenarios", scenario_id, "timeline"]:
             return _answer(
@@ -314,9 +342,9 @@ def respond(method: str, path: str, body: bytes = b"") -> Response:
         case ["api", "scenarios", scenario_id, "cfd", "geometry"]:
             return _answer(lambda: cfd.geometry(scenario_id, _scene_changes(query)))
         case ["api", "checkpoints"]:
-            return _answer(checkpoints.checkpoints)
+            return _answer(lambda: checkpoints.checkpoints(simulator))
         case ["api", "checkpoints", checkpoint_id]:
-            return _answer(lambda: checkpoints.checkpoint(checkpoint_id))
+            return _answer(lambda: checkpoints.checkpoint(simulator, checkpoint_id))
         case ["api", "scenarios", scenario_id, "layout"]:
             name = _last(query, "layout")
             if name is None:
@@ -326,32 +354,38 @@ def respond(method: str, path: str, body: bytes = b"") -> Response:
             return _error(HTTPStatus.NOT_FOUND, f"nothing at {path!r}")
 
 
-def _posted(path: str, query: Query, body: bytes) -> Response:
+def _posted(simulator: Simulator, path: str, query: Query, body: bytes) -> Response:
     """What a POST request makes: a checkpoint of a scenario's run, asked for
     as its climate field is, or one uploaded as the request's JSON body."""
     match _segments(path):
         case ["api", "scenarios", scenario_id, "checkpoints"]:
             return _answer(
-                lambda: checkpoints.save_checkpoint(_run(scenario_id, query), _seconds(query))
+                lambda: checkpoints.save_checkpoint(
+                    simulator, _run(scenario_id, query), _seconds(query)
+                )
             )
         case ["api", "checkpoints"]:
-            return _answer(lambda: checkpoints.upload_checkpoint(_json(body)))
+            return _answer(lambda: checkpoints.upload_checkpoint(simulator, _json(body)))
         case ["api", "scenarios", scenario_id, "playback", "start"]:
             layout = _last(query, "layout")
-            return _answer(lambda: playback.start(scenario_id, _pace(query), layout=layout))
+            return _answer(
+                lambda: playback.start(simulator, scenario_id, _pace(query), layout=layout)
+            )
         case ["api", "scenarios", scenario_id, "playback", "targets"]:
             return _answer(
                 lambda: playback.set_targets(
-                    scenario_id, _pairs(query.get("targets", []), "targets")
+                    simulator, scenario_id, _pairs(query.get("targets", []), "targets")
                 )
             )
         case ["api", "scenarios", scenario_id, "playback", "pace"]:
-            return _answer(lambda: playback.set_pace(scenario_id, _pace(query) or 0.0))
+            return _answer(lambda: playback.set_pace(simulator, scenario_id, _pace(query) or 0.0))
         case ["api", "scenarios", scenario_id, "playback", action]:
             if action not in PlaybackCommand:
                 return _error(HTTPStatus.NOT_FOUND, f"no playback command {action!r}")
             layout = _last(query, "layout")
-            return _answer(lambda: playback.command(scenario_id, PlaybackCommand(action), layout))
+            return _answer(
+                lambda: playback.command(simulator, scenario_id, PlaybackCommand(action), layout)
+            )
         case _:
             return _error(HTTPStatus.METHOD_NOT_ALLOWED, f"{path!r} only answers GET")
 

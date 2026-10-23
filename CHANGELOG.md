@@ -21,6 +21,19 @@ breaks the conformance checks is a major version.
   file cannot ask for a crop too large to lay out. A row's support shorter
   than its two end legs stands on one leg, at its middle, where laying it
   out divided by zero.
+- `greenhouse-sim`: every service that reads or keeps runs takes the
+  simulator it keeps them in, and reaches its climate runs, crops,
+  sunlight, checkpoints and kept states through it; so does a playback,
+  which works its days out in its simulator's (decision 0048). The stores
+  are still the services' modules', every simulator's, until each
+  simulator makes its own.
+- `greenhouse-sim`: the runs played back and the cursors given to
+  consumers are a simulator's own (decision 0048): the API's server makes
+  its simulator, answers every request from it and closes it as it closes.
+  A playback stopped leaves the day it is working out at its next moment,
+  rather than finishing the day, so the API stopped with a run playing
+  back exits at once rather than after the day (some ten seconds for the
+  reference greenhouse).
 - `greenhouse-sim`: an envelope may name the gutter lines that keep a post
   on its inner frames (`inner_posts`). A lattice girder under the gutters
   then carries the gutters between, from post to post, drawn and shading

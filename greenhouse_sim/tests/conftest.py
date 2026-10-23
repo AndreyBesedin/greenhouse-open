@@ -7,12 +7,17 @@ canonical checks nor the pre-push pass run them.
 holds a lock, as a request working a run on holds the run's; `held_in_a_day`
 keeps a live run working a day out until the test lets it finish.
 
+A test that answers requests, plays runs back, or asks a service that
+reads or keeps runs, asks for `simulator` (decision 0048): one a module's
+tests share, closed after them. Until each simulator makes its own stores,
+what the services keep is every simulator's.
+
 A test that needs what the services keep forgotten asks for it here, never
 of a store itself (W9): `afresh` (or `afresh_module`, for a module's
 fixtures) forgets everything every store keeps, before the test and
 whenever it calls it, and keeps the scenarios' opening days again after it,
-as the API keeps them as it starts; `no_playbacks` stops every run played
-back, and leaves the runs kept."""
+as the API keeps them as it starts; `no_playbacks` stops every run the
+module's simulator plays back, and leaves the runs kept."""
 
 import threading
 from collections.abc import Callable, Iterator
@@ -24,6 +29,7 @@ from greenhouse_sim.cfd import runner
 from greenhouse_sim.services.checkpoints import load_openings
 from greenhouse_sim.services.live import LiveFrame, LiveRun
 from greenhouse_sim.services.playback import stop_playbacks
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.stores import forget_everything
 
 
@@ -103,31 +109,40 @@ def finishes_beside_held() -> _Beside:
 
 
 @contextmanager
-def _clean_slate() -> Iterator[Callable[[], None]]:
+def _clean_slate(simulator: Simulator) -> Iterator[Callable[[], None]]:
     forget_everything()
     try:
         yield forget_everything
     finally:
         forget_everything()
-        load_openings()
+        load_openings(simulator)
 
 
 @pytest.fixture
-def afresh() -> Iterator[Callable[[], None]]:
-    with _clean_slate() as forget:
+def afresh(simulator: Simulator) -> Iterator[Callable[[], None]]:
+    with _clean_slate(simulator) as forget:
         yield forget
 
 
 @pytest.fixture(scope="module")
-def afresh_module() -> Iterator[Callable[[], None]]:
-    with _clean_slate() as forget:
+def afresh_module(simulator: Simulator) -> Iterator[Callable[[], None]]:
+    with _clean_slate(simulator) as forget:
         yield forget
 
 
+@pytest.fixture(scope="module")
+def simulator() -> Iterator[Simulator]:
+    with Simulator() as made:
+        yield made
+
+
 @pytest.fixture
-def no_playbacks() -> Iterator[Callable[[], None]]:
-    stop_playbacks()
+def no_playbacks(simulator: Simulator) -> Iterator[Callable[[], None]]:
+    def stop() -> None:
+        stop_playbacks(simulator)
+
+    stop()
     try:
-        yield stop_playbacks
+        yield stop
     finally:
-        stop_playbacks()
+        stop()

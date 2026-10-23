@@ -13,6 +13,7 @@ import pytest
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.domain.envelope import OpeningKind, SurfaceCategory
 from greenhouse_sim.scene.snapshot import SceneEntityKind, SceneSnapshot
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.envelope import Envelope, Opening
 from greenhouse_sim.world.envelope_checks import inverted_surfaces, outline, shared_edges
 from greenhouse_sim.world.geometry import Point2
@@ -98,11 +99,13 @@ def test_the_shells_vent_opens_no_more_than_its_frame(envelope: Envelope) -> Non
     assert (area == 0.0) == (vent.opening == 0.0)
 
 
-def test_the_api_changes_the_shell_of_a_scenarios_greenhouse() -> None:
+def test_the_api_changes_the_shell_of_a_scenarios_greenhouse(simulator: Simulator) -> None:
     """The browser walkthrough's greenhouse, as the API draws it."""
     # The climate box made three of its 6.4 m spans wide, in four bays.
     query = "envelope=length:12,width:19.2,spans:3,bays:4,eave_height:4,ridge_height:4.8"
-    response = respond("GET", f"/api/scenarios/climate_box/scene?{query}&open=roof_vent:1")
+    response = respond(
+        simulator, "GET", f"/api/scenarios/climate_box/scene?{query}&open=roof_vent:1"
+    )
     scene = SceneSnapshot.model_validate(response.body)
     kinds = [entity.kind for entity in scene.entities]
     [bounds] = [e for e in scene.entities if e.kind == SceneEntityKind.GREENHOUSE_BOUNDS]

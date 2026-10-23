@@ -36,6 +36,7 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import crop as crop_service
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import plant_ids
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.solar.plants import Crown
 
 REFERENCE = SCENARIO_REGISTRY["reference_greenhouse"]
@@ -368,14 +369,14 @@ def test_the_timeline_lists_each_harvest_round_after_the_plants_day() -> None:
 FIRST_PLANT = "reference_greenhouse_plant_001"
 
 
-def _body(path: str) -> dict[str, Any]:
-    response = respond("GET", path)
+def _body(simulator: Simulator, path: str) -> dict[str, Any]:
+    response = respond(simulator, "GET", path)
     assert response.status == HTTPStatus.OK, response.body
     assert isinstance(response.body, dict)
     return response.body
 
 
-def test_the_reference_greenhouse_grows_its_crop_organ_by_organ() -> None:
+def test_the_reference_greenhouse_grows_its_crop_organ_by_organ(simulator: Simulator) -> None:
     assert REFERENCE.crop_model == CropModel.ORGAN
     assert REFERENCE.crop_work == CropWork(
         harvest_every_days=7, lower_every_days=7, head_room_m=0.3
@@ -383,26 +384,30 @@ def test_the_reference_greenhouse_grows_its_crop_organ_by_organ() -> None:
     others = [s for s in SCENARIO_REGISTRY.values() if s.greenhouse_id != "reference_greenhouse"]
     assert all(other.crop_model == CropModel.SIMPLE for other in others)
 
-    refused = respond("GET", "/api/scenarios/climate_box/crop?t=0")
+    refused = respond(simulator, "GET", "/api/scenarios/climate_box/crop?t=0")
     assert refused.status == HTTPStatus.NOT_FOUND
     assert refused.body == {
         "error": "climate_box grows its crop with the simple daily model, not by organ"
     }
 
 
-def test_before_its_first_day_its_scene_draws_its_transplants_as_its_crop_does() -> None:
-    scene = _body("/api/scenarios/reference_greenhouse/scene")
-    crop = _body("/api/scenarios/reference_greenhouse/crop")
+def test_before_its_first_day_its_scene_draws_its_transplants_as_its_crop_does(
+    simulator: Simulator,
+) -> None:
+    scene = _body(simulator, "/api/scenarios/reference_greenhouse/scene")
+    crop = _body(simulator, "/api/scenarios/reference_greenhouse/crop")
 
     organs = [entity for entity in scene["entities"] if "organ_id" in entity["properties"]]
     assert organs == crop["entities"]
     assert crop["simulated_day"] == 0
 
 
-def test_its_crop_on_a_moments_day_has_lived_the_days_ended_by_then() -> None:
-    scene = _body(f"/api/scenarios/reference_greenhouse/crop?t={1.5 * DAY_S:.0f}")
-    plant = _body(f"/api/scenarios/reference_greenhouse/crop/{FIRST_PLANT}?t={1.5 * DAY_S:.0f}")
-    crop = crop_service.run_crop(RunRequest("reference_greenhouse"))
+def test_its_crop_on_a_moments_day_has_lived_the_days_ended_by_then(simulator: Simulator) -> None:
+    scene = _body(simulator, f"/api/scenarios/reference_greenhouse/crop?t={1.5 * DAY_S:.0f}")
+    plant = _body(
+        simulator, f"/api/scenarios/reference_greenhouse/crop/{FIRST_PLANT}?t={1.5 * DAY_S:.0f}"
+    )
+    crop = crop_service.run_crop(simulator, RunRequest("reference_greenhouse"))
 
     assert scene["simulated_day"] == 1
     drawn = {entity["properties"]["plant_id"] for entity in scene["entities"]}
@@ -413,15 +418,15 @@ def test_its_crop_on_a_moments_day_has_lived_the_days_ended_by_then() -> None:
     assert [LocalEnvironment.model_validate(e) for e in plant["environments"]] == [
         crop.local(FIRST_PLANT, 0)
     ]
-    missing = respond("GET", "/api/scenarios/reference_greenhouse/crop/nobody?t=0")
+    missing = respond(simulator, "GET", "/api/scenarios/reference_greenhouse/crop/nobody?t=0")
     assert missing.status == HTTPStatus.NOT_FOUND
 
 
-def test_its_plants_share_the_houses_air_each_in_its_own_light() -> None:
-    crop = crop_service.run_crop(RunRequest("reference_greenhouse"))
+def test_its_plants_share_the_houses_air_each_in_its_own_light(simulator: Simulator) -> None:
+    crop = crop_service.run_crop(simulator, RunRequest("reference_greenhouse"))
     days = [crop.local(plant_id, 0) for plant_id in plant_ids(REFERENCE)]
-    house = _body("/api/scenarios/reference_greenhouse/climate/house?t=86400")
-    light = _body("/api/scenarios/reference_greenhouse/climate/plants?t=43200")
+    house = _body(simulator, "/api/scenarios/reference_greenhouse/climate/house?t=86400")
+    light = _body(simulator, "/api/scenarios/reference_greenhouse/climate/plants?t=43200")
 
     assert {(day.mean_temperature_c, day.co2_ppm, day.water_status) for day in days} == {
         (days[0].mean_temperature_c, 420.0, 1.0)
@@ -436,12 +441,16 @@ def test_its_plants_share_the_houses_air_each_in_its_own_light() -> None:
     }
 
 
-def test_a_heated_house_develops_its_crop_faster() -> None:
+def test_a_heated_house_develops_its_crop_faster(simulator: Simulator) -> None:
     # Without its own schedule, unheated, and with the heater on throughout.
-    cold = _body(f"/api/scenarios/reference_greenhouse/crop/{FIRST_PLANT}?t={DAY_S:.0f}&daily=none")
+    cold = _body(
+        simulator,
+        f"/api/scenarios/reference_greenhouse/crop/{FIRST_PLANT}?t={DAY_S:.0f}&daily=none",
+    )
     heated = _body(
+        simulator,
         f"/api/scenarios/reference_greenhouse/crop/{FIRST_PLANT}?t={DAY_S:.0f}&daily=none"
-        "&set=heater:1"
+        "&set=heater:1",
     )
 
     warmer = heated["environments"][0]["mean_temperature_c"]

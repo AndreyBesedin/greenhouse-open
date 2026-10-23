@@ -21,6 +21,7 @@ from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services import sensors
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.sunlight import plant_light
 from greenhouse_sim.solar.plants import (
     CROWN_DIAMETER_M,
@@ -44,8 +45,8 @@ REST = LocalEnvironment(mean_temperature_c=21.0, par_mol_m2_day=0.0, co2_ppm=800
 GROWN_DAYS = 10
 
 
-def _light() -> PlantLight:
-    return plant_light("solar_lab", DEFAULT_LAYOUT, DEFAULT_WEATHER)
+def _light(simulator: Simulator) -> PlantLight:
+    return plant_light(simulator, "solar_lab", DEFAULT_LAYOUT, DEFAULT_WEATHER)
 
 
 def _lab_crowns() -> list[Crown]:
@@ -73,8 +74,8 @@ def test_each_plant_has_a_crown_about_its_stem_as_tall_as_it_shows() -> None:
     assert shadows.lit(lab_crowns[0].top(), OVERHEAD).all()
 
 
-def test_the_same_sunlight_can_be_shaded_by_other_crowns() -> None:
-    light = _light()
+def test_the_same_sunlight_can_be_shaded_by_other_crowns(simulator: Simulator) -> None:
+    light = _light(simulator)
     taller = [
         Crown(plant_id=crown.plant_id, base=crown.base, height_m=1.5) for crown in light.crowns
     ]
@@ -91,8 +92,10 @@ def test_the_same_sunlight_can_be_shaded_by_other_crowns() -> None:
     assert light.sunlight.shadows is not shaded.shadows
 
 
-def test_at_noon_the_crates_shade_the_first_plants_and_the_rest_take_the_sun() -> None:
-    light = _light()
+def test_at_noon_the_crates_shade_the_first_plants_and_the_rest_take_the_sun(
+    simulator: Simulator,
+) -> None:
+    light = _light(simulator)
     par = light.par_at(NOON_S)
 
     # The equinox's clear noon outside, 616 W/m², through the south roof's
@@ -103,8 +106,8 @@ def test_at_noon_the_crates_shade_the_first_plants_and_the_rest_take_the_sun() -
     assert max(par[plant] for plant in SHADED) < 0.25 * min(par[plant] for plant in EXPOSED)
 
 
-def test_a_shaded_plants_day_takes_less_light() -> None:
-    integrals = _light().daily_light_integral()
+def test_a_shaded_plants_day_takes_less_light(simulator: Simulator) -> None:
+    integrals = _light(simulator).daily_light_integral()
 
     shaded = [integrals[plant] for plant in SHADED]
     exposed = [integrals[plant] for plant in EXPOSED]
@@ -113,8 +116,8 @@ def test_a_shaded_plants_day_takes_less_light() -> None:
     assert all(25.0 < value < 30.0 for value in exposed)
 
 
-def test_the_plant_model_takes_each_plants_own_light() -> None:
-    environment = SunlitEnvironment(_light(), REST)
+def test_the_plant_model_takes_each_plants_own_light(simulator: Simulator) -> None:
+    environment = SunlitEnvironment(_light(simulator), REST)
     shaded = environment.local(SHADED[0], 0)
     exposed = environment.local(EXPOSED[-1], 0)
 
@@ -141,8 +144,8 @@ def _grown(plant_id: str, environment: SunlitEnvironment) -> Plant:
     return plant
 
 
-def test_a_plant_grown_in_its_own_light_grows_less_where_it_is_shaded() -> None:
-    environment = SunlitEnvironment(_light(), REST)
+def test_a_plant_grown_in_its_own_light_grows_less_where_it_is_shaded(simulator: Simulator) -> None:
+    environment = SunlitEnvironment(_light(simulator), REST)
 
     shaded = _grown(SHADED[1], environment)
     exposed = _grown(EXPOSED[-1], environment)
@@ -150,8 +153,8 @@ def test_a_plant_grown_in_its_own_light_grows_less_where_it_is_shaded() -> None:
     assert _length_cm(shaded) < _length_cm(exposed)
 
 
-def test_the_api_serves_each_plants_light() -> None:
-    response = respond("GET", f"/api/scenarios/solar_lab/climate/plants?t={NOON_S}")
+def test_the_api_serves_each_plants_light(simulator: Simulator) -> None:
+    response = respond(simulator, "GET", f"/api/scenarios/solar_lab/climate/plants?t={NOON_S}")
     body = json.loads(json.dumps(response.body))
 
     assert response.status == HTTPStatus.OK
@@ -159,12 +162,12 @@ def test_the_api_serves_each_plants_light() -> None:
     assert set(body["par_umol_m2_s"]) == set(plant_ids(LAB))
     assert 150.0 < body["par_umol_m2_s"][SHADED[0]] < 250.0
     assert body["daily_light_integral_mol_m2_d"][EXPOSED[0]] > 25.0
-    refused = respond("GET", "/api/scenarios/solar_lab/climate/plants?t=900000")
+    refused = respond(simulator, "GET", "/api/scenarios/solar_lab/climate/plants?t=900000")
     assert refused.status == HTTPStatus.BAD_REQUEST
 
 
-def test_par_sensors_read_the_light_in_the_sun_and_in_the_shade() -> None:
-    truth = sensors.truth(RunRequest("solar_lab"), until_s=NOON_S)
+def test_par_sensors_read_the_light_in_the_sun_and_in_the_shade(simulator: Simulator) -> None:
+    truth = sensors.truth(simulator, RunRequest("solar_lab"), until_s=NOON_S)
     read = {sensor.sensor_id: sensor.values[-1] for sensor in truth.sensors}
 
     assert read["par_open"] is not None and read["par_shade"] is not None

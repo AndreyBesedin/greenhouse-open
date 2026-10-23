@@ -17,6 +17,7 @@ from greenhouse_sim.services import cfd, fields
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Vector3
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
@@ -27,8 +28,8 @@ WEATHER = CONFIG.run_weather()
 FAN_AT = Vector3(x=1.0, y=3.2, z=2.8)
 
 
-def _climate(query: str = "") -> EnvironmentField:
-    response = respond("GET", f"/api/scenarios/climate_box/fields/climate{query}")
+def _climate(simulator: Simulator, query: str = "") -> EnvironmentField:
+    response = respond(simulator, "GET", f"/api/scenarios/climate_box/fields/climate{query}")
     assert response.status == 200, response.body
     return EnvironmentField.from_document(FieldDocument.model_validate(response.body))
 
@@ -59,20 +60,24 @@ def _run(levels: dict[str, float]) -> ClimateRun:
     )
 
 
-def test_a_scenario_with_equipment_offers_its_climate_and_others_do_not() -> None:
-    assert fields.field_names("climate_box") == [
+def test_a_scenario_with_equipment_offers_its_climate_and_others_do_not(
+    simulator: Simulator,
+) -> None:
+    assert fields.field_names(simulator, "climate_box") == [
         "uniform",
         "buoyancy",
         "vortex",
         "climate",
         "shear",
     ]
-    assert "climate" not in fields.field_names("tomato_compartment")
-    assert "climate" not in fields.field_names("airflow_box")
+    assert "climate" not in fields.field_names(simulator, "tomato_compartment")
+    assert "climate" not in fields.field_names(simulator, "airflow_box")
 
 
-def test_at_its_start_with_everything_off_the_air_is_still_at_its_starting_temperature() -> None:
-    climate = _climate()
+def test_at_its_start_with_everything_off_the_air_is_still_at_its_starting_temperature(
+    simulator: Simulator,
+) -> None:
+    climate = _climate(simulator)
 
     assert climate.source == "climate:prescribed:uniform"
     assert climate.time_s == 0.0
@@ -80,8 +85,8 @@ def test_at_its_start_with_everything_off_the_air_is_still_at_its_starting_tempe
     assert (climate.channels[AirQuantity.TEMPERATURE] == 16.0).all()
 
 
-def test_with_the_fan_on_the_air_speeds_up_downstream_along_its_axis() -> None:
-    off, on = _climate(), _climate("?set=fan:1")
+def test_with_the_fan_on_the_air_speeds_up_downstream_along_its_axis(simulator: Simulator) -> None:
+    off, on = _climate(simulator), _climate(simulator, "?set=fan:1")
     downstream = [_speed_along(on, x) for x in (2.0, 4.0, 6.0, 9.0, 11.5)]
 
     assert [_speed_along(off, x) for x in (2.0, 4.0, 6.0, 9.0, 11.5)] == [0.0] * 5
@@ -95,15 +100,15 @@ def test_with_the_fan_on_the_air_speeds_up_downstream_along_its_axis() -> None:
     assert _speed_along(on, 6.0, z=0.25) < -0.03
 
 
-def test_the_fans_level_sets_how_much_it_adds() -> None:
-    off = _climate().channels[AirQuantity.VELOCITY]
-    full = _climate("?set=fan:1").channels[AirQuantity.VELOCITY]
-    half = _climate("?set=fan:0.5").channels[AirQuantity.VELOCITY]
+def test_the_fans_level_sets_how_much_it_adds(simulator: Simulator) -> None:
+    off = _climate(simulator).channels[AirQuantity.VELOCITY]
+    full = _climate(simulator, "?set=fan:1").channels[AirQuantity.VELOCITY]
+    half = _climate(simulator, "?set=fan:0.5").channels[AirQuantity.VELOCITY]
 
     np.testing.assert_allclose(half - off, (full - off) / 2, atol=1e-6)
 
 
-def test_the_equipment_reaches_the_air_only_through_its_source_terms() -> None:
+def test_the_equipment_reaches_the_air_only_through_its_source_terms(simulator: Simulator) -> None:
     run = _run({"fan": 1.0, "heater": 1.0, "dehumidifier": 1.0})
     solid = cfd.geometry("climate_box").solid()
     field = run.field("climate_box_climate", GRID)
@@ -112,13 +117,15 @@ def test_the_equipment_reaches_the_air_only_through_its_source_terms() -> None:
 
     np.testing.assert_array_equal(field.channels[AirQuantity.VELOCITY], flow.velocity())
     # A heater and a dehumidifier move no air.
-    units = _climate("?set=heater:1,dehumidifier:1")
+    units = _climate(simulator, "?set=heater:1,dehumidifier:1")
     assert not units.channels[AirQuantity.VELOCITY].any()
 
 
-def test_through_the_run_the_heater_warms_its_corner_and_the_unheated_house_cools() -> None:
-    heated = _climate("?set=heater:1&t=600")
-    unheated = _climate("?t=600")
+def test_through_the_run_the_heater_warms_its_corner_and_the_unheated_house_cools(
+    simulator: Simulator,
+) -> None:
+    heated = _climate(simulator, "?set=heater:1&t=600")
+    unheated = _climate(simulator, "?t=600")
     corner = (10.5, 1.0, 0.75)
 
     assert heated.time_s == unheated.time_s == 600.0
@@ -129,8 +136,8 @@ def test_through_the_run_the_heater_warms_its_corner_and_the_unheated_house_cool
     assert _temperature(heated, 6.0, 3.2, 1.5) > _temperature(unheated, 6.0, 3.2, 1.5) + 3.0
 
 
-def test_obstacles_show_the_air_beside_them() -> None:
-    temperature = _climate("?t=600").channels[AirQuantity.TEMPERATURE]
+def test_obstacles_show_the_air_beside_them(simulator: Simulator) -> None:
+    temperature = _climate(simulator, "?t=600").channels[AirQuantity.TEMPERATURE]
 
     # Not the 16 °C they started at: the air beside them has cooled.
     assert temperature.max() < 12.0
@@ -171,8 +178,10 @@ def test_a_run_on_another_grid_or_solid_cells_is_refused() -> None:
     ],
     ids=["unknown", "above full", "none there", "no climate", "before", "after", "not a time"],
 )
-def test_levels_a_scenario_cannot_run_are_refused(path: str, error: str | None) -> None:
-    response = respond("GET", f"/api/scenarios/{path}")
+def test_levels_a_scenario_cannot_run_are_refused(
+    simulator: Simulator, path: str, error: str | None
+) -> None:
+    response = respond(simulator, "GET", f"/api/scenarios/{path}")
 
     if error is None:
         assert response.status == 404
@@ -180,6 +189,6 @@ def test_levels_a_scenario_cannot_run_are_refused(path: str, error: str | None) 
         assert (response.status, response.body) == (400, {"error": error})
 
 
-def test_the_service_refuses_levels_as_the_api_does() -> None:
+def test_the_service_refuses_levels_as_the_api_does(simulator: Simulator) -> None:
     with pytest.raises(InvalidRequest):
-        fields.field(RunRequest("climate_box", levels={"fan": -1.0}), "climate")
+        fields.field(simulator, RunRequest("climate_box", levels={"fan": -1.0}), "climate")

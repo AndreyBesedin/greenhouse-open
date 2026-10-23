@@ -39,6 +39,7 @@ from greenhouse_sim.services import crop, fields, scenarios, weather
 from greenhouse_sim.services.checkpoints import load_openings
 from greenhouse_sim.services.run_state import run_state
 from greenhouse_sim.services.runs import Commanded, RunRequest
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Vector3
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -163,9 +164,9 @@ def _speed(document: FieldDocument, point: Vector3) -> float:
     return float(np.hypot(np.hypot(velocity.x, velocity.y), velocity.z))
 
 
-def _crop_counts(day: int) -> dict[str, float]:
+def _crop_counts(simulator: Simulator, day: int) -> dict[str, float]:
     """How many leaves, fruits and red fruits the crop bears on a day."""
-    entities = _crop_scene(day).entities
+    entities = _crop_scene(simulator, day).entities
     fruits = [e for e in entities if e.properties.get("organ_kind") == "fruit"]
     return {
         "leaves": float(sum(e.properties.get("organ_kind") == "leaf" for e in entities)),
@@ -175,10 +176,12 @@ def _crop_counts(day: int) -> dict[str, float]:
 
 
 @cache
-def _crop_scene(day: int) -> SceneSnapshot:
+def _crop_scene(simulator: Simulator, day: int) -> SceneSnapshot:
     """The crop at noon on a day: it is the same through the day, as it has
     lived the days before."""
-    return crop.crop_scene(RunRequest(SCENARIO), time_s=day * DAY_S + 12 * HOUR_S + 40 * MINUTE_S)
+    return crop.crop_scene(
+        simulator, RunRequest(SCENARIO), time_s=day * DAY_S + 12 * HOUR_S + 40 * MINUTE_S
+    )
 
 
 def _house(moment: Moment, levels: dict[str, float]) -> object:
@@ -200,10 +203,10 @@ def _house(moment: Moment, levels: dict[str, float]) -> object:
     return _rounded(house.model_dump(mode="json"), SCENE_DECIMALS)
 
 
-def _moment(moment: Moment) -> tuple[dict[str, Any], dict[str, float]]:
+def _moment(simulator: Simulator, moment: Moment) -> tuple[dict[str, Any], dict[str, float]]:
     """What a moment's views draw, and its probes."""
     run = RunRequest(SCENARIO, commands=moment.commands)
-    state = run_state(run, until_s=moment.time_s)
+    state = run_state(simulator, run, until_s=moment.time_s)
     outside = weather.at_a_moment(SCENARIO, moment.time_s)
     assert state.house_air is not None
     probes = {
@@ -217,30 +220,30 @@ def _moment(moment: Moment) -> tuple[dict[str, Any], dict[str, float]]:
         "weather": _rounded(outside.model_dump(mode="json")),
     }
     if moment.channels:
-        document = fields.field(run, "climate", time_s=moment.time_s)
+        document = fields.field(simulator, run, "climate", time_s=moment.time_s)
         drawn["field"] = _field(document, moment.channels)
         if AirQuantity.VELOCITY in moment.channels:
             probes["jet_m_s"] = _speed(document, IN_THE_JET)
     if moment.openings:
-        passing = fields.openings(run, time_s=moment.time_s)
+        passing = fields.openings(simulator, run, time_s=moment.time_s)
         drawn["openings"] = _rounded(passing.model_dump(mode="json"))
         probes["vents_exchange_m3_s"] = sum((o.exchange_m3_s for o in passing.openings), 0.0)
-    probes |= _crop_counts(days_ended(moment.time_s))
+    probes |= _crop_counts(simulator, days_ended(moment.time_s))
     return drawn, probes
 
 
 @cache
-def _document() -> dict[str, Any]:
+def _document(simulator: Simulator) -> dict[str, Any]:
     """Everything the golden views draw, as the simulator gives it now."""
-    load_openings()
-    moments = {name: _moment(moment) for name, moment in MOMENTS.items()}
+    load_openings(simulator)
+    moments = {name: _moment(simulator, moment) for name, moment in MOMENTS.items()}
     days = sorted({days_ended(moment.time_s) for moment in MOMENTS.values()})
     return {
         "moments": {
             name: drawn | {"probes": _rounded(probes)} for name, (drawn, probes) in moments.items()
         },
         "crops": {
-            str(day): _rounded(_crop_scene(day).model_dump(mode="json"), SCENE_DECIMALS)
+            str(day): _rounded(_crop_scene(simulator, day).model_dump(mode="json"), SCENE_DECIMALS)
             for day in days
         },
         "sun_path": _rounded(
@@ -276,22 +279,26 @@ def test_the_kept_views_draw_what_they_say() -> None:
 
 
 @pytest.mark.slow
-def test_the_kept_views_are_what_the_simulator_gives() -> None:
-    assert _kept() == _document()
+def test_the_kept_views_are_what_the_simulator_gives(simulator: Simulator) -> None:
+    assert _kept() == _document(simulator)
 
 
-def _write() -> None:
-    text = json.dumps(_document(), separators=(",", ":")) + "\n"
+def _write(simulator: Simulator) -> None:
+    text = json.dumps(_document(simulator), separators=(",", ":")) + "\n"
     QA_FILE.write_bytes(gzip.compress(text.encode(), compresslevel=9, mtime=0))
 
 
 if __name__ == "__main__":
-    if sys.argv[1:] == ["--measure"]:
-        print(
-            json.dumps({name: m["probes"] for name, m in _document()["moments"].items()}, indent=4)
-        )
-        raise SystemExit(0)
-    if sys.argv[1:] != ["--update"]:
-        raise SystemExit("usage: python tests/test_reference_qa.py --update | --measure")
-    _write()
-    print("wrote", QA_FILE)
+    with Simulator() as simulator:
+        if sys.argv[1:] == ["--measure"]:
+            print(
+                json.dumps(
+                    {name: m["probes"] for name, m in _document(simulator)["moments"].items()},
+                    indent=4,
+                )
+            )
+            raise SystemExit(0)
+        if sys.argv[1:] != ["--update"]:
+            raise SystemExit("usage: python tests/test_reference_qa.py --update | --measure")
+        _write(simulator)
+        print("wrote", QA_FILE)

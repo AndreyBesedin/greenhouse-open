@@ -19,6 +19,8 @@ import { TargetsPanel } from "./fields/TargetsPanel";
 import { useFolds } from "./folds";
 import { OpeningControls, openingsIn } from "./OpeningControls";
 import {
+  levelsAt,
+  openingsAt,
   type ScenarioSource,
   withCfdBoundaries,
   withClouds,
@@ -38,7 +40,6 @@ import {
 import type { ThermostatAt } from "./scene/equipment";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
 import { scenarioRun } from "./scene/run";
-import { levelsAt, openingsAt } from "./scene/source";
 import type { SetSource } from "./scene/useSource";
 import { TimelinePanel } from "./timeline/TimelinePanel";
 import { WeatherPanel } from "./weather/WeatherPanel";

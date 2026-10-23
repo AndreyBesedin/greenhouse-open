@@ -28,6 +28,7 @@ from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import layout_name
 from greenhouse_sim.services.sensors import run_start
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import HOUR_S
 
 SCENARIO: Final = "reference_greenhouse"
@@ -50,8 +51,8 @@ class Clock:
         return self.now
 
 
-def _equipment(query: str) -> Any:
-    response = respond("GET", f"/api/scenarios/{SCENARIO}/climate/equipment?{query}")
+def _equipment(simulator: Simulator, query: str) -> Any:
+    response = respond(simulator, "GET", f"/api/scenarios/{SCENARIO}/climate/equipment?{query}")
     assert response.status == HTTPStatus.OK, response.body
     return response.body
 
@@ -85,41 +86,47 @@ def test_the_thermostat_heats_to_its_targets_as_changed() -> None:
     assert not thermostat.heats(23.0, False, DAY_FROM_S)
 
 
-def test_the_house_is_heated_to_a_target_set_and_says_its_setpoints() -> None:
+def test_the_house_is_heated_to_a_target_set_and_says_its_setpoints(simulator: Simulator) -> None:
     """Set to 24 °C from 7 h, the house's air is within the thermostat's band
     of it by 8 h 30, where the scenario's own 18 °C holds it near 18."""
     half_band = 0.5
     moment = DAY_FROM_S + 1.5 * HOUR_S
-    own = house_air_at(RunRequest(SCENARIO), moment)
-    warmer = house_air_at(RunRequest(SCENARIO, targets=WARMER), moment)
+    own = house_air_at(simulator, RunRequest(SCENARIO), moment)
+    warmer = house_air_at(simulator, RunRequest(SCENARIO, targets=WARMER), moment)
     assert own is not None and warmer is not None
 
     assert abs(own.temperature_c - 18.0) <= half_band
     assert abs(warmer.temperature_c - 24.0) <= half_band
-    said = _equipment(f"t={moment:.0f}&targets={DAY_FROM_S:.0f}:heating_day:24")["thermostat"]
+    said = _equipment(simulator, f"t={moment:.0f}&targets={DAY_FROM_S:.0f}:heating_day:24")[
+        "thermostat"
+    ]
     assert (said["setpoint_c"], said["day_c"], said["night_c"]) == (24.0, 24.0, 16.0)
-    assert _equipment(f"t={moment:.0f}")["thermostat"]["day_c"] == 18.0
+    assert _equipment(simulator, f"t={moment:.0f}")["thermostat"]["day_c"] == 18.0
 
 
-def test_another_target_makes_another_run_and_the_same_targets_the_same() -> None:
-    own_key, _ = climate_run(RunRequest(SCENARIO))
-    warmer_key, _ = climate_run(RunRequest(SCENARIO, targets=WARMER))
+def test_another_target_makes_another_run_and_the_same_targets_the_same(
+    simulator: Simulator,
+) -> None:
+    own_key, _ = climate_run(simulator, RunRequest(SCENARIO))
+    warmer_key, _ = climate_run(simulator, RunRequest(SCENARIO, targets=WARMER))
 
     assert warmer_key != own_key
-    assert climate_run(RunRequest(SCENARIO, targets=WARMER))[0] == warmer_key
-    own_id = air_through_a_run(RunRequest(SCENARIO))[1]
-    assert air_through_a_run(RunRequest(SCENARIO, targets=WARMER))[1] != own_id
+    assert climate_run(simulator, RunRequest(SCENARIO, targets=WARMER))[0] == warmer_key
+    own_id = air_through_a_run(simulator, RunRequest(SCENARIO))[1]
+    assert air_through_a_run(simulator, RunRequest(SCENARIO, targets=WARMER))[1] != own_id
     # A run whose targets are its scenario's own is named as before #274.
-    assert air_through_a_run(RunRequest(SCENARIO, targets=()))[1] == own_id
+    assert air_through_a_run(simulator, RunRequest(SCENARIO, targets=()))[1] == own_id
 
 
-def test_the_same_target_changes_asked_for_in_another_order_make_the_same_run() -> None:
+def test_the_same_target_changes_asked_for_in_another_order_make_the_same_run(
+    simulator: Simulator,
+) -> None:
     later = (DAY_FROM_S + HOUR_S, "heating_day", 20.0)
     in_order = RunRequest(SCENARIO, targets=(*WARMER, later))
     reversed_ = RunRequest(SCENARIO, targets=(later, *WARMER))
 
-    assert climate_run(reversed_)[0] == climate_run(in_order)[0]
-    assert air_through_a_run(reversed_)[1] == air_through_a_run(in_order)[1]
+    assert climate_run(simulator, reversed_)[0] == climate_run(simulator, in_order)[0]
+    assert air_through_a_run(simulator, reversed_)[1] == air_through_a_run(simulator, in_order)[1]
 
 
 @pytest.mark.parametrize(
@@ -132,39 +139,49 @@ def test_the_same_target_changes_asked_for_in_another_order_make_the_same_run() 
         (f"{200 * DAY_S:.0f}:heating_day:24", "within the run"),
     ],
 )
-def test_a_target_change_that_does_not_fit_is_refused(targets: str, refused: str) -> None:
-    response = respond("GET", f"/api/scenarios/{SCENARIO}/climate/equipment?t=60&targets={targets}")
+def test_a_target_change_that_does_not_fit_is_refused(
+    simulator: Simulator, targets: str, refused: str
+) -> None:
+    response = respond(
+        simulator, "GET", f"/api/scenarios/{SCENARIO}/climate/equipment?t=60&targets={targets}"
+    )
 
     assert response.status == HTTPStatus.BAD_REQUEST
     assert refused in str(response.body)
 
 
-def test_a_scenario_without_a_heating_loop_has_no_target_to_change() -> None:
+def test_a_scenario_without_a_heating_loop_has_no_target_to_change(simulator: Simulator) -> None:
     response = respond(
-        "GET", "/api/scenarios/climate_box/climate/equipment?t=60&targets=60:heating_day:24"
+        simulator,
+        "GET",
+        "/api/scenarios/climate_box/climate/equipment?t=60&targets=60:heating_day:24",
     )
 
     assert response.body == {"error": "climate_box has no heating loop whose target to change"}
 
 
-def test_a_format_2_checkpoint_is_read_as_one_whose_run_changed_no_target() -> None:
-    kept = checkpoints.load_opening(SCENARIO)[0]
-    document = json.loads(checkpoints.checkpoint(kept.checkpoint_id).model_dump_json())
+def test_a_format_2_checkpoint_is_read_as_one_whose_run_changed_no_target(
+    simulator: Simulator,
+) -> None:
+    kept = checkpoints.load_opening(simulator, SCENARIO)[0]
+    document = json.loads(checkpoints.checkpoint(simulator, kept.checkpoint_id).model_dump_json())
     assert document["checkpoint_format"] == checkpoints.CHECKPOINT_FORMAT == 3
 
     older = {key: value for key, value in document.items() if key != "targets"}
-    uploaded = checkpoints.upload_checkpoint(older | {"checkpoint_format": 2})
+    uploaded = checkpoints.upload_checkpoint(simulator, older | {"checkpoint_format": 2})
     assert uploaded.targets == []
     with pytest.raises(InvalidRequest, match="a format 2 checkpoint keeps no target changes"):
-        checkpoints.upload_checkpoint(document | {"checkpoint_format": 2, "targets": [[0, "x", 1]]})
+        checkpoints.upload_checkpoint(
+            simulator, document | {"checkpoint_format": 2, "targets": [[0, "x", 1]]}
+        )
 
 
 @pytest.mark.slow
-def test_a_checkpoint_keeps_the_target_changes_before_its_day() -> None:
+def test_a_checkpoint_keeps_the_target_changes_before_its_day(simulator: Simulator) -> None:
     later = ((DAY_S + DAY_FROM_S, "heating_day", 20.0),)
     run = RunRequest(SCENARIO, targets=(*WARMER, *later))
-    saved = checkpoints.save_checkpoint(run, time_s=DAY_S)
-    kept = checkpoints.checkpoint(saved.checkpoint_id)
+    saved = checkpoints.save_checkpoint(simulator, run, time_s=DAY_S)
+    kept = checkpoints.checkpoint(simulator, saved.checkpoint_id)
 
     assert [tuple(change) for change in kept.targets] == list(WARMER)
     assert saved.targets == kept.targets
@@ -172,19 +189,21 @@ def test_a_checkpoint_keeps_the_target_changes_before_its_day() -> None:
     restored = kept.run()
     assert restored.targets == WARMER
     assert (
-        climate_run(RunRequest(SCENARIO, targets=(*restored.targets, *later)))[0]
-        == (climate_run(run)[0])
+        climate_run(simulator, RunRequest(SCENARIO, targets=(*restored.targets, *later)))[0]
+        == (climate_run(simulator, run)[0])
     )
 
 
 @pytest.mark.slow
-def test_a_target_set_while_the_run_plays_steers_it_from_the_next_minute() -> None:
+def test_a_target_set_while_the_run_plays_steers_it_from_the_next_minute(
+    simulator: Simulator,
+) -> None:
     """Set at 6 h 00 min 30 s, the night's target holds from 6 h 01 in the
     same run and epoch: the clock waits there until the day is worked out
     again, nothing delivered before changes, and the heater gives more heat
     in the hour after."""
     clock = Clock()
-    played = Playback(SCENARIO, seconds_per_day=24.0, every_s=EVERY_S, clock=clock)
+    played = Playback(simulator, SCENARIO, seconds_per_day=24.0, every_s=EVERY_S, clock=clock)
     assert played.work_day(0)
     played.command(PlaybackCommand.PLAY)
     clock.now = 6.0 + 30.0 / HOUR_S
@@ -209,8 +228,10 @@ def test_a_target_set_while_the_run_plays_steers_it_from_the_next_minute() -> No
     assert again.records[: len(delivered.records)] == delivered.records
 
     start = run_start(SCENARIO)
-    own = heat_records(RunRequest(SCENARIO), 0, start, before.run_id)
-    warmer = heat_records(RunRequest(SCENARIO, targets=(change,)), 0, start, before.run_id)
+    own = heat_records(simulator, RunRequest(SCENARIO), 0, start, before.run_id)
+    warmer = heat_records(
+        simulator, RunRequest(SCENARIO, targets=(change,)), 0, start, before.run_id
+    )
     assert [record.value for record in warmer[:6]] == [record.value for record in own[:6]]
     assert warmer[6].value > own[6].value
     # What it delivers after the change is the steered run's, though the day
@@ -222,7 +243,7 @@ def test_a_target_set_while_the_run_plays_steers_it_from_the_next_minute() -> No
 
 
 def test_a_run_started_over_with_moves_keeps_its_target_changes(
-    tmp_path: Path, no_playbacks: Callable[[], None]
+    simulator: Simulator, tmp_path: Path, no_playbacks: Callable[[], None]
 ) -> None:
     """Moving equipment while the run plays starts it over from its first
     day, the same run rearranged: a target changed in it holds from its
@@ -230,11 +251,11 @@ def test_a_run_started_over_with_moves_keeps_its_target_changes(
     run drops its changes, as decision 0043 has it."""
     clock = Clock()
     path = f"/api/scenarios/{SCENARIO}/playback"
-    playback.start(SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
+    playback.start(simulator, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
     change = (60.0, "heating_day", 24.0)
-    assert playback.set_targets(SCENARIO, {"heating_day": 24.0}).targets == [change]
+    assert playback.set_targets(simulator, SCENARIO, {"heating_day": 24.0}).targets == [change]
 
-    moved = respond("POST", f"{path}/restart?layout={FAN_MOVED}")
+    moved = respond(simulator, "POST", f"{path}/restart?layout={FAN_MOVED}")
 
     assert moved.status == HTTPStatus.OK and isinstance(moved.body, dict)
     moved_layout = layout_name(FAN_MOVED)
@@ -242,34 +263,34 @@ def test_a_run_started_over_with_moves_keeps_its_target_changes(
     assert (moved.body["time_s"], moved.body["targets"]) == (0.0, [list(change)])
     # What it delivers is the rearranged run with the change: the same heat
     # through the night, more once the day's target holds.
-    played = playback.playback(SCENARIO)
+    played = playback.playback(simulator, SCENARIO)
     assert played.wait_for(1, timeout_s=300)
     clock.now += 24.0
     delivered = {r.observation_id: r.value for r in played.records_after(0, ALL).records}
     start, run_id = run_start(SCENARIO), str(moved.body["run_id"])
     with_change = RunRequest(SCENARIO, layout=moved_layout, targets=(change,))
-    kept = heat_records(with_change, 0, start, run_id)
-    dropped = heat_records(RunRequest(SCENARIO, layout=moved_layout), 0, start, run_id)
+    kept = heat_records(simulator, with_change, 0, start, run_id)
+    dropped = heat_records(simulator, RunRequest(SCENARIO, layout=moved_layout), 0, start, run_id)
     assert [delivered[record.observation_id] for record in kept] == [r.value for r in kept]
     night = int(DAY_FROM_S // HOUR_S)
     assert [r.value for r in kept[:night]] == [r.value for r in dropped[:night]]
     assert sum(r.value for r in kept) > sum(r.value for r in dropped)
 
-    again = respond("POST", f"{path}/restart")
+    again = respond(simulator, "POST", f"{path}/restart")
     assert isinstance(again.body, dict)
     assert (again.body["layout"], again.body["targets"]) == (moved_layout, [])
 
 
 def test_a_target_changed_while_moves_replace_the_playback_is_kept(
-    tmp_path: Path, no_playbacks: Callable[[], None]
+    simulator: Simulator, tmp_path: Path, no_playbacks: Callable[[], None]
 ) -> None:
     """A request that found the playback before moves replaced it, and
     changes its targets only once the replacement has taken them, is not
     lost: the playback replaced hands the change to the one in its place,
     which plays the moved run with it (decision 0049)."""
     clock = Clock()
-    playback.start(SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
-    replaced = playback.playback(SCENARIO)
+    playback.start(simulator, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
+    replaced = playback.playback(simulator, SCENARIO)
     # A restart with moves has made the playback to put in its place, its
     # targets taken, and not yet put it there.
     replacing = replaced.rearranged(layout_name(FAN_MOVED))

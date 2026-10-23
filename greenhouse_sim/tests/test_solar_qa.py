@@ -29,6 +29,7 @@ from greenhouse_sim.fields.field import EnvironmentField
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services import scenarios, weather
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.sunlight import plant_light
 from greenhouse_sim.world.geometry import Vector3
 
@@ -98,8 +99,8 @@ def _scene() -> object:
     return _rounded(scenarios.initial_scene(SCENARIO).model_dump(mode="json"))
 
 
-def _par_field(time_s: float) -> object:
-    sunlight = plant_light(SCENARIO, DEFAULT_LAYOUT, DEFAULT_WEATHER).sunlight
+def _par_field(simulator: Simulator, time_s: float) -> object:
+    sunlight = plant_light(simulator, SCENARIO, DEFAULT_LAYOUT, DEFAULT_WEATHER).sunlight
     par = np.round(sunlight.at(time_s).par_umol_m2_s, PAR_DECIMALS)
     field = EnvironmentField(
         field_id=f"{SCENARIO}_light",
@@ -111,12 +112,12 @@ def _par_field(time_s: float) -> object:
     return _rounded(field.document().model_dump(mode="json"))
 
 
-def _light() -> object:
+def _light(simulator: Simulator) -> object:
     return {
         "views": {
             name: {
                 "weather": _rounded(weather.at_a_moment(SCENARIO, time_s).model_dump(mode="json")),
-                "field": _par_field(time_s),
+                "field": _par_field(simulator, time_s),
             }
             for name, time_s in VIEWS.items()
         },
@@ -130,9 +131,9 @@ def _par(field: EnvironmentField, point: Vector3) -> float:
     return value
 
 
-def _measured() -> dict[str, dict[str, float]]:
+def _measured(simulator: Simulator) -> dict[str, dict[str, float]]:
     """The sun's light at the reference points, at each moment drawn."""
-    light = plant_light(SCENARIO, DEFAULT_LAYOUT, DEFAULT_WEATHER)
+    light = plant_light(simulator, SCENARIO, DEFAULT_LAYOUT, DEFAULT_WEATHER)
     measured = {}
     for name, time_s in VIEWS.items():
         outside = light.sunlight.outside_at(time_s)
@@ -160,22 +161,25 @@ def test_the_qa_scene_is_what_the_simulator_draws() -> None:
     assert json.loads(SCENE_FILE.read_text()) == _scene()
 
 
-def test_the_qa_light_is_what_the_simulator_gives() -> None:
-    assert json.loads(LIGHT_FILE.read_text()) == _light()
+def test_the_qa_light_is_what_the_simulator_gives(simulator: Simulator) -> None:
+    assert json.loads(LIGHT_FILE.read_text()) == _light(simulator)
 
 
 @pytest.mark.parametrize("view", VIEWS)
-def test_the_suns_light_at_the_reference_points_is_as_recorded(view: str) -> None:
-    assert _measured()[view] == pytest.approx(REFERENCE[view], rel=1e-6, abs=1e-6)
+def test_the_suns_light_at_the_reference_points_is_as_recorded(
+    simulator: Simulator, view: str
+) -> None:
+    assert _measured(simulator)[view] == pytest.approx(REFERENCE[view], rel=1e-6, abs=1e-6)
 
 
 if __name__ == "__main__":
-    if sys.argv[1:] == ["--measure"]:
-        print(json.dumps(_measured(), indent=4))
-        raise SystemExit(0)
-    if sys.argv[1:] != ["--update"]:
-        raise SystemExit("usage: python tests/test_solar_qa.py --update | --measure")
-    SCENE_FILE.write_text(json.dumps(_scene(), indent=2) + "\n")
-    LIGHT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    LIGHT_FILE.write_text(json.dumps(_light()) + "\n")
-    print("wrote", SCENE_FILE, LIGHT_FILE)
+    with Simulator() as simulator:
+        if sys.argv[1:] == ["--measure"]:
+            print(json.dumps(_measured(simulator), indent=4))
+            raise SystemExit(0)
+        if sys.argv[1:] != ["--update"]:
+            raise SystemExit("usage: python tests/test_solar_qa.py --update | --measure")
+        SCENE_FILE.write_text(json.dumps(_scene(), indent=2) + "\n")
+        LIGHT_FILE.parent.mkdir(parents=True, exist_ok=True)
+        LIGHT_FILE.write_text(json.dumps(_light(simulator)) + "\n")
+        print("wrote", SCENE_FILE, LIGHT_FILE)
