@@ -11,12 +11,10 @@ import { contractReader, type Loaded, loadJson } from "../loadJson";
 import { SNAPSHOT_SCHEMA } from "../scene/generated/snapshotSchema";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import { ASSESSED_SCHEMA } from "./generated/assessedSchema";
-import type { Assessed, Installation } from "./generated/assessedTypes";
+import type { Assessed, DraftRevision, Installation } from "./generated/assessedTypes";
 import type { BasicSetup } from "./generated/basicTypes";
-import { DRAFT_SCHEMA } from "./generated/draftSchema";
 import { DRAFTS_SCHEMA } from "./generated/draftsSchema";
 import type { DraftsListed } from "./generated/draftsTypes";
-import type { DraftAnswer } from "./generated/draftTypes";
 import type { Edit } from "./generated/editTypes";
 
 export const BUILDER_URL = "/api/builder";
@@ -35,11 +33,23 @@ export interface RunSettings {
   weather: string;
 }
 
+/** A draft at a revision: the builder's answer about its installation,
+ * which names the draft and the revision. */
+export type DraftAnswer = Assessed & { draft: DraftRevision };
+
 const readAssessed = contractReader<Assessed>(ASSESSED_SCHEMA, "not an assessed installation");
-const readDraft = contractReader<DraftAnswer>(DRAFT_SCHEMA, "not a draft");
+const readKept = contractReader<Assessed>(ASSESSED_SCHEMA, "not a draft");
 const readDrafts = contractReader<DraftsListed>(DRAFTS_SCHEMA, "not a list of drafts");
 const readScene = contractReader<SceneSnapshot>(SNAPSHOT_SCHEMA, "not a scene");
 const readScenario = contractReader<ScenarioSummary>(SCENARIO_SUMMARY_SCHEMA, "not a scenario");
+
+function readDraft(body: unknown): DraftAnswer {
+  const { draft, ...assessed } = readKept(body);
+  if (!draft) {
+    throw new Error("not a draft");
+  }
+  return { ...assessed, draft };
+}
 
 /** An installation as its file writes it, in the format given: what the
  * builder sends the simulator, and what it exports. */

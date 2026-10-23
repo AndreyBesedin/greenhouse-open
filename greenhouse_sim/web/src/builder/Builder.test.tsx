@@ -32,12 +32,14 @@ function holdingSaves(): { release: () => void } {
         release = resolve;
       });
       return answer({
-        draft_id: installation.installation_id,
-        revision: 1,
-        saved_at: "2026-10-23T12:00:00Z",
         schema_version,
         installation,
         findings: [],
+        draft: {
+          draft_id: installation.installation_id,
+          revision: 1,
+          saved_at: "2026-10-23T12:00:00Z",
+        },
       });
     }
     if (url.startsWith("/api/drafts")) {
