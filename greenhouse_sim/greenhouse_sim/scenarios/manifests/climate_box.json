@@ -1,6 +1,6 @@
 {
   "$schema": "../scenario.schema.json",
-  "schema_version": 3,
+  "schema_version": 4,
   "greenhouse_id": "climate_box",
   "name": "Climate box",
   "description": "A small single-span house of 32 tomato plants, shut and still, where climate equipment is tried, 14 days",
@@ -12,69 +12,82 @@
     "climate": "A cold, damp night, when heating and drying matter: 16 °C and 85% inside to start, through single glass.",
     "weather": "The cold, damp night outside: 8 °C and 90%, still."
   },
-  "variety": "cherry_tomato",
-  "rows": 2,
-  "columns": 16,
-  "start_date": "2026-01-01",
-  "duration_days": 14,
-  "random_seed": 1201,
-  "envelope": {
-    "length": 12.0,
-    "width": 6.4,
-    "eave_height": 4.0,
-    "ridge_height": 4.8,
-    "bays": 3,
-    "openings": [
-      {
-        "opening_id": "roof_vent",
-        "kind": "roof_vent",
-        "surface_id": "roof_1_right",
-        "centre": {
-          "x": 0.0,
-          "y": 0.8
+  "installation": {
+    "installation_id": "climate_box",
+    "name": "Climate box",
+    "envelope": {
+      "length": 12.0,
+      "width": 6.4,
+      "eave_height": 4.0,
+      "ridge_height": 4.8,
+      "bays": 3,
+      "openings": [
+        {
+          "opening_id": "roof_vent",
+          "kind": "roof_vent",
+          "surface_id": "roof_1_right",
+          "centre": {
+            "x": 0.0,
+            "y": 0.8
+          },
+          "width": 4.0,
+          "height": 1.0,
+          "opening": 0.0
         },
-        "width": 4.0,
-        "height": 1.0,
-        "opening": 0.0
+        {
+          "opening_id": "side_vent",
+          "kind": "side_vent",
+          "surface_id": "side_wall_right",
+          "centre": {
+            "x": 0.0,
+            "y": 0.5
+          },
+          "width": 3.0,
+          "height": 0.6,
+          "opening": 0.0
+        },
+        {
+          "opening_id": "side_vent_left",
+          "kind": "side_vent",
+          "surface_id": "side_wall_left",
+          "centre": {
+            "x": 0.0,
+            "y": 0.5
+          },
+          "width": 3.0,
+          "height": 0.6,
+          "opening": 0.0
+        },
+        {
+          "opening_id": "door",
+          "kind": "door",
+          "surface_id": "end_wall_front",
+          "centre": {
+            "x": 5.0,
+            "y": 1.05
+          },
+          "width": 1.2,
+          "height": 2.1
+        }
+      ]
+    },
+    "layout": "default",
+    "row_crops": [
+      {
+        "row": 1,
+        "crop_model": "simple",
+        "variety": "cherry_tomato"
       },
       {
-        "opening_id": "side_vent",
-        "kind": "side_vent",
-        "surface_id": "side_wall_right",
-        "centre": {
-          "x": 0.0,
-          "y": 0.5
-        },
-        "width": 3.0,
-        "height": 0.6,
-        "opening": 0.0
-      },
-      {
-        "opening_id": "side_vent_left",
-        "kind": "side_vent",
-        "surface_id": "side_wall_left",
-        "centre": {
-          "x": 0.0,
-          "y": 0.5
-        },
-        "width": 3.0,
-        "height": 0.6,
-        "opening": 0.0
-      },
-      {
-        "opening_id": "door",
-        "kind": "door",
-        "surface_id": "end_wall_front",
-        "centre": {
-          "x": 5.0,
-          "y": 1.05
-        },
-        "width": 1.2,
-        "height": 2.1
+        "row": 2,
+        "crop_model": "simple",
+        "variety": "cherry_tomato"
       }
     ]
   },
-  "layout": "default",
+  "start_date": "2026-01-01",
+  "duration_days": 14,
+  "random_seed": 1201,
   "airflow": {
     "kind": "uniform",
     "velocity_m_s": {

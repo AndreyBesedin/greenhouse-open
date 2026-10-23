@@ -7,6 +7,43 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: drafts of installations and their revisions are kept
+  locally (P12.1, decision 0051): `greenhouse_sim.builder.drafts.DraftStore`
+  keeps them in one SQLite file, each revision its installation's file. A
+  draft is saved revision by revision, reopened at any, reverted to an
+  earlier one (saved again as the latest) and deleted. A change names the
+  revision it was made on and is refused if another was saved since, as by
+  another window of the editor.
+- `greenhouse-sim`: a scenario's manifest holds its house as an
+  installation (P12.1, decision 0050). Manifest format 4 writes its
+  envelope, its layout's name and the crop each row grows under
+  `installation`, in place of format 3's `envelope`, `layout`, `rows`,
+  `columns`, `crop_model` and `variety`; its rows and columns are its
+  layout's crop rows and their planting positions. A format 3 manifest is
+  migrated to it, and refused if its rows and columns are not its layout's.
+  A manifest holding an installation a run cannot grow, with a row without
+  a crop or rows of different crops, is refused saying so. The model is
+  `greenhouse_sim.scenarios.installation.Installation`, which the builder
+  imports (its `InstallationDraft` before), and an installation's file in
+  format 3 or 4 is read. The packaged manifests are written in format 4:
+  every run id and replay digest is unchanged. Each manifest's version, the
+  digest of its content, is new, so a checkpoint saved before is refused as
+  one of another version of its scenario, and the reference greenhouse's
+  kept opening day was written again, changed in that digest alone.
+- `greenhouse-sim`: `greenhouse_sim.builder`, the setup builder's first step
+  (P12.0, decision 0050). An installation, the house part of a scenario
+  (its envelope, its layout and the crop each row grows), is drafted from a
+  form's values, assessed for what stops it running (each finding naming
+  the items and rows it concerns), given a crop over many rows at once, and
+  exchanged as a file in the manifests' format version, with its JSON
+  Schema, `builder/installation.schema.json`. A refused file names each
+  field at fault. Nothing in the packaged scenarios changes.
+- `greenhouse-sim`: a layout's crop rows are bounded, as an envelope's spans
+  and bays are: at most 1,000 rows, 10,000 positions a row and 100,000
+  positions in all, and a run of pipes at most 1,000 pipes, so that a small
+  file cannot ask for a crop too large to lay out. A row's support shorter
+  than its two end legs stands on one leg, at its middle, where laying it
+  out divided by zero.
 - `greenhouse-sim`: each simulator keeps what it keeps, its climate runs,
   crops, sunlight, checkpoints and kept states, in stores of its own, made
   with it and forgotten with it (`Simulator.forget`, decision 0048): no

@@ -1,6 +1,6 @@
 {
   "$schema": "../scenario.schema.json",
-  "schema_version": 3,
+  "schema_version": 4,
   "greenhouse_id": "solar_lab",
   "name": "Solar lab",
   "description": "Sun QA case: a small shut house at the March equinox under a clear sky, a row of plants partly shaded by a stack of crates, and PAR sensors in the sun and the shade",
@@ -9,20 +9,28 @@
     "layout": "One row of 16 plants along the middle of the house on a crop gutter; a stack of crates 1.5 m high just south of its first four plants, which shades them at noon; PAR sensors 0.3 m up on either side of the crates, in the sun to their south and in their shade to their north; and a heater, off, in the back right corner, so that the house has a climate run.",
     "weather": "The cold spring day (the cold_spring_day preset), without a cloud."
   },
-  "variety": "cherry_tomato",
-  "rows": 1,
-  "columns": 16,
+  "installation": {
+    "installation_id": "solar_lab",
+    "name": "Solar lab",
+    "envelope": {
+      "length": 12.0,
+      "width": 6.4,
+      "eave_height": 4.0,
+      "ridge_height": 4.8,
+      "bays": 3
+    },
+    "layout": "default",
+    "row_crops": [
+      {
+        "row": 1,
+        "crop_model": "simple",
+        "variety": "cherry_tomato"
+      }
+    ]
+  },
   "start_date": "2026-03-20",
   "duration_days": 10,
   "random_seed": 808,
-  "envelope": {
-    "length": 12.0,
-    "width": 6.4,
-    "eave_height": 4.0,
-    "ridge_height": 4.8,
-    "bays": 3
-  },
-  "layout": "default",
   "airflow": {
     "kind": "uniform",
     "velocity_m_s": {

@@ -1,0 +1,113 @@
+"""An installation: the house part of a scenario (decision 0050).
+
+Its envelope, its layout and the crop each row grows, as a scenario's
+manifest holds them (format 4, `manifest_files`) and the setup builder
+edits them (`greenhouse_sim.builder`). A value no greenhouse can have is
+refused as the models refuse it. What only the parts together get wrong,
+such as a row reaching through a wall, is the builder's assessment instead,
+so that a draft can be kept and edited until it can run.
+
+A run grows one crop model and one variety, over its layout's rows times
+their planting positions (`ScenarioConfig`): `scenario_house` gives a
+scenario those fields from its installation, and refuses an installation a
+run cannot grow yet.
+"""
+
+from pydantic import BaseModel, ConfigDict, Field, PositiveInt, ValidationInfo, field_validator
+
+from greenhouse_sim.domain.crop import CropModel
+from greenhouse_sim.world.envelope import Envelope
+from greenhouse_sim.world.identifiers import ItemId
+from greenhouse_sim.world.layout import Layout
+
+
+class RowCrop(BaseModel):
+    """The crop one row grows: its model and its variety. Rows are numbered
+    from 1, as `CropRows` numbers them."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    row: PositiveInt
+    crop_model: CropModel
+    variety: str = Field(min_length=1)
+
+
+class Installation(BaseModel):
+    """A greenhouse as authored: no weather, period, control or policy,
+    which are a scenario's."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    installation_id: ItemId
+    name: str = Field(min_length=1)
+    envelope: Envelope
+    layout: Layout
+    row_crops: list[RowCrop] = []
+
+    # Checked as the field, so that a refusal points at it; the layout,
+    # before it, is read already, unless it was refused itself.
+    @field_validator("row_crops")
+    @classmethod
+    def _each_row_has_one_crop_at_most(
+        cls, crops: list[RowCrop], info: ValidationInfo
+    ) -> list[RowCrop]:
+        first: dict[int, int] = {}
+        for index, crop in enumerate(crops):
+            if crop.row in first:
+                raise ValueError(
+                    f"row {crop.row} has more than one crop, at [{first[crop.row]}] and [{index}]"
+                )
+            first[crop.row] = index
+        layout = info.data.get("layout")
+        if isinstance(layout, Layout):
+            total = 0 if layout.crop_rows is None else layout.crop_rows.rows
+            beyond = sorted(crop.row for crop in crops if crop.row > total)
+            if beyond:
+                raise ValueError(f"crops for rows {beyond}, beyond the layout's {total} rows")
+        return crops
+
+
+class CannotRun(ValueError):
+    """An installation a run cannot grow yet, and why."""
+
+
+class ScenarioHouse(BaseModel):
+    """The fields of a scenario its installation gives: its house, and its
+    crop as `ScenarioConfig` holds it, the layout's rows times their
+    planting positions, every one growing one model and one variety."""
+
+    model_config = ConfigDict(frozen=True)
+
+    envelope: Envelope
+    layout: Layout
+    rows: PositiveInt
+    columns: PositiveInt
+    crop_model: CropModel
+    variety: str
+
+
+def scenario_house(installation: Installation) -> ScenarioHouse:
+    """What a scenario's run grows in an installation: its rows of planting
+    positions, each row growing the one crop all of them grow. Refused if
+    its layout has no crop rows, a row has no crop, or rows grow different
+    crops, which a run cannot grow yet (P12.5)."""
+    rows = installation.layout.crop_rows
+    if rows is None:
+        raise CannotRun("it has no crop rows")
+    chosen = {crop.row for crop in installation.row_crops}
+    bare = [row for row in range(1, rows.rows + 1) if row not in chosen]
+    if bare:
+        raise CannotRun(f"rows {bare} have no crop")
+    crops = sorted({(crop.crop_model, crop.variety) for crop in installation.row_crops})
+    if len(crops) > 1:
+        grown = ", ".join(f"{model.value} {variety}" for model, variety in crops)
+        raise CannotRun(f"its rows grow different crops ({grown}); a run grows one")
+    ((crop_model, variety),) = crops
+    return ScenarioHouse(
+        envelope=installation.envelope,
+        layout=installation.layout,
+        rows=rows.rows,
+        columns=rows.positions_per_row,
+        crop_model=crop_model,
+        variety=variety,
+    )

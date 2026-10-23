@@ -1,6 +1,6 @@
 {
   "$schema": "../scenario.schema.json",
-  "schema_version": 3,
+  "schema_version": 4,
   "greenhouse_id": "tomato_compartment",
   "name": "Tomato compartment",
   "description": "Reference scenario: a 24 by 16 m Venlo-style compartment of 320 high-wire tomato plants in eight rows, 28 days",
@@ -11,83 +11,126 @@
     "airflow": "Convection: two rolls across the house, rising up its middle.",
     "weather": "A mild winter's day with the prevailing wind of the Dutch coast: a moderate south-westerly breeze."
   },
-  "variety": "cherry_tomato",
-  "rows": 8,
-  "columns": 40,
-  "start_date": "2026-01-01",
-  "duration_days": 28,
-  "random_seed": 2401,
-  "envelope": {
-    "length": 24.0,
-    "width": 16.0,
-    "eave_height": 6.0,
-    "ridge_height": 6.8,
-    "spans": 4,
-    "bays": 6,
-    "inner_posts": [0, 1, 3, 4],
-    "openings": [
-      {
-        "opening_id": "roof_vent_1",
-        "kind": "roof_vent",
-        "surface_id": "roof_1_right",
-        "centre": {
-          "x": 0.0,
-          "y": 0.5
+  "installation": {
+    "installation_id": "tomato_compartment",
+    "name": "Tomato compartment",
+    "envelope": {
+      "length": 24.0,
+      "width": 16.0,
+      "eave_height": 6.0,
+      "ridge_height": 6.8,
+      "spans": 4,
+      "bays": 6,
+      "inner_posts": [0, 1, 3, 4],
+      "openings": [
+        {
+          "opening_id": "roof_vent_1",
+          "kind": "roof_vent",
+          "surface_id": "roof_1_right",
+          "centre": {
+            "x": 0.0,
+            "y": 0.5
+          },
+          "width": 6.0,
+          "height": 1.0,
+          "opening": 0.2
         },
-        "width": 6.0,
-        "height": 1.0,
-        "opening": 0.2
+        {
+          "opening_id": "roof_vent_2",
+          "kind": "roof_vent",
+          "surface_id": "roof_2_right",
+          "centre": {
+            "x": 0.0,
+            "y": 0.5
+          },
+          "width": 6.0,
+          "height": 1.0,
+          "opening": 0.2
+        },
+        {
+          "opening_id": "roof_vent_3",
+          "kind": "roof_vent",
+          "surface_id": "roof_3_right",
+          "centre": {
+            "x": 0.0,
+            "y": 0.5
+          },
+          "width": 6.0,
+          "height": 1.0,
+          "opening": 0.2
+        },
+        {
+          "opening_id": "roof_vent_4",
+          "kind": "roof_vent",
+          "surface_id": "roof_4_right",
+          "centre": {
+            "x": 0.0,
+            "y": 0.5
+          },
+          "width": 6.0,
+          "height": 1.0,
+          "opening": 0.2
+        },
+        {
+          "opening_id": "door_front",
+          "kind": "door",
+          "surface_id": "end_wall_front",
+          "centre": {
+            "x": 8.0,
+            "y": 1.5
+          },
+          "width": 3.0,
+          "height": 3.0
+        }
+      ]
+    },
+    "layout": "default",
+    "row_crops": [
+      {
+        "row": 1,
+        "crop_model": "simple",
+        "variety": "cherry_tomato"
       },
       {
-        "opening_id": "roof_vent_2",
-        "kind": "roof_vent",
-        "surface_id": "roof_2_right",
-        "centre": {
-          "x": 0.0,
-          "y": 0.5
-        },
-        "width": 6.0,
-        "height": 1.0,
-        "opening": 0.2
+        "row": 2,
+        "crop_model": "simple",
+        "variety": "cherry_tomato"
       },
       {
-        "opening_id": "roof_vent_3",
-        "kind": "roof_vent",
-        "surface_id": "roof_3_right",
-        "centre": {
-          "x": 0.0,
-          "y": 0.5
-        },
-        "width": 6.0,
-        "height": 1.0,
-        "opening": 0.2
+        "row": 3,
+        "crop_model": "simple",
+        "variety": "cherry_tomato"
       },
       {
-        "opening_id": "roof_vent_4",
-        "kind": "roof_vent",
-        "surface_id": "roof_4_right",
-        "centre": {
-          "x": 0.0,
-          "y": 0.5
-        },
-        "width": 6.0,
-        "height": 1.0,
-        "opening": 0.2
+        "row": 4,
+        "crop_model": "simple",
+        "variety": "cherry_tomato"
       },
       {
-        "opening_id": "door_front",
-        "kind": "door",
-        "surface_id": "end_wall_front",
-        "centre": {
-          "x": 8.0,
-          "y": 1.5
-        },
-        "width": 3.0,
-        "height": 3.0
+        "row": 5,
+        "crop_model": "simple",
+        "variety": "cherry_tomato"
+      },
+      {
+        "row": 6,
+        "crop_model": "simple",
+        "variety": "cherry_tomato"
+      },
+      {
+        "row": 7,
+        "crop_model": "simple",
+        "variety": "cherry_tomato"
+      },
+      {
+        "row": 8,
+        "crop_model": "simple",
+        "variety": "cherry_tomato"
       }
     ]
   },
-  "layout": "default",
+  "start_date": "2026-01-01",
+  "duration_days": 28,
+  "random_seed": 2401,
   "airflow": {
     "kind": "buoyancy"
   },

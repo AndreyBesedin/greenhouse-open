@@ -1,6 +1,6 @@
 {
   "$schema": "../scenario.schema.json",
-  "schema_version": 3,
+  "schema_version": 4,
   "greenhouse_id": "airflow_box",
   "name": "Airflow QA Box",
   "description": "Airflow QA case: air blown through a house from door to door, around one block between them, solved with OpenFOAM and compared with a prescribed breeze.",
@@ -10,45 +10,53 @@
     "layout": "The block, 1 m along the house, 2 m across and 1.5 m high, halfway between the doors. Its second layout, open, is the same house without the block.",
     "airflow": "The breeze it is compared with: the CFD inlet's speed, along the house."
   },
-  "variety": "cherry_tomato",
-  "rows": 1,
-  "columns": 1,
-  "start_date": "2026-01-01",
-  "duration_days": 10,
-  "random_seed": 404,
-  "envelope": {
-    "length": 12.0,
-    "width": 6.4,
-    "eave_height": 3.0,
-    "ridge_height": 3.65,
-    "openings": [
-      {
-        "opening_id": "door_front",
-        "kind": "door",
-        "surface_id": "end_wall_front",
-        "centre": {
-          "x": 3.2,
-          "y": 1.1
+  "installation": {
+    "installation_id": "airflow_box",
+    "name": "Airflow QA Box",
+    "envelope": {
+      "length": 12.0,
+      "width": 6.4,
+      "eave_height": 3.0,
+      "ridge_height": 3.65,
+      "openings": [
+        {
+          "opening_id": "door_front",
+          "kind": "door",
+          "surface_id": "end_wall_front",
+          "centre": {
+            "x": 3.2,
+            "y": 1.1
+          },
+          "width": 2.0,
+          "height": 2.2,
+          "opening": 1.0
         },
-        "width": 2.0,
-        "height": 2.2,
-        "opening": 1.0
-      },
+        {
+          "opening_id": "door_back",
+          "kind": "door",
+          "surface_id": "end_wall_back",
+          "centre": {
+            "x": 3.2,
+            "y": 1.1
+          },
+          "width": 2.0,
+          "height": 2.2,
+          "opening": 1.0
+        }
+      ]
+    },
+    "layout": "default",
+    "row_crops": [
       {
-        "opening_id": "door_back",
-        "kind": "door",
-        "surface_id": "end_wall_back",
-        "centre": {
-          "x": 3.2,
-          "y": 1.1
-        },
-        "width": 2.0,
-        "height": 2.2,
-        "opening": 1.0
+        "row": 1,
+        "crop_model": "simple",
+        "variety": "cherry_tomato"
       }
     ]
   },
-  "layout": "default",
+  "start_date": "2026-01-01",
+  "duration_days": 10,
+  "random_seed": 404,
   "airflow": {
     "kind": "uniform",
     "velocity_m_s": {
