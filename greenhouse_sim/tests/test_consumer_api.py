@@ -203,6 +203,8 @@ def test_what_is_not_a_consumer_route_or_request_is_refused(
         ("GET", f"{PREFIX}/runs/{run_id}/observations?limit=0"): 400,
         ("GET", f"{PREFIX}/runs/{run_id}/observations?after="): 400,
         ("GET", f"{PREFIX}/runs/{run_id}/events?limit="): 400,
+        ("GET", f"{PREFIX}/runs/{run_id}/outcomes?after=-1"): 400,
+        ("GET", f"{PREFIX}/runs/{run_id}/outcomes?limit="): 400,
         ("POST", f"{PREFIX}/runs"): 405,
     }
     for (method, path), status in cases.items():

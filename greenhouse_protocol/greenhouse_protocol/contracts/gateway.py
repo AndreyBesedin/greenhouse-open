@@ -279,17 +279,13 @@ def conformance_authorisation(
 type MakeGateway = Callable[[AuthorisationConfig, datetime], GatewayUnderTest]
 
 
-def check_gateway(make: MakeGateway, start: datetime, *, continues_clock: bool = True) -> list[str]:
+def check_gateway(make: MakeGateway, start: datetime) -> list[str]:
     """Holds a gateway to this module's rules, scenario by scenario, each on
     a gateway `make` gives for a run starting at `start`, under
     `conformance_authorisation()`. Returns the violations, empty when it
-    conforms. A gateway whose run never continues its clock into another,
-    as a simulator's playback only starts over, says so with
-    `continues_clock=False`, and is held to the rest."""
+    conforms."""
     violations: list[str] = []
     for scenario in _SCENARIOS:
-        if scenario is _carried and not continues_clock:
-            continue
         try:
             violations += [
                 f"{scenario.__name__.removeprefix('_')}: {v}"

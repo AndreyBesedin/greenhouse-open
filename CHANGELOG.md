@@ -19,11 +19,11 @@ breaks the conformance checks is a major version.
   consumer interface serves the outcome log:
   `GET /consumer/v1/runs/{run_id}/outcomes`.
 - `greenhouse-protocol`: the reference gateway acts through any executor
-  on its clock (`ClockedExecutor`), names it (`executor_ref`), knows a
-  run's controller targets from its items, and takes plans again when it
-  is started over after it finished. `check_gateway(continues_clock=False)`
-  holds a gateway whose run never continues its clock to every scenario
-  but that one.
+  on its clock (`ClockedExecutor`), names it (`executor_ref`), and takes
+  plans again when it is started over after it finished. It knows a run's
+  controller targets from its items, as its devices and plants: given
+  items without targets, it refuses a `set_target` as acting on what the
+  run has not.
 - `greenhouse-sim`: a run carries out a plan (P13.2, decision 0046).
   `RunRequest.plan` holds the protocol's `set_level` and `set_target`
   actions, each at a moment of the run or every day. The address's

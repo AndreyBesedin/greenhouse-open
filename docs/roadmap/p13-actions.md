@@ -826,8 +826,10 @@ What the design left to its first step, as P13.1 settles it:
   knows a run's controller targets from its items. The run is the executor
   (`greenhouse_sim.services.gateway.RunExecutor`), named
   `simulated_run:<run id>` in outcomes. The gateway contract's checks hold
-  the pair to every scenario but a clock that continues into another run,
-  which a playback never does (`check_gateway(continues_clock=False)`).
+  the pair to every scenario, a clock that continues into another run
+  among them, though a playback only starts its run over. A playback sets
+  no bound on the actions of its plans: the local operator's target
+  changes accumulate in one plan, a revision each.
 - **The lead time is the whole run.** A playback works every day out ahead
   of its clock, so an action joins the run's plan as soon as the gateway
   has it. The records from its moment are worked out again while the

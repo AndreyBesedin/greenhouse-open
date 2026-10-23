@@ -65,6 +65,7 @@ from typing import TYPE_CHECKING, Final
 
 from greenhouse_protocol.actions import Action, SetTarget
 from greenhouse_protocol.contracts.consumer import OutcomeBatch
+from greenhouse_protocol.contracts.gateway import GatewayLimits
 from greenhouse_protocol.contracts.memory_gateway import InMemoryGateway
 from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
@@ -81,6 +82,7 @@ from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.gateway import (
     LOCAL_AUTHORISATION,
     LOCAL_OPERATOR,
+    UNLIMITED,
     RunExecutor,
     run_items,
     run_kinds,
@@ -366,6 +368,9 @@ class Playback:
             executor=self._executor,
             executor_ref=ExecutorRef(kind=ExecutorKind.SIMULATED_RUN, id=self.run_id),
             items=run_items(played),
+            # As many actions as its run is given: the local operator's
+            # target changes accumulate in one plan, a revision each.
+            limits=GatewayLimits(max_actions=UNLIMITED, max_occurrences=UNLIMITED),
             greenhouse_id=self.greenhouse_id,
             run_id=self.run_id,
         )
@@ -502,6 +507,9 @@ class Playback:
             raise InvalidRequest("; ".join(receipt.errors))
         self._targets_planned = planned
         self._targets_revision += 1
+        if receipt.refused:
+            refused = ", ".join(str(ref) for ref in receipt.refused)
+            raise InvalidRequest(f"the run refuses the target changes {refused}")
 
     def _next_day(self) -> int:
         """The day to work out next: the day a target change is worked into,
@@ -571,13 +579,14 @@ class Playback:
         events = sorted(harvests, key=lambda e: (e.timestamp, e.plant_id or ""))
         worked = (self._observations.packed(observations), self._events.packed(events))
         with self._lock:
-            if changes != self._changes:
-                # Worked out under targets changed since: worked again.
-                return True
             # The clock moved as far as it could before this day: from now
             # on it moves into it. Time it spent waiting is not banked,
-            # however often anyone asked meanwhile.
+            # however often anyone asked meanwhile. What fell due meanwhile
+            # may have changed the run's plan too.
             self._advance()
+            if changes != self._changes:
+                # Worked out under a plan changed since: worked again.
+                return True
             del self._worked[day:]
             self._worked.append(worked)
             self._again_from = None
@@ -679,14 +688,11 @@ class Playback:
                     raise InvalidRequest("the run has ended: its targets change no more")
                 changes = tuple((moment, name, value) for name, value in targets.items())
                 # Checked as a run's target changes are; refused, nothing changes.
+                planned = self._executor.plan().actions
+                asked = RunPlan.requested(targets=changes).actions
                 run_schedule(
                     self._simulator.catalogue,
-                    replace(
-                        self._run(),
-                        plan=RunPlan.requested(
-                            targets=(*self._executor.plan().targeted(), *changes)
-                        ),
-                    ),
+                    replace(self._run(), plan=RunPlan.model_construct(actions=(*planned, *asked))),
                 )
                 self._plan_targets(changes)
                 return self._state()

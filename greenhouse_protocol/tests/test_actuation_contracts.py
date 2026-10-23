@@ -383,16 +383,6 @@ def test_executors_of_one_kind_are_checked_with_an_action_of_their_kind() -> Non
     ]
 
 
-def test_a_gateway_whose_clock_never_continues_is_held_to_the_rest() -> None:
-    """A playback only starts its run over: the scenario of a restart that
-    continues the clock is not asked of it."""
-    violations = check_gateway(
-        lambda config, start: _gateway(config, start), START, continues_clock=False
-    )
-
-    assert violations == []
-
-
 def test_a_gateway_names_the_executor_it_is_given() -> None:
     """A gateway acting through an executor of its own, such as a
     simulator's run, names it in its outcomes and in a plan's

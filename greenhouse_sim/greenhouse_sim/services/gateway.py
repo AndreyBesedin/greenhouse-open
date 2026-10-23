@@ -34,6 +34,7 @@ from greenhouse_protocol.contracts.memory_gateway import effect_of
 from greenhouse_protocol.plan import Principal, PrincipalKind
 
 from greenhouse_sim.climate.commands import TARGET_EVERY_S
+from greenhouse_sim.domain.equipment import Target
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services.runs import PlannedAt, RunPlan
 from greenhouse_sim.services.scenarios import plant_ids
@@ -80,7 +81,7 @@ def run_kinds(config: ScenarioConfig) -> frozenset[ActionKind]:
     return frozenset({ActionKind.SET_LEVEL, ActionKind.SET_TARGET})
 
 
-_TARGETS: Final = frozenset({"heating_day", "heating_night"})
+_TARGETS: Final = frozenset(target.value for target in Target)
 
 
 @dataclass

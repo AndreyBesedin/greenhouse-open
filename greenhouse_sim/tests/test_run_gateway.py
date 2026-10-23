@@ -22,7 +22,7 @@ from greenhouse_sim.api.consumer import consumer_respond
 from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import playback
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR, RunExecutor, run_items, run_kinds
-from greenhouse_sim.services.playback import Epochs, PlaybackCommand
+from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
@@ -36,6 +36,8 @@ RUN: Final = ExecutorRef(kind=ExecutorKind.SIMULATED_RUN, id="run")
 DEVICE: Final = sorted(run_items(CONFIG).devices)[0]
 # Every record there is, in one batch.
 ALL: Final = 10**6
+# More target changes than the protocol's default limit of actions to a plan.
+MANY_CHANGES: Final = 120
 
 
 def _executor(**given: Any) -> RunExecutor:
@@ -69,8 +71,7 @@ def test_a_run_keeps_the_executor_contract() -> None:
 
 def test_a_gateway_acting_through_a_run_keeps_the_gateway_contract() -> None:
     """The protocol's gateway, with a run as its executor, as a playback
-    holds it; its clock never continues into another run, which a playback
-    only starts over."""
+    holds it, held to every scenario of the contract."""
 
     def make(authorisation: AuthorisationConfig, start: Any) -> InMemoryGateway:
         return InMemoryGateway(
@@ -81,7 +82,7 @@ def test_a_gateway_acting_through_a_run_keeps_the_gateway_contract() -> None:
             items=run_items(CONFIG),
         )
 
-    assert check_gateway(make, START, continues_clock=False) == []
+    assert check_gateway(make, START) == []
 
 
 def test_a_run_carries_out_levels_and_targets_it_has() -> None:
@@ -173,13 +174,17 @@ def test_a_target_changed_while_the_run_plays_ends_in_an_outcome_a_consumer_read
         TargetSet(target="heating_night", value_c=22.0),
         LOCAL_OPERATOR,
     )
-    assert done.resolved_at == START + timedelta(hours=6, minutes=1)
+    done_at_s = 6 * HOUR_S + 60.0
+    assert done.resolved_at == START + timedelta(seconds=done_at_s)
     assert done.executor == ExecutorRef(kind=ExecutorKind.SIMULATED_RUN, id=started.run_id)
 
     clock.now = 8.0
     played.set_targets({"heating_day": 25.0})
     restarted = played.command(PlaybackCommand.RESTART)
     assert restarted.targets == []
+    # Its records worked out again from the first change it had made, now
+    # the scenario's own run's.
+    assert restarted.worked_out_s == done_at_s
     polls.append(_poll(simulator, f"{path}?after={polls[-1].next}"))
     polls.append(_poll(simulator, path))
     (dropped,) = polls[-1].outcomes
@@ -202,3 +207,14 @@ class _Clock:
 
     def __call__(self) -> float:
         return self.now
+
+
+def test_a_playback_takes_as_many_target_changes_as_it_is_given(simulator: Simulator) -> None:
+    """Each change is a revision of the local operator's plan of them,
+    which holds every change of the epoch: past the protocol's default of a
+    hundred actions to a plan too."""
+    played = Playback(simulator, SCENARIO, seconds_per_day=24.0, clock=_Clock())
+    for n in range(MANY_CHANGES):
+        played.set_targets({"heating_day": 15.0 + n % 10})
+
+    assert len(played.state().targets) == MANY_CHANGES
