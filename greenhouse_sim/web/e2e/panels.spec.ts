@@ -221,9 +221,12 @@ test("the panels are dark, or light if chosen, and the golden views keep theirs 
 test("each side's panels fold to a stripe at the view's edge, and open as they were (#304)", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto("/?scene=example");
-  await expect(page.getByTestId("scene-status")).toContainText("Showing the example scene");
+  // A scenario's sections in a short window: the info panel overflows.
+  await page.setViewportSize({ width: 1280, height: 420 });
+  await page.goto("/?scenario=climate_box");
+  await expect(page.getByTestId("scene-status")).toContainText("climate_box", { timeout: 30_000 });
+  await unfold(page, "Display");
+  await unfold(page, "Weather");
   const info = page.locator(".info-panel");
   const hud = page.locator(".hud");
   const infoStripe = page.getByTestId("info-stripe");
@@ -233,6 +236,7 @@ test("each side's panels fold to a stripe at the view's edge, and open as they w
     panel.scrollTop = 40;
   });
   const scrolled = await info.evaluate((panel) => panel.scrollTop);
+  expect(scrolled).toBeGreaterThan(0);
 
   await test.step("by the pointer, the info panel folds to its stripe at the left edge", async () => {
     await page.getByRole("button", { name: "Fold the info panel" }).click();
@@ -250,6 +254,15 @@ test("each side's panels fold to a stripe at the view's edge, and open as they w
     await expect(hud).toBeHidden();
     const stripe = await viewStripe.boundingBox();
     expect((stripe?.x ?? 0) + (stripe?.width ?? 0)).toBeGreaterThan(1260);
+  });
+
+  await test.step("the view's controls, asked for by their key, open the View panel to be seen", async () => {
+    await page.keyboard.press("?");
+    await expect(page.getByRole("region", { name: "Moving around the view" })).toBeVisible();
+    await expect(hud).toBeVisible();
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Fold the View panel" }).click();
+    await expect(hud).toBeHidden();
   });
 
   await test.step("opened again, each is as it was, the info panel where it was scrolled", async () => {

@@ -21,9 +21,13 @@ export function storedFolds(): ReadonlySet<PanelSide> {
   }
 }
 
-/** Which sides' panels are folded, kept for the next visit, and a fold or
- * unfold of one. */
-export function usePanelFolds(): [ReadonlySet<PanelSide>, (side: PanelSide) => void] {
+/** Which sides' panels are folded, kept for the next visit; a fold or unfold
+ * of one, and an unfold of one, if it is folded. */
+export function usePanelFolds(): [
+  ReadonlySet<PanelSide>,
+  (side: PanelSide) => void,
+  (side: PanelSide) => void,
+] {
   const [folded, setFolded] = useState(storedFolds);
   useEffect(() => {
     try {
@@ -41,5 +45,15 @@ export function usePanelFolds(): [ReadonlySet<PanelSide>, (side: PanelSide) => v
       return next;
     });
   }
-  return [folded, toggle];
+  function unfold(side: PanelSide): void {
+    setFolded((was) => {
+      if (!was.has(side)) {
+        return was;
+      }
+      const next = new Set(was);
+      next.delete(side);
+      return next;
+    });
+  }
+  return [folded, toggle, unfold];
 }
