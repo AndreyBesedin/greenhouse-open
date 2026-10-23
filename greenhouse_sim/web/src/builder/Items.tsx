@@ -77,18 +77,25 @@ export function fieldValue(text: string): number | boolean | string {
 export function Items({
   installation,
   snapshot,
+  chosen,
   busy,
+  onChoose,
   onEdit,
+  children,
 }: {
   installation: Installation;
   snapshot: SceneSnapshot | null;
+  /** The items chosen, by their identifiers: here, or in the view. */
+  chosen: ReadonlySet<string>;
   busy: boolean;
+  onChoose: (chosen: ReadonlySet<string>) => void;
   onEdit: (edit: Edit, said: string) => void;
+  /** What is shown of the items chosen, below their list: the inspector. */
+  children?: ReactNode;
 }) {
   const heading = useId();
   const items = listed(installation);
   const surfaces = snapshot === null ? [] : hosts(snapshot);
-  const [chosen, setChosen] = useState<ReadonlySet<string>>(new Set());
   const chosenNow = items.filter((item) => chosen.has(item.id));
   const all = items.length > 0 && items.every((item) => chosen.has(item.id));
   const [kind, setKind] = useState<ItemKind | OpeningKind>("fan");
@@ -167,7 +174,7 @@ export function Items({
     } else {
       next.delete(id);
     }
-    setChosen(next);
+    onChoose(next);
   }
 
   function place(event: FormEvent<HTMLFormElement>): void {
@@ -255,7 +262,7 @@ export function Items({
                   aria-label="Choose every item"
                   checked={all}
                   onChange={(event) =>
-                    setChosen(new Set(event.target.checked ? items.map((item) => item.id) : []))
+                    onChoose(new Set(event.target.checked ? items.map((item) => item.id) : []))
                   }
                 />
               </th>
@@ -284,6 +291,7 @@ export function Items({
         </table>
       )}
 
+      {children}
       {chosenNow.length > 0 && (
         <fieldset className="builder-chosen">
           <legend>With {named}</legend>

@@ -66,6 +66,100 @@ export function formFields(schema: Record<string, unknown>): FormField[] {
   });
 }
 
+/** A field of one of the schema's models, as an inspector shows it: its
+ * path within the model, a nested object's by its own (`base.x`). A flag is
+ * a field that is true or false. */
+export interface ModelField extends Omit<FormField, "kind" | "name" | "required"> {
+  path: string;
+  kind: FieldKind | "flag";
+}
+
+// How deep the inspector follows a model's nested objects: a position's
+// coordinates, a sensor's imperfections, not a transform's rotation.
+const DEEPEST = 1;
+
+/** The one kind of value a property holds, if it allows null besides. */
+function oneOf(property: Record<string, unknown>): Record<string, unknown> | null {
+  if (!Array.isArray(property.anyOf)) {
+    return property;
+  }
+  const kinds = property.anyOf.filter((each) => isObject(each) && each.type !== "null");
+  const [only] = kinds;
+  return kinds.length === 1 && isObject(only) ? { ...property, ...only } : null;
+}
+
+function capitalised(key: string): string {
+  const words = key.replaceAll("_", " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** The fields of the schema's model `name`, in their order, a nested
+ * object's by their path; a list, and a field that holds values of more
+ * than one kind, are left out, for an edit of their own. */
+export function modelFields(
+  schema: Record<string, unknown>,
+  name: string,
+  prefix = "",
+  depth = 0,
+  within = "",
+): ModelField[] {
+  const definitions = isObject(schema.$defs) ? schema.$defs : {};
+  const model = definitions[name];
+  const properties = isObject(model) && isObject(model.properties) ? model.properties : {};
+  return Object.entries(properties).flatMap(([key, property]): ModelField[] => {
+    const field = oneOf(resolved(schema, property));
+    // A list has edits of its own; a constant, such as a kind, is no field
+    // to change.
+    if (field === null || field.type === "array" || "const" in field) {
+      return [];
+    }
+    const path = `${prefix}${key}`;
+    const reference = isObject(property) && typeof property.$ref === "string" ? property.$ref : "";
+    // A field is titled by its own title, never its model's ("Vector3",
+    // "OpeningKind"), or else by its name.
+    const own = isObject(property) ? property.title : undefined;
+    const title =
+      typeof own === "string"
+        ? own
+        : reference === "" && typeof field.title === "string"
+          ? field.title
+          : capitalised(key);
+    if (isObject(field.properties)) {
+      // A nested field is titled by what holds it too: "Base X".
+      return depth < DEEPEST
+        ? modelFields(
+            schema,
+            reference.replace("#/$defs/", ""),
+            `${path}.`,
+            depth + 1,
+            `${within}${title} `,
+          )
+        : [];
+    }
+    const choices = Array.isArray(field.enum) ? field.enum.map(String) : [];
+    const kind: ModelField["kind"] =
+      choices.length > 0
+        ? "choice"
+        : field.type === "boolean"
+          ? "flag"
+          : field.type === "integer"
+            ? "integer"
+            : field.type === "number"
+              ? "number"
+              : "text";
+    return [
+      {
+        path,
+        title: `${within}${title}`,
+        kind,
+        choices,
+        ...(typeof field.minimum === "number" ? { minimum: field.minimum } : {}),
+        ...(typeof field.maximum === "number" ? { maximum: field.maximum } : {}),
+      },
+    ];
+  });
+}
+
 /** What the form shows at first: the schema's first example, each value as
  * an input holds it, and nothing for a field it does not give. */
 export function startingValues(schema: Record<string, unknown>): Record<string, string> {

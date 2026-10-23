@@ -10,6 +10,7 @@ export type Edit =
   | RepeatOpenings
   | SpaceOpenings
   | SetField
+  | SetValue
   | RemoveItems;
 export type Equipment = Fan | Heater | Dehumidifier;
 export type Sensor = PointSensor | Camera;
@@ -239,6 +240,15 @@ export interface SpaceOpenings {
 export interface SetField {
   edit?: "set_field";
   items: string[];
+  path: string;
+  value: JsonValue;
+}
+/**
+ * One field of the installation, by its path from the top
+ * (`envelope.length`), given a value.
+ */
+export interface SetValue {
+  edit?: "set_value";
   path: string;
   value: JsonValue;
 }

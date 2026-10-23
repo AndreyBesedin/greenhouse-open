@@ -236,6 +236,18 @@ def set_field(
     return _with_items(draft, replaced=changed_items)
 
 
+def set_value(draft: Installation, path: str, value: JsonValue) -> Installation:
+    """One field of the installation given a value, by its path from the
+    top, as its file writes it: `envelope.length`, `layout.crop_rows.rows`.
+    The installation is checked whole, as a file of it is read; refused if
+    it has no field there, or its models refuse the value."""
+    if not path:
+        raise ValueError("name a field")
+    fields = draft.model_dump()
+    _with_value(fields, path.split("."), value, draft.installation_id, path)
+    return Installation.model_validate(fields)
+
+
 def remove_items(draft: Installation, item_ids: Sequence[str]) -> Installation:
     """The chosen equipment, sensors, doors and vents taken out of the
     draft. Refused if none is chosen, or one is not the draft's."""
@@ -365,16 +377,29 @@ def _placed_opening(opening: Opening, name: str, surface_id: str, centre: Point2
 def _with_value(
     fields: dict[str, object], keys: list[str], value: JsonValue, name: str, path: str
 ) -> dict[str, object]:
-    """The item's fields with the one at `keys` given `value`, refused if it
-    has none there."""
+    """The fields with the one at `keys` given `value`, a list's item by its
+    place (`zones.0.height`); refused if they have none there."""
     *parents, last = keys
     holder: object = fields
     for key in parents:
-        holder = holder.get(key) if isinstance(holder, dict) else None
-    if not isinstance(holder, dict) or last not in holder:
+        holder = _inside(holder, key)
+    if isinstance(holder, dict) and last in holder:
+        holder[last] = value
+    elif isinstance(holder, list) and last.isdigit() and int(last) < len(holder):
+        holder[int(last)] = value
+    else:
         raise ValueError(f"{name} has no {path}")
-    holder[last] = value
     return fields
+
+
+def _inside(holder: object, key: str) -> object:
+    """What `holder` holds at `key`: a mapping's by its name, a list's by
+    its place; None if it holds nothing there."""
+    if isinstance(holder, dict):
+        return holder.get(key)
+    if isinstance(holder, list) and key.isdigit() and int(key) < len(holder):
+        return holder[int(key)]
+    return None
 
 
 def _with_items(

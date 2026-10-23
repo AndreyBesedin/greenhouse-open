@@ -123,7 +123,7 @@ function give(within: HTMLElement, row: number, variety: string): void {
     throw new Error(`no row ${row}`);
   }
   click(box);
-  enter(within.querySelector(".builder-give input") as HTMLInputElement, variety);
+  enter(within.querySelector(".builder-rows .builder-give input") as HTMLInputElement, variety);
   click(button(within, "Give the chosen rows this crop"));
   click(box);
 }

@@ -3,6 +3,7 @@ removed many at a time, and what the assessment says of items that collide
 (P12.3)."""
 
 import math
+import re
 
 import pytest
 from greenhouse_protocol.sensor import CameraIntrinsics
@@ -19,6 +20,7 @@ from greenhouse_sim.builder.items import (
     repeat_items,
     repeat_openings,
     set_field,
+    set_value,
     space_items,
     space_openings,
     spread_openings,
@@ -374,3 +376,28 @@ def test_only_items_whose_boxes_meet_are_tested_for_the_boxes_themselves(
     assert tested == []
     assert "items_collide" in _codes(near)
     assert tested == [1]
+
+
+def test_any_field_of_the_house_is_set_by_its_path_and_checked_whole() -> None:
+    house = _house()
+
+    longer = set_value(house, "envelope.length", 14.0)
+    wider = set_value(house, "layout.crop_rows.row_spacing", 1.8)
+
+    assert (longer.envelope.length, longer.layout) == (14.0, house.layout)
+    assert wider.layout.crop_rows is not None
+    assert wider.layout.crop_rows.row_spacing == 1.8
+    with pytest.raises(ValueError, match=re.escape("my_greenhouse has no envelope.colour")):
+        set_value(house, "envelope.colour", "green")
+    with pytest.raises(ValidationError, match="ridge"):
+        set_value(house, "envelope.ridge_height", 3.0)
+
+
+def test_a_list_items_field_is_set_by_its_place() -> None:
+    house = place_openings(_house(), VENT, ["roof_1_right"])
+
+    opened = set_value(house, "envelope.openings.0.opening", 0.5)
+
+    assert opened.envelope.openings[0].opening == 0.5
+    with pytest.raises(ValueError, match=re.escape("has no envelope.openings.3.opening")):
+        set_value(house, "envelope.openings.3.opening", 0.5)

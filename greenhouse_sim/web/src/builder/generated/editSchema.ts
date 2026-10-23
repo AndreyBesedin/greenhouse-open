@@ -711,6 +711,32 @@ export const EDIT_SCHEMA = {
       "title": "SetField",
       "type": "object"
     },
+    "SetValue": {
+      "additionalProperties": false,
+      "description": "One field of the installation, by its path from the top\n(`envelope.length`), given a value.",
+      "properties": {
+        "edit": {
+          "const": "set_value",
+          "default": "set_value",
+          "title": "Edit",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/JsonValue"
+        }
+      },
+      "required": [
+        "path",
+        "value"
+      ],
+      "title": "SetValue",
+      "type": "object"
+    },
     "SpaceItems": {
       "additionalProperties": false,
       "description": "The chosen pieces of equipment and sensors spaced evenly along an\naxis of the greenhouse.",
@@ -827,6 +853,7 @@ export const EDIT_SCHEMA = {
       "repeat_items": "#/$defs/RepeatItems",
       "repeat_openings": "#/$defs/RepeatOpenings",
       "set_field": "#/$defs/SetField",
+      "set_value": "#/$defs/SetValue",
       "space_items": "#/$defs/SpaceItems",
       "space_openings": "#/$defs/SpaceOpenings",
       "spread_openings": "#/$defs/SpreadOpenings"
@@ -857,6 +884,9 @@ export const EDIT_SCHEMA = {
     },
     {
       "$ref": "#/$defs/SetField"
+    },
+    {
+      "$ref": "#/$defs/SetValue"
     },
     {
       "$ref": "#/$defs/RemoveItems"

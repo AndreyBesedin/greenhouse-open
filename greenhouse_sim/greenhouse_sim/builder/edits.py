@@ -20,6 +20,7 @@ from greenhouse_sim.builder.items import (
     repeat_items,
     repeat_openings,
     set_field,
+    set_value,
     space_items,
     space_openings,
     spread_openings,
@@ -141,6 +142,18 @@ class SetField(_Edit):
         return set_field(draft, self.items, self.path, self.value)
 
 
+class SetValue(_Edit):
+    """One field of the installation, by its path from the top
+    (`envelope.length`), given a value."""
+
+    edit: Literal["set_value"] = "set_value"
+    path: str = Field(min_length=1)
+    value: JsonValue
+
+    def apply(self, draft: Installation) -> Installation:
+        return set_value(draft, self.path, self.value)
+
+
 class RemoveItems(_Edit):
     """The chosen equipment, sensors, doors and vents taken out."""
 
@@ -160,6 +173,7 @@ type Edit = Annotated[
     | RepeatOpenings
     | SpaceOpenings
     | SetField
+    | SetValue
     | RemoveItems,
     Field(discriminator="edit"),
 ]
