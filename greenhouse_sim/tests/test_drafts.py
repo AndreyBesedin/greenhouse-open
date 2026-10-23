@@ -18,7 +18,11 @@ from greenhouse_sim.builder.drafts import (
     DraftStoreError,
     StaleDraft,
 )
-from greenhouse_sim.builder.portable import export_installation
+from greenhouse_sim.builder.portable import (
+    MAX_IMPORT_BYTES,
+    InstallationFileError,
+    export_installation,
+)
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.scenarios.installation import Installation
 
@@ -177,8 +181,25 @@ def test_a_deleted_draft_is_gone_with_its_revisions(tmp_path: Path) -> None:
     assert store.drafts() == []
     with pytest.raises(DraftNotFound, match="no draft 'my_greenhouse'"):
         store.open("my_greenhouse")
-    # Its identifier is free again, from revision 1.
-    assert store.save(_house(), on=None).revision == 1
+    # Its identifier is free again, its revisions numbered on.
+    assert store.save(_house(), on=None).revision == 3
+
+
+def test_a_change_on_a_deleted_draft_is_refused_by_the_one_made_in_its_place(
+    tmp_path: Path,
+) -> None:
+    """Revision numbers are never given twice under one identifier: a window
+    still on the deleted draft's revision 1 does not take the new draft's
+    place."""
+    store = _store(tmp_path)
+    store.save(_house(name="The old house"), on=None)
+    store.delete("my_greenhouse", on=1)
+    renewed = store.save(_house(name="The new house"), on=None)
+
+    with pytest.raises(StaleDraft, match="at revision 2, not 1"):
+        store.save(_house(name="An edit of the old house"), on=1)
+    assert renewed.revision == 2
+    assert store.open("my_greenhouse").installation.name == "The new house"
 
 
 def test_what_is_not_kept_is_not_found(tmp_path: Path) -> None:
@@ -207,6 +228,9 @@ def test_a_draft_that_cannot_be_written_is_not_saved(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="JSON"):
         store.save(unwritable, on=None)
+    # Nor one its file's import would refuse, which could never be opened.
+    with pytest.raises(InstallationFileError, match="larger than"):
+        store.save(_house(name="x" * MAX_IMPORT_BYTES), on=None)
     assert store.drafts() == []
 
 

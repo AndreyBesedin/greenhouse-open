@@ -8,6 +8,7 @@ refused with the reason. The manifests name
 
 import json
 from datetime import date
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -22,6 +23,7 @@ from greenhouse_sim.scenarios.manifest_files import (
     SCHEMA_FROM_A_MANIFEST_FILE,
     SCHEMA_VERSION,
     InvalidManifest,
+    _migrated,
     manifest_digest,
     manifest_ids,
     manifest_json_schema,
@@ -36,24 +38,15 @@ def _manifest(scenario_id: str) -> dict[str, Any]:
     return document
 
 
-def _in_format_3(scenario_id: str, document: dict[str, Any]) -> dict[str, Any]:
-    """A format 4 manifest as format 3 wrote it: its installation's house as
-    fields of its own, its rows and columns its layout's crop rows and their
-    positions, and the crop every row grows."""
-    installation = document["installation"]
-    (crop,) = {(each["crop_model"], each["variety"]) for each in installation["row_crops"]}
-    crop_rows = load_layout(scenario_id, installation["layout"]).crop_rows
-    assert crop_rows is not None
-    house = {
-        "variety": crop[1],
-        "rows": crop_rows.rows,
-        "columns": crop_rows.positions_per_row,
-        "crop_model": crop[0],
-        "envelope": installation["envelope"],
-        "layout": installation["layout"],
-    }
-    rest = {key: value for key, value in document.items() if key != "installation"}
-    return rest | house | {"schema_version": 3}
+# The packaged manifests as format 3 wrote them, before format 4 held their
+# houses as installations: kept as they were, so that their migration is
+# held to what they were, not to what it made of them.
+FORMAT_3 = Path(__file__).parent / "fixtures" / "format_3_manifests"
+
+
+def _in_format_3(scenario_id: str) -> dict[str, Any]:
+    document: dict[str, Any] = json.loads((FORMAT_3 / f"{scenario_id}.json").read_text())
+    return document
 
 
 def _installation(document: dict[str, Any], **changes: Any) -> dict[str, Any]:
@@ -69,6 +62,9 @@ def test_the_schema_holds_the_house_as_an_installation_and_refuses_what_it_does_
     installation = schema["$defs"]["Installation"]
     assert installation["properties"]["layout"]["type"] == "string"
     assert installation["additionalProperties"] is False
+    # Every crop row of a scenario grows a crop, so its installation has one.
+    assert "row_crops" in installation["required"]
+    assert installation["properties"]["row_crops"]["minItems"] == 1
     assert not {"envelope", "layout", "rows", "columns", "variety"} & set(schema["properties"])
     assert schema["properties"]["schema_version"] == {"const": SCHEMA_VERSION}
     assert {"schema_version", "installation"} <= set(schema["required"])
@@ -105,7 +101,7 @@ def test_a_format_1_manifest_is_read_as_format_2_its_identifiers_held_to_it() ->
     """Format 2 narrowed the identifiers an item may have (#254); a format 1
     manifest is otherwise the same, and is read as format 2, or refused for
     an identifier format 2 does not allow, by name."""
-    older = _in_format_3("climate_box", _manifest("climate_box")) | {"schema_version": 1}
+    older = _in_format_3("climate_box") | {"schema_version": 1}
     assert scenario_from_manifest("climate_box", older) == SCENARIO_REGISTRY["climate_box"]
 
     openings = older["envelope"]["openings"]
@@ -142,7 +138,7 @@ def test_an_older_manifest_has_its_thermostat_read_as_its_controls_heating_loop(
     """Format 3 writes a heater's thermostat as its control's heating loop
     (P11.1); a format 1 or 2 manifest with one is migrated to it, its note
     on the thermostat a note on the control."""
-    current = _in_format_3("reference_greenhouse", _manifest("reference_greenhouse"))
+    current = _in_format_3("reference_greenhouse")
     older = _with_a_thermostat(current, version)
 
     assert "control" not in older
@@ -166,15 +162,45 @@ def test_a_thermostat_is_refused_from_format_3_on_and_a_control_before_it() -> N
 def test_a_format_3_manifest_holds_its_house_as_an_installation(scenario_id: str) -> None:
     """Format 4 holds a scenario's house as an installation (P12.1); a
     format 3 manifest is read as one, each row growing its crop, to the same
-    scenario: its run is the same run."""
-    older = _in_format_3(scenario_id, _manifest(scenario_id))
+    scenario: its run is the same run. The packaged manifests are what the
+    migration makes of theirs, their notes on the house on its parts."""
+    older = _in_format_3(scenario_id)
 
-    assert "installation" not in older
+    assert older["schema_version"] == 3
     assert scenario_from_manifest(scenario_id, older) == SCENARIO_REGISTRY[scenario_id]
+    assert _migrated(scenario_id, older, 3) == _manifest(scenario_id)
+
+
+def test_a_format_3_note_on_the_house_is_a_note_on_its_installation() -> None:
+    older = _in_format_3("reference_greenhouse")
+    notes = older["notes"]
+    migrated: Any = _migrated(
+        "reference_greenhouse", older | {"notes": notes | {"rows": "Four."}}, 3
+    )
+
+    assert migrated["notes"]["installation.envelope"] == notes["envelope"]
+    assert migrated["notes"]["installation.row_crops"] == notes["crop_model"]
+    assert migrated["notes"]["installation.layout"] == f"{notes['layout']} Four."
+    assert not {"envelope", "layout", "crop_model", "rows"} & set(migrated["notes"])
+
+
+def test_a_format_3_manifest_names_its_crop_and_is_called_by_its_name_or_identifier() -> None:
+    older = _in_format_3("climate_box")
+
+    unnamed = scenario_from_manifest("climate_box", older | {"name": ""})
+    assert unnamed.name == ""
+    renamed: Any = _migrated("climate_box", older | {"name": ""}, 3)
+    assert renamed["installation"]["name"] == "climate_box"
+    with pytest.raises(InvalidManifest, match="a crop's variety is named, not ''"):
+        scenario_from_manifest("climate_box", older | {"variety": ""})
+    with pytest.raises(InvalidManifest, match="a crop model is one of simple, organ, not 'tree'"):
+        scenario_from_manifest("climate_box", older | {"crop_model": "tree"})
+    with pytest.raises(InvalidManifest, match=r"a crop model is one of .*, not \['organ'\]"):
+        scenario_from_manifest("climate_box", older | {"crop_model": ["organ"]})
 
 
 def test_a_format_3_manifest_is_refused_where_its_plants_are_not_its_rows() -> None:
-    older = _in_format_3("climate_box", _manifest("climate_box"))
+    older = _in_format_3("climate_box")
 
     with pytest.raises(InvalidManifest, match="its 1 rows of 32 plants are not its layout's crop"):
         scenario_from_manifest("climate_box", older | {"rows": 1, "columns": 32})
@@ -259,6 +285,15 @@ def test_notes_are_only_on_what_the_scenario_has() -> None:
     notes = document["notes"] | {"heaters": "two"}
     with pytest.raises(InvalidManifest, match="notes on what it does not have"):
         scenario_from_manifest("climate_box", document | {"notes": notes})
+    # The house is noted by the part of its installation a note is about,
+    # not by the fields format 3 wrote it in.
+    for about in ("rows", "envelope", "installation.lenght"):
+        with pytest.raises(
+            InvalidManifest, match=f"notes on what it does not have: \\['{about}'\\]"
+        ):
+            scenario_from_manifest("climate_box", document | {"notes": {about: "A note."}})
+    for about in ("installation", "installation.envelope", "installation.row_crops"):
+        assert scenario_from_manifest("climate_box", document | {"notes": {about: "A note."}})
     with pytest.raises(InvalidManifest, match="notes are written by what each is about"):
         scenario_from_manifest("climate_box", document | {"notes": ["a note"]})
 
