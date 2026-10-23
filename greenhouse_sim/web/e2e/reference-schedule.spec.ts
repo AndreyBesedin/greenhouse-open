@@ -46,7 +46,7 @@ test("reference schedule: the run vents by its own clock, its thermostat heats i
     await run.getByRole("slider", { name: "Time of day" }).fill("43200");
     await expect(moment).toHaveText("day 2, 12 h 00 min", ARRIVES);
     await expect(heater).toHaveText(/, by its thermostat at 18 °C$/, ARRIVES);
-    await expect(air).toHaveText("Air 18.1 °C, all off 13.6 °C", ARRIVES);
+    await expect(air).toHaveText("Air 17.6 °C, all off 13.5 °C", ARRIVES);
   });
 
   await test.step("switched off by hand, the heater is the command's, not the thermostat's", async () => {

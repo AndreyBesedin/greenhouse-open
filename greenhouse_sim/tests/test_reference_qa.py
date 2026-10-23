@@ -96,32 +96,32 @@ MOMENTS: Final = {
 # the air's speed in the right fan's jet (m/s), what the vents exchange
 # (m³/s), and the crop's leaves, fruits and red fruits. A change to any
 # model they come from moves them, and should be meant.
-CROP_ON_OPENING_DAY: Final = {"leaves": 10384.0, "fruits": 741.0, "red_fruits": 1.0}
+CROP_ON_OPENING_DAY: Final = {"leaves": 10373.0, "fruits": 741.0, "red_fruits": 1.0}
 REFERENCE: Final[dict[str, dict[str, float]]] = {
-    "dawn": {"house_air_c": 15.815854, "sun_elevation_deg": 10.842524, **CROP_ON_OPENING_DAY},
+    "dawn": {"house_air_c": 15.754785, "sun_elevation_deg": 10.842524, **CROP_ON_OPENING_DAY},
     "noon": {
-        "house_air_c": 28.155517,
+        "house_air_c": 28.136028,
         "sun_elevation_deg": 59.18513,
         "jet_m_s": 1.391237,
         "vents_exchange_m3_s": 1.07656,
         **CROP_ON_OPENING_DAY,
     },
-    "evening": {"house_air_c": 15.844551, "sun_elevation_deg": 9.236631, **CROP_ON_OPENING_DAY},
+    "evening": {"house_air_c": 16.152659, "sun_elevation_deg": 9.236631, **CROP_ON_OPENING_DAY},
     # The house as one volume does not feel its fans: only the jet stops.
     "fans-off": {
-        "house_air_c": 28.155517,
+        "house_air_c": 28.136028,
         "sun_elevation_deg": 59.18513,
         "jet_m_s": 0.0,
         **CROP_ON_OPENING_DAY,
     },
     "vents-shut": {
-        "house_air_c": 38.155198,
+        "house_air_c": 38.11858,
         "sun_elevation_deg": 59.18513,
         "vents_exchange_m3_s": 0.0,
         **CROP_ON_OPENING_DAY,
     },
     "young": {
-        "house_air_c": 20.444744,
+        "house_air_c": 20.443174,
         "sun_elevation_deg": 38.727684,
         "leaves": 4257.0,
         "fruits": 0.0,

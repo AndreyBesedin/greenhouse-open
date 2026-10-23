@@ -51,7 +51,9 @@ page instead.
 
 - **The house:** a small Venlo-style house of three 3.2 m spans and three
   4 m bays, 4 m to the gutters, near Amsterdam; a roof vent along each
-  span's ridge and a door in the front gable.
+  span's ridge and a door in the front gable. Inside, a lattice girder
+  carries the gutters across each frame, so the posts stand at the side
+  walls, clear of the paths between the rows.
 - **The crop:** 32 cherry tomatoes in four rows of eight, grown organ by
   organ from transplants, each plant's traits drawn from seed 42, on a
   high-wire double row lowered every week and harvested every week.
