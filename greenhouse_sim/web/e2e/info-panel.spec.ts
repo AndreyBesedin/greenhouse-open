@@ -116,3 +116,17 @@ test("info panel: the sections sit in titled cards by topic (#306)", async ({ pa
   await expect(card("Equipment").locator("details.equipment-fold")).toBeVisible();
   await expect(card("Outside").getByRole("region", { name: "Weather" })).toBeVisible();
 });
+
+test("info panel: a card with nothing in it is not drawn (#306)", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  // The sensor lab has no equipment and no openings, nothing is probed, and
+  // no run is played back or worked out.
+  await page.goto("/?scenario=sensor_lab");
+  await expect(page.getByTestId("scene-status")).toContainText("sensor_lab, day 0", {
+    timeout: 20_000,
+  });
+  const panel = page.locator(".info-panel");
+  await expect(panel.getByRole("region", { name: "Weather" })).toBeVisible();
+
+  await expect(panel.locator(".panel-card-title")).toHaveText(["House", "Outside"]);
+});

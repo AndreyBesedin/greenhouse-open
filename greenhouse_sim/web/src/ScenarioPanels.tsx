@@ -6,7 +6,7 @@ import { BranchComparison } from "./checkpoints/BranchComparison";
 import { checkpointRun, comparable } from "./checkpoints/branches";
 import { CheckpointsPanel } from "./checkpoints/CheckpointsPanel";
 import { type CheckpointSummary, restored } from "./checkpoints/checkpoints";
-import { EquipmentControls } from "./EquipmentControls";
+import { EquipmentControls, equipmentIn } from "./EquipmentControls";
 import { ClimateSchedule } from "./fields/ClimateSchedule";
 import { ClimateTime, describeClimateRun } from "./fields/ClimateTime";
 import type { FieldView, Slice } from "./fields/display";
@@ -178,6 +178,10 @@ export function ScenarioPanels({
   // Whether the run played back leads the simulation's card: a JSX `false`
   // when the view does not follow one.
   const leads = children !== undefined && children !== null && children !== false;
+  // A card is drawn only with a section in it: a scenario may have no
+  // openings, no equipment or no weather.
+  const openings = snapshot === null ? [] : openingsIn(snapshot);
+  const equipped = snapshot !== null && equipmentIn(snapshot).length > 0;
   // The sections grouped in titled cards by topic (#306): the run played
   // back and the climate run's moment and course; the house's air, its
   // targets and its schedule; its equipment, openings and probes; and the
@@ -280,7 +284,7 @@ export function ScenarioPanels({
           />
         )}
       </PanelCard>
-      {(probing || climate || snapshot !== null) && (
+      {(probing || climate || openings.length > 0 || equipped) && (
         <PanelCard title="Equipment">
           {(probing || climate) && (
             <details className="probes-fold" {...fold("probes")}>
@@ -311,7 +315,7 @@ export function ScenarioPanels({
               snapshot={snapshot}
               requested={openingsAt(
                 source,
-                openingsIn(snapshot).map((opening) => opening.openingId),
+                openings.map((opening) => opening.openingId),
               )}
               fold={fold("openings")}
               onChange={(openings) => onSource(withOpenings(source, openings))}
@@ -328,20 +332,22 @@ export function ScenarioPanels({
           )}
         </PanelCard>
       )}
-      <PanelCard title="Outside">
-        <WeatherPanel
-          state={weather}
-          day={weatherDay}
-          weathers={weathers}
-          chosen={source.weather}
-          time={time}
-          onChoose={(chosen) => onSource(withWeather(source, chosen))}
-          clouds={source.clouds}
-          onClouds={(clouds) => onSource(withClouds(source, clouds))}
-          windFrom={source.wind}
-          onWindFrom={(wind) => onSource(withWind(source, wind))}
-        />
-      </PanelCard>
+      {weather.status !== "none" && (
+        <PanelCard title="Outside">
+          <WeatherPanel
+            state={weather}
+            day={weatherDay}
+            weathers={weathers}
+            chosen={source.weather}
+            time={time}
+            onChoose={(chosen) => onSource(withWeather(source, chosen))}
+            clouds={source.clouds}
+            onClouds={(clouds) => onSource(withClouds(source, clouds))}
+            windFrom={source.wind}
+            onWindFrom={(wind) => onSource(withWind(source, wind))}
+          />
+        </PanelCard>
+      )}
     </>
   );
 }
