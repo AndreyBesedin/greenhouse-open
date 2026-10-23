@@ -6,11 +6,17 @@ from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt
 
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.scenarios.installation import Installation, RowCrop
-from greenhouse_sim.world.envelope import Envelope
+from greenhouse_sim.world.envelope import MOST_BAYS, MOST_SPANS, Envelope
 from greenhouse_sim.world.geometry import Point2
 from greenhouse_sim.world.identifiers import ItemId
 from greenhouse_sim.world.layout import Layout
-from greenhouse_sim.world.rows import TOMATO_GUTTER, CropRows, RowSupport
+from greenhouse_sim.world.rows import (
+    MOST_POSITIONS_PER_ROW,
+    MOST_ROWS,
+    TOMATO_GUTTER,
+    CropRows,
+    RowSupport,
+)
 
 
 class BasicSetup(BaseModel):
@@ -24,10 +30,11 @@ class BasicSetup(BaseModel):
     width_m: PositiveFloat
     eave_height_m: PositiveFloat
     ridge_height_m: PositiveFloat
-    spans: PositiveInt = 1
-    bays: PositiveInt = 1
-    rows: PositiveInt
-    plants_per_row: PositiveInt
+    # Bounded as the envelope and the rows are, before either is made.
+    spans: PositiveInt = Field(default=1, le=MOST_SPANS)
+    bays: PositiveInt = Field(default=1, le=MOST_BAYS)
+    rows: PositiveInt = Field(le=MOST_ROWS)
+    plants_per_row: PositiveInt = Field(le=MOST_POSITIONS_PER_ROW)
     plant_pitch_m: PositiveFloat
     row_spacing_m: PositiveFloat
     support_height_m: PositiveFloat

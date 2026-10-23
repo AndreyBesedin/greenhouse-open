@@ -212,6 +212,7 @@ already taken.
 """
 
 import json
+import math
 from collections.abc import Callable, Sequence
 from http import HTTPStatus
 from typing import Final
@@ -480,10 +481,21 @@ def _json(body: bytes) -> JsonValue:
     """A request's body, read as JSON: standard JSON, whose numbers are all
     finite, not Python's, which reads `NaN` and `Infinity` too."""
     try:
-        parsed: JsonValue = json.loads(body, parse_constant=_not_a_number)
+        parsed: JsonValue = json.loads(body, parse_constant=_not_a_number, parse_float=_finite)
     except ValueError:
         raise InvalidRequest("the body is not JSON") from None
+    except RecursionError:
+        raise InvalidRequest("the body is JSON nested too deeply to read") from None
     return parsed
+
+
+def _finite(written: str) -> float:
+    """A number as JSON writes it, refused if Python reads it as infinite,
+    as it reads `1e999`."""
+    number = float(written)
+    if not math.isfinite(number):
+        raise InvalidRequest(f"the body holds {written}, too large a number")
+    return number
 
 
 def _text(body: bytes) -> str:
