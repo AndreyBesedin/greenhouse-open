@@ -28,8 +28,8 @@ from pydantic import BaseModel, ConfigDict, JsonValue
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.digests import short_digest
 from greenhouse_sim.domain.crop import CropModel
+from greenhouse_sim.services.climate_runs import climate_run
 from greenhouse_sim.services.crop import run_crop
-from greenhouse_sim.services.fields import climate_run
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.sensors import observations

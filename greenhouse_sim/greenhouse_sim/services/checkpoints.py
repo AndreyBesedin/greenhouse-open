@@ -54,13 +54,9 @@ from greenhouse_sim.digests import short_digest
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.scenarios.manifest_files import opening_file
+from greenhouse_sim.services.climate_runs import climate_run, run_schedule, seed_kept_climate_runs
 from greenhouse_sim.services.crop import run_crop, seed_kept_crops
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
-from greenhouse_sim.services.fields import (
-    climate_run,
-    run_schedule,
-    seed_kept_climate_runs,
-)
 from greenhouse_sim.services.kept_states import KeptState, keep
 from greenhouse_sim.services.runs import Commanded, RunRequest, checked_moment
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids, scenario, version

@@ -38,8 +38,9 @@ from greenhouse_sim.scenarios.layout_files import LAYOUT_SCHEMA_FILE, layout_jso
 from greenhouse_sim.scenarios.manifest_files import MANIFEST_SCHEMA_FILE, manifest_json_schema
 from greenhouse_sim.scene.snapshot import snapshot_json_schema
 from greenhouse_sim.services.checkpoints import CheckpointSummary
+from greenhouse_sim.services.climate_readings import EquipmentAt
 from greenhouse_sim.services.crop import CropPlant, PlantsLight
-from greenhouse_sim.services.fields import EquipmentAt, FieldNames
+from greenhouse_sim.services.fields import FieldNames
 from greenhouse_sim.services.live import LiveState
 from greenhouse_sim.services.plants import LabChecks
 from greenhouse_sim.services.playback import PlaybackState

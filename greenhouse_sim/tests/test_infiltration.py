@@ -17,7 +17,7 @@ from greenhouse_sim.climate.transport import Transport
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
-from greenhouse_sim.services.fields import _climate_day
+from greenhouse_sim.services.climate_runs import climate_day
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.weather.sources import ConstantWeather, RunWeather
@@ -119,10 +119,8 @@ def test_a_house_leaks_faster_in_a_wind() -> None:
 
 
 def test_opening_a_vent_under_dry_outside_air_dries_the_house(simulator: Simulator) -> None:
-    shut = _climate_day(
-        simulator, ("climate_box", "default", "cold_spring_day", (), (), (), ())
-    ).run
-    venting = _climate_day(
+    shut = climate_day(simulator, ("climate_box", "default", "cold_spring_day", (), (), (), ())).run
+    venting = climate_day(
         simulator, ("climate_box", "default", "cold_spring_day", (), (("roof_vent", 1.0),), (), ())
     ).run
 

@@ -27,7 +27,7 @@ from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
-from greenhouse_sim.services.fields import _climate_day
+from greenhouse_sim.services.climate_runs import climate_day
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.weather.sources import ConstantWeather, RunWeather, WeatherSeries
@@ -177,7 +177,7 @@ def test_a_cold_spell_cools_the_glass_at_once_and_the_air_more_slowly() -> None:
 def test_the_climate_box_heated_settles_where_its_still_glass_passes_the_heaters_heat(
     simulator: Simulator,
 ) -> None:
-    house = _climate_day(
+    house = climate_day(
         simulator, ("climate_box", "default", "default", (("heater", 1.0),), (), (), ())
     ).house
     still_u = glazing_u_w_m2k(SINGLE_GLASS, 0.0)

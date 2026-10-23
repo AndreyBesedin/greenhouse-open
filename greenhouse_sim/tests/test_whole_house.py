@@ -20,7 +20,7 @@ from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
-from greenhouse_sim.services.fields import _climate_day
+from greenhouse_sim.services.climate_runs import climate_day
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.weather.presets import COLD_SPRING_DAY
@@ -49,7 +49,7 @@ def _run(
     levels: tuple[tuple[str, float], ...] = (),
     openings: tuple[tuple[str, float], ...] = (),
 ) -> ClimateRun:
-    return _climate_day(
+    return climate_day(
         simulator, ("climate_box", "default", "default", levels, openings, (), ())
     ).run
 
@@ -118,7 +118,7 @@ def test_shut_off_from_the_outside_the_water_it_loses_is_removed_or_condensed() 
 
 
 def test_it_follows_the_weather_through_a_day(simulator: Simulator) -> None:
-    house = _climate_day(
+    house = climate_day(
         simulator, ("climate_box", "default", "cold_spring_day", (), (), (), ())
     ).house
     dawn, afternoon = house.air_at(6.5 * 3600), house.air_at(15.5 * 3600)
@@ -154,7 +154,7 @@ def test_it_takes_over_anothers_air_up_to_where_their_schedules_differ(
     first = WholeHouse(_run(simulator))
     first.air_at(4 * hour)
     second = WholeHouse(
-        _climate_day(simulator, ("climate_box", "default", "default", (), (), heated, ())).run
+        climate_day(simulator, ("climate_box", "default", "default", (), (), heated, ())).run
     )
 
     second.carry_on_from(first)
@@ -191,7 +191,7 @@ def test_it_takes_over_what_another_works_out_after_it_carried_on(
     heated = ((4 * hour, "heater", 1.0),)
     first = WholeHouse(_run(simulator))
     second = WholeHouse(
-        _climate_day(simulator, ("climate_box", "default", "default", (), (), heated, ())).run
+        climate_day(simulator, ("climate_box", "default", "default", (), (), heated, ())).run
     )
     second.carry_on_from(first)
     first.air_at(3 * hour)
@@ -214,7 +214,7 @@ def test_it_waits_for_another_working_the_stretch_it_needs_and_no_longer(
     heated = ((2 * hour, "heater", 1.0),)
     first = WholeHouse(_run(simulator))
     second = WholeHouse(
-        _climate_day(simulator, ("climate_box", "default", "default", (), (), heated, ())).run
+        climate_day(simulator, ("climate_box", "default", "default", (), (), heated, ())).run
     )
     second.carry_on_from(first)
     advance = first._advance
@@ -244,7 +244,7 @@ def test_its_air_is_the_same_whatever_moments_were_asked_for_before(simulator: S
     # A viewer scrubbing a run asks for moments between its minutes: the air
     # later is worked out from the minutes kept, never from those, under a
     # weather and a sun that change through the stretch.
-    run = _climate_day(simulator, ("climate_box", "default", "cold_spring_day", (), (), (), ())).run
+    run = climate_day(simulator, ("climate_box", "default", "cold_spring_day", (), (), (), ())).run
     scrubbed = WholeHouse(run)
     for moment in (90.0, 3_599.5, 43_230.0):
         scrubbed.air_at(moment)
@@ -256,7 +256,7 @@ def test_its_air_is_the_same_whatever_moments_were_asked_for_before(simulator: S
 
 
 def test_its_mean_through_a_stretch_weighs_each_minute_alike(simulator: Simulator) -> None:
-    house = _climate_day(
+    house = climate_day(
         simulator, ("climate_box", "default", "cold_spring_day", (), (), (), ())
     ).house
     minutes = [house.air_at(60.0 * minute) for minute in range(1441)]

@@ -13,8 +13,8 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.climate.day import FROM_THE_START_S, ClimateDay, window_start
 from greenhouse_sim.climate.house import grid_mean
 from greenhouse_sim.domain.air import AirQuantity
-from greenhouse_sim.services import fields, sensors
-from greenhouse_sim.services.fields import _climate_day
+from greenhouse_sim.services import climate_readings, sensors
+from greenhouse_sim.services.climate_runs import climate_day
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import HOUR_S
@@ -26,7 +26,7 @@ SHUT_TEMPERATURE_C = 0.6
 
 
 def _day(simulator: Simulator, commands: tuple[tuple[float, str, float], ...] = ()) -> ClimateDay:
-    return _climate_day(simulator, ("climate_box", "default", "default", HEATED, (), commands, ()))
+    return climate_day(simulator, ("climate_box", "default", "default", HEATED, (), commands, ()))
 
 
 @pytest.mark.parametrize(
@@ -143,7 +143,7 @@ def test_sensors_sample_the_grid_then_the_whole_house(simulator: Simulator) -> N
 
 
 def test_probes_read_the_grid_run_that_draws_the_moment(simulator: Simulator) -> None:
-    probes = fields.climate_probes(
+    probes = climate_readings.climate_probes(
         simulator,
         RunRequest("climate_box", levels={"heater": 1.0}),
         [(6.0, 3.2, 1.5)],

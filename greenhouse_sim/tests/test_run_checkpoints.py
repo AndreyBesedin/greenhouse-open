@@ -14,9 +14,9 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.manifest_files import manifest_digest
 from greenhouse_sim.services import checkpoints, kept_states
+from greenhouse_sim.services.climate_runs import climate_run
 from greenhouse_sim.services.crop import run_crop
 from greenhouse_sim.services.errors import InvalidRequest
-from greenhouse_sim.services.fields import climate_run
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
 

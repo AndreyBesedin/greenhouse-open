@@ -36,7 +36,7 @@ from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.scene.snapshot import SceneSnapshot
-from greenhouse_sim.services import crop, fields, scenarios, weather
+from greenhouse_sim.services import climate_readings, crop, fields, scenarios, weather
 from greenhouse_sim.services.checkpoints import load_openings
 from greenhouse_sim.services.run_state import run_state
 from greenhouse_sim.services.runs import Commanded, RunRequest
@@ -227,7 +227,7 @@ def _moment(simulator: Simulator, moment: Moment) -> tuple[dict[str, Any], dict[
         if AirQuantity.VELOCITY in moment.channels:
             probes["jet_m_s"] = _speed(document, IN_THE_JET)
     if moment.openings:
-        passing = fields.openings(simulator, run, time_s=moment.time_s)
+        passing = climate_readings.openings(simulator, run, time_s=moment.time_s)
         drawn["openings"] = _rounded(passing.model_dump(mode="json"))
         probes["vents_exchange_m3_s"] = sum((o.exchange_m3_s for o in passing.openings), 0.0)
     probes |= _crop_counts(simulator, days_ended(moment.time_s))

@@ -3,10 +3,11 @@ mode's developer panel: the clock, the house's air, the crop's days, the
 equipment's levels and the latest commands it was given, each sensor's
 freshness and each camera's latest frame.
 
-Each part is what its own service gives at the moment (`services.fields`,
-`services.sensors`), read through its contract, not from another process's
-internals. The run is asked for as its climate field is, and refused as it
-is. None of it is the sensors' truth, which leaves by its own path.
+Each part is what its own service gives at the moment
+(`services.climate_readings`, `services.sensors`), read through its
+contract, not from another process's internals. The run is asked for as its
+climate field is, and refused as it is. None of it is the sensors' truth,
+which leaves by its own path.
 """
 
 from datetime import datetime, timedelta
@@ -18,7 +19,8 @@ from greenhouse_sim.climate.commands import Command
 from greenhouse_sim.core.clock import days_ended, run_day
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.sensors.log import SensorFreshness
-from greenhouse_sim.services.fields import equipment_at, house_air_at, run_schedule
+from greenhouse_sim.services.climate_readings import equipment_at, house_air_at
+from greenhouse_sim.services.climate_runs import run_schedule
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import SceneChanges, changed, plant_ids, scenario
 from greenhouse_sim.services.sensors import CameraAt, sensors_at

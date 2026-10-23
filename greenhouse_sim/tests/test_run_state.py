@@ -10,9 +10,9 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.climate.commands import Command
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.catalogue import PACKAGED
-from greenhouse_sim.services import fields, sensors
+from greenhouse_sim.services import climate_readings, sensors
+from greenhouse_sim.services.climate_readings import equipment_at
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
-from greenhouse_sim.services.fields import equipment_at
 from greenhouse_sim.services.run_state import LATEST_COMMANDS, RunState, run_state
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
@@ -27,7 +27,7 @@ SECOND_NOON_S = DAY_S + NOON_S
 
 def test_the_clock_and_the_house_air_are_the_runs_at_the_moment(simulator: Simulator) -> None:
     state = run_state(simulator, RunRequest("climate_box", levels=HEATED), until_s=TEN_MINUTES_S)
-    trace = fields.house_air(
+    trace = climate_readings.house_air(
         simulator, RunRequest("climate_box", levels=HEATED), until_s=TEN_MINUTES_S
     )
 

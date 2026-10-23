@@ -17,7 +17,7 @@ from types import TracebackType
 from typing import Self
 
 from greenhouse_sim.scenarios.catalogue import Catalogue
-from greenhouse_sim.services import checkpoints, crop, fields, kept_states, sunlight
+from greenhouse_sim.services import checkpoints, climate_runs, crop, kept_states, sunlight
 from greenhouse_sim.services.consumer import Cursors
 from greenhouse_sim.services.live import DEFAULT_SECONDS_PER_DAY, LiveRuns
 from greenhouse_sim.services.playback import Playbacks
@@ -37,7 +37,7 @@ class Simulator:
         # What the services keep, this simulator's alone.
         self.states = kept_states.new_store()
         self.sunlight = sunlight.new_store()
-        self.climate_runs = fields.new_store()
+        self.climate_runs = climate_runs.new_store()
         self.crops = crop.new_store()
         self.checkpoints = checkpoints.new_store(self.states)
         self._closing = threading.Lock()
