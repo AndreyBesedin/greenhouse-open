@@ -105,6 +105,7 @@ from greenhouse_protocol.contracts.conformance import check_events, check_observ
 from greenhouse_protocol.event import Event
 from greenhouse_protocol.instant import Instant
 from greenhouse_protocol.observation import Observation
+from greenhouse_protocol.run import RunEpoch
 
 # The path segment every route of this version lives under.
 CONSUMER_INTERFACE_VERSION: Final = "v1"
@@ -143,6 +144,12 @@ class RunDescriptor(BaseModel):
     started_at: Instant
     clock: RunClock
     interface_version: str = CONSUMER_INTERFACE_VERSION
+    # The run and epoch whose clock this one continues, as the gateway that
+    # started it says (decision 0046): a run of a physical installation
+    # whose gateway started again, or whose equipment changed, the wall
+    # clock going on. None when its clock starts at the run's start, as a
+    # simulated run's restart does; left out of its JSON then.
+    continues_from: RunEpoch | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class RunList(BaseModel):

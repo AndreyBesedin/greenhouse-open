@@ -1,0 +1,365 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Action": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/SetLevel"
+        },
+        {
+          "$ref": "#/$defs/SetTarget"
+        },
+        {
+          "$ref": "#/$defs/Water"
+        },
+        {
+          "$ref": "#/$defs/Harvest"
+        },
+        {
+          "$ref": "#/$defs/Lower"
+        },
+        {
+          "$ref": "#/$defs/RemoveLeaf"
+        },
+        {
+          "$ref": "#/$defs/Inspect"
+        }
+      ]
+    },
+    "ActionId": {
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9_.-]+$",
+      "type": "string"
+    },
+    "ActionRef": {
+      "additionalProperties": false,
+      "description": "Which action a record is about: a planned action, one occurrence of a\nrecurring one, or the fallback carried out in its place. `str()` spells\nit for people, `harvest@3` or `vent/fallback`; records keep the parts.",
+      "properties": {
+        "action_id": {
+          "$ref": "#/$defs/ActionId"
+        },
+        "occurrence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Occurrence"
+        },
+        "fallback": {
+          "default": false,
+          "title": "Fallback",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "action_id"
+      ],
+      "title": "ActionRef",
+      "type": "object"
+    },
+    "Harvest": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "harvest",
+          "default": "harvest",
+          "title": "Kind",
+          "type": "string"
+        },
+        "plant_id": {
+          "$ref": "#/$defs/ItemName"
+        },
+        "scope": {
+          "$ref": "#/$defs/HarvestScope"
+        },
+        "organ_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ItemName"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "plant_id",
+        "scope"
+      ],
+      "title": "Harvest",
+      "type": "object"
+    },
+    "HarvestScope": {
+      "enum": [
+        "ripe",
+        "fruit",
+        "truss"
+      ],
+      "title": "HarvestScope",
+      "type": "string"
+    },
+    "Identifier": {
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9_.-]+$",
+      "type": "string"
+    },
+    "Inspect": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "inspect",
+          "default": "inspect",
+          "title": "Kind",
+          "type": "string"
+        },
+        "plant_id": {
+          "$ref": "#/$defs/ItemName"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plant_id",
+        "reason"
+      ],
+      "title": "Inspect",
+      "type": "object"
+    },
+    "Instant": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "ItemName": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "Lower": {
+      "additionalProperties": false,
+      "description": "Lower a plant's stem: by so many centimetres, by so many internodes,\nor until its top has so much head room under its wire. Exactly one.",
+      "properties": {
+        "kind": {
+          "const": "lower",
+          "default": "lower",
+          "title": "Kind",
+          "type": "string"
+        },
+        "plant_id": {
+          "$ref": "#/$defs/ItemName"
+        },
+        "by_cm": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "By Cm"
+        },
+        "by_internodes": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "By Internodes"
+        },
+        "to_head_room_m": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "To Head Room M"
+        }
+      },
+      "required": [
+        "plant_id"
+      ],
+      "title": "Lower",
+      "type": "object"
+    },
+    "Name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "RemoveLeaf": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "remove_leaf",
+          "default": "remove_leaf",
+          "title": "Kind",
+          "type": "string"
+        },
+        "plant_id": {
+          "$ref": "#/$defs/ItemName"
+        },
+        "leaf_id": {
+          "$ref": "#/$defs/ItemName"
+        }
+      },
+      "required": [
+        "plant_id",
+        "leaf_id"
+      ],
+      "title": "RemoveLeaf",
+      "type": "object"
+    },
+    "SetLevel": {
+      "additionalProperties": false,
+      "description": "A device's level, from 0 (off) to 1 (full), or `auto` to hand the\ndevice back to whatever control loop runs it. A door or vent is a\ndevice, its level how far it is open.",
+      "properties": {
+        "kind": {
+          "const": "set_level",
+          "default": "set_level",
+          "title": "Kind",
+          "type": "string"
+        },
+        "device_id": {
+          "$ref": "#/$defs/ItemName"
+        },
+        "level": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "const": "auto",
+              "type": "string"
+            }
+          ],
+          "title": "Level"
+        }
+      },
+      "required": [
+        "device_id",
+        "level"
+      ],
+      "title": "SetLevel",
+      "type": "object"
+    },
+    "SetTarget": {
+      "additionalProperties": false,
+      "description": "A climate controller's heating setpoint, by day or by night, in °C.\nEach kind of target has its own unit and range: the venting and humidity\ntargets, when a controller has them, are members of their own beside\nthis one.",
+      "properties": {
+        "kind": {
+          "const": "set_target",
+          "default": "set_target",
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "enum": [
+            "heating_day",
+            "heating_night"
+          ],
+          "title": "Target",
+          "type": "string"
+        },
+        "value_c": {
+          "maximum": 40.0,
+          "minimum": 0.0,
+          "title": "Value C",
+          "type": "number"
+        }
+      },
+      "required": [
+        "target",
+        "value_c"
+      ],
+      "title": "SetTarget",
+      "type": "object"
+    },
+    "Water": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "water",
+          "default": "water",
+          "title": "Kind",
+          "type": "string"
+        },
+        "plant_id": {
+          "$ref": "#/$defs/ItemName"
+        },
+        "amount_ml": {
+          "exclusiveMinimum": 0.0,
+          "maximum": 2000.0,
+          "title": "Amount Ml",
+          "type": "number"
+        }
+      },
+      "required": [
+        "plant_id",
+        "amount_ml"
+      ],
+      "title": "Water",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "assignment_id": {
+      "$ref": "#/$defs/Identifier"
+    },
+    "run_id": {
+      "$ref": "#/$defs/Name"
+    },
+    "ref": {
+      "$ref": "#/$defs/ActionRef"
+    },
+    "action": {
+      "$ref": "#/$defs/Action"
+    },
+    "at": {
+      "$ref": "#/$defs/Instant"
+    },
+    "deadline": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Instant"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "assignment_id",
+    "run_id",
+    "ref",
+    "action",
+    "at"
+  ],
+  "title": "Assignment",
+  "type": "object"
+}

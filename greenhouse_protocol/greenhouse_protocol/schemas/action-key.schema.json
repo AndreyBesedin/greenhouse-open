@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "ActionId": {
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9_.-]+$",
+      "type": "string"
+    },
+    "ActionRef": {
+      "additionalProperties": false,
+      "description": "Which action a record is about: a planned action, one occurrence of a\nrecurring one, or the fallback carried out in its place. `str()` spells\nit for people, `harvest@3` or `vent/fallback`; records keep the parts.",
+      "properties": {
+        "action_id": {
+          "$ref": "#/$defs/ActionId"
+        },
+        "occurrence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Occurrence"
+        },
+        "fallback": {
+          "default": false,
+          "title": "Fallback",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "action_id"
+      ],
+      "title": "ActionRef",
+      "type": "object"
+    },
+    "Identifier": {
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9_.-]+$",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "An action as a caller saw it, to cancel it: in a plan, a revision and\nan epoch. A key whose action a later revision replaced, or whose epoch\nhas ended, is stale: refused, and nothing cancelled. An occurrence of\nNone, for a recurring action, means every occurrence still to come.",
+  "properties": {
+    "plan_id": {
+      "$ref": "#/$defs/Identifier"
+    },
+    "epoch": {
+      "minimum": 0,
+      "title": "Epoch",
+      "type": "integer"
+    },
+    "revision": {
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "ref": {
+      "$ref": "#/$defs/ActionRef"
+    }
+  },
+  "required": [
+    "plan_id",
+    "epoch",
+    "revision",
+    "ref"
+  ],
+  "title": "ActionKey",
+  "type": "object"
+}

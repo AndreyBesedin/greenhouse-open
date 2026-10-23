@@ -592,7 +592,7 @@ within the day; the action format needs no change for it.
 
 | Step | What | Commit title | Status |
 | --- | --- | --- | --- |
-| P13.1 | The protocol's types and contracts: `Action`, `ActionId`, `ActionRef`, `PlannedAction`, `Plan`, `Principal`, `Grant`, `AuthorisationGroup`, `AuthorisationConfig`, `ActionOutcome`, `ActionEffect`, `ExecutorRef`, `Assignment`, `ExecutionReport`, the gateway and executor contracts (revocation, status, at most once; listing the actions as they stand, `ActionKey`, `ActionState`; cancelling chosen actions; the epoch on every write; the gateway's limits; carrying actions into a run that continues the clock, as `RunDescriptor.continues_from` says, and dropping them from one that starts over) and `ActionNotExecutable`; checks (a malformed or stale plan refused whole, the graph checked as given, recurrences bounded, grants and delegation, the order across plans, one outcome per action) as conformance functions and their tests, the executor's with one that drops messages, and the gateway's with an in-memory gateway on a clock that continues; the published JSON Schemas. The old names stay as deprecated aliases; the protocol's minor version moves and the changelog says what each became. | `feat(protocol): one action, plan, gateway and executor format` | Planned |
+| P13.1 | The protocol's types and contracts: `Action`, `ActionId`, `ActionRef`, `PlannedAction`, `Plan`, `Principal`, `Grant`, `AuthorisationGroup`, `AuthorisationConfig`, `ActionOutcome`, `ActionEffect`, `ExecutorRef`, `Assignment`, `ExecutionReport`, the gateway and executor contracts (revocation, status, at most once; listing the actions as they stand, `ActionKey`, `ActionState`; cancelling chosen actions; the epoch on every write; the gateway's limits; carrying actions into a run that continues the clock, as `RunDescriptor.continues_from` says, and dropping them from one that starts over) and `ActionNotExecutable`; checks (a malformed or stale plan refused whole, the graph checked as given, recurrences bounded, grants and delegation, the order across plans, one outcome per action) as conformance functions and their tests, the executor's with one that drops messages, and the gateway's with an in-memory gateway on a clock that continues; the published JSON Schemas. The old names stay, deprecated; the changelog says what each became, and the version moves at the next release (decision 0045). | `feat(protocol): one action, plan, gateway and executor format` | In progress: the records |
 | P13.2 | The run carries out a plan of today's kinds: levels, openings, daily commands and targets become a plan internally; `RunRequest` holds it; the address's spellings are read into it. Every run id, replay digest and kept opening day unchanged. Checkpoints in a new format, format 3 read. | `refactor(sim): the run carries out its schedule as a plan` | Planned |
 | P13.3 | The simulator's gateway: the playback holds its run's plan and revisions, schedules them onto the run as its executor, writes the outcome log and serves it on the consumer interface; steering as the gateway's rule; the actions as they stand, cancelling chosen ones, and dropping them when the playback starts over. The gateway contract's conformance tests run against it. | `feat(sim): the playback as its run's gateway` | Planned |
 | P13.4 | Authorisation in the gateway: principals on every planned action, bound to the authenticated submitter or granted on its behalf; plan ownership; groups and grants in a versioned configuration, an input of the run, its changes recorded; checked when a plan is given and when each action falls due, refusals as outcomes; the local operator group. | `feat(sim): the gateway authorises every action` | Planned |
@@ -726,6 +726,37 @@ consumer following:
     carried, with that reason; the others keep their ids, principals and
     dependencies, and an assigned one keeps its assignment.
 12. A plan of today's commands and targets alone: the run id is today's.
+
+## Settled in P13.1
+
+What the design left to its first step, as P13.1 settles it:
+
+- **Modules.** The records are `actions`, `plan`, `authorisation`,
+  `outcome`, `assignment` and `run`; the contracts are `contracts/gateway`
+  and `contracts/execution`. Their JSON Schemas are published in the
+  package, `greenhouse_protocol/schemas/`, each held to its record's
+  export (`greenhouse_protocol/tests/test_published_schemas.py`).
+- **Versions.** A feature does not move versions: a release does
+  (decision 0045). The new records are additive and the old names stay
+  as they are, so nothing breaks before P13.9 removes them, the release
+  after which moves the protocol's minor version.
+- **Deprecation.** The old names are deprecated in their docstrings, the
+  README and the changelog. A runtime warning comes when the simulator
+  carries the new format out, so that nothing warns before there is
+  something to move to.
+- **Recurring edges.** Two recurring actions may wait for one another only
+  if they recur alike, the same period and the same end, so that
+  occurrence `n` pairs with occurrence `n`. A recurring as-soon-as-possible
+  action needs a deadline, its anchor.
+- **Targets of a grant.** By device, plant and controller target. Rows wait
+  for an installation's description to name them.
+- **`set_target`.** One member today, the heating setpoint by day or by
+  night, in °C from 0 to 40, its field `value_c`; P11's targets join as
+  members of their own.
+- **`continues_from`** is left out of a descriptor's JSON when unset, so
+  that every descriptor written before reads and writes as it did.
+- **An executor's report** has a `status` of `done`, `failed` or
+  `refused` (`ReportStatus`), apart from the deprecated `ExecutionStatus`.
 
 ## Decided
 
