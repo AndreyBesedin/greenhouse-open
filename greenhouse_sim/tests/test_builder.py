@@ -2,6 +2,7 @@
 exchanged as a file (P12.0, decision 0050)."""
 
 import json
+import math
 
 import pytest
 from pydantic import ValidationError
@@ -139,7 +140,7 @@ def test_rows_without_a_crop_are_listed_by_number() -> None:
 def test_a_row_given_two_crops_or_none_of_the_layouts_is_refused() -> None:
     data = basic_installation(_values()).model_dump()
 
-    with pytest.raises(ValidationError, match="more than one crop"):
+    with pytest.raises(ValidationError, match=r"row 1 has more than one crop, at \[0\] and \[2\]"):
         InstallationDraft.model_validate(data | {"row_crops": data["row_crops"] * 2})
     beyond = [{"row": 3, "crop_model": "organ", "variety": "cherry"}]
     with pytest.raises(ValidationError, match=r"rows \[3\], beyond the layout's 2 rows"):
@@ -215,6 +216,103 @@ def test_a_file_that_is_no_installation_is_refused(text: str, field: str, said: 
 
     (problem,) = refused.value.problems
     assert (problem.field, said in problem.message) == (field, True)
+
+
+def test_a_file_giving_a_row_two_crops_says_where() -> None:
+    document = json.loads(export_installation(basic_installation(_values())))
+    document["row_crops"].append(document["row_crops"][0])
+
+    with pytest.raises(InstallationFileError) as refused:
+        import_installation(json.dumps(document))
+
+    (problem,) = refused.value.problems
+    assert problem.field == "row_crops"
+    assert "row 1 has more than one crop, at [0] and [2]" in problem.message
+
+
+@pytest.mark.parametrize(
+    ("part", "field"),
+    [
+        # `Envelope` and `Vector3` ignore a field they do not have.
+        (("envelope",), "envelope.colour"),
+        (("envelope", "origin", "position"), "envelope.origin.position.colour"),
+        # `RowSupport` refuses one itself.
+        (("layout", "crop_rows", "support"), "layout.crop_rows.support.colour"),
+    ],
+)
+def test_a_field_no_model_of_a_draft_has_is_refused_by_its_path(
+    part: tuple[str, ...], field: str
+) -> None:
+    document = json.loads(export_installation(basic_installation(_values())))
+    holder = document
+    for key in part:
+        holder = holder[key]
+    holder["colour"] = "green"
+
+    with pytest.raises(InstallationFileError) as refused:
+        import_installation(json.dumps(document))
+
+    assert [problem.field for problem in refused.value.problems] == [field]
+
+
+@pytest.mark.parametrize(
+    ("changes", "field"),
+    [
+        ({"rows": 10**9}, "layout.crop_rows.rows"),
+        ({"positions_per_row": 10**9}, "layout.crop_rows.positions_per_row"),
+    ],
+)
+def test_a_small_file_asking_for_a_crop_too_large_is_refused_before_it_is_laid_out(
+    changes: dict[str, int], field: str
+) -> None:
+    document = json.loads(export_installation(basic_installation(_values())))
+    document["layout"]["crop_rows"] |= changes
+    document["row_crops"] = []
+
+    with pytest.raises(InstallationFileError) as refused:
+        import_installation(json.dumps(document))
+
+    assert [problem.field for problem in refused.value.problems] == [field]
+
+
+def test_a_file_whose_support_is_too_short_for_two_legs_reads() -> None:
+    # 2 cm long, less than its two end legs' 4 cm.
+    document = json.loads(export_installation(basic_installation(_values(plants_per_row=1))))
+    support = document["layout"]["crop_rows"]["support"]
+    support |= {"overhang": 0.01, "leg_spacing": 1.0, "slab": None}
+
+    draft = import_installation(json.dumps(document))
+
+    legs = [f for f in draft.layout.fixtures() if f.fixture_id.startswith("row_1_support_1_leg")]
+    assert len(legs) == 1
+
+
+@pytest.mark.parametrize("constant", ["NaN", "Infinity", "-Infinity"])
+def test_a_number_json_has_not_is_refused(constant: str) -> None:
+    text = export_installation(basic_installation(_values()))
+    text = text.replace('"length": 12.0', f'"length": {constant}', 1)
+
+    with pytest.raises(InstallationFileError, match=f"not JSON: {constant} is not a JSON number"):
+        import_installation(text)
+
+
+def test_a_draft_holding_a_number_json_has_not_is_not_written() -> None:
+    draft = basic_installation(_values())
+    origin = draft.envelope.origin
+    odd = draft.model_copy(
+        update={
+            "envelope": draft.envelope.model_copy(
+                update={
+                    "origin": origin.model_copy(
+                        update={"position": origin.position.model_copy(update={"x": math.nan})}
+                    )
+                }
+            )
+        }
+    )
+
+    with pytest.raises(ValueError, match="Out of range float values are not JSON compliant"):
+        export_installation(odd)
 
 
 def test_a_file_with_a_field_no_draft_has_is_refused() -> None:

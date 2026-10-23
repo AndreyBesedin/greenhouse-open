@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, JsonValue, ValidationError
 
 from greenhouse_sim.builder.installation import InstallationDraft
 from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
-from greenhouse_sim.scenarios.manifest_files import SCHEMA_VERSION
+from greenhouse_sim.scenarios.manifest_files import SCHEMA_VERSION, unknown_fields
 
 INSTALLATION_SCHEMA_FILE: Final = Path(__file__).parent / "installation.schema.json"
 # A file larger than this is refused before it is read: an editor can say
@@ -52,21 +52,24 @@ class InstallationFileError(ValueError):
 
 
 def export_installation(draft: InstallationDraft) -> str:
-    """The file of a draft, its rows' crops included."""
+    """The file of a draft, its rows' crops included. A draft holding a
+    number JSON cannot write, such as NaN, is not written."""
     document = {_VERSION_KEY: SCHEMA_VERSION, **draft.model_dump(mode="json")}
-    return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
+    return json.dumps(document, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
 
 
 def import_installation(text: str) -> InstallationDraft:
     """The draft a file holds. Refused with its problems if it is too
-    large, not JSON, in another format's version, or not a draft."""
+    large, not JSON (NaN and infinities included, which JSON has not), in
+    another format's version, not a draft, or has a field, at any depth,
+    that a draft does not."""
     if len(text.encode("utf-8")) > MAX_IMPORT_BYTES:
         raise InstallationFileError(
             [Problem(field="", message=f"larger than {MAX_IMPORT_BYTES} bytes")]
         )
     try:
-        document = json.loads(text)
-    except json.JSONDecodeError as error:
+        document = json.loads(text, parse_constant=_not_json)
+    except (json.JSONDecodeError, _NotJson) as error:
         raise InstallationFileError([Problem(field="", message=f"not JSON: {error}")]) from None
     if not isinstance(document, dict):
         raise InstallationFileError([Problem(field="", message="not a JSON object")])
@@ -84,11 +87,27 @@ def import_installation(text: str) -> InstallationDraft:
         key: value for key, value in document.items() if key not in (_VERSION_KEY, _SCHEMA_KEY)
     }
     try:
-        return InstallationDraft.model_validate(fields)
+        draft = InstallationDraft.model_validate(fields)
     except ValidationError as error:
         raise InstallationFileError(
             [Problem(field=_path(each["loc"]), message=each["msg"]) for each in error.errors()]
         ) from None
+    # Some of the models a draft is made of ignore a field they do not have,
+    # rather than refuse it, as a manifest's are read.
+    unknown = unknown_fields(fields, draft.model_dump(mode="json"))
+    if unknown:
+        raise InstallationFileError(
+            [Problem(field=where, message="not a field of an installation") for where in unknown]
+        )
+    return draft
+
+
+class _NotJson(ValueError):
+    """A constant Python reads as JSON, and JSON has not."""
+
+
+def _not_json(constant: str) -> float:
+    raise _NotJson(f"{constant} is not a JSON number")
 
 
 def installation_json_schema() -> dict[str, JsonValue]:

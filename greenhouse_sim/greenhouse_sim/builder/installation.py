@@ -11,9 +11,9 @@ A draft may give rows different crops, although a run grows one model and
 one variety (`ScenarioConfig`); the assessment says so rather than refuse it.
 """
 
-from typing import Final, Literal, Self
+from typing import Final, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, PositiveInt, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PositiveInt, ValidationInfo, field_validator
 
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.envelope import OpeningKind
@@ -50,16 +50,27 @@ class InstallationDraft(BaseModel):
     layout: Layout
     row_crops: list[RowCrop] = []
 
-    @model_validator(mode="after")
-    def _each_row_has_one_crop_at_most(self) -> Self:
-        rows = [crop.row for crop in self.row_crops]
-        if len(rows) != len(set(rows)):
-            raise ValueError("a crop row has more than one crop")
-        total = 0 if self.layout.crop_rows is None else self.layout.crop_rows.rows
-        beyond = sorted(row for row in rows if row > total)
-        if beyond:
-            raise ValueError(f"crops for rows {beyond}, beyond the layout's {total} rows")
-        return self
+    # Checked as the field, so that a refusal points at it; the layout,
+    # before it, is read already, unless it was refused itself.
+    @field_validator("row_crops")
+    @classmethod
+    def _each_row_has_one_crop_at_most(
+        cls, crops: list[RowCrop], info: ValidationInfo
+    ) -> list[RowCrop]:
+        first: dict[int, int] = {}
+        for index, crop in enumerate(crops):
+            if crop.row in first:
+                raise ValueError(
+                    f"row {crop.row} has more than one crop, at [{first[crop.row]}] and [{index}]"
+                )
+            first[crop.row] = index
+        layout = info.data.get("layout")
+        if isinstance(layout, Layout):
+            total = 0 if layout.crop_rows is None else layout.crop_rows.rows
+            beyond = sorted(crop.row for crop in crops if crop.row > total)
+            if beyond:
+                raise ValueError(f"crops for rows {beyond}, beyond the layout's {total} rows")
+        return crops
 
 
 class Finding(BaseModel):
