@@ -94,17 +94,29 @@ epoch rising each time its gateway starts again; its clock the wall
 clock. A run that has finished, and a recorded one, cannot be acted on
 (`ActionNotExecutable`).
 
-**What is still to come is carried.** When a run ends and the next run of
-the same installation begins, its equipment changed or its gateway started
-again into a new epoch, the gateway carries the actions not yet resolved
-into it, each checked again against the new configuration, its executors
-and the authorisation in force: one that no longer applies is refused,
-with the reason, and the others keep their ids, principals and
-dependencies. An action already assigned keeps its assignment, whose
-executor is asked before anything is assigned again, so nothing is
-carried out twice. A run that ends for good leaves nothing to carry: its
-pending actions are cancelled. Reviewing what was carried is a consumer's
-or a platform's matter.
+**What is still to come goes on with the clock, or is dropped with it.**
+When a run ends and the next run or epoch of the same installation
+begins, what becomes of the actions not yet resolved is a property of the
+clock, not of the producer:
+
+- **The clock continues:** the next one starts where the previous one's
+  clock had reached, as a physical installation's does when its gateway
+  starts again into a new epoch, or its equipment changes into a new run,
+  the wall clock going on. The gateway carries the actions into it, each
+  checked again against the new configuration, its executors and the
+  authorisation in force: one that no longer applies is refused, with the
+  reason; the others keep their ids, principals and dependencies. An
+  action already assigned keeps its assignment, whose executor is asked
+  before anything is assigned again, so nothing is carried out twice.
+- **The clock starts over:** the next one starts again from the run's
+  start, as the simulator's playback does when it restarts, into a new
+  epoch of the same deterministic run or, with another layout, into a new
+  run. The actions are cancelled, each with the reason that the run
+  started over.
+
+A run that ends for good leaves nothing to carry: its pending actions are
+cancelled. Reviewing what was carried is a consumer's or a platform's
+matter.
 
 **A gateway carries the plan; executors carry out actions.** Each run has a
 gateway, its local endpoint, which:
@@ -215,9 +227,10 @@ actuation contract of its own in the protocol.
   the roadmap.
 - Decision 0043's "targets are not records" no longer holds once outcomes
   are records: a target changed is an outcome a consumer reads. Its
-  steering holds for every kind, as the gateway's rule. Its restart "without
-  the changes" holds for what was carried out before the restart, which a
-  new epoch does not repeat; what was still to come is carried into it.
+  steering holds for every kind, as the gateway's rule; and so does its
+  restart, for every run that starts over: a new epoch from the run's
+  start makes no change of the epoch before, and what was pending is
+  dropped.
 - P11's actuation interface, which P10 left out, is this one.
 - The protocol's version moves (a minor version, below 1.0) with the
   first step that changes it, which keeps the old names as deprecated
