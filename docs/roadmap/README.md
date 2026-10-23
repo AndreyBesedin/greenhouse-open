@@ -112,6 +112,7 @@ adds a visible or measurable result.
 | [P10](p10-consumer-interface.md) | A consumer's interface to a running simulation | Done |
 | [P11](p11-climate-setpoints.md) | Climate setpoints: targets that run the house's equipment | In progress |
 | [P12](p12-setup-builder.md) | The setup builder: greenhouse installations authored, assessed and exchanged | In progress |
+| [P13](p13-actions.md) | One action format, and a plan a run's gateway carries out | Planned |
 
 A project's document is added when its first pull request lands.
 
@@ -296,6 +297,19 @@ clock. Planned then:
 Each target is a run's input: changed, it makes another run, as a command
 does. Targets set from outside the simulator, by a consumer, wait for an
 actuation interface, which P10 leaves out.
+
+**Crop work within the day** (recorded 2026-10-22, future work, after
+[P13](p13-actions.md)). The organ crop steps a day at a time, so the
+simulated run carries out harvesting, lowering and leaf removal at a day's
+start only, and refuses them at any other instant (decision 0046).
+Automation plans and stacks crop work through the day: a harvest at 10:00
+and another at 15:00, each changing the crop when it is done. Planned
+then:
+
+- the organ crop stepping within a day, its organs growing between two
+  actions, so that one action's effect is there for the next;
+- the simulated run honouring crop actions at any instant; the action
+  format, which already takes any instant, unchanged.
 
 **CO₂ and light targets** (recorded 2026-10-20, future work, after the
 climate setpoints). Each needs equipment the simulator does not have yet:
