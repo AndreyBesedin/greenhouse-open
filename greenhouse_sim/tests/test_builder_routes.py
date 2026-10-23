@@ -141,3 +141,37 @@ def test_a_file_exported_reads_back_through_the_builder(simulator: Simulator) ->
     status, assessed = _post(simulator, "/api/builder/assess", exported)
 
     assert (status, assessed["installation"]) == (HTTPStatus.OK, first["installation"])
+
+
+@pytest.mark.parametrize(
+    ("path", "body", "said"),
+    [
+        ("/api/builder/basic", json.dumps(FORM | {"plants_per_row": 10**309}), "plants_per_row"),
+        ("/api/builder/basic", json.dumps(FORM | {"rows": 10**309}), "rows"),
+        ("/api/builder/basic", "[" * 100_000 + "]" * 100_000, "nested too deeply"),
+        ("/api/builder/assess", "[" * 100_000 + "]" * 100_000, "nested too deeply"),
+        ("/api/builder/scene", "[" * 100_000 + "]" * 100_000, "nested too deeply"),
+        ("/api/builder/basic", json.dumps(FORM).replace("12.0", "1e999", 1), "too large a number"),
+    ],
+    ids=["huge plants", "huge rows", "nested basic", "nested assess", "nested scene", "1e999"],
+)
+def test_what_no_greenhouse_has_is_refused_not_failed_on(
+    simulator: Simulator, path: str, body: str, said: str
+) -> None:
+    status, answered = _post(simulator, path, body)
+
+    assert (status, said in answered["error"]) == (HTTPStatus.BAD_REQUEST, True), answered
+
+
+def test_an_installations_file_with_an_infinite_number_is_refused(simulator: Simulator) -> None:
+    """Python reads `1e999` as infinity; no greenhouse's number is."""
+    status, first = _post(simulator, "/api/builder/basic", json.dumps(FORM))
+    file = _file(first).replace('"length": 12.0', '"length": 1e999', 1)
+    assert "1e999" in file
+
+    for path in ("/api/builder/assess", "/api/builder/scene"):
+        status, answered = _post(simulator, path, file)
+        assert (status, "too large a number" in answered["error"]) == (
+            HTTPStatus.BAD_REQUEST,
+            True,
+        ), answered
