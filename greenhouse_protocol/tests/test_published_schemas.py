@@ -1,5 +1,5 @@
 """Every JSON Schema the protocol publishes, from one list: the records a
-run's gateway takes and writes (decision 0046), each committed file its
+run's gateway takes and writes, and what its routes answer (decision 0046), each committed file its
 model's export in the 2020-12 dialect, written one way. They live in the
 package (`greenhouse_protocol/schemas/`), for a consumer, a platform or an
 executor in another language to check documents against.
@@ -20,6 +20,8 @@ from pydantic import BaseModel
 
 from greenhouse_protocol.assignment import Assignment, ExecutionReport
 from greenhouse_protocol.authorisation import AuthorisationConfig
+from greenhouse_protocol.contracts.consumer import OutcomeBatch
+from greenhouse_protocol.contracts.gateway import GatewayLimits, PlanState, Receipt
 from greenhouse_protocol.outcome import ActionOutcome
 from greenhouse_protocol.plan import ActionKey, ActionState, Plan
 
@@ -34,6 +36,10 @@ PUBLISHED: Final[dict[str, type[BaseModel]]] = {
     "assignment.schema.json": Assignment,
     "execution-report.schema.json": ExecutionReport,
     "authorisation-config.schema.json": AuthorisationConfig,
+    "receipt.schema.json": Receipt,
+    "plan-state.schema.json": PlanState,
+    "gateway-limits.schema.json": GatewayLimits,
+    "outcome-batch.schema.json": OutcomeBatch,
 }
 
 

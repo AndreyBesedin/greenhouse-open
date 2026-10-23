@@ -25,6 +25,12 @@ is a new version segment; the old one may be served beside it.
     /consumer/v1/runs/{run_id}/greenhouse          -> GreenhouseDescription
     /consumer/v1/runs/{run_id}/observations?after= -> ObservationBatch
     /consumer/v1/runs/{run_id}/events?after=       -> EventBatch
+    /consumer/v1/runs/{run_id}/outcomes?after=     -> OutcomeBatch
+
+The outcomes are what became of the actions a run's gateway carried out or
+not (decision 0046, `greenhouse_protocol.outcome`): a third log, beside the
+observations and the events, kept by the same rules; an outcome is
+delivered at its `delivered_at`, or else when it was resolved.
 
 An unknown run is `404`. `after` is a cursor (below), `0` when omitted;
 `limit` caps a batch's size and a producer may cap it lower.
@@ -101,10 +107,15 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from greenhouse_protocol.contracts.conformance import check_events, check_observations
+from greenhouse_protocol.contracts.conformance import (
+    check_events,
+    check_observations,
+    check_outcomes,
+)
 from greenhouse_protocol.event import Event
 from greenhouse_protocol.instant import Instant
 from greenhouse_protocol.observation import Observation
+from greenhouse_protocol.outcome import ActionOutcome
 from greenhouse_protocol.run import RunEpoch
 
 # The path segment every route of this version lives under.
@@ -194,19 +205,49 @@ class EventBatch(BaseModel):
         return self.events
 
 
-type Batch = ObservationBatch | EventBatch
+class OutcomeBatch(BaseModel):
+    """The outcomes delivered after a cursor, in delivery order."""
+
+    model_config = ConfigDict(frozen=True)
+
+    run_id: str = Field(min_length=1)
+    epoch: int = Field(ge=0)
+    after: int = Field(ge=0)
+    next: int = Field(ge=0)
+    simulated_now: Instant
+    has_more: bool = False
+    outcomes: tuple[ActionOutcome, ...]
+
+    @property
+    def records(self) -> tuple[ActionOutcome, ...]:
+        return self.outcomes
 
 
-def delivered_at(record: Observation | Event) -> datetime:
+type Batch = ObservationBatch | EventBatch | OutcomeBatch
+type LogRecord = Observation | Event | ActionOutcome
+
+
+def delivered_at(record: LogRecord) -> datetime:
     """When a record reached the producer: its delivery time, or the instant
-    it describes when it was delivered as it was taken."""
-    if isinstance(record, Observation) and record.delivered_at is not None:
-        return record.delivered_at
-    return record.timestamp
+    it describes when it was delivered as it was taken; for an outcome, when
+    it was resolved."""
+    match record:
+        case Observation(delivered_at=delivered) if delivered is not None:
+            return delivered
+        case ActionOutcome(delivered_at=delivered, resolved_at=resolved):
+            return resolved if delivered is None else delivered
+        case _:
+            return record.timestamp
 
 
-def record_id(record: Observation | Event) -> str:
-    return record.observation_id if isinstance(record, Observation) else record.event_id
+def record_id(record: LogRecord) -> str:
+    match record:
+        case Observation(observation_id=identity):
+            return identity
+        case ActionOutcome(outcome_id=identity):
+            return identity
+        case Event(event_id=identity):
+            return identity
 
 
 def check_run(run: RunDescriptor) -> list[str]:
@@ -261,10 +302,13 @@ def check_batch(batch: Batch, *, greenhouse_id: str | None = None) -> list[str]:
                 f"after its clock ({batch.simulated_now.isoformat()})"
             )
         previous = delivered
-    if isinstance(batch, ObservationBatch):
-        violations += check_observations(batch.observations)
-    else:
-        violations += check_events(batch.events)
+    match batch:
+        case ObservationBatch(observations=observations):
+            violations += check_observations(observations)
+        case EventBatch(events=events):
+            violations += check_events(events)
+        case OutcomeBatch(outcomes=outcomes):
+            violations += check_outcomes(outcomes)
     return violations
 
 
@@ -285,7 +329,7 @@ def check_polls(batches: Iterable[Batch], *, greenhouse_id: str | None = None) -
     seen: dict[str, int] = {}
     # The log as the polls revealed it, the record at each position: a
     # repoll must hold the same record there, not only the same identity.
-    log: dict[int, Observation | Event] = {}
+    log: dict[int, LogRecord] = {}
     clock: datetime | None = None
     for index, batch in enumerate(polls):
         label = f"{_label(batch)} (poll {index})"
@@ -300,7 +344,7 @@ def check_polls(batches: Iterable[Batch], *, greenhouse_id: str | None = None) -
                 "a timeline that starts over is a new epoch"
             )
         clock = batch.simulated_now if clock is None else max(clock, batch.simulated_now)
-        records: list[Observation | Event] = list(batch.records)
+        records: list[LogRecord] = list(batch.records)
         if records and batch.after not in given:
             violations.append(
                 f"{label} answers after={batch.after}, "
@@ -334,5 +378,11 @@ def check_polls(batches: Iterable[Batch], *, greenhouse_id: str | None = None) -
 
 
 def _label(batch: Batch) -> str:
-    kind = "observations" if isinstance(batch, ObservationBatch) else "events"
+    match batch:
+        case ObservationBatch():
+            kind = "observations"
+        case EventBatch():
+            kind = "events"
+        case OutcomeBatch():
+            kind = "outcomes"
     return f"{kind} batch of run {batch.run_id!r} epoch {batch.epoch} after={batch.after}"

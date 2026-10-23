@@ -592,7 +592,7 @@ within the day; the action format needs no change for it.
 
 | Step | What | Commit title | Status |
 | --- | --- | --- | --- |
-| P13.1 | The protocol's types and contracts: `Action`, `ActionId`, `ActionRef`, `PlannedAction`, `Plan`, `Principal`, `Grant`, `AuthorisationGroup`, `AuthorisationConfig`, `ActionOutcome`, `ActionEffect`, `ExecutorRef`, `Assignment`, `ExecutionReport`, the gateway and executor contracts (revocation, status, at most once; listing the actions as they stand, `ActionKey`, `ActionState`; cancelling chosen actions; the epoch on every write; the gateway's limits; carrying actions into a run that continues the clock, as `RunDescriptor.continues_from` says, and dropping them from one that starts over) and `ActionNotExecutable`; checks (a malformed or stale plan refused whole, the graph checked as given, recurrences bounded, grants and delegation, the order across plans, one outcome per action) as conformance functions and their tests, the executor's with one that drops messages, and the gateway's with an in-memory gateway on a clock that continues; the published JSON Schemas. The old names stay, deprecated; the changelog says what each became, and the version moves at the next release (decision 0045). | `feat(protocol): one action, plan, gateway and executor format` | In progress: the records |
+| P13.1 | The protocol's types and contracts: `Action`, `ActionId`, `ActionRef`, `PlannedAction`, `Plan`, `Principal`, `Grant`, `AuthorisationGroup`, `AuthorisationConfig`, `ActionOutcome`, `ActionEffect`, `ExecutorRef`, `Assignment`, `ExecutionReport`, the gateway and executor contracts (revocation, status, at most once; listing the actions as they stand, `ActionKey`, `ActionState`; cancelling chosen actions; the epoch on every write; the gateway's limits; carrying actions into a run that continues the clock, as `RunDescriptor.continues_from` says, and dropping them from one that starts over) and `ActionNotExecutable`; checks (a malformed or stale plan refused whole, the graph checked as given, recurrences bounded, grants and delegation, the order across plans, one outcome per action) as conformance functions and their tests, the executor's with one that drops messages, and the gateway's with an in-memory gateway on a clock that continues; the published JSON Schemas. The old names stay, deprecated; the changelog says what each became, and the version moves at the next release (decision 0045). | `feat(protocol): one action, plan, gateway and executor format` | Done: the records (#323) and the contracts |
 | P13.2 | The run carries out a plan of today's kinds: levels, openings, daily commands and targets become a plan internally; `RunRequest` holds it; the address's spellings are read into it. Every run id, replay digest and kept opening day unchanged. Checkpoints in a new format, format 3 read. | `refactor(sim): the run carries out its schedule as a plan` | Planned |
 | P13.3 | The simulator's gateway: the playback holds its run's plan and revisions, schedules them onto the run as its executor, writes the outcome log and serves it on the consumer interface; steering as the gateway's rule; the actions as they stand, cancelling chosen ones, and dropping them when the playback starts over. The gateway contract's conformance tests run against it. | `feat(sim): the playback as its run's gateway` | Planned |
 | P13.4 | Authorisation in the gateway: principals on every planned action, bound to the authenticated submitter or granted on its behalf; plan ownership; groups and grants in a versioned configuration, an input of the run, its changes recorded; checked when a plan is given and when each action falls due, refusals as outcomes; the local operator group. | `feat(sim): the gateway authorises every action` | Planned |
@@ -757,6 +757,19 @@ What the design left to its first step, as P13.1 settles it:
   that every descriptor written before reads and writes as it did.
 - **An executor's report** has a `status` of `done`, `failed` or
   `refused` (`ReportStatus`), apart from the deprecated `ExecutionStatus`.
+- **The reference implementation** is in the package, beside the store's
+  (`contracts/memory_gateway`, as `contracts/memory`): an in-memory gateway
+  on a clock that continues, and an executor into which a lost send and an
+  executor that cannot be reached can be injected. The conformance checks,
+  `check_gateway` and `check_executor`, hold it, and will hold the
+  simulator's gateway, to the same rules, through a harness that moves its
+  clock, changes its authorisation, restarts it and finishes it.
+- **Outcomes of a run that starts over** are the first outcomes of its new
+  epoch, resolved at its start, where a consumer reads them: the epoch
+  before is no longer served once the epoch changes.
+- **A refusal for withdrawn rights** may come when the assignment is to be
+  sent, its executor's lead time before the action falls due, or when it
+  falls due; both are after the withdrawal and by the due instant.
 
 ## Decided
 

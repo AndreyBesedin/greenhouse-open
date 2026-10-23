@@ -34,6 +34,18 @@ breaks the conformance checks is a major version.
   `outcome.ActionOutcome` and `OutcomeStatus`; `ActionExecutionAdapter`
   becomes a run's gateway and its executors (P13.1's contracts).
   `MAX_WATER_AMOUNT_ML` moves to `actions`, and `action` re-exports it.
+- `greenhouse-protocol`: the contracts for acting on a greenhouse (decision
+  0046, P13.1): `contracts.gateway.RunGateway`, a run's gateway, with its
+  `/actuation/v1` routes, `Receipt`, `PlanState`, `GatewayLimits` and
+  `occurrences`/`check_limits`; `contracts.execution.ActionExecutor`, with
+  `Revocation` and `AssignmentStatus`; the consumer interface's outcome log
+  (`OutcomeBatch` at `/consumer/v1/runs/{run_id}/outcomes`), held by
+  `check_batch` and `check_polls` with `check_outcomes`. `check_gateway` and
+  `check_executor` hold an implementation to the contracts' rules, and
+  `contracts.memory_gateway` is an in-memory reference implementation of
+  both, which passes them, with faults to inject. The schemas of the
+  receipt, plan state, limits and outcome batch are published beside the
+  records'.
 
 - `greenhouse-sim`: the packaged scenarios are read once into an
   unchanging catalogue (`scenarios.catalogue.PACKAGED`), each with its
