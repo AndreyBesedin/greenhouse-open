@@ -59,6 +59,7 @@ changes course is a new record that supersedes the old one.
 | [0047](0047-python-lint-rules-a-family-at-a-time.md) | Python lint rules, a family at a time | Accepted |
 | [0048](0048-a-simulators-state-is-one-object-passed-explicitly.md) | A simulator's state is one object, passed explicitly | Accepted |
 | [0049](0049-a-run-started-from-moves-keeps-its-target-changes.md) | A run started from moves keeps its target changes | Accepted |
+| [0050](0050-an-installation-is-the-house-part-of-a-scenario.md) | An installation is the house part of a scenario | Accepted |
 
 ## Template
 
