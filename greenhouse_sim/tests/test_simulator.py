@@ -1,10 +1,12 @@
 """A simulator's state, in one object (decision 0048): its scenarios and
 its live runs, closed with it; made by the server, or given to it."""
 
+import ast
 import threading
 import time
 from collections.abc import Callable
 from http import HTTPStatus
+from pathlib import Path
 
 import pytest
 
@@ -150,3 +152,42 @@ def test_a_scenario_registered_with_a_simulator_is_answered_by_it_alone() -> Non
         assert respond(other, "GET", "/api/scenarios/drafted_box/climate/house?t=0").status == (
             HTTPStatus.NOT_FOUND
         )
+
+
+# What would hold state for the whole process, made as a module is
+# imported: a store, a threading primitive, or what keeps a simulator's.
+PROCESS_STATE = frozenset(
+    {
+        "Store",
+        "Lock",
+        "RLock",
+        "Condition",
+        "Event",
+        "Semaphore",
+        "Thread",
+        "Playbacks",
+        "Cursors",
+        "LiveRuns",
+        "Catalogue",
+    }
+)
+# Where a simulator's state is its own (decision 0048).
+OWN_STATE_PACKAGES = ("services", "scenarios", "core")
+PACKAGE = Path(__file__).resolve().parents[1] / "greenhouse_sim"
+
+
+def test_no_module_keeps_state_for_the_whole_process() -> None:
+    made = []
+    for package in OWN_STATE_PACKAGES:
+        for path in sorted((PACKAGE / package).rglob("*.py")):
+            for node in ast.parse(path.read_text()).body:
+                value = node.value if isinstance(node, ast.Assign | ast.AnnAssign) else None
+                if not isinstance(value, ast.Call):
+                    continue
+                called = value.func
+                name = (
+                    called.attr if isinstance(called, ast.Attribute) else getattr(called, "id", "")
+                )
+                if name in PROCESS_STATE:
+                    made.append(f"{path.relative_to(PACKAGE)}:{node.lineno} {name}")
+    assert made == []

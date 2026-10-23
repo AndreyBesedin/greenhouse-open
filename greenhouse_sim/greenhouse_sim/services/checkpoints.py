@@ -61,7 +61,7 @@ from greenhouse_sim.services.fields import (
     run_schedule,
     seed_kept_climate_runs,
 )
-from greenhouse_sim.services.kept_states import STATES, KeptState, keep
+from greenhouse_sim.services.kept_states import KeptState, keep
 from greenhouse_sim.services.runs import Commanded, RunRequest, checked_moment
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids, scenario, version
 from greenhouse_sim.services.stores import Store
@@ -164,17 +164,20 @@ class CheckpointSummary(BaseModel):
     plants: int
 
 
-# The last `KEPT_CHECKPOINTS` saved or uploaded, and beside them, pinned,
-# never in their place, the scenarios' opening days: they are the oldest,
-# and the next fresh run of their scenario would work its days out from the
-# start without them. A checkpoint let go takes its state with it.
-# Each with the state it was kept with: let go, it takes that state with it,
-# and not one the same checkpoint, uploaded again meanwhile, keeps since.
-# Its states are the module's too, until each simulator makes its own stores
-# (decision 0048).
-CHECKPOINTS: Store[str, tuple[Checkpoint, KeptState]] = Store(
-    "checkpoints", KEPT_CHECKPOINTS, on_drop=lambda key, kept: STATES.drop(key, kept[1]), label=str
-)
+def new_store(states: Store[str, KeptState]) -> Store[str, tuple[Checkpoint, KeptState]]:
+    """A simulator's checkpoints (decision 0048): the last `KEPT_CHECKPOINTS`
+    saved or uploaded, and beside them, pinned, never in their place, the
+    scenarios' opening days: they are the oldest, and the next fresh run of
+    their scenario would work its days out from the start without them.
+    Each with the state it was kept with, in `states`: let go, it takes that
+    state with it, and not one the same checkpoint, uploaded again
+    meanwhile, keeps since."""
+    return Store(
+        "checkpoints",
+        KEPT_CHECKPOINTS,
+        on_drop=lambda key, kept: states.drop(key, kept[1]),
+        label=str,
+    )
 
 
 def save_checkpoint(

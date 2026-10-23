@@ -9,15 +9,15 @@ keeps a live run working a day out until the test lets it finish.
 
 A test that answers requests, plays runs back, or asks a service that
 reads or keeps runs, asks for `simulator` (decision 0048): one a module's
-tests share, closed after them. Until each simulator makes its own stores,
-what the services keep is every simulator's.
+tests share, with the scenarios' opening days kept as the API's server keeps
+them, closed after the module. What it keeps is its own.
 
 A test that needs what the services keep forgotten asks for it here, never
 of a store itself (W9): `afresh` (or `afresh_module`, for a module's
-fixtures) forgets everything every store keeps, before the test and
-whenever it calls it, and keeps the scenarios' opening days again after it,
-as the API keeps them as it starts; `no_playbacks` stops every run the
-module's simulator plays back, and leaves the runs kept."""
+fixtures) has the module's simulator forget everything it keeps, before the
+test and whenever it calls it, and keep the scenarios' opening days again
+after it; `no_playbacks` stops every run the module's simulator plays back,
+and leaves the runs kept."""
 
 import threading
 from collections.abc import Callable, Iterator
@@ -30,7 +30,6 @@ from greenhouse_sim.services.checkpoints import load_openings
 from greenhouse_sim.services.live import LiveFrame, LiveRun
 from greenhouse_sim.services.playback import stop_playbacks
 from greenhouse_sim.services.simulator import Simulator
-from greenhouse_sim.services.stores import forget_everything
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
@@ -110,11 +109,11 @@ def finishes_beside_held() -> _Beside:
 
 @contextmanager
 def _clean_slate(simulator: Simulator) -> Iterator[Callable[[], None]]:
-    forget_everything()
+    simulator.forget()
     try:
-        yield forget_everything
+        yield simulator.forget
     finally:
-        forget_everything()
+        simulator.forget()
         load_openings(simulator)
 
 
@@ -132,7 +131,9 @@ def afresh_module(simulator: Simulator) -> Iterator[Callable[[], None]]:
 
 @pytest.fixture(scope="module")
 def simulator() -> Iterator[Simulator]:
+    # With the scenarios' opening days kept, as the API's server keeps them.
     with Simulator() as made:
+        load_openings(made)
         yield made
 
 

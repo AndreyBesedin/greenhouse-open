@@ -77,6 +77,11 @@ class Cursors:
                 self._given[(run_id, log)] = held
             held[1].add(cursor)
 
+    def forget(self) -> None:
+        """Forget every cursor given."""
+        with self._lock:
+            self._given.clear()
+
 
 class Reads(Protocol):
     """What a consumer reads of a simulator: the runs it plays back, the
