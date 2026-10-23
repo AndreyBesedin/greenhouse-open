@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { EnvironmentField } from "../fields/field";
 import {
+  openingsAt,
   type ScenarioSource,
   withCfdBoundaries,
   withClouds,
@@ -17,7 +18,7 @@ import {
   withTime,
   withWeather,
 } from "./edits";
-import { openingsAt, sourceFromSearch } from "./source";
+import { sourceFromSearch } from "./source";
 
 function scenario(search: string): ScenarioSource {
   const source = sourceFromSearch(search);

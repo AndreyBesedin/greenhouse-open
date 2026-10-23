@@ -1,6 +1,7 @@
 import { DEFAULT_LAYOUT } from "./scenarios";
 import { baseLayout, movesIn } from "./scene/moves";
-import type { SceneSource, SceneState } from "./scene/source";
+import type { SceneState } from "./scene/sceneLoad";
+import type { SceneSource } from "./scene/source";
 
 /** What a source draws; a scenario's scene is before its first day, unless
  * its crop is drawn on a later one (`day`). */

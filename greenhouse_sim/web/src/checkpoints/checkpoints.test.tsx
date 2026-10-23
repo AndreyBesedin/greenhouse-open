@@ -165,6 +165,30 @@ describe("the checkpoints panel", () => {
     expect(onRestore).toHaveBeenCalledWith(CHECKPOINT);
   });
 
+  it("uploads through a button in the viewer's words, the browser's own picker hidden (#303)", () => {
+    const panel = render(
+      <CheckpointsPanel
+        scenarioId="reference_greenhouse"
+        run={{ time: 90000 }}
+        time={90000}
+        onRestore={vi.fn()}
+        fetchFn={vi.fn() as unknown as typeof fetch}
+      />,
+    );
+    shown = panel;
+    const picker = panel.container.querySelector<HTMLInputElement>('input[type="file"]');
+    expect(picker?.hidden).toBe(true);
+    expect(picker?.getAttribute("aria-hidden")).toBe("true");
+    const opened = vi
+      .spyOn(HTMLInputElement.prototype, "click")
+      .mockImplementation(() => undefined);
+
+    act(() => button(panel.container, "Upload a checkpoint").click());
+
+    expect(opened).toHaveBeenCalledTimes(1);
+    opened.mockRestore();
+  });
+
   it("gives up its list's request when it is closed, through the fetch it is given", async () => {
     let listing: AbortSignal | undefined;
     const fetchFn = vi.fn(async (_url: string, init?: RequestInit) => {
