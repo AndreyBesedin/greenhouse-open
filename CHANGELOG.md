@@ -15,7 +15,8 @@ breaks the conformance checks is a major version.
   as a scenario of its own, with a period, a site, a seed and a weather,
   which is then listed, drawn and run as any scenario is; a draft with
   errors is refused with each. The server keeps drafts in
-  `~/.greenhouse-sim/drafts.sqlite3` unless `--drafts` names another file.
+  `~/.greenhouse-sim/drafts.sqlite3` unless `--drafts` names another file;
+  where that default cannot be made, it starts keeping none.
 - `greenhouse-sim`: drafts of installations and their revisions are kept
   locally (P12.1, decision 0051): `greenhouse_sim.builder.drafts.DraftStore`
   keeps them in one SQLite file, each revision its installation's file. A

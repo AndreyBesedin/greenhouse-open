@@ -15,6 +15,7 @@ reason.
 """
 
 import logging
+import re
 from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Final
@@ -58,6 +59,13 @@ logger = logging.getLogger(__name__)
 
 # The most days a draft's run lasts: a year and a day.
 MOST_DAYS: Final = 366
+# The days a draft's run may start on: those whose suns and weathers the
+# simulator works out, well within what a date can hold.
+EARLIEST_START: Final = date(1900, 1, 1)
+LATEST_START: Final = date(2199, 12, 31)
+# What of a draft's identifier a scenario's cannot have, which its run's
+# name writes as `_`.
+_NOT_IN_A_SCENARIO_ID: Final = re.compile(r"[^a-z0-9_]")
 
 
 class DraftAnswer(BaseModel):
@@ -96,15 +104,16 @@ class RevisionListed(BaseModel):
 
 class DraftRun(BaseModel):
     """What a draft's run adds to its installation: a scenario's own fields.
-    It is named `<draft>_r<revision>` unless it is given a name; the rest is
-    as a scenario's defaults are."""
+    It is named `<draft>_r<revision>`, in lower case with `_` for what a
+    scenario's name cannot hold, unless it is given a name; the rest is as
+    a scenario's defaults are."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     scenario_id: Annotated[str, Field(pattern=f"^{SCENARIO_ID.pattern}$")] | None = None
     name: Annotated[str, Field(min_length=1)] | None = None
     description: str = ""
-    start_date: date
+    start_date: Annotated[date, Field(ge=EARLIEST_START, le=LATEST_START)]
     duration_days: Annotated[PositiveInt, Field(le=MOST_DAYS)]
     random_seed: NonNegativeInt = 0
     site: Site = DEFAULT_SITE
@@ -114,12 +123,13 @@ class DraftRun(BaseModel):
 
 
 def store_at(path: Path) -> DraftStore:
-    """The drafts kept in the file at `path`, made if it is missing, for a
-    simulator to be given. Refused if the file is not a store of drafts."""
+    """The drafts kept in the file at `path`, made with its folder if it is
+    missing, for a simulator to be given. Refused if the file is not a
+    store of drafts, or cannot be made or opened."""
     try:
         return DraftStore(path)
-    except DraftStoreError as error:
-        raise InvalidRequest(str(error)) from None
+    except (DraftStoreError, OSError) as error:
+        raise InvalidRequest(f"{path}: drafts cannot be kept there: {error}") from None
 
 
 def drafts(simulator: Simulator) -> list[DraftListed]:
@@ -170,6 +180,9 @@ def save(simulator: Simulator, draft_id: str, file: str, on: int | None) -> Draf
         saved = _store(simulator).save(installation, on=on)
     except StaleDraft as error:
         raise Conflict(str(error)) from None
+    except InstallationFileError as error:
+        # As the store writes it, the file may not be read back.
+        raise InvalidRequest(str(error)) from None
     logger.info(
         "drafts: saved %s, revision %d",
         draft_id,
@@ -188,6 +201,8 @@ def revert(simulator: Simulator, draft_id: str, revision: int, on: int) -> Draft
         raise NotFound(str(error)) from None
     except StaleDraft as error:
         raise Conflict(str(error)) from None
+    except InstallationFileError as error:
+        raise Conflict(_unreadable(draft_id, revision, error)) from None
     logger.info(
         "drafts: reverted %s to revision %d, as revision %d",
         draft_id,
@@ -234,9 +249,10 @@ def run(
         raise InvalidRequest(f"not a draft's run: {_first(error)}") from None
     try:
         house = scenario_house(kept.installation)
+        own = _NOT_IN_A_SCENARIO_ID.sub("_", f"{draft_id.lower()}_r{kept.revision}")
         config = ScenarioConfig.model_validate(
             {
-                "greenhouse_id": asked.scenario_id or f"{draft_id}_r{kept.revision}",
+                "greenhouse_id": asked.scenario_id or own,
                 "name": asked.name or kept.installation.name,
                 "description": asked.description,
                 "start_date": asked.start_date,
@@ -246,8 +262,10 @@ def run(
             }
             | dict(house)
         )
-    except (CannotRun, ValidationError) as error:
+    except CannotRun as error:
         raise InvalidRequest(f"draft {draft_id!r} cannot run: {error}") from None
+    except ValidationError as error:
+        raise InvalidRequest(f"draft {draft_id!r} cannot run: {_first(error)}") from None
     config = with_weather(config, asked.weather)
     try:
         entry = simulator.catalogue.register(config)
@@ -274,6 +292,15 @@ def _opened(store: DraftStore, draft_id: str, revision: int | None) -> Revision:
         return store.open(draft_id, revision)
     except DraftNotFound as error:
         raise NotFound(str(error)) from None
+    except InstallationFileError as error:
+        raise Conflict(_unreadable(draft_id, revision, error)) from None
+
+
+def _unreadable(draft_id: str, revision: int | None, error: InstallationFileError) -> str:
+    """Why a revision kept cannot be read, as by one a later simulator saved
+    in a format this one does not read."""
+    which = "its latest revision" if revision is None else f"revision {revision}"
+    return f"draft {draft_id!r}: {which} is kept as a file this simulator cannot read: {error}"
 
 
 def _answer(kept: Revision) -> DraftAnswer:

@@ -237,6 +237,10 @@ from greenhouse_sim.services.simulator import Simulator
 type Query = dict[str, list[str]]
 
 
+# The largest revision a query may name: the largest whole number a draft's
+# store keeps (SQLite's).
+MOST_REVISION: Final = 2**63 - 1
+
 # How each kind of service error is answered; the first that matches.
 _REFUSALS: Final = (
     (NotFound, HTTPStatus.NOT_FOUND),
@@ -720,8 +724,13 @@ def _revision(query: Query, name: str) -> int | None:
     text = _last(query, name)
     if text is None:
         return None
-    if not (text.isascii() and text.isdigit()) or int(text) < 1:
-        raise InvalidRequest(f"{name} is a revision, a whole number from 1, not {text!r}")
+    # Its digits counted before they are read: a number too long to read,
+    # or to keep, is refused as any other.
+    whole = text.isascii() and text.isdigit() and len(text) <= len(str(MOST_REVISION))
+    if not whole or not 1 <= int(text) <= MOST_REVISION:
+        raise InvalidRequest(
+            f"{name} is a revision, a whole number from 1 to {MOST_REVISION}, not {text!r}"
+        )
     return int(text)
 
 

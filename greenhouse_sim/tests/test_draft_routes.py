@@ -3,7 +3,9 @@
 refused as a conflict, and a draft without errors run as a scenario of its
 own, registered with the simulator and drawn as any scenario is."""
 
+import argparse
 import json
+import sqlite3
 from collections.abc import Iterator
 from http import HTTPStatus
 from pathlib import Path
@@ -11,7 +13,9 @@ from typing import Any
 
 import pytest
 
+from greenhouse_sim.api import server
 from greenhouse_sim.api.routes import respond
+from greenhouse_sim.builder import portable
 from greenhouse_sim.builder.basic import BasicSetup, basic_installation
 from greenhouse_sim.builder.batch import assign_crop_to_rows
 from greenhouse_sim.builder.drafts import DraftStore
@@ -261,3 +265,123 @@ def test_a_draft_run_under_a_name_taken_is_a_conflict(simulator: Simulator) -> N
         HTTPStatus.CONFLICT,
         True,
     )
+
+
+def test_a_run_starts_on_a_day_the_simulator_works_out(simulator: Simulator) -> None:
+    """A date far from now would be registered, and then fail every route
+    that works out its sun or its weather."""
+    _save(simulator, _house())
+    for start in ("0001-01-01", "9999-12-31"):
+        asked = A_WEEK | {"start_date": start}
+        status, answer = _ask(
+            simulator, "POST", f"/api/drafts/{DRAFT}/run", json.dumps(asked).encode()
+        )
+        assert (status, "start_date" in answer["error"]) == (HTTPStatus.BAD_REQUEST, True)
+
+
+@pytest.mark.parametrize("revision", ["99999999999999999999", "9" * 5000, "-1", "1.0"])
+def test_a_revision_too_large_to_keep_or_not_whole_is_refused(
+    simulator: Simulator, revision: str
+) -> None:
+    _save(simulator, _house())
+
+    for method, path in (
+        ("GET", f"/api/drafts/{DRAFT}?revision={revision}"),
+        ("POST", f"/api/drafts/{DRAFT}/revert?revision={revision}&on=1"),
+        ("POST", f"/api/drafts/{DRAFT}/delete?on={revision}"),
+    ):
+        status, answer = _ask(simulator, method, path)
+        assert (status, "is a revision, a whole number" in answer["error"]) == (
+            HTTPStatus.BAD_REQUEST,
+            True,
+        )
+
+
+def test_a_draft_named_as_no_scenario_is_runs_under_a_name_that_is(simulator: Simulator) -> None:
+    house = _house().model_copy(update={"installation_id": "My-House.2"})
+    _save(simulator, house)
+
+    status, registered = _ask(
+        simulator, "POST", "/api/drafts/My-House.2/run", json.dumps(A_WEEK).encode()
+    )
+    assert (status, registered["id"]) == (HTTPStatus.OK, "my_house_2_r1")
+
+
+def test_a_run_the_scenario_refuses_says_why_in_words(simulator: Simulator) -> None:
+    """A walkway across a row's first position leaves 11 for 2 rows of 6:
+    the assessment has nothing against it, the scenario refuses it."""
+    house = _house()
+    walkway = {
+        "primitive": "walkway",
+        "fixture_id": "path",
+        "start": {"x": 4.125, "y": 0.5},
+        "end": {"x": 4.125, "y": 2.5},
+        "width": 0.3,
+    }
+    layout = house.layout.model_validate(house.layout.model_dump() | {"placed": [walkway]})
+    _save(simulator, house.model_copy(update={"layout": layout}))
+
+    status, answer = _ask(
+        simulator, "POST", f"/api/drafts/{DRAFT}/run", json.dumps(A_WEEK).encode()
+    )
+
+    assert status == HTTPStatus.BAD_REQUEST
+    assert "12 plants, but only 11 planting positions" in answer["error"]
+    assert "pydantic" not in answer["error"] and "\n" not in answer["error"]
+
+
+def test_a_revision_this_simulator_cannot_read_is_a_conflict(
+    simulator: Simulator, tmp_path: Path
+) -> None:
+    """As one a later simulator saved, in a format this one does not read."""
+    _save(simulator, _house())
+    later = json.dumps(json.loads(export_installation(_house())) | {"schema_version": 99})
+    with sqlite3.connect(tmp_path / "drafts.sqlite3") as connection:
+        connection.execute("UPDATE revisions SET document = ?", (later,))
+
+    for method, path in (
+        ("GET", f"/api/drafts/{DRAFT}"),
+        ("POST", f"/api/drafts/{DRAFT}/revert?revision=1&on=1"),
+        ("POST", f"/api/drafts/{DRAFT}/run"),
+    ):
+        status, answer = _ask(simulator, method, path, json.dumps(A_WEEK).encode())
+        assert (status, "cannot read" in answer["error"]) == (HTTPStatus.CONFLICT, True), answer
+
+
+def test_a_file_the_store_could_not_read_back_is_refused(
+    simulator: Simulator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Sent compactly, a file may be read; kept as the store writes it, it
+    may be too large to read back."""
+    compact = json.dumps(json.loads(export_installation(_house())), separators=(",", ":"))
+    monkeypatch.setattr(portable, "MAX_IMPORT_BYTES", len(compact) + 1)
+
+    status, answer = _ask(simulator, "POST", f"/api/drafts/{DRAFT}/save", compact.encode())
+
+    assert (status, "larger than" in answer["error"]) == (HTTPStatus.BAD_REQUEST, True)
+    assert _ask(simulator, "GET", "/api/drafts") == (HTTPStatus.OK, [])
+
+
+def test_the_api_keeps_drafts_where_it_is_told_or_starts_without_its_own(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    parser = argparse.ArgumentParser()
+    given = tmp_path / "given.sqlite3"
+    assert server._drafts(given, parser) is not None
+    assert given.exists()
+
+    not_a_store = tmp_path / "notes.sqlite3"
+    not_a_store.write_text("not a database\n" * 100)
+    with pytest.raises(SystemExit):
+        server._drafts(not_a_store, parser)
+
+    # A home it may not write to: no drafts kept, and the API starts.
+    home = tmp_path / "home"
+    home.mkdir()
+    home.chmod(0o555)
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    try:
+        assert server._drafts(None, parser) is None
+    finally:
+        home.chmod(0o755)
+    assert "keeping no drafts" in capsys.readouterr().err

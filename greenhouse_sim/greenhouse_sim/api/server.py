@@ -47,9 +47,9 @@ LOOPBACK: Final = "127.0.0.1"
 # What a client is told when the simulator fails on its request unexpectedly.
 UNEXPECTED_FAILURE: Final = "the simulator failed to answer; its log says why"
 DEFAULT_PORT: Final = 8765
-# Where the installations' drafts are kept unless the command line says
-# otherwise (decision 0051): a file of the user's, beside no repository.
-DEFAULT_DRAFTS: Final = Path.home() / ".greenhouse-sim" / "drafts.sqlite3"
+# Where, under the user's home, the installations' drafts are kept unless
+# the command line says otherwise (decision 0051): beside no repository.
+DEFAULT_DRAFTS: Final = Path(".greenhouse-sim") / "drafts.sqlite3"
 # How long a quiet stream waits before sending a keep-alive comment.
 KEEPALIVE_SECONDS: Final = 15.0
 # How soon a viewer's browser should try again after losing the stream.
@@ -252,6 +252,23 @@ def create_server(
     return SimulatorServer(port, simulator, seconds_per_day=seconds_per_day, drafts=drafts)
 
 
+def _drafts(given: Path | None, parser: argparse.ArgumentParser) -> DraftStore | None:
+    """The store of drafts the command line names, the API refusing to start
+    without it; or else the default one, without which it starts all the
+    same, keeping no drafts, as where its user has no home it may write to."""
+    if given is not None:
+        try:
+            return store_at(given)
+        except InvalidRequest as error:
+            parser.error(error.message)
+    try:
+        return store_at(Path.home() / DEFAULT_DRAFTS)
+    except (InvalidRequest, RuntimeError) as error:
+        reason = error.message if isinstance(error, InvalidRequest) else str(error)
+        print(f"keeping no drafts: {reason}", file=sys.stderr)
+        return None
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Serve the simulator's local API.")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
@@ -282,14 +299,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--drafts",
         type=Path,
-        default=DEFAULT_DRAFTS,
-        help="the SQLite file the installations' drafts are kept in, made if missing",
+        default=None,
+        help=(
+            "the SQLite file the installations' drafts are kept in, made if missing; "
+            f"by default ~/{DEFAULT_DRAFTS}"
+        ),
     )
     args = parser.parse_args(argv)
-    try:
-        drafts = store_at(args.drafts)
-    except InvalidRequest as error:
-        parser.error(error.message)
+    drafts = _drafts(args.drafts, parser)
     # What the simulator's services make, keep, take over and let go, at
     # INFO (AUDIT.14); other libraries' warnings only.
     logging.basicConfig(level=logging.WARNING, format=LOG_FORMAT, stream=sys.stderr)

@@ -170,7 +170,7 @@ The API keeps them (`services.drafts`): drafts are listed, opened at any
 revision with what stops them running, saved from an installation's file,
 reverted and deleted, a change on a stale revision answered as a conflict
 (409). The server keeps them in `~/.greenhouse-sim/drafts.sqlite3`, or the
-file `--drafts` names.
+file `--drafts` names; where its default cannot be made, it keeps none.
 
 A draft runs as a scenario of its own (`POST /api/drafts/{id}/run`): its
 installation at a revision, with a start date and days (a year and a day
