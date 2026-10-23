@@ -1,3 +1,7 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { defineConfig, devices } from "@playwright/test";
 
 import {
@@ -13,6 +17,9 @@ import {
 // that has greenhouse-sim installed (`simulatorServer`).
 // Its preview's port, unless TEST_PORT_OFFSET moves it.
 const OWN_PREVIEW_PORT = 4317;
+// Where the simulator served keeps the drafts the tests save: a folder of
+// this run's own.
+const TEST_DRAFTS = join(mkdtempSync(join(tmpdir(), "greenhouse-sim-drafts-")), "drafts.sqlite3");
 const PREVIEW_PORT = testPort(OWN_PREVIEW_PORT);
 const IN_CI = process.env.CI !== undefined;
 // Screenshot comparisons and the benchmark have their own configurations.
@@ -129,7 +136,9 @@ export default defineConfig({
   }),
   webServer: [
     {
-      command: simulatorServer(TEST_SIMULATOR_API_PORT),
+      // The drafts its tests save, in a file of the run's own, never in
+      // the user's (P12.2).
+      command: simulatorServer(TEST_SIMULATOR_API_PORT, undefined, TEST_DRAFTS),
       url: `${simulatorApi(TEST_SIMULATOR_API_PORT)}/api/health`,
       reuseExistingServer: REUSE_TEST_SERVERS,
     },

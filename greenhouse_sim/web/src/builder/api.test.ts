@@ -1,0 +1,57 @@
+import { describe, expect, it } from "vitest";
+
+import { firstDraft, installationFile, openDraft, refusal, saveDraft } from "./api";
+import type { Installation } from "./generated/assessedTypes";
+
+function answering(status: number, body: unknown, asked: Request[] = []): typeof fetch {
+  return async (input, init) => {
+    asked.push(new Request(new URL(String(input), "http://localhost"), init));
+    return new Response(JSON.stringify(body), { status });
+  };
+}
+
+const HOUSE = { installation_id: "house", name: "House" } as unknown as Installation;
+
+describe("the builder's side of the API (P12.2)", () => {
+  it("writes an installation's file as an import reads it", () => {
+    expect(JSON.parse(installationFile(4, HOUSE))).toEqual({
+      schema_version: 4,
+      installation_id: "house",
+      name: "House",
+    });
+  });
+
+  it("saves on the revision it was made on, or as a new draft", async () => {
+    const asked: Request[] = [];
+    await saveDraft("my house", "{}", 3, answering(409, { error: "stale" }, asked));
+    await saveDraft("house", "{}", null, answering(409, { error: "kept" }, asked));
+
+    expect(
+      asked.map((request) => [
+        request.method,
+        new URL(request.url).pathname + new URL(request.url).search,
+      ]),
+    ).toEqual([
+      ["POST", "/api/drafts/my%20house/save?on=3"],
+      ["POST", "/api/drafts/house/save"],
+    ]);
+  });
+
+  it("says why the simulator refused, in its words, or by its status", async () => {
+    expect(
+      await firstDraft({} as never, answering(400, { error: "rows: Field required" })),
+    ).toEqual({
+      ok: false,
+      problem: "rows: Field required",
+    });
+    expect(await refusal(new Response("not JSON", { status: 502 }))).toBe(
+      "the simulator API answered 502",
+    );
+  });
+
+  it("refuses an answer that is not what its contract says", async () => {
+    const opened = await openDraft("house", 2, answering(200, { draft_id: "house" }));
+
+    expect(opened).toEqual({ status: "unavailable", reason: "not a draft" });
+  });
+});

@@ -9,6 +9,12 @@ describe("the browser tests' simulator", () => {
     );
   });
 
+  it("keeps its drafts where it is told, a path quoted as a word", () => {
+    expect(simulatorServer(8766, "python", "/tmp/a b/drafts.sqlite3")).toBe(
+      "'python' -m greenhouse_sim.api --port 8766 --drafts '/tmp/a b/drafts.sqlite3'",
+    );
+  });
+
   it("quotes a quote too", () => {
     expect(shellWord("it's")).toBe(`'it'"'"'s'`);
   });

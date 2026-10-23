@@ -2,9 +2,12 @@
 a pitched house of equal spans and bays, and parallel rows of one crop
 (P12.0)."""
 
-from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt
+from typing import Final
+
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, PositiveFloat, PositiveInt
 
 from greenhouse_sim.domain.crop import CropModel
+from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
 from greenhouse_sim.scenarios.installation import Installation, RowCrop
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.geometry import Point2
@@ -12,27 +15,58 @@ from greenhouse_sim.world.identifiers import ItemId
 from greenhouse_sim.world.layout import Layout
 from greenhouse_sim.world.rows import TOMATO_GUTTER, CropRows, RowSupport
 
+# A house the first form starts from: a small single-span one of two rows,
+# as the climate box is (published as the form's schema's example).
+STARTING_HOUSE: Final[dict[str, JsonValue]] = {
+    "installation_id": "my_greenhouse",
+    "name": "My greenhouse",
+    "length_m": 12.0,
+    "width_m": 6.4,
+    "eave_height_m": 4.0,
+    "ridge_height_m": 4.8,
+    "spans": 1,
+    "bays": 3,
+    "rows": 2,
+    "plants_per_row": 16,
+    "plant_pitch_m": 0.5,
+    "row_spacing_m": 1.6,
+    "support_height_m": 0.3,
+    "crop_model": "simple",
+    "variety": "cherry_tomato",
+}
+
 
 class BasicSetup(BaseModel):
-    """The values of the builder's first form, in metres."""
+    """The values of the builder's first form, in metres. Each field's title
+    is the form's label for it, and the schema's example the house the form
+    starts from."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(
+        frozen=True, extra="forbid", json_schema_extra={"examples": [STARTING_HOUSE]}
+    )
 
-    installation_id: ItemId
-    name: str = Field(min_length=1)
-    length_m: PositiveFloat
-    width_m: PositiveFloat
-    eave_height_m: PositiveFloat
-    ridge_height_m: PositiveFloat
-    spans: PositiveInt = 1
-    bays: PositiveInt = 1
-    rows: PositiveInt
-    plants_per_row: PositiveInt
-    plant_pitch_m: PositiveFloat
-    row_spacing_m: PositiveFloat
-    support_height_m: PositiveFloat
-    crop_model: CropModel
-    variety: str = Field(min_length=1)
+    installation_id: ItemId = Field(title="Identifier")
+    name: str = Field(min_length=1, title="Name")
+    length_m: PositiveFloat = Field(title="Length (m)")
+    width_m: PositiveFloat = Field(title="Width (m)")
+    eave_height_m: PositiveFloat = Field(title="Height to the gutters (m)")
+    ridge_height_m: PositiveFloat = Field(title="Height to the ridge (m)")
+    spans: PositiveInt = Field(default=1, title="Spans")
+    bays: PositiveInt = Field(default=1, title="Bays")
+    rows: PositiveInt = Field(title="Crop rows")
+    plants_per_row: PositiveInt = Field(title="Plants per row")
+    plant_pitch_m: PositiveFloat = Field(title="Between plants (m)")
+    row_spacing_m: PositiveFloat = Field(title="Between rows (m)")
+    support_height_m: PositiveFloat = Field(title="Gutter height (m)")
+    crop_model: CropModel = Field(title="Crop model")
+    variety: str = Field(min_length=1, title="Variety")
+
+
+def basic_json_schema() -> dict[str, JsonValue]:
+    """The JSON Schema of the first form's values, published as
+    `basic.schema.json`: what a client sends, so that a field with a default
+    may be left out."""
+    return {"$schema": JSON_SCHEMA_DIALECT, **BasicSetup.model_json_schema()}
 
 
 def basic_installation(values: BasicSetup) -> Installation:

@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
+import { BUILDER_PATH, Builder } from "./builder/Builder";
 import { showPanels, storedPanelTheme } from "./panelTheme";
 import { QA_AIRFLOW_PATH } from "./qa/airflowViews";
 import { QA_GREENHOUSE_PATH } from "./qa/greenhouseViews";
@@ -41,13 +42,16 @@ const page =
     <QaSolar search={location.search} />
   ) : path === QA_REFERENCE_PATH ? (
     <QaReference search={location.search} />
+  ) : path === BUILDER_PATH ? (
+    <Builder />
   ) : (
     <App />
   );
 
 // The golden views compare the scene drawn: their captions keep the light
-// panels they were drawn with (#208); the viewer shows the theme chosen. Set
-// before the first render, so that the panels never show the other first.
-showPanels(page.type === App ? storedPanelTheme() : "light");
+// panels they were drawn with (#208); the viewer and the builder show the
+// theme chosen. Set before the first render, so that the panels never show
+// the other first.
+showPanels(page.type === App || page.type === Builder ? storedPanelTheme() : "light");
 
 createRoot(root).render(<StrictMode>{page}</StrictMode>);

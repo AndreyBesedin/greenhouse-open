@@ -7,6 +7,15 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- viewer: the setup builder, `/builder` (P12.2). A house is drafted from
+  the first form, which reads its fields from the simulator's published
+  schema, opened from the drafts or imported from a file; its rows are
+  given a crop many at a time, each edit undone and redone in one step,
+  by button or Ctrl/⌘+Z, with what stops it running shown as it changes
+  and the house drawn as the simulator draws it. A draft is saved revision
+  by revision, exported as a file, and a saved revision run as a scenario
+  of its own, which the viewer opens. The browser tests' simulator keeps
+  its drafts in a file of the run's own.
 - `greenhouse-sim`: what the setup builder asks of the API besides its
   drafts (P12.2): `POST /api/builder/basic` makes a first draft from its
   first form's values, `POST /api/builder/assess` reads and assesses an

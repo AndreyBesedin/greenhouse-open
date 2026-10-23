@@ -48,9 +48,15 @@ export function simulatorApi(port: number): string {
 const PYTHON = process.env.PYTHON ?? "python";
 
 /** The shell command that serves the simulator's API on `port`, from
- * `python`, which is quoted: a clone's path may hold a space. */
-export function simulatorServer(port: number, python: string = PYTHON): string {
-  return `${shellWord(python)} -m greenhouse_sim.api --port ${port}`;
+ * `python`, which is quoted: a clone's path may hold a space; keeping the
+ * installations' drafts in `drafts`, if given, rather than in its user's. */
+export function simulatorServer(
+  port: number,
+  python: string = PYTHON,
+  drafts: string | null = null,
+): string {
+  const kept = drafts === null ? "" : ` --drafts ${shellWord(drafts)}`;
+  return `${shellWord(python)} -m greenhouse_sim.api --port ${port}${kept}`;
 }
 
 /** `text` as one word to a POSIX shell. */

@@ -170,6 +170,31 @@ export const CONTRACTS: readonly Contract[] = [
     ["src/plants", "labEnvironments"],
     "LAB_ENVIRONMENTS_SCHEMA",
   ),
+  // The setup builder's (P12.2).
+  contract(
+    "greenhouse_sim/builder/basic.schema.json",
+    "BasicSetup",
+    ["src/builder", "basic"],
+    "BASIC_SETUP_SCHEMA",
+  ),
+  contract(
+    `${SERVICES}/builder.schema.json`,
+    "Assessed",
+    ["src/builder", "assessed"],
+    "ASSESSED_SCHEMA",
+  ),
+  contract(
+    `${SERVICES}/draft.schema.json`,
+    "DraftAnswer",
+    ["src/builder", "draft"],
+    "DRAFT_SCHEMA",
+  ),
+  contract(
+    `${SERVICES}/drafts.schema.json`,
+    "DraftsListed",
+    ["src/builder", "drafts"],
+    "DRAFTS_SCHEMA",
+  ),
   contract(
     "greenhouse_sim/biology/tomato/organ/plant.schema.json",
     "Plant",

@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field
 
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.biology.tomato.organ.topology import Plant
+from greenhouse_sim.builder.basic import basic_json_schema
 from greenhouse_sim.builder.portable import INSTALLATION_SCHEMA_FILE, installation_json_schema
 from greenhouse_sim.cfd.geometry import cfd_geometry_json_schema
 from greenhouse_sim.climate.glazing import GlazingAt
@@ -38,9 +39,11 @@ from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT, answer_json_schema,
 from greenhouse_sim.scenarios.layout_files import LAYOUT_SCHEMA_FILE, layout_json_schema
 from greenhouse_sim.scenarios.manifest_files import MANIFEST_SCHEMA_FILE, manifest_json_schema
 from greenhouse_sim.scene.snapshot import snapshot_json_schema
+from greenhouse_sim.services.builder import Assessed
 from greenhouse_sim.services.checkpoints import CheckpointSummary
 from greenhouse_sim.services.climate_readings import EquipmentAt
 from greenhouse_sim.services.crop import CropPlant, PlantsLight
+from greenhouse_sim.services.drafts import DraftAnswer, DraftListed
 from greenhouse_sim.services.fields import FieldNames
 from greenhouse_sim.services.live import LiveState
 from greenhouse_sim.services.plants import LabChecks
@@ -79,6 +82,11 @@ ANSWERS: Final[dict[Path, type[object]]] = {
     SERVICES / "crop_plant.schema.json": CropPlant,
     SERVICES / "lab_checks.schema.json": LabChecks,
     SERVICES / "lab_environments.schema.json": dict[str, LocalEnvironment],
+    # The setup builder's (P12.2): what it is answered of an installation,
+    # and the drafts.
+    SERVICES / "builder.schema.json": Assessed,
+    SERVICES / "draft.schema.json": DraftAnswer,
+    SERVICES / "drafts.schema.json": list[DraftListed],
     PACKAGE / "biology" / "tomato" / "organ" / "plant.schema.json": Plant,
     CLIMATE / "house.schema.json": HouseTrace,
     CLIMATE / "probes.schema.json": ClimateProbes,
@@ -89,6 +97,8 @@ ANSWERS: Final[dict[Path, type[object]]] = {
 # Each published schema's file, and the export it holds.
 PUBLISHED: Final[dict[Path, Callable[[], Mapping[str, object]]]] = {
     SNAPSHOT_SCHEMA_FILE: snapshot_json_schema,
+    # The setup builder's first form's values, which a client sends (P12.2).
+    PACKAGE / "builder" / "basic.schema.json": basic_json_schema,
     PACKAGE / "fields" / "field.schema.json": field_json_schema,
     PACKAGE / "cfd" / "geometry.schema.json": cfd_geometry_json_schema,
     MANIFEST_SCHEMA_FILE: manifest_json_schema,

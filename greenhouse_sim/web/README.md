@@ -338,6 +338,17 @@ uv run viewer   # the viewer, which forwards /api there
 
 Without the API, the page says so and how to start it.
 
+### The setup builder
+
+`/builder` authors a greenhouse (P12.2): a house drafted from a first form,
+whose fields the simulator publishes (`builder/basic.schema.json`), a draft
+opened or a file imported; its rows given a crop many at a time, each edit
+undone (or Ctrl/⌘+Z) and redone in one step; what stops it running shown
+as it changes, and the house drawn as the simulator draws it. A draft is
+saved revision by revision in the API's drafts file (`--drafts`, by
+default `~/.greenhouse-sim/drafts.sqlite3`), exported as a file, and a
+saved revision run as a scenario of its own, which the viewer opens.
+
 ## Develop
 
 Node 24 (see `.nvmrc`) and npm. `uv run setup`, from the repository's root,
