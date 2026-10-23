@@ -1,6 +1,6 @@
-"""Equipment, sensors, doors and vents placed, copied, spaced, changed and
-removed many at a time, and what the assessment says of items that collide
-(P12.3)."""
+"""Equipment, sensors, zones, fixtures, doors and vents placed, copied,
+spaced, changed and removed many at a time, and what the assessment says of
+items that collide (P12.3)."""
 
 import math
 import re
@@ -26,13 +26,15 @@ from greenhouse_sim.builder.items import (
     spread_openings,
 )
 from greenhouse_sim.domain.envelope import OpeningKind
+from greenhouse_sim.domain.layout import ZoneKind
 from greenhouse_sim.domain.sensors import SensorKind
 from greenhouse_sim.scenarios.installation import Installation
 from greenhouse_sim.world.envelope import Opening
 from greenhouse_sim.world.equipment import Fan, Heater
-from greenhouse_sim.world.fixtures import WalkwayPrimitive
+from greenhouse_sim.world.fixtures import BoxPrimitive, PipeRunPrimitive, WalkwayPrimitive
 from greenhouse_sim.world.geometry import Point2, Vector3
 from greenhouse_sim.world.sensors import Camera, PointSensor
+from greenhouse_sim.world.zones import Strip, Zone
 
 # Along the right wall, clear of the rows at y 2.2 and 3.8.
 HEATER = Heater(
@@ -61,6 +63,29 @@ VENT = Opening(
     centre=Point2(x=-4.0, y=0.0),
     width=1.0,
     height=0.6,
+)
+# Across the rows, which stop short of it.
+WALKWAY = WalkwayPrimitive(
+    fixture_id="path", start=Point2(x=2.0, y=0.3), end=Point2(x=2.0, y=5.7), width=0.8
+)
+# Room for a trolley by the back wall.
+ZONE = Zone(
+    zone_id="service",
+    kind=ZoneKind.SERVICE,
+    area=Strip(start=Point2(x=11.0, y=0.5), end=Point2(x=11.0, y=1.5), width=0.8),
+    height=2.0,
+)
+# Two heating pipes along the right wall, named `heating_1` and `heating_2`.
+PIPES = PipeRunPrimitive(
+    fixture_id="heating",
+    start=Vector3(x=0.5, y=1.0, z=0.1),
+    end=Vector3(x=11.5, y=1.0, z=0.1),
+    radius=0.03,
+    count=2,
+    step=Vector3(x=0.0, y=0.2, z=0.0),
+)
+BENCH = BoxPrimitive(
+    fixture_id="bench", base=Vector3(x=1.0, y=5.3, z=0.0), size_x=1.0, size_y=0.6, size_z=0.9
 )
 
 
@@ -92,6 +117,8 @@ def _ids(draft: Installation) -> list[str]:
     return [
         *(piece.actuator_id for piece in layout.equipment),
         *(sensor.sensor_id for sensor in layout.sensors),
+        *(zone.zone_id for zone in layout.zones),
+        *(primitive.fixture_id for primitive in layout.placed),
         *(opening.opening_id for opening in draft.envelope.openings),
     ]
 
@@ -183,7 +210,7 @@ def test_copying_nothing_or_what_the_draft_has_not_is_refused() -> None:
 
     with pytest.raises(ValueError, match="choose at least one item"):
         repeat_items(house, [], count=1, step=step)
-    with pytest.raises(ValueError, match="no equipment or sensor heater_9"):
+    with pytest.raises(ValueError, match="no equipment, sensor, zone or fixture heater_9"):
         repeat_items(house, ["fan_1", "heater_9"], count=1, step=step)
     with pytest.raises(ValueError, match="give a step"):
         repeat_items(house, ["fan_1"], count=2, step=Vector3(x=0.0, y=0.0, z=0.0))
@@ -401,3 +428,80 @@ def test_a_list_items_field_is_set_by_its_place() -> None:
     assert opened.envelope.openings[0].opening == 0.5
     with pytest.raises(ValueError, match=re.escape("has no envelope.openings.3.opening")):
         set_value(house, "envelope.openings.3.opening", 0.5)
+
+
+def test_walkways_and_zones_are_placed_along_the_floor_at_a_step() -> None:
+    house = _house()
+    # A step's height is not the floor's to take.
+    step = Vector3(x=4.0, y=0.0, z=1.0)
+
+    placed = place_items(place_items(house, WALKWAY, count=3, step=step), ZONE, count=2, step=step)
+
+    assert _ids(placed) == ["service_1", "service_2", "path_1", "path_2", "path_3"]
+    walkways = [w for _, w in placed.layout.walkways()]
+    assert [(w.start.x, w.end.x, w.start.y, w.end.y) for w in walkways] == [
+        (2.0, 2.0, 0.3, 5.7),
+        (6.0, 6.0, 0.3, 5.7),
+        (10.0, 10.0, 0.3, 5.7),
+    ]
+    assert [(z.area.start.x, z.area.end.y, z.height) for z in placed.layout.zones] == [
+        (11.0, 1.5, 2.0),
+        (15.0, 1.5, 2.0),
+    ]
+    # The rows keep clear of the walkways: their positions stop short.
+    assert len(placed.layout.planting_positions()) < len(house.layout.planting_positions())
+
+
+def test_a_pipe_run_copied_is_named_apart_from_its_own_pipes() -> None:
+    house = place_items(_house(), PIPES.model_copy(update={"fixture_id": "heating"}))
+    assert _ids(house) == ["heating_1"]
+
+    copied = repeat_items(house, ["heating_1"], count=1, step=Vector3(x=0.0, y=-0.5, z=0.0))
+
+    # `heating_1`'s pipes are `heating_1_1` and `heating_1_2`: the copy is
+    # named after it, with the lowest number no fixture has.
+    assert _ids(copied) == ["heating_1", "heating_2"]
+    pipes = {f.fixture_id: f for f in copied.layout.fixtures() if f.fixture_id.startswith("heat")}
+    assert sorted(pipes) == ["heating_1_1", "heating_1_2", "heating_2_1", "heating_2_2"]
+    assert pipes["heating_2_1"].transform.position.y == pytest.approx(0.5)
+
+
+def test_a_fixture_is_never_named_as_the_pipes_of_another() -> None:
+    # A run named as a file may name it, with no number: its pipes are
+    # `heating_1` and `heating_2`.
+    house = _house()
+    house = house.model_copy(update={"layout": house.layout.model_copy(update={"placed": [PIPES]})})
+
+    again = place_items(house, PIPES)
+
+    assert _ids(again) == ["heating", "heating_3"]
+
+
+def test_zones_and_fixtures_are_spaced_changed_and_removed() -> None:
+    house = place_items(_house(), ZONE)
+    for x in (1.0, 2.0, 9.0):
+        house = place_items(house, BENCH.model_copy(update={"base": Vector3(x=x, y=5.3, z=0)}))
+
+    spaced = space_items(house, ["bench_1", "bench_2", "bench_3"], axis="x")
+    changed = set_field(
+        set_field(spaced, ["bench_2"], "size_z", 1.2), ["service_1"], "kind", "keep_out"
+    )
+    raised = set_field(changed, ["service_1"], "area.width", 1.0)
+
+    benches = [p for p in raised.layout.placed if isinstance(p, BoxPrimitive)]
+    assert [(b.base.x, b.size_z) for b in benches] == [(1.0, 0.9), (5.0, 1.2), (9.0, 0.9)]
+    (zone,) = raised.layout.zones
+    assert (zone.kind, zone.area.width) == (ZoneKind.KEEP_OUT, 1.0)
+    with pytest.raises(ValidationError, match="height"):
+        set_field(raised, ["service_1"], "height", 0)
+    assert _ids(remove_items(raised, ["service_1", "bench_2"])) == ["bench_1", "bench_3"]
+
+
+def test_a_walkway_placed_under_a_unit_is_refused_with_the_layouts_reason() -> None:
+    house = place_items(_house(), HEATER)
+
+    with pytest.raises(ValidationError, match="heater_1 stands on the walkway path_1"):
+        place_items(
+            house,
+            WALKWAY.model_copy(update={"start": Point2(x=1.0, y=0.3), "end": Point2(x=1.0, y=5.7)}),
+        )

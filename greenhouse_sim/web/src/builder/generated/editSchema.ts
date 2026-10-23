@@ -13,6 +13,84 @@ export const EDIT_SCHEMA = {
       ],
       "type": "string"
     },
+    "BoxPrimitive": {
+      "additionalProperties": false,
+      "description": "A box standing on the floor or anything else: its base centred on\n`base`, turned about the vertical by `heading` radians from the\ngreenhouse's x.",
+      "properties": {
+        "fixture_id": {
+          "title": "Fixture Id",
+          "type": "string"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Material"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "obstructs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Obstruction"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Obstructs"
+        },
+        "primitive": {
+          "const": "box",
+          "default": "box",
+          "title": "Primitive",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FixtureKind",
+          "default": "obstacle"
+        },
+        "base": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "size_x": {
+          "exclusiveMinimum": 0,
+          "title": "Size X",
+          "type": "number"
+        },
+        "size_y": {
+          "exclusiveMinimum": 0,
+          "title": "Size Y",
+          "type": "number"
+        },
+        "size_z": {
+          "exclusiveMinimum": 0,
+          "title": "Size Z",
+          "type": "number"
+        },
+        "heading": {
+          "default": 0,
+          "title": "Heading",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fixture_id",
+        "base",
+        "size_x",
+        "size_y",
+        "size_z"
+      ],
+      "title": "BoxPrimitive",
+      "type": "object"
+    },
     "Camera": {
       "additionalProperties": false,
       "description": "A camera at its position, looking at `target`, with its intrinsics.",
@@ -109,6 +187,73 @@ export const EDIT_SCHEMA = {
       "maximum": 500,
       "minimum": 1,
       "type": "integer"
+    },
+    "CylinderPrimitive": {
+      "additionalProperties": false,
+      "description": "An upright cylinder, its base centred on `base`.",
+      "properties": {
+        "fixture_id": {
+          "title": "Fixture Id",
+          "type": "string"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Material"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "obstructs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Obstruction"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Obstructs"
+        },
+        "primitive": {
+          "const": "cylinder",
+          "default": "cylinder",
+          "title": "Primitive",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FixtureKind",
+          "default": "obstacle"
+        },
+        "base": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "radius": {
+          "exclusiveMinimum": 0,
+          "title": "Radius",
+          "type": "number"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fixture_id",
+        "base",
+        "radius",
+        "height"
+      ],
+      "title": "CylinderPrimitive",
+      "type": "object"
     },
     "Dehumidifier": {
       "additionalProperties": false,
@@ -237,6 +382,21 @@ export const EDIT_SCHEMA = {
       "title": "Fan",
       "type": "object"
     },
+    "FixtureKind": {
+      "description": "What a fixture is, for every consumer of its geometry.",
+      "enum": [
+        "crop_gutter",
+        "bench",
+        "slab",
+        "walkway",
+        "rail",
+        "pipe",
+        "wire",
+        "obstacle"
+      ],
+      "title": "FixtureKind",
+      "type": "string"
+    },
     "Heater": {
       "additionalProperties": false,
       "description": "A unit heater: its rated power, all of it given to the air as heat.",
@@ -337,6 +497,28 @@ export const EDIT_SCHEMA = {
       "type": "object"
     },
     "JsonValue": {},
+    "Material": {
+      "description": "What a fixture, or a part of the envelope, is made of.",
+      "enum": [
+        "steel",
+        "aluminium",
+        "plastic",
+        "concrete",
+        "substrate"
+      ],
+      "title": "Material",
+      "type": "string"
+    },
+    "Obstruction": {
+      "description": "What a fixture stands in the way of.",
+      "enum": [
+        "movement",
+        "airflow",
+        "light"
+      ],
+      "title": "Obstruction",
+      "type": "string"
+    },
     "Opening": {
       "description": "A door or vent: a rectangle on its host surface, centred at `centre` in\nthe host's own x-y plane, `width` along the host's x and `height` along\nits y, open by `opening`, from 0 (closed) to 1.",
       "properties": {
@@ -401,9 +583,150 @@ export const EDIT_SCHEMA = {
       "title": "OpeningKind",
       "type": "string"
     },
+    "PipePrimitive": {
+      "additionalProperties": false,
+      "description": "A straight pipe, its axis from `start` to `end`.",
+      "properties": {
+        "fixture_id": {
+          "title": "Fixture Id",
+          "type": "string"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Material"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "obstructs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Obstruction"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Obstructs"
+        },
+        "primitive": {
+          "const": "pipe",
+          "default": "pipe",
+          "title": "Primitive",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FixtureKind",
+          "default": "pipe"
+        },
+        "start": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "end": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "radius": {
+          "exclusiveMinimum": 0,
+          "title": "Radius",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fixture_id",
+        "start",
+        "end",
+        "radius"
+      ],
+      "title": "PipePrimitive",
+      "type": "object"
+    },
+    "PipeRunPrimitive": {
+      "additionalProperties": false,
+      "description": "Pipes repeated in parallel, such as heating pipes stacked along a wall:\nthe first from `start` to `end`, each next one `step` further on, `count`\nin all. Each is its own multiple of the step from the first, and is called\n`<fixture_id>_<n>`, from 1.",
+      "properties": {
+        "fixture_id": {
+          "title": "Fixture Id",
+          "type": "string"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Material"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "obstructs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Obstruction"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Obstructs"
+        },
+        "primitive": {
+          "const": "pipe_run",
+          "default": "pipe_run",
+          "title": "Primitive",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FixtureKind",
+          "default": "pipe"
+        },
+        "start": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "end": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "radius": {
+          "exclusiveMinimum": 0,
+          "title": "Radius",
+          "type": "number"
+        },
+        "count": {
+          "exclusiveMinimum": 0,
+          "maximum": 1000,
+          "title": "Count",
+          "type": "integer"
+        },
+        "step": {
+          "$ref": "#/$defs/Vector3"
+        }
+      },
+      "required": [
+        "fixture_id",
+        "start",
+        "end",
+        "radius",
+        "count",
+        "step"
+      ],
+      "title": "PipeRunPrimitive",
+      "type": "object"
+    },
     "PlaceItems": {
       "additionalProperties": false,
-      "description": "Pieces of equipment or sensors like `item`, the first where it\nstands and each next `step` further, named after its identifier.",
+      "description": "Pieces of equipment, sensors, zones or fixtures like `item`, the\nfirst where it stands and each next `step` further, named after its\nidentifier.",
       "properties": {
         "edit": {
           "const": "place_items",
@@ -418,6 +741,12 @@ export const EDIT_SCHEMA = {
             },
             {
               "$ref": "#/$defs/Sensor"
+            },
+            {
+              "$ref": "#/$defs/Zone"
+            },
+            {
+              "$ref": "#/$defs/Primitive"
             }
           ],
           "title": "Item"
@@ -563,9 +892,117 @@ export const EDIT_SCHEMA = {
       "title": "PointSensor",
       "type": "object"
     },
+    "Primitive": {
+      "discriminator": {
+        "mapping": {
+          "box": "#/$defs/BoxPrimitive",
+          "cylinder": "#/$defs/CylinderPrimitive",
+          "pipe": "#/$defs/PipePrimitive",
+          "pipe_run": "#/$defs/PipeRunPrimitive",
+          "rail": "#/$defs/RailPrimitive",
+          "tray": "#/$defs/TrayPrimitive",
+          "walkway": "#/$defs/WalkwayPrimitive"
+        },
+        "propertyName": "primitive"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/BoxPrimitive"
+        },
+        {
+          "$ref": "#/$defs/CylinderPrimitive"
+        },
+        {
+          "$ref": "#/$defs/PipePrimitive"
+        },
+        {
+          "$ref": "#/$defs/PipeRunPrimitive"
+        },
+        {
+          "$ref": "#/$defs/RailPrimitive"
+        },
+        {
+          "$ref": "#/$defs/TrayPrimitive"
+        },
+        {
+          "$ref": "#/$defs/WalkwayPrimitive"
+        }
+      ]
+    },
+    "RailPrimitive": {
+      "additionalProperties": false,
+      "description": "A rail of two parallel tubes, `gauge` apart from axis to axis, either\nside of its centre line from `start` to `end`. Its tubes are\n`<fixture_id>_right` and `<fixture_id>_left`, as seen looking along it.",
+      "properties": {
+        "fixture_id": {
+          "title": "Fixture Id",
+          "type": "string"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Material"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "obstructs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Obstruction"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Obstructs"
+        },
+        "primitive": {
+          "const": "rail",
+          "default": "rail",
+          "title": "Primitive",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FixtureKind",
+          "default": "rail"
+        },
+        "start": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "end": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "gauge": {
+          "exclusiveMinimum": 0,
+          "title": "Gauge",
+          "type": "number"
+        },
+        "tube_radius": {
+          "exclusiveMinimum": 0,
+          "title": "Tube Radius",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fixture_id",
+        "start",
+        "end",
+        "gauge",
+        "tube_radius"
+      ],
+      "title": "RailPrimitive",
+      "type": "object"
+    },
     "RemoveItems": {
       "additionalProperties": false,
-      "description": "The chosen equipment, sensors, doors and vents taken out.",
+      "description": "The chosen equipment, sensors, zones, fixtures, doors and vents\ntaken out.",
       "properties": {
         "edit": {
           "const": "remove_items",
@@ -589,7 +1026,7 @@ export const EDIT_SCHEMA = {
     },
     "RepeatItems": {
       "additionalProperties": false,
-      "description": "Each chosen piece of equipment or sensor copied `count` times, each\ncopy `step` further than the one before.",
+      "description": "Each chosen piece of equipment, sensor, zone or fixture copied\n`count` times, each copy `step` further than the one before.",
       "properties": {
         "edit": {
           "const": "repeat_items",
@@ -679,7 +1116,7 @@ export const EDIT_SCHEMA = {
     },
     "SetField": {
       "additionalProperties": false,
-      "description": "One field, a nested one by its path (`base.z`), given one value over\nthe chosen items: equipment, sensors, doors or vents.",
+      "description": "One field, a nested one by its path (`base.z`), given one value over\nthe chosen items: equipment, sensors, zones, fixtures, doors or\nvents.",
       "properties": {
         "edit": {
           "const": "set_field",
@@ -739,7 +1176,7 @@ export const EDIT_SCHEMA = {
     },
     "SpaceItems": {
       "additionalProperties": false,
-      "description": "The chosen pieces of equipment and sensors spaced evenly along an\naxis of the greenhouse.",
+      "description": "The chosen pieces of equipment, sensors, zones and fixtures spaced\nevenly along an axis of the greenhouse.",
       "properties": {
         "edit": {
           "const": "space_items",
@@ -821,6 +1258,101 @@ export const EDIT_SCHEMA = {
       "title": "SpreadOpenings",
       "type": "object"
     },
+    "Strip": {
+      "additionalProperties": false,
+      "description": "A rectangle of the floor: a centre line from `start` to `end`, `width`\nwide.",
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/Point2"
+        },
+        "end": {
+          "$ref": "#/$defs/Point2"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "number"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "width"
+      ],
+      "title": "Strip",
+      "type": "object"
+    },
+    "TrayPrimitive": {
+      "additionalProperties": false,
+      "description": "An open tray, such as a crop gutter: `width` across and `depth` deep,\nits bottom's centre line from `start` to `end`. It may slope, as gutters\ndo to drain; it stays level across.",
+      "properties": {
+        "fixture_id": {
+          "title": "Fixture Id",
+          "type": "string"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Material"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "obstructs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Obstruction"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Obstructs"
+        },
+        "primitive": {
+          "const": "tray",
+          "default": "tray",
+          "title": "Primitive",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FixtureKind",
+          "default": "crop_gutter"
+        },
+        "start": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "end": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "number"
+        },
+        "depth": {
+          "exclusiveMinimum": 0,
+          "title": "Depth",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fixture_id",
+        "start",
+        "end",
+        "width",
+        "depth"
+      ],
+      "title": "TrayPrimitive",
+      "type": "object"
+    },
     "Vector3": {
       "properties": {
         "x": {
@@ -843,6 +1375,109 @@ export const EDIT_SCHEMA = {
       ],
       "title": "Vector3",
       "type": "object"
+    },
+    "WalkwayPrimitive": {
+      "additionalProperties": false,
+      "description": "A path on the floor, `width` wide, its centre line from `start` to\n`end`.",
+      "properties": {
+        "fixture_id": {
+          "title": "Fixture Id",
+          "type": "string"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Material"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "obstructs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Obstruction"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Obstructs"
+        },
+        "primitive": {
+          "const": "walkway",
+          "default": "walkway",
+          "title": "Primitive",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FixtureKind",
+          "default": "walkway"
+        },
+        "start": {
+          "$ref": "#/$defs/Point2"
+        },
+        "end": {
+          "$ref": "#/$defs/Point2"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fixture_id",
+        "start",
+        "end",
+        "width"
+      ],
+      "title": "WalkwayPrimitive",
+      "type": "object"
+    },
+    "Zone": {
+      "additionalProperties": false,
+      "description": "A service zone or keep-out volume: a strip of the floor, rising\n`height` above it.",
+      "properties": {
+        "zone_id": {
+          "title": "Zone Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ZoneKind"
+        },
+        "area": {
+          "$ref": "#/$defs/Strip"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "number"
+        }
+      },
+      "required": [
+        "zone_id",
+        "kind",
+        "area",
+        "height"
+      ],
+      "title": "Zone",
+      "type": "object"
+    },
+    "ZoneKind": {
+      "description": "What an area of the floor is kept for.",
+      "enum": [
+        "service",
+        "keep_out"
+      ],
+      "title": "ZoneKind",
+      "type": "string"
     }
   },
   "discriminator": {
