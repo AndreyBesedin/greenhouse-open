@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { checkScene } from "../scene/checkScene";
-import { loadScene, searchFor, sourceFromSearch } from "../scene/source";
+import { loadScene } from "../scene/sceneLoad";
+import { searchFor, sourceFromSearch } from "../scene/source";
 import {
   DEFAULT_STRESS_PLANTS,
   MAX_STRESS_PLANTS,

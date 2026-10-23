@@ -14,16 +14,18 @@ from greenhouse_sim.climate.vents import Vent
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import climate_vents
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.scenarios import SceneChanges, changed
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.weather.sources import ConstantWeather
 from greenhouse_sim.world.geometry import Vector3
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
 GRID = air_grid(CONFIG)
-SOLID = cfd.geometry("climate_box").solid()
+SOLID = cfd.geometry(PACKAGED, "climate_box").solid()
 AIR = ~SOLID
 # The glass shut, and the gaps sealed, so that only the vents exchange
 # anything with the outside.
@@ -35,8 +37,10 @@ UNDER_THE_VENT = Vector3(x=6.0, y=2.5, z=3.75)
 
 
 def _vents(openings: dict[str, float]) -> list[Vent]:
-    config = changed(CONFIG, SceneChanges(openings=openings))
-    return climate_vents(config, cfd.geometry("climate_box", SceneChanges(openings=openings)))
+    config = changed(PACKAGED, CONFIG, SceneChanges(openings=openings))
+    return climate_vents(
+        config, cfd.geometry(PACKAGED, "climate_box", SceneChanges(openings=openings))
+    )
 
 
 def _run(
@@ -69,7 +73,7 @@ def test_a_closed_door_or_vent_exchanges_nothing() -> None:
 @pytest.mark.parametrize("opening", ["roof_vent", "side_vent", "door"])
 def test_the_exchange_grows_with_the_aperture_the_geometry_gives(opening: str) -> None:
     half, full = _vents({opening: 0.5}), _vents({opening: 1.0})
-    config = changed(CONFIG, SceneChanges(openings={opening: 1.0}))
+    config = changed(PACKAGED, CONFIG, SceneChanges(openings={opening: 1.0}))
     (aperture,) = [o.aperture_area() for o in config.envelope.openings if o.opening_id == opening]
     night = CONFIG.run_weather().at(0.0)
 
@@ -132,21 +136,23 @@ def test_the_draught_goes_out_of_a_warmer_house_and_into_a_cooler_one() -> None:
     assert _draught(_run({})) == 0.0
 
 
-def _climate(query: str) -> EnvironmentField:
-    response = respond("GET", f"/api/scenarios/climate_box/fields/climate{query}")
+def _climate(simulator: Simulator, query: str) -> EnvironmentField:
+    response = respond(simulator, "GET", f"/api/scenarios/climate_box/fields/climate{query}")
     assert response.status == 200, response.body
     return EnvironmentField.from_document(FieldDocument.model_validate(response.body))
 
 
-def test_a_climate_is_served_with_its_vents_open_as_asked() -> None:
-    closed = _climate("?set=heater:1&t=600")
-    opened = _climate("?set=heater:1&t=600&open=roof_vent:1")
+def test_a_climate_is_served_with_its_vents_open_as_asked(simulator: Simulator) -> None:
+    closed = _climate(simulator, "?set=heater:1&t=600")
+    opened = _climate(simulator, "?set=heater:1&t=600&open=roof_vent:1")
 
     closed_t = closed.sample(AirQuantity.TEMPERATURE, UNDER_THE_VENT)
     opened_t = opened.sample(AirQuantity.TEMPERATURE, UNDER_THE_VENT)
     assert isinstance(closed_t, float) and isinstance(opened_t, float)
     assert opened_t < closed_t - 3.0
-    response = respond("GET", "/api/scenarios/climate_box/fields/climate?open=skylight:1")
+    response = respond(
+        simulator, "GET", "/api/scenarios/climate_box/fields/climate?open=skylight:1"
+    )
     assert (response.status, response.body) == (
         400,
         {"error": "climate_box has no opening 'skylight'"},

@@ -15,6 +15,7 @@ import pytest
 from greenhouse_sim.api.routes import control
 from greenhouse_sim.api.server import SimulatorServer, create_server
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import live
 from greenhouse_sim.services.live import SPEEDS, LiveFrame, LiveRun, LiveRuns
 
@@ -253,7 +254,7 @@ def test_an_unknown_scenario_has_no_live_stream(server: SimulatorServer) -> None
 
 @pytest.fixture
 def runs() -> Iterator[LiveRuns]:
-    runs = LiveRuns(seconds_per_day=60.0)
+    runs = LiveRuns(PACKAGED, seconds_per_day=60.0)
     yield runs
     runs.close()
 
@@ -363,7 +364,7 @@ def test_a_run_stopped_has_finished_with_its_thread() -> None:
 
 
 def test_live_runs_closed_start_no_other() -> None:
-    runs = LiveRuns(seconds_per_day=QUICK_SECONDS_PER_DAY)
+    runs = LiveRuns(PACKAGED, seconds_per_day=QUICK_SECONDS_PER_DAY)
     run = runs.run_for(CONFIG)
 
     runs.close()
@@ -411,7 +412,7 @@ def test_stopping_a_run_stuck_in_a_day_gives_up_in_time_and_says_so(
 def test_closing_live_runs_tells_each_to_stop_before_waiting_for_any(
     held_in_a_day: Callable[[LiveRun, threading.Event], threading.Event],
 ) -> None:
-    runs = LiveRuns(seconds_per_day=QUICK_SECONDS_PER_DAY)
+    runs = LiveRuns(PACKAGED, seconds_per_day=QUICK_SECONDS_PER_DAY)
     release = threading.Event()
     first = runs.run_for(CONFIG)
     second = runs.run_for(SCENARIO_REGISTRY["airflow_box"])

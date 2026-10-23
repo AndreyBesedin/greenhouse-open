@@ -10,6 +10,7 @@ from greenhouse_sim.climate.commands import Command, Schedule
 from greenhouse_sim.climate.sources import HEATER_JET_DIAMETERS, SourceTerms, source_terms
 from greenhouse_sim.fields.field import FieldGrid
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.units import HOUR_S
@@ -18,7 +19,7 @@ from greenhouse_sim.world.geometry import Vector3
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
 GRID = air_grid(CONFIG)
-SOLID = cfd.geometry("climate_box").solid()
+SOLID = cfd.geometry(PACKAGED, "climate_box").solid()
 
 
 def _piece[T: Fan | Heater | Dehumidifier](kind: type[T]) -> T:

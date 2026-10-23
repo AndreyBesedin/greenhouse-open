@@ -13,8 +13,10 @@ from pydantic import ValidationError
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.climate.psychrometrics import humidity_ratio_g_kg
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import fields, scenarios, weather
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.weather.presets import COLD_SPRING_DAY, PRESETS
 from greenhouse_sim.weather.state import WeatherState
 from greenhouse_sim.weather.synthetic import SyntheticWeather
@@ -155,29 +157,33 @@ def test_a_day_that_does_not_warm_and_cool_is_refused(
 
 
 def test_every_scenario_can_be_run_under_any_preset() -> None:
-    for summary in scenarios.scenario_summaries():
+    for summary in scenarios.scenario_summaries(PACKAGED):
         # Its own, the presets, then the recorded days (P07.7).
         assert summary.weathers[: len(PRESETS) + 1] == ["default", *PRESETS]
 
 
-def test_a_climate_run_under_a_preset_is_its_weathers() -> None:
+def test_a_climate_run_under_a_preset_is_its_weathers(simulator: Simulator) -> None:
     config = SCENARIO_REGISTRY["climate_box"]
     # The run starts at midnight, near 8 °C on the spring day, as on the
     # box's own night; but the spring day is drier and colder by its first
     # hour, so the house's air differs.
-    own = fields.field(RunRequest("climate_box"), "climate", time_s=3600)
+    own = fields.field(simulator, RunRequest("climate_box"), "climate", time_s=3600)
     spring = fields.field(
-        RunRequest("climate_box", weather="cold_spring_day"), "climate", time_s=3600
+        simulator, RunRequest("climate_box", weather="cold_spring_day"), "climate", time_s=3600
     )
-    outside = weather.at_a_moment("climate_box", 0.0, "cold_spring_day").weather
+    outside = weather.at_a_moment(PACKAGED, "climate_box", 0.0, "cold_spring_day").weather
 
     assert own.source == spring.source
     assert own.channels != spring.channels
     assert outside.relative_humidity_pct < config.run_weather().at(0.0).relative_humidity_pct
 
 
-def test_the_api_serves_a_scenario_under_a_preset_and_refuses_an_unknown_one() -> None:
-    preset = respond("GET", "/api/scenarios/climate_box/weather?weather=cold_spring_day&t=600")
+def test_the_api_serves_a_scenario_under_a_preset_and_refuses_an_unknown_one(
+    simulator: Simulator,
+) -> None:
+    preset = respond(
+        simulator, "GET", "/api/scenarios/climate_box/weather?weather=cold_spring_day&t=600"
+    )
     body = json.loads(json.dumps(preset.body))
 
     assert preset.status == HTTPStatus.OK
@@ -189,11 +195,13 @@ def test_the_api_serves_a_scenario_under_a_preset_and_refuses_an_unknown_one() -
         "/api/scenarios/climate_box/climate/probes?probes=6:3.2:1&weather=foggy",
         "/api/scenarios/climate_box/climate/observations?weather=foggy",
     ):
-        assert respond("GET", path).status == HTTPStatus.NOT_FOUND, path
+        assert respond(simulator, "GET", path).status == HTTPStatus.NOT_FOUND, path
 
 
-def test_the_api_serves_the_weather_through_the_runs_first_day() -> None:
-    response = respond("GET", "/api/scenarios/climate_box/weather/day?weather=cold_spring_day")
+def test_the_api_serves_the_weather_through_the_runs_first_day(simulator: Simulator) -> None:
+    response = respond(
+        simulator, "GET", "/api/scenarios/climate_box/weather/day?weather=cold_spring_day"
+    )
     body = json.loads(json.dumps(response.body))
 
     assert response.status == HTTPStatus.OK
@@ -204,5 +212,5 @@ def test_the_api_serves_the_weather_through_the_runs_first_day() -> None:
     assert min(temperatures) == pytest.approx(4.0)
     assert max(temperatures) == pytest.approx(16.0)
     # Its own weather is the same all day.
-    own = weather.through_the_day("climate_box")
+    own = weather.through_the_day(PACKAGED, "climate_box")
     assert {state.air_temperature_c for state in own.weather} == {8.0}

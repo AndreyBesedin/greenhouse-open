@@ -15,6 +15,7 @@ import pytest
 from pydantic import ValidationError
 
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.scenarios.layout_files import load_layout
 from greenhouse_sim.scenarios.manifest_files import (
     FIRST_SCENARIO,
@@ -312,7 +313,7 @@ def test_a_manifest_names_a_layout_of_its_own_scenario() -> None:
 
 
 def test_a_run_says_what_it_is_made_from() -> None:
-    assert run_manifest("reference_greenhouse") == RunManifest(
+    assert run_manifest(PACKAGED, "reference_greenhouse") == RunManifest(
         scenario_id="reference_greenhouse",
         schema_version=SCHEMA_VERSION,
         version=manifest_digest("reference_greenhouse"),
@@ -331,21 +332,21 @@ def test_a_run_says_what_it_is_made_from() -> None:
 
 
 def test_a_run_under_another_weather_names_it_and_its_overrides() -> None:
-    manifest = run_manifest("climate_box", "cold_spring_day@80~90")
+    manifest = run_manifest(PACKAGED, "climate_box", "cold_spring_day@80~90")
 
     assert (manifest.weather, manifest.weather_kind) == ("cold_spring_day", "synthetic")
     assert (manifest.cloud_cover_pct, manifest.wind_from_deg) == (80.0, 90.0)
     # Its own, constant weather, its own seed and crop model.
-    own = run_manifest("climate_box")
+    own = run_manifest(PACKAGED, "climate_box")
     assert (own.weather, own.weather_kind, own.random_seed) == ("default", "constant", 1201)
     assert (own.crop_model, own.opening_day) == ("simple", None)
-    assert run_manifest("tomato_compartment").airflow == "buoyancy"
+    assert run_manifest(PACKAGED, "tomato_compartment").airflow == "buoyancy"
 
 
 def test_a_run_manifest_is_refused_as_its_run_is() -> None:
     with pytest.raises(NotFound, match="no scenario"):
-        run_manifest("nowhere")
+        run_manifest(PACKAGED, "nowhere")
     with pytest.raises(NotFound, match="no weather"):
-        run_manifest("climate_box", "monsoon")
+        run_manifest(PACKAGED, "climate_box", "monsoon")
     with pytest.raises(InvalidRequest, match="cloud cover"):
-        run_manifest("climate_box", "default@120")
+        run_manifest(PACKAGED, "climate_box", "default@120")

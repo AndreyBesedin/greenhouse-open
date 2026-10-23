@@ -16,8 +16,10 @@ import json
 import sys
 from pathlib import Path
 
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import fields, scenarios
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 
 ROOT = Path(__file__).resolve().parents[1]
 SCENE_FILE = ROOT / "web" / "public" / "scenes" / "qa-airflow-box.json"
@@ -39,25 +41,26 @@ def _rounded(value: object) -> object:
 
 
 def _scene() -> object:
-    return _rounded(scenarios.initial_scene(SCENARIO).model_dump(mode="json"))
+    return _rounded(scenarios.initial_scene(PACKAGED, SCENARIO).model_dump(mode="json"))
 
 
-def _field() -> object:
-    return fields.field(RunRequest(SCENARIO), "cfd").model_dump(mode="json")
+def _field(simulator: Simulator) -> object:
+    return fields.field(simulator, RunRequest(SCENARIO), "cfd").model_dump(mode="json")
 
 
 def test_the_qa_scene_is_what_the_simulator_draws() -> None:
     assert json.loads(SCENE_FILE.read_text()) == _scene()
 
 
-def test_the_qa_field_is_the_scenarios_kept_cfd_solution() -> None:
-    assert json.loads(FIELD_FILE.read_text()) == _field()
+def test_the_qa_field_is_the_scenarios_kept_cfd_solution(simulator: Simulator) -> None:
+    assert json.loads(FIELD_FILE.read_text()) == _field(simulator)
 
 
 if __name__ == "__main__":
-    if sys.argv[1:] != ["--update"]:
-        raise SystemExit("usage: python tests/test_airflow_qa.py --update")
-    SCENE_FILE.write_text(json.dumps(_scene(), indent=2) + "\n")
-    FIELD_FILE.parent.mkdir(parents=True, exist_ok=True)
-    FIELD_FILE.write_text(json.dumps(_field()) + "\n")
-    print("wrote", SCENE_FILE, FIELD_FILE)
+    with Simulator() as simulator:
+        if sys.argv[1:] != ["--update"]:
+            raise SystemExit("usage: python tests/test_airflow_qa.py --update")
+        SCENE_FILE.write_text(json.dumps(_scene(), indent=2) + "\n")
+        FIELD_FILE.parent.mkdir(parents=True, exist_ok=True)
+        FIELD_FILE.write_text(json.dumps(_field(simulator)) + "\n")
+        print("wrote", SCENE_FILE, FIELD_FILE)

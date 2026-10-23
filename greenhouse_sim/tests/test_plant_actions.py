@@ -27,6 +27,7 @@ from greenhouse_sim.domain.organs import FlowerStage, FruitStage, LeafStage
 from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services import plants
 from greenhouse_sim.services.plants import LabAction, LabRun
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Vector3
 
 # The lab's first plant on day 85: two red trusses, and more ripening above.
@@ -215,10 +216,14 @@ def test_scheduled_actions_last_through_the_days_after_and_not_before() -> None:
     assert after.problems_since(on) == []
 
 
-def test_the_lab_schedules_actions_from_its_query_and_shows_them() -> None:
+def test_the_lab_schedules_actions_from_its_query_and_shows_them(simulator: Simulator) -> None:
     query = "day=40&act=30:p01:remove_leaf:p01_n02_leaf&act=35:p02:remove_leaf:p02_n01_leaf"
-    scene = SceneSnapshot.model_validate(respond("GET", f"/api/plants/scene?{query}").body)
-    structure = Plant.model_validate(respond("GET", f"/api/plants/structure?{query}").body)
+    scene = SceneSnapshot.model_validate(
+        respond(simulator, "GET", f"/api/plants/scene?{query}").body
+    )
+    structure = Plant.model_validate(
+        respond(simulator, "GET", f"/api/plants/structure?{query}").body
+    )
     ids = {entity.entity_id for entity in scene.entities}
 
     assert "p01_n02_leaf_petiole" not in ids and "p02_n01_leaf_petiole" not in ids
@@ -244,8 +249,10 @@ def test_the_lab_schedules_actions_from_its_query_and_shows_them() -> None:
         ("91:p01:remove_leaf:p01_n02_leaf", "the plant lab runs from day 0 to day 90, not day 91"),
     ],
 )
-def test_an_action_the_lab_cannot_schedule_is_refused(act_query: str, reason: str) -> None:
-    answer = respond("GET", f"/api/plants/scene?act={act_query}")
+def test_an_action_the_lab_cannot_schedule_is_refused(
+    simulator: Simulator, act_query: str, reason: str
+) -> None:
+    answer = respond(simulator, "GET", f"/api/plants/scene?act={act_query}")
 
     assert (answer.status, answer.body) == (HTTPStatus.BAD_REQUEST, {"error": reason})
 
