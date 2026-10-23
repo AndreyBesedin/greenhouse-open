@@ -32,11 +32,12 @@ of kept areas as supports do; a piece too short to ride on is not laid.
 """
 
 import math
-from typing import Final, Literal, Self
+from typing import Annotated, Final, Literal, Self
 
 from pydantic import (
     BaseModel,
     ConfigDict,
+    Field,
     NonNegativeFloat,
     PositiveFloat,
     PositiveInt,
@@ -64,6 +65,11 @@ LEAST_SUPPORT_REACH_M: Final = 2 * SLAB_INSET_M
 ROW_OVERHANG_M: Final = 0.25
 # A rail left shorter than this between kept areas is not laid.
 SHORTEST_RAIL_M: Final = 1.0
+# No crop is larger: more rows, or positions, describe a crop too large to
+# draw or grow, which a file read from elsewhere could ask for in a few bytes.
+MOST_ROWS: Final = 1_000
+MOST_POSITIONS_PER_ROW: Final = 10_000
+MOST_PLANTING_POSITIONS: Final = 100_000
 
 
 class Slab(BaseModel):
@@ -186,8 +192,8 @@ class CropRows(BaseModel):
     origin: Point2
     # Which way the rows run: a turn about the vertical from the greenhouse's x.
     heading: float = 0.0
-    rows: PositiveInt
-    positions_per_row: PositiveInt
+    rows: Annotated[PositiveInt, Field(le=MOST_ROWS)]
+    positions_per_row: Annotated[PositiveInt, Field(le=MOST_POSITIONS_PER_ROW)]
     # From one planting position to the next along a row.
     plant_pitch: PositiveFloat
     # From one row to the next; with paired rows, from one pair to the next.
@@ -201,6 +207,15 @@ class CropRows(BaseModel):
     rails: RowRails | None = None
     # A crop wire above each row.
     wires: CropWires | None = None
+
+    @model_validator(mode="after")
+    def _not_too_many_positions(self) -> Self:
+        if self.rows * self.positions_per_row > MOST_PLANTING_POSITIONS:
+            raise ValueError(
+                f"{self.rows} rows of {self.positions_per_row} positions; a crop has at most "
+                f"{MOST_PLANTING_POSITIONS} of them"
+            )
+        return self
 
     @model_validator(mode="after")
     def _pairs_do_not_overlap(self) -> Self:
@@ -471,11 +486,17 @@ class CropRows(BaseModel):
             material=support.material,
         ).fixtures()
         if support.leg_spacing is not None:
-            # The end legs stand flush with the support's ends, not past them.
+            # The end legs stand flush with the support's ends, not past them;
+            # a support too short for a leg at each end stands on one, at its
+            # middle.
             first_leg, last_leg = start + support.leg_radius, end - support.leg_radius
             spans = math.ceil((last_leg - first_leg) / support.leg_spacing)
-            for leg in range(spans + 1):
-                along = first_leg + (last_leg - first_leg) * leg / spans
+            legs = (
+                [first_leg + (last_leg - first_leg) * leg / spans for leg in range(spans + 1)]
+                if spans > 0
+                else [(start + end) / 2]
+            )
+            for leg, along in enumerate(legs):
                 fixtures += CylinderPrimitive(
                     fixture_id=f"{support_id}_leg_{leg + 1}",
                     kind=support.kind,

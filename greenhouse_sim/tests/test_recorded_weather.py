@@ -11,11 +11,13 @@ import pytest
 from greenhouse_sim.climate.openings import opening_flows, opening_sites
 from greenhouse_sim.fields.synthetic import shear_field
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.sensors.air import reads
 from greenhouse_sim.services import scenarios, sensors, weather
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import SceneChanges, changed
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.weather.recorded import (
     RecordedWeather,
     WeatherFileError,
@@ -116,7 +118,9 @@ def test_a_wind_without_a_direction_drives_no_flow_and_a_vane_reads_none(tmp_pat
         HEADER + ",outside_wind_speed_m_s\n2026-04-01T00:00Z,8,90,6\n2026-04-01T01:00Z,8,90,6\n"
     )
     state = _write(tmp_path, breezy).source(DEFAULT_SITE).at(datetime(2026, 4, 1, tzinfo=UTC))
-    config = changed(BOX, SceneChanges(openings={"side_vent": 1.0, "side_vent_left": 1.0}))
+    config = changed(
+        PACKAGED, BOX, SceneChanges(openings={"side_vent": 1.0, "side_vent_left": 1.0})
+    )
     sites = list(opening_sites(config.envelope, config.site).values())
     vane = next(s for s in BOX.layout.weather_station() if s.sensor_id == "station_wind_direction")
 
@@ -151,7 +155,7 @@ def test_a_recorded_day_is_replayed_from_its_midnight_at_a_runs_start(tmp_path: 
 def test_the_example_day_is_a_scenarios_weather_by_name() -> None:
     assert "example_day" in recorded_weathers()
     assert "example_day" in scenarios.weather_names()
-    day = weather.through_the_day("climate_box", "example_day")
+    day = weather.through_the_day(PACKAGED, "climate_box", "example_day")
 
     assert len(day.weather) == 145
     assert all(state.wind_direction_deg is not None for state in day.weather)
@@ -159,14 +163,14 @@ def test_the_example_day_is_a_scenarios_weather_by_name() -> None:
     assert all(0 < state.relative_humidity_pct <= 100 for state in day.weather)
 
 
-def test_a_run_is_told_apart_by_its_recorded_file(tmp_path: Path) -> None:
+def test_a_run_is_told_apart_by_its_recorded_file(simulator: Simulator, tmp_path: Path) -> None:
     first = _write(tmp_path, HEADER + "\n2026-04-01T00:00Z,8,90\n")
     before = first.identity()
     second = _write(tmp_path, HEADER + "\n2026-04-01T00:00Z,9,90\n")
 
     assert second.identity() != before
-    own = sensors.observations(RunRequest("climate_box"), until_s=60).run_id
+    own = sensors.observations(simulator, RunRequest("climate_box"), until_s=60).run_id
     recorded = sensors.observations(
-        RunRequest("climate_box", weather="example_day"), until_s=60
+        simulator, RunRequest("climate_box", weather="example_day"), until_s=60
     ).run_id
     assert own != recorded

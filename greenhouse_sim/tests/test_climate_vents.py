@@ -14,6 +14,7 @@ from greenhouse_sim.climate.vents import Vent
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import climate_vents
 from greenhouse_sim.services.grid import air_grid
@@ -24,7 +25,7 @@ from greenhouse_sim.world.geometry import Vector3
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
 GRID = air_grid(CONFIG)
-SOLID = cfd.geometry("climate_box").solid()
+SOLID = cfd.geometry(PACKAGED, "climate_box").solid()
 AIR = ~SOLID
 # The glass shut, and the gaps sealed, so that only the vents exchange
 # anything with the outside.
@@ -36,8 +37,10 @@ UNDER_THE_VENT = Vector3(x=6.0, y=2.5, z=3.75)
 
 
 def _vents(openings: dict[str, float]) -> list[Vent]:
-    config = changed(CONFIG, SceneChanges(openings=openings))
-    return climate_vents(config, cfd.geometry("climate_box", SceneChanges(openings=openings)))
+    config = changed(PACKAGED, CONFIG, SceneChanges(openings=openings))
+    return climate_vents(
+        config, cfd.geometry(PACKAGED, "climate_box", SceneChanges(openings=openings))
+    )
 
 
 def _run(
@@ -70,7 +73,7 @@ def test_a_closed_door_or_vent_exchanges_nothing() -> None:
 @pytest.mark.parametrize("opening", ["roof_vent", "side_vent", "door"])
 def test_the_exchange_grows_with_the_aperture_the_geometry_gives(opening: str) -> None:
     half, full = _vents({opening: 0.5}), _vents({opening: 1.0})
-    config = changed(CONFIG, SceneChanges(openings={opening: 1.0}))
+    config = changed(PACKAGED, CONFIG, SceneChanges(openings={opening: 1.0}))
     (aperture,) = [o.aperture_area() for o in config.envelope.openings if o.opening_id == opening]
     night = CONFIG.run_weather().at(0.0)
 

@@ -192,8 +192,15 @@ export function ClimateTime({
           following to choose the moment here, or play it.
         </p>
       )}
-      {waiting && (
-        <p className="climate-time-note" data-testid="climate-pending">
+      {/* While the run plays, or the view follows it, the line keeps its place
+          between one moment's loading and the next's, so that the rows below
+          stay where they are (#301); only its words are shown or not. */}
+      {(waiting || ((playing || followed) && !failed)) && (
+        <p
+          className={waiting ? "climate-time-note" : "climate-time-note climate-time-idle"}
+          data-testid={waiting ? "climate-pending" : undefined}
+          aria-hidden={waiting ? undefined : true}
+        >
           {playing ? "Playing: waiting for" : "Loading"} {describeTime(time)}… {waited} s
         </p>
       )}

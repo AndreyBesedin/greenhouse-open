@@ -116,8 +116,8 @@ def test_no_daily_commands_are_not_the_scenarios_own(simulator: Simulator) -> No
     assert own["fan_left"] == 1.0
     assert none["fan_left"] == 0.0
     assert (
-        climate_run(RunRequest("reference_greenhouse"))[0]
-        != climate_run(RunRequest("reference_greenhouse", daily=()))[0]
+        climate_run(simulator, RunRequest("reference_greenhouse"))[0]
+        != climate_run(simulator, RunRequest("reference_greenhouse", daily=()))[0]
     )
 
 
@@ -126,7 +126,7 @@ def test_a_run_left_unsaid_is_its_scenarios_default(simulator: Simulator) -> Non
         "climate_box", layout=DEFAULT_LAYOUT, weather=DEFAULT_WEATHER, levels={}, openings={}
     )
 
-    assert climate_run(RunRequest("climate_box"))[0] == climate_run(said)[0]
+    assert climate_run(simulator, RunRequest("climate_box"))[0] == climate_run(simulator, said)[0]
     assert _levels(simulator, "t=60") == _levels(
         simulator, f"layout={DEFAULT_LAYOUT}&weather={DEFAULT_WEATHER}&t=60"
     )
@@ -142,7 +142,9 @@ def test_every_route_that_makes_a_run_refuses_a_malformed_one_alike(
     assert (response.status, response.body) == (HTTPStatus.BAD_REQUEST, {"error": error})
 
 
-def test_a_checkpoints_run_is_the_run_it_was_saved_from(afresh: Callable[[], None]) -> None:
+def test_a_checkpoints_run_is_the_run_it_was_saved_from(
+    simulator: Simulator, afresh: Callable[[], None]
+) -> None:
     run = RunRequest(
         "climate_box",
         levels={"heater": 1.0},
@@ -150,10 +152,10 @@ def test_a_checkpoints_run_is_the_run_it_was_saved_from(afresh: Callable[[], Non
         commands=((600.0, "fan", 1.0), (600.0, "fan", 0.0)),
         daily=(),
     )
-    saved = checkpoints.save_checkpoint(run, time_s=DAY_S)
-    kept = checkpoints.checkpoint(saved.checkpoint_id)
+    saved = checkpoints.save_checkpoint(simulator, run, time_s=DAY_S)
+    kept = checkpoints.checkpoint(simulator, saved.checkpoint_id)
 
-    assert climate_run(kept.run())[0] == climate_run(run)[0]
+    assert climate_run(simulator, kept.run())[0] == climate_run(simulator, run)[0]
     # In the checkpoint's own format, which uploads read (`CHECKPOINT_FORMAT`).
     document = json.loads(kept.model_dump_json())
     assert document["checkpoint_format"] == checkpoints.CHECKPOINT_FORMAT

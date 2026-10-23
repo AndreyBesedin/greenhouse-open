@@ -12,7 +12,7 @@ light is asked for at a moment of a run is the crop's
 (`greenhouse_sim.services.crop`).
 """
 
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 from greenhouse_sim.biology.tomato.organ.geometry import stem_height_m
 from greenhouse_sim.biology.tomato.organ.transplants import transplant
@@ -25,6 +25,10 @@ from greenhouse_sim.services.stores import Store
 from greenhouse_sim.solar.inside import Sunlight
 from greenhouse_sim.solar.plants import Crown, PlantLight, crowns, placed_crowns
 from greenhouse_sim.solar.shadows import Shadows
+
+if TYPE_CHECKING:
+    # Typed only: the simulator imports the services that take it.
+    from greenhouse_sim.services.simulator import Simulator
 
 # How many scenarios' sunlight, under a layout and a weather, are kept.
 KEPT_SUNLIGHT: Final = 8
@@ -49,12 +53,16 @@ def first_crowns(config: ScenarioConfig) -> list[Crown]:
     return crowns(world.plants, positions, config.envelope)
 
 
-def plant_light(scenario_id: str, layout: str, weather: str) -> PlantLight:
+def plant_light(simulator: Simulator, scenario_id: str, layout: str, weather: str) -> PlantLight:
     """A scenario's sunlight with one of its layouts, under a weather, and the
     light on each of its plants: one of those kept, or a new one."""
 
     def make(_: object) -> PlantLight:
-        config = changed(scenario(scenario_id), SceneChanges(layout=layout, weather=weather))
+        config = changed(
+            simulator.catalogue,
+            scenario(simulator.catalogue, scenario_id),
+            SceneChanges(layout=layout, weather=weather),
+        )
         plant_crowns = first_crowns(config)
         sunlight = Sunlight(
             config.site,
@@ -65,4 +73,4 @@ def plant_light(scenario_id: str, layout: str, weather: str) -> PlantLight:
         )
         return PlantLight(sunlight, plant_crowns)
 
-    return SUNLIGHT.made_once((scenario_id, layout, weather), make)
+    return simulator.sunlight.made_once((scenario_id, layout, weather), make)

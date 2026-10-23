@@ -15,12 +15,14 @@ from greenhouse_sim.climate.house import WholeHouse
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.thermostat import OFF, ON, Thermostat
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import climate_run, equipment_at, house_air, off_levels
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.run_state import run_state
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.weather.sources import ConstantWeather
 from greenhouse_sim.world.equipment import Heater
 
@@ -53,7 +55,7 @@ def _day(
             schedule=schedule or Schedule(),
             settings=config.climate.model_copy(update=SEALED if sealed else {}),
             grid=air_grid(config),
-            solid=cfd.geometry("climate_box").solid(),
+            solid=cfd.geometry(PACKAGED, "climate_box").solid(),
             weather=config.run_weather(),
             thermostat=thermostat,
         )
@@ -221,24 +223,31 @@ def test_a_thermostat_runs_one_of_the_scenarios_heaters_and_takes_no_daily_comma
         config(control={"heating": heating}, daily=[daily.model_dump()])
 
 
-def test_the_reference_greenhouses_run_with_everything_off_runs_no_heater() -> None:
-    _, day = climate_run(RunRequest("reference_greenhouse"))
+def test_the_reference_greenhouses_run_with_everything_off_runs_no_heater(
+    simulator: Simulator,
+) -> None:
+    _, day = climate_run(simulator, RunRequest("reference_greenhouse"))
     _, off = climate_run(
-        RunRequest("reference_greenhouse", levels=off_levels("reference_greenhouse"), daily=())
+        simulator,
+        RunRequest(
+            "reference_greenhouse", levels=off_levels(PACKAGED, "reference_greenhouse"), daily=()
+        ),
     )
 
-    assert off_levels("reference_greenhouse") == {"heater": 0.0}
+    assert off_levels(PACKAGED, "reference_greenhouse") == {"heater": 0.0}
     assert off.house.heated_j(0.0, HOUR_S) == 0.0
     assert day.house.heated_j(0.0, HOUR_S) > 0.0
-    trace = house_air(RunRequest("reference_greenhouse"), until_s=HOUR_S)
+    trace = house_air(simulator, RunRequest("reference_greenhouse"), until_s=HOUR_S)
     assert trace.all_off.temperature_c[-1] < trace.controlled.temperature_c[-1]
 
 
-def test_the_viewer_and_qa_mode_read_its_heater_as_the_thermostat_runs_it() -> None:
-    _, day = climate_run(RunRequest("reference_greenhouse"))
+def test_the_viewer_and_qa_mode_read_its_heater_as_the_thermostat_runs_it(
+    simulator: Simulator,
+) -> None:
+    _, day = climate_run(simulator, RunRequest("reference_greenhouse"))
 
-    state = run_state(RunRequest("reference_greenhouse"), until_s=HOUR_S)
-    equipment = equipment_at(RunRequest("reference_greenhouse"), time_s=HOUR_S)
+    state = run_state(simulator, RunRequest("reference_greenhouse"), until_s=HOUR_S)
+    equipment = equipment_at(simulator, RunRequest("reference_greenhouse"), time_s=HOUR_S)
 
     assert state.levels["heater"] == day.house.heater_level_at(HOUR_S)
     assert equipment.levels == day.run.levels_at(HOUR_S)
@@ -246,10 +255,12 @@ def test_the_viewer_and_qa_mode_read_its_heater_as_the_thermostat_runs_it() -> N
     assert (equipment.thermostat.setpoint_c, equipment.thermostat.runs) == (16.0, True)
     # A command to the heater takes it over, and the viewer is told.
     commanded = equipment_at(
-        RunRequest("reference_greenhouse", commands=((600.0, "heater", 0.0),)), time_s=HOUR_S
+        simulator,
+        RunRequest("reference_greenhouse", commands=((600.0, "heater", 0.0),)),
+        time_s=HOUR_S,
     )
     assert commanded.levels["heater"] == 0.0
     assert commanded.thermostat is not None
     assert not commanded.thermostat.runs
     # A scenario without one says so.
-    assert equipment_at(RunRequest("climate_box"), time_s=HOUR_S).thermostat is None
+    assert equipment_at(simulator, RunRequest("climate_box"), time_s=HOUR_S).thermostat is None

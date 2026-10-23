@@ -25,6 +25,7 @@ from greenhouse_sim.climate.house import WholeHouse
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.settings import ClimateSettings
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import _climate_day
 from greenhouse_sim.services.grid import air_grid
@@ -34,7 +35,7 @@ from greenhouse_sim.weather.state import WeatherState
 
 BOX = SCENARIO_REGISTRY["climate_box"]
 GRID = air_grid(BOX)
-SOLID = cfd.geometry("climate_box").solid()
+SOLID = cfd.geometry(PACKAGED, "climate_box").solid()
 SINGLE_GLASS = 6.0
 NIGHT = BOX.run_weather().at(0.0)
 
@@ -169,8 +170,12 @@ def test_a_cold_spell_cools_the_glass_at_once_and_the_air_more_slowly() -> None:
     assert all(g > a for g, a in zip(glass, air, strict=True))
 
 
-def test_the_climate_box_heated_settles_where_its_still_glass_passes_the_heaters_heat() -> None:
-    house = _climate_day("climate_box", "default", "default", (("heater", 1.0),), (), ()).house
+def test_the_climate_box_heated_settles_where_its_still_glass_passes_the_heaters_heat(
+    simulator: Simulator,
+) -> None:
+    house = _climate_day(
+        simulator, "climate_box", "default", "default", (("heater", 1.0),), (), ()
+    ).house
     still_u = glazing_u_w_m2k(SINGLE_GLASS, 0.0)
 
     settled = house.air_at(6 * 3600.0).temperature_c

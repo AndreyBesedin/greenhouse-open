@@ -7,9 +7,10 @@ canonical checks nor the pre-push pass run them.
 holds a lock, as a request working a run on holds the run's; `held_in_a_day`
 keeps a live run working a day out until the test lets it finish.
 
-A test that answers requests or plays runs back asks for `simulator`
-(decision 0048): one a module's tests share, closed after them. Until the
-services keep their state in it, what they keep is every simulator's.
+A test that answers requests, plays runs back, or asks a service that
+reads or keeps runs, asks for `simulator` (decision 0048): one a module's
+tests share, closed after them. Until each simulator makes its own stores,
+what the services keep is every simulator's.
 
 A test that needs what the services keep forgotten asks for it here, never
 of a store itself (W9): `afresh` (or `afresh_module`, for a module's
@@ -108,24 +109,24 @@ def finishes_beside_held() -> _Beside:
 
 
 @contextmanager
-def _clean_slate() -> Iterator[Callable[[], None]]:
+def _clean_slate(simulator: Simulator) -> Iterator[Callable[[], None]]:
     forget_everything()
     try:
         yield forget_everything
     finally:
         forget_everything()
-        load_openings()
+        load_openings(simulator)
 
 
 @pytest.fixture
-def afresh() -> Iterator[Callable[[], None]]:
-    with _clean_slate() as forget:
+def afresh(simulator: Simulator) -> Iterator[Callable[[], None]]:
+    with _clean_slate(simulator) as forget:
         yield forget
 
 
 @pytest.fixture(scope="module")
-def afresh_module() -> Iterator[Callable[[], None]]:
-    with _clean_slate() as forget:
+def afresh_module(simulator: Simulator) -> Iterator[Callable[[], None]]:
+    with _clean_slate(simulator) as forget:
         yield forget
 
 

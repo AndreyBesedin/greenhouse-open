@@ -11,6 +11,7 @@ import pytest
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services.scenarios import SceneChanges, changed
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.sunlight import plant_light
@@ -86,7 +87,7 @@ def test_the_clouds_override_dims_any_weather_from_its_own_sky(simulator: Simula
     assert clouded.global_radiation_w_m2 == pytest.approx(100.0)
     assert clouded.cloud_cover_pct == 100.0
     # And the scenario keeps the override.
-    config = changed(SCENARIO_REGISTRY["solar_lab"], SceneChanges(weather="default@80"))
+    config = changed(PACKAGED, SCENARIO_REGISTRY["solar_lab"], SceneChanges(weather="default@80"))
     assert config.cloud_cover_pct == 80.0
     assert config.run_weather().at(0.0).cloud_cover_pct == 80.0
 
@@ -99,14 +100,16 @@ def test_a_cloud_cover_beyond_the_sky_is_refused(simulator: Simulator, weather: 
     assert "a cloud cover runs from 0 to 100 %" in json.dumps(response.body)
 
 
-def test_the_roofs_structure_covers_a_twentieth_of_the_climate_boxs_plan() -> None:
+def test_the_roofs_structure_covers_a_twentieth_of_the_climate_boxs_plan(
+    simulator: Simulator,
+) -> None:
     # Four frames of two rafters, each 6 cm wide over its 3.2 m run, and the
     # two eave gutters' inner halves, 10 cm along the 12 m house, over its
     # 12 m by 6.4 m.
     expected = (4 * 2 * 0.06 * 3.2 + 2 * 0.1 * 12.0) / (12.0 * 6.4)
 
     assert roof_shading(SCENARIO_REGISTRY["climate_box"].envelope) == pytest.approx(expected)
-    light = plant_light("solar_lab", "default", "default")
+    light = plant_light(simulator, "solar_lab", "default", "default")
     assert light.sunlight.diffuse_passed == pytest.approx(DIFFUSE_TRANSMITTANCE * (1 - expected))
 
 
@@ -123,10 +126,10 @@ def test_a_girder_under_the_rafters_covers_the_plan_once() -> None:
     )
 
 
-def test_clouds_soften_the_shadows() -> None:
+def test_clouds_soften_the_shadows(simulator: Simulator) -> None:
     # The plants behind the crates against those in the open, at noon.
     def contrast(weather: str) -> float:
-        par = plant_light("solar_lab", "default", weather).par_at(NOON_S)
+        par = plant_light(simulator, "solar_lab", "default", weather).par_at(NOON_S)
         return par["solar_lab_plant_002"] / par["solar_lab_plant_016"]
 
     clear, cloudy, overcast = contrast("default"), contrast("default@80"), contrast("default@100")

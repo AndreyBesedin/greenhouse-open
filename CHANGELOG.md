@@ -47,6 +47,33 @@ breaks the conformance checks is a major version.
   receipt, plan state, limits and outcome batch are published beside the
   records'.
 
+- `greenhouse-sim`: a scenario is looked up in the catalogue of the
+  simulator answering (decision 0048): the services that look scenarios up
+  take it, and a scenario registered with one simulator is listed and run
+  by that one alone. Versions, opening days and layouts come from the
+  catalogue's entries rather than from the manifests' files.
+  `SCENARIO_REGISTRY` is read-only now, the packaged scenarios as
+  `catalogue.PACKAGED` holds them.
+- `greenhouse-sim`: `greenhouse_sim.builder`, the setup builder's first step
+  (P12.0, decision 0050). An installation, the house part of a scenario
+  (its envelope, its layout and the crop each row grows), is drafted from a
+  form's values, assessed for what stops it running (each finding naming
+  the items and rows it concerns), given a crop over many rows at once, and
+  exchanged as a file in the manifests' format version, with its JSON
+  Schema, `builder/installation.schema.json`. A refused file names each
+  field at fault. Nothing in the packaged scenarios changes.
+- `greenhouse-sim`: a layout's crop rows are bounded, as an envelope's spans
+  and bays are: at most 1,000 rows, 10,000 positions a row and 100,000
+  positions in all, and a run of pipes at most 1,000 pipes, so that a small
+  file cannot ask for a crop too large to lay out. A row's support shorter
+  than its two end legs stands on one leg, at its middle, where laying it
+  out divided by zero.
+- `greenhouse-sim`: every service that reads or keeps runs takes the
+  simulator it keeps them in, and reaches its climate runs, crops,
+  sunlight, checkpoints and kept states through it; so does a playback,
+  which works its days out in its simulator's (decision 0048). The stores
+  are still the services' modules', every simulator's, until each
+  simulator makes its own.
 - `greenhouse-sim`: the runs played back and the cursors given to
   consumers are a simulator's own (decision 0048): the API's server makes
   its simulator, answers every request from it and closes it as it closes.

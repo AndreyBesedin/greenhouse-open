@@ -85,26 +85,32 @@ def test_a_series_that_ends_before_it_begins_is_refused(simulator: Simulator) ->
     )
 
 
-def test_a_days_log_is_the_whole_logs_from_that_day_on() -> None:
+def test_a_days_log_is_the_whole_logs_from_that_day_on(simulator: Simulator) -> None:
     whole = sensors.observations(
-        RunRequest("climate_box", levels=HEATED), until_s=SECOND_DAY_S, from_s=0.0
+        simulator, RunRequest("climate_box", levels=HEATED), until_s=SECOND_DAY_S, from_s=0.0
     )
-    days = sensors.observations(RunRequest("climate_box", levels=HEATED), until_s=SECOND_DAY_S)
+    days = sensors.observations(
+        simulator, RunRequest("climate_box", levels=HEATED), until_s=SECOND_DAY_S
+    )
     midnight = whole.start + timedelta(seconds=DAY_S)
 
     assert days.observations == [o for o in whole.observations if o.timestamp >= midnight]
     assert days.frames == [f for f in whole.frames if f.timestamp >= midnight]
     assert days.freshness == whole.freshness
-    truths = sensors.truth(RunRequest("climate_box", levels=HEATED), until_s=SECOND_DAY_S)
+    truths = sensors.truth(
+        simulator, RunRequest("climate_box", levels=HEATED), until_s=SECOND_DAY_S
+    )
     assert {t.times_s[0] for t in truths.sensors} == {DAY_S}
 
 
 @pytest.mark.parametrize("until_s", [0.0, 59.0, 600.0, 1170.0, 1171.0, 1200.0, SECOND_DAY_S])
-def test_a_sensors_freshness_is_its_latest_reading_without_reading_them(until_s: float) -> None:
+def test_a_sensors_freshness_is_its_latest_reading_without_reading_them(
+    simulator: Simulator, until_s: float
+) -> None:
     """Worked out from the draws alone, it agrees with the readings
     delivered: the back thermometer drops samples and is late."""
     log = sensors.observations(
-        RunRequest("climate_box", levels=HEATED), until_s=until_s, from_s=0.0
+        simulator, RunRequest("climate_box", levels=HEATED), until_s=until_s, from_s=0.0
     )
     latest: dict[str, datetime] = {}
     for observation in log.observations:
@@ -124,7 +130,7 @@ def test_the_weather_through_a_later_day(simulator: Simulator) -> None:
 
 
 def test_a_plants_light_integral_is_its_moments_days(simulator: Simulator) -> None:
-    light = plant_light("solar_lab", "default", "default")
+    light = plant_light(simulator, "solar_lab", "default", "default")
     body = _body(simulator, f"/api/scenarios/solar_lab/climate/plants?t={SECOND_DAY_S:.0f}")
 
     assert body["daily_light_integral_mol_m2_d"] == light.daily_light_integral(1)

@@ -7,9 +7,13 @@ import { CONTRACTS, generatedSources } from "../scripts/generateContractSources"
 // The simulator's package, where each schema it publishes lies beside its
 // model.
 const PACKAGE = new URL("../../greenhouse_sim/", import.meta.url);
-// The schemas of the files a scenario is written in, which the viewer does
-// not read.
-const NOT_READ = ["scenarios/layout.schema.json", "scenarios/scenario.schema.json"];
+// The schemas of the files a scenario, or an installation, is written in,
+// which the viewer does not read.
+const NOT_READ = [
+  "builder/installation.schema.json",
+  "scenarios/layout.schema.json",
+  "scenarios/scenario.schema.json",
+];
 
 describe("the viewer's side of the simulator's contracts", () => {
   it.each(CONTRACTS.map((contract) => [contract.schemaPath, contract] as const))(

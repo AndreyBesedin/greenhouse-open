@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field
 
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.biology.tomato.organ.topology import Plant
+from greenhouse_sim.builder.portable import INSTALLATION_SCHEMA_FILE, installation_json_schema
 from greenhouse_sim.cfd.geometry import cfd_geometry_json_schema
 from greenhouse_sim.climate.glazing import GlazingAt
 from greenhouse_sim.climate.house import HouseTrace
@@ -91,6 +92,7 @@ PUBLISHED: Final[dict[Path, Callable[[], Mapping[str, object]]]] = {
     PACKAGE / "cfd" / "geometry.schema.json": cfd_geometry_json_schema,
     MANIFEST_SCHEMA_FILE: manifest_json_schema,
     LAYOUT_SCHEMA_FILE: layout_json_schema,
+    INSTALLATION_SCHEMA_FILE: installation_json_schema,
     **{path: partial(answer_json_schema, answered) for path, answered in ANSWERS.items()},
 }
 

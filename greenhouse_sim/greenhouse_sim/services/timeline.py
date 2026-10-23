@@ -15,6 +15,7 @@ from greenhouse_sim.climate.house import STEP_S
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.core.timeline import TURNS, RunProcesses, events
 from greenhouse_sim.domain.processes import Process
+from greenhouse_sim.scenarios.catalogue import Scenarios
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import run_schedule
@@ -46,14 +47,18 @@ class TimelineDocument(BaseModel):
 
 
 def timeline(
-    run: RunRequest, until_s: float = 0.0, from_s: float | None = None
+    catalogue: Scenarios, run: RunRequest, until_s: float = 0.0, from_s: float | None = None
 ) -> TimelineDocument:
     """A run's events from `from_s`, by default the start of the day
     `until_s` belongs to (`services.runs`), to `until_s`: with one of its
     scenario's layouts, its equipment at its levels from the start, then as
     its daily commands and its commands set it, checked as its climate's
     are. A window longer than a day is refused."""
-    config = changed(scenario(run.scenario_id), SceneChanges(layout=run.layout or DEFAULT_LAYOUT))
+    config = changed(
+        catalogue,
+        scenario(catalogue, run.scenario_id),
+        SceneChanges(layout=run.layout or DEFAULT_LAYOUT),
+    )
     first = checked_window(config, from_s, until_s)
     if until_s - first > LONGEST_WINDOW_S:
         raise InvalidRequest(
@@ -61,7 +66,7 @@ def timeline(
             f"{until_s - first:.15g}"
         )
     processes = RunProcesses(
-        schedule=run_schedule(run),
+        schedule=run_schedule(catalogue, run),
         air_step_s=STEP_S if config.layout.equipment else None,
         plants=plant_ids(config),
         sensors=[sensor for sensor in config.layout.sensors if isinstance(sensor, PointSensor)],

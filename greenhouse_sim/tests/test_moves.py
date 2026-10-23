@@ -12,6 +12,7 @@ import pytest
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import air_through_a_run, climate_run
 from greenhouse_sim.services.runs import RunRequest
@@ -35,7 +36,7 @@ TURNED = Transform(
 
 
 def _item(layout_name: str, item_id: str) -> object:
-    config = changed(REFERENCE, SceneChanges(layout=layout_name))
+    config = changed(PACKAGED, REFERENCE, SceneChanges(layout=layout_name))
     return next(
         item
         for item in [*config.layout.equipment, *config.layout.sensors]
@@ -121,13 +122,13 @@ def test_moves_are_written_in_a_layouts_name_and_refused_when_they_cannot_be() -
         ("default~heater:99:0", "moved so, outside the greenhouse: heater"),
     ]:
         with pytest.raises(InvalidRequest, match=refused):
-            changed(REFERENCE, SceneChanges(layout=name))
+            changed(PACKAGED, REFERENCE, SceneChanges(layout=name))
 
 
 def test_a_moved_layout_is_another_run_and_the_api_draws_it(simulator: Simulator) -> None:
-    _, own = air_through_a_run(RunRequest("climate_box"))
+    _, own = air_through_a_run(simulator, RunRequest("climate_box"))
     _, moved_run = air_through_a_run(
-        RunRequest("climate_box", layout="default~temperature_front:0.5:0")
+        simulator, RunRequest("climate_box", layout="default~temperature_front:0.5:0")
     )
     assert moved_run != own
 
@@ -149,7 +150,7 @@ def test_moves_are_checked_in_the_greenhouse_as_its_dimensions_change_it(
     simulator: Simulator,
 ) -> None:
     def heater_x(name: str, length_m: float) -> float:
-        config = changed(BOX, SceneChanges(layout=name, envelope={"length": length_m}))
+        config = changed(PACKAGED, BOX, SceneChanges(layout=name, envelope={"length": length_m}))
         heater = next(p for p in config.layout.equipment if isinstance(p, Heater))
         return heater.base.x
 
@@ -171,7 +172,7 @@ def test_moves_are_checked_in_the_greenhouse_as_its_dimensions_change_it(
     assert (heater["base"]["x"], heater["base"]["y"]) == pytest.approx((10.2, 1.2))
 
 
-def test_the_same_moves_however_written_are_the_same_run() -> None:
+def test_the_same_moves_however_written_are_the_same_run(simulator: Simulator) -> None:
     assert layout_name("default") == "default"
     assert layout_name("default~heater:-1:0.50,co2:0:1") == "default~co2:0.0:1.0,heater:-1.0:0.5"
     # A move of nought is none, and no moves left is the layout itself.
@@ -180,7 +181,7 @@ def test_the_same_moves_however_written_are_the_same_run() -> None:
     assert layout_name(layout_name("default~heater:-1:0.5")) == "default~heater:-1.0:0.5"
 
     runs = {
-        air_through_a_run(RunRequest("climate_box", layout=name))[1]
+        air_through_a_run(simulator, RunRequest("climate_box", layout=name))[1]
         for name in [
             "default~heater:-1:0,temperature_front:0.5:0",
             "default~temperature_front:0.5:0,heater:-1:0",
@@ -190,21 +191,23 @@ def test_the_same_moves_however_written_are_the_same_run() -> None:
     assert len(runs) == 1
     # No moves at all is the scenario's own run.
     assert (
-        air_through_a_run(RunRequest("climate_box", layout="default~heater:0:0"))[1]
-        == (air_through_a_run(RunRequest("climate_box"))[1])
+        air_through_a_run(simulator, RunRequest("climate_box", layout="default~heater:0:0"))[1]
+        == (air_through_a_run(simulator, RunRequest("climate_box"))[1])
     )
 
 
-def test_a_unit_moved_is_a_house_of_its_own(afresh: Callable[[], None]) -> None:
+def test_a_unit_moved_is_a_house_of_its_own(
+    simulator: Simulator, afresh: Callable[[], None]
+) -> None:
     # Against the side wall, the reference greenhouse's heater fills two more
     # of the grid's cells, and covers glass: the house holds less air, which
     # differs from the start. So the run with it moved, the one a person
     # rearranging the room starts (#271), is worked out from its start, and
     # shares nothing with the run it was moved from.
     hour = 3600.0
-    _, own = climate_run(RunRequest("reference_greenhouse"))
+    _, own = climate_run(simulator, RunRequest("reference_greenhouse"))
     _, moved_run = climate_run(
-        RunRequest("reference_greenhouse", layout="default~heater:-2.9:-0.2")
+        simulator, RunRequest("reference_greenhouse", layout="default~heater:-2.9:-0.2")
     )
 
     assert moved_run.house.volume_m3 < own.house.volume_m3
