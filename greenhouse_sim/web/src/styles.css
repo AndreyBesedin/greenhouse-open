@@ -1388,6 +1388,25 @@ body {
   padding-left: 18px;
 }
 
+/* How moving works, folded under the session's line (#305). */
+.move-details {
+  margin: 0 0 4px;
+}
+
+/* The question before the moves' new run starts (#305): in the panel, set
+ * off from the moves above it. */
+.move-confirm {
+  margin: 0;
+  padding: 6px 0 0;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+}
+
+.move-confirm > legend {
+  padding: 0;
+  font-weight: 600;
+}
+
 /* Where the run followed stands across all its days (#270): its bar takes
  * the row's width, beside the moment it has reached. */
 .playback-progress {

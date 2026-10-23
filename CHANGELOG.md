@@ -7,6 +7,15 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- Viewer and `greenhouse-sim`: moves applied to equipment keep the run's
+  heating target changes. A playback started over with another layout
+  keeps them, each at its moment, and lists them in its state; the viewer
+  keeps `&targets=` in the address, followed or not. A restart with the
+  layout it plays drops them as before (decision 0049). The Move panel
+  says in a line what applying the moves does, the details folded under
+  "How moving works", and "Start a new run with these moves" asks first,
+  in the panel: "Start the new run" applies them, "Back to the moves" or
+  Escape returns to them (#305).
 - `greenhouse-sim`: the packaged scenarios are read once into an
   unchanging catalogue (`scenarios.catalogue.PACKAGED`), each with its
   manifest's digest, opening day and layouts; a catalogue of one's own
