@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 
 import { CfdControls } from "./cfd/CfdControls";
 import type { CfdGeometryState } from "./cfd/geometry";
@@ -6,7 +6,7 @@ import { BranchComparison } from "./checkpoints/BranchComparison";
 import { checkpointRun, comparable } from "./checkpoints/branches";
 import { CheckpointsPanel } from "./checkpoints/CheckpointsPanel";
 import { type CheckpointSummary, restored } from "./checkpoints/checkpoints";
-import { EquipmentControls } from "./EquipmentControls";
+import { EquipmentControls, equipmentIn } from "./EquipmentControls";
 import { ClimateSchedule } from "./fields/ClimateSchedule";
 import { ClimateTime, describeClimateRun } from "./fields/ClimateTime";
 import type { FieldView, Slice } from "./fields/display";
@@ -18,6 +18,7 @@ import { CLIMATE_FIELD, type FieldState } from "./fields/source";
 import { TargetsPanel } from "./fields/TargetsPanel";
 import { useFolds } from "./folds";
 import { OpeningControls, openingsIn } from "./OpeningControls";
+import { PanelCard } from "./PanelCard";
 import {
   levelsAt,
   openingsAt,
@@ -67,6 +68,7 @@ export interface ScenarioLoads {
  * is the viewer's.
  */
 export function ScenarioPanels({
+  children,
   source,
   snapshot,
   weathers,
@@ -89,6 +91,9 @@ export function ScenarioPanels({
   onPlayingClimate,
   onOwnRange,
 }: {
+  /** What leads the simulation's card: the run played back, while the view
+   * follows it. */
+  children?: ReactNode;
   source: ScenarioSource;
   snapshot: SceneSnapshot | null;
   /** The preset weathers it can be run under. */
@@ -170,152 +175,178 @@ export function ScenarioPanels({
     onSource(withSlice(source, slice));
   }
 
+  // Whether the run played back leads the simulation's card: a JSX `false`
+  // when the view does not follow one.
+  const leads = children !== undefined && children !== null && children !== false;
+  // A card is drawn only with a section in it: a scenario may have no
+  // openings, no equipment or no weather.
+  const openings = snapshot === null ? [] : openingsIn(snapshot);
+  const equipped = snapshot !== null && equipmentIn(snapshot).length > 0;
+  // The sections grouped in titled cards by topic (#306): the run played
+  // back and the climate run's moment and course; the house's air, its
+  // targets and its schedule; its equipment, openings and probes; and the
+  // weather outside.
   return (
     <>
-      <details className="field-fold" {...fold("field")}>
-        <summary data-testid="field-summary">
-          {describeAirField(source.field ?? null, fieldView, source.cfdBoundaries === true)}
-        </summary>
-        <FieldControls
-          fields={fields}
-          chosen={source.field ?? null}
-          state={field}
-          view={fieldView}
-          slice={fieldSlice}
-          onChoose={chooseField}
-          onView={chooseFieldView}
-          onSlice={chooseSlice}
-        />
-        <CfdControls
-          shown={source.cfdBoundaries === true}
-          state={cfd}
-          onShow={(show) => onSource(withCfdBoundaries(source, show))}
-        />
-      </details>
-      {climate && (
-        <details className="moment-fold" {...fold("moment")}>
-          <summary data-testid="moment-summary">
-            {describeClimateRun(time, shownTime, momentFailed)}
-          </summary>
-          <ClimateTime
-            time={time}
-            shown={shownTime}
-            failed={momentFailed}
-            followed={source.follow === true}
-            days={days}
-            playing={playingClimate}
-            onTime={setTime}
-            onPlaying={onPlayingClimate}
-          />
-        </details>
-      )}
-      {climate && (
-        <details className="house-fold" {...fold("house")}>
-          <summary data-testid="house-summary">{describeHouseAir(houseAir)}</summary>
-          <HouseAir state={houseAir} />
-        </details>
-      )}
-      {climate && setpoints !== undefined && onTargets !== undefined && (
-        <TargetsPanel
-          thermostat={setpoints}
-          time={time}
-          followed={source.follow === true}
-          onSet={onTargets}
-        />
-      )}
-      {climate && (
-        <ClimateSchedule
-          schedule={source.schedule ?? []}
-          daily={source.daily ?? []}
-          time={time}
-          days={days}
-          onTime={setTime}
-          onRemove={(index) => onSource(withoutCommand(source, index))}
-          onRepeat={(index) => onSource(withRepeated(source, index))}
-          onRemoveDaily={(index) => onSource(withoutDaily(source, index))}
-        />
-      )}
-      {climate && (
-        <TimelinePanel scenarioId={source.scenarioId} run={scenarioRun(source)} time={time} />
-      )}
-      {climate && (
-        <CheckpointsPanel
-          scenarioId={source.scenarioId}
-          run={scenarioRun(source)}
-          time={time}
-          onRestore={(checkpoint) => onSource(restored(source, checkpoint, CLIMATE_FIELD))}
-          compared={against?.checkpointId ?? null}
-          onCompare={setAgainst}
-        />
-      )}
-      {climate && against !== null && against.scenarioId === source.scenarioId && (
-        <BranchComparison
-          checkpoint={against}
-          time={time}
-          request={{
-            scenarioId: source.scenarioId,
-            a: checkpointRun(against, time),
-            b: scenarioRun(source),
-            fromDay: against.day,
-            ...comparable(snapshot),
-          }}
-        />
-      )}
-      <WeatherPanel
-        state={weather}
-        day={weatherDay}
-        weathers={weathers}
-        chosen={source.weather}
-        time={time}
-        onChoose={(chosen) => onSource(withWeather(source, chosen))}
-        clouds={source.clouds}
-        onClouds={(clouds) => onSource(withClouds(source, clouds))}
-        windFrom={source.wind}
-        onWindFrom={(wind) => onSource(withWind(source, wind))}
-      />
-      {(probing || climate) && (
-        <details className="probes-fold" {...fold("probes")}>
-          <summary data-testid="probes-summary">
-            {describeProbes(probes.length, source.compare ?? null)}
-          </summary>
-          {probing && (
-            <FieldProbes
-              names={fields.names}
-              fieldName={fieldName}
-              field={probed}
-              compareName={source.compare ?? null}
-              compareState={comparedField}
-              probes={probes}
-              placing={placing}
-              height={probeHeight}
-              onProbes={onProbes}
-              onCompare={(name) => onSource(withCompared(source, name))}
-              onPlacing={onPlacing}
-              onHeight={onProbeHeight}
+      {(leads || climate) && (
+        <PanelCard title="Simulation">
+          {children}
+          {climate && (
+            <details className="moment-fold" {...fold("moment")}>
+              <summary data-testid="moment-summary">
+                {describeClimateRun(time, shownTime, momentFailed)}
+              </summary>
+              <ClimateTime
+                time={time}
+                shown={shownTime}
+                failed={momentFailed}
+                followed={source.follow === true}
+                days={days}
+                playing={playingClimate}
+                onTime={setTime}
+                onPlaying={onPlayingClimate}
+              />
+            </details>
+          )}
+          {climate && (
+            <TimelinePanel scenarioId={source.scenarioId} run={scenarioRun(source)} time={time} />
+          )}
+          {climate && (
+            <CheckpointsPanel
+              scenarioId={source.scenarioId}
+              run={scenarioRun(source)}
+              time={time}
+              onRestore={(checkpoint) => onSource(restored(source, checkpoint, CLIMATE_FIELD))}
+              compared={against?.checkpointId ?? null}
+              onCompare={setAgainst}
             />
           )}
-          {climate && <ProbeCharts state={probeCharts} time={time} />}
-        </details>
-      )}
-      {snapshot !== null && (
-        <OpeningControls
-          snapshot={snapshot}
-          requested={openingsAt(
-            source,
-            openingsIn(snapshot).map((opening) => opening.openingId),
+          {climate && against !== null && against.scenarioId === source.scenarioId && (
+            <BranchComparison
+              checkpoint={against}
+              time={time}
+              request={{
+                scenarioId: source.scenarioId,
+                a: checkpointRun(against, time),
+                b: scenarioRun(source),
+                fromDay: against.day,
+                ...comparable(snapshot),
+              }}
+            />
           )}
-          fold={fold("openings")}
-          onChange={(openings) => onSource(withOpenings(source, openings))}
-        />
+        </PanelCard>
       )}
-      {snapshot !== null && (
-        <EquipmentControls
-          snapshot={snapshot}
-          requested={levelsAt(source)}
-          thermostat={thermostat}
-          fold={fold("equipment")}
-          onChange={(levels) => onSource(withLevels(source, levels))}
-        />
+      <PanelCard title="House">
+        <details className="field-fold" {...fold("field")}>
+          <summary data-testid="field-summary">
+            {describeAirField(source.field ?? null, fieldView, source.cfdBoundaries === true)}
+          </summary>
+          <FieldControls
+            fields={fields}
+            chosen={source.field ?? null}
+            state={field}
+            view={fieldView}
+            slice={fieldSlice}
+            onChoose={chooseField}
+            onView={chooseFieldView}
+            onSlice={chooseSlice}
+          />
+          <CfdControls
+            shown={source.cfdBoundaries === true}
+            state={cfd}
+            onShow={(show) => onSource(withCfdBoundaries(source, show))}
+          />
+        </details>
+        {climate && (
+          <details className="house-fold" {...fold("house")}>
+            <summary data-testid="house-summary">{describeHouseAir(houseAir)}</summary>
+            <HouseAir state={houseAir} />
+          </details>
+        )}
+        {climate && setpoints !== undefined && onTargets !== undefined && (
+          <TargetsPanel
+            thermostat={setpoints}
+            time={time}
+            followed={source.follow === true}
+            onSet={onTargets}
+          />
+        )}
+        {climate && (
+          <ClimateSchedule
+            schedule={source.schedule ?? []}
+            daily={source.daily ?? []}
+            time={time}
+            days={days}
+            onTime={setTime}
+            onRemove={(index) => onSource(withoutCommand(source, index))}
+            onRepeat={(index) => onSource(withRepeated(source, index))}
+            onRemoveDaily={(index) => onSource(withoutDaily(source, index))}
+          />
+        )}
+      </PanelCard>
+      {(probing || climate || openings.length > 0 || equipped) && (
+        <PanelCard title="Equipment">
+          {(probing || climate) && (
+            <details className="probes-fold" {...fold("probes")}>
+              <summary data-testid="probes-summary">
+                {describeProbes(probes.length, source.compare ?? null)}
+              </summary>
+              {probing && (
+                <FieldProbes
+                  names={fields.names}
+                  fieldName={fieldName}
+                  field={probed}
+                  compareName={source.compare ?? null}
+                  compareState={comparedField}
+                  probes={probes}
+                  placing={placing}
+                  height={probeHeight}
+                  onProbes={onProbes}
+                  onCompare={(name) => onSource(withCompared(source, name))}
+                  onPlacing={onPlacing}
+                  onHeight={onProbeHeight}
+                />
+              )}
+              {climate && <ProbeCharts state={probeCharts} time={time} />}
+            </details>
+          )}
+          {snapshot !== null && (
+            <OpeningControls
+              snapshot={snapshot}
+              requested={openingsAt(
+                source,
+                openings.map((opening) => opening.openingId),
+              )}
+              fold={fold("openings")}
+              onChange={(openings) => onSource(withOpenings(source, openings))}
+            />
+          )}
+          {snapshot !== null && (
+            <EquipmentControls
+              snapshot={snapshot}
+              requested={levelsAt(source)}
+              thermostat={thermostat}
+              fold={fold("equipment")}
+              onChange={(levels) => onSource(withLevels(source, levels))}
+            />
+          )}
+        </PanelCard>
+      )}
+      {weather.status !== "none" && (
+        <PanelCard title="Outside">
+          <WeatherPanel
+            state={weather}
+            day={weatherDay}
+            weathers={weathers}
+            chosen={source.weather}
+            time={time}
+            onChoose={(chosen) => onSource(withWeather(source, chosen))}
+            clouds={source.clouds}
+            onClouds={(clouds) => onSource(withClouds(source, clouds))}
+            windFrom={source.wind}
+            onWindFrom={(wind) => onSource(withWind(source, wind))}
+          />
+        </PanelCard>
       )}
     </>
   );

@@ -121,6 +121,27 @@ body {
   text-align: left;
 }
 
+/* The info panel's sections grouped in outlined cards by topic (#306), each
+ * card's title on its outline, so that a card costs next to no height. */
+.panel-card {
+  margin: 10px 0 4px;
+  padding: 2px 6px 4px;
+  border: 1px solid var(--panel-rule);
+  border-radius: 4px;
+}
+
+.panel-card-title {
+  width: fit-content;
+  margin: -0.75em 0 0;
+  padding: 0 4px;
+  background: var(--panel-bg);
+  color: var(--panel-muted);
+  font-size: 0.7em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 /* Every group of the info panel a section folded to the line that says how
  * it stands (#206, #273), with room below it; and what the viewer was built
  * from, last. */
