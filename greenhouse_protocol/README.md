@@ -51,10 +51,22 @@ replaces, so that the description checks it.
 - `canonical_store`: one store and one query contract per record kind.
   Every query takes `up_to`, the temporal-honesty boundary: a decision made
   at T must not see a record from after T.
-- `execution`: how an approved action reaches whatever carries it out, and
-  how an environment that cannot execute (a recorded history) refuses. Its
-  `ActionExecutionAdapter` is deprecated: a run's gateway and its executors
-  replace it (decision 0046).
+- `gateway` (decision 0046): a run's gateway, its local endpoint, which
+  holds the run's plan, schedules it, applies lateness, authorises and
+  writes the outcome log (`RunGateway`), with its routes under
+  `/actuation/v1`, the rules it keeps, and `check_gateway`, which holds a
+  gateway to them through a harness that moves its clock.
+- `execution`: an executor behind a gateway (`ActionExecutor`), which
+  carries an assignment out at most once, may be revoked before it starts,
+  and is asked how an assignment stands when its report does not come;
+  `check_executor` holds one to that, with an action of a kind it carries
+  out: by default the first it names, or one given. How an environment that cannot
+  execute (a recorded history) refuses: `ActionNotExecutable`. Its
+  `ActionExecutionAdapter` is deprecated.
+- `memory_gateway`: an in-memory reference implementation of the two, a
+  gateway on a clock that continues and an executor into which faults can
+  be injected (a lost send, an executor that cannot be reached), to
+  develop a gateway or an executor against.
 - `conformance`: checks any producer's output must pass - unambiguous
   timestamps, unique identities, real numbers rather than placeholders -
   as plain functions returning a list of violations.
@@ -63,7 +75,8 @@ replaces, so that the description checks it.
 - `consumer`: the interface a client reads a running producer through:
   `/consumer/v1` routes answering a run's identity, epoch and clock, its
   greenhouse description, and its observations and events after a cursor,
-  in delivery order and never from the client's future. The rules a
+  in delivery order and never from the client's future, and the outcomes of
+  the actions a run's gateway carried out or not, as a third log. The rules a
   producer keeps (`check_batch`, `check_polls`) and a recorded exchange to
   develop a client against (`tests/fixtures/consumer/exchange.json`). The
   simulator is one producer of it; a gateway in front of real sensors is

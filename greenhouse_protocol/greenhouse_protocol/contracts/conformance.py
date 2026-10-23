@@ -27,6 +27,7 @@ from typing import Protocol
 from greenhouse_protocol.event import Event
 from greenhouse_protocol.media import CameraFrame, MediaCapture
 from greenhouse_protocol.observation import Observation
+from greenhouse_protocol.outcome import ActionOutcome
 
 
 class CanonicalRecord(Protocol):
@@ -114,6 +115,27 @@ def check_frames(frames: Iterable[CameraFrame]) -> list[str]:
         violations += _delivered_in_time(
             f"frame {frame.frame_id!r}", frame.timestamp, frame.delivered_at
         )
+    return violations
+
+
+def check_outcomes(outcomes: Iterable[ActionOutcome]) -> list[str]:
+    """What a run's outcome log must hold (decision 0046): each outcome once,
+    by its identity, and one outcome for each action, occurrence or
+    fallback of a revision of a plan in an epoch. A revision may replace an
+    action under the same id, so the first is superseded and the second has
+    its own outcome, under its own revision."""
+    listed = list(outcomes)
+    violations = [
+        f"outcome {outcome_id!r} appears {count} times"
+        for outcome_id, count in Counter(o.outcome_id for o in listed).items()
+        if count > 1
+    ]
+    ends = Counter((o.epoch, o.plan_id, o.revision, str(o.ref)) for o in listed)
+    violations += [
+        f"{ref} of plan {plan_id!r} revision {revision} in epoch {epoch} ends {count} times"
+        for (epoch, plan_id, revision, ref), count in ends.items()
+        if count > 1
+    ]
     return violations
 
 

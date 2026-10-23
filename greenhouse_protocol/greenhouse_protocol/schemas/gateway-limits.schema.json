@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "How much one plan may hold: actions, and their occurrences expanded.",
+  "properties": {
+    "max_actions": {
+      "minimum": 1,
+      "title": "Max Actions",
+      "type": "integer"
+    },
+    "max_occurrences": {
+      "minimum": 1,
+      "title": "Max Occurrences",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "max_actions",
+    "max_occurrences"
+  ],
+  "title": "GatewayLimits",
+  "type": "object"
+}
