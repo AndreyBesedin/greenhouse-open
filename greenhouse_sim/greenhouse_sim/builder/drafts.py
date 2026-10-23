@@ -5,11 +5,14 @@ A draft is an installation being authored, kept at any step, runnable or
 not, by its installation's identifier. Each save is a revision of it,
 numbered from 1 and kept with the moment it was saved. An earlier revision
 is reopened as it was, or made the latest again by reverting to it, which
-saves it anew: nothing saved is lost but by deleting the draft.
+saves it anew: nothing saved is lost but by deleting the draft. A number is
+never given twice under one identifier: a draft made under the identifier
+of one deleted numbers its revisions on from the deleted one's.
 
 A revision is kept as its installation's file (`builder.portable`), so that
 one saved in an older format is read as the file would be, and a store
-needs no migration of its own when the format changes.
+needs no migration of its own when the format changes. A draft whose file
+an import would refuse, such as one too large, is not saved.
 
 The drafts are kept in one SQLite file, written a transaction at a time:
 a save is kept whole or not at all. A save, revert or delete names the
@@ -33,16 +36,26 @@ STORE_FORMAT: Final = 1
 # How long a save waits for another to finish writing, in seconds.
 BUSY_TIMEOUT_S: Final = 5.0
 
-_TABLES: Final = """
-CREATE TABLE revisions (
-    draft_id TEXT NOT NULL,
-    revision INTEGER NOT NULL,
-    saved_at TEXT NOT NULL,
-    name TEXT NOT NULL,
-    document TEXT NOT NULL,
-    PRIMARY KEY (draft_id, revision)
-) STRICT
-"""
+_TABLES: Final = (
+    """
+    CREATE TABLE revisions (
+        draft_id TEXT NOT NULL,
+        revision INTEGER NOT NULL,
+        saved_at TEXT NOT NULL,
+        name TEXT NOT NULL,
+        document TEXT NOT NULL,
+        PRIMARY KEY (draft_id, revision)
+    ) STRICT
+    """,
+    # The last revision given under each identifier, kept when its draft is
+    # deleted, so that no number is given twice.
+    """
+    CREATE TABLE numbering (
+        draft_id TEXT PRIMARY KEY,
+        last_revision INTEGER NOT NULL
+    ) STRICT
+    """,
+)
 
 
 class DraftNotFound(LookupError):
@@ -103,7 +116,8 @@ class DraftStore:
                 version = connection.execute("PRAGMA user_version").fetchone()[0]
                 empty = connection.execute("SELECT 1 FROM sqlite_master").fetchone() is None
                 if version == 0 and empty:
-                    connection.execute(_TABLES)
+                    for table in _TABLES:
+                        connection.execute(table)
                     connection.execute(f"PRAGMA user_version = {STORE_FORMAT}")
                     version = STORE_FORMAT
         except sqlite3.DatabaseError as error:
@@ -117,14 +131,17 @@ class DraftStore:
     def save(self, installation: Installation, *, on: int | None) -> Revision:
         """Save `installation` as the next revision of its draft, made on
         revision `on`, or as a new draft if None. Refused, saving nothing, if
-        `on` is not the draft's latest revision, or a new draft's identifier
-        is kept already."""
+        `on` is not the draft's latest revision, a new draft's identifier is
+        kept already, or its file would not be read back."""
         document = export_installation(installation)
+        # Kept only as a file an import reads: one too large is refused now,
+        # rather than when it is opened.
+        import_installation(document)
         with self._writing() as connection:
             latest = _latest(connection, installation.installation_id)
             if latest != on:
                 raise StaleDraft(_stale(installation.installation_id, latest, on))
-            return self._insert(connection, installation, (latest or 0) + 1, document)
+            return self._insert(connection, installation, document)
 
     def revert(self, draft_id: str, revision: int, *, on: int) -> Revision:
         """Save revision `revision` of a draft again, as its latest, made on
@@ -137,13 +154,11 @@ class DraftStore:
             if latest != on:
                 raise StaleDraft(_stale(draft_id, latest, on))
             installation = _read(connection, draft_id, revision).installation
-            return self._insert(
-                connection, installation, latest + 1, export_installation(installation)
-            )
+            return self._insert(connection, installation, export_installation(installation))
 
     def delete(self, draft_id: str, *, on: int) -> None:
         """Forget a draft and every revision of it, made on revision `on`.
-        Refused as `save` is."""
+        Refused as `save` is. Its identifier's numbering goes on."""
         with self._writing() as connection:
             latest = _latest(connection, draft_id)
             if latest is None:
@@ -193,18 +208,26 @@ class DraftStore:
         ]
 
     def _insert(
-        self,
-        connection: sqlite3.Connection,
-        installation: Installation,
-        revision: int,
-        document: str,
+        self, connection: sqlite3.Connection, installation: Installation, document: str
     ) -> Revision:
+        """Its draft's next revision, numbered on from the last given under
+        its identifier, whether or not a draft deleted had it."""
+        draft_id = installation.installation_id
+        last = connection.execute(
+            "SELECT last_revision FROM numbering WHERE draft_id = ?", (draft_id,)
+        ).fetchone()
+        revision = 1 if last is None else last[0] + 1
+        connection.execute(
+            "INSERT INTO numbering (draft_id, last_revision) VALUES (?, ?) "
+            "ON CONFLICT (draft_id) DO UPDATE SET last_revision = excluded.last_revision",
+            (draft_id, revision),
+        )
         saved_at = self._now()
         connection.execute(
             "INSERT INTO revisions (draft_id, revision, saved_at, name, document) "
             "VALUES (?, ?, ?, ?, ?)",
             (
-                installation.installation_id,
+                draft_id,
                 revision,
                 saved_at.isoformat(),
                 installation.name,
@@ -212,7 +235,7 @@ class DraftStore:
             ),
         )
         return Revision(
-            draft_id=installation.installation_id,
+            draft_id=draft_id,
             revision=revision,
             saved_at=saved_at,
             installation=installation,
@@ -233,7 +256,11 @@ class DraftStore:
             try:
                 yield connection
             except BaseException:
-                connection.execute("ROLLBACK")
+                # SQLite rolls some failures back itself, a full disk among
+                # them: then there is nothing to roll back, and the failure
+                # is what is raised.
+                if connection.in_transaction:
+                    connection.execute("ROLLBACK")
                 raise
             connection.execute("COMMIT")
 
