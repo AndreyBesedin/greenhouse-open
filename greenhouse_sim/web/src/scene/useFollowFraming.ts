@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { type CameraPose, framing } from "../camera";
 import type { Pending } from "../useLoad";
 import type { Point3 } from "../world";
-import type { SceneState } from "./source";
+import type { SceneState } from "./sceneLoad";
 import type { SetSource } from "./useSource";
 
 // How near the camera may stand to the pose framed for it, in metres, and

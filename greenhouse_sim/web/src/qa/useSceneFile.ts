@@ -1,4 +1,4 @@
-import { fetchScene, type SceneState } from "../scene/source";
+import { fetchScene, type SceneState } from "../scene/sceneLoad";
 import { useLoad } from "../useLoad";
 
 /** A scene the simulator wrote to a file, fetched and checked once. */
