@@ -19,14 +19,16 @@ from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.domain.envelope import OpeningKind
 from greenhouse_sim.domain.layout import FixtureKind, Obstruction, ZoneKind
 from greenhouse_sim.fields.field import EnvironmentField
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services import cfd, fields
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import SceneChanges, changed, scenario
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Vector3
 
-COMPARTMENT = scenario("tomato_compartment")
-BOX = scenario("climate_box")
+COMPARTMENT = scenario(PACKAGED, "tomato_compartment")
+BOX = scenario(PACKAGED, "climate_box")
 
 
 def _kinds(config: ScenarioConfig) -> Counter[FixtureKind]:
@@ -47,7 +49,7 @@ def test_the_compartment_is_a_venlo_style_house_of_four_spans_and_six_bays() -> 
     assert (envelope.length, envelope.width) == (24.0, 16.0)
     assert (envelope.eave_height, envelope.ridge_height) == (6.0, 6.8)
     assert (envelope.spans, envelope.bays) == (4, 6)
-    assert fields.grid("tomato_compartment").shape == (48, 32, 12)
+    assert fields.grid(PACKAGED, "tomato_compartment").shape == (48, 32, 12)
 
 
 def test_the_compartments_roof_vents_stand_open_and_its_door_shut() -> None:
@@ -59,7 +61,7 @@ def test_the_compartments_roof_vents_stand_open_and_its_door_shut() -> None:
     assert door.aperture_area() == 0.0
     assert (door.width, door.height) == (3.0, 3.0)
     # Each vent is an opening of the air's domain, in its ceiling.
-    openings = cfd.geometry("tomato_compartment").of(BoundaryCategory.OPENING)
+    openings = cfd.geometry(PACKAGED, "tomato_compartment").of(BoundaryCategory.OPENING)
     assert [b.name for b in openings] == [v.opening_id for v in vents]
 
 
@@ -87,19 +89,23 @@ def test_the_compartments_irrigation_unit_stands_in_a_kept_service_area() -> Non
         "service_area_back": ZoneKind.SERVICE,
         "keep_out_irrigation": ZoneKind.KEEP_OUT,
     }
-    (obstacle,) = cfd.geometry("tomato_compartment").of(BoundaryCategory.OBSTACLE)
+    (obstacle,) = cfd.geometry(PACKAGED, "tomato_compartment").of(BoundaryCategory.OBSTACLE)
     assert obstacle.name == "obstacle_irrigation_unit"
 
 
-def test_the_compartments_kept_cfd_solution_is_current_and_blows_in_and_out_at_its_vents() -> None:
-    grid = fields.grid("tomato_compartment")
+def test_the_compartments_kept_cfd_solution_is_current_and_blows_in_and_out_at_its_vents(
+    simulator: Simulator,
+) -> None:
+    grid = fields.grid(PACKAGED, "tomato_compartment")
     result = kept_result("tomato_compartment", COMPARTMENT, grid)
     assert result is not None, (
         "tomato_compartment's kept CFD result is missing or stale: take it from the CFD "
         "workflow's cfd-results artifact"
     )
     field = EnvironmentField.from_document(result.field)
-    vents = {b.name: b for b in cfd.geometry("tomato_compartment").of(BoundaryCategory.OPENING)}
+    vents = {
+        b.name: b for b in cfd.geometry(PACKAGED, "tomato_compartment").of(BoundaryCategory.OPENING)
+    }
 
     def below(name: str) -> Vector3:
         box = vents[name].box
@@ -110,7 +116,7 @@ def test_the_compartments_kept_cfd_solution_is_current_and_blows_in_and_out_at_i
         )
 
     assert result.converged and field.grid == grid and field.source == SOURCE
-    assert fields.field(RunRequest("tomato_compartment"), "cfd").source == SOURCE
+    assert fields.field(simulator, RunRequest("tomato_compartment"), "cfd").source == SOURCE
     # In through the first vent, at about the setup's speed, and out through
     # the others.
     falling = field.sample(AirQuantity.VELOCITY, below("roof_vent_1"))
@@ -121,7 +127,7 @@ def test_the_compartments_kept_cfd_solution_is_current_and_blows_in_and_out_at_i
 
 
 def test_the_compartments_propagation_layout_raises_the_same_rows_on_benches() -> None:
-    propagation = changed(COMPARTMENT, SceneChanges(layout="propagation"))
+    propagation = changed(PACKAGED, COMPARTMENT, SceneChanges(layout="propagation"))
 
     assert len(propagation.layout.planting_positions()) == 320
     assert _kinds(propagation)[FixtureKind.BENCH] == 8
@@ -133,7 +139,7 @@ def test_the_climate_box_is_a_small_single_span_house_shut_and_still() -> None:
 
     assert (envelope.length, envelope.width, envelope.spans, envelope.bays) == (12.0, 6.4, 1, 3)
     assert (envelope.eave_height, envelope.ridge_height) == (4.0, 4.8)
-    assert fields.grid("climate_box").shape == (24, 13, 8)
+    assert fields.grid(PACKAGED, "climate_box").shape == (24, 13, 8)
     assert BOX.rows * BOX.columns == len(BOX.layout.planting_positions()) == 32
     assert BOX.airflow.kind == "uniform"
     assert (BOX.airflow.velocity_m_s.x, BOX.airflow.velocity_m_s.y) == (0.0, 0.0)
@@ -141,7 +147,7 @@ def test_the_climate_box_is_a_small_single_span_house_shut_and_still() -> None:
 
 def test_the_climate_box_has_an_opening_of_each_kind_all_shut() -> None:
     kinds = sorted(opening.kind for opening in BOX.envelope.openings)
-    geometry = cfd.geometry("climate_box")
+    geometry = cfd.geometry(PACKAGED, "climate_box")
 
     # A side vent in each side wall, so that a wind across the house has a
     # vent on either side (P07.6).

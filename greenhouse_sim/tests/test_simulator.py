@@ -4,9 +4,11 @@ its live runs, closed with it; made by the server, or given to it."""
 import threading
 import time
 from collections.abc import Callable
+from http import HTTPStatus
 
 import pytest
 
+from greenhouse_sim.api.routes import respond
 from greenhouse_sim.api.server import create_server
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED, Catalogue
@@ -130,3 +132,21 @@ def test_each_simulator_plays_its_own_runs_back() -> None:
         assert [found.scenario_id for found in simulator.playbacks.all()] == ["climate_box"]
         assert other.playbacks.all() == []
         assert simulator.cursors is not other.cursors
+
+
+def test_a_scenario_registered_with_a_simulator_is_answered_by_it_alone() -> None:
+    drafted = CONFIG.model_copy(update={"greenhouse_id": "drafted_box"})
+    with Simulator() as simulator, Simulator() as other:
+        simulator.catalogue.register(drafted)
+
+        listed = respond(simulator, "GET", "/api/scenarios").body
+        assert isinstance(listed, list)
+        assert [summary["id"] for summary in listed if isinstance(summary, dict)][-1] == (
+            "drafted_box"
+        )
+        assert respond(simulator, "GET", "/api/scenarios/drafted_box/climate/house?t=0").status == (
+            HTTPStatus.OK
+        )
+        assert respond(other, "GET", "/api/scenarios/drafted_box/climate/house?t=0").status == (
+            HTTPStatus.NOT_FOUND
+        )

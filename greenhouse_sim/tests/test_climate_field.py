@@ -13,6 +13,7 @@ from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd, fields
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.grid import air_grid
@@ -55,21 +56,23 @@ def _run(levels: dict[str, float]) -> ClimateRun:
         schedule=Schedule.from_start(levels),
         settings=CONFIG.climate,
         grid=GRID,
-        solid=cfd.geometry("climate_box").solid(),
+        solid=cfd.geometry(PACKAGED, "climate_box").solid(),
         weather=WEATHER,
     )
 
 
-def test_a_scenario_with_equipment_offers_its_climate_and_others_do_not() -> None:
-    assert fields.field_names("climate_box") == [
+def test_a_scenario_with_equipment_offers_its_climate_and_others_do_not(
+    simulator: Simulator,
+) -> None:
+    assert fields.field_names(simulator, "climate_box") == [
         "uniform",
         "buoyancy",
         "vortex",
         "climate",
         "shear",
     ]
-    assert "climate" not in fields.field_names("tomato_compartment")
-    assert "climate" not in fields.field_names("airflow_box")
+    assert "climate" not in fields.field_names(simulator, "tomato_compartment")
+    assert "climate" not in fields.field_names(simulator, "airflow_box")
 
 
 def test_at_its_start_with_everything_off_the_air_is_still_at_its_starting_temperature(
@@ -108,7 +111,7 @@ def test_the_fans_level_sets_how_much_it_adds(simulator: Simulator) -> None:
 
 def test_the_equipment_reaches_the_air_only_through_its_source_terms(simulator: Simulator) -> None:
     run = _run({"fan": 1.0, "heater": 1.0, "dehumidifier": 1.0})
-    solid = cfd.geometry("climate_box").solid()
+    solid = cfd.geometry(PACKAGED, "climate_box").solid()
     field = run.field("climate_box_climate", GRID)
     base = CONFIG.airflow.field("climate_box_uniform", GRID).channels[AirQuantity.VELOCITY]
     flow = conserving(face_flows(GRID, base + run.terms_at(0.0).velocity, solid), solid)
@@ -187,6 +190,6 @@ def test_levels_a_scenario_cannot_run_are_refused(
         assert (response.status, response.body) == (400, {"error": error})
 
 
-def test_the_service_refuses_levels_as_the_api_does() -> None:
+def test_the_service_refuses_levels_as_the_api_does(simulator: Simulator) -> None:
     with pytest.raises(InvalidRequest):
-        fields.field(RunRequest("climate_box", levels={"fan": -1.0}), "climate")
+        fields.field(simulator, RunRequest("climate_box", levels={"fan": -1.0}), "climate")

@@ -13,6 +13,7 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.processes import Process
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import plant_ids
 from greenhouse_sim.services.simulator import Simulator
@@ -28,6 +29,7 @@ EVENINGS = ((64_800.0, "fan_right", 1.0),)
 
 def _second_day() -> TimelineDocument:
     return timeline(
+        PACKAGED,
         RunRequest("reference_greenhouse", commands=HEATER_ON, daily=EVENINGS),
         until_s=2 * DAY_S,
         from_s=DAY_S,
@@ -67,6 +69,7 @@ def test_the_same_run_has_the_same_events_in_the_same_order() -> None:
 def test_at_a_moment_commands_go_first_then_the_air_plants_sensors_and_cameras() -> None:
     midnight = 2 * DAY_S
     document = timeline(
+        PACKAGED,
         RunRequest("reference_greenhouse", commands=((midnight, "heater", 0.0),)),
         until_s=midnight,
         from_s=DAY_S,
@@ -83,8 +86,8 @@ def test_at_a_moment_commands_go_first_then_the_air_plants_sensors_and_cameras()
 
 
 def test_a_window_is_the_moments_day_by_default_and_the_runs_start_is_in_its_first() -> None:
-    later = timeline(RunRequest("climate_box"), until_s=DAY_S + 600.0)
-    first = timeline(RunRequest("climate_box"), until_s=600.0)
+    later = timeline(PACKAGED, RunRequest("climate_box"), until_s=DAY_S + 600.0)
+    first = timeline(PACKAGED, RunRequest("climate_box"), until_s=600.0)
 
     assert (later.from_s, later.until_s) == (DAY_S, DAY_S + 600.0)
     assert min(later.times_s) == DAY_S + 60.0
@@ -94,7 +97,7 @@ def test_a_window_is_the_moments_day_by_default_and_the_runs_start_is_in_its_fir
 
 
 def test_a_run_that_works_no_climate_has_no_air_events() -> None:
-    document = timeline(RunRequest("sensor_lab"), until_s=600.0)
+    document = timeline(PACKAGED, RunRequest("sensor_lab"), until_s=600.0)
 
     assert document.times_s
     assert document.processes.index(Process.AIR) not in document.process

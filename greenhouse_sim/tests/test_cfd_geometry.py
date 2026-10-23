@@ -38,6 +38,7 @@ from greenhouse_sim.cfd.openfoam import (
 from greenhouse_sim.domain.envelope import OpeningKind
 from greenhouse_sim.domain.layout import Obstruction
 from greenhouse_sim.fields.field import FieldGrid
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd, fields
 from greenhouse_sim.services.scenarios import SceneChanges, scenario
 from greenhouse_sim.services.simulator import Simulator
@@ -45,7 +46,7 @@ from greenhouse_sim.world.geometry import Vector3
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_FILE = ROOT / "greenhouse_sim" / "cfd" / "geometry.schema.json"
-COMPARTMENT = cfd.geometry("tomato_compartment")
+COMPARTMENT = cfd.geometry(PACKAGED, "tomato_compartment")
 # The compartment with its door open, and one vent shut.
 OPENED = SceneChanges(openings={"door_front": 1.0, "roof_vent_2": 0.0})
 SCENARIOS = ("tomato_compartment", "climate_box", "airflow_box")
@@ -100,7 +101,7 @@ def _footprint(obstacle: Boundary, grid: FieldGrid, face: Face) -> int:
 
 
 def test_the_domain_is_the_fields_box_bounded_by_its_floor_walls_and_ceiling() -> None:
-    grid = fields.grid("tomato_compartment")
+    grid = fields.grid(PACKAGED, "tomato_compartment")
     nx, ny, nz = grid.shape
     sides = [b for b in COMPARTMENT.boundaries if b.category != BoundaryCategory.OPENING and b.face]
 
@@ -120,8 +121,8 @@ def test_the_domain_is_the_fields_box_bounded_by_its_floor_walls_and_ceiling() -
 
 @pytest.mark.parametrize("scenario_id", SCENARIOS)
 def test_every_boundary_is_one_the_greenhouse_has_by_its_category(scenario_id: str) -> None:
-    config = scenario(scenario_id)
-    geometry = cfd.geometry(scenario_id)
+    config = scenario(PACKAGED, scenario_id)
+    geometry = cfd.geometry(PACKAGED, scenario_id)
     open_ones = [o.opening_id for o in config.envelope.openings if o.opening > 0]
     in_the_way = [f.fixture_id for f in config.layout.obstructing(Obstruction.AIRFLOW)]
     obstacles = [b.name.removeprefix("obstacle_") for b in geometry.of(BoundaryCategory.OBSTACLE)]
@@ -135,7 +136,7 @@ def test_every_boundary_is_one_the_greenhouse_has_by_its_category(scenario_id: s
 
 
 def test_only_open_doors_and_vents_are_openings_each_on_the_face_it_opens_in() -> None:
-    opened = cfd.geometry("tomato_compartment", OPENED)
+    opened = cfd.geometry(PACKAGED, "tomato_compartment", OPENED)
 
     vents = [f"roof_vent_{span}" for span in range(1, 5)]
     assert [(b.name, b.opening_kind, b.face) for b in COMPARTMENT.of(BoundaryCategory.OPENING)] == [
@@ -152,7 +153,7 @@ def test_only_open_doors_and_vents_are_openings_each_on_the_face_it_opens_in() -
 
 
 def test_an_opening_covers_whole_faces_of_the_mesh_the_selection_finds_exactly() -> None:
-    geometry = cfd.geometry("tomato_compartment", OPENED)
+    geometry = cfd.geometry(PACKAGED, "tomato_compartment", OPENED)
     selections = topo_set_dict(geometry)
 
     for opening in geometry.of(BoundaryCategory.OPENING):
@@ -167,7 +168,7 @@ def test_an_opening_covers_whole_faces_of_the_mesh_the_selection_finds_exactly()
 def test_an_obstacle_removes_the_cells_its_fixture_holds_and_the_selection_finds_them() -> None:
     fixture = next(
         f
-        for f in scenario("tomato_compartment").layout.fixtures()
+        for f in scenario(PACKAGED, "tomato_compartment").layout.fixtures()
         if f.fixture_id == "irrigation_unit"
     )
     low, high = fixture.bounds()
@@ -189,7 +190,7 @@ def test_an_obstacle_removes_the_cells_its_fixture_holds_and_the_selection_finds
 
 
 def test_at_a_coarser_resolution_openings_crowd_and_obstacles_vanish() -> None:
-    config = scenario("tomato_compartment")
+    config = scenario(PACKAGED, "tomato_compartment")
     envelope = config.envelope
     top = Vector3(x=envelope.length, y=envelope.width, z=envelope.eave_height)
     # One cell across the house: all four vents would open in the ceiling's
@@ -207,7 +208,7 @@ def test_at_a_coarser_resolution_openings_crowd_and_obstacles_vanish() -> None:
 def test_the_case_meshes_the_grid_and_takes_only_the_steps_it_needs() -> None:
     nx, ny, nz = COMPARTMENT.grid.shape
     blocks = block_mesh_dict(COMPARTMENT)
-    climate_box = cfd.geometry("climate_box")
+    climate_box = cfd.geometry(PACKAGED, "climate_box")
 
     assert f"hex (0 1 2 3 4 5 6 7) ({nx} {ny} {nz})" in blocks
     assert re.findall(r"\n    (\w+)\n    \{\n        type wall;", blocks) == [
@@ -258,7 +259,9 @@ def test_a_scenarios_cfd_geometry_is_served_changed_as_its_scene_is(simulator: S
 
     assert answer.status == HTTPStatus.OK
     assert CfdGeometry.model_validate(answer.body) == COMPARTMENT
-    assert CfdGeometry.model_validate(opened.body) == cfd.geometry("tomato_compartment", OPENED)
+    assert CfdGeometry.model_validate(opened.body) == cfd.geometry(
+        PACKAGED, "tomato_compartment", OPENED
+    )
     assert (
         respond(simulator, "GET", "/api/scenarios/gh_999/cfd/geometry").status
         == HTTPStatus.NOT_FOUND
@@ -277,7 +280,7 @@ def test_the_command_line_writes_a_case_described_as_the_api_describes_it(tmp_pa
     assert main(["tomato_compartment", str(case), "--open", "door_front:1,roof_vent_2:0"]) == 0
     assert (case / "Allmesh").stat().st_mode & 0o111
     written = CfdGeometry.model_validate_json((case / "geometry.json").read_text())
-    assert written == cfd.geometry("tomato_compartment", OPENED)
+    assert written == cfd.geometry(PACKAGED, "tomato_compartment", OPENED)
     with pytest.raises(SystemExit):
         main(["tomato_compartment", str(tmp_path / "other"), "--open", "hatch:1"])
     assert not (tmp_path / "other").exists()
@@ -285,8 +288,8 @@ def test_the_command_line_writes_a_case_described_as_the_api_describes_it(tmp_pa
 
 @pytest.mark.cfd
 def test_openfoam_meshes_exactly_the_boundaries_the_geometry_describes(tmp_path: Path) -> None:
-    geometry = cfd.geometry("tomato_compartment", OPENED)
-    cfd.write_case("tomato_compartment", tmp_path, OPENED)
+    geometry = cfd.geometry(PACKAGED, "tomato_compartment", OPENED)
+    cfd.write_case(PACKAGED, "tomato_compartment", tmp_path, OPENED)
     grid = geometry.grid
     obstacles = geometry.of(BoundaryCategory.OBSTACLE)
 

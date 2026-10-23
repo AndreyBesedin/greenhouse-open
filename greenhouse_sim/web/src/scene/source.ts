@@ -1,22 +1,24 @@
+/**
+ * Which scene the viewer draws (`SceneSource`), and how the address bar and
+ * the simulator's API write its parts: the address's codec (`searchFor`,
+ * `sourceFromSearch`), and the texts both write the same way. The helpers
+ * that edit a source are in `edits.ts`, and loading its scene in
+ * `sceneLoad.ts`.
+ */
 import type { CameraPose } from "../camera";
-import { DAY_S } from "../clock";
 import { type FieldView, fieldViewFrom, type Slice, sliceFrom, sliceText } from "../fields/display";
 import { probesFrom, probesText } from "../fields/probes";
-import { loadJson } from "../loadJson";
 import {
   actionFrom,
   actionsQuery,
   FIRST_LAB_RUN,
   type LabRun,
-  labRunQuery,
   PLANT_LAB_LAST_DAY,
   PLANT_LAB_SEED,
 } from "../plants/lab";
-import { stressPlants, stressScene } from "../qa/stressScene";
+import { stressPlants } from "../qa/stressScene";
 import { DEFAULT_WEATHER } from "../scenarios";
 import type { Point3 } from "../world";
-import { checkScene } from "./checkScene";
-import type { SceneSnapshot } from "./generated/snapshotTypes";
 import { layoutText } from "./moves";
 
 /** Which scene the viewer draws, chosen in the address bar so a refresh keeps it. */
@@ -97,17 +99,6 @@ export interface ScheduledCommand {
   level: number;
 }
 
-export type SceneState =
-  | { status: "none" }
-  | { status: "loading" }
-  | { status: "unavailable"; reason: string }
-  | { status: "rejected"; problems: string[] }
-  | { status: "loaded"; snapshot: SceneSnapshot };
-
-const EXAMPLE_SCENE_URL = "/scenes/example.json";
-// The simulator writes it (`tests/test_scene_schema.py --update`).
-export const FIXTURE_GALLERY_URL = "/scenes/qa-fixtures.json";
-export const PLANT_LAB_SCENE_URL = "/api/plants/scene";
 // The address's `cfd=` when a scenario's CFD boundaries are drawn.
 const CFD_BOUNDARIES = "boundaries";
 // The most a sky can be clouded, in %, and how the simulator is asked for a
@@ -398,104 +389,6 @@ function dailyFrom(value: string | null): ScheduledCommand[] | null {
   return value === NO_DAILY_COMMANDS ? [] : scheduleFrom(value);
 }
 
-/** A scenario's source with its scenario's own daily commands, `own`, where
- * it gives none of its own (P09.4). */
-export function withOwnDaily<S extends { daily?: ScheduledCommand[] }>(
-  source: S,
-  own: readonly ScheduledCommand[],
-): S {
-  return source.daily === undefined && own.length > 0 ? { ...source, daily: [...own] } : source;
-}
-
-/** A scenario's source keeping its daily commands only where they differ
- * from its scenario's own, `own`: the address keeps a change, not a copy. */
-export function keptDaily<S extends { daily?: ScheduledCommand[] }>(
-  source: S,
-  own: readonly ScheduledCommand[],
-): S {
-  if (source.daily === undefined || scheduleText(source.daily) !== scheduleText(own)) {
-    return source;
-  }
-  const { daily: _, ...rest } = source;
-  return rest as S;
-}
-
-/** A daily command's latest moment by `now`, in seconds into the run, or
- * null if its time of day has not yet come on the run's first day. */
-export function latestDaily(command: ScheduledCommand, now: number): number | null {
-  return now < command.timeS
-    ? null
-    : Math.floor((now - command.timeS) / DAY_S) * DAY_S + command.timeS;
-}
-
-/** A scenario's equipment's levels at the moment of its climate run drawn:
- * those set from the start, then its commands up to that moment, in time
- * order, the later winning at a moment; its daily commands at a moment
- * before the others then, as the simulator applies them. */
-export function levelsAt(source: {
-  levels?: Readonly<Record<string, number>>;
-  schedule?: readonly ScheduledCommand[];
-  daily?: readonly ScheduledCommand[];
-  time?: number;
-}): Record<string, number> {
-  const now = source.time ?? 0;
-  const levels: Record<string, number> = { ...(source.levels ?? {}) };
-  const daily = (source.daily ?? []).flatMap((command) => {
-    const timeS = latestDaily(command, now);
-    return timeS === null ? [] : [{ ...command, timeS }];
-  });
-  const applied = [...daily, ...(source.schedule ?? [])]
-    .map((command, order) => ({ command, order }))
-    .filter(({ command }) => command.timeS <= now)
-    .sort((a, b) => a.command.timeS - b.command.timeS || a.order - b.order);
-  for (const { command } of applied) {
-    levels[command.actuatorId] = command.level;
-  }
-  return levels;
-}
-
-/** How far each of `openingIds` stands open at the moment drawn, as the
- * source says: from the start, as its openings set them, then as its
- * commands to them do. One the source says nothing of is left out. */
-export function openingsAt(
-  source: {
-    levels?: Readonly<Record<string, number>>;
-    openings?: Readonly<Record<string, number>>;
-    schedule?: readonly ScheduledCommand[];
-    daily?: readonly ScheduledCommand[];
-    time?: number;
-  },
-  openingIds: readonly string[],
-): Record<string, number> {
-  const commanded = levelsAt(source);
-  const standing: Record<string, number> = { ...(source.openings ?? {}) };
-  for (const openingId of openingIds) {
-    const level = commanded[openingId];
-    if (level !== undefined) {
-      standing[openingId] = level;
-    }
-  }
-  return standing;
-}
-
-/** The schedule with an override at a moment: each actuator's command at
- * that moment replaced by the level it is set to, kept in time order. */
-export function withOverride(
-  schedule: readonly ScheduledCommand[],
-  timeS: number,
-  levels: Readonly<Record<string, number>>,
-): ScheduledCommand[] {
-  const kept = schedule.filter(
-    (command) => !(command.timeS === timeS && command.actuatorId in levels),
-  );
-  const added = Object.entries(levels).map(([actuatorId, level]) => ({ timeS, actuatorId, level }));
-  return [...kept, ...added]
-    .map((command, order) => ({ command, order }))
-    .sort((a, b) => a.command.timeS - b.command.timeS || a.order - b.order)
-    .map(({ command }) => command);
-}
-
-/** The moment an address asks for, in seconds from 0, or null. */
 /** A cloud cover the address overrides the weather's with, from 0 to 100 %,
  * or null when it says none or nothing readable. */
 function cloudsFrom(value: string | null): number | null {
@@ -526,6 +419,7 @@ export function apiWeather(
   return `${weather ?? DEFAULT_WEATHER}${clouded}${winded}`;
 }
 
+/** The moment an address asks for, in seconds from 0, or null. */
 function timeFrom(value: string | null): number | null {
   const time = Number(value ?? "");
   return value !== null && value !== "" && Number.isFinite(time) && time >= 0 ? time : null;
@@ -547,133 +441,6 @@ export function pairsFrom(value: string | null): Record<string, number> | null {
     pairs[key] = number;
   }
   return pairs;
-}
-
-function sceneUrl(
-  source: SceneSource,
-  openingIds: readonly string[] = [],
-  governed: Readonly<Record<string, number>> = {},
-): string | null {
-  switch (source.kind) {
-    case "reference":
-    case "stress":
-    case "live":
-      // A stress scene is built here, and a live scene streams in (see useLiveScene).
-      return null;
-    case "example":
-      return EXAMPLE_SCENE_URL;
-    case "fixtures":
-      return FIXTURE_GALLERY_URL;
-    case "plants":
-      return `${PLANT_LAB_SCENE_URL}?${labRunQuery(source)}`;
-    case "scenario":
-      // Its equipment, and its doors and vents, as they stand at the moment of
-      // its climate run drawn, its thermostat's heater as the run has it.
-      return `/api/scenarios/${encodeURIComponent(source.scenarioId)}/scene${changesQuery(standingAt(source, openingIds, governed), "?")}`;
-  }
-}
-
-/** What a scene is asked for by: its address, or, for a stress scene, which
- * the viewer builds itself, its size; null for none, or a live one. */
-export function sceneRequest(
-  source: SceneSource,
-  openingIds: readonly string[] = [],
-  governed: Readonly<Record<string, number>> = {},
-): string | null {
-  return source.kind === "stress"
-    ? `stress ${source.plants}`
-    : sceneUrl(source, openingIds, governed);
-}
-
-/** A scenario's source with its equipment, and its doors and vents,
- * `openingIds`, at the levels they stand at at the moment drawn: its
- * commands to an opening open it that far, as the simulator's do; and the
- * levels `governed` by a thermostat as the run has them. */
-export function standingAt<
-  S extends {
-    levels?: Readonly<Record<string, number>>;
-    openings?: Readonly<Record<string, number>>;
-    schedule?: readonly ScheduledCommand[];
-    daily?: readonly ScheduledCommand[];
-    time?: number;
-  },
->(source: S, openingIds: readonly string[], governed: Readonly<Record<string, number>> = {}): S {
-  const doors = new Set(openingIds);
-  const standing = Object.entries({ ...levelsAt(source), ...governed });
-  return {
-    ...source,
-    levels: Object.fromEntries(standing.filter(([id]) => !doors.has(id))),
-    openings: {
-      ...(source.openings ?? {}),
-      ...Object.fromEntries(standing.filter(([id]) => doors.has(id))),
-    },
-  };
-}
-
-/** Fetches and checks the chosen scene; every failure becomes a state to show. */
-export async function loadScene(
-  source: SceneSource,
-  fetchFn: typeof fetch = fetch,
-  openingIds: readonly string[] = [],
-  governed: Readonly<Record<string, number>> = {},
-): Promise<SceneState> {
-  if (source.kind === "stress") {
-    // The viewer builds it, so it needs no check.
-    return { status: "loaded", snapshot: stressScene(source.plants) };
-  }
-  const url = sceneUrl(source, openingIds, governed);
-  return url === null ? { status: "none" } : fetchScene(url, fetchFn);
-}
-
-/** Why a scene was refused: the simulator's own reason, where it gives one. */
-async function refusal(url: string, response: Response): Promise<string> {
-  const answered = `${url} answered ${response.status}`;
-  try {
-    const body: unknown = await response.json();
-    const error =
-      typeof body === "object" && body !== null ? (body as Record<string, unknown>).error : null;
-    return typeof error === "string" ? `${answered}: ${error}` : answered;
-  } catch {
-    return answered;
-  }
-}
-
-/** Fetches and checks the scene at `url`; every failure becomes a state to show. */
-export async function fetchScene(url: string, fetchFn: typeof fetch = fetch): Promise<SceneState> {
-  const answer = await loadJson(url, checkScene, fetchFn, (response) => refusal(url, response));
-  if (answer.status !== "loaded") {
-    return answer;
-  }
-  const check = answer.value;
-  return check.ok
-    ? { status: "loaded", snapshot: check.snapshot }
-    : { status: "rejected", problems: check.problems };
-}
-
-/** The scenario on show with another of its layouts keeps the weather it is
- * run under, and how its air is drawn, probed and compared, so that the two
- * layouts' air can be compared; any other choice starts afresh. */
-export function withItsAir(shown: SceneSource, chosen: SceneSource): SceneSource {
-  if (
-    shown.kind !== "scenario" ||
-    chosen.kind !== "scenario" ||
-    shown.scenarioId !== chosen.scenarioId
-  ) {
-    return chosen;
-  }
-  const { weather, clouds, wind, field, fieldView, slice, compare, probes, cfdBoundaries } = shown;
-  return {
-    ...chosen,
-    ...(weather === undefined ? {} : { weather }),
-    ...(clouds === undefined ? {} : { clouds }),
-    ...(wind === undefined ? {} : { wind }),
-    ...(field === undefined ? {} : { field }),
-    ...(fieldView === undefined ? {} : { fieldView }),
-    ...(slice === undefined ? {} : { slice }),
-    ...(compare === undefined ? {} : { compare }),
-    ...(probes === undefined ? {} : { probes }),
-    ...(cfdBoundaries === undefined ? {} : { cfdBoundaries }),
-  };
 }
 
 /** A camera pose as the address writes it: its position, then the point it

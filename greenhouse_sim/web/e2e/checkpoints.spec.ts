@@ -82,7 +82,7 @@ test("checkpoints: a run saved at a day's start is restored, downloaded and uplo
     await expect(link).toHaveAttribute("download", /^climate_box-day-1-[0-9a-f]{16}\.json$/);
     const href = await link.getAttribute("href");
     const document = await (await page.request.get(href ?? "")).body();
-    await panel.getByLabel("Upload a checkpoint").setInputFiles({
+    await panel.locator("input[type=file]").setInputFiles({
       name: "checkpoint.json",
       mimeType: "application/json",
       buffer: document,
@@ -93,7 +93,7 @@ test("checkpoints: a run saved at a day's start is restored, downloaded and uplo
   });
 
   await test.step("a file that is not one is refused, saying why", async () => {
-    await panel.getByLabel("Upload a checkpoint").setInputFiles({
+    await panel.locator("input[type=file]").setInputFiles({
       name: "notes.json",
       mimeType: "application/json",
       buffer: Buffer.from("{"),
@@ -102,5 +102,23 @@ test("checkpoints: a run saved at a day's start is restored, downloaded and uplo
       "the body is not JSON",
       ARRIVES,
     );
+  });
+});
+
+test.describe("in a browser set to French", () => {
+  test.use({ locale: "fr-FR" });
+
+  test("checkpoints: the panel reads in the viewer's words, not the browser's (#303)", async ({
+    page,
+  }) => {
+    const panel = page.locator("details.checkpoints");
+    await page.goto("/?scenario=climate_box&field=climate");
+    await panel.locator("summary").click();
+
+    await expect(panel.getByRole("button", { name: "Upload a checkpoint" })).toBeVisible();
+    // The browser draws its own file picker's button and status in its own
+    // language, inside the input, where no page text shows it: the input is
+    // never on show.
+    await expect(panel.locator("input[type=file]")).toBeHidden();
   });
 });

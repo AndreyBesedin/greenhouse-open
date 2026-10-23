@@ -407,7 +407,7 @@ def test_its_crop_on_a_moments_day_has_lived_the_days_ended_by_then(simulator: S
     plant = _body(
         simulator, f"/api/scenarios/reference_greenhouse/crop/{FIRST_PLANT}?t={1.5 * DAY_S:.0f}"
     )
-    crop = crop_service.run_crop(RunRequest("reference_greenhouse"))
+    crop = crop_service.run_crop(simulator, RunRequest("reference_greenhouse"))
 
     assert scene["simulated_day"] == 1
     drawn = {entity["properties"]["plant_id"] for entity in scene["entities"]}
@@ -423,7 +423,7 @@ def test_its_crop_on_a_moments_day_has_lived_the_days_ended_by_then(simulator: S
 
 
 def test_its_plants_share_the_houses_air_each_in_its_own_light(simulator: Simulator) -> None:
-    crop = crop_service.run_crop(RunRequest("reference_greenhouse"))
+    crop = crop_service.run_crop(simulator, RunRequest("reference_greenhouse"))
     days = [crop.local(plant_id, 0) for plant_id in plant_ids(REFERENCE)]
     house = _body(simulator, "/api/scenarios/reference_greenhouse/climate/house?t=86400")
     light = _body(simulator, "/api/scenarios/reference_greenhouse/climate/plants?t=43200")

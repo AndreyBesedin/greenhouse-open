@@ -21,16 +21,17 @@ from greenhouse_sim.biology.tomato.organ.transplants import transplant
 from greenhouse_sim.climate.commands import DailyCommand
 from greenhouse_sim.core.engine import SimulationEngine
 from greenhouse_sim.domain.crop import CropModel
-from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+
+# `Scenarios` is the services' too: the consumer's service names it from here.
+from greenhouse_sim.scenarios.catalogue import CatalogueEntry
+from greenhouse_sim.scenarios.catalogue import Scenarios as Scenarios
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import (
     DEFAULT_LAYOUT,
     layout_document,
-    layout_names,
     load_layout,
 )
 from greenhouse_sim.scenarios.manifest_files import SCHEMA_VERSION as MANIFEST_FORMAT
-from greenhouse_sim.scenarios.manifest_files import manifest_digest, opening_day
 from greenhouse_sim.scene.plants import crop_entities
 from greenhouse_sim.scene.snapshot import SceneSnapshot, greenhouse_scene, scene_snapshot
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
@@ -89,7 +90,7 @@ class RunManifest(BaseModel):
 
     scenario_id: str
     # The format its manifest is written in, and what tells this version of
-    # it from another (`manifest_digest`).
+    # it from another (its catalogue entry's `version`).
     schema_version: int
     version: str
     random_seed: int
@@ -123,41 +124,63 @@ class SceneChanges(BaseModel):
     levels: dict[str, float] = {}
 
 
-def scenario_summaries() -> list[ScenarioSummary]:
-    """Every registered scenario, as a client lists them."""
+def scenario_summaries(catalogue: Scenarios) -> list[ScenarioSummary]:
+    """Every scenario the catalogue knows, as a client lists them: the
+    packaged ones first, then those registered."""
     return [
         ScenarioSummary(
-            id=config.greenhouse_id,
-            name=config.name,
-            description=config.description,
-            plants=config.rows * config.columns,
-            duration_days=config.duration_days,
-            crop_model=config.crop_model.value,
-            daily=config.daily,
-            openings=[opening.opening_id for opening in config.envelope.openings],
-            opening_day=opening_day(config.greenhouse_id),
-            layouts=layout_names(config.greenhouse_id),
+            id=entry.config.greenhouse_id,
+            name=entry.config.name,
+            description=entry.config.description,
+            plants=entry.config.rows * entry.config.columns,
+            duration_days=entry.config.duration_days,
+            crop_model=entry.config.crop_model.value,
+            daily=entry.config.daily,
+            openings=[opening.opening_id for opening in entry.config.envelope.openings],
+            opening_day=entry.opening_day,
+            layouts=list(entry.layouts),
             weathers=weather_names(),
-            thermostat=None if config.thermostat is None else config.thermostat.actuator_id,
+            thermostat=None
+            if entry.config.thermostat is None
+            else entry.config.thermostat.actuator_id,
         )
-        for config in SCENARIO_REGISTRY.values()
+        for entry in _entries(catalogue)
     ]
 
 
-def run_manifest(scenario_id: str, weather: str | None = None) -> RunManifest:
+def _entries(catalogue: Scenarios) -> list[CatalogueEntry]:
+    """The catalogue's entries, in its order."""
+    return [entry for entry in map(catalogue.entry, catalogue.ids()) if entry is not None]
+
+
+def _entry(catalogue: Scenarios, scenario_id: str) -> CatalogueEntry:
+    """A scenario the catalogue knows; one it does not is not found."""
+    entry = catalogue.entry(scenario_id)
+    if entry is None:
+        raise NotFound(f"no scenario {scenario_id!r}")
+    return entry
+
+
+def version(catalogue: Scenarios, scenario_id: str) -> str:
+    """What tells this version of a scenario from another (`CatalogueEntry`)."""
+    return _entry(catalogue, scenario_id).version
+
+
+def run_manifest(catalogue: Scenarios, scenario_id: str, weather: str | None = None) -> RunManifest:
     """What a scenario's run is made from, read from its manifest: under its
     own weather, or another asked for as a climate run's is, with its clouds
     and wind overridden."""
     name = weather or DEFAULT_WEATHER
-    config = changed(scenario(scenario_id), SceneChanges(weather=name))
+    entry = _entry(catalogue, scenario_id)
+    config = changed(catalogue, entry.config, SceneChanges(weather=name))
     return RunManifest(
         scenario_id=scenario_id,
         schema_version=MANIFEST_FORMAT,
-        version=manifest_digest(scenario_id),
+        version=entry.version,
         random_seed=config.random_seed,
         start_date=config.start_date,
         duration_days=config.duration_days,
-        opening_day=opening_day(scenario_id),
+        opening_day=entry.opening_day,
         crop_model=config.crop_model.value,
         variety=config.variety,
         airflow=config.airflow.kind,
@@ -174,12 +197,9 @@ def weather_names() -> list[str]:
     return [DEFAULT_WEATHER, *PRESETS, *recorded_weathers()]
 
 
-def scenario(scenario_id: str) -> ScenarioConfig:
-    """A registered scenario."""
-    config = SCENARIO_REGISTRY.get(scenario_id)
-    if config is None:
-        raise NotFound(f"no scenario {scenario_id!r}")
-    return config
+def scenario(catalogue: Scenarios, scenario_id: str) -> ScenarioConfig:
+    """A scenario the catalogue knows; one it does not is not found."""
+    return _entry(catalogue, scenario_id).config
 
 
 def plant_ids(config: ScenarioConfig) -> list[str]:
@@ -188,12 +208,14 @@ def plant_ids(config: ScenarioConfig) -> list[str]:
     return [f"{config.greenhouse_id}_plant_{i:03d}" for i in range(1, plant_count + 1)]
 
 
-def initial_scene(scenario_id: str, changes: SceneChanges | None = None) -> SceneSnapshot:
+def initial_scene(
+    catalogue: Scenarios, scenario_id: str, changes: SceneChanges | None = None
+) -> SceneSnapshot:
     """A scenario's full crop before its first day, as a viewer draws it,
     with the changes a client asks for: its transplants organ by organ,
     where it grows its crop so, or else the simple model's plants."""
     changes = changes or SceneChanges()
-    config = changed(scenario(scenario_id), changes)
+    config = changed(catalogue, scenario(catalogue, scenario_id), changes)
     levels = equipment_levels(config, changes.levels)
     if config.crop_model == CropModel.ORGAN:
         house = greenhouse_scene(
@@ -211,10 +233,14 @@ def initial_scene(scenario_id: str, changes: SceneChanges | None = None) -> Scen
     return scene_snapshot(world, config, levels)
 
 
-def layout(scenario_id: str, name: str = DEFAULT_LAYOUT) -> dict[str, JsonValue]:
+def layout(
+    catalogue: Scenarios, scenario_id: str, name: str = DEFAULT_LAYOUT
+) -> dict[str, JsonValue]:
     """One of a scenario's layouts, as its file holds it, once it is checked
     to fit the scenario."""
-    return layout_document(changed(scenario(scenario_id), SceneChanges(layout=name)).layout)
+    return layout_document(
+        changed(catalogue, scenario(catalogue, scenario_id), SceneChanges(layout=name)).layout
+    )
 
 
 def equipment_levels(config: ScenarioConfig, levels: Mapping[str, float]) -> dict[str, float]:
@@ -231,14 +257,14 @@ def equipment_levels(config: ScenarioConfig, levels: Mapping[str, float]) -> dic
     return dict(levels)
 
 
-def changed(config: ScenarioConfig, changes: SceneChanges) -> ScenarioConfig:
+def changed(catalogue: Scenarios, config: ScenarioConfig, changes: SceneChanges) -> ScenarioConfig:
     """A scenario with the changes a client asks for: another of its layouts
     and another weather, then its greenhouse's dimensions and openings, and
     the moves its layout's name ends with (#209), checked once all are made:
     an item may be moved into the room a larger greenhouse makes."""
     base, marked, written = changes.layout.partition(MOVES_MARK)
     return _with_envelope(
-        _with_weather(_with_layout(config, base), changes.weather),
+        _with_weather(_with_layout(catalogue, config, base), changes.weather),
         changes,
         _moves(written) if marked else None,
     )
@@ -313,12 +339,15 @@ def layout_name(name: str) -> str:
     return f"{base}{MOVES_MARK}{','.join(told)}"
 
 
-def _with_layout(config: ScenarioConfig, name: str) -> ScenarioConfig:
+def _with_layout(catalogue: Scenarios, config: ScenarioConfig, name: str) -> ScenarioConfig:
     """The scenario with another of its layouts, read from its file: one it
     does not have is not found, and one that does not fit its greenhouse or
     crop is refused."""
     if name == DEFAULT_LAYOUT:
         return config
+    entry = _entry(catalogue, config.greenhouse_id)
+    if not entry.packaged or name not in entry.layouts:
+        raise NotFound(f"{config.greenhouse_id} has no layout {name!r}")
     try:
         other = load_layout(config.greenhouse_id, name)
     except KeyError:

@@ -16,6 +16,7 @@ from typing import Final
 from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.core.clock import DAY_S, day_start
+from greenhouse_sim.scenarios.catalogue import Scenarios
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.runs import checked_moment
@@ -65,17 +66,21 @@ class WeatherThroughADay(BaseModel):
     sun_directions: list[Vector3]
 
 
-def _under(scenario_id: str, weather: str | None) -> ScenarioConfig:
-    return changed(scenario(scenario_id), SceneChanges(weather=weather or DEFAULT_WEATHER))
+def _under(catalogue: Scenarios, scenario_id: str, weather: str | None) -> ScenarioConfig:
+    return changed(
+        catalogue,
+        scenario(catalogue, scenario_id),
+        SceneChanges(weather=weather or DEFAULT_WEATHER),
+    )
 
 
 def at_a_moment(
-    scenario_id: str, time_s: float = 0.0, weather: str | None = None
+    catalogue: Scenarios, scenario_id: str, time_s: float = 0.0, weather: str | None = None
 ) -> WeatherAtAMoment:
     """A scenario's weather `time_s` into a run, under its own weather or a
     preset's. A moment outside a run is refused, as is one its weather does
     not know."""
-    config = _under(scenario_id, weather)
+    config = _under(catalogue, scenario_id, weather)
     checked_moment(config, time_s)
     try:
         state = config.run_weather().at(time_s)
@@ -96,13 +101,13 @@ def at_a_moment(
 
 
 def through_the_day(
-    scenario_id: str, weather: str | None = None, time_s: float = 0.0
+    catalogue: Scenarios, scenario_id: str, weather: str | None = None, time_s: float = 0.0
 ) -> WeatherThroughADay:
     """A scenario's weather every `DAY_EVERY_S` through the day of a run that
     `time_s` belongs to (`greenhouse_sim.core.clock`), by default its first,
     under its own weather or a preset's. A moment outside a run is refused,
     as is a weather that does not know the whole day."""
-    config = _under(scenario_id, weather)
+    config = _under(catalogue, scenario_id, weather)
     first = day_start(checked_moment(config, time_s))
     run = config.run_weather()
     times = [first + step * DAY_EVERY_S for step in range(int(DAY_S // DAY_EVERY_S) + 1)]

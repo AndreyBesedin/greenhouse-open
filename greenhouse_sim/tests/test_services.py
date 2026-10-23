@@ -6,6 +6,7 @@ from collections.abc import Iterator
 import pytest
 
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.scene.snapshot import SCHEMA_VERSION, SceneEntityKind
 from greenhouse_sim.services import scenarios, system
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
@@ -27,7 +28,7 @@ def test_the_system_says_it_is_up_and_what_it_is() -> None:
 
 
 def test_every_registered_scenario_is_summarised_with_its_layouts() -> None:
-    summaries = {summary.id: summary for summary in scenarios.scenario_summaries()}
+    summaries = {summary.id: summary for summary in scenarios.scenario_summaries(PACKAGED)}
 
     assert set(summaries) == set(SCENARIO_REGISTRY)
     assert summaries["tomato_compartment"].layouts == ["default", "propagation"]
@@ -36,11 +37,11 @@ def test_every_registered_scenario_is_summarised_with_its_layouts() -> None:
 
 def test_an_unregistered_scenario_is_not_found() -> None:
     with pytest.raises(NotFound, match="no scenario 'gh_404'"):
-        scenarios.scenario("gh_404")
+        scenarios.scenario(PACKAGED, "gh_404")
     with pytest.raises(NotFound):
-        scenarios.initial_scene("gh_404")
+        scenarios.initial_scene(PACKAGED, "gh_404")
     with pytest.raises(NotFound):
-        scenarios.layout("gh_404")
+        scenarios.layout(PACKAGED, "gh_404")
 
 
 def test_a_crop_is_named_by_its_scenario_and_place() -> None:
@@ -51,10 +52,10 @@ def test_a_crop_is_named_by_its_scenario_and_place() -> None:
 
 def test_a_scene_without_changes_is_the_scenario_as_registered() -> None:
     config = SCENARIO_REGISTRY["tomato_compartment"]
-    scene = scenarios.initial_scene("tomato_compartment")
+    scene = scenarios.initial_scene(PACKAGED, "tomato_compartment")
     plants = [e for e in scene.entities if e.kind == SceneEntityKind.PLANT]
 
-    assert scenarios.changed(config, SceneChanges()) is config
+    assert scenarios.changed(PACKAGED, config, SceneChanges()) is config
     assert (scene.greenhouse_id, scene.simulated_day, len(plants)) == (
         "tomato_compartment",
         0,
@@ -66,7 +67,7 @@ def test_a_scene_shows_the_scenario_changed_as_asked() -> None:
     changes = SceneChanges(
         layout="propagation", envelope={"length": 30.0}, openings={"roof_vent_1": 1.0}
     )
-    scene = scenarios.initial_scene("tomato_compartment", changes)
+    scene = scenarios.initial_scene(PACKAGED, "tomato_compartment", changes)
     kinds = {entity.kind for entity in scene.entities}
     vent = next(e for e in scene.entities if e.entity_id == "tomato_compartment_roof_vent_1")
     bounds = next(e for e in scene.entities if e.kind == SceneEntityKind.GREENHOUSE_BOUNDS)
@@ -102,15 +103,15 @@ def test_a_change_that_cannot_be_made_is_refused_with_its_reason(
     changes: SceneChanges, error: type[ServiceError], reason: str
 ) -> None:
     with pytest.raises(error, match=reason) as refused:
-        scenarios.initial_scene("tomato_compartment", changes)
+        scenarios.initial_scene(PACKAGED, "tomato_compartment", changes)
 
     assert reason in refused.value.message
 
 
 def test_a_layout_is_given_as_its_file_holds_it() -> None:
     default, benches = (
-        scenarios.layout("tomato_compartment"),
-        scenarios.layout("tomato_compartment", "propagation"),
+        scenarios.layout(PACKAGED, "tomato_compartment"),
+        scenarios.layout(PACKAGED, "tomato_compartment", "propagation"),
     )
 
     rows = benches["crop_rows"]
@@ -123,7 +124,7 @@ def test_a_layout_is_given_as_its_file_holds_it() -> None:
 
 @pytest.fixture
 def runs() -> Iterator[LiveRuns]:
-    runs = LiveRuns(seconds_per_day=60.0)
+    runs = LiveRuns(PACKAGED, seconds_per_day=60.0)
     yield runs
     runs.close()
 

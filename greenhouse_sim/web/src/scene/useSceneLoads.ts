@@ -4,7 +4,8 @@ import type { ScenarioSummary } from "../scenarios";
 import { useLoad, useLoadProgress } from "../useLoad";
 import { equipmentUrl, governedLevels, loadEquipment } from "./equipment";
 import type { ScenarioRun } from "./run";
-import { fetchScene, loadScene, type SceneSource, sceneRequest } from "./source";
+import { fetchScene, loadScene, sceneRequest } from "./sceneLoad";
+import type { SceneSource } from "./source";
 
 const NO_OPENINGS: readonly string[] = [];
 

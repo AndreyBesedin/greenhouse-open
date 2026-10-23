@@ -36,7 +36,7 @@ from greenhouse_protocol.greenhouse import GreenhouseDescription, GreenhouseLayo
 
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.playback import Playback, Playbacks, PlaybackState
-from greenhouse_sim.services.scenarios import plant_ids, scenario
+from greenhouse_sim.services.scenarios import Scenarios, plant_ids, scenario
 
 # The most records a batch holds, whatever a client asks for.
 MOST_PER_BATCH: Final = 5_000
@@ -79,11 +79,14 @@ class Cursors:
 
 
 class Reads(Protocol):
-    """What a consumer reads of a simulator: the runs it plays back, and
-    the cursors it has given."""
+    """What a consumer reads of a simulator: the runs it plays back, the
+    cursors it has given, and the scenarios their greenhouses are."""
 
     @property
     def playbacks(self) -> Playbacks: ...
+
+    @property
+    def catalogue(self) -> Scenarios: ...
 
     @property
     def cursors(self) -> Cursors: ...
@@ -110,7 +113,7 @@ def greenhouse(reads: Reads, run_id: str) -> GreenhouseDescription:
     """The greenhouse a run describes: its plants, row by row, as the
     scenario lays them out, described when its run starts."""
     found = _played(reads, run_id)
-    config = scenario(found.scenario_id)
+    config = scenario(reads.catalogue, found.scenario_id)
     plants = tuple(
         Plant(
             plant_id=plant_id,

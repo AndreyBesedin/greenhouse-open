@@ -17,6 +17,7 @@ from greenhouse_sim.climate.openings import (
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import climate_vents
 from greenhouse_sim.services.grid import air_grid
@@ -38,7 +39,7 @@ NORTHERLY = SOUTHERLY.model_copy(update={"wind_direction_deg": 0.0})
 
 
 def _sites(openings: dict[str, float]) -> dict[str, OpeningSite]:
-    config = changed(BOX, SceneChanges(openings=openings))
+    config = changed(PACKAGED, BOX, SceneChanges(openings=openings))
     return opening_sites(config.envelope, config.site)
 
 
@@ -112,8 +113,8 @@ def test_an_opening_alone_passes_nothing_net_and_exchanges_both_ways() -> None:
 
 
 def _run(openings: dict[str, float], weather: ConstantWeather) -> ClimateRun:
-    config = changed(BOX, SceneChanges(openings=openings))
-    geometry = cfd.geometry("climate_box", SceneChanges(openings=openings))
+    config = changed(PACKAGED, BOX, SceneChanges(openings=openings))
+    geometry = cfd.geometry(PACKAGED, "climate_box", SceneChanges(openings=openings))
     return ClimateRun(
         base=config.airflow,
         equipment=config.layout.equipment,

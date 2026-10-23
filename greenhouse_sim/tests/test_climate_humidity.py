@@ -18,6 +18,7 @@ from greenhouse_sim.climate.transport import AirState, Transport
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.simulator import Simulator
@@ -27,7 +28,7 @@ from greenhouse_sim.world.geometry import Vector3
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
 GRID = air_grid(CONFIG)
-SOLID = cfd.geometry("climate_box").solid()
+SOLID = cfd.geometry(PACKAGED, "climate_box").solid()
 AIR = ~SOLID
 NX, NY, NZ = GRID.shape
 FAN = next(piece for piece in CONFIG.layout.equipment if isinstance(piece, Fan))

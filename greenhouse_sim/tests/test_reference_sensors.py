@@ -15,6 +15,7 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services.fields import field
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.sensors import delivered_between
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.sensors import PointSensor
 
 SCENARIO: Final = "reference_greenhouse"
@@ -62,13 +63,17 @@ def test_its_back_thermometer_drifts_far_enough_to_be_found() -> None:
     assert errors["temperature_front"] == 0.0
 
 
-def test_its_heater_warms_its_air_as_a_unit_heater_does_and_keeps_a_humidity_it_can_have() -> None:
+def test_its_heater_warms_its_air_as_a_unit_heater_does_and_keeps_a_humidity_it_can_have(
+    simulator: Simulator,
+) -> None:
     # Its heater warmed the few cells around its body past 100 °C in the
     # run's first minutes (#261), where they lost more water than they held
     # and the house's humidity cell by cell ran to ±10⁸ % (#198). Its warm
     # air spread along its jet, its warmest cell is a unit heater's outlet.
     for time_s in HEATER_FIRST_MINUTES_S:
-        air = EnvironmentField.from_document(field(RunRequest(SCENARIO), "climate", time_s=time_s))
+        air = EnvironmentField.from_document(
+            field(simulator, RunRequest(SCENARIO), "climate", time_s=time_s)
+        )
         temperature = air.channels[AirQuantity.TEMPERATURE]
         relative = air.channels[AirQuantity.HUMIDITY]
 
@@ -77,10 +82,10 @@ def test_its_heater_warms_its_air_as_a_unit_heater_does_and_keeps_a_humidity_it_
         assert np.nanmin(relative) >= 0.0 and np.nanmax(relative) <= 100.0
 
 
-def test_its_hygrometers_read_a_house_s_humidity_from_the_runs_start() -> None:
+def test_its_hygrometers_read_a_house_s_humidity_from_the_runs_start(simulator: Simulator) -> None:
     # Through its first two hours they read 0% and then 100% for an hour
     # and more, from the grid run that ran wild (#198).
-    readings, _ = delivered_between(RunRequest(SCENARIO), None, FROM_THE_START_S, 60.0)
+    readings, _ = delivered_between(simulator, RunRequest(SCENARIO), None, FROM_THE_START_S, 60.0)
     humidity = [r.value for r in readings if r.sensor_id in {"humidity_front", "humidity_back"}]
 
     assert len(humidity) >= 2 * FROM_THE_START_S / HOUR_S * 60

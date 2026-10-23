@@ -25,8 +25,8 @@ HEATED = (("heater", 1.0),)
 SHUT_TEMPERATURE_C = 0.6
 
 
-def _day(commands: tuple[tuple[float, str, float], ...] = ()) -> ClimateDay:
-    return _climate_day("climate_box", "default", "default", HEATED, (), commands)
+def _day(simulator: Simulator, commands: tuple[tuple[float, str, float], ...] = ()) -> ClimateDay:
+    return _climate_day(simulator, "climate_box", "default", "default", HEATED, (), commands)
 
 
 @pytest.mark.parametrize(
@@ -39,8 +39,10 @@ def test_the_field_at_a_moment_is_drawn_from_an_hour_before_its_hour(
     assert window_start(moment) == start
 
 
-def test_through_its_first_two_hours_the_field_is_the_grid_run_from_the_start() -> None:
-    day = _day()
+def test_through_its_first_two_hours_the_field_is_the_grid_run_from_the_start(
+    simulator: Simulator,
+) -> None:
+    day = _day(simulator)
 
     assert day.window(5400.0) is day.run
     np.testing.assert_array_equal(
@@ -49,8 +51,10 @@ def test_through_its_first_two_hours_the_field_is_the_grid_run_from_the_start() 
     )
 
 
-def test_later_the_field_comes_from_a_grid_run_started_from_the_whole_house() -> None:
-    day = _day()
+def test_later_the_field_comes_from_a_grid_run_started_from_the_whole_house(
+    simulator: Simulator,
+) -> None:
+    day = _day(simulator)
     window = day.window(4.5 * HOUR_S)
     house = day.house.air_at(3 * HOUR_S)
     started = window.air_at(3 * HOUR_S)
@@ -66,8 +70,8 @@ def test_later_the_field_comes_from_a_grid_run_started_from_the_whole_house() ->
     assert temperature.max() - temperature.min() > 1.0
 
 
-def test_scrubbing_within_an_hour_carries_one_grid_run_on() -> None:
-    day = _day()
+def test_scrubbing_within_an_hour_carries_one_grid_run_on(simulator: Simulator) -> None:
+    day = _day(simulator)
 
     assert day.window(4.1 * HOUR_S) is day.window(4.9 * HOUR_S)
     assert day.window(5.0 * HOUR_S) is not day.window(4.9 * HOUR_S)
@@ -75,20 +79,22 @@ def test_scrubbing_within_an_hour_carries_one_grid_run_on() -> None:
         day.window(4.5 * HOUR_S).air_at(2 * HOUR_S)
 
 
-def test_an_override_later_in_the_day_carries_on_from_the_air_before_it() -> None:
-    day = _day()
+def test_an_override_later_in_the_day_carries_on_from_the_air_before_it(
+    simulator: Simulator,
+) -> None:
+    day = _day(simulator)
     day.field("f", 4.5 * HOUR_S)
-    override = _day(((4.5 * HOUR_S, "heater", 0.0),))
+    override = _day(simulator, ((4.5 * HOUR_S, "heater", 0.0),))
 
     # The air up to the override is the same air, taken over, not run again.
     window = override.window(4.75 * HOUR_S)
     assert window.air_at(4.5 * HOUR_S) is day.window(4.5 * HOUR_S).air_at(4.5 * HOUR_S)
 
 
-def test_a_branch_starts_none_of_the_later_grid_runs_it_cannot_share() -> None:
-    day = _day()
+def test_a_branch_starts_none_of_the_later_grid_runs_it_cannot_share(simulator: Simulator) -> None:
+    day = _day(simulator)
     day.field("f", 6.5 * HOUR_S)
-    branch = _day(((HOUR_S, "heater", 0.25),))
+    branch = _day(simulator, ((HOUR_S, "heater", 0.25),))
 
     # The two differ from the first hour on: the grid run that draws 6:30,
     # from 5:00, shares nothing with the branch, which is not worked out to
@@ -98,13 +104,14 @@ def test_a_branch_starts_none_of_the_later_grid_runs_it_cannot_share() -> None:
 
 
 def test_a_later_grid_run_is_shared_whichever_day_starts_it_first(
+    simulator: Simulator,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # The source has no grid run for 3:00 to 5:00 when the branch is made;
     # the branch is asked for 4:30 first. The source's is started beside the
     # branch's, and takes the hour over rather than work it out again.
-    day = _day()
-    branch = _day(((6 * HOUR_S, "heater", 0.0),))
+    day = _day(simulator)
+    branch = _day(simulator, ((6 * HOUR_S, "heater", 0.0),))
     branch.field("f", 4.5 * HOUR_S)
 
     def not_again(*args: object, **kwargs: object) -> NoReturn:
@@ -115,9 +122,9 @@ def test_a_later_grid_run_is_shared_whichever_day_starts_it_first(
     assert window.air_at(4.5 * HOUR_S) is branch.window(4.5 * HOUR_S).air_at(4.5 * HOUR_S)
 
 
-def test_sensors_sample_the_grid_then_the_whole_house() -> None:
+def test_sensors_sample_the_grid_then_the_whole_house(simulator: Simulator) -> None:
     log = sensors.observations(
-        RunRequest("climate_box", levels={"heater": 1.0}), until_s=3 * HOUR_S, clean=True
+        simulator, RunRequest("climate_box", levels={"heater": 1.0}), until_s=3 * HOUR_S, clean=True
     )
     by_sensor: dict[str, dict[float, float]] = {}
     for o in log.observations:
@@ -128,16 +135,19 @@ def test_sensors_sample_the_grid_then_the_whole_house() -> None:
     # Through the first two hours the back, by the heater, is the warmer.
     assert back[3600.0] > front[3600.0] + 1.0
     # After them both read the whole house's air.
-    house = _day().house.air_at(2.5 * HOUR_S)
+    house = _day(simulator).house.air_at(2.5 * HOUR_S)
     assert front[2.5 * HOUR_S] == back[2.5 * HOUR_S] == pytest.approx(house.temperature_c)
     assert min(front) == 0.0
     assert max(front) == 3 * HOUR_S
     assert FROM_THE_START_S in front
 
 
-def test_probes_read_the_grid_run_that_draws_the_moment() -> None:
+def test_probes_read_the_grid_run_that_draws_the_moment(simulator: Simulator) -> None:
     probes = fields.climate_probes(
-        RunRequest("climate_box", levels={"heater": 1.0}), [(6.0, 3.2, 1.5)], until_s=4.25 * HOUR_S
+        simulator,
+        RunRequest("climate_box", levels={"heater": 1.0}),
+        [(6.0, 3.2, 1.5)],
+        until_s=4.25 * HOUR_S,
     )
 
     assert probes.times_s[0] == 3 * HOUR_S

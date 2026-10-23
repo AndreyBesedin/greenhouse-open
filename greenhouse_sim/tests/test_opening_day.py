@@ -28,6 +28,7 @@ from greenhouse_sim.biology.tomato.organ.fruit import Maturity, maturity
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.organs import FruitStage
+from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.scenarios.manifest_files import (
     MANIFESTS_DIR,
     manifest_digest,
@@ -100,24 +101,26 @@ def test_the_kept_opening_day_is_the_manifests_and_bears_red_fruit() -> None:
         kept.manifest,
         [],
         [],
-        off_levels(SCENARIO),
+        off_levels(PACKAGED, SCENARIO),
     )
     assert off.house.temperature_c < kept.house.temperature_c
-    listed = next(s for s in scenario_summaries() if s.id == SCENARIO)
+    listed = next(s for s in scenario_summaries(PACKAGED) if s.id == SCENARIO)
     assert listed.opening_day == day
-    assert [s.opening_day for s in scenario_summaries() if s.id != SCENARIO] == [None] * 5
+    assert [s.opening_day for s in scenario_summaries(PACKAGED) if s.id != SCENARIO] == [None] * 5
 
 
-def test_kept_as_the_api_starts_the_runs_later_days_carry_on_from_it() -> None:
-    assert checkpoints.load_openings() == []
+def test_kept_as_the_api_starts_the_runs_later_days_carry_on_from_it(simulator: Simulator) -> None:
+    assert checkpoints.load_openings(simulator) == []
 
-    plants = run_crop(RunRequest(SCENARIO)).plants_on(OPENING + 1)
-    house = climate_run(RunRequest(SCENARIO))[1].house
-    off = climate_run(RunRequest(SCENARIO, levels=off_levels(SCENARIO), daily=()))[1].house
+    plants = run_crop(simulator, RunRequest(SCENARIO)).plants_on(OPENING + 1)
+    house = climate_run(simulator, RunRequest(SCENARIO))[1].house
+    off = climate_run(
+        simulator, RunRequest(SCENARIO, levels=off_levels(PACKAGED, SCENARIO), daily=())
+    )[1].house
     off.air_at((OPENING + 0.5) * DAY_S)
     # The air cell by cell in the day's first hour, its grid run started an
     # hour before the day began.
-    field(RunRequest(SCENARIO), "climate", time_s=OPENING * DAY_S + 20 * 60.0)
+    field(simulator, RunRequest(SCENARIO), "climate", time_s=OPENING * DAY_S + 20 * 60.0)
 
     assert len(plants) == 32
     # Only the opening day's air was worked out, from its start, in the run
@@ -129,7 +132,7 @@ def test_kept_as_the_api_starts_the_runs_later_days_carry_on_from_it() -> None:
     before = [m for m in house._kept if 0.0 < m < OPENING * DAY_S]
     assert min(before) == hour_before
     assert [m for m in off._kept if 0.0 < m < OPENING * DAY_S] == [hour_before]
-    assert [c.day for c in checkpoints.checkpoints()] == [OPENING, OPENING]
+    assert [c.day for c in checkpoints.checkpoints(simulator)] == [OPENING, OPENING]
 
 
 def test_the_crop_stays_whole_through_the_days_about_its_opening(simulator: Simulator) -> None:
@@ -137,7 +140,7 @@ def test_the_crop_stays_whole_through_the_days_about_its_opening(simulator: Simu
     # whole, its 32 plants' organs, none fewer than the day before's by more
     # than a little, before the first harvest (day 91), and the opening day's
     # as the days either side of it.
-    assert checkpoints.load_openings() == []
+    assert checkpoints.load_openings(simulator) == []
     entities = []
     for day in (83, 85, OPENING, OPENING + 1):
         answer = respond(
@@ -158,18 +161,18 @@ def test_the_crop_stays_whole_through_the_days_about_its_opening(simulator: Simu
 
 
 @pytest.mark.slow
-def test_replayed_from_the_runs_start_the_opening_day_is_the_one_kept() -> None:
+def test_replayed_from_the_runs_start_the_opening_day_is_the_one_kept(simulator: Simulator) -> None:
     kept = _kept()
-    crop = run_crop(RunRequest(SCENARIO))
+    crop = run_crop(simulator, RunRequest(SCENARIO))
 
     assert all(_red(crop.plants_on(day)) == 0 for day in range(kept.day))
-    saved = checkpoints.save_checkpoint(RunRequest(SCENARIO), time_s=kept.day * DAY_S)
+    saved = checkpoints.save_checkpoint(simulator, RunRequest(SCENARIO), time_s=kept.day * DAY_S)
 
-    assert _state(checkpoints.checkpoint(saved.checkpoint_id)) == _state(kept)
+    assert _state(checkpoints.checkpoint(simulator, saved.checkpoint_id)) == _state(kept)
 
 
-def _update() -> None:
-    crop = run_crop(RunRequest(SCENARIO))
+def _update(simulator: Simulator) -> None:
+    crop = run_crop(simulator, RunRequest(SCENARIO))
     day = next(day for day in range(crop.days + 1) if _red(crop.plants_on(day)) > 0)
     path = MANIFESTS_DIR / f"{SCENARIO}.json"
     manifest = json.loads(path.read_text())
@@ -178,17 +181,18 @@ def _update() -> None:
     opening_file(SCENARIO).parent.mkdir(exist_ok=True)
     # The run, and the same run with everything off, which a viewer charts
     # beside it: its thermostat's heater too.
-    for all_off, levels, daily in ((False, {}, None), (True, off_levels(SCENARIO), ())):
+    for all_off, levels, daily in ((False, {}, None), (True, off_levels(PACKAGED, SCENARIO), ())):
         saved = checkpoints.save_checkpoint(
-            RunRequest(SCENARIO, levels=levels, daily=daily), time_s=day * DAY_S
+            simulator, RunRequest(SCENARIO, levels=levels, daily=daily), time_s=day * DAY_S
         )
         opening_file(SCENARIO, all_off).write_bytes(
-            checkpoints.opening_bytes(checkpoints.checkpoint(saved.checkpoint_id))
+            checkpoints.opening_bytes(checkpoints.checkpoint(simulator, saved.checkpoint_id))
         )
         print(f"wrote day {day} to {opening_file(SCENARIO, all_off)}")
 
 
 if __name__ == "__main__":
-    if sys.argv[1:] != ["--update"]:
-        raise SystemExit("usage: python tests/test_opening_day.py --update")
-    _update()
+    with Simulator() as simulator:
+        if sys.argv[1:] != ["--update"]:
+            raise SystemExit("usage: python tests/test_opening_day.py --update")
+        _update(simulator)
