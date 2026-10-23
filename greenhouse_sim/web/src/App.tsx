@@ -26,7 +26,9 @@ import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
 import { MovePanel } from "./MovePanel";
+import { PanelSide } from "./PanelSide";
 import { PlaybackPanel } from "./PlaybackPanel";
+import { usePanelFolds } from "./panelFolds";
 import { usePanelTheme } from "./panelTheme";
 import { LabPanels } from "./plants/LabPanels";
 import { type LabRun, PLANT_LAB_POSE } from "./plants/lab";
@@ -78,6 +80,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [chooseFirst] = useState(() => searchFor(addressed) === "");
   // How the panels look (#208): dark unless the person chose light.
   const [panelTheme, setPanelTheme] = usePanelTheme();
+  // The sides whose panels are folded to a stripe at the view's edge (#304).
+  const [folded, toggleFold, unfold] = usePanelFolds();
   // Whether the viewer shows what the simulator knows and a policy never
   // sees (P09.6): only QA mode asks for truth.
   const [qaMode, setQaMode] = useQaMode();
@@ -369,7 +373,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         {cfd.status === "loaded" && <CfdBoundaries geometry={cfd.geometry} />}
       </Viewport>
       <div className="viewer-panels">
-        <div className="panel-column">
+        <PanelSide side="info" folded={folded.has("info")} onToggle={() => toggleFold("info")}>
           <InfoPanel
             build={build}
             scenarios={scenarios}
@@ -525,8 +529,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             // A session's moves stay on show while nothing is selected.
             movePanel !== null && <div className="inspector">{movePanel}</div>
           )}
-        </div>
-        <div className="panel-column at-the-end">
+        </PanelSide>
+        <PanelSide side="view" folded={folded.has("view")} onToggle={() => toggleFold("view")}>
           <Hud
             sample={sample}
             pointer={pointer}
@@ -536,7 +540,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             onCommand={commands.send}
           />
           <div className="legends">
-            <ControlsHelp />
+            <ControlsHelp onShow={() => unfold("view")} />
             <WhatAmISeeing
               view={{
                 drawn: overlaysDrawn,
@@ -568,7 +572,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
               />
             )}
           </div>
-        </div>
+        </PanelSide>
       </div>
     </main>
   );

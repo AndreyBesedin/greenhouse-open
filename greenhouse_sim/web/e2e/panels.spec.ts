@@ -217,3 +217,82 @@ test("the panels are dark, or light if chosen, and the golden views keep theirs 
   await page.goto("/qa/renderer?seed=42");
   expect(await background(".qa-caption")).toBe("rgba(255, 255, 255, 0.88)");
 });
+
+test("each side's panels fold to a stripe at the view's edge, and open as they were (#304)", async ({
+  page,
+}) => {
+  // A scenario's sections in a short window: the info panel overflows.
+  await page.setViewportSize({ width: 1280, height: 420 });
+  await page.goto("/?scenario=climate_box");
+  await expect(page.getByTestId("scene-status")).toContainText("climate_box", { timeout: 30_000 });
+  await unfold(page, "Display");
+  await unfold(page, "Weather");
+  const info = page.locator(".info-panel");
+  const hud = page.locator(".hud");
+  const infoStripe = page.getByTestId("info-stripe");
+  const viewStripe = page.getByTestId("view-stripe");
+  // The info panel scrolled a little, to find it so again.
+  await info.evaluate((panel) => {
+    panel.scrollTop = 40;
+  });
+  const scrolled = await info.evaluate((panel) => panel.scrollTop);
+  expect(scrolled).toBeGreaterThan(0);
+
+  await test.step("by the pointer, the info panel folds to its stripe at the left edge", async () => {
+    await page.getByRole("button", { name: "Fold the info panel" }).click();
+    await expect(info).toBeHidden();
+    const stripe = await infoStripe.boundingBox();
+    expect(stripe?.x).toBeLessThan(20);
+    // Folded, nothing of the side but its stripe covers the view.
+    expect(stripe?.width).toBeLessThan(20);
+    await expect(hud).toBeVisible();
+  });
+
+  await test.step("by the keyboard, the View panel folds to its stripe at the right edge", async () => {
+    await page.getByRole("button", { name: "Fold the View panel" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(hud).toBeHidden();
+    const stripe = await viewStripe.boundingBox();
+    expect((stripe?.x ?? 0) + (stripe?.width ?? 0)).toBeGreaterThan(1260);
+  });
+
+  await test.step("the view's controls, asked for by their key, open the View panel to be seen", async () => {
+    await page.keyboard.press("?");
+    await expect(page.getByRole("region", { name: "Moving around the view" })).toBeVisible();
+    await expect(hud).toBeVisible();
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Fold the View panel" }).click();
+    await expect(hud).toBeHidden();
+  });
+
+  await test.step("opened again, each is as it was, the info panel where it was scrolled", async () => {
+    await page.getByRole("button", { name: "Open the info panel" }).press("Space");
+    await page.getByRole("button", { name: "Open the View panel" }).click();
+    await expect(info).toBeVisible();
+    await expect(hud).toBeVisible();
+    expect(await info.evaluate((panel) => panel.scrollTop)).toBe(scrolled);
+  });
+
+  await test.step("a docked, narrow window shows no stripe, and folds nothing", async () => {
+    await page.getByRole("button", { name: "Fold the info panel" }).click();
+    await page.setViewportSize({ width: 640, height: 480 });
+    await expect(infoStripe).toBeHidden();
+    await expect(info).toBeVisible();
+  });
+});
+
+test("a side's stripe stands at its panel's edge, however long a line of the panel (#304)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  // Followed, the climate run's note is a line far longer than the panel.
+  await page.goto("/?scenario=climate_box&field=climate&follow=1");
+  await expect(page.getByTestId("climate-time")).toBeVisible({ timeout: 30_000 });
+  const panel = await page.locator(".info-panel").boundingBox();
+  const stripe = await page.getByTestId("info-stripe").boundingBox();
+  const hud = await page.locator(".hud").boundingBox();
+  const viewStripe = await page.getByTestId("view-stripe").boundingBox();
+
+  expect((stripe?.x ?? 0) - ((panel?.x ?? 0) + (panel?.width ?? 0))).toBeLessThan(12);
+  expect((hud?.x ?? 0) - ((viewStripe?.x ?? 0) + (viewStripe?.width ?? 0))).toBeLessThan(12);
+});
