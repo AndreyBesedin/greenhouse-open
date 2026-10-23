@@ -143,6 +143,8 @@ def test_an_edit_is_assessed_as_it_stands_and_sent_back_as_it_came(simulator: Si
     assert unassigned["rows"] == [2]
     # What it answers is what it was sent, read.
     assert json.loads(_file(assessed)) == edited
+    # An installation not kept as a draft names none.
+    assert "draft" not in assessed
 
 
 def test_a_house_is_previewed_as_the_simulator_draws_it(simulator: Simulator) -> None:
