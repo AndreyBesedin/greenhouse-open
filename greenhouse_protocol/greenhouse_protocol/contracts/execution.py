@@ -9,6 +9,10 @@ to. The contract belongs to neither side.
 Not every environment can execute. Recorded history cannot change, so a
 replay adapter refuses rather than pretending, and `ActionNotExecutable` is
 how it says so: replay can never execute an action by accident.
+
+`ActionExecutionAdapter` is deprecated (decision 0046): a run's gateway and
+its executors replace it, each with a contract of its own (P13). It stays,
+as it is, until the simulator carries the new format out.
 """
 
 from datetime import datetime

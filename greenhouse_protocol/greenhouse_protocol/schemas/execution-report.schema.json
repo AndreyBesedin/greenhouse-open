@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "ActionEffect": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/LevelSet"
+        },
+        {
+          "$ref": "#/$defs/TargetSet"
+        },
+        {
+          "$ref": "#/$defs/Watered"
+        },
+        {
+          "$ref": "#/$defs/Harvested"
+        },
+        {
+          "$ref": "#/$defs/Lowered"
+        },
+        {
+          "$ref": "#/$defs/LeafRemoved"
+        },
+        {
+          "$ref": "#/$defs/Inspected"
+        }
+      ]
+    },
+    "Harvested": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "harvested",
+          "default": "harvested",
+          "title": "Kind",
+          "type": "string"
+        },
+        "fruit_count": {
+          "minimum": 0,
+          "title": "Fruit Count",
+          "type": "integer"
+        },
+        "fresh_mass_g": {
+          "minimum": 0.0,
+          "title": "Fresh Mass G",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fruit_count",
+        "fresh_mass_g"
+      ],
+      "title": "Harvested",
+      "type": "object"
+    },
+    "Identifier": {
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9_.-]+$",
+      "type": "string"
+    },
+    "Inspected": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "inspected",
+          "default": "inspected",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "title": "Inspected",
+      "type": "object"
+    },
+    "Instant": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "LeafRemoved": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "leaf_removed",
+          "default": "leaf_removed",
+          "title": "Kind",
+          "type": "string"
+        },
+        "leaf_id": {
+          "$ref": "#/$defs/Name"
+        }
+      },
+      "required": [
+        "leaf_id"
+      ],
+      "title": "LeafRemoved",
+      "type": "object"
+    },
+    "LevelSet": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "level_set",
+          "default": "level_set",
+          "title": "Kind",
+          "type": "string"
+        },
+        "device_id": {
+          "$ref": "#/$defs/Name"
+        },
+        "level": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "const": "auto",
+              "type": "string"
+            }
+          ],
+          "title": "Level"
+        }
+      },
+      "required": [
+        "device_id",
+        "level"
+      ],
+      "title": "LevelSet",
+      "type": "object"
+    },
+    "Lowered": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "lowered",
+          "default": "lowered",
+          "title": "Kind",
+          "type": "string"
+        },
+        "by_cm": {
+          "minimum": 0.0,
+          "title": "By Cm",
+          "type": "number"
+        }
+      },
+      "required": [
+        "by_cm"
+      ],
+      "title": "Lowered",
+      "type": "object"
+    },
+    "Name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "ReportStatus": {
+      "enum": [
+        "done",
+        "failed",
+        "refused"
+      ],
+      "title": "ReportStatus",
+      "type": "string"
+    },
+    "TargetSet": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "target_set",
+          "default": "target_set",
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/Name"
+        },
+        "value_c": {
+          "title": "Value C",
+          "type": "number"
+        }
+      },
+      "required": [
+        "target",
+        "value_c"
+      ],
+      "title": "TargetSet",
+      "type": "object"
+    },
+    "Watered": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "watered",
+          "default": "watered",
+          "title": "Kind",
+          "type": "string"
+        },
+        "amount_ml": {
+          "minimum": 0.0,
+          "title": "Amount Ml",
+          "type": "number"
+        }
+      },
+      "required": [
+        "amount_ml"
+      ],
+      "title": "Watered",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "An executor's report of an assignment: done, with its start and\nfinish; failed, with why; or refused before it started, with why.",
+  "properties": {
+    "assignment_id": {
+      "$ref": "#/$defs/Identifier"
+    },
+    "status": {
+      "$ref": "#/$defs/ReportStatus"
+    },
+    "started_at": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Instant"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "finished_at": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Instant"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "effect": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ActionEffect"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reason"
+    }
+  },
+  "required": [
+    "assignment_id",
+    "status"
+  ],
+  "title": "ExecutionReport",
+  "type": "object"
+}

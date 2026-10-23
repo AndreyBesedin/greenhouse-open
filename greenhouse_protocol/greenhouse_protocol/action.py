@@ -7,16 +7,19 @@ happen is not the party that carries it out. So these types belong to no
 decision-maker and no executor: a policy proposes them, an executor
 validates and performs them against its own view of the world, and the
 outcome comes back as an `ActionOutcome` (`greenhouse_protocol.execution`).
+
+Deprecated (decision 0046): one action format replaces these requests,
+`greenhouse_protocol.actions`, carried in a plan (`greenhouse_protocol.plan`)
+and ending in an outcome (`greenhouse_protocol.outcome`). They stay, as they
+are, until the simulator carries the new format out, and go then (P13).
 """
 
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-# The hard upper bound on a single watering request. Part of the contract
-# rather than of any one executor: whatever proposes an action can know it
-# in advance, and every executor's validation enforces it.
-MAX_WATER_AMOUNT_ML = 2000.0
+# The hard upper bound on a single watering request: the one format's.
+from greenhouse_protocol.actions import MAX_WATER_AMOUNT_ML as MAX_WATER_AMOUNT_ML
 
 
 class WaterPlantAction(BaseModel):

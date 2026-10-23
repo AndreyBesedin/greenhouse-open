@@ -17,6 +17,34 @@ breaks the conformance checks is a major version.
   errors is refused with each. The server keeps drafts in
   `~/.greenhouse-sim/drafts.sqlite3` unless `--drafts` names another file;
   where that default cannot be made, it starts keeping none.
+- `greenhouse-protocol`: one format for acting on a greenhouse (decision
+  0046, P13.1), as records, their checks and their published JSON Schemas
+  (`greenhouse_protocol/schemas/`). New modules, all additive:
+  - `actions`: `Action`, a union by `kind` (`set_level`, `set_target`,
+    `water`, `harvest`, `lower`, `remove_leaf`, `inspect`), the protocol's
+    own `ActionId`, and `ActionRef` for an occurrence or a fallback;
+  - `plan`: `Plan` and `PlannedAction`, with timing (`At`, `Window`,
+    `Asap`), `Recurrence`, `Lateness` (`on_late`: run late, skip, critical,
+    fallback, abort the plan), `Principal`, `ExecutorRef`, `ActionKey` and
+    `ActionState`; a malformed plan (an id twice, a prerequisite missing, a
+    cycle, an edge between recurrences that do not pair) is refused whole;
+  - `authorisation`: `AuthorisationConfig`, versioned, its groups granting
+    action kinds, optionally on targets, delegation and managing plans;
+  - `outcome`: `ActionOutcome`, whose fields agree with its status, and its
+    typed `ActionEffect`;
+  - `assignment`: `Assignment` and `ExecutionReport`, between a gateway and
+    an executor;
+  - `run`: `RunEpoch`; the consumer interface's `RunDescriptor` gains
+    `continues_from`, left out of its JSON when unset.
+
+  Deprecated, unchanged until the simulator carries the new format out:
+  `greenhouse_protocol.action` (`RequestedAction`, `ActionResult` and the
+  four request types) becomes `actions.Action` in a `plan.Plan`; the
+  `ActionOutcome` and `ExecutionStatus` of `execution` become
+  `outcome.ActionOutcome` and `OutcomeStatus`; `ActionExecutionAdapter`
+  becomes a run's gateway and its executors (P13.1's contracts).
+  `MAX_WATER_AMOUNT_ML` moves to `actions`, and `action` re-exports it.
+
 - `greenhouse-sim`: drafts of installations and their revisions are kept
   locally (P12.1, decision 0051): `greenhouse_sim.builder.drafts.DraftStore`
   keeps them in one SQLite file, each revision its installation's file. A
