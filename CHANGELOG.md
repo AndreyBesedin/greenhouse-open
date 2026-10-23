@@ -7,6 +7,14 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: `greenhouse_sim.builder`, the setup builder's first step
+  (P12.0, decision 0050). An installation, the house part of a scenario
+  (its envelope, its layout and the crop each row grows), is drafted from a
+  form's values, assessed for what stops it running (each finding naming
+  the items and rows it concerns), given a crop over many rows at once, and
+  exchanged as a file in the manifests' format version, with its JSON
+  Schema, `builder/installation.schema.json`. A refused file names each
+  field at fault. Nothing in the packaged scenarios changes.
 - `greenhouse-sim`: an envelope may name the gutter lines that keep a post
   on its inner frames (`inner_posts`). A lattice girder under the gutters
   then carries the gutters between, from post to post, drawn and shading
