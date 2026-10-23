@@ -32,20 +32,23 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.manifest_files import manifest_digest, opening_day
 from greenhouse_sim.scene.snapshot import SCHEMA_VERSION, SceneEntityKind, SceneSnapshot
 from greenhouse_sim.services import system
+from greenhouse_sim.services.simulator import Simulator
 
 PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "greenhouse_sim"
 # Long enough for any answer of the local server's.
 WAIT_S = 10.0
 
 
-def test_the_health_check_answers() -> None:
-    response = respond("GET", "/api/health")
+def test_the_health_check_answers(simulator: Simulator) -> None:
+    response = respond(simulator, "GET", "/api/health")
 
     assert (response.status, response.body) == (HTTPStatus.OK, {"status": "ok"})
 
 
-def test_the_version_names_the_simulator_its_commit_and_the_scene_schema() -> None:
-    body = respond("GET", "/api/version").body
+def test_the_version_names_the_simulator_its_commit_and_the_scene_schema(
+    simulator: Simulator,
+) -> None:
+    body = respond(simulator, "GET", "/api/version").body
 
     assert isinstance(body, dict)
     assert body["simulator"] == "greenhouse-sim"
@@ -90,15 +93,19 @@ def test_outside_a_git_checkout_the_commit_is_unknown(
     assert system.source_commit.__wrapped__() == system.UNKNOWN_COMMIT
 
 
-def test_a_runs_manifest_is_served_and_refused_as_its_run_is() -> None:
-    body = respond("GET", "/api/scenarios/reference_greenhouse/manifest?weather=default~90").body
+def test_a_runs_manifest_is_served_and_refused_as_its_run_is(simulator: Simulator) -> None:
+    body = respond(
+        simulator, "GET", "/api/scenarios/reference_greenhouse/manifest?weather=default~90"
+    ).body
 
     assert isinstance(body, dict)
     assert body["version"] == manifest_digest("reference_greenhouse")
     assert (body["random_seed"], body["start_date"], body["opening_day"]) == (42, "2026-03-01", 86)
     assert (body["weather"], body["wind_from_deg"]) == ("default", 90.0)
-    assert respond("GET", "/api/scenarios/nowhere/manifest").status == HTTPStatus.NOT_FOUND
-    refused = respond("GET", "/api/scenarios/climate_box/manifest?weather=default~400")
+    assert (
+        respond(simulator, "GET", "/api/scenarios/nowhere/manifest").status == HTTPStatus.NOT_FOUND
+    )
+    refused = respond(simulator, "GET", "/api/scenarios/climate_box/manifest?weather=default~400")
     assert refused.status == HTTPStatus.BAD_REQUEST
 
 
@@ -110,8 +117,8 @@ OTHER_LAYOUTS = {
 }
 
 
-def test_the_scenario_list_is_the_registry() -> None:
-    body = respond("GET", "/api/scenarios").body
+def test_the_scenario_list_is_the_registry(simulator: Simulator) -> None:
+    body = respond(simulator, "GET", "/api/scenarios").body
 
     assert isinstance(body, list)
     summaries = {item["id"]: item for item in body if isinstance(item, dict)}
@@ -140,8 +147,10 @@ def test_the_scenario_list_is_the_registry() -> None:
 
 
 @pytest.mark.parametrize("scenario_id", sorted(SCENARIO_REGISTRY))
-def test_a_scenario_has_a_scene_before_its_first_day(scenario_id: str) -> None:
-    response = respond("GET", f"/api/scenarios/{scenario_id}/scene")
+def test_a_scenario_has_a_scene_before_its_first_day(
+    simulator: Simulator, scenario_id: str
+) -> None:
+    response = respond(simulator, "GET", f"/api/scenarios/{scenario_id}/scene")
     config = SCENARIO_REGISTRY[scenario_id]
 
     assert response.status == HTTPStatus.OK
@@ -163,8 +172,10 @@ def test_a_scenario_has_a_scene_before_its_first_day(scenario_id: str) -> None:
         ("POST", "/api/health", HTTPStatus.METHOD_NOT_ALLOWED),
     ],
 )
-def test_anything_else_is_refused_with_a_reason(method: str, path: str, status: HTTPStatus) -> None:
-    response = respond(method, path)
+def test_anything_else_is_refused_with_a_reason(
+    simulator: Simulator, method: str, path: str, status: HTTPStatus
+) -> None:
+    response = respond(simulator, method, path)
 
     assert response.status == status
     assert isinstance(response.body, dict) and response.body["error"]
@@ -210,7 +221,7 @@ def test_every_answer_says_how_long_the_simulator_took(
 
     # The time is the simulator's, from the request read to its answer
     # written as JSON.
-    def slow(method: str, path: str) -> Response:
+    def slow(simulator: Simulator, method: str, path: str) -> Response:
         time.sleep(0.05)
         return Response(HTTPStatus.OK, {"status": "ok"})
 
@@ -220,9 +231,9 @@ def test_every_answer_says_how_long_the_simulator_took(
     assert found is not None and float(found.group(1)) >= 50
 
 
-def test_a_body_with_a_number_json_does_not_have_is_refused() -> None:
+def test_a_body_with_a_number_json_does_not_have_is_refused(simulator: Simulator) -> None:
     for constant in ("NaN", "Infinity", "-Infinity"):
-        response = respond("POST", "/api/checkpoints", f'{{"day": {constant}}}'.encode())
+        response = respond(simulator, "POST", "/api/checkpoints", f'{{"day": {constant}}}'.encode())
 
         assert response.status == HTTPStatus.BAD_REQUEST
         assert isinstance(response.body, dict)
@@ -292,7 +303,7 @@ def test_another_method_is_refused_as_json_with_its_timing(
 def test_a_request_the_simulator_fails_on_is_answered_500_and_logged(
     server: ThreadingHTTPServer, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    def failing(method: str, path: str) -> Response:
+    def failing(simulator: Simulator, method: str, path: str) -> Response:
         raise RuntimeError("a failure nobody planned for")
 
     monkeypatch.setattr(server_module, "respond", failing)
@@ -314,7 +325,7 @@ def test_a_client_gone_before_its_answer_is_let_go_quietly(
     gone = threading.Event()
     let_go = threading.Event()
 
-    def slow(method: str, path: str) -> Response:
+    def slow(simulator: Simulator, method: str, path: str) -> Response:
         gone.wait(WAIT_S)
         return Response(HTTPStatus.OK, {"field": "x" * 1_000_000})
 

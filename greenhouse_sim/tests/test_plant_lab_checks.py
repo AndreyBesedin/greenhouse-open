@@ -11,6 +11,7 @@ from greenhouse_sim.biology.tomato.organ.development import DevelopmentParams
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.services import plants
 from greenhouse_sim.services.plants import LabAction, LabChecks, LabRun
+from greenhouse_sim.services.simulator import Simulator
 
 
 @pytest.mark.parametrize(
@@ -50,9 +51,11 @@ def test_a_plant_that_goes_wrong_overnight_is_named_with_what_went_wrong(
     assert "p05_n02 appeared after the plant's thermal time" in problems
 
 
-def test_the_lab_answers_with_its_checks_and_refuses_a_run_it_cannot_make() -> None:
-    answer = respond("GET", "/api/plants/checks?day=3&seed=4")
-    refused = respond("GET", "/api/plants/checks?environment=tropical")
+def test_the_lab_answers_with_its_checks_and_refuses_a_run_it_cannot_make(
+    simulator: Simulator,
+) -> None:
+    answer = respond(simulator, "GET", "/api/plants/checks?day=3&seed=4")
+    refused = respond(simulator, "GET", "/api/plants/checks?environment=tropical")
 
     assert answer.status == HTTPStatus.OK
     assert LabChecks.model_validate(answer.body) == plants.checks(LabRun(day=3, seed=4))

@@ -17,6 +17,7 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import _climate_day
 from greenhouse_sim.services.grid import air_grid
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.sunlight import plant_light
 
 LAB = SCENARIO_REGISTRY["solar_lab"]
@@ -117,9 +118,9 @@ def test_by_day_the_sun_warms_the_shut_house_on_the_grid_too() -> None:
     assert layers[0] > layers[1]
 
 
-def test_the_api_serves_the_sunlit_houses_air() -> None:
-    response = respond("GET", f"/api/scenarios/solar_lab/climate/house?t={NOON_S}")
-    weather = respond("GET", f"/api/scenarios/solar_lab/weather?t={NOON_S}")
+def test_the_api_serves_the_sunlit_houses_air(simulator: Simulator) -> None:
+    response = respond(simulator, "GET", f"/api/scenarios/solar_lab/climate/house?t={NOON_S}")
+    weather = respond(simulator, "GET", f"/api/scenarios/solar_lab/weather?t={NOON_S}")
     body = json.loads(json.dumps(response.body))
     outside = json.loads(json.dumps(weather.body))["weather"]["air_temperature_c"]
 

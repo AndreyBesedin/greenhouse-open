@@ -21,6 +21,7 @@ from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services import sensors
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.sunlight import plant_light
 from greenhouse_sim.solar.plants import (
     CROWN_DIAMETER_M,
@@ -150,8 +151,8 @@ def test_a_plant_grown_in_its_own_light_grows_less_where_it_is_shaded() -> None:
     assert _length_cm(shaded) < _length_cm(exposed)
 
 
-def test_the_api_serves_each_plants_light() -> None:
-    response = respond("GET", f"/api/scenarios/solar_lab/climate/plants?t={NOON_S}")
+def test_the_api_serves_each_plants_light(simulator: Simulator) -> None:
+    response = respond(simulator, "GET", f"/api/scenarios/solar_lab/climate/plants?t={NOON_S}")
     body = json.loads(json.dumps(response.body))
 
     assert response.status == HTTPStatus.OK
@@ -159,7 +160,7 @@ def test_the_api_serves_each_plants_light() -> None:
     assert set(body["par_umol_m2_s"]) == set(plant_ids(LAB))
     assert 150.0 < body["par_umol_m2_s"][SHADED[0]] < 250.0
     assert body["daily_light_integral_mol_m2_d"][EXPOSED[0]] > 25.0
-    refused = respond("GET", "/api/scenarios/solar_lab/climate/plants?t=900000")
+    refused = respond(simulator, "GET", "/api/scenarios/solar_lab/climate/plants?t=900000")
     assert refused.status == HTTPStatus.BAD_REQUEST
 
 
