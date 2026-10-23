@@ -1240,6 +1240,48 @@ body {
   min-width: 0;
 }
 
+/* Each side's panels, beside the stripe along their inner edge that folds
+ * them (#304). Folded, the panels leave the layout but stay drawn, unseen,
+ * so that they open again as they were, scrolled where they were. */
+.panel-side {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+
+.panel-side.at-the-end {
+  flex-shrink: 0;
+}
+
+.panel-side.folded > .panel-column {
+  position: absolute;
+  visibility: hidden;
+}
+
+/* A tab at the top of the side's inner edge, beside its panel's head: no
+ * taller, so that it never stands over the view a click is meant for. */
+.panel-stripe {
+  flex: none;
+  align-self: flex-start;
+  width: 14px;
+  height: 96px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: var(--panel-rule);
+  color: var(--panel-text);
+  font-size: 10px;
+  cursor: pointer;
+  opacity: 0.7;
+  pointer-events: auto;
+}
+
+.panel-stripe:hover,
+.panel-stripe:focus-visible {
+  background: var(--panel-accent);
+  opacity: 1;
+}
+
 /* The HUD's column keeps its width, so that its readings stay on one line
  * each: the info panel's column gives way instead, however long a line of
  * it would run unwrapped, which is what its width asks for. */
@@ -1321,9 +1363,20 @@ body {
     pointer-events: auto;
   }
 
-  /* The columns dissolve: their panels stack in the dock, one under another. */
-  .panel-column {
+  /* The columns dissolve: their panels stack in the dock, one under another,
+   * and nothing folds them there. */
+  .panel-column,
+  .panel-side {
     display: contents;
+  }
+
+  .panel-side.folded > .panel-column {
+    position: static;
+    visibility: visible;
+  }
+
+  .panel-stripe {
+    display: none;
   }
 
   .viewer-panels .panel-column > * {

@@ -217,3 +217,53 @@ test("the panels are dark, or light if chosen, and the golden views keep theirs 
   await page.goto("/qa/renderer?seed=42");
   expect(await background(".qa-caption")).toBe("rgba(255, 255, 255, 0.88)");
 });
+
+test("each side's panels fold to a stripe at the view's edge, and open as they were (#304)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/?scene=example");
+  await expect(page.getByTestId("scene-status")).toContainText("Showing the example scene");
+  const info = page.locator(".info-panel");
+  const hud = page.locator(".hud");
+  const infoStripe = page.getByTestId("info-stripe");
+  const viewStripe = page.getByTestId("view-stripe");
+  // The info panel scrolled a little, to find it so again.
+  await info.evaluate((panel) => {
+    panel.scrollTop = 40;
+  });
+  const scrolled = await info.evaluate((panel) => panel.scrollTop);
+
+  await test.step("by the pointer, the info panel folds to its stripe at the left edge", async () => {
+    await page.getByRole("button", { name: "Fold the info panel" }).click();
+    await expect(info).toBeHidden();
+    const stripe = await infoStripe.boundingBox();
+    expect(stripe?.x).toBeLessThan(20);
+    // Folded, nothing of the side but its stripe covers the view.
+    expect(stripe?.width).toBeLessThan(20);
+    await expect(hud).toBeVisible();
+  });
+
+  await test.step("by the keyboard, the View panel folds to its stripe at the right edge", async () => {
+    await page.getByRole("button", { name: "Fold the View panel" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(hud).toBeHidden();
+    const stripe = await viewStripe.boundingBox();
+    expect((stripe?.x ?? 0) + (stripe?.width ?? 0)).toBeGreaterThan(1260);
+  });
+
+  await test.step("opened again, each is as it was, the info panel where it was scrolled", async () => {
+    await page.getByRole("button", { name: "Open the info panel" }).press("Space");
+    await page.getByRole("button", { name: "Open the View panel" }).click();
+    await expect(info).toBeVisible();
+    await expect(hud).toBeVisible();
+    expect(await info.evaluate((panel) => panel.scrollTop)).toBe(scrolled);
+  });
+
+  await test.step("a docked, narrow window shows no stripe, and folds nothing", async () => {
+    await page.getByRole("button", { name: "Fold the info panel" }).click();
+    await page.setViewportSize({ width: 640, height: 480 });
+    await expect(infoStripe).toBeHidden();
+    await expect(info).toBeVisible();
+  });
+});

@@ -26,7 +26,9 @@ import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
 import { MovePanel } from "./MovePanel";
+import { PanelStripe } from "./PanelStripe";
 import { PlaybackPanel } from "./PlaybackPanel";
+import { usePanelFolds } from "./panelFolds";
 import { usePanelTheme } from "./panelTheme";
 import { LabPanels } from "./plants/LabPanels";
 import { type LabRun, PLANT_LAB_POSE } from "./plants/lab";
@@ -78,6 +80,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [chooseFirst] = useState(() => searchFor(addressed) === "");
   // How the panels look (#208): dark unless the person chose light.
   const [panelTheme, setPanelTheme] = usePanelTheme();
+  // The sides whose panels are folded to a stripe at the view's edge (#304).
+  const [folded, toggleFold] = usePanelFolds();
   // Whether the viewer shows what the simulator knows and a policy never
   // sees (P09.6): only QA mode asks for truth.
   const [qaMode, setQaMode] = useQaMode();
@@ -369,204 +373,225 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
         {cfd.status === "loaded" && <CfdBoundaries geometry={cfd.geometry} />}
       </Viewport>
       <div className="viewer-panels">
-        <div className="panel-column">
-          <InfoPanel
-            build={build}
-            scenarios={scenarios}
-            source={source}
-            scene={shown.status === "loaded" && snapshot !== null ? { ...shown, snapshot } : shown}
-            failures={source.kind === "live" ? [] : failures}
-            chooseFirst={chooseFirst}
-            theme={panelTheme}
-            onTheme={setPanelTheme}
-            onSource={chooseSource}
-          >
-            {snapshot !== null && (
-              <DisplayOptions
-                colourProperties={display.colourProperties}
-                colourBy={display.colourBy}
-                onColourBy={display.setColourBy}
-                showDimensions={display.showDimensions}
-                onShowDimensions={display.setShowDimensions}
-                byCategory={display.byCategory}
-                onByCategory={display.setByCategory}
-                drawn={overlaysDrawn}
-                fieldView={fieldView}
+        <div className={folded.has("info") ? "panel-side folded" : "panel-side"}>
+          <div className="panel-column">
+            <InfoPanel
+              build={build}
+              scenarios={scenarios}
+              source={source}
+              scene={
+                shown.status === "loaded" && snapshot !== null ? { ...shown, snapshot } : shown
+              }
+              failures={source.kind === "live" ? [] : failures}
+              chooseFirst={chooseFirst}
+              theme={panelTheme}
+              onTheme={setPanelTheme}
+              onSource={chooseSource}
+            >
+              {snapshot !== null && (
+                <DisplayOptions
+                  colourProperties={display.colourProperties}
+                  colourBy={display.colourBy}
+                  onColourBy={display.setColourBy}
+                  showDimensions={display.showDimensions}
+                  onShowDimensions={display.setShowDimensions}
+                  byCategory={display.byCategory}
+                  onByCategory={display.setByCategory}
+                  drawn={overlaysDrawn}
+                  fieldView={fieldView}
+                  overlays={display.toggles}
+                  onOverlays={display.setToggles}
+                  qaMode={qaMode}
+                  onQaMode={setQaMode}
+                />
+              )}
+              {qaMode && (
+                <QaPanel
+                  build={build}
+                  served={served}
+                  manifest={runManifest}
+                  state={runState}
+                  onSelect={
+                    snapshot === null
+                      ? null
+                      : (id) => setSelectedId(`${snapshot.greenhouse_id}_${id}`)
+                  }
+                />
+              )}
+              {followed !== null && (
+                <PlaybackPanel
+                  load={playback}
+                  days={summary?.duration_days ?? null}
+                  changed={anotherRun}
+                  onCommand={(command) => void commandPlayback(followed, command).then(setPlayback)}
+                  onStart={() => void commandPlayback(followed, "start").then(setPlayback)}
+                  onOwnRun={() => setSource((current) => withoutRunChanges(current, playedLayout))}
+                  onStop={() =>
+                    setSource((current) => {
+                      if (current.kind !== "scenario") {
+                        return current;
+                      }
+                      const { follow: _, ...rest } = current;
+                      return rest;
+                    })
+                  }
+                />
+              )}
+              {source.kind === "scenario" && (
+                <ScenarioPanels
+                  source={source}
+                  snapshot={snapshot}
+                  weathers={summary?.weathers ?? []}
+                  days={summary?.duration_days ?? 1}
+                  loads={{ field, compared, weather, weatherDay, houseAir, probeCharts, cfd }}
+                  thermostat={runningThermostat(equipment)}
+                  setpoints={
+                    summary?.thermostat
+                      ? equipment.status === "loaded"
+                        ? equipment.equipment.thermostat
+                        : null
+                      : undefined
+                  }
+                  onTargets={(targets) => {
+                    if (followed !== null) {
+                      void setPlaybackTargets(followed, targets).then(setPlayback);
+                      return;
+                    }
+                    setSource((current) =>
+                      current.kind === "scenario" ? withTargetsSet(current, targets) : current,
+                    );
+                  }}
+                  momentFailed={momentFailed}
+                  fieldView={fieldView}
+                  fieldSlice={fieldSlice}
+                  probes={probes}
+                  placing={placingProbes}
+                  probeHeight={probeHeight}
+                  playingClimate={playingClimate}
+                  onSource={setSource}
+                  onProbes={setProbes}
+                  onPlacing={setPlacingProbes}
+                  onProbeHeight={setProbeHeight}
+                  onPlayingClimate={setPlayingClimate}
+                  onOwnRange={() => setFieldRange(null)}
+                />
+              )}
+              {source.kind === "plants" && (
+                <LabPanels
+                  run={source}
+                  shownDay={shownDay}
+                  selected={selected}
+                  playing={playing}
+                  speed={speed}
+                  showNames={showPlantNames}
+                  onRun={setLabRun}
+                  onPlaying={setPlaying}
+                  onSpeed={setSpeed}
+                  onShowNames={setShowPlantNames}
+                  onSelectOrgan={(organId) => setSelectedId(entityOfOrgan(snapshot, organId))}
+                />
+              )}
+            </InfoPanel>
+            {selected ? (
+              <Inspector
+                // Where it is drawn, a Move session's moves included.
+                entity={drawnSelected ?? selected}
                 overlays={display.toggles}
                 onOverlays={display.setToggles}
-                qaMode={qaMode}
-                onQaMode={setQaMode}
-              />
+                onClear={() => setSelectedId(null)}
+              >
+                {snapshot !== null && selectedCamera !== null && (
+                  <>
+                    <CameraView snapshot={snapshot} spec={selectedCamera} />
+                    <CameraFrames cameraId={selectedCamera.cameraId} state={sensors.readings} />
+                  </>
+                )}
+                {selectedPlant !== null && (
+                  <PlantLight plantId={selectedPlant} state={plantsLight} />
+                )}
+                {selectedPlant !== null && (
+                  <PlantDays
+                    state={cropPlant}
+                    selectedOrgan={organOf(selected)}
+                    onSelect={(organId) => setSelectedId(entityOfOrgan(snapshot, organId))}
+                  />
+                )}
+                {selected.kind === "SENSOR" && (
+                  <SensorPanel
+                    sensorId={String(selected.properties.sensor_id)}
+                    unit={String(selected.properties.unit)}
+                    state={sensors.readings}
+                    allOff={sensors.allOff}
+                    until={moment}
+                    qa={qaMode}
+                    imperfect={sensors.imperfect}
+                    onImperfect={sensors.setImperfect}
+                  />
+                )}
+                {movePanel}
+              </Inspector>
+            ) : (
+              // A session's moves stay on show while nothing is selected.
+              movePanel !== null && <div className="inspector">{movePanel}</div>
             )}
-            {qaMode && (
-              <QaPanel
-                build={build}
-                served={served}
-                manifest={runManifest}
-                state={runState}
-                onSelect={
-                  snapshot === null
-                    ? null
-                    : (id) => setSelectedId(`${snapshot.greenhouse_id}_${id}`)
-                }
-              />
-            )}
-            {followed !== null && (
-              <PlaybackPanel
-                load={playback}
-                days={summary?.duration_days ?? null}
-                changed={anotherRun}
-                onCommand={(command) => void commandPlayback(followed, command).then(setPlayback)}
-                onStart={() => void commandPlayback(followed, "start").then(setPlayback)}
-                onOwnRun={() => setSource((current) => withoutRunChanges(current, playedLayout))}
-                onStop={() =>
-                  setSource((current) => {
-                    if (current.kind !== "scenario") {
-                      return current;
-                    }
-                    const { follow: _, ...rest } = current;
-                    return rest;
-                  })
-                }
-              />
-            )}
-            {source.kind === "scenario" && (
-              <ScenarioPanels
-                source={source}
-                snapshot={snapshot}
-                weathers={summary?.weathers ?? []}
-                days={summary?.duration_days ?? 1}
-                loads={{ field, compared, weather, weatherDay, houseAir, probeCharts, cfd }}
-                thermostat={runningThermostat(equipment)}
-                setpoints={
-                  summary?.thermostat
-                    ? equipment.status === "loaded"
-                      ? equipment.equipment.thermostat
-                      : null
-                    : undefined
-                }
-                onTargets={(targets) => {
-                  if (followed !== null) {
-                    void setPlaybackTargets(followed, targets).then(setPlayback);
-                    return;
-                  }
-                  setSource((current) =>
-                    current.kind === "scenario" ? withTargetsSet(current, targets) : current,
-                  );
-                }}
-                momentFailed={momentFailed}
-                fieldView={fieldView}
-                fieldSlice={fieldSlice}
-                probes={probes}
-                placing={placingProbes}
-                probeHeight={probeHeight}
-                playingClimate={playingClimate}
-                onSource={setSource}
-                onProbes={setProbes}
-                onPlacing={setPlacingProbes}
-                onProbeHeight={setProbeHeight}
-                onPlayingClimate={setPlayingClimate}
-                onOwnRange={() => setFieldRange(null)}
-              />
-            )}
-            {source.kind === "plants" && (
-              <LabPanels
-                run={source}
-                shownDay={shownDay}
-                selected={selected}
-                playing={playing}
-                speed={speed}
-                showNames={showPlantNames}
-                onRun={setLabRun}
-                onPlaying={setPlaying}
-                onSpeed={setSpeed}
-                onShowNames={setShowPlantNames}
-                onSelectOrgan={(organId) => setSelectedId(entityOfOrgan(snapshot, organId))}
-              />
-            )}
-          </InfoPanel>
-          {selected ? (
-            <Inspector
-              // Where it is drawn, a Move session's moves included.
-              entity={drawnSelected ?? selected}
-              overlays={display.toggles}
-              onOverlays={display.setToggles}
-              onClear={() => setSelectedId(null)}
-            >
-              {snapshot !== null && selectedCamera !== null && (
-                <>
-                  <CameraView snapshot={snapshot} spec={selectedCamera} />
-                  <CameraFrames cameraId={selectedCamera.cameraId} state={sensors.readings} />
-                </>
-              )}
-              {selectedPlant !== null && <PlantLight plantId={selectedPlant} state={plantsLight} />}
-              {selectedPlant !== null && (
-                <PlantDays
-                  state={cropPlant}
-                  selectedOrgan={organOf(selected)}
-                  onSelect={(organId) => setSelectedId(entityOfOrgan(snapshot, organId))}
-                />
-              )}
-              {selected.kind === "SENSOR" && (
-                <SensorPanel
-                  sensorId={String(selected.properties.sensor_id)}
-                  unit={String(selected.properties.unit)}
-                  state={sensors.readings}
-                  allOff={sensors.allOff}
-                  until={moment}
-                  qa={qaMode}
-                  imperfect={sensors.imperfect}
-                  onImperfect={sensors.setImperfect}
-                />
-              )}
-              {movePanel}
-            </Inspector>
-          ) : (
-            // A session's moves stay on show while nothing is selected.
-            movePanel !== null && <div className="inspector">{movePanel}</div>
-          )}
-        </div>
-        <div className="panel-column at-the-end">
-          <Hud
-            sample={sample}
-            pointer={pointer}
-            live={liveStatus}
-            simulator={simulatorTime}
-            onPreset={choosePreset}
-            onCommand={commands.send}
+          </div>
+          <PanelStripe
+            side="info"
+            folded={folded.has("info")}
+            onToggle={() => toggleFold("info")}
           />
-          <div className="legends">
-            <ControlsHelp />
-            <WhatAmISeeing
-              view={{
-                drawn: overlaysDrawn,
-                overlays: display.toggles,
-                fieldView,
-                fieldScale,
-                fieldArrowSpacing: loadedField === null ? 1 : arrowSpacing(loadedField.grid.cells),
-                sun: { now: sunNow.length > 0, path: sunPath.length > 0 },
-                colourBy: display.colouring?.property ?? null,
-                byCategory: display.byCategory && snapshot !== null,
-                cfdBoundaries: cfd.status === "loaded",
-                dimensions: display.showDimensions && snapshot !== null,
-                kinds: kindsShown,
-                axesLengthM,
-              }}
+        </div>
+        <div
+          className={folded.has("view") ? "panel-side at-the-end folded" : "panel-side at-the-end"}
+        >
+          <PanelStripe
+            side="view"
+            folded={folded.has("view")}
+            onToggle={() => toggleFold("view")}
+          />
+          <div className="panel-column at-the-end">
+            <Hud
+              sample={sample}
+              pointer={pointer}
+              live={liveStatus}
+              simulator={simulatorTime}
+              onPreset={choosePreset}
+              onCommand={commands.send}
             />
-            {display.byCategory && snapshot !== null && (
-              <CategoryLegend categories={categoriesIn(snapshot)} />
-            )}
-            {display.colouring && <ScalarLegend colouring={display.colouring} />}
-            {cfd.status === "loaded" && <CfdLegend geometry={cfd.geometry} />}
-            {fieldScale !== null && display.toggles.airField && (
-              <FieldLegend
-                title={fieldScale.title}
-                unit={fieldScale.unit}
-                range={fieldColours ?? fieldScale.range}
-                own={fieldScale.range}
-                onRange={setFieldRange}
+            <div className="legends">
+              <ControlsHelp />
+              <WhatAmISeeing
+                view={{
+                  drawn: overlaysDrawn,
+                  overlays: display.toggles,
+                  fieldView,
+                  fieldScale,
+                  fieldArrowSpacing:
+                    loadedField === null ? 1 : arrowSpacing(loadedField.grid.cells),
+                  sun: { now: sunNow.length > 0, path: sunPath.length > 0 },
+                  colourBy: display.colouring?.property ?? null,
+                  byCategory: display.byCategory && snapshot !== null,
+                  cfdBoundaries: cfd.status === "loaded",
+                  dimensions: display.showDimensions && snapshot !== null,
+                  kinds: kindsShown,
+                  axesLengthM,
+                }}
               />
-            )}
+              {display.byCategory && snapshot !== null && (
+                <CategoryLegend categories={categoriesIn(snapshot)} />
+              )}
+              {display.colouring && <ScalarLegend colouring={display.colouring} />}
+              {cfd.status === "loaded" && <CfdLegend geometry={cfd.geometry} />}
+              {fieldScale !== null && display.toggles.airField && (
+                <FieldLegend
+                  title={fieldScale.title}
+                  unit={fieldScale.unit}
+                  range={fieldColours ?? fieldScale.range}
+                  own={fieldScale.range}
+                  onRange={setFieldRange}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
