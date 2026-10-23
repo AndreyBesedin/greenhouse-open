@@ -7,6 +7,12 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: the local API's routes are a module for each area of
+  what it answers (`greenhouse_sim.api.routes`: `system`, `scenarios`,
+  `runs`, `checkpoints`, `playback`, `live`, `lab` and `builder`), each
+  with the table of its routes at its top, and what they share apart
+  (AUDIT.17). `respond`, `live_stream` and `control` are imported as
+  before, and every route answers as it did.
 - `greenhouse-sim` and the viewer: a scenario's house as the builder's
   start (P12.2). `GET /api/scenarios/{id}/installation` answers a
   scenario's house as an installation, assessed, as its manifest holds it
