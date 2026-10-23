@@ -28,6 +28,7 @@ from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import layout_name
 from greenhouse_sim.services.sensors import run_start
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import HOUR_S
 
 SCENARIO: Final = "reference_greenhouse"
@@ -50,8 +51,8 @@ class Clock:
         return self.now
 
 
-def _equipment(query: str) -> Any:
-    response = respond("GET", f"/api/scenarios/{SCENARIO}/climate/equipment?{query}")
+def _equipment(simulator: Simulator, query: str) -> Any:
+    response = respond(simulator, "GET", f"/api/scenarios/{SCENARIO}/climate/equipment?{query}")
     assert response.status == HTTPStatus.OK, response.body
     return response.body
 
@@ -85,7 +86,7 @@ def test_the_thermostat_heats_to_its_targets_as_changed() -> None:
     assert not thermostat.heats(23.0, False, DAY_FROM_S)
 
 
-def test_the_house_is_heated_to_a_target_set_and_says_its_setpoints() -> None:
+def test_the_house_is_heated_to_a_target_set_and_says_its_setpoints(simulator: Simulator) -> None:
     """Set to 24 °C from 7 h, the house's air is within the thermostat's band
     of it by 8 h 30, where the scenario's own 18 °C holds it near 18."""
     half_band = 0.5
@@ -96,9 +97,11 @@ def test_the_house_is_heated_to_a_target_set_and_says_its_setpoints() -> None:
 
     assert abs(own.temperature_c - 18.0) <= half_band
     assert abs(warmer.temperature_c - 24.0) <= half_band
-    said = _equipment(f"t={moment:.0f}&targets={DAY_FROM_S:.0f}:heating_day:24")["thermostat"]
+    said = _equipment(simulator, f"t={moment:.0f}&targets={DAY_FROM_S:.0f}:heating_day:24")[
+        "thermostat"
+    ]
     assert (said["setpoint_c"], said["day_c"], said["night_c"]) == (24.0, 24.0, 16.0)
-    assert _equipment(f"t={moment:.0f}")["thermostat"]["day_c"] == 18.0
+    assert _equipment(simulator, f"t={moment:.0f}")["thermostat"]["day_c"] == 18.0
 
 
 def test_another_target_makes_another_run_and_the_same_targets_the_same() -> None:
@@ -132,16 +135,22 @@ def test_the_same_target_changes_asked_for_in_another_order_make_the_same_run() 
         (f"{200 * DAY_S:.0f}:heating_day:24", "within the run"),
     ],
 )
-def test_a_target_change_that_does_not_fit_is_refused(targets: str, refused: str) -> None:
-    response = respond("GET", f"/api/scenarios/{SCENARIO}/climate/equipment?t=60&targets={targets}")
+def test_a_target_change_that_does_not_fit_is_refused(
+    simulator: Simulator, targets: str, refused: str
+) -> None:
+    response = respond(
+        simulator, "GET", f"/api/scenarios/{SCENARIO}/climate/equipment?t=60&targets={targets}"
+    )
 
     assert response.status == HTTPStatus.BAD_REQUEST
     assert refused in str(response.body)
 
 
-def test_a_scenario_without_a_heating_loop_has_no_target_to_change() -> None:
+def test_a_scenario_without_a_heating_loop_has_no_target_to_change(simulator: Simulator) -> None:
     response = respond(
-        "GET", "/api/scenarios/climate_box/climate/equipment?t=60&targets=60:heating_day:24"
+        simulator,
+        "GET",
+        "/api/scenarios/climate_box/climate/equipment?t=60&targets=60:heating_day:24",
     )
 
     assert response.body == {"error": "climate_box has no heating loop whose target to change"}
@@ -222,7 +231,7 @@ def test_a_target_set_while_the_run_plays_steers_it_from_the_next_minute() -> No
 
 
 def test_a_run_started_over_with_moves_keeps_its_target_changes(
-    tmp_path: Path, no_playbacks: Callable[[], None]
+    simulator: Simulator, tmp_path: Path, no_playbacks: Callable[[], None]
 ) -> None:
     """Moving equipment while the run plays starts it over from its first
     day, the same run rearranged: a target changed in it holds from its
@@ -230,11 +239,11 @@ def test_a_run_started_over_with_moves_keeps_its_target_changes(
     run drops its changes, as decision 0043 has it."""
     clock = Clock()
     path = f"/api/scenarios/{SCENARIO}/playback"
-    playback.start(SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
+    playback.start(simulator, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
     change = (60.0, "heating_day", 24.0)
-    assert playback.set_targets(SCENARIO, {"heating_day": 24.0}).targets == [change]
+    assert playback.set_targets(simulator, SCENARIO, {"heating_day": 24.0}).targets == [change]
 
-    moved = respond("POST", f"{path}/restart?layout={FAN_MOVED}")
+    moved = respond(simulator, "POST", f"{path}/restart?layout={FAN_MOVED}")
 
     assert moved.status == HTTPStatus.OK and isinstance(moved.body, dict)
     moved_layout = layout_name(FAN_MOVED)
@@ -242,7 +251,7 @@ def test_a_run_started_over_with_moves_keeps_its_target_changes(
     assert (moved.body["time_s"], moved.body["targets"]) == (0.0, [list(change)])
     # What it delivers is the rearranged run with the change: the same heat
     # through the night, more once the day's target holds.
-    played = playback.playback(SCENARIO)
+    played = playback.playback(simulator, SCENARIO)
     assert played.wait_for(1, timeout_s=300)
     clock.now += 24.0
     delivered = {r.observation_id: r.value for r in played.records_after(0, ALL).records}
@@ -255,21 +264,21 @@ def test_a_run_started_over_with_moves_keeps_its_target_changes(
     assert [r.value for r in kept[:night]] == [r.value for r in dropped[:night]]
     assert sum(r.value for r in kept) > sum(r.value for r in dropped)
 
-    again = respond("POST", f"{path}/restart")
+    again = respond(simulator, "POST", f"{path}/restart")
     assert isinstance(again.body, dict)
     assert (again.body["layout"], again.body["targets"]) == (moved_layout, [])
 
 
 def test_a_target_changed_while_moves_replace_the_playback_is_kept(
-    tmp_path: Path, no_playbacks: Callable[[], None]
+    simulator: Simulator, tmp_path: Path, no_playbacks: Callable[[], None]
 ) -> None:
     """A request that found the playback before moves replaced it, and
     changes its targets only once the replacement has taken them, is not
     lost: the playback replaced hands the change to the one in its place,
     which plays the moved run with it (decision 0049)."""
     clock = Clock()
-    playback.start(SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
-    replaced = playback.playback(SCENARIO)
+    playback.start(simulator, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
+    replaced = playback.playback(simulator, SCENARIO)
     # A restart with moves has made the playback to put in its place, its
     # targets taken, and not yet put it there.
     replacing = replaced.rearranged(layout_name(FAN_MOVED))

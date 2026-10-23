@@ -40,8 +40,10 @@ service, an arm in `respond`, and their tests.
    what it answers. `greenhouse_sim/tests/test_route_table.py` fails when
    the table and the routes disagree.
 5. **Its tests:** the service called directly, and the route through
-   `respond("GET", "/api/scenarios/climate_box/…")`, its status and body,
-   refusals included, as `greenhouse_sim/tests/test_timeline.py` does.
+   `respond(simulator, "GET", "/api/scenarios/climate_box/…")`, its status
+   and body, refusals included, as `greenhouse_sim/tests/test_timeline.py`
+   does: `simulator` is the module's, a fixture of conftest's (decision
+   0048).
 6. **Say so:** a line in `CHANGELOG.md`'s Unreleased section if clients
    will use it, and in `greenhouse_sim/web/README.md` if the viewer does.
 
