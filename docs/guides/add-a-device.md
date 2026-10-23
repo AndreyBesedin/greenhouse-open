@@ -19,9 +19,10 @@ the parts to write. The dehumidifier was added in this order (commits
    - give it a `kind: Literal[...]`, its rated values and `rated()`;
    - add it to `type Equipment`.
 
-   A unit that is not a `_Unit` also needs a branch in
+   Every kind also needs a branch in `displaced`, in
    `greenhouse_sim/greenhouse_sim/world/moves.py`, which moves a fan's
-   `position` and every other unit's `base`.
+   `position` and a unit's `base` for a move or a copy, a kind at a time;
+   mypy refuses the kind until it has one.
 3. **What it does to the air.** In
    `greenhouse_sim/greenhouse_sim/climate/sources.py`, give `source_terms`
    a branch of its own. Its last branch takes any other kind for a
