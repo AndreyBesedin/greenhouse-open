@@ -4,16 +4,33 @@ a pitched house of equal spans and bays, and parallel rows of one crop
 
 from typing import Final
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, PositiveFloat, PositiveInt
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    PositiveFloat,
+    PositiveInt,
+    ValidationInfo,
+    field_validator,
+)
 
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
 from greenhouse_sim.scenarios.installation import Installation, RowCrop
-from greenhouse_sim.world.envelope import MOST_BAYS, MOST_SPANS, Envelope
+from greenhouse_sim.world.envelope import (
+    HIGHEST_M,
+    LONGEST_SIDE_M,
+    MOST_BAYS,
+    MOST_SPANS,
+    MOST_SPANS_BY_BAYS,
+    Envelope,
+)
 from greenhouse_sim.world.geometry import Point2
 from greenhouse_sim.world.identifiers import ItemId
 from greenhouse_sim.world.layout import Layout
 from greenhouse_sim.world.rows import (
+    MOST_PLANTING_POSITIONS,
     MOST_POSITIONS_PER_ROW,
     MOST_ROWS,
     TOMATO_GUTTER,
@@ -45,7 +62,10 @@ STARTING_HOUSE: Final[dict[str, JsonValue]] = {
 class BasicSetup(BaseModel):
     """The values of the builder's first form, in metres. Each field's title
     is the form's label for it, and the schema's example the house the form
-    starts from."""
+    starts from. Each is checked as the envelope and the rows check what it
+    becomes, before either is made, so that a value refused is refused by
+    the form's own field: their bounds, and their rules between two values,
+    held by the second."""
 
     model_config = ConfigDict(
         frozen=True, extra="forbid", json_schema_extra={"examples": [STARTING_HOUSE]}
@@ -53,20 +73,60 @@ class BasicSetup(BaseModel):
 
     installation_id: ItemId = Field(title="Identifier")
     name: str = Field(min_length=1, title="Name")
-    length_m: PositiveFloat = Field(title="Length (m)")
-    width_m: PositiveFloat = Field(title="Width (m)")
-    eave_height_m: PositiveFloat = Field(title="Height to the gutters (m)")
-    ridge_height_m: PositiveFloat = Field(title="Height to the ridge (m)")
-    # Bounded as the envelope and the rows are, before either is made.
+    length_m: PositiveFloat = Field(le=LONGEST_SIDE_M, title="Length (m)")
+    width_m: PositiveFloat = Field(le=LONGEST_SIDE_M, title="Width (m)")
+    eave_height_m: PositiveFloat = Field(le=HIGHEST_M, title="Height to the gutters (m)")
+    ridge_height_m: PositiveFloat = Field(le=HIGHEST_M, title="Height to the ridge (m)")
     spans: PositiveInt = Field(default=1, le=MOST_SPANS, title="Spans")
     bays: PositiveInt = Field(default=1, le=MOST_BAYS, title="Bays")
     rows: PositiveInt = Field(le=MOST_ROWS, title="Crop rows")
     plants_per_row: PositiveInt = Field(le=MOST_POSITIONS_PER_ROW, title="Plants per row")
     plant_pitch_m: PositiveFloat = Field(title="Between plants (m)")
     row_spacing_m: PositiveFloat = Field(title="Between rows (m)")
-    support_height_m: PositiveFloat = Field(title="Gutter height (m)")
+    # A tomato gutter's top, above its depth.
+    support_height_m: float = Field(gt=TOMATO_GUTTER.depth, title="Gutter height (m)")
     crop_model: CropModel = Field(title="Crop model")
     variety: str = Field(min_length=1, title="Variety")
+
+    @field_validator("ridge_height_m")
+    @classmethod
+    def _ridge_is_not_below_the_eaves(cls, ridge: float, info: ValidationInfo) -> float:
+        eaves = info.data.get("eave_height_m")
+        if eaves is not None and ridge < eaves:
+            raise ValueError(f"the ridge ({ridge} m) is below the eaves ({eaves} m)")
+        return ridge
+
+    @field_validator("bays")
+    @classmethod
+    def _not_too_many_bays_and_spans(cls, bays: int, info: ValidationInfo) -> int:
+        spans = info.data.get("spans")
+        if spans is not None and spans * bays > MOST_SPANS_BY_BAYS:
+            raise ValueError(
+                f"{spans} spans of {bays} bays; a greenhouse has at most "
+                f"{MOST_SPANS_BY_BAYS} of them"
+            )
+        return bays
+
+    @field_validator("plants_per_row")
+    @classmethod
+    def _not_too_many_plants(cls, plants: int, info: ValidationInfo) -> int:
+        rows = info.data.get("rows")
+        if rows is not None and rows * plants > MOST_PLANTING_POSITIONS:
+            raise ValueError(
+                f"{rows} rows of {plants} plants; a crop has at most "
+                f"{MOST_PLANTING_POSITIONS} of them"
+            )
+        return plants
+
+    @field_validator("row_spacing_m")
+    @classmethod
+    def _gutters_do_not_overlap(cls, spacing: float, info: ValidationInfo) -> float:
+        rows = info.data.get("rows")
+        if rows is not None and rows > 1 and spacing < TOMATO_GUTTER.width:
+            raise ValueError(
+                f"rows {spacing} m apart are too close for gutters {TOMATO_GUTTER.width} m wide"
+            )
+        return spacing
 
 
 def basic_json_schema() -> dict[str, JsonValue]:

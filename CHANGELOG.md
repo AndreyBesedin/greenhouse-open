@@ -23,7 +23,10 @@ breaks the conformance checks is a major version.
   draws the house it describes, as a scene, to preview it. Each answers
   with the installation and the format a file of it is written in, as a
   draft's answer now does too, so that an editor sends back what it is
-  given.
+  given. A form or a file refused, there or as a draft is saved, names
+  every field at fault in its answer's `problems`, as the form or the file
+  names it: the form checks what the envelope and the rows would refuse,
+  such as a ridge below the eaves, before either is made.
 - `greenhouse-sim`: the API keeps the installations' drafts and runs them
   (P12.1): `GET /api/drafts`, `GET /api/drafts/{id}` with what stops it
   running, its `revisions`, and `POST` to `save` an installation's file,

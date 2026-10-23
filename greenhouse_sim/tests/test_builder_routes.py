@@ -87,6 +87,48 @@ def test_form_values_no_greenhouse_can_have_are_refused_by_field(
     assert (status, said in answered["error"]) == (HTTPStatus.BAD_REQUEST, True), answered
 
 
+@pytest.mark.parametrize(
+    ("changes", "fields"),
+    [
+        ({"ridge_height_m": 3.0}, ["ridge_height_m"]),
+        ({"length_m": 600.0}, ["length_m"]),
+        ({"eave_height_m": 60.0, "ridge_height_m": 70.0}, ["eave_height_m", "ridge_height_m"]),
+        ({"support_height_m": 0.1}, ["support_height_m"]),
+        ({"spans": 50, "bays": 50}, ["bays"]),
+        ({"rows": 1000, "plants_per_row": 1000}, ["plants_per_row"]),
+        ({"row_spacing_m": 0.2}, ["row_spacing_m"]),
+    ],
+    ids=["ridge", "length", "heights", "support", "spans by bays", "plants", "spacing"],
+)
+def test_a_value_the_house_refuses_is_refused_by_the_forms_field(
+    simulator: Simulator, changes: dict[str, float], fields: list[str]
+) -> None:
+    """The envelope and the rows check what the form's values become; a
+    value they refuse is named as the form names it, as are all of them."""
+    status, answered = _post(simulator, "/api/builder/basic", json.dumps(FORM | changes))
+
+    assert status == HTTPStatus.BAD_REQUEST, answered
+    assert answered["error"].startswith(f"not the first form's values: {fields[0]}: ")
+    assert [problem["field"] for problem in answered["problems"]] == fields
+
+
+@pytest.mark.parametrize("path", ["/api/builder/assess", "/api/builder/scene"])
+def test_a_file_refused_names_every_field_at_fault(simulator: Simulator, path: str) -> None:
+    status, first = _post(simulator, "/api/builder/basic", json.dumps(FORM))
+    document = json.loads(_file(first))
+    document["envelope"]["length"] = -1
+    document["row_crops"][1]["crop_model"] = "tomato.simple"
+
+    status, answered = _post(simulator, path, json.dumps(document))
+
+    assert status == HTTPStatus.BAD_REQUEST
+    assert answered["error"].endswith("(and 1 more)")
+    assert [problem["field"] for problem in answered["problems"]] == [
+        "envelope.length",
+        "row_crops[1].crop_model",
+    ]
+
+
 def test_an_edit_is_assessed_as_it_stands_and_sent_back_as_it_came(simulator: Simulator) -> None:
     status, first = _post(simulator, "/api/builder/basic", json.dumps(FORM))
     edited = json.loads(_file(first))
