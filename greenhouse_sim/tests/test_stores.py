@@ -16,8 +16,9 @@ import pytest
 
 from greenhouse_sim.digests import short_digest
 from greenhouse_sim.services import fields
+from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
-from greenhouse_sim.services.stores import LABEL_DIGITS, Store, digest_label, forget_everything
+from greenhouse_sim.services.stores import LABEL_DIGITS, Store, digest_label
 
 # Long enough for a thread that is not stalled to finish.
 WAIT_S = 5.0
@@ -216,20 +217,38 @@ def test_a_kept_value_is_named_in_the_log_by_a_digest_of_its_key() -> None:
     assert digest_label(key) != digest_label(("climate_box", "default", ("heater", 0.0)))
 
 
-def test_everything_is_forgotten_at_once_the_stores_made_last_first(
-    afresh: Callable[[], None],
+def test_a_simulator_forgets_what_it_keeps_those_that_build_on_others_first(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     forgotten: list[str] = []
-    runs: Store[str, str] = Store("runs", on_drop=lambda key, _: forgotten.append(key))
-    playbacks: Store[str, str] = Store("playbacks", on_drop=lambda key, _: forgotten.append(key))
-    runs.keep("run", "R")
-    playbacks.keep("playback", "P", pinned=True)
+    with Simulator() as simulator:
+        monkeypatch.setattr(simulator.playbacks, "stop", lambda: forgotten.append("playbacks"))
+        for name in ("checkpoints", "crops", "climate_runs", "sunlight", "states", "cursors"):
+            kept = getattr(simulator, name)
+            monkeypatch.setattr(kept, "forget", lambda name=name: forgotten.append(name))
 
-    forget_everything()
+        simulator.forget()
 
-    # The playbacks, which work days out from the runs, stop first.
-    assert forgotten == ["playback", "run"]
-    assert runs.values() == [] and playbacks.values() == []
+        # The playbacks, which work days out from the runs, stop first; a
+        # checkpoint, which takes its state with it, goes before the states.
+        assert forgotten == [
+            "playbacks",
+            "checkpoints",
+            "crops",
+            "climate_runs",
+            "sunlight",
+            "states",
+            "cursors",
+        ]
+
+
+def test_each_simulator_keeps_its_own(simulator: Simulator) -> None:
+    with Simulator() as other:
+        fields.climate_run(simulator, RunRequest("climate_box"))
+
+        assert simulator.climate_runs.values() != []
+        assert other.climate_runs.values() == []
+        assert other.climate_runs is not simulator.climate_runs
 
 
 def test_no_test_forgets_a_store_itself() -> None:
@@ -258,7 +277,7 @@ def test_a_run_being_made_holds_up_no_request_for_another_scenario(
             branch = pool.submit(fields._climate_day, simulator, *branch_key)
             asked = threading.Event()
             for _ in range(int(WAIT_S / POLL_S)):
-                if branch_key in fields.CLIMATE_RUNS or branch.done() or asked.wait(POLL_S):
+                if branch_key in simulator.climate_runs or branch.done() or asked.wait(POLL_S):
                     break
             other = pool.submit(
                 fields._climate_day,

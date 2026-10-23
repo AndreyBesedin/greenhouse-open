@@ -7,6 +7,12 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: each simulator keeps what it keeps, its climate runs,
+  crops, sunlight, checkpoints and kept states, in stores of its own, made
+  with it and forgotten with it (`Simulator.forget`, decision 0048): no
+  store, lock or thread is made as a module is imported, and a test
+  holds that. `stores.forget_everything` is gone. A scenario registered
+  with a simulator now runs there as a packaged one does.
 - `greenhouse-sim`: a scenario is looked up in the catalogue of the
   simulator answering (decision 0048): the services that look scenarios up
   take it, and a scenario registered with one simulator is listed and run
