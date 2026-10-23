@@ -15,7 +15,7 @@ export const BASIC_SETUP_SCHEMA = {
     }
   },
   "additionalProperties": false,
-  "description": "The values of the builder's first form, in metres. Each field's title\nis the form's label for it, and the schema's example the house the form\nstarts from.",
+  "description": "The values of the builder's first form, in metres. Each field's title\nis the form's label for it, and the schema's example the house the form\nstarts from. Each is checked as the envelope and the rows check what it\nbecomes, before either is made, so that a value refused is refused by\nthe form's own field: their bounds, and their rules between two values,\nheld by the second.",
   "examples": [
     {
       "bays": 3,
@@ -49,21 +49,25 @@ export const BASIC_SETUP_SCHEMA = {
     },
     "length_m": {
       "exclusiveMinimum": 0,
+      "maximum": 500,
       "title": "Length (m)",
       "type": "number"
     },
     "width_m": {
       "exclusiveMinimum": 0,
+      "maximum": 500,
       "title": "Width (m)",
       "type": "number"
     },
     "eave_height_m": {
       "exclusiveMinimum": 0,
+      "maximum": 50,
       "title": "Height to the gutters (m)",
       "type": "number"
     },
     "ridge_height_m": {
       "exclusiveMinimum": 0,
+      "maximum": 50,
       "title": "Height to the ridge (m)",
       "type": "number"
     },
@@ -104,7 +108,7 @@ export const BASIC_SETUP_SCHEMA = {
       "type": "number"
     },
     "support_height_m": {
-      "exclusiveMinimum": 0,
+      "exclusiveMinimum": 0.12,
       "title": "Gutter height (m)",
       "type": "number"
     },

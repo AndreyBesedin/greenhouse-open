@@ -10,7 +10,10 @@ export type CropModel = "simple" | "organ";
 /**
  * The values of the builder's first form, in metres. Each field's title
  * is the form's label for it, and the schema's example the house the form
- * starts from.
+ * starts from. Each is checked as the envelope and the rows check what it
+ * becomes, before either is made, so that a value refused is refused by
+ * the form's own field: their bounds, and their rules between two values,
+ * held by the second.
  */
 export interface BasicSetup {
   /**
