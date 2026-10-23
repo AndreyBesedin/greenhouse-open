@@ -38,6 +38,7 @@ from greenhouse_sim.api.responses import Response
 from greenhouse_sim.api.routes import control, live_stream, respond
 from greenhouse_sim.services import checkpoints, playback
 from greenhouse_sim.services.live import DEFAULT_SECONDS_PER_DAY, LiveRun, LiveRuns
+from greenhouse_sim.services.simulator import Simulator
 
 LOOPBACK: Final = "127.0.0.1"
 # What a client is told when the simulator fails on its request unexpectedly.
@@ -68,16 +69,23 @@ LOG_FORMAT: Final = "%(asctime)s %(name)s: %(message)s"
 
 
 class SimulatorServer(ThreadingHTTPServer):
-    """The API's server, holding the scenarios being played live."""
+    """The API's server, answering from its simulator (decision 0048): one it
+    makes, and closes as it closes, or one it is given, which its giver
+    closes."""
 
     daemon_threads = True
     request_queue_size = PENDING_CONNECTIONS
 
-    def __init__(self, port: int, *, seconds_per_day: float) -> None:
+    def __init__(
+        self, port: int, simulator: Simulator | None = None, *, seconds_per_day: float
+    ) -> None:
         # Before binding: a server that fails to bind closes itself, which
-        # stops its live runs, and then raises the bind's own error. None has
-        # started yet.
-        self.live = LiveRuns(seconds_per_day=seconds_per_day)
+        # closes a simulator it made, and then raises the bind's own error.
+        # Nothing has started yet.
+        self._makes_simulator = simulator is None
+        self.simulator = (
+            Simulator(seconds_per_day=seconds_per_day) if simulator is None else simulator
+        )
         super().__init__((LOOPBACK, port), _Handler)
         # The scenarios' kept opening days, so that their runs' later days
         # need not be worked out from their starts.
@@ -85,10 +93,13 @@ class SimulatorServer(ThreadingHTTPServer):
             print(f"not kept: {refused}", file=sys.stderr)
 
     def server_close(self) -> None:
-        self.live.stop()
-        # The runs played back go with the server that played them.
-        playback.stop_playbacks()
+        # It accepts no request once its socket is closed; then the runs
+        # played back go with the server that played them, and the simulator
+        # with the server that made it.
         super().server_close()
+        playback.stop_playbacks()
+        if self._makes_simulator:
+            self.simulator.close()
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -157,7 +168,7 @@ class _Handler(BaseHTTPRequestHandler):
 
     @property
     def _live(self) -> LiveRuns:
-        return cast(SimulatorServer, self.server).live
+        return cast(SimulatorServer, self.server).simulator.live
 
     def _safely[T](self, answer: Callable[[], T]) -> T | Response:
         """The route's answer, or a 500 if the simulator failed unexpectedly."""
@@ -213,10 +224,15 @@ def _refused_method(method: str) -> Response:
 
 
 def create_server(
-    port: int = DEFAULT_PORT, *, seconds_per_day: float = DEFAULT_SECONDS_PER_DAY
+    port: int = DEFAULT_PORT,
+    *,
+    seconds_per_day: float = DEFAULT_SECONDS_PER_DAY,
+    simulator: Simulator | None = None,
 ) -> SimulatorServer:
-    """A server on the loopback interface; port 0 picks a free port."""
-    return SimulatorServer(port, seconds_per_day=seconds_per_day)
+    """A server on the loopback interface; port 0 picks a free port. It makes
+    its own simulator, live runs paced at `seconds_per_day`, unless it is
+    given one."""
+    return SimulatorServer(port, simulator, seconds_per_day=seconds_per_day)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
