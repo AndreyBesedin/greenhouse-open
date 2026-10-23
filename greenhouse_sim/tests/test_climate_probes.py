@@ -9,6 +9,7 @@ import pytest
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Vector3
 
 # Beside the climate box's heater, and in the middle of the house.
@@ -17,15 +18,15 @@ MIDDLE = Vector3(x=6.0, y=3.2, z=0.75)
 PROBES = "10.5:1:0.75,6:3.2:0.75"
 
 
-def _probes(query: str) -> dict:  # type: ignore[type-arg]
-    response = respond("GET", f"/api/scenarios/climate_box/climate/probes{query}")
+def _probes(simulator: Simulator, query: str) -> dict:  # type: ignore[type-arg]
+    response = respond(simulator, "GET", f"/api/scenarios/climate_box/climate/probes{query}")
     assert response.status == 200, response.body
     assert isinstance(response.body, dict)
     return response.body
 
 
-def _field(query: str) -> EnvironmentField:
-    response = respond("GET", f"/api/scenarios/climate_box/fields/climate{query}")
+def _field(simulator: Simulator, query: str) -> EnvironmentField:
+    response = respond(simulator, "GET", f"/api/scenarios/climate_box/fields/climate{query}")
     assert response.status == 200, response.body
     return EnvironmentField.from_document(FieldDocument.model_validate(response.body))
 
@@ -39,18 +40,18 @@ def _read(field: EnvironmentField, point: Vector3) -> tuple[float, float, float]
     return temperature, humidity, math.sqrt(velocity.x**2 + velocity.y**2 + velocity.z**2)
 
 
-def test_probes_read_every_minute_up_to_the_moment_asked() -> None:
-    assert _probes(f"?probes={PROBES}&t=150")["times_s"] == [0, 60, 120, 150]
-    assert _probes(f"?probes={PROBES}")["times_s"] == [0]
+def test_probes_read_every_minute_up_to_the_moment_asked(simulator: Simulator) -> None:
+    assert _probes(simulator, f"?probes={PROBES}&t=150")["times_s"] == [0, 60, 120, 150]
+    assert _probes(simulator, f"?probes={PROBES}")["times_s"] == [0]
 
 
-def test_the_charts_values_are_the_probes_values_at_each_time() -> None:
+def test_the_charts_values_are_the_probes_values_at_each_time(simulator: Simulator) -> None:
     asked = "set=heater:1&schedule=120:fan:1,240:dehumidifier:1"
-    series = _probes(f"?probes={PROBES}&{asked}&t=300")
+    series = _probes(simulator, f"?probes={PROBES}&{asked}&t=300")
 
     for index, time_s in enumerate(series["times_s"]):
-        controlled = _field(f"?{asked}&t={time_s:g}")
-        all_off = _field(f"?t={time_s:g}")
+        controlled = _field(simulator, f"?{asked}&t={time_s:g}")
+        all_off = _field(simulator, f"?t={time_s:g}")
         for probe, point in zip(series["probes"], (CORNER, MIDDLE), strict=True):
             for readings, field in ((probe["controlled"], controlled), (probe["all_off"], all_off)):
                 assert (
@@ -60,8 +61,10 @@ def test_the_charts_values_are_the_probes_values_at_each_time() -> None:
                 ) == _read(field, point)
 
 
-def test_the_controlled_and_uncontrolled_runs_diverge_where_the_equipment_acts() -> None:
-    series = _probes(f"?probes={PROBES}&set=heater:1&t=600")
+def test_the_controlled_and_uncontrolled_runs_diverge_where_the_equipment_acts(
+    simulator: Simulator,
+) -> None:
+    series = _probes(simulator, f"?probes={PROBES}&set=heater:1&t=600")
     corner, middle = series["probes"]
 
     # At the start, both runs are the same air.
@@ -72,9 +75,9 @@ def test_the_controlled_and_uncontrolled_runs_diverge_where_the_equipment_acts()
     assert 3.0 < across < beside
 
 
-def test_the_all_off_run_keeps_the_doors_and_vents_as_asked() -> None:
-    shut = _probes(f"?probes={PROBES}&set=heater:1&t=600")
-    venting = _probes(f"?probes={PROBES}&set=heater:1&open=roof_vent:1&t=600")
+def test_the_all_off_run_keeps_the_doors_and_vents_as_asked(simulator: Simulator) -> None:
+    shut = _probes(simulator, f"?probes={PROBES}&set=heater:1&t=600")
+    venting = _probes(simulator, f"?probes={PROBES}&set=heater:1&open=roof_vent:1&t=600")
 
     assert venting["probes"][1]["all_off"] != shut["probes"][1]["all_off"]
 
@@ -106,7 +109,9 @@ def test_the_all_off_run_keeps_the_doors_and_vents_as_asked() -> None:
     ],
     ids=["outside", "not a point", "after the run", "unknown equipment", "no climate"],
 )
-def test_probes_a_run_cannot_read_are_refused(path: str, status: int, error: str) -> None:
-    response = respond("GET", f"/api/scenarios/{path}")
+def test_probes_a_run_cannot_read_are_refused(
+    simulator: Simulator, path: str, status: int, error: str
+) -> None:
+    response = respond(simulator, "GET", f"/api/scenarios/{path}")
 
     assert (response.status, response.body) == (status, {"error": error})

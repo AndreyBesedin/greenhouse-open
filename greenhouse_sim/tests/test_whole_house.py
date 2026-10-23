@@ -21,6 +21,7 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import _climate_day
 from greenhouse_sim.services.grid import air_grid
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.weather.presets import COLD_SPRING_DAY
 from greenhouse_sim.world.equipment import Heater
 
@@ -264,8 +265,10 @@ def test_it_runs_a_day_in_well_under_a_second() -> None:
     assert time.perf_counter() - started < 1.0
 
 
-def test_the_api_serves_the_houses_air_beside_the_run_all_off() -> None:
-    response = respond("GET", "/api/scenarios/climate_box/climate/house?set=heater:1&t=600")
+def test_the_api_serves_the_houses_air_beside_the_run_all_off(simulator: Simulator) -> None:
+    response = respond(
+        simulator, "GET", "/api/scenarios/climate_box/climate/house?set=heater:1&t=600"
+    )
     body = json.loads(json.dumps(response.body))
 
     assert response.status == HTTPStatus.OK
@@ -285,6 +288,6 @@ def test_the_api_serves_the_houses_air_beside_the_run_all_off() -> None:
     ],
 )
 def test_the_api_refuses_the_houses_air_as_it_refuses_the_climate(
-    path: str, status: HTTPStatus
+    simulator: Simulator, path: str, status: HTTPStatus
 ) -> None:
-    assert respond("GET", path).status == status
+    assert respond(simulator, "GET", path).status == status
