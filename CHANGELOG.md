@@ -19,6 +19,41 @@ breaks the conformance checks is a major version.
   refused, by the field at fault, if it breaks the protocol's rules. A
   checkpoint's identifier, a digest of its content, changes with the
   format, the kept opening days' too. Its summary is unchanged.
+- viewer: the builder's equipment, sensors, doors and vents (P12.3). They
+  are listed with their kind and place, and chosen many at once to be
+  copied at a step, spaced evenly, given one value for a field, or
+  removed. A palette places fans, heaters, dehumidifiers and sensors
+  several at a step, and doors and vents on the walls or roof slopes
+  chosen, at a step or spread evenly along each, the surfaces read from
+  the house the simulator draws. Each is one edit the simulator makes
+  (`POST /api/builder/edit`) and is undone in one step; an edit answered
+  once the draft has changed is dropped, so that no edit is lost.
+- `greenhouse-sim` and the viewer: `POST /api/builder/edit` makes an edit
+  of many items (P12.3) on an installation's file, the body's `file`, and
+  answers the installation it makes, assessed. The edit, the body's
+  `edit`, is one of `builder.items`'s, told apart by its `edit`
+  (`place_items`, `repeat_items`, `space_items`, `place_openings`,
+  `spread_openings`, `repeat_openings`, `space_openings`, `set_field`,
+  `remove_items`), and its JSON Schema is published as
+  `builder/edit.schema.json`, from which the viewer's types are generated.
+  A body that is no edit is refused by its fields, and an edit the
+  installation refuses with the reason.
+- `greenhouse-sim`: equipment, sensors, doors and vents edited many at a
+  time (P12.3, `builder.items`). Pieces of equipment or sensors are placed
+  several at a step, copied, or spaced evenly along an axis; doors and
+  vents are placed at a step or spread evenly along each surface chosen,
+  such as a row of vents along each roof slope, copied and spaced; one
+  field, nested ones by their path, is changed over the items chosen; and
+  items are removed. Each edit checks everything it changes, and the
+  installation it makes as a file of it is read, before changing
+  anything, and names new items after what they copy, with the lowest
+  numbers free. An installation's assessment finds a heater or a
+  dehumidifier through another or through a row's supports
+  (`items_collide`), by the boxes themselves rather than the boxes around
+  them, testing only pairs whose boxes along the house's axes meet, and
+  doors or vents overlapping on a surface (`openings_overlap`). An
+  installation whose layout names an item as a door or vent is named is
+  refused.
 - `greenhouse-sim`: the local API's routes are a module for each area of
   what it answers (`greenhouse_sim.api.routes`: `system`, `scenarios`,
   `runs`, `checkpoints`, `playback`, `live`, `lab` and `builder`), each

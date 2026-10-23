@@ -6,6 +6,7 @@ import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import { Viewport } from "../Viewport";
 import {
   assess,
+  edit as editItems,
   firstDraft,
   installationFile,
   loadDrafts,
@@ -22,9 +23,11 @@ import { type Assessment, Findings } from "./Findings";
 import type { Installation } from "./generated/assessedTypes";
 import type { BasicSetup } from "./generated/basicTypes";
 import type { DraftListed } from "./generated/draftsTypes";
+import type { Edit } from "./generated/editTypes";
 import { HouseForm } from "./HouseForm";
 import { HouseIdentity } from "./HouseIdentity";
 import { begun, edited, type History, redone, undone } from "./history";
+import { Items } from "./Items";
 import { RowCrops } from "./RowCrops";
 import { RunStep } from "./RunStep";
 
@@ -103,6 +106,10 @@ export function Builder() {
   // Which draft is shown: each start makes it another, so that what was
   // asked for the one before is dropped when it arrives.
   const session = useRef(0);
+  // The draft as last drawn, for an answer to check it was asked for this
+  // one as it stands.
+  const shown = useRef<Editing | null>(null);
+  shown.current = editing;
 
   const refreshDrafts = useCallback(async () => {
     const listed = await loadDrafts();
@@ -309,6 +316,38 @@ export function Builder() {
     }
     edit((installation) => withCrop(installation, rows, crop));
     setStatus(`Rows ${rows.join(", ")} grow ${crop.crop_model} ${crop.variety}.`);
+  }
+
+  /** An edit of many items, made by the simulator on the draft shown, and
+   * kept as one step to undo; dropped if the draft has changed since it
+   * was asked for, so that no edit is lost under another. */
+  async function change(asked: Edit, said: string): Promise<void> {
+    if (editing === null) {
+      return;
+    }
+    const session_ = session.current;
+    const sent = editing.history.present;
+    setBusy(true);
+    const answer = await editItems(editing.schemaVersion, sent, asked);
+    setBusy(false);
+    if (session.current !== session_) {
+      return;
+    }
+    if (!answer.ok) {
+      setStatus(`Not changed: ${answer.problem}`);
+      return;
+    }
+    if (shown.current?.history.present !== sent) {
+      setStatus("The draft changed while that edit was on its way: make it again.");
+      return;
+    }
+    setEditing((now) =>
+      now === null || now.history.present !== sent
+        ? now
+        : { ...now, history: edited(now.history, answer.value.installation) },
+    );
+    setRan(null);
+    setStatus(said);
   }
 
   function rename(draftId: string, name: string): void {
@@ -543,6 +582,12 @@ export function Builder() {
             />
             <Findings assessment={assessment} />
             <RowCrops installation={editing.history.present} onGive={give} />
+            <Items
+              installation={editing.history.present}
+              snapshot={snapshot}
+              busy={busy}
+              onEdit={(asked, said) => void change(asked, said)}
+            />
             <RunStep
               weathers={listed[0]?.weathers ?? []}
               disabled={runWhy !== "" || busy}
