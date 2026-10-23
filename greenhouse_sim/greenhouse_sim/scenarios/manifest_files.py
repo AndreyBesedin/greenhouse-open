@@ -144,7 +144,7 @@ def scenario_from_manifest(scenario_id: str, document: dict[str, JsonValue]) -> 
     if unnoted:
         raise InvalidManifest(f"{scenario_id}: notes on what it does not have: {sorted(unnoted)}")
     config = ScenarioConfig.model_validate(fields | {"layout": load_layout(scenario_id, layout)})
-    unknown = _unknown_fields(fields, config.model_dump(mode="json", exclude={"layout"}))
+    unknown = unknown_fields(fields, config.model_dump(mode="json", exclude={"layout"}))
     if unknown:
         raise InvalidManifest(f"{scenario_id}: fields it does not have: {', '.join(unknown)}")
     return config
@@ -238,9 +238,11 @@ def manifest_json_schema() -> dict[str, JsonValue]:
     return {"$schema": JSON_SCHEMA_DIALECT, **schema}
 
 
-def _unknown_fields(written: JsonValue, read: JsonValue, path: str = "") -> list[str]:
+def unknown_fields(written: JsonValue, read: JsonValue, path: str = "") -> list[str]:
     """Where a manifest has a field that the configuration read from it does
-    not, each by its path (`envelope.openings[0].centre.z`).
+    not, each by its path (`envelope.openings[0].centre.z`); and so for any
+    document read into the configuration's models, such as an installation's
+    file (`builder.portable`).
 
     Some of the configuration's models ignore a field they do not have,
     rather than refuse it. So what the manifest wrote is compared with what
@@ -251,7 +253,7 @@ def _unknown_fields(written: JsonValue, read: JsonValue, path: str = "") -> list
     if isinstance(written, list) and isinstance(read, list):
         found: list[str] = []
         for index, (item, read_item) in enumerate(zip(written, read, strict=False)):
-            found += _unknown_fields(item, read_item, f"{path}[{index}]")
+            found += unknown_fields(item, read_item, f"{path}[{index}]")
         return found
     if not isinstance(written, dict) or not isinstance(read, dict):
         return []
@@ -261,7 +263,7 @@ def _unknown_fields(written: JsonValue, read: JsonValue, path: str = "") -> list
         if key not in read:
             found.append(where)
             continue
-        found += _unknown_fields(value, read[key], where)
+        found += unknown_fields(value, read[key], where)
     return found
 
 

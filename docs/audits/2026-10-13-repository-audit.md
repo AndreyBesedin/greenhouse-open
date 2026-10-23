@@ -187,10 +187,10 @@ code at `467821f`; *review*, reproduced by a review and not again here.
 | `AUDIT.14` Nothing in the packages logs | corrected | read | when touched | W15 |
 | `AUDIT.15` Module globals and threads make tests order-dependent | corrected | run | next | W8 (#184, #185), W5's follow-up (#191), W9 (#253) |
 | `AUDIT.16` The prose is consistent, dense and tied to the roadmap | corrected | read | when touched | W14 (#263) |
-| `AUDIT.17` Four hubs carry the weight | corrected | read | when touched | W11 (#280), W15 |
+| `AUDIT.17` Four hubs carry the weight | corrected | read | when touched | W11 (#280), W15 (#310, #312, #314, #315) |
 | `AUDIT.18` The test suite's shape | corrected | read | next | W8 (#184, #185, #186) |
 | `AUDIT.19` What the benchmark and the profile point at | corrected | run | next | W10 (#193, #194) |
-| `AUDIT.20` The viewer's global stylesheet and bundle | corrected | read | when touched | W15 |
+| `AUDIT.20` The viewer's global stylesheet and bundle | corrected | read | when touched | W15 (#316) |
 | `AUDIT.21` The process is one developer's, and says so | corrected | read | decide | D4 (decision 0038, #183) |
 | `AUDIT.22` A run's numbers depend on the moments asked for before | new | run | **now** | W1 (#162) |
 | `AUDIT.23` The adapters' storage accepts bytes it never verified | new | run | **now** | W2 (#161) |

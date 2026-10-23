@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 
 import { PLACE_BY_CLICKING } from "./fields/FieldProbes";
 
@@ -105,8 +105,14 @@ function typing(target: EventTarget | null): boolean {
  * view's controls; × and Escape close it, and the button opens it again.
  * The view has no keys of its own to move by.
  */
-export function ControlsHelp() {
+export function ControlsHelp({ onShow }: { onShow?: () => void } = {}) {
   const [open, setOpen] = useState(false);
+  // Shown by its shortcut, the card first has its side's panels opened, if
+  // they are folded (#304), in the same render, so that it is seen and its
+  // close button takes the focus.
+  const showing = useEffectEvent(() => onShow?.());
+  const isOpen = useRef(open);
+  isOpen.current = open;
   const trigger = useRef<HTMLButtonElement | null>(null);
   const close = useRef<HTMLButtonElement | null>(null);
   // Focus follows the card: to its close button as it opens, and back to
@@ -119,6 +125,9 @@ export function ControlsHelp() {
     function onKey(event: KeyboardEvent): void {
       if (event.key === "?" && !typing(event.target)) {
         event.preventDefault();
+        if (!isOpen.current) {
+          showing();
+        }
         setOpen((was) => !was);
       } else if (event.key === "Escape") {
         setOpen(false);

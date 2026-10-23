@@ -172,6 +172,7 @@ describe("a climate run's moment on its way", () => {
     shown: number | null;
     failed?: boolean;
     playing?: boolean;
+    followed?: boolean;
   }) {
     const { playing = false, ...rest } = props;
     return <ClimateTime {...rest} days={14} playing={playing} onTime={ignore} onPlaying={ignore} />;
@@ -199,6 +200,30 @@ describe("a climate run's moment on its way", () => {
     view.rerender(clock({ time: 2 * DAY_S + 600, shown: DAY_S + 600, playing: true }));
 
     expect(said(view.container, "climate-pending")).toBe("Playing: waiting for day 2, 10 min… 0 s");
+    view.unmount();
+  });
+
+  it("keeps the loading line's place between loads while the run plays or is followed (#301)", () => {
+    const notes = (container: HTMLElement) => container.querySelectorAll(".climate-time-note");
+    for (const way of [{ playing: true }, { followed: true }]) {
+      const view = render(clock({ time: DAY_S + 600, shown: 600, ...way }));
+      const loading = notes(view.container).length;
+
+      view.rerender(clock({ time: DAY_S + 600, shown: DAY_S + 600, ...way }));
+
+      // The same lines, the loading one kept, unseen and unread.
+      expect(notes(view.container)).toHaveLength(loading);
+      const idle = view.container.querySelector(".climate-time-idle");
+      expect(idle?.getAttribute("aria-hidden")).toBe("true");
+      expect(said(view.container, "climate-pending")).toBeNull();
+      view.unmount();
+    }
+  });
+
+  it("keeps no line for loading once a moment has arrived, at rest", () => {
+    const view = render(clock({ time: DAY_S + 600, shown: DAY_S + 600 }));
+
+    expect(view.container.querySelector(".climate-time-idle")).toBeNull();
     view.unmount();
   });
 
