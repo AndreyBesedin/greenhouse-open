@@ -7,6 +7,13 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: drafts of installations and their revisions are kept
+  locally (P12.1, decision 0051): `greenhouse_sim.builder.drafts.DraftStore`
+  keeps them in one SQLite file, each revision its installation's file. A
+  draft is saved revision by revision, reopened at any, reverted to an
+  earlier one (saved again as the latest) and deleted. A change names the
+  revision it was made on and is refused if another was saved since, as by
+  another window of the editor.
 - `greenhouse-sim`: a scenario's manifest holds its house as an
   installation (P12.1, decision 0050). Manifest format 4 writes its
   envelope, its layout's name and the crop each row grows under
