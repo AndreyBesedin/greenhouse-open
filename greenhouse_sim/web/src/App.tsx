@@ -5,8 +5,7 @@ import { ControlsHelp } from "./ControlsHelp";
 import { type CameraPose, framing, type PresetName, type PresetRequest } from "./camera";
 import { CfdBoundaries } from "./cfd/CfdBoundaries";
 import { CfdLegend } from "./cfd/CfdLegend";
-import { cfdGeometryUrl, loadCfdGeometry } from "./cfd/geometry";
-import { daysEnded } from "./clock";
+import { useCfdBoundaries } from "./cfd/useCfdBoundaries";
 import { DisplayOptions } from "./DisplayOptions";
 import { CategoryLegend } from "./debug/CategoryLegend";
 import { categoriesIn } from "./debug/categories";
@@ -19,50 +18,42 @@ import {
   shownPrimitives,
 } from "./debug/overlays";
 import { ScalarLegend } from "./debug/ScalarLegend";
-import type { ScalarRange } from "./debug/scalar";
 import { colouringBy, scalarProperties } from "./debug/scalar";
 import { arrowSpacing } from "./fields/arrows";
-import type { FieldView } from "./fields/display";
-import { defaultSlice, type HeldRanges, heldThrough, quantityScale } from "./fields/drawing";
 import { FieldArrows } from "./fields/FieldArrows";
 import { FieldLegend } from "./fields/FieldLegend";
 import { FieldSlice } from "./fields/FieldSlice";
 import { FieldStreamlines } from "./fields/FieldStreamlines";
-import { glazingUrl, loadGlazing, withGlazing } from "./fields/glazing";
-import { houseAirUrl, loadHouseAir } from "./fields/HouseAir";
-import {
-  loadOpenings,
-  openingFlowOverlays,
-  openingsUrl,
-  withOpeningFlows,
-} from "./fields/openingFlows";
-import { loadProbeCharts, probeChartsUrl } from "./fields/ProbeCharts";
+import { withGlazing } from "./fields/glazing";
+import { openingFlowOverlays, withOpeningFlows } from "./fields/openingFlows";
 import { MAX_PROBES, probeOverlays } from "./fields/probes";
-import { CLIMATE_FIELD, fetchField, fieldUrl } from "./fields/source";
+import { CLIMATE_FIELD } from "./fields/source";
+import { useClimateLoads } from "./fields/useClimateLoads";
+import { useFieldDrawing } from "./fields/useFieldDrawing";
 import { Hud, type LiveStatus } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
 import { type MoveDraft, MovePanel } from "./MovePanel";
 import { PlaybackPanel } from "./PlaybackPanel";
 import { usePanelTheme } from "./panelTheme";
-import { cropPlantUrl, cropUrl, loadCropPlant, ORGAN_CROP, withCrop } from "./plants/crop";
+import { withCrop } from "./plants/crop";
 import type { GrowthSpeed } from "./plants/LabControls";
 import { LabPanels } from "./plants/LabPanels";
 import { type LabRun, PLANT_LAB_LAST_DAY, PLANT_LAB_POSE } from "./plants/lab";
-import { describePlantLight, loadPlantsLight, plantsLightUrl } from "./plants/light";
+import { describePlantLight } from "./plants/light";
 import { plantNameOverlays } from "./plants/names";
 import { PlantDays } from "./plants/PlantDays";
 import { PlantLight } from "./plants/PlantLight";
-import { loadRunManifest, loadServedVersion, runManifestUrl, VERSION_URL } from "./qaMode/manifest";
+import { usePlantLoads } from "./plants/usePlantLoads";
 import { useQaMode } from "./qaMode/mode";
 import { QaPanel } from "./qaMode/QaPanel";
-import { loadRunState, runStateUrl } from "./qaMode/state";
+import { useQaLoads } from "./qaMode/useQaLoads";
 import type { ViewSample } from "./readouts";
 import { ScenarioPanels } from "./ScenarioPanels";
 import { WhatAmISeeing, worldAxesLength } from "./SeenInTheView";
 import { DEFAULT_LAYOUT, loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
 import { withProbes, withTargets, withTargetsSet, withTime } from "./scene/edits";
-import { equipmentUrl, governedLevels, loadEquipment, runningThermostat } from "./scene/equipment";
+import { runningThermostat } from "./scene/equipment";
 import type { SceneEntity } from "./scene/generated/snapshotTypes";
 import {
   baseLayout,
@@ -77,14 +68,10 @@ import {
   shifted,
 } from "./scene/moves";
 import { commandPlayback, followedMoment, setPlaybackTargets, usePlayback } from "./scene/playback";
-import { runApartFromItsMoment, runsSomething, scenarioRun } from "./scene/run";
+import { runApartFromItsMoment, scenarioRun } from "./scene/run";
 import {
-  changesQuery,
-  fetchScene,
   keptDaily,
-  loadScene,
   type SceneSource,
-  sceneRequest,
   searchFor,
   shownBy,
   targetsFrom,
@@ -95,25 +82,20 @@ import {
 import { useLiveCommands } from "./scene/useLiveCommands";
 import { useLiveScene } from "./scene/useLiveScene";
 import { useMoveSession } from "./scene/useMoveSession";
+import { useSceneLoads } from "./scene/useSceneLoads";
 import { type SetSource, useSource } from "./scene/useSource";
 import { entityOfOrgan, organOf, plantOf, selectedEntity } from "./selection";
 import { CameraFrames } from "./sensors/CameraFrames";
 import { CameraView } from "./sensors/CameraView";
 import { cameraOf, frustumOverlays } from "./sensors/camera";
-import { loadSensorReadings, sensorsKey } from "./sensors/readings";
 import { SensorPanel } from "./sensors/SensorPanel";
+import { useSensorReadings } from "./sensors/useSensorReadings";
 import { useSimulatorTime } from "./simulatorTime";
-import { type Pending, type Progress, useLoad, useLoadProgress } from "./useLoad";
+import { drawn, failed, failureOf, useLoad } from "./useLoad";
 import { Viewport } from "./Viewport";
 import { sceneSunlight, sunPathOverlays } from "./weather/sunlight";
-import {
-  loadWeather,
-  loadWeatherDay,
-  sunOverlays,
-  weatherDayUrl,
-  weatherUrl,
-  windOverlays,
-} from "./weather/weather";
+import { useWeatherLoads } from "./weather/useWeatherLoads";
+import { sunOverlays, windOverlays } from "./weather/weather";
 import type { Point3 } from "./world";
 
 const MILLISECONDS_PER_SECOND = 1000;
@@ -121,7 +103,6 @@ const MILLISECONDS_PER_SECOND = 1000;
 // a crop's height.
 const DEFAULT_PROBE_HEIGHT_M = 1;
 const EMPTY_PROBES: Point3[] = [];
-const NO_OPENINGS: readonly string[] = [];
 // How near the camera may stand to the pose framed for it, in metres, and
 // still be taken as not moved since: the HUD samples it as drawn.
 const FRAMED_STILL_M = 0.01;
@@ -143,29 +124,6 @@ function useWindowAspect(): number {
     return () => window.removeEventListener("resize", resized);
   }, []);
   return aspect;
-}
-
-/** What a part of the view draws: the latest of it that loaded, kept while
- * the next is on its way and when the next fails, or else how its latest
- * request stands. */
-function drawn<T extends { status: string }>({ shown, latest }: Progress<T>): T | Pending {
-  return shown ?? latest;
-}
-
-/** Whether a part's latest request failed. */
-function failed(latest: { status: string }): boolean {
-  return latest.status === "unavailable" || latest.status === "rejected";
-}
-
-/** Why a part's latest request failed, in words, if it did. */
-function failureOf(part: string, latest: { status: string }): string | null {
-  if (latest.status === "unavailable" && "reason" in latest) {
-    return `the ${part} is not available (${String(latest.reason)})`;
-  }
-  if (latest.status === "rejected" && "problems" in latest && Array.isArray(latest.problems)) {
-    return `the ${part} was refused (${latest.problems.join("; ")})`;
-  }
-  return null;
 }
 
 export function App({ build = buildInfo }: { build?: BuildInfo }) {
@@ -207,14 +165,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // Whether a click places a probe, and how high.
   const [placingProbes, setPlacingProbes] = useState(false);
   const [playingClimate, setPlayingClimate] = useState(false);
-  // Whether sensors' readings are shown as they err, or, in QA mode, as clean
-  // ones'.
-  const [sensorsImperfect, setSensorsImperfect] = useState(true);
   const [probeHeight, setProbeHeight] = useState(DEFAULT_PROBE_HEIGHT_M);
-  // A range the viewer chose for the field's colours, in place of its own.
-  const [fieldRange, setFieldRange] = useState<ScalarRange | null>(null);
-  // The colour ranges a climate run's moments have reached, so far.
-  const [heldRanges, setHeldRanges] = useState<HeldRanges | null>(null);
   const [presetRequest, setPresetRequest] = useState<PresetRequest | null>(null);
   const [sample, setSample] = useState<ViewSample | null>(null);
   const [pointer, setPointer] = useState<Point3 | null>(null);
@@ -267,34 +218,6 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     startAfresh(lastShown, source);
   }
 
-  // A scenario reopened by its sliders, or the plant lab on another day,
-  // keeps its scene on show until the next arrives; any other change of
-  // scene starts from loading.
-  const openingIds = summary?.openings ?? NO_OPENINGS;
-  // A thermostat runs its heater by the house's air (P10.3), which only the
-  // run knows: the scene draws the heater as the run has it at the moment.
-  const equipment = useLoad(
-    source.kind === "scenario" && summary?.thermostat
-      ? equipmentUrl(source.scenarioId, scenarioRun(source))
-      : null,
-    loadEquipment,
-  );
-  const governed = governedLevels(equipment);
-  const sceneAsked = sceneRequest(source, openingIds, governed);
-  const sceneProgress = useLoadProgress(
-    sceneAsked,
-    (_url, fetchFn) => loadScene(source, fetchFn, openingIds, governed),
-    {
-      group:
-        source.kind === "scenario"
-          ? `scenario ${source.scenarioId}`
-          : source.kind === "plants"
-            ? "plants"
-            : (sceneAsked ?? ""),
-    },
-  );
-  const scene = drawn(sceneProgress);
-
   // The scenario's run drawn, every part of which is asked for under its
   // layout, equipment, openings, schedule, moment and weather; and the same
   // run as the climate's, while the climate field is drawn.
@@ -302,39 +225,26 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const climate = source.kind === "scenario" && source.field === CLIMATE_FIELD ? run : null;
   // The moment drawn, in seconds into the climate run.
   const moment = run?.time ?? 0;
-  // A climate run, apart from its moments: its colours keep the widest range
-  // its moments have reached, so that a slice keeps its colours as the run
-  // plays and goes back. Another run starts afresh.
+  // A climate run, apart from its moments, whose colours its field keeps.
   const climateRun = climate === null ? null : runApartFromItsMoment(climate);
   const probes = source.kind === "scenario" ? (source.probes ?? EMPTY_PROBES) : EMPTY_PROBES;
 
-  // A crop grown organ by organ, as it stands at the moment drawn, in place
-  // of its transplants once a day has ended; the last stays on show until
-  // the next day's arrives, and when the next day's fails.
-  const organCrop = summary?.crop_model === ORGAN_CROP;
-  const cropProgress = useLoadProgress(
-    run === null || !organCrop || daysEnded(moment) === 0 ? null : cropUrl(run),
-    fetchScene,
-    { group: run === null ? "" : `crop ${run.scenarioId}` },
-  );
+  const { equipment, sceneProgress, cropProgress, organCrop } = useSceneLoads(source, summary, run);
+  const scene = drawn(sceneProgress);
   const crop = drawn(cropProgress);
-
-  // The scenario's field, drawn over its scene, and another compared with it
-  // at the probes; the last of each stays on show until the next arrives,
-  // and the field's when the next fails.
+  const {
+    fieldProgress,
+    field,
+    compared,
+    fieldView,
+    loadedField,
+    fieldSlice,
+    scaleQuantity,
+    fieldScale,
+    fieldColours,
+    setFieldRange,
+  } = useFieldDrawing(source, run, climateRun);
   const fieldName = source.kind === "scenario" ? (source.field ?? null) : null;
-  const fieldProgress = useLoadProgress(
-    run === null || fieldName === null ? null : fieldUrl(run.scenarioId, fieldName, run),
-    fetchField,
-    {
-      onAnswer: (state) => {
-        if (climateRun !== null && state.status === "loaded") {
-          setHeldRanges((held) => heldThrough(held, climateRun, state.field));
-        }
-      },
-    },
-  );
-  const field = drawn(fieldProgress);
 
   // A run followed as it is played back (P10.2, decision 0041): the moment
   // drawn is the playback's clock, in whole minutes, moved on once the moment
@@ -392,73 +302,10 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const momentFailed = [sceneProgress, cropProgress, fieldProgress].some(({ latest }) =>
     failed(latest),
   );
-  const compareName = source.kind === "scenario" ? (source.compare ?? null) : null;
-  const compared = useLoad(
-    run === null || compareName === null ? null : fieldUrl(run.scenarioId, compareName, run),
-    fetchField,
-  );
-
-  // In QA mode, the simulator's version and commit, as it says itself, and
-  // what the scenario's run drawn is made from.
-  const served = useLoad(qaMode ? VERSION_URL : null, loadServedVersion);
-  const runManifest = useLoad(
-    !qaMode || run === null ? null : runManifestUrl(run.scenarioId, run),
-    loadRunManifest,
-  );
-  // In QA mode, what each process of the run drawn holds at its moment; the
-  // last stays on show until the next arrives.
-  const runState = useLoad(
-    !qaMode || run === null ? null : runStateUrl(run.scenarioId, run),
-    loadRunState,
-    { group: run === null ? "" : `state ${run.scenarioId}` },
-  );
-
-  // The weather outside a scenario at the moment drawn, and through its
-  // day, for its chart.
-  const weather = useLoad(
-    run === null ? null : weatherUrl(run.scenarioId, moment, run.weather),
-    loadWeather,
-  );
-  const weatherDay = useLoad(
-    run === null ? null : weatherDayUrl(run.scenarioId, moment, run.weather),
-    loadWeatherDay,
-  );
-
-  // What the probes read through the climate run drawn, and through the
-  // same run all off, up to the moment drawn.
-  const probeCharts = useLoad(
-    climate === null || probes.length === 0
-      ? null
-      : probeChartsUrl(climate.scenarioId, { ...climate, probes }),
-    loadProbeCharts,
-  );
-  // The house's air as one volume through the climate run drawn, and the
-  // same run all off, up to the moment drawn.
-  const houseAir = useLoad(
-    climate === null ? null : houseAirUrl(climate.scenarioId, climate),
-    loadHouseAir,
-  );
-  // The glazing at the moment drawn, each wall's and roof slope's
-  // temperature, for "Colour by".
-  const glazing = useLoad(
-    climate === null ? null : glazingUrl(climate.scenarioId, climate),
-    loadGlazing,
-  );
-  // What the open doors and vents pass at the moment drawn, for "Colour by"
-  // and their arrows.
-  const openingFlows = useLoad(
-    climate === null ? null : openingsUrl(climate.scenarioId, climate),
-    loadOpenings,
-  );
-
-  // The boundaries a CFD solver is given, changed as the scene is, drawn
-  // over it when asked for; the last stays on show until the next arrives.
-  // How hard its equipment runs does not change them.
-  const cfdUrl =
-    source.kind === "scenario" && source.cfdBoundaries
-      ? cfdGeometryUrl(source.scenarioId, changesQuery({ ...source, levels: {} }, "?"))
-      : null;
-  const cfd = useLoad(cfdUrl, loadCfdGeometry);
+  const { served, runManifest, runState } = useQaLoads(qaMode, run);
+  const { weather, weatherDay } = useWeatherLoads(run);
+  const { probeCharts, houseAir, glazing, openingFlows } = useClimateLoads(climate, probes);
+  const cfd = useCfdBoundaries(source);
 
   // A click on the view places probes too: placing stops once all are placed.
   function setProbes(next: Point3[]): void {
@@ -510,21 +357,13 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // The plant selected: a plant drawn whole, or any part of one.
   const selectedPlant =
     selected === null ? null : selected.kind === "PLANT" ? selected.entity_id : plantOf(selected);
-  // The light on the plants at the moment drawn, while a plant is selected
-  // in a climate run's view, or in QA mode, which labels every plant with
-  // it; the last stays on show until the next arrives.
-  const plantsLight = useLoad(
-    climate === null || (selectedPlant === null && !qaMode)
-      ? null
-      : plantsLightUrl(climate.scenarioId, climate),
-    loadPlantsLight,
-  );
-  // The plant selected in a crop grown organ by organ, as it stands at the
-  // moment drawn, with each day it lived.
-  const cropPlant = useLoad(
-    run === null || !organCrop || selectedPlant === null ? null : cropPlantUrl(run, selectedPlant),
-    loadCropPlant,
-  );
+  const { plantsLight, cropPlant } = usePlantLoads({
+    run,
+    climate,
+    organCrop,
+    selectedPlant,
+    qaMode,
+  });
   const selectedCamera = selected === null ? null : cameraOf(selected);
 
   // The selected item, if it is equipment or a sensor a scenario's view can
@@ -703,38 +542,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
       />
     ) : null;
 
-  // The run's observation log up to the moment drawn, while a sensor or a
-  // camera is selected, and, in QA mode only, what its sensors truly
-  // sampled; as clean sensors would have made it, if QA mode asks.
-  const sensorSelected = selected?.kind === "SENSOR" || selected?.kind === "CAMERA";
-  const sensorRun = sensorSelected ? run : null;
-  const clean = qaMode && !sensorsImperfect;
-  const sensorReadings = useLoad(
-    sensorRun === null
-      ? null
-      : { scenarioId: sensorRun.scenarioId, run: { ...sensorRun, clean }, truth: qaMode },
-    loadSensorReadings,
-    { key: sensorsKey },
-  );
-
-  // What the sensors read through the same run all off, when something runs.
-  const offReadings = useLoad(
-    sensorRun === null || !runsSomething(sensorRun)
-      ? null
-      : {
-          scenarioId: sensorRun.scenarioId,
-          run: {
-            ...sensorRun,
-            levels: undefined,
-            schedule: undefined,
-            daily: [],
-            clean,
-          },
-          truth: false,
-        },
-    loadSensorReadings,
-    { key: sensorsKey },
-  );
+  // The run's observation log while a sensor or a camera is selected.
+  const sensors = useSensorReadings(selected, run, qaMode);
 
   // Every plant's name, in the plant lab if asked for, and in a scenario's
   // view in QA mode, with its day's light in a climate run's.
@@ -782,22 +591,6 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     () => (snapshot === null || colourBy === null ? null : colouringBy(snapshot, colourBy)),
     [snapshot, colourBy],
   );
-  // How the field is drawn, and the scale its colours run over: air speed for
-  // arrows and streamlines, the slice's quantity for a slice.
-  const fieldView: FieldView =
-    source.kind === "scenario" ? (source.fieldView ?? "arrows") : "arrows";
-  const loadedField = field.status === "loaded" ? field.field : null;
-  // Worked out once for each field and choice, not on every render: the
-  // layers redraw, and trace streamlines afresh, whenever these change.
-  const askedSlice = source.kind === "scenario" ? source.slice : undefined;
-  const fieldSlice = useMemo(
-    () =>
-      fieldView === "slice" && loadedField !== null
-        ? (askedSlice ?? defaultSlice(loadedField))
-        : null,
-    [fieldView, loadedField, askedSlice],
-  );
-  const scaleQuantity = fieldSlice === null ? "speed" : fieldSlice.quantity;
   // The sun's two halves load on their own: the sun now, above the horizon
   // only, and its day's path; the card says which of them is drawn.
   const sunNow = useMemo(
@@ -846,15 +639,6 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     ],
   );
 
-  const fieldScale = useMemo(
-    () => (loadedField === null ? null : quantityScale(loadedField, scaleQuantity)),
-    [loadedField, scaleQuantity],
-  );
-  const heldRange =
-    heldRanges !== null && heldRanges.run === climateRun
-      ? heldRanges.ranges[scaleQuantity]
-      : undefined;
-  const fieldColours = fieldScale === null ? null : (fieldRange ?? heldRange ?? fieldScale.range);
   const fieldLayer =
     loadedField === null || fieldColours === null ? null : fieldView === "streamlines" ? (
       <FieldStreamlines field={loadedField} range={fieldColours} />
@@ -1055,7 +839,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
               {snapshot !== null && selectedCamera !== null && (
                 <>
                   <CameraView snapshot={snapshot} spec={selectedCamera} />
-                  <CameraFrames cameraId={selectedCamera.cameraId} state={sensorReadings} />
+                  <CameraFrames cameraId={selectedCamera.cameraId} state={sensors.readings} />
                 </>
               )}
               {selectedPlant !== null && <PlantLight plantId={selectedPlant} state={plantsLight} />}
@@ -1070,12 +854,12 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 <SensorPanel
                   sensorId={String(selected.properties.sensor_id)}
                   unit={String(selected.properties.unit)}
-                  state={sensorReadings}
-                  allOff={offReadings}
+                  state={sensors.readings}
+                  allOff={sensors.allOff}
                   until={moment}
                   qa={qaMode}
-                  imperfect={sensorsImperfect}
-                  onImperfect={setSensorsImperfect}
+                  imperfect={sensors.imperfect}
+                  onImperfect={sensors.setImperfect}
                 />
               )}
               {movePanel}
