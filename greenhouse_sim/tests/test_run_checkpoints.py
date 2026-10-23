@@ -274,12 +274,12 @@ def test_a_checkpoint_let_go_takes_its_own_state_not_one_kept_since(simulator: S
     # leave, or a run restored from it would work its days out again.
     saved = checkpoints.save_checkpoint(simulator, RunRequest("climate_box"), time_s=DAY_S)
     document = checkpoints.checkpoint(simulator, saved.checkpoint_id).model_dump(mode="json")
-    first = kept_states.STATES.get(saved.checkpoint_id)
+    first = simulator.states.get(saved.checkpoint_id)
     checkpoints.upload_checkpoint(simulator, document)
-    again = kept_states.STATES.get(saved.checkpoint_id)
+    again = simulator.states.get(saved.checkpoint_id)
     assert first is not None and again is not None and again is not first
 
     kept_states.drop(simulator, saved.checkpoint_id, first)
 
-    assert kept_states.STATES.get(saved.checkpoint_id) is again
+    assert simulator.states.get(saved.checkpoint_id) is again
     assert saved in checkpoints.checkpoints(simulator)

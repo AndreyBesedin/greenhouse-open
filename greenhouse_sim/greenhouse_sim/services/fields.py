@@ -229,7 +229,9 @@ def run_label(key: RunKey) -> str:
     return f"{key[0]} {digest_label(key)}"
 
 
-CLIMATE_RUNS: Store[RunKey, ClimateDay] = Store("climate runs", KEPT_RUNS, label=run_label)
+def new_store() -> Store[RunKey, ClimateDay]:
+    """A simulator's climate runs: the latest `KEPT_RUNS` (decision 0048)."""
+    return Store("climate runs", KEPT_RUNS, label=run_label)
 
 
 def _climate_day(

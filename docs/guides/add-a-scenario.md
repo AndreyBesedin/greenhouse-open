@@ -6,6 +6,13 @@ The simulator finds both by their file names, the API lists the scenario, and
 the viewer opens it with `?scenario=<id>`. Nothing registers it by hand.
 The reference greenhouse was added this way (commit `ca527ae`).
 
+That makes a packaged scenario, which every simulator knows
+(`scenarios.catalogue.PACKAGED`). A scenario made while a simulator runs, as
+a setup builder makes one, is registered with that simulator alone
+(`simulator.catalogue.register(config)`, decision 0048): under an identifier
+of its own, never a packaged one's, with its layout in its configuration and
+no opening day.
+
 ## Steps
 
 1. **Its layout:** `greenhouse_sim/greenhouse_sim/scenarios/layouts/<id>/default.json`,

@@ -15,9 +15,8 @@ value it lets go, such as dropping a checkpoint's state or stopping a
 playback, it does once its lock is released. So the stores have no lock
 order to keep.
 
-Every store is listed as it is made, so that `forget_everything` forgets
-them all, as a test asks for a clean slate: the stores made last, which
-build on those made before, first.
+Each simulator makes its own stores, and forgets them, those that build on
+others first (`Simulator.forget`, decision 0048).
 
 A store logs, at INFO, each value it makes, with how long it took and how
 many related values it was made from, each it is given to keep, and each
@@ -29,11 +28,10 @@ made rather than reading a store's insides.
 import logging
 import threading
 import time
-import weakref
 from collections import OrderedDict
 from collections.abc import Callable, Hashable
 from concurrent.futures import Future
-from typing import Any, Literal
+from typing import Literal
 
 from greenhouse_sim.digests import short_digest
 
@@ -76,8 +74,6 @@ class Store[K: Hashable, V]:
         self._kept: OrderedDict[K, Future[V]] = OrderedDict()
         self._pinned: set[K] = set()
         self._lock = threading.Lock()
-        with _LISTING:
-            _STORES.append(weakref.ref(self))
 
     def made_once(
         self,
@@ -202,24 +198,6 @@ class Store[K: Hashable, V]:
             f" ({detail})" if detail else "",
             extra={"store": self.name, "event": event, "label": label},
         )
-
-
-# Every store made, as long as it lasts: the services' last as long as the
-# process; one a test makes, as long as the test.
-_STORES: list[weakref.ref[Store[Any, Any]]] = []
-_LISTING = threading.Lock()
-
-
-def forget_everything() -> None:
-    """Let go of everything every store keeps, the stores made last first:
-    the playbacks, which work days out from the runs kept, stop before the
-    runs go."""
-    with _LISTING:
-        _STORES[:] = [listed for listed in _STORES if listed() is not None]
-        stores = [listed() for listed in reversed(_STORES)]
-    for store in stores:
-        if store is not None:
-            store.forget()
 
 
 def _is[V](promised: Future[V], value: V) -> bool:

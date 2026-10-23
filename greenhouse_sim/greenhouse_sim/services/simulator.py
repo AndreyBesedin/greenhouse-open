@@ -7,9 +7,9 @@ or is given one; a test makes its own. Closing it stops what it runs,
 waiting for each run's thread, and it starts nothing after.
 
 The services that keep runs reach what they keep through it: its climate
-runs, crops, sunlight, checkpoints and the states runs take over from them.
-Until the decision's last step these are the services' module stores,
-every simulator's; then each simulator makes its own.
+runs, crops, sunlight, checkpoints and the states runs take over from them,
+each a store of its own, which no other simulator shares. Forgetting them
+(`forget`) lets everything kept go, those that build on others first.
 """
 
 import threading
@@ -34,13 +34,12 @@ class Simulator:
         self.live = LiveRuns(self.catalogue, seconds_per_day=seconds_per_day)
         self.playbacks = Playbacks()
         self.cursors = Cursors()
-        # What the services keep: the modules' stores, every simulator's,
-        # until each simulator makes its own (decision 0048).
-        self.climate_runs = fields.CLIMATE_RUNS
-        self.crops = crop.CROPS
-        self.sunlight = sunlight.SUNLIGHT
-        self.checkpoints = checkpoints.CHECKPOINTS
-        self.states = kept_states.STATES
+        # What the services keep, this simulator's alone.
+        self.states = kept_states.new_store()
+        self.sunlight = sunlight.new_store()
+        self.climate_runs = fields.new_store()
+        self.crops = crop.new_store()
+        self.checkpoints = checkpoints.new_store(self.states)
         self._closing = threading.Lock()
         self._closed = False
 
@@ -48,16 +47,30 @@ class Simulator:
     def closed(self) -> bool:
         return self._closed
 
+    def forget(self) -> None:
+        """Lets go of everything kept, those that build on others first: the
+        playbacks, which work days out from the runs kept, stop before the
+        runs go; a checkpoint takes its state with it; the cursors given go
+        too. The scenarios it knows stay."""
+        self.playbacks.stop()
+        self.checkpoints.forget()
+        self.crops.forget()
+        self.climate_runs.forget()
+        self.sunlight.forget()
+        self.states.forget()
+        self.cursors.forget()
+
     def close(self) -> None:
-        """Stops the live runs and the playbacks, and waits for them. A close
-        asked for while another is under way waits for it; one asked for
-        after does nothing."""
+        """Stops the live runs and the playbacks, waits for them, and lets go
+        of everything kept. A close asked for while another is under way
+        waits for it; one asked for after does nothing."""
         with self._closing:
             if self._closed:
                 return
             try:
                 self.live.close()
                 self.playbacks.close()
+                self.forget()
             finally:
                 self._closed = True
 

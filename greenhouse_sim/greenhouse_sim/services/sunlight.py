@@ -33,7 +33,10 @@ if TYPE_CHECKING:
 # How many scenarios' sunlight, under a layout and a weather, are kept.
 KEPT_SUNLIGHT: Final = 8
 
-SUNLIGHT: Store[tuple[str, str, str], PlantLight] = Store("sunlight", KEPT_SUNLIGHT, label="/".join)
+
+def new_store() -> Store[tuple[str, str, str], PlantLight]:
+    """A simulator's sunlight: the latest `KEPT_SUNLIGHT` (decision 0048)."""
+    return Store("sunlight", KEPT_SUNLIGHT, label="/".join)
 
 
 def first_crowns(config: ScenarioConfig) -> list[Crown]:
