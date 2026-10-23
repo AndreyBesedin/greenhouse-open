@@ -43,6 +43,7 @@ from greenhouse_sim.scenarios.catalogue import SCENARIO_ID, ScenarioRefused
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.installation import CannotRun, Installation, scenario_house
 from greenhouse_sim.scenarios.manifest_files import SCHEMA_VERSION
+from greenhouse_sim.services.builder import refused_file
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound, first_reason
 from greenhouse_sim.services.scenarios import (
     DEFAULT_WEATHER,
@@ -173,7 +174,7 @@ def save(simulator: Simulator, draft_id: str, file: str, on: int | None) -> Draf
     try:
         installation = import_installation(file)
     except InstallationFileError as error:
-        raise InvalidRequest(str(error)) from None
+        raise refused_file(error) from None
     if installation.installation_id != draft_id:
         raise InvalidRequest(
             f"the file holds the installation {installation.installation_id!r}, "
@@ -185,7 +186,7 @@ def save(simulator: Simulator, draft_id: str, file: str, on: int | None) -> Draf
         raise Conflict(str(error)) from None
     except InstallationFileError as error:
         # As the store writes it, the file may not be read back.
-        raise InvalidRequest(str(error)) from None
+        raise refused_file(error) from None
     logger.info(
         "drafts: saved %s, revision %d",
         draft_id,

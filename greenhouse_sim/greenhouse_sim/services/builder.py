@@ -15,7 +15,7 @@ from greenhouse_sim.builder.portable import InstallationFileError, import_instal
 from greenhouse_sim.scenarios.installation import Installation
 from greenhouse_sim.scenarios.manifest_files import SCHEMA_VERSION
 from greenhouse_sim.scene.snapshot import SceneSnapshot, greenhouse_scene
-from greenhouse_sim.services.errors import InvalidRequest, first_reason
+from greenhouse_sim.services.errors import InvalidRequest, every_reason, first_reason
 
 
 class Assessed(BaseModel):
@@ -35,9 +35,16 @@ def basic(values: JsonValue) -> Assessed:
     Refused, by the field at fault, if the values are not the form's or no
     greenhouse can have them."""
     try:
-        installation = basic_installation(BasicSetup.model_validate(values))
+        form = BasicSetup.model_validate(values)
     except ValidationError as error:
-        raise InvalidRequest(f"not the first form's values: {first_reason(error)}") from None
+        raise InvalidRequest(
+            f"not the first form's values: {first_reason(error)}", every_reason(error)
+        ) from None
+    try:
+        installation = basic_installation(form)
+    except ValidationError as error:
+        # What the form's own checks did not foresee, in the house's terms.
+        raise InvalidRequest(f"no greenhouse has these values: {first_reason(error)}") from None
     return _assessed(installation)
 
 
@@ -56,11 +63,19 @@ def scene(file: str) -> SceneSnapshot:
     )
 
 
+def refused_file(error: InstallationFileError) -> InvalidRequest:
+    """A file refused as the client's request: its first problem, and each
+    of them by its field."""
+    return InvalidRequest(
+        str(error), [(problem.field, problem.message) for problem in error.problems]
+    )
+
+
 def _read(file: str) -> Installation:
     try:
         return import_installation(file)
     except InstallationFileError as error:
-        raise InvalidRequest(str(error)) from None
+        raise refused_file(error) from None
 
 
 def _assessed(installation: Installation) -> Assessed:

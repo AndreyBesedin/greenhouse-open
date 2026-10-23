@@ -208,7 +208,9 @@ check; a route that comes to need one checks it first.
 
 A change to a draft made on a revision that is no longer its latest is
 refused as a conflict (409), as is a draft's run under a scenario's name
-already taken.
+already taken. The first form's values and an installation's file are
+refused (400) with `problems` beside the `error`: each field at fault, by
+its path, and what is wrong with it.
 """
 
 import json
@@ -568,6 +570,11 @@ def _answer(
 
 def _refusal(error: ServiceError) -> Response:
     status = next(status for kind, status in _REFUSALS if isinstance(error, kind))
+    if isinstance(error, InvalidRequest) and error.problems:
+        problems: list[JsonValue] = [
+            {"field": field, "message": message} for field, message in error.problems
+        ]
+        return Response(status, {"error": error.message, "problems": problems})
     return _error(status, error.message)
 
 
