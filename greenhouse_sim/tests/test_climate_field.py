@@ -60,16 +60,18 @@ def _run(levels: dict[str, float]) -> ClimateRun:
     )
 
 
-def test_a_scenario_with_equipment_offers_its_climate_and_others_do_not() -> None:
-    assert fields.field_names("climate_box") == [
+def test_a_scenario_with_equipment_offers_its_climate_and_others_do_not(
+    simulator: Simulator,
+) -> None:
+    assert fields.field_names(simulator, "climate_box") == [
         "uniform",
         "buoyancy",
         "vortex",
         "climate",
         "shear",
     ]
-    assert "climate" not in fields.field_names("tomato_compartment")
-    assert "climate" not in fields.field_names("airflow_box")
+    assert "climate" not in fields.field_names(simulator, "tomato_compartment")
+    assert "climate" not in fields.field_names(simulator, "airflow_box")
 
 
 def test_at_its_start_with_everything_off_the_air_is_still_at_its_starting_temperature(
@@ -187,6 +189,6 @@ def test_levels_a_scenario_cannot_run_are_refused(
         assert (response.status, response.body) == (400, {"error": error})
 
 
-def test_the_service_refuses_levels_as_the_api_does() -> None:
+def test_the_service_refuses_levels_as_the_api_does(simulator: Simulator) -> None:
     with pytest.raises(InvalidRequest):
-        fields.field(RunRequest("climate_box", levels={"fan": -1.0}), "climate")
+        fields.field(simulator, RunRequest("climate_box", levels={"fan": -1.0}), "climate")

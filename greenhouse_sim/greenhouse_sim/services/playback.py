@@ -278,6 +278,7 @@ class Playback:
 
     def __init__(
         self,
+        simulator: Simulator,
         scenario_id: str,
         *,
         layout: str | None = None,
@@ -287,6 +288,7 @@ class Playback:
         clock: Callable[[], float] = monotonic,
         epochs: Epochs | None = None,
     ) -> None:
+        self._simulator = simulator
         config = scenario(scenario_id)
         _check_pace(seconds_per_day)
         self.scenario_id = scenario_id
@@ -295,7 +297,7 @@ class Playback:
         self.end_s = config.duration_days * DAY_S
         self.every_s = every_s
         self.layout = layout_name(layout or DEFAULT_LAYOUT)
-        _, self.run_id = air_through_a_run(RunRequest(scenario_id, layout=self.layout))
+        _, self.run_id = air_through_a_run(simulator, RunRequest(scenario_id, layout=self.layout))
         if targets:
             # Checked as a run's target changes are; refused, nothing starts.
             run_schedule(RunRequest(scenario_id, layout=self.layout, targets=tuple(targets)))
@@ -349,6 +351,7 @@ class Playback:
         has it. A layout refused makes none, and this one goes on as it was."""
         with self._lock:
             replacing = Playback(
+                self._simulator,
                 self.scenario_id,
                 layout=layout,
                 targets=self._targets,
@@ -439,6 +442,7 @@ class Playback:
         after it, if they were worked out under the targets before."""
         try:
             readings, run_id = delivered_between(
+                self._simulator,
                 run,
                 None if day == 0 else day * DAY_S,
                 (day + 1) * DAY_S,
@@ -448,10 +452,10 @@ class Playback:
             )
             if self._stopped.is_set():
                 return False
-            walked, harvests = crop_records(run, day, self.start, self.run_id)
+            walked, harvests = crop_records(self._simulator, run, day, self.start, self.run_id)
             if self._stopped.is_set():
                 return False
-            heated = heat_records(run, day, self.start, self.run_id)
+            heated = heat_records(self._simulator, run, day, self.start, self.run_id)
             if self._stopped.is_set():
                 return False
         except Stopped:
@@ -725,6 +729,7 @@ def start(
 
     def begun(_: object) -> Playback:
         found = Playback(
+            simulator,
             scenario_id,
             layout=layout,
             seconds_per_day=DEFAULT_SECONDS_PER_DAY if seconds_per_day is None else seconds_per_day,

@@ -89,7 +89,7 @@ class SimulatorServer(ThreadingHTTPServer):
         super().__init__((LOOPBACK, port), _Handler)
         # The scenarios' kept opening days, so that their runs' later days
         # need not be worked out from their starts.
-        for refused in checkpoints.load_openings():
+        for refused in checkpoints.load_openings(self.simulator):
             print(f"not kept: {refused}", file=sys.stderr)
 
     def server_close(self) -> None:

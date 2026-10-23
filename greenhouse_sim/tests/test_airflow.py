@@ -20,6 +20,7 @@ from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldGrid
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import fields
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Vector3
 
 # A box 8 by 6 by 3 m, in cells of a quarter metre.
@@ -146,7 +147,7 @@ def test_a_uniform_breeze_is_the_same_everywhere() -> None:
     assert [corner.x, corner.y, corner.z] == pytest.approx([0.1, 0.2, 0.0])
 
 
-def test_each_scenario_names_its_own_airflow_which_it_offers_first() -> None:
+def test_each_scenario_names_its_own_airflow_which_it_offers_first(simulator: Simulator) -> None:
     kinds = {scenario_id: config.airflow.kind for scenario_id, config in SCENARIO_REGISTRY.items()}
 
     assert kinds == {
@@ -158,7 +159,7 @@ def test_each_scenario_names_its_own_airflow_which_it_offers_first() -> None:
         "solar_lab": "uniform",
     }
     for scenario_id, kind in kinds.items():
-        assert fields.field_names(scenario_id)[0] == kind
+        assert fields.field_names(simulator, scenario_id)[0] == kind
         assert fields.configured(scenario_id) == kind
         assert math.isclose(
             fields.grid(scenario_id).maximum.z, SCENARIO_REGISTRY[scenario_id].envelope.eave_height

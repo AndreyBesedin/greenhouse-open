@@ -161,14 +161,14 @@ def test_every_scenario_can_be_run_under_any_preset() -> None:
         assert summary.weathers[: len(PRESETS) + 1] == ["default", *PRESETS]
 
 
-def test_a_climate_run_under_a_preset_is_its_weathers() -> None:
+def test_a_climate_run_under_a_preset_is_its_weathers(simulator: Simulator) -> None:
     config = SCENARIO_REGISTRY["climate_box"]
     # The run starts at midnight, near 8 °C on the spring day, as on the
     # box's own night; but the spring day is drier and colder by its first
     # hour, so the house's air differs.
-    own = fields.field(RunRequest("climate_box"), "climate", time_s=3600)
+    own = fields.field(simulator, RunRequest("climate_box"), "climate", time_s=3600)
     spring = fields.field(
-        RunRequest("climate_box", weather="cold_spring_day"), "climate", time_s=3600
+        simulator, RunRequest("climate_box", weather="cold_spring_day"), "climate", time_s=3600
     )
     outside = weather.at_a_moment("climate_box", 0.0, "cold_spring_day").weather
 

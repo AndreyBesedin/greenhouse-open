@@ -16,6 +16,7 @@ import pytest
 
 from greenhouse_sim.digests import short_digest
 from greenhouse_sim.services import fields
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.stores import LABEL_DIGITS, Store, digest_label, forget_everything
 
 # Long enough for a thread that is not stalled to finish.
@@ -245,21 +246,29 @@ def test_no_test_forgets_a_store_itself() -> None:
 
 
 def test_a_run_being_made_holds_up_no_request_for_another_scenario(
+    simulator: Simulator,
     afresh: Callable[[], None],
 ) -> None:
     # A branch of a run whose air a long request is working out waits for
     # it to carry on; a request for another scenario's run does not wait.
-    base = fields._climate_day("climate_box", "default", "default", (), (), ())
+    base = fields._climate_day(simulator, "climate_box", "default", "default", (), (), ())
     branch_key = ("climate_box", "default", "default", (), (), ((3600.0, "heater", 1.0),))
     with ThreadPoolExecutor(max_workers=2) as pool:
         with base.house._working:
-            branch = pool.submit(fields._climate_day, *branch_key)
+            branch = pool.submit(fields._climate_day, simulator, *branch_key)
             asked = threading.Event()
             for _ in range(int(WAIT_S / POLL_S)):
                 if branch_key in fields.CLIMATE_RUNS or branch.done() or asked.wait(POLL_S):
                     break
             other = pool.submit(
-                fields._climate_day, "climate_box", "default", "cold_spring_day", (), (), ()
+                fields._climate_day,
+                simulator,
+                "climate_box",
+                "default",
+                "cold_spring_day",
+                (),
+                (),
+                (),
             )
             other.result(timeout=WAIT_S)
         branch.result(timeout=WAIT_S)

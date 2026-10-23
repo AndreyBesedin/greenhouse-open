@@ -23,7 +23,7 @@ a heater has no record of its heat.
 """
 
 from datetime import datetime, timedelta
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 from greenhouse_protocol.enums import ObservationType, SourceType
 from greenhouse_protocol.observation import Observation
@@ -37,6 +37,10 @@ from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.units import HOUR_S
 from greenhouse_sim.world.equipment import Heater
 
+if TYPE_CHECKING:
+    # Typed only: the simulator imports the services that take it.
+    from greenhouse_sim.services.simulator import Simulator
+
 J_PER_MJ: Final = 1e6
 # Its value is kept to a kilojoule per square metre.
 DECIMALS: Final = 3
@@ -44,7 +48,9 @@ DECIMALS: Final = 3
 EVERY_S: Final = HOUR_S
 
 
-def heat_records(run: RunRequest, day: int, start: datetime, run_id: str) -> list[Observation]:
+def heat_records(
+    simulator: Simulator, run: RunRequest, day: int, start: datetime, run_id: str
+) -> list[Observation]:
     """The heat a run's heaters gave its house's air on its day `day`, which
     starts `day` days after `start`, such as a scenario's own run with a
     layout rearranged or targets changed, each named by `run_id`: a record
@@ -52,7 +58,7 @@ def heat_records(run: RunRequest, day: int, start: datetime, run_id: str) -> lis
     config = scenario(run.scenario_id)
     if not any(isinstance(piece, Heater) for piece in config.layout.equipment):
         return []
-    _, climate = climate_run(run)
+    _, climate = climate_run(simulator, run)
     floor_m2 = config.envelope.length * config.envelope.width
     kind = ObservationType.HEATING_ENERGY_INCREMENT_MJ_M2
     source = RecordSource(type=SourceType.SIMULATION, source_id=run_id)

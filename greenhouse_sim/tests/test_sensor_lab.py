@@ -14,6 +14,7 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.layout_files import load_layout
 from greenhouse_sim.services import sensors
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.layout import Layout
 from greenhouse_sim.world.sensors import Camera, PointSensor
@@ -36,10 +37,10 @@ def _sensor(sensor_id: str) -> PointSensor:
     return sensor
 
 
-def _readings(sensor_id: str) -> list[tuple[float, float, float]]:
+def _readings(simulator: Simulator, sensor_id: str) -> list[tuple[float, float, float]]:
     """Each of a sensor's readings through the run: when it was taken and
     delivered, in seconds from the start, and its value."""
-    log = sensors.observations(RunRequest("sensor_lab"), until_s=HOUR_S)
+    log = sensors.observations(simulator, RunRequest("sensor_lab"), until_s=HOUR_S)
     return [
         (
             (o.timestamp - log.start).total_seconds(),
@@ -58,13 +59,13 @@ def test_the_lab_air_warms_linearly_along_the_house() -> None:
 
 
 @pytest.mark.parametrize("sensor_id", ["clean_front", "clean_back"])
-def test_a_clean_sensor_reads_the_gradient_exactly(sensor_id: str) -> None:
+def test_a_clean_sensor_reads_the_gradient_exactly(simulator: Simulator, sensor_id: str) -> None:
     sensor = _sensor(sensor_id)
     expected = _gradient().temperature_at(sensor.position.x)
-    readings = _readings(sensor_id)
+    readings = _readings(simulator, sensor_id)
     truth = next(
         t
-        for t in sensors.truth(RunRequest("sensor_lab"), until_s=HOUR_S).sensors
+        for t in sensors.truth(simulator, RunRequest("sensor_lab"), until_s=HOUR_S).sensors
         if t.sensor_id == sensor_id
     )
 
@@ -75,11 +76,11 @@ def test_a_clean_sensor_reads_the_gradient_exactly(sensor_id: str) -> None:
     assert truth.values == pytest.approx([expected] * 61, abs=1e-9)
 
 
-def test_the_imperfect_sensor_errs_as_its_configuration_says() -> None:
+def test_the_imperfect_sensor_errs_as_its_configuration_says(simulator: Simulator) -> None:
     sensor = _sensor("imperfect_front")
     imperfections = sensor.imperfections
     truth = _gradient().temperature_at(sensor.position.x)
-    readings = _readings("imperfect_front")
+    readings = _readings(simulator, "imperfect_front")
     taken = [moment for moment, _, _ in readings]
     errors = [value - truth for _, _, value in readings]
 
@@ -111,8 +112,8 @@ def test_the_imperfect_sensor_errs_as_its_configuration_says() -> None:
     assert 61 - count == 6
 
 
-def test_the_lab_errs_the_same_way_every_time() -> None:
-    assert _readings("imperfect_front") == _readings("imperfect_front")
+def test_the_lab_errs_the_same_way_every_time(simulator: Simulator) -> None:
+    assert _readings(simulator, "imperfect_front") == _readings(simulator, "imperfect_front")
 
 
 def _silhouette(camera: Camera, layout: Layout, fixture_id: str) -> tuple[float, ...]:

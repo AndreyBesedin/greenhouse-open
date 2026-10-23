@@ -53,6 +53,7 @@ from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services import cfd, fields
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import SceneChanges, changed, scenario
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import AIR_DENSITY_KG_M3
 from greenhouse_sim.world.geometry import Vector3
 
@@ -360,12 +361,12 @@ def test_a_kept_solution_is_an_airflow_on_any_grid_at_any_time() -> None:
             assert values[k, j, i] == pytest.approx(expected, abs=1e-9)
 
 
-def test_a_scenario_offers_its_kept_solution_among_its_fields() -> None:
+def test_a_scenario_offers_its_kept_solution_among_its_fields(simulator: Simulator) -> None:
     _kept_compartment()
 
-    assert "cfd" in fields.field_names("tomato_compartment")
-    assert fields.field(RunRequest("tomato_compartment"), "cfd").source == SOURCE
-    assert "cfd" not in fields.field_names("climate_box")
+    assert "cfd" in fields.field_names(simulator, "tomato_compartment")
+    assert fields.field(simulator, RunRequest("tomato_compartment"), "cfd").source == SOURCE
+    assert "cfd" not in fields.field_names(simulator, "climate_box")
     assert {
         sid
         for sid, config in SCENARIO_REGISTRY.items()

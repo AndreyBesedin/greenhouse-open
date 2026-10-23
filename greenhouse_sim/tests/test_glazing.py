@@ -169,8 +169,12 @@ def test_a_cold_spell_cools_the_glass_at_once_and_the_air_more_slowly() -> None:
     assert all(g > a for g, a in zip(glass, air, strict=True))
 
 
-def test_the_climate_box_heated_settles_where_its_still_glass_passes_the_heaters_heat() -> None:
-    house = _climate_day("climate_box", "default", "default", (("heater", 1.0),), (), ()).house
+def test_the_climate_box_heated_settles_where_its_still_glass_passes_the_heaters_heat(
+    simulator: Simulator,
+) -> None:
+    house = _climate_day(
+        simulator, "climate_box", "default", "default", (("heater", 1.0),), (), ()
+    ).house
     still_u = glazing_u_w_m2k(SINGLE_GLASS, 0.0)
 
     settled = house.air_at(6 * 3600.0).temperature_c

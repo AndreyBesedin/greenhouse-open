@@ -13,6 +13,7 @@ longer one is asked for. The run is asked for as its climate field is
 import threading
 from collections.abc import Sequence
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
 
 from greenhouse_protocol.media import CameraFrame
 from greenhouse_protocol.observation import Observation
@@ -27,6 +28,10 @@ from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.runs import RunRequest, checked_window
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, SceneChanges, changed, scenario
 from greenhouse_sim.world.sensors import Camera, PointSensor
+
+if TYPE_CHECKING:
+    # Typed only: the simulator imports the services that take it.
+    from greenhouse_sim.services.simulator import Simulator
 
 
 class SensorObservations(BaseModel):
@@ -101,6 +106,7 @@ def _weather_at(scenario_id: str, weather: str | None) -> WeatherAt:
 
 
 def observations(
+    simulator: Simulator,
     run: RunRequest,
     until_s: float = 0.0,
     clean: bool = False,
@@ -113,7 +119,7 @@ def observations(
     scenario_id = run.scenario_id
     first = checked_window(scenario(scenario_id), from_s, until_s)
     name = run.layout or DEFAULT_LAYOUT
-    air_at, run_id = air_through_a_run(run)
+    air_at, run_id = air_through_a_run(simulator, run)
     weather_at = _weather_at(scenario_id, run.weather)
     start = run_start(scenario_id)
     greenhouse_id = scenario(scenario_id).greenhouse_id
@@ -151,6 +157,7 @@ class Stopped(Exception):
 
 
 def delivered_between(
+    simulator: Simulator,
     run: RunRequest,
     after_s: float | None,
     until_s: float,
@@ -171,7 +178,7 @@ def delivered_between(
     scenario_id = run.scenario_id
     config = scenario(scenario_id)
     point_sensors = _point_sensors(scenario_id, run.layout or DEFAULT_LAYOUT)
-    air_at, run_id = air_through_a_run(run)
+    air_at, run_id = air_through_a_run(simulator, run)
     if stop is not None:
         air_at = _until_stopped(air_at, stop)
     start = run_start(scenario_id)
@@ -206,7 +213,7 @@ def _until_stopped(air_at: AirAt, stop: threading.Event) -> AirAt:
     return checked
 
 
-def sensors_at(run: RunRequest, until_s: float = 0.0) -> SensorsAt:
+def sensors_at(simulator: Simulator, run: RunRequest, until_s: float = 0.0) -> SensorsAt:
     """Where a run's sensors stand at `until_s`: each point sensor's
     freshness, as its observation log gives it, and each camera's frames,
     working out none of the log's observations, which sample the house's air
@@ -214,7 +221,7 @@ def sensors_at(run: RunRequest, until_s: float = 0.0) -> SensorsAt:
     scenario_id = run.scenario_id
     checked_window(scenario(scenario_id), None, until_s)
     name = run.layout or DEFAULT_LAYOUT
-    air_at, run_id = air_through_a_run(run)
+    air_at, run_id = air_through_a_run(simulator, run)
     start = run_start(scenario_id)
     greenhouse_id = scenario(scenario_id).greenhouse_id
     cameras = []
@@ -268,14 +275,16 @@ def _freshness(
     )
 
 
-def truth(run: RunRequest, until_s: float = 0.0, from_s: float | None = None) -> SensorTruths:
+def truth(
+    simulator: Simulator, run: RunRequest, until_s: float = 0.0, from_s: float | None = None
+) -> SensorTruths:
     """What a run's point sensors truly sampled from `from_s`, by default
     the start of the day `until_s` belongs to, to `until_s`: for evaluation
     and QA only."""
     scenario_id = run.scenario_id
     first = checked_window(scenario(scenario_id), from_s, until_s)
     name = run.layout or DEFAULT_LAYOUT
-    air_at, run_id = air_through_a_run(run)
+    air_at, run_id = air_through_a_run(simulator, run)
     return SensorTruths(
         run_id=run_id,
         sensors=sensor_truth(
