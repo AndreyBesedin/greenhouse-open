@@ -28,6 +28,7 @@ from pydantic import BaseModel, Field
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.builder.basic import basic_json_schema
+from greenhouse_sim.builder.edits import edit_json_schema
 from greenhouse_sim.builder.portable import INSTALLATION_SCHEMA_FILE, installation_json_schema
 from greenhouse_sim.cfd.geometry import cfd_geometry_json_schema
 from greenhouse_sim.climate.glazing import GlazingAt
@@ -98,6 +99,8 @@ PUBLISHED: Final[dict[Path, Callable[[], Mapping[str, object]]]] = {
     SNAPSHOT_SCHEMA_FILE: snapshot_json_schema,
     # The setup builder's first form's values, which a client sends (P12.2).
     PACKAGE / "builder" / "basic.schema.json": basic_json_schema,
+    # An edit of many of an installation's items, which a client sends (P12.3).
+    PACKAGE / "builder" / "edit.schema.json": edit_json_schema,
     PACKAGE / "fields" / "field.schema.json": field_json_schema,
     PACKAGE / "cfd" / "geometry.schema.json": cfd_geometry_json_schema,
     MANIFEST_SCHEMA_FILE: manifest_json_schema,

@@ -52,6 +52,28 @@ class Installation(BaseModel):
     layout: Layout
     row_crops: list[RowCrop] = []
 
+    # The layout's items and the envelope's doors and vents are named apart,
+    # as each of them names its own: an edit or a command names one item.
+    @field_validator("layout")
+    @classmethod
+    def _named_apart_from_the_doors_and_vents(cls, layout: Layout, info: ValidationInfo) -> Layout:
+        envelope = info.data.get("envelope")
+        if not isinstance(envelope, Envelope) or not envelope.openings:
+            return layout
+        named = (
+            {fixture.fixture_id for fixture in layout.fixtures()}
+            | {zone.zone_id for zone in layout.zones}
+            | {piece.actuator_id for piece in layout.equipment}
+            | {sensor.sensor_id for sensor in layout.sensors}
+        )
+        shared = sorted(named & {opening.opening_id for opening in envelope.openings})
+        if shared:
+            raise ValueError(
+                f"the layout and the envelope's doors and vents share an identifier: "
+                f"{', '.join(shared)}"
+            )
+        return layout
+
     # Checked as the field, so that a refusal points at it; the layout,
     # before it, is read already, unless it was refused itself.
     @field_validator("row_crops")

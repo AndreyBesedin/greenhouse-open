@@ -8,12 +8,14 @@ Each takes an installation as its file is written (`builder.portable`) and
 answers with it read, so that an editor sends back what it is given.
 """
 
+import json
 from datetime import datetime
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError
 
 from greenhouse_sim.builder.basic import BasicSetup, basic_installation
+from greenhouse_sim.builder.edits import Edit
 from greenhouse_sim.builder.installation import Finding, assess_installation
 from greenhouse_sim.builder.portable import InstallationFileError, import_installation
 from greenhouse_sim.scenarios.catalogue import Scenarios
@@ -86,6 +88,37 @@ def scenario_house(catalogue: Scenarios, scenario_id: str) -> Assessed:
 def assess(file: str) -> Assessed:
     """An installation's file, read and assessed as it stands."""
     return _assessed(_read(file))
+
+
+class _EditAsked(BaseModel):
+    """An edit of many items, and the installation's file it is made on."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    file: dict[str, JsonValue]
+    edit: Edit
+
+
+def edit(values: JsonValue) -> Assessed:
+    """An edit of many items (`builder.edits`), the body's `edit`, made on
+    an installation's file, its `file`: the installation it makes, assessed,
+    for an editor to keep, the one before kept for its undo. Refused, by the
+    field at fault, if the body is not an edit or its file not an
+    installation, and with the reason the edit is refused for: an item it
+    names that the installation has not, or an installation the models
+    refuse, such as a heater on a walkway."""
+    try:
+        asked = _EditAsked.model_validate(values)
+    except ValidationError as error:
+        raise InvalidRequest(f"not an edit: {first_reason(error)}", every_reason(error)) from None
+    installation = _read(json.dumps(asked.file))
+    try:
+        edited = asked.edit.apply(installation)
+    except ValidationError as error:
+        raise InvalidRequest(f"the edit is refused: {first_reason(error)}") from None
+    except ValueError as reason:
+        raise InvalidRequest(f"the edit is refused: {reason}") from None
+    return _assessed(edited)
 
 
 def scene(file: str) -> SceneSnapshot:
