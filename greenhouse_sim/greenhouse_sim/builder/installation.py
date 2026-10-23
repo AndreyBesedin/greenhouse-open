@@ -12,6 +12,8 @@ one variety (`ScenarioConfig`); the assessment says so rather than refuse it.
 
 from typing import Final, Literal
 
+import numpy as np
+from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.domain.envelope import OpeningKind
@@ -19,7 +21,6 @@ from greenhouse_sim.domain.equipment import ActuatorKind
 from greenhouse_sim.domain.layout import Obstruction
 from greenhouse_sim.scenarios.installation import Installation
 from greenhouse_sim.world.envelope import Opening
-from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.layout import inside_the_greenhouse, outside_the_greenhouse
 from greenhouse_sim.world.zones import EDGE_TOLERANCE_M
 
@@ -85,24 +86,42 @@ def assess_installation(draft: Installation) -> list[Finding]:
 def _collisions(draft: Installation) -> list[Finding]:
     """A heater or a dehumidifier through another, or through a fixture in
     the way of movement or air, such as a row's supports: each pair named,
-    as a finding of the pieces of equipment."""
+    as a finding of the pieces of equipment. Only pairs whose boxes along
+    the house's axes meet are tested for the boxes themselves, so that a
+    large house's thousands of supports cost a comparison each."""
     layout = draft.layout
     bodies = [
-        piece.fixture()
-        for piece in layout.equipment
-        if Obstruction.MOVEMENT in piece.fixture().obstructs
+        body
+        for body in (piece.fixture() for piece in layout.equipment)
+        if Obstruction.MOVEMENT in body.obstructs
     ]
+    if not bodies:
+        return []
     solid = [
         fixture
         for fixture in layout.fixtures()
         if {Obstruction.MOVEMENT, Obstruction.AIRFLOW} & fixture.obstructs
     ]
-    pairs = [
-        (body.fixture_id, other.fixture_id)
-        for index, body in enumerate(bodies)
-        for other in bodies[index + 1 :] + solid
-        if _boxes_overlap(body.corners(), other.corners())
+    everything = bodies + solid
+    corners = [
+        np.array([(corner.x, corner.y, corner.z) for corner in fixture.corners()])
+        for fixture in everything
     ]
+    lows = np.array([each.min(axis=0) for each in corners])
+    highs = np.array([each.max(axis=0) for each in corners])
+    pairs = []
+    for index, body in enumerate(bodies):
+        near = np.all(
+            (lows[index] < highs - EDGE_TOLERANCE_M) & (lows < highs[index] - EDGE_TOLERANCE_M),
+            axis=1,
+        )
+        # Each pair of bodies once, and no body with itself.
+        near[: index + 1] = False
+        pairs += [
+            (body.fixture_id, everything[other].fixture_id)
+            for other in np.flatnonzero(near)
+            if _boxes_overlap(corners[index], corners[other])
+        ]
     if not pairs:
         return []
     clashing = [f"{one} with {other}" for one, other in pairs]
@@ -144,38 +163,36 @@ def _rectangles_overlap(one: Opening, other: Opening) -> bool:
     return apart_x < -EDGE_TOLERANCE_M and apart_y < -EDGE_TOLERANCE_M
 
 
-def _boxes_overlap(one: list[Vector3], other: list[Vector3]) -> bool:
-    """Whether two boxes, each by its corners as `Fixture.corners` gives
-    them, share more than a face: no axis separates them, among each box's
-    edges and the products of an edge of each (the separating axis
+def _boxes_overlap(one: NDArray[np.float64], other: NDArray[np.float64]) -> bool:
+    """Whether two boxes, each by its eight corners as `Fixture.corners`
+    gives them, share more than a face: no axis separates them, among each
+    box's edges and the products of an edge of each (the separating axis
     theorem). A cylinder is taken as the box around it."""
-    edges = _box_edges(one) + _box_edges(other)
-    axes = edges + [a.cross(b) for a in _box_edges(one) for b in _box_edges(other)]
-    for axis in axes:
-        if axis.length() < _PARALLEL:
-            continue
-        on_one = [corner.dot(axis) / axis.length() for corner in one]
-        on_other = [corner.dot(axis) / axis.length() for corner in other]
-        if min(on_one) >= max(on_other) - EDGE_TOLERANCE_M:
-            return False
-        if min(on_other) >= max(on_one) - EDGE_TOLERANCE_M:
-            return False
-    return True
+    edges_one, edges_other = _box_edges(one), _box_edges(other)
+    crossed = np.cross(edges_one[:, None, :], edges_other[None, :, :]).reshape(-1, _SPACE)
+    axes = np.concatenate([edges_one, edges_other, crossed])
+    lengths = np.linalg.norm(axes, axis=1)
+    # A product this short comes of parallel edges, and separates nothing
+    # their own axes do not.
+    axes = axes[lengths >= _PARALLEL] / lengths[lengths >= _PARALLEL, None]
+    on_one, on_other = one @ axes.T, other @ axes.T
+    apart = (on_one.min(axis=0) >= on_other.max(axis=0) - EDGE_TOLERANCE_M) | (
+        on_other.min(axis=0) >= on_one.max(axis=0) - EDGE_TOLERANCE_M
+    )
+    return not bool(apart.any())
 
 
-# A product of two edges this short comes of parallel edges, and separates
-# nothing their own axes do not.
+# A product of two edges this short comes of parallel edges.
 _PARALLEL: Final = 1e-9
+# A box's corners and edges, in x, y and z.
+_SPACE: Final = 3
 
 
-def _box_edges(corners: list[Vector3]) -> list[Vector3]:
+def _box_edges(corners: NDArray[np.float64]) -> NDArray[np.float64]:
     """A box's three edges from its first corner: along its x, y and z, in
     the order `Fixture.corners` lists the corners (x, then y, then z)."""
-    first = corners[0]
-    return [
-        Vector3(x=c.x - first.x, y=c.y - first.y, z=c.z - first.z)
-        for c in (corners[4], corners[2], corners[1])
-    ]
+    edges: NDArray[np.float64] = corners[[4, 2, 1]] - corners[0]
+    return edges
 
 
 def _crop_findings(draft: Installation) -> list[Finding]:

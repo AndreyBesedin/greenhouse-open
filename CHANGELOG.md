@@ -19,7 +19,10 @@ breaks the conformance checks is a major version.
   numbers free. An installation's assessment finds a heater or a
   dehumidifier through another or through a row's supports
   (`items_collide`), by the boxes themselves rather than the boxes around
-  them, and doors or vents overlapping on a surface (`openings_overlap`).
+  them, testing only pairs whose boxes along the house's axes meet, and
+  doors or vents overlapping on a surface (`openings_overlap`). An
+  installation whose layout names an item as a door or vent is named is
+  refused.
 - `greenhouse-sim` and the viewer: a scenario's house as the builder's
   start (P12.2). `GET /api/scenarios/{id}/installation` answers a
   scenario's house as an installation, assessed, as its manifest holds it
