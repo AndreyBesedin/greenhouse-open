@@ -49,7 +49,7 @@ class SetLevel(BaseModel):
     device back to whatever control loop runs it. A door or vent is a
     device, its level how far it is open."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     kind: Literal[ActionKind.SET_LEVEL] = ActionKind.SET_LEVEL
     device_id: ItemName
@@ -62,7 +62,7 @@ class SetTarget(BaseModel):
     targets, when a controller has them, are members of their own beside
     this one."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     kind: Literal[ActionKind.SET_TARGET] = ActionKind.SET_TARGET
     target: Literal["heating_day", "heating_night"]
@@ -70,7 +70,7 @@ class SetTarget(BaseModel):
 
 
 class Water(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     kind: Literal[ActionKind.WATER] = ActionKind.WATER
     plant_id: ItemName
@@ -84,7 +84,17 @@ class HarvestScope(StrEnum):
 
 
 class Harvest(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+        allow_inf_nan=False,
+        # The organ with its scope, as the published schema says it too.
+        json_schema_extra={
+            "if": {"properties": {"scope": {"const": "ripe"}}},
+            "then": {"properties": {"organ_id": {"type": "null"}}},
+            "else": {"required": ["organ_id"], "properties": {"organ_id": {"type": "string"}}},
+        },
+    )
 
     kind: Literal[ActionKind.HARVEST] = ActionKind.HARVEST
     plant_id: ItemName
@@ -105,7 +115,25 @@ class Lower(BaseModel):
     """Lower a plant's stem: by so many centimetres, by so many internodes,
     or until its top has so much head room under its wire. Exactly one."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+        allow_inf_nan=False,
+        # Exactly one measure, as the published schema says it too.
+        json_schema_extra={
+            "oneOf": [
+                {"properties": {"by_cm": {"type": "number"}}, "required": ["by_cm"]},
+                {
+                    "properties": {"by_internodes": {"type": "integer"}},
+                    "required": ["by_internodes"],
+                },
+                {
+                    "properties": {"to_head_room_m": {"type": "number"}},
+                    "required": ["to_head_room_m"],
+                },
+            ]
+        },
+    )
 
     kind: Literal[ActionKind.LOWER] = ActionKind.LOWER
     plant_id: ItemName
@@ -124,7 +152,7 @@ class Lower(BaseModel):
 
 
 class RemoveLeaf(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     kind: Literal[ActionKind.REMOVE_LEAF] = ActionKind.REMOVE_LEAF
     plant_id: ItemName
@@ -132,7 +160,7 @@ class RemoveLeaf(BaseModel):
 
 
 class Inspect(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     kind: Literal[ActionKind.INSPECT] = ActionKind.INSPECT
     plant_id: ItemName
@@ -150,7 +178,7 @@ class ActionRef(BaseModel):
     recurring one, or the fallback carried out in its place. `str()` spells
     it for people, `harvest@3` or `vent/fallback`; records keep the parts."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     action_id: ActionId
     # Which occurrence of a recurring action, from 0; None for a one-off.
@@ -170,7 +198,7 @@ class ActionTargets(BaseModel):
     """What an action acts on, by kind of target, which an authorisation
     grant may limit."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     devices: frozenset[str] = frozenset()
     plants: frozenset[str] = frozenset()

@@ -38,7 +38,7 @@ class TargetSelector(BaseModel):
     devices must all be among `devices`, its plants among `plants`, its
     controller targets among `targets`. A kind left None is not limited."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     devices: frozenset[str] | None = None
     plants: frozenset[str] | None = None
@@ -50,7 +50,7 @@ class TargetSelector(BaseModel):
 
 
 class Grant(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     kinds: frozenset[ActionKind] = frozenset()
     # Every target of those kinds, if None.
@@ -92,7 +92,7 @@ class Grant(BaseModel):
 
 
 class AuthorisationGroup(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     group_id: Identifier
     principals: frozenset[Principal]
@@ -104,7 +104,7 @@ class AuthorisationGroup(BaseModel):
 
 
 class AuthorisationConfig(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     version: Annotated[int, Field(ge=1)]
     groups: tuple[AuthorisationGroup, ...]

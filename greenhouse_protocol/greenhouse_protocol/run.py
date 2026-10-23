@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 
 class RunEpoch(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     run_id: Annotated[str, StringConstraints(min_length=1)]
     epoch: Annotated[int, Field(ge=0)]

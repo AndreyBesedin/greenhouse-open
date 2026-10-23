@@ -6,8 +6,24 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from pydantic import ValidationError
 
-from greenhouse_protocol.actions import ActionRef, Harvest, HarvestScope, SetLevel
-from greenhouse_protocol.outcome import ActionOutcome, Harvested, LevelSet, OutcomeStatus
+from greenhouse_protocol.actions import (
+    Action,
+    ActionRef,
+    Harvest,
+    HarvestScope,
+    RemoveLeaf,
+    SetLevel,
+    SetTarget,
+)
+from greenhouse_protocol.outcome import (
+    ActionEffect,
+    ActionOutcome,
+    Harvested,
+    LeafRemoved,
+    LevelSet,
+    OutcomeStatus,
+    TargetSet,
+)
 from greenhouse_protocol.plan import Asap, At, ExecutorKind, ExecutorRef, Principal, PrincipalKind
 
 OPERATOR = Principal(kind=PrincipalKind.PERSON, id="operator")
@@ -76,7 +92,12 @@ def test_an_outcome_of_each_status() -> None:
         ),
         (
             OutcomeStatus.FAILED,
-            dict(reason="no", effect=Harvested(fruit_count=1, fresh_mass_g=5)),
+            dict(
+                reason="no",
+                started_at=TEN,
+                executor=ROBOT,
+                effect=Harvested(fruit_count=1, fresh_mass_g=5),
+            ),
             "no effect",
         ),
         (
@@ -85,6 +106,28 @@ def test_an_outcome_of_each_status() -> None:
             "effect is harvested",
         ),
         (OutcomeStatus.REFUSED, dict(reason="no", due=None), "has no due"),
+        (OutcomeStatus.FAILED, dict(reason="stalled"), "was attempted"),
+        (OutcomeStatus.FAILED, dict(reason="stalled", started_at=TEN), "was attempted"),
+        (OutcomeStatus.REFUSED, dict(reason="no", finished_at=TEN), "that finished started"),
+        (
+            OutcomeStatus.MISSED,
+            dict(reason="late", fallback=ActionRef(action_id="other", fallback=True)),
+            "fallback is harvest/fallback",
+        ),
+        (
+            OutcomeStatus.MISSED,
+            dict(reason="late", fallback=ActionRef(action_id="harvest")),
+            "fallback is harvest/fallback",
+        ),
+        (
+            OutcomeStatus.MISSED,
+            dict(
+                reason="late",
+                ref=ActionRef(action_id="harvest", fallback=True),
+                fallback=ActionRef(action_id="harvest", fallback=True),
+            ),
+            "fallback is",
+        ),
         (
             OutcomeStatus.EXECUTED,
             {**RAN, "finished_at": TEN - MINUTE},
@@ -121,6 +164,22 @@ def test_only_an_as_soon_as_possible_action_dropped_before_it_starts_has_no_due(
     assert dropped.due is None
     with pytest.raises(ValidationError, match="has no due"):
         _outcome(OutcomeStatus.EXECUTED, **RAN, timing=Asap(), due=None)
+
+
+@pytest.mark.parametrize(
+    "action, effect",
+    [
+        (SetLevel(device_id="vent_1", level=1.0), LevelSet(device_id="heater", level=1.0)),
+        (
+            SetTarget(target="heating_day", value_c=20),
+            TargetSet(target="heating_night", value_c=20),
+        ),
+        (RemoveLeaf(plant_id="p30", leaf_id="l1"), LeafRemoved(leaf_id="l2")),
+    ],
+)
+def test_an_effect_acts_on_what_its_action_does(action: Action, effect: ActionEffect) -> None:
+    with pytest.raises(ValidationError, match="acts on what its action does"):
+        _outcome(OutcomeStatus.EXECUTED, **RAN, action=action, effect=effect)
 
 
 def test_an_outcome_names_its_greenhouse_and_carries_its_action() -> None:
