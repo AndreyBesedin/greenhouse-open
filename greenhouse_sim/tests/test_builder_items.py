@@ -8,6 +8,7 @@ import pytest
 from greenhouse_protocol.sensor import CameraIntrinsics
 from pydantic import ValidationError
 
+from greenhouse_sim.builder import installation
 from greenhouse_sim.builder.basic import BasicSetup, basic_installation
 from greenhouse_sim.builder.installation import assess_installation
 from greenhouse_sim.builder.items import (
@@ -333,3 +334,43 @@ def test_doors_or_vents_that_overlap_on_a_surface_are_an_error() -> None:
     (overlap,) = [f for f in assess_installation(house) if f.code == "openings_overlap"]
     assert (overlap.severity, overlap.items) == ("error", ["vent_1", "vent_2"])
     assert "openings_overlap" not in _codes(touching)
+
+
+def test_one_vent_on_each_of_several_surfaces_needs_no_step() -> None:
+    placed = place_openings(_house(), VENT, ["roof_1_right", "roof_2_left"])
+
+    assert [(o.opening_id, o.surface_id) for o in placed.envelope.openings] == [
+        ("vent_1", "roof_1_right"),
+        ("vent_2", "roof_2_left"),
+    ]
+
+
+def test_a_door_or_vent_is_not_named_as_an_item_of_the_layout() -> None:
+    house = place_openings(place_items(_house(), HEATER), VENT, ["roof_1_right"])
+
+    with pytest.raises(ValidationError, match="share an identifier: heater_1"):
+        set_field(house, ["vent_1"], "opening_id", "heater_1")
+    with pytest.raises(ValidationError, match="share an identifier: vent_1"):
+        set_field(house, ["heater_1"], "actuator_id", "vent_1")
+
+
+def test_only_items_whose_boxes_meet_are_tested_for_the_boxes_themselves(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tested: list[int] = []
+    exact = installation._boxes_overlap
+
+    def counted(one: object, other: object) -> bool:
+        tested.append(1)
+        return exact(one, other)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(installation, "_boxes_overlap", counted)
+    # Six heaters along the wall, far from each other and from the rows'
+    # supports: no pair is near enough to be tested.
+    apart = place_items(_house(), HEATER, count=6, step=Vector3(x=2.0, y=0.0, z=0.0))
+    near = place_items(apart, HEATER.model_copy(update={"base": Vector3(x=1.3, y=0.6, z=0)}))
+
+    assert "items_collide" not in _codes(apart)
+    assert tested == []
+    assert "items_collide" in _codes(near)
+    assert tested == [1]
