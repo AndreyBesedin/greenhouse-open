@@ -588,18 +588,19 @@
           "description": "The name of one of the scenario's layout files."
         },
         "row_crops": {
-          "default": [],
           "items": {
             "$ref": "#/$defs/RowCrop"
           },
           "title": "Row Crops",
-          "type": "array"
+          "type": "array",
+          "minItems": 1
         }
       },
       "required": [
         "installation_id",
         "name",
-        "envelope"
+        "envelope",
+        "row_crops"
       ],
       "title": "Installation",
       "type": "object"

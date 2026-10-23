@@ -124,11 +124,15 @@ def _not_json(constant: str) -> float:
 
 def installation_json_schema() -> dict[str, JsonValue]:
     """The JSON Schema an installation's file follows, published as
-    `installation.schema.json`: a draft's, with the format's version and
-    the schema's name."""
+    `installation.schema.json`: a draft's, with the format's version, any
+    it is read in, and the schema's name."""
     schema = Installation.model_json_schema()
     properties = schema["properties"]
-    properties[_VERSION_KEY] = {"const": SCHEMA_VERSION}
+    properties[_VERSION_KEY] = {
+        "type": "integer",
+        "minimum": FIRST_FORMAT,
+        "maximum": SCHEMA_VERSION,
+    }
     properties[_SCHEMA_KEY] = {"type": "string"}
     schema["required"] = [_VERSION_KEY, *schema["required"]]
     return {"$schema": JSON_SCHEMA_DIALECT, **schema}
