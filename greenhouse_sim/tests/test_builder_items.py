@@ -401,3 +401,19 @@ def test_a_list_items_field_is_set_by_its_place() -> None:
     assert opened.envelope.openings[0].opening == 0.5
     with pytest.raises(ValueError, match=re.escape("has no envelope.openings.3.opening")):
         set_value(house, "envelope.openings.3.opening", 0.5)
+
+
+def test_fewer_rows_take_the_crops_of_the_rows_they_no_longer_have() -> None:
+    """Set to one row, a house of two keeps the first row's crop, in the
+    same edit; set to three again, the third has none, for the assessment
+    to say so."""
+    house = _house()
+    assert [crop.row for crop in house.row_crops] == [1, 2]
+
+    one = set_value(house, "layout.crop_rows.rows", 1)
+    three = set_value(one, "layout.crop_rows.rows", 3)
+
+    assert one.layout.crop_rows is not None
+    assert (one.layout.crop_rows.rows, [crop.row for crop in one.row_crops]) == (1, [1])
+    assert [crop.row for crop in three.row_crops] == [1]
+    assert one.row_crops[0] == house.row_crops[0]

@@ -43,11 +43,18 @@ function shown(values: unknown, path: string): string {
   return held === undefined || held === null ? "" : String(held);
 }
 
+/** What a field is given: a number, a flag, a text, or none at all. */
+type Given = number | boolean | string | null;
+
 /** A value as the field takes it: a number's as a number, where it reads as
- * one, for the simulator to check; a flag's as true or false. */
-function typed(field: ModelField, text: string): number | boolean | string {
+ * one, for the simulator to check; a flag's as true or false; and nothing,
+ * null, for a field that may have none, emptied. */
+function typed(field: ModelField, text: string): Given {
   if (field.kind === "flag") {
     return text === "true";
+  }
+  if (field.nullable && text.trim() === "") {
+    return null;
   }
   const asNumber = Number(text);
   return (field.kind === "number" || field.kind === "integer") &&
@@ -66,7 +73,7 @@ function Field({
   field: ModelField;
   value: string;
   busy: boolean;
-  onCommit: (field: ModelField, value: number | boolean | string) => void;
+  onCommit: (field: ModelField, value: Given) => void;
 }) {
   function commit(text: string): void {
     if (text !== value) {

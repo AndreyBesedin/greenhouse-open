@@ -202,6 +202,37 @@ describe("the setup builder (P12.2)", () => {
     );
   });
 
+  it("exports a draft only once the edit under way is made, with it (P12.3)", async () => {
+    const edits = holdingEdits();
+    const exported: Blob[] = [];
+    vi.spyOn(URL, "createObjectURL").mockImplementation((file) => {
+      exported.push(file as Blob);
+      return "blob:exported";
+    });
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    shown = render(<Builder />);
+    const page = shown.container;
+    await settled();
+    click(button(page, "Draft this house"));
+    await settled();
+
+    placeAHeater(page);
+    await settled();
+    expect(button(page, "Export").disabled).toBe(true);
+    click(button(page, "Export"));
+    expect(exported).toEqual([]);
+
+    edits.release();
+    await settled();
+    click(button(page, "Export"));
+    const [file] = exported;
+    expect(exported).toHaveLength(1);
+    expect(JSON.parse(await (file as Blob).text()).layout.equipment).toMatchObject([
+      { actuator_id: "heater_1" },
+    ]);
+  });
+
   it("drops a save's answer that arrives once the draft is left", async () => {
     const saves = holdingSaves();
     vi.spyOn(window, "confirm").mockReturnValue(true);

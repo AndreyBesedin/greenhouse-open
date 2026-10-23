@@ -114,6 +114,9 @@ export function Builder() {
   // Which draft is shown: each start makes it another, so that what was
   // asked for the one before is dropped when it arrives.
   const session = useRef(0);
+  // How many edits the simulator is making of the draft shown: until each
+  // is made, the draft exported would leave it out.
+  const editsUnderWay = useRef(0);
   // The draft as last drawn, for an answer to check it was asked for this
   // one as it stands.
   const shown = useRef<Editing | null>(null);
@@ -338,7 +341,10 @@ export function Builder() {
     const session_ = session.current;
     const sent = editing.history.present;
     setBusy(true);
-    const answer = await editItems(editing.schemaVersion, sent, asked);
+    editsUnderWay.current += 1;
+    const answer = await editItems(editing.schemaVersion, sent, asked).finally(() => {
+      editsUnderWay.current -= 1;
+    });
     setBusy(false);
     if (session.current !== session_) {
       return;
@@ -402,6 +408,10 @@ export function Builder() {
 
   function exportFile(): void {
     if (editing === null) {
+      return;
+    }
+    if (editsUnderWay.current > 0) {
+      setStatus("Not exported: an edit is still being made. Export once it is.");
       return;
     }
     const present = editing.history.present;
@@ -531,7 +541,7 @@ export function Builder() {
               <button type="button" disabled={!changed || busy} onClick={() => void save()}>
                 Save
               </button>
-              <button type="button" onClick={exportFile}>
+              <button type="button" disabled={busy} onClick={exportFile}>
                 Export
               </button>
             </div>

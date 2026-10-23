@@ -82,6 +82,20 @@ describe("a model's fields read from the schema the simulator publishes (P12.3)"
     ]);
   });
 
+  it("follows a model a field may hold or not, and says which fields may be null", () => {
+    const rows = modelFields(schema, "CropRows", "layout.crop_rows.");
+    const byPath = new Map(rows.map((field) => [field.path, field]));
+
+    // A row's gutter, `RowSupport | None`: its fields, not one of text.
+    expect(byPath.has("layout.crop_rows.support")).toBe(false);
+    expect(byPath.get("layout.crop_rows.support.height")).toMatchObject({
+      title: "Support Height",
+      kind: "number",
+    });
+    expect(byPath.get("layout.crop_rows.pair_gap")).toMatchObject({ nullable: true });
+    expect(byPath.get("layout.crop_rows.rows")).toMatchObject({ nullable: false });
+  });
+
   it("offers a choice's values, and takes a flag as true or false", () => {
     const opening = modelFields(schema, "Opening");
 

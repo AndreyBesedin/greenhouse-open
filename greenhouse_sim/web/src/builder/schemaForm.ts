@@ -68,17 +68,20 @@ export function formFields(schema: Record<string, unknown>): FormField[] {
 
 /** A field of one of the schema's models, as an inspector shows it: its
  * path within the model, a nested object's by its own (`base.x`). A flag is
- * a field that is true or false. */
+ * a field that is true or false; a field that may be null besides, such as
+ * a pair of rows' gap, is `nullable`. */
 export interface ModelField extends Omit<FormField, "kind" | "name" | "required"> {
   path: string;
   kind: FieldKind | "flag";
+  nullable: boolean;
 }
 
 // How deep the inspector follows a model's nested objects: a position's
 // coordinates, a sensor's imperfections, not a transform's rotation.
 const DEEPEST = 1;
 
-/** The one kind of value a property holds, if it allows null besides. */
+/** The one kind of value a property holds, if it allows null besides, with
+ * the reference that kind is written as, if it is a model's. */
 function oneOf(property: Record<string, unknown>): Record<string, unknown> | null {
   if (!Array.isArray(property.anyOf)) {
     return property;
@@ -86,6 +89,15 @@ function oneOf(property: Record<string, unknown>): Record<string, unknown> | nul
   const kinds = property.anyOf.filter((each) => isObject(each) && each.type !== "null");
   const [only] = kinds;
   return kinds.length === 1 && isObject(only) ? { ...property, ...only } : null;
+}
+
+/** Whether a property allows null besides its kind. */
+function allowsNull(property: unknown): boolean {
+  return (
+    isObject(property) &&
+    Array.isArray(property.anyOf) &&
+    property.anyOf.some((each) => isObject(each) && each.type === "null")
+  );
 }
 
 function capitalised(key: string): string {
@@ -107,14 +119,17 @@ export function modelFields(
   const model = definitions[name];
   const properties = isObject(model) && isObject(model.properties) ? model.properties : {};
   return Object.entries(properties).flatMap(([key, property]): ModelField[] => {
-    const field = oneOf(resolved(schema, property));
+    // The kind it holds, null aside, and then the model that kind refers
+    // to: a gutter that rows may have, `RowSupport | None`, is a model.
+    const kind = oneOf(isObject(property) ? property : {});
+    const field = kind === null ? null : resolved(schema, kind);
     // A list has edits of its own; a constant, such as a kind, is no field
     // to change.
-    if (field === null || field.type === "array" || "const" in field) {
+    if (field === null || kind === null || field.type === "array" || "const" in field) {
       return [];
     }
     const path = `${prefix}${key}`;
-    const reference = isObject(property) && typeof property.$ref === "string" ? property.$ref : "";
+    const reference = typeof kind.$ref === "string" ? kind.$ref : "";
     // A field is titled by its own title, never its model's ("Vector3",
     // "OpeningKind"), or else by its name.
     const own = isObject(property) ? property.title : undefined;
@@ -137,7 +152,7 @@ export function modelFields(
         : [];
     }
     const choices = Array.isArray(field.enum) ? field.enum.map(String) : [];
-    const kind: ModelField["kind"] =
+    const entered: ModelField["kind"] =
       choices.length > 0
         ? "choice"
         : field.type === "boolean"
@@ -151,8 +166,9 @@ export function modelFields(
       {
         path,
         title: `${within}${title}`,
-        kind,
+        kind: entered,
         choices,
+        nullable: allowsNull(property),
         ...(typeof field.minimum === "number" ? { minimum: field.minimum } : {}),
         ...(typeof field.maximum === "number" ? { maximum: field.maximum } : {}),
       },
