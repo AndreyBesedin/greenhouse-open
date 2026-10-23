@@ -28,10 +28,22 @@ the new format out.
 from collections.abc import Callable, Sequence
 from datetime import datetime, timedelta
 from enum import StrEnum
-from typing import Protocol
+from typing import Final, Protocol
 
 from greenhouse_protocol.action import RequestedAction
-from greenhouse_protocol.actions import ActionKind, ActionRef, Inspect, SetLevel
+from greenhouse_protocol.actions import (
+    Action,
+    ActionKind,
+    ActionRef,
+    Harvest,
+    HarvestScope,
+    Inspect,
+    Lower,
+    RemoveLeaf,
+    SetLevel,
+    SetTarget,
+    Water,
+)
 from greenhouse_protocol.assignment import Assignment, ExecutionReport
 from greenhouse_protocol.execution import ActionOutcome
 
@@ -131,18 +143,39 @@ class ExecutorUnderTest(ActionExecutor, Protocol):
 
 type MakeExecutor = Callable[[datetime], ExecutorUnderTest]
 
+# An action of each kind, for the executor's check to assign when it is
+# given none: the first of the kinds the executor carries out, in this
+# order.
+CONFORMANCE_ACTIONS: Final[tuple[Action, ...]] = (
+    SetLevel(device_id="conformance_device", level=1.0),
+    Inspect(plant_id="conformance_plant", reason="a conformance check"),
+    SetTarget(target="heating_day", value_c=18.0),
+    Water(plant_id="conformance_plant", amount_ml=100.0),
+    Harvest(plant_id="conformance_plant", scope=HarvestScope.RIPE),
+    Lower(plant_id="conformance_plant", by_cm=10.0),
+    RemoveLeaf(plant_id="conformance_plant", leaf_id="conformance_leaf"),
+)
 
-def check_executor(make: MakeExecutor, start: datetime) -> list[str]:
+
+def check_executor(
+    make: MakeExecutor, start: datetime, *, action: Action | None = None
+) -> list[str]:
     """Holds an executor to the contract's rules, each on an executor `make`
     gives for a clock starting at `start`: an assignment sent twice carried
     out at most once, one revoked before it starts never carried out, a
     revocation too late said so, and an unknown assignment said unknown.
-    Returns the violations, empty when it conforms."""
+    The assignments carry `action`, one of its kinds on what it can act on;
+    by default, an action of the first kind it names
+    (`CONFORMANCE_ACTIONS`). Returns the violations, empty when it
+    conforms."""
     executor = make(start)
-    if ActionKind.SET_LEVEL in executor.kinds():
-        action: SetLevel | Inspect = SetLevel(device_id="conformance_device", level=1.0)
-    else:
-        action = Inspect(plant_id="conformance_plant", reason="a conformance check")
+    kinds = executor.kinds()
+    if action is None:
+        action = next((each for each in CONFORMANCE_ACTIONS if each.kind in kinds), None)
+        if action is None:
+            return ["it carries out no kind of action"]
+    elif action.kind not in kinds:
+        return [f"it was checked with {action.kind}, a kind it does not carry out"]
     longest = timedelta(seconds=executor.longest_duration_s(action.kind))
     soon = Assignment(
         assignment_id="soon",

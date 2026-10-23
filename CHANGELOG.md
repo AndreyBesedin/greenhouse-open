@@ -40,8 +40,10 @@ breaks the conformance checks is a major version.
   `occurrences`/`check_limits`; `contracts.execution.ActionExecutor`, with
   `Revocation` and `AssignmentStatus`; the consumer interface's outcome log
   (`OutcomeBatch` at `/consumer/v1/runs/{run_id}/outcomes`), held by
-  `check_batch` and `check_polls` with `check_outcomes`. `check_gateway` and
-  `check_executor` hold an implementation to the contracts' rules, and
+  `check_batch` and `check_polls` with `check_outcomes`, one outcome for
+  each action however the log is paged. `check_gateway` and
+  `check_executor` (with an action of a kind the executor carries out)
+  hold an implementation to the contracts' rules, and
   `contracts.memory_gateway` is an in-memory reference implementation of
   both, which passes them, with faults to inject. The schemas of the
   receipt, plan state, limits and outcome batch are published beside the

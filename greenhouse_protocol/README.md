@@ -59,7 +59,8 @@ replaces, so that the description checks it.
 - `execution`: an executor behind a gateway (`ActionExecutor`), which
   carries an assignment out at most once, may be revoked before it starts,
   and is asked how an assignment stands when its report does not come;
-  `check_executor` holds one to that. How an environment that cannot
+  `check_executor` holds one to that, with an action of a kind it carries
+  out: by default the first it names, or one given. How an environment that cannot
   execute (a recorded history) refuses: `ActionNotExecutable`. Its
   `ActionExecutionAdapter` is deprecated.
 - `memory_gateway`: an in-memory reference implementation of the two, a

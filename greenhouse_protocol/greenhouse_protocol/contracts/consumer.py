@@ -326,7 +326,8 @@ def check_polls(batches: Iterable[Batch], *, greenhouse_id: str | None = None) -
     """What a sequence of batches of one log, as a client received them,
     must satisfy together: epochs that never decrease, a clock that never
     turns back within one, repolls that extend rather than rewrite, cursors
-    the producer gave, and no record twice."""
+    the producer gave, no record twice, and no action ending twice, however
+    the log was paged."""
     polls = list(batches)
     violations: list[str] = []
     for batch in polls:
@@ -337,6 +338,10 @@ def check_polls(batches: Iterable[Batch], *, greenhouse_id: str | None = None) -
     epoch = -1
     given: set[int] = set()
     seen: dict[str, int] = {}
+    # Where each action of the epoch ended, and in which poll: an action
+    # ends once (`check_outcomes`), however the log is paged; ending twice
+    # within one batch is that batch's check's to say.
+    ended: dict[tuple[str, int, str], tuple[int, int]] = {}
     # The log as the polls revealed it, the record at each position: a
     # repoll must hold the same record there, not only the same identity.
     log: dict[int, LogRecord] = {}
@@ -347,6 +352,7 @@ def check_polls(batches: Iterable[Batch], *, greenhouse_id: str | None = None) -
             violations.append(f"{label} returns to epoch {batch.epoch}")
         if batch.epoch != epoch:
             epoch, given, seen, log, clock = batch.epoch, {FIRST_CURSOR}, {}, {}, None
+            ended = {}
         if clock is not None and batch.simulated_now < clock:
             violations.append(
                 f"{label} turns the clock back within epoch {epoch}: "
@@ -376,6 +382,14 @@ def check_polls(batches: Iterable[Batch], *, greenhouse_id: str | None = None) -
                     f"at position {position} after position {delivered_before}"
                 )
             seen.setdefault(identity, position)
+            if isinstance(record, ActionOutcome):
+                action = (record.plan_id, record.revision, str(record.ref))
+                first = ended.setdefault(action, (position, index))
+                if first[0] != position and first[1] != index:
+                    violations.append(
+                        f"{label} ends {action[2]} of plan {action[0]!r} revision {action[1]} "
+                        f"again, at position {position} after position {first[0]}"
+                    )
             before = log.get(position - 1)
             if before is not None and delivered_at(record) < delivered_at(before):
                 violations.append(

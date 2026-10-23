@@ -107,3 +107,27 @@ def test_a_receipt_is_accepted_exactly_when_it_has_no_errors() -> None:
         Receipt(accepted=False)
     with pytest.raises(ValidationError, match="refused and cancelled nothing"):
         Receipt(accepted=False, errors=("stale",), cancelled=(ActionRef(action_id="a"),))
+
+
+def test_an_action_ends_once_however_its_log_is_paged() -> None:
+    """Two outcomes of one action, each in a page of its own (#326's
+    review): the polls together are refused, as one batch holding both is;
+    a repoll of the same position, or a new epoch's outcome, is not."""
+    first = _refused("o1", "vent", TEN)
+    twin = _refused("o2", "vent", TEN + MINUTE)
+    paged = [_batch(first), _batch(twin, after=1)]
+
+    assert check_polls(paged) == [
+        "outcomes batch of run 'run_1' epoch 0 after=1 (poll 1) ends vent of plan 'p' "
+        "revision 1 again, at position 2 after position 1"
+    ]
+    assert check_polls([_batch(first), _batch(first)]) == []
+    started_over = OutcomeBatch(
+        run_id="run_1",
+        epoch=1,
+        after=0,
+        next=1,
+        simulated_now=TEN + 10 * MINUTE,
+        outcomes=(twin.model_copy(update={"epoch": 1}),),
+    )
+    assert check_polls([_batch(first), started_over]) == []

@@ -184,6 +184,16 @@ class MemoryExecutor:
     def reports(self, after: int = 0) -> tuple[ExecutionReport, ...]:
         return tuple(self._reports[after:])
 
+    def finishes(self) -> tuple[datetime, ...]:
+        """When each assignment it holds and has not finished will finish,
+        so that a gateway on the same clock wakes then, as one on a real
+        clock hears the report."""
+        return tuple(
+            (held.started or held.assignment.at) + self._duration
+            for held in self._held.values()
+            if not held.revoked and held.finished is None
+        )
+
     def advance(self, to: datetime) -> None:
         held_in_order = sorted(
             self._held.values(), key=lambda h: (h.assignment.at, h.assignment.assignment_id)
@@ -230,10 +240,19 @@ class _Action:
     starts_at: datetime | None = None
     late: bool = False
     carried_from: RunEpoch | None = None
+    # Where the gateway holds it: under its key, or, once a revision has
+    # replaced it while it ran, under a key of its revision's, so that it
+    # still ends in its own outcome.
+    slot: str = ""
 
     @property
     def key(self) -> str:
         return f"{self.plan_id}/{self.ref}"
+
+    @property
+    def current(self) -> bool:
+        """Whether it is its key's incarnation, not one a revision replaced."""
+        return self.slot in {"", self.key}
 
 
 @dataclass
@@ -472,7 +491,9 @@ class InMemoryGateway:
             self.continues_from = before
             for action in pending:
                 action.carried_from = before
-                reason = self._cannot(action.action, action.principal, action.timing)
+                reason = self._cannot(
+                    action.action, action.principal, action.timing, action.planned.executed_by
+                )
                 if reason is not None:
                     self._withdraw(action)
                     self._end(action, OutcomeStatus.REFUSED, reason=f"{reason}, as it was carried")
@@ -511,11 +532,20 @@ class InMemoryGateway:
             stale.append(f"stale: revision {plan.revision} of {plan.plan_id!r} is not newer")
         return stale
 
-    def _cannot(self, action: Action, principal: Principal, timing: Timing) -> str | None:
+    def _cannot(
+        self,
+        action: Action,
+        principal: Principal,
+        timing: Timing,
+        executed_by: tuple[ExecutorRef, ...] | None = None,
+    ) -> str | None:
         if not self._config.allows(principal, action):
             return f"{principal.id} is not authorised to {action.kind}"
         if action.kind not in self._executor.kinds():
             return f"no executor carries out {action.kind}"
+        if executed_by is not None and not any(_names(each, EXECUTOR) for each in executed_by):
+            permitted = ", ".join(f"{each.kind}:{each.id or 'any'}" for each in executed_by)
+            return f"none of those who may carry it out ({permitted}) is this run's executor"
         acted_on = targets_of(action)
         missing = (
             (acted_on.devices - self._items.devices)
@@ -574,13 +604,39 @@ class InMemoryGateway:
                     order=(sequence, position, n),
                     due=_due(timing),
                 )
-                reason = self._cannot(action.action, action.principal, timing)
+                reason = self._cannot(action.action, action.principal, timing, planned.executed_by)
                 if reason is not None:
+                    self._retire(action.key)
                     self._end(action, OutcomeStatus.REFUSED, reason=reason)
                     refused.append(action.ref)
                 else:
-                    self._actions[action.key] = action
+                    self._hold(action)
         return tuple(refused)
+
+    def _retire(self, key: str) -> None:
+        """Makes way for a new incarnation of the action under `key`. The one
+        before, which started and so a revision could not withdraw, runs on
+        under its revision's key, to its own outcome; and what the one
+        before resolved to is forgotten, so that what waits for the key
+        waits for the new incarnation."""
+        before = self._actions.get(key)
+        if before is not None:
+            before.slot = f"{key}#{before.revision}"
+            self._actions[before.slot] = before
+            del self._actions[key]
+        self._resolved.pop(key, None)
+        self._failed_hard.discard(key)
+
+    def _hold(self, action: _Action) -> None:
+        """Holds a new incarnation of an action under its key."""
+        self._retire(action.key)
+        action.slot = action.key
+        self._actions[action.key] = action
+
+    def _active(self, action: _Action) -> bool:
+        """Whether an action taken from an earlier listing is still held: one
+        ended since, as by an aborted plan, is not dispatched."""
+        return self._actions.get(action.slot or action.key) is action
 
     def _chosen(self, key: ActionKey) -> list[_Action]:
         return [
@@ -607,9 +663,17 @@ class InMemoryGateway:
         return True
 
     def _in_order(self) -> list[_Action]:
+        """Its actions in the one order of one instant: by when they fall
+        due, then recurring before one-off, then the order the revisions
+        were accepted in, then place in the plan. What waits for a
+        prerequisite is held back until it resolves."""
         return sorted(
             self._actions.values(),
-            key=lambda a: (a.due or datetime.max.replace(tzinfo=self.now.tzinfo), a.order),
+            key=lambda a: (
+                a.due or datetime.max.replace(tzinfo=self.now.tzinfo),
+                a.planned.every is None,
+                a.order,
+            ),
         )
 
     def _next_moment(self, to: datetime) -> datetime | None:
@@ -621,6 +685,7 @@ class InMemoryGateway:
                 moments += [action.due - lead, action.due]
             if action.starts_at is not None:
                 moments += [action.starts_at, action.starts_at + longest]
+        moments += self._executor.finishes()
         later = [m for m in moments if self.now < m <= to]
         return min(later, default=None)
 
@@ -632,6 +697,8 @@ class InMemoryGateway:
                 len(self._log),
                 tuple((a.key, a.state, a.due) for a in self._actions.values()),
             )
+            # Checked again as it falls due, before the executor may start it.
+            self._recheck_due()
             self._executor.advance(self.now)
             self._collect()
             self._settle()
@@ -661,7 +728,7 @@ class InMemoryGateway:
 
     def _settle(self) -> None:
         for action in self._in_order():
-            if action.state not in NOT_STARTED:
+            if not self._active(action) or action.state not in NOT_STARTED:
                 continue
             ends = [self._resolved.get(key) for key in action.waits_for]
             failed = [
@@ -687,37 +754,46 @@ class InMemoryGateway:
 
     def _dispatch(self) -> None:
         for action in self._in_order():
+            if not self._active(action) or action.state != ActionStateKind.WAITING:
+                continue
             if action.due is None or any(self._resolved.get(k) is None for k in action.waits_for):
                 continue
             lead = timedelta(seconds=self._executor.lead_time_s(action.action.kind))
-            if action.state == ActionStateKind.WAITING and self.now >= action.due - lead:
-                if not self._config.allows(action.principal, action.action):
-                    self._end(
-                        action,
-                        OutcomeStatus.REFUSED,
-                        reason=f"{action.principal.id} is no longer authorised",
-                    )
-                    continue
-                deadline = _deadline(action)
-                if deadline is not None and self.now > deadline:
-                    self._late(action)
-                    continue
-                self._assign(action)
-            elif (
-                action.state == ActionStateKind.ASSIGNED
-                and action.starts_at is not None
-                and self.now >= action.starts_at
+            if self.now < action.due - lead:
+                continue
+            if not self._config.allows(action.principal, action.action):
+                self._end(
+                    action,
+                    OutcomeStatus.REFUSED,
+                    reason=f"{action.principal.id} is no longer authorised",
+                )
+                continue
+            deadline = _deadline(action)
+            if deadline is not None and self.now > deadline:
+                self._late(action)
+                continue
+            self._assign(action)
+
+    def _recheck_due(self) -> None:
+        """Each assignment whose instant has come, its authorisation checked
+        again: revoked, and refused, if its principal may no longer carry it
+        out; started otherwise."""
+        for action in self._in_order():
+            if (
+                not self._active(action)
+                or action.state != ActionStateKind.ASSIGNED
+                or action.starts_at is None
+                or self.now < action.starts_at
             ):
-                if not self._config.allows(action.principal, action.action) and self._withdraw(
-                    action
-                ):
-                    self._end(
-                        action,
-                        OutcomeStatus.REFUSED,
-                        reason=f"{action.principal.id} is no longer authorised",
-                    )
-                elif action.state == ActionStateKind.ASSIGNED:
-                    action.state = ActionStateKind.STARTED
+                continue
+            if not self._config.allows(action.principal, action.action) and self._withdraw(action):
+                self._end(
+                    action,
+                    OutcomeStatus.REFUSED,
+                    reason=f"{action.principal.id} is no longer authorised",
+                )
+            elif action.state == ActionStateKind.ASSIGNED:
+                action.state = ActionStateKind.STARTED
 
     def _assign(self, action: _Action, *, late: bool = False) -> None:
         assert action.due is not None
@@ -749,17 +825,19 @@ class InMemoryGateway:
             fallback = ActionRef(
                 action_id=action.ref.action_id, occurrence=action.ref.occurrence, fallback=True
             )
-            self._actions[f"{action.plan_id}/{fallback}"] = _Action(
-                plan_id=action.plan_id,
-                revision=action.revision,
-                ref=fallback,
-                planned=action.planned,
-                action=action.planned.lateness.fallback,
-                timing=Asap(),
-                principal=action.principal,
-                waits_for=[],
-                order=action.order,
-                due=self.now,
+            self._hold(
+                _Action(
+                    plan_id=action.plan_id,
+                    revision=action.revision,
+                    ref=fallback,
+                    planned=action.planned,
+                    action=action.planned.lateness.fallback,
+                    timing=Asap(),
+                    principal=action.principal,
+                    waits_for=[],
+                    order=action.order,
+                    due=self.now,
+                )
             )
         if on_late == OnLate.CRITICAL:
             self._failed_hard.add(action.key)
@@ -771,7 +849,7 @@ class InMemoryGateway:
 
     def _time_out(self) -> None:
         for action in self._in_order():
-            if action.starts_at is None or action.assignment_id is None:
+            if not self._active(action) or action.starts_at is None or action.assignment_id is None:
                 continue
             longest = timedelta(seconds=self._executor.longest_duration_s(action.action.kind))
             if self.now < action.starts_at + longest or action.state not in {
@@ -843,8 +921,11 @@ class InMemoryGateway:
             else None,
         )
         self._log.append(outcome)
-        self._resolved[action.key] = outcome
-        self._actions.pop(action.key, None)
+        if action.current:
+            self._resolved[action.key] = outcome
+        slot = action.slot or action.key
+        if self._actions.get(slot) is action:
+            del self._actions[slot]
 
 
 def _due(timing: Timing) -> datetime | None:
@@ -876,3 +957,9 @@ def _acts_on_any(action: Action, targets: ActionTargets) -> bool:
         or acted_on.plants & targets.plants
         or acted_on.targets & targets.targets
     )
+
+
+def _names(permitted: ExecutorRef, executor: ExecutorRef) -> bool:
+    """Whether `permitted`, from an action's `executed_by`, names
+    `executor`: its kind, and its id or any of the kind."""
+    return permitted.kind == executor.kind and permitted.id in {None, executor.id}
