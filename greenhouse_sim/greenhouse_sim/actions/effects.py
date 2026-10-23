@@ -21,7 +21,6 @@ def apply_action(
     action: RequestedAction,
     config: ScenarioConfig,
     *,
-    day: int,
     timestamp: datetime,
 ) -> tuple[GreenhouseWorld, Event]:
     """Applies an already-validated action, returning the updated world and its Event.
@@ -32,12 +31,12 @@ def apply_action(
     unaware of which one runs.
     """
     if isinstance(action, WaterPlantAction):
-        return _apply_water(world, action, config, day=day, timestamp=timestamp)
+        return _apply_water(world, action, config, timestamp=timestamp)
     if isinstance(action, HarvestPlantAction):
-        return _apply_harvest(world, action, day=day, timestamp=timestamp)
+        return _apply_harvest(world, action, timestamp=timestamp)
     if isinstance(action, LowerPlantAction):
-        return _apply_lower(world, action, day=day, timestamp=timestamp)
-    return _apply_inspection(world, action, day=day, timestamp=timestamp)
+        return _apply_lower(world, action, timestamp=timestamp)
+    return _apply_inspection(world, action, timestamp=timestamp)
 
 
 def _apply_water(
@@ -45,7 +44,6 @@ def _apply_water(
     action: WaterPlantAction,
     config: ScenarioConfig,
     *,
-    day: int,
     timestamp: datetime,
 ) -> tuple[GreenhouseWorld, Event]:
     # Water reaches the root zone, up to what it holds. How the plant responds
@@ -67,7 +65,7 @@ def _apply_water(
 
 
 def _apply_harvest(
-    world: GreenhouseWorld, action: HarvestPlantAction, *, day: int, timestamp: datetime
+    world: GreenhouseWorld, action: HarvestPlantAction, *, timestamp: datetime
 ) -> tuple[GreenhouseWorld, Event]:
     plant = world.plant(action.plant_id)
     harvested_mass_g = 0.0
@@ -104,7 +102,7 @@ def _apply_harvest(
 
 
 def _apply_lower(
-    world: GreenhouseWorld, action: LowerPlantAction, *, day: int, timestamp: datetime
+    world: GreenhouseWorld, action: LowerPlantAction, *, timestamp: datetime
 ) -> tuple[GreenhouseWorld, Event]:
     plant = world.plant(action.plant_id)
     updated_plant = plant.model_copy(
@@ -124,7 +122,7 @@ def _apply_lower(
 
 
 def _apply_inspection(
-    world: GreenhouseWorld, action: ScheduleInspectionAction, *, day: int, timestamp: datetime
+    world: GreenhouseWorld, action: ScheduleInspectionAction, *, timestamp: datetime
 ) -> tuple[GreenhouseWorld, Event]:
     event = Event(
         event_id=event_id(action.plant_id, timestamp, "inspection"),

@@ -185,10 +185,10 @@ def _crop_scene(simulator: Simulator, day: int) -> SceneSnapshot:
     )
 
 
-def _house(moment: Moment, levels: dict[str, float]) -> object:
-    """The house as the viewer draws it at the moment, its equipment at its
-    levels and its doors and vents as open as they stand; without its crop,
-    which the crop's day gives."""
+def _house(levels: dict[str, float]) -> object:
+    """The house as the viewer draws it, its equipment at its levels and its
+    doors and vents as open as they stand; without its crop, which the
+    crop's day gives."""
     config = scenarios.scenario(PACKAGED, SCENARIO)
     equipment = {piece.actuator_id for piece in config.layout.equipment}
     scene = scenarios.initial_scene(
@@ -217,7 +217,7 @@ def _moment(simulator: Simulator, moment: Moment) -> tuple[dict[str, Any], dict[
     }
     drawn: dict[str, Any] = {
         "time_s": moment.time_s,
-        "house": _house(moment, state.levels),
+        "house": _house(state.levels),
         "crop_day": days_ended(moment.time_s),
         "weather": _rounded(outside.model_dump(mode="json")),
     }

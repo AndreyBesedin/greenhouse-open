@@ -45,7 +45,7 @@ LABEL_DIGITS = 8
 type LetGo = Literal["past the bound", "dropped", "forgotten"]
 
 
-def _never(key: object) -> bool:
+def _never(_key: object) -> bool:
     return False
 
 
