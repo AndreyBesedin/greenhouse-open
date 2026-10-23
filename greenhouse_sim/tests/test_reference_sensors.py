@@ -85,7 +85,9 @@ def test_its_heater_warms_its_air_as_a_unit_heater_does_and_keeps_a_humidity_it_
 def test_its_hygrometers_read_a_house_s_humidity_from_the_runs_start(simulator: Simulator) -> None:
     # Through its first two hours they read 0% and then 100% for an hour
     # and more, from the grid run that ran wild (#198).
-    readings, _ = delivered_between(simulator, RunRequest(SCENARIO), None, FROM_THE_START_S, 60.0)
+    readings, _ = delivered_between(
+        simulator, RunRequest(SCENARIO), None, FROM_THE_START_S, every_s=60.0
+    )
     humidity = [r.value for r in readings if r.sensor_id in {"humidity_front", "humidity_back"}]
 
     assert len(humidity) >= 2 * FROM_THE_START_S / HOUR_S * 60

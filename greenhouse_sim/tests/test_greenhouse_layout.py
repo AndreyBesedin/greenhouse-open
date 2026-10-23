@@ -78,6 +78,7 @@ def _layout(
     pitch: float,
     spacing: tuple[float, float | None],
     support: RowSupport | None,
+    *,
     aisles: bool,
 ) -> Layout:
     """Rows filling the house along its length (heading 0) or across it (a
@@ -199,7 +200,7 @@ CASES = [
 @pytest.mark.parametrize("case", CASES, ids=[case.name() for case in CASES])
 def test_a_layout_keeps_its_promises(case: Case) -> None:
     house, pitch, support = HOUSES[case.house], case.pitch, case.support
-    layout = _layout(house, case.heading, pitch, case.spacing, support, case.aisles)
+    layout = _layout(house, case.heading, pitch, case.spacing, support, aisles=case.aisles)
     rows = layout.crop_rows
     assert rows is not None
     positions = layout.planting_positions()

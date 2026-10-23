@@ -230,7 +230,7 @@ class WholeHouse:
             course = self._course(air, steady, outside, now, sun)
             switch = self._switching_s(air, course, now, end - now)
             span = end - now if switch is None else switch
-            air = self._advance(air, steady, outside, span, now, sun, course)
+            air = self._advance(air, steady, outside, span, now, sun_w=sun, course=course)
             now = end if switch is None else now + span
             if switch is not None:
                 air = replace(air, heating=not air.heating)
@@ -318,6 +318,7 @@ class WholeHouse:
         outside: WeatherState,
         duration_s: float,
         time_s: float,
+        *,
         sun_w: float = 0.0,
         course: _Course | None = None,
     ) -> HouseAir:

@@ -234,28 +234,17 @@ def new_store() -> Store[RunKey, ClimateDay]:
     return Store("climate runs", KEPT_RUNS, label=run_label)
 
 
-def _climate_day(
-    simulator: Simulator,
-    scenario_id: str,
-    layout: str,
-    weather: str,
-    levels: _Pairs,
-    openings: _Pairs,
-    commands: tuple[Commanded, ...],
-    targets: tuple[Commanded, ...] = (),
-) -> ClimateDay:
-    """A scenario's climate run through a day (`greenhouse_sim.climate.day`),
-    with one of its layouts, under a weather, its
-    equipment set to `levels` from the start and then as `commands` set it,
-    its targets changed as `targets` change them,
-    and its doors and vents open as `openings` say: one of the `KEPT_RUNS`
-    kept, or a new one, carrying on from those kept for the same house under
-    the same weather up to where their schedules differ, as an override's
-    does."""
-    key = (scenario_id, layout, weather, levels, openings, commands, targets)
+def _climate_day(simulator: Simulator, key: RunKey) -> ClimateDay:
+    """The climate run through a day (`greenhouse_sim.climate.day`) that `key`
+    names: a scenario with one of its layouts, under a weather, its equipment
+    set to its levels from the start and then as its commands set it, its
+    targets changed as its target changes do, and its doors and vents open as
+    its openings say: one of the `KEPT_RUNS` kept, or a new one, carrying on
+    from those kept for the same house under the same weather up to where
+    their schedules differ, as an override's does."""
 
     def make(others: list[tuple[RunKey, ClimateDay]]) -> ClimateDay:
-        run = ClimateDay(_new_climate_run(simulator, *key))
+        run = ClimateDay(_new_climate_run(simulator, key))
         for _, other in others:
             run.carry_on_from(other)
         taken_over = agreeing(simulator, house_of(key), run.run.schedule)
@@ -302,7 +291,7 @@ def _everything_off(simulator: Simulator, key: RunKey) -> ClimateDay:
     weather, its doors and vents as open from the start, and nothing run."""
     scenario_id, layout, weather, _, openings, *_ = key
     off = tuple(sorted(off_levels(simulator.catalogue, scenario_id).items()))
-    return _climate_day(simulator, scenario_id, layout, weather, off, openings, (), ())
+    return _climate_day(simulator, (scenario_id, layout, weather, off, openings, (), ()))
 
 
 def climate_run(simulator: Simulator, run: RunRequest) -> tuple[RunKey, ClimateDay]:
@@ -325,7 +314,7 @@ def climate_run(simulator: Simulator, run: RunRequest) -> tuple[RunKey, ClimateD
         _checked(config, run.commands, run.daily),
         _checked_targets(config, run.targets),
     )
-    return key, _climate_day(simulator, *key)
+    return key, _climate_day(simulator, key)
 
 
 def seed_kept_climate_runs(simulator: Simulator, state: KeptState) -> None:
@@ -356,18 +345,10 @@ def climate_vents(config: ScenarioConfig, geometry: CfdGeometry) -> list[Vent]:
     ]
 
 
-def _new_climate_run(
-    simulator: Simulator,
-    scenario_id: str,
-    layout: str,
-    weather: str,
-    levels: _Pairs,
-    openings: _Pairs,
-    commands: tuple[Commanded, ...],
-    targets: tuple[Commanded, ...] = (),
-) -> ClimateRun:
-    """A scenario's climate run, from its start. Its doors and vents are those
-    open at the start, or opened by a command at a later moment."""
+def _new_climate_run(simulator: Simulator, key: RunKey) -> ClimateRun:
+    """The climate run `key` names, from its start. Its doors and vents are
+    those open at the start, or opened by a command at a later moment."""
+    scenario_id, layout, weather, levels, openings, commands, targets = key
     config = changed(
         simulator.catalogue,
         scenario(simulator.catalogue, scenario_id),
@@ -412,6 +393,7 @@ class _Climate:
     def __init__(
         self,
         simulator: Simulator,
+        *,
         scenario_id: str,
         layout: str,
         weather: str,
@@ -434,7 +416,7 @@ class _Climate:
     def field(self, field_id: str, grid: FieldGrid, time_s: float = 0.0) -> EnvironmentField:
         if grid != air_grid(scenario(self._simulator.catalogue, self.key[0])):
             raise ValueError("a climate run is drawn on its own grid")
-        return _climate_day(self._simulator, *self.key).field(field_id, time_s)
+        return _climate_day(self._simulator, self.key).field(field_id, time_s)
 
 
 def _models(simulator: Simulator, run: RunRequest) -> dict[str, AirflowModel]:
@@ -462,13 +444,13 @@ def _models(simulator: Simulator, run: RunRequest) -> dict[str, AirflowModel]:
     if config.layout.equipment:
         models[CLIMATE] = _Climate(
             simulator,
-            run.scenario_id,
-            layout_name(layout),
-            weather,
-            running,
-            run.openings,
-            scheduled,
-            targets,
+            scenario_id=run.scenario_id,
+            layout=layout_name(layout),
+            weather=weather,
+            levels=running,
+            openings=run.openings,
+            commands=scheduled,
+            targets=targets,
         )
     models[SHEAR] = _Shear()
     return models
@@ -555,7 +537,7 @@ def climate_probes(
         named = ", ".join(f"({p.x:g}, {p.y:g}, {p.z:g})" for p in outside)
         raise InvalidRequest(f"a probe stands in the house's air, not at {named}")
     return probe_series(
-        _climate_day(simulator, *climate.key).window(until_s),
+        _climate_day(simulator, climate.key).window(until_s),
         _everything_off(simulator, climate.key).window(until_s),
         probed,
         _moments(until_s, window_start(until_s)),
@@ -586,7 +568,7 @@ def house_air(
     if not isinstance(climate, _Climate):
         raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
     return house_trace(
-        _climate_day(simulator, *climate.key).house,
+        _climate_day(simulator, climate.key).house,
         _everything_off(simulator, climate.key).house,
         _moments(until_s, first),
     )
@@ -602,7 +584,7 @@ def house_air_at(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> 
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
         return None
-    return _climate_day(simulator, *climate.key).house.air_at(time_s)
+    return _climate_day(simulator, climate.key).house.air_at(time_s)
 
 
 class ThermostatAt(BaseModel):
@@ -642,7 +624,7 @@ def equipment_at(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> 
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
         return EquipmentAt(time_s=time_s, levels={}, thermostat=None)
-    worked = _climate_day(simulator, *climate.key).run
+    worked = _climate_day(simulator, climate.key).run
     thermostat = worked.thermostat
     targets = worked.schedule.targets_at(time_s)
     return EquipmentAt(
@@ -671,7 +653,7 @@ def glazing(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> Glazi
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
         raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
-    return _climate_day(simulator, *climate.key).glazing_at(time_s)
+    return _climate_day(simulator, climate.key).glazing_at(time_s)
 
 
 def openings(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> OpeningsAt:
@@ -684,7 +666,7 @@ def openings(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> Open
     climate = models.get(CLIMATE)
     if not isinstance(climate, _Climate):
         raise NotFound(f"scenario {scenario_id!r} has no climate: it has no equipment")
-    return _climate_day(simulator, *climate.key).openings_at(time_s)
+    return _climate_day(simulator, climate.key).openings_at(time_s)
 
 
 def air_through_a_run(
@@ -703,7 +685,7 @@ def air_through_a_run(
     # drives its air: a manifest or a layout changed, such as its weather or
     # its heater, makes another run.
     if isinstance(climate, _Climate):
-        day = _climate_day(simulator, *climate.key)
+        day = _climate_day(simulator, climate.key)
         config = changed(
             simulator.catalogue,
             scenario(simulator.catalogue, scenario_id),

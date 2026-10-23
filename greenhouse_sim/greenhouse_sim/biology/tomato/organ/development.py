@@ -197,6 +197,7 @@ def _grown(
     phytomer: Phytomer,
     previous_tt: float,
     thermal_time: float,
+    *,
     params: DevelopmentParams,
     growth: float,
 ) -> Phytomer:
@@ -230,7 +231,12 @@ def _grown(
             "truss": None
             if phytomer.truss is None
             else grown_truss(
-                plant, phytomer.truss, previous_tt, thermal_time, params.trusses, growth
+                plant,
+                phytomer.truss,
+                previous_tt,
+                thermal_time,
+                params=params.trusses,
+                growth=growth,
             ),
         }
     )
@@ -281,7 +287,7 @@ def develop(
         phytomers.append(_new_phytomer(plant, rank, born, own, truss))
         born += own.phyllochron_cd
     grown = tuple(
-        _grown(plant, phytomer, plant.thermal_time, thermal_time, own, growth)
+        _grown(plant, phytomer, plant.thermal_time, thermal_time, params=own, growth=growth)
         for phytomer in phytomers
     )
     return plant.model_copy(
