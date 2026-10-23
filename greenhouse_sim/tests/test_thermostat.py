@@ -23,7 +23,7 @@ from greenhouse_sim.services.climate_readings import equipment_at, house_air
 from greenhouse_sim.services.climate_runs import climate_run, off_levels
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.run_state import run_state
-from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.runs import RunPlan, RunRequest
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.weather.sources import ConstantWeather
 from greenhouse_sim.world.equipment import Heater
@@ -232,7 +232,9 @@ def test_the_reference_greenhouses_run_with_everything_off_runs_no_heater(
     _, off = climate_run(
         simulator,
         RunRequest(
-            "reference_greenhouse", levels=off_levels(PACKAGED, "reference_greenhouse"), daily=()
+            "reference_greenhouse",
+            levels=off_levels(PACKAGED, "reference_greenhouse"),
+            plan=RunPlan.requested(daily=()),
         ),
     )
 
@@ -258,7 +260,9 @@ def test_the_viewer_and_qa_mode_read_its_heater_as_the_thermostat_runs_it(
     # A command to the heater takes it over, and the viewer is told.
     commanded = equipment_at(
         simulator,
-        RunRequest("reference_greenhouse", commands=((600.0, "heater", 0.0),)),
+        RunRequest(
+            "reference_greenhouse", plan=RunPlan.requested(commands=((600.0, "heater", 0.0),))
+        ),
         time_s=HOUR_S,
     )
     assert commanded.levels["heater"] == 0.0

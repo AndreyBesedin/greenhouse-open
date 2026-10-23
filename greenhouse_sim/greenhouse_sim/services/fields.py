@@ -118,8 +118,8 @@ def _models(simulator: Simulator, run: RunRequest) -> dict[str, AirflowModel]:
         SceneChanges(layout=layout, weather=weather, openings=dict(run.openings)),
     )
     running = equipment_levels(config, run.levels)
-    scheduled = checked_commands(config, run.commands, run.daily)
-    targets = checked_targets(config, run.targets)
+    scheduled = checked_commands(config, run.plan.commanded(), run.plan.daily_commanded())
+    targets = checked_targets(config, run.plan.targeted())
     own = config.airflow
     models: dict[str, AirflowModel] = {own.kind: own}
     for name, pattern in PATTERNS.items():

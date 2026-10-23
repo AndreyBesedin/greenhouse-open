@@ -15,7 +15,7 @@ from greenhouse_sim.climate.commands import Command, Schedule
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument
 from greenhouse_sim.services import fields
-from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.runs import RunPlan, RunRequest
 from greenhouse_sim.services.simulator import Simulator
 
 
@@ -88,7 +88,9 @@ def test_the_same_schedule_replays_to_the_same_air(
         RunRequest(
             "climate_box",
             levels={"fan": 0.5},
-            commands=((120, "heater", 1), (240, "dehumidifier", 1), (360, "fan", 0)),
+            plan=RunPlan.requested(
+                commands=((120, "heater", 1), (240, "dehumidifier", 1), (360, "fan", 0))
+            ),
         ),
         "climate",
         time_s=480,

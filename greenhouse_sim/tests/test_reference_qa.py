@@ -39,7 +39,7 @@ from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services import climate_readings, crop, fields, scenarios, weather
 from greenhouse_sim.services.checkpoints import load_openings
 from greenhouse_sim.services.run_state import run_state
-from greenhouse_sim.services.runs import Commanded, RunRequest
+from greenhouse_sim.services.runs import Commanded, RunPlan, RunRequest
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Vector3
 
@@ -207,7 +207,7 @@ def _house(levels: dict[str, float]) -> object:
 
 def _moment(simulator: Simulator, moment: Moment) -> tuple[dict[str, Any], dict[str, float]]:
     """What a moment's views draw, and its probes."""
-    run = RunRequest(SCENARIO, commands=moment.commands)
+    run = RunRequest(SCENARIO, plan=RunPlan.requested(commands=moment.commands))
     state = run_state(simulator, run, until_s=moment.time_s)
     outside = weather.at_a_moment(PACKAGED, SCENARIO, moment.time_s)
     assert state.house_air is not None

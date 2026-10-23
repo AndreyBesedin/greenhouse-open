@@ -7,6 +7,18 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: a run carries out a plan (P13.2, decision 0046).
+  `RunRequest.plan` holds the protocol's `set_level` and `set_target`
+  actions, each at a moment of the run or every day. The address's
+  `&schedule=`, `&daily=` and `&targets=` are read into it as written,
+  and the run checks it as before. Where a run starts from (`&set=`,
+  `&open=`) stays the request's, beside its plan. Every run id, replay
+  digest and kept opening day is unchanged. Checkpoints are written in
+  format 4, which keeps the run's plan. Formats 3 and 2 are read as it,
+  the kept opening days among them; an uploaded checkpoint's plan is
+  refused, by the field at fault, if it breaks the protocol's rules. A
+  checkpoint's identifier, a digest of its content, changes with the
+  format, the kept opening days' too. Its summary is unchanged.
 - viewer: the builder's equipment, sensors, doors and vents (P12.3). They
   are listed with their kind and place, and chosen many at once to be
   copied at a step, spaced evenly, given one value for a field, or
