@@ -28,6 +28,7 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import _climate_day
 from greenhouse_sim.services.grid import air_grid
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.weather.sources import ConstantWeather, RunWeather, WeatherSeries
 from greenhouse_sim.weather.state import WeatherState
 
@@ -176,8 +177,10 @@ def test_the_climate_box_heated_settles_where_its_still_glass_passes_the_heaters
     assert settled == pytest.approx(8.0 + 10_000.0 / (still_u * 224.0), abs=1.0)
 
 
-def test_the_api_serves_the_glazing_at_a_moment() -> None:
-    response = respond("GET", "/api/scenarios/climate_box/climate/glazing?set=heater:1&t=600")
+def test_the_api_serves_the_glazing_at_a_moment(simulator: Simulator) -> None:
+    response = respond(
+        simulator, "GET", "/api/scenarios/climate_box/climate/glazing?set=heater:1&t=600"
+    )
     body = json.loads(json.dumps(response.body))
 
     assert response.status == HTTPStatus.OK
@@ -186,7 +189,7 @@ def test_the_api_serves_the_glazing_at_a_moment() -> None:
     front = next(s for s in body["surfaces"] if s["surface_id"] == "end_wall_front")
     # The heater stands at the back.
     assert back["surface_c"] > front["surface_c"] > body["outside_c"]
-    assert respond("GET", "/api/scenarios/sensor_lab/climate/glazing").status == 404
+    assert respond(simulator, "GET", "/api/scenarios/sensor_lab/climate/glazing").status == 404
 
 
 def test_its_weathers_wind_reaches_the_glass() -> None:

@@ -26,6 +26,7 @@ from greenhouse_sim.biology.tomato.organ.parameters import TOMATO_VARIATION
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services import plants
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Vector3
 
 VARIATION = TOMATO_VARIATION
@@ -168,8 +169,8 @@ def test_the_labs_row_varies_and_keeps_every_rule() -> None:
     assert len(counts) > 1
 
 
-def test_the_labs_scene_stands_its_row_along_y() -> None:
-    scene = SceneSnapshot.model_validate(respond("GET", "/api/plants/scene?seed=7").body)
+def test_the_labs_scene_stands_its_row_along_y(simulator: Simulator) -> None:
+    scene = SceneSnapshot.model_validate(respond(simulator, "GET", "/api/plants/scene?seed=7").body)
     bases = {
         e.properties["plant_id"]: e.transform.position
         for e in scene.entities
@@ -182,11 +183,13 @@ def test_the_labs_scene_stands_its_row_along_y() -> None:
     assert scene == plants.scene(plants.LabRun(day=0, seed=7))
 
 
-def test_the_lab_answers_for_any_seed_and_plant_and_refuses_what_it_cannot() -> None:
-    structure = respond("GET", "/api/plants/structure?day=3&seed=7&plant=p12")
-    unknown = respond("GET", "/api/plants/structure?plant=p21")
-    negative = respond("GET", "/api/plants/scene?seed=-1")
-    wordy = respond("GET", "/api/plants/scene?seed=lucky")
+def test_the_lab_answers_for_any_seed_and_plant_and_refuses_what_it_cannot(
+    simulator: Simulator,
+) -> None:
+    structure = respond(simulator, "GET", "/api/plants/structure?day=3&seed=7&plant=p12")
+    unknown = respond(simulator, "GET", "/api/plants/structure?plant=p21")
+    negative = respond(simulator, "GET", "/api/plants/scene?seed=-1")
+    wordy = respond(simulator, "GET", "/api/plants/scene?seed=lucky")
 
     assert structure.status == HTTPStatus.OK
     assert Plant.model_validate(structure.body) == plants.structure(

@@ -16,6 +16,7 @@ from greenhouse_sim.services import cfd
 from greenhouse_sim.services.fields import climate_vents
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.scenarios import SceneChanges, changed
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Vector3
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
@@ -71,8 +72,8 @@ def test_an_open_vent_draws_the_houses_co2_towards_the_outsides() -> None:
     assert CONFIG.run_weather().at(0.0).co2_ppm < means[-1] < means[0] < 800.0
 
 
-def test_the_climate_publishes_its_co2() -> None:
-    response = respond("GET", "/api/scenarios/climate_box/fields/climate?t=60")
+def test_the_climate_publishes_its_co2(simulator: Simulator) -> None:
+    response = respond(simulator, "GET", "/api/scenarios/climate_box/fields/climate?t=60")
     field = EnvironmentField.from_document(FieldDocument.model_validate(response.body))
 
     assert field.sample(AirQuantity.CO2, Vector3(x=6.0, y=3.2, z=1.5)) == pytest.approx(420.0)
