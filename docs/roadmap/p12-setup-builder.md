@@ -118,7 +118,7 @@ to describe a house.
 | Step | Work | Accepted when | Status |
 | --- | --- | --- | --- |
 | P12.0 | An installation drafted from a form's values, assessed, edited many rows at a time, exchanged as a file; decision 0050 | A file reads back as the draft it was written from; a refused file names its fields; findings name their items and rows; no packaged scenario changes | Done |
-| P12.1 | A manifest holds or names an installation, by a manifest migration; a draft resolved into a scenario and registered at runtime; drafts and revisions kept locally | A packaged scenario's run id unchanged by the migration; a draft without errors runs; drafts saved, reopened and reverted; files exchanged without the store | In progress: the manifest holds its installation (format 4); a draft run and drafts kept follow, after decision 0048's series |
+| P12.1 | A manifest holds or names an installation, by a manifest migration; a draft resolved into a scenario and registered at runtime; drafts and revisions kept locally | A packaged scenario's run id unchanged by the migration; a draft without errors runs; drafts saved, reopened and reverted; files exchanged without the store | In progress: the manifest holds its installation (format 4); drafts kept (decision 0051); a draft run follows, after decision 0048's series |
 | P12.2 | The builder in the viewer: start, house form, preview, rows chosen together, the scenario step | Create, preview, import, export, save, reopen and run a house in the browser, by keyboard too; its browser QA | Proposed |
 | P12.3 | Equipment and openings: palettes, surface-mounted doors and vents, many items placed, copied and spaced at once, a property inspector | Items placed many at a time with valid geometry and stable ids; collisions explained or refused; every field editable | Proposed |
 | P12.4 | Crop model parameters as versioned assets, edited by schema-driven forms | A tomato parameter set edited, saved, compared, exported, and a run reproduced from its version | Proposed, building on the audit's project for models chosen by the manifest |
@@ -162,9 +162,15 @@ A manifest naming an installation's file, rather than holding it, waits
 for something that needs it: a draft is run by registering its scenario
 with the simulator, not by writing a manifest.
 
+Drafts and their revisions are kept in a local SQLite file (decision
+0051, `builder.drafts`), each revision its installation's file, so that a
+revision saved in an older format is read as the file is. A change names
+the revision it was made on and is refused if another was saved since.
+
 Next: a draft resolved into a scenario, with a site, a period and a
 weather, registered with the simulator's catalogue at runtime, and run;
-then drafts and their revisions kept locally.
+and the API's routes to the drafts, which the builder in the viewer
+(P12.2) uses.
 
 ### P12.4 and the models chosen by the manifest
 
@@ -203,8 +209,6 @@ scene and its first day match the reference greenhouse's.
 
 ## Open questions
 
-- Drafts kept in a local SQLite file first, or as files beside the
-  packaged scenarios; either keeps the same document and revision contract.
 - Whether a row's crop belongs on an explicit row object rather than beside
   `CropRows`, which repeats one row; P12.5 migrates rather than keeping
   both.
