@@ -12,6 +12,7 @@ import pytest
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.climate.commands import Command, DailyCommand
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.services.simulator import Simulator
 
 EVENINGS = "64800:heater:1,79200:heater:0"
 # The same evenings, as commands on each of the first two days.
@@ -19,8 +20,8 @@ TWO_EVENINGS = "64800:heater:1,79200:heater:0,151200:heater:1,165600:heater:0"
 TWO_DAYS = f"t={2 * DAY_S:.0f}&from=0"
 
 
-def _house(query: str) -> dict[str, Any]:
-    response = respond("GET", f"/api/scenarios/climate_box/climate/house?{query}")
+def _house(simulator: Simulator, query: str) -> dict[str, Any]:
+    response = respond(simulator, "GET", f"/api/scenarios/climate_box/climate/house?{query}")
     assert response.status == HTTPStatus.OK, response.body
     assert isinstance(response.body, dict)
     return response.body
@@ -40,10 +41,10 @@ def test_a_daily_command_is_a_command_on_each_day() -> None:
     ]
 
 
-def test_a_daily_schedule_runs_as_its_commands_on_each_day() -> None:
-    daily = _house(f"{TWO_DAYS}&daily={EVENINGS}")
-    given = _house(f"{TWO_DAYS}&schedule={TWO_EVENINGS}")
-    off = _house(TWO_DAYS)
+def test_a_daily_schedule_runs_as_its_commands_on_each_day(simulator: Simulator) -> None:
+    daily = _house(simulator, f"{TWO_DAYS}&daily={EVENINGS}")
+    given = _house(simulator, f"{TWO_DAYS}&schedule={TWO_EVENINGS}")
+    off = _house(simulator, TWO_DAYS)
 
     assert daily["controlled"] == given["controlled"]
     # Warmer every evening than without it, and the same at each day's start.
@@ -52,19 +53,19 @@ def test_a_daily_schedule_runs_as_its_commands_on_each_day() -> None:
     assert _at(daily, 3600.0) == _at(off, 3600.0)
 
 
-def test_a_command_for_a_moment_overrides_the_days_then() -> None:
-    overridden = _house(f"{TWO_DAYS}&daily=64800:heater:1&schedule=64800:heater:0")
-    second_day_only = _house(f"{TWO_DAYS}&schedule=151200:heater:1")
+def test_a_command_for_a_moment_overrides_the_days_then(simulator: Simulator) -> None:
+    overridden = _house(simulator, f"{TWO_DAYS}&daily=64800:heater:1&schedule=64800:heater:0")
+    second_day_only = _house(simulator, f"{TWO_DAYS}&schedule=151200:heater:1")
 
     assert overridden["controlled"]["temperature_c"] == pytest.approx(
         second_day_only["controlled"]["temperature_c"]
     )
 
 
-def test_the_sensors_read_a_daily_schedules_run() -> None:
+def test_the_sensors_read_a_daily_schedules_run(simulator: Simulator) -> None:
     path = "/api/scenarios/climate_box/climate/truth?t=162000"
-    daily = respond("GET", f"{path}&daily={EVENINGS}")
-    off = respond("GET", path)
+    daily = respond(simulator, "GET", f"{path}&daily={EVENINGS}")
+    off = respond(simulator, "GET", path)
 
     assert daily.status == off.status == HTTPStatus.OK
     assert isinstance(daily.body, dict) and isinstance(off.body, dict)
@@ -83,7 +84,9 @@ def test_the_sensors_read_a_daily_schedules_run() -> None:
         ("evening:heater:1", "daily wants seconds:actuator:level commands, not 'evening:heater:1'"),
     ],
 )
-def test_a_daily_command_outside_a_day_or_the_house_is_refused(daily: str, error: str) -> None:
-    response = respond("GET", f"/api/scenarios/climate_box/climate/house?daily={daily}")
+def test_a_daily_command_outside_a_day_or_the_house_is_refused(
+    simulator: Simulator, daily: str, error: str
+) -> None:
+    response = respond(simulator, "GET", f"/api/scenarios/climate_box/climate/house?daily={daily}")
 
     assert (response.status, response.body) == (HTTPStatus.BAD_REQUEST, {"error": error})

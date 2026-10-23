@@ -21,6 +21,7 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.sensors.air import observe, reads, samples
 from greenhouse_sim.services import sensors
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.sensors import PointSensor
 
@@ -38,9 +39,11 @@ def _observed(sensor_id: str | None = None, *, clean: bool = False) -> list[Obse
     return [o for o in observed if sensor_id is None or o.sensor_id == sensor_id]
 
 
-def _climate(time_s: float) -> EnvironmentField:
+def _climate(simulator: Simulator, time_s: float) -> EnvironmentField:
     response = respond(
-        "GET", f"/api/scenarios/climate_box/fields/climate?set=heater:1,fan:1&t={time_s:g}"
+        simulator,
+        "GET",
+        f"/api/scenarios/climate_box/fields/climate?set=heater:1,fan:1&t={time_s:g}",
     )
     return EnvironmentField.from_document(FieldDocument.model_validate(response.body))
 
@@ -51,14 +54,20 @@ def _sensor(sensor_id: str) -> PointSensor:
     return sensor
 
 
-def test_a_clean_sensor_reports_the_air_where_it_stands_at_each_of_its_samples() -> None:
+def test_a_clean_sensor_reports_the_air_where_it_stands_at_each_of_its_samples(
+    simulator: Simulator,
+) -> None:
     # The climate box's front temperature sensor is clean.
     observed = _observed("temperature_front")
     position = _sensor("temperature_front").position
 
     # The published field is in 32-bit floats; a sensor reads the run's own.
     assert [o.value for o in observed] == pytest.approx(
-        [_climate(moment).sample(AirQuantity.TEMPERATURE, position) for moment in MOMENTS], rel=1e-6
+        [
+            _climate(simulator, moment).sample(AirQuantity.TEMPERATURE, position)
+            for moment in MOMENTS
+        ],
+        rel=1e-6,
     )
     assert [o.timestamp for o in observed] == [START + timedelta(seconds=m) for m in MOMENTS]
     assert [o.delivered_at for o in observed] == [o.timestamp for o in observed]
@@ -149,11 +158,13 @@ def test_a_sensor_samples_at_most_once_a_second() -> None:
         )
 
 
-def test_samples_a_second_or_more_apart_are_each_their_own_observation() -> None:
+def test_samples_a_second_or_more_apart_are_each_their_own_observation(
+    simulator: Simulator,
+) -> None:
     sensor = PointSensor(
         sensor_id="t", kind=SensorKind.TEMPERATURE, position=Vector3(x=1, y=1, z=1), cadence_s=1.5
     )
-    air = CONFIG.airflow.field("still", _climate(0).grid)
+    air = CONFIG.airflow.field("still", _climate(simulator, 0).grid)
 
     observed = observe([sensor], lambda _: air, 60, start=START, greenhouse_id="box", run_id="run")
 
@@ -161,18 +172,20 @@ def test_samples_a_second_or_more_apart_are_each_their_own_observation() -> None
     assert check_observations(observed) == []
 
 
-def test_a_sensor_in_steady_air_reads_it_the_same_at_every_sample() -> None:
+def test_a_sensor_in_steady_air_reads_it_the_same_at_every_sample(simulator: Simulator) -> None:
     sensor = PointSensor(
         sensor_id="t", kind=SensorKind.TEMPERATURE, position=Vector3(x=1, y=1, z=1)
     )
-    air = CONFIG.airflow.field("still", _climate(0).grid)
+    air = CONFIG.airflow.field("still", _climate(simulator, 0).grid)
 
     observed = observe([sensor], lambda _: air, 180, start=START, greenhouse_id="box", run_id="run")
 
     assert [o.value for o in observed] == [reads(sensor, air)] * 4
 
 
-def test_the_air_at_a_moment_is_worked_out_once_for_every_sensor_sampling_then() -> None:
+def test_the_air_at_a_moment_is_worked_out_once_for_every_sensor_sampling_then(
+    simulator: Simulator,
+) -> None:
     # Three sensors on the same cadence, over five minutes: the air is asked
     # for at each of the six moments once, not once a sensor (the log of a
     # day of the reference house took 50 s rather than 9).
@@ -180,7 +193,7 @@ def test_the_air_at_a_moment_is_worked_out_once_for_every_sensor_sampling_then()
         PointSensor(sensor_id=f"t{x}", kind=SensorKind.TEMPERATURE, position=Vector3(x=x, y=1, z=1))
         for x in (1, 2, 3)
     ]
-    air = CONFIG.airflow.field("still", _climate(0).grid)
+    air = CONFIG.airflow.field("still", _climate(simulator, 0).grid)
     asked: list[float] = []
 
     def air_at(time_s: float) -> EnvironmentField:
@@ -193,11 +206,13 @@ def test_the_air_at_a_moment_is_worked_out_once_for_every_sensor_sampling_then()
     assert len(observed) == len(trio) * len(MOMENTS)
 
 
-def test_the_api_serves_the_observations_and_the_truth() -> None:
+def test_the_api_serves_the_observations_and_the_truth(simulator: Simulator) -> None:
     observed = respond(
-        "GET", "/api/scenarios/climate_box/climate/observations?set=heater:1&t=120&clean=1"
+        simulator,
+        "GET",
+        "/api/scenarios/climate_box/climate/observations?set=heater:1&t=120&clean=1",
     )
-    truth = respond("GET", "/api/scenarios/climate_box/climate/truth?set=heater:1&t=120")
+    truth = respond(simulator, "GET", "/api/scenarios/climate_box/climate/truth?set=heater:1&t=120")
 
     assert (observed.status, truth.status) == (200, 200)
     assert isinstance(observed.body, dict) and isinstance(truth.body, dict)
@@ -216,9 +231,11 @@ def test_the_api_serves_the_observations_and_the_truth() -> None:
     ],
     ids=["after the run", "unknown equipment"],
 )
-def test_observations_a_run_cannot_give_are_refused(query: str, error: str) -> None:
+def test_observations_a_run_cannot_give_are_refused(
+    simulator: Simulator, query: str, error: str
+) -> None:
     for asked in ("observations", "truth"):
-        response = respond("GET", f"/api/scenarios/climate_box/climate/{asked}{query}")
+        response = respond(simulator, "GET", f"/api/scenarios/climate_box/climate/{asked}{query}")
         assert (response.status, response.body) == (400, {"error": error})
 
 
