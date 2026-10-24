@@ -15,6 +15,14 @@ const BACKGROUND_KINDS: ReadonlySet<string> = new Set(["FLOOR", "GROUND"]);
 // on, but after anything solid inside them.
 const VOLUME_KINDS: ReadonlySet<string> = new Set(["SERVICE_ZONE", "KEEP_OUT"]);
 
+/** The raycast of what is drawn but never picked, such as a field or a
+ * boundary, so that a click passes through it. One function for all of them:
+ * a new one at every render is a changed prop, which draws a frame
+ * (decision 0053). */
+export function hitsNothing(): null {
+  return null;
+}
+
 /**
  * The entity a click landed on: the nearest hit drawn as part of an entity.
  * `SceneView` marks each entity's group with its identifier and kind, and an

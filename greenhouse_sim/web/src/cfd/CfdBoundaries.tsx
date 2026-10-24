@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { BufferAttribute, BufferGeometry, DoubleSide } from "three";
+import { hitsNothing } from "../selection";
 import { useDisposable } from "../useDisposable";
 import {
   type BoundaryShape,
@@ -38,7 +39,7 @@ function Fill({ shape }: { shape: BoundaryShape }) {
   const position: [number, number, number] = [centre.x, centre.y, centre.z];
   if (normal === null) {
     return (
-      <mesh position={position} raycast={() => null}>
+      <mesh position={position} raycast={hitsNothing}>
         <boxGeometry args={[size.x, size.y, size.z]} />
         {material}
       </mesh>
@@ -47,7 +48,7 @@ function Fill({ shape }: { shape: BoundaryShape }) {
   // A plane's width and height, along its own x and y once turned.
   const across = { x: [size.z, size.y], y: [size.x, size.z], z: [size.x, size.y] }[normal];
   return (
-    <mesh position={position} rotation={[...PLANE_TURNS[normal]]} raycast={() => null}>
+    <mesh position={position} rotation={[...PLANE_TURNS[normal]]} raycast={hitsNothing}>
       <planeGeometry args={[across[0], across[1]]} />
       {material}
     </mesh>
@@ -70,7 +71,7 @@ export function CfdBoundaries({ geometry }: { geometry: CfdGeometry }) {
       {shapes.map((shape) => (
         <Fill key={shape.name} shape={shape} />
       ))}
-      <lineSegments geometry={outlines} raycast={() => null}>
+      <lineSegments geometry={outlines} raycast={hitsNothing}>
         <lineBasicMaterial vertexColors />
       </lineSegments>
     </group>
