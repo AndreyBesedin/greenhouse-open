@@ -19,8 +19,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from greenhouse_sim.core.clock import DAY_S, day_start
 from greenhouse_sim.core.crop_actions import CropAction
-from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.services.crop_models import registration
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.scenarios import plant_ids
 
@@ -186,12 +186,13 @@ class RunPlan(BaseModel):
 
 def crop_model_refusal(config: ScenarioConfig, kind: ActionKind) -> str | None:
     """Why a run of a scenario takes no action of `kind` on its crop at all,
-    if it takes none: its crop is not grown organ by organ."""
-    if config.crop_model == CropModel.ORGAN:
+    if it takes none: its crop's model takes none, as it is registered
+    (`crop_models.CropRegistration.takes_crop_actions`)."""
+    model = registration(config)
+    if model.takes_crop_actions:
         return None
-    return (
-        f"{config.greenhouse_id} grows its crop with the simple daily model, which takes no {kind}"
-    )
+    grower = config.greenhouse_id
+    return f"{grower} grows its crop with the {model.name} model, which takes no {kind}"
 
 
 def crop_moment_refusal(config: ScenarioConfig, kind: ActionKind, at_s: float) -> str | None:

@@ -12,7 +12,8 @@ refuses when the action falls due, in its own words.
 
 The run carries out a device's level, a door's or a vent's included, at any
 moment of it, and a heating target on the minute, if it has a heating loop.
-On an organ crop it carries out a harvest, a lowering, a leaf removed and
+On a crop whose model takes them, as it is registered (the organ crop,
+`crop_models`), it carries out a harvest, a lowering, a leaf removed and
 an inspection at the start of a day after its first (P13.5), given by the
 time the clock reaches it, as one waiting for another done then is. It
 says why it does not carry out the rest, in its own words (`why_not`),
@@ -64,9 +65,9 @@ from pydantic import (
 
 from greenhouse_sim.climate.commands import TARGET_EVERY_S
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.equipment import Target
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.services.crop_models import registration
 from greenhouse_sim.services.errors import InvalidRequest, every_reason, first_reason
 from greenhouse_sim.services.runs import (
     CROP_KINDS,
@@ -139,11 +140,12 @@ def run_items(config: ScenarioConfig) -> ActionTargets:
 
 def run_kinds(config: ScenarioConfig) -> frozenset[ActionKind]:
     """The kinds of action a scenario's run carries out: levels always,
-    targets with a heating loop, and crop actions on an organ crop."""
+    targets with a heating loop, and crop actions on a crop whose model
+    takes them, as it is registered (`crop_models`)."""
     kinds = {ActionKind.SET_LEVEL}
     if config.thermostat is not None:
         kinds.add(ActionKind.SET_TARGET)
-    if config.crop_model == CropModel.ORGAN:
+    if registration(config).takes_crop_actions:
         kinds |= CROP_KINDS
     return frozenset(kinds)
 
