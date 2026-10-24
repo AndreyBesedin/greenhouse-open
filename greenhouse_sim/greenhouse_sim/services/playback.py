@@ -378,6 +378,7 @@ class Playback:
             changed=self._work_again_from,
             refuses=self._refusal,
             unhonoured=run_unhonoured(played),
+            crew=simulator.crew,
         )
         # Who may do what on its run, as its gateway enforces it.
         self._authorisation = simulator.authorisation
