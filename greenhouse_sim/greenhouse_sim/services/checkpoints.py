@@ -70,9 +70,17 @@ from greenhouse_sim.services.climate_runs import climate_run, run_schedule, seed
 from greenhouse_sim.services.crop import run_crop, seed_kept_crops
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError, first_reason
 from greenhouse_sim.services.kept_states import KeptState, keep
-from greenhouse_sim.services.runs import Commanded, RunPlan, RunRequest, checked_moment
+from greenhouse_sim.services.runs import (
+    Commanded,
+    RunPlan,
+    RunRequest,
+    checked_crop_plan,
+    checked_moment,
+)
 from greenhouse_sim.services.scenarios import (
     DEFAULT_WEATHER,
+    SceneChanges,
+    changed,
     plant_ids,
     scenario,
     version,
@@ -370,6 +378,9 @@ def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
             "first day, and only then"
         )
     climate_run(simulator, uploaded.run())
+    checked_crop_plan(
+        changed(simulator.catalogue, config, SceneChanges(layout=uploaded.layout)), uploaded.plan
+    )
     expected = plant_ids(config) if config.crop_model == CropModel.ORGAN else []
     if [plant.plant_id for plant in uploaded.crop.plants] != expected:
         raise InvalidRequest(f"a checkpoint's plants are {uploaded.scenario_id}'s, in order")
@@ -494,6 +505,7 @@ def _kept(
             if checkpoint.house_before is None
             else ((window_start(checkpoint.day * DAY_S), checkpoint.house_before),)
         ),
+        crop_actions=checkpoint.plan.before(checkpoint.day * DAY_S).crop_plan(),
     )
     # Its state first, so that a checkpoint listed always has one.
     keep(simulator, checkpoint_id, state)
