@@ -599,7 +599,7 @@ within the day; the action format needs no change for it.
 | P13.4 | Authorisation in the gateway: principals on every planned action, bound to the authenticated submitter or granted on its behalf; plan ownership; groups and grants in a versioned configuration, an input of the run, its changes recorded; checked when a plan is given and when each action falls due, refusals as outcomes; the local operator group. | `feat(sim): the gateway authorises every action` | Done |
 | P13.5 | Crop actions on the run: `harvest`, `lower`, `remove_leaf`, `inspect` at a day's start, refused at other instants and `water` refused, with their reasons; the organ model's `PlantAction` renamed `PlantOperation`; the plant lab and crop work give them; events name their actions. | `feat(sim): crop actions and their outcomes on the run` | Done: the organ crop's operations (#351), the protocol's reasons and events (#353), a run's plan on its crop (#354), and its playback's outcomes (#356) |
 | P13.6 | The graph, windows and lateness, with a simulated executor whose actions take time and which has a number of hands, so that `late`, `missed`, fallbacks and cancelled dependents happen, deterministically. | `feat(sim): plans with order, windows and lateness` | Done: the gateway's start and hands (#363), and the run's crew (#365) |
-| P13.7 | The gateway's write side and its routes: give a plan before a run, steer a playing one, list the actions as they stand, cancel a plan or chosen actions, read the plan in force; the playback's targets route becomes an alias. | `feat(api): give, steer and read a run's plan` | Planned |
+| P13.7 | The gateway's write side and its routes: give a plan before a run, steer a playing one, list the actions as they stand, cancel a plan or chosen actions, read the plan in force; the playback's targets route becomes an alias. | `feat(api): give, steer and read a run's plan` | Done |
 | P13.8 | The viewer: the Equipment, Openings and Targets panels and the plant lab write one plan; a plan lane in the timeline shows what was due, what happened and why. | `feat(viewer): one plan, and its outcomes in the timeline` | Planned |
 | P13.9 | The old paths removed: the engine's actions, `greenhouse_sim.executor`, the deprecated aliases (`RequestedAction`, `ActionResult` and the old execution names), `LabAction`; the close-the-loop example as a policy loop on the run; the protocol's minor version moves again, and the changelog says so. | `refactor: one way to act on a greenhouse` | Planned |
 | P13.10 | The QA scenario below, run and recorded. | `test(e2e): a plan carried out, late, on time and refused` | Planned |
@@ -1015,6 +1015,45 @@ which changes no run, then the run carrying out a plan's crop actions.
 - **Not yet:** the server takes no crew of its own, so its runs have none.
   A hand that the crop refuses an action for is not handed back to the
   actions already assigned after it, which keep their instants.
+
+## Settled in P13.7
+
+- **The routes** are the gateway contract's, under `/actuation/v1`
+  (`api/actuation.py`), served beside the consumer interface by the local
+  API, on this machine's loopback interface. They reach the simulator
+  through `services.actuation` alone, and a run is a playback, named by
+  its run's identifier as the consumer interface names it. A receipt
+  answers `200` whether or not the gateway accepted the write. A request
+  that is not one is `400`, an unknown run, plan or revision `404`, and a
+  write to a run that has finished `409`.
+- **Every write is the local operator's** (decision 0052). The local API
+  authenticates no one, so a plan's actions are checked against what the
+  local operator may do, and one proposed for another principal is
+  refused, as proposing for someone the local operator may not. No route
+  changes the authorisation.
+- **Before a run** is a playback held at its start: the start route's
+  `hold=true`. A plan given then steers the run from its start, in its own
+  run and epoch, as a plan given while it plays does from then on, so the
+  run keeps its identity. A plan that is part of a run's request, and of
+  its identity, is still the address's spellings (P13.2). Taking one as a
+  JSON plan is not yet done.
+- **The targets route is an alias,** deprecated. Each call gives the plan
+  `targets` its next revision: the changes so far and the new ones. A
+  revision given over the routes is the one it revises next, so the two
+  write one plan.
+- **A plan holds at most 1,000 occurrences,** its recurrences expanded
+  (`PLAN_OCCURRENCES`). That is what the gateway takes and lists in about a
+  second. A plan beyond it is refused whole, so a recurrence given by
+  mistake does not hold the server. The time grows faster than the
+  occurrences: the in-memory gateway looks through every action for each
+  action's start and for each action listed, and the run's executor does
+  the same for each action it is given. A plan of 4,000 occurrences took
+  12 s to give. Each action is checked as a run checks its plan, without
+  working the season's daily commands out again
+  (`climate_runs.checked_actions`); that check had cost 6 ms an action.
+- **Not yet:** the number of plans is not bounded, only each plan. No
+  route serves a gateway's limits. The viewer's development server does
+  not pass `/actuation` on to the API (P13.8).
 
 ## Decided
 
