@@ -64,8 +64,9 @@ from time import monotonic
 from typing import TYPE_CHECKING, Final
 
 from greenhouse_protocol.actions import Action, SetTarget
+from greenhouse_protocol.authorisation import AuthorisationConfig
 from greenhouse_protocol.contracts.consumer import OutcomeBatch
-from greenhouse_protocol.contracts.gateway import GatewayLimits
+from greenhouse_protocol.contracts.gateway import GatewayLimits, PlanState
 from greenhouse_protocol.contracts.memory_gateway import InMemoryGateway
 from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
@@ -80,7 +81,6 @@ from greenhouse_sim.services.crop_log import crop_records
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.gateway import (
-    LOCAL_AUTHORISATION,
     LOCAL_OPERATOR,
     UNLIMITED,
     RunExecutor,
@@ -362,8 +362,10 @@ class Playback:
             changed=self._work_again_from,
             refuses=self._refusal,
         )
+        # Who may do what on its run, as its gateway enforces it.
+        self._authorisation = simulator.authorisation
         self._gateway = InMemoryGateway(
-            LOCAL_AUTHORISATION,
+            simulator.authorisation,
             self.start,
             executor=self._executor,
             executor_ref=ExecutorRef(kind=ExecutorKind.SIMULATED_RUN, id=self.run_id),
@@ -481,7 +483,8 @@ class Playback:
     def _plan_targets(self, changes: Sequence[Commanded]) -> None:
         """Gives its gateway the local operator's target changes so far and
         `changes`, as the next revision of their plan. Checked first, as a
-        run's target changes are."""
+        run's target changes are, and refused whole, changing nothing, if
+        the local operator may not make every one."""
         given = len(self._targets_planned)
         added = tuple(
             PlannedAction(
@@ -492,6 +495,14 @@ class Playback:
             )
             for n, (moment, name, value) in enumerate(changes)
         )
+        for asked in added:
+            change = asked.action
+            if isinstance(change, SetTarget) and not self._authorisation.allows(
+                LOCAL_OPERATOR, change
+            ):
+                raise InvalidRequest(
+                    f"{LOCAL_OPERATOR.id} is not authorised to {change.kind} {change.target}"
+                )
         planned = (*self._targets_planned, *added)
         receipt = self._gateway.submit(
             Plan(
@@ -508,8 +519,13 @@ class Playback:
         self._targets_planned = planned
         self._targets_revision += 1
         if receipt.refused:
-            refused = ", ".join(str(ref) for ref in receipt.refused)
-            raise InvalidRequest(f"the run refuses the target changes {refused}")
+            why = {
+                outcome.ref: outcome.reason
+                for outcome in self._gateway.outcomes().outcomes
+                if outcome.plan_id == TARGETS_PLAN and outcome.ref in receipt.refused
+            }
+            refused = "; ".join(f"{ref}: {why.get(ref) or 'refused'}" for ref in receipt.refused)
+            raise InvalidRequest(f"the run refuses the target changes ({refused})")
 
     def _next_day(self) -> int:
         """The day to work out next: the day a target change is worked into,
@@ -594,19 +610,36 @@ class Playback:
 
     def _advance(self) -> None:
         """Moves the clock on by the real time since it last moved, at its
-        pace, as far as the records are worked out and the run lasts."""
+        pace, as far as the records are worked out and the run lasts, and
+        its gateway with it: no further than an action that changes the
+        run's plan as it falls due, such as one whose rights were withdrawn
+        meanwhile, until the run is worked out again from there."""
         now = self._clock()
+        to = self._time_s
         if self._playing:
             moved = self._time_s + (now - self._since) * DAY_S / self._seconds_per_day
-            self._time_s = max(self._time_s, min(moved, self._worked_out_s(), self.end_s))
-            if self._time_s >= self.end_s:
-                self._playing = False
+            to = max(self._time_s, min(moved, self._worked_out_s(), self.end_s))
         self._since = now
-        # Its gateway on the same clock: what falls due by now, done; and,
-        # once the run has ended, what is left of its plans cancelled.
-        self._gateway.advance(self._executor.instant(self._time_s))
+        self._time_s = self._gateway_to(to)
+        if self._time_s >= self.end_s:
+            self._playing = False
+        # Once the run has ended, what is left of its plans is cancelled.
         if self._time_s >= self.end_s and not self._gateway.finished:
             self._gateway.finish()
+
+    def _gateway_to(self, to_s: float) -> float:
+        """Moves its gateway to the run's moment `to_s`, a moment its run
+        acts at after another, and says how far the clock may move: there,
+        or, if the run's plan changed as an action fell due, no further
+        than the records worked out under it, which are worked again from
+        that action's moment before they are delivered."""
+        changes = self._changes
+        moments = sorted(set(self._executor.finishes()))
+        for at in (*(m for m in moments if self._executor.seconds(m) < to_s), None):
+            self._gateway.advance(self._executor.instant(to_s) if at is None else at)
+            if self._changes != changes:
+                return max(self._time_s, min(to_s, self._worked_out_s()))
+        return to_s
 
     def _worked_out_s(self) -> float:
         """How far its records are worked out under its targets as they are:
@@ -704,6 +737,30 @@ class Playback:
         self._changes += 1
         self._again_from = moment_s if self._again_from is None else min(self._again_from, moment_s)
         self._changed.set()
+
+    def authorise(self, authorisation: AuthorisationConfig) -> None:
+        """Who may do what on its run from its clock's moment on (decision
+        0052): its gateway checks each action falling due by it from then,
+        and records the change. Once replaced, the one in its place does."""
+        with self._lock:
+            successor = self._successor
+            if successor is None:
+                self._advance()
+                self._authorisation = authorisation
+                self._gateway.authorise(authorisation)
+                return
+        successor.authorise(authorisation)
+
+    def plan(self, plan_id: str) -> PlanState:
+        """A plan of its run's, as its gateway holds it: its revision in
+        force, its owner, its actions not yet resolved, its outcomes, and
+        the changes of the authorisation it was checked under."""
+        with self._lock:
+            self._advance()
+            try:
+                return self._gateway.plan(plan_id)
+            except KeyError:
+                raise NotFound(f"no plan {plan_id!r} of run {self.run_id!r}") from None
 
     def set_pace(self, seconds_per_day: float) -> PlaybackState:
         """Plays a simulated day in `seconds_per_day` real seconds; once
