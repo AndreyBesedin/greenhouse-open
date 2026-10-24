@@ -91,6 +91,11 @@ uv run browser-tests e2e/crop.spec.ts
 
 ## What else to know
 
+- **A model's version** (`version` in its registration,
+  `greenhouse_sim/greenhouse_sim/scenarios/registry.py`) goes up by one
+  whenever its numbers change for the same parameters: a run's identity
+  covers it (P14.2), so its runs become other runs and a checkpoint made
+  with the version before is refused.
 - **Nothing new goes on the engine's day** (`greenhouse_sim/greenhouse_sim/core/engine.py`):
   it only takes fixes.
 - **Where a model's parameters live:** in the model's own `parameters.py`,

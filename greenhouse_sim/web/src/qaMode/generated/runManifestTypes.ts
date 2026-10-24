@@ -22,6 +22,13 @@ export interface RunManifest {
   cloud_cover_pct: number | null;
   wind_from_deg: number | null;
   models: {
-    [k: string]: string;
+    [k: string]: ModelRun;
   };
+}
+/**
+ * A part's model as a run runs it: its name and version.
+ */
+export interface ModelRun {
+  model: string;
+  version: number;
 }

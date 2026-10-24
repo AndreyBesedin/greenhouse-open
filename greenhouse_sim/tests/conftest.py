@@ -170,15 +170,21 @@ def written_in_format_3() -> Callable[[bool], dict[str, Any]]:
         document = {
             name: value
             for name, value in json.loads(kept.model_dump_json()).items()
-            if name != "plan"
+            if name not in ("plan", "models")
         }
-        return document | {
-            "checkpoint_format": checkpoints.WITH_COMMANDS,
-            "commands": [list(each) for each in plan.commanded()],
-            "daily": None
-            if plan.daily is None
-            else [list(each) for each in plan.daily_commanded() or ()],
-            "targets": [list(each) for each in plan.targeted()],
-        }
+        # Its plants and the days they lived beside its run, as formats 3
+        # and 4 kept them, not as its organ crop's state.
+        return (
+            document
+            | kept.crop.model_dump(mode="json")
+            | {
+                "checkpoint_format": checkpoints.WITH_COMMANDS,
+                "commands": [list(each) for each in plan.commanded()],
+                "daily": None
+                if plan.daily is None
+                else [list(each) for each in plan.daily_commanded() or ()],
+                "targets": [list(each) for each in plan.targeted()],
+            }
+        )
 
     return written
