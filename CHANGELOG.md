@@ -7,6 +7,15 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- viewer and `greenhouse-sim`: the builder's inspector (P12.3). Every
+  field of the item chosen, a nested one by its path, and the house's
+  envelope and rows, read from the schema the simulator publishes, each
+  value changed one edit the simulator makes and checks, undone in one
+  step: an item's by `set_field`, the house's by the new `set_value` edit,
+  which sets any field of an installation by its path (a list's item by
+  its place, `envelope.openings.0.opening`). An item clicked in the view
+  is chosen, the one chosen is drawn selected, and the items an error
+  names are outlined on the house.
 - `greenhouse-sim`: a run carries out a plan (P13.2, decision 0046).
   `RunRequest.plan` holds the protocol's `set_level` and `set_target`
   actions, each at a moment of the run or every day. The address's

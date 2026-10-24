@@ -196,3 +196,46 @@ test("builder: vents spread along the roof and heaters placed at a step, each un
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(items.locator("tbody tr")).toHaveCount(8);
 });
+
+test("builder: the inspector sets a field of the item chosen, and of the house", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const status = page.getByTestId("builder-status");
+  const house = page.locator(".builder-inspector").first();
+  const inspector = page.locator(".builder-items .builder-inspector");
+  const palette = page.locator(".builder-palette");
+
+  await page.goto("/builder");
+  await page.locator(".builder-form").getByLabel("Identifier").fill(`inspect_${Date.now()}`);
+  await page.getByRole("button", { name: "Draft this house" }).click();
+  await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
+
+  // No item chosen: the house's own fields.
+  await expect(house.getByRole("heading", { name: "Envelope and rows" })).toBeVisible();
+  await house.getByLabel("Length", { exact: true }).fill("14");
+  await house.getByLabel("Length", { exact: true }).press("Enter");
+  await expect(status).toHaveText("Set length of the house.", ARRIVES);
+  await expect(house.getByLabel("Length", { exact: true })).toHaveValue("14");
+
+  // A heater placed and chosen: its fields, one changed by its path.
+  await palette.getByLabel("What").selectOption("heater");
+  await palette.getByLabel("y (m)", { exact: true }).fill("0.6");
+  await palette.getByRole("button", { name: "Place" }).click();
+  await expect(status).toHaveText("Placed 1 heater.", ARRIVES);
+  await page.getByLabel("Choose heater_1").check();
+  await expect(inspector.getByRole("heading", { name: "heater_1" })).toBeVisible();
+  await inspector.getByLabel("Power W").fill("20000");
+  await inspector.getByLabel("Power W").press("Enter");
+  await expect(status).toHaveText("Set power w of heater_1.", ARRIVES);
+  await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
+
+  // A second heater placed where the first stands: an error naming both,
+  // the heaters outlined on the house.
+  await palette.getByRole("button", { name: "Place" }).click();
+  await expect(status).toHaveText("Placed 1 heater.", ARRIVES);
+  await expect(page.locator(".builder-finding-error")).toContainText(
+    "Equipment through another item: heater_1 with heater_2.",
+    ARRIVES,
+  );
+});

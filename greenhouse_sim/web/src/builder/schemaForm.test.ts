@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { ASSESSED_SCHEMA } from "./generated/assessedSchema";
 import { BASIC_SETUP_SCHEMA } from "./generated/basicSchema";
-import { formFields, formValues, startingValues } from "./schemaForm";
+import { formFields, formValues, modelFields, startingValues } from "./schemaForm";
 
 const SCHEMA: Record<string, unknown> = BASIC_SETUP_SCHEMA;
 
@@ -46,5 +47,62 @@ describe("a form read from the schema the simulator publishes (P12.2)", () => {
       name: "House",
       bays: "x",
     });
+  });
+});
+
+describe("a model's fields read from the schema the simulator publishes (P12.3)", () => {
+  const schema: Record<string, unknown> = ASSESSED_SCHEMA;
+
+  it("has each field of a model, a nested object's by its path and titled by what holds it", () => {
+    const fields = modelFields(schema, "Heater");
+
+    expect(fields.map((field) => [field.path, field.title, field.kind])).toEqual([
+      ["actuator_id", "Actuator Id", "text"],
+      ["heading", "Heading", "number"],
+      ["base.x", "Base X", "number"],
+      ["base.y", "Base Y", "number"],
+      ["base.z", "Base Z", "number"],
+      ["size_x", "Size X", "number"],
+      ["size_y", "Size Y", "number"],
+      ["size_z", "Size Z", "number"],
+      ["power_w", "Power W", "number"],
+    ]);
+  });
+
+  it("leaves out lists, a constant kind, and what is nested deeper than one object", () => {
+    const paths = modelFields(schema, "Envelope", "envelope.").map((field) => field.path);
+
+    expect(paths).toEqual([
+      "envelope.length",
+      "envelope.width",
+      "envelope.eave_height",
+      "envelope.ridge_height",
+      "envelope.spans",
+      "envelope.bays",
+    ]);
+  });
+
+  it("follows a model a field may hold or not, and says which fields may be null", () => {
+    const rows = modelFields(schema, "CropRows", "layout.crop_rows.");
+    const byPath = new Map(rows.map((field) => [field.path, field]));
+
+    // A row's gutter, `RowSupport | None`: its fields, not one of text.
+    expect(byPath.has("layout.crop_rows.support")).toBe(false);
+    expect(byPath.get("layout.crop_rows.support.height")).toMatchObject({
+      title: "Support Height",
+      kind: "number",
+    });
+    expect(byPath.get("layout.crop_rows.pair_gap")).toMatchObject({ nullable: true });
+    expect(byPath.get("layout.crop_rows.rows")).toMatchObject({ nullable: false });
+  });
+
+  it("offers a choice's values, and takes a flag as true or false", () => {
+    const opening = modelFields(schema, "Opening");
+
+    expect(opening.find((field) => field.path === "kind")).toMatchObject({
+      kind: "choice",
+      choices: ["door", "roof_vent", "side_vent"],
+    });
+    expect(modelFields(schema, "Imperfections").map((field) => field.kind)).not.toContain("choice");
   });
 });

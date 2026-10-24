@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
@@ -13,6 +14,7 @@ import {
   select,
 } from "../testing/render";
 import type { Installation } from "./generated/assessedTypes";
+import type { Edit } from "./generated/editTypes";
 import { fieldValue, Items } from "./Items";
 
 const HOUSE = {
@@ -104,8 +106,23 @@ describe("the builder's equipment, sensors, doors and vents (P12.3)", () => {
   let shown: Rendered | undefined;
   afterEach(() => shown?.unmount());
 
+  /** The section, its choice kept as the builder keeps it. */
+  function Choosing({ onEdit }: { onEdit: (edit: Edit, said: string) => void }) {
+    const [chosen, setChosen] = useState<ReadonlySet<string>>(new Set());
+    return (
+      <Items
+        installation={HOUSE}
+        snapshot={SCENE}
+        chosen={chosen}
+        busy={false}
+        onChoose={setChosen}
+        onEdit={onEdit}
+      />
+    );
+  }
+
   function show(onEdit = vi.fn()) {
-    shown = render(<Items installation={HOUSE} snapshot={SCENE} busy={false} onEdit={onEdit} />);
+    shown = render(<Choosing onEdit={onEdit} />);
     return { within: shown.container, onEdit };
   }
 
