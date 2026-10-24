@@ -1,4 +1,6 @@
-"""What the simulator needs from a plant model.
+"""What the engine's day needs from a plant model, until the engine goes
+(decision 0035). A model of the run's crop is a rung of it instead
+(`greenhouse_sim.biology.crop_contract.CropRung`).
 
 A plant model develops a crop one day at a time. It receives the plants, the
 state it keeps for itself (its `StateT`, carried between days in

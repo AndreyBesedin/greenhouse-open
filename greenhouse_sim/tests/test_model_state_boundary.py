@@ -5,7 +5,8 @@ world, not what the world is. A sensor, an action, ground truth or an
 evaluation that read it would depend on one model's internals, and would
 break or silently change meaning when another model replaces it. So outside
 the model itself, only the module that composes the models and the world's
-own definition may touch it.
+own definition may touch it: the engine's world (`world_builder.py`) and
+the run's simple crop (`core/simple_crop.py`).
 """
 
 import ast
@@ -17,6 +18,7 @@ ALLOWED = (
     "biology/tomato/simple/",
     "world/state.py",
     "world_builder.py",
+    "core/simple_crop.py",
 )
 
 

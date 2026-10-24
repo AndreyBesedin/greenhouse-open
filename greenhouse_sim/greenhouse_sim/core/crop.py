@@ -1,7 +1,10 @@
-"""A run's crop, organ by organ, through the run's days (P09.3).
+"""A run's crop through the run's days (P09.3), grown by one of the crop
+part's models, a rung of its ladder (decision 0035): organ by organ
+(`OrganRung`), or by the simple daily model (`greenhouse_sim.core.simple_crop`,
+P14.3). What a model must do is its contract, `CropRung`
+(`greenhouse_sim.biology.crop_contract`).
 
-- **Its plants** are transplants of one crop
-  (`greenhouse_sim.biology.tomato.organ.transplants`), each at its planting
+- **Its plants** are transplants of one crop, each at its planting
   position, trained as its layout trains it, its traits drawn from the
   scenario's seed.
 - **Each plant lives each day** in what the run makes of it, through the
@@ -11,12 +14,13 @@
   its crown's top with every crown as tall as its plant stands that day,
   where its stem rises (`greenhouse_sim.solar.plants`), so that a taller row shades its
   neighbours more as the season goes on; and a water status of 1, since
-  nothing models the irrigation yet.
+  nothing models the irrigation yet. Each model takes from it what it
+  reads.
 - **The crop work** is the run's (`CropWork`): a harvest round at the start
-  of every `harvest_every_days`th day picks every red fruit, each a harvest
-  in its plant's history; then a lowering round, every `lower_every_days`,
-  lowers each plant that hangs from a wire to keep its top under it,
-  laying its bare lower stem down along the lane its training gives it
+  of every `harvest_every_days`th day picks every red fruit; then a
+  lowering round, every `lower_every_days`, lowers each plant that hangs
+  from a wire to keep its top under it, the organ crop laying its bare
+  lower stem down along the lane its training gives it
   (`greenhouse_sim.world.training`).
 - **A run's own crop actions** (`planned`), the harvests, lowerings and
   leaves removed its plan asks for at the start of a day, are carried out
@@ -41,19 +45,20 @@ import weakref
 from collections import OrderedDict
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Final, Protocol
+from typing import Final, Protocol, TypeIs
 
 from greenhouse_protocol.actions import Harvest, HarvestScope, Lower
 from pydantic import BaseModel, ConfigDict, NonNegativeFloat, PositiveInt
 
+from greenhouse_sim.biology.crop_contract import CropPlant, CropRung
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.biology.tomato.organ.development import live_day
 from greenhouse_sim.biology.tomato.organ.geometry import rising_point, stem_height_m
 from greenhouse_sim.biology.tomato.organ.topology import Plant
-from greenhouse_sim.biology.tomato.organ.transplants import DEVELOPMENT
+from greenhouse_sim.biology.tomato.organ.transplants import DEVELOPMENT, transplant
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.climate.run import LOOK_AGAIN_S
-from greenhouse_sim.core.crop_actions import CropAction, CropEffect, carry_out
+from greenhouse_sim.core.crop_actions import CarriedOut, CropAction, CropEffect, carry_out
 from greenhouse_sim.core.stopwatch import Stopwatch, timed
 from greenhouse_sim.solar.plants import Crown
 from greenhouse_sim.world.envelope import Envelope
@@ -82,6 +87,38 @@ class CropLight(Protocol):
         """Each plant's daily light integral on the run's `day`th day, in
         mol/m²/d."""
         ...
+
+
+class OrganRung:
+    """The organ crop as a rung of the run's crop: the scenario's transplants
+    (`greenhouse_sim.biology.tomato.organ.transplants`), drawn from its
+    `seed`, each living its days by the organ model's development, and the
+    crop work its operations (`greenhouse_sim.core.crop_actions`); its
+    crown rises where its stem does, as tall as its standing stem."""
+
+    def __init__(self, seed: int) -> None:
+        self._seed = seed
+
+    @property
+    def plant_type(self) -> type[Plant]:
+        return Plant
+
+    def transplant(self, plant_id: str) -> Plant:
+        return transplant(plant_id, self._seed)
+
+    def live_day(self, plant: Plant, environment: LocalEnvironment) -> Plant:
+        return live_day(plant, environment, DEVELOPMENT)
+
+    def carry_out(
+        self, plant: Plant, action: CropAction, training: Training | None
+    ) -> CarriedOut[Plant]:
+        return carry_out(plant, action, training)
+
+    def crown(self, plant: Plant, training: Training) -> tuple[Vector3, float]:
+        return rising_point(plant, training.path), stem_height_m(plant)
+
+    def recorded(self, plant: Plant) -> int:
+        return len(plant.history)
 
 
 # The house's mean air through a day of the run, from 0.
@@ -147,20 +184,21 @@ class DayWork:
     work_ends: Mapping[str, int]
 
 
-class RunCrop:
-    """A run's crop of `transplants` through its `days`, the first plant
-    trained as the first of `trainings` says in `envelope`, and so on: each
-    day in `air` and its own `light`, worked as `work` says, and then as
-    the run's own crop actions on that day ask (`planned`, by day). It is
-    the plant model's environment for its plants (`local`). A `watch` times
-    the parts of each day it works out, for a benchmark."""
+class RunCrop[PlantT: CropPlant]:
+    """A run's crop of `transplants` through its `days`, grown by `rung`,
+    the first plant trained as the first of `trainings` says in `envelope`,
+    and so on: each day in `air` and its own `light`, worked as `work` says,
+    and then as the run's own crop actions on that day ask (`planned`, by
+    day). It is the plant model's environment for its plants (`local`). A
+    `watch` times the parts of each day it works out, for a benchmark."""
 
     def __init__(
         self,
-        transplants: Sequence[Plant],
+        transplants: Sequence[PlantT],
         trainings: Sequence[Training],
         envelope: Envelope,
         *,
+        rung: CropRung[PlantT],
         air: DayAir,
         light: CrownLight,
         work: CropWork,
@@ -170,6 +208,7 @@ class RunCrop:
     ) -> None:
         self.days = days
         self.work = work
+        self.rung = rung
         self._watch = watch
         self._plant_ids = [plant.plant_id for plant in transplants]
         self._planned = {day: tuple(acts) for day, acts in (planned or {}).items() if acts}
@@ -189,7 +228,7 @@ class RunCrop:
         self._lived: list[dict[str, LocalEnvironment]] = []
         # The plants on the days kept: the first, the latest worked out, and
         # the last asked for.
-        self._kept: OrderedDict[int, tuple[Plant, ...]] = OrderedDict({0: tuple(transplants)})
+        self._kept: OrderedDict[int, tuple[PlantT, ...]] = OrderedDict({0: tuple(transplants)})
         # One request at a time works a crop on; others wait for it, and
         # find what it kept.
         self._working = threading.RLock()
@@ -210,13 +249,13 @@ class RunCrop:
         # so that a request working one of them on is neither waited for nor
         # repeated. Held weakly: a crop the kept runs have forgotten is not
         # kept alive by those that carried on from it.
-        self._sources: list[tuple[weakref.ref[RunCrop], int]] = []
+        self._sources: list[tuple[weakref.ref[RunCrop[PlantT]], int]] = []
 
     def _checked(self, day: int, last: int) -> None:
         if not 0 <= day <= last:
             raise ValueError(f"a run's crop has days 0 to {last}, not {day}")
 
-    def plants_on(self, day: int) -> tuple[Plant, ...]:
+    def plants_on(self, day: int) -> tuple[PlantT, ...]:
         """The crop on the run's day `day`, from 0 to its days: its plants
         once they have lived the days before it, after that day's crop
         work."""
@@ -240,13 +279,13 @@ class RunCrop:
             self._keep(day, plants)
             return plants
 
-    def _lived_through(self, start: int, day: int) -> tuple[Plant, ...]:
+    def _lived_through(self, start: int, day: int) -> tuple[PlantT, ...]:
         plants = self._kept[start]
         for lived in range(start, day):
             plants = self._next_day(lived, plants)
         return plants
 
-    def _next_day(self, lived: int, plants: tuple[Plant, ...]) -> tuple[Plant, ...]:
+    def _next_day(self, lived: int, plants: tuple[PlantT, ...]) -> tuple[PlantT, ...]:
         """The crop on the day after `lived`, `plants` on it: once they have
         lived it, after the next day's crop work and its own crop actions."""
         environments = self._day(lived, plants)
@@ -254,7 +293,7 @@ class RunCrop:
             plants = tuple(
                 self._worked(
                     lived + 1,
-                    live_day(plant, environments[plant.plant_id], DEVELOPMENT),
+                    self.rung.live_day(plant, environments[plant.plant_id]),
                     training,
                 )
                 for plant, training in zip(plants, self._trainings, strict=False)
@@ -309,19 +348,25 @@ class RunCrop:
     def seed(
         self,
         day: int,
-        plants: Sequence[Plant],
+        plants: Sequence[CropPlant],
         lived: Sequence[dict[str, LocalEnvironment]],
     ) -> None:
         """Take `plants` as the crop on the run's `day`, and `lived` as what
         they experienced on each day before it, from a checkpoint of the
-        same run (P09.5): later days carry on from them."""
+        same run (P09.5): later days carry on from them. Refused if they are
+        not its model's plants."""
         self._checked(day, self.days)
         if len(lived) != day:
             raise ValueError(f"a crop on day {day} has lived {day} days, not {len(lived)}")
+        if not self._its_own(plants):
+            raise ValueError(f"a crop of {self.rung.plant_type.__name__} plants takes no others")
         with self._working, self._keeping:
             if len(self._lived) < day:
                 self._lived = list(lived)
             self._kept.setdefault(day, tuple(plants))
+
+    def _its_own(self, plants: Sequence[CropPlant]) -> TypeIs[Sequence[PlantT]]:
+        return all(isinstance(plant, self.rung.plant_type) for plant in plants)
 
     def crowns_on(self, day: int) -> list[Crown]:
         """The plants' crowns on the run's day `day`, each as tall as its
@@ -334,7 +379,7 @@ class RunCrop:
         self._checked(day, self.days - 1)
         return self._light(day, self.crowns_on(day))
 
-    def carry_on_from(self, other: RunCrop, days: int) -> None:
+    def carry_on_from(self, other: RunCrop[PlantT], days: int) -> None:
         """Take over what `other` worked out of the run's first `days` days:
         what its plants experienced on them, and its plants kept on those
         days and the next; and what it works out of them later, as this crop
@@ -390,7 +435,7 @@ class RunCrop:
         start, end = self._stretch
         return start < through and since < min(end, through)
 
-    def _day(self, day: int, plants: tuple[Plant, ...]) -> dict[str, LocalEnvironment]:
+    def _day(self, day: int, plants: tuple[PlantT, ...]) -> dict[str, LocalEnvironment]:
         """What each of the crop's plants, `plants` on the run's day `day`,
         experienced on that day: kept, or worked out from the house's air
         and their light."""
@@ -412,43 +457,44 @@ class RunCrop:
             self._lived.append(environments)
         return environments
 
-    def _worked(self, day: int, plant: Plant, training: Training) -> Plant:
+    def _worked(self, day: int, plant: PlantT, training: Training) -> PlantT:
         """The plant after the crop work that starts the run's day `day`, its
         crop actions carried out in order (`CropWork.actions_on`); a plant
         that hangs from no wire is not lowered."""
         for action in self.work.actions_on(day, plant.plant_id):
-            plant = carry_out(plant, action, training).plant
+            plant = self.rung.carry_out(plant, action, training).plant
         return plant
 
     def _carried_out(
-        self, day: int, plants: tuple[Plant, ...], planned: Sequence[CropAction]
-    ) -> tuple[Plant, ...]:
+        self, day: int, plants: tuple[PlantT, ...], planned: Sequence[CropAction]
+    ) -> tuple[PlantT, ...]:
         """The crop after the run's own crop actions on its day `day`, in
         their order, `plants` once its crop work was done; what each did
         kept."""
         place = {plant.plant_id: index for index, plant in enumerate(plants)}
         worked = list(plants)
         work_ends = {
-            action.plant_id: len(worked[place[action.plant_id]].history) for action in planned
+            action.plant_id: self.rung.recorded(worked[place[action.plant_id]])
+            for action in planned
         }
         done = []
         for action in planned:
             index = place[action.plant_id]
             training = self._trainings[index] if index < len(self._trainings) else None
-            carried = carry_out(worked[index], action, training)
+            carried = self.rung.carry_out(worked[index], action, training)
             worked[index] = carried.plant
             done.append(CropDone(carried.effect, carried.refusal))
         with self._keeping:
             self._done[day] = DayWork(tuple(done), work_ends)
         return tuple(worked)
 
-    def _crowns(self, plants: Sequence[Plant]) -> list[Crown]:
-        """Each plant's crown, standing where its stem rises, as tall as
-        its standing stem."""
+    def _crowns(self, plants: Sequence[PlantT]) -> list[Crown]:
+        """Each plant's crown, standing where its model says it rises, as
+        tall as it says it stands."""
         crowns = []
         for plant, training in zip(plants, self._trainings, strict=False):
-            foot, rises = training.position.point, rising_point(plant, training.path)
-            height = stem_height_m(plant)
+            foot = training.position.point
+            rises, height = self.rung.crown(plant, training)
             if height > 0:
                 base = Vector3(x=foot.x + rises.x, y=foot.y + rises.y, z=foot.z + rises.z)
                 crowns.append(
@@ -460,7 +506,7 @@ class RunCrop:
                 )
         return crowns
 
-    def _keep(self, day: int, plants: tuple[Plant, ...]) -> None:
+    def _keep(self, day: int, plants: tuple[PlantT, ...]) -> None:
         with self._keeping:
             self._kept[day] = plants
             self._kept.move_to_end(day)

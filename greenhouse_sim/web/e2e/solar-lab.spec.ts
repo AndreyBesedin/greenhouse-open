@@ -19,6 +19,7 @@ const fromTheNorth = (stem: typeof SHADED_STEM): CameraPose => ({
 });
 // Solar noon at the March equinox, at 4.5° east: 12:50 on the site's clock.
 const NOON_S = 46_200;
+const DAY_S = 86_400;
 
 /** The solar lab at the equinox's noon, its camera looking at a stem. */
 async function atNoon(page: Page, stem: typeof SHADED_STEM): Promise<void> {
@@ -73,6 +74,31 @@ test("solar lab: at the equinox's noon a shaded plant takes the sky's light and 
       page.getByRole("figure", { name: "House air" }).getByTestId("house-air-°C"),
     ).toHaveText("Air 18.3 °C, all off 18.3 °C");
   });
+});
+
+test("solar lab: its simple crop grows in its run a day at a time, each plant with its numbers", async ({
+  page,
+}) => {
+  // Its climate run is worked out through its first days.
+  test.setTimeout(150_000);
+  const status = page.getByTestId("scene-status");
+  const run = page.getByRole("group", { name: "Climate run" });
+  const arrives = { timeout: 90_000 };
+  await page.goto(
+    `/?scenario=solar_lab&field=climate&t=${DAY_S + NOON_S}&camera=${cameraText(fromTheNorth(EXPOSED_STEM))}`,
+  );
+  await expect(status).toContainText("solar_lab, day 1,", arrives);
+  await selectAt(page, EXPOSED_STEM, "solar_lab_plant_016", fromTheNorth(EXPOSED_STEM));
+  await expect(page.getByTestId("property-age_days")).toHaveText("1");
+  const height = page.getByTestId("property-visible_height_cm");
+  const first = await height.textContent();
+
+  await run.getByRole("button", { name: "Next day" }).click();
+  await expect(status).toContainText("solar_lab, day 2,", arrives);
+  // The same plant, a day older and taller.
+  await expect(page.getByTestId("selected-entity")).toHaveText("solar_lab_plant_016");
+  await expect(page.getByTestId("property-age_days")).toHaveText("2");
+  await expect(height).not.toHaveText(first ?? "");
 });
 
 // P08's equinox views, drawn from the files the simulator writes: the sun

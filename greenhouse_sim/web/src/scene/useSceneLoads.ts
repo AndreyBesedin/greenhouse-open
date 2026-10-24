@@ -11,15 +11,18 @@ const NO_OPENINGS: readonly string[] = [];
 
 /**
  * What a view draws of its scene: the scene, its crop and, for a scenario
- * whose thermostat runs its heater, the equipment as the run has it.
+ * whose thermostat runs its heater, the equipment as the run has it; and
+ * whether its crop is grown organ by organ, whose plants list their
+ * structure (`organCrop`).
  *
  * A thermostat runs its heater by the house's air (P10.3), which only the
  * run knows: the scene draws the heater as the run has it at the moment. A
  * scenario reopened by its sliders, or the plant lab on another day, keeps
  * its scene on show until the next arrives; any other change of scene starts
- * from loading. A crop grown organ by organ is drawn as it stands at the
- * moment, in place of its transplants once a day has ended; the last stays
- * on show until the next day's arrives, and when the next day's fails.
+ * from loading. A run's crop, organ by organ or of the simple crop, is drawn
+ * as it stands at the moment, in place of its transplants once a day has
+ * ended; the last stays on show until the next day's arrives, and when the
+ * next day's fails.
  */
 export function useSceneLoads(
   source: SceneSource,
@@ -47,7 +50,7 @@ export function useSceneLoads(
   );
   const organCrop = summary?.crop_model === ORGAN_CROP;
   const cropProgress = useLoadProgress(
-    run === null || !organCrop || daysEnded(run.time ?? 0) === 0 ? null : cropUrl(run),
+    run === null || daysEnded(run.time ?? 0) === 0 ? null : cropUrl(run),
     fetchScene,
     { group: run === null ? "" : `crop ${run.scenarioId}` },
   );

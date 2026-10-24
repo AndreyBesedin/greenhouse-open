@@ -27,6 +27,55 @@ breaks the conformance checks is a major version.
   capacity, is dealt with as before.
 
 - `greenhouse-sim`: **every run id changes, once** (P14.2, decision 0054).
+- viewer: a scenario whose rows grow the simple crop draws its crop as it
+  stands at the moment of its run, as it draws the organ crop, once a day
+  has ended: each plant a cylinder as tall as its stem stands, in place of
+  its transplants, and, selected, its numbers in the inspector (its age,
+  height, trusses, fruits, ripe fruits and harvest) (P14.3).
+- `greenhouse-sim`: the simple crop is a rung of the run (P14.3, decision
+  0035). A scenario whose rows grow it grows it in its run, a day at a
+  time, from each day's mean air temperature in its house, by its settings
+  and seed: for the same temperatures, its plants are the engine's day's.
+  - Its crop's scene (`GET /api/scenarios/{id}/crop`) draws its plants as
+    they stand, each with its numbers; the light on its plants
+    (`GET /api/scenarios/{id}/climate/plants`) is read with their crowns as
+    tall as they stand that day.
+  - A checkpoint keeps its plants, with the values the model keeps for
+    them, and the days they lived (`models.crop.state`); a run carries on
+    from it, and one whose plants could not be its run's is refused. The
+    replay's probes digest its plants.
+  - The crop part has a contract, `CropRung` (`biology.crop_contract`),
+    which the organ crop (`core.crop.OrganRung`) and the simple crop
+    (`core.simple_crop.SimpleRung`) keep, and `RunCrop` is built with one.
+    The simple model's day takes the day's mean air temperature, the one
+    thing it reads.
+  - The simple crop's version is 2, so the run ids of the scenarios that
+    grow it change, in this release; a checkpoint of one of them made
+    before is refused, naming the crop.
+  - A plant of the simple crop has no structure to list
+    (`GET /api/scenarios/{id}/crop/{plant}` is not found for it), its root
+    zone empties as the model has it, since nothing waters it in a run,
+    and the crop log has no records of it.
+- `greenhouse-sim`: a scenario's configuration holds its crop model's
+  parameters and its crop walk's each in a section of their own (P14.3,
+  decision 0054), in place of the 21 settings at its top:
+  `ScenarioConfig.crop`, the parameters of the model its rows grow,
+  `SimpleCrop` or `OrganCrop`, told apart by their `kind`
+  (`scenarios.crop_parameters`); and `ScenarioConfig.crop_walk`, the
+  walk's three measurement noises. A configuration given its crop model
+  alone takes that model's parameters. `ScenarioConfig.simple_crop` gives
+  the settings the engine's day grows the simple crop by: its crop's, or
+  the simple crop's defaults where its rows grow the organ crop. A
+  manifest's section of the organ crop takes no parameters, and a format 4
+  manifest of organ rows leaves out the simple crop's settings it wrote.
+  A configuration given those settings at its top, as one written before
+  holds them, reads them into their sections, the simple crop's left out
+  where its rows grow the organ crop. They are read from the sections:
+  `config.water_capacity_ml` becomes `config.simple_crop.water_capacity_ml`,
+  and `config.height_noise_cm` `config.crop_walk.height_noise_cm`. The run
+  ids change with it, in this release, with P14.2's change below.
+- `greenhouse-sim`: **every run id changes, once in this release** (P14.2
+  and P14.3, decision 0054).
   A run's identity now covers the model each part of it runs and that
   model's version, so that a model whose numbers change makes other runs:
   the same request names another run than before, for every packaged
@@ -50,9 +99,7 @@ breaks the conformance checks is a major version.
   parameter model (`scenarios.registry`); a part left out runs its
   default. The weather, the airflow, the simple crop's settings and the
   walk's measurement noises are no longer written at a manifest's top, and
-  format 4 manifests are migrated so. A scenario of organ rows gives the
-  simple crop's settings, by which its live run grows the simple crop, in
-  its crop's section, which names the organ crop. A section gives its
+  format 4 manifests are migrated so. A section gives its
   parameters if its model has one with no default, as a recorded
   weather's file, and the published schema now requires them.
   `GET /api/scenarios/{id}/manifest` answers `models`, each part's model

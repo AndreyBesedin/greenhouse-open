@@ -87,8 +87,9 @@ def test_it_keeps_the_commands_given_before_its_day_and_its_daily_ones(
         time_s=DAY_S + 60.0,
     )
 
-    # The climate box grows the simple model: no plants are kept.
-    assert saved.plants == 0
+    # The climate box grows the simple crop: its plants are kept as it
+    # keeps them.
+    assert saved.plants == 32
     assert saved.commands == [(600.0, "heater", 1.0)]
     assert saved.daily == [(64800.0, "heater", 1.0)]
     assert saved.levels == {"fan": 1.0}

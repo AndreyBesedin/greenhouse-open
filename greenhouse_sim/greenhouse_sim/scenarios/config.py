@@ -1,15 +1,7 @@
 from datetime import UTC, date, datetime
-from typing import Annotated, Self
+from typing import Annotated, Any, Self
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    NonNegativeInt,
-    PositiveFloat,
-    PositiveInt,
-    model_validator,
-)
+from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt, PositiveInt, model_validator
 
 from greenhouse_sim.airflow.prescribed import PrescribedAirflow, UniformAirflow
 from greenhouse_sim.cfd.setup import CfdSetup
@@ -21,6 +13,14 @@ from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.core.crop import CropWork
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.envelope import OpeningKind
+from greenhouse_sim.scenarios.crop_parameters import (
+    DEFAULT_SIMPLE_CROP,
+    HELD_AT_THE_TOP,
+    WALK,
+    CropWalk,
+    OrganCrop,
+    SimpleCrop,
+)
 from greenhouse_sim.weather.recorded import RecordedWeather
 from greenhouse_sim.weather.seasonal import SeasonalWeather
 from greenhouse_sim.weather.sources import Clouded, ConstantWeather, RunWeather, Winded
@@ -58,7 +58,12 @@ class ScenarioConfig(BaseModel):
     # engine, or organ by organ, each day from the run's air and each plant's
     # own light (`greenhouse_sim.core.crop`); and what they do to it.
     crop_model: CropModel = CropModel.SIMPLE
+    # Its crop model's parameters, of the model its rows grow: by default,
+    # that model's own (`greenhouse_sim.scenarios.crop_parameters`).
+    crop: Annotated[SimpleCrop | OrganCrop, Field(discriminator="kind")] = SimpleCrop()
     crop_work: CropWork = CropWork()
+    # The daily walk through its crop's measurement errors.
+    crop_walk: CropWalk = CropWalk()
     # The commands its runs give its equipment, doors and vents at a time of
     # day, every day, unless a run is given daily commands of its own (P09.4).
     daily: list[DailyCommand] = []
@@ -97,36 +102,47 @@ class ScenarioConfig(BaseModel):
     # blows from (`greenhouse_sim.weather.sources.Winded`); none by default.
     wind_from_deg: Bearing | None = None
 
-    # Environment: bounds the smooth day-to-day drift stays within.
-    air_temperature_bounds: tuple[float, float] = (18.0, 32.0)
-    humidity_bounds: tuple[float, float] = (45.0, 85.0)
+    @model_validator(mode="before")
+    @classmethod
+    def _its_crop_takes_its_models_parameters(cls, given: Any) -> Any:
+        """A configuration given its crop model, not its parameters, takes
+        that model's own; and given the settings it held at its top until
+        P14.3, as one written before may be, takes them in their sections:
+        the walk's in its crop walk, the simple crop's in its crop if it is
+        the simple crop, and not at all if it is another, since they were
+        the engine's for the simple crop in its place."""
+        if not isinstance(given, dict):
+            return given
+        grown = given.get("crop_model", CropModel.SIMPLE)
+        kinds = {"crop": str(grown), "crop_walk": WALK}
+        sections = dict(given)
+        for section, names in HELD_AT_THE_TOP.items():
+            held = {name: sections.pop(name) for name in names if name in sections}
+            if held and section in sections:
+                raise ValueError(f"its {section} holds {', '.join(held)}, not beside it")
+            if section == "crop" and grown != CropModel.SIMPLE:
+                held = {}
+            if held:
+                sections[section] = {"kind": kinds[section], **held}
+        if "crop" not in sections and grown in tuple(CropModel):
+            sections["crop"] = {"kind": str(grown)}
+        return sections
 
-    # Water reservoir / stress.
-    initial_water_reservoir_ml: float = 600.0
-    water_capacity_ml: PositiveFloat = 1200.0
-    water_use_ml_per_day_base: float = 80.0
-    evaporation_ml_per_day: float = 20.0
-    water_stress_threshold_pct: float = 35.0
+    @model_validator(mode="after")
+    def _its_crop_is_the_one_its_rows_grow(self) -> Self:
+        if self.crop.kind != self.crop_model:
+            raise ValueError(
+                f"its crop's parameters are the {self.crop.kind} crop's, but it grows the "
+                f"{self.crop_model} crop"
+            )
+        return self
 
-    # Stem / truss growth.
-    initial_stem_length_cm: float = 20.0
-    stem_growth_cm_per_day_base: float = 2.0
-    truss_interval_days: PositiveInt = 6
-    max_trusses: NonNegativeInt = 8
-    fruits_per_truss_bounds: tuple[int, int] = (3, 6)
-
-    # Fruit growth / ripening.
-    target_diameter_mm_bounds: tuple[float, float] = (18.0, 26.0)
-    fruit_growth_days_to_target: PositiveInt = 20
-    mass_coefficient_g_per_mm3: float = 0.0012
-    ripening_days_bounds: tuple[int, int] = (16, 26)
-
-    # Observation noise (standard deviations / detection-error rates).
-    soil_moisture_noise_pct: float = 3.0
-    air_temperature_noise_c: float = 0.4
-    fruit_count_noise_probability: float = 0.1
-    ripe_mass_noise_pct: float = 8.0
-    height_noise_cm: float = 1.5
+    @property
+    def simple_crop(self) -> SimpleCrop:
+        """The simple crop's settings, by which the engine's day grows its
+        crop: its crop's, or the simple crop's own if its crop is of another
+        model."""
+        return self.crop if isinstance(self.crop, SimpleCrop) else DEFAULT_SIMPLE_CROP
 
     def run_start(self) -> datetime:
         """The instant its runs start: its start date's midnight at its site."""

@@ -11,20 +11,20 @@ from greenhouse_sim.biology.tomato.simple.state import SimpleFruitState, SimpleP
 from greenhouse_sim.core.rng import seeded_rng
 from greenhouse_sim.domain.crop import TrussStage
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.world.state import Fruit, GreenhouseEnvironment, PlantWorld, Truss
+from greenhouse_sim.world.state import Fruit, PlantWorld, Truss
 
 
 def advance_stem(
-    plant_state: SimplePlantState, environment: GreenhouseEnvironment, config: ScenarioConfig
+    plant_state: SimplePlantState, temperature_c: float, config: ScenarioConfig
 ) -> float:
     """Stem length gained today. Stressed or too-hot/cold plants grow slower."""
     water_factor = 1.0 - STEM_GROWTH_LOSS_AT_FULL_WATER_STRESS * plant_state.water_stress
-    temp_deviation = abs(environment.air_temperature_c - REFERENCE_TEMPERATURE_C)
+    temp_deviation = abs(temperature_c - REFERENCE_TEMPERATURE_C)
     temp_factor = max(
         STEM_GROWTH_MIN_TEMPERATURE_FACTOR, 1.0 - temp_deviation * STEM_GROWTH_LOSS_PER_DEGREE
     )
     return (
-        config.stem_growth_cm_per_day_base
+        config.simple_crop.stem_growth_cm_per_day_base
         * water_factor
         * temp_factor
         * plant_state.growth_multiplier
@@ -38,15 +38,15 @@ def maybe_initiate_truss(
 
     Returns the truss with its fruits, and the model's values for each new fruit.
     """
-    if len(plant.trusses) >= config.max_trusses:
+    if len(plant.trusses) >= config.simple_crop.max_trusses:
         return None
-    if plant.age_days == 0 or plant.age_days % config.truss_interval_days != 0:
+    if plant.age_days == 0 or plant.age_days % config.simple_crop.truss_interval_days != 0:
         return None
 
     truss_index = len(plant.trusses) + 1
     rng = seeded_rng(seed, plant.plant_id, "truss", truss_index)
     truss_id = f"{plant.plant_id}_truss_{truss_index:02d}"
-    fruit_low, fruit_high = config.fruits_per_truss_bounds
+    fruit_low, fruit_high = config.simple_crop.fruits_per_truss_bounds
     fruit_count = int(rng.integers(fruit_low, fruit_high + 1))
     new_fruits = [
         _new_fruit(plant.plant_id, truss_id, index, config, rng) for index in range(fruit_count)
@@ -67,8 +67,8 @@ def _new_fruit(
     config: ScenarioConfig,
     rng: np.random.Generator,
 ) -> tuple[Fruit, SimpleFruitState]:
-    diameter_low, diameter_high = config.target_diameter_mm_bounds
-    ripening_low, ripening_high = config.ripening_days_bounds
+    diameter_low, diameter_high = config.simple_crop.target_diameter_mm_bounds
+    ripening_low, ripening_high = config.simple_crop.ripening_days_bounds
     target_diameter_mm = float(rng.uniform(diameter_low, diameter_high))
     growth_rate_multiplier = float(rng.uniform(*FRUIT_GROWTH_RATE_RANGE))
     ripening_day = int(rng.integers(ripening_low, ripening_high + 1))
@@ -86,12 +86,12 @@ def grow_fruit_diameter(
 ) -> float:
     """A bounded, monotonically increasing growth curve toward target_diameter_mm."""
     effective_age = fruit.age_days * fruit_state.growth_rate_multiplier
-    fraction = effective_age / (effective_age + config.fruit_growth_days_to_target)
+    fraction = effective_age / (effective_age + config.simple_crop.fruit_growth_days_to_target)
     return fruit_state.target_diameter_mm * fraction
 
 
 def fruit_mass_g(diameter_mm: float, config: ScenarioConfig) -> float:
-    return config.mass_coefficient_g_per_mm3 * diameter_mm**3
+    return config.simple_crop.mass_coefficient_g_per_mm3 * diameter_mm**3
 
 
 def truss_stage(truss: Truss) -> TrussStage:

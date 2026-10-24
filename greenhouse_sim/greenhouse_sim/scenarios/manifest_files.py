@@ -30,6 +30,7 @@ from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.scenarios.crop_parameters import HELD_AT_THE_TOP, WALK
 from greenhouse_sim.scenarios.installation import (
     CannotRun,
     Installation,
@@ -37,15 +38,7 @@ from greenhouse_sim.scenarios.installation import (
     scenario_house,
 )
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT, LAYOUT_NAME, load_layout
-from greenhouse_sim.scenarios.registry import (
-    CONFIGURED,
-    KIND,
-    SIMPLE_CROP_FIELDS,
-    WALK,
-    WALK_FIELDS,
-    model,
-    models_json_schema,
-)
+from greenhouse_sim.scenarios.registry import CONFIGURED, KIND, model, models_json_schema
 
 MANIFESTS_DIR: Final = Path(__file__).parent / "manifests"
 MANIFEST_SCHEMA_FILE: Final = Path(__file__).parent / "scenario.schema.json"
@@ -77,9 +70,16 @@ _PARAMETERS_KEY: Final = "parameters"
 # the part it chose for.
 _FORMAT_4_PARTS: Final = {"weather": Part.WEATHER, "airflow": Part.AIR_FIELD}
 # The settings format 4 wrote at the configuration's top, by the part
-# whose model's parameters they are in format 5: the crop's, which its rows
-# grow, and the crop walk's.
-_FORMAT_4_SETTINGS: Final = {Part.CROP: SIMPLE_CROP_FIELDS, Part.CROP_WALK: WALK_FIELDS}
+# whose model's parameters they are in format 5: the simple crop's, with
+# those of the engine's day it grows in, and the crop walk's.
+_FORMAT_4_SETTINGS: Final = {
+    Part.CROP: HELD_AT_THE_TOP["crop"],
+    Part.CROP_WALK: HELD_AT_THE_TOP["crop_walk"],
+}
+# Every field format 4 wrote a part's model or parameters in.
+_FORMAT_4_CONFIGURED: Final = frozenset(
+    {*_FORMAT_4_PARTS, *(field for fields in _FORMAT_4_SETTINGS.values() for field in fields)}
+)
 # What a format 4 note on one of those fields is about in format 5: the
 # part's section.
 _FORMAT_4_NOTES: Final = {
@@ -209,7 +209,7 @@ def scenario_from_manifest(scenario_id: str, document: dict[str, JsonValue]) -> 
         raise InvalidManifest(
             f"{scenario_id}: its house is its installation's, not written beside it: {outside}"
         )
-    outside = sorted(set(fields) & CONFIGURED)
+    outside = sorted(set(fields) & (CONFIGURED | _FORMAT_4_CONFIGURED))
     if outside:
         raise InvalidManifest(
             f"{scenario_id}: a model's parameters are written in its {_MODELS_KEY}, "
@@ -419,10 +419,11 @@ def _from_format_4(scenario_id: str, document: dict[str, JsonValue]) -> dict[str
     own. Format 5 writes each in its part's section of `models` (P14.1,
     decision 0054), where the first of them stood: the weather's and the air
     field's kind as their model, the rest of them as its parameters; the
-    simple crop's settings as the parameters of the crop its rows grow,
-    the walk's noises as the walk's; and a note on one of them as a note on
-    its part. What a run is does not change: its configuration reads the
-    same."""
+    simple crop's settings as the simple crop's parameters, the walk's
+    noises as the walk's; and a note on one of them as a note on its part.
+    Rows of the organ crop leave the simple crop's settings out: they were
+    those by which the engine's day grew the simple crop in its place, its
+    defaults since the organ crop has a section of its own (P14.3)."""
     if _MODELS_KEY in document:
         raise InvalidManifest(f"{scenario_id}: a format 4 manifest has no {_MODELS_KEY!r}")
     sections: dict[str, JsonValue] = {}
@@ -439,11 +440,11 @@ def _from_format_4(scenario_id: str, document: dict[str, JsonValue]) -> dict[str
     named = {Part.CROP: _rows_crop(document), Part.CROP_WALK: WALK}
     for part, fields in _FORMAT_4_SETTINGS.items():
         parameters = {field: document[field] for field in fields if field in document}
-        if parameters:
+        if parameters and named[part] != CropModel.ORGAN:
             sections[part] = {_MODEL_KEY: named[part], _PARAMETERS_KEY: parameters}
     migrated: dict[str, JsonValue] = {}
     for key, value in document.items():
-        if key in CONFIGURED:
+        if key in _FORMAT_4_CONFIGURED:
             migrated.setdefault(_MODELS_KEY, sections)
         elif key == _NOTES_KEY and isinstance(value, dict):
             migrated[key] = _notes_moved(value, _FORMAT_4_NOTES)

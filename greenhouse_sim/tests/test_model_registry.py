@@ -1,28 +1,20 @@
 """The models a manifest chooses for each part of a run (P14.1, decision
 0054): each part's models by name, its default the configuration's own, and
-each model's parameters the configuration's fields, so that a manifest's
-models change no run."""
+each model's parameters under a field of the configuration, the crop's of
+the model its rows grow (P14.3)."""
 
 import json
 
 import pytest
 from pydantic import ValidationError
 
+from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.scenarios.crop_parameters import OrganCrop, SimpleCrop
 from greenhouse_sim.scenarios.manifest_files import MANIFESTS_DIR
-from greenhouse_sim.scenarios.registry import (
-    CONFIGURED,
-    DEFAULTS,
-    MODELS,
-    SIMPLE_CROP_FIELDS,
-    WALK_FIELDS,
-    CropWalk,
-    SimpleCrop,
-    chosen,
-    model,
-)
+from greenhouse_sim.scenarios.registry import CONFIGURED, DEFAULTS, MODELS, chosen, model
 
 
 def test_every_part_runs_a_model_it_has_when_a_manifest_names_none() -> None:
@@ -34,6 +26,8 @@ def test_every_part_runs_a_model_it_has_when_a_manifest_names_none() -> None:
     assert fields["weather"].default.kind == DEFAULTS[Part.WEATHER]
     assert fields["airflow"].default.kind == DEFAULTS[Part.AIR_FIELD]
     assert fields["crop_model"].default == DEFAULTS[Part.CROP]
+    assert fields["crop"].default.kind == DEFAULTS[Part.CROP]
+    assert fields["crop_walk"].default.kind == DEFAULTS[Part.CROP_WALK]
 
 
 def test_a_model_the_part_does_not_have_is_refused_naming_those_it_has() -> None:
@@ -41,17 +35,29 @@ def test_a_model_the_part_does_not_have_is_refused_naming_those_it_has() -> None
         model(Part.AIR_FIELD, "storm")
 
 
-def test_the_simple_crops_and_the_walks_parameters_are_the_configurations_fields() -> None:
-    """Written once, in the configuration, with its types, bounds and
-    defaults, until P14.3 moves them."""
+def test_each_models_parameters_are_held_under_its_field_of_the_configuration() -> None:
     fields = ScenarioConfig.model_fields
 
-    assert CONFIGURED == {"weather", "airflow", *SIMPLE_CROP_FIELDS, *WALK_FIELDS}
+    assert CONFIGURED == {"weather", "airflow", "crop", "crop_walk"}
     assert CONFIGURED <= set(fields)
-    assert SimpleCrop().model_dump() == {name: fields[name].default for name in SIMPLE_CROP_FIELDS}
-    assert CropWalk().model_dump() == {name: fields[name].default for name in WALK_FIELDS}
+    for models in MODELS.values():
+        for each in models.values():
+            assert each.parameters.model_fields["kind"].default == each.name
     with pytest.raises(ValidationError, match="water_capacity_ml"):
         SimpleCrop(water_capacity_ml=0)
+
+
+def test_a_scenarios_crop_takes_the_parameters_of_the_model_its_rows_grow() -> None:
+    simple = SCENARIO_REGISTRY["climate_box"]
+    given = simple.model_dump(exclude={"crop"}) | {"crop_model": CropModel.ORGAN}
+
+    organ = ScenarioConfig.model_validate(given)
+
+    assert organ.crop == OrganCrop()
+    # The engine's day grows the simple crop by its own settings in its place.
+    assert organ.simple_crop == SimpleCrop()
+    with pytest.raises(ValidationError, match="the simple crop's, but it grows the organ crop"):
+        ScenarioConfig.model_validate(given | {"crop": {"kind": "simple"}})
 
 
 @pytest.mark.parametrize("scenario_id", sorted(SCENARIO_REGISTRY))

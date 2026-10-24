@@ -191,7 +191,9 @@ def test_the_engine_runs_the_environment_model_it_is_given() -> None:
         ]
         assert world.environment == _ConstantClimate.CLIMATE
         assert readings and all(abs(reading - 30.0) < 2.0 for reading in readings)
-    assert all(plant.stem_length_cm > CONFIG.initial_stem_length_cm for plant in world.plants)
+    assert all(
+        plant.stem_length_cm > CONFIG.simple_crop.initial_stem_length_cm for plant in world.plants
+    )
 
 
 def test_executor_for_resolves_the_simulated_operator() -> None:

@@ -30,7 +30,7 @@ class SimpleTomatoModel:
         fruit_states = dict(state.fruits)
         for plant in plants:
             advanced, plant_state, new_fruit_states = advance_plant(
-                plant, state, environment, config
+                plant, state, environment.air_temperature_c, config
             )
             advanced_plants.append(advanced)
             plant_states[advanced.plant_id] = plant_state

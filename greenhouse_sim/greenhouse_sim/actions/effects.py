@@ -49,7 +49,9 @@ def _apply_water(
     # Water reaches the root zone, up to what it holds. How the plant responds
     # is the plant model's business on the next day.
     plant = world.plant(action.plant_id)
-    reservoir = min(config.water_capacity_ml, plant.water_reservoir_ml + action.amount_ml)
+    reservoir = min(
+        config.simple_crop.water_capacity_ml, plant.water_reservoir_ml + action.amount_ml
+    )
     updated_plant = plant.model_copy(update={"water_reservoir_ml": reservoir})
     world = _replace_plant(world, updated_plant)
     event = Event(

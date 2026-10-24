@@ -11,26 +11,20 @@ part runs, today's choice. P14.1 registers the parts a manifest chose
 already: the weather, the air field drawn, the crop and the crop walk's
 measurements. The others follow (P14.6).
 
-Until P14.3 moves them, a scenario's configuration (`ScenarioConfig`) holds
-each model's parameters where it held them before: the weather's and the
-air field's under a field of their own, told apart by their `kind`, which is
-the model's name; the simple crop's and the crop walk's as fields at its
-top. So the manifest's `models` change where a manifest writes a choice,
-not what a run is: its configuration, and so its run's identity, stays the
-one it was.
-
-The crop's model is the one its rows grow (decision 0050): a manifest's
-crop section gives that model's parameters, and names it as its rows do.
-Until P14.3, either crop model's parameters are the simple crop's
-settings: a scenario's live run grows the simple crop whatever its rows
-grow (`services.live`), so a scenario of organ rows has them too.
+A scenario's configuration (`ScenarioConfig`) holds each model's
+parameters under a field of its own, told apart by their `kind`, which is
+the model's name: the weather's under `weather`, the air field's under
+`airflow`, the crop's under `crop` and the crop walk's under `crop_walk`
+(P14.3). The crop's model is the one its rows grow (decision 0050): a
+manifest's crop section gives that model's parameters, and names it as its
+rows do.
 """
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Final
+from typing import Final
 
-from pydantic import BaseModel, ConfigDict, JsonValue, create_model
+from pydantic import BaseModel, ConfigDict, JsonValue
 
 from greenhouse_sim.airflow.prescribed import (
     BuoyancyAirflow,
@@ -41,6 +35,7 @@ from greenhouse_sim.airflow.prescribed import (
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.scenarios.crop_parameters import WALK, CropWalk, OrganCrop, SimpleCrop
 from greenhouse_sim.weather.recorded import RecordedWeather
 from greenhouse_sim.weather.seasonal import SeasonalWeather
 from greenhouse_sim.weather.sources import ConstantWeather
@@ -49,77 +44,35 @@ from greenhouse_sim.weather.synthetic import SyntheticWeather
 # The field of a parameter model that a configuration's union tells its
 # models apart by: the model's name.
 KIND: Final = "kind"
-# The simple crop's settings, and the engine's it runs in, which the
-# configuration holds at its top until P14.3.
-SIMPLE_CROP_FIELDS: Final = (
-    "air_temperature_bounds",
-    "humidity_bounds",
-    "initial_water_reservoir_ml",
-    "water_capacity_ml",
-    "water_use_ml_per_day_base",
-    "evaporation_ml_per_day",
-    "water_stress_threshold_pct",
-    "initial_stem_length_cm",
-    "stem_growth_cm_per_day_base",
-    "truss_interval_days",
-    "max_trusses",
-    "fruits_per_truss_bounds",
-    "target_diameter_mm_bounds",
-    "fruit_growth_days_to_target",
-    "mass_coefficient_g_per_mm3",
-    "ripening_days_bounds",
-    "soil_moisture_noise_pct",
-    "air_temperature_noise_c",
-)
-# The crop walk's measurement noises, which act on either crop's walk
-# (`services.crop_log`).
-WALK_FIELDS: Final = ("fruit_count_noise_probability", "ripe_mass_noise_pct", "height_noise_cm")
-# The crop walk's one model.
-WALK: Final = "walk"
-
-
-def _the_configurations(name: str, fields: tuple[str, ...]) -> type[BaseModel]:
-    """A parameter model of fields the configuration holds itself, as it
-    has them: their types, bounds and defaults, written once."""
-    held = ScenarioConfig.model_fields
-    # Each field as `create_model` takes it: its type and its field.
-    definitions: dict[str, Any] = {field: (held[field].annotation, held[field]) for field in fields}
-    return create_model(name, __config__=ConfigDict(frozen=True, extra="forbid"), **definitions)
-
-
-SimpleCrop: Final = _the_configurations("SimpleCrop", SIMPLE_CROP_FIELDS)
-CropWalk: Final = _the_configurations("CropWalk", WALK_FIELDS)
 
 
 @dataclass(frozen=True)
 class Model:
-    """A model of a part: its name, its parameters' model, where the
-    configuration holds them (under `field`, with the model's name as their
-    `kind`; or, with no field, as fields of its own), and its version."""
+    """A model of a part: its name, its parameters' model, the field of the
+    configuration that holds them, with the model's name as their `kind`,
+    and its version."""
 
     part: Part
     name: str
     parameters: type[BaseModel]
-    field: str | None = None
+    field: str
     version: int = 1
 
     def read(self, parameters: Mapping[str, JsonValue]) -> BaseModel:
         """Its parameters as a manifest's section gives them, checked:
         refused with their model's reason, or if they name its kind, which
         is the section's model."""
-        if self.field is not None and KIND in parameters:
+        if KIND in parameters:
             raise ValueError(f"its {KIND} is its model's name, {self.name!r}")
-        given = dict(parameters) | ({} if self.field is None else {KIND: self.name})
-        return self.parameters.model_validate(given)
+        return self.parameters.model_validate(dict(parameters) | {KIND: self.name})
 
     def written(self, parameters: BaseModel) -> dict[str, JsonValue]:
         """Its parameters as a manifest's section writes them."""
         return parameters.model_dump(mode="json", exclude={KIND})
 
     def configured(self, parameters: BaseModel) -> dict[str, JsonValue]:
-        """The configuration's fields its parameters are."""
-        fields = parameters.model_dump(mode="json")
-        return fields if self.field is None else {self.field: fields}
+        """The configuration's field its parameters are."""
+        return {self.field: parameters.model_dump(mode="json")}
 
 
 def _models(*models: Model) -> dict[str, Model]:
@@ -141,12 +94,12 @@ MODELS: Final[Mapping[Part, Mapping[str, Model]]] = {
         Model(Part.AIR_FIELD, "gradient", GradientAirflow, "airflow"),
     ),
     Part.CROP: _models(
-        Model(Part.CROP, CropModel.SIMPLE.value, SimpleCrop),
-        # The simple crop's settings, by which the scenario's live run grows
-        # the simple crop (P14.3 moves them); its variety is its rows'.
-        Model(Part.CROP, CropModel.ORGAN.value, SimpleCrop),
+        # 2: grown in the run, from its air, rather than in the engine's day
+        # alone (P14.3).
+        Model(Part.CROP, CropModel.SIMPLE.value, SimpleCrop, "crop", version=2),
+        Model(Part.CROP, CropModel.ORGAN.value, OrganCrop, "crop"),
     ),
-    Part.CROP_WALK: _models(Model(Part.CROP_WALK, WALK, CropWalk)),
+    Part.CROP_WALK: _models(Model(Part.CROP_WALK, WALK, CropWalk, "crop_walk")),
 }
 
 # The model each part runs when a manifest says nothing of it: the
@@ -161,7 +114,7 @@ DEFAULTS: Final[Mapping[Part, str]] = {
 # The configuration's fields that a part's models hold their parameters
 # in, which a manifest writes in its `models` instead.
 CONFIGURED: Final = frozenset(
-    {"weather", "airflow", *SIMPLE_CROP_FIELDS, *WALK_FIELDS},
+    {model.field for models in MODELS.values() for model in models.values()}
 )
 
 
@@ -198,8 +151,8 @@ def chosen(config: ScenarioConfig) -> dict[Part, str]:
     return {
         Part.WEATHER: config.weather.kind,
         Part.AIR_FIELD: config.airflow.kind,
-        Part.CROP: config.crop_model.value,
-        Part.CROP_WALK: WALK,
+        Part.CROP: config.crop.kind,
+        Part.CROP_WALK: config.crop_walk.kind,
     }
 
 

@@ -28,7 +28,9 @@ def _run() -> tuple[list[Observation], list[GroundTruth]]:
         world = step.world
         observations.extend(step.observations)
         truth.append(
-            ground_truth(world, timestamp=timestamp, water_capacity_ml=CONFIG.water_capacity_ml)
+            ground_truth(
+                world, timestamp=timestamp, water_capacity_ml=CONFIG.simple_crop.water_capacity_ml
+            )
         )
 
     return observations, truth
@@ -66,8 +68,8 @@ def test_the_readings_are_wrong_by_about_the_configured_noise() -> None:
     temperature = report.for_type(ObservationType.AIR_TEMPERATURE_C)
     moisture = report.for_type(ObservationType.SOIL_MOISTURE_PCT)
 
-    assert 0.0 < temperature.mean_absolute_error < 2 * CONFIG.air_temperature_noise_c
-    assert 0.0 < moisture.mean_absolute_error < 2 * CONFIG.soil_moisture_noise_pct
+    assert 0.0 < temperature.mean_absolute_error < 2 * CONFIG.simple_crop.air_temperature_noise_c
+    assert 0.0 < moisture.mean_absolute_error < 2 * CONFIG.simple_crop.soil_moisture_noise_pct
     assert temperature.max_absolute_error >= temperature.mean_absolute_error
 
 

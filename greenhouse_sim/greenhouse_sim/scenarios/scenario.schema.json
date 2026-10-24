@@ -290,6 +290,7 @@
     },
     "CropWalk": {
       "additionalProperties": false,
+      "description": "The daily walk through the crop's measurement errors, on either\ncrop's walk (`greenhouse_sim.services.crop_log`, and the engine's\nsensors): the chance that a count is one off, and the standard\ndeviations of the ripe fruits' estimated mass, in percent, and of a\nplant's measured height, in cm.",
       "properties": {
         "fruit_count_noise_probability": {
           "default": 0.1,
@@ -678,6 +679,13 @@
       "title": "OpeningKind",
       "type": "string"
     },
+    "OrganCrop": {
+      "additionalProperties": false,
+      "description": "The organ crop's settings (`greenhouse_sim.biology.tomato.organ`):\nnone a scenario chooses yet, its variety's being its own (P12.4).",
+      "properties": {},
+      "title": "OrganCrop",
+      "type": "object"
+    },
     "Percent": {
       "maximum": 100.0,
       "minimum": 0.0,
@@ -891,6 +899,7 @@
     },
     "SimpleCrop": {
       "additionalProperties": false,
+      "description": "The simple daily crop's settings (`greenhouse_sim.biology.tomato.simple`),\nand those of the engine's day it grows in: the bounds its air drifts\nwithin (`greenhouse_sim.environment.simple`) and its sensors' noises\n(`greenhouse_sim.sensors.generation`), until the engine goes (decision\n0035).",
       "properties": {
         "air_temperature_bounds": {
           "default": [
@@ -1609,7 +1618,7 @@
                   "const": "organ"
                 },
                 "parameters": {
-                  "$ref": "#/$defs/SimpleCrop"
+                  "$ref": "#/$defs/OrganCrop"
                 }
               }
             }

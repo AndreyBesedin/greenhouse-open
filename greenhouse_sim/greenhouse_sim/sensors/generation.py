@@ -49,7 +49,9 @@ def _air_temperature_observation(
     rng: np.random.Generator,
     source: RecordSource,
 ) -> Observation:
-    noisy = world.environment.air_temperature_c + rng.normal(0.0, config.air_temperature_noise_c)
+    noisy = world.environment.air_temperature_c + rng.normal(
+        0.0, config.simple_crop.air_temperature_noise_c
+    )
     return Observation(
         observation_id=observation_id(
             world.greenhouse_id, timestamp, ObservationType.AIR_TEMPERATURE_C.value
@@ -83,8 +85,8 @@ def _plant_observations(
             source=source,
         )
 
-    soil_moisture_pct = 100.0 * plant.water_reservoir_ml / config.water_capacity_ml
-    noisy_moisture = soil_moisture_pct + rng.normal(0.0, config.soil_moisture_noise_pct)
+    soil_moisture_pct = 100.0 * plant.water_reservoir_ml / config.simple_crop.water_capacity_ml
+    noisy_moisture = soil_moisture_pct + rng.normal(0.0, config.simple_crop.soil_moisture_noise_pct)
     noisy_moisture = float(np.clip(noisy_moisture, 0.0, 100.0))
 
     fruits = [fruit for truss in plant.trusses for fruit in truss.fruits]
@@ -92,21 +94,21 @@ def _plant_observations(
     ripe_fruits = [fruit for fruit in visible_fruits if fruit.status == FruitStatus.RIPE]
     ripe_mass_g = sum(fruit.mass_g for fruit in ripe_fruits)
     noisy_ripe_mass = max(
-        0.0, ripe_mass_g * (1 + rng.normal(0.0, config.ripe_mass_noise_pct / 100.0))
+        0.0, ripe_mass_g * (1 + rng.normal(0.0, config.crop_walk.ripe_mass_noise_pct / 100.0))
     )
 
     visible_height_cm = plant.stem_length_cm - plant.lowered_length_cm
-    noisy_height = max(0.0, visible_height_cm + rng.normal(0.0, config.height_noise_cm))
+    noisy_height = max(0.0, visible_height_cm + rng.normal(0.0, config.crop_walk.height_noise_cm))
 
     return [
         observation(ObservationType.SOIL_MOISTURE_PCT, round(noisy_moisture, 1)),
         observation(
             ObservationType.VISIBLE_FRUIT_COUNT,
-            _noisy_count(len(visible_fruits), config.fruit_count_noise_probability, rng),
+            _noisy_count(len(visible_fruits), config.crop_walk.fruit_count_noise_probability, rng),
         ),
         observation(
             ObservationType.RIPE_FRUIT_COUNT,
-            _noisy_count(len(ripe_fruits), config.fruit_count_noise_probability, rng),
+            _noisy_count(len(ripe_fruits), config.crop_walk.fruit_count_noise_probability, rng),
         ),
         observation(ObservationType.ESTIMATED_RIPE_MASS_G, round(noisy_ripe_mass, 1)),
         observation(ObservationType.VISIBLE_HEIGHT_CM, round(noisy_height, 1)),
