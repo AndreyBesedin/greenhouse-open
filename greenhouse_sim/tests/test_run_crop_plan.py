@@ -5,6 +5,7 @@ from another run's from the first day their crop actions differ, and from a
 kept state whose crop actions up to its day are not its own."""
 
 import re
+from collections.abc import Callable
 from dataclasses import replace
 from typing import Final
 
@@ -157,11 +158,12 @@ def test_a_kept_state_s_crop_is_a_run_s_only_with_its_crop_actions_up_to_its_day
 
 
 def test_a_run_s_crop_carries_out_its_crop_actions_and_takes_over_days_before_them(
-    simulator: Simulator,
+    simulator: Simulator, afresh: Callable[[], None]
 ) -> None:
     """On the run's second day, after its crop work: every ripe fruit
     picked, of which there is none; the lowest leaf removed, and the stem
-    lowered by the internode it leaves bare."""
+    lowered by the internode it leaves bare. Without the opening days kept,
+    every crop here works its days out itself, as the plain run's would."""
     leaf = RemoveLeaf(plant_id=PLANT, leaf_id=f"{PLANT}_n01_leaf")
     lowering = Lower(plant_id=PLANT, by_internodes=1)
     plain = run_crop(simulator, RunRequest(SCENARIO))
