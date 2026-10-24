@@ -9,12 +9,14 @@ its own air and sunlight, for a day or two.
 
 import threading
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from contextlib import AbstractContextManager
 from http import HTTPStatus
 from typing import Any, Final
 
 import pytest
+from greenhouse_protocol.actions import Harvest, HarvestScope, Lower, RemoveLeaf
+from greenhouse_protocol.outcome import Harvested, LeafRemoved, Lowered
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
@@ -27,7 +29,8 @@ from greenhouse_sim.biology.tomato.organ.transplants import transplant
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.core.clock import DAY_S, days_ended
-from greenhouse_sim.core.crop import KEPT_DAYS, CropLight, CropWork, RunCrop
+from greenhouse_sim.core.crop import KEPT_DAYS, CropDone, CropLight, CropWork, DayWork, RunCrop
+from greenhouse_sim.core.crop_actions import CropAction, carry_out
 from greenhouse_sim.core.timeline import HARVEST_ROUND, RunProcesses, events
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.organs import FruitStage
@@ -90,6 +93,7 @@ def _crop(
     seed: int = SEED,
     asked: _Asked | None = None,
     air_on: Callable[[int], HouseAir] | None = None,
+    planned: Mapping[int, Sequence[CropAction]] | None = None,
 ) -> RunCrop:
     """Three of the reference greenhouse's transplants, at its first three
     planting positions, in steady air and light."""
@@ -111,6 +115,7 @@ def _crop(
         light=light,
         work=work,
         days=SEASON_DAYS,
+        planned=planned,
     )
 
 
@@ -343,6 +348,68 @@ def test_a_crop_keeps_no_more_days_for_what_it_takes_over() -> None:
         second.local("p1", day - 1)
 
     assert len(second._kept) <= KEPT_DAYS + 2
+
+
+# A run's own crop actions on the day of its first red harvest round: a leaf
+# removed and the stem lowered past it, on the first plant; every ripe
+# fruit picked, on the second, which the round has picked already.
+OWN_ACTIONS: Final[tuple[CropAction, ...]] = (
+    RemoveLeaf(plant_id="p1", leaf_id="p1_n01_leaf"),
+    Harvest(plant_id="p2", scope=HarvestScope.RIPE),
+    Lower(plant_id="p1", by_internodes=1),
+)
+
+
+def test_a_runs_own_crop_actions_follow_its_crop_work_in_the_order_planned() -> None:
+    crop = _crop(planned={FIRST_RED_ROUND: OWN_ACTIONS})
+    worked = _crop()
+    before = worked.plants_on(FIRST_RED_ROUND)
+    pruned = carry_out(before[0], OWN_ACTIONS[0], REFERENCE.layout.trainings()[0])
+    lowered = carry_out(pruned.plant, OWN_ACTIONS[2], REFERENCE.layout.trainings()[0])
+    picked = carry_out(before[1], OWN_ACTIONS[1], REFERENCE.layout.trainings()[1])
+
+    assert crop.plants_on(FIRST_RED_ROUND - 1) == worked.plants_on(FIRST_RED_ROUND - 1)
+    assert crop.plants_on(FIRST_RED_ROUND) == (lowered.plant, picked.plant, before[2])
+    assert crop.worked_on(FIRST_RED_ROUND) == DayWork(
+        done=(
+            CropDone(LeafRemoved(leaf_id="p1_n01_leaf")),
+            CropDone(Harvested(fruit_count=0, fresh_mass_g=0.0)),
+            CropDone(lowered.effect),
+        ),
+        work_ends={"p1": len(before[0].history), "p2": len(before[1].history)},
+    )
+    assert isinstance(lowered.effect, Lowered) and lowered.effect.by_cm > 0
+    assert crop.worked_on(FIRST_RED_ROUND - 1) is None
+    # The days after carry them on.
+    assert crop.plants_on(FIRST_RED_ROUND + 1)[0].laid_internodes == 1
+
+
+def test_what_a_crop_took_over_or_was_given_it_works_out_again_to_say_what_it_did() -> None:
+    planned = {FIRST_RED_ROUND: OWN_ACTIONS}
+    first = _crop(planned=planned)
+    done = first.worked_on(FIRST_RED_ROUND)
+    asked = _Asked()
+    second = _crop(planned=planned, asked=asked)
+    second.carry_on_from(first, FIRST_RED_ROUND)
+    seeded = _crop(planned=planned)
+    seeded.seed(
+        FIRST_RED_ROUND,
+        first.plants_on(FIRST_RED_ROUND),
+        first.lived_through(FIRST_RED_ROUND),
+    )
+
+    assert second.worked_on(FIRST_RED_ROUND) == done
+    assert seeded.worked_on(FIRST_RED_ROUND) == done
+    # From what it took over, without asking for any day's air again.
+    assert asked.air == []
+
+
+def test_a_crop_s_own_crop_actions_are_on_its_plants_on_the_days_it_works() -> None:
+    harvest = Harvest(plant_id="p1", scope=HarvestScope.RIPE)
+    with pytest.raises(ValueError, match="worked on days 1 to 120, not 0"):
+        _crop(planned={0: [harvest]})
+    with pytest.raises(ValueError, match="no plant 'p9'"):
+        _crop(planned={1: [Harvest(plant_id="p9", scope=HarvestScope.RIPE)]})
 
 
 def test_the_timeline_lists_each_harvest_round_after_the_plants_day() -> None:

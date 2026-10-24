@@ -11,6 +11,16 @@ breaks the conformance checks is a major version.
   digits, so that a float's rounding no longer shows, as in the starting
   house's rows' origin, 2.4000000000000004. A value left as it is still
   sends nothing, and the simulator keeps it exact.
+- `greenhouse-sim`: a playback's run carries out the crop actions given to
+  its gateway (P13.5, decision 0046), through `Playback.submit`. A harvest,
+  a lowering, a leaf removed or an inspection is carried out at the start
+  of a day after its first, given before the clock reaches it. The gateway
+  refuses the rest at once, in the run's words: watering, because its
+  organ crop has no water in its root zone, and any other moment. Each
+  action is done once its day is worked out, with the effect the crop gave
+  it, or refused in the organ model's words. Each one done makes an event
+  of its own, which names it and which its outcome names. The crop work's
+  harvest events count the harvest round alone.
 - `greenhouse-sim`: who may act on a simulator's runs is an authorisation
   it is given (P13.4, decision 0052): a file the server reads,
   `--authorisation <file>`, as the protocol writes the record, or else the
@@ -20,6 +30,35 @@ breaks the conformance checks is a major version.
   enforce it from its clock on, recorded beside each plan
   (`Playback.plan`); an action whose rights are withdrawn before it falls
   due is refused then.
+- `greenhouse-protocol`: an executor may say why it refuses
+  (`contracts.execution.ExplainsRefusals.why_not`): a kind it does not
+  carry out, or an instant it does not honour. The reference gateway adds
+  those words to its own refusal, and `check_executor` holds them to the
+  executor's kinds and the instants it honours. An execution report may
+  name the event its action made in the run's records
+  (`ExecutionReport.event_id`), if the action started, and the gateway's
+  outcome names that event too. Both are additive (P13.5, decision 0046).
+- `greenhouse-sim`: a run's plan holds crop actions (P13.5, decision 0046):
+  a harvest, a lowering, a leaf removed or an inspection, at the start of a
+  day after its first, on an organ crop. Any other moment is refused, in
+  the run's words, and so are a plant it does not have and a lowering to a
+  head room on a plant with no wire. After that day's crop work, the crop
+  carries them out in the plan's order, and keeps what each did
+  (`RunCrop.worked_on`). A run with crop actions has an identity of its
+  own. Every other run keeps its id, replay digest and kept opening day. A
+  crop takes over another's days, or a kept state's plants, only as far as
+  their crop actions agree.
+- `greenhouse-sim`: the organ crop carries out the protocol's crop actions
+  (P13.5, decision 0046): a harvest of one fruit, one truss or every ripe
+  fruit, a lowering by internodes, by centimetres or to a head room under
+  the plant's wire, and a leaf removed, each as the organ model's own
+  operations, with its effect: the fruits picked and their mass, how far
+  the top came down, the leaf removed (`core.crop_actions`). The plant
+  lab's scheduled actions and a scenario's crop work are carried out so,
+  with every plant, run id and kept opening day as before. The lab refuses
+  a scheduled action that names no organ. The organ model's `PlantAction`
+  is renamed `PlantOperation`, and so is its definition in the plant
+  schemas; its events' `action` field and kinds are unchanged.
 
 ## 0.4.0 - 2026-10-24
 

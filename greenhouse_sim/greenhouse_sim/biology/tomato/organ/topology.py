@@ -140,19 +140,21 @@ class LowerStem(BaseModel):
     internodes: PositiveInt = 1
 
 
-type PlantAction = Annotated[
+# What the organ model does to a plant: its own operations, not actions,
+# which a run's crop actions are carried out as.
+type PlantOperation = Annotated[
     RemoveLeaf | HarvestFruit | HarvestTruss | LowerStem, Field(discriminator="kind")
 ]
 
 
 class PlantEvent(BaseModel):
-    """An action done to a plant, or asked of it and refused."""
+    """An operation done to a plant, or asked of it and refused."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     # The plant's thermal time when it was done.
     thermal_time: NonNegativeFloat
-    action: PlantAction
+    action: PlantOperation
     applied: bool
     # What it did, or why it was refused, in words.
     note: str

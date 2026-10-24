@@ -34,6 +34,7 @@ from greenhouse_protocol.contracts.execution import (
     ActionNotExecutable,
     AssignmentStatus,
     ExecutorUnderTest,
+    ExplainsRefusals,
     Revocation,
 )
 from greenhouse_protocol.contracts.gateway import (
@@ -563,7 +564,7 @@ class InMemoryGateway:
         if not self._config.allows(principal, action):
             return f"{principal.id} is not authorised to {action.kind}"
         if action.kind not in self._executor.kinds():
-            return f"no executor carries out {action.kind}"
+            return self._explained(f"no executor carries out {action.kind}", action.kind)
         if executed_by is not None and not any(
             _names(each, self._executor_ref) for each in executed_by
         ):
@@ -578,8 +579,17 @@ class InMemoryGateway:
         if missing:
             return f"the run has no {', '.join(sorted(missing))}"
         if isinstance(timing, At) and not self._executor.honours(action.kind, timing.at):
-            return f"no executor honours {action.kind} at {timing.at.isoformat()}"
+            refusal = f"no executor honours {action.kind} at {timing.at.isoformat()}"
+            return self._explained(refusal, action.kind, timing.at)
         return None
+
+    def _explained(self, refusal: str, kind: ActionKind, instant: datetime | None = None) -> str:
+        """The refusal, with the executor's own words for it, if it gives
+        them (`ExplainsRefusals`)."""
+        if not isinstance(self._executor, ExplainsRefusals):
+            return refusal
+        why = self._executor.why_not(kind, instant)
+        return refusal if why is None else f"{refusal}: {why}"
 
     def _revise(self, plan: Plan, kept: dict[str, PlannedAction], by: Principal) -> None:
         for action in [a for a in self._in_order() if a.plan_id == plan.plan_id]:
@@ -942,6 +952,7 @@ class InMemoryGateway:
             effect=report.effect
             if report and status in {OutcomeStatus.EXECUTED, OutcomeStatus.LATE}
             else None,
+            event_id=report.event_id if ran and report else None,
         )
         self._log.append(outcome)
         if action.current:

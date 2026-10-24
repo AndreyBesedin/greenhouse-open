@@ -358,25 +358,9 @@ export const PLANT_SCHEMA = {
       "title": "Phytomer",
       "type": "object"
     },
-    "PlantAction": {
-      "oneOf": [
-        {
-          "$ref": "#/$defs/RemoveLeaf"
-        },
-        {
-          "$ref": "#/$defs/HarvestFruit"
-        },
-        {
-          "$ref": "#/$defs/HarvestTruss"
-        },
-        {
-          "$ref": "#/$defs/LowerStem"
-        }
-      ]
-    },
     "PlantEvent": {
       "additionalProperties": false,
-      "description": "An action done to a plant, or asked of it and refused.",
+      "description": "An operation done to a plant, or asked of it and refused.",
       "properties": {
         "thermal_time": {
           "minimum": 0,
@@ -384,7 +368,7 @@ export const PLANT_SCHEMA = {
           "type": "number"
         },
         "action": {
-          "$ref": "#/$defs/PlantAction"
+          "$ref": "#/$defs/PlantOperation"
         },
         "applied": {
           "title": "Applied",
@@ -419,6 +403,22 @@ export const PLANT_SCHEMA = {
       ],
       "title": "PlantEvent",
       "type": "object"
+    },
+    "PlantOperation": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/RemoveLeaf"
+        },
+        {
+          "$ref": "#/$defs/HarvestFruit"
+        },
+        {
+          "$ref": "#/$defs/HarvestTruss"
+        },
+        {
+          "$ref": "#/$defs/LowerStem"
+        }
+      ]
     },
     "PlantTraits": {
       "additionalProperties": false,

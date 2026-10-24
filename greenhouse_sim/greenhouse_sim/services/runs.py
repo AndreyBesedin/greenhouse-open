@@ -4,19 +4,41 @@ scenario's last day, on the run's clock (`greenhouse_sim.core.clock`)."""
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Annotated, Any, Self, cast
+from typing import Annotated, Any, Final, Self, cast
 
-from greenhouse_protocol.actions import SetLevel, SetTarget
+from greenhouse_protocol.actions import (
+    ActionKind,
+    Harvest,
+    Inspect,
+    Lower,
+    RemoveLeaf,
+    SetLevel,
+    SetTarget,
+)
 from pydantic import BaseModel, ConfigDict, Field
 
-from greenhouse_sim.core.clock import day_start
+from greenhouse_sim.core.clock import DAY_S, day_start
+from greenhouse_sim.core.crop_actions import CropAction
+from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services.errors import InvalidRequest
+from greenhouse_sim.services.scenarios import plant_ids
 
 # A command as a request writes it: its moment, its actuator and its level.
 # A daily command's moment is its time of day; a target change's actuator is
 # its target, and its level the value it sets, in °C (#274).
 type Commanded = tuple[float, str, float]
+
+# The kinds of action a run carries out on its organ crop (P13.5), at the
+# start of a day after its first: the crop steps a day at a time.
+CROP_KINDS: Final = frozenset(
+    {ActionKind.HARVEST, ActionKind.LOWER, ActionKind.REMOVE_LEAF, ActionKind.INSPECT}
+)
+
+# An action of the kinds a run carries out.
+type RunAction = Annotated[
+    SetLevel | SetTarget | Harvest | Lower | RemoveLeaf | Inspect, Field(discriminator="kind")
+]
 
 
 class PlannedAt(BaseModel):
@@ -26,7 +48,7 @@ class PlannedAt(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     at_s: float
-    action: Annotated[SetLevel | SetTarget, Field(discriminator="kind")]
+    action: RunAction
 
 
 class PlannedDaily(BaseModel):
@@ -39,10 +61,17 @@ class PlannedDaily(BaseModel):
     action: SetLevel
 
 
+# A run's crop actions that act on its crop, by their moments
+# (`RunPlan.crop_plan`): what tells its crop from another's of the same air.
+type CropPlan = tuple[PlannedAt, ...]
+
+
 class RunPlan(BaseModel):
     """What a run is asked to do once it has started (P13.2, decision 0046),
     in the protocol's actions of the kinds a run carries out: a device's
-    level, a door's or a vent's included, and a heating target.
+    level, a door's or a vent's included, a heating target and, on an organ
+    crop, a harvest, a lowering, a leaf removed and an inspection, at the
+    start of a day (`CROP_KINDS`, P13.5).
 
     - `actions`: each at its moment, in the order given, those at one
       moment included;
@@ -119,11 +148,31 @@ class RunPlan(BaseModel):
             if isinstance(planned.action, SetTarget)
         )
 
+    def cropped(self) -> tuple[PlannedAt, ...]:
+        """Its crop actions, each at its moment, in the order given."""
+        return tuple(planned for planned in self.actions if planned.action.kind in CROP_KINDS)
+
+    def crop_plan(self) -> CropPlan:
+        """Its crop actions that act on its crop, its harvests, lowerings
+        and leaves removed, by their moments, those at one moment in the
+        order given."""
+        worked = (each for each in self.cropped() if not isinstance(each.action, Inspect))
+        return tuple(sorted(worked, key=lambda each: each.at_s))
+
     def before(self, moment_s: float) -> Self:
         """The plan as it stood for what came before `moment_s`: its actions
-        at earlier moments, and what it does every day."""
+        at earlier moments, its crop actions at that moment too, since the
+        crop at a day's start is the crop once that day's work is done; and
+        what it does every day."""
         return self.model_copy(
-            update={"actions": tuple(each for each in self.actions if each.at_s < moment_s)}
+            update={
+                "actions": tuple(
+                    each
+                    for each in self.actions
+                    if each.at_s < moment_s
+                    or (each.at_s == moment_s and each.action.kind in CROP_KINDS)
+                )
+            }
         )
 
     def validated(self) -> Self:
@@ -133,6 +182,77 @@ class RunPlan(BaseModel):
         # As a request wrote them, its numbers may not be the floats the
         # protocol's fields are typed with until they are validated.
         return type(self).model_validate(self.model_dump(warnings=False))
+
+
+def crop_model_refusal(config: ScenarioConfig, kind: ActionKind) -> str | None:
+    """Why a run of a scenario takes no action of `kind` on its crop at all,
+    if it takes none: its crop is not grown organ by organ."""
+    if config.crop_model == CropModel.ORGAN:
+        return None
+    return (
+        f"{config.greenhouse_id} grows its crop with the simple daily model, which takes no {kind}"
+    )
+
+
+def crop_moment_refusal(config: ScenarioConfig, kind: ActionKind, at_s: float) -> str | None:
+    """Why a run of a scenario does not carry out a crop action of `kind` at
+    `at_s` seconds from its start, if it does not: its organ crop steps a
+    day at a time, and its work begins with its second day."""
+    unmodelled = crop_model_refusal(config, kind)
+    if unmodelled is not None:
+        return unmodelled
+    if at_s % DAY_S != 0:
+        return (
+            f"the run's crop steps a day at a time: it carries out {kind} at a day's start, "
+            f"not at {at_s:.15g} s"
+        )
+    if at_s <= 0:
+        return "the run's crop is planted at its start: its work begins with its second day"
+    if at_s >= config.run_length_s():
+        return f"the run ends at {config.run_length_s():.15g} s: no day of it starts then"
+    return None
+
+
+def crop_action_refusal(config: ScenarioConfig, action: CropAction | Inspect) -> str | None:
+    """Why a run of a scenario does not carry out a crop action on a plant,
+    whatever the day, if it does not: a plant it has not, or a lowering to a
+    head room on a plant that hangs from no wire."""
+    plants = plant_ids(config)
+    if action.plant_id not in plants:
+        return f"{config.greenhouse_id} has no plant {action.plant_id!r}"
+    if isinstance(action, Lower) and action.to_head_room_m is not None:
+        trainings = dict(zip(plants, config.layout.trainings(), strict=False))
+        training = trainings.get(action.plant_id)
+        if training is None or training.wire_m is None:
+            return f"{action.plant_id} hangs from no wire"
+    return None
+
+
+def checked_crop_plan(config: ScenarioConfig, plan: RunPlan) -> CropPlan:
+    """A run's crop plan (`RunPlan.crop_plan`), of a scenario as `config`
+    has it; refused, saying why, if the run would not carry out one of its
+    crop actions."""
+    cropped = plan.cropped()
+    for planned in cropped:
+        match planned.action:
+            case Harvest() | Lower() | RemoveLeaf() | Inspect() as action:
+                refusal = crop_moment_refusal(
+                    config, action.kind, planned.at_s
+                ) or crop_action_refusal(config, action)
+                if refusal is not None:
+                    raise InvalidRequest(refusal)
+    return plan.crop_plan()
+
+
+def crop_days(planned: CropPlan) -> dict[int, tuple[CropAction, ...]]:
+    """A crop plan's actions by the day they start, each day's in order."""
+    days: dict[int, tuple[CropAction, ...]] = {}
+    for each in planned:
+        match each.action:
+            case Harvest() | Lower() | RemoveLeaf() as action:
+                day = int(each.at_s // DAY_S)
+                days[day] = (*days.get(day, ()), action)
+    return days
 
 
 def _level(device_id: str, level: float) -> SetLevel:
