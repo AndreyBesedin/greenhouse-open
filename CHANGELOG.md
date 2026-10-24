@@ -7,6 +7,18 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: a run's crew (P13.6, decision 0046). A simulator may
+  be given one, `Simulator(crew=Crew(hands=..., durations_s=...))`: so
+  many hands, each crop action holding one for as long as its kind takes.
+  A plan's crop actions are then on time, late, missed, carried out by
+  their fallbacks or cancelled with what waits for them, by their rules,
+  the same way run after run. The run says when it carries each kind out
+  (`RunExecutor.earliest`): a level at once, a target on the minute, and
+  crop work at the next day's start. So its gateway starts a window's, an
+  as soon as possible or a late crop action there, rather than refusing
+  it. A crop action's outcome finishes its kind's time after it starts.
+  Without a crew, every run is as it was.
+
 - `greenhouse-protocol`: a gateway starts each action at the earliest
   instant it can (P13.6, decision 0046). An executor may say the earliest
   instant from one on at which it carries out a kind

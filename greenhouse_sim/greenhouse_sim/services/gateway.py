@@ -35,11 +35,12 @@ plan is given and again when it falls due, and records each change of the
 configuration with its moment.
 """
 
+import math
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Final
+from typing import Final, Self
 
 from greenhouse_protocol.actions import Action, ActionKind, ActionTargets
 from greenhouse_protocol.assignment import Assignment, ExecutionReport, ReportStatus
@@ -51,7 +52,15 @@ from greenhouse_protocol.contracts.execution import AssignmentStatus, Revocation
 from greenhouse_protocol.contracts.memory_gateway import effect_of
 from greenhouse_protocol.outcome import ActionEffect
 from greenhouse_protocol.plan import Principal, PrincipalKind
-from pydantic import ValidationError
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    NonNegativeFloat,
+    PositiveInt,
+    ValidationError,
+    model_validator,
+)
 
 from greenhouse_sim.climate.commands import TARGET_EVERY_S
 from greenhouse_sim.core.clock import DAY_S
@@ -160,6 +169,31 @@ def run_unhonoured(config: ScenarioConfig) -> Unhonoured:
 _TARGETS: Final = frozenset(target.value for target in Target)
 
 
+class Crew(BaseModel):
+    """Who carries a run's crop actions out (P13.6): so many hands at once,
+    each action holding one for as long as its kind takes, as a grower's
+    crew does. Levels and targets are the climate computer's, done at once,
+    and hold no hand. Without hands given, as many at once as are given;
+    without a kind's time, it takes none."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
+
+    hands: PositiveInt | None = None
+    durations_s: dict[ActionKind, NonNegativeFloat] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _crop_work_timed(self) -> Self:
+        timed = sorted(set(self.durations_s) - CROP_KINDS)
+        if timed:
+            raise ValueError(f"a crew times crop actions only, not {', '.join(timed)}")
+        return self
+
+
+# A crew of as many hands as are given, whose work takes no time: every
+# crop action at its day's start, as P13.5 has it.
+NO_CREW: Final = Crew()
+
+
 @dataclass(frozen=True)
 class Carried:
     """What the run made of one of its crop actions once its day was worked
@@ -188,7 +222,9 @@ class RunExecutor:
     works it out: see the module. `changed` is told the moment, in seconds
     from the run's start, from which its plan has changed; `refuses` says
     why the run would refuse an action, if it would; and `unhonoured` why it
-    does not carry out a kind, or not at a moment (`run_unhonoured`)."""
+    does not carry out a kind, or not at a moment (`run_unhonoured`). Its
+    `crew` carries its crop actions out: so many at once, each taking its
+    kind's time."""
 
     def __init__(
         self,
@@ -199,6 +235,7 @@ class RunExecutor:
         changed: Callable[[float], None] = lambda _: None,
         refuses: Refusal = lambda _action, _at: None,
         unhonoured: Unhonoured = lambda _kind, _at: None,
+        crew: Crew = NO_CREW,
     ) -> None:
         self.now = start
         self._start = start
@@ -207,6 +244,7 @@ class RunExecutor:
         self._changed = changed
         self._refuses = refuses
         self._unhonoured = unhonoured
+        self._crew = crew
         self._held: dict[str, _Held] = {}
         self._reports: list[ExecutionReport] = []
 
@@ -252,14 +290,33 @@ class RunExecutor:
             return "the run's clock has passed that day's start: its crop's work then is done"
         return None
 
+    def earliest(
+        self, kind: ActionKind, not_before: datetime, not_after: datetime | None = None
+    ) -> datetime | None:
+        """The earliest instant from `not_before` on, and by `not_after` if
+        given, at which the run carries out `kind` (`SaysWhen`): a level at
+        once, a target on the minute, crop work at the next day's start
+        after its first that its clock has not passed; None if there is
+        none in the run."""
+        moment = max(self.seconds(not_before), 0.0)
+        if kind == ActionKind.SET_TARGET:
+            moment = math.ceil(moment / TARGET_EVERY_S) * TARGET_EVERY_S
+        elif kind in CROP_KINDS:
+            moment = max(moment, self.seconds(self.now), DAY_S)
+            moment = math.ceil(moment / DAY_S) * DAY_S
+        at = self.instant(moment)
+        if (not_after is not None and at > not_after) or not self.honours(kind, at):
+            return None
+        return at
+
     def capacity(self) -> int:
-        return UNLIMITED
+        return UNLIMITED if self._crew.hands is None else self._crew.hands
 
     def lead_time_s(self, kind: ActionKind) -> float:
         return self._end_s
 
     def longest_duration_s(self, kind: ActionKind) -> float:
-        return 0.0
+        return self._crew.durations_s.get(kind, 0.0)
 
     def perform(self, assignment: Assignment) -> None:
         if assignment.assignment_id in self._held:
@@ -299,22 +356,31 @@ class RunExecutor:
     # On the gateway's clock.
 
     def finishes(self) -> tuple[datetime, ...]:
-        return tuple(held.assignment.at for held in self._pending())
+        return tuple(self._finish(held) for held in self._pending())
 
     def advance(self, to: datetime) -> None:
-        """Each action whose moment the clock has reached is done, as the run
-        worked it out, or refused, as the run would; a crop action once its
-        day is worked out, and not before. What follows a crop action still
-        waiting, at its moment or later, waits with it, so that the
-        outcomes of one moment keep their order however far ahead of the
-        clock the run was worked out."""
-        for held in sorted(self._pending(), key=_in_order):
+        """Each action the clock has reached the end of is done, as the run
+        worked it out, once its crew's time for it has passed; or refused,
+        at its moment, as the run would. A crop action is either only once
+        its day is worked out. What follows a crop action still waiting, at
+        its end or later, waits with it, so that the outcomes keep their
+        order however far ahead of the clock the run was worked out."""
+        for held in sorted(self._pending(), key=lambda held: (self._finish(held), _in_order(held))):
             waiting = held.assignment.action.kind in CROP_KINDS and held.carried is None
-            if held.assignment.at > to or (held.refusal is None and waiting):
+            if self._finish(held) > to or (held.refusal is None and waiting):
                 break
             held.finished = True
-            self._reports.append(_report(held))
+            self._reports.append(_report(held, self._finish(held)))
         self.now = max(self.now, to)
+
+    def _finish(self, held: _Held) -> datetime:
+        """When a held action ends: at its moment, refused; or once its
+        crew's time for its kind has passed."""
+        refused = held.refusal or (held.carried.refusal if held.carried is not None else None)
+        if refused is not None:
+            return held.assignment.at
+        takes = self.longest_duration_s(held.assignment.action.kind)
+        return held.assignment.at + timedelta(seconds=takes)
 
     # The run's side.
 
@@ -380,9 +446,10 @@ class RunExecutor:
         self._changed(moment_s)
 
 
-def _report(held: _Held) -> ExecutionReport:
-    """A held action's report, its moment reached: refused, as the run
-    refuses it; or done, with its effect, or what the run made of it."""
+def _report(held: _Held, finished_at: datetime) -> ExecutionReport:
+    """A held action's report, its end reached: refused, as the run refuses
+    it; or done, from its moment to `finished_at`, with its effect, or what
+    the run made of it."""
     assignment_id, at = held.assignment.assignment_id, held.assignment.at
     refusal = held.refusal or (held.carried.refusal if held.carried is not None else None)
     if refusal is not None:
@@ -394,7 +461,7 @@ def _report(held: _Held) -> ExecutionReport:
         assignment_id=assignment_id,
         status=ReportStatus.DONE,
         started_at=at,
-        finished_at=at,
+        finished_at=finished_at,
         effect=effect_of(held.assignment.action) if carried is None else carried.effect,
         event_id=None if carried is None else carried.event_id,
     )

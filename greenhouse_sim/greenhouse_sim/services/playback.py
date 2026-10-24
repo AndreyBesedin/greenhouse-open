@@ -378,6 +378,7 @@ class Playback:
             changed=self._work_again_from,
             refuses=self._refusal,
             unhonoured=run_unhonoured(played),
+            crew=simulator.crew,
         )
         # Who may do what on its run, as its gateway enforces it.
         self._authorisation = simulator.authorisation
@@ -672,18 +673,22 @@ class Playback:
             self._gateway.finish()
 
     def _gateway_to(self, to_s: float) -> float:
-        """Moves its gateway to the run's moment `to_s`, a moment its run
-        acts at after another, and says how far the clock may move: there,
-        or, if the run's plan changed as an action fell due, no further
-        than the records worked out under it, which are worked again from
-        that action's moment before they are delivered."""
+        """Moves its gateway to the run's moment `to_s`, a moment it has
+        something to do at after another (`InMemoryGateway.next_moment`), and
+        says how far the clock may move: there, or, if the run's plan
+        changed at one of them, as an action fell due or turned late, no
+        further than that moment, nor than the records worked out under the
+        plan, which are worked again before they are delivered. Its clock
+        and its gateway's stay together."""
         changes = self._changes
-        moments = sorted(set(self._executor.finishes()))
-        for at in (*(m for m in moments if self._executor.seconds(m) < to_s), None):
-            self._gateway.advance(self._executor.instant(to_s) if at is None else at)
+        end = self._executor.instant(to_s)
+        while True:
+            at = self._gateway.next_moment(end) or end
+            self._gateway.advance(at)
             if self._changes != changes:
-                return max(self._time_s, min(to_s, self._worked_out_s()))
-        return to_s
+                return max(self._time_s, min(self._executor.seconds(at), self._worked_out_s()))
+            if at >= end:
+                return to_s
 
     def _worked_out_s(self) -> float:
         """How far its records are worked out under its targets as they are:
