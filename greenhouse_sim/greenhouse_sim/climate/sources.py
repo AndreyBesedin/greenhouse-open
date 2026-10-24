@@ -1,12 +1,15 @@
 """What equipment does to the air, as source terms over a field's grid.
 
 Whatever computes the air takes a piece of equipment's effect in the same
-terms, cell by cell, so that no device depends on how the air is computed:
+terms, cell by cell, so that no device depends on how the air is computed.
+A piece's terms are the sum of its capabilities'
+(`greenhouse_sim.world.capabilities`), whatever its kind (P14.5):
 
-- **velocity added**, in m/s, for a fan's jet (`greenhouse_sim.climate.jets`);
-- **heat added**, in watts per cell, for a heater, and for a dehumidifier's
+- **velocity added**, in m/s, for air it moves, as a jet
+  (`greenhouse_sim.climate.jets`);
+- **heat added**, in watts per cell, for heat it gives, as heating or
   waste heat;
-- **water removed**, in kg/s per cell, for a dehumidifier.
+- **water removed**, in kg/s per cell, for the air it dries.
 
 Every term scales with the equipment's level and vanishes when it is off.
 
@@ -15,10 +18,10 @@ does not reach (`greenhouse_sim.cfd.geometry.CfdGeometry.solid`): it gives
 its heat to, and draws its water from, the air cells around its body
 instead: those whose centres lie within a cell of it, beside it or above it.
 
-A unit heater blows its warm air out of its front (#261): its heat is given
-to the cells that air passes through, weighted as a round jet's speed is
-(`greenhouse_sim.climate.jets`), from an outlet as wide as its front, along
-its heading. Put into the few cells around its body, a heater sized to the
+Heat blown from an outlet, as a unit heater blows its warm air out of its
+front (#261), is given to the cells that air passes through, weighted as a
+round jet's speed is (`greenhouse_sim.climate.jets`), from its outlet along
+its axis. Put into the few cells around its body, a heater sized to the
 house warmed them past 100 °C in a run's first minutes, where a unit
 heater's outlet is some 40 to 70 °C; its total heat is the same either way.
 """
@@ -32,7 +35,15 @@ import numpy as np
 from greenhouse_sim.climate.jets import JET_DECAY, JET_REACH_WIDTHS, jet_velocity
 from greenhouse_sim.fields.field import VECTOR_COMPONENTS, FieldGrid
 from greenhouse_sim.units import HOUR_S
-from greenhouse_sim.world.equipment import Dehumidifier, Equipment, Fan, Heater
+from greenhouse_sim.world.capabilities import (
+    Capability,
+    Device,
+    Dries,
+    Heats,
+    MovesAir,
+    Outlet,
+    WasteHeat,
+)
 from greenhouse_sim.world.geometry import Vector3
 
 
@@ -74,7 +85,7 @@ class SourceTerms:
         return float(self.water_removed_kg_s.sum())
 
 
-def _around(piece: Heater | Dehumidifier, grid: FieldGrid, solid: np.ndarray) -> np.ndarray:
+def _around(piece: Device, grid: FieldGrid, solid: np.ndarray) -> np.ndarray:
     """The air cells around a unit's body: those whose centres lie within a
     cell of its box, beside it or above it, and that it does not fill; or,
     if there are none, the air cell nearest its middle."""
@@ -113,24 +124,17 @@ def _around(piece: Heater | Dehumidifier, grid: FieldGrid, solid: np.ndarray) ->
 HEATER_JET_DIAMETERS: Final = JET_DECAY
 
 
-def _heater_jet(piece: Heater, grid: FieldGrid, solid: np.ndarray) -> np.ndarray | None:
-    """How a heater's heat is shared among the air cells of its jet: by the
-    speed a round jet from its outlet would have at each cell's centre, up
-    to `HEATER_JET_DIAMETERS` outlet diameters along its heading, or to the
-    first obstacle on its axis. Its outlet is the middle of its front, as
-    wide as its front is high or wide, whichever is less. A jet too narrow
-    for any cell's centre gives its heat to the cells its axis passes
-    through; one whose outlet an obstacle blocks has none, and its heat
-    stays around its body."""
-    axis = piece.facing()
-    diameter = min(piece.size_y, piece.size_z)
+def _heater_jet(blown: Outlet, grid: FieldGrid, solid: np.ndarray) -> np.ndarray | None:
+    """How heat blown from an outlet is shared among the air cells of its
+    jet: by the speed a round jet from the outlet would have at each cell's
+    centre, up to `HEATER_JET_DIAMETERS` outlet diameters along its axis, or
+    to the first obstacle on it. A jet too narrow for any cell's centre
+    gives its heat to the cells its axis passes through; one whose outlet an
+    obstacle blocks has none, and its heat stays around its body."""
+    axis = blown.axis
+    diameter = blown.diameter_m
     radius = diameter / 2
-    front = piece.size_x / 2
-    outlet = Vector3(
-        x=piece.base.x + axis.x * front,
-        y=piece.base.y + axis.y * front,
-        z=piece.base.z + piece.size_z / 2,
-    )
+    outlet = blown.centre
     passed, reach = _axis_cells(outlet, axis, HEATER_JET_DIAMETERS * diameter, grid, solid)
     if not passed:
         return None
@@ -185,36 +189,45 @@ def _axis_cells(
     return passed, length
 
 
-def source_terms(piece: Equipment, level: float, grid: FieldGrid, solid: np.ndarray) -> SourceTerms:
+def source_terms(piece: Device, level: float, grid: FieldGrid, solid: np.ndarray) -> SourceTerms:
     """What a piece of equipment does to the air at a level, on a grid whose
-    `solid` cells its obstacles fill."""
+    `solid` cells its obstacles fill: the sum of what each of its
+    capabilities does."""
     terms = SourceTerms.none(grid)
     if level <= 0.0:
         return terms
-    if isinstance(piece, Fan):
-        return SourceTerms(
-            grid=grid,
-            velocity=jet_velocity(piece, level, grid, solid),
-            heat_w=terms.heat_w,
-            water_removed_kg_s=terms.water_removed_kg_s,
-        )
+    for capability in piece.capabilities():
+        terms = terms + _capability_terms(piece, capability, level, grid, solid)
+    return terms
+
+
+def _capability_terms(
+    piece: Device, capability: Capability, level: float, grid: FieldGrid, solid: np.ndarray
+) -> SourceTerms:
+    """What one of a piece's capabilities does to the air at a level."""
+    none = SourceTerms.none(grid)
+    match capability:
+        case MovesAir():
+            velocity = jet_velocity(capability, level, grid, solid)
+            return SourceTerms(grid, velocity, none.heat_w, none.water_removed_kg_s)
+        case Heats(power_w=power_w, outlet=outlet):
+            # Heat blown from an outlet an obstacle blocks is given around
+            # the piece's body.
+            jet = None if outlet is None else _heater_jet(outlet, grid, solid)
+            share = _share(piece, grid, solid) if jet is None else jet / jet.sum()
+            return SourceTerms(
+                grid, none.velocity, share * level * power_w, none.water_removed_kg_s
+            )
+        case WasteHeat(heat_w=heat_w):
+            heat = _share(piece, grid, solid) * level * heat_w
+            return SourceTerms(grid, none.velocity, heat, none.water_removed_kg_s)
+        case Dries(removal_kg_h=removal_kg_h):
+            water = _share(piece, grid, solid) * level * removal_kg_h / HOUR_S
+            return SourceTerms(grid, none.velocity, none.heat_w, water)
+
+
+def _share(piece: Device, grid: FieldGrid, solid: np.ndarray) -> np.ndarray:
+    """Each air cell's share of what a piece gives the air around its body."""
     region = _around(piece, grid, solid)
-    share = region / region.sum()
-    if isinstance(piece, Heater):
-        jet = _heater_jet(piece, grid, solid)
-        # A heater whose outlet an obstacle blocks gives its heat around its
-        # body.
-        if jet is not None:
-            share = jet / jet.sum()
-        return SourceTerms(
-            grid=grid,
-            velocity=terms.velocity,
-            heat_w=share * level * piece.power_w,
-            water_removed_kg_s=terms.water_removed_kg_s,
-        )
-    return SourceTerms(
-        grid=grid,
-        velocity=terms.velocity,
-        heat_w=share * level * piece.heat_w,
-        water_removed_kg_s=share * level * piece.removal_kg_h / HOUR_S,
-    )
+    share: np.ndarray = region / region.sum()
+    return share

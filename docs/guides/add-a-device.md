@@ -19,18 +19,23 @@ the parts to write. The dehumidifier was added in this order (commits
    - give it a `kind: Literal[...]`, its rated values and `rated()`;
    - add it to `type Equipment`.
 
-   Every kind also needs a branch in `displaced`, in
-   `greenhouse_sim/greenhouse_sim/world/moves.py`, which moves a fan's
-   `position` and a unit's `base` for a move or a copy, a kind at a time;
-   mypy refuses the kind until it has one.
-3. **What it does to the air.** In
-   `greenhouse_sim/greenhouse_sim/climate/sources.py`, give `source_terms`
-   a branch of its own. Its last branch takes any other kind for a
-   dehumidifier, without checking. A quantity the air does not carry yet
-   (CO₂, say) needs a new `SourceTerms` field, kept in `none` and `__add__`,
-   and used by `climate/transport.py` and `climate/house.py`. Only a device
-   that heats, or that a thermostat switches, involves `climate/house.py`'s
-   heater, `climate/thermostat.py` and `services/heat_log.py`.
+   A unit inherits where it is placed (`anchor`) and how a move or a copy
+   places it further (`displaced`) from `_Unit`; a device placed otherwise
+   gives its own.
+3. **What it does to the air:** its `capabilities()`, made of those in
+   `greenhouse_sim/greenhouse_sim/world/capabilities.py` (P14.5): it moves
+   air (`MovesAir`, a jet from its outlet), heats (`Heats`, blown from an
+   outlet or given around its body), dries (`Dries`), and the heat it gives
+   off as it works (`WasteHeat`). Nothing else reads its kind: the
+   climate's source terms add its capabilities up
+   (`greenhouse_sim/greenhouse_sim/climate/sources.py`), the heating,
+   dehumidifying and circulation loops run a device that heats, dries or
+   moves air, the house's heating and the heat log are what heats, and the
+   builder's findings ask the same. A device that does what no capability
+   says (adds CO₂, say) needs a capability of its own, its source terms in
+   `climate/sources.py`, and, for a quantity the air does not carry yet, a
+   new `SourceTerms` field, kept in `none` and `__add__`, and used by
+   `climate/transport.py` and `climate/house.py`.
 4. **Place one.** Add it to a layout, such as
    `greenhouse_sim/greenhouse_sim/scenarios/layouts/climate_box/default.json`,
    and update the `layout` note in that scenario's manifest

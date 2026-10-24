@@ -1,6 +1,7 @@
-"""A fan's jet: what a running fan adds to the air's velocity (P05.2).
+"""A fan's jet: what a running device that moves air adds to the air's
+velocity (P05.2, `greenhouse_sim.world.capabilities.MovesAir`).
 
-A fan blows a round free jet along its heading. Its rotor gives the air a
+A fan blows a round free jet from its outlet, its rotor, along its axis. Its rotor gives the air a
 core speed, U₀, its flow over the area it sweeps. At a distance x from the
 rotor, along its axis:
 
@@ -28,7 +29,7 @@ from typing import Final
 import numpy as np
 
 from greenhouse_sim.fields.field import VECTOR_COMPONENTS, FieldGrid
-from greenhouse_sim.world.equipment import Fan
+from greenhouse_sim.world.capabilities import MovesAir
 
 # The decay constant of a round free jet: beyond its core, this many nozzle
 # diameters long, its speed on its axis is this many nozzle diameters over
@@ -39,19 +40,20 @@ JET_DECAY: Final = 6.0
 JET_REACH_WIDTHS: Final = 3.0
 
 
-def jet_velocity(fan: Fan, level: float, grid: FieldGrid, solid: np.ndarray) -> np.ndarray:
-    """The velocity a fan's jet adds at a level, at every cell's centre of a
-    grid whose `solid` cells obstacles fill, in the grid's order (z, y, x)
-    with its three components last."""
+def jet_velocity(blows: MovesAir, level: float, grid: FieldGrid, solid: np.ndarray) -> np.ndarray:
+    """The velocity the jet a device `blows` adds at a level, at every
+    cell's centre of a grid whose `solid` cells obstacles fill, in the
+    grid's order (z, y, x) with its three components last."""
     xs, ys, zs = grid.centres()
     z, y, x = np.meshgrid(zs, ys, xs, indexing="ij")
-    axis = fan.facing()
-    dx, dy, dz = x - fan.position.x, y - fan.position.y, z - fan.position.z
+    outlet = blows.outlet
+    axis = outlet.axis
+    dx, dy, dz = x - outlet.centre.x, y - outlet.centre.y, z - outlet.centre.z
     along = dx * axis.x + dy * axis.y + dz * axis.z
     across_squared = np.maximum(dx**2 + dy**2 + dz**2 - along**2, 0.0)
-    radius = fan.diameter_m / 2
+    radius = outlet.diameter_m / 2
     width = np.maximum(radius, along / (2 * JET_DECAY))
-    core_speed = level * fan.flow_m3_s / (math.pi * radius**2)
+    core_speed = level * blows.flow_m3_s / (math.pi * radius**2)
     reached = (along >= 0.0) & (across_squared <= (JET_REACH_WIDTHS * width) ** 2) & ~solid
     speed = np.where(reached, core_speed * radius / width * np.exp(-across_squared / width**2), 0.0)
     velocity = np.zeros((*speed.shape, VECTOR_COMPONENTS))

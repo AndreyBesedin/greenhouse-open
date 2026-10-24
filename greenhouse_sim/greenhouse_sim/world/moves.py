@@ -16,11 +16,10 @@ nothing with the run it was moved from (#271).
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Protocol, Self
 
-from greenhouse_sim.world.equipment import Dehumidifier, Fan, Heater
 from greenhouse_sim.world.geometry import Quaternion, Transform, Vector3
 from greenhouse_sim.world.layout import Layout
-from greenhouse_sim.world.sensors import Camera, PointSensor
 
 
 @dataclass(frozen=True)
@@ -41,28 +40,17 @@ def _level(vector: Vector3) -> Vector3:
     return Vector3(x=vector.x, y=vector.y, z=0.0)
 
 
-def _plus(point: Vector3, by: Vector3) -> Vector3:
-    return Vector3(x=point.x + by.x, y=point.y + by.y, z=point.z + by.z)
+class Placed(Protocol):
+    """An item a move places further: it says how (`displaced`)."""
+
+    def displaced(self, by: Vector3) -> Self: ...
 
 
-def displaced[Item: Fan | Heater | Dehumidifier | PointSensor | Camera](
-    item: Item, by: Vector3
-) -> Item:
-    """`item` placed `by` further, in the greenhouse's frame: a unit's base,
-    a fan's centre, a sensor's position; a camera's target moves with it, so
-    that it looks the same way."""
-    # A kind at a time, so that each keeps its own type through the copy.
-    if isinstance(item, Heater):
-        return item.model_copy(update={"base": _plus(item.base, by)})
-    if isinstance(item, Dehumidifier):
-        return item.model_copy(update={"base": _plus(item.base, by)})
-    if isinstance(item, Camera):
-        return item.model_copy(
-            update={"position": _plus(item.position, by), "target": _plus(item.target, by)}
-        )
-    if isinstance(item, Fan):
-        return item.model_copy(update={"position": _plus(item.position, by)})
-    return item.model_copy(update={"position": _plus(item.position, by)})
+def displaced[Item: Placed](item: Item, by: Vector3) -> Item:
+    """`item` placed `by` further, in the greenhouse's frame, as it says it
+    is placed: a piece of equipment's base or centre, a sensor's position, a
+    camera's with its target, so that it looks the same way."""
+    return item.displaced(by)
 
 
 def moved(layout: Layout, origin: Transform, moves: Sequence[Move]) -> Layout:

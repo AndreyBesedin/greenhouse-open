@@ -100,6 +100,10 @@ class Imperfections(BaseModel):
         return self == Imperfections()
 
 
+def _plus(point: Vector3, by: Vector3) -> Vector3:
+    return Vector3(x=point.x + by.x, y=point.y + by.y, z=point.z + by.z)
+
+
 class _Sensor(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -108,6 +112,10 @@ class _Sensor(BaseModel):
     # A sample every so many seconds of a run: a second or more, as each
     # sample's identifier is stamped to the second (`greenhouse_sim.records`).
     cadence_s: float = Field(default=60.0, ge=MIN_CADENCE_S)
+
+    def displaced(self, by: Vector3) -> Self:
+        """It placed `by` further."""
+        return self.model_copy(update={"position": _plus(self.position, by)})
 
 
 class PointSensor(_Sensor):
@@ -145,6 +153,13 @@ class Camera(_Sensor):
     kind: Literal[SensorKind.CAMERA] = SensorKind.CAMERA
     target: Vector3
     intrinsics: CameraIntrinsics
+
+    def displaced(self, by: Vector3) -> Self:
+        """It placed `by` further, its target moved with it, so that it looks
+        the same way."""
+        return self.model_copy(
+            update={"position": _plus(self.position, by), "target": _plus(self.target, by)}
+        )
 
     @model_validator(mode="after")
     def _looks_somewhere(self) -> Self:

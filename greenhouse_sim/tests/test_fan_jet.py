@@ -10,6 +10,7 @@ import pytest
 from greenhouse_sim.climate.jets import JET_DECAY, jet_velocity
 from greenhouse_sim.climate.sources import source_terms
 from greenhouse_sim.fields.field import CellCounts, FieldGrid
+from greenhouse_sim.world.capabilities import MovesAir
 from greenhouse_sim.world.equipment import Fan
 from greenhouse_sim.world.geometry import Vector3
 
@@ -22,6 +23,15 @@ FAN = Fan(
     flow_m3_s=1.0,
 )
 CORE_SPEED_M_S = 1.0 / (math.pi * 0.25**2)
+
+
+def _blows(fan: Fan) -> MovesAir:
+    """What a fan does: it moves air."""
+    (blows,) = fan.capabilities()
+    assert isinstance(blows, MovesAir)
+    return blows
+
+
 # Its core reaches six rotor diameters downstream.
 CORE_M = 3.0
 # Fine enough across the jet to integrate it: 2.5 cm cells across a block of
@@ -46,14 +56,14 @@ def _plane(velocity: np.ndarray, x: float) -> np.ndarray:
 
 
 def test_at_its_rotor_the_jet_carries_the_fans_flow_at_its_core_speed() -> None:
-    plane = _plane(jet_velocity(FAN, 1.0, FINE, OPEN), FAN.position.x + 0.01)
+    plane = _plane(jet_velocity(_blows(FAN), 1.0, FINE, OPEN), FAN.position.x + 0.01)
 
     assert plane.sum() * CELL_AREA_M2 == pytest.approx(1.0, rel=0.01)
     assert plane.max() == pytest.approx(CORE_SPEED_M_S, rel=0.01)
 
 
 def test_over_its_core_it_keeps_its_flow_and_speed() -> None:
-    velocity = jet_velocity(FAN, 1.0, FINE, OPEN)
+    velocity = jet_velocity(_blows(FAN), 1.0, FINE, OPEN)
 
     for distance in (1.0, 2.0, CORE_M - 0.05):
         plane = _plane(velocity, FAN.position.x + distance)
@@ -62,7 +72,7 @@ def test_over_its_core_it_keeps_its_flow_and_speed() -> None:
 
 
 def test_beyond_its_core_it_draws_in_air_and_slows_but_keeps_its_momentum() -> None:
-    velocity = jet_velocity(FAN, 1.0, FINE, OPEN)
+    velocity = jet_velocity(_blows(FAN), 1.0, FINE, OPEN)
     distances = (0.01, 4.0, 5.5, 7.0)
     planes = [_plane(velocity, FAN.position.x + distance) for distance in distances]
     flows = [plane.sum() * CELL_AREA_M2 for plane in planes]
@@ -75,7 +85,7 @@ def test_beyond_its_core_it_draws_in_air_and_slows_but_keeps_its_momentum() -> N
 
 
 def test_beyond_its_core_its_speed_falls_as_a_round_jets_does() -> None:
-    velocity = jet_velocity(FAN, 1.0, FINE, OPEN)
+    velocity = jet_velocity(_blows(FAN), 1.0, FINE, OPEN)
 
     for distance in (4.0, 5.5, 7.0):
         plane = _plane(velocity, FAN.position.x + distance)
@@ -84,9 +94,9 @@ def test_beyond_its_core_its_speed_falls_as_a_round_jets_does() -> None:
 
 
 def test_it_blows_along_the_fans_heading() -> None:
-    velocity = jet_velocity(FAN, 1.0, FINE, OPEN)
+    velocity = jet_velocity(_blows(FAN), 1.0, FINE, OPEN)
     turned = FAN.model_copy(update={"heading": math.pi / 2, "position": Vector3(x=4, y=2, z=2.8)})
-    across = jet_velocity(turned, 1.0, FINE, OPEN)
+    across = jet_velocity(_blows(turned), 1.0, FINE, OPEN)
 
     assert np.abs(velocity[..., 1:]).max() == 0.0
     assert velocity[..., 0].min() >= 0.0
@@ -95,7 +105,7 @@ def test_it_blows_along_the_fans_heading() -> None:
 
 
 def test_nothing_changes_behind_the_fan_or_far_beside_it() -> None:
-    velocity = jet_velocity(FAN, 1.0, FINE, OPEN)
+    velocity = jet_velocity(_blows(FAN), 1.0, FINE, OPEN)
     behind = XS < FAN.position.x
 
     assert not velocity[:, :, behind].any()
@@ -106,10 +116,10 @@ def test_nothing_changes_behind_the_fan_or_far_beside_it() -> None:
 
 
 def test_it_scales_with_the_fans_level_and_vanishes_when_off() -> None:
-    full = jet_velocity(FAN, 1.0, FINE, OPEN)
+    full = jet_velocity(_blows(FAN), 1.0, FINE, OPEN)
 
-    np.testing.assert_allclose(jet_velocity(FAN, 0.4, FINE, OPEN), 0.4 * full)
-    assert not jet_velocity(FAN, 0.0, FINE, OPEN).any()
+    np.testing.assert_allclose(jet_velocity(_blows(FAN), 0.4, FINE, OPEN), 0.4 * full)
+    assert not jet_velocity(_blows(FAN), 0.0, FINE, OPEN).any()
 
 
 def test_it_adds_nothing_where_obstacles_stand() -> None:
@@ -117,7 +127,7 @@ def test_it_adds_nothing_where_obstacles_stand() -> None:
     i = int(np.argmin(np.abs(XS - 3.0)))
     solid[:, :, i] = True
 
-    blocked = jet_velocity(FAN, 1.0, FINE, solid)
+    blocked = jet_velocity(_blows(FAN), 1.0, FINE, solid)
 
     assert not blocked[:, :, i].any()
     assert blocked[:, :, i + 1].any()
@@ -126,6 +136,6 @@ def test_it_adds_nothing_where_obstacles_stand() -> None:
 def test_a_fans_source_terms_are_its_jet_and_nothing_else() -> None:
     terms = source_terms(FAN, 0.5, FINE, OPEN)
 
-    np.testing.assert_array_equal(terms.velocity, jet_velocity(FAN, 0.5, FINE, OPEN))
+    np.testing.assert_array_equal(terms.velocity, jet_velocity(_blows(FAN), 0.5, FINE, OPEN))
     assert terms.total_heat_w() == 0.0
     assert terms.total_water_removed_kg_s() == 0.0

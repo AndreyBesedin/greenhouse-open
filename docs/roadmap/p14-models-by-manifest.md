@@ -226,6 +226,27 @@ the audit asks: **the simple crop as a rung of the run.**
 | P14.6 | **The other parts registered:** first the crop's registration taking over the services' branches on its model (decision 0055); then the house's air (the whole house and the grid as rungs), sun and glazing, the sensors' sampler and the controller's loops. The engine's remaining models are re-homed or removed (decision 0035). | Proposed |
 | P14.7 | **The recipes and the QA:** the guides (`add-a-plant-model`, `add-an-air-model`, `add-a-device`, `add-a-sensor-kind`) rewritten for the registry; the QA scenario below. | Proposed |
 
+## Settled in P14.5
+
+- **The capabilities** (`greenhouse_sim/greenhouse_sim/world/capabilities.py`):
+  a device moves air (`MovesAir`: its flow, blown as a round jet from its
+  outlet), heats (`Heats`: its power, the house's heating, blown from an
+  outlet or given around its body) or dries (`Dries`: the water it takes
+  out of the air around its body). The heat a device gives off as it works
+  (`WasteHeat`) is not heating: no loop runs a device for it, and the heat
+  log does not meter it. A fan moves air; a unit heater heats, blown from
+  the middle of its front; a dehumidifier dries, and gives off heat.
+- **One level a device:** its level scales all it does at once. An action
+  names a device, not one of its capabilities (the open question on
+  capabilities and actions), until a device's capabilities run apart.
+- **What the climate knows of a device** (`Device`): its identifier, its
+  body and its capabilities. The source terms take any device, so a device
+  is added with no change to the climate as long as it does what the
+  capabilities say.
+- **Where a device stands and how a move places it** are its own
+  (`anchor`, `displaced`), as a sensor's are: moves, copies and the
+  builder's spacing ask the item.
+
 ## Acceptance criteria
 
 - **Manifests:**

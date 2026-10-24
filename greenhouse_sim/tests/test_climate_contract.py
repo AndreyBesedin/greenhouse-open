@@ -14,7 +14,9 @@ from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import cfd
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.units import HOUR_S
-from greenhouse_sim.world.equipment import Dehumidifier, Fan, Heater
+from greenhouse_sim.world.capabilities import Capability, Dries, Heats, MovesAir, WasteHeat
+from greenhouse_sim.world.equipment import Dehumidifier, Fan, Heater, can
+from greenhouse_sim.world.fixtures import Fixture
 from greenhouse_sim.world.geometry import Vector3
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
@@ -270,3 +272,45 @@ def test_source_terms_add_up_on_one_grid_and_refuse_another() -> None:
     assert (SourceTerms.none(GRID) + heater).total_heat_w() == heater.total_heat_w()
     with pytest.raises(ValueError, match="different grids"):
         heater + SourceTerms.none(other)
+
+
+class _Standing:
+    """A device the climate was not written for, standing where the climate
+    box's dehumidifier does: known by its body and what it can do alone
+    (`greenhouse_sim.world.capabilities.Device`)."""
+
+    actuator_id = "stand_in"
+
+    def __init__(self, *capabilities: Capability) -> None:
+        self._capabilities = capabilities
+
+    def fixture(self) -> Fixture:
+        return DEHUMIDIFIER.fixture()
+
+    def capabilities(self) -> tuple[Capability, ...]:
+        return self._capabilities
+
+
+def test_a_devices_terms_are_its_capabilities_whatever_its_kind() -> None:
+    """The climate reads what a device can do, never its kind (P14.5): a
+    stand-in that heats, dries and gives off heat around the same body as
+    the dehumidifier gives the same air what each says."""
+    heats_and_dries = _Standing(Heats(power_w=500.0), Dries(removal_kg_h=2.0), WasteHeat(100.0))
+
+    terms = source_terms(heats_and_dries, 0.5, GRID, SOLID)
+    around = source_terms(DEHUMIDIFIER, 0.5, GRID, SOLID)
+
+    assert terms.total_heat_w() == pytest.approx(0.5 * 600.0)
+    assert terms.total_water_removed_kg_s() == pytest.approx(0.5 * 2.0 / HOUR_S)
+    np.testing.assert_array_equal(terms.heat_w > 0, around.heat_w > 0)
+    assert not terms.velocity.any()
+    assert can(heats_and_dries, Heats) and can(heats_and_dries, Dries)
+    assert not can(heats_and_dries, MovesAir)
+    # A piece's terms are its capabilities', added up: the dehumidifier's
+    # those of its drying and its waste heat.
+    dries, waste = (_Standing(c) for c in DEHUMIDIFIER.capabilities())
+    np.testing.assert_array_equal(
+        (source_terms(dries, 0.5, GRID, SOLID) + source_terms(waste, 0.5, GRID, SOLID)).heat_w,
+        around.heat_w,
+    )
+    assert source_terms(heats_and_dries, 0.0, GRID, SOLID).total_heat_w() == 0.0
