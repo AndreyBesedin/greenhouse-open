@@ -39,8 +39,10 @@ class Simulator:
         authorisation: AuthorisationConfig = LOCAL_AUTHORISATION,
     ) -> None:
         self.catalogue = Catalogue() if catalogue is None else catalogue
-        # Who may do what on its runs: each run's gateway enforces it.
+        # Who may do what on its runs: each run's gateway enforces it. One
+        # change of it at a time, so that it and every playback's agree.
         self.authorisation = authorisation
+        self._authorising = threading.Lock()
         # Where the drafts it is asked for are kept, if anywhere: a file of
         # its user's, which outlives it, and which it never forgets.
         self.drafts = drafts
@@ -63,10 +65,12 @@ class Simulator:
     def authorise(self, authorisation: AuthorisationConfig) -> None:
         """Who may do what on its runs from now on: every playback's gateway
         enforces it from its clock's moment, and records the change; a
-        playback started later takes it from the start."""
-        self.authorisation = authorisation
-        for played in self.playbacks.all():
-            played.authorise(authorisation)
+        playback started later takes it from the start. Changes made at once
+        are made one after the other, every playback's in the same order."""
+        with self._authorising:
+            self.authorisation = authorisation
+            for played in self.playbacks.all():
+                played.authorise(authorisation)
 
     def forget(self) -> None:
         """Lets go of everything kept, those that build on others first: the
