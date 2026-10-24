@@ -23,7 +23,8 @@ refused.
 - **A leaf removed** is that operation.
 
 What it did is the protocol's effect of its kind: the fruits it picked and
-their fresh mass, how far it lowered the top, the leaf it removed.
+their fresh mass, how far it lowered the top as the plant is trained, the
+leaf it removed.
 """
 
 from dataclasses import dataclass
@@ -118,8 +119,11 @@ def _lower(plant: Plant, action: Lower, training: Training | None) -> CarriedOut
         # A lowering gives exactly one measure: here, its head room.
         head_room_m = action.to_head_room_m or 0.0
         after = lowering_round(plant, training.wire_m - head_room_m, path)
-    laid = after.stem.phytomers[plant.laid_internodes : after.laid_internodes]
-    return _outcome(plant, after, Lowered(by_cm=sum(p.internode.length_cm for p in laid)))
+    # How far its top came down, as its training holds it: on a high wire
+    # the standing stem leans, and leans otherwise once it is first lowered,
+    # so not as far as the stem laid down. Never up: by nothing at least.
+    drop_m = top_height_m(plant, path) - top_height_m(after, path)
+    return _outcome(plant, after, Lowered(by_cm=max(0.0, drop_m) / METRES_PER_CM))
 
 
 def _outcome(before: Plant, after: Plant, effect: CropEffect) -> CarriedOut:
