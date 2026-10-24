@@ -42,7 +42,11 @@ def test_each_models_parameters_are_held_under_its_field_of_the_configuration() 
     assert CONFIGURED <= set(fields)
     for models in MODELS.values():
         for each in models.values():
-            assert each.parameters.model_fields["kind"].default == each.name
+            # A model held under a field is told apart there by its kind; one
+            # that takes no parameters is held under none.
+            assert (each.field is None) == ("kind" not in each.parameters.model_fields)
+            if each.field is not None:
+                assert each.parameters.model_fields["kind"].default == each.name
     with pytest.raises(ValidationError, match="water_capacity_ml"):
         SimpleCrop(water_capacity_ml=0)
 
