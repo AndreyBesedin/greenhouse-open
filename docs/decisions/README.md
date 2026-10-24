@@ -65,6 +65,7 @@ changes course is a new record that supersedes the old one.
 | [0052](0052-a-simulators-authorisation-is-a-file-it-is-given.md) | A simulator's authorisation is a file it is given, the local operator's by default | Accepted |
 | [0053](0053-the-viewer-draws-only-when-something-changes.md) | The viewer draws only when something changes | Accepted |
 | [0054](0054-models-are-chosen-by-the-manifest-from-a-registry.md) | Models are chosen by the manifest, from a registry | Accepted |
+| [0055](0055-a-model-is-registered-with-all-that-tells-it-apart.md) | A model is registered with all that tells it apart | Proposed |
 
 ## Template
 
