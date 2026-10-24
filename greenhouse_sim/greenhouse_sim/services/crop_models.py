@@ -14,7 +14,10 @@ what the services ask of it:
   round picked from one (`picked`);
 - **what a replay reads beside a day's digest** (`probed`): the crop's
   organs and their plants' mean thermal time, none for a model without
-  organs.
+  organs;
+- **whether it takes the run's own crop actions** (`takes_crop_actions`),
+  the harvests, lowerings and leaves removed a plan asks for (P13.5): the
+  organ crop does, the simple crop does not.
 
 A model may answer more than the crop part asks, as the organ crop answers
 a plant's structure (`greenhouse_sim.services.crop.crop_plant`): that
@@ -107,6 +110,7 @@ class CropRegistration[PlantT: CropPlant]:
     picked: Callable[[PlantT, PlantT, int | None], tuple[int, float]]
     # The crop's organs, and its plants' mean thermal time, in °Cd.
     probed: Callable[[Sequence[PlantT]], tuple[int, float]]
+    takes_crop_actions: bool
 
 
 def _organ_implausible(state: CropState, day: int) -> list[str]:
@@ -234,6 +238,7 @@ ORGAN: Final = CropRegistration[Plant](
     measured=_organ_measured,
     picked=_organ_picked,
     probed=_organ_probed,
+    takes_crop_actions=True,
 )
 SIMPLE: Final = CropRegistration[SimplePlant](
     name=CropModel.SIMPLE.value,
@@ -244,6 +249,7 @@ SIMPLE: Final = CropRegistration[SimplePlant](
     measured=_simple_measured,
     picked=_simple_picked,
     probed=_simple_probed,
+    takes_crop_actions=False,
 )
 # Each crop model's registration, by its registry's name.
 CROP_MODELS: Final[dict[str, CropRegistration[Any]]] = {

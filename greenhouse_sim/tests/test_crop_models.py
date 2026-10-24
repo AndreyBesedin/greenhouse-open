@@ -66,3 +66,11 @@ def test_the_organs_registration_finds_what_no_run_of_it_reaches() -> None:
 
     (problem, *_) = CROP_MODELS["organ"].implausible(state, DAYS)
     assert "thermal time" in problem
+
+
+def test_only_the_organ_crop_takes_the_runs_own_crop_actions() -> None:
+    """As the run carries a plan's crop actions out (P13.5)."""
+    assert {name: each.takes_crop_actions for name, each in CROP_MODELS.items()} == {
+        "organ": True,
+        "simple": False,
+    }
