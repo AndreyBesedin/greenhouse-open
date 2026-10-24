@@ -136,3 +136,17 @@ def test_a_checkpoint_of_the_simple_crop_keeping_another_models_plants_is_refuse
 
     with pytest.raises(InvalidRequest, match="not a checkpoint"):
         checkpoints.upload_checkpoint(simulator, document)
+
+
+def test_a_checkpoint_of_a_simple_plant_without_its_fruits_values_is_refused(
+    simulator: Simulator,
+) -> None:
+    """Its next day reads them: kept without them, the crop could not live
+    it."""
+    document = _saved(simulator, day=8)
+    plant = document["models"]["crop"]["state"]["plants"][0]
+    fruit = plant["plant"]["trusses"][0]["fruits"][0]["fruit_id"]
+    del plant["fruits"][fruit]
+
+    with pytest.raises(InvalidRequest, match=f"keeps no values for its fruit {fruit}"):
+        checkpoints.upload_checkpoint(simulator, document)
