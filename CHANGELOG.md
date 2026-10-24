@@ -7,6 +7,15 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-protocol`: an executor may say why it refuses
+  (`contracts.execution.ExplainsRefusals.why_not`): a kind it does not
+  carry out, or an instant it does not honour. The reference gateway adds
+  those words to its own refusal, and `check_executor` holds them to the
+  executor's kinds and the instants it honours. An execution report may
+  name the event its action made in the run's records
+  (`ExecutionReport.event_id`), if the action started, and the gateway's
+  outcome names that event too. Both are additive (P13.5, decision 0046).
+
 ## 0.4.0 - 2026-10-24
 
 The setup builder (P12.0 to P12.3): a greenhouse's installation drafted

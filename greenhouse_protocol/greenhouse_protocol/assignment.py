@@ -49,7 +49,8 @@ class ReportStatus(StrEnum):
 
 class ExecutionReport(BaseModel):
     """An executor's report of an assignment: done, with its start and
-    finish; failed, with why; or refused before it started, with why."""
+    finish; failed, with why; or refused before it started, with why. One
+    that was attempted may name the event it made in the run's records."""
 
     model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
@@ -59,6 +60,8 @@ class ExecutionReport(BaseModel):
     finished_at: Instant | None = None
     effect: ActionEffect | None = None
     reason: str | None = None
+    # The event the executor made of it in the run's records, if it made one.
+    event_id: Name | None = None
 
     @model_validator(mode="after")
     def _agrees_with_its_status(self) -> Self:
@@ -75,6 +78,8 @@ class ExecutionReport(BaseModel):
             raise ValueError(f"a {self.status} report that finished started")
         if self.effect is not None and self.status != ReportStatus.DONE:
             raise ValueError(f"a {self.status} report has no effect")
+        if self.event_id is not None and self.started_at is None:
+            raise ValueError(f"a {self.status} report that never started made no event")
         if (
             self.started_at is not None
             and self.finished_at is not None

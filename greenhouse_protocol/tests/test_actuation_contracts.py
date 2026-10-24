@@ -13,12 +13,13 @@ from greenhouse_protocol.actions import (
     SetLevel,
     SetTarget,
 )
-from greenhouse_protocol.assignment import Assignment
+from greenhouse_protocol.assignment import Assignment, ExecutionReport, ReportStatus
 from greenhouse_protocol.authorisation import AuthorisationConfig
 from greenhouse_protocol.contracts.consumer import check_polls
 from greenhouse_protocol.contracts.execution import (
     ActionNotExecutable,
     AssignmentStatus,
+    ExplainsRefusals,
     check_executor,
 )
 from greenhouse_protocol.contracts.gateway import (
@@ -50,6 +51,7 @@ from greenhouse_protocol.plan import (
 
 START = datetime(2026, 3, 1, 6, tzinfo=UTC)
 HOUR = timedelta(hours=1)
+DAY = timedelta(days=1)
 
 
 def _gateway(
@@ -426,3 +428,83 @@ def test_a_finished_run_started_over_takes_plans_again() -> None:
 
     assert receipt.accepted
     assert gateway.run().clock.playing
+
+
+class _DayStarts(MemoryExecutor):
+    """Harvests only, and only at the start of a day of its clock, saying
+    why it does nothing else."""
+
+    def __init__(self, start: datetime) -> None:
+        super().__init__(start)
+        self._from = start
+
+    def kinds(self) -> frozenset[ActionKind]:
+        return frozenset({ActionKind.HARVEST})
+
+    def honours(self, kind: ActionKind, instant: datetime) -> bool:
+        return kind in self.kinds() and (instant - self._from) % DAY == timedelta(0)
+
+    def why_not(self, kind: ActionKind, instant: datetime | None = None) -> str | None:
+        if kind not in self.kinds():
+            return f"it harvests, and does not {kind}"
+        if instant is not None and not self.honours(kind, instant):
+            return "it harvests at a day's start only"
+        return None
+
+
+def test_an_executor_that_explains_its_refusals_keeps_the_contract_if_its_words_agree() -> None:
+    class Silent(_DayStarts):
+        def why_not(self, kind: ActionKind, instant: datetime | None = None) -> str | None:
+            return None
+
+    assert isinstance(_DayStarts(START), ExplainsRefusals)
+    assert not isinstance(MemoryExecutor(START), ExplainsRefusals)
+    assert check_executor(_DayStarts, START) == []
+    violations = check_executor(Silent, START)
+    assert "it carries out no set_level, and says nothing of why" in violations
+    assert (
+        "it does not honour harvest at 2026-03-01T06:00:30+00:00, and says nothing of why"
+        in violations
+    )
+
+
+def test_a_gateway_refuses_at_once_in_the_executor_s_own_words() -> None:
+    gateway = InMemoryGateway(conformance_authorisation(), START, executor=_DayStarts(START))
+    harvest = Harvest(plant_id="p30", scope=HarvestScope.RIPE)
+    gateway.submit(
+        _plan(
+            gateway,
+            _vent("vent"),
+            _vent("noon", action=harvest),
+            _vent("dawn", action=harvest, timing=At(at=START + DAY)),
+        ),
+        by=OPERATOR,
+    )
+    refused = {o.ref.action_id: o.reason for o in gateway.outcomes().outcomes}
+
+    assert refused == {
+        "vent": "no executor carries out set_level: it harvests, and does not set_level",
+        "noon": "no executor honours harvest at 2026-03-01T07:00:00+00:00: "
+        "it harvests at a day's start only",
+    }
+
+
+def test_the_event_an_executor_made_of_an_action_is_its_outcome_s() -> None:
+    class Recording(MemoryExecutor):
+        """Makes an event of each action it carries out."""
+
+        def reports(self, after: int = 0) -> tuple[ExecutionReport, ...]:
+            return tuple(
+                report.model_copy(update={"event_id": f"event_{report.assignment_id}"})
+                if report.status == ReportStatus.DONE
+                else report
+                for report in super().reports(after)
+            )
+
+    gateway = InMemoryGateway(conformance_authorisation(), START, executor=Recording(START))
+    gateway.submit(_plan(gateway, _vent("vent")), by=OPERATOR)
+    gateway.advance(START + 2 * HOUR)
+    (done,) = gateway.outcomes().outcomes
+
+    assert done.status == OutcomeStatus.EXECUTED
+    assert done.event_id is not None and done.event_id.startswith("event_")
