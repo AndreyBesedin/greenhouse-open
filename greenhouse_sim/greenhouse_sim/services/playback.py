@@ -613,7 +613,8 @@ class Playback:
             [*readings, *walked, *heated],
             key=lambda r: (delivered(r), r.sensor_id or r.plant_id or ""),
         )
-        # A day's crop work first, then the run's own crop actions.
+        # Each event at its moment, by plant: a plant's crop work at a day's
+        # start before the run's own crop actions on it.
         made = [action.event for action in done if action.event is not None]
         events = sorted([*harvests, *made], key=lambda e: (e.timestamp, e.plant_id or ""))
         worked = (self._observations.packed(observations), self._events.packed(events))

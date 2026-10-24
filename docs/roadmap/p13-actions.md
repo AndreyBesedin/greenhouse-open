@@ -961,7 +961,10 @@ which changes no run, then the run carrying out a plan's crop actions.
   as decision 0049 has it, and not crop actions, which are given again for
   the new layout.
 - **Later:** routes that give and steer a plan (P13.7), and crop work
-  within the day (the roadmap's project of its own).
+  within the day (the roadmap's project of its own). Until the viewer
+  follows a playback's whole plan (P13.8), its state lists its target
+  changes alone: a viewer following it draws the crop without the crop
+  actions given to it, which its records include.
 
 ## Decided
 

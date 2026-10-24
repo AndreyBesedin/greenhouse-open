@@ -300,12 +300,14 @@ class RunExecutor:
     def advance(self, to: datetime) -> None:
         """Each action whose moment the clock has reached is done, as the run
         worked it out, or refused, as the run would; a crop action once its
-        day is worked out, and not before."""
+        day is worked out, and not before. What follows a crop action still
+        waiting, at its moment or later, waits with it, so that the
+        outcomes of one moment keep their order however far ahead of the
+        clock the run was worked out."""
         for held in sorted(self._pending(), key=_in_order):
-            at = held.assignment.at
             waiting = held.assignment.action.kind in CROP_KINDS and held.carried is None
-            if at > to or (held.refusal is None and waiting):
-                continue
+            if held.assignment.at > to or (held.refusal is None and waiting):
+                break
             held.finished = True
             self._reports.append(_report(held))
         self.now = max(self.now, to)

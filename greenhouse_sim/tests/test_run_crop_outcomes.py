@@ -132,7 +132,9 @@ def test_a_crop_action_is_done_once_its_day_is_worked_out_with_what_it_did() -> 
     executor.perform(_assigned("heat", HEATING, DAY_S))
     executor.advance(START + DAY + HOUR)
 
-    assert [report.assignment_id for report in executor.reports()] == ["heat"]
+    # The level waits with the crop actions given before it at that moment,
+    # so that the moment's outcomes keep their order.
+    assert executor.reports() == ()
     assert executor.status("ripe") == AssignmentStatus.RECEIVED
     assert [each.assignment_id for each in executor.crop_actions_on(1)] == ["ripe", "look"]
     picked = Harvested(fruit_count=2, fresh_mass_g=150.0)
@@ -145,6 +147,7 @@ def test_a_crop_action_is_done_once_its_day_is_worked_out_with_what_it_did() -> 
     executor.advance(START + DAY + HOUR)
 
     ends = {report.assignment_id: report for report in executor.reports()}
+    assert list(ends) == ["ripe", "look", "heat"]
     assert (ends["ripe"].status, ends["ripe"].effect, ends["ripe"].event_id) == (
         ReportStatus.DONE,
         picked,
