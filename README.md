@@ -12,9 +12,9 @@ research datasets into that format.
 
 ## Demo
 
-Greenhouse Open v0.3.0 — Greenhouse Simulation
+Greenhouse Open v0.4.0 — Greenhouse Simulation
 
-https://github.com/user-attachments/assets/0be8188e-db84-47b0-9fbe-fec118c530b8
+https://github.com/user-attachments/assets/980c31d8-9c7d-4a75-98d1-0ecdc0887b73
 
 ## Why a shared format
 

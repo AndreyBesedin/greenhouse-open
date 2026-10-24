@@ -260,4 +260,24 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   await page.goto(`${QA_REFERENCE_PATH}?view=noon`);
   await expect(page.getByTestId("qa-probes")).toContainText("house air 28.14 °C", ARRIVES);
   await say(page, "12. The golden views, as CI compares them, with their state probes");
+
+  // New in 0.4.0 (P12): the setup builder. A house drafted from its first
+  // form and drawn as the simulator draws it, then roof vents placed along
+  // both slopes of its span in one edit.
+  await page.goto("/builder");
+  await page.locator(".builder-form").getByLabel("Identifier").fill(`demo_${Date.now()}`);
+  await page.getByRole("button", { name: "Draft this house" }).click();
+  await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
+  await expect(page.getByTestId("builder-view").locator("canvas")).toBeVisible(ARRIVES);
+  await say(page, "New in 0.4.0: the setup builder, a house drafted from its first form");
+  const palette = page.locator(".builder-palette");
+  await palette.getByLabel("What").selectOption("roof_vent");
+  await palette.getByLabel("roof 1 right").check(ARRIVES);
+  await palette.getByLabel("roof 1 left").check();
+  await palette.getByRole("button", { name: "Place" }).click();
+  await expect(page.getByTestId("builder-status")).toHaveText(
+    /^Placed \d+ roof vents on 2 surfaces\.$/,
+    ARRIVES,
+  );
+  await say(page, "New in 0.4.0: roof vents placed along both slopes, in one edit");
 });
