@@ -109,8 +109,120 @@ def test_prepare_refuses_when_nothing_is_unreleased(root: Path) -> None:
     changelog = root / "CHANGELOG.md"
     changelog.write_text(CHANGELOG.replace("- A heater that heats.\n- A vent that opens.\n\n", ""))
 
-    with pytest.raises(Refused, match="Unreleased section is empty"):
+    with pytest.raises(Refused, match="no changelog entry since the last release"):
         release.prepare("0.4.0", DAY, root)
+    with pytest.raises(Refused, match="no changelog entry since the last release"):
+        release.prepare("0.4.0", DAY, root, [_merged(7, "CI only", "none")])
+
+
+def _merged(number: int, title: str, entry: str | None, **fields: Any) -> release.Merged:
+    """A pull request merged, its description giving `entry` under the
+    changelog's section, or no such section if None."""
+    body = "## What changed?\n\nSomething.\n"
+    if entry is not None:
+        body += (
+            f"\n{release.CHANGELOG_SECTION}\n\n<!-- One or two sentences, or none. -->\n"
+            f"{entry}\n\n## Verification\n\n- [x] Tests\n"
+        )
+    return release.Merged(number=number, title=title, body=body, **fields)
+
+
+def test_prepare_takes_the_entries_the_pull_requests_merged_give(root: Path) -> None:
+    """After those written under Unreleased, in the order merged, each
+    ending with its number; none from one that needs none, from a bot's, or
+    from one whose own diff wrote its entry in the changelog."""
+    merged = [
+        _merged(10, "A fan", "`greenhouse-sim`: a fan that turns."),
+        _merged(11, "CI", "None."),
+        _merged(12, "Bump", None, bot=True),
+        _merged(13, "Written in the file", None, files=("CHANGELOG.md", "x.py")),
+        _merged(
+            14,
+            "Two things",
+            "- `greenhouse-protocol`: a record.\n  Its schema too.\n- the viewer: a panel.",
+        ),
+        _merged(15, "Long", "`greenhouse-sim`: a change\nsaid on two lines."),
+    ]
+
+    release.prepare("0.4.0", DAY, root, merged)
+
+    section = (root / "CHANGELOG.md").read_text().split("## 0.4.0 - 2026-11-02\n\n", 1)[1]
+    assert section.split("\n\n## 0.3.0", 1)[0] == (
+        "- A heater that heats.\n"
+        "- A vent that opens.\n"
+        "- `greenhouse-sim`: a fan that turns. (#10)\n"
+        "- `greenhouse-protocol`: a record.\n  Its schema too. (#14)\n"
+        "- the viewer: a panel. (#14)\n"
+        "- `greenhouse-sim`: a change\n  said on two lines. (#15)"
+    )
+
+
+def test_prepare_waits_for_every_pull_request_merged_to_give_an_entry_or_none(
+    root: Path,
+) -> None:
+    before = {path: path.read_text() for path in root.rglob("*") if path.is_file()}
+    merged = [
+        _merged(20, "Given", "A thing."),
+        _merged(21, "Silent", None),
+        _merged(22, "Empty", ""),
+    ]
+
+    with pytest.raises(Refused, match="#21 Silent; #22 Empty"):
+        release.prepare("0.4.0", DAY, root, merged)
+
+    assert {path: path.read_text() for path in root.rglob("*") if path.is_file()} == before
+    entries, missing = release.unreleased(root, merged)
+    assert entries.endswith("- A thing. (#20)")
+    assert missing == ["#21 Silent", "#22 Empty"]
+
+
+@pytest.mark.parametrize(
+    ("body", "entry"),
+    [
+        ("## Changelog\n\nA thing.\n\n## Review\n", "A thing."),
+        ("## Changelog\r\n\r\n<!-- guidance -->\r\nnone\r\n", "none"),
+        ("## Changelog\n<!-- guidance, unterminated", ""),
+        ("## What changed?\n\nNo section.\n", None),
+        ("## Changelogs\n\nNot the section.\n", None),
+    ],
+)
+def test_a_pull_requests_entry_is_what_its_description_gives_under_its_section(
+    body: str, entry: str | None
+) -> None:
+    assert release.changelog_entry(body) == entry
+
+
+@pytest.mark.parametrize(
+    ("body", "bot", "branch", "said"),
+    [
+        ("## Changelog\n\nA thing.\n", False, "feat/x", []),
+        ("## Changelog\n\nnone\n", False, "ci/x", []),
+        ("## What changed?\n", False, "feat/x", ["has no '## Changelog' section"]),
+        ("## Changelog\n\n<!-- An entry, or none. -->\n", False, "feat/x", ["is empty"]),
+        ("", True, "dependabot/pip/x", []),
+        ("", False, "build/release-0.5.0", []),
+    ],
+)
+def test_a_pull_requests_description_gives_its_entry_or_none(
+    body: str, bot: bool, branch: str, said: list[str]
+) -> None:
+    found = release.description_problems(body, bot=bot, branch=branch)
+
+    assert len(found) == len(said)
+    assert all(part in problem for part, problem in zip(said, found, strict=True))
+
+
+def test_check_description_reads_the_pull_request_from_ci(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("PR_BODY", "## What changed?\n\nA thing.\n")
+    monkeypatch.setenv("PR_IS_BOT", "false")
+    monkeypatch.setenv("PR_BRANCH", "feat/x")
+    assert release.main(["check-description"]) == 1
+    assert "no '## Changelog' section" in capsys.readouterr().err
+
+    monkeypatch.setenv("PR_BODY", "## Changelog\n\nnone\n")
+    assert release.main(["check-description"]) == 0
 
 
 def test_prepare_changes_nothing_when_a_package_is_behind(root: Path) -> None:
@@ -427,3 +539,36 @@ def test_the_repositorys_packages_are_released_together() -> None:
     assert release.notes(version).startswith(release.NOTES_INTRO)
     listed = release.release_managers((release.ROOT / release.RELEASE_MANAGERS).read_text())
     assert all(re.fullmatch(r"[A-Za-z0-9-]+", login) for login in listed)
+
+
+def test_the_pull_requests_merged_since_the_last_release_are_those_after_its_tag(
+    repository: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Of those GitHub lists as merged since the tag's day: the ones whose
+    merge commit is in the checkout's history and not in the tag's, in the
+    order they were merged."""
+    before = commit(repository, "merged before the release")
+    git(repository, "tag", "v0.3.0")
+    first = commit(repository, "merged after it")
+    second = commit(repository, "merged after that")
+    listed: list[dict[str, Any]] = [
+        {"number": 3, "mergeCommit": {"oid": second}, "mergedAt": "2026-10-25T12:00:00Z"},
+        {"number": 1, "mergeCommit": {"oid": before}, "mergedAt": "2026-10-24T09:00:00Z"},
+        {"number": 2, "mergeCommit": {"oid": first}, "mergedAt": "2026-10-25T10:00:00Z"},
+        {"number": 4, "mergeCommit": {"oid": "f" * 40}, "mergedAt": "2026-10-25T11:00:00Z"},
+        {"number": 5, "mergeCommit": None, "mergedAt": "2026-10-25T13:00:00Z"},
+    ]
+    asked: list[tuple[str, ...]] = []
+
+    def gh(*arguments: str) -> list[dict[str, Any]]:
+        asked.append(arguments)
+        return [
+            {"title": f"#{pull['number']}", "body": "", "author": {"is_bot": False}, **pull}
+            for pull in listed
+        ]
+
+    monkeypatch.setattr(release, "_gh", gh)
+
+    assert [pull.number for pull in release.merged_since_release(repository)] == [2, 3]
+    (arguments,) = asked
+    assert "merged:>=" + git(repository, "show", "-s", "--format=%cs", "v0.3.0") in arguments

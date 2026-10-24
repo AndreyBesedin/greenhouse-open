@@ -1,6 +1,6 @@
 # 0045: A release is a pull request the owner merges and tags, and CI publishes it
 
-**Status:** Accepted
+**Status:** Accepted; the Unreleased entries each pull request wrote superseded by [0056](0056-a-changelog-is-written-at-release-from-the-pull-requests-merged.md)
 **Date:** 2026-10-22
 
 ## Context
