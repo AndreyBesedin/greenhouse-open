@@ -246,6 +246,7 @@ def test_the_lab_schedules_actions_from_its_query_and_shows_them(simulator: Simu
         ),
         ("30:p99:remove_leaf:p99_n02_leaf", "the plant lab has no plant 'p99' to act on"),
         ("30:p01:lower_stem:far", "lower_stem wants how many internodes, not 'far'"),
+        ("30:p01:remove_leaf:", "remove_leaf wants a leaf, not ''"),
         ("91:p01:remove_leaf:p01_n02_leaf", "the plant lab runs from day 0 to day 90, not day 91"),
     ],
 )
