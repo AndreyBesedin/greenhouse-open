@@ -42,7 +42,9 @@ def _run(
 ) -> ClimateRun:
     # Sealed, nothing leaks through its gaps.
     leaks = {"infiltration_per_h": 0.0, "infiltration_per_h_per_m_s": 0.0} if sealed else {}
-    settings = CONFIG.climate.model_copy(update={"start_co2_ppm": start_co2_ppm} | leaks)
+    settings = CONFIG.climate.run_settings().model_copy(
+        update={"start_co2_ppm": start_co2_ppm} | leaks
+    )
     return ClimateRun(
         base=changed(PACKAGED, CONFIG, SceneChanges(openings=openings)).airflow,
         equipment=CONFIG.layout.equipment,

@@ -119,7 +119,7 @@ def _run(openings: dict[str, float], weather: ConstantWeather) -> ClimateRun:
         base=config.airflow,
         equipment=config.layout.equipment,
         schedule=Schedule.from_start({}),
-        settings=config.climate,
+        settings=config.climate.run_settings(),
         grid=GRID,
         solid=geometry.solid(),
         weather=config.model_copy(update={"weather": weather}).run_weather(),

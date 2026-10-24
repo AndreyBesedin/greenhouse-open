@@ -117,7 +117,7 @@ def _run(weather: ConstantWeather | WeatherSeries, levels: dict[str, float]) -> 
         base=BOX.airflow,
         equipment=BOX.layout.equipment,
         schedule=Schedule.from_start(levels),
-        settings=BOX.climate,
+        settings=BOX.climate.run_settings(),
         grid=GRID,
         solid=SOLID,
         weather=RunWeather(source, BOX.run_start()),

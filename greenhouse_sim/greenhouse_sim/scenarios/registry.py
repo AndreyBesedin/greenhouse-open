@@ -9,8 +9,9 @@ manifest that gives its parameters. The registry holds each part's models
 by name, with its default: the model a manifest that says nothing of the
 part runs, today's choice. P14.1 registers the parts a manifest chose
 already: the weather, the air field drawn, the crop and the crop walk's
-measurements. P14.6 registers the others, the sunlight and the sensors
-first, each with the one model it has, which takes no parameters.
+measurements. P14.6 registers the others: the sunlight and the sensors,
+each with the one model it has, which takes no parameters, and the house's
+air, as one well-mixed volume or cell by cell beside it.
 
 A scenario's configuration (`ScenarioConfig`) holds each model's
 parameters under a field of its own, told apart by their `kind`, which is
@@ -33,6 +34,7 @@ from greenhouse_sim.airflow.prescribed import (
     UniformAirflow,
     VortexAirflow,
 )
+from greenhouse_sim.climate.settings import GridAir, WholeHouseAir
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios.config import ScenarioConfig
@@ -48,6 +50,9 @@ KIND: Final = "kind"
 # The sunlight's one model, and the sensors'.
 SUNLIGHT: Final = "haurwitz_erbs"
 SAMPLED: Final = "sampled"
+# The house air's two models.
+GRID: Final = "grid"
+WHOLE_HOUSE: Final = "whole_house"
 
 
 class NoParameters(BaseModel):
@@ -120,6 +125,12 @@ MODELS: Final[Mapping[Part, Mapping[str, Model]]] = {
     # own imperfections, and the weather station the weather
     # (`greenhouse_sim.sensors.air`).
     Part.SENSORS: _models(Model(Part.SENSORS, SAMPLED)),
+    # The house's air cell by cell beside the whole house, or the whole
+    # house alone (`greenhouse_sim.climate.day`).
+    Part.HOUSE_AIR: _models(
+        Model(Part.HOUSE_AIR, GRID, GridAir, "climate"),
+        Model(Part.HOUSE_AIR, WHOLE_HOUSE, WholeHouseAir, "climate"),
+    ),
 }
 
 # The model each part runs when a manifest says nothing of it: the
@@ -131,6 +142,7 @@ DEFAULTS: Final[Mapping[Part, str]] = {
     Part.CROP_WALK: WALK,
     Part.SUNLIGHT: SUNLIGHT,
     Part.SENSORS: SAMPLED,
+    Part.HOUSE_AIR: GRID,
 }
 
 # The configuration's fields that a part's models hold their parameters
@@ -178,6 +190,7 @@ def chosen(config: ScenarioConfig) -> dict[Part, str]:
         # Each the one model it has.
         Part.SUNLIGHT: SUNLIGHT,
         Part.SENSORS: SAMPLED,
+        Part.HOUSE_AIR: config.climate.kind,
     }
 
 

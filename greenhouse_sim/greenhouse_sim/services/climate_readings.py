@@ -51,11 +51,12 @@ def climate_probes(
     points: Sequence[tuple[float, float, float]],
     until_s: float = 0.0,
 ) -> ClimateProbes:
-    """What probes at `points` read of the grid run that draws a run's
-    climate at `until_s`, every `PROBE_EVERY_S` from its start to `until_s`,
-    and of the same run with everything off, its doors and vents as asked.
-    Asked as its climate field is, and refused as it is; a probe outside the
-    house's air is refused too."""
+    """What probes at `points` read of the air a run's climate draws at
+    `until_s`, its grid run's or its whole house's (`ClimateDay.drawn`),
+    every `PROBE_EVERY_S` from its start to `until_s`, and of the same run
+    with everything off, its doors and vents as asked. Asked as its climate
+    field is, and refused as it is; a probe outside the house's air is
+    refused too."""
     scenario_id = run.scenario_id
     checked_moment(scenario(simulator.catalogue, scenario_id), until_s)
     key = _climate_of(simulator, run)
@@ -66,8 +67,8 @@ def climate_probes(
         named = ", ".join(f"({p.x:g}, {p.y:g}, {p.z:g})" for p in outside)
         raise InvalidRequest(f"a probe stands in the house's air, not at {named}")
     return probe_series(
-        climate_day(simulator, key).window(until_s),
-        everything_off(simulator, key).window(until_s),
+        climate_day(simulator, key).drawn(until_s),
+        everything_off(simulator, key).drawn(until_s),
         probed,
         _moments(until_s, window_start(until_s)),
     )

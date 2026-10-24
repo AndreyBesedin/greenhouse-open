@@ -28,7 +28,7 @@ from greenhouse_sim.climate.commands import (
     Schedule,
     TargetChange,
 )
-from greenhouse_sim.climate.day import ClimateDay
+from greenhouse_sim.climate.day import DAYS, ClimateDay
 from greenhouse_sim.climate.glazing import glazed_cells
 from greenhouse_sim.climate.openings import opening_sites
 from greenhouse_sim.climate.run import ClimateRun
@@ -198,15 +198,20 @@ def new_store() -> Store[RunKey, ClimateDay]:
 
 def climate_day(simulator: Simulator, key: RunKey) -> ClimateDay:
     """The climate run through a day (`greenhouse_sim.climate.day`) that `key`
-    names: a scenario with one of its layouts, under a weather, its equipment
+    names, by its scenario's house air's model: a scenario with one of its
+    layouts, under a weather, its equipment
     set to its levels from the start and then as its commands set it, its
     targets changed as its target changes do, and its doors and vents open as
     its openings say: one of the `KEPT_RUNS` kept, or a new one, carrying on
     from those kept for the same house under the same weather up to where
     their schedules differ, as an override's does."""
 
+    # A day of its house air's model: cell by cell beside the whole house,
+    # or the whole house alone (P14.6).
+    day = DAYS[scenario(simulator.catalogue, key[0]).climate.kind]
+
     def make(others: list[tuple[RunKey, ClimateDay]]) -> ClimateDay:
-        run = ClimateDay(_new_climate_run(simulator, key))
+        run = day(_new_climate_run(simulator, key))
         for _, other in others:
             run.carry_on_from(other)
         taken_over = agreeing(simulator, house_of(key), run.run.schedule)
@@ -337,7 +342,7 @@ def _new_climate_run(simulator: Simulator, key: RunKey) -> ClimateRun:
         base=config.airflow,
         equipment=config.layout.equipment,
         schedule=_schedule(levels, commands, targets),
-        settings=config.climate,
+        settings=config.climate.run_settings(),
         grid=grid,
         solid=geometry.solid(),
         weather=outside,

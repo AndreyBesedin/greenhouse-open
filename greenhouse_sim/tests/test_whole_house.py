@@ -91,7 +91,7 @@ def _shut(levels: dict[str, float], weather: object = None) -> WholeHouse:
             base=config.airflow,
             equipment=config.layout.equipment,
             schedule=Schedule.from_start(levels),
-            settings=config.climate.model_copy(update=SEALED),
+            settings=config.climate.run_settings().model_copy(update=SEALED),
             grid=air_grid(config),
             solid=cfd.geometry(PACKAGED, "climate_box").solid(),
             weather=config.run_weather(),

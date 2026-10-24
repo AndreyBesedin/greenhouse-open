@@ -10,13 +10,26 @@ charted side by side.
 
 import math
 from collections.abc import Sequence
+from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict
 
-from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.domain.air import AirQuantity
-from greenhouse_sim.fields.field import EnvironmentField
+from greenhouse_sim.fields.field import EnvironmentField, FieldGrid
 from greenhouse_sim.world.geometry import Vector3
+
+
+class DrawnAir(Protocol):
+    """The air a run draws on its grid at a moment: a grid run's
+    (`greenhouse_sim.climate.run.ClimateRun`), or the whole house's, the
+    same in every cell (`greenhouse_sim.climate.day.WholeHouseDay`)."""
+
+    @property
+    def grid(self) -> FieldGrid: ...
+
+    def field(self, field_id: str, grid: FieldGrid, time_s: float = 0.0) -> EnvironmentField:
+        """The air at `time_s`, as a field on `grid`, the run's own."""
+        ...
 
 
 class Readings(BaseModel):
@@ -68,7 +81,7 @@ def _readings(fields: Sequence[EnvironmentField], point: Vector3) -> Readings:
 
 
 def probe_series(
-    run: ClimateRun, all_off: ClimateRun, points: Sequence[Vector3], times_s: Sequence[float]
+    run: DrawnAir, all_off: DrawnAir, points: Sequence[Vector3], times_s: Sequence[float]
 ) -> ClimateProbes:
     """What probes at `points` read through `run` and `all_off`, at each of
     `times_s`, as the runs' published fields sample it."""

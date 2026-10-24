@@ -29,7 +29,7 @@ SOLID = cfd.geometry(PACKAGED, "climate_box").solid()
 AIR = ~SOLID
 # The glass shut, and the gaps sealed, so that only the vents exchange
 # anything with the outside.
-SHUT = CONFIG.climate.model_copy(
+SHUT = CONFIG.climate.run_settings().model_copy(
     update={"glazing_u_w_m2k": 0.0, "infiltration_per_h": 0.0, "infiltration_per_h_per_m_s": 0.0}
 )
 # Under the roof vent, in the top layer of the house's air.
@@ -120,7 +120,7 @@ def _draught(run: ClimateRun) -> float:
 
 
 def test_the_draught_goes_out_of_a_warmer_house_and_into_a_cooler_one() -> None:
-    heated = _run({"roof_vent": 1.0}, CONFIG.climate, {"heater": 1.0})
+    heated = _run({"roof_vent": 1.0}, CONFIG.climate.run_settings(), {"heater": 1.0})
     warm_outside = ConstantWeather(air_temperature_c=25.0, relative_humidity_pct=90.0)
     cooler = _run({"roof_vent": 1.0}, SHUT, weather=warm_outside)
     (vent,) = heated.vents

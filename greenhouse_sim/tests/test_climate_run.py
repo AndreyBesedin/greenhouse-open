@@ -28,7 +28,7 @@ def _run(*commands: Command) -> ClimateRun:
         base=CONFIG.airflow,
         equipment=CONFIG.layout.equipment,
         schedule=Schedule.of(commands),
-        settings=CONFIG.climate,
+        settings=CONFIG.climate.run_settings(),
         grid=GRID,
         solid=SOLID,
         weather=CONFIG.run_weather(),

@@ -29,7 +29,7 @@ AIR = ~SOLID
 NX, NY, NZ = GRID.shape
 HOUR_S = 3600.0
 # Its glass passing nothing, so that only air carries anything in or out.
-OPAQUE = BOX.climate.model_copy(update={"glazing_u_w_m2k": 0.0})
+OPAQUE = BOX.climate.run_settings().model_copy(update={"glazing_u_w_m2k": 0.0})
 SEALED = OPAQUE.model_copy(update={"infiltration_per_h": 0.0, "infiltration_per_h_per_m_s": 0.0})
 # Warm and dry outside: nothing condenses, and every path shows.
 DRY = ConstantWeather(air_temperature_c=16.0, relative_humidity_pct=30.0, co2_ppm=400.0)
@@ -48,7 +48,7 @@ def _run(settings: ClimateSettings, weather: ConstantWeather = DRY) -> ClimateRu
 
 
 def test_a_house_leaks_a_quarter_of_its_air_an_hour_and_more_in_a_wind() -> None:
-    settings = BOX.climate
+    settings = BOX.climate.run_settings()
 
     assert settings.infiltration_per_s(0.0) * HOUR_S == pytest.approx(0.25)
     assert settings.infiltration_per_s(4.0) * HOUR_S == pytest.approx(0.65)
@@ -56,7 +56,7 @@ def test_a_house_leaks_a_quarter_of_its_air_an_hour_and_more_in_a_wind() -> None
 
 def test_its_leaks_are_spread_over_the_air_against_the_walls_and_roof() -> None:
     flows = conserving(face_flows(GRID, np.zeros((NZ, NY, NX, 3)), SOLID), SOLID)
-    transport = Transport(GRID, flows, SOLID, BOX.climate)
+    transport = Transport(GRID, flows, SOLID, BOX.climate.run_settings())
     leaks = transport.leaks_m3_s(wind_m_s=0.0)
     volume = float(AIR.sum()) * transport.cell_volume_m3()
 

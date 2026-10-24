@@ -30,7 +30,7 @@ NO_HEAT = np.zeros((NZ, NY, NX))
 STILL = np.zeros((NZ, NY, NX, 3))
 START = np.full((NZ, NY, NX), 16.0)
 # The climate box's: 8 °C outside, 16 °C to start, single glass.
-SETTINGS = CONFIG.climate
+SETTINGS = CONFIG.climate.run_settings()
 OUTSIDE = CONFIG.run_weather().at(0.0)
 # Sealed: its glass passes nothing, and it leaks nothing.
 SHUT = SETTINGS.model_copy(

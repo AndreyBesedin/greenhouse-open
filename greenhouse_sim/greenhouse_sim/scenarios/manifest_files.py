@@ -38,15 +38,17 @@ from greenhouse_sim.scenarios.installation import (
     scenario_house,
 )
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT, LAYOUT_NAME, load_layout
-from greenhouse_sim.scenarios.registry import CONFIGURED, KIND, model, models_json_schema
+from greenhouse_sim.scenarios.registry import CONFIGURED, GRID, KIND, model, models_json_schema
 
 MANIFESTS_DIR: Final = Path(__file__).parent / "manifests"
 MANIFEST_SCHEMA_FILE: Final = Path(__file__).parent / "scenario.schema.json"
 # Where a manifest finds the schema, from the manifests' folder.
 SCHEMA_FROM_A_MANIFEST_FILE: Final = "../scenario.schema.json"
-# The version of the format a manifest is written in: 5 since a manifest
-# names the model each part of its runs runs (P14.1, decision 0054).
-SCHEMA_VERSION: Final = 5
+# The version of the format a manifest is written in: 6 since a manifest
+# writes its house's air's settings as its house air's model's parameters
+# (P14.6), and 5 since it names the model each part of its runs runs
+# (P14.1, decision 0054).
+SCHEMA_VERSION: Final = 6
 # How many hexadecimal digits of its content's digest name a manifest's
 # version.
 DIGEST_LENGTH: Final = 16
@@ -66,6 +68,10 @@ _CONTROL_KEY: Final = "control"
 _MODELS_KEY: Final = "models"
 _MODEL_KEY: Final = "model"
 _PARAMETERS_KEY: Final = "parameters"
+# Where format 5 wrote the house's air's settings.
+_CLIMATE_KEY: Final = "climate"
+# What a format 5 note on them is about in format 6: the house air's section.
+_FORMAT_5_NOTES: Final = {_CLIMATE_KEY: f"{_MODELS_KEY}.{Part.HOUSE_AIR}"}
 # The fields format 4 wrote a part's choice in, an object with its kind, by
 # the part it chose for.
 _FORMAT_4_PARTS: Final = {"weather": Part.WEATHER, "airflow": Part.AIR_FIELD}
@@ -476,12 +482,42 @@ def _notes_moved(notes: dict[str, JsonValue], moves: dict[str, str]) -> dict[str
     return moved
 
 
+def _from_format_5(scenario_id: str, document: dict[str, JsonValue]) -> dict[str, JsonValue]:
+    """Format 5 wrote the house's air's settings as a field of the
+    configuration's own, `climate`. Format 6 writes them as the parameters
+    of the house air's model (P14.6): the grid's, which every run of format
+    5 worked its air out by; and a note on them as a note on that part.
+    What a run is does not change."""
+    models = document.get(_MODELS_KEY, {})
+    if not isinstance(models, dict):
+        raise InvalidManifest(f"{scenario_id}: its {_MODELS_KEY} are written by part")
+    if Part.HOUSE_AIR.value in models:
+        raise InvalidManifest(
+            f"{scenario_id}: a format 5 manifest names no model of the {Part.HOUSE_AIR}"
+        )
+    migrated: dict[str, JsonValue] = {}
+    for key, value in document.items():
+        if key == _CLIMATE_KEY:
+            continue
+        if key == _NOTES_KEY and isinstance(value, dict):
+            migrated[key] = _notes_moved(value, _FORMAT_5_NOTES)
+        else:
+            migrated[key] = value
+    climate = document.get(_CLIMATE_KEY)
+    if climate is not None:
+        section: dict[str, JsonValue] = {_MODEL_KEY: GRID, _PARAMETERS_KEY: climate}
+        moved: dict[str, JsonValue] = {**models, Part.HOUSE_AIR.value: section}
+        migrated[_MODELS_KEY] = moved
+    return migrated
+
+
 # How each older format a manifest may be written in becomes the next.
 _MIGRATIONS: Final[dict[int, Callable[[str, dict[str, JsonValue]], dict[str, JsonValue]]]] = {
     1: _from_format_1,
     2: _from_format_2,
     3: _from_format_3,
     4: _from_format_4,
+    5: _from_format_5,
 }
 
 

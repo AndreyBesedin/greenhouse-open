@@ -38,7 +38,7 @@ def test_a_model_the_part_does_not_have_is_refused_naming_those_it_has() -> None
 def test_each_models_parameters_are_held_under_its_field_of_the_configuration() -> None:
     fields = ScenarioConfig.model_fields
 
-    assert CONFIGURED == {"weather", "airflow", "crop", "crop_walk"}
+    assert CONFIGURED == {"weather", "airflow", "crop", "crop_walk", "climate"}
     assert CONFIGURED <= set(fields)
     for models in MODELS.values():
         for each in models.values():

@@ -37,31 +37,32 @@ def test_a_run_is_named_by_what_its_scenario_is_made_of(
 
 # Runs as the API's addresses ask for them, and the ids they have since a
 # run's identity covers its models' versions (P14.2) and its crop's and
-# crop walk's parameters are each a section of its scenario (P14.3): the
-# same requests must name the same runs, so that every record, replay and
+# crop walk's parameters are each a section of its scenario (P14.3), and
+# the house's air is a part of its own (P14.6): the same requests must name
+# the same runs, so that every record, replay and
 # kept day made of them stands.
 PINNED_RUNS = [
-    ("reference_greenhouse", "", "reference_greenhouse-climate-7cc45c53"),
-    ("reference_greenhouse", "set=heater:0&daily=none", "reference_greenhouse-climate-ae7c7333"),
+    ("reference_greenhouse", "", "reference_greenhouse-climate-2f2dc84a"),
+    ("reference_greenhouse", "set=heater:0&daily=none", "reference_greenhouse-climate-ab15e62c"),
     (
         "reference_greenhouse",
         "targets=3600:heating_day:24,60:heating_night:15",
-        "reference_greenhouse-climate-9b20c99d",
+        "reference_greenhouse-climate-863e7166",
     ),
     (
         "reference_greenhouse",
         "schedule=600:roof_vent_1:1,600:roof_vent_1:0.5&targets=86400:heating_night:12",
-        "reference_greenhouse-climate-f6427b16",
+        "reference_greenhouse-climate-89cbbe7a",
     ),
-    ("climate_box", "", "climate_box-climate-9418ad32"),
-    ("climate_box", "set=fan:1&schedule=60:fan:0.5,30:heater:1", "climate_box-climate-5395d4af"),
+    ("climate_box", "", "climate_box-climate-a161f18e"),
+    ("climate_box", "set=fan:1&schedule=60:fan:0.5,30:heater:1", "climate_box-climate-c0f452f5"),
     (
         "climate_box",
         "daily=64800:heater:1,0:fan:1&schedule=0:fan:0",
-        "climate_box-climate-c3a4eeed",
+        "climate_box-climate-d08774b0",
     ),
-    ("climate_box", "open=roof_vent:0.5&schedule=120:roof_vent:1", "climate_box-climate-6e682190"),
-    ("climate_box", "weather=cold_spring_day&set=heater:0.5", "climate_box-climate-7e1487a3"),
+    ("climate_box", "open=roof_vent:0.5&schedule=120:roof_vent:1", "climate_box-climate-a2a66cc8"),
+    ("climate_box", "weather=cold_spring_day&set=heater:0.5", "climate_box-climate-b5b8b29a"),
 ]
 
 

@@ -55,7 +55,7 @@ def _day(
             base=config.airflow,
             equipment=config.layout.equipment,
             schedule=schedule or Schedule(),
-            settings=config.climate.model_copy(update=SEALED if sealed else {}),
+            settings=config.climate.run_settings().model_copy(update=SEALED if sealed else {}),
             grid=air_grid(config),
             solid=cfd.geometry(PACKAGED, "climate_box").solid(),
             weather=config.run_weather(),

@@ -1802,7 +1802,7 @@ export const ASSESSED_SCHEMA = {
   "description": "An installation, the format a file of it is written in, and what\nstops it running, or what it lacks; and, if it is a draft's, the draft\nand the revision it is (`services.drafts`). One answer for both, so that\nthe contract published for it describes an installation once.",
   "properties": {
     "schema_version": {
-      "default": 5,
+      "default": 6,
       "title": "Schema Version",
       "type": "integer"
     },

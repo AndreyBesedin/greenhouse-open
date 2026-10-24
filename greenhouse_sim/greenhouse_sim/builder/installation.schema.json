@@ -1667,7 +1667,7 @@
     "schema_version": {
       "type": "integer",
       "minimum": 3,
-      "maximum": 5
+      "maximum": 6
     },
     "$schema": {
       "type": "string"

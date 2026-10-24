@@ -180,7 +180,7 @@ def test_a_climate_runs_field_carries_the_light() -> None:
         base=config.airflow,
         equipment=config.layout.equipment,
         schedule=Schedule.from_start({}),
-        settings=config.climate,
+        settings=config.climate.run_settings(),
         grid=grid,
         solid=np.zeros((nz, ny, nx), dtype=bool),
         weather=weather,

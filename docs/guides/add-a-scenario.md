@@ -21,7 +21,7 @@ no opening day.
    planting positions. See [add a layout](add-a-layout.md) for what a
    layout file must be.
 2. **Its manifest:** `greenhouse_sim/greenhouse_sim/scenarios/manifests/<id>.json`,
-   with `"$schema": "../scenario.schema.json"`, `"schema_version": 5`, a
+   with `"$schema": "../scenario.schema.json"`, `"schema_version": 6`, a
    `greenhouse_id` equal to its file's name, and its house as an
    `installation` ([decision 0050](../decisions/0050-an-installation-is-the-house-part-of-a-scenario.md)):
    an `installation_id`, a `name`, its `envelope`, `"layout": "default"`
@@ -31,7 +31,9 @@ no opening day.
    ([decision 0054](../decisions/0054-models-are-chosen-by-the-manifest-from-a-registry.md)):
    `"weather": {"model": "seasonal", "parameters": {…}}`, `"air_field"`
    likewise; `"crop"`, the model its rows grow, for the simple crop's
-   settings, and `"crop_walk"` for the walk's measurement noises. A part
+   settings, `"crop_walk"` for the walk's measurement noises, and
+   `"house_air"` for how its air is worked out, `"grid"` or
+   `"whole_house"`, with the air it starts with and its glass. A part
    left out runs its default (`scenarios.registry.DEFAULTS`). The schema (`greenhouse_sim/greenhouse_sim/scenarios/scenario.schema.json`)
    names the fields it must have and refuses any it does not know, at any
    depth. Its `random_seed` is its own, apart from every other scenario's.
