@@ -76,6 +76,7 @@ export function FieldStreamlines({
   range: ScalarRange;
 }) {
   const size = useThree((state) => state.size);
+  const invalidate = useThree((state) => state.invalidate);
   const velocity = field.channels.velocity;
   const lines = useDisposable(
     () => {
@@ -97,6 +98,8 @@ export function FieldStreamlines({
   );
   useEffect(() => {
     lines?.material.resolution.set(size.width, size.height);
-  }, [lines, size]);
+    // The lines' width in pixels follows the canvas: drawn again at the new size.
+    invalidate();
+  }, [lines, size, invalidate]);
   return lines === null ? null : <primitive object={lines} />;
 }

@@ -1,3 +1,4 @@
+import { useThree } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { ConeGeometry, CylinderGeometry, type InstancedMesh } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -33,6 +34,7 @@ function unitArrow() {
  * over `range`, in one draw call. */
 export function FieldArrows({ field, range }: { field: EnvironmentField; range: ScalarRange }) {
   const mesh = useRef<InstancedMesh>(null);
+  const invalidate = useThree((state) => state.invalidate);
   const geometry = useDisposable(unitArrow, []);
   const velocity = field.channels.velocity;
   const arrows = useMemo(
@@ -55,7 +57,9 @@ export function FieldArrows({ field, range }: { field: EnvironmentField; range: 
       instanced.instanceColor.needsUpdate = true;
     }
     instanced.computeBoundingSphere();
-  }, [arrows]);
+    // Written to the mesh, not passed as a prop, so the view is told to draw.
+    invalidate();
+  }, [arrows, invalidate]);
 
   if (count === 0) {
     return null;

@@ -38,7 +38,14 @@ export function CameraRig({
       clipping: () => gl.clippingPlanes,
     });
     const orbit = view.orbit;
-    const redraw = () => invalidate();
+    // The controls turn the camera without updating its world matrix, which
+    // a frame would. The view draws only when something changes (decision
+    // 0053), so a click can come before that frame, and is picked from the
+    // camera as it now stands.
+    const redraw = () => {
+      camera.updateMatrixWorld();
+      invalidate();
+    };
     orbit.addEventListener("change", redraw);
     controls.current = orbit;
     holdStill(orbit, held.current);

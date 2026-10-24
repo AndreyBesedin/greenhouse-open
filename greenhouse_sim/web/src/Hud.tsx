@@ -219,13 +219,23 @@ function HudBody({
         <dd data-testid="pointer-position">
           {pointer ? `x ${formatMetres(pointer.x)}, y ${formatMetres(pointer.y)}` : "—"}
         </dd>
+        {/* The view draws only when something changes (decision 0053): still,
+            it has no frame rate, and its frame time is that of its last frames. */}
         <dt>Frame rate</dt>
         <dd data-testid="frame-rate">
-          {sample ? `${Math.round(sample.framesPerSecond)} fps` : PENDING}
+          {sample === null
+            ? PENDING
+            : !sample.drawing
+              ? "idle"
+              : sample.rate === null
+                ? PENDING
+                : `${Math.round(sample.rate.framesPerSecond)} fps`}
         </dd>
         <dt>Frame time</dt>
         <dd data-testid="frame-time">
-          {sample ? formatFrameTime(sample.frameTimeMs, sample.worstFrameMs) : PENDING}
+          {sample?.rate
+            ? formatFrameTime(sample.rate.frameTimeMs, sample.rate.worstFrameMs)
+            : PENDING}
         </dd>
         <dt>Draw calls</dt>
         <dd data-testid="draw-calls">

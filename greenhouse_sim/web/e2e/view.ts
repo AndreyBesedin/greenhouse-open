@@ -15,6 +15,34 @@ export function mainView(page: Page): Locator {
   return page.getByTestId("main-view").locator("canvas");
 }
 
+// Each step of an orbit, across the view, and the moves the mouse makes in it.
+const ORBIT_STEP_PX = 20;
+const ORBIT_MOVES_PER_STEP = 5;
+
+/**
+ * Orbits the camera across the view, a step at a time, until `readout` says
+ * `text`. The view draws only when something changes (decision 0053), so how
+ * fast it draws is measured while it moves; each poll moves it again.
+ */
+export async function orbitUntil(page: Page, readout: Locator, text: RegExp): Promise<void> {
+  const box = await mainView(page).boundingBox();
+  if (box === null) {
+    throw new Error("the 3D view is not on the page");
+  }
+  const y = box.y + box.height / 2;
+  let x = box.x + box.width / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await expect
+    .poll(async () => {
+      x += ORBIT_STEP_PX;
+      await page.mouse.move(x, y, { steps: ORBIT_MOVES_PER_STEP });
+      return readout.textContent();
+    })
+    .toMatch(text);
+  await page.mouse.up();
+}
+
 /** Where a world point appears on the page, seen from a camera preset or
  * pose, worked out as the viewer's own camera works it out. */
 export async function onScreen(

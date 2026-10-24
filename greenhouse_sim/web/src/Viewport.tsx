@@ -71,7 +71,6 @@ export function Viewport({
   initialPose = null,
   section = null,
   sunlight = null,
-  frameloop = "always",
   onSample,
   onPointer,
   onSelect,
@@ -94,10 +93,6 @@ export function Viewport({
   /** Lights the scene from the sun, casting shadows, while it is up; by the
    * sky's ambient light alone at night; by the fixed light (null) otherwise. */
   sunlight?: SunLightPose | "night" | null;
-  /** Whether it draws every frame, as the viewer's HUD measures it, or only
-   * when something changes, as a QA page whose scene never changes can, so
-   * that a heavy scene drawn in software leaves its screenshots alone. */
-  frameloop?: "always" | "demand";
   onSample: (sample: ViewSample) => void;
   onPointer: (point: Point3 | null) => void;
   /** A click picked an entity, or nothing (null). Drags orbit and pick nothing. */
@@ -143,8 +138,11 @@ export function Viewport({
   }
 
   return (
+    // It draws only when something changes (decision 0053): drawn every
+    // frame, a heavy scene in software, as CI draws, kept the page from
+    // answering a click for seconds.
     <Canvas
-      frameloop={frameloop}
+      frameloop="demand"
       camera={{ fov: CAMERA_FIELD_OF_VIEW_DEG, near: CAMERA_NEAR_M }}
       data-testid="main-view"
       data-light={sunlight === null ? "fixed" : sunlight === "night" ? "night" : "sun"}

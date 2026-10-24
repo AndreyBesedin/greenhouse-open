@@ -34,6 +34,7 @@ const PASS_ORDER: readonly Pass[] = ["rgb", "depth", "instance"];
  * intrinsics say: the simulator's pinhole, exactly. */
 function SensorCamera({ spec }: { spec: CameraSpec }) {
   const camera = useThree((state) => state.camera) as PerspectiveCamera & { manual?: boolean };
+  const invalidate = useThree((state) => state.invalidate);
   useLayoutEffect(() => {
     // Its projection is its own; the canvas must not reset it on resize.
     camera.manual = true;
@@ -55,7 +56,9 @@ function SensorCamera({ spec }: { spec: CameraSpec }) {
     );
     camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
     camera.updateMatrixWorld();
-  }, [camera, spec]);
+    // Set on the camera, not passed as a prop, so the picture is told to draw.
+    invalidate();
+  }, [camera, spec, invalidate]);
   return null;
 }
 
@@ -185,7 +188,9 @@ export function CameraView({
         onPointerMove={point}
         onPointerLeave={() => setPixel(null)}
       >
+        {/* Drawn when something changes, as the main view is (decision 0053). */}
         <Canvas
+          frameloop="demand"
           gl={{ preserveDrawingBuffer: true }}
           aria-label="Camera view"
           data-testid="camera-view"

@@ -1,12 +1,15 @@
+import type { FrameRate } from "./frameMeter";
 import type { Point3 } from "./world";
 
-/** What the HUD shows about the 3D view, sampled a few times a second. */
+/** What the HUD shows about the 3D view, sampled a few times a second while
+ * it draws, and once more when it stops. */
 export interface ViewSample {
-  framesPerSecond: number;
-  /** The mean and the longest time from one frame to the next, in milliseconds. */
-  frameTimeMs: number;
-  worstFrameMs: number;
-  /** What the renderer drew in a frame. */
+  /** Whether the view is drawing, or stands still, as it does until
+   * something changes (decision 0053). */
+  drawing: boolean;
+  /** How fast it drew when it last drew frames in a row; null before then. */
+  rate: FrameRate | null;
+  /** What the renderer drew in its last frame. */
   drawCalls: number;
   triangles: number;
   /** What the renderer holds in GPU memory. */

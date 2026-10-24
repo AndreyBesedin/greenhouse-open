@@ -15,6 +15,7 @@ export interface SectionPlane {
 /** Cuts everything the renderer draws by a plane, while it is set. */
 export function Section({ plane }: { plane: SectionPlane | null }) {
   const gl = useThree((state) => state.gl);
+  const invalidate = useThree((state) => state.invalidate);
 
   useEffect(() => {
     if (plane === null) {
@@ -22,10 +23,13 @@ export function Section({ plane }: { plane: SectionPlane | null }) {
     }
     const normal = worldToViewer(plane.normal);
     gl.clippingPlanes = [new Plane(new Vector3(normal.x, normal.y, normal.z), plane.distance)];
+    // The renderer's, not a prop: the view is told to draw, cut and uncut.
+    invalidate();
     return () => {
       gl.clippingPlanes = [];
+      invalidate();
     };
-  }, [gl, plane]);
+  }, [gl, plane, invalidate]);
 
   return null;
 }

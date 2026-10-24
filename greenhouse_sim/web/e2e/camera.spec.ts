@@ -3,7 +3,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { CAMERA_PRESETS, DEFAULT_PRESET, PRESET_ORDER, type PresetName } from "../src/camera.ts";
 import { formatPoint } from "../src/readouts.ts";
 import type { Point3 } from "../src/world.ts";
-import { mainView, onScreen } from "./view.ts";
+import { mainView, onScreen, orbitUntil } from "./view.ts";
 
 const LABELS: Record<PresetName, string> = {
   top: "Top",
@@ -49,14 +49,20 @@ test("dragging orbits the camera, and a refresh restores the default view", asyn
 
 test("the HUD reports frame rate, objects and the pointer on the ground", async ({ page }) => {
   await page.goto("/");
+  const frameRate = page.getByTestId("frame-rate");
 
-  await expect(page.getByTestId("frame-rate")).toHaveText(/^\d+ fps$/);
   await expect(page.getByTestId("object-count")).toHaveText(/^[1-9]\d*$/);
+  // Still, the view draws nothing, so it has no frame rate (decision 0053).
+  await expect(frameRate).toHaveText("idle");
 
   // The default view looks at the origin, so the middle of the view is on the ground there.
   const centre = await viewCentre(page);
   await page.mouse.move(centre.x, centre.y);
   await expect(page.getByTestId("pointer-position")).toHaveText(/^x -?0\.\d\d, y -?0\.\d\d$/);
+
+  // Orbited, it draws frame after frame, and says how fast; let go, it stands still again.
+  await orbitUntil(page, frameRate, /^\d+ fps$/);
+  await expect(frameRate).toHaveText("idle");
 });
 
 // A mouse wheel's notch, as Chromium reports it.

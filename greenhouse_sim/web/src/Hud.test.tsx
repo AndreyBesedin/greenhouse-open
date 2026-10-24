@@ -7,9 +7,8 @@ import { button, click, type Rendered, render, said } from "./testing/render";
 
 const ignore = () => undefined;
 const SAMPLE = {
-  framesPerSecond: 59.6,
-  frameTimeMs: 16.78,
-  worstFrameMs: 33.4,
+  drawing: true,
+  rate: { framesPerSecond: 59.6, frameTimeMs: 16.78, worstFrameMs: 33.4 },
   drawCalls: 12,
   triangles: 123456,
   geometries: 9,
@@ -60,6 +59,35 @@ describe("the HUD", () => {
     expect(said(hud.container, "camera-position")).toBe("…");
     expect(said(hud.container, "pointer-position")).toBe("—");
     expect(said(hud.container, "simulator-time")).toBe("—");
+  });
+
+  it("says the view is idle while it stands still, with the frame time it last drew at", () => {
+    hud = render(
+      <Hud
+        sample={{ ...SAMPLE, drawing: false }}
+        pointer={null}
+        onPreset={ignore}
+        onCommand={ignore}
+      />,
+    );
+
+    expect(said(hud.container, "frame-rate")).toBe("idle");
+    expect(said(hud.container, "frame-time")).toBe("16.8 ms, worst 33.4 ms");
+  });
+
+  it("waits for frames drawn in a row before giving a rate", () => {
+    hud = render(
+      <Hud
+        sample={{ ...SAMPLE, rate: null }}
+        pointer={null}
+        onPreset={ignore}
+        onCommand={ignore}
+      />,
+    );
+
+    expect(said(hud.container, "frame-rate")).toBe("…");
+    expect(said(hud.container, "frame-time")).toBe("…");
+    expect(said(hud.container, "object-count")).toBe("8");
   });
 
   it("folds to its header, and unfolds with its readouts as they were", async () => {
