@@ -7,6 +7,18 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim` and the viewer: the builder's zones and fixtures placed
+  one by one (P12.3). The simulator's item edits take service zones,
+  keep-out volumes, walkways, boxes, cylinders, pipes, pipe runs, rails and
+  trays as they take equipment and sensors: placed several at a step,
+  copied, spaced, given a value for a field and removed, `place_items`
+  taking any of them. A zone or a walkway lies on the floor, so a step
+  moves it along the floor only; a new fixture is named apart from the
+  pipes or tubes a pipe run or a rail names after itself. The builder's
+  palette places each of them, its list shows them, and its inspector
+  shows their fields, the ends of a zone's area among them (it follows a
+  model two objects deep, leaving out a rotation's quaternion). A pipe or
+  a tube clicked in the view chooses its run or its rail.
 - viewer and `greenhouse-sim`: the builder's inspector (P12.3). Every
   field of the item chosen, a nested one by its path, and the house's
   envelope and rows, read from the schema the simulator publishes, each

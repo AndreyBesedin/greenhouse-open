@@ -69,9 +69,10 @@ describe("a model's fields read from the schema the simulator publishes (P12.3)"
     ]);
   });
 
-  it("leaves out lists, a constant kind, and what is nested deeper than one object", () => {
+  it("leaves out lists, a constant kind, and a rotation no one types by hand", () => {
     const paths = modelFields(schema, "Envelope", "envelope.").map((field) => field.path);
 
+    // Its openings are a list; its turn in the world, a quaternion.
     expect(paths).toEqual([
       "envelope.length",
       "envelope.width",
@@ -79,6 +80,24 @@ describe("a model's fields read from the schema the simulator publishes (P12.3)"
       "envelope.ridge_height",
       "envelope.spans",
       "envelope.bays",
+      "envelope.origin.position.x",
+      "envelope.origin.position.y",
+      "envelope.origin.position.z",
+    ]);
+  });
+
+  it("follows a model two objects deep: the ends of a zone's area", () => {
+    const fields = modelFields(schema, "Zone");
+
+    expect(fields.map((field) => [field.path, field.title])).toEqual([
+      ["zone_id", "Zone Id"],
+      ["kind", "Kind"],
+      ["area.start.x", "Area Start X"],
+      ["area.start.y", "Area Start Y"],
+      ["area.end.x", "Area End X"],
+      ["area.end.y", "Area End Y"],
+      ["area.width", "Area Width"],
+      ["height", "Height"],
     ]);
   });
 

@@ -4,6 +4,7 @@ import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import type { Installation } from "./generated/assessedTypes";
 import type { Axis, Edit } from "./generated/editTypes";
 import {
+  FIXTURE_KINDS,
   hosts,
   hostsFor,
   ITEM_KINDS,
@@ -67,10 +68,11 @@ export function fieldValue(text: string): number | boolean | string {
 }
 
 /**
- * The house's equipment, sensors, doors and vents, placed, copied, spaced,
- * changed and removed many at a time (P12.3). Each is one edit the
- * simulator makes and checks, undone in one step: the palette places
- * several at a step, or spreads doors and vents along each surface chosen;
+ * The house's equipment, sensors, zones, fixtures, doors and vents,
+ * placed, copied, spaced, changed and removed many at a time (P12.3). Each
+ * is one edit the simulator makes and checks, undone in one step: the
+ * palette places several at a step, or spreads doors and vents along each
+ * surface chosen;
  * the items chosen in the list are copied at a step, spaced evenly, given
  * one value for a field or removed.
  */
@@ -249,7 +251,7 @@ export function Items({
 
   return (
     <section className="builder-items" aria-labelledby={heading}>
-      <h2 id={heading}>Equipment, sensors, doors and vents</h2>
+      <h2 id={heading}>Items of the house</h2>
       {items.length === 0 ? (
         <p className="builder-note">None placed yet.</p>
       ) : (
@@ -297,7 +299,7 @@ export function Items({
           <legend>With {named}</legend>
           {!oneKind ? (
             <p className="builder-note">
-              Choose equipment and sensors, or doors and vents, to copy or space them.
+              Choose items in the house, or doors and vents, to copy or space them.
             </p>
           ) : (
             <>
@@ -378,6 +380,13 @@ export function Items({
           >
             <optgroup label="In the house">
               {ITEM_KINDS.map((each) => (
+                <option key={each} value={each}>
+                  {each.replaceAll("_", " ")}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Zones and fixtures">
+              {FIXTURE_KINDS.map((each) => (
                 <option key={each} value={each}>
                   {each.replaceAll("_", " ")}
                 </option>

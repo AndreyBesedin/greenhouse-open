@@ -20,7 +20,18 @@ const EQUIPMENT_MODELS: Readonly<Record<string, string>> = {
   dehumidifier: "Dehumidifier",
 };
 
-/** The equipment, sensor, door or vent named `id`, with its model. */
+const FIXTURE_MODELS: Readonly<Record<string, string>> = {
+  box: "BoxPrimitive",
+  cylinder: "CylinderPrimitive",
+  pipe: "PipePrimitive",
+  pipe_run: "PipeRunPrimitive",
+  rail: "RailPrimitive",
+  tray: "TrayPrimitive",
+  walkway: "WalkwayPrimitive",
+};
+
+/** The equipment, sensor, zone, fixture, door or vent named `id`, with its
+ * model. */
 function inspected(installation: Installation, id: string): Inspected | null {
   const piece = installation.layout.equipment?.find((each) => each.actuator_id === id);
   if (piece !== undefined) {
@@ -29,6 +40,15 @@ function inspected(installation: Installation, id: string): Inspected | null {
   const sensor = installation.layout.sensors?.find((each) => each.sensor_id === id);
   if (sensor !== undefined) {
     return { id, model: sensor.kind === "camera" ? "Camera" : "PointSensor", values: sensor };
+  }
+  const zone = installation.layout.zones?.find((each) => each.zone_id === id);
+  if (zone !== undefined) {
+    return { id, model: "Zone", values: zone };
+  }
+  const fixture = installation.layout.placed?.find((each) => each.fixture_id === id);
+  const model = FIXTURE_MODELS[fixture?.primitive ?? ""];
+  if (fixture !== undefined && model !== undefined) {
+    return { id, model, values: fixture };
   }
   const opening = installation.envelope.openings?.find((each) => each.opening_id === id);
   return opening === undefined ? null : { id, model: "Opening", values: opening };

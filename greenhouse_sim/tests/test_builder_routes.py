@@ -314,6 +314,34 @@ def test_an_edit_of_many_items_answers_the_installation_it_makes_assessed(
     assert (status, len(fewer["installation"]["envelope"]["openings"])) == (HTTPStatus.OK, 6)
 
 
+def test_walkways_and_zones_are_placed_as_equipment_is(simulator: Simulator) -> None:
+    status, first = _post(simulator, "/api/builder/basic", json.dumps(FORM))
+    walkway = {
+        "primitive": "walkway",
+        "fixture_id": "path",
+        "start": {"x": 2.0, "y": 0.3},
+        "end": {"x": 2.0, "y": 5.7},
+        "width": 0.8,
+    }
+    zone = {
+        "zone_id": "service",
+        "kind": "service",
+        "area": {"start": {"x": 11.0, "y": 0.5}, "end": {"x": 11.0, "y": 1.5}, "width": 0.8},
+        "height": 2.0,
+    }
+    step = {"x": 4.0, "y": 0.0, "z": 0.0}
+
+    status, paths = _edit(
+        simulator, first, {"edit": "place_items", "item": walkway, "count": 2, "step": step}
+    )
+    status, edited = _edit(simulator, paths, {"edit": "place_items", "item": zone})
+
+    assert status == HTTPStatus.OK, edited
+    layout = edited["installation"]["layout"]
+    assert [p["fixture_id"] for p in layout["placed"]] == ["path_1", "path_2"]
+    assert [z["zone_id"] for z in layout["zones"]] == ["service_1"]
+
+
 @pytest.mark.parametrize(
     ("edit", "said"),
     [

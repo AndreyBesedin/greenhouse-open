@@ -29,8 +29,10 @@ from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
 from greenhouse_sim.scenarios.installation import Installation
 from greenhouse_sim.world.envelope import Opening
 from greenhouse_sim.world.equipment import Equipment
+from greenhouse_sim.world.fixtures import Primitive
 from greenhouse_sim.world.geometry import Point2, Vector3
 from greenhouse_sim.world.sensors import Sensor
+from greenhouse_sim.world.zones import Zone
 
 # How many items one edit places or copies of each: as many as
 # `MOST_AT_ONCE` allows in all.
@@ -42,11 +44,12 @@ class _Edit(BaseModel):
 
 
 class PlaceItems(_Edit):
-    """Pieces of equipment or sensors like `item`, the first where it
-    stands and each next `step` further, named after its identifier."""
+    """Pieces of equipment, sensors, zones or fixtures like `item`, the
+    first where it stands and each next `step` further, named after its
+    identifier."""
 
     edit: Literal["place_items"] = "place_items"
-    item: Equipment | Sensor
+    item: Equipment | Sensor | Zone | Primitive
     count: Count = 1
     step: Vector3 | None = None
 
@@ -55,8 +58,8 @@ class PlaceItems(_Edit):
 
 
 class RepeatItems(_Edit):
-    """Each chosen piece of equipment or sensor copied `count` times, each
-    copy `step` further than the one before."""
+    """Each chosen piece of equipment, sensor, zone or fixture copied
+    `count` times, each copy `step` further than the one before."""
 
     edit: Literal["repeat_items"] = "repeat_items"
     items: list[str]
@@ -68,8 +71,8 @@ class RepeatItems(_Edit):
 
 
 class SpaceItems(_Edit):
-    """The chosen pieces of equipment and sensors spaced evenly along an
-    axis of the greenhouse."""
+    """The chosen pieces of equipment, sensors, zones and fixtures spaced
+    evenly along an axis of the greenhouse."""
 
     edit: Literal["space_items"] = "space_items"
     items: list[str]
@@ -131,7 +134,8 @@ class SpaceOpenings(_Edit):
 
 class SetField(_Edit):
     """One field, a nested one by its path (`base.z`), given one value over
-    the chosen items: equipment, sensors, doors or vents."""
+    the chosen items: equipment, sensors, zones, fixtures, doors or
+    vents."""
 
     edit: Literal["set_field"] = "set_field"
     items: list[str]
@@ -155,7 +159,8 @@ class SetValue(_Edit):
 
 
 class RemoveItems(_Edit):
-    """The chosen equipment, sensors, doors and vents taken out."""
+    """The chosen equipment, sensors, zones, fixtures, doors and vents
+    taken out."""
 
     edit: Literal["remove_items"] = "remove_items"
     items: list[str]

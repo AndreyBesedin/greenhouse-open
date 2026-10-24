@@ -77,8 +77,11 @@ export interface ModelField extends Omit<FormField, "kind" | "name" | "required"
 }
 
 // How deep the inspector follows a model's nested objects: a position's
-// coordinates, a sensor's imperfections, not a transform's rotation.
-const DEEPEST = 1;
+// coordinates, a sensor's imperfections, the ends of a zone's area.
+const DEEPEST = 2;
+// The models no one types a value of by hand: a rotation's quaternion,
+// such as the house's turn in the world.
+const UNTYPED: ReadonlySet<string> = new Set(["#/$defs/Quaternion"]);
 
 /** The one kind of value a property holds, if it allows null besides, with
  * the reference that kind is written as, if it is a model's. */
@@ -130,6 +133,9 @@ export function modelFields(
     }
     const path = `${prefix}${key}`;
     const reference = typeof kind.$ref === "string" ? kind.$ref : "";
+    if (UNTYPED.has(reference)) {
+      return [];
+    }
     // A field is titled by its own title, never its model's ("Vector3",
     // "OpeningKind"), or else by its name.
     const own = isObject(property) ? property.title : undefined;
