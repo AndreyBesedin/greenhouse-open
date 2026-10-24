@@ -17,10 +17,11 @@ from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.domain.envelope import OpeningKind
-from greenhouse_sim.domain.equipment import ActuatorKind
 from greenhouse_sim.domain.layout import Obstruction
 from greenhouse_sim.scenarios.installation import Installation
+from greenhouse_sim.world.capabilities import Heats, MovesAir
 from greenhouse_sim.world.envelope import Opening
+from greenhouse_sim.world.equipment import can
 from greenhouse_sim.world.layout import inside_the_greenhouse, outside_the_greenhouse
 from greenhouse_sim.world.zones import EDGE_TOLERANCE_M
 
@@ -243,12 +244,12 @@ def _crop_findings(draft: Installation) -> list[Finding]:
 
 def _missing_equipment(draft: Installation) -> list[Finding]:
     openings = draft.envelope.openings
-    equipment = {piece.kind for piece in draft.layout.equipment}
+    equipment = draft.layout.equipment
     missing = [
         ("no_door", "No door.", any(o.kind == OpeningKind.DOOR for o in openings)),
         ("no_vents", "No vent.", any(o.kind != OpeningKind.DOOR for o in openings)),
-        ("no_heating", "No heater.", ActuatorKind.HEATER in equipment),
-        ("no_fans", "No circulation fan.", ActuatorKind.FAN in equipment),
+        ("no_heating", "No heater.", any(can(piece, Heats) for piece in equipment)),
+        ("no_fans", "No circulation fan.", any(can(piece, MovesAir) for piece in equipment)),
     ]
     return [
         Finding(severity="warning", code=code, message=message)

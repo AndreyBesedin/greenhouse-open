@@ -12,15 +12,29 @@ geometry: a heater or a dehumidifier stands on the floor and is in the way
 of air and of robots, as an obstacle is, so it joins the layout's
 obstructions; a fan hangs from the structure, small beside the air it moves,
 and is in the way of nothing.
+
+What a piece does to the air is its capabilities
+(`greenhouse_sim.world.capabilities`): a fan moves air, a heater heats, a
+dehumidifier dries and gives off heat. The climate, its loops and the heat
+log read those, never the piece's kind (P14.5).
 """
 
 import math
-from typing import Annotated, Final, Literal
+from typing import Annotated, Final, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat
 
 from greenhouse_sim.domain.equipment import ActuatorKind
 from greenhouse_sim.domain.layout import FixtureKind, Material, Obstruction
+from greenhouse_sim.world.capabilities import (
+    Capability,
+    Device,
+    Dries,
+    Heats,
+    MovesAir,
+    Outlet,
+    WasteHeat,
+)
 from greenhouse_sim.world.fixtures import Fixture
 from greenhouse_sim.world.geometry import Box, Cylinder, Quaternion, Transform, Vector3
 from greenhouse_sim.world.identifiers import ItemId
@@ -45,6 +59,10 @@ class _Equipment(BaseModel):
     def facing(self) -> Vector3:
         """The unit vector it faces along, level."""
         return Vector3(x=math.cos(self.heading), y=math.sin(self.heading), z=0.0)
+
+
+def _plus(point: Vector3, by: Vector3, scale: float = 1.0) -> Vector3:
+    return Vector3(x=point.x + by.x * scale, y=point.y + by.y * scale, z=point.z + by.z * scale)
 
 
 class Fan(_Equipment):
@@ -87,6 +105,19 @@ class Fan(_Equipment):
     def rated(self) -> dict[str, float]:
         return {"diameter_m": self.diameter_m, "flow_m3_s": self.flow_m3_s}
 
+    def capabilities(self) -> tuple[Capability, ...]:
+        """It moves air: its flow blown from its rotor, along its heading."""
+        outlet = Outlet(centre=self.position, axis=self.facing(), diameter_m=self.diameter_m)
+        return (MovesAir(outlet=outlet, flow_m3_s=self.flow_m3_s),)
+
+    def anchor(self) -> Vector3:
+        """Where it is placed: its rotor's centre."""
+        return self.position
+
+    def displaced(self, by: Vector3) -> Self:
+        """It placed `by` further."""
+        return self.model_copy(update={"position": _plus(self.position, by)})
+
 
 class _Unit(_Equipment):
     """A unit standing on the floor or anything else: a box, its base centred
@@ -114,6 +145,14 @@ class _Unit(_Equipment):
             obstructs=_BODY_OBSTRUCTS,
         )
 
+    def anchor(self) -> Vector3:
+        """Where it is placed: its base's centre."""
+        return self.base
+
+    def displaced(self, by: Vector3) -> Self:
+        """It placed `by` further."""
+        return self.model_copy(update={"base": _plus(self.base, by)})
+
 
 class Heater(_Unit):
     """A unit heater: its rated power, all of it given to the air as heat."""
@@ -123,6 +162,19 @@ class Heater(_Unit):
 
     def rated(self) -> dict[str, float]:
         return {"power_w": self.power_w}
+
+    def capabilities(self) -> tuple[Capability, ...]:
+        """It heats: its power blown out of the middle of its front, along
+        its heading, from an outlet as wide as its front is high or wide,
+        whichever is less."""
+        axis = self.facing()
+        front = _plus(self.base, axis, self.size_x / 2)
+        outlet = Outlet(
+            centre=Vector3(x=front.x, y=front.y, z=self.base.z + self.size_z / 2),
+            axis=axis,
+            diameter_m=min(self.size_y, self.size_z),
+        )
+        return (Heats(power_w=self.power_w, outlet=outlet),)
 
 
 class Dehumidifier(_Unit):
@@ -136,5 +188,15 @@ class Dehumidifier(_Unit):
     def rated(self) -> dict[str, float]:
         return {"removal_kg_h": self.removal_kg_h, "heat_w": self.heat_w}
 
+    def capabilities(self) -> tuple[Capability, ...]:
+        """It dries the air around its body, and gives off heat as it does."""
+        return (Dries(removal_kg_h=self.removal_kg_h), WasteHeat(heat_w=self.heat_w))
+
 
 type Equipment = Annotated[Fan | Heater | Dehumidifier, Field(discriminator="kind")]
+
+
+def can(piece: Device, capability: type[Capability]) -> bool:
+    """Whether a piece of equipment can do what `capability` says: move air,
+    heat or dry (`greenhouse_sim.world.capabilities`)."""
+    return any(isinstance(each, capability) for each in piece.capabilities())

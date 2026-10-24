@@ -35,7 +35,8 @@ from greenhouse_sim.services.climate_runs import climate_run
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.units import HOUR_S
-from greenhouse_sim.world.equipment import Heater
+from greenhouse_sim.world.capabilities import Heats
+from greenhouse_sim.world.equipment import can
 
 if TYPE_CHECKING:
     # Typed only: the simulator imports the services that take it.
@@ -56,7 +57,7 @@ def heat_records(
     layout rearranged or targets changed, each named by `run_id`: a record
     at the end of each of its hours, or none if it has no heater."""
     config = scenario(simulator.catalogue, run.scenario_id)
-    if not any(isinstance(piece, Heater) for piece in config.layout.equipment):
+    if not any(can(piece, Heats) for piece in config.layout.equipment):
         return []
     _, climate = climate_run(simulator, run)
     floor_m2 = config.envelope.length * config.envelope.width

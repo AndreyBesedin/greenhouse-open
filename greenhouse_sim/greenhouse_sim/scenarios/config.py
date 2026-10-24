@@ -26,8 +26,9 @@ from greenhouse_sim.weather.seasonal import SeasonalWeather
 from greenhouse_sim.weather.sources import Clouded, ConstantWeather, RunWeather, Winded
 from greenhouse_sim.weather.state import Percent
 from greenhouse_sim.weather.synthetic import SyntheticWeather
+from greenhouse_sim.world.capabilities import Capability, Dries, Heats, MovesAir
 from greenhouse_sim.world.envelope import Envelope
-from greenhouse_sim.world.equipment import Dehumidifier, Fan, Heater
+from greenhouse_sim.world.equipment import can
 from greenhouse_sim.world.layout import Layout, inside_the_greenhouse, outside_the_greenhouse
 from greenhouse_sim.world.site import DEFAULT_SITE, Bearing, Site
 
@@ -198,16 +199,16 @@ class ScenarioConfig(BaseModel):
         if control is None:
             return self
         if control.heating is not None:
-            self._runs(control.heating.actuator_id, Heater, "heating loop", "heaters")
+            self._runs(control.heating.actuator_id, Heats, "heating loop", "heaters")
         if control.dehumidifying is not None:
             self._runs(
                 control.dehumidifying.actuator_id,
-                Dehumidifier,
+                Dries,
                 "dehumidifying loop",
                 "dehumidifiers",
             )
         for fan in control.circulation.fans if control.circulation is not None else []:
-            self._runs(fan, Fan, "circulation loop", "fans")
+            self._runs(fan, MovesAir, "circulation loop", "fans")
         vents = {o.opening_id for o in self.envelope.openings if o.kind != OpeningKind.DOOR}
         for vent in control.venting.vents if control.venting is not None else []:
             if vent not in vents:
@@ -227,14 +228,18 @@ class ScenarioConfig(BaseModel):
             )
         return self
 
-    def _runs(self, actuator_id: str, kind: type, loop: str, kinds: str) -> None:
+    def _runs(
+        self, actuator_id: str, capability: type[Capability], loop: str, devices: str
+    ) -> None:
         """Refuse a loop's device unless it is one of this scenario's
-        equipment, of the kind the loop runs."""
+        equipment that does what the loop runs it for: a heating loop's
+        heats, a dehumidifying loop's dries, a circulation loop's moves air
+        (`greenhouse_sim.world.capabilities`)."""
         if not any(
-            isinstance(piece, kind) and piece.actuator_id == actuator_id
+            piece.actuator_id == actuator_id and can(piece, capability)
             for piece in self.layout.equipment
         ):
-            raise ValueError(f"a {loop} runs one of its {kinds}, not {actuator_id!r}")
+            raise ValueError(f"a {loop} runs one of its {devices}, not {actuator_id!r}")
 
     @property
     def thermostat(self) -> Thermostat | None:

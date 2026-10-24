@@ -54,7 +54,7 @@ from greenhouse_sim.climate.transport import (
 )
 from greenhouse_sim.units import AIR_DENSITY_KG_M3
 from greenhouse_sim.weather.state import WeatherState
-from greenhouse_sim.world.equipment import Heater
+from greenhouse_sim.world.capabilities import Heats
 
 # The longest stretch advanced at once, in seconds: the weather is taken at
 # the middle of each.
@@ -270,9 +270,10 @@ class WholeHouse:
                 glass_m3_s_per_u=glass / configured_u if configured_u > 0 else 0.0,
                 heat_w=float(terms.heat_w[air].sum()),
                 heater_w=sum(
-                    piece.power_w * levels.get(piece.actuator_id, 0.0)
+                    capability.power_w * levels.get(piece.actuator_id, 0.0)
                     for piece in self.run.equipment
-                    if isinstance(piece, Heater)
+                    for capability in piece.capabilities()
+                    if isinstance(capability, Heats)
                 ),
                 water_removed_kg_s=float(terms.water_removed_kg_s[air].sum()),
             )

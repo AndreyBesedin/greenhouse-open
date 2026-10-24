@@ -412,10 +412,13 @@ def _chosen_surfaces(envelope: Envelope, surface_ids: Sequence[str]) -> list[str
 
 
 def _place(item: Item) -> Vector3:
-    """Where an item stands, as spacing measures it: a unit's or a box's
-    base, a fan's centre, a sensor's position, the middle of a zone, a
-    walkway, a pipe, a rail or a tray."""
-    if isinstance(item, Heater | Dehumidifier | BoxPrimitive | CylinderPrimitive):
+    """Where an item stands, as spacing measures it: a piece of equipment's
+    place as it says it is placed (a unit's base, a fan's centre), a box's
+    base, a sensor's position, the middle of a zone, a walkway, a pipe, a
+    rail or a tray."""
+    if _is_equipment(item):
+        return item.anchor()
+    if isinstance(item, BoxPrimitive | CylinderPrimitive):
         return item.base
     if isinstance(item, Zone | WalkwayPrimitive):
         middle = item.area.middle
