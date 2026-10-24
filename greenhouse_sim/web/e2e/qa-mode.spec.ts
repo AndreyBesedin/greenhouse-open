@@ -101,7 +101,7 @@ test("QA mode: the run's manifest says what it is made from, and the versions se
   const panel = page.getByRole("region", { name: "QA mode" });
   await unfold(page, "Display");
   await expect(panel.getByTestId("manifest-scenario")).toHaveText(
-    /^climate_box, version [0-9a-f]{16}, format 4$/,
+    /^climate_box, version [0-9a-f]{16}, format 5$/,
   );
   await expect(panel.getByTestId("manifest-seed")).toHaveText("1201");
   await expect(panel.getByTestId("manifest-season")).toHaveText("from 2026-01-01, 14 days");
@@ -110,6 +110,9 @@ test("QA mode: the run's manifest says what it is made from, and the versions se
   );
   await expect(panel.getByTestId("manifest-weather")).toHaveText(
     "cold_spring_day, synthetic, clouds 80%",
+  );
+  await expect(panel.getByTestId("manifest-models")).toHaveText(
+    "weather: synthetic, air field: uniform, crop: simple, crop walk: walk",
   );
 
   // The simulator's version and commit as the API serves them, and the

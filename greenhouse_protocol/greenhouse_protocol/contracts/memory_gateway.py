@@ -526,6 +526,9 @@ class InMemoryGateway:
                 self._withdraw(action)
                 self._end(action, OutcomeStatus.CANCELLED, reason=f"the run {STARTED_OVER}")
             self._plans = {}
+            # The new epoch is checked under the authorisation in force from
+            # its start: its record of changes begins there.
+            self._authorisation = [AuthorisationChange(version=self._config.version, at=self.now)]
         self._step()
 
     def finish(self) -> None:

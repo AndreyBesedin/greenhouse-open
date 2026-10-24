@@ -79,6 +79,13 @@
         }
       ],
       "title": "Wind From Deg"
+    },
+    "models": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Models",
+      "type": "object"
     }
   },
   "required": [
@@ -95,7 +102,8 @@
     "weather",
     "weather_kind",
     "cloud_cover_pct",
-    "wind_from_deg"
+    "wind_from_deg",
+    "models"
   ],
   "title": "RunManifest",
   "type": "object"

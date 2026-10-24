@@ -1,7 +1,7 @@
 # P13: One action format, and a plan a run's gateway carries out
 
 **Status:** in progress. The design is accepted (decision 0046), its
-questions [decided](#decided); P13.1 to P13.3 are done. Part of the
+questions [decided](#decided); P13.1 to P13.4 are done. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -596,7 +596,7 @@ within the day; the action format needs no change for it.
 | P13.1 | The protocol's types and contracts: `Action`, `ActionId`, `ActionRef`, `PlannedAction`, `Plan`, `Principal`, `Grant`, `AuthorisationGroup`, `AuthorisationConfig`, `ActionOutcome`, `ActionEffect`, `ExecutorRef`, `Assignment`, `ExecutionReport`, the gateway and executor contracts (revocation, status, at most once; listing the actions as they stand, `ActionKey`, `ActionState`; cancelling chosen actions; the epoch on every write; the gateway's limits; carrying actions into a run that continues the clock, as `RunDescriptor.continues_from` says, and dropping them from one that starts over) and `ActionNotExecutable`; checks (a malformed or stale plan refused whole, the graph checked as given, recurrences bounded, grants and delegation, the order across plans, one outcome per action) as conformance functions and their tests, the executor's with one that drops messages, and the gateway's with an in-memory gateway on a clock that continues; the published JSON Schemas. The old names stay, deprecated; the changelog says what each became, and the version moves at the next release (decision 0045). | `feat(protocol): one action, plan, gateway and executor format` | Done: the records (#323) and the contracts |
 | P13.2 | The run carries out a plan of today's kinds: levels, openings, daily commands and targets become a plan internally; `RunRequest` holds it; the address's spellings are read into it. Every run id, replay digest and kept opening day unchanged. Checkpoints in a new format, format 3 read. | `refactor(sim): the run carries out its schedule as a plan` | Done |
 | P13.3 | The simulator's gateway: the playback holds its run's plan and revisions, schedules them onto the run as its executor, writes the outcome log and serves it on the consumer interface; steering as the gateway's rule; the actions as they stand, cancelling chosen ones, and dropping them when the playback starts over. The gateway contract's conformance tests run against it. | `feat(sim): the playback as its run's gateway` | Done |
-| P13.4 | Authorisation in the gateway: principals on every planned action, bound to the authenticated submitter or granted on its behalf; plan ownership; groups and grants in a versioned configuration, an input of the run, its changes recorded; checked when a plan is given and when each action falls due, refusals as outcomes; the local operator group. | `feat(sim): the gateway authorises every action` | Planned |
+| P13.4 | Authorisation in the gateway: principals on every planned action, bound to the authenticated submitter or granted on its behalf; plan ownership; groups and grants in a versioned configuration, an input of the run, its changes recorded; checked when a plan is given and when each action falls due, refusals as outcomes; the local operator group. | `feat(sim): the gateway authorises every action` | Done |
 | P13.5 | Crop actions on the run: `harvest`, `lower`, `remove_leaf`, `inspect` at a day's start, refused at other instants and `water` refused, with their reasons; the organ model's `PlantAction` renamed `PlantOperation`; the plant lab and crop work give them; events name their actions. | `feat(sim): crop actions and their outcomes on the run` | In progress: the organ crop carries crop actions out (#351) |
 | P13.6 | The graph, windows and lateness, with a simulated executor whose actions take time and which has a number of hands, so that `late`, `missed`, fallbacks and cancelled dependents happen, deterministically. | `feat(sim): plans with order, windows and lateness` | Planned |
 | P13.7 | The gateway's write side and its routes: give a plan before a run, steer a playing one, list the actions as they stand, cancel a plan or chosen actions, read the plan in force; the playback's targets route becomes an alias. | `feat(api): give, steer and read a run's plan` | Planned |
@@ -862,6 +862,24 @@ What the design left to its first step, as P13.1 settles it:
 - **Later:** the routes that give, steer, list and cancel plans (P13.7),
   and the viewer's plan lane (P13.8). Until then, the playback's state
   lists its target changes, not the levels a plan sets.
+
+## Settled in P13.4
+
+- **The authorisation is a file the server is given** (decision 0052),
+  `--authorisation <file>`, the protocol's record as JSON; without it, the
+  local operator may do every kind. Every playback's gateway enforces the
+  simulator's.
+- **The local API's submitter is the local operator**, `person:local_operator`:
+  the API authenticates no one (decision 0009). An action proposed for
+  anyone else is refused unless the authorisation grants the local operator
+  to propose on their behalf.
+- **A change while runs play** (`Simulator.authorise`) holds from each
+  playback's clock on, recorded beside each plan with its version and
+  moment (`Playback.plan`, `PlanState.authorisation`). An action whose
+  rights are withdrawn before it falls due is refused then: "no longer
+  authorised".
+- **Refusals say who and what:** a target change the local operator may not
+  make is refused, the API answering with the gateway's reason.
 
 ## Settled in P13.5
 
