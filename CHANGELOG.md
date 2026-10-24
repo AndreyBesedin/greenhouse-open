@@ -7,6 +7,15 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: who may act on a simulator's runs is an authorisation
+  it is given (P13.4, decision 0052): a file the server reads,
+  `--authorisation <file>`, as the protocol writes the record, or else the
+  local operator's, who may do every kind. The local API acts as the local
+  operator; an action it may not do is refused, saying who may not do
+  what. A simulator given another while its runs play has each playback
+  enforce it from its clock on, recorded beside each plan
+  (`Playback.plan`); an action whose rights are withdrawn before it falls
+  due is refused then.
 - `greenhouse-sim`: a playback is its run's gateway (P13.3, decision
   0046). It holds its run's plans in the protocol's reference gateway, on
   its clock, with the run as the executor (`services.gateway`). An action

@@ -2,10 +2,11 @@
 
 A `Simulator` owns what a simulator keeps and runs: the scenarios it knows,
 packaged and registered (`scenarios.catalogue`), its live runs, the runs it
-plays back, the cursors it has given consumers, and the installations'
-drafts it is given a store of (`builder.drafts`, decision 0051). The server makes one,
-or is given one; a test makes its own. Closing it stops what it runs,
-waiting for each run's thread, and it starts nothing after.
+plays back, the cursors it has given consumers, the installations' drafts
+it is given a store of (`builder.drafts`, decision 0051), and who may act on
+its runs (`authorisation`, decision 0052). The server makes one, or is given
+one; a test makes its own. Closing it stops what it runs, waiting for each
+run's thread, and it starts nothing after.
 
 The services that keep runs reach what they keep through it: its climate
 runs, crops, sunlight, checkpoints and the states runs take over from them,
@@ -17,10 +18,13 @@ import threading
 from types import TracebackType
 from typing import Self
 
+from greenhouse_protocol.authorisation import AuthorisationConfig
+
 from greenhouse_sim.builder.drafts import DraftStore
 from greenhouse_sim.scenarios.catalogue import Catalogue
 from greenhouse_sim.services import checkpoints, climate_runs, crop, kept_states, sunlight
 from greenhouse_sim.services.consumer import Cursors
+from greenhouse_sim.services.gateway import LOCAL_AUTHORISATION
 from greenhouse_sim.services.live import DEFAULT_SECONDS_PER_DAY, LiveRuns
 from greenhouse_sim.services.playback import Playbacks
 
@@ -32,8 +36,11 @@ class Simulator:
         *,
         seconds_per_day: float = DEFAULT_SECONDS_PER_DAY,
         drafts: DraftStore | None = None,
+        authorisation: AuthorisationConfig = LOCAL_AUTHORISATION,
     ) -> None:
         self.catalogue = Catalogue() if catalogue is None else catalogue
+        # Who may do what on its runs: each run's gateway enforces it.
+        self.authorisation = authorisation
         # Where the drafts it is asked for are kept, if anywhere: a file of
         # its user's, which outlives it, and which it never forgets.
         self.drafts = drafts
@@ -52,6 +59,14 @@ class Simulator:
     @property
     def closed(self) -> bool:
         return self._closed
+
+    def authorise(self, authorisation: AuthorisationConfig) -> None:
+        """Who may do what on its runs from now on: every playback's gateway
+        enforces it from its clock's moment, and records the change; a
+        playback started later takes it from the start."""
+        self.authorisation = authorisation
+        for played in self.playbacks.all():
+            played.authorise(authorisation)
 
     def forget(self) -> None:
         """Lets go of everything kept, those that build on others first: the

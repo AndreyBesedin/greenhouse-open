@@ -64,8 +64,9 @@ from time import monotonic
 from typing import TYPE_CHECKING, Final
 
 from greenhouse_protocol.actions import Action, SetTarget
+from greenhouse_protocol.authorisation import AuthorisationConfig
 from greenhouse_protocol.contracts.consumer import OutcomeBatch
-from greenhouse_protocol.contracts.gateway import GatewayLimits
+from greenhouse_protocol.contracts.gateway import GatewayLimits, PlanState
 from greenhouse_protocol.contracts.memory_gateway import InMemoryGateway
 from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
@@ -80,7 +81,6 @@ from greenhouse_sim.services.crop_log import crop_records
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.gateway import (
-    LOCAL_AUTHORISATION,
     LOCAL_OPERATOR,
     UNLIMITED,
     RunExecutor,
@@ -363,7 +363,7 @@ class Playback:
             refuses=self._refusal,
         )
         self._gateway = InMemoryGateway(
-            LOCAL_AUTHORISATION,
+            simulator.authorisation,
             self.start,
             executor=self._executor,
             executor_ref=ExecutorRef(kind=ExecutorKind.SIMULATED_RUN, id=self.run_id),
@@ -508,8 +508,13 @@ class Playback:
         self._targets_planned = planned
         self._targets_revision += 1
         if receipt.refused:
-            refused = ", ".join(str(ref) for ref in receipt.refused)
-            raise InvalidRequest(f"the run refuses the target changes {refused}")
+            why = {
+                outcome.ref: outcome.reason
+                for outcome in self._gateway.outcomes().outcomes
+                if outcome.plan_id == TARGETS_PLAN and outcome.ref in receipt.refused
+            }
+            refused = "; ".join(f"{ref}: {why.get(ref) or 'refused'}" for ref in receipt.refused)
+            raise InvalidRequest(f"the run refuses the target changes ({refused})")
 
     def _next_day(self) -> int:
         """The day to work out next: the day a target change is worked into,
@@ -704,6 +709,29 @@ class Playback:
         self._changes += 1
         self._again_from = moment_s if self._again_from is None else min(self._again_from, moment_s)
         self._changed.set()
+
+    def authorise(self, authorisation: AuthorisationConfig) -> None:
+        """Who may do what on its run from its clock's moment on (decision
+        0052): its gateway checks each action falling due by it from then,
+        and records the change. Once replaced, the one in its place does."""
+        with self._lock:
+            successor = self._successor
+            if successor is None:
+                self._advance()
+                self._gateway.authorise(authorisation)
+                return
+        successor.authorise(authorisation)
+
+    def plan(self, plan_id: str) -> PlanState:
+        """A plan of its run's, as its gateway holds it: its revision in
+        force, its owner, its actions not yet resolved, its outcomes, and
+        the changes of the authorisation it was checked under."""
+        with self._lock:
+            self._advance()
+            try:
+                return self._gateway.plan(plan_id)
+            except KeyError:
+                raise NotFound(f"no plan {plan_id!r} of run {self.run_id!r}") from None
 
     def set_pace(self, seconds_per_day: float) -> PlaybackState:
         """Plays a simulated day in `seconds_per_day` real seconds; once
