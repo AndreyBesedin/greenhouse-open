@@ -6,7 +6,6 @@ they were, and a checkpoint's run the run it was saved from, in the
 checkpoint's own format."""
 
 import dataclasses
-import gzip
 import json
 import logging
 from collections.abc import Callable
@@ -21,7 +20,6 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.equipment import Target
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
-from greenhouse_sim.scenarios.manifest_files import opening_file
 from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.climate_readings import EquipmentAt
 from greenhouse_sim.services.climate_runs import SETPOINT_RANGE_C, climate_run
@@ -233,13 +231,14 @@ def test_a_device_handed_back_to_its_control_loop_is_refused_until_a_run_can(
 
 @pytest.mark.parametrize("all_off", [False, True])
 def test_a_format_3_checkpoint_is_read_as_its_runs_plan(
-    simulator: Simulator, all_off: bool
+    simulator: Simulator,
+    all_off: bool,
+    written_in_format_3: Callable[[bool], dict[str, Any]],
 ) -> None:
     """The kept opening days are written in format 3: their commands, daily
     commands and target changes are read as their run's plan, which names
     the run they were saved from."""
-    written = json.loads(gzip.decompress(opening_file(REFERENCE, all_off).read_bytes()))
-    assert written["checkpoint_format"] == checkpoints.WITH_COMMANDS
+    written = written_in_format_3(all_off)
 
     read = checkpoints.read_checkpoint(written)
 
@@ -272,9 +271,9 @@ def test_a_format_3_checkpoint_is_read_as_its_runs_plan(
     ],
 )
 def test_a_format_3_checkpoint_whose_plan_is_not_one_is_refused(
-    plan: dict[str, Any], said: str
+    plan: dict[str, Any], said: str, written_in_format_3: Callable[[bool], dict[str, Any]]
 ) -> None:
-    written = json.loads(gzip.decompress(opening_file(REFERENCE).read_bytes()))
+    written = written_in_format_3(False)
 
     with pytest.raises(InvalidRequest, match="not a checkpoint") as refused:
         checkpoints.read_checkpoint(written | plan)
@@ -282,7 +281,9 @@ def test_a_format_3_checkpoint_whose_plan_is_not_one_is_refused(
 
 
 def test_a_format_3_checkpoints_plan_is_the_one_its_run_would_be_saved_with(
-    simulator: Simulator, afresh: Callable[[], None]
+    simulator: Simulator,
+    afresh: Callable[[], None],
+    written_in_format_3: Callable[[bool], dict[str, Any]],
 ) -> None:
     """Commands, daily commands and target changes as format 3 wrote them
     are read as the plan a checkpoint of the same run keeps in format 4,
@@ -290,7 +291,7 @@ def test_a_format_3_checkpoints_plan_is_the_one_its_run_would_be_saved_with(
     commands: list[Commanded] = [(600.0, "roof_vent_1", 1.0), (600.0, "roof_vent_1", 0.5)]
     daily: list[Commanded] = [(64800.0, "fan_right", 1.0)]
     targets: list[Commanded] = [(86400.0, "heating_night", 12.0), (3600.0, "heating_day", 20.0)]
-    written = json.loads(gzip.decompress(opening_file(REFERENCE).read_bytes()))
+    written = written_in_format_3(False)
     as_written = {
         name: [list(each) for each in part]
         for name, part in (("commands", commands), ("daily", daily), ("targets", targets))

@@ -324,6 +324,126 @@ climate setpoints). Each needs equipment the simulator does not have yet:
   (P08) and their heat the air. The reference greenhouse's PAR is the
   sun's alone, so it falls to 0 every night.
 
+**Intelligence components** (recorded 2026-10-24, future work, after the
+projects in progress, P11 to P14). The components that decide and predict
+from what a greenhouse observes: a climate strategy that sets its targets,
+crop work planned from the crop's state, a yield forecast, the crop seen in
+its cameras' images. The simulator has the protocol's actions and plans
+(P13), a consumer's interface (P10), and observations kept apart from the
+truth; beyond the climate controller's loops (P11), nothing in it reads
+observations and chooses what to do. What belongs in the repository, and
+what is expected from outside it, is designed first, in a decision:
+
+- **One interface** for every such component, in the repository or outside
+  it: what it reads (observations and the run's clock, never the ground
+  truth), what it gives (actions and plans in the protocol's format,
+  forecasts as records), and when a run asks it, at its own rate.
+- **Base components in the simulator,** behind that interface: simple,
+  documented with their limits, as its base models are, so that a run, a
+  policy's evaluation and the viewer work with nothing from outside. A
+  rule-based climate strategy, a harvest planner and a forecast from a
+  crop model are the first candidates.
+- **The most complex components from outside,** proprietary or public,
+  through the same interface: the repository holds their contract and its
+  conformance tests, and evaluates them against its ground truth, not the
+  components themselves.
+- **To decide with it:** whether an outside component runs in the
+  simulator's process or apart from it, through the consumer's interface;
+  how its identity and version enter a run's, as P14's models do; and how
+  an evaluation scores one component against another.
+
+**Crop models from plant research** (recorded 2026-10-24, future work,
+after P14, whose registry lets a manifest choose a crop model). The
+simulator grows one crop, the tomato, by its own organ model (P03) and by a
+simple daily model, both its own. Published crop modelling, validated in
+greenhouses, informs the first as a reference only. Planned then:
+
+- **A survey first,** for tomato, cucumber, strawberry and sweet (bell)
+  pepper: the published models of each crop's growth, development, fruit
+  set, yield and quality; their inputs, time steps and the processes they
+  leave out; the greenhouses and data they were validated against; and
+  their licences, and whether their equations or code are published. Its
+  findings, and which models are adopted, adapted or written anew, are
+  recorded in a decision.
+- **The tomato first:** the organ model's processes compared with the
+  established ones, and replaced where the survey shows them better
+  supported, its version raised with its numbers (P14).
+- **Then cucumber, strawberry and sweet pepper,** each a crop model of the
+  registry: its parameters for each variety (P12.4), its organs drawn by
+  the viewer, its records (fruit counts and mass) in the protocol's terms,
+  and a conformance test with the crop part's other models.
+- **Each model held to its sources:** the data it was validated against
+  kept as a reference test, where its licence allows.
+
+**CI time, a second pass** (recorded 2026-10-24, future work, after the
+projects in progress, P11 to P14). A pull request's checks have grown slow
+again since the first pass (the test suite and CI time, above, and the
+first audit's `W7` and `W8`). Measured as successful CI runs of pull
+requests, start to finish, leaving out those under three minutes, which
+skip the long jobs: from 17 to 20 October, 99 runs took 11.5 minutes at the
+median; from 21 to 24 October, 151 runs took 16.8 at the median, 21.7 at
+the 90th percentile and up to 29.1. The browser tests are the longest
+again. Over the twelve latest of those runs, the `crop` lane took 13.7
+minutes on average and the `chromium` lane 10.8, against 6.0 for the
+longest lane when the lanes began; the simulator's repository checks took
+8.2. Planned then:
+
+- **Measured first:** each lane's tests by their time, and what has grown
+  since the lanes began, recorded with the commit measured.
+- **The options to weigh then:** the lanes balanced by their measured
+  time, or more of them; a pull request's browser tests chosen by what
+  its change can reach, with the whole suite on `main` and on a schedule;
+  the slowest tests made shorter where what they check allows.
+- **The aim:** a pull request's checks under 10 minutes, measured as here,
+  and kept there; after the first pass they took 11.5 at the median.
+
+**A second repository audit** (recorded 2026-10-24, future work, after the
+items above, the intelligence components and the crop models from plant
+research included). The [repository audit](../audits/2026-10-13-repository-audit.md)
+of 13 October looked at the repository after P09. By then the consumer's
+interface (P10), the climate targets (P11), the setup builder (P12), the
+actions and plans (P13), the models' registry (P14), the intelligence
+components' interface and three more crops will have come since. The
+second audit takes the first's form: the commit it looked at, what it
+measured, findings with identifiers, and an order of work. It asks:
+
+- whether the first audit's findings stay closed;
+- what the projects since have added that repeats, crosses a boundary, or
+  is missing its tests, documents or recipes;
+- whether the setup builder's and the registry's interfaces are complete
+  and checked enough for the assistant below to drive them;
+- the checks' time, after the second pass above.
+
+Its work plan is the maintenance done before the assistant, scheduled by
+the roadmap as the first audit's was.
+
+**An assistant in the viewer** (recorded 2026-10-24, future work, after the
+second audit's work plan). A chat that guides a person through the
+simulator and helps with what it can do: setting up a new greenhouse in
+the setup builder (P12), choosing the devices and sensors suited to it,
+choosing a crop model from the registry (P14) or defining a new one. It
+runs on a language model, called through its provider's API. It is
+designed in detail when it starts, in its project document and a
+decision; recorded now:
+
+- **The user's own key:** the provider's API key, set in the user's
+  `.env`, read by the simulator's server and never sent to the browser.
+  Without one, the simulator and the viewer work as they do now, with no
+  assistant.
+- **Limits for a hosted demo:** a demo deployment that anyone can open
+  runs the assistant on its own key, so its cost has a ceiling: a limit
+  for each user and one for the whole deployment, enforced by the server,
+  and protection from abuse, from automated or malicious traffic to
+  requests that use the assistant for anything but the simulator.
+- **An evaluation before it is offered:** a fixed set of requests, scored
+  on what the simulator can check, such as a setup that loads, runs and is
+  what was asked for; a judged score, where one is needed, labelled as
+  judged, with its limits.
+- **To decide with it:** the providers and models it supports; whether it
+  changes a setup itself or proposes changes the person applies; what it
+  is told of a scenario and a run; and how the demo tells one user from
+  another.
+
 ```mermaid
 flowchart LR
     PM1["P-1 Restructure greenhouse_sim"] --> P00["P00 Browser renderer"]

@@ -45,6 +45,15 @@ breaks the conformance checks is a major version.
   digits, so that a float's rounding no longer shows, as in the starting
   house's rows' origin, 2.4000000000000004. A value left as it is still
   sends nothing, and the simulator keeps it exact.
+- `greenhouse-sim`: who may act on a simulator's runs is an authorisation
+  it is given (P13.4, decision 0052): a file the server reads,
+  `--authorisation <file>`, as the protocol writes the record, or else the
+  local operator's, who may do every kind. The local API acts as the local
+  operator; an action it may not do is refused, saying who may not do
+  what. A simulator given another while its runs play has each playback
+  enforce it from its clock on, recorded beside each plan
+  (`Playback.plan`); an action whose rights are withdrawn before it falls
+  due is refused then.
 
 ## 0.4.0 - 2026-10-24
 
