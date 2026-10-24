@@ -63,21 +63,29 @@ from pathlib import Path
 from time import monotonic
 from typing import TYPE_CHECKING, Final
 
-from greenhouse_protocol.actions import Action, SetTarget
+from greenhouse_protocol.actions import Action, Harvest, Inspect, Lower, RemoveLeaf, SetTarget
+from greenhouse_protocol.assignment import Assignment
 from greenhouse_protocol.authorisation import AuthorisationConfig
 from greenhouse_protocol.contracts.consumer import OutcomeBatch
-from greenhouse_protocol.contracts.gateway import GatewayLimits, PlanState
+from greenhouse_protocol.contracts.gateway import GatewayLimits, PlanState, Receipt
 from greenhouse_protocol.contracts.memory_gateway import InMemoryGateway
 from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
-from greenhouse_protocol.plan import At, ExecutorKind, ExecutorRef, Plan, PlannedAction
+from greenhouse_protocol.plan import (
+    At,
+    ExecutorKind,
+    ExecutorRef,
+    Plan,
+    PlannedAction,
+    Principal,
+)
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 
 from greenhouse_sim.climate.commands import TARGET_EVERY_S
 from greenhouse_sim.core.clock import DAY_S, run_day
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.climate_runs import run_schedule
-from greenhouse_sim.services.crop_log import crop_records
+from greenhouse_sim.services.crop_log import CropActionDone, crop_actions_done, crop_records
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.gateway import (
@@ -86,9 +94,16 @@ from greenhouse_sim.services.gateway import (
     RunExecutor,
     run_items,
     run_kinds,
+    run_unhonoured,
 )
 from greenhouse_sim.services.heat_log import heat_records
-from greenhouse_sim.services.runs import Commanded, PlannedAt, RunPlan, RunRequest
+from greenhouse_sim.services.runs import (
+    Commanded,
+    PlannedAt,
+    RunPlan,
+    RunRequest,
+    crop_action_refusal,
+)
 from greenhouse_sim.services.scenarios import SceneChanges, changed, layout_name, scenario
 from greenhouse_sim.services.sensors import Stopped, delivered_between, run_start
 from greenhouse_sim.services.stores import Store
@@ -355,12 +370,14 @@ class Playback:
         # run as the executor; and the local operator's plan of target
         # changes, as last revised.
         played = changed(simulator.catalogue, config, SceneChanges(layout=self.layout))
+        self._played = played
         self._executor = RunExecutor(
             self.start,
             self.end_s,
             kinds=run_kinds(played),
             changed=self._work_again_from,
             refuses=self._refusal,
+            unhonoured=run_unhonoured(played),
         )
         # Who may do what on its run, as its gateway enforces it.
         self._authorisation = simulator.authorisation
@@ -467,6 +484,11 @@ class Playback:
     def _refusal(self, action: Action, at_s: float) -> str | None:
         """Why its run would refuse `action` at `at_s` seconds, as a run's
         plan is checked; None if it carries it out."""
+        match action:
+            case Harvest() | Lower() | RemoveLeaf() | Inspect():
+                return crop_action_refusal(self._played, action)
+            case _:
+                pass
         try:
             run_schedule(
                 self._simulator.catalogue,
@@ -539,12 +561,13 @@ class Playback:
         while not self._stopped.is_set():
             with self._lock:
                 day, run, changes = self._next_day(), self._run(), self._changes
+                assigned = self._executor.crop_actions_on(day)
                 self._changed.clear()
             if day >= days:
                 # Every day worked out, until a change has some worked again.
                 self._changed.wait(WAIT_STEP_S)
                 continue
-            if not self._work_day(day, run, changes):
+            if not self._work_day(day, run, changes, assigned):
                 return
 
     def work_day(self, day: int) -> bool:
@@ -554,12 +577,16 @@ class Playback:
         failure kept and said by `state` rather than lost with the worker."""
         with self._lock:
             run, changes = self._run(), self._changes
-        return self._work_day(day, run, changes)
+            assigned = self._executor.crop_actions_on(day)
+        return self._work_day(day, run, changes, assigned)
 
-    def _work_day(self, day: int, run: RunRequest, changes: int) -> bool:
-        """Works day `day` of `run` out, as `work_day` does, and publishes
-        it unless the targets changed meanwhile: in place of the day and those
-        after it, if they were worked out under the targets before."""
+    def _work_day(
+        self, day: int, run: RunRequest, changes: int, assigned: Sequence[Assignment] = ()
+    ) -> bool:
+        """Works day `day` of `run` out, as `work_day` does, with what its
+        crop actions `assigned` at the day's start did, and publishes it
+        unless its plan changed meanwhile: in place of the day and those
+        after it, if they were worked out under the plan before."""
         try:
             readings, run_id = delivered_between(
                 self._simulator,
@@ -578,6 +605,11 @@ class Playback:
             heated = heat_records(self._simulator, run, day, self.start, self.run_id)
             if self._stopped.is_set():
                 return False
+            done: list[CropActionDone] = (
+                crop_actions_done(self._simulator, run, day, self.start, assigned)
+                if assigned
+                else []
+            )
         except Stopped:
             return False
         except Exception as error:
@@ -592,7 +624,12 @@ class Playback:
             [*readings, *walked, *heated],
             key=lambda r: (delivered(r), r.sensor_id or r.plant_id or ""),
         )
-        events = sorted(harvests, key=lambda e: (e.timestamp, e.plant_id or ""))
+        # Each event at its moment: the day's crop work by plant, then the
+        # run's own crop actions in the order they apply, so that one given
+        # at an instant the clock is at comes after those delivered then.
+        made = [action.event for action in done if action.event is not None]
+        worked_by_plant = sorted(harvests, key=lambda e: (e.timestamp, e.plant_id or ""))
+        events = sorted([*worked_by_plant, *made], key=lambda e: e.timestamp)
         worked = (self._observations.packed(observations), self._events.packed(events))
         with self._lock:
             # The clock moved as far as it could before this day: from now
@@ -606,6 +643,13 @@ class Playback:
             del self._worked[day:]
             self._worked.append(worked)
             self._again_from = None
+            if done:
+                # What its crop actions did is done, or refused, as the
+                # clock has passed them, and as it passes them from now.
+                self._executor.carried_out(
+                    {action.assignment_id: action.carried for action in done}
+                )
+                self._gateway.advance(self._executor.instant(self._time_s))
         return True
 
     def _advance(self) -> None:
@@ -737,6 +781,18 @@ class Playback:
         self._changes += 1
         self._again_from = moment_s if self._again_from is None else min(self._again_from, moment_s)
         self._changed.set()
+
+    def submit(self, plan: Plan, *, by: Principal = LOCAL_OPERATOR) -> Receipt:
+        """Gives its gateway a plan, or a revision of one, by `by`, the local
+        operator unless said: its actions from the clock's moment on are the
+        run's, each carried out or refused as the gateway and the run decide.
+        Once replaced, the one in its place takes it."""
+        with self._lock:
+            successor = self._successor
+            if successor is None:
+                self._advance()
+                return self._gateway.submit(plan, by=by)
+        return successor.submit(plan, by=by)
 
     def authorise(self, authorisation: AuthorisationConfig) -> None:
         """Who may do what on its run from its clock's moment on (decision

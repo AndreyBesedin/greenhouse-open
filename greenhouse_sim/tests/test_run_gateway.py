@@ -23,6 +23,7 @@ from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import playback
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR, RunExecutor, run_items, run_kinds
 from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
+from greenhouse_sim.services.runs import CROP_KINDS
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
@@ -85,8 +86,8 @@ def test_a_gateway_acting_through_a_run_keeps_the_gateway_contract() -> None:
     assert check_gateway(make, START) == []
 
 
-def test_a_run_carries_out_levels_and_targets_it_has() -> None:
-    assert run_kinds(CONFIG) == {ActionKind.SET_LEVEL, ActionKind.SET_TARGET}
+def test_a_run_carries_out_levels_targets_and_crop_actions_it_has() -> None:
+    assert run_kinds(CONFIG) == {ActionKind.SET_LEVEL, ActionKind.SET_TARGET} | CROP_KINDS
     assert run_kinds(scenario(PACKAGED, "climate_box")) == {ActionKind.SET_LEVEL}
     assert run_items(scenario(PACKAGED, "climate_box")).targets == frozenset()
     executor = _executor()
