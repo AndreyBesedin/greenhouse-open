@@ -13,10 +13,11 @@ refuses when the action falls due, in its own words.
 The run carries out a device's level, a door's or a vent's included, at any
 moment of it, and a heating target on the minute, if it has a heating loop.
 On an organ crop it carries out a harvest, a lowering, a leaf removed and
-an inspection at the start of a day after its first (P13.5), given before
-the clock reaches it. It says why it does not carry out the rest, in its
-own words (`why_not`), which the gateway gives with its refusal: watering,
-for one, since its organ crop has no water in its root zone. It works every
+an inspection at the start of a day after its first (P13.5), given by the
+time the clock reaches it, as one waiting for another done then is. It
+says why it does not carry out the rest, in its own words (`why_not`),
+which the gateway gives with its refusal: watering, for one, since its
+organ crop has no water in its root zone. It works every
 day out ahead of the clock, so its lead time is the whole run: every action
 is in its plan as soon as the gateway has it. At one moment, what recurs
 comes before what does not, and then each in the order the gateway gave
@@ -244,8 +245,11 @@ class RunExecutor:
             return None
         if moment % DAY_S != 0 or not 0.0 < moment < self._end_s:
             return f"the run carries out {kind} at the start of a day after its first"
-        if instant <= self.now:
-            return "the run's clock has reached that day's start: its crop's work then is done"
+        # At the instant its clock is at, the day's crop is worked out again
+        # with it, as one waiting for another done then is: nothing delivered
+        # changes, its event coming after the others of that instant.
+        if instant < self.now:
+            return "the run's clock has passed that day's start: its crop's work then is done"
         return None
 
     def capacity(self) -> int:

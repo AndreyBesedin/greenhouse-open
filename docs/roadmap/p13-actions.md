@@ -939,8 +939,11 @@ which changes no run, then the run carrying out a plan's crop actions.
   at once in the run's words:
   - `water`: its organ crop has no water in its root zone;
   - a crop action off a day's start, on its first day or at its end;
-  - one at a day's start the clock has reached, since that day's records
-    are delivered;
+  - one at a day's start the clock has passed, since that day's records
+    are delivered. One at the instant the clock is at is taken, as one
+    waiting for another done then is: the day is worked out again with it,
+    after what it waits for, and its event comes after those of that
+    instant, so nothing delivered changes;
   - every crop action on a scenario that grows its crop with the simple
     daily model.
 

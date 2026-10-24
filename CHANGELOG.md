@@ -48,7 +48,8 @@ breaks the conformance checks is a major version.
 - `greenhouse-sim`: a playback's run carries out the crop actions given to
   its gateway (P13.5, decision 0046), through `Playback.submit`. A harvest,
   a lowering, a leaf removed or an inspection is carried out at the start
-  of a day after its first, given before the clock reaches it. The gateway
+  of a day after its first, given by the time the clock reaches it; one
+  waiting for another at that instant is done after it, that day. The gateway
   refuses the rest at once, in the run's words: watering, because its
   organ crop has no water in its root zone, and any other moment. Each
   action is done once its day is worked out, with the effect the crop gave

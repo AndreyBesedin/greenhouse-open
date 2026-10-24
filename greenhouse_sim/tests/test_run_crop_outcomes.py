@@ -4,6 +4,7 @@ refused otherwise in the run's own words; done once its day is worked out,
 with what it did and the event it made, which its outcome names; watering
 refused, since its organ crop has no water in its root zone."""
 
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
@@ -64,6 +65,7 @@ START: Final = run_start(PACKAGED, SCENARIO)
 DAY: Final = timedelta(days=1)
 HOUR: Final = timedelta(hours=1)
 PLANT: Final = plant_ids(CONFIG)[0]
+SECOND: Final = plant_ids(CONFIG)[1]
 RIPE: Final = Harvest(plant_id=PLANT, scope=HarvestScope.RIPE)
 LEAF: Final = RemoveLeaf(plant_id=PLANT, leaf_id=f"{PLANT}_n01_leaf")
 LOWERING: Final = Lower(plant_id=PLANT, by_internodes=1)
@@ -113,10 +115,13 @@ def test_a_run_says_why_it_does_not_carry_out_what_it_refuses() -> None:
     assert boxed.why_not(ActionKind.SET_TARGET) == (
         "climate_box has no heating loop to set a target of"
     )
-    # A day's start the clock has reached has had its crop's work done.
+    # A day's start the clock is at takes a crop action still; one it has
+    # passed has had its crop's work done.
     executor.advance(START + DAY)
+    assert executor.why_not(ActionKind.HARVEST, START + DAY) is None
+    executor.advance(START + DAY + HOUR)
     assert executor.why_not(ActionKind.HARVEST, START + DAY) == (
-        "the run's clock has reached that day's start: its crop's work then is done"
+        "the run's clock has passed that day's start: its crop's work then is done"
     )
     for scenario_id in (SCENARIO, "climate_box"):
         level = SetLevel(
@@ -282,6 +287,77 @@ def test_crop_actions_given_to_a_playback_end_in_outcomes_naming_their_events(
     polls = [_poll(simulator, path)]
     polls.append(_poll(simulator, f"{path}?after={polls[-1].next}"))
     assert check_polls(polls) == []
+
+
+@pytest.mark.slow
+def test_a_crop_action_waiting_for_another_at_its_day_start_is_carried_out_after_it(
+    simulator: Simulator, afresh: Callable[[], None], tmp_path: Path
+) -> None:
+    """A leaf removed, and the stem lowered by the internode it leaves bare,
+    both at the run's second day's start, the lowering waiting for the
+    removal; and a second plant's leaf removed, which the first plant's
+    inspection waits for. When each removal is done, what waits for it is
+    assigned at that same instant, and done that day after it. Its event
+    comes after those already delivered then, whatever its plant."""
+    clock = _Clock()
+    started = playback.start(
+        simulator, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path)
+    )
+    played = playback.playback(simulator, SCENARIO)
+    day_1 = START + DAY
+    receipt = played.submit(
+        Plan(
+            plan_id="crop",
+            run_id=started.run_id,
+            epoch=started.epoch,
+            revision=1,
+            actions=(
+                PlannedAction(
+                    action_id="leaf", action=LEAF, timing=At(at=day_1), proposed_by=LOCAL_OPERATOR
+                ),
+                PlannedAction(
+                    action_id="lower",
+                    action=LOWERING,
+                    timing=At(at=day_1),
+                    after=("leaf",),
+                    proposed_by=LOCAL_OPERATOR,
+                ),
+                PlannedAction(
+                    action_id="leaf2",
+                    action=RemoveLeaf(plant_id=SECOND, leaf_id=f"{SECOND}_n01_leaf"),
+                    timing=At(at=day_1),
+                    proposed_by=LOCAL_OPERATOR,
+                ),
+                PlannedAction(
+                    action_id="look",
+                    action=LOOK,
+                    timing=At(at=day_1),
+                    after=("leaf2",),
+                    proposed_by=LOCAL_OPERATOR,
+                ),
+            ),
+        )
+    )
+    assert receipt.accepted and receipt.refused == ()
+    assert played.work_day(0) and played.work_day(1)
+    played.command(PlaybackCommand.PLAY)
+    # The removal done at the day's start, the lowering is assigned then:
+    # the clock waits there while the day is worked out again with it.
+    clock.now = 25.0
+    assert played.state().simulated_now == day_1
+    delivered = [event.event_id for event in played.events_after(0, ALL).records]
+    assert played.work_day(1)
+    clock.now = 26.0
+    ends = {o.ref.action_id: o for o in played.plan("crop").outcomes}
+
+    assert {key: end.status for key, end in ends.items()} == dict.fromkeys(
+        ("leaf", "lower", "leaf2", "look"), OutcomeStatus.EXECUTED
+    )
+    assert isinstance(ends["lower"].effect, Lowered) and ends["lower"].effect.by_cm > 0
+    assert ends["lower"].resolved_at == ends["look"].resolved_at == day_1
+    made = [event.event_id for event in played.events_after(0, ALL).records]
+    assert made[: len(delivered)] == delivered
+    assert [str(ends[key].event_id) for key in ("lower", "look")] == made[len(delivered) :]
 
 
 def _poll(simulator: Simulator, path: str) -> OutcomeBatch:

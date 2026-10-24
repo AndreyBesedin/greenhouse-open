@@ -624,10 +624,12 @@ class Playback:
             [*readings, *walked, *heated],
             key=lambda r: (delivered(r), r.sensor_id or r.plant_id or ""),
         )
-        # Each event at its moment, by plant: a plant's crop work at a day's
-        # start before the run's own crop actions on it.
+        # Each event at its moment: the day's crop work by plant, then the
+        # run's own crop actions in the order they apply, so that one given
+        # at an instant the clock is at comes after those delivered then.
         made = [action.event for action in done if action.event is not None]
-        events = sorted([*harvests, *made], key=lambda e: (e.timestamp, e.plant_id or ""))
+        worked_by_plant = sorted(harvests, key=lambda e: (e.timestamp, e.plant_id or ""))
+        events = sorted([*worked_by_plant, *made], key=lambda e: e.timestamp)
         worked = (self._observations.packed(observations), self._events.packed(events))
         with self._lock:
             # The clock moved as far as it could before this day: from now
