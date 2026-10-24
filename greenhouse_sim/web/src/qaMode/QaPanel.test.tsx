@@ -24,7 +24,12 @@ const MANIFEST: RunManifest = {
   weatherKind: "synthetic",
   cloudCoverPct: null,
   windFromDeg: null,
-  models: { weather: "synthetic", air_field: "uniform", crop: "organ", crop_walk: "walk" },
+  models: {
+    weather: { model: "synthetic", version: 1 },
+    air_field: { model: "uniform", version: 1 },
+    crop: { model: "organ", version: 1 },
+    crop_walk: { model: "walk", version: 1 },
+  },
 };
 
 // Noon on the reference greenhouse's second day, as the simulator holds it.
@@ -102,7 +107,7 @@ describe("QA mode's panel", () => {
     expect(html).toContain('data-testid="manifest-seed">42<');
     expect(html).toContain('data-testid="manifest-weather">its own, synthetic<');
     expect(html).toContain(
-      'data-testid="manifest-models">weather: synthetic, air field: uniform, crop: organ, crop walk: walk<',
+      'data-testid="manifest-models">weather: synthetic v1, air field: uniform v1, crop: organ v1, crop walk: walk v1<',
     );
     expect(html).toContain('data-testid="manifest-simulator">0.1.0, commit c1964e9<');
     expect(html).toContain('data-testid="manifest-viewer">0.1.0, commit c1964e9<');

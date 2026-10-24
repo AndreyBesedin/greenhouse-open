@@ -2,7 +2,9 @@
 0054).
 
 A part is what a run needs worked out. A model of it has a name, unique
-within its part, and a parameter model, which checks the section of a
+within its part; a version, which changes whenever its numbers change for
+the same parameters, so that a run's identity, which covers it (P14.2),
+tells the runs apart; and a parameter model, which checks the section of a
 manifest that gives its parameters. The registry holds each part's models
 by name, with its default: the model a manifest that says nothing of the
 part runs, today's choice. P14.1 registers the parts a manifest chose
@@ -26,7 +28,6 @@ grow (`services.live`), so a scenario of organ rows has them too.
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from enum import StrEnum
 from typing import Any, Final
 
 from pydantic import BaseModel, ConfigDict, JsonValue, create_model
@@ -38,22 +39,12 @@ from greenhouse_sim.airflow.prescribed import (
     VortexAirflow,
 )
 from greenhouse_sim.domain.crop import CropModel
+from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.weather.recorded import RecordedWeather
 from greenhouse_sim.weather.seasonal import SeasonalWeather
 from greenhouse_sim.weather.sources import ConstantWeather
 from greenhouse_sim.weather.synthetic import SyntheticWeather
-
-
-class Part(StrEnum):
-    """What a run needs worked out, of the parts a manifest chooses a model
-    for."""
-
-    WEATHER = "weather"
-    AIR_FIELD = "air_field"
-    CROP = "crop"
-    CROP_WALK = "crop_walk"
-
 
 # The field of a parameter model that a configuration's union tells its
 # models apart by: the model's name.
@@ -102,14 +93,15 @@ CropWalk: Final = _the_configurations("CropWalk", WALK_FIELDS)
 
 @dataclass(frozen=True)
 class Model:
-    """A model of a part: its name, its parameters' model, and where the
-    configuration holds them: under `field`, with the model's name as their
-    `kind`; or, with no field, as fields of its own."""
+    """A model of a part: its name, its parameters' model, where the
+    configuration holds them (under `field`, with the model's name as their
+    `kind`; or, with no field, as fields of its own), and its version."""
 
     part: Part
     name: str
     parameters: type[BaseModel]
     field: str | None = None
+    version: int = 1
 
     def read(self, parameters: Mapping[str, JsonValue]) -> BaseModel:
         """Its parameters as a manifest's section gives them, checked:
@@ -181,6 +173,24 @@ def model(part: Part, name: str) -> Model:
         known = ", ".join(MODELS[part])
         raise ValueError(f"the {part} has no model {name!r}: its models are {known}")
     return found
+
+
+class ModelRun(BaseModel):
+    """A part's model as a run runs it: its name and version."""
+
+    model_config = ConfigDict(frozen=True)
+
+    model: str
+    version: int
+
+
+def models_run(config: ScenarioConfig) -> dict[Part, ModelRun]:
+    """The model and version a scenario runs for each part: what a run's
+    identity covers of its models, beside its parameters (P14.2)."""
+    return {
+        part: ModelRun(model=name, version=model(part, name).version)
+        for part, name in chosen(config).items()
+    }
 
 
 def chosen(config: ScenarioConfig) -> dict[Part, str]:

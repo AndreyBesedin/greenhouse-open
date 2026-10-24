@@ -27,6 +27,7 @@ from pydantic import JsonValue
 
 from greenhouse_sim.digests import short_digest
 from greenhouse_sim.domain.crop import CropModel
+from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.installation import (
@@ -42,7 +43,6 @@ from greenhouse_sim.scenarios.registry import (
     SIMPLE_CROP_FIELDS,
     WALK,
     WALK_FIELDS,
-    Part,
     model,
     models_json_schema,
 )

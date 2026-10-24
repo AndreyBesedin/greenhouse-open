@@ -7,6 +7,23 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: **every run id changes, once** (P14.2, decision 0054).
+  A run's identity now covers the model each part of it runs and that
+  model's version, so that a model whose numbers change makes other runs:
+  the same request names another run than before, for every packaged
+  scenario. A consumer that kept run ids, or records keyed by them, finds
+  them under new ids. Each registered model has a version, 1 for all
+  today. `GET /api/scenarios/{id}/manifest` answers each part's model and
+  version, `{"model": …, "version": …}`, and QA mode shows them.
+  Checkpoints are written in format 5: each part's model, its version and
+  its state, the organ crop's plants and the days they lived under
+  `models.crop.state`. A checkpoint made with another model or version of a
+  part is refused, naming the part, a run under another weather than its
+  scenario's having that weather's model. A format 5 checkpoint names
+  every part's model; formats 2 to 4 are still read, as made with the
+  first version of each model, a format 4 checkpoint's plants as its organ
+  crop's state.
+
 - `greenhouse-sim`: a scenario's manifest names the model each part of
   its runs runs, from a registry (P14.1, decision 0054). Manifest format 5
   adds `models`: for the weather, the air field, the crop and the crop

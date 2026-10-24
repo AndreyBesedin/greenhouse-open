@@ -30,6 +30,7 @@ from greenhouse_sim.scenarios.manifest_files import (
     manifest_json_schema,
     scenario_from_manifest,
 )
+from greenhouse_sim.scenarios.registry import ModelRun
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.scenarios import RunManifest, run_manifest
 
@@ -337,10 +338,13 @@ def test_a_run_says_what_it_is_made_from() -> None:
         cloud_cover_pct=None,
         wind_from_deg=None,
         models={
-            "weather": "seasonal",
-            "air_field": "uniform",
-            "crop": "organ",
-            "crop_walk": "walk",
+            part: ModelRun(model=name, version=1)
+            for part, name in {
+                "weather": "seasonal",
+                "air_field": "uniform",
+                "crop": "organ",
+                "crop_walk": "walk",
+            }.items()
         },
     )
 
