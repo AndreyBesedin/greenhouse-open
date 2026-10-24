@@ -238,6 +238,28 @@ def test_rights_withdrawn_after_an_assignment_was_sent_revoke_it_at_its_due() ->
     assert executor.reports() == ()
 
 
+def test_a_run_started_over_is_checked_under_the_authorisation_in_force_from_its_start() -> None:
+    """Its record of the authorisation's changes begins again with the new
+    epoch, at its start, as the one it checks every plan under; one that
+    continues the clock keeps the record it had."""
+    gateway = _gateway(conformance_authorisation(), START)
+    gateway.advance(START + 6 * HOUR)
+    gateway.authorise(conformance_authorisation(2))
+    gateway.restart(continue_clock=False)
+    gateway.submit(_plan(gateway, _vent("vent")), by=OPERATOR)
+    carried = _gateway(conformance_authorisation(), START)
+    carried.advance(START + 6 * HOUR)
+    carried.authorise(conformance_authorisation(2))
+    carried.restart(continue_clock=True)
+    carried.submit(_plan(carried, _vent("vent", timing=At(at=START + 7 * HOUR))), by=OPERATOR)
+
+    assert [(c.version, c.at) for c in gateway.plan("p").authorisation] == [(2, START)]
+    assert [(c.version, c.at) for c in carried.plan("p").authorisation] == [
+        (1, START),
+        (2, START + 6 * HOUR),
+    ]
+
+
 def test_an_action_revised_while_it_runs_ends_in_its_own_outcome() -> None:
     """Its revision's replacement is another action, with an outcome of its
     own: both are accounted for."""

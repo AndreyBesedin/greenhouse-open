@@ -19,13 +19,18 @@ test and whenever it calls it, and keep the scenarios' opening days again
 after it; `no_playbacks` stops every run the module's simulator plays back,
 and leaves the runs kept."""
 
+import gzip
+import json
 import threading
 from collections.abc import Callable, Iterator
 from contextlib import AbstractContextManager, contextmanager
+from typing import Any
 
 import pytest
 
 from greenhouse_sim.cfd import runner
+from greenhouse_sim.scenarios.manifest_files import opening_file
+from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.checkpoints import load_openings
 from greenhouse_sim.services.live import LiveFrame, LiveRun
 from greenhouse_sim.services.playback import stop_playbacks
@@ -147,3 +152,33 @@ def no_playbacks(simulator: Simulator) -> Iterator[Callable[[], None]]:
         yield stop
     finally:
         stop()
+
+
+@pytest.fixture
+def written_in_format_3() -> Callable[[bool], dict[str, Any]]:
+    """The reference greenhouse's kept opening day, its run's, or its run's
+    with everything off, as checkpoint format 3 wrote it: its run's plan as
+    its commands, daily commands and target changes. Made from the
+    checkpoint as it is kept, so that it holds whatever format the kept
+    files are written in again."""
+
+    def written(all_off: bool = False) -> dict[str, Any]:
+        kept = checkpoints.read_checkpoint(
+            json.loads(gzip.decompress(opening_file("reference_greenhouse", all_off).read_bytes()))
+        )
+        plan = kept.plan
+        document = {
+            name: value
+            for name, value in json.loads(kept.model_dump_json()).items()
+            if name != "plan"
+        }
+        return document | {
+            "checkpoint_format": checkpoints.WITH_COMMANDS,
+            "commands": [list(each) for each in plan.commanded()],
+            "daily": None
+            if plan.daily is None
+            else [list(each) for each in plan.daily_commanded() or ()],
+            "targets": [list(each) for each in plan.targeted()],
+        }
+
+    return written

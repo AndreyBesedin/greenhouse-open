@@ -40,6 +40,11 @@ from greenhouse_sim.api.routes import control, live_stream, respond
 from greenhouse_sim.services import checkpoints, playback
 from greenhouse_sim.services.drafts import DraftStore, store_at
 from greenhouse_sim.services.errors import InvalidRequest
+from greenhouse_sim.services.gateway import (
+    LOCAL_AUTHORISATION,
+    AuthorisationConfig,
+    authorisation_file,
+)
 from greenhouse_sim.services.live import DEFAULT_SECONDS_PER_DAY, LiveRun, LiveRuns
 from greenhouse_sim.services.simulator import Simulator
 
@@ -89,13 +94,14 @@ class SimulatorServer(ThreadingHTTPServer):
         *,
         seconds_per_day: float,
         drafts: DraftStore | None = None,
+        authorisation: AuthorisationConfig = LOCAL_AUTHORISATION,
     ) -> None:
         # Before binding: a server that fails to bind closes itself, which
         # closes a simulator it made, and then raises the bind's own error.
         # Nothing has started yet.
         self._makes_simulator = simulator is None
         self.simulator = (
-            Simulator(seconds_per_day=seconds_per_day, drafts=drafts)
+            Simulator(seconds_per_day=seconds_per_day, drafts=drafts, authorisation=authorisation)
             if simulator is None
             else simulator
         )
@@ -245,11 +251,26 @@ def create_server(
     seconds_per_day: float = DEFAULT_SECONDS_PER_DAY,
     simulator: Simulator | None = None,
     drafts: DraftStore | None = None,
+    authorisation: AuthorisationConfig = LOCAL_AUTHORISATION,
 ) -> SimulatorServer:
     """A server on the loopback interface; port 0 picks a free port. It makes
     its own simulator, live runs paced at `seconds_per_day`, keeping drafts
-    in `drafts` if given, unless it is given a simulator."""
-    return SimulatorServer(port, simulator, seconds_per_day=seconds_per_day, drafts=drafts)
+    in `drafts` if given, its runs acted on as `authorisation` lets (decision
+    0052), unless it is given a simulator."""
+    return SimulatorServer(
+        port, simulator, seconds_per_day=seconds_per_day, drafts=drafts, authorisation=authorisation
+    )
+
+
+def _authorisation(given: Path | None, parser: argparse.ArgumentParser) -> AuthorisationConfig:
+    """The authorisation the command line names, the API refusing to start
+    without it; or else the local operator's (decision 0052)."""
+    if given is None:
+        return LOCAL_AUTHORISATION
+    try:
+        return authorisation_file(given)
+    except InvalidRequest as error:
+        parser.error(error.message)
 
 
 def _drafts(given: Path | None, parser: argparse.ArgumentParser) -> DraftStore | None:
@@ -305,8 +326,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             f"by default ~/{DEFAULT_DRAFTS}"
         ),
     )
+    parser.add_argument(
+        "--authorisation",
+        type=Path,
+        default=None,
+        help=(
+            "a JSON file of who may do what on the simulator's runs, as the protocol "
+            "writes an authorisation; by default the local operator, everything"
+        ),
+    )
     args = parser.parse_args(argv)
     drafts = _drafts(args.drafts, parser)
+    authorisation = _authorisation(args.authorisation, parser)
     # What the simulator's services make, keep, take over and let go, at
     # INFO (AUDIT.14); other libraries' warnings only.
     logging.basicConfig(level=logging.WARNING, format=LOG_FORMAT, stream=sys.stderr)
@@ -315,7 +346,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     # the server running, to see where a busy or stuck one is.
     faulthandler.register(signal.SIGUSR1, all_threads=True)
 
-    server = create_server(args.port, seconds_per_day=args.seconds_per_day, drafts=drafts)
+    server = create_server(
+        args.port,
+        seconds_per_day=args.seconds_per_day,
+        drafts=drafts,
+        authorisation=authorisation,
+    )
     host, port = server.server_address[:2]
     print(f"greenhouse-sim API on http://{host!s}:{port}/api", flush=True)
     for scenario_id in args.play:

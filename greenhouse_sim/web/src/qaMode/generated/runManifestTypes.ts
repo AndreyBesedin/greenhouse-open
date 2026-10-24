@@ -21,4 +21,7 @@ export interface RunManifest {
   weather_kind: string;
   cloud_cover_pct: number | null;
   wind_from_deg: number | null;
+  models: {
+    [k: string]: string;
+  };
 }

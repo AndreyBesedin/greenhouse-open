@@ -42,8 +42,12 @@ on its own clock through a `WeatherSource`
    (`extra="forbid"`) with a `kind` literal and a `source(site, seed,
    start)` that returns a `WeatherSource`, every draw from the seed.
 2. Its place in the union of `ScenarioConfig.weather`
-   (`greenhouse_sim/greenhouse_sim/scenarios/config.py`), so that a
-   manifest can choose it with `"weather": {"kind": …}`.
+   (`greenhouse_sim/greenhouse_sim/scenarios/config.py`), and its
+   registration among the weather's models in
+   `greenhouse_sim/greenhouse_sim/scenarios/registry.py`, under its kind,
+   so that a manifest can choose it in its models:
+   `"models": {"weather": {"model": "<kind>", "parameters": {…}}}`
+   ([decision 0054](../decisions/0054-models-are-chosen-by-the-manifest-from-a-registry.md)).
 3. Its own tests, as `greenhouse_sim/tests/test_seasonal_weather.py` has
    for the seasonal kind: the same seed gives the same weather, and its
    numbers lie where its sources say they should.
