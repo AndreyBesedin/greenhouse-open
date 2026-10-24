@@ -17,19 +17,23 @@ function atItsCropsDay(run: ScenarioRun): ScenarioRun {
 }
 
 /** Where a scenario's crop at the moment of a run is published, organ by
- * organ (`GET /api/scenarios/{id}/crop`): asked for as the climate is. */
+ * organ or as the simple crop's plants are drawn (`GET
+ * /api/scenarios/{id}/crop`): asked for as the climate is. */
 export function cropUrl(run: ScenarioRun): string {
   return scenarioUrl(run.scenarioId, "crop", runParameters(atItsCropsDay(run)));
 }
 
-/** The scene with the crop drawn as `crop` has it: every organ the scene
- * draws gives way to the crop's, on the crop's day. */
+/** The scene with the crop drawn as `crop` has it: every organ and every
+ * plant drawn whole the scene draws gives way to the crop's, on the crop's
+ * day. */
 export function withCrop(scene: SceneSnapshot, crop: SceneSnapshot): SceneSnapshot {
   return {
     ...scene,
     simulated_day: crop.simulated_day,
     entities: [
-      ...scene.entities.filter((entity) => typeof entity.properties.organ_id !== "string"),
+      ...scene.entities.filter(
+        (entity) => typeof entity.properties.organ_id !== "string" && entity.kind !== "PLANT",
+      ),
       ...crop.entities,
     ],
   };

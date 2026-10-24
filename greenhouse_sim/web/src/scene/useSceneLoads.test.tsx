@@ -58,14 +58,16 @@ describe("useSceneLoads", () => {
     expect(asked.filter((url) => url.includes("/crop"))).toHaveLength(1);
   });
 
-  it("asks for no equipment without a thermostat, nor a crop of a simple crop", () => {
+  it("asks for no equipment without a thermostat, and for a simple crop as for any", () => {
     const asked = recordingFetch();
     const props = scenarioAt(DAY_S + DAY_S / 2);
-    renderHook(useLoads, {
+    const hook = renderHook(useLoads, {
       ...props,
       summary: { ...SUMMARY, thermostat: null, crop_model: "simple" },
     });
 
-    expect(asked.some((url) => url.includes("/equipment") || url.includes("/crop"))).toBe(false);
+    expect(asked.some((url) => url.includes("/equipment"))).toBe(false);
+    expect(asked.filter((url) => url.includes("/crop"))).toHaveLength(1);
+    expect(hook.current.organCrop).toBe(false);
   });
 });

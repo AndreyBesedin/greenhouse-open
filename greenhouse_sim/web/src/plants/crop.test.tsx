@@ -129,6 +129,21 @@ describe("a run's crop", () => {
 
     expect(withCrop(scene, crop)).toEqual({ ...scene, simulated_day: 3, entities: [wall, grown] });
   });
+
+  it("takes the place of every plant of the simple crop the scene draws whole", () => {
+    const wall = entity("wall", {});
+    const planted = { ...entity("p1", { age_days: 0 }), kind: "PLANT" } as SceneEntity;
+    const scene = {
+      schema_version: 1,
+      greenhouse_id: "climate_box",
+      simulated_day: 0,
+      entities: [wall, planted],
+    } as SceneSnapshot;
+    const grown = { ...entity("p1", { age_days: 3 }), kind: "PLANT" } as SceneEntity;
+    const crop = { ...scene, simulated_day: 3, entities: [grown] };
+
+    expect(withCrop(scene, crop)).toEqual({ ...scene, simulated_day: 3, entities: [wall, grown] });
+  });
 });
 
 describe("a plant's days", () => {
