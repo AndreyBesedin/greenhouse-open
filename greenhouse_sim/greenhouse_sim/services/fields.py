@@ -46,7 +46,12 @@ from greenhouse_sim.services.climate_runs import (
 )
 from greenhouse_sim.services.errors import NotFound
 from greenhouse_sim.services.grid import air_grid
-from greenhouse_sim.services.runs import Commanded, RunRequest, checked_moment
+from greenhouse_sim.services.runs import (
+    Commanded,
+    RunRequest,
+    checked_crop_plan,
+    checked_moment,
+)
 from greenhouse_sim.services.scenarios import (
     DEFAULT_WEATHER,
     SceneChanges,
@@ -238,7 +243,13 @@ def air_through_a_run(
         # A run whose targets are its scenario's own is named as it was before
         # runs had target changes (#274), so its identity stays.
         named = climate.key if climate.key[-1] else climate.key[:-1]
-        digest = _digest(repr(named) + recorded + _models_told(config) + config.model_dump_json())
+        digest = _digest(
+            repr(named)
+            + recorded
+            + _models_told(config)
+            + config.model_dump_json()
+            + _cropped(config, run)
+        )
         return (lambda time_s: day.sampled(f"{scenario_id}_{CLIMATE}", time_s)), (
             f"{scenario_id}-climate-{digest}"
         )
@@ -246,7 +257,7 @@ def air_through_a_run(
         simulator.catalogue, scenario(simulator.catalogue, scenario_id), SceneChanges(layout=name)
     )
     own = config.airflow.field(f"{scenario_id}_{config.airflow.kind}", air)
-    digest = _digest(_models_told(config) + config.model_dump_json())
+    digest = _digest(_models_told(config) + config.model_dump_json() + _cropped(config, run))
     return (lambda _: own), f"{scenario_id}-{config.airflow.kind}-{digest}"
 
 
@@ -256,6 +267,18 @@ def _models_told(config: ScenarioConfig) -> str:
     version with them, make another run."""
     runs = {part.value: run.model_dump() for part, run in models_run(config).items()}
     return json.dumps(runs, sort_keys=True)
+
+
+def _cropped(config: ScenarioConfig, run: RunRequest) -> str:
+    """What tells a run with crop actions of its own (P13.5) from one
+    without: its crop actions, checked, by their moments, those at one
+    moment in the order they apply; nothing for a run without, whose
+    identity stays as it was before runs had them."""
+    cropped = sorted(run.plan.cropped(), key=lambda each: each.at_s)
+    if not cropped:
+        return ""
+    checked_crop_plan(config, run.plan)
+    return json.dumps([[each.at_s, each.action.model_dump(mode="json")] for each in cropped])
 
 
 def _digest(told: str) -> str:
