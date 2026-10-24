@@ -35,7 +35,8 @@ never one a document names.
 - **Each well-formed action that cannot be carried out is refused at once,**
   as an outcome: one its principal may not carry out, of a kind no
   executor carries out, on a device, plant or target the run does not
-  have, at an instant no executor honours.
+  have, at an instant no executor honours; with the executor's own words
+  for why, when it gives them (`ExplainsRefusals`).
 - **Authorisation is checked again** when an assignment is sent and when it
   falls due; a refusal after it was sent revokes it.
 - **A revision steers from then on:** the actions of the one before not
