@@ -28,10 +28,14 @@ breaks the conformance checks is a major version.
   executor's `capacity`: each assignment holds one of its hands from its
   start for as long as its kind takes at the longest, so an action no
   hand is free for by its deadline is late, by its `on_late`, decided at
-  that deadline. A window or an as soon as possible action that its
-  executor honours no instant for is refused at once, and `check_executor`
-  holds what an executor says to what it honours. `MemoryExecutor` takes
-  a `capacity`. An executor that does not say when, with unlimited
+  that deadline. An action is sent no earlier than its executor's lead
+  time before its start, which is reserved, holding its hand, meanwhile.
+  A window its executor honours no instant in, or an as soon as possible
+  action it honours none for from then on, is refused at once; one already
+  past is late, by its rule. `check_executor` holds what an executor says
+  to what it honours, bounded or not. `InMemoryGateway.next_moment` says
+  the next instant it has something to do. `MemoryExecutor` takes a
+  `capacity`. An executor that does not say when, with unlimited
   capacity, is dealt with as before.
 
 - `greenhouse-sim`: **every run id changes, once** (P14.2, decision 0054).

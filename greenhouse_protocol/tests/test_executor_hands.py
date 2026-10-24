@@ -4,11 +4,12 @@ its hands free for as long as the action's kind takes at the longest; late,
 by the action's own rule, when there is none by its deadline."""
 
 from datetime import UTC, datetime, timedelta
-from typing import Final
+from typing import Any, Final
 
 import pytest
 
 from greenhouse_protocol.actions import ActionKind, SetLevel
+from greenhouse_protocol.assignment import Assignment
 from greenhouse_protocol.contracts.execution import SaysWhen, check_executor
 from greenhouse_protocol.contracts.gateway import OPERATOR, conformance_authorisation
 from greenhouse_protocol.contracts.memory_gateway import InMemoryGateway, MemoryExecutor
@@ -274,9 +275,125 @@ def test_an_executor_that_says_when_says_what_it_honours() -> None:
         ) -> datetime | None:
             return not_before
 
+    class Unbounded(_Hourly):
+        """Says when, unless it is given a bound."""
+
+        def earliest(
+            self, kind: ActionKind, not_before: datetime, not_after: datetime | None = None
+        ) -> datetime | None:
+            return None if not_after is not None else super().earliest(kind, not_before)
+
+    class BoundedHasty(_Hourly):
+        """Says the instant asked for, given it as its bound, honoured or not."""
+
+        def earliest(
+            self, kind: ActionKind, not_before: datetime, not_after: datetime | None = None
+        ) -> datetime | None:
+            if not_after == not_before:
+                return not_before
+            return super().earliest(kind, not_before, not_after)
+
     assert check_executor(_Hourly, START) == []
     violations = check_executor(Hasty, START)
     assert (
         f"it says set_level from {(START + timedelta(seconds=30)).isoformat()} at "
         f"{(START + timedelta(seconds=30)).isoformat()}, which it does not honour" in violations
     )
+    on_the_hour, off_it = START.isoformat(), (START + timedelta(seconds=30)).isoformat()
+    assert f"it honours set_level at {on_the_hour}, and says no instant by then" in check_executor(
+        Unbounded, START
+    )
+    assert f"it does not honour set_level at {off_it}, and says it by then" in check_executor(
+        BoundedHasty, START
+    )
+
+
+class _Always(MemoryExecutor):
+    """Carries out every kind at any instant, and says so."""
+
+    def earliest(
+        self, kind: ActionKind, not_before: datetime, not_after: datetime | None = None
+    ) -> datetime | None:
+        return not_before if not_after is None or not_before <= not_after else None
+
+
+class _Receiving(_Hourly):
+    """On the hour, as `_Hourly`, keeping when it received each assignment."""
+
+    def __init__(self, start: datetime, **kwargs: Any) -> None:
+        super().__init__(start, **kwargs)
+        self.received: dict[str, datetime] = {}
+
+    def perform(self, assignment: Assignment) -> None:
+        self.received.setdefault(assignment.ref.action_id, self.now)
+        super().perform(assignment)
+
+
+@pytest.mark.parametrize(
+    ("timing", "on_late", "ends"),
+    [
+        (
+            Window(not_before=START - 2 * HOUR, not_after=START - HOUR),
+            OnLate.RUN_LATE,
+            {"open": (OutcomeStatus.LATE, START)},
+        ),
+        (
+            Asap(deadline=START - HOUR),
+            OnLate.FALLBACK,
+            {
+                "open": (OutcomeStatus.MISSED, None),
+                "open/fallback": (OutcomeStatus.EXECUTED, START),
+            },
+        ),
+    ],
+)
+def test_a_window_or_a_deadline_already_past_is_late_by_its_rule_not_refused(
+    timing: Window | Asap, on_late: OnLate, ends: dict[str, tuple[OutcomeStatus, datetime | None]]
+) -> None:
+    lateness = Lateness(on_late=on_late, fallback=SHUT if on_late == OnLate.FALLBACK else None)
+    gateway = _given(_Always(START), _vent("open", timing=timing, lateness=lateness))
+    gateway.advance(START + HOUR)
+
+    assert _ends(gateway) == ends
+
+
+@pytest.mark.parametrize(("lead_s", "received"), [(0.0, START + HOUR), (1800.0, START + HOUR / 2)])
+def test_an_action_is_sent_no_earlier_than_its_executors_lead_before_its_start(
+    lead_s: float, received: datetime
+) -> None:
+    """Its window opening at 06:10, it starts at 07:00, the hourly executor's
+    first instant in it: the assignment is sent then, or its lead before."""
+    executor = _Receiving(START, lead_s=lead_s)
+    window = Window(not_before=START + 10 * MINUTE, not_after=START + 3 * HOUR)
+    gateway = _given(executor, _vent("open", timing=window))
+    gateway.advance(START + 2 * HOUR)
+
+    assert executor.received == {"open": received}
+    assert _ends(gateway) == {"open": (OutcomeStatus.EXECUTED, START + HOUR)}
+
+
+def test_a_start_reserved_holds_its_hand_until_it_is_sent() -> None:
+    """One hand, a quarter of an hour's lead: the first action's start, an
+    hour on, is reserved before it is sent, and the second, due then too,
+    finds the hand taken."""
+    executor = MemoryExecutor(
+        START, lead_s=900.0, duration_s=HALF_AN_HOUR, longest_s=HALF_AN_HOUR, capacity=1
+    )
+    gateway = _given(executor, _vent("first"), _vent("second"))
+    gateway.advance(START + 3 * HOUR)
+
+    assert _ends(gateway) == {
+        "first": (OutcomeStatus.EXECUTED, START + HOUR),
+        "second": (OutcomeStatus.LATE, START + HOUR + HOUR / 2),
+    }
+
+
+def test_a_gateway_says_the_next_moment_it_has_something_to_do() -> None:
+    """Due an hour on, both; the second, late for want of the hand, is
+    reserved for when it comes free, half an hour after."""
+    gateway = _given(_one_hand(), _vent("first"), _vent("second"))
+
+    assert gateway.next_moment(START + 3 * HOUR) == START + HOUR
+    assert gateway.next_moment(START + HOUR / 2) is None
+    gateway.advance(START + HOUR)
+    assert gateway.next_moment(START + 3 * HOUR) == START + HOUR + HOUR / 2

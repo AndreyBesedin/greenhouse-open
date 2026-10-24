@@ -281,8 +281,13 @@ def _said_when(executor: ExecutorUnderTest, start: datetime) -> list[str]:
                 )
             if executor.honours(kind, asked) and said != asked:
                 violations.append(f"it honours {kind} at {when}, and says another instant")
-            if bounded not in {None, asked}:
-                violations.append(f"it says {kind} from {when} by then at another instant")
+            # Bounded by the instant asked, it says that instant exactly when
+            # it honours it, and none otherwise.
+            expected = asked if executor.honours(kind, asked) else None
+            if bounded != expected:
+                told = "it" if bounded == asked else "no instant" if bounded is None else "another"
+                honoured = "honours" if expected is not None else "does not honour"
+                violations.append(f"it {honoured} {kind} at {when}, and says {told} by then")
     return violations
 
 
