@@ -14,11 +14,12 @@ from greenhouse_sim.biology.tomato.organ.geometry import ALONG_THE_ROW, METRES_P
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.core.crop import CropWork
 from greenhouse_sim.core.crop_actions import carry_out
+from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import plants
 from greenhouse_sim.services.plants import LabRun
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.rows import PlantingPosition
-from greenhouse_sim.world.training import Training
+from greenhouse_sim.world.training import HighWire, Training
 
 # The lab's first plant on day 85: two red trusses, and more ripening above.
 PLANT: Final = plants.structure(LabRun(day=85))
@@ -36,6 +37,11 @@ WIRED: Final = Training(
 def _laid_cm(before: Plant, after: Plant) -> float:
     laid = after.stem.phytomers[before.laid_internodes : after.laid_internodes]
     return sum(phytomer.internode.length_cm for phytomer in laid)
+
+
+def _lowered_cm(effect: object) -> float:
+    assert isinstance(effect, Lowered)
+    return effect.by_cm
 
 
 def test_a_leaf_removed_is_the_organ_model_s_pruning() -> None:
@@ -95,8 +101,9 @@ def test_a_lowering_by_internodes_lays_them_down_if_they_are_bare() -> None:
     refused = carry_out(PLANT, lowering)
 
     assert lowered.plant == act(bare, topology.LowerStem(internodes=2))
+    # Along its row, its top comes down by the stem laid down.
     drop = sum(phytomer.internode.length_cm for phytomer in PLANT.stem.phytomers[:2])
-    assert lowered.effect == Lowered(by_cm=drop)
+    assert _lowered_cm(lowered.effect) == pytest.approx(drop)
     assert (refused.effect, refused.refusal) == (None, "p01_n01_leaf is still on the stem")
     assert refused.plant.laid_internodes == 0
 
@@ -109,7 +116,7 @@ def test_a_lowering_to_a_head_room_is_a_lowering_round_under_the_plant_s_wire() 
 
     assert lowered.plant == lowering_round(PICKED, top_height_m(PLANT) - 0.3, ALONG_THE_ROW)
     assert lowered.plant.laid_internodes > 0
-    assert lowered.effect == Lowered(by_cm=_laid_cm(PICKED, lowered.plant))
+    assert _lowered_cm(lowered.effect) == pytest.approx(_laid_cm(PICKED, lowered.plant))
     # Low enough already: done, lowering it by nothing.
     assert (again.plant, again.effect) == (lowered.plant, Lowered(by_cm=0.0))
     # A plant that hangs from no wire is left as it is.
@@ -125,9 +132,26 @@ def test_a_lowering_by_centimetres_lays_down_as_few_internodes_as_bring_the_top_
     laid = lowered.plant.laid_internodes
 
     assert lowered.plant == lowering_round(PICKED, top_height_m(PICKED) - 10.0 * METRES_PER_CM)
-    assert lowered.effect == Lowered(by_cm=_laid_cm(PICKED, lowered.plant))
+    assert _lowered_cm(lowered.effect) == pytest.approx(_laid_cm(PICKED, lowered.plant))
     assert top_height_m(PICKED) - top_height_m(lowered.plant) >= 10.0 * METRES_PER_CM
     assert top_height_m(PICKED) - top_height_m(PICKED, laid=laid - 1) < 10.0 * METRES_PER_CM
+
+
+def test_a_lowering_says_how_far_the_top_came_down_as_the_plant_is_trained() -> None:
+    """On a high wire, the standing stem leans towards its wire, and leans
+    otherwise once it is first lowered: its top comes down by less than
+    the stem laid down."""
+    high_wire = SCENARIO_REGISTRY["reference_greenhouse"].layout.trainings()[0]
+    bare = act(
+        act(PLANT, topology.RemoveLeaf(leaf_id="p01_n01_leaf")),
+        topology.RemoveLeaf(leaf_id="p01_n02_leaf"),
+    )
+    lowered = carry_out(bare, Lower(plant_id="p01", by_internodes=1), high_wire)
+    drop_m = top_height_m(bare, high_wire.path) - top_height_m(lowered.plant, high_wire.path)
+
+    assert isinstance(high_wire.path, HighWire)
+    assert _lowered_cm(lowered.effect) == pytest.approx(drop_m / METRES_PER_CM)
+    assert _lowered_cm(lowered.effect) < _laid_cm(bare, lowered.plant)
 
 
 def test_an_action_on_another_plant_is_not_carried_out_on_this_one() -> None:
