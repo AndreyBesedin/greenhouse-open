@@ -7,6 +7,26 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-protocol`: a gateway starts each action at the earliest
+  instant it can (P13.6, decision 0046). An executor may say the earliest
+  instant from one on at which it carries out a kind
+  (`contracts.execution.SaysWhen.earliest`), and the reference gateway
+  starts a window's, an as soon as possible or a late action there, rather
+  than at an instant the executor would refuse. It also keeps to the
+  executor's `capacity`: each assignment holds one of its hands from its
+  start for as long as its kind takes at the longest, so an action no
+  hand is free for by its deadline is late, by its `on_late`, decided at
+  that deadline. An action is sent no earlier than its executor's lead
+  time before its start, which is reserved, holding its hand, meanwhile.
+  A window its executor honours no instant in, or an as soon as possible
+  action it honours none for from then on, is refused at once; one already
+  past is late, by its rule. `check_executor` holds what an executor says
+  to what it honours, bounded or not. `InMemoryGateway.next_moment` says
+  the next instant it has something to do. `MemoryExecutor` takes a
+  `capacity`. An executor that does not say when, with unlimited
+  capacity, is dealt with as before.
+
+- `greenhouse-sim`: **every run id changes, once** (P14.2, decision 0054).
 - viewer: a scenario whose rows grow the simple crop draws its crop as it
   stands at the moment of its run, as it draws the organ crop, once a day
   has ended: each plant a cylinder as tall as its stem stands, in place of

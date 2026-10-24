@@ -39,6 +39,20 @@ never one a document names.
   for why, when it gives them (`ExplainsRefusals`).
 - **Authorisation is checked again** when an assignment is sent and when it
   falls due; a refusal after it was sent revokes it.
+- **An action starts at the earliest instant it can,** from when it falls
+  due: one its executor honours, as the executor says when it does
+  (`SaysWhen`), and at which one of its hands is free (`capacity`). Each
+  assignment holds a hand from its start for as long as its kind takes at
+  the longest. A window's action starts within its window, and an as soon
+  as possible one once what it waits for is done. It is sent no earlier
+  than its executor's lead time before its start, which is reserved
+  meanwhile, holding its hand. A window its executor honours no instant
+  in, or an as soon as possible action it honours none for from then on,
+  is refused at once. One already past is late, by its rule.
+- **An action that cannot start by its deadline is late:** its instant,
+  its window's end or its own deadline, with its tolerance. The gateway
+  decides that at the deadline, by the action's `on_late`. One run late
+  starts at the next instant it can, and is missed if there is none.
 - **A revision steers from then on:** the actions of the one before not
   yet started are superseded unless it keeps them unchanged; what started
   keeps its outcome.
