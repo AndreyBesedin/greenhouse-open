@@ -324,6 +324,57 @@ climate setpoints). Each needs equipment the simulator does not have yet:
   (P08) and their heat the air. The reference greenhouse's PAR is the
   sun's alone, so it falls to 0 every night.
 
+**Intelligence components** (recorded 2026-10-24, future work, after the
+projects in progress, P11 to P14). The components that decide and predict
+from what a greenhouse observes: a climate strategy that sets its targets,
+crop work planned from the crop's state, a yield forecast, the crop seen in
+its cameras' images. The simulator has the protocol's actions and plans
+(P13), a consumer's interface (P10), and observations kept apart from the
+truth; beyond the climate controller's loops (P11), nothing in it reads
+observations and chooses what to do. What belongs in the repository, and
+what is expected from outside it, is designed first, in a decision:
+
+- **One interface** for every such component, in the repository or outside
+  it: what it reads (observations and the run's clock, never the ground
+  truth), what it gives (actions and plans in the protocol's format,
+  forecasts as records), and when a run asks it, at its own rate.
+- **Base components in the simulator,** behind that interface: simple,
+  documented with their limits, as its base models are, so that a run, a
+  policy's evaluation and the viewer work with nothing from outside. A
+  rule-based climate strategy, a harvest planner and a forecast from a
+  crop model are the first candidates.
+- **The most complex components from outside,** proprietary or public,
+  through the same interface: the repository holds their contract and its
+  conformance tests, and evaluates them against its ground truth, not the
+  components themselves.
+- **To decide with it:** whether an outside component runs in the
+  simulator's process or apart from it, through the consumer's interface;
+  how its identity and version enter a run's, as P14's models do; and how
+  an evaluation scores one component against another.
+
+**Crop models from plant research** (recorded 2026-10-24, future work,
+after P14, whose registry lets a manifest choose a crop model). The
+simulator grows one crop, the tomato, by its own organ model (P03) and by a
+simple daily model, both its own. Published crop modelling, validated in
+greenhouses, informs the first as a reference only. Planned then:
+
+- **A survey first,** for tomato, cucumber, strawberry and sweet (bell)
+  pepper: the published models of each crop's growth, development, fruit
+  set, yield and quality; their inputs, time steps and the processes they
+  leave out; the greenhouses and data they were validated against; and
+  their licences, and whether their equations or code are published. Its
+  findings, and which models are adopted, adapted or written anew, are
+  recorded in a decision.
+- **The tomato first:** the organ model's processes compared with the
+  established ones, and replaced where the survey shows them better
+  supported, its version raised with its numbers (P14).
+- **Then cucumber, strawberry and sweet pepper,** each a crop model of the
+  registry: its parameters for each variety (P12.4), its organs drawn by
+  the viewer, its records (fruit counts and mass) in the protocol's terms,
+  and a conformance test with the crop part's other models.
+- **Each model held to its sources:** the data it was validated against
+  kept as a reference test, where its licence allows.
+
 ```mermaid
 flowchart LR
     PM1["P-1 Restructure greenhouse_sim"] --> P00["P00 Browser renderer"]
