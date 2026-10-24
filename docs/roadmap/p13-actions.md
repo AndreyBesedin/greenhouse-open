@@ -597,7 +597,7 @@ within the day; the action format needs no change for it.
 | P13.2 | The run carries out a plan of today's kinds: levels, openings, daily commands and targets become a plan internally; `RunRequest` holds it; the address's spellings are read into it. Every run id, replay digest and kept opening day unchanged. Checkpoints in a new format, format 3 read. | `refactor(sim): the run carries out its schedule as a plan` | Done |
 | P13.3 | The simulator's gateway: the playback holds its run's plan and revisions, schedules them onto the run as its executor, writes the outcome log and serves it on the consumer interface; steering as the gateway's rule; the actions as they stand, cancelling chosen ones, and dropping them when the playback starts over. The gateway contract's conformance tests run against it. | `feat(sim): the playback as its run's gateway` | Done |
 | P13.4 | Authorisation in the gateway: principals on every planned action, bound to the authenticated submitter or granted on its behalf; plan ownership; groups and grants in a versioned configuration, an input of the run, its changes recorded; checked when a plan is given and when each action falls due, refusals as outcomes; the local operator group. | `feat(sim): the gateway authorises every action` | Planned |
-| P13.5 | Crop actions on the run: `harvest`, `lower`, `remove_leaf`, `inspect` at a day's start, refused at other instants and `water` refused, with their reasons; the organ model's `PlantAction` renamed `PlantOperation`; the plant lab and crop work give them; events name their actions. | `feat(sim): crop actions and their outcomes on the run` | Planned |
+| P13.5 | Crop actions on the run: `harvest`, `lower`, `remove_leaf`, `inspect` at a day's start, refused at other instants and `water` refused, with their reasons; the organ model's `PlantAction` renamed `PlantOperation`; the plant lab and crop work give them; events name their actions. | `feat(sim): crop actions and their outcomes on the run` | In progress: the organ crop carries crop actions out (#351) |
 | P13.6 | The graph, windows and lateness, with a simulated executor whose actions take time and which has a number of hands, so that `late`, `missed`, fallbacks and cancelled dependents happen, deterministically. | `feat(sim): plans with order, windows and lateness` | Planned |
 | P13.7 | The gateway's write side and its routes: give a plan before a run, steer a playing one, list the actions as they stand, cancel a plan or chosen actions, read the plan in force; the playback's targets route becomes an alias. | `feat(api): give, steer and read a run's plan` | Planned |
 | P13.8 | The viewer: the Equipment, Openings and Targets panels and the plant lab write one plan; a plan lane in the timeline shows what was due, what happened and why. | `feat(viewer): one plan, and its outcomes in the timeline` | Planned |
@@ -862,6 +862,38 @@ What the design left to its first step, as P13.1 settles it:
 - **Later:** the routes that give, steer, list and cancel plans (P13.7),
   and the viewer's plan lane (P13.8). Until then, the playback's state
   lists its target changes, not the levels a plan sets.
+
+## Settled in P13.5
+
+P13.5 comes in two parts: how the organ crop carries out a crop action,
+which changes no run, then the run carrying out a plan's crop actions.
+
+- **The organ crop carries out a crop action as its own operations**
+  (`greenhouse_sim.core.crop_actions`). A harvest of one fruit or one truss
+  is that operation, and of every ripe fruit a harvest round. A lowering by
+  internodes lays them down if they are bare. By centimetres, or to a head
+  room under the plant's wire, it is a lowering round, which strips the
+  leaves of what it lays down and never lays down a truss that still bears.
+  A leaf removed is that operation. Each reports its effect: the fruits
+  picked and their fresh mass, how far the top came down, the leaf
+  removed. A refused operation refuses the action, in its words. A round
+  that finds nothing to do is done, by nothing. A plant that hangs from no
+  wire is not lowered to a head room under one.
+- **`PlantOperation`** is the organ model's `PlantAction` renamed, in the
+  plant schemas too. An event's `action` field and its kinds keep their
+  spelling, so no plant, checkpoint or kept opening day changes.
+- **The plant lab** gives its scheduled actions as crop actions: a leaf
+  removed, a fruit or a truss harvested, a lowering by internodes. It
+  refuses a scheduled action that names no organ, as it refuses a lowering
+  that says no number.
+- **Crop work** is its crop actions on every plant (`CropWork.actions_on`):
+  a harvest of every ripe fruit, then a lowering to its head room, on the
+  days they are due. Every run id, replay digest and kept opening day
+  stays.
+- **Next:** the run carries a plan's crop actions out at a day's start, and
+  refuses them at any other instant, and `water` always, each with its
+  reason. Its outcomes report their effects once the day is worked out,
+  and each action has an event of its own.
 
 ## Decided
 
