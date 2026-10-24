@@ -379,6 +379,8 @@ class Playback:
             refuses=self._refusal,
             unhonoured=run_unhonoured(played),
         )
+        # Who may do what on its run, as its gateway enforces it.
+        self._authorisation = simulator.authorisation
         self._gateway = InMemoryGateway(
             simulator.authorisation,
             self.start,
@@ -503,7 +505,8 @@ class Playback:
     def _plan_targets(self, changes: Sequence[Commanded]) -> None:
         """Gives its gateway the local operator's target changes so far and
         `changes`, as the next revision of their plan. Checked first, as a
-        run's target changes are."""
+        run's target changes are, and refused whole, changing nothing, if
+        the local operator may not make every one."""
         given = len(self._targets_planned)
         added = tuple(
             PlannedAction(
@@ -514,6 +517,14 @@ class Playback:
             )
             for n, (moment, name, value) in enumerate(changes)
         )
+        for asked in added:
+            change = asked.action
+            if isinstance(change, SetTarget) and not self._authorisation.allows(
+                LOCAL_OPERATOR, change
+            ):
+                raise InvalidRequest(
+                    f"{LOCAL_OPERATOR.id} is not authorised to {change.kind} {change.target}"
+                )
         planned = (*self._targets_planned, *added)
         receipt = self._gateway.submit(
             Plan(
@@ -641,19 +652,36 @@ class Playback:
 
     def _advance(self) -> None:
         """Moves the clock on by the real time since it last moved, at its
-        pace, as far as the records are worked out and the run lasts."""
+        pace, as far as the records are worked out and the run lasts, and
+        its gateway with it: no further than an action that changes the
+        run's plan as it falls due, such as one whose rights were withdrawn
+        meanwhile, until the run is worked out again from there."""
         now = self._clock()
+        to = self._time_s
         if self._playing:
             moved = self._time_s + (now - self._since) * DAY_S / self._seconds_per_day
-            self._time_s = max(self._time_s, min(moved, self._worked_out_s(), self.end_s))
-            if self._time_s >= self.end_s:
-                self._playing = False
+            to = max(self._time_s, min(moved, self._worked_out_s(), self.end_s))
         self._since = now
-        # Its gateway on the same clock: what falls due by now, done; and,
-        # once the run has ended, what is left of its plans cancelled.
-        self._gateway.advance(self._executor.instant(self._time_s))
+        self._time_s = self._gateway_to(to)
+        if self._time_s >= self.end_s:
+            self._playing = False
+        # Once the run has ended, what is left of its plans is cancelled.
         if self._time_s >= self.end_s and not self._gateway.finished:
             self._gateway.finish()
+
+    def _gateway_to(self, to_s: float) -> float:
+        """Moves its gateway to the run's moment `to_s`, a moment its run
+        acts at after another, and says how far the clock may move: there,
+        or, if the run's plan changed as an action fell due, no further
+        than the records worked out under it, which are worked again from
+        that action's moment before they are delivered."""
+        changes = self._changes
+        moments = sorted(set(self._executor.finishes()))
+        for at in (*(m for m in moments if self._executor.seconds(m) < to_s), None):
+            self._gateway.advance(self._executor.instant(to_s) if at is None else at)
+            if self._changes != changes:
+                return max(self._time_s, min(to_s, self._worked_out_s()))
+        return to_s
 
     def _worked_out_s(self) -> float:
         """How far its records are worked out under its targets as they are:
@@ -772,6 +800,7 @@ class Playback:
             successor = self._successor
             if successor is None:
                 self._advance()
+                self._authorisation = authorisation
                 self._gateway.authorise(authorisation)
                 return
         successor.authorise(authorisation)
