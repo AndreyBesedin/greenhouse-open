@@ -1,6 +1,6 @@
 {
   "$schema": "../scenario.schema.json",
-  "schema_version": 4,
+  "schema_version": 5,
   "greenhouse_id": "tomato_compartment",
   "name": "Tomato compartment",
   "description": "Reference scenario: a 24 by 16 m Venlo-style compartment of 320 high-wire tomato plants in eight rows, 28 days",
@@ -8,8 +8,8 @@
     "scenario": "The reference scenario of P05.0: a production compartment for high-wire tomato, the scale and shape the simulator's later projects are about.",
     "installation.envelope": "Six 4 m bays and four 4 m spans, 6 m to the gutters: a Venlo-style roof. Inside the house, a lattice girder under the gutters spans the two middle spans of each frame, so that no post stands in the middle path between the rows. A vent near each span's ridge, along the middle of the house, stands a fifth open; a sliding door in the front gable lets trolleys in, shut.",
     "installation.layout": "Eight rows along the house, 1.6 m apart, of 40 plants at 0.5 m, on hanging gutters under crop wires 4 m up, with a pipe rail in each path between them. A main path runs across the front, past the door, and a side path along each side wall, by its heating pipes; the back is kept for service, with an irrigation unit that robots keep out of. Its other layout, propagation, raises the same rows on benches.",
-    "airflow": "Convection: two rolls across the house, rising up its middle.",
-    "weather": "A mild winter's day with the prevailing wind of the Dutch coast: a moderate south-westerly breeze."
+    "models.air_field": "Convection: two rolls across the house, rising up its middle.",
+    "models.weather": "A mild winter's day with the prevailing wind of the Dutch coast: a moderate south-westerly breeze."
   },
   "installation": {
     "installation_id": "tomato_compartment",
@@ -131,12 +131,16 @@
   "start_date": "2026-01-01",
   "duration_days": 28,
   "random_seed": 2401,
-  "airflow": {
-    "kind": "buoyancy"
-  },
-  "weather": {
-    "kind": "constant",
-    "wind_speed_m_s": 4.0,
-    "wind_direction_deg": 225.0
+  "models": {
+    "weather": {
+      "model": "constant",
+      "parameters": {
+        "wind_speed_m_s": 4.0,
+        "wind_direction_deg": 225.0
+      }
+    },
+    "air_field": {
+      "model": "buoyancy"
+    }
   }
 }

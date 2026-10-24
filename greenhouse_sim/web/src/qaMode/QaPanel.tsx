@@ -128,6 +128,7 @@ function RunManifestList({
           ["Crop", "manifest-crop", described.crop],
           ["Airflow", "manifest-airflow", described.airflow],
           ["Weather", "manifest-weather", described.weather],
+          ["Models", "manifest-models", described.models],
         ];
   const simulator =
     served.status === "loaded"

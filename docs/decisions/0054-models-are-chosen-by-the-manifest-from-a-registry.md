@@ -1,8 +1,7 @@
 # 0054: Models are chosen by the manifest, from a registry
 
-**Status:** Proposed. It becomes Accepted, or is changed, in the pull
-request that starts its implementation (P14.1,
-[P14](../roadmap/p14-models-by-manifest.md)).
+**Status:** Accepted, with P14.1
+([P14](../roadmap/p14-models-by-manifest.md)).
 **Date:** 2026-10-23
 
 ## Context
@@ -77,3 +76,21 @@ not by the manifest (`AUDIT.2`):
     process;
   - if a part's models need different contracts at different rungs, which
     would make the part two parts.
+
+## Open questions, settled
+
+The design's open questions are settled as it proposes, or, where it
+proposed none, as the steps it lists have them:
+
+1. **The pilot** is the simple crop as a rung of the run (P14.3).
+2. **A model's version enters the run's identity** with P14.2, changing
+   the packaged runs' ids once.
+3. **Models from other packages** wait until a model from outside the
+   repository asks for one: no entry point is loaded in P14. P14.4 records
+   what the pilot showed, and the entry point is decided then.
+4. **The crop part and rows:** the crop's section gives the parameters of
+   the model the rows grow, and names it as they do; a manifest whose
+   section names another is refused. Parameters for each variety are
+   P12.4's, built on that section.
+5. **Capabilities and actions** share one vocabulary, decided with P13's
+   executor step.
