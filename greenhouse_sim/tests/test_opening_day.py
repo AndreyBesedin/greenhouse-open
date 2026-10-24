@@ -38,6 +38,7 @@ from greenhouse_sim.scenarios.manifest_files import (
 from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.climate_runs import climate_run, off_levels
 from greenhouse_sim.services.crop import run_crop
+from greenhouse_sim.services.crop_models import CropState
 from greenhouse_sim.services.fields import field
 from greenhouse_sim.services.replay import _rounded
 from greenhouse_sim.services.runs import RunPlan, RunRequest
@@ -95,7 +96,7 @@ def test_the_kept_opening_day_is_the_manifests_and_bears_red_fruit() -> None:
         "the reference scenario's manifest has changed: write its opening day again with "
         "`python tests/test_opening_day.py --update`"
     )
-    assert isinstance(kept.crop, checkpoints.CropState)
+    assert isinstance(kept.crop, CropState)
     assert _red(kept.crop.plants) > 0
     # Beside it, the same run with everything off, as a viewer charts it.
     off = _kept(all_off=True)

@@ -15,6 +15,7 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.climate_runs import climate_run
 from greenhouse_sim.services.crop import is_organ, scenario_crop
+from greenhouse_sim.services.crop_models import SimpleCropState
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import plant_ids
@@ -73,7 +74,7 @@ def test_a_checkpoint_keeps_its_simple_crop_and_a_run_carries_on_from_it(
     crop = scenario_crop(simulator, RUN)
     kept = checkpoints.read_checkpoint(document)
 
-    assert isinstance(kept.crop, checkpoints.SimpleCropState)
+    assert isinstance(kept.crop, SimpleCropState)
     assert kept.crop.plants == list(crop.plants_on(2))
     assert kept.crop.lived == crop.lived_through(2)
     assert document["models"]["crop"]["model"] == "simple"
