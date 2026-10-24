@@ -55,7 +55,7 @@ changes course is a new record that supersedes the old one.
 | [0042](0042-a-season-a-thermostat-and-the-heat-it-gives-as-a-modelled-record.md) | A season, a thermostat, and the heat it gives as a modelled record | Accepted |
 | [0043](0043-a-target-changed-while-a-run-plays-steers-it-from-then-on.md) | A target changed while a run plays steers it from then on | Accepted |
 | [0044](0044-public-records-speak-for-the-project.md) | Public records speak for the project | Accepted |
-| [0045](0045-a-release-is-a-pull-request-the-owner-merges.md) | A release is a pull request the owner merges and tags, and CI publishes it | Accepted |
+| [0045](0045-a-release-is-a-pull-request-the-owner-merges.md) | A release is a pull request the owner merges and tags, and CI publishes it | Accepted; the Unreleased entries each pull request wrote superseded by 0056 |
 | [0046](0046-one-action-format-and-plan.md) | One action format, and a plan a run's gateway carries out | Accepted |
 | [0047](0047-python-lint-rules-a-family-at-a-time.md) | Python lint rules, a family at a time | Accepted |
 | [0048](0048-a-simulators-state-is-one-object-passed-explicitly.md) | A simulator's state is one object, passed explicitly | Accepted |
@@ -65,6 +65,8 @@ changes course is a new record that supersedes the old one.
 | [0052](0052-a-simulators-authorisation-is-a-file-it-is-given.md) | A simulator's authorisation is a file it is given, the local operator's by default | Accepted |
 | [0053](0053-the-viewer-draws-only-when-something-changes.md) | The viewer draws only when something changes | Accepted |
 | [0054](0054-models-are-chosen-by-the-manifest-from-a-registry.md) | Models are chosen by the manifest, from a registry | Accepted |
+| [0055](0055-a-model-is-registered-with-all-that-tells-it-apart.md) | A model is registered with all that tells it apart | Proposed |
+| [0056](0056-a-changelog-is-written-at-release-from-the-pull-requests-merged.md) | A changelog is written at release, from the pull requests merged | Accepted |
 
 ## Template
 

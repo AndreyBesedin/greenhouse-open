@@ -24,13 +24,12 @@ gh pr list --state open
 ## What merged since the last tag
 
 ```bash
-since=$(git log -1 --format=%cI "$(git describe --tags --abbrev=0 origin/main)")
-gh pr list --state merged --base main --limit 200 \
-  --search "merged:>=${since%%T*}" --json number,title,mergedAt,mergeCommit
-# Which of them has an entry: the changelog cites pull requests and issues by number.
-sed -n '/^## Unreleased/,/^## [0-9]/p' CHANGELOG.md | grep -o '#[0-9]*' | sort -u
-# An entry a later merge dropped: the changelog as that pull request merged it.
-git show <merge-commit>:CHANGELOG.md | sed -n '/^## Unreleased/,/^## [0-9]/p'
+# The next release's entries, and the pull requests that give neither an
+# entry nor none (decision 0056).
+uv run release changes
+# One pull request's description, to read or give its entry.
+gh pr view <number> --json body --jq .body
+gh pr edit <number> --body-file <file>
 ```
 
 ## The release branch

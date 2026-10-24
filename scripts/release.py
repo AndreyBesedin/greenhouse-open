@@ -2,14 +2,23 @@
 checks before both (decision 0045).
 
     uv run release prepare 0.4.0         # on its branch, build/release-0.4.0
+    uv run release changes               # what the next release's changelog takes
     uv run release video https://github.com/user-attachments/assets/<id>
     uv run release tag <pull request>    # the owner, on its merge commit
     uv run release notes 0.4.0           # the GitHub release's notes
     python scripts/release.py verify --tag v0.4.0 --tagged-by <login> --owner <login>
+    python scripts/release.py check-description   # a pull request's, in CI
 
-`prepare` moves the three packages to the version, and the simulator's and
-the adapters' range of the protocol with them, makes the changelog's
-Unreleased entries the version's, dated, and locks. `video` points the
+A version's changelog is written at its release (decision 0056): each pull
+request merged since the last release gives its entry in its description,
+under `## Changelog`, or says `none`, and no pull request edits the
+changelog itself. `prepare` moves the three packages to the version, and
+the simulator's and the adapters' range of the protocol with them, makes
+the entries the version's, dated, those written under Unreleased before
+first, and locks; it is refused while a pull request merged gives neither
+an entry nor `none`. `changes` prints those entries, and the pull requests
+that give neither. `check-description` holds a pull request's description
+to the same rule. `video` points the
 README's demo at a video uploaded to GitHub, captioned with the packages'
 version. `tag` checks a merged release pull request and, for the
 repository's owner, tags its merge commit and pushes the tag; `verify` is
@@ -25,6 +34,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import json
+import os
 import re
 import subprocess
 import sys
@@ -44,6 +54,10 @@ RELEASE_MANAGERS = Path(".github/release-managers")
 RELEASE_BRANCH = "build/release-"
 UNRELEASED = "## Unreleased"
 DEMO = "## Demo"
+# Where a pull request's description gives its changelog entry, and what it
+# says when a change needs none: CI, documents or tests alone.
+CHANGELOG_SECTION = "## Changelog"
+NO_ENTRY = "none"
 # The first line of every GitHub release's notes, above the changelog's.
 NOTES_INTRO = "Not on PyPI yet: install from a clone, see the README."
 
@@ -55,6 +69,10 @@ _HEADING = re.compile(r"^## ", re.MULTILINE)
 _DATED = re.compile(r"^## (\S+) - \d{4}-\d{2}-\d{2}$", re.MULTILINE)
 _VIDEO_URL = re.compile(r"^https://github\.com/user-attachments/assets/[0-9a-f-]+$", re.MULTILINE)
 _CAPTIONED_VERSION = re.compile(r"\bv\d+\.\d+\.\d+\b")
+# An HTML comment, which an unterminated `<!--` extends to the end: the
+# template's guidance, which GitHub does not show.
+_COMMENT = re.compile(r"<!--.*?(?:-->|\Z)", re.DOTALL)
+_CHANGELOG_SECTION = re.compile(r"^## Changelog[ \t]*$", re.MULTILINE)
 
 
 class Refused(ValueError):
@@ -87,6 +105,93 @@ class Merge:
             commit=pull["merge_commit_sha"],
             base=pull["base"]["sha"],
         )
+
+
+@dataclass(frozen=True)
+class Merged:
+    """A pull request merged since the last release, as GitHub lists it."""
+
+    number: int
+    title: str
+    body: str
+    bot: bool = False
+    # The paths its own diff changed.
+    files: tuple[str, ...] = ()
+
+    @classmethod
+    def of(cls, pull: Mapping[str, Any]) -> Merged:
+        """From `gh pr list --json number,title,body,author,files`."""
+        return cls(
+            number=pull["number"],
+            title=pull["title"],
+            body=pull.get("body") or "",
+            bot=bool(pull["author"].get("is_bot")),
+            files=tuple(changed["path"] for changed in pull.get("files") or ()),
+        )
+
+
+def changelog_entry(description: str) -> str | None:
+    """A pull request's changelog entry, as its description gives it under
+    `## Changelog`, without the template's comments: empty where it gives
+    nothing there, and None without the section."""
+    text = _COMMENT.sub("", description.replace("\r\n", "\n"))
+    found = _CHANGELOG_SECTION.search(text)
+    if found is None:
+        return None
+    following = _HEADING.search(text, found.end())
+    return text[found.end() : following.start() if following else len(text)].strip()
+
+
+def gives_none(entry: str) -> bool:
+    """Whether an entry says the change needs none."""
+    return entry.strip().rstrip(".").lower() == NO_ENTRY
+
+
+def entries_merged(merged: Sequence[Merged]) -> tuple[list[str], list[str]]:
+    """The changelog entries the pull requests merged give, in the order
+    they were merged, each a list item ending with its pull request's
+    number; and the pull requests that give neither an entry nor `none`.
+    A bot's pull request gives none, and one whose own diff edited the
+    changelog has its entry there, as each did before decision 0056."""
+    entries: list[str] = []
+    missing: list[str] = []
+    for pull in merged:
+        if pull.bot or CHANGELOG.as_posix() in pull.files:
+            continue
+        entry = changelog_entry(pull.body)
+        if not entry:
+            missing.append(f"#{pull.number} {pull.title}")
+        elif not gives_none(entry):
+            entries += _items(entry, pull.number)
+    return entries, missing
+
+
+def _items(entry: str, number: int) -> list[str]:
+    """An entry as the changelog's list items, each ending with the pull
+    request's number: one per item it lists, or one of all its text."""
+    lines = entry.splitlines()
+    if not lines[0].startswith("- "):
+        lines = [f"- {lines[0]}", *(f"  {line}" if line else line for line in lines[1:])]
+    items: list[list[str]] = []
+    for line in lines:
+        if line.startswith("- ") or not items:
+            items.append([line])
+        else:
+            items[-1].append(line)
+    return ["\n".join(item).rstrip() + f" (#{number})" for item in items]
+
+
+def description_problems(description: str, *, bot: bool, branch: str) -> list[str]:
+    """What a pull request's description lacks: its changelog entry, or
+    `none`, under `## Changelog`. A bot's, and a release's, need none."""
+    if bot or branch.startswith(RELEASE_BRANCH):
+        return []
+    entry = changelog_entry(description)
+    if entry is None:
+        return [f"its description has no '{CHANGELOG_SECTION}' section: an entry, or {NO_ENTRY}"]
+    if not entry:
+        return [f"its '{CHANGELOG_SECTION}' section is empty: write its entry, or {NO_ENTRY}"]
+    return []
 
 
 def parse_version(text: str) -> tuple[int, int, int]:
@@ -135,9 +240,23 @@ def _replace_once(text: str, pattern: re.Pattern[str], new: str, where: Path) ->
     return replaced
 
 
-def prepare(version: str, date: datetime.date, root: Path = ROOT) -> list[Path]:
+def unreleased(root: Path, merged: Sequence[Merged]) -> tuple[str, list[str]]:
+    """The changelog entries of the next release: those written under
+    Unreleased, then those the pull requests merged give; and the pull
+    requests that give neither an entry nor `none`."""
+    changelog = (root / CHANGELOG).read_text()
+    body, end = _section(changelog, UNRELEASED)
+    entries, missing = entries_merged(merged)
+    written = changelog[body:end].strip()
+    return "\n".join(part for part in (written, *entries) if part), missing
+
+
+def prepare(
+    version: str, date: datetime.date, root: Path = ROOT, merged: Sequence[Merged] = ()
+) -> list[Path]:
     """Moves the packages and the changelog to `version`, released on
-    `date`, and gives the files it changed."""
+    `date`, the version's entries those of `unreleased`, and gives the files
+    it changed."""
     current = current_version(root)
     if parse_version(version) <= parse_version(current):
         raise Refused(f"{version} does not follow {current}, the packages' version")
@@ -145,9 +264,14 @@ def prepare(version: str, date: datetime.date, root: Path = ROOT) -> list[Path]:
     if f"\n## {version} - " in changelog:
         raise Refused(f"{CHANGELOG} already has a section for {version}")
     body, end = _section(changelog, UNRELEASED)
-    entries = changelog[body:end].strip()
+    entries, missing = unreleased(root, merged)
+    if missing:
+        raise Refused(
+            f"pull requests merged without a changelog entry or {NO_ENTRY} under "
+            f"'{CHANGELOG_SECTION}' in their descriptions: {'; '.join(missing)}"
+        )
     if not entries:
-        raise Refused(f"{CHANGELOG}'s Unreleased section is empty: nothing to release")
+        raise Refused("no changelog entry since the last release: nothing to release")
     edits = {
         CHANGELOG: (
             f"{changelog[:body]}\n## {version} - {date.isoformat()}\n\n{entries}\n\n"
@@ -287,6 +411,44 @@ def merged_as(commit: str) -> Merge:
     return pull_request(numbers[0])
 
 
+def merged_since_release(root: Path = ROOT) -> list[Merged]:
+    """The pull requests merged into `main` since the last release's tag, in
+    the order they were merged: those whose merge commit is in the
+    checkout's history and not in the tag's."""
+    tags = _tags(root)
+    if not tags:
+        raise Refused("no release tag to count the pull requests merged from")
+    last = max(tags, key=lambda name: parse_version(name.removeprefix("v")))
+    tagged = tags[last]
+    since = _git(root, "show", "-s", "--format=%cs", tagged).stdout.strip()
+    listed = _gh(
+        "pr",
+        "list",
+        "--state",
+        "merged",
+        "--base",
+        "main",
+        "--search",
+        f"merged:>={since}",
+        "--limit",
+        "1000",
+        "--json",
+        "number,title,body,author,files,mergeCommit,mergedAt",
+    )
+
+    def since_the_tag(commit: str) -> bool:
+        in_history = _git(root, "merge-base", "--is-ancestor", commit, "HEAD").returncode == 0
+        tagged_too = _git(root, "merge-base", "--is-ancestor", commit, tagged).returncode == 0
+        return in_history and not tagged_too
+
+    pulls = [
+        pull
+        for pull in listed
+        if pull.get("mergeCommit") and since_the_tag(pull["mergeCommit"]["oid"])
+    ]
+    return [Merged.of(pull) for pull in sorted(pulls, key=lambda pull: pull["mergedAt"])]
+
+
 def _head(root: Path) -> str:
     return _git(root, "rev-parse", "HEAD").stdout.strip()
 
@@ -344,6 +506,11 @@ def main(arguments: Sequence[str] | None = None) -> int:
     preparing = commands.add_parser("prepare", help="versions, protocol range, changelog, lock")
     preparing.add_argument("version")
     preparing.add_argument("--date", type=datetime.date.fromisoformat, help="default: today")
+    commands.add_parser("changes", help="the next release's changelog entries, as they stand")
+    commands.add_parser(
+        "check-description",
+        help="a pull request's description, from PR_BODY, PR_IS_BOT and PR_BRANCH, in CI",
+    )
     commands.add_parser("video", help="the README's demo video").add_argument("url")
     commands.add_parser("notes", help="the GitHub release's notes").add_argument("version")
     tagging = commands.add_parser("tag", help="tag a merged release pull request, as the owner")
@@ -354,9 +521,24 @@ def main(arguments: Sequence[str] | None = None) -> int:
     args = parser.parse_args(arguments)
     try:
         if args.command == "prepare":
-            changed = prepare(args.version, args.date or _today(), ROOT)
+            merged = merged_since_release(ROOT)
+            changed = prepare(args.version, args.date or _today(), ROOT, merged)
             print("Changed: " + ", ".join(str(path) for path in changed))
             _lock(ROOT)
+        elif args.command == "changes":
+            entries, missing = unreleased(ROOT, merged_since_release(ROOT))
+            print(entries or "No changelog entry since the last release.")
+            if missing:
+                return _report([f"{pull}: no changelog entry, nor {NO_ENTRY}" for pull in missing])
+        elif args.command == "check-description":
+            found = description_problems(
+                os.environ.get("PR_BODY", ""),
+                bot=os.environ.get("PR_IS_BOT", "false") == "true",
+                branch=os.environ.get("PR_BRANCH", ""),
+            )
+            if found:
+                return _report(found)
+            print(f"Its description gives its changelog entry under '{CHANGELOG_SECTION}'.")
         elif args.command == "video":
             print(f"README.md plays {args.url}, captioned v{set_video(args.url, ROOT)}")
         elif args.command == "notes":

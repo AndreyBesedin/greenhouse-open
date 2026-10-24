@@ -5,8 +5,46 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the
 project uses [semantic versioning](https://semver.org/): a change that
 breaks the conformance checks is a major version.
 
+Each version's entries are written at its release, from the descriptions of
+the pull requests merged since the one before, each giving its own under
+`## Changelog` (decision 0056); no pull request edits this file. The
+Unreleased section holds the entries written here before that.
+`uv run release changes` prints what the next release would say.
+
 ## Unreleased
 
+- `greenhouse-sim`: a run's crew (P13.6, decision 0046). A simulator may
+  be given one, `Simulator(crew=Crew(hands=..., durations_s=...))`: so
+  many hands, each crop action holding one for as long as its kind takes.
+  A plan's crop actions are then on time, late, missed, carried out by
+  their fallbacks or cancelled with what waits for them, by their rules,
+  the same way run after run. The run says when it carries each kind out
+  (`RunExecutor.earliest`): a level at once, a target on the minute, and
+  crop work at the next day's start. So its gateway starts a window's, an
+  as soon as possible or a late crop action there, rather than refusing
+  it. A crop action's outcome finishes its kind's time after it starts.
+  Without a crew, every run is as it was.
+
+- `greenhouse-protocol`: a gateway starts each action at the earliest
+  instant it can (P13.6, decision 0046). An executor may say the earliest
+  instant from one on at which it carries out a kind
+  (`contracts.execution.SaysWhen.earliest`), and the reference gateway
+  starts a window's, an as soon as possible or a late action there, rather
+  than at an instant the executor would refuse. It also keeps to the
+  executor's `capacity`: each assignment holds one of its hands from its
+  start for as long as its kind takes at the longest, so an action no
+  hand is free for by its deadline is late, by its `on_late`, decided at
+  that deadline. An action is sent no earlier than its executor's lead
+  time before its start, which is reserved, holding its hand, meanwhile.
+  A window its executor honours no instant in, or an as soon as possible
+  action it honours none for from then on, is refused at once; one already
+  past is late, by its rule. `check_executor` holds what an executor says
+  to what it honours, bounded or not. `InMemoryGateway.next_moment` says
+  the next instant it has something to do. `MemoryExecutor` takes a
+  `capacity`. An executor that does not say when, with unlimited
+  capacity, is dealt with as before.
+
+- `greenhouse-sim`: **every run id changes, once** (P14.2, decision 0054).
 - viewer: a scenario whose rows grow the simple crop draws its crop as it
   stands at the moment of its run, as it draws the organ crop, once a day
   has ended: each plant a cylinder as tall as its stem stands, in place of
@@ -32,10 +70,16 @@ breaks the conformance checks is a major version.
   - The simple crop's version is 2, so the run ids of the scenarios that
     grow it change, in this release; a checkpoint of one of them made
     before is refused, naming the crop.
+  - It delivers records to a consumer as the organ crop does (P10.4). The
+    daily walk at noon counts each plant's fruit as the engine's sensors
+    do, those not harvested and the ripe ones, estimates the ripe ones'
+    mass and measures how tall its stem stands, with the scenario's walk
+    errors. A harvest round is an event per plant picked: its fruit, and
+    the mass it added to the plant's harvest.
   - A plant of the simple crop has no structure to list
-    (`GET /api/scenarios/{id}/crop/{plant}` is not found for it), its root
-    zone empties as the model has it, since nothing waters it in a run,
-    and the crop log has no records of it.
+    (`GET /api/scenarios/{id}/crop/{plant}` is not found for it), and its
+    root zone empties as the model has it, since nothing waters it in a
+    run.
 - `greenhouse-sim`: a scenario's configuration holds its crop model's
   parameters and its crop walk's each in a section of their own (P14.3,
   decision 0054), in place of the 21 settings at its top:

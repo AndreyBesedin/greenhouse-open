@@ -17,9 +17,9 @@ Read only the policies relevant to the change:
   a review of a pull request: how to judge findings, fix with regression tests,
   reply on and resolve threads, and keep the risk gate's tick honest.
 - [Release skill](.claude/skills/release/SKILL.md) when making a release:
-  who may, the version, the changelog against what merged, the release
-  pull request, the demo video, and the owner's tag, which CI publishes
-  (decision 0045).
+  who may, the version, the changelog from the pull requests merged, the
+  release pull request, the demo video, and the owner's tag, which CI
+  publishes (decisions 0045, 0056).
 
 ## Working in this repository
 
@@ -50,6 +50,9 @@ was evaluated and what limits it. They leave out any one contributor's
 plans, events, deadlines, commercial needs and requests, including those
 of the person the agent works for
 (`docs/engineering.md`, "What a public record says", decision 0044).
+A pull request's description gives its changelog entry under
+`## Changelog`, or `none`, and the release takes it from there; no pull
+request but a release's edits `CHANGELOG.md` (decision 0056).
 
 ### Generated files
 

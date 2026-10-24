@@ -24,7 +24,7 @@ from greenhouse_sim.builder.drafts import DraftStore
 from greenhouse_sim.scenarios.catalogue import Catalogue
 from greenhouse_sim.services import checkpoints, climate_runs, crop, kept_states, sunlight
 from greenhouse_sim.services.consumer import Cursors
-from greenhouse_sim.services.gateway import LOCAL_AUTHORISATION
+from greenhouse_sim.services.gateway import LOCAL_AUTHORISATION, NO_CREW, Crew
 from greenhouse_sim.services.live import DEFAULT_SECONDS_PER_DAY, LiveRuns
 from greenhouse_sim.services.playback import Playbacks
 
@@ -37,12 +37,16 @@ class Simulator:
         seconds_per_day: float = DEFAULT_SECONDS_PER_DAY,
         drafts: DraftStore | None = None,
         authorisation: AuthorisationConfig = LOCAL_AUTHORISATION,
+        crew: Crew = NO_CREW,
     ) -> None:
         self.catalogue = Catalogue() if catalogue is None else catalogue
         # Who may do what on its runs: each run's gateway enforces it. One
         # change of it at a time, so that it and every playback's agree.
         self.authorisation = authorisation
         self._authorising = threading.Lock()
+        # Who carries its runs' crop actions out (P13.6): so many at once,
+        # each taking its kind's time; every playback's run has it.
+        self.crew = crew
         # Where the drafts it is asked for are kept, if anywhere: a file of
         # its user's, which outlives it, and which it never forgets.
         self.drafts = drafts

@@ -58,7 +58,7 @@ the parts to write. The dehumidifier was added in this order (commits
    to the scene's types raises `SCHEMA_VERSION`, with a comment that says
    what changed, and `scene/schemaVersion.ts`'s `SUPPORTED_SCHEMA_VERSION`
    with it.
-6. **Say so** in the pull request's `## Changelog` section and in
+6. **Say so** in the pull request's `## Changelog` entry and in
    `greenhouse_sim/web/README.md`.
 
 ## Generated files

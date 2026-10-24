@@ -96,7 +96,10 @@ class ActionExecutor(Protocol):
     The rules an executor keeps:
 
     - It carries out only the kinds it names (`kinds`), at the instants it
-      says it honours (`honours`), as many at once as its `capacity`.
+      says it honours (`honours`), as many at once as its `capacity`: an
+      assignment holds one of them from its start for as long as its kind
+      takes at the longest (`longest_duration_s`), and none if that is
+      nothing.
     - It carries an assignment out at most once. An assignment id received
       again is answered as before and never performed twice, so a gateway
       may send it again when unsure it arrived.
@@ -145,6 +148,22 @@ class ExplainsRefusals(Protocol):
     def why_not(self, kind: ActionKind, instant: datetime | None = None) -> str | None:
         """Why it does not carry out `kind`, or not at `instant`, if given;
         None if it does."""
+        ...
+
+
+@runtime_checkable
+class SaysWhen(Protocol):
+    """An executor that says the earliest instant, from one on, at which it
+    carries out a kind: a gateway starts a window's action, an as soon as
+    possible one, or a late one there, rather than at an instant it does
+    not honour. Optional: a gateway asks only an executor that has it, and
+    what it says agrees with `honours`."""
+
+    def earliest(
+        self, kind: ActionKind, not_before: datetime, not_after: datetime | None = None
+    ) -> datetime | None:
+        """The earliest instant from `not_before` on, and by `not_after` if
+        given, at which it carries out `kind`; None if there is none."""
         ...
 
 
@@ -231,6 +250,8 @@ def check_executor(
         violations.append("an assignment never received was not said to be unknown")
     if isinstance(executor, ExplainsRefusals):
         violations += _explained(make(start), start)
+    if isinstance(executor, SaysWhen):
+        violations += _said_when(make(start), start)
     return violations
 
 
@@ -238,6 +259,36 @@ def check_executor(
 # are held to what it honours: at once, off the minute, on it, on the hour,
 # and a day on.
 _EXPLAINED_AFTER: Final = tuple(timedelta(seconds=seconds) for seconds in (0, 30, 60, 3600, 86400))
+
+
+def _said_when(executor: ExecutorUnderTest, start: datetime) -> list[str]:
+    """An executor that says when it carries out a kind says an instant it
+    honours, no earlier than asked and by the bound it is given, and the
+    instant asked itself whenever it honours that: of each kind it carries
+    out, from a few instants after its clock's start."""
+    if not isinstance(executor, SaysWhen):
+        return []
+    violations = []
+    for kind in sorted(executor.kinds()):
+        for after in _EXPLAINED_AFTER:
+            asked = start + after
+            said = executor.earliest(kind, asked)
+            bounded = executor.earliest(kind, asked, asked)
+            when = asked.isoformat()
+            if said is not None and (said < asked or not executor.honours(kind, said)):
+                violations.append(
+                    f"it says {kind} from {when} at {said.isoformat()}, which it does not honour"
+                )
+            if executor.honours(kind, asked) and said != asked:
+                violations.append(f"it honours {kind} at {when}, and says another instant")
+            # Bounded by the instant asked, it says that instant exactly when
+            # it honours it, and none otherwise.
+            expected = asked if executor.honours(kind, asked) else None
+            if bounded != expected:
+                told = "it" if bounded == asked else "no instant" if bounded is None else "another"
+                honoured = "honours" if expected is not None else "does not honour"
+                violations.append(f"it {honoured} {kind} at {when}, and says {told} by then")
+    return violations
 
 
 def _explained(executor: ExecutorUnderTest, start: datetime) -> list[str]:

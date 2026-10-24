@@ -36,6 +36,7 @@ from greenhouse_protocol.contracts.execution import (
     ExecutorUnderTest,
     ExplainsRefusals,
     Revocation,
+    SaysWhen,
 )
 from greenhouse_protocol.contracts.gateway import (
     STARTED_OVER,
@@ -79,6 +80,8 @@ from greenhouse_protocol.run import RunEpoch
 EXECUTOR: Final = ExecutorRef(kind=ExecutorKind.ROBOT, id="memory")
 # As many actions at once as anyone asks of the memory executor.
 UNLIMITED: Final = 1_000_000
+# Why an action whose executor will honour no instant for it is missed.
+NONE_LEFT: Final = "no instant its executor honours is left"
 # A harvest the memory executor makes: one fruit, of this fresh mass.
 FRUIT_G: Final = 50.0
 CONTROLLER_TARGETS: Final = frozenset({"heating_day", "heating_night"})
@@ -134,11 +137,13 @@ class MemoryExecutor:
         lead_s: float = 0.0,
         duration_s: float = 0.0,
         longest_s: float = 60.0,
+        capacity: int = UNLIMITED,
         loses_first_send: bool = False,
         unreachable: frozenset[str] = frozenset(),
     ) -> None:
         self.now = start
         self._lead_s = lead_s
+        self._capacity = capacity
         self._duration = timedelta(seconds=duration_s)
         self._longest_s = longest_s
         self._loses_first_send = loses_first_send
@@ -154,7 +159,7 @@ class MemoryExecutor:
         return True
 
     def capacity(self) -> int:
-        return UNLIMITED
+        return self._capacity
 
     def lead_time_s(self, kind: ActionKind) -> float:
         return self._lead_s
@@ -250,6 +255,9 @@ class _Action:
     due: datetime | None = None
     assignment_id: str | None = None
     starts_at: datetime | None = None
+    # Where it will start, before it is sent: its executor's lead time
+    # before then has not come.
+    reserved_at: datetime | None = None
     late: bool = False
     carried_from: RunEpoch | None = None
     # Where the gateway holds it: under its key, or, once a revision has
@@ -487,6 +495,13 @@ class InMemoryGateway:
     def items(self) -> ActionTargets:
         return self._items
 
+    def next_moment(self, to: datetime) -> datetime | None:
+        """The next instant after its clock, and by `to`, at which it has
+        something to do: one an action falls due, is sent or is late at,
+        or one its executor starts or finishes one at. A caller moving it
+        a moment at a time stops where it must."""
+        return self._next_moment(to)
+
     def advance(self, to: datetime) -> None:
         while (moment := self._next_moment(to)) is not None:
             self.now = moment
@@ -581,6 +596,15 @@ class InMemoryGateway:
         if isinstance(timing, At) and not self._executor.honours(action.kind, timing.at):
             refusal = f"no executor honours {action.kind} at {timing.at.isoformat()}"
             return self._explained(refusal, action.kind, timing.at)
+        if isinstance(timing, Window | Asap) and isinstance(self._executor, SaysWhen):
+            # Whether its executor honours an instant for it at all: in its
+            # window, or from now on. A window or a deadline already past is
+            # a matter of lateness, which its own rule decides.
+            begins = timing.not_before if isinstance(timing, Window) else self.now
+            ends = timing.not_after if isinstance(timing, Window) else None
+            if self._executor.earliest(action.kind, begins, ends) is None:
+                by = "" if ends is None else f" by {ends.isoformat()}"
+                return f"no executor honours {action.kind} from {begins.isoformat()}{by}"
         return None
 
     def _explained(self, refusal: str, kind: ActionKind, instant: datetime | None = None) -> str:
@@ -716,6 +740,11 @@ class InMemoryGateway:
             longest = timedelta(seconds=self._executor.longest_duration_s(action.action.kind))
             if action.due is not None and action.state in NOT_STARTED:
                 moments += [action.due - lead, action.due]
+                if action.reserved_at is not None:
+                    moments.append(action.reserved_at - lead)
+                # Where it is late if it has not started by then.
+                if (deadline := _deadline(action)) is not None:
+                    moments.append(deadline)
             if action.starts_at is not None:
                 moments += [action.starts_at, action.starts_at + longest]
         moments += self._executor.finishes()
@@ -802,10 +831,14 @@ class InMemoryGateway:
                 )
                 continue
             deadline = _deadline(action)
-            if deadline is not None and self.now > deadline:
+            start = self._start_of(action, max(action.due, self.now), deadline)
+            if start is not None:
+                self._send(action, start)
+            elif deadline is None:
+                self._end(action, OutcomeStatus.MISSED, reason=NONE_LEFT)
+            elif self.now >= deadline:
                 self._late(action)
-                continue
-            self._assign(action)
+            # Otherwise it waits, until a hand is free or its deadline comes.
 
     def _recheck_due(self) -> None:
         """Each assignment whose instant has come, its authorisation checked
@@ -828,11 +861,21 @@ class InMemoryGateway:
             elif action.state == ActionStateKind.ASSIGNED:
                 action.state = ActionStateKind.STARTED
 
-    def _assign(self, action: _Action, *, late: bool = False) -> None:
-        assert action.due is not None
+    def _send(self, action: _Action, start: datetime, *, late: bool = False) -> None:
+        """Assigns an action to start at `start` once its executor's lead
+        time before then has come; until then its start is reserved,
+        holding its hand, and the gateway wakes to send it."""
+        lead = timedelta(seconds=self._executor.lead_time_s(action.action.kind))
+        if self.now < start - lead:
+            action.reserved_at = start
+            return
+        action.reserved_at = None
+        self._assign(action, at=start, late=late)
+
+    def _assign(self, action: _Action, *, at: datetime, late: bool = False) -> None:
         self._made += 1
         action.assignment_id = f"e{self.epoch}-a{self._made}"
-        action.starts_at = max(action.due, self.now)
+        action.starts_at = at
         action.late = late
         assignment = Assignment(
             assignment_id=action.assignment_id,
@@ -851,7 +894,11 @@ class InMemoryGateway:
     def _late(self, action: _Action) -> None:
         on_late = action.planned.lateness.on_late
         if on_late == OnLate.RUN_LATE:
-            self._assign(action, late=True)
+            start = self._start_of(action, self.now, None)
+            if start is None:
+                self._end(action, OutcomeStatus.MISSED, reason=f"late, and {NONE_LEFT}")
+            else:
+                self._send(action, start, late=True)
             return
         fallback = None
         if on_late == OnLate.FALLBACK and action.planned.lateness.fallback is not None:
@@ -879,6 +926,49 @@ class InMemoryGateway:
             for other in [a for a in self._in_order() if a.plan_id == action.plan_id]:
                 if self._withdraw(other):
                     self._end(other, OutcomeStatus.CANCELLED, reason="its plan was aborted")
+
+    def _start_of(
+        self, action: _Action, not_before: datetime, not_after: datetime | None
+    ) -> datetime | None:
+        """When an action can start at the earliest, from `not_before` and by
+        `not_after` if given: an instant its executor honours, as it says
+        (`SaysWhen`) or else `not_before` itself, at which one of its hands
+        is free for as long as the action's kind takes at the longest. Each
+        assignment not ended holds a hand from its start for as long as its
+        own kind takes, and so does a start reserved until it is sent; one
+        that takes nothing holds none."""
+        kind = action.action.kind
+        takes = timedelta(seconds=self._executor.longest_duration_s(kind))
+        hands = self._executor.capacity()
+        held = [
+            (begins, begins + longest)
+            for other in self._actions.values()
+            if other is not action
+            and (begins := _holds_from(other)) is not None
+            and (longest := timedelta(seconds=self._executor.longest_duration_s(other.action.kind)))
+            > timedelta(0)
+        ]
+        at: datetime | None = not_before
+        while at is not None:
+            at = self._earliest(kind, at, not_after)
+            if at is None or takes <= timedelta(0) or len(held) < hands:
+                return at
+            busy = [(begins, ends) for begins, ends in held if begins < at + takes and ends > at]
+            if _most_at_once(busy, at, at + takes) < hands:
+                return at
+            # The first hand to come free, after which it is asked again.
+            at = min(ends for _, ends in busy if ends > at)
+        return None
+
+    def _earliest(
+        self, kind: ActionKind, not_before: datetime, not_after: datetime | None
+    ) -> datetime | None:
+        """The earliest instant its executor carries `kind` out at, from
+        `not_before` and by `not_after` if given: as it says, if it says
+        (`SaysWhen`); `not_before` itself otherwise."""
+        if isinstance(self._executor, SaysWhen):
+            return self._executor.earliest(kind, not_before, not_after)
+        return not_before if not_after is None or not_before <= not_after else None
 
     def _time_out(self) -> None:
         for action in self._in_order():
@@ -960,6 +1050,26 @@ class InMemoryGateway:
         slot = action.slot or action.key
         if self._actions.get(slot) is action:
             del self._actions[slot]
+
+
+def _holds_from(action: _Action) -> datetime | None:
+    """Where an action holds one of its executor's hands from, if it holds
+    one: its start, assigned or reserved."""
+    if action.state in {ActionStateKind.ASSIGNED, ActionStateKind.STARTED}:
+        return action.starts_at
+    if action.state == ActionStateKind.WAITING:
+        return action.reserved_at
+    return None
+
+
+def _most_at_once(spans: list[tuple[datetime, datetime]], begins: datetime, ends: datetime) -> int:
+    """How many of the spans overlap at once at most, between `begins` and
+    `ends`: at its beginning, or where one of them begins within it."""
+    moments = [begins] + [start for start, _ in spans if begins < start < ends]
+    return max(
+        (sum(1 for start, end in spans if start <= moment < end) for moment in moments),
+        default=0,
+    )
 
 
 def _due(timing: Timing) -> datetime | None:

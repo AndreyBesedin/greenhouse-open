@@ -200,7 +200,11 @@ its merge commit with `uv run release tag`, and the tag's push publishes the
 GitHub release (decision 0045); a tag ruleset, `tags: owner only`, lets no
 one else create, move or delete a tag. Its versions, changelog and README
 video are prepared with `uv run release`, and its steps are the release
-skill's (`.claude/skills/release/SKILL.md`).
+skill's (`.claude/skills/release/SKILL.md`). Its changelog is written from
+the pull requests merged since the last release, each giving its entry, or
+`none`, under `## Changelog` in its description, which a check beside the
+risk gate holds it to; no pull request but a release's edits
+`CHANGELOG.md` (decision 0056).
 
 GitHub settings require a pull request for `main` and CI checks. The `main`
 ruleset names its required checks: a renamed CI job, or a new browser-test
