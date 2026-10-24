@@ -15,9 +15,13 @@ export function mainView(page: Page): Locator {
   return page.getByTestId("main-view").locator("canvas");
 }
 
-// Each step of an orbit, across the view, and the moves the mouse makes in it.
+// Each step of an orbit across the view, one move of the mouse. A held drag
+// draws every frame (decision 0053), and each move waits for the frame being
+// drawn: on CI's software renderer, a frame of the stress scene takes about
+// half a second, and five moves took seven seconds there. The orbit is given
+// longer than a check's default to read what it waits for.
 const ORBIT_STEP_PX = 20;
-const ORBIT_MOVES_PER_STEP = 5;
+const ORBIT_TIMEOUT_MS = 20_000;
 
 /**
  * Orbits the camera across the view, a step at a time, until `readout` says
@@ -34,11 +38,14 @@ export async function orbitUntil(page: Page, readout: Locator, text: RegExp): Pr
   await page.mouse.move(x, y);
   await page.mouse.down();
   await expect
-    .poll(async () => {
-      x += ORBIT_STEP_PX;
-      await page.mouse.move(x, y, { steps: ORBIT_MOVES_PER_STEP });
-      return readout.textContent();
-    })
+    .poll(
+      async () => {
+        x += ORBIT_STEP_PX;
+        await page.mouse.move(x, y);
+        return readout.textContent();
+      },
+      { timeout: ORBIT_TIMEOUT_MS },
+    )
     .toMatch(text);
   await page.mouse.up();
 }
