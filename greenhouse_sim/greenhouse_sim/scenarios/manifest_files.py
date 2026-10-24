@@ -5,7 +5,9 @@ module: a `ScenarioConfig` (`greenhouse_sim.scenarios.config`) written as
 JSON, its house held as an installation (`greenhouse_sim.scenarios.installation`,
 decision 0050): its envelope, its layout, named rather than written out
 since the layouts are files of their own (`layout_files`), and the crop
-each row grows. Beside the configuration, a manifest
+each row grows; and the model each part of its runs runs, with its
+parameters, by part (`greenhouse_sim.scenarios.registry`, decision 0054).
+Beside the configuration, a manifest
 states the version of the format it is written in, which a reader refuses
 if it does not know it, and may carry notes: what the scenario, or one of
 its fields, is and why, which JSON has no comments for.
@@ -34,14 +36,24 @@ from greenhouse_sim.scenarios.installation import (
     scenario_house,
 )
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT, LAYOUT_NAME, load_layout
+from greenhouse_sim.scenarios.registry import (
+    CONFIGURED,
+    KIND,
+    SIMPLE_CROP_FIELDS,
+    WALK,
+    WALK_FIELDS,
+    Part,
+    model,
+    models_json_schema,
+)
 
 MANIFESTS_DIR: Final = Path(__file__).parent / "manifests"
 MANIFEST_SCHEMA_FILE: Final = Path(__file__).parent / "scenario.schema.json"
 # Where a manifest finds the schema, from the manifests' folder.
 SCHEMA_FROM_A_MANIFEST_FILE: Final = "../scenario.schema.json"
-# The version of the format a manifest is written in: 4 since a manifest
-# holds its house as an installation (P12.1, decision 0050).
-SCHEMA_VERSION: Final = 4
+# The version of the format a manifest is written in: 5 since a manifest
+# names the model each part of its runs runs (P14.1, decision 0054).
+SCHEMA_VERSION: Final = 5
 # How many hexadecimal digits of its content's digest name a manifest's
 # version.
 DIGEST_LENGTH: Final = 16
@@ -58,6 +70,26 @@ _INSTALLATION_KEY: Final = "installation"
 _OPENING_KEY: Final = "opening_day"
 _THERMOSTAT_KEY: Final = "thermostat"
 _CONTROL_KEY: Final = "control"
+_MODELS_KEY: Final = "models"
+_MODEL_KEY: Final = "model"
+_PARAMETERS_KEY: Final = "parameters"
+# The fields format 4 wrote a part's choice in, an object with its kind, by
+# the part it chose for.
+_FORMAT_4_PARTS: Final = {"weather": Part.WEATHER, "airflow": Part.AIR_FIELD}
+# The settings format 4 wrote at the configuration's top, by the part and
+# the model whose parameters they are in format 5.
+_FORMAT_4_SETTINGS: Final = (
+    (Part.CROP, CropModel.SIMPLE.value, SIMPLE_CROP_FIELDS),
+    (Part.CROP_WALK, WALK, WALK_FIELDS),
+)
+# What a format 4 note on one of those fields is about in format 5: the
+# part's section.
+_FORMAT_4_NOTES: Final = {
+    **{field: f"{_MODELS_KEY}.{part}" for field, part in _FORMAT_4_PARTS.items()},
+    **{
+        field: f"{_MODELS_KEY}.{part}" for part, _, fields in _FORMAT_4_SETTINGS for field in fields
+    },
+}
 # What format 3 moved from a thermostat to the control: its day and night.
 _CONTROL_TIMES: Final = frozenset({"day_from_s", "night_from_s"})
 # What format 3 wrote of a scenario's house as fields of its own, which
@@ -77,17 +109,20 @@ _FORMAT_3_NOTES: Final = {
 # to `ScenarioConfig`, which could not read them as written: the schema, the
 # format's version and the notes are about the file, not the greenhouse; the
 # installation is read as one, its layout's own file read in place of its
-# name, and gives the configuration its house; and the opening day is where
-# a viewer opens the scenario's run, not part of its world.
+# name, and gives the configuration its house; the models are read by the
+# registry, and give the configuration their parameters; and the opening day
+# is where a viewer opens the scenario's run, not part of its world.
 _MANIFEST_ONLY_FIELDS: Final = frozenset(
-    {_SCHEMA_KEY, _VERSION_KEY, _NOTES_KEY, _INSTALLATION_KEY, _OPENING_KEY}
+    {_SCHEMA_KEY, _VERSION_KEY, _NOTES_KEY, _INSTALLATION_KEY, _MODELS_KEY, _OPENING_KEY}
 )
-# What a note may be about: the scenario, one of the manifest's fields, or a
-# field of its installation, by its path (`installation.envelope`).
+# What a note may be about: the scenario, one of the manifest's fields, a
+# field of its installation, by its path (`installation.envelope`), or a
+# part's model (`models.weather`).
 _NOTED: Final = frozenset(
-    {WHOLE_SCENARIO, _OPENING_KEY, _INSTALLATION_KEY}
-    | (set(ScenarioConfig.model_fields) - _FORMAT_3_HOUSE)
+    {WHOLE_SCENARIO, _OPENING_KEY, _INSTALLATION_KEY, _MODELS_KEY}
+    | (set(ScenarioConfig.model_fields) - _FORMAT_3_HOUSE - CONFIGURED)
     | {f"{_INSTALLATION_KEY}.{name}" for name in Installation.model_fields}
+    | {f"{_MODELS_KEY}.{part}" for part in Part}
 )
 # How Pydantic's schema points to a model it defines, once, under `$defs`:
 # `{"$ref": "#/$defs/<model>"}`, wherever the model is used.
@@ -148,8 +183,10 @@ def scenario_from_manifest(scenario_id: str, document: dict[str, JsonValue]) -> 
     its layout read from the file it names. Refused, with the reason, if the
     manifest is in a format this simulator does not read, names another
     scenario, notes a field it does not have, has a field the configuration
-    or the installation does not, writes its house outside its installation,
-    or holds an installation a run cannot grow."""
+    or the installation does not, writes its house outside its installation
+    or a model's parameters outside its models, names a model the registry
+    does not have or another crop than its rows grow, or holds an
+    installation a run cannot grow."""
     version = document.get(_VERSION_KEY)
     if (
         isinstance(version, bool)
@@ -172,6 +209,13 @@ def scenario_from_manifest(scenario_id: str, document: dict[str, JsonValue]) -> 
         raise InvalidManifest(
             f"{scenario_id}: its house is its installation's, not written beside it: {outside}"
         )
+    outside = sorted(set(fields) & CONFIGURED)
+    if outside:
+        raise InvalidManifest(
+            f"{scenario_id}: a model's parameters are written in its {_MODELS_KEY}, "
+            f"not beside them: {outside}"
+        )
+    configured, crop = _configured(scenario_id, document.get(_MODELS_KEY))
     notes = document.get(_NOTES_KEY, {})
     if not isinstance(notes, dict) or not all(isinstance(note, str) for note in notes.values()):
         raise InvalidManifest(f"{scenario_id}: notes are written by what each is about")
@@ -185,11 +229,60 @@ def scenario_from_manifest(scenario_id: str, document: dict[str, JsonValue]) -> 
         raise InvalidManifest(
             f"{scenario_id}: a run cannot grow its installation: {error}"
         ) from None
-    config = ScenarioConfig.model_validate(fields | dict(house))
+    if crop is not None and crop != house.crop_model:
+        raise InvalidManifest(
+            f"{scenario_id}: its {_MODELS_KEY}.{Part.CROP} is the {crop} crop, but its rows grow "
+            f"the {house.crop_model} crop"
+        )
+    config = ScenarioConfig.model_validate(fields | configured | dict(house))
     unknown = unknown_fields(fields, config.model_dump(mode="json", exclude={"layout"}))
     if unknown:
         raise InvalidManifest(f"{scenario_id}: fields it does not have: {', '.join(unknown)}")
     return config
+
+
+def _configured(scenario_id: str, written: JsonValue) -> tuple[dict[str, JsonValue], str | None]:
+    """The configuration's fields a manifest's `models` give, and the crop
+    model they name, if they name one. Refused, with the reason, if they
+    name a part or a model the registry does not have, or give parameters
+    their model refuses or does not have."""
+    if written is None:
+        return {}, None
+    if not isinstance(written, dict):
+        raise InvalidManifest(
+            f"{scenario_id}: its {_MODELS_KEY} are written by part, not {written!r}"
+        )
+    configured: dict[str, JsonValue] = {}
+    crop: str | None = None
+    for name, section in written.items():
+        where = f"{_MODELS_KEY}.{name}"
+        if name not in tuple(Part):
+            parts = ", ".join(Part)
+            raise InvalidManifest(f"{scenario_id}: no part {where}; the parts are {parts}")
+        parameters = section.get(_PARAMETERS_KEY, {}) if isinstance(section, dict) else None
+        if (
+            not isinstance(section, dict)
+            or not isinstance(section.get(_MODEL_KEY), str)
+            or set(section) - {_MODEL_KEY, _PARAMETERS_KEY}
+            or not isinstance(parameters, dict)
+        ):
+            raise InvalidManifest(
+                f"{scenario_id}: {where} names its {_MODEL_KEY}, and may give its "
+                f"{_PARAMETERS_KEY}, not {section!r}"
+            )
+        try:
+            chosen = model(Part(name), str(section[_MODEL_KEY]))
+            read = chosen.read(parameters)
+        except ValueError as error:
+            raise InvalidManifest(f"{scenario_id}: {where}: {error}") from None
+        unknown = unknown_fields(parameters, chosen.written(read))
+        if unknown:
+            named = ", ".join(f"{where}.{_PARAMETERS_KEY}.{field}" for field in unknown)
+            raise InvalidManifest(f"{scenario_id}: fields it does not have: {named}")
+        configured |= chosen.configured(read)
+        if chosen.part is Part.CROP:
+            crop = chosen.name
+    return configured, crop
 
 
 def _installation(scenario_id: str, written: JsonValue) -> Installation:
@@ -317,9 +410,52 @@ def _from_format_3(scenario_id: str, document: dict[str, JsonValue]) -> dict[str
 def _notes_from_format_3(notes: dict[str, JsonValue]) -> dict[str, JsonValue]:
     """Format 3's notes, each on a house field now on the part of the
     installation it became; two on one part, one after the other."""
+    return _notes_moved(notes, _FORMAT_3_NOTES)
+
+
+def _from_format_4(scenario_id: str, document: dict[str, JsonValue]) -> dict[str, JsonValue]:
+    """Format 4 wrote the weather, the air field's pattern, and the simple
+    crop's and the crop walk's settings as fields of the configuration's
+    own. Format 5 writes each in its part's section of `models` (P14.1,
+    decision 0054), where the first of them stood: the weather's and the air
+    field's kind as their model, the rest of them as its parameters; the
+    simple crop's settings as the simple crop's parameters, the walk's
+    noises as the walk's; and a note on one of them as a note on its part.
+    What a run is does not change: its configuration reads the same."""
+    if _MODELS_KEY in document:
+        raise InvalidManifest(f"{scenario_id}: a format 4 manifest has no {_MODELS_KEY!r}")
+    sections: dict[str, JsonValue] = {}
+    for field, part in _FORMAT_4_PARTS.items():
+        written = document.get(field)
+        if written is None:
+            continue
+        if not isinstance(written, dict):
+            raise InvalidManifest(f"{scenario_id}: its {field} is an object, not {written!r}")
+        parameters = {key: value for key, value in written.items() if key != KIND}
+        sections[part] = {_MODEL_KEY: written.get(KIND)} | (
+            {_PARAMETERS_KEY: parameters} if parameters else {}
+        )
+    for part, name, fields in _FORMAT_4_SETTINGS:
+        parameters = {field: document[field] for field in fields if field in document}
+        if parameters:
+            sections[part] = {_MODEL_KEY: name, _PARAMETERS_KEY: parameters}
+    migrated: dict[str, JsonValue] = {}
+    for key, value in document.items():
+        if key in CONFIGURED:
+            migrated.setdefault(_MODELS_KEY, sections)
+        elif key == _NOTES_KEY and isinstance(value, dict):
+            migrated[key] = _notes_moved(value, _FORMAT_4_NOTES)
+        else:
+            migrated[key] = value
+    return migrated
+
+
+def _notes_moved(notes: dict[str, JsonValue], moves: dict[str, str]) -> dict[str, JsonValue]:
+    """Notes, each on a field a format moved now on what it became; two on
+    one, one after the other."""
     moved: dict[str, JsonValue] = {}
     for about, note in notes.items():
-        part = _FORMAT_3_NOTES.get(about, about)
+        part = moves.get(about, about)
         earlier = moved.get(part)
         moved[part] = note if earlier is None else f"{earlier} {note}"
     return moved
@@ -330,6 +466,7 @@ _MIGRATIONS: Final[dict[int, Callable[[str, dict[str, JsonValue]], dict[str, Jso
     1: _from_format_1,
     2: _from_format_2,
     3: _from_format_3,
+    4: _from_format_4,
 }
 
 
@@ -346,11 +483,19 @@ def manifest_json_schema() -> dict[str, JsonValue]:
     """
     schema = ScenarioConfig.model_json_schema()
     properties = schema["properties"]
-    # A manifest holds its house as an installation, rather than as fields
-    # of its own.
-    for name in _FORMAT_3_HOUSE:
+    # A manifest holds its house as an installation, and its models'
+    # parameters in its models, rather than as fields of their own.
+    for name in _FORMAT_3_HOUSE | CONFIGURED:
         del properties[name]
-    schema["required"] = [name for name in schema["required"] if name not in _FORMAT_3_HOUSE]
+    schema["required"] = [
+        name for name in schema["required"] if name not in _FORMAT_3_HOUSE | CONFIGURED
+    ]
+    # A model's parameters leave out the kind its section's model says:
+    # they replace the definitions the configuration's fields had of them,
+    # which nothing else uses.
+    models, definitions = models_json_schema()
+    schema["$defs"] |= definitions
+    properties[_MODELS_KEY] = models
     installation = Installation.model_json_schema()
     for name, definition in installation.pop("$defs").items():
         if schema["$defs"].setdefault(name, definition) != definition:

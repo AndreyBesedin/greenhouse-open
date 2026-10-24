@@ -10,12 +10,6 @@
       "additionalProperties": false,
       "description": "Convection: air rising up the middle and sinking along the side walls,\nover air warming with height and towards the middle.",
       "properties": {
-        "kind": {
-          "const": "buoyancy",
-          "default": "buoyancy",
-          "title": "Kind",
-          "type": "string"
-        },
         "peak_speed_m_s": {
           "default": 0.25,
           "minimum": 0,
@@ -202,12 +196,6 @@
           "$ref": "#/$defs/Percent",
           "default": 0.0
         },
-        "kind": {
-          "const": "constant",
-          "default": "constant",
-          "title": "Kind",
-          "type": "string"
-        },
         "barometric_pressure_hpa": {
           "anyOf": [
             {
@@ -299,6 +287,28 @@
       ],
       "title": "CropModel",
       "type": "string"
+    },
+    "CropWalk": {
+      "additionalProperties": false,
+      "properties": {
+        "fruit_count_noise_probability": {
+          "default": 0.1,
+          "title": "Fruit Count Noise Probability",
+          "type": "number"
+        },
+        "ripe_mass_noise_pct": {
+          "default": 8.0,
+          "title": "Ripe Mass Noise Pct",
+          "type": "number"
+        },
+        "height_noise_cm": {
+          "default": 1.5,
+          "title": "Height Noise Cm",
+          "type": "number"
+        }
+      },
+      "title": "CropWalk",
+      "type": "object"
     },
     "CropWork": {
       "additionalProperties": false,
@@ -502,12 +512,6 @@
       "additionalProperties": false,
       "description": "Still air whose temperature rises linearly along the house: a known\nfield to check sensors against.",
       "properties": {
-        "kind": {
-          "const": "gradient",
-          "default": "gradient",
-          "title": "Kind",
-          "type": "string"
-        },
         "front_temperature_c": {
           "default": 16.0,
           "title": "Front Temperature C",
@@ -674,6 +678,13 @@
       "title": "OpeningKind",
       "type": "string"
     },
+    "OrganCrop": {
+      "additionalProperties": false,
+      "description": "The organ crop's parameters: none a manifest sets yet, its variety\nbeing its rows'.",
+      "properties": {},
+      "title": "OrganCrop",
+      "type": "object"
+    },
     "Percent": {
       "maximum": 100.0,
       "minimum": 0.0,
@@ -702,31 +713,6 @@
       ],
       "title": "Point2",
       "type": "object"
-    },
-    "PrescribedAirflow": {
-      "discriminator": {
-        "mapping": {
-          "buoyancy": "#/$defs/BuoyancyAirflow",
-          "gradient": "#/$defs/GradientAirflow",
-          "uniform": "#/$defs/UniformAirflow",
-          "vortex": "#/$defs/VortexAirflow"
-        },
-        "propertyName": "kind"
-      },
-      "oneOf": [
-        {
-          "$ref": "#/$defs/UniformAirflow"
-        },
-        {
-          "$ref": "#/$defs/BuoyancyAirflow"
-        },
-        {
-          "$ref": "#/$defs/VortexAirflow"
-        },
-        {
-          "$ref": "#/$defs/GradientAirflow"
-        }
-      ]
     },
     "Quaternion": {
       "description": "A rotation as a unit quaternion; the default is no rotation.",
@@ -759,12 +745,6 @@
       "additionalProperties": false,
       "description": "Weather recorded in a file of the recorded weather's directory, by its\nname.",
       "properties": {
-        "kind": {
-          "const": "recorded",
-          "default": "recorded",
-          "title": "Kind",
-          "type": "string"
-        },
         "file": {
           "title": "File",
           "type": "string"
@@ -806,12 +786,6 @@
       "additionalProperties": false,
       "description": "Weather through a season: each day's usual coldest and warmest\ntemperatures on the year's coldest day and half a year later, which day\nof the year is coldest, how far a day's temperatures wander from their\nusual ones and how much of that a day keeps from the day before, and\neach day's clouds; and a synthetic day's shape, humidity and wind.",
       "properties": {
-        "kind": {
-          "const": "seasonal",
-          "default": "seasonal",
-          "title": "Kind",
-          "type": "string"
-        },
         "coldest_c": {
           "$ref": "#/$defs/Seasons"
         },
@@ -922,6 +896,172 @@
       ],
       "type": "array"
     },
+    "SimpleCrop": {
+      "additionalProperties": false,
+      "properties": {
+        "air_temperature_bounds": {
+          "default": [
+            18.0,
+            32.0
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Air Temperature Bounds",
+          "type": "array"
+        },
+        "humidity_bounds": {
+          "default": [
+            45.0,
+            85.0
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Humidity Bounds",
+          "type": "array"
+        },
+        "initial_water_reservoir_ml": {
+          "default": 600.0,
+          "title": "Initial Water Reservoir Ml",
+          "type": "number"
+        },
+        "water_capacity_ml": {
+          "default": 1200.0,
+          "exclusiveMinimum": 0,
+          "title": "Water Capacity Ml",
+          "type": "number"
+        },
+        "water_use_ml_per_day_base": {
+          "default": 80.0,
+          "title": "Water Use Ml Per Day Base",
+          "type": "number"
+        },
+        "evaporation_ml_per_day": {
+          "default": 20.0,
+          "title": "Evaporation Ml Per Day",
+          "type": "number"
+        },
+        "water_stress_threshold_pct": {
+          "default": 35.0,
+          "title": "Water Stress Threshold Pct",
+          "type": "number"
+        },
+        "initial_stem_length_cm": {
+          "default": 20.0,
+          "title": "Initial Stem Length Cm",
+          "type": "number"
+        },
+        "stem_growth_cm_per_day_base": {
+          "default": 2.0,
+          "title": "Stem Growth Cm Per Day Base",
+          "type": "number"
+        },
+        "truss_interval_days": {
+          "default": 6,
+          "exclusiveMinimum": 0,
+          "title": "Truss Interval Days",
+          "type": "integer"
+        },
+        "max_trusses": {
+          "default": 8,
+          "minimum": 0,
+          "title": "Max Trusses",
+          "type": "integer"
+        },
+        "fruits_per_truss_bounds": {
+          "default": [
+            3,
+            6
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Fruits Per Truss Bounds",
+          "type": "array"
+        },
+        "target_diameter_mm_bounds": {
+          "default": [
+            18.0,
+            26.0
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Target Diameter Mm Bounds",
+          "type": "array"
+        },
+        "fruit_growth_days_to_target": {
+          "default": 20,
+          "exclusiveMinimum": 0,
+          "title": "Fruit Growth Days To Target",
+          "type": "integer"
+        },
+        "mass_coefficient_g_per_mm3": {
+          "default": 0.0012,
+          "title": "Mass Coefficient G Per Mm3",
+          "type": "number"
+        },
+        "ripening_days_bounds": {
+          "default": [
+            16,
+            26
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Ripening Days Bounds",
+          "type": "array"
+        },
+        "soil_moisture_noise_pct": {
+          "default": 3.0,
+          "title": "Soil Moisture Noise Pct",
+          "type": "number"
+        },
+        "air_temperature_noise_c": {
+          "default": 0.4,
+          "title": "Air Temperature Noise C",
+          "type": "number"
+        }
+      },
+      "title": "SimpleCrop",
+      "type": "object"
+    },
     "Site": {
       "additionalProperties": false,
       "description": "Where the world lies: its latitude and longitude (degrees north and\neast), its elevation (metres above sea level), its time zone (by its\nIANA name, such as `Europe/Amsterdam`), and the bearing of its x axis.",
@@ -969,12 +1109,6 @@
       "additionalProperties": false,
       "description": "A day of weather, each day alike: its coldest and warmest temperatures\nand their hours, its humidity at the coldest, its CO2, its calmest and\nwindiest winds, the direction the wind blows from at midnight and how\nfar it veers clockwise by the next (backing if negative), its gusts' size\nas a share of the wind's speed, its cloud cover and its pressure.",
       "properties": {
-        "kind": {
-          "const": "synthetic",
-          "default": "synthetic",
-          "title": "Kind",
-          "type": "string"
-        },
         "coldest_c": {
           "title": "Coldest C",
           "type": "number"
@@ -1084,12 +1218,6 @@
       "additionalProperties": false,
       "description": "One breeze everywhere, at one temperature.",
       "properties": {
-        "kind": {
-          "const": "uniform",
-          "default": "uniform",
-          "title": "Kind",
-          "type": "string"
-        },
         "velocity_m_s": {
           "$ref": "#/$defs/Vector3",
           "default": {
@@ -1198,12 +1326,6 @@
       "additionalProperties": false,
       "description": "One roll across the house, turning about its length.",
       "properties": {
-        "kind": {
-          "const": "vortex",
-          "default": "vortex",
-          "title": "Kind",
-          "type": "string"
-        },
         "peak_speed_m_s": {
           "default": 0.5,
           "minimum": 0,
@@ -1276,18 +1398,6 @@
       "title": "Random Seed",
       "type": "integer"
     },
-    "airflow": {
-      "$ref": "#/$defs/PrescribedAirflow",
-      "default": {
-        "kind": "uniform",
-        "velocity_m_s": {
-          "x": 0.3,
-          "y": 0.0,
-          "z": 0.0
-        },
-        "temperature_c": 20.0
-      }
-    },
     "cfd": {
       "$ref": "#/$defs/CfdSetup",
       "default": {
@@ -1319,43 +1429,6 @@
         "x_bearing_deg": 90.0
       }
     },
-    "weather": {
-      "default": {
-        "air_temperature_c": 10.0,
-        "relative_humidity_pct": 80.0,
-        "co2_ppm": 420.0,
-        "wind_speed_m_s": 0.0,
-        "wind_direction_deg": 0.0,
-        "global_radiation_w_m2": 0.0,
-        "cloud_cover_pct": 0.0,
-        "kind": "constant",
-        "barometric_pressure_hpa": null
-      },
-      "discriminator": {
-        "mapping": {
-          "constant": "#/$defs/ConstantWeather",
-          "recorded": "#/$defs/RecordedWeather",
-          "seasonal": "#/$defs/SeasonalWeather",
-          "synthetic": "#/$defs/SyntheticWeather"
-        },
-        "propertyName": "kind"
-      },
-      "oneOf": [
-        {
-          "$ref": "#/$defs/ConstantWeather"
-        },
-        {
-          "$ref": "#/$defs/SyntheticWeather"
-        },
-        {
-          "$ref": "#/$defs/SeasonalWeather"
-        },
-        {
-          "$ref": "#/$defs/RecordedWeather"
-        }
-      ],
-      "title": "Weather"
-    },
     "cloud_cover_pct": {
       "anyOf": [
         {
@@ -1378,179 +1451,197 @@
       ],
       "default": null
     },
-    "air_temperature_bounds": {
-      "default": [
-        18.0,
-        32.0
-      ],
-      "maxItems": 2,
-      "minItems": 2,
-      "prefixItems": [
-        {
-          "type": "number"
+    "models": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "weather": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "constant"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/ConstantWeather"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "synthetic"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/SyntheticWeather"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "seasonal"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/SeasonalWeather"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "recorded"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/RecordedWeather"
+                }
+              }
+            }
+          ],
+          "description": "The weather's model: 'constant' if none is named."
         },
-        {
-          "type": "number"
-        }
-      ],
-      "title": "Air Temperature Bounds",
-      "type": "array"
-    },
-    "humidity_bounds": {
-      "default": [
-        45.0,
-        85.0
-      ],
-      "maxItems": 2,
-      "minItems": 2,
-      "prefixItems": [
-        {
-          "type": "number"
+        "air_field": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "uniform"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/UniformAirflow"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "buoyancy"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/BuoyancyAirflow"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "vortex"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/VortexAirflow"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "gradient"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/GradientAirflow"
+                }
+              }
+            }
+          ],
+          "description": "The air field's model: 'uniform' if none is named."
         },
-        {
-          "type": "number"
-        }
-      ],
-      "title": "Humidity Bounds",
-      "type": "array"
-    },
-    "initial_water_reservoir_ml": {
-      "default": 600.0,
-      "title": "Initial Water Reservoir Ml",
-      "type": "number"
-    },
-    "water_capacity_ml": {
-      "default": 1200.0,
-      "exclusiveMinimum": 0,
-      "title": "Water Capacity Ml",
-      "type": "number"
-    },
-    "water_use_ml_per_day_base": {
-      "default": 80.0,
-      "title": "Water Use Ml Per Day Base",
-      "type": "number"
-    },
-    "evaporation_ml_per_day": {
-      "default": 20.0,
-      "title": "Evaporation Ml Per Day",
-      "type": "number"
-    },
-    "water_stress_threshold_pct": {
-      "default": 35.0,
-      "title": "Water Stress Threshold Pct",
-      "type": "number"
-    },
-    "initial_stem_length_cm": {
-      "default": 20.0,
-      "title": "Initial Stem Length Cm",
-      "type": "number"
-    },
-    "stem_growth_cm_per_day_base": {
-      "default": 2.0,
-      "title": "Stem Growth Cm Per Day Base",
-      "type": "number"
-    },
-    "truss_interval_days": {
-      "default": 6,
-      "exclusiveMinimum": 0,
-      "title": "Truss Interval Days",
-      "type": "integer"
-    },
-    "max_trusses": {
-      "default": 8,
-      "minimum": 0,
-      "title": "Max Trusses",
-      "type": "integer"
-    },
-    "fruits_per_truss_bounds": {
-      "default": [
-        3,
-        6
-      ],
-      "maxItems": 2,
-      "minItems": 2,
-      "prefixItems": [
-        {
-          "type": "integer"
+        "crop": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "simple"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/SimpleCrop"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "organ"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/OrganCrop"
+                }
+              }
+            }
+          ],
+          "description": "The crop's model: the one its rows grow."
         },
-        {
-          "type": "integer"
+        "crop_walk": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "walk"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/CropWalk"
+                }
+              }
+            }
+          ],
+          "description": "The crop walk's model: 'walk' if none is named."
         }
-      ],
-      "title": "Fruits Per Truss Bounds",
-      "type": "array"
-    },
-    "target_diameter_mm_bounds": {
-      "default": [
-        18.0,
-        26.0
-      ],
-      "maxItems": 2,
-      "minItems": 2,
-      "prefixItems": [
-        {
-          "type": "number"
-        },
-        {
-          "type": "number"
-        }
-      ],
-      "title": "Target Diameter Mm Bounds",
-      "type": "array"
-    },
-    "fruit_growth_days_to_target": {
-      "default": 20,
-      "exclusiveMinimum": 0,
-      "title": "Fruit Growth Days To Target",
-      "type": "integer"
-    },
-    "mass_coefficient_g_per_mm3": {
-      "default": 0.0012,
-      "title": "Mass Coefficient G Per Mm3",
-      "type": "number"
-    },
-    "ripening_days_bounds": {
-      "default": [
-        16,
-        26
-      ],
-      "maxItems": 2,
-      "minItems": 2,
-      "prefixItems": [
-        {
-          "type": "integer"
-        },
-        {
-          "type": "integer"
-        }
-      ],
-      "title": "Ripening Days Bounds",
-      "type": "array"
-    },
-    "soil_moisture_noise_pct": {
-      "default": 3.0,
-      "title": "Soil Moisture Noise Pct",
-      "type": "number"
-    },
-    "air_temperature_noise_c": {
-      "default": 0.4,
-      "title": "Air Temperature Noise C",
-      "type": "number"
-    },
-    "fruit_count_noise_probability": {
-      "default": 0.1,
-      "title": "Fruit Count Noise Probability",
-      "type": "number"
-    },
-    "ripe_mass_noise_pct": {
-      "default": 8.0,
-      "title": "Ripe Mass Noise Pct",
-      "type": "number"
-    },
-    "height_noise_cm": {
-      "default": 1.5,
-      "title": "Height Noise Cm",
-      "type": "number"
+      },
+      "description": "The model each part of a run runs, by part, and its parameters."
     },
     "installation": {
       "$ref": "#/$defs/Installation"
@@ -1559,7 +1650,7 @@
       "type": "string"
     },
     "schema_version": {
-      "const": 4
+      "const": 5
     },
     "opening_day": {
       "type": "integer",

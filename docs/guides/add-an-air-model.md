@@ -30,9 +30,12 @@ contract to write first.
    a `kind` literal, its parameters named with their units, and a `field()`
    that gives the velocity and the temperature, its source
    `prescribed:<kind>`.
-2. **Its place** in the `PrescribedAirflow` union, so that a scenario's
-   manifest can choose it (`"airflow": {"kind": …}`), and in `PATTERNS`
-   only if every scenario should offer it.
+2. **Its place** in the `PrescribedAirflow` union, and its registration
+   among the air field's models in
+   `greenhouse_sim/greenhouse_sim/scenarios/registry.py`, under its kind, so
+   that a scenario's manifest can choose it in its models
+   (`"models": {"air_field": {"model": "<kind>", "parameters": {…}}}`); and
+   in `PATTERNS` only if every scenario should offer it.
 3. **Nothing else registers it:** `_models` in
    `greenhouse_sim/greenhouse_sim/services/fields.py` offers a scenario's
    own airflow first, then the patterns, CFD, the climate and the shear;
