@@ -25,8 +25,8 @@ def initial_plant(plant_id: str, config: ScenarioConfig) -> tuple[PlantWorld, Si
     rng = seeded_rng(config.random_seed, plant_id, "growth_multiplier")
     plant = PlantWorld(
         plant_id=plant_id,
-        stem_length_cm=config.initial_stem_length_cm,
-        water_reservoir_ml=config.initial_water_reservoir_ml,
+        stem_length_cm=config.simple_crop.initial_stem_length_cm,
+        water_reservoir_ml=config.simple_crop.initial_water_reservoir_ml,
     )
     return plant, SimplePlantState(growth_multiplier=float(rng.uniform(*PLANT_VIGOUR_RANGE)))
 

@@ -21,7 +21,7 @@ def test_initialize_world_creates_one_plant_world_per_plant_id() -> None:
 
     assert world.simulated_day == 0
     assert {p.plant_id for p in world.plants} == set(PLANT_IDS)
-    assert all(p.stem_length_cm == CONFIG.initial_stem_length_cm for p in world.plants)
+    assert all(p.stem_length_cm == CONFIG.simple_crop.initial_stem_length_cm for p in world.plants)
     assert all(p.trusses == [] for p in world.plants)
 
 
@@ -55,13 +55,13 @@ def test_advance_world_grows_the_plant_across_days() -> None:
 
     stem_lengths = [w.plant(PLANT_IDS[0]).stem_length_cm for w in worlds]
     assert stem_lengths == sorted(stem_lengths)
-    assert stem_lengths[-1] > CONFIG.initial_stem_length_cm
+    assert stem_lengths[-1] > CONFIG.simple_crop.initial_stem_length_cm
 
 
 def test_a_truss_initiates_at_the_configured_interval_and_persists() -> None:
-    worlds = _run_days(CONFIG.truss_interval_days + 2)
+    worlds = _run_days(CONFIG.simple_crop.truss_interval_days + 2)
 
-    plant_at_interval = worlds[CONFIG.truss_interval_days - 1].plant(PLANT_IDS[0])
+    plant_at_interval = worlds[CONFIG.simple_crop.truss_interval_days - 1].plant(PLANT_IDS[0])
     assert len(plant_at_interval.trusses) == 1
     assert len(plant_at_interval.trusses[0].fruits) > 0
 
@@ -74,11 +74,11 @@ def test_a_truss_initiates_at_the_configured_interval_and_persists() -> None:
 
 
 def test_fruit_diameter_grows_monotonically_and_stays_bounded() -> None:
-    worlds = _run_days(CONFIG.truss_interval_days + 15)
+    worlds = _run_days(CONFIG.simple_crop.truss_interval_days + 15)
 
     plant_id = PLANT_IDS[0]
     diameters = []
-    for world in worlds[CONFIG.truss_interval_days - 1 :]:
+    for world in worlds[CONFIG.simple_crop.truss_interval_days - 1 :]:
         plant = world.plant(plant_id)
         if plant.trusses and plant.trusses[0].fruits:
             fruit = plant.trusses[0].fruits[0]

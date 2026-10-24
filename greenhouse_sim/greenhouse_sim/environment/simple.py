@@ -33,7 +33,7 @@ def advance_environment(
     so the climate does not depend on what else the simulator draws.
     """
     rng = seeded_rng(config.random_seed, day, "environment")
-    temp_low, temp_high = config.air_temperature_bounds
+    temp_low, temp_high = config.simple_crop.air_temperature_bounds
     temp_center = (temp_low + temp_high) / 2
     temp_drift = rng.normal(0.0, TEMPERATURE_DRIFT_SD_C) + PULL_TO_MIDDLE_PER_DAY * (
         temp_center - environment.air_temperature_c
@@ -42,7 +42,7 @@ def advance_environment(
         np.clip(environment.air_temperature_c + temp_drift, temp_low, temp_high)
     )
 
-    humidity_low, humidity_high = config.humidity_bounds
+    humidity_low, humidity_high = config.simple_crop.humidity_bounds
     humidity_center = (humidity_low + humidity_high) / 2
     humidity_drift = rng.normal(0.0, HUMIDITY_DRIFT_SD_PCT) + PULL_TO_MIDDLE_PER_DAY * (
         humidity_center - environment.humidity_pct
@@ -55,8 +55,8 @@ def advance_environment(
 
 
 def initial_environment(config: ScenarioConfig) -> GreenhouseEnvironment:
-    temp_low, temp_high = config.air_temperature_bounds
-    humidity_low, humidity_high = config.humidity_bounds
+    temp_low, temp_high = config.simple_crop.air_temperature_bounds
+    humidity_low, humidity_high = config.simple_crop.humidity_bounds
     return GreenhouseEnvironment(
         air_temperature_c=(temp_low + temp_high) / 2,
         humidity_pct=(humidity_low + humidity_high) / 2,

@@ -98,15 +98,14 @@ uv run browser-tests e2e/crop.spec.ts
   with the version before is refused.
 - **Nothing new goes on the engine's day** (`greenhouse_sim/greenhouse_sim/core/engine.py`):
   it only takes fixes.
-- **Where a model's parameters live:** in the model's own `parameters.py`,
-  never as flat fields of the scenario's configuration. A manifest gives a
-  crop model's parameters in its `models.crop` section, checked by its
-  parameter model in `greenhouse_sim/greenhouse_sim/scenarios/registry.py`
-  ([decision 0054](../decisions/0054-models-are-chosen-by-the-manifest-from-a-registry.md));
-  the registry's crop models are the simple and the organ crop until
-  P14.3 makes the crop a part the run chooses by it. Until then, both take
-  the simple crop's settings, since a scenario's live run grows the simple
-  crop whatever its rows grow.
+- **Where a model's parameters live:** in a parameter model of its own,
+  never as flat fields of the scenario's configuration. A crop model's are
+  in `greenhouse_sim/greenhouse_sim/scenarios/crop_parameters.py`, told
+  apart by their `kind`, the model's name, and the configuration holds
+  those of the model its rows grow as its `crop`. A manifest gives them in
+  its `models.crop` section, checked by that parameter model, which
+  `greenhouse_sim/greenhouse_sim/scenarios/registry.py` registers
+  ([decision 0054](../decisions/0054-models-are-chosen-by-the-manifest-from-a-registry.md)).
 - **The consumer's records** (`greenhouse_sim/greenhouse_sim/services/crop_log.py`)
   count fruit and ripe mass as the tomato's organs have them: a crop of
   another kind says what it records.
