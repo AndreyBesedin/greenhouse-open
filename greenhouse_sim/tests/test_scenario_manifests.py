@@ -385,6 +385,19 @@ def test_the_schema_writes_each_parts_model_in_its_models_not_at_the_top() -> No
     # A model's parameters leave out the kind its section's model says.
     assert "kind" not in schema["$defs"]["SeasonalWeather"]["properties"]
     assert "max_trusses" in schema["$defs"]["SimpleCrop"]["properties"]
+    # A section gives its parameters if its model has one with no default,
+    # as the recorded weather's file: the reader refuses it without them.
+    assert [section["required"] for section in weathers] == [
+        ["model"],
+        ["model", "parameters"],
+        ["model", "parameters"],
+        ["model", "parameters"],
+    ]
+    assert schema["$defs"]["RecordedWeather"]["required"] == ["file"]
+    with pytest.raises(InvalidManifest, match=r"(?s)models\.weather: .*file"):
+        scenario_from_manifest(
+            "climate_box", _models(_manifest("climate_box"), weather={"model": "recorded"})
+        )
     assert not {"weather", "airflow", "max_trusses", "height_noise_cm"} & set(schema["properties"])
 
 
@@ -495,3 +508,35 @@ def test_a_format_4_manifest_writes_its_choices_in_its_models_to_the_same_scenar
     assert config.airflow.kind == "vortex"
     with pytest.raises(InvalidManifest, match="a format 4 manifest has no 'models'"):
         scenario_from_manifest("climate_box", older | {"models": {}})
+
+
+def test_a_scenario_of_organ_rows_gives_the_simple_crops_settings_to_its_crop() -> None:
+    """A scenario's live run grows the simple crop whatever its rows grow,
+    by the simple crop's settings, which format 4 wrote at the top: a
+    scenario of organ rows gives them in its crop's section, which names
+    the organ crop, and a format 4 manifest of organ rows is migrated so."""
+    current = _manifest("reference_greenhouse")
+    weather = current["models"]["weather"]
+    air = current["models"]["air_field"]
+    older = {key: value for key, value in current.items() if key != "models"} | {
+        "schema_version": 4,
+        "weather": {"kind": weather["model"], **weather["parameters"]},
+        "airflow": {"kind": air["model"], **air.get("parameters", {})},
+        "water_capacity_ml": 1500.0,
+        "notes": {
+            ("weather" if key == "models.weather" else key): note
+            for key, note in current["notes"].items()
+        },
+    }
+    wetter = SCENARIO_REGISTRY["reference_greenhouse"].model_copy(
+        update={"water_capacity_ml": 1500.0}
+    )
+
+    migrated: Any = _migrated("reference_greenhouse", older, 4)
+
+    assert migrated["models"]["crop"] == {
+        "model": "organ",
+        "parameters": {"water_capacity_ml": 1500.0},
+    }
+    assert scenario_from_manifest("reference_greenhouse", older) == wetter
+    assert scenario_from_manifest("reference_greenhouse", migrated) == wetter
