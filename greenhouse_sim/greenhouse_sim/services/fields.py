@@ -256,9 +256,10 @@ def air_through_a_run(
 
 def _cropped(config: ScenarioConfig, run: RunRequest) -> str:
     """What tells a run with crop actions of its own (P13.5) from one
-    without: its crop actions, checked, each at its moment; nothing for a
-    run without, whose identity stays as it was before runs had them."""
-    cropped = run.plan.cropped()
+    without: its crop actions, checked, by their moments, those at one
+    moment in the order they apply; nothing for a run without, whose
+    identity stays as it was before runs had them."""
+    cropped = sorted(run.plan.cropped(), key=lambda each: each.at_s)
     if not cropped:
         return ""
     checked_crop_plan(config, run.plan)

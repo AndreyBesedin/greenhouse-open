@@ -70,6 +70,15 @@ def test_a_run_without_crop_actions_keeps_its_identity_and_one_with_them_has_ano
     assert named["none"] == "reference_greenhouse-climate-283d2b26"
     assert len(set(named.values())) == len(named)
     assert _run_id(simulator, _with((DAY_S, RIPE))) == named["day 1"]
+    # Given in another order, the same actions on different days are the
+    # same run; at one moment, their order is how they apply, and another
+    # order another run.
+    leaf = RemoveLeaf(plant_id=PLANT, leaf_id=f"{PLANT}_n01_leaf")
+    both = _run_id(simulator, _with((DAY_S, leaf), (2 * DAY_S, RIPE)))
+    assert _run_id(simulator, _with((2 * DAY_S, RIPE), (DAY_S, leaf))) == both
+    assert _run_id(simulator, _with((DAY_S, leaf), (DAY_S, RIPE))) != _run_id(
+        simulator, _with((DAY_S, RIPE), (DAY_S, leaf))
+    )
 
 
 @pytest.mark.parametrize(
