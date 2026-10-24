@@ -37,6 +37,17 @@ breaks the conformance checks is a major version.
   enforce it from its clock on, recorded beside each plan
   (`Playback.plan`); an action whose rights are withdrawn before it falls
   due is refused then.
+- `greenhouse-sim`: the organ crop carries out the protocol's crop actions
+  (P13.5, decision 0046): a harvest of one fruit, one truss or every ripe
+  fruit, a lowering by internodes, by centimetres or to a head room under
+  the plant's wire, and a leaf removed, each as the organ model's own
+  operations, with its effect: the fruits picked and their mass, how far
+  the top came down, the leaf removed (`core.crop_actions`). The plant
+  lab's scheduled actions and a scenario's crop work are carried out so,
+  with every plant, run id and kept opening day as before. The lab refuses
+  a scheduled action that names no organ. The organ model's `PlantAction`
+  is renamed `PlantOperation`, and so is its definition in the plant
+  schemas; its events' `action` field and kinds are unchanged.
 
 ## 0.4.0 - 2026-10-24
 

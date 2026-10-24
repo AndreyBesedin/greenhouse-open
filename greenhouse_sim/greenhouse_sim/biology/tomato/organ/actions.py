@@ -1,8 +1,11 @@
 """What a grower does to a plant: prune, harvest and lower.
 
-Every action asked of a plant becomes an event in its history, at the
-plant's thermal time: applied, saying what it did, or refused, saying why.
-Nothing an action touches leaves the plant's structure. A removed leaf, a
+These are the organ model's operations on a plant (`PlantOperation`), which
+a run's crop actions are carried out as
+(`greenhouse_sim.core.crop_actions`); they are not actions themselves. Every
+operation asked of a plant becomes an event in its history, at the plant's
+thermal time: applied, saying what it did, or refused, saying why. Nothing
+an operation touches leaves the plant's structure. A removed leaf, a
 picked fruit and a dropped flower keep their places and identifiers, with
 their stages saying they are no longer on the plant, so the history can
 always name them.
@@ -33,8 +36,8 @@ from greenhouse_sim.biology.tomato.organ.topology import (
     LowerStem,
     Phytomer,
     Plant,
-    PlantAction,
     PlantEvent,
+    PlantOperation,
     RemoveLeaf,
     Truss,
     bears_anything,
@@ -42,11 +45,11 @@ from greenhouse_sim.biology.tomato.organ.topology import (
 from greenhouse_sim.domain.organs import FlowerStage, FruitStage, LeafStage
 
 
-def _event(plant: Plant, action: PlantAction, note: str, **outcome: object) -> PlantEvent:
+def _event(plant: Plant, operation: PlantOperation, note: str, **outcome: object) -> PlantEvent:
     return PlantEvent.model_validate(
         {
             "thermal_time": plant.thermal_time,
-            "action": action,
+            "action": operation,
             "applied": bool(outcome.pop("applied", False)),
             "note": note,
             **outcome,
@@ -61,25 +64,25 @@ def _with(plant: Plant, index: int, phytomer: Phytomer, event: PlantEvent) -> Pl
     return plant.model_copy(update={"stem": stem, "history": (*plant.history, event)})
 
 
-def _refused(plant: Plant, action: PlantAction, why: str) -> Plant:
-    return plant.model_copy(update={"history": (*plant.history, _event(plant, action, why))})
+def _refused(plant: Plant, operation: PlantOperation, why: str) -> Plant:
+    return plant.model_copy(update={"history": (*plant.history, _event(plant, operation, why))})
 
 
-def _remove_leaf(plant: Plant, action: RemoveLeaf) -> Plant:
+def _remove_leaf(plant: Plant, operation: RemoveLeaf) -> Plant:
     for index, phytomer in enumerate(plant.stem.phytomers):
         leaf = phytomer.leaf
-        if leaf.leaf_id != action.leaf_id:
+        if leaf.leaf_id != operation.leaf_id:
             continue
         if leaf.stage == LeafStage.REMOVED:
-            return _refused(plant, action, f"{leaf.leaf_id} is already removed")
+            return _refused(plant, operation, f"{leaf.leaf_id} is already removed")
         removed = phytomer.model_copy(
             update={"leaf": leaf.model_copy(update={"stage": LeafStage.REMOVED})}
         )
         event = _event(
-            plant, action, f"removed {leaf.leaf_id}", applied=True, organs=(leaf.leaf_id,)
+            plant, operation, f"removed {leaf.leaf_id}", applied=True, organs=(leaf.leaf_id,)
         )
         return _with(plant, index, removed, event)
-    return _refused(plant, action, f"{plant.plant_id} has no leaf {action.leaf_id}")
+    return _refused(plant, operation, f"{plant.plant_id} has no leaf {operation.leaf_id}")
 
 
 def _picked(flower: Flower) -> Flower:
@@ -95,7 +98,9 @@ def _picked(flower: Flower) -> Flower:
     return flower
 
 
-def _cut(plant: Plant, action: PlantAction, index: int, truss: Truss, picks: set[str]) -> Plant:
+def _cut(
+    plant: Plant, operation: PlantOperation, index: int, truss: Truss, picks: set[str]
+) -> Plant:
     """The plant with these of the truss's flowers and fruits picked or
     dropped, and the event saying so."""
     flowers = tuple(
@@ -122,74 +127,74 @@ def _cut(plant: Plant, action: PlantAction, index: int, truss: Truss, picks: set
     )
     phytomer = plant.stem.phytomers[index]
     cut = phytomer.model_copy(update={"truss": truss.model_copy(update={"flowers": flowers})})
-    event = _event(plant, action, note, applied=True, organs=organs, harvested_g=harvested_g)
+    event = _event(plant, operation, note, applied=True, organs=organs, harvested_g=harvested_g)
     return _with(plant, index, cut, event)
 
 
-def _harvest_fruit(plant: Plant, action: HarvestFruit) -> Plant:
+def _harvest_fruit(plant: Plant, operation: HarvestFruit) -> Plant:
     for index, phytomer in enumerate(plant.stem.phytomers):
         truss = phytomer.truss
         if truss is None:
             continue
         for flower in truss.flowers:
             fruit = flower.fruit
-            if fruit is None or fruit.fruit_id != action.fruit_id:
+            if fruit is None or fruit.fruit_id != operation.fruit_id:
                 continue
             if fruit.stage != FruitStage.ATTACHED:
                 return _refused(
-                    plant, action, f"{fruit.fruit_id} is {fruit.stage}, not on the plant"
+                    plant, operation, f"{fruit.fruit_id} is {fruit.stage}, not on the plant"
                 )
-            return _cut(plant, action, index, truss, {flower.flower_id})
-    return _refused(plant, action, f"{plant.plant_id} has no fruit {action.fruit_id}")
+            return _cut(plant, operation, index, truss, {flower.flower_id})
+    return _refused(plant, operation, f"{plant.plant_id} has no fruit {operation.fruit_id}")
 
 
-def _harvest_truss(plant: Plant, action: HarvestTruss) -> Plant:
+def _harvest_truss(plant: Plant, operation: HarvestTruss) -> Plant:
     for index, phytomer in enumerate(plant.stem.phytomers):
         truss = phytomer.truss
-        if truss is None or truss.truss_id != action.truss_id:
+        if truss is None or truss.truss_id != operation.truss_id:
             continue
         if not bears_anything(truss):
-            return _refused(plant, action, f"{truss.truss_id} bears nothing to harvest")
-        return _cut(plant, action, index, truss, {flower.flower_id for flower in truss.flowers})
-    return _refused(plant, action, f"{plant.plant_id} has no truss {action.truss_id}")
+            return _refused(plant, operation, f"{truss.truss_id} bears nothing to harvest")
+        return _cut(plant, operation, index, truss, {flower.flower_id for flower in truss.flowers})
+    return _refused(plant, operation, f"{plant.plant_id} has no truss {operation.truss_id}")
 
 
-def _lower_stem(plant: Plant, action: LowerStem) -> Plant:
+def _lower_stem(plant: Plant, operation: LowerStem) -> Plant:
     standing = plant.stem.phytomers[plant.laid_internodes :]
-    if len(standing) <= action.internodes:
+    if len(standing) <= operation.internodes:
         return _refused(
-            plant, action, f"{plant.plant_id} has only {len(standing)} internodes standing"
+            plant, operation, f"{plant.plant_id} has only {len(standing)} internodes standing"
         )
-    lowered = standing[: action.internodes]
+    lowered = standing[: operation.internodes]
     for phytomer in lowered:
         if phytomer.leaf.stage != LeafStage.REMOVED:
-            return _refused(plant, action, f"{phytomer.leaf.leaf_id} is still on the stem")
+            return _refused(plant, operation, f"{phytomer.leaf.leaf_id} is still on the stem")
         if phytomer.truss is not None and bears_anything(phytomer.truss):
-            return _refused(plant, action, f"{phytomer.truss.truss_id} still bears")
+            return _refused(plant, operation, f"{phytomer.truss.truss_id} still bears")
     drop_cm = sum(phytomer.internode.length_cm for phytomer in lowered)
     organs = tuple(phytomer.internode.internode_id for phytomer in lowered)
-    note = f"laid {action.internodes} internodes down, lowering the top by {drop_cm:.0f} cm"
-    event = _event(plant, action, note, applied=True, organs=organs)
+    note = f"laid {operation.internodes} internodes down, lowering the top by {drop_cm:.0f} cm"
+    event = _event(plant, operation, note, applied=True, organs=organs)
     return plant.model_copy(
         update={
-            "laid_internodes": plant.laid_internodes + action.internodes,
+            "laid_internodes": plant.laid_internodes + operation.internodes,
             "history": (*plant.history, event),
         }
     )
 
 
-def act(plant: Plant, action: PlantAction) -> Plant:
-    """The plant after this action is asked of it: changed if it can be done,
+def act(plant: Plant, operation: PlantOperation) -> Plant:
+    """The plant after this operation is asked of it: changed if it can be done,
     and either way one event longer in its history."""
-    match action:
+    match operation:
         case RemoveLeaf():
-            return _remove_leaf(plant, action)
+            return _remove_leaf(plant, operation)
         case HarvestFruit():
-            return _harvest_fruit(plant, action)
+            return _harvest_fruit(plant, operation)
         case HarvestTruss():
-            return _harvest_truss(plant, action)
+            return _harvest_truss(plant, operation)
         case LowerStem():
-            return _lower_stem(plant, action)
+            return _lower_stem(plant, operation)
 
 
 def harvest_round(plant: Plant) -> Plant:

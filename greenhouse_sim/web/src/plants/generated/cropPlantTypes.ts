@@ -10,7 +10,7 @@ export type FlowerStage = "bud" | "open" | "set" | "aborted";
  * Where a fruit is in its life, from set to picked.
  */
 export type FruitStage = "attached" | "aborted" | "harvested";
-export type PlantAction = RemoveLeaf | HarvestFruit | HarvestTruss | LowerStem;
+export type PlantOperation = RemoveLeaf | HarvestFruit | HarvestTruss | LowerStem;
 
 /**
  * One plant of a scenario's crop `time_s` into a run, once it has lived
@@ -105,11 +105,11 @@ export interface PlantTraits {
   rotation_rad: number;
 }
 /**
- * An action done to a plant, or asked of it and refused.
+ * An operation done to a plant, or asked of it and refused.
  */
 export interface PlantEvent {
   thermal_time: number;
-  action: PlantAction;
+  action: PlantOperation;
   applied: boolean;
   note: string;
   organs: string[];
