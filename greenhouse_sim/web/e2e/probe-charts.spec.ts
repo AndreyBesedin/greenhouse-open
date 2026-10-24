@@ -4,6 +4,10 @@ import { unfold } from "./folds";
 // Beside the climate box's heater, and in the middle of the house, both
 // 0.75 m up.
 const BY_THE_HEATER = "10.5:1:0.75,6:3.2:0.75";
+// A later moment of a run can take CI's simulator a while: the browser tests'
+// two workers share it, and another test asking it for a moment days into a
+// run held this one's requests back seven seconds.
+const ARRIVES_MS = 15_000;
 
 test("probe charts: a heated run diverges from the same run all off, where the heater acts", async ({
   page,
@@ -37,7 +41,9 @@ test("probe charts: a heated run diverges from the same run all off, where the h
 
   await test.step("later in the run, the charts follow", async () => {
     await page.getByRole("slider", { name: "Time of day" }).fill("1200");
-    await expect(corner).toHaveText("temperature 30.82 °C, all off 8.67 °C");
+    await expect(corner).toHaveText("temperature 30.82 °C, all off 8.67 °C", {
+      timeout: ARRIVES_MS,
+    });
     await expect(middle).toHaveText("temperature 21.87 °C, all off 8.72 °C");
   });
 });
