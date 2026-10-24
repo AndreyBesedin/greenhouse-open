@@ -24,9 +24,7 @@ const WALL_CLEARANCE_M = 0.001;
 // The kinds that can be moved: the equipment's, by its actuator, and the
 // sensors', by their sensor.
 const MOVABLE: Readonly<Record<string, string>> = {
-  FAN: "actuator_id",
-  HEATER: "actuator_id",
-  DEHUMIDIFIER: "actuator_id",
+  EQUIPMENT: "actuator_id",
   SENSOR: "sensor_id",
   CAMERA: "sensor_id",
 };

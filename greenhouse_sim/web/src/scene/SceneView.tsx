@@ -13,7 +13,7 @@ import { RENDERERS } from "./renderers";
 /** The colour an entity is drawn in: its category's in the categories' debug
  * view, a colouring's where it has the property, or its own. */
 function shownColor(entity: SceneEntity, colouring: Colouring | null, byCategory: boolean): Color {
-  const category = byCategory ? categoryColor(entity.kind) : null;
+  const category = byCategory ? categoryColor(entity) : null;
   if (category !== null) {
     return category;
   }

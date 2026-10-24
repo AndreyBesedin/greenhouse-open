@@ -1,7 +1,12 @@
 import { useState } from "react";
 
 import { CFD_COLORS } from "./cfd/boundaries";
-import { CATEGORY_COLORS, type Category } from "./debug/categories";
+import {
+  CATEGORY_COLORS,
+  type Category,
+  EQUIPMENT_CATEGORIES,
+  type EquipmentCategory,
+} from "./debug/categories";
 import { DIMENSION_COLOR } from "./debug/dimensions";
 import type { OverlayToggles, SceneOverlay } from "./debug/overlays";
 import {
@@ -34,7 +39,6 @@ const EQUIPMENT_OFF_COLOR = "#8c8c8c";
 const SCALE_COLORS = "linear-gradient(90deg, #440154, #21918c, #fde725)";
 // The categories' swatch: the first three of their colours, as a hint.
 const CATEGORY_HINT: readonly Category[] = ["FLOOR", "WALL", "ROOF"];
-const EQUIPMENT_KINDS = ["FAN", "HEATER", "DEHUMIDIFIER"] as const satisfies readonly Category[];
 const GLAZED_KINDS = ["WALL", "ROOF", "VENT"] as const satisfies readonly Category[];
 
 /** One thing in the view, and what it means. */
@@ -80,8 +84,9 @@ export interface ViewState {
   byCategory: boolean;
   cfdBoundaries: boolean;
   dimensions: boolean;
-  /** The kinds the scene holds; null while the empty view is shown. */
-  kinds: ReadonlySet<SceneEntityKind> | null;
+  /** The kinds the scene holds, and its equipment's categories; null while
+   * the empty view is shown. */
+  kinds: ReadonlySet<SceneEntityKind | EquipmentCategory> | null;
   /** How long the world axes are drawn, in metres: the scene's own, or the
    * empty view's; null when none are drawn. */
   axesLengthM: number | null;
@@ -304,7 +309,7 @@ function always(view: ViewState): SeenRow[] {
       ...own(PLANTING_COLOR, "A disc on the floor where a plant can stand.", ["PLANTING_POSITION"]),
     });
   }
-  const equipment = EQUIPMENT_KINDS.filter((kind) => kinds.has(kind));
+  const equipment = EQUIPMENT_CATEGORIES.filter((category) => kinds.has(category));
   if (equipment.length > 0) {
     rows.push({
       key: "equipment",
@@ -314,7 +319,7 @@ function always(view: ViewState): SeenRow[] {
         EQUIPMENT_OFF_COLOR,
         byCategory
           ? "Running or not. A fan's arrow shows its way."
-          : "Grey while off, in its kind's colour while running. A fan's arrow shows its way.",
+          : "Grey while off, in the colour of what it is for while running. A fan's arrow shows its way.",
         equipment,
       ),
     });

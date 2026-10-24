@@ -3,17 +3,20 @@ import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
+import type { SceneEntity, SceneSnapshot } from "../scene/generated/snapshotTypes";
+import { present } from "../testing/present";
 import { CategoryLegend } from "./CategoryLegend";
 import {
   CATEGORY_COLORS,
   categoriesIn,
   categoryColor,
+  categoryOf,
   ENVELOPE_CATEGORIES,
   EQUIPMENT_CATEGORIES,
   isEnvelopeCategory,
   LAYOUT_CATEGORIES,
   SENSOR_CATEGORIES,
+  semanticType,
 } from "./categories";
 
 const EXAMPLE: SceneSnapshot = JSON.parse(
@@ -45,13 +48,13 @@ describe("the envelope's categories", () => {
       "SLAB",
       "WALKWAY",
       "WIRE",
-      "FAN",
-      "HEATER",
-      "DEHUMIDIFIER",
+      "MOVES_AIR",
+      "HEATS",
+      "DRIES",
       "SENSOR",
       "CAMERA",
     ]);
-    const others = EXAMPLE.entities.filter((entity) => categoryColor(entity.kind) === null);
+    const others = EXAMPLE.entities.filter((entity) => categoryColor(entity) === null);
     expect(new Set(others.map((entity) => entity.kind))).toEqual(
       new Set(["AXES", "GREENHOUSE_BOUNDS", "PLANT"]),
     );
@@ -93,7 +96,7 @@ describe("the layout's categories", () => {
       "WIRE",
       "OBSTACLE",
     ]);
-    const others = QA_LAYOUT.entities.filter((entity) => categoryColor(entity.kind) === null);
+    const others = QA_LAYOUT.entities.filter((entity) => categoryColor(entity) === null);
     expect(new Set(others.map((entity) => entity.kind))).toEqual(
       new Set(["AXES", "GREENHOUSE_BOUNDS"]),
     );
@@ -112,17 +115,21 @@ describe("the layout's categories", () => {
   });
 
   it("list the equipment in a legend of its own", () => {
-    const html = renderToStaticMarkup(<CategoryLegend categories={["WALKWAY", "FAN", "HEATER"]} />);
+    const html = renderToStaticMarkup(
+      <CategoryLegend categories={["WALKWAY", "MOVES_AIR", "HEATS"]} />,
+    );
 
     expect(html).toContain('aria-label="Layout categories"');
     expect(html).toContain('aria-label="Equipment categories"');
     expect(html.match(/data-testid="equipment-category"/g)).toHaveLength(2);
-    expect(html).toContain(`background:${CATEGORY_COLORS.HEATER}`);
-    expect(html).toContain(">fan</li>");
+    expect(html).toContain(`background:${CATEGORY_COLORS.HEATS}`);
+    expect(html).toContain(">moving air</li>");
   });
 
   it("list the sensors in a legend of their own", () => {
-    const html = renderToStaticMarkup(<CategoryLegend categories={["FAN", "SENSOR", "CAMERA"]} />);
+    const html = renderToStaticMarkup(
+      <CategoryLegend categories={["MOVES_AIR", "SENSOR", "CAMERA"]} />,
+    );
 
     expect(html).toContain('aria-label="Equipment categories"');
     expect(html).toContain('aria-label="Sensor categories"');
@@ -134,5 +141,32 @@ describe("the layout's categories", () => {
     const html = renderToStaticMarkup(<CategoryLegend categories={["WALKWAY"]} />);
 
     expect(html).not.toContain("Surface categories");
+  });
+});
+
+describe("the equipment's categories", () => {
+  it("are what each piece is for, whatever its kind, and its kind is what it is", () => {
+    const fan = present(
+      EXAMPLE.entities.find((entity) => entity.kind === "EQUIPMENT"),
+      "the example's fan",
+    );
+    const fogger: SceneEntity = {
+      ...fan,
+      properties: { ...fan.properties, device_kind: "fogger", does: "dries" },
+    };
+    const doser: SceneEntity = {
+      ...fan,
+      properties: { device_kind: "co2_doser", does: "adds_co2" },
+    };
+
+    expect([categoryOf(fan), semanticType(fan)]).toEqual(["MOVES_AIR", "fan"]);
+    expect([categoryOf(fogger), semanticType(fogger)]).toEqual(["DRIES", "fogger"]);
+    expect(categoryColor(fogger)).toEqual(categoryColor({ ...fan, properties: { does: "dries" } }));
+    // What the viewer has no category for is still named by its kind.
+    expect([categoryOf(doser), categoryColor(doser), semanticType(doser)]).toEqual([
+      null,
+      null,
+      "co2 doser",
+    ]);
   });
 });

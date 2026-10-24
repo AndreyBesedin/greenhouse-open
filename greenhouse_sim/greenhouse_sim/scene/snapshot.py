@@ -26,13 +26,13 @@ from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 from greenhouse_sim.domain.crop import FruitStatus
 from greenhouse_sim.domain.envelope import OpeningKind, SurfaceCategory
-from greenhouse_sim.domain.equipment import ActuatorKind
 from greenhouse_sim.domain.layout import FixtureKind, Material, Obstruction, ZoneKind
 from greenhouse_sim.json_schemas import answer_json_schema
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.units import METRES_PER_CENTIMETRE
+from greenhouse_sim.world.capabilities import Dries, Heats, MovesAir, WasteHeat
 from greenhouse_sim.world.envelope import Envelope, Gutter, Member, OpeningPanel, Surface
-from greenhouse_sim.world.equipment import Equipment
+from greenhouse_sim.world.equipment import Equipment, purpose
 from greenhouse_sim.world.fixtures import Fixture
 from greenhouse_sim.world.geometry import (
     Axes,
@@ -66,7 +66,11 @@ from greenhouse_sim.world.zones import Zone
 # 13: plants' compound leaves, their leaflets drawn with the ellipsoid shape.
 # 14: climate equipment: fans, heaters and dehumidifiers.
 # 15: sensors and cameras.
-SCHEMA_VERSION: Final = 15
+# 16: climate equipment as one kind, known by what it does and its shape
+#     (P14.5): its kind, its main capability and each capability's rating
+#     as its properties, in place of a kind of entity for each kind of
+#     equipment.
+SCHEMA_VERSION: Final = 16
 
 PLANT_STEM_RADIUS_M: Final = 0.02
 AXES_LENGTH_M: Final = 1.0
@@ -99,15 +103,18 @@ PLANTING_POSITION_COLOR: Final = Color(r=0.85, g=0.6, b=0.25)
 SERVICE_ZONE_COLOR: Final = Color(r=0.45, g=0.7, b=0.85)
 KEEP_OUT_COLOR: Final = Color(r=0.9, g=0.35, b=0.3)
 GREENHOUSE_BOUNDS_COLOR: Final = Color(r=0.62, g=0.78, b=0.88)
-# Equipment that is off is grey; running, it shows its kind's colour.
+# Equipment that is off is grey; running, it shows the colour of what it is
+# for (`world.equipment.purpose`), by its capability's name, or the
+# colour of its waste heat if that is all it does.
 EQUIPMENT_OFF_COLOR: Final = Color(r=0.55, g=0.55, b=0.55)
 # Sensors in Tol's bright yellow, cameras in its purple.
 SENSOR_COLOR: Final = Color(r=0.8, g=0.73, b=0.27)
 CAMERA_COLOR: Final = Color(r=0.67, g=0.2, b=0.47)
 EQUIPMENT_COLORS: Final = {
-    ActuatorKind.FAN: Color(r=0.27, g=0.47, b=0.67),
-    ActuatorKind.HEATER: Color(r=0.93, g=0.4, b=0.47),
-    ActuatorKind.DEHUMIDIFIER: Color(r=0.4, g=0.8, b=0.93),
+    MovesAir.name: Color(r=0.27, g=0.47, b=0.67),
+    Heats.name: Color(r=0.93, g=0.4, b=0.47),
+    Dries.name: Color(r=0.4, g=0.8, b=0.93),
+    WasteHeat.name: Color(r=0.8, g=0.73, b=0.47),
 }
 # What the envelope's metal parts are made of.
 GUTTER_MATERIAL: Final = Material.ALUMINIUM
@@ -148,10 +155,8 @@ class SceneEntityKind(StrEnum):
     PIPE = "PIPE"
     WIRE = "WIRE"
     OBSTACLE = "OBSTACLE"
-    # Climate equipment, one kind for each kind of equipment.
-    FAN = "FAN"
-    HEATER = "HEATER"
-    DEHUMIDIFIER = "DEHUMIDIFIER"
+    # Climate equipment of any kind, known by what it does and its shape.
+    EQUIPMENT = "EQUIPMENT"
     # A point sensor, of any kind, and a camera.
     SENSOR = "SENSOR"
     CAMERA = "CAMERA"
@@ -403,13 +408,6 @@ def _fixture_entity(greenhouse_id: str, envelope: Envelope, fixture: Fixture) ->
     )
 
 
-_EQUIPMENT_KINDS: Final = {
-    ActuatorKind.FAN: SceneEntityKind.FAN,
-    ActuatorKind.HEATER: SceneEntityKind.HEATER,
-    ActuatorKind.DEHUMIDIFIER: SceneEntityKind.DEHUMIDIFIER,
-}
-
-
 def _equipment_entities(
     greenhouse_id: str, envelope: Envelope, layout: Layout, levels: Mapping[str, float]
 ) -> list[SceneEntity]:
@@ -422,17 +420,28 @@ def _equipment_entities(
 def _equipment_entity(
     greenhouse_id: str, envelope: Envelope, piece: Equipment, level: float
 ) -> SceneEntity:
-    """A piece of equipment, placed in the world: grey while it is off, in its
-    kind's colour while it runs, with its rated capacity and its level."""
+    """A piece of equipment, placed in the world, known by what it does:
+    grey while it is off, in the colour of what it is for while it runs,
+    with its kind, what it is for (`does`), each capability's rating, its
+    own rated capacity and its level."""
+    capabilities = piece.capabilities()
+    main = purpose(piece) or capabilities[0]
     return SceneEntity(
         entity_id=f"{greenhouse_id}_{piece.actuator_id}",
-        kind=_EQUIPMENT_KINDS[piece.kind],
+        kind=SceneEntityKind.EQUIPMENT,
         transform=envelope.origin.after(piece.transform()),
         shape=piece.shape(),
-        color=EQUIPMENT_COLORS[piece.kind] if level > 0 else EQUIPMENT_OFF_COLOR,
+        color=EQUIPMENT_COLORS[main.name] if level > 0 else EQUIPMENT_OFF_COLOR,
         material=Material.STEEL,
         label=piece.actuator_id.replace("_", " "),
-        properties={"actuator_id": piece.actuator_id, "level": level, **piece.rated()},
+        properties={
+            "actuator_id": piece.actuator_id,
+            "level": level,
+            "device_kind": piece.kind.value,
+            "does": main.name,
+            **dict(capability.rating() for capability in capabilities),
+            **piece.rated(),
+        },
     )
 
 
