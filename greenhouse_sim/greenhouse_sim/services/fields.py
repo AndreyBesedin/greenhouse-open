@@ -22,6 +22,7 @@ and what a run's climate reads at its moments is given by
 `greenhouse_sim.services.climate_readings`.
 """
 
+import json
 from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Final
 
@@ -34,6 +35,7 @@ from greenhouse_sim.digests import short_digest
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument, FieldGrid
 from greenhouse_sim.fields.synthetic import shear_field
 from greenhouse_sim.scenarios.catalogue import Scenarios
+from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.climate_runs import (
     RunKey,
@@ -43,7 +45,12 @@ from greenhouse_sim.services.climate_runs import (
 )
 from greenhouse_sim.services.errors import NotFound
 from greenhouse_sim.services.grid import air_grid
-from greenhouse_sim.services.runs import Commanded, RunRequest, checked_moment
+from greenhouse_sim.services.runs import (
+    Commanded,
+    RunRequest,
+    checked_crop_plan,
+    checked_moment,
+)
 from greenhouse_sim.services.scenarios import (
     DEFAULT_WEATHER,
     SceneChanges,
@@ -235,7 +242,7 @@ def air_through_a_run(
         # A run whose targets are its scenario's own is named as it was before
         # runs had target changes (#274), so its identity stays.
         named = climate.key if climate.key[-1] else climate.key[:-1]
-        digest = _digest(repr(named) + recorded + config.model_dump_json())
+        digest = _digest(repr(named) + recorded + config.model_dump_json() + _cropped(config, run))
         return (lambda time_s: day.sampled(f"{scenario_id}_{CLIMATE}", time_s)), (
             f"{scenario_id}-climate-{digest}"
         )
@@ -243,8 +250,19 @@ def air_through_a_run(
         simulator.catalogue, scenario(simulator.catalogue, scenario_id), SceneChanges(layout=name)
     )
     own = config.airflow.field(f"{scenario_id}_{config.airflow.kind}", air)
-    digest = _digest(config.model_dump_json())
+    digest = _digest(config.model_dump_json() + _cropped(config, run))
     return (lambda _: own), f"{scenario_id}-{config.airflow.kind}-{digest}"
+
+
+def _cropped(config: ScenarioConfig, run: RunRequest) -> str:
+    """What tells a run with crop actions of its own (P13.5) from one
+    without: its crop actions, checked, each at its moment; nothing for a
+    run without, whose identity stays as it was before runs had them."""
+    cropped = run.plan.cropped()
+    if not cropped:
+        return ""
+    checked_crop_plan(config, run.plan)
+    return json.dumps([[each.at_s, each.action.model_dump(mode="json")] for each in cropped])
 
 
 def _digest(told: str) -> str:

@@ -9,7 +9,9 @@ weather, with the same doors and vents open from the start, whose schedule
 agrees with the state's up to its moment, is the same run up to then
 (`Schedule.same_until`), so it takes the state over in place of working its
 days out again: a checkpoint's own run, restored, and a branch from it,
-whose commands differ only from its moment on.
+whose commands differ only from its moment on. Its crop is the same crop if
+the run's own crop actions up to then are the state's too
+(`crop_agrees`).
 
 The climate's and the crop's services look here when they make a run; this
 module looks at neither.
@@ -23,6 +25,7 @@ from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.services.runs import CropPlan
 from greenhouse_sim.services.stores import Store
 
 if TYPE_CHECKING:
@@ -49,6 +52,9 @@ class KeptState:
     # Its house's air at moments before its day began, each with its moment:
     # where the field of the day's first hour starts its grid run.
     earlier: tuple[tuple[float, HouseAir], ...] = ()
+    # Its run's own crop actions up to its day, its own included: what its
+    # plants are the crop of.
+    crop_actions: CropPlan = ()
 
     @property
     def moment_s(self) -> float:
@@ -62,6 +68,11 @@ class KeptState:
         """Whether a run of `house` under `schedule` is this state's run up
         to its moment."""
         return house == self.house and schedule.same_until(self.schedule) >= self.moment_s
+
+    def crop_agrees(self, planned: CropPlan) -> bool:
+        """Whether a run whose own crop actions are `planned`, and which is
+        this state's run up to its moment, has this state's crop then."""
+        return tuple(each for each in planned if each.at_s <= self.moment_s) == self.crop_actions
 
 
 def new_store() -> Store[str, KeptState]:
