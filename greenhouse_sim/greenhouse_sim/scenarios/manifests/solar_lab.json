@@ -1,13 +1,13 @@
 {
   "$schema": "../scenario.schema.json",
-  "schema_version": 4,
+  "schema_version": 5,
   "greenhouse_id": "solar_lab",
   "name": "Solar lab",
   "description": "Sun QA case: a small shut house at the March equinox under a clear sky, a row of plants partly shaded by a stack of crates, and PAR sensors in the sun and the shade",
   "notes": {
     "scenario": "The sun's QA case of P08: the climate box's house, shut, at the March equinox under a clear spring sky, so that the sun's path, the light through the glass and the shadows inside can be checked against values known for the day.",
     "installation.layout": "One row of 16 plants along the middle of the house on a crop gutter; a stack of crates 1.5 m high just south of its first four plants, which shades them at noon; PAR sensors 0.3 m up on either side of the crates, in the sun to their south and in their shade to their north; and a heater, off, in the back right corner, so that the house has a climate run.",
-    "weather": "The cold spring day (the cold_spring_day preset), without a cloud."
+    "models.weather": "The cold spring day (the cold_spring_day preset), without a cloud."
   },
   "installation": {
     "installation_id": "solar_lab",
@@ -31,26 +31,32 @@
   "start_date": "2026-03-20",
   "duration_days": 10,
   "random_seed": 808,
-  "airflow": {
-    "kind": "uniform",
-    "velocity_m_s": {
-      "x": 0.0,
-      "y": 0.0,
-      "z": 0.0
+  "models": {
+    "weather": {
+      "model": "synthetic",
+      "parameters": {
+        "coldest_c": 4.0,
+        "warmest_c": 16.0,
+        "coldest_hour": 6.0,
+        "warmest_hour": 15.0,
+        "humidity_at_coldest_pct": 95.0,
+        "calmest_m_s": 1.5,
+        "windiest_m_s": 6.0,
+        "wind_from_deg": 225.0,
+        "veer_deg": 90.0,
+        "gustiness": 0.2,
+        "cloud_cover_pct": 0.0
+      }
+    },
+    "air_field": {
+      "model": "uniform",
+      "parameters": {
+        "velocity_m_s": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      }
     }
-  },
-  "weather": {
-    "kind": "synthetic",
-    "coldest_c": 4.0,
-    "warmest_c": 16.0,
-    "coldest_hour": 6.0,
-    "warmest_hour": 15.0,
-    "humidity_at_coldest_pct": 95.0,
-    "calmest_m_s": 1.5,
-    "windiest_m_s": 6.0,
-    "wind_from_deg": 225.0,
-    "veer_deg": 90.0,
-    "gustiness": 0.2,
-    "cloud_cover_pct": 0.0
   }
 }

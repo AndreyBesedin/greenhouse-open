@@ -32,6 +32,7 @@ from greenhouse_sim.scenarios.layout_files import (
     load_layout,
 )
 from greenhouse_sim.scenarios.manifest_files import SCHEMA_VERSION as MANIFEST_FORMAT
+from greenhouse_sim.scenarios.registry import chosen
 from greenhouse_sim.scene.plants import crop_entities
 from greenhouse_sim.scene.snapshot import SceneSnapshot, greenhouse_scene, scene_snapshot
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
@@ -109,6 +110,9 @@ class RunManifest(BaseModel):
     weather_kind: str
     cloud_cover_pct: float | None
     wind_from_deg: float | None
+    # The model each part of its run runs, by part (P14.1, decision 0054):
+    # the weather's, the air field's, the crop's and the crop walk's.
+    models: dict[str, str]
 
 
 class SceneChanges(BaseModel):
@@ -192,6 +196,7 @@ def run_manifest(catalogue: Scenarios, scenario_id: str, weather: str | None = N
         weather_kind=config.weather.kind,
         cloud_cover_pct=config.cloud_cover_pct,
         wind_from_deg=config.wind_from_deg,
+        models={part.value: name for part, name in chosen(config).items()},
     )
 
 

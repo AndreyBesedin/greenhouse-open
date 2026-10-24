@@ -1,6 +1,6 @@
 {
   "$schema": "../scenario.schema.json",
-  "schema_version": 4,
+  "schema_version": 5,
   "greenhouse_id": "climate_box",
   "name": "Climate box",
   "description": "A small single-span house of 32 tomato plants, shut and still, where climate equipment is tried, 14 days",
@@ -8,9 +8,9 @@
     "scenario": "The small house of P05.0: small enough to follow its air closely, where P05's equipment is placed and its QA run. It has a roof vent, a side vent in each side wall and a door, all shut, so that equipment acts on still, closed air.",
     "installation.envelope": "One 6.4 m span, three 4 m bays, 4 m to the gutters. The left side vent is across the house from the right one, so that a wind across the house has a vent on either side (P07.6).",
     "installation.layout": "Two rows of 16 plants along the house, 1.6 m apart about its middle, on gutters under crop wires, behind a path across the front; and its equipment, all off until commanded: a fan high over the front path blowing down the house, a 10 kW heater in the back right corner, and a dehumidifier against the left side wall, halfway along; and its sensors: temperature and humidity in each half of the house, an anemometer in the fan's jet, CO2 in the middle and PAR under the roof; and a weather station on a mast 3 m in front of the house: its air's temperature and humidity side by side 1.5 m up, the pressure below them, and the wind's speed and direction 6 m up, above the ridge.",
-    "airflow": "Still air, so that a fan's jet stands out.",
+    "models.air_field": "Still air, so that a fan's jet stands out.",
     "climate": "A cold, damp night, when heating and drying matter: 16 °C and 85% inside to start, through single glass.",
-    "weather": "The cold, damp night outside: 8 °C and 90%, still."
+    "models.weather": "The cold, damp night outside: 8 °C and 90%, still."
   },
   "installation": {
     "installation_id": "climate_box",
@@ -88,21 +88,27 @@
   "start_date": "2026-01-01",
   "duration_days": 14,
   "random_seed": 1201,
-  "airflow": {
-    "kind": "uniform",
-    "velocity_m_s": {
-      "x": 0.0,
-      "y": 0.0,
-      "z": 0.0
+  "models": {
+    "weather": {
+      "model": "constant",
+      "parameters": {
+        "air_temperature_c": 8.0,
+        "relative_humidity_pct": 90.0
+      }
+    },
+    "air_field": {
+      "model": "uniform",
+      "parameters": {
+        "velocity_m_s": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      }
     }
   },
   "climate": {
     "start_temperature_c": 16.0,
     "start_humidity_pct": 85.0
-  },
-  "weather": {
-    "kind": "constant",
-    "air_temperature_c": 8.0,
-    "relative_humidity_pct": 90.0
   }
 }
