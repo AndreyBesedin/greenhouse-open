@@ -25,18 +25,67 @@ export type PointKind =
   | "wind_speed"
   | "wind_direction"
   | "barometric_pressure";
+/**
+ * What an area of the floor is kept for.
+ */
+export type ZoneKind = "service" | "keep_out";
+export type Primitive =
+  | BoxPrimitive
+  | CylinderPrimitive
+  | PipePrimitive
+  | PipeRunPrimitive
+  | RailPrimitive
+  | TrayPrimitive
+  | WalkwayPrimitive;
+/**
+ * What a fixture, or a part of the envelope, is made of.
+ */
+export type Material = "steel" | "aluminium" | "plastic" | "concrete" | "substrate";
+/**
+ * What a fixture stands in the way of.
+ */
+export type Obstruction = "movement" | "airflow" | "light";
+/**
+ * What a fixture is, for every consumer of its geometry.
+ */
+export type FixtureKind = "crop_gutter" | "bench" | "slab" | "walkway" | "rail" | "pipe" | "wire" | "obstacle";
+/**
+ * What a fixture is, for every consumer of its geometry.
+ */
+export type FixtureKind1 = "crop_gutter" | "bench" | "slab" | "walkway" | "rail" | "pipe" | "wire" | "obstacle";
+/**
+ * What a fixture is, for every consumer of its geometry.
+ */
+export type FixtureKind2 = "crop_gutter" | "bench" | "slab" | "walkway" | "rail" | "pipe" | "wire" | "obstacle";
+/**
+ * What a fixture is, for every consumer of its geometry.
+ */
+export type FixtureKind3 = "crop_gutter" | "bench" | "slab" | "walkway" | "rail" | "pipe" | "wire" | "obstacle";
+/**
+ * What a fixture is, for every consumer of its geometry.
+ */
+export type FixtureKind4 = "crop_gutter" | "bench" | "slab" | "walkway" | "rail" | "pipe" | "wire" | "obstacle";
+/**
+ * What a fixture is, for every consumer of its geometry.
+ */
+export type FixtureKind5 = "crop_gutter" | "bench" | "slab" | "walkway" | "rail" | "pipe" | "wire" | "obstacle";
+/**
+ * What a fixture is, for every consumer of its geometry.
+ */
+export type FixtureKind6 = "crop_gutter" | "bench" | "slab" | "walkway" | "rail" | "pipe" | "wire" | "obstacle";
 export type Count = number;
 export type Axis = "x" | "y" | "z";
 export type OpeningKind = "door" | "roof_vent" | "side_vent";
 export type JsonValue = unknown;
 
 /**
- * Pieces of equipment or sensors like `item`, the first where it
- * stands and each next `step` further, named after its identifier.
+ * Pieces of equipment, sensors, zones or fixtures like `item`, the
+ * first where it stands and each next `step` further, named after its
+ * identifier.
  */
 export interface PlaceItems {
   edit?: "place_items";
-  item: Equipment | Sensor;
+  item: Equipment | Sensor | Zone | Primitive;
   count?: number;
   step?: Vector3 | null;
 }
@@ -152,8 +201,141 @@ export interface CameraIntrinsics {
   distortion?: number[];
 }
 /**
- * Each chosen piece of equipment or sensor copied `count` times, each
- * copy `step` further than the one before.
+ * A service zone or keep-out volume: a strip of the floor, rising
+ * `height` above it.
+ */
+export interface Zone {
+  zone_id: string;
+  kind: ZoneKind;
+  area: Strip;
+  height: number;
+}
+/**
+ * A rectangle of the floor: a centre line from `start` to `end`, `width`
+ * wide.
+ */
+export interface Strip {
+  start: Point2;
+  end: Point2;
+  width: number;
+}
+/**
+ * A point in a shape's own x-y plane.
+ */
+export interface Point2 {
+  x: number;
+  y: number;
+}
+/**
+ * A box standing on the floor or anything else: its base centred on
+ * `base`, turned about the vertical by `heading` radians from the
+ * greenhouse's x.
+ */
+export interface BoxPrimitive {
+  fixture_id: string;
+  material?: Material | null;
+  obstructs?: Obstruction[] | null;
+  primitive?: "box";
+  kind?: FixtureKind;
+  base: Vector3;
+  size_x: number;
+  size_y: number;
+  size_z: number;
+  heading?: number;
+}
+/**
+ * An upright cylinder, its base centred on `base`.
+ */
+export interface CylinderPrimitive {
+  fixture_id: string;
+  material?: Material | null;
+  obstructs?: Obstruction[] | null;
+  primitive?: "cylinder";
+  kind?: FixtureKind1;
+  base: Vector3;
+  radius: number;
+  height: number;
+}
+/**
+ * A straight pipe, its axis from `start` to `end`.
+ */
+export interface PipePrimitive {
+  fixture_id: string;
+  material?: Material | null;
+  obstructs?: Obstruction[] | null;
+  primitive?: "pipe";
+  kind?: FixtureKind2;
+  start: Vector3;
+  end: Vector3;
+  radius: number;
+}
+/**
+ * Pipes repeated in parallel, such as heating pipes stacked along a wall:
+ * the first from `start` to `end`, each next one `step` further on, `count`
+ * in all. Each is its own multiple of the step from the first, and is called
+ * `<fixture_id>_<n>`, from 1.
+ */
+export interface PipeRunPrimitive {
+  fixture_id: string;
+  material?: Material | null;
+  obstructs?: Obstruction[] | null;
+  primitive?: "pipe_run";
+  kind?: FixtureKind3;
+  start: Vector3;
+  end: Vector3;
+  radius: number;
+  count: number;
+  step: Vector3;
+}
+/**
+ * A rail of two parallel tubes, `gauge` apart from axis to axis, either
+ * side of its centre line from `start` to `end`. Its tubes are
+ * `<fixture_id>_right` and `<fixture_id>_left`, as seen looking along it.
+ */
+export interface RailPrimitive {
+  fixture_id: string;
+  material?: Material | null;
+  obstructs?: Obstruction[] | null;
+  primitive?: "rail";
+  kind?: FixtureKind4;
+  start: Vector3;
+  end: Vector3;
+  gauge: number;
+  tube_radius: number;
+}
+/**
+ * An open tray, such as a crop gutter: `width` across and `depth` deep,
+ * its bottom's centre line from `start` to `end`. It may slope, as gutters
+ * do to drain; it stays level across.
+ */
+export interface TrayPrimitive {
+  fixture_id: string;
+  material?: Material | null;
+  obstructs?: Obstruction[] | null;
+  primitive?: "tray";
+  kind?: FixtureKind5;
+  start: Vector3;
+  end: Vector3;
+  width: number;
+  depth: number;
+}
+/**
+ * A path on the floor, `width` wide, its centre line from `start` to
+ * `end`.
+ */
+export interface WalkwayPrimitive {
+  fixture_id: string;
+  material?: Material | null;
+  obstructs?: Obstruction[] | null;
+  primitive?: "walkway";
+  kind?: FixtureKind6;
+  start: Point2;
+  end: Point2;
+  width: number;
+}
+/**
+ * Each chosen piece of equipment, sensor, zone or fixture copied
+ * `count` times, each copy `step` further than the one before.
  */
 export interface RepeatItems {
   edit?: "repeat_items";
@@ -162,8 +344,8 @@ export interface RepeatItems {
   step: Vector3;
 }
 /**
- * The chosen pieces of equipment and sensors spaced evenly along an
- * axis of the greenhouse.
+ * The chosen pieces of equipment, sensors, zones and fixtures spaced
+ * evenly along an axis of the greenhouse.
  */
 export interface SpaceItems {
   edit?: "space_items";
@@ -200,13 +382,6 @@ export interface Opening {
   largest_angle?: number;
 }
 /**
- * A point in a shape's own x-y plane.
- */
-export interface Point2 {
-  x: number;
-  y: number;
-}
-/**
  * On each chosen surface, `count` doors or vents like `opening`, spread
  * evenly along it.
  */
@@ -235,7 +410,8 @@ export interface SpaceOpenings {
 }
 /**
  * One field, a nested one by its path (`base.z`), given one value over
- * the chosen items: equipment, sensors, doors or vents.
+ * the chosen items: equipment, sensors, zones, fixtures, doors or
+ * vents.
  */
 export interface SetField {
   edit?: "set_field";
@@ -253,7 +429,8 @@ export interface SetValue {
   value: JsonValue;
 }
 /**
- * The chosen equipment, sensors, doors and vents taken out.
+ * The chosen equipment, sensors, zones, fixtures, doors and vents
+ * taken out.
  */
 export interface RemoveItems {
   edit?: "remove_items";

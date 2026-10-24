@@ -239,3 +239,41 @@ test("builder: the inspector sets a field of the item chosen, and of the house",
     ARRIVES,
   );
 });
+
+test("builder: heating pipes and a service zone placed, and changed in the inspector", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const status = page.getByTestId("builder-status");
+  const items = page.locator(".builder-items");
+  const inspector = page.locator(".builder-items .builder-inspector");
+  const palette = page.locator(".builder-palette");
+
+  await page.goto("/builder");
+  await page.locator(".builder-form").getByLabel("Identifier").fill(`fixtures_${Date.now()}`);
+  await page.getByRole("button", { name: "Draft this house" }).click();
+  await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
+
+  // A run of heating pipes, laid along the house just above the floor.
+  await palette.getByLabel("What").selectOption("pipe_run");
+  await palette.getByRole("button", { name: "Place" }).click();
+  await expect(status).toHaveText("Placed 1 pipe run.", ARRIVES);
+  await expect(items.getByRole("cell", { name: "pipe run", exact: true })).toBeVisible();
+  await page.getByLabel("Choose pipes_1").check();
+  await expect(inspector.getByRole("heading", { name: "pipes_1" })).toBeVisible();
+  await inspector.getByLabel("Count").fill("3");
+  await inspector.getByLabel("Count").press("Enter");
+  await expect(status).toHaveText("Set count of pipes_1.", ARRIVES);
+
+  // A service zone, widened by its area's width.
+  await page.getByLabel("Choose pipes_1").uncheck();
+  await palette.getByLabel("What").selectOption("service_zone");
+  await palette.getByRole("button", { name: "Place" }).click();
+  await expect(status).toHaveText("Placed 1 service zone.", ARRIVES);
+  await page.getByLabel("Choose service_zone_1").check();
+  await inspector.getByLabel("Area Width").fill("1.5");
+  await inspector.getByLabel("Area Width").press("Enter");
+  await expect(status).toHaveText("Set area width of service_zone_1.", ARRIVES);
+  await expect(inspector.getByLabel("Area Width")).toHaveValue("1.5");
+  await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
+});
