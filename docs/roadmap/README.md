@@ -375,6 +375,59 @@ greenhouses, informs the first as a reference only. Planned then:
 - **Each model held to its sources:** the data it was validated against
   kept as a reference test, where its licence allows.
 
+**Greenhouse R&D workflows and Modelica comparison** (recorded
+2026-10-24, exploratory work after P14, alongside the crop-model research
+above; not a blocker for P11–P14). Modelica and its tools, including
+OpenModelica and Dymola, already support substantial greenhouse climate,
+energy and crop models. The question is not whether the simulator can replace
+their equation-based modelling. It is whether it adds a useful *experimental
+workflow* for academic and applied R&D teams, alongside existing models:
+setting up a greenhouse, choosing fidelity, replaying a season, connecting
+sensors and policies, and comparing decisions reproducibly.
+
+- **Establish actual research workflows first.** Describe two or three
+  representative tasks performed by academic or industrial greenhouse R&D
+  teams, using existing tools as a baseline. Ask practitioners which work is
+  straightforward in Modelica, which work requires custom scripts or other
+  platforms, and where switching tools would cost more than it saves. Include
+  unsuccessful or negative evidence, not only prospective use cases.
+- **Reproduce one published scientific baseline.** A candidate is
+  [TiGwerLib v0.7.0](https://zenodo.org/records/15590404), associated with
+  [Sourisseau et al. (2026)](https://doi.org/10.1371/journal.pone.0340619)
+  and its [published greenhouse dataset](https://zenodo.org/records/17554203).
+  First attempt its documented configuration in OpenModelica, without
+  requiring a proprietary license. Record exact versions of the model,
+  libraries, solver, weather, measured inputs and equipment schedules, and
+  report any reproduction or compatibility blockers rather than concealing
+  them. Check the artefacts' licences before redistributing anything.
+- **Compare on matched inputs, not visual similarity.** Run a comparable
+  greenhouse in this simulator with the same period, weather forcing,
+  geometry and equipment/control assumptions where possible. Compare indoor
+  temperature, humidity, CO₂, energy and crop outputs only when definitions
+  and available measurements support a meaningful comparison. Publish units,
+  sampling intervals, error metrics, run times and missing physics. Different
+  model fidelities are expected; disagreement is evidence about assumptions,
+  not automatically a defect in either tool.
+- **Test the end-to-end experiment, not just the solver.** Measure the work
+  needed to configure a setup, exchange models, change sensors or actions,
+  rerun counterfactual scenarios, connect a policy, evaluate it against
+  hidden ground truth and reproduce its results. Distinguish capabilities
+  Modelica tools already provide from those that need custom integration, and
+  record where this simulator is worse or incomplete. A small, repeatable
+  research task is more useful than a broad feature checklist.
+- **Get feedback and decide based on evidence.** Seek feedback from at least
+  one academic and one applied/industrial R&D perspective, where available.
+  Publish a concise comparison with a reproducible reference case,
+  performance/fidelity findings, workflow friction, limitations and a clear
+  conclusion: complementary research workflow, a justified external-model
+  adapter, or no demonstrated additional value yet. Consider FMI/FMU support
+  only if a concrete workflow requires it; an integration decision then gets
+  its own decision record and implementation project.
+
+The outcome is a research comparison and a direction, **not** a replacement
+of the Python simulator, a mandatory Modelica dependency, or a commitment
+to buy Dymola.
+
 **CI time, a second pass** (recorded 2026-10-24, future work, after the
 projects in progress, P11 to P14). A pull request's checks have grown slow
 again since the first pass (the test suite and CI time, above, and the
