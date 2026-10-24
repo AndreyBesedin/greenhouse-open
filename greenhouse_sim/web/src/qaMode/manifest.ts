@@ -36,6 +36,10 @@ export interface RunManifest {
   weatherKind: string;
   cloudCoverPct: number | null;
   windFromDeg: number | null;
+  /** The model each part of its run runs, by part, as its manifest chooses
+   * them (P14.1): the weather's, the air field's, the crop's and the crop
+   * walk's. */
+  models: Readonly<Record<string, string>>;
 }
 
 export type ServedVersionState =
@@ -94,6 +98,7 @@ export function parseRunManifest(body: unknown): RunManifest {
     weatherKind: served.weather_kind,
     cloudCoverPct: served.cloud_cover_pct,
     windFromDeg: served.wind_from_deg,
+    models: served.models,
   };
 }
 
@@ -128,6 +133,7 @@ export function describeManifest(manifest: RunManifest): {
   crop: string;
   airflow: string;
   weather: string;
+  models: string;
 } {
   const overrides = [
     ...(manifest.cloudCoverPct === null ? [] : [`clouds ${manifest.cloudCoverPct}%`]),
@@ -143,5 +149,8 @@ export function describeManifest(manifest: RunManifest): {
     crop: `${manifest.variety}, ${CROP_MODELS[manifest.cropModel] ?? manifest.cropModel}`,
     airflow: `${manifest.airflow}, prescribed`,
     weather: [`${weatherName}, ${manifest.weatherKind}`, ...overrides].join(", "),
+    models: Object.entries(manifest.models)
+      .map(([part, model]) => `${part.replaceAll("_", " ")}: ${model}`)
+      .join(", "),
   };
 }

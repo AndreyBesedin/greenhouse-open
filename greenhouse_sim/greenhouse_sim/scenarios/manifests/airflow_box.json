@@ -1,6 +1,6 @@
 {
   "$schema": "../scenario.schema.json",
-  "schema_version": 4,
+  "schema_version": 5,
   "greenhouse_id": "airflow_box",
   "name": "Airflow QA Box",
   "description": "Airflow QA case: air blown through a house from door to door, around one block between them, solved with OpenFOAM and compared with a prescribed breeze.",
@@ -8,7 +8,7 @@
     "scenario": "The airflow QA case of P04: a single-span house with a wide door open at each end, face to face, and one block on the floor between them. Air is blown in through the front door and leaves through the back one, so it runs the length of the house and must go around and over the block, which leaves a wake behind it. Its one plant stands in a back corner, out of the way.",
     "installation.envelope": "Each door is 2 m wide and 2.2 m high, centred across the house's 6.4 m width, standing on the floor.",
     "installation.layout": "The block, 1 m along the house, 2 m across and 1.5 m high, halfway between the doors. Its second layout, open, is the same house without the block.",
-    "airflow": "The breeze it is compared with: the CFD inlet's speed, along the house."
+    "models.air_field": "The breeze it is compared with: the CFD inlet's speed, along the house."
   },
   "installation": {
     "installation_id": "airflow_box",
@@ -57,12 +57,16 @@
   "start_date": "2026-01-01",
   "duration_days": 10,
   "random_seed": 404,
-  "airflow": {
-    "kind": "uniform",
-    "velocity_m_s": {
-      "x": 0.5,
-      "y": 0.0,
-      "z": 0.0
+  "models": {
+    "air_field": {
+      "model": "uniform",
+      "parameters": {
+        "velocity_m_s": {
+          "x": 0.5,
+          "y": 0.0,
+          "z": 0.0
+        }
+      }
     }
   },
   "cfd": {

@@ -62,7 +62,8 @@ changes course is a new record that supersedes the old one.
 | [0049](0049-a-run-started-from-moves-keeps-its-target-changes.md) | A run started from moves keeps its target changes | Accepted |
 | [0050](0050-an-installation-is-the-house-part-of-a-scenario.md) | An installation is the house part of a scenario | Accepted |
 | [0051](0051-drafts-are-kept-in-a-local-sqlite-file.md) | Drafts are kept in a local SQLite file | Accepted |
-| [0054](0054-models-are-chosen-by-the-manifest-from-a-registry.md) | Models are chosen by the manifest, from a registry | Proposed |
+| [0052](0052-a-simulators-authorisation-is-a-file-it-is-given.md) | A simulator's authorisation is a file it is given, the local operator's by default | Accepted |
+| [0054](0054-models-are-chosen-by-the-manifest-from-a-registry.md) | Models are chosen by the manifest, from a registry | Accepted |
 
 ## Template
 

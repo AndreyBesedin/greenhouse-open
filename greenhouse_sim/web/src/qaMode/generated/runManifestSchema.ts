@@ -82,6 +82,13 @@ export const RUN_MANIFEST_SCHEMA = {
         }
       ],
       "title": "Wind From Deg"
+    },
+    "models": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Models",
+      "type": "object"
     }
   },
   "required": [
@@ -98,7 +105,8 @@ export const RUN_MANIFEST_SCHEMA = {
     "weather",
     "weather_kind",
     "cloud_cover_pct",
-    "wind_from_deg"
+    "wind_from_deg",
+    "models"
   ],
   "title": "RunManifest",
   "type": "object"
