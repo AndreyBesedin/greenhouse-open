@@ -598,7 +598,7 @@ within the day; the action format needs no change for it.
 | P13.3 | The simulator's gateway: the playback holds its run's plan and revisions, schedules them onto the run as its executor, writes the outcome log and serves it on the consumer interface; steering as the gateway's rule; the actions as they stand, cancelling chosen ones, and dropping them when the playback starts over. The gateway contract's conformance tests run against it. | `feat(sim): the playback as its run's gateway` | Done |
 | P13.4 | Authorisation in the gateway: principals on every planned action, bound to the authenticated submitter or granted on its behalf; plan ownership; groups and grants in a versioned configuration, an input of the run, its changes recorded; checked when a plan is given and when each action falls due, refusals as outcomes; the local operator group. | `feat(sim): the gateway authorises every action` | Done |
 | P13.5 | Crop actions on the run: `harvest`, `lower`, `remove_leaf`, `inspect` at a day's start, refused at other instants and `water` refused, with their reasons; the organ model's `PlantAction` renamed `PlantOperation`; the plant lab and crop work give them; events name their actions. | `feat(sim): crop actions and their outcomes on the run` | Done: the organ crop's operations (#351), the protocol's reasons and events (#353), a run's plan on its crop (#354), and its playback's outcomes (#356) |
-| P13.6 | The graph, windows and lateness, with a simulated executor whose actions take time and which has a number of hands, so that `late`, `missed`, fallbacks and cancelled dependents happen, deterministically. | `feat(sim): plans with order, windows and lateness` | Planned |
+| P13.6 | The graph, windows and lateness, with a simulated executor whose actions take time and which has a number of hands, so that `late`, `missed`, fallbacks and cancelled dependents happen, deterministically. | `feat(sim): plans with order, windows and lateness` | Done: the gateway's start and hands (#363), and the run's crew (#365) |
 | P13.7 | The gateway's write side and its routes: give a plan before a run, steer a playing one, list the actions as they stand, cancel a plan or chosen actions, read the plan in force; the playback's targets route becomes an alias. | `feat(api): give, steer and read a run's plan` | Planned |
 | P13.8 | The viewer: the Equipment, Openings and Targets panels and the plant lab write one plan; a plan lane in the timeline shows what was due, what happened and why. | `feat(viewer): one plan, and its outcomes in the timeline` | Planned |
 | P13.9 | The old paths removed: the engine's actions, `greenhouse_sim.executor`, the deprecated aliases (`RequestedAction`, `ActionResult` and the old execution names), `LabAction`; the close-the-loop example as a policy loop on the run; the protocol's minor version moves again, and the changelog says so. | `refactor: one way to act on a greenhouse` | Planned |
@@ -969,6 +969,52 @@ which changes no run, then the run carrying out a plan's crop actions.
   follows a playback's whole plan (P13.8), its state lists its target
   changes alone: a viewer following it draws the crop without the crop
   actions given to it, which its records include.
+
+## Settled in P13.6
+
+- **A gateway starts an action when its executor can** (#363). That is the
+  earliest instant, from when it falls due, that its executor honours, as
+  the executor says when it does (`SaysWhen.earliest`), and at which one
+  of its hands is free (`capacity`). Each assignment holds a hand from its
+  start for as long as its kind takes at the longest. An action no hand
+  is free for by its deadline is late, decided at that deadline, by its
+  `on_late`. Run late, it starts at the next such instant, and is missed if
+  there is none. A window or an as soon as possible action that its
+  executor honours no instant for is refused at once.
+- **The run says when** (`RunExecutor.earliest`): a level at once, a
+  target on the minute, and crop work at the next day's start after its
+  first that its clock has not passed. A window's crop action starts at
+  the first day's start in its window. An as soon as possible one starts
+  at the next day's start once what it waits for is done: at the same one,
+  if what it waits for was done there (P13.5).
+- **A crew** (`services.gateway.Crew`) carries a run's crop actions out:
+  so many hands, each crop action holding one for as long as its kind
+  takes. Levels and targets are the climate computer's: done at once, they
+  hold no hand. It is the simulator's input, as its authorisation is
+  (`Simulator(crew=...)`), and every playback's run has it. Without one,
+  every crop action starts when it falls due and takes no time, as in
+  P13.5, and every run is as it was.
+- **Crop work still starts at a day's start,** since the organ crop steps a
+  day at a time. With a crew of so many hands, that many crop actions
+  start at a day's start. One that cannot start by its deadline is late,
+  by its rule. Run late, it starts at the next day's start with a hand
+  free. Its outcome starts then and finishes its kind's time later, and
+  its effect and its event are the crop's at that day's start. Within the
+  day, a crew would carry work out as its hands came free: that is crop
+  work within the day, a project of its own.
+- **The same plan ends the same,** however far ahead of the clock the run
+  was worked out, and however the clock moves. The gateway decides at its
+  own instants, and a crop action's report waits for its day. Tests cover
+  a plan for one hand played by hours, minutes and days, and a playback
+  started over and given the plan again.
+- **A playback moves its gateway a moment at a time,** through every
+  moment the gateway has something to do (`InMemoryGateway.next_moment`).
+  Where the run's plan changes, as an action is refused when it falls due
+  or turns late, its clock stops with the gateway's, so nothing is
+  decided ahead of the records.
+- **Not yet:** the server takes no crew of its own, so its runs have none.
+  A hand that the crop refuses an action for is not handed back to the
+  actions already assigned after it, which keep their instants.
 
 ## Decided
 
