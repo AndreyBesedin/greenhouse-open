@@ -196,6 +196,12 @@ class Dehumidifier(_Unit):
 type Equipment = Annotated[Fan | Heater | Dehumidifier, Field(discriminator="kind")]
 
 
+def purpose(piece: Device) -> Capability | None:
+    """What a piece of equipment is for: the first of its capabilities that
+    is not the heat it gives off as it works; none if that is all it does."""
+    return next((each for each in piece.capabilities() if not isinstance(each, WasteHeat)), None)
+
+
 def can(piece: Device, capability: type[Capability]) -> bool:
     """Whether a piece of equipment can do what `capability` says: move air,
     heat or dry (`greenhouse_sim.world.capabilities`)."""

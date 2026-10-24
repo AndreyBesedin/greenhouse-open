@@ -89,17 +89,18 @@ export const RENDERERS: Record<
   PIPE: solid,
   WIRE: solid,
   OBSTACLE: solid,
-  // Climate equipment: a fan's housing, with an arrow the way it blows, and a
-  // heater's and a dehumidifier's body, grey while off and in its kind's
-  // colour while it runs. A fan is drawn on its own, never batched.
-  FAN: (entity, look) => (
+  // Climate equipment of any kind, by its shape: a body grey while off and
+  // in the colour of what it is for while it runs, and, for a housing that
+  // moves air, an arrow the way it blows. It is drawn on its own, never
+  // batched.
+  EQUIPMENT: (entity, look) => (
     <>
       {solid(entity, look)}
-      {entity.shape.shape === "cylinder" && <FanArrow housing={entity.shape} color={look.color} />}
+      {entity.properties.does === "moves_air" && entity.shape.shape === "cylinder" && (
+        <FanArrow housing={entity.shape} color={look.color} />
+      )}
     </>
   ),
-  HEATER: solid,
-  DEHUMIDIFIER: solid,
   // A sensor's housing and a camera's body.
   SENSOR: solid,
   CAMERA: solid,

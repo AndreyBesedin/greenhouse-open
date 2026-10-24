@@ -10,8 +10,9 @@ import {
   EquipmentControls,
   equipmentIn,
 } from "./EquipmentControls";
-import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
+import type { SceneEntity, SceneSnapshot } from "./scene/generated/snapshotTypes";
 import { changesQuery, searchFor, sourceFromSearch } from "./scene/source";
+import { present } from "./testing/present";
 
 const EXAMPLE: SceneSnapshot = JSON.parse(
   readFileSync(new URL("../public/scenes/example.json", import.meta.url), "utf8"),
@@ -26,6 +27,29 @@ describe("a scene's equipment", () => {
       { actuatorId: "fan", label: "fan", level: 0, rated: 1, unit: "m³/s" },
       { actuatorId: "heater", label: "heater", level: 0, rated: 10, unit: "kW" },
       { actuatorId: "dehumidifier", label: "dehumidifier", level: 0, rated: 1, unit: "kg/h" },
+    ]);
+  });
+
+  it("lists a kind of equipment it was not built with by what it does", () => {
+    const dehumidifier = present(
+      EXAMPLE.entities.find((entity) => entity.properties.does === "dries"),
+      "the example's dehumidifier",
+    );
+    const fogger: SceneEntity = {
+      ...dehumidifier,
+      entity_id: "climate_box_fogger",
+      label: "fogger",
+      properties: {
+        actuator_id: "fogger",
+        level: 0.5,
+        device_kind: "fogger",
+        does: "dries",
+        dries_kg_h: 2,
+      },
+    };
+
+    expect(equipmentIn({ ...EXAMPLE, entities: [fogger] })).toEqual([
+      { actuatorId: "fogger", label: "fogger", level: 0.5, rated: 2, unit: "kg/h" },
     ]);
   });
 

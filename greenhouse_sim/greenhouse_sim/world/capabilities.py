@@ -19,10 +19,14 @@ around its body: no loop runs it for that heat, and it is not heating.
 A device has one level, which scales all of them at once: an action names
 the device, not one of its capabilities, until a device's capabilities run
 apart.
+
+Each has a name, as a scene and a viewer know it (`moves_air`, `heats`,
+`dries`, `gives_off_heat`), and its rating, what it does at full level,
+under a name of its own (`rating`), whatever a device's fields call it.
 """
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import ClassVar, Protocol
 
 from greenhouse_sim.world.fixtures import Fixture
 from greenhouse_sim.world.geometry import Vector3
@@ -46,6 +50,12 @@ class MovesAir:
     outlet: Outlet
     flow_m3_s: float
 
+    name: ClassVar[str] = "moves_air"
+
+    def rating(self) -> tuple[str, float]:
+        """The air it moves at full level, in m³/s."""
+        return "moves_air_m3_s", self.flow_m3_s
+
 
 @dataclass(frozen=True)
 class Heats:
@@ -55,6 +65,12 @@ class Heats:
     power_w: float
     outlet: Outlet | None = None
 
+    name: ClassVar[str] = "heats"
+
+    def rating(self) -> tuple[str, float]:
+        """Its heating at full level, in W."""
+        return "heats_w", self.power_w
+
 
 @dataclass(frozen=True)
 class Dries:
@@ -63,6 +79,12 @@ class Dries:
 
     removal_kg_h: float
 
+    name: ClassVar[str] = "dries"
+
+    def rating(self) -> tuple[str, float]:
+        """The water it takes out of the air at full level, in kg/h."""
+        return "dries_kg_h", self.removal_kg_h
+
 
 @dataclass(frozen=True)
 class WasteHeat:
@@ -70,6 +92,12 @@ class WasteHeat:
     it works: not heating."""
 
     heat_w: float
+
+    name: ClassVar[str] = "gives_off_heat"
+
+    def rating(self) -> tuple[str, float]:
+        """The heat it gives off at full level, in W."""
+        return "gives_off_heat_w", self.heat_w
 
 
 # What a device does to the air.

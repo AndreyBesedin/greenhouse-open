@@ -1,5 +1,5 @@
 {
-  "schema_version": 15,
+  "schema_version": 16,
   "greenhouse_id": "climate_box",
   "simulated_day": 9,
   "entities": [
@@ -2580,7 +2580,7 @@
     },
     {
       "entity_id": "climate_box_fan",
-      "kind": "FAN",
+      "kind": "EQUIPMENT",
       "transform": {
         "position": {
           "x": 0.85,
@@ -2609,13 +2609,16 @@
       "properties": {
         "actuator_id": "fan",
         "level": 0.0,
+        "device_kind": "fan",
+        "does": "moves_air",
+        "moves_air_m3_s": 1.0,
         "diameter_m": 0.5,
         "flow_m3_s": 1.0
       }
     },
     {
       "entity_id": "climate_box_heater",
-      "kind": "HEATER",
+      "kind": "EQUIPMENT",
       "transform": {
         "position": {
           "x": 11.2,
@@ -2645,12 +2648,15 @@
       "properties": {
         "actuator_id": "heater",
         "level": 0.0,
+        "device_kind": "heater",
+        "does": "heats",
+        "heats_w": 10000.0,
         "power_w": 10000.0
       }
     },
     {
       "entity_id": "climate_box_dehumidifier",
-      "kind": "DEHUMIDIFIER",
+      "kind": "EQUIPMENT",
       "transform": {
         "position": {
           "x": 6.0,
@@ -2680,6 +2686,10 @@
       "properties": {
         "actuator_id": "dehumidifier",
         "level": 0.0,
+        "device_kind": "dehumidifier",
+        "does": "dries",
+        "dries_kg_h": 1.0,
+        "gives_off_heat_w": 1200.0,
         "removal_kg_h": 1.0,
         "heat_w": 1200.0
       }

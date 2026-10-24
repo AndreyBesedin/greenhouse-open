@@ -247,6 +247,17 @@ the audit asks: **the simple crop as a rung of the run.**
 - **Where a device stands and how a move places it** are its own
   (`anchor`, `displaced`), as a sensor's are: moves, copies and the
   builder's spacing ask the item.
+- **The scene knows one kind of equipment** (`EQUIPMENT`, scene schema
+  16): a device is drawn by its shape, in the colour of what it is for
+  (`purpose`, its first capability other than its waste heat), with its
+  kind (`device_kind`), what it is for (`does`) and each capability's
+  rating under the capability's name, beside its own rated values.
+- **The viewer draws and lists a device by what it does:** its category
+  in the categories' view is what it is for (moving air, heating,
+  drying), the inspector names its kind, the Equipment panel reads its
+  rating by what it is for, and it is drawn by its shape, with the arrow
+  of the air it moves on a cylinder that moves air. A device of a kind
+  the viewer was not built with is drawn, named and listed the same way.
 
 ## Acceptance criteria
 

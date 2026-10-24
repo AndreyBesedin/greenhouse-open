@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { CFD_COLORS } from "./cfd/boundaries";
-import { CATEGORY_COLORS } from "./debug/categories";
+import { CATEGORY_COLORS, type EquipmentCategory } from "./debug/categories";
 import { DIMENSION_COLOR } from "./debug/dimensions";
 import { ALL_OVERLAYS } from "./debug/overlays";
 import { CUBE_COLOR, PLACEHOLDER_AXES_LENGTH_M } from "./emptyView";
@@ -17,13 +17,14 @@ import {
 import type { SceneEntityKind } from "./scene/generated/snapshotTypes";
 import { button, click, type Rendered, render, said } from "./testing/render";
 
-const HOUSE: ReadonlySet<SceneEntityKind> = new Set([
+const HOUSE: ReadonlySet<SceneEntityKind | EquipmentCategory> = new Set([
   "AXES",
   "FLOOR",
   "WALL",
   "ROOF",
   "PLANTING_POSITION",
-  "FAN",
+  "EQUIPMENT",
+  "MOVES_AIR",
 ]);
 const VIEW: ViewState = {
   drawn: ["airField", "wind", "sun", "probes"],
@@ -162,7 +163,7 @@ describe("each row matches what is drawn", () => {
     });
     expect(row(always, "planting")).toMatchObject({ color: CATEGORY_COLORS.PLANTING_POSITION });
     expect(row(always, "equipment")).toMatchObject({
-      color: CATEGORY_COLORS.FAN,
+      color: CATEGORY_COLORS.MOVES_AIR,
       meaning:
         "Running or not. A fan's arrow shows its way. Each in its category's colour: the legend below.",
     });
@@ -172,7 +173,7 @@ describe("each row matches what is drawn", () => {
     const { always } = seenInTheView({ ...VIEW, colourBy: "age_days" });
 
     expect(row(always, "equipment")?.meaning).toBe(
-      "Grey while off, in its kind's colour while running. A fan's arrow shows its way. " +
+      "Grey while off, in the colour of what it is for while running. A fan's arrow shows its way. " +
         "Shaded by age_days where it has a value.",
     );
     expect(row(always, "grid")?.meaning).toBe("20 m across, in 1 m cells.");

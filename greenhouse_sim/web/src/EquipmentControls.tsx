@@ -1,21 +1,21 @@
 import type { Fold } from "./folds";
 import { formatValue, onAndRest } from "./readouts";
 import type { ThermostatAt } from "./scene/equipment";
-import type { SceneEntityKind, SceneSnapshot } from "./scene/generated/snapshotTypes";
+import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
 import { PERCENT } from "./units";
 
 // The sliders move in steps of 5%.
 const STEP_PERCENT = 5;
 const WATTS_PER_KILOWATT = 1000;
 
-/** What a kind of equipment does at full power, as its readout says it: the
- * rated property, the factor to the unit shown, and that unit. */
-const RATINGS: Partial<Record<SceneEntityKind, { property: string; scale: number; unit: string }>> =
-  {
-    FAN: { property: "flow_m3_s", scale: 1, unit: "m³/s" },
-    HEATER: { property: "power_w", scale: 1 / WATTS_PER_KILOWATT, unit: "kW" },
-    DEHUMIDIFIER: { property: "removal_kg_h", scale: 1, unit: "kg/h" },
-  };
+/** What a piece of equipment does at full power, by what it is for, as its
+ * readout says it: the rating the scene gives it (P14.5), the factor to the
+ * unit shown, and that unit. */
+const RATINGS: Readonly<Record<string, { property: string; scale: number; unit: string }>> = {
+  moves_air: { property: "moves_air_m3_s", scale: 1, unit: "m³/s" },
+  heats: { property: "heats_w", scale: 1 / WATTS_PER_KILOWATT, unit: "kW" },
+  dries: { property: "dries_kg_h", scale: 1, unit: "kg/h" },
+};
 
 interface EquipmentState {
   actuatorId: string;
@@ -29,8 +29,9 @@ interface EquipmentState {
 /** The climate equipment a scene holds, with the level each runs at. */
 export function equipmentIn(snapshot: SceneSnapshot): EquipmentState[] {
   return snapshot.entities.flatMap((entity) => {
-    const rating = RATINGS[entity.kind];
-    const { actuator_id, level } = entity.properties;
+    const { actuator_id, level, does } = entity.properties;
+    const rating =
+      entity.kind === "EQUIPMENT" && typeof does === "string" ? RATINGS[does] : undefined;
     const rated = rating === undefined ? undefined : entity.properties[rating.property];
     if (
       rating === undefined ||

@@ -24,14 +24,14 @@ function placed(matrices: Float32Array, index: number, point: Vector3): Vector3 
 describe("instancing shapes", () => {
   it("leaves a fan, a cylinder, to be drawn on its own, with its arrow", () => {
     const fan = present(
-      EXAMPLE.entities.find((entity) => entity.kind === "FAN"),
+      EXAMPLE.entities.find((entity) => entity.properties.does === "moves_air"),
       "the example's fan",
     );
     const batches = shapeBatches(EXAMPLE.entities).map(({ batch }) => batch);
 
     expect(fan.shape.shape).toBe("cylinder");
     expect(isInstanced(fan)).toBe(false);
-    expect(batches.some((batch) => batch.startsWith("FAN"))).toBe(false);
+    expect(batches.some((batch) => batch.startsWith("EQUIPMENT"))).toBe(false);
     expect(isInstanced(PLANT)).toBe(true);
   });
 

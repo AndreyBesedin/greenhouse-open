@@ -42,26 +42,23 @@ the parts to write. The dehumidifier was added in this order (commits
    (`greenhouse_sim/greenhouse_sim/scenarios/manifests/climate_box.json`).
    Its identifier holds only letters, digits, `_`, `.` and `-`, because the
    API's parameters carry it.
-5. **The scene.** In `greenhouse_sim/greenhouse_sim/scene/snapshot.py`,
-   add a `SceneEntityKind` member and entries in `EQUIPMENT_COLORS` and
-   `_EQUIPMENT_KINDS`. Then raise `SCHEMA_VERSION` by one, with a comment
-   that says what changed.
-6. **The viewer**, in `greenhouse_sim/web/src/`:
-   - `greenhouse_sim/web/src/scene/schemaVersion.ts`: the same version, in
-     `SUPPORTED_SCHEMA_VERSION`, since a scene of any other version is
-     refused;
-   - `greenhouse_sim/web/src/scene/renderers.tsx`: its renderer in
-     `RENDERERS`, without which the viewer does not compile;
-   - `greenhouse_sim/web/src/scene/instancing.ts`: `DRAWN_ALONE`, if its
-     renderer is its own;
-   - `greenhouse_sim/web/src/debug/categories.ts`: `EQUIPMENT_CATEGORIES`,
-     its colour (the snapshot's) and its label;
-   - `greenhouse_sim/web/src/SeenInTheView.tsx`: `EQUIPMENT_KINDS`;
-   - `greenhouse_sim/web/src/EquipmentControls.tsx`: its rating in
-     `RATINGS`. A device missing from it is quietly left out of the panel;
-   - `greenhouse_sim/web/src/scene/moves.ts`: `MOVABLE`, so that it can be
-     moved.
-7. **Say so** in `CHANGELOG.md`'s Unreleased section and in
+5. **The scene and the viewer** need nothing for a device made of the
+   capabilities there are (P14.5). The scene draws every device as one kind
+   of entity, `EQUIPMENT`, by its shape, grey while off and in the colour
+   of what it is for while it runs, with its kind (`device_kind`), what it
+   is for (`does`) and each capability's rating under the capability's
+   name (`heats_w`, `moves_air_m3_s`, `dries_kg_h`, `gives_off_heat_w`)
+   among its properties (`greenhouse_sim/greenhouse_sim/scene/snapshot.py`).
+   The viewer draws it by its shape, puts it in the category of what it
+   does, names it by its kind, lists it in the Equipment panel by its
+   rating and moves it, whatever its kind. A new capability is added to
+   the scene's `EQUIPMENT_COLORS` and, in `greenhouse_sim/web/src/`, to
+   `debug/categories.ts` (`EQUIPMENT_CATEGORIES`, `DOES`, its colour and
+   label) and `EquipmentControls.tsx` (its rating, in `RATINGS`); a change
+   to the scene's types raises `SCHEMA_VERSION`, with a comment that says
+   what changed, and `scene/schemaVersion.ts`'s `SUPPORTED_SCHEMA_VERSION`
+   with it.
+6. **Say so** in the pull request's `## Changelog` section and in
    `greenhouse_sim/web/README.md`.
 
 ## Generated files
