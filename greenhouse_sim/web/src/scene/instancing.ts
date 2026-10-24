@@ -32,9 +32,9 @@ export const UNIT_SHAPES: Record<InstancedShapeName, InstancedShape> = {
   ellipsoid: { shape: "ellipsoid", size_x: 1, size_y: 1, size_z: 1 },
 };
 
-/** Kinds drawn on their own whatever their shape: a fan, with the arrow its
- * renderer adds along its axis. */
-const DRAWN_ALONE: ReadonlySet<SceneEntityKind> = new Set<SceneEntityKind>(["FAN"]);
+/** Kinds drawn on their own whatever their shape: equipment, a fan with the
+ * arrow its renderer adds along its axis. */
+const DRAWN_ALONE: ReadonlySet<SceneEntityKind> = new Set<SceneEntityKind>(["EQUIPMENT"]);
 
 export function isInstanced(entity: SceneEntity): boolean {
   return INSTANCED.has(entity.shape.shape) && !DRAWN_ALONE.has(entity.kind);

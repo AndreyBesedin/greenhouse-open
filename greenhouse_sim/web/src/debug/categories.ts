@@ -1,6 +1,11 @@
 import { SRGBColorSpace, Color as ThreeColor } from "three";
 
-import type { Color, SceneEntityKind, SceneSnapshot } from "../scene/generated/snapshotTypes";
+import type {
+  Color,
+  SceneEntity,
+  SceneEntityKind,
+  SceneSnapshot,
+} from "../scene/generated/snapshotTypes";
 
 /** The parts of a greenhouse's envelope, by kind: each is a semantic category
  * of its boundary or structure. */
@@ -32,13 +37,18 @@ export const LAYOUT_CATEGORIES = [
 ] as const satisfies readonly SceneEntityKind[];
 export type LayoutCategory = (typeof LAYOUT_CATEGORIES)[number];
 
-/** The greenhouse's climate equipment, by kind. */
-export const EQUIPMENT_CATEGORIES = [
-  "FAN",
-  "HEATER",
-  "DEHUMIDIFIER",
-] as const satisfies readonly SceneEntityKind[];
+/** The greenhouse's climate equipment, by what each piece is for (P14.5):
+ * moving air, heating or drying it. A piece of any kind, one the viewer was
+ * not built with too, takes the category of what it does, as the scene says
+ * it (`properties.does`). */
+export const EQUIPMENT_CATEGORIES = ["MOVES_AIR", "HEATS", "DRIES"] as const;
 export type EquipmentCategory = (typeof EQUIPMENT_CATEGORIES)[number];
+// What a piece does, as the scene names it, by its category.
+const DOES: Readonly<Record<string, EquipmentCategory>> = {
+  moves_air: "MOVES_AIR",
+  heats: "HEATS",
+  dries: "DRIES",
+};
 
 /** The greenhouse's sensors: point sensors of every kind, and cameras. */
 export const SENSOR_CATEGORIES = ["SENSOR", "CAMERA"] as const satisfies readonly SceneEntityKind[];
@@ -69,9 +79,9 @@ export const CATEGORY_COLORS: Record<Category, string> = {
   PIPE: "#aa4499",
   WIRE: "#000000",
   OBSTACLE: "#dddddd",
-  FAN: "#4477aa",
-  HEATER: "#ee6677",
-  DEHUMIDIFIER: "#66ccee",
+  MOVES_AIR: "#4477aa",
+  HEATS: "#ee6677",
+  DRIES: "#66ccee",
   SENSOR: "#ccbb44",
   CAMERA: "#aa3377",
 };
@@ -95,9 +105,9 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   PIPE: "pipe",
   WIRE: "wire",
   OBSTACLE: "obstacle",
-  FAN: "fan",
-  HEATER: "heater",
-  DEHUMIDIFIER: "dehumidifier",
+  MOVES_AIR: "moving air",
+  HEATS: "heating",
+  DRIES: "drying",
   SENSOR: "sensor",
   CAMERA: "camera",
 };
@@ -109,8 +119,27 @@ const CATEGORIES: readonly Category[] = [
   ...SENSOR_CATEGORIES,
 ];
 
-function isCategory(kind: SceneEntityKind): kind is Category {
-  return (CATEGORIES as readonly SceneEntityKind[]).includes(kind);
+// The categories an entity takes by its kind alone.
+const KIND_CATEGORIES: readonly SceneEntityKind[] = [
+  ...ENVELOPE_CATEGORIES,
+  ...LAYOUT_CATEGORIES,
+  ...SENSOR_CATEGORIES,
+];
+
+function isKindCategory(
+  kind: SceneEntityKind,
+): kind is EnvelopeCategory | LayoutCategory | SensorCategory {
+  return KIND_CATEGORIES.includes(kind);
+}
+
+/** An entity's category: a piece of equipment's by what it does, any other's
+ * by its kind; null for one that has none, such as a plant. */
+export function categoryOf(entity: SceneEntity): Category | null {
+  if (entity.kind === "EQUIPMENT") {
+    const does = entity.properties.does;
+    return typeof does === "string" ? (DOES[does] ?? null) : null;
+  }
+  return isKindCategory(entity.kind) ? entity.kind : null;
 }
 
 export function isEnvelopeCategory(category: Category): category is EnvelopeCategory {
@@ -125,28 +154,37 @@ export function isSensorCategory(category: Category): category is SensorCategory
   return (SENSOR_CATEGORIES as readonly Category[]).includes(category);
 }
 
-/** The colour a kind takes in the categories' debug view, or null for a kind
+/** The colour an entity takes in the categories' debug view, or null for one
  * that is not part of the envelope, layout, equipment or sensors, such as a
  * plant, which keeps its own. */
-export function categoryColor(kind: SceneEntityKind): Color | null {
-  if (!isCategory(kind)) {
+export function categoryColor(entity: SceneEntity): Color | null {
+  const category = categoryOf(entity);
+  if (category === null) {
     return null;
   }
-  const { r, g, b } = new ThreeColor(CATEGORY_COLORS[kind]).getRGB(
+  const { r, g, b } = new ThreeColor(CATEGORY_COLORS[category]).getRGB(
     new ThreeColor(),
     SRGBColorSpace,
   );
   return { r, g, b };
 }
 
-/** What an entity of a kind is, in words: its category's name, or its kind's. */
-export function semanticType(kind: SceneEntityKind): string {
-  return isCategory(kind) ? CATEGORY_LABELS[kind] : kind.toLowerCase().replaceAll("_", " ");
+/** What an entity is, in words: a piece of equipment's kind, as the scene
+ * names it; another's category's name, or its kind's. */
+export function semanticType(entity: SceneEntity): string {
+  const deviceKind = entity.properties.device_kind;
+  if (entity.kind === "EQUIPMENT" && typeof deviceKind === "string") {
+    return deviceKind.replaceAll("_", " ");
+  }
+  const category = categoryOf(entity);
+  return category === null
+    ? entity.kind.toLowerCase().replaceAll("_", " ")
+    : CATEGORY_LABELS[category];
 }
 
 /** The categories a scene holds, in the legends' order: the envelope's, the
  * layout's, the equipment's, then the sensors'. */
 export function categoriesIn(snapshot: SceneSnapshot): Category[] {
-  const kinds = new Set(snapshot.entities.map((entity) => entity.kind));
-  return CATEGORIES.filter((category) => kinds.has(category));
+  const held = new Set(snapshot.entities.map(categoryOf));
+  return CATEGORIES.filter((category) => held.has(category));
 }

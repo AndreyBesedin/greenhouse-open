@@ -17,6 +17,7 @@ import {
   windOverlays,
 } from "../weather/weather";
 import type { Point3 } from "../world";
+import { categoriesIn, isEquipmentCategory } from "./categories";
 import { sceneDimensionOverlays } from "./dimensions";
 import {
   type OverlayToggles,
@@ -110,7 +111,13 @@ export function useSceneOverlays({
     [drawnSelected, toggles, snapshot, showDimensions, showingNames, lightOn, scenePrimitives],
   );
   const kindsShown = useMemo(
-    () => (snapshot === null ? null : new Set(snapshot.entities.map((entity) => entity.kind))),
+    () =>
+      snapshot === null
+        ? null
+        : new Set([
+            ...snapshot.entities.map((entity) => entity.kind),
+            ...categoriesIn(snapshot).filter(isEquipmentCategory),
+          ]),
     [snapshot],
   );
   const axesLengthM = useMemo(() => worldAxesLength(snapshot), [snapshot]);

@@ -1,11 +1,12 @@
 """Climate equipment in the scene (P05.1): each piece drawn where it stands,
-grey while it is off and in its kind's colour while it runs, with its level
-and rated capacity; and a client setting its levels with `?set=`."""
+as one kind of entity known by what it does (P14.5), grey while it is off
+and in the colour of what it is for while it runs, with its level, its
+kind, its capabilities' ratings and its rated capacity; and a client
+setting its levels with `?set=`."""
 
 import pytest
 
 from greenhouse_sim.api.routes import respond
-from greenhouse_sim.domain.equipment import ActuatorKind
 from greenhouse_sim.scene.snapshot import (
     EQUIPMENT_COLORS,
     EQUIPMENT_OFF_COLOR,
@@ -16,8 +17,6 @@ from greenhouse_sim.scene.snapshot import (
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Box, Cylinder
 
-EQUIPMENT_KINDS = {SceneEntityKind.FAN, SceneEntityKind.HEATER, SceneEntityKind.DEHUMIDIFIER}
-
 
 def _scene(simulator: Simulator, scenario_id: str, query: str = "") -> SceneSnapshot:
     response = respond(simulator, "GET", f"/api/scenarios/{scenario_id}/scene{query}")
@@ -26,7 +25,7 @@ def _scene(simulator: Simulator, scenario_id: str, query: str = "") -> SceneSnap
 
 
 def _equipment(scene: SceneSnapshot) -> dict[str, SceneEntity]:
-    return {e.entity_id: e for e in scene.entities if e.kind in EQUIPMENT_KINDS}
+    return {e.entity_id: e for e in scene.entities if e.kind == SceneEntityKind.EQUIPMENT}
 
 
 def test_the_climate_box_draws_its_equipment_off_with_its_rated_capacity(
@@ -37,22 +36,36 @@ def test_the_climate_box_draws_its_equipment_off_with_its_rated_capacity(
     heater = equipment["climate_box_heater"]
     dehumidifier = equipment["climate_box_dehumidifier"]
 
-    assert [e.kind for e in equipment.values()] == [
-        SceneEntityKind.FAN,
-        SceneEntityKind.HEATER,
-        SceneEntityKind.DEHUMIDIFIER,
+    assert [e.properties["device_kind"] for e in equipment.values()] == [
+        "fan",
+        "heater",
+        "dehumidifier",
     ]
     assert {e.color for e in equipment.values()} == {EQUIPMENT_OFF_COLOR}
     assert fan.properties == {
         "actuator_id": "fan",
         "level": 0.0,
+        "device_kind": "fan",
+        "does": "moves_air",
+        "moves_air_m3_s": 1.0,
         "diameter_m": 0.5,
         "flow_m3_s": 1.0,
     }
-    assert heater.properties == {"actuator_id": "heater", "level": 0.0, "power_w": 10_000.0}
+    assert heater.properties == {
+        "actuator_id": "heater",
+        "level": 0.0,
+        "device_kind": "heater",
+        "does": "heats",
+        "heats_w": 10_000.0,
+        "power_w": 10_000.0,
+    }
     assert dehumidifier.properties == {
         "actuator_id": "dehumidifier",
         "level": 0.0,
+        "device_kind": "dehumidifier",
+        "does": "dries",
+        "dries_kg_h": 1.0,
+        "gives_off_heat_w": 1_200.0,
         "removal_kg_h": 1.0,
         "heat_w": 1_200.0,
     }
@@ -72,7 +85,7 @@ def test_a_piece_is_drawn_as_its_shape_where_it_stands(simulator: Simulator) -> 
     assert (heater.transform.position.x, heater.transform.position.y) == (11.2, 0.7)
 
 
-def test_a_client_sets_levels_and_running_equipment_shows_its_kinds_colour(
+def test_a_client_sets_levels_and_running_equipment_shows_the_colour_of_what_it_is_for(
     simulator: Simulator,
 ) -> None:
     equipment = _equipment(_scene(simulator, "climate_box", "?set=fan:1,heater:0.5"))
@@ -80,11 +93,8 @@ def test_a_client_sets_levels_and_running_equipment_shows_its_kinds_colour(
     heater = equipment["climate_box_heater"]
     dehumidifier = equipment["climate_box_dehumidifier"]
 
-    assert (fan.properties["level"], fan.color) == (1.0, EQUIPMENT_COLORS[ActuatorKind.FAN])
-    assert (heater.properties["level"], heater.color) == (
-        0.5,
-        EQUIPMENT_COLORS[ActuatorKind.HEATER],
-    )
+    assert (fan.properties["level"], fan.color) == (1.0, EQUIPMENT_COLORS["moves_air"])
+    assert (heater.properties["level"], heater.color) == (0.5, EQUIPMENT_COLORS["heats"])
     assert (dehumidifier.properties["level"], dehumidifier.color) == (0.0, EQUIPMENT_OFF_COLOR)
 
 

@@ -1,5 +1,5 @@
 {
-  "schema_version": 15,
+  "schema_version": 16,
   "greenhouse_id": "solar_lab",
   "simulated_day": 0,
   "entities": [
@@ -1600,7 +1600,7 @@
     },
     {
       "entity_id": "solar_lab_heater",
-      "kind": "HEATER",
+      "kind": "EQUIPMENT",
       "transform": {
         "position": {
           "x": 11.2,
@@ -1630,6 +1630,9 @@
       "properties": {
         "actuator_id": "heater",
         "level": 0.0,
+        "device_kind": "heater",
+        "does": "heats",
+        "heats_w": 10000.0,
         "power_w": 10000.0
       }
     },

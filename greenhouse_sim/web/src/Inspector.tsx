@@ -88,7 +88,7 @@ export function Inspector({
         <dt>Kind</dt>
         <dd>{entity.kind}</dd>
         <dt>Type</dt>
-        <dd data-testid="selected-type">{semanticType(entity.kind)}</dd>
+        <dd data-testid="selected-type">{semanticType(entity)}</dd>
         {entity.label !== null && (
           <>
             <dt>Label</dt>

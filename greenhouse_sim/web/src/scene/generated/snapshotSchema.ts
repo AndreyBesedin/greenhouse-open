@@ -368,9 +368,7 @@ export const SNAPSHOT_SCHEMA = {
         "PIPE",
         "WIRE",
         "OBSTACLE",
-        "FAN",
-        "HEATER",
-        "DEHUMIDIFIER",
+        "EQUIPMENT",
         "SENSOR",
         "CAMERA",
         "PLANT",
@@ -480,7 +478,7 @@ export const SNAPSHOT_SCHEMA = {
   "description": "One greenhouse at one simulated day, as a viewer draws it. Positions\nand sizes are in metres, in right-handed world axes with z up.",
   "properties": {
     "schema_version": {
-      "default": 15,
+      "default": 16,
       "title": "Schema Version",
       "type": "integer"
     },
