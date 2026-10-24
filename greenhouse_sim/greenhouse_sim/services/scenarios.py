@@ -17,10 +17,7 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict, JsonValue, ValidationError
 
-from greenhouse_sim.biology.tomato.organ.transplants import transplant
 from greenhouse_sim.climate.commands import DailyCommand
-from greenhouse_sim.core.engine import SimulationEngine
-from greenhouse_sim.domain.crop import CropModel
 
 # `Scenarios` is the services' too: the consumer's service names it from here.
 from greenhouse_sim.scenarios.catalogue import CatalogueEntry
@@ -33,8 +30,8 @@ from greenhouse_sim.scenarios.layout_files import (
 )
 from greenhouse_sim.scenarios.manifest_files import SCHEMA_VERSION as MANIFEST_FORMAT
 from greenhouse_sim.scenarios.registry import ModelRun, models_run
-from greenhouse_sim.scene.plants import crop_entities
-from greenhouse_sim.scene.snapshot import SceneSnapshot, greenhouse_scene, scene_snapshot
+from greenhouse_sim.scene.snapshot import SceneSnapshot, greenhouse_scene
+from greenhouse_sim.services.crop_models import registration
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.units import FULL_TURN_DEG
 from greenhouse_sim.weather.presets import PRESETS
@@ -222,25 +219,18 @@ def initial_scene(
     catalogue: Scenarios, scenario_id: str, changes: SceneChanges | None = None
 ) -> SceneSnapshot:
     """A scenario's full crop before its first day, as a viewer draws it,
-    with the changes a client asks for: its transplants organ by organ,
-    where it grows its crop so, or else the simple model's plants."""
+    with the changes a client asks for: its transplants, drawn as the model
+    its rows grow draws them (`greenhouse_sim.services.crop_models`)."""
     changes = changes or SceneChanges()
     config = changed(catalogue, scenario(catalogue, scenario_id), changes)
     levels = equipment_levels(config, changes.levels)
-    if config.crop_model == CropModel.ORGAN:
-        house = greenhouse_scene(
-            config.greenhouse_id, config.envelope, layout=config.layout, levels=levels
-        )
-        crop = crop_entities(
-            [transplant(plant_id, config.random_seed) for plant_id in plant_ids(config)],
-            config.layout.trainings(),
-            config.envelope,
-        )
-        return house.model_copy(update={"entities": [*house.entities, *crop]})
-    world = SimulationEngine(config).initialize(
-        plant_ids(config), greenhouse_id=config.greenhouse_id
+    house = greenhouse_scene(
+        config.greenhouse_id, config.envelope, layout=config.layout, levels=levels
     )
-    return scene_snapshot(world, config, levels)
+    grown_by = registration(config)
+    rung = grown_by.rung(config)
+    crop = grown_by.drawn([rung.transplant(plant_id) for plant_id in plant_ids(config)], config)
+    return house.model_copy(update={"entities": [*house.entities, *crop]})
 
 
 def layout(

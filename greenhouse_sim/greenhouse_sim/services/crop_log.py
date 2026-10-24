@@ -41,19 +41,13 @@ from greenhouse_protocol.outcome import (
 )
 from greenhouse_protocol.provenance import RecordSource
 
-from greenhouse_sim.biology.plant.organs import Fruit
-from greenhouse_sim.biology.tomato.organ.fruit import is_red
-from greenhouse_sim.biology.tomato.organ.geometry import top_height_m
-from greenhouse_sim.biology.tomato.organ.topology import HarvestFruit, Plant
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.core.crop_actions import CropAction
 from greenhouse_sim.core.rng import seeded_rng
-from greenhouse_sim.core.simple_crop import SimplePlant
-from greenhouse_sim.domain.crop import FruitStatus
-from greenhouse_sim.domain.organs import FruitStage
 from greenhouse_sim.records import event_id, observation_id
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.services.crop import is_organ, run_crop, scenario_crop
+from greenhouse_sim.services.crop import run_crop, scenario_crop
+from greenhouse_sim.services.crop_models import Measured, registration
 from greenhouse_sim.services.gateway import Carried
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import scenario
@@ -85,36 +79,21 @@ def crop_records(
     `day`, which starts `day` days after `start`, each named by `run_id`."""
     config = scenario(simulator.catalogue, run.scenario_id)
     crop = scenario_crop(simulator, run)
+    grown_by = registration(config)
     day_start = start + timedelta(seconds=day * DAY_S)
-    events: list[Event]
-    measured: list[Measured]
-    if is_organ(crop):
-        plants = crop.plants_on(day)
-        before = crop.plants_on(day - 1) if day > 0 else plants
-        # The day's crop work ends where the run's own crop actions begin.
-        work = crop.worked_on(day)
-        ends = {} if work is None else work.work_ends
-        events = [
-            harvest
-            for plant, earlier in zip(plants, before, strict=True)
-            if (
-                harvest := _harvest(
-                    plant, earlier, day_start, config.greenhouse_id, ends.get(plant.plant_id)
-                )
+    plants = crop.plants_on(day)
+    before = crop.plants_on(day - 1) if day > 0 else plants
+    # The day's crop work ends where the run's own crop actions begin.
+    work = crop.worked_on(day)
+    ends = {} if work is None else work.work_ends
+    events = []
+    for plant, earlier in zip(plants, before, strict=True):
+        count, mass_g = grown_by.picked(plant, earlier, ends.get(plant.plant_id))
+        if count:
+            events.append(
+                _harvested(plant.plant_id, day_start, config.greenhouse_id, mass_g, count)
             )
-            is not None
-        ]
-        measured = [_organ_measured(plant) for plant in plants]
-    else:
-        grown = crop.plants_on(day)
-        earlier_on = crop.plants_on(day - 1) if day > 0 else grown
-        events = [
-            harvest
-            for plant, earlier in zip(grown, earlier_on, strict=True)
-            if (harvest := _simple_harvest(plant, earlier, day_start, config.greenhouse_id))
-            is not None
-        ]
-        measured = [_simple_measured(plant) for plant in grown]
+    measured = [grown_by.measured(plant) for plant in plants]
     walked = day_start + timedelta(seconds=WALK_S)
     source = RecordSource(type=SourceType.SIMULATION, source_id=run_id)
     observations = [
@@ -199,45 +178,6 @@ def _parameters(effect: ActionEffect, action: CropAction | Inspect) -> dict[str,
             return {}
 
 
-def _harvest(
-    plant: Plant, earlier: Plant, at: datetime, greenhouse_id: str, until: int | None = None
-) -> Event | None:
-    """What the day's harvest round picked from a plant, as one event: the
-    fruits picked since the day before and their fresh mass, by the crop
-    work alone, which ends where its history is `until` long, if given."""
-    picked = [
-        event
-        for event in plant.history[len(earlier.history) : until]
-        if event.applied and isinstance(event.action, HarvestFruit)
-    ]
-    if not picked:
-        return None
-    return _harvested(
-        plant.plant_id, at, greenhouse_id, sum(event.harvested_g for event in picked), len(picked)
-    )
-
-
-def _simple_harvest(
-    plant: SimplePlant, earlier: SimplePlant, at: datetime, greenhouse_id: str
-) -> Event | None:
-    """What the day's harvest round picked from a plant of the simple crop,
-    as one event: its fruits harvested since the day before, and the mass
-    they added to its harvest."""
-    picked = _harvested_fruits(plant) - _harvested_fruits(earlier)
-    if not picked:
-        return None
-    mass_g = plant.plant.cumulative_harvest_g - earlier.plant.cumulative_harvest_g
-    return _harvested(plant.plant_id, at, greenhouse_id, mass_g, picked)
-
-
-def _harvested_fruits(plant: SimplePlant) -> int:
-    return sum(
-        fruit.status == FruitStatus.HARVESTED
-        for truss in plant.plant.trusses
-        for fruit in truss.fruits
-    )
-
-
 def _harvested(plant_id: str, at: datetime, greenhouse_id: str, mass_g: float, count: int) -> Event:
     return Event(
         event_id=event_id(plant_id, at, "harvest"),
@@ -250,62 +190,6 @@ def _harvested(plant_id: str, at: datetime, greenhouse_id: str, mass_g: float, c
         # (`actions.effects`).
         parameters={"harvested_mass_g": round(mass_g, 1), "harvested_fruit_count": count},
     )
-
-
-@dataclass(frozen=True)
-class Measured:
-    """A plant as a walk would find it, without the walk's errors: how many
-    fruits it bears, how many of them are ripe and their mass, and how high
-    it stands, in cm."""
-
-    plant_id: str
-    fruits: int
-    ripe: int
-    ripe_mass_g: float
-    height_cm: float
-
-
-def _organ_measured(plant: Plant) -> Measured:
-    """A plant of the organ crop: the fruits attached, the red ones, and how
-    high its top stands."""
-    fruits = _fruits(plant)
-    red = [fruit for fruit in fruits if is_red(fruit.ripeness)]
-    return Measured(
-        plant_id=plant.plant_id,
-        fruits=len(fruits),
-        ripe=len(red),
-        ripe_mass_g=sum(fruit.mass_g for fruit in red),
-        height_cm=top_height_m(plant) * CM_PER_M,
-    )
-
-
-def _simple_measured(plant: SimplePlant) -> Measured:
-    """A plant of the simple crop, as the engine's sensors measure it: the
-    fruits not harvested, the ripe ones, and how tall its stem stands."""
-    fruits = [
-        fruit
-        for truss in plant.plant.trusses
-        for fruit in truss.fruits
-        if fruit.status != FruitStatus.HARVESTED
-    ]
-    ripe = [fruit for fruit in fruits if fruit.status == FruitStatus.RIPE]
-    return Measured(
-        plant_id=plant.plant_id,
-        fruits=len(fruits),
-        ripe=len(ripe),
-        ripe_mass_g=sum(fruit.mass_g for fruit in ripe),
-        height_cm=plant.standing_cm(),
-    )
-
-
-def _fruits(plant: Plant) -> list[Fruit]:
-    return [
-        flower.fruit
-        for phytomer in plant.stem.phytomers
-        if phytomer.truss is not None
-        for flower in phytomer.truss.flowers
-        if flower.fruit is not None and flower.fruit.stage == FruitStage.ATTACHED
-    ]
 
 
 def _walk(

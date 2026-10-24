@@ -53,15 +53,10 @@ from pydantic import (
     model_validator,
 )
 
-from greenhouse_sim.biology.plant.environment import LocalEnvironment
-from greenhouse_sim.biology.tomato.organ.development import daily_thermal_time
-from greenhouse_sim.biology.tomato.organ.topology import Plant
-from greenhouse_sim.biology.tomato.organ.transplants import DEVELOPMENT, TRANSPLANT_CD
 from greenhouse_sim.climate.day import window_start
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.climate.psychrometrics import saturation_ratio_g_kg
 from greenhouse_sim.core.clock import DAY_S, days_ended
-from greenhouse_sim.core.simple_crop import SimplePlant
 from greenhouse_sim.digests import short_digest
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.parts import Part
@@ -69,7 +64,14 @@ from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.scenarios.manifest_files import opening_file
 from greenhouse_sim.scenarios.registry import ModelRun, models_run
 from greenhouse_sim.services.climate_runs import climate_run, run_schedule, seed_kept_climate_runs
-from greenhouse_sim.services.crop import is_organ, scenario_crop, seed_kept_crops
+from greenhouse_sim.services.crop import scenario_crop, seed_kept_crops
+from greenhouse_sim.services.crop_models import (
+    CROP_MODELS,
+    CropModelState,
+    CropState,
+    SimpleCropState,
+    registration,
+)
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError, first_reason
 from greenhouse_sim.services.kept_states import KeptState, keep
 from greenhouse_sim.services.runs import (
@@ -118,34 +120,6 @@ ID_LENGTH: Final = 16
 COLDEST_AIR_C: Final = -60.0
 WARMEST_AIR_C: Final = 80.0
 MOST_CO2_PPM: Final = 20_000.0
-# How far a plant's thermal time may be from the sum of the days it lived,
-# relative to it: what adding them up in another order gives.
-THERMAL_TIME_TOLERANCE: Final = 1e-9
-
-
-class CropState(BaseModel):
-    """The organ crop's state at a checkpoint's day: its plants, and what
-    each experienced on each day before, by plant."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    plants: list[Plant] = []
-    lived: list[dict[str, LocalEnvironment]] = []
-
-
-class SimpleCropState(BaseModel):
-    """The simple crop's state at a checkpoint's day: its plants, with the
-    values the model keeps for each, and what each experienced on each day
-    before, by plant."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    plants: list[SimplePlant] = []
-    lived: list[dict[str, LocalEnvironment]] = []
-
-
-# Each crop model's state, by its name.
-CROP_STATES: Final = {CropModel.ORGAN.value: CropState, CropModel.SIMPLE.value: SimpleCropState}
 
 
 class ModelState(BaseModel):
@@ -202,10 +176,10 @@ class Checkpoint(BaseModel):
         crop = models.get(Part.CROP.value)
         if not isinstance(crop, dict) or not isinstance(crop.get("state"), dict):
             return given
-        kept = CROP_STATES.get(str(crop.get("model")))
+        kept = CROP_MODELS.get(str(crop.get("model")))
         if kept is None:
             return given
-        state = kept.model_validate(crop["state"])
+        state = kept.state.model_validate(crop["state"])
         return given | {"models": models | {Part.CROP.value: crop | {"state": state}}}
 
     @property
@@ -280,11 +254,9 @@ def save_checkpoint(
     moment = day * DAY_S
     _, climate = climate_run(simulator, run)
     crop = scenario_crop(simulator, run)
-    state: CropState | SimpleCropState
-    if is_organ(crop):
-        state = CropState(plants=list(crop.plants_on(day)), lived=crop.lived_through(day))
-    else:
-        state = SimpleCropState(plants=list(crop.plants_on(day)), lived=crop.lived_through(day))
+    state: CropModelState = registration(config).state(
+        plants=list(crop.plants_on(day)), lived=crop.lived_through(day)
+    )
     before = window_start(moment)
     checkpoint = Checkpoint(
         scenario_id=scenario_id,
@@ -433,8 +405,8 @@ def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
 
 def _implausible(checkpoint: Checkpoint) -> list[str]:
     """What, in a checkpoint that fits its run's shape, no run could have
-    reached: air out of bounds, a plant that breaks the structure's rules,
-    or one whose thermal time is not what the days it lived add up to."""
+    reached: air out of bounds, what a plant lived not finite, or a crop
+    its model does not reach (`CropRegistration.implausible`)."""
     problems = [
         f"its house's air {when}: {problem}"
         for when, air in (("on its day", checkpoint.house), ("before it", checkpoint.house_before))
@@ -447,25 +419,9 @@ def _implausible(checkpoint: Checkpoint) -> list[str]:
                 problems.append(f"what {plant_id} lived on day {day} is not finite")
     if problems:
         return problems
-    crop = checkpoint.crop
-    if isinstance(crop, SimpleCropState):
-        return [
-            f"{plant.plant_id} is {plant.plant.age_days} days old on day {checkpoint.day}"
-            for plant in crop.plants
-            if plant.plant.age_days != checkpoint.day
-        ]
-    for plant in crop.plants:
-        problems += [f"{plant.plant_id}: {problem}" for problem in plant.problems()]
-        added = TRANSPLANT_CD + sum(
-            daily_thermal_time(day[plant.plant_id].mean_temperature_c, DEVELOPMENT)
-            for day in checkpoint.crop.lived
-        )
-        if not math.isclose(plant.thermal_time, added, rel_tol=THERMAL_TIME_TOLERANCE):
-            problems.append(
-                f"{plant.plant_id}'s thermal time is {plant.thermal_time:.6g} °Cd, and the "
-                f"{checkpoint.day} days it lived add up to {added:.6g}"
-            )
-    return problems
+    kept = checkpoint.models.get(Part.CROP)
+    crop = None if kept is None else CROP_MODELS.get(kept.model)
+    return [] if crop is None else crop.implausible(checkpoint.crop, checkpoint.day)
 
 
 def _air_problems(air: HouseAir) -> list[str]:
