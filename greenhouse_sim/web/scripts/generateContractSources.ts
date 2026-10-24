@@ -177,6 +177,13 @@ export const CONTRACTS: readonly Contract[] = [
     ["src/builder", "basic"],
     "BASIC_SETUP_SCHEMA",
   ),
+  // An edit of many items (P12.3), which the builder sends.
+  contract(
+    "greenhouse_sim/builder/edit.schema.json",
+    "Edit",
+    ["src/builder", "edit"],
+    "EDIT_SCHEMA",
+  ),
   contract(
     `${SERVICES}/builder.schema.json`,
     "Assessed",

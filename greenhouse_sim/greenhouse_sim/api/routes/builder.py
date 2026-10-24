@@ -31,6 +31,11 @@ drawn before it is saved, and a scenario's house to copy.
                                           read and assessed as it stands
     POST /api/builder/scene               the house an installation's file,
                                           the body, describes, as a scene
+    POST /api/builder/edit                an edit of many items, the body's
+                                          `edit`, made on an installation's
+                                          file, its `file`, and the
+                                          installation it makes, assessed
+                                          (P12.3)
 
 A change to a draft made on a revision that is no longer its latest is
 refused as a conflict (409), as is a draft's run under a scenario's name
@@ -74,6 +79,8 @@ def post(simulator: Simulator, segments: list[str], query: Query, body: bytes) -
             return answer(lambda: builder.assess(text_body(body)))
         case ["api", "builder", "scene"]:
             return answer(lambda: builder.scene(text_body(body)))
+        case ["api", "builder", "edit"]:
+            return answer(lambda: builder.edit(json_body(body)))
         case ["api", "drafts", draft_id, "save"]:
             return answer(
                 lambda: drafts.save(simulator, draft_id, text_body(body), _revision(query, "on"))

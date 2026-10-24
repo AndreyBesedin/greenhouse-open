@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { entityBounds, type OverlayPrimitive } from "../debug/overlays";
 import { greenhouseExtent, qaGreenhousePose } from "../qa/greenhouseViews";
 import type { ScenarioSummary, ScenariosState } from "../scenarios";
 import { loadScenarios } from "../scenarios";
@@ -6,6 +7,7 @@ import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import { Viewport } from "../Viewport";
 import {
   assess,
+  edit as editItems,
   firstDraft,
   installationFile,
   loadDrafts,
@@ -22,11 +24,18 @@ import { type Assessment, Findings } from "./Findings";
 import type { Installation } from "./generated/assessedTypes";
 import type { BasicSetup } from "./generated/basicTypes";
 import type { DraftListed } from "./generated/draftsTypes";
+import type { Edit } from "./generated/editTypes";
 import { HouseForm } from "./HouseForm";
 import { HouseIdentity } from "./HouseIdentity";
 import { begun, edited, type History, redone, undone } from "./history";
+import { Inspector } from "./Inspector";
+import { Items } from "./Items";
+import { listed as listedItems } from "./palette";
 import { RowCrops } from "./RowCrops";
 import { RunStep } from "./RunStep";
+
+/** What outlines an item an error names, on the house. */
+const FINDING_COLOR = "#e5484d";
 
 /** Where the builder lives: a page of its own beside the viewer. */
 export const BUILDER_PATH = "/builder";
@@ -99,10 +108,19 @@ export function Builder() {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [ran, setRan] = useState<Ran | null>(null);
+  // The items chosen, in the list or the view, by their identifiers.
+  const [chosen, setChosen] = useState<ReadonlySet<string>>(new Set());
   const importer = useRef<HTMLInputElement>(null);
   // Which draft is shown: each start makes it another, so that what was
   // asked for the one before is dropped when it arrives.
   const session = useRef(0);
+  // How many edits the simulator is making of the draft shown: until each
+  // is made, the draft exported would leave it out.
+  const editsUnderWay = useRef(0);
+  // The draft as last drawn, for an answer to check it was asked for this
+  // one as it stands.
+  const shown = useRef<Editing | null>(null);
+  shown.current = editing;
 
   const refreshDrafts = useCallback(async () => {
     const listed = await loadDrafts();
@@ -196,6 +214,7 @@ export function Builder() {
       return;
     }
     setEditing(next);
+    setChosen(new Set());
     setRan(null);
     const id = next.history.present.installation_id;
     const kept = next.saved === null && drafts?.some((draft) => draft.draft_id === id);
@@ -285,6 +304,7 @@ export function Builder() {
     }
     nextSession();
     setEditing(null);
+    setChosen(new Set());
     setRan(null);
     setStatus("");
   }
@@ -309,6 +329,41 @@ export function Builder() {
     }
     edit((installation) => withCrop(installation, rows, crop));
     setStatus(`Rows ${rows.join(", ")} grow ${crop.crop_model} ${crop.variety}.`);
+  }
+
+  /** An edit of many items, made by the simulator on the draft shown, and
+   * kept as one step to undo; dropped if the draft has changed since it
+   * was asked for, so that no edit is lost under another. */
+  async function change(asked: Edit, said: string): Promise<void> {
+    if (editing === null) {
+      return;
+    }
+    const session_ = session.current;
+    const sent = editing.history.present;
+    setBusy(true);
+    editsUnderWay.current += 1;
+    const answer = await editItems(editing.schemaVersion, sent, asked).finally(() => {
+      editsUnderWay.current -= 1;
+    });
+    setBusy(false);
+    if (session.current !== session_) {
+      return;
+    }
+    if (!answer.ok) {
+      setStatus(`Not changed: ${answer.problem}`);
+      return;
+    }
+    if (shown.current?.history.present !== sent) {
+      setStatus("The draft changed while that edit was on its way: make it again.");
+      return;
+    }
+    setEditing((now) =>
+      now === null || now.history.present !== sent
+        ? now
+        : { ...now, history: edited(now.history, answer.value.installation) },
+    );
+    setRan(null);
+    setStatus(said);
   }
 
   function rename(draftId: string, name: string): void {
@@ -353,6 +408,10 @@ export function Builder() {
 
   function exportFile(): void {
     if (editing === null) {
+      return;
+    }
+    if (editsUnderWay.current > 0) {
+      setStatus("Not exported: an edit is still being made. Export once it is.");
       return;
     }
     const present = editing.history.present;
@@ -412,6 +471,30 @@ export function Builder() {
     [extentKey],
   );
 
+  // The items an error names, outlined on the house; the one item chosen,
+  // drawn selected; and an item clicked in the view, chosen alone.
+  const prefix = snapshot === null ? "" : `${snapshot.greenhouse_id}_`;
+  const named = new Set(
+    assessment.status === "assessed"
+      ? assessment.findings.flatMap((found) => (found.severity === "error" ? found.items : []))
+      : [],
+  );
+  const outlined: OverlayPrimitive[] = (snapshot?.entities ?? [])
+    .filter((entity) => named.has(entity.entity_id.slice(prefix.length)))
+    .map((entity) => ({
+      id: `finding-${entity.entity_id}`,
+      kind: "box",
+      bounds: entityBounds(entity),
+      color: FINDING_COLOR,
+    }));
+  const [only] = chosen.size === 1 ? [...chosen] : [];
+  const items =
+    present === null ? new Set<string>() : new Set(listedItems(present).map((item) => item.id));
+  function picked(entityId: string | null): void {
+    const id = entityId?.startsWith(prefix) ? entityId.slice(prefix.length) : null;
+    setChosen(new Set(id !== null && items.has(id) ? [id] : []));
+  }
+
   const changed = unsaved(editing);
   const runWhy =
     editing?.saved == null || madeOn(editing) === null
@@ -458,7 +541,7 @@ export function Builder() {
               <button type="button" disabled={!changed || busy} onClick={() => void save()}>
                 Save
               </button>
-              <button type="button" onClick={exportFile}>
+              <button type="button" disabled={busy} onClick={exportFile}>
                 Export
               </button>
             </div>
@@ -541,8 +624,31 @@ export function Builder() {
               name={editing.history.present.name}
               onRename={rename}
             />
+            <Inspector
+              installation={editing.history.present}
+              chosen={null}
+              busy={busy}
+              onEdit={(asked, said) => void change(asked, said)}
+            />
             <Findings assessment={assessment} />
             <RowCrops installation={editing.history.present} onGive={give} />
+            <Items
+              installation={editing.history.present}
+              snapshot={snapshot}
+              chosen={chosen}
+              busy={busy}
+              onChoose={setChosen}
+              onEdit={(asked, said) => void change(asked, said)}
+            >
+              {only !== undefined && (
+                <Inspector
+                  installation={editing.history.present}
+                  chosen={only}
+                  busy={busy}
+                  onEdit={(asked, said) => void change(asked, said)}
+                />
+              )}
+            </Items>
             <RunStep
               weathers={listed[0]?.weathers ?? []}
               disabled={runWhy !== "" || busy}
@@ -560,7 +666,9 @@ export function Builder() {
             initialPose={pose}
             onSample={ignore}
             onPointer={ignore}
-            onSelect={ignore}
+            selectedId={only === undefined ? null : `${prefix}${only}`}
+            overlays={outlined}
+            onSelect={picked}
           />
         ) : (
           <p className="builder-note">
