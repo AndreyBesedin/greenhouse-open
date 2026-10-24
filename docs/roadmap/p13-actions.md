@@ -597,7 +597,7 @@ within the day; the action format needs no change for it.
 | P13.2 | The run carries out a plan of today's kinds: levels, openings, daily commands and targets become a plan internally; `RunRequest` holds it; the address's spellings are read into it. Every run id, replay digest and kept opening day unchanged. Checkpoints in a new format, format 3 read. | `refactor(sim): the run carries out its schedule as a plan` | Done |
 | P13.3 | The simulator's gateway: the playback holds its run's plan and revisions, schedules them onto the run as its executor, writes the outcome log and serves it on the consumer interface; steering as the gateway's rule; the actions as they stand, cancelling chosen ones, and dropping them when the playback starts over. The gateway contract's conformance tests run against it. | `feat(sim): the playback as its run's gateway` | Done |
 | P13.4 | Authorisation in the gateway: principals on every planned action, bound to the authenticated submitter or granted on its behalf; plan ownership; groups and grants in a versioned configuration, an input of the run, its changes recorded; checked when a plan is given and when each action falls due, refusals as outcomes; the local operator group. | `feat(sim): the gateway authorises every action` | Done |
-| P13.5 | Crop actions on the run: `harvest`, `lower`, `remove_leaf`, `inspect` at a day's start, refused at other instants and `water` refused, with their reasons; the organ model's `PlantAction` renamed `PlantOperation`; the plant lab and crop work give them; events name their actions. | `feat(sim): crop actions and their outcomes on the run` | In progress: the organ crop carries crop actions out (#351) |
+| P13.5 | Crop actions on the run: `harvest`, `lower`, `remove_leaf`, `inspect` at a day's start, refused at other instants and `water` refused, with their reasons; the organ model's `PlantAction` renamed `PlantOperation`; the plant lab and crop work give them; events name their actions. | `feat(sim): crop actions and their outcomes on the run` | Done: the organ crop's operations (#351), the protocol's reasons and events (#353), a run's plan on its crop (#354), and its playback's outcomes (#356) |
 | P13.6 | The graph, windows and lateness, with a simulated executor whose actions take time and which has a number of hands, so that `late`, `missed`, fallbacks and cancelled dependents happen, deterministically. | `feat(sim): plans with order, windows and lateness` | Planned |
 | P13.7 | The gateway's write side and its routes: give a plan before a run, steer a playing one, list the actions as they stand, cancel a plan or chosen actions, read the plan in force; the playback's targets route becomes an alias. | `feat(api): give, steer and read a run's plan` | Planned |
 | P13.8 | The viewer: the Equipment, Openings and Targets panels and the plant lab write one plan; a plan lane in the timeline shows what was due, what happened and why. | `feat(viewer): one plan, and its outcomes in the timeline` | Planned |
@@ -932,10 +932,36 @@ which changes no run, then the run carrying out a plan's crop actions.
   crop before the reference greenhouse's opening day does not start from
   it. A checkpoint keeps the crop actions of its own moment, since the crop
   at a day's start is the crop once that day's work is done.
-- **Next:** the playback's run carries out the crop actions given to its
-  gateway, refusing at once in its own words through the protocol's
-  `ExplainsRefusals`. Each outcome reports its effect once the day is
-  worked out, and names the event the action made.
+- **The playback's run carries out the crop actions given to its gateway**
+  (`services.gateway.RunExecutor`, `Playback.submit`). It explains what it
+  refuses through the protocol's `ExplainsRefusals`, so the gateway refuses
+  at once in the run's words:
+  - `water`: its organ crop has no water in its root zone;
+  - a crop action off a day's start, on its first day or at its end;
+  - one at a day's start the clock has reached, since that day's records
+    are delivered;
+  - every crop action on a scenario that grows its crop with the simple
+    daily model.
+
+  When it is performed, it refuses a plant it has not, and a lowering to a
+  head room on a plant that hangs from no wire.
+- **A crop action is done once its day is worked out.** The run's
+  executor holds it, received, until the playback has worked out its day.
+  Then it is done with the effect the crop gave it, or refused in the
+  organ model's words, such as a leaf the plant has not, as the clock
+  passes its moment. A change of the plan before it has its day worked out
+  again first. An inspection is done as its day is, and changes nothing.
+- **Each crop action done is an event of its own** (`crop_log.crop_actions_done`):
+  a harvest, a lowering, a pruning or an inspection, at its day's start,
+  named by its assignment and naming its action. Its parameters are named
+  as the simulator's other events name them. The action's outcome names the
+  event (`ExecutionReport.event_id`). The day's crop work keeps its
+  harvest events, which count what the harvest round picked alone.
+- **Rearranged,** a playback keeps the local operator's target changes,
+  as decision 0049 has it, and not crop actions, which are given again for
+  the new layout.
+- **Later:** routes that give and steer a plan (P13.7), and crop work
+  within the day (the roadmap's project of its own).
 
 ## Decided
 

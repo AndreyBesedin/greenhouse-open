@@ -184,15 +184,23 @@ class RunPlan(BaseModel):
         return type(self).model_validate(self.model_dump(warnings=False))
 
 
+def crop_model_refusal(config: ScenarioConfig, kind: ActionKind) -> str | None:
+    """Why a run of a scenario takes no action of `kind` on its crop at all,
+    if it takes none: its crop is not grown organ by organ."""
+    if config.crop_model == CropModel.ORGAN:
+        return None
+    return (
+        f"{config.greenhouse_id} grows its crop with the simple daily model, which takes no {kind}"
+    )
+
+
 def crop_moment_refusal(config: ScenarioConfig, kind: ActionKind, at_s: float) -> str | None:
     """Why a run of a scenario does not carry out a crop action of `kind` at
     `at_s` seconds from its start, if it does not: its organ crop steps a
     day at a time, and its work begins with its second day."""
-    if config.crop_model != CropModel.ORGAN:
-        return (
-            f"{config.greenhouse_id} grows its crop with the simple daily model, "
-            f"which takes no {kind}"
-        )
+    unmodelled = crop_model_refusal(config, kind)
+    if unmodelled is not None:
+        return unmodelled
     if at_s % DAY_S != 0:
         return (
             f"the run's crop steps a day at a time: it carries out {kind} at a day's start, "

@@ -11,11 +11,17 @@ can be revoked, and leaves the plan. What the run cannot carry out, it
 refuses when the action falls due, in its own words.
 
 The run carries out a device's level, a door's or a vent's included, at any
-moment of it, and a heating target on the minute, if it has a heating loop;
-crop actions wait for P13.5. It works every day out ahead of the clock, so
-its lead time is the whole run: every action is in its plan as soon as the
-gateway has it. At one moment, what recurs comes before what does not, and
-then each in the order the gateway gave it.
+moment of it, and a heating target on the minute, if it has a heating loop.
+On an organ crop it carries out a harvest, a lowering, a leaf removed and
+an inspection at the start of a day after its first (P13.5), given before
+the clock reaches it. It says why it does not carry out the rest, in its
+own words (`why_not`), which the gateway gives with its refusal: watering,
+for one, since its organ crop has no water in its root zone. It works every
+day out ahead of the clock, so its lead time is the whole run: every action
+is in its plan as soon as the gateway has it. At one moment, what recurs
+comes before what does not, and then each in the order the gateway gave
+it. A crop action is done once its day is worked out, with what it did and
+the event it made (`carried_out`), as the clock passes its moment.
 
 Who may do what is the simulator's authorisation (decision 0052): a
 configuration the server is given as a file (`authorisation_file`), or else
@@ -28,7 +34,7 @@ plan is given and again when it falls due, and records each change of the
 configuration with its moment.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -42,14 +48,23 @@ from greenhouse_protocol.authorisation import AuthorisationConfig as Authorisati
 from greenhouse_protocol.authorisation import AuthorisationGroup, Grant
 from greenhouse_protocol.contracts.execution import AssignmentStatus, Revocation
 from greenhouse_protocol.contracts.memory_gateway import effect_of
+from greenhouse_protocol.outcome import ActionEffect
 from greenhouse_protocol.plan import Principal, PrincipalKind
 from pydantic import ValidationError
 
 from greenhouse_sim.climate.commands import TARGET_EVERY_S
+from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.equipment import Target
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services.errors import InvalidRequest, every_reason, first_reason
-from greenhouse_sim.services.runs import PlannedAt, RunPlan
+from greenhouse_sim.services.runs import (
+    CROP_KINDS,
+    PlannedAt,
+    RunPlan,
+    crop_model_refusal,
+    crop_moment_refusal,
+)
 from greenhouse_sim.services.scenarios import plant_ids
 
 # The person at the simulator's own interface: its viewer, its API.
@@ -72,6 +87,15 @@ UNLIMITED: Final = 1_000_000
 # Why a run refuses an action, or None if it carries it out: the run's own
 # check of one action at a moment, in seconds from its start.
 type Refusal = Callable[[Action, float], str | None]
+# Why a run does not carry out a kind of action, or not at a moment of it,
+# in seconds from its start, if given; None if it does.
+type Unhonoured = Callable[[ActionKind, float | None], str | None]
+
+# Why the run's organ crop is not watered: its plants have no root zone of
+# their own (`greenhouse_sim.biology.plant.environment`).
+NO_ROOT_ZONE: Final = (
+    "the run's organ crop has no water in its root zone: its plants' water status is always full"
+)
 
 
 def authorisation_file(path: Path) -> AuthorisationConfig:
@@ -104,13 +128,45 @@ def run_items(config: ScenarioConfig) -> ActionTargets:
 
 
 def run_kinds(config: ScenarioConfig) -> frozenset[ActionKind]:
-    """The kinds of action a scenario's run carries out."""
-    if config.thermostat is None:
-        return frozenset({ActionKind.SET_LEVEL})
-    return frozenset({ActionKind.SET_LEVEL, ActionKind.SET_TARGET})
+    """The kinds of action a scenario's run carries out: levels always,
+    targets with a heating loop, and crop actions on an organ crop."""
+    kinds = {ActionKind.SET_LEVEL}
+    if config.thermostat is not None:
+        kinds.add(ActionKind.SET_TARGET)
+    if config.crop_model == CropModel.ORGAN:
+        kinds |= CROP_KINDS
+    return frozenset(kinds)
+
+
+def run_unhonoured(config: ScenarioConfig) -> Unhonoured:
+    """Why a scenario's run does not carry out a kind of action, or not at a
+    moment of it, in its own words: see the module."""
+
+    def unhonoured(kind: ActionKind, moment_s: float | None) -> str | None:
+        if kind == ActionKind.WATER:
+            return crop_model_refusal(config, kind) or NO_ROOT_ZONE
+        if kind == ActionKind.SET_TARGET and config.thermostat is None:
+            return f"{config.greenhouse_id} has no heating loop to set a target of"
+        if kind not in CROP_KINDS:
+            return None
+        if moment_s is None:
+            return crop_model_refusal(config, kind)
+        return crop_moment_refusal(config, kind, moment_s)
+
+    return unhonoured
 
 
 _TARGETS: Final = frozenset(target.value for target in Target)
+
+
+@dataclass(frozen=True)
+class Carried:
+    """What the run made of one of its crop actions once its day was worked
+    out: what it did and the event it made of it, or why it refused it."""
+
+    effect: ActionEffect | None = None
+    event_id: str | None = None
+    refusal: str | None = None
 
 
 @dataclass
@@ -120,6 +176,8 @@ class _Held:
     given: int
     # Why the run will refuse it when it falls due, if it will.
     refusal: str | None = None
+    # What the run made of a crop action, once its day is worked out.
+    carried: Carried | None = None
     finished: bool = False
     revoked: bool = False
 
@@ -127,8 +185,9 @@ class _Held:
 class RunExecutor:
     """A run as its gateway's executor, on the clock of the playback that
     works it out: see the module. `changed` is told the moment, in seconds
-    from the run's start, from which its plan has changed, and `refuses`
-    says why the run would refuse an action, if it would."""
+    from the run's start, from which its plan has changed; `refuses` says
+    why the run would refuse an action, if it would; and `unhonoured` why it
+    does not carry out a kind, or not at a moment (`run_unhonoured`)."""
 
     def __init__(
         self,
@@ -138,6 +197,7 @@ class RunExecutor:
         kinds: frozenset[ActionKind],
         changed: Callable[[float], None] = lambda _: None,
         refuses: Refusal = lambda _action, _at: None,
+        unhonoured: Unhonoured = lambda _kind, _at: None,
     ) -> None:
         self.now = start
         self._start = start
@@ -145,6 +205,7 @@ class RunExecutor:
         self._kinds = kinds
         self._changed = changed
         self._refuses = refuses
+        self._unhonoured = unhonoured
         self._held: dict[str, _Held] = {}
         self._reports: list[ExecutionReport] = []
 
@@ -162,9 +223,30 @@ class RunExecutor:
         return self._kinds
 
     def honours(self, kind: ActionKind, instant: datetime) -> bool:
+        return self.why_not(kind, instant) is None
+
+    def why_not(self, kind: ActionKind, instant: datetime | None = None) -> str | None:
+        """Why the run does not carry out `kind`, or not at `instant`, if
+        given, in its own words; None if it does (`ExplainsRefusals`)."""
+        if kind not in self._kinds:
+            return self._unhonoured(kind, None) or f"the run does not carry out {kind}"
+        if instant is None:
+            return None
         moment = self.seconds(instant)
-        on_time = kind != ActionKind.SET_TARGET or moment % TARGET_EVERY_S == 0
-        return kind in self._kinds and 0.0 <= moment <= self._end_s and on_time
+        if not 0.0 <= moment <= self._end_s:
+            return f"the run lasts from 0 to {self._end_s:.15g} s, not {moment:.15g} s"
+        if kind == ActionKind.SET_TARGET and moment % TARGET_EVERY_S != 0:
+            return f"the run changes a target on the minute, not at {moment:.15g} s"
+        unhonoured = self._unhonoured(kind, moment)
+        if unhonoured is not None:
+            return unhonoured
+        if kind not in CROP_KINDS:
+            return None
+        if moment % DAY_S != 0 or not 0.0 < moment < self._end_s:
+            return f"the run carries out {kind} at the start of a day after its first"
+        if instant <= self.now:
+            return "the run's clock has reached that day's start: its crop's work then is done"
+        return None
 
     def capacity(self) -> int:
         return UNLIMITED
@@ -184,7 +266,7 @@ class RunExecutor:
             assignment, given=len(self._held), refusal=refusal
         )
         if refusal is None:
-            self._changed(at)
+            self._work_again_from(at)
 
     def revoke(self, assignment_id: str) -> Revocation:
         held = self._held.get(assignment_id)
@@ -194,7 +276,7 @@ class RunExecutor:
             return Revocation.FINISHED
         held.revoked = True
         if held.refusal is None:
-            self._changed(self.seconds(held.assignment.at))
+            self._work_again_from(self.seconds(held.assignment.at))
         return Revocation.REVOKED
 
     def status(self, assignment_id: str) -> AssignmentStatus:
@@ -217,39 +299,43 @@ class RunExecutor:
 
     def advance(self, to: datetime) -> None:
         """Each action whose moment the clock has reached is done, as the run
-        worked it out, or refused, as the run would."""
+        worked it out, or refused, as the run would; a crop action once its
+        day is worked out, and not before."""
         for held in sorted(self._pending(), key=_in_order):
             at = held.assignment.at
-            if at > to:
+            waiting = held.assignment.action.kind in CROP_KINDS and held.carried is None
+            if at > to or (held.refusal is None and waiting):
                 continue
             held.finished = True
-            if held.refusal is not None:
-                report = ExecutionReport(
-                    assignment_id=held.assignment.assignment_id,
-                    status=ReportStatus.REFUSED,
-                    reason=held.refusal,
-                )
-            else:
-                report = ExecutionReport(
-                    assignment_id=held.assignment.assignment_id,
-                    status=ReportStatus.DONE,
-                    started_at=at,
-                    finished_at=at,
-                    effect=effect_of(held.assignment.action),
-                )
-            self._reports.append(report)
+            self._reports.append(_report(held))
         self.now = max(self.now, to)
 
     # The run's side.
+
+    def crop_actions_on(self, day: int) -> tuple[Assignment, ...]:
+        """The crop actions its run carries out at the start of its day
+        `day`, as they were assigned, in the order they apply: as the run's
+        plan has them (`plan`)."""
+        moment = self._start + timedelta(seconds=day * DAY_S)
+        return tuple(
+            held.assignment
+            for held in sorted(self._given(), key=_in_order)
+            if held.assignment.at == moment and held.assignment.action.kind in CROP_KINDS
+        )
+
+    def carried_out(self, carried: Mapping[str, Carried]) -> None:
+        """What its run made of crop actions, by assignment, once their day
+        is worked out: each is done, or refused, as the clock passes it."""
+        for assignment_id, made in carried.items():
+            held = self._held.get(assignment_id)
+            if held is not None and not held.finished:
+                held.carried = made
 
     def plan(self) -> RunPlan:
         """The plan its run is worked out under: every action given and not
         revoked or to be refused, each at its moment, in the order they
         apply at one moment."""
-        given = sorted(
-            (held for held in self._held.values() if not held.revoked and held.refusal is None),
-            key=_in_order,
-        )
+        given = sorted(self._given(), key=_in_order)
         return RunPlan(
             actions=tuple(
                 PlannedAt(at_s=self.seconds(held.assignment.at), action=held.assignment.action)
@@ -266,14 +352,46 @@ class RunExecutor:
         if given:
             self._changed(min(self.seconds(held.assignment.at) for held in given))
 
+    def _given(self) -> list[_Held]:
+        """Every action given, and not revoked or to be refused."""
+        return [held for held in self._held.values() if not held.revoked and held.refusal is None]
+
     def _pending(self) -> list[_Held]:
         return [held for held in self._held.values() if not (held.revoked or held.finished)]
 
     def _refusal(self, action: Action, at: datetime) -> str | None:
-        moment = self.seconds(at)
-        if not self.honours(action.kind, at):
-            return f"the run does not carry out {action.kind} at {moment:.15g} s"
-        return self._refuses(action, moment)
+        why = self.why_not(action.kind, at)
+        if why is not None:
+            return why
+        return self._refuses(action, self.seconds(at))
+
+    def _work_again_from(self, moment_s: float) -> None:
+        """Its run's plan changed from `moment_s` on: what it made of crop
+        actions from then is worked out again."""
+        for held in self._held.values():
+            if not held.finished and self.seconds(held.assignment.at) >= moment_s:
+                held.carried = None
+        self._changed(moment_s)
+
+
+def _report(held: _Held) -> ExecutionReport:
+    """A held action's report, its moment reached: refused, as the run
+    refuses it; or done, with its effect, or what the run made of it."""
+    assignment_id, at = held.assignment.assignment_id, held.assignment.at
+    refusal = held.refusal or (held.carried.refusal if held.carried is not None else None)
+    if refusal is not None:
+        return ExecutionReport(
+            assignment_id=assignment_id, status=ReportStatus.REFUSED, reason=refusal
+        )
+    carried = held.carried
+    return ExecutionReport(
+        assignment_id=assignment_id,
+        status=ReportStatus.DONE,
+        started_at=at,
+        finished_at=at,
+        effect=effect_of(held.assignment.action) if carried is None else carried.effect,
+        event_id=None if carried is None else carried.event_id,
+    )
 
 
 def _in_order(held: _Held) -> tuple[datetime, bool, int]:

@@ -7,6 +7,16 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: a playback's run carries out the crop actions given to
+  its gateway (P13.5, decision 0046), through `Playback.submit`. A harvest,
+  a lowering, a leaf removed or an inspection is carried out at the start
+  of a day after its first, given before the clock reaches it. The gateway
+  refuses the rest at once, in the run's words: watering, because its
+  organ crop has no water in its root zone, and any other moment. Each
+  action is done once its day is worked out, with the effect the crop gave
+  it, or refused in the organ model's words. Each one done makes an event
+  of its own, which names it and which its outcome names. The crop work's
+  harvest events count the harvest round alone.
 - `greenhouse-sim`: who may act on a simulator's runs is an authorisation
   it is given (P13.4, decision 0052): a file the server reads,
   `--authorisation <file>`, as the protocol writes the record, or else the
