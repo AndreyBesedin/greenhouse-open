@@ -7,6 +7,28 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+## 0.4.0 - 2026-10-24
+
+The setup builder (P12.0 to P12.3): a greenhouse's installation drafted
+from a form or copied from a scenario, assessed as it is edited, its
+equipment, sensors, doors, vents, zones and fixtures placed many at a time
+and set in an inspector, kept as drafts with their revisions, exchanged
+as a file, and run as a scenario of its own, in the viewer's `/builder`.
+One format for acting on a greenhouse (P13.1 to P13.3, decision 0046):
+the protocol's actions, plans, authorisation and outcomes, with a run's
+gateway and its executors held to conformance checks; a run carries out a
+plan, and a playback is its run's gateway, whose outcomes a consumer reads.
+A simulator owns its scenarios, runs and playbacks (decision 0048), and
+the viewer's panels fold to a stripe and sit in cards by topic. Scenario
+manifests are in format 4, which holds a house as an installation, and
+checkpoints in format 4, which keeps a run's plan; manifests in formats 1
+to 3, and checkpoints in formats 2 and 3, are still read, and every
+checkpoint's identifier changes. The reference greenhouse's and the
+tomato compartment's runs have new identities, their posts off the pipe
+rails (#302); every other run keeps its own. The protocol's records for
+acting are new and additive; its older action and execution names are
+deprecated, and still read.
+
 - `greenhouse-sim`: a playback is its run's gateway (P13.3, decision
   0046). It holds its run's plans in the protocol's reference gateway, on
   its clock, with the run as the executor (`services.gateway`). An action
@@ -136,7 +158,9 @@ breaks the conformance checks is a major version.
   Conflict`. `POST /api/drafts/{id}/run` registers a draft at a revision
   as a scenario of its own, with a period, a site, a seed and a weather,
   which is then listed, drawn and run as any scenario is; a draft with
-  errors is refused with each. The server keeps drafts in
+  errors is refused with each. A draft is answered as the builder answers
+  an installation, assessed, with the draft and revision it is under
+  `draft`, its schema published once. The server keeps drafts in
   `~/.greenhouse-sim/drafts.sqlite3` unless `--drafts` names another file;
   where that default cannot be made, it starts keeping none.
 - `greenhouse-protocol`: one format for acting on a greenhouse (decision
@@ -244,6 +268,14 @@ breaks the conformance checks is a major version.
   rather than finishing the day, so the API stopped with a run playing
   back exits at once rather than after the day (some ten seconds for the
   reference greenhouse).
+- Viewer: rows keep their place while a run plays: the climate run's
+  loading line keeps its slot, and the View panel's Simulator row one line
+  (#301). A checkpoint is uploaded by a button of the viewer's own, in its
+  words whatever the browser's language (#303). Each side's panels fold to
+  a stripe at the view's edge, kept folded in this browser, and the info
+  panel's column is as wide as its widest panel (#304). The info panel's
+  sections sit in titled cards by topic: Simulation, House, Equipment,
+  Outside (#306).
 - `greenhouse-sim`: an envelope may name the gutter lines that keep a post
   on its inner frames (`inner_posts`). A lattice girder under the gutters
   then carries the gutters between, from post to post, drawn and shading
