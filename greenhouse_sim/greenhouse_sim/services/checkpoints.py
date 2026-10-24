@@ -12,8 +12,11 @@ A checkpoint is a run's state at the start of one of its days:
   before its day began, where the field of the day's first hour starts its
   grid run from (`greenhouse_sim.climate.day.window_start`): without it, a
   run restored would work out every day before to draw its first hour;
-- **its crop,** where it grows one organ by organ: its plants then, and what
-  each experienced on each day before (`greenhouse_sim.core.crop`).
+- **its models:** each part's model and version (decision 0054), and the
+  state of those that keep one: its crop's, where it grows one organ by
+  organ, its plants then, and what each experienced on each day before
+  (`greenhouse_sim.core.crop`). A checkpoint is restored only into a run of
+  the same models and versions.
 
 Nothing else needs keeping: its sensors' and cameras' draws are seeded
 sample by sample, its weather and its sun are functions of the moment, and
@@ -40,7 +43,14 @@ import json
 import math
 from typing import TYPE_CHECKING, Final
 
-from pydantic import BaseModel, ConfigDict, JsonValue, NonNegativeInt, ValidationError
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    JsonValue,
+    NonNegativeInt,
+    PositiveInt,
+    ValidationError,
+)
 
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.biology.tomato.organ.development import daily_thermal_time
@@ -52,8 +62,10 @@ from greenhouse_sim.climate.psychrometrics import saturation_ratio_g_kg
 from greenhouse_sim.core.clock import DAY_S, days_ended
 from greenhouse_sim.digests import short_digest
 from greenhouse_sim.domain.crop import CropModel
+from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.scenarios.manifest_files import opening_file
+from greenhouse_sim.scenarios.registry import ModelRun, models_run
 from greenhouse_sim.services.climate_runs import climate_run, run_schedule, seed_kept_climate_runs
 from greenhouse_sim.services.crop import run_crop, seed_kept_crops
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError, first_reason
@@ -72,6 +84,7 @@ from greenhouse_sim.services.scenarios import (
     plant_ids,
     scenario,
     version,
+    with_weather,
 )
 from greenhouse_sim.services.stores import Store
 
@@ -80,15 +93,19 @@ if TYPE_CHECKING:
     from greenhouse_sim.services.simulator import Simulator
 
 # The format a checkpoint is written in, which a reader refuses if it does
-# not know it: 4 since a checkpoint keeps its run's plan (P13.2), not its
-# commands and target changes.
-CHECKPOINT_FORMAT: Final = 4
+# not know it: 5 since a checkpoint keeps each part's model, its version
+# and its state (P14.2), not its crop's plants beside them.
+CHECKPOINT_FORMAT: Final = 5
 # The formats before, each read as the one after it: a format 2
-# checkpoint's run changed no target (#274), and a format 3 checkpoint's
-# commands, daily commands and target changes are its run's plan.
+# checkpoint's run changed no target (#274); a format 3 checkpoint's
+# commands, daily commands and target changes are its run's plan; and a
+# format 4 checkpoint's plants are its organ crop's state.
 WITHOUT_TARGETS: Final = 2
 WITH_COMMANDS: Final = 3
-READ_AS_CURRENT: Final = (WITHOUT_TARGETS, WITH_COMMANDS)
+WITHOUT_MODELS: Final = 4
+READ_AS_CURRENT: Final = (WITHOUT_TARGETS, WITH_COMMANDS, WITHOUT_MODELS)
+# The version every model had before a checkpoint kept models' versions.
+FIRST_VERSION: Final = 1
 # How many checkpoints are kept, the last saved or uploaded.
 KEPT_CHECKPOINTS: Final = 16
 # How many hexadecimal digits of its content's digest name a checkpoint.
@@ -104,10 +121,31 @@ MOST_CO2_PPM: Final = 20_000.0
 THERMAL_TIME_TOLERANCE: Final = 1e-9
 
 
+class CropState(BaseModel):
+    """The organ crop's state at a checkpoint's day: its plants, and what
+    each experienced on each day before, by plant."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    plants: list[Plant] = []
+    lived: list[dict[str, LocalEnvironment]] = []
+
+
+class ModelState(BaseModel):
+    """A part's model as a checkpoint keeps it: its name and version, and
+    its state then, if it keeps one, as the organ crop does."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    model: str
+    version: PositiveInt
+    state: CropState | None = None
+
+
 class Checkpoint(BaseModel):
     """A run's state at the start of its day `day`, as it is downloaded and
-    uploaded: its run, its house's air, and its organ-level crop, if it
-    grows one."""
+    uploaded: its run, its house's air, and its models, with the state of
+    those that keep one."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -131,9 +169,17 @@ class Checkpoint(BaseModel):
     # so that a run restored works out none of the days before; none on its
     # run's first day, which draws its first hours from its start (format 2).
     house_before: HouseAir | None = None
-    plants: list[Plant] = []
-    # What each plant experienced on each day before, by plant.
-    lived: list[dict[str, LocalEnvironment]] = []
+    # Each part's model and version, and its state then, if it keeps one
+    # (format 5), for every part. A checkpoint of an earlier format names its
+    # crop's alone: its others are its run's, at the version every model had
+    # then.
+    models: dict[Part, ModelState]
+
+    @property
+    def crop(self) -> CropState:
+        """Its organ crop's plants and the days they lived, or none."""
+        kept = self.models.get(Part.CROP)
+        return CropState() if kept is None or kept.state is None else kept.state
 
     def identifier(self) -> str:
         """A digest of its content, which names it."""
@@ -200,12 +246,10 @@ def save_checkpoint(
     day = days_ended(time_s)
     moment = day * DAY_S
     _, climate = climate_run(simulator, run)
-    plants: list[Plant] = []
-    lived: list[dict[str, LocalEnvironment]] = []
+    state: CropState | None = None
     if config.crop_model == CropModel.ORGAN:
         crop = run_crop(simulator, run)
-        plants = list(crop.plants_on(day))
-        lived = crop.lived_through(day)
+        state = CropState(plants=list(crop.plants_on(day)), lived=crop.lived_through(day))
     before = window_start(moment)
     checkpoint = Checkpoint(
         scenario_id=scenario_id,
@@ -218,10 +262,21 @@ def save_checkpoint(
         day=day,
         house=climate.house.air_at(moment),
         house_before=climate.house.air_at(before) if before < moment else None,
-        plants=plants,
-        lived=lived,
+        models={
+            part: ModelState(
+                model=ran.model, version=ran.version, state=state if part is Part.CROP else None
+            )
+            for part, ran in _models_run(simulator, run).items()
+        },
     )
     return _kept(simulator, checkpoint)
+
+
+def _models_run(simulator: Simulator, run: RunRequest) -> dict[Part, ModelRun]:
+    """Each part's model and version a run runs: its scenario's, under the
+    weather it is asked for, which may be another model's."""
+    config = scenario(simulator.catalogue, run.scenario_id)
+    return models_run(with_weather(config, run.weather or DEFAULT_WEATHER))
 
 
 def checkpoints(simulator: Simulator) -> list[CheckpointSummary]:
@@ -250,10 +305,14 @@ def read_checkpoint(document: JsonValue) -> Checkpoint:
     """A checkpoint as it is written, in this simulator's format or one it
     reads as it (`READ_AS_CURRENT`), as this format holds it. Refused if it
     is not one, or is in a format this simulator does not read."""
+    # A checkpoint of this format names every part's model; one of an
+    # earlier format, its crop's alone.
+    native = isinstance(document, dict) and document.get("checkpoint_format") == CHECKPOINT_FORMAT
     if isinstance(document, dict):
         written_in = document.get("checkpoint_format")
         if written_in != CHECKPOINT_FORMAT and written_in not in READ_AS_CURRENT:
-            read = " and ".join(str(earlier) for earlier in READ_AS_CURRENT)
+            *earlier, last = (str(each) for each in READ_AS_CURRENT)
+            read = f"{', '.join(earlier)} and {last}" if earlier else last
             raise InvalidRequest(
                 f"a checkpoint in format {written_in!r}; this simulator reads format "
                 f"{CHECKPOINT_FORMAT}, and formats {read} as it"
@@ -264,10 +323,20 @@ def read_checkpoint(document: JsonValue) -> Checkpoint:
             written_in = WITH_COMMANDS
         if written_in == WITH_COMMANDS:
             document = _planned(document)
+            written_in = WITHOUT_MODELS
+        if written_in == WITHOUT_MODELS:
+            document = _with_models(document)
     try:
-        return Checkpoint.model_validate(document)
+        held = Checkpoint.model_validate(document)
     except ValidationError as error:
         raise InvalidRequest(f"not a checkpoint: {first_reason(error)}") from None
+    unnamed = [part.value for part in Part if part not in held.models]
+    if native and unnamed:
+        raise InvalidRequest(
+            f"not a checkpoint: a format {CHECKPOINT_FORMAT} checkpoint keeps each part's "
+            f"model, and this one none for the {', '.join(unnamed)}"
+        )
+    return held
 
 
 def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
@@ -278,6 +347,26 @@ def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
         raise InvalidRequest(
             f"a checkpoint made with another version of {uploaded.scenario_id}'s manifest"
         )
+    runs = _models_run(simulator, uploaded.run())
+    for part, ran in runs.items():
+        # A checkpoint of an earlier format names its crop's model alone:
+        # its others are its run's, at the version every model had then.
+        kept = uploaded.models.get(part) or ModelState(model=ran.model, version=FIRST_VERSION)
+        if (kept.model, kept.version) != (ran.model, ran.version):
+            raise InvalidRequest(
+                f"a checkpoint made with the {kept.model} model of the {part}, version "
+                f"{kept.version}: its run's is the {ran.model} model, version {ran.version}"
+            )
+    # Kept, it names every part's model, as one saved does, so that it
+    # downloads as one of this format and uploads again.
+    uploaded = uploaded.model_copy(
+        update={
+            "models": {
+                part: uploaded.models.get(part) or ModelState(model=ran.model, version=ran.version)
+                for part, ran in runs.items()
+            }
+        }
+    )
     if uploaded.day > config.duration_days:
         raise InvalidRequest(
             f"a run of {uploaded.scenario_id} has days 0 to {config.duration_days}, "
@@ -293,11 +382,11 @@ def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
         changed(simulator.catalogue, config, SceneChanges(layout=uploaded.layout)), uploaded.plan
     )
     expected = plant_ids(config) if config.crop_model == CropModel.ORGAN else []
-    if [plant.plant_id for plant in uploaded.plants] != expected:
+    if [plant.plant_id for plant in uploaded.crop.plants] != expected:
         raise InvalidRequest(f"a checkpoint's plants are {uploaded.scenario_id}'s, in order")
     if config.crop_model == CropModel.ORGAN and (
-        len(uploaded.lived) != uploaded.day
-        or any(set(day) != set(expected) for day in uploaded.lived)
+        len(uploaded.crop.lived) != uploaded.day
+        or any(set(day) != set(expected) for day in uploaded.crop.lived)
     ):
         raise InvalidRequest(
             f"a crop on day {uploaded.day} has lived {uploaded.day} days, each plant's"
@@ -318,17 +407,17 @@ def _implausible(checkpoint: Checkpoint) -> list[str]:
         if air is not None
         for problem in _air_problems(air)
     ]
-    for day, lived in enumerate(checkpoint.lived):
+    for day, lived in enumerate(checkpoint.crop.lived):
         for plant_id, environment in lived.items():
             if not all(map(math.isfinite, environment.model_dump().values())):
                 problems.append(f"what {plant_id} lived on day {day} is not finite")
     if problems:
         return problems
-    for plant in checkpoint.plants:
+    for plant in checkpoint.crop.plants:
         problems += [f"{plant.plant_id}: {problem}" for problem in plant.problems()]
         added = TRANSPLANT_CD + sum(
             daily_thermal_time(day[plant.plant_id].mean_temperature_c, DEVELOPMENT)
-            for day in checkpoint.lived
+            for day in checkpoint.crop.lived
         )
         if not math.isclose(plant.thermal_time, added, rel_tol=THERMAL_TIME_TOLERANCE):
             problems.append(
@@ -409,8 +498,8 @@ def _kept(
         schedule=run_schedule(simulator.catalogue, checkpoint.run()),
         day=checkpoint.day,
         air=checkpoint.house,
-        plants=tuple(checkpoint.plants),
-        lived=tuple(checkpoint.lived),
+        plants=tuple(checkpoint.crop.plants),
+        lived=tuple(checkpoint.crop.lived),
         earlier=(
             ()
             if checkpoint.house_before is None
@@ -451,7 +540,33 @@ def _planned(document: dict[str, JsonValue]) -> dict[str, JsonValue]:
         ],
     }
     kept = {name: value for name, value in document.items() if name not in _FORMAT_3_PLAN}
-    return kept | {"checkpoint_format": CHECKPOINT_FORMAT, "plan": plan}
+    return kept | {"checkpoint_format": WITHOUT_MODELS, "plan": plan}
+
+
+def _with_models(document: dict[str, JsonValue]) -> dict[str, JsonValue]:
+    """A format 4 checkpoint as format 5 writes it: its plants and the days
+    they lived, the organ crop's state, at the version every model had
+    then; a checkpoint with no plants, the simple crop's. Its other parts'
+    models it did not name: its run's are taken for them, at the version
+    every model had then (`_checked_upload`)."""
+    if "models" in document:
+        raise InvalidRequest("not a checkpoint: a format 4 checkpoint keeps no models")
+    plants, lived = document.get("plants", []), document.get("lived", [])
+    crop: dict[str, JsonValue] = (
+        {
+            "model": CropModel.ORGAN.value,
+            "version": FIRST_VERSION,
+            "state": {"plants": plants, "lived": lived},
+        }
+        if plants
+        else {"model": CropModel.SIMPLE.value, "version": FIRST_VERSION}
+    )
+    kept = {name: value for name, value in document.items() if name not in _FORMAT_4_CROP}
+    return kept | {"checkpoint_format": CHECKPOINT_FORMAT, "models": {Part.CROP.value: crop}}
+
+
+# What a format 4 checkpoint wrote of its crop beside its run.
+_FORMAT_4_CROP: Final = ("plants", "lived")
 
 
 # What a format 3 checkpoint wrote of its run's plan.
@@ -496,5 +611,5 @@ def _summary(checkpoint_id: str, checkpoint: Checkpoint) -> CheckpointSummary:
         targets=list(checkpoint.plan.targeted()),
         day=checkpoint.day,
         time_s=checkpoint.day * DAY_S,
-        plants=len(checkpoint.plants),
+        plants=len(checkpoint.crop.plants),
     )

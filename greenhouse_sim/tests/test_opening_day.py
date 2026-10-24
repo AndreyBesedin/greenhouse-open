@@ -81,7 +81,8 @@ def _state(checkpoint: checkpoints.Checkpoint) -> object:
     air, at its day's start and an hour before, rounded as the replay's
     probes are."""
     return _rounded(
-        checkpoint.model_dump(mode="json", include={"plants", "house", "house_before", "lived"})
+        checkpoint.model_dump(mode="json", include={"house", "house_before"})
+        | checkpoint.crop.model_dump(mode="json")
     )
 
 
@@ -94,7 +95,7 @@ def test_the_kept_opening_day_is_the_manifests_and_bears_red_fruit() -> None:
         "the reference scenario's manifest has changed: write its opening day again with "
         "`python tests/test_opening_day.py --update`"
     )
-    assert _red(kept.plants) > 0
+    assert _red(kept.crop.plants) > 0
     # Beside it, the same run with everything off, as a viewer charts it.
     off = _kept(all_off=True)
     assert (off.day, off.manifest, off.plan.daily, off.plan.actions, off.levels) == (
