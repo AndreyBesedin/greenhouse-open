@@ -176,11 +176,12 @@ def check_executor(
     """Holds an executor to the contract's rules, each on an executor `make`
     gives for a clock starting at `start`: an assignment sent twice carried
     out at most once, one revoked before it starts never carried out, a
-    revocation too late said so, and an unknown assignment said unknown.
-    The assignments carry `action`, one of its kinds on what it can act on;
-    by default, an action of the first kind it names
-    (`CONFORMANCE_ACTIONS`). Returns the violations, empty when it
-    conforms."""
+    revocation too late said so, and an unknown assignment said unknown;
+    and, if it explains its refusals (`ExplainsRefusals`), its words held
+    to its kinds and to the instants it honours. The assignments carry
+    `action`, one of its kinds on what it can act on; by default, an
+    action of the first kind it names (`CONFORMANCE_ACTIONS`). Returns the
+    violations, empty when it conforms."""
     executor = make(start)
     kinds = executor.kinds()
     if action is None:
