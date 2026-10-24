@@ -11,6 +11,16 @@ breaks the conformance checks is a major version.
   digits, so that a float's rounding no longer shows, as in the starting
   house's rows' origin, 2.4000000000000004. A value left as it is still
   sends nothing, and the simulator keeps it exact.
+- `greenhouse-sim`: a run's plan holds crop actions (P13.5, decision 0046):
+  a harvest, a lowering, a leaf removed or an inspection, at the start of a
+  day after its first, on an organ crop. Any other moment is refused, in
+  the run's words, and so are a plant it does not have and a lowering to a
+  head room on a plant with no wire. After that day's crop work, the crop
+  carries them out in the plan's order, and keeps what each did
+  (`RunCrop.worked_on`). A run with crop actions has an identity of its
+  own. Every other run keeps its id, replay digest and kept opening day. A
+  crop takes over another's days, or a kept state's plants, only as far as
+  their crop actions agree.
 - `greenhouse-sim`: the organ crop carries out the protocol's crop actions
   (P13.5, decision 0046): a harvest of one fruit, one truss or every ripe
   fruit, a lowering by internodes, by centimetres or to a head room under

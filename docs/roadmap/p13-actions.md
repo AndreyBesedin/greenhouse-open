@@ -890,10 +890,35 @@ which changes no run, then the run carrying out a plan's crop actions.
   a harvest of every ripe fruit, then a lowering to its head room, on the
   days they are due. Every run id, replay digest and kept opening day
   stays.
-- **Next:** the run carries a plan's crop actions out at a day's start, and
-  refuses them at any other instant, and `water` always, each with its
-  reason. Its outcomes report their effects once the day is worked out,
-  and each action has an event of its own.
+- **A run's plan holds crop actions** (`RunPlan`, `CROP_KINDS`): a
+  harvest, a lowering, a leaf removed and an inspection, each at a moment.
+  The run carries them out at the start of a day after its first, before
+  its end, on an organ crop, and refuses any other moment in its own words
+  (`runs.crop_moment_refusal`): its crop steps a day at a time, and is
+  planted at its start. It also refuses a plant it has not, and a lowering
+  to a head room on a plant that hangs from no wire
+  (`runs.crop_action_refusal`). `water` never enters a run's plan.
+- **After the day's crop work,** the crop carries out that day's harvests,
+  lowerings and leaves removed, in the plan's order, and keeps what each
+  did, or why it was refused (`RunCrop.worked_on`). A crop that took a
+  day over, or was given it by a checkpoint, works that day out again to
+  say so.
+- **A run's identity** gains its crop actions when it has some. A run
+  without them is named as before, so every run id, replay digest and kept
+  opening day stays. Crop actions change no run's air: the climate run
+  takes its light from the transplants, so its key and store are as they
+  were.
+- **A crop is kept by its run's crop actions too.** It takes over another
+  crop's days up to the day before the first their crop actions differ on.
+  It takes a kept state's plants only if its crop actions up to that day
+  are the state's (`KeptState.crop_actions`), so a run that acts on its
+  crop before the reference greenhouse's opening day does not start from
+  it. A checkpoint keeps the crop actions of its own moment, since the crop
+  at a day's start is the crop once that day's work is done.
+- **Next:** the playback's run carries out the crop actions given to its
+  gateway, refusing at once in its own words through the protocol's
+  `ExplainsRefusals`. Each outcome reports its effect once the day is
+  worked out, and names the event the action made.
 
 ## Decided
 
