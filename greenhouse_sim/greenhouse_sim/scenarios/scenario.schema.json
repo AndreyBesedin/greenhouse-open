@@ -678,13 +678,6 @@
       "title": "OpeningKind",
       "type": "string"
     },
-    "OrganCrop": {
-      "additionalProperties": false,
-      "description": "The organ crop's parameters: none a manifest sets yet, its variety\nbeing its rows'.",
-      "properties": {},
-      "title": "OrganCrop",
-      "type": "object"
-    },
     "Percent": {
       "maximum": 100.0,
       "minimum": 0.0,
@@ -1476,7 +1469,8 @@
               "type": "object",
               "additionalProperties": false,
               "required": [
-                "model"
+                "model",
+                "parameters"
               ],
               "properties": {
                 "model": {
@@ -1491,7 +1485,8 @@
               "type": "object",
               "additionalProperties": false,
               "required": [
-                "model"
+                "model",
+                "parameters"
               ],
               "properties": {
                 "model": {
@@ -1506,7 +1501,8 @@
               "type": "object",
               "additionalProperties": false,
               "required": [
-                "model"
+                "model",
+                "parameters"
               ],
               "properties": {
                 "model": {
@@ -1613,7 +1609,7 @@
                   "const": "organ"
                 },
                 "parameters": {
-                  "$ref": "#/$defs/OrganCrop"
+                  "$ref": "#/$defs/SimpleCrop"
                 }
               }
             }

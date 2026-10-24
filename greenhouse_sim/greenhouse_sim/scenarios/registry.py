@@ -19,6 +19,9 @@ one it was.
 
 The crop's model is the one its rows grow (decision 0050): a manifest's
 crop section gives that model's parameters, and names it as its rows do.
+Until P14.3, either crop model's parameters are the simple crop's
+settings: a scenario's live run grows the simple crop whatever its rows
+grow (`services.live`), so a scenario of organ rows has them too.
 """
 
 from collections.abc import Mapping
@@ -97,13 +100,6 @@ SimpleCrop: Final = _the_configurations("SimpleCrop", SIMPLE_CROP_FIELDS)
 CropWalk: Final = _the_configurations("CropWalk", WALK_FIELDS)
 
 
-class OrganCrop(BaseModel):
-    """The organ crop's parameters: none a manifest sets yet, its variety
-    being its rows'."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-
 @dataclass(frozen=True)
 class Model:
     """A model of a part: its name, its parameters' model, and where the
@@ -154,7 +150,9 @@ MODELS: Final[Mapping[Part, Mapping[str, Model]]] = {
     ),
     Part.CROP: _models(
         Model(Part.CROP, CropModel.SIMPLE.value, SimpleCrop),
-        Model(Part.CROP, CropModel.ORGAN.value, OrganCrop),
+        # The simple crop's settings, by which the scenario's live run grows
+        # the simple crop (P14.3 moves them); its variety is its rows'.
+        Model(Part.CROP, CropModel.ORGAN.value, SimpleCrop),
     ),
     Part.CROP_WALK: _models(Model(Part.CROP_WALK, WALK, CropWalk)),
 }
@@ -203,7 +201,8 @@ def models_json_schema() -> tuple[dict[str, JsonValue], dict[str, JsonValue]]:
     """The JSON Schema of a manifest's `models`, and the definitions it
     uses, by name: for each part, a section naming one of its models and
     giving that model's parameters, its kind left out, as its name says
-    it."""
+    it; required if the model has one with no default, as the recorded
+    weather's file."""
     definitions: dict[str, JsonValue] = {}
     parts: dict[str, JsonValue] = {}
     for part, models in MODELS.items():
@@ -213,11 +212,14 @@ def models_json_schema() -> tuple[dict[str, JsonValue], dict[str, JsonValue]]:
             definitions |= schema.pop("$defs", {})
             schema["properties"].pop(KIND, None)
             definitions[entry.parameters.__name__] = schema
+            needed: list[JsonValue] = (
+                ["model", "parameters"] if schema.get("required") else ["model"]
+            )
             sections.append(
                 {
                     "type": "object",
                     "additionalProperties": False,
-                    "required": ["model"],
+                    "required": needed,
                     "properties": {
                         "model": {"const": entry.name},
                         "parameters": {"$ref": _DEFINITION.format(model=entry.parameters.__name__)},

@@ -14,7 +14,11 @@ breaks the conformance checks is a major version.
   parameter model (`scenarios.registry`); a part left out runs its
   default. The weather, the airflow, the simple crop's settings and the
   walk's measurement noises are no longer written at a manifest's top, and
-  format 4 manifests are migrated so. `GET /api/scenarios/{id}/manifest`
+  format 4 manifests are migrated so. A scenario of organ rows gives the
+  simple crop's settings, by which its live run grows the simple crop, in
+  its crop's section, which names the organ crop. A section gives its
+  parameters if its model has one with no default, as a recorded
+  weather's file, and the published schema now requires them. `GET /api/scenarios/{id}/manifest`
   answers `models`, each part's model by part, and QA mode shows them. No
   run changes: every run id is the same. The packaged scenarios' versions
   change with their rewritten manifests, so a checkpoint of a packaged

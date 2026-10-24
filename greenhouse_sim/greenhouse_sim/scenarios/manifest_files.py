@@ -76,18 +76,18 @@ _PARAMETERS_KEY: Final = "parameters"
 # The fields format 4 wrote a part's choice in, an object with its kind, by
 # the part it chose for.
 _FORMAT_4_PARTS: Final = {"weather": Part.WEATHER, "airflow": Part.AIR_FIELD}
-# The settings format 4 wrote at the configuration's top, by the part and
-# the model whose parameters they are in format 5.
-_FORMAT_4_SETTINGS: Final = (
-    (Part.CROP, CropModel.SIMPLE.value, SIMPLE_CROP_FIELDS),
-    (Part.CROP_WALK, WALK, WALK_FIELDS),
-)
+# The settings format 4 wrote at the configuration's top, by the part
+# whose model's parameters they are in format 5: the crop's, which its rows
+# grow, and the crop walk's.
+_FORMAT_4_SETTINGS: Final = {Part.CROP: SIMPLE_CROP_FIELDS, Part.CROP_WALK: WALK_FIELDS}
 # What a format 4 note on one of those fields is about in format 5: the
 # part's section.
 _FORMAT_4_NOTES: Final = {
     **{field: f"{_MODELS_KEY}.{part}" for field, part in _FORMAT_4_PARTS.items()},
     **{
-        field: f"{_MODELS_KEY}.{part}" for part, _, fields in _FORMAT_4_SETTINGS for field in fields
+        field: f"{_MODELS_KEY}.{part}"
+        for part, fields in _FORMAT_4_SETTINGS.items()
+        for field in fields
     },
 }
 # What format 3 moved from a thermostat to the control: its day and night.
@@ -419,9 +419,10 @@ def _from_format_4(scenario_id: str, document: dict[str, JsonValue]) -> dict[str
     own. Format 5 writes each in its part's section of `models` (P14.1,
     decision 0054), where the first of them stood: the weather's and the air
     field's kind as their model, the rest of them as its parameters; the
-    simple crop's settings as the simple crop's parameters, the walk's
-    noises as the walk's; and a note on one of them as a note on its part.
-    What a run is does not change: its configuration reads the same."""
+    simple crop's settings as the parameters of the crop its rows grow,
+    the walk's noises as the walk's; and a note on one of them as a note on
+    its part. What a run is does not change: its configuration reads the
+    same."""
     if _MODELS_KEY in document:
         raise InvalidManifest(f"{scenario_id}: a format 4 manifest has no {_MODELS_KEY!r}")
     sections: dict[str, JsonValue] = {}
@@ -435,10 +436,11 @@ def _from_format_4(scenario_id: str, document: dict[str, JsonValue]) -> dict[str
         sections[part] = {_MODEL_KEY: written.get(KIND)} | (
             {_PARAMETERS_KEY: parameters} if parameters else {}
         )
-    for part, name, fields in _FORMAT_4_SETTINGS:
+    named = {Part.CROP: _rows_crop(document), Part.CROP_WALK: WALK}
+    for part, fields in _FORMAT_4_SETTINGS.items():
         parameters = {field: document[field] for field in fields if field in document}
         if parameters:
-            sections[part] = {_MODEL_KEY: name, _PARAMETERS_KEY: parameters}
+            sections[part] = {_MODEL_KEY: named[part], _PARAMETERS_KEY: parameters}
     migrated: dict[str, JsonValue] = {}
     for key, value in document.items():
         if key in CONFIGURED:
@@ -448,6 +450,18 @@ def _from_format_4(scenario_id: str, document: dict[str, JsonValue]) -> dict[str
         else:
             migrated[key] = value
     return migrated
+
+
+def _rows_crop(document: dict[str, JsonValue]) -> str:
+    """The crop model a manifest's rows grow, as it writes them: its first
+    row's, the reader refusing rows that grow different crops
+    (`scenario_house`); the simple crop if it writes none, the reader
+    refusing a row without one."""
+    installation = document.get(_INSTALLATION_KEY)
+    rows = installation.get("row_crops") if isinstance(installation, dict) else None
+    first = rows[0] if isinstance(rows, list) and rows else None
+    grown = first.get("crop_model") if isinstance(first, dict) else None
+    return grown if isinstance(grown, str) else CropModel.SIMPLE.value
 
 
 def _notes_moved(notes: dict[str, JsonValue], moves: dict[str, str]) -> dict[str, JsonValue]:
