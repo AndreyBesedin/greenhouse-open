@@ -209,7 +209,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "An executor's report of an assignment: done, with its start and\nfinish; failed, with why; or refused before it started, with why.",
+  "description": "An executor's report of an assignment: done, with its start and\nfinish; failed, with why; or refused before it started, with why. One\nthat was attempted may name the event it made in the run's records.",
   "properties": {
     "assignment_id": {
       "$ref": "#/$defs/Identifier"
@@ -261,6 +261,17 @@
       ],
       "default": null,
       "title": "Reason"
+    },
+    "event_id": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Name"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [

@@ -28,7 +28,7 @@ the new format out.
 from collections.abc import Callable, Sequence
 from datetime import datetime, timedelta
 from enum import StrEnum
-from typing import Final, Protocol
+from typing import Final, Protocol, runtime_checkable
 
 from greenhouse_protocol.action import RequestedAction
 from greenhouse_protocol.actions import (
@@ -135,6 +135,19 @@ class ActionExecutor(Protocol):
         ...
 
 
+@runtime_checkable
+class ExplainsRefusals(Protocol):
+    """An executor that says, in its own words, why it does not carry out a
+    kind of action, or not at an instant: a gateway gives them with its
+    refusal. Optional: a gateway asks only an executor that has it, and
+    what it says agrees with `kinds` and `honours`."""
+
+    def why_not(self, kind: ActionKind, instant: datetime | None = None) -> str | None:
+        """Why it does not carry out `kind`, or not at `instant`, if given;
+        None if it does."""
+        ...
+
+
 class ExecutorUnderTest(ActionExecutor, Protocol):
     """An executor, with what a test needs to move its clock."""
 
@@ -215,4 +228,43 @@ def check_executor(
         or executor.status("never") != AssignmentStatus.UNKNOWN
     ):
         violations.append("an assignment never received was not said to be unknown")
+    if isinstance(executor, ExplainsRefusals):
+        violations += _explained(make(start), start)
+    return violations
+
+
+# The instants after a clock's start at which an executor's explanations
+# are held to what it honours: at once, off the minute, on it, on the hour,
+# and a day on.
+_EXPLAINED_AFTER: Final = tuple(timedelta(seconds=seconds) for seconds in (0, 30, 60, 3600, 86400))
+
+
+def _explained(executor: ExecutorUnderTest, start: datetime) -> list[str]:
+    """An executor that explains its refusals explains each it makes, and
+    none it does not: of every kind, and at a few instants of each kind it
+    carries out."""
+    if not isinstance(executor, ExplainsRefusals):
+        return []
+    violations = []
+    kinds = executor.kinds()
+    for kind in ActionKind:
+        carried = kind in kinds
+        if (executor.why_not(kind) is None) != carried:
+            violations.append(
+                f"it says why it does not carry out {kind}, which it does"
+                if carried
+                else f"it carries out no {kind}, and says nothing of why"
+            )
+        if not carried:
+            continue
+        for after in _EXPLAINED_AFTER:
+            instant = start + after
+            honoured = executor.honours(kind, instant)
+            if (executor.why_not(kind, instant) is None) != honoured:
+                when = instant.isoformat()
+                violations.append(
+                    f"it says why it does not honour {kind} at {when}, which it does"
+                    if honoured
+                    else f"it does not honour {kind} at {when}, and says nothing of why"
+                )
     return violations

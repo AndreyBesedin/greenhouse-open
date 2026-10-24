@@ -42,6 +42,7 @@ def test_a_report_of_each_status() -> None:
             started_at=TEN,
             finished_at=TEN + MINUTE,
             effect=Lowered(by_cm=25),
+            event_id="sim_p01_lowering",
         ),
         ExecutionReport(
             assignment_id="a1", status=ReportStatus.FAILED, started_at=TEN, reason="stuck"
@@ -61,6 +62,7 @@ def test_a_report_of_each_status() -> None:
         (dict(status=ReportStatus.FAILED, reason="stuck"), "was attempted"),
         (dict(status=ReportStatus.REFUSED, reason="no", finished_at=TEN), "that finished started"),
         (dict(status=ReportStatus.REFUSED, reason="no", started_at=TEN), "never started"),
+        (dict(status=ReportStatus.REFUSED, reason="no", event_id="e1"), "made no event"),
         (
             dict(status=ReportStatus.FAILED, reason="no", started_at=TEN, effect=Lowered(by_cm=1)),
             "no effect",
