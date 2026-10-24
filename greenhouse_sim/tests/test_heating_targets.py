@@ -6,8 +6,6 @@ playback's run, steered while it plays, keeps its identity and epoch and
 rewrites nothing it delivered (decision 0043); and started over with its
 equipment moved, it keeps them (decision 0049)."""
 
-import gzip
-import json
 from collections.abc import Callable
 from http import HTTPStatus
 from pathlib import Path
@@ -22,7 +20,6 @@ from greenhouse_sim.climate.thermostat import Thermostat
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.equipment import Target
 from greenhouse_sim.scenarios.catalogue import PACKAGED
-from greenhouse_sim.scenarios.manifest_files import opening_file
 from greenhouse_sim.services import checkpoints, playback
 from greenhouse_sim.services.climate_readings import house_air_at
 from greenhouse_sim.services.climate_runs import climate_run
@@ -181,11 +178,9 @@ def test_a_scenario_without_a_heating_loop_has_no_target_to_change(simulator: Si
 
 
 def test_a_format_2_checkpoint_is_read_as_one_whose_run_changed_no_target(
-    simulator: Simulator,
+    simulator: Simulator, written_in_format_3: Callable[[bool], dict[str, Any]]
 ) -> None:
-    # The kept opening day, as format 3 wrote it.
-    document = json.loads(gzip.decompress(opening_file(SCENARIO).read_bytes()))
-    assert document["checkpoint_format"] == 3
+    document = written_in_format_3(False)
 
     older = {key: value for key, value in document.items() if key != "targets"}
     uploaded = checkpoints.upload_checkpoint(simulator, older | {"checkpoint_format": 2})
