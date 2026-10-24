@@ -119,7 +119,7 @@ def _run(scenario_id: str) -> Baseline:
         timestamp = start + timedelta(days=day - 1)
         step = engine.advance(world, day=day, timestamp=timestamp, simulation_id=SIMULATION_ID)
         truth = ground_truth(
-            step.world, timestamp=timestamp, water_capacity_ml=config.water_capacity_ml
+            step.world, timestamp=timestamp, water_capacity_ml=config.simple_crop.water_capacity_ml
         )
         execution = engine.apply_actions(
             step.world, _schedule(day, plant_ids), day=day, timestamp=timestamp

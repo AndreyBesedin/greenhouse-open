@@ -225,9 +225,11 @@ def _walk(
     fruits = _fruits(plant)
     red = [fruit for fruit in fruits if is_red(fruit.ripeness)]
     red_mass_g = sum(fruit.mass_g for fruit in red)
-    estimated_g = max(0.0, red_mass_g * (1 + rng.normal(0.0, config.ripe_mass_noise_pct / 100)))
+    estimated_g = max(
+        0.0, red_mass_g * (1 + rng.normal(0.0, config.crop_walk.ripe_mass_noise_pct / 100))
+    )
     height_cm = top_height_m(plant) * CM_PER_M
-    measured_cm = max(0.0, height_cm + rng.normal(0.0, config.height_noise_cm))
+    measured_cm = max(0.0, height_cm + rng.normal(0.0, config.crop_walk.height_noise_cm))
 
     def observed(kind: ObservationType, value: float) -> Observation:
         return Observation(
@@ -253,7 +255,7 @@ def _counted(count: int, config: ScenarioConfig, rng: np.random.Generator) -> fl
     fruit is missed or counted twice; but none where there is none, which
     is no fruit to miscount. The draws are made either way, so that a plant
     without fruit leaves the others' counts as they were."""
-    if rng.uniform() < config.fruit_count_noise_probability:
+    if rng.uniform() < config.crop_walk.fruit_count_noise_probability:
         miscount = int(rng.choice(MISCOUNTS))
         if count > 0:
             count += miscount

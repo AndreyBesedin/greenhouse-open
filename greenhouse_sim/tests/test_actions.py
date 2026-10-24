@@ -48,12 +48,12 @@ def test_water_action_does_not_exceed_capacity() -> None:
 
     updated_world, _ = apply_action(
         world,
-        WaterPlantAction(plant_id=PLANT_ID, amount_ml=CONFIG.water_capacity_ml * 2),
+        WaterPlantAction(plant_id=PLANT_ID, amount_ml=CONFIG.simple_crop.water_capacity_ml * 2),
         CONFIG,
         timestamp=TIMESTAMP,
     )
 
-    assert updated_world.plant(PLANT_ID).water_reservoir_ml == CONFIG.water_capacity_ml
+    assert updated_world.plant(PLANT_ID).water_reservoir_ml == CONFIG.simple_crop.water_capacity_ml
 
 
 def test_harvest_action_removes_ripe_fruit_and_tracks_cumulative_mass() -> None:

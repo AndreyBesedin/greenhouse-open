@@ -34,7 +34,9 @@ def main() -> None:
         world = step.world
         observations.extend(step.observations)
         truth.append(
-            ground_truth(world, timestamp=timestamp, water_capacity_ml=SCENARIO.water_capacity_ml)
+            ground_truth(
+                world, timestamp=timestamp, water_capacity_ml=SCENARIO.simple_crop.water_capacity_ml
+            )
         )
 
     # Nobody waters in this run, so soil moisture falls towards zero and its

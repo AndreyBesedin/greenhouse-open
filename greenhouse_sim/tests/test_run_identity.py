@@ -12,7 +12,8 @@ from greenhouse_sim.api.routes.runs import run_request
 from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED, Catalogue
-from greenhouse_sim.scenarios.registry import MODELS, WALK
+from greenhouse_sim.scenarios.crop_parameters import WALK
+from greenhouse_sim.scenarios.registry import MODELS
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
@@ -35,31 +36,32 @@ def test_a_run_is_named_by_what_its_scenario_is_made_of(
 
 
 # Runs as the API's addresses ask for them, and the ids they have since a
-# run's identity covers its models' versions (P14.2): the same requests
-# must name the same runs, so that every record, replay and kept day made
-# of them stands.
+# run's identity covers its models' versions (P14.2) and its crop's and
+# crop walk's parameters are each a section of its scenario (P14.3): the
+# same requests must name the same runs, so that every record, replay and
+# kept day made of them stands.
 PINNED_RUNS = [
-    ("reference_greenhouse", "", "reference_greenhouse-climate-8cc0d519"),
-    ("reference_greenhouse", "set=heater:0&daily=none", "reference_greenhouse-climate-a3a6c13d"),
+    ("reference_greenhouse", "", "reference_greenhouse-climate-9a0075e4"),
+    ("reference_greenhouse", "set=heater:0&daily=none", "reference_greenhouse-climate-15b29f58"),
     (
         "reference_greenhouse",
         "targets=3600:heating_day:24,60:heating_night:15",
-        "reference_greenhouse-climate-561fcc2e",
+        "reference_greenhouse-climate-a95a6f0f",
     ),
     (
         "reference_greenhouse",
         "schedule=600:roof_vent_1:1,600:roof_vent_1:0.5&targets=86400:heating_night:12",
-        "reference_greenhouse-climate-0cc44d4e",
+        "reference_greenhouse-climate-c41a7847",
     ),
-    ("climate_box", "", "climate_box-climate-3f9cc2fa"),
-    ("climate_box", "set=fan:1&schedule=60:fan:0.5,30:heater:1", "climate_box-climate-2accaf83"),
+    ("climate_box", "", "climate_box-climate-7bcca9ce"),
+    ("climate_box", "set=fan:1&schedule=60:fan:0.5,30:heater:1", "climate_box-climate-5148c4ca"),
     (
         "climate_box",
         "daily=64800:heater:1,0:fan:1&schedule=0:fan:0",
-        "climate_box-climate-0a1bbd83",
+        "climate_box-climate-7dc38379",
     ),
-    ("climate_box", "open=roof_vent:0.5&schedule=120:roof_vent:1", "climate_box-climate-2825661c"),
-    ("climate_box", "weather=cold_spring_day&set=heater:0.5", "climate_box-climate-12e0cc77"),
+    ("climate_box", "open=roof_vent:0.5&schedule=120:roof_vent:1", "climate_box-climate-2f0cc1fd"),
+    ("climate_box", "weather=cold_spring_day&set=heater:0.5", "climate_box-climate-2ca1585d"),
 ]
 
 

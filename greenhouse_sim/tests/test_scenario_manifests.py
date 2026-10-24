@@ -17,6 +17,7 @@ from pydantic import ValidationError
 
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED
+from greenhouse_sim.scenarios.crop_parameters import CropWalk, SimpleCrop
 from greenhouse_sim.scenarios.layout_files import load_layout
 from greenhouse_sim.scenarios.manifest_files import (
     FIRST_SCENARIO,
@@ -411,7 +412,10 @@ def test_each_parts_model_and_its_parameters_are_read_from_its_section() -> None
 
     config = scenario_from_manifest("climate_box", document)
 
-    assert (config.max_trusses, config.height_noise_cm) == (4, 0.5)
+    assert (config.crop, config.crop_walk) == (
+        SimpleCrop(max_trusses=4),
+        CropWalk(height_noise_cm=0.5),
+    )
     assert config.airflow.kind == "vortex"
     # A part left out runs its default model with its defaults: its own
     # weather left out, the climate box's runs are under a constant one.
@@ -501,8 +505,8 @@ def test_a_format_4_manifest_writes_its_choices_in_its_models_to_the_same_scenar
     assert config == SCENARIO_REGISTRY["climate_box"].model_copy(
         update={
             "airflow": config.airflow,
-            "max_trusses": 4,
-            "height_noise_cm": 0.5,
+            "crop": SimpleCrop(max_trusses=4),
+            "crop_walk": CropWalk(height_noise_cm=0.5),
         }
     )
     assert config.airflow.kind == "vortex"
@@ -510,11 +514,11 @@ def test_a_format_4_manifest_writes_its_choices_in_its_models_to_the_same_scenar
         scenario_from_manifest("climate_box", older | {"models": {}})
 
 
-def test_a_scenario_of_organ_rows_gives_the_simple_crops_settings_to_its_crop() -> None:
-    """A scenario's live run grows the simple crop whatever its rows grow,
-    by the simple crop's settings, which format 4 wrote at the top: a
-    scenario of organ rows gives them in its crop's section, which names
-    the organ crop, and a format 4 manifest of organ rows is migrated so."""
+def test_a_scenario_of_organ_rows_gives_its_crop_no_simple_crops_settings() -> None:
+    """The organ crop has a section of its own (P14.3): a format 4
+    manifest of organ rows leaves out the simple crop's settings it wrote
+    at the top, by which the engine's day grew the simple crop in its place,
+    and a section of the organ crop that gives them is refused."""
     current = _manifest("reference_greenhouse")
     weather = current["models"]["weather"]
     air = current["models"]["air_field"]
@@ -528,15 +532,16 @@ def test_a_scenario_of_organ_rows_gives_the_simple_crops_settings_to_its_crop() 
             for key, note in current["notes"].items()
         },
     }
-    wetter = SCENARIO_REGISTRY["reference_greenhouse"].model_copy(
-        update={"water_capacity_ml": 1500.0}
-    )
 
     migrated: Any = _migrated("reference_greenhouse", older, 4)
 
-    assert migrated["models"]["crop"] == {
-        "model": "organ",
-        "parameters": {"water_capacity_ml": 1500.0},
-    }
-    assert scenario_from_manifest("reference_greenhouse", older) == wetter
-    assert scenario_from_manifest("reference_greenhouse", migrated) == wetter
+    assert "crop" not in migrated["models"]
+    assert (
+        scenario_from_manifest("reference_greenhouse", older)
+        == SCENARIO_REGISTRY["reference_greenhouse"]
+    )
+    with pytest.raises(InvalidManifest, match=r"(?s)models\.crop: .*water_capacity_ml.*Extra"):
+        scenario_from_manifest(
+            "reference_greenhouse",
+            _models(current, crop={"model": "organ", "parameters": {"water_capacity_ml": 1500.0}}),
+        )

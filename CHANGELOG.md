@@ -7,7 +7,26 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
-- `greenhouse-sim`: **every run id changes, once** (P14.2, decision 0054).
+- `greenhouse-sim`: a scenario's configuration holds its crop model's
+  parameters and its crop walk's each in a section of their own (P14.3,
+  decision 0054), in place of the 21 settings at its top:
+  `ScenarioConfig.crop`, the parameters of the model its rows grow,
+  `SimpleCrop` or `OrganCrop`, told apart by their `kind`
+  (`scenarios.crop_parameters`); and `ScenarioConfig.crop_walk`, the
+  walk's three measurement noises. A configuration given its crop model
+  alone takes that model's parameters. `ScenarioConfig.simple_crop` gives
+  the settings the engine's day grows the simple crop by: its crop's, or
+  the simple crop's defaults where its rows grow the organ crop. A
+  manifest's section of the organ crop takes no parameters, and a format 4
+  manifest of organ rows leaves out the simple crop's settings it wrote.
+  A configuration given those settings at its top, as one written before
+  holds them, reads them into their sections, the simple crop's left out
+  where its rows grow the organ crop. They are read from the sections:
+  `config.water_capacity_ml` becomes `config.simple_crop.water_capacity_ml`,
+  and `config.height_noise_cm` `config.crop_walk.height_noise_cm`. The run
+  ids change with it, in this release, with P14.2's change below.
+- `greenhouse-sim`: **every run id changes, once in this release** (P14.2
+  and P14.3, decision 0054).
   A run's identity now covers the model each part of it runs and that
   model's version, so that a model whose numbers change makes other runs:
   the same request names another run than before, for every packaged
@@ -31,9 +50,7 @@ breaks the conformance checks is a major version.
   parameter model (`scenarios.registry`); a part left out runs its
   default. The weather, the airflow, the simple crop's settings and the
   walk's measurement noises are no longer written at a manifest's top, and
-  format 4 manifests are migrated so. A scenario of organ rows gives the
-  simple crop's settings, by which its live run grows the simple crop, in
-  its crop's section, which names the organ crop. A section gives its
+  format 4 manifests are migrated so. A section gives its
   parameters if its model has one with no default, as a recorded
   weather's file, and the published schema now requires them.
   `GET /api/scenarios/{id}/manifest` answers `models`, each part's model
