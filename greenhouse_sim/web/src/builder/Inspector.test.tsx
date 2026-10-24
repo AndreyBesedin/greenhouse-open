@@ -31,6 +31,8 @@ const HOUSE = {
   },
   layout: {
     crop_rows: {
+      // Halfway across a 6.4 m house less a row's gap, as a float has it.
+      origin: { x: 1, y: (6.4 - 1.6) / 2 },
       rows: 2,
       pair_gap: 0.4,
       support: { kind: "crop_gutter", height: 0.5, width: 0.3, depth: 0.12 },
@@ -167,6 +169,18 @@ describe("the builder's inspector (P12.3)", () => {
     expect([...onEdit.mock.calls, ...pipes.onEdit.mock.calls].map(([edit]) => edit)).toEqual([
       { edit: "set_field", items: ["service_1"], path: "area.start.x", value: 10 },
       { edit: "set_field", items: ["heating_1"], path: "count", value: 3 },
+    ]);
+  });
+
+  it("shows a number to twelve digits, and sends nothing for one left as it was", () => {
+    const { within, onEdit } = show(null);
+
+    expect(control(within, "Origin Y").value).toBe("2.4");
+    typeAndEnter(control(within, "Origin Y"), "2.4");
+    typeAndEnter(control(within, "Origin X"), "1.5");
+
+    expect(onEdit.mock.calls.map(([edit]) => edit)).toEqual([
+      { edit: "set_value", path: "layout.crop_rows.origin.x", value: 1.5 },
     ]);
   });
 
