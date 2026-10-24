@@ -112,7 +112,7 @@ test("QA mode: the run's manifest says what it is made from, and the versions se
     "cold_spring_day, synthetic, clouds 80%",
   );
   await expect(panel.getByTestId("manifest-models")).toHaveText(
-    "weather: synthetic, air field: uniform, crop: simple, crop walk: walk",
+    "weather: synthetic v1, air field: uniform v1, crop: simple v1, crop walk: walk v1",
   );
 
   // The simulator's version and commit as the API serves them, and the

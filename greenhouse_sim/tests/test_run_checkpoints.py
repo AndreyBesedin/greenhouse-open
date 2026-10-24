@@ -12,6 +12,7 @@ import pytest
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios.manifest_files import manifest_digest
 from greenhouse_sim.services import checkpoints, kept_states
 from greenhouse_sim.services.climate_runs import climate_run
@@ -61,8 +62,8 @@ def test_a_checkpoint_keeps_a_runs_state_at_the_start_of_its_day(simulator: Simu
     assert kept.house == climate.house.air_at(DAY_S)
     # And an hour before its day, where its first hour's field starts.
     assert kept.house_before == climate.house.air_at(DAY_S - HOUR_S)
-    assert kept.plants == list(crop.plants_on(1))
-    assert kept.lived == crop.lived_through(1)
+    assert kept.crop.plants == list(crop.plants_on(1))
+    assert kept.crop.lived == crop.lived_through(1)
     assert kept.manifest == manifest_digest("reference_greenhouse")
     assert (kept.layout, kept.weather, kept.plan.daily) == ("default", "default", None)
     assert checkpoints.checkpoints(simulator) == [saved]
@@ -204,6 +205,13 @@ def test_a_checkpoint_downloads_and_uploads_as_it_was(
     assert _body(simulator, "GET", "/api/checkpoints") == [saved]
 
 
+def _crop(document: dict[str, Any], **state: Any) -> dict[str, Any]:
+    """A checkpoint downloaded, its organ crop's state changed."""
+    crop = document["models"]["crop"]
+    changed = crop | {"state": crop["state"] | state}
+    return document | {"models": document["models"] | {"crop": changed}}
+
+
 def _refusal(simulator: Simulator, document: Any) -> str:
     response = respond(simulator, "POST", "/api/checkpoints", json.dumps(document).encode())
     assert response.status == HTTPStatus.BAD_REQUEST
@@ -217,7 +225,8 @@ def test_a_checkpoint_no_run_could_reach_is_refused(simulator: Simulator) -> Non
     )
     good = checkpoints.checkpoint(simulator, saved.checkpoint_id).model_dump(mode="json")
     house = good["house"]
-    plant = good["plants"][0]
+    plants = good["models"]["crop"]["state"]["plants"]
+    plant = plants[0]
 
     assert "-300 °C" in _refusal(simulator, good | {"house": house | {"temperature_c": -300.0}})
     assert "g/kg of water" in _refusal(simulator, good | {"house": house | {"humidity_g_kg": -5.0}})
@@ -226,15 +235,15 @@ def test_a_checkpoint_no_run_could_reach_is_refused(simulator: Simulator) -> Non
     # A plant older than the days it lived, as a later day's crop with its
     # days cut to fit an earlier one's would be.
     older = plant | {"thermal_time": plant["thermal_time"] + 50.0}
-    assert "add up to" in _refusal(simulator, good | {"plants": [older, *good["plants"][1:]]})
+    assert "add up to" in _refusal(simulator, _crop(good, plants=[older, *plants[1:]]))
     # Numbers JSON has none for reach the service from Python only.
     hot = [
         {plant_id: day[plant_id] | {"mean_temperature_c": math.inf} for plant_id in day}
-        for day in good["lived"]
+        for day in good["models"]["crop"]["state"]["lived"]
     ]
     for unreachable in (
         good | {"house": house | {"temperature_c": math.nan}},
-        good | {"lived": hot},
+        _crop(good, lived=hot),
     ):
         with pytest.raises(InvalidRequest, match="not finite"):
             checkpoints.upload_checkpoint(simulator, unreachable)
@@ -261,9 +270,9 @@ def test_a_checkpoint_that_does_not_fit_its_run_is_refused(simulator: Simulator)
     assert "format 1" in _refusal(simulator, good | {"checkpoint_format": 1})
     assert "an hour before its day" in _refusal(simulator, good | {"house_before": None})
     assert "plants are reference_greenhouse's" in _refusal(
-        simulator, good | {"plants": good["plants"][1:]}
+        simulator, _crop(good, plants=good["models"]["crop"]["state"]["plants"][1:])
     )
-    assert "lived 1 days" in _refusal(simulator, good | {"lived": []})
+    assert "lived 1 days" in _refusal(simulator, _crop(good, lived=[]))
     assert "days 0 to 120" in _refusal(simulator, good | {"day": 121})
     assert "has no equipment 'boiler'" in _refusal(simulator, good | {"levels": {"boiler": 1.0}})
     assert "not a checkpoint" in _refusal(simulator, {"checkpoint_format": 2})
@@ -292,3 +301,58 @@ def test_a_checkpoint_let_go_takes_its_own_state_not_one_kept_since(simulator: S
 
     assert simulator.states.get(saved.checkpoint_id) is again
     assert saved in checkpoints.checkpoints(simulator)
+
+
+def test_a_checkpoint_keeps_each_parts_model_its_version_and_its_state(
+    simulator: Simulator,
+) -> None:
+    saved = checkpoints.save_checkpoint(simulator, RunRequest("reference_greenhouse"), time_s=DAY_S)
+    kept = checkpoints.checkpoint(simulator, saved.checkpoint_id)
+
+    assert {part: (run.model, run.version) for part, run in kept.models.items()} == {
+        Part.WEATHER: ("seasonal", 1),
+        Part.AIR_FIELD: ("uniform", 1),
+        Part.CROP: ("organ", 1),
+        Part.CROP_WALK: ("walk", 1),
+    }
+    # Only the organ crop keeps a state: its plants and the days they lived.
+    assert [part for part, run in kept.models.items() if run.state is not None] == [Part.CROP]
+    assert len(kept.crop.plants) == saved.plants == 32
+
+
+def test_a_checkpoint_of_another_model_or_version_is_refused_naming_the_part(
+    simulator: Simulator,
+) -> None:
+    saved = checkpoints.save_checkpoint(simulator, RunRequest("reference_greenhouse"), time_s=DAY_S)
+    good = checkpoints.checkpoint(simulator, saved.checkpoint_id).model_dump(mode="json")
+    crop = good["models"]["crop"]
+
+    simple = good | {"models": good["models"] | {"crop": {"model": "simple", "version": 1}}}
+    later = good | {"models": good["models"] | {"crop": crop | {"version": 2}}}
+    walked = good | {"models": good["models"] | {"crop_walk": {"model": "walk", "version": 3}}}
+
+    assert "with the simple model of the crop, version 1: its run's is the organ model" in (
+        _refusal(simulator, simple)
+    )
+    assert "the organ model of the crop, version 2" in _refusal(simulator, later)
+    assert "the walk model of the crop_walk, version 3" in _refusal(simulator, walked)
+
+
+def test_a_format_4_checkpoints_plants_are_its_organ_crops_state(simulator: Simulator) -> None:
+    saved = checkpoints.save_checkpoint(simulator, RunRequest("reference_greenhouse"), time_s=DAY_S)
+    kept = checkpoints.checkpoint(simulator, saved.checkpoint_id)
+    written = kept.model_dump(mode="json", exclude={"models"})
+    state = kept.crop.model_dump(mode="json")
+    older = written | state | {"checkpoint_format": checkpoints.WITHOUT_MODELS}
+
+    read = checkpoints.read_checkpoint(older)
+
+    assert read.crop == kept.crop
+    # It names its crop's model alone, at the version every model had then;
+    # its run's are taken for the others.
+    assert {part: (run.model, run.version) for part, run in read.models.items()} == {
+        Part.CROP: ("organ", 1)
+    }
+    assert checkpoints.upload_checkpoint(simulator, older).plants == 32
+    with pytest.raises(InvalidRequest, match="a format 4 checkpoint keeps no models"):
+        checkpoints.read_checkpoint(older | {"models": {}})

@@ -25,7 +25,12 @@ const SERVED_MANIFEST = {
   weather_kind: "synthetic",
   cloud_cover_pct: null,
   wind_from_deg: null,
-  models: { weather: "synthetic", air_field: "uniform", crop: "organ", crop_walk: "walk" },
+  models: {
+    weather: { model: "synthetic", version: 1 },
+    air_field: { model: "uniform", version: 1 },
+    crop: { model: "organ", version: 1 },
+    crop_walk: { model: "walk", version: 1 },
+  },
 };
 
 const MANIFEST: RunManifest = {
@@ -43,7 +48,12 @@ const MANIFEST: RunManifest = {
   weatherKind: "synthetic",
   cloudCoverPct: null,
   windFromDeg: null,
-  models: { weather: "synthetic", air_field: "uniform", crop: "organ", crop_walk: "walk" },
+  models: {
+    weather: { model: "synthetic", version: 1 },
+    air_field: { model: "uniform", version: 1 },
+    crop: { model: "organ", version: 1 },
+    crop_walk: { model: "walk", version: 1 },
+  },
 };
 
 function answering(body: unknown, status = 200): typeof fetch {
@@ -83,7 +93,7 @@ describe("a run's manifest", () => {
       crop: "cherry_tomato, organ by organ",
       airflow: "uniform, prescribed",
       weather: "its own, synthetic",
-      models: "weather: synthetic, air field: uniform, crop: organ, crop walk: walk",
+      models: "weather: synthetic v1, air field: uniform v1, crop: organ v1, crop walk: walk v1",
     });
     const other = describeManifest({
       ...MANIFEST,

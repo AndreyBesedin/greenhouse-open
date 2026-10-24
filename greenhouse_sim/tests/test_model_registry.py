@@ -8,6 +8,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
+from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.manifest_files import MANIFESTS_DIR
@@ -18,7 +19,6 @@ from greenhouse_sim.scenarios.registry import (
     SIMPLE_CROP_FIELDS,
     WALK_FIELDS,
     CropWalk,
-    Part,
     SimpleCrop,
     chosen,
     model,
