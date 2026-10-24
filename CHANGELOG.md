@@ -27,10 +27,16 @@ breaks the conformance checks is a major version.
   - The simple crop's version is 2, so the run ids of the scenarios that
     grow it change, in this release; a checkpoint of one of them made
     before is refused, naming the crop.
+  - It delivers records to a consumer as the organ crop does (P10.4). The
+    daily walk at noon counts each plant's fruit as the engine's sensors
+    do, those not harvested and the ripe ones, estimates the ripe ones'
+    mass and measures how tall its stem stands, with the scenario's walk
+    errors. A harvest round is an event per plant picked: its fruit, and
+    the mass it added to the plant's harvest.
   - A plant of the simple crop has no structure to list
-    (`GET /api/scenarios/{id}/crop/{plant}` is not found for it), its root
-    zone empties as the model has it, since nothing waters it in a run,
-    and the crop log has no records of it.
+    (`GET /api/scenarios/{id}/crop/{plant}` is not found for it), and its
+    root zone empties as the model has it, since nothing waters it in a
+    run.
 - `greenhouse-sim`: a scenario's configuration holds its crop model's
   parameters and its crop walk's each in a section of their own (P14.3,
   decision 0054), in place of the 21 settings at its top:
