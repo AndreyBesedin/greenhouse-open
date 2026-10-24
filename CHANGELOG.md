@@ -7,6 +7,11 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- viewer: a scenario whose rows grow the simple crop draws its crop as it
+  stands at the moment of its run, as it draws the organ crop, once a day
+  has ended: each plant a cylinder as tall as its stem stands, in place of
+  its transplants, and, selected, its numbers in the inspector (its age,
+  height, trusses, fruits, ripe fruits and harvest) (P14.3).
 - `greenhouse-sim`: the simple crop is a rung of the run (P14.3, decision
   0035). A scenario whose rows grow it grows it in its run, a day at a
   time, from each day's mean air temperature in its house, by its settings
