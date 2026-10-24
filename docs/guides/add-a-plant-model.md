@@ -49,20 +49,27 @@ its rows' crop model, with that model's parameters in its manifest's
 4. **Its choice:** a member of `CropModel` in
    `greenhouse_sim/greenhouse_sim/domain/crop.py`, which a row names; its
    parameter model in `greenhouse_sim/greenhouse_sim/scenarios/crop_parameters.py`,
-   registered with its version in `greenhouse_sim/greenhouse_sim/scenarios/registry.py`;
-   its rung built for it in `greenhouse_sim/greenhouse_sim/services/crop.py`
-   (`_new_crop`); and every branch on `is_organ` handled, in the services
-   (the crop's scene, a plant's structure, the crop log and the replay) and
-   in the viewer (`greenhouse_sim/web/src/plants/crop.ts`).
-5. **Checkpoints** keep its plants: its state model in `CROP_STATES`
-   (`greenhouse_sim/greenhouse_sim/services/checkpoints.py`), and what no run
-   of it reaches refused on upload (`_implausible`).
+   added to `ScenarioConfig.crop`'s union and registered with its version in
+   `greenhouse_sim/greenhouse_sim/scenarios/registry.py`.
+5. **Its registration for the services** ([decision 0055](../decisions/0055-a-model-is-registered-with-all-that-tells-it-apart.md)),
+   under the same name in `CROP_MODELS`
+   (`greenhouse_sim/greenhouse_sim/services/crop_models.py`): its rung,
+   built from the scenario; its state model, added to `CropModelState`, and
+   what no run of it reaches in a checkpoint (`implausible`); how its plants
+   are drawn (`drawn`); how a walk measures a plant (`measured`) and what a
+   harvest round picked from one (`picked`); and what a replay reads beside
+   a day's digest (`probed`). No service branches on a model's name: the
+   crop's scene before and during a run, the plants' light, checkpoints,
+   the crop log and the replay ask the registration. A plant's structure
+   and the run's own crop actions are the organ crop's alone.
 6. **Its scene:** `crop_entities` (`greenhouse_sim/greenhouse_sim/scene/plants.py`)
    draws the tomato's organs. A new organ is a new entity kind and a
    renderer, as [add a device](add-a-device.md) describes for equipment.
 7. **Its tests:** its rung added to `RUNGS` in
    `greenhouse_sim/tests/test_crop_rungs.py`, which holds every rung to the
-   contract's rules, and the run's coupling as
+   contract's rules; its registration held by
+   `greenhouse_sim/tests/test_crop_models.py`, as every registration is;
+   and the run's coupling as
    `greenhouse_sim/tests/test_run_crop.py` and
    `greenhouse_sim/tests/test_run_simple_crop.py` check it.
 8. **Its sources:** each equation and parameter from a cited source,

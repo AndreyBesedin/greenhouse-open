@@ -121,6 +121,27 @@ class OrganRung:
         return len(plant.history)
 
 
+def crowns[PlantT: CropPlant](
+    rung: CropRung[PlantT],
+    plants: Sequence[PlantT],
+    trainings: Sequence[Training],
+    envelope: Envelope,
+) -> list[Crown]:
+    """Each plant's crown, the first trained as the first of `trainings`
+    says in `envelope`, and so on: standing where its model says it rises,
+    as tall as it says it stands; none for a plant with no stem showing."""
+    placed = []
+    for plant, training in zip(plants, trainings, strict=False):
+        foot = training.position.point
+        rises, height = rung.crown(plant, training)
+        if height > 0:
+            base = Vector3(x=foot.x + rises.x, y=foot.y + rises.y, z=foot.z + rises.z)
+            placed.append(
+                Crown(plant_id=plant.plant_id, base=envelope.to_world(base), height_m=height)
+            )
+    return placed
+
+
 # The house's mean air through a day of the run, from 0.
 type DayAir = Callable[[int], HouseAir]
 # The light on the crop on a day of the run, its crowns as given.
@@ -489,22 +510,7 @@ class RunCrop[PlantT: CropPlant]:
         return tuple(worked)
 
     def _crowns(self, plants: Sequence[PlantT]) -> list[Crown]:
-        """Each plant's crown, standing where its model says it rises, as
-        tall as it says it stands."""
-        crowns = []
-        for plant, training in zip(plants, self._trainings, strict=False):
-            foot = training.position.point
-            rises, height = self.rung.crown(plant, training)
-            if height > 0:
-                base = Vector3(x=foot.x + rises.x, y=foot.y + rises.y, z=foot.z + rises.z)
-                crowns.append(
-                    Crown(
-                        plant_id=plant.plant_id,
-                        base=self._envelope.to_world(base),
-                        height_m=height,
-                    )
-                )
-        return crowns
+        return crowns(self.rung, plants, self._trainings, self._envelope)
 
     def _keep(self, day: int, plants: tuple[PlantT, ...]) -> None:
         with self._keeping:

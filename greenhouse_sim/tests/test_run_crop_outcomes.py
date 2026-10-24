@@ -43,7 +43,8 @@ from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.organs import FruitStage
 from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import plants, playback
-from greenhouse_sim.services.crop_log import _harvest, crop_actions_done
+from greenhouse_sim.services.crop_log import crop_actions_done
+from greenhouse_sim.services.crop_models import ORGAN
 from greenhouse_sim.services.gateway import (
     LOCAL_OPERATOR,
     NO_ROOT_ZONE,
@@ -221,12 +222,11 @@ def test_a_day_s_harvest_event_counts_its_crop_work_alone() -> None:
     )
     after = act(worked, HarvestFruit(fruit_id=unripe))
 
-    whole = _harvest(after, plant, START, "lab")
-    round_only = _harvest(after, plant, START, "lab", len(worked.history))
+    whole, _ = ORGAN.picked(after, plant, None)
+    round_only, _ = ORGAN.picked(after, plant, len(worked.history))
 
-    assert whole is not None and round_only is not None
-    assert round_only.parameters["harvested_fruit_count"] == len(worked.history)
-    assert whole.parameters["harvested_fruit_count"] == len(worked.history) + 1
+    assert round_only == len(worked.history)
+    assert whole == len(worked.history) + 1
 
 
 @pytest.mark.slow

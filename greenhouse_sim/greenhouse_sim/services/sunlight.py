@@ -14,16 +14,14 @@ light is asked for at a moment of a run is the crop's
 
 from typing import TYPE_CHECKING, Final
 
-from greenhouse_sim.biology.tomato.organ.geometry import stem_height_m
-from greenhouse_sim.biology.tomato.organ.transplants import transplant
-from greenhouse_sim.domain.crop import CropModel
-from greenhouse_sim.engine import SimulationEngine
+from greenhouse_sim.core.crop import crowns
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.services.crop_models import registration
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.scenarios import SceneChanges, changed, plant_ids, scenario
 from greenhouse_sim.services.stores import Store
 from greenhouse_sim.solar.inside import Sunlight
-from greenhouse_sim.solar.plants import Crown, PlantLight, crowns, placed_crowns
+from greenhouse_sim.solar.plants import Crown, PlantLight
 from greenhouse_sim.solar.shadows import Shadows
 
 if TYPE_CHECKING:
@@ -40,20 +38,12 @@ def new_store() -> Store[tuple[str, str, str], PlantLight]:
 
 
 def first_crowns(config: ScenarioConfig) -> list[Crown]:
-    """A scenario's plants' crowns before its first day: its transplants',
-    where it grows its crop organ by organ, or else the simple model's
-    plants'."""
-    positions = config.layout.planting_positions()
-    if config.crop_model == CropModel.ORGAN:
-        heights = {
-            plant_id: stem_height_m(transplant(plant_id, config.random_seed))
-            for plant_id in plant_ids(config)
-        }
-        return placed_crowns(heights, positions, config.envelope)
-    world = SimulationEngine(config).initialize(
-        plant_ids(config), greenhouse_id=config.greenhouse_id
-    )
-    return crowns(world.plants, positions, config.envelope)
+    """A scenario's plants' crowns before its first day: its transplants', as
+    the model its rows grow starts and stands them
+    (`greenhouse_sim.services.crop_models`)."""
+    rung = registration(config).rung(config)
+    transplants = [rung.transplant(plant_id) for plant_id in plant_ids(config)]
+    return crowns(rung, transplants, config.layout.trainings(), config.envelope)
 
 
 def plant_light(simulator: Simulator, scenario_id: str, layout: str, weather: str) -> PlantLight:

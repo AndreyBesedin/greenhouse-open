@@ -1,6 +1,6 @@
 # 0055: A model is registered with all that tells it apart
 
-**Status:** Proposed, with P14.4
+**Status:** Accepted, with P14.6's first step, the crop's registration
 ([P14](../roadmap/p14-models-by-manifest.md)).
 **Date:** 2026-10-24
 

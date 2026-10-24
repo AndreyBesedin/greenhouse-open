@@ -29,8 +29,10 @@ from pydantic import BaseModel, ConfigDict, JsonValue
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.digests import short_digest
 from greenhouse_sim.services.climate_runs import climate_run
-from greenhouse_sim.services.crop import is_organ, scenario_crop
+from greenhouse_sim.services.crop import scenario_crop
+from greenhouse_sim.services.crop_models import registration
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.sensors import observations
 from greenhouse_sim.units import HOUR_S, HOURS_A_DAY
 
@@ -79,12 +81,12 @@ def day_probes(simulator: Simulator, run: RunRequest, days: int) -> list[DayProb
     asked for as its climate field is."""
     _, climate = climate_run(simulator, run)
     crop = scenario_crop(simulator, run)
+    grown_by = registration(scenario(simulator.catalogue, run.scenario_id))
     probes = []
     for day in range(days):
         end = (day + 1) * DAY_S
         air = climate.house.air_at(end)
         plants = crop.plants_on(day + 1)
-        organ = list(crop.plants_on(day + 1)) if is_organ(crop) else []
         readings: list[JsonValue] = [
             [observation.sensor_id, (hour + 1) * HOUR_S, observation.value]
             for hour in range(HOURS_A_DAY)
@@ -104,7 +106,7 @@ def day_probes(simulator: Simulator, run: RunRequest, days: int) -> list[DayProb
             }
         )
         text = json.dumps(probe, sort_keys=True, separators=(",", ":"))
-        organs = sum(1 for plant in organ for _ in plant.organs())
+        organs, thermal_cd = grown_by.probed(plants)
         probes.append(
             DayProbe(
                 day=day,
@@ -112,9 +114,7 @@ def day_probes(simulator: Simulator, run: RunRequest, days: int) -> list[DayProb
                 house_temperature_c=round(air.temperature_c, 2),
                 house_humidity_pct=round(air.relative_humidity_pct(), 1),
                 organs=organs,
-                thermal_time_cd=round(sum(plant.thermal_time for plant in organ) / len(organ), 2)
-                if organ
-                else 0.0,
+                thermal_time_cd=round(thermal_cd, 2),
                 readings=len(readings),
             )
         )
