@@ -20,7 +20,7 @@ from greenhouse_protocol.actions import (
     RemoveLeaf,
     SetLevel,
 )
-from greenhouse_protocol.authorisation import AuthorisationConfig
+from greenhouse_protocol.authorisation import AuthorisationConfig, AuthorisationGroup, Grant
 from greenhouse_protocol.contracts.execution import check_executor
 from greenhouse_protocol.contracts.gateway import check_gateway
 from greenhouse_protocol.contracts.memory_gateway import InMemoryGateway
@@ -110,6 +110,19 @@ def _ripe(plant: int) -> Harvest:
 
 def _look(plant: int) -> Inspect:
     return Inspect(plant_id=PLANTS[plant], reason="spots on its lowest leaves")
+
+
+# The local operator, allowed to inspect the crop, and no other kind.
+INSPECTIONS_ONLY: Final = AuthorisationConfig(
+    version=2,
+    groups=(
+        AuthorisationGroup(
+            group_id="local_operators",
+            principals=frozenset({LOCAL_OPERATOR}),
+            grants=(Grant(kinds=frozenset({ActionKind.INSPECT})),),
+        ),
+    ),
+)
 
 
 # A plan given before the run's second day, for one hand: a harvest on
@@ -302,6 +315,51 @@ def test_a_playback_with_a_crew_ends_a_plan_the_same_after_it_starts_over(
             played.command(PlaybackCommand.RESTART)
 
     assert ends[0] == ends[1] == CREW_ENDS
+
+
+@pytest.mark.slow
+def test_a_playback_and_its_gateway_stop_together_where_a_timed_action_is_refused(
+    tmp_path: Path,
+) -> None:
+    """An hour's harvest due at day 1's start, its rights withdrawn before
+    then, is refused at its start. The playback's clock and its gateway's
+    stop there together, so an inspection given then, as soon as possible,
+    starts at that same day's start."""
+    clock = _Clock()
+    with Simulator(crew=ONE_HAND) as simulator:
+        playback.start(simulator, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
+        played = playback.playback(simulator, SCENARIO)
+        state = played.state()
+
+        def given(plan_id: str, *actions: PlannedAction) -> None:
+            plan = Plan(
+                plan_id=plan_id,
+                run_id=state.run_id,
+                epoch=state.epoch,
+                revision=1,
+                actions=actions,
+            )
+            receipt = played.submit(plan)
+            assert receipt.accepted and receipt.refused == ()
+
+        given("crop", _planned("ripe", _ripe(0), START + DAY))
+        assert played.work_day(0) and played.work_day(1)
+        simulator.authorise(INSPECTIONS_ONLY)
+        played.command(PlaybackCommand.PLAY)
+        clock.now = 26.0
+        assert played.state().simulated_now == START + DAY
+        given("look", _planned("look", _look(1), START + DAY, timing=Asap()))
+        assert played.work_day(1)
+        clock.now = 27.0
+        (refused,) = played.plan("crop").outcomes
+        (looked,) = played.plan("look").outcomes
+
+    assert (refused.status, refused.resolved_at) == (OutcomeStatus.REFUSED, START + DAY)
+    assert (looked.status, looked.started_at, looked.finished_at) == (
+        OutcomeStatus.EXECUTED,
+        START + DAY,
+        START + DAY + 10 * MINUTE,
+    )
 
 
 def _played_through(

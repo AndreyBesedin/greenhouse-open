@@ -1007,6 +1007,11 @@ which changes no run, then the run carrying out a plan's crop actions.
   own instants, and a crop action's report waits for its day. Tests cover
   a plan for one hand played by hours, minutes and days, and a playback
   started over and given the plan again.
+- **A playback moves its gateway a moment at a time,** through every
+  moment the gateway has something to do (`InMemoryGateway.next_moment`).
+  Where the run's plan changes, as an action is refused when it falls due
+  or turns late, its clock stops with the gateway's, so nothing is
+  decided ahead of the records.
 - **Not yet:** the server takes no crew of its own, so its runs have none.
   A hand that the crop refuses an action for is not handed back to the
   actions already assigned after it, which keep their instants.
