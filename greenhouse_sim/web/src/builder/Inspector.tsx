@@ -54,11 +54,21 @@ function inspected(installation: Installation, id: string): Inspected | null {
   return opening === undefined ? null : { id, model: "Opening", values: opening };
 }
 
-/** What `values` holds at `path`, as an input shows it. */
+// How many significant digits a number is shown to: more than any size a
+// greenhouse is measured to, fewer than a float's rounding shows, as in
+// (6.4 - 1.6) / 2, 2.4000000000000004.
+const SHOWN_DIGITS = 12;
+
+/** What `values` holds at `path`, as an input shows it: a number to
+ * `SHOWN_DIGITS`, so that a value left as it is sends nothing, and the
+ * simulator keeps it exact. */
 function shown(values: unknown, path: string): string {
   let held: unknown = values;
   for (const key of path.split(".")) {
     held = isObject(held) ? held[key] : undefined;
+  }
+  if (typeof held === "number") {
+    return String(Number(held.toPrecision(SHOWN_DIGITS)));
   }
   return held === undefined || held === null ? "" : String(held);
 }
