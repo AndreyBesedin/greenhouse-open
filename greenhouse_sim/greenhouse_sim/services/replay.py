@@ -3,8 +3,9 @@ one replay of a run from another.
 
 At the end of each of a run's days, its state is probed:
 
-- **its crop,** where it grows one organ by organ: each plant's structure,
-  every organ and its size, and its history (`greenhouse_sim.core.crop`);
+- **its crop:** each plant as its model keeps it, organ by organ, each
+  organ's size and its history, or the simple crop's plant and the values
+  it keeps for it (`greenhouse_sim.core.crop`);
 - **its house's air** then (`greenhouse_sim.climate.house`);
 - **a sample of its readings:** what each of its point sensors observed on
   each hour of the day, on the observation path, its noise and dropouts and
@@ -27,11 +28,9 @@ from pydantic import BaseModel, ConfigDict, JsonValue
 
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.digests import short_digest
-from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.services.climate_runs import climate_run
-from greenhouse_sim.services.crop import run_crop
+from greenhouse_sim.services.crop import is_organ, scenario_crop
 from greenhouse_sim.services.runs import RunRequest
-from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.sensors import observations
 from greenhouse_sim.units import HOUR_S, HOURS_A_DAY
 
@@ -51,8 +50,8 @@ DIGEST_LENGTH: Final = 16
 class DayProbe(BaseModel):
     """A run's state probed at the end of its day `day`: the digest of the
     probe, and, to read beside it, the house's air temperature and relative
-    humidity then, the crop's organs and mean thermal time, and the
-    readings sampled."""
+    humidity then, the organ crop's organs and mean thermal time, none for
+    the simple crop, and the readings sampled."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -78,14 +77,14 @@ def _rounded(value: JsonValue) -> JsonValue:
 def day_probes(simulator: Simulator, run: RunRequest, days: int) -> list[DayProbe]:
     """A run's state probed at the end of each of its first `days` days,
     asked for as its climate field is."""
-    config = scenario(simulator.catalogue, run.scenario_id)
     _, climate = climate_run(simulator, run)
-    crop = run_crop(simulator, run) if config.crop_model == CropModel.ORGAN else None
+    crop = scenario_crop(simulator, run)
     probes = []
     for day in range(days):
         end = (day + 1) * DAY_S
         air = climate.house.air_at(end)
-        plants = [] if crop is None else list(crop.plants_on(day + 1))
+        plants = crop.plants_on(day + 1)
+        organ = list(crop.plants_on(day + 1)) if is_organ(crop) else []
         readings: list[JsonValue] = [
             [observation.sensor_id, (hour + 1) * HOUR_S, observation.value]
             for hour in range(HOURS_A_DAY)
@@ -105,7 +104,7 @@ def day_probes(simulator: Simulator, run: RunRequest, days: int) -> list[DayProb
             }
         )
         text = json.dumps(probe, sort_keys=True, separators=(",", ":"))
-        organs = sum(1 for plant in plants for _ in plant.organs())
+        organs = sum(1 for plant in organ for _ in plant.organs())
         probes.append(
             DayProbe(
                 day=day,
@@ -113,8 +112,8 @@ def day_probes(simulator: Simulator, run: RunRequest, days: int) -> list[DayProb
                 house_temperature_c=round(air.temperature_c, 2),
                 house_humidity_pct=round(air.relative_humidity_pct(), 1),
                 organs=organs,
-                thermal_time_cd=round(sum(plant.thermal_time for plant in plants) / len(plants), 2)
-                if plants
+                thermal_time_cd=round(sum(plant.thermal_time for plant in organ) / len(organ), 2)
+                if organ
                 else 0.0,
                 readings=len(readings),
             )

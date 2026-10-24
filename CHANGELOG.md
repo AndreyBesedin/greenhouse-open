@@ -7,6 +7,30 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: the simple crop is a rung of the run (P14.3, decision
+  0035). A scenario whose rows grow it grows it in its run, a day at a
+  time, from each day's mean air temperature in its house, by its settings
+  and seed: for the same temperatures, its plants are the engine's day's.
+  - Its crop's scene (`GET /api/scenarios/{id}/crop`) draws its plants as
+    they stand, each with its numbers; the light on its plants
+    (`GET /api/scenarios/{id}/climate/plants`) is read with their crowns as
+    tall as they stand that day.
+  - A checkpoint keeps its plants, with the values the model keeps for
+    them, and the days they lived (`models.crop.state`); a run carries on
+    from it, and one whose plants could not be its run's is refused. The
+    replay's probes digest its plants.
+  - The crop part has a contract, `CropRung` (`biology.crop_contract`),
+    which the organ crop (`core.crop.OrganRung`) and the simple crop
+    (`core.simple_crop.SimpleRung`) keep, and `RunCrop` is built with one.
+    The simple model's day takes the day's mean air temperature, the one
+    thing it reads.
+  - The simple crop's version is 2, so the run ids of the scenarios that
+    grow it change, in this release; a checkpoint of one of them made
+    before is refused, naming the crop.
+  - A plant of the simple crop has no structure to list
+    (`GET /api/scenarios/{id}/crop/{plant}` is not found for it), its root
+    zone empties as the model has it, since nothing waters it in a run,
+    and the crop log has no records of it.
 - `greenhouse-sim`: a scenario's configuration holds its crop model's
   parameters and its crop walk's each in a section of their own (P14.3,
   decision 0054), in place of the 21 settings at its top:

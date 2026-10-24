@@ -8,16 +8,12 @@ from greenhouse_sim.biology.tomato.simple.parameters import (
 )
 from greenhouse_sim.biology.tomato.simple.state import SimplePlantState
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.world.state import GreenhouseEnvironment, PlantWorld
+from greenhouse_sim.world.state import PlantWorld
 
 
-def daily_water_use_ml(
-    plant: PlantWorld, environment: GreenhouseEnvironment, config: ScenarioConfig
-) -> float:
+def daily_water_use_ml(plant: PlantWorld, temperature_c: float, config: ScenarioConfig) -> float:
     """Hotter days and bigger plants use more water."""
-    temp_factor = 1.0 + WATER_USE_INCREASE_PER_DEGREE * (
-        environment.air_temperature_c - REFERENCE_TEMPERATURE_C
-    )
+    temp_factor = 1.0 + WATER_USE_INCREASE_PER_DEGREE * (temperature_c - REFERENCE_TEMPERATURE_C)
     size_factor = 1.0 + WATER_USE_INCREASE_PER_INITIAL_STEM_LENGTH * (
         plant.stem_length_cm / max(config.simple_crop.initial_stem_length_cm, 1.0)
     )
@@ -31,11 +27,11 @@ def daily_water_use_ml(
 def advance_water(
     plant: PlantWorld,
     plant_state: SimplePlantState,
-    environment: GreenhouseEnvironment,
+    temperature_c: float,
     config: ScenarioConfig,
 ) -> tuple[PlantWorld, SimplePlantState]:
     """The day's water use empties the root zone; a low root zone builds stress."""
-    use = daily_water_use_ml(plant, environment, config)
+    use = daily_water_use_ml(plant, temperature_c, config)
     reservoir = plant.water_reservoir_ml - use - config.simple_crop.evaporation_ml_per_day
     reservoir = max(0.0, min(config.simple_crop.water_capacity_ml, reservoir))
 

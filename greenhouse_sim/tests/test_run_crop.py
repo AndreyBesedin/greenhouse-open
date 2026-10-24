@@ -29,7 +29,15 @@ from greenhouse_sim.biology.tomato.organ.transplants import transplant
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.core.clock import DAY_S, days_ended
-from greenhouse_sim.core.crop import KEPT_DAYS, CropDone, CropLight, CropWork, DayWork, RunCrop
+from greenhouse_sim.core.crop import (
+    KEPT_DAYS,
+    CropDone,
+    CropLight,
+    CropWork,
+    DayWork,
+    OrganRung,
+    RunCrop,
+)
 from greenhouse_sim.core.crop_actions import CropAction, carry_out
 from greenhouse_sim.core.timeline import HARVEST_ROUND, RunProcesses, events
 from greenhouse_sim.domain.crop import CropModel
@@ -94,7 +102,7 @@ def _crop(
     asked: _Asked | None = None,
     air_on: Callable[[int], HouseAir] | None = None,
     planned: Mapping[int, Sequence[CropAction]] | None = None,
-) -> RunCrop:
+) -> RunCrop[Plant]:
     """Three of the reference greenhouse's transplants, at its first three
     planting positions, in steady air and light."""
     record = _Asked() if asked is None else asked
@@ -111,6 +119,7 @@ def _crop(
         [transplant(plant_id, seed) for plant_id in PLANTS],
         REFERENCE.layout.trainings(),
         REFERENCE.envelope,
+        rung=OrganRung(seed),
         air=day_air,
         light=light,
         work=work,
@@ -451,7 +460,10 @@ def test_the_reference_greenhouse_grows_its_crop_organ_by_organ(simulator: Simul
     others = [s for s in SCENARIO_REGISTRY.values() if s.greenhouse_id != "reference_greenhouse"]
     assert all(other.crop_model == CropModel.SIMPLE for other in others)
 
-    refused = respond(simulator, "GET", "/api/scenarios/climate_box/crop?t=0")
+    # A plant of the simple crop has no structure to list: its numbers are
+    # its entity's in the crop's scene.
+    plant = "climate_box_plant_001"
+    refused = respond(simulator, "GET", f"/api/scenarios/climate_box/crop/{plant}?t=0")
     assert refused.status == HTTPStatus.NOT_FOUND
     assert refused.body == {
         "error": "climate_box grows its crop with the simple daily model, not by organ"

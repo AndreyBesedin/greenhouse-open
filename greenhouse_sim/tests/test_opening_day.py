@@ -95,6 +95,7 @@ def test_the_kept_opening_day_is_the_manifests_and_bears_red_fruit() -> None:
         "the reference scenario's manifest has changed: write its opening day again with "
         "`python tests/test_opening_day.py --update`"
     )
+    assert isinstance(kept.crop, checkpoints.CropState)
     assert _red(kept.crop.plants) > 0
     # Beside it, the same run with everything off, as a viewer charts it.
     off = _kept(all_off=True)

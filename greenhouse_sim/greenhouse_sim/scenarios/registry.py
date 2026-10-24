@@ -94,7 +94,9 @@ MODELS: Final[Mapping[Part, Mapping[str, Model]]] = {
         Model(Part.AIR_FIELD, "gradient", GradientAirflow, "airflow"),
     ),
     Part.CROP: _models(
-        Model(Part.CROP, CropModel.SIMPLE.value, SimpleCrop, "crop"),
+        # 2: grown in the run, from its air, rather than in the engine's day
+        # alone (P14.3).
+        Model(Part.CROP, CropModel.SIMPLE.value, SimpleCrop, "crop", version=2),
         Model(Part.CROP, CropModel.ORGAN.value, OrganCrop, "crop"),
     ),
     Part.CROP_WALK: _models(Model(Part.CROP_WALK, WALK, CropWalk, "crop_walk")),
