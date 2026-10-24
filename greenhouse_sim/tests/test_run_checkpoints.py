@@ -2,6 +2,7 @@
 memory, downloaded and uploaded as JSON; a restored run carrying on as the
 original does, and a branch sharing every day before its own."""
 
+import dataclasses
 import json
 import math
 from collections.abc import Callable
@@ -14,6 +15,7 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios.manifest_files import manifest_digest
+from greenhouse_sim.scenarios.registry import MODELS
 from greenhouse_sim.services import checkpoints, kept_states
 from greenhouse_sim.services.climate_runs import climate_run
 from greenhouse_sim.services.crop import run_crop
@@ -336,9 +338,46 @@ def test_a_checkpoint_of_another_model_or_version_is_refused_naming_the_part(
     )
     assert "the organ model of the crop, version 2" in _refusal(simulator, later)
     assert "the walk model of the crop_walk, version 3" in _refusal(simulator, walked)
+    # A part left out would be left unchecked: this format names them all.
+    unnamed = good | {
+        "models": {part: kept for part, kept in good["models"].items() if part != "crop_walk"}
+    }
+    assert "keeps each part's model, and this one none for the crop_walk" in (
+        _refusal(simulator, unnamed)
+    )
 
 
-def test_a_format_4_checkpoints_plants_are_its_organ_crops_state(simulator: Simulator) -> None:
+def _bumped(monkeypatch: pytest.MonkeyPatch, part: Part, name: str) -> None:
+    """The model `name` of `part` at its next version, as when its numbers
+    change."""
+    models = MODELS[part]
+    bumped = dataclasses.replace(models[name], version=models[name].version + 1)
+    monkeypatch.setitem(models, name, bumped)
+
+
+def test_a_checkpoint_keeps_the_model_of_the_weather_its_run_is_under(
+    simulator: Simulator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The reference greenhouse's own weather is seasonal; its run under a
+    preset, synthetic."""
+    saved = checkpoints.save_checkpoint(
+        simulator, RunRequest("reference_greenhouse", weather="cold_spring_day")
+    )
+    kept = checkpoints.checkpoint(simulator, saved.checkpoint_id)
+
+    assert (kept.models[Part.WEATHER].model, kept.models[Part.WEATHER].version) == (
+        "synthetic",
+        1,
+    )
+    _bumped(monkeypatch, Part.WEATHER, "synthetic")
+    assert "the synthetic model of the weather, version 1: its run's is the synthetic" in (
+        _refusal(simulator, kept.model_dump(mode="json"))
+    )
+
+
+def test_a_format_4_checkpoints_plants_are_its_organ_crops_state(
+    simulator: Simulator, monkeypatch: pytest.MonkeyPatch
+) -> None:
     saved = checkpoints.save_checkpoint(simulator, RunRequest("reference_greenhouse"), time_s=DAY_S)
     kept = checkpoints.checkpoint(simulator, saved.checkpoint_id)
     written = kept.model_dump(mode="json", exclude={"models"})
@@ -353,6 +392,13 @@ def test_a_format_4_checkpoints_plants_are_its_organ_crops_state(simulator: Simu
     assert {part: (run.model, run.version) for part, run in read.models.items()} == {
         Part.CROP: ("organ", 1)
     }
-    assert checkpoints.upload_checkpoint(simulator, older).plants == 32
+    # Kept, it names every part's model, as the one saved does: it is that
+    # one.
+    assert checkpoints.upload_checkpoint(simulator, older) == saved
     with pytest.raises(InvalidRequest, match="a format 4 checkpoint keeps no models"):
         checkpoints.read_checkpoint(older | {"models": {}})
+    # Made before models had versions, with the first of each: a part's
+    # model at a later one makes another run.
+    _bumped(monkeypatch, Part.WEATHER, "seasonal")
+    with pytest.raises(InvalidRequest, match="the seasonal model of the weather, version 1"):
+        checkpoints.upload_checkpoint(simulator, older)

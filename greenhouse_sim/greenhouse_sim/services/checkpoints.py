@@ -65,13 +65,19 @@ from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.scenarios.manifest_files import opening_file
-from greenhouse_sim.scenarios.registry import models_run
+from greenhouse_sim.scenarios.registry import ModelRun, models_run
 from greenhouse_sim.services.climate_runs import climate_run, run_schedule, seed_kept_climate_runs
 from greenhouse_sim.services.crop import run_crop, seed_kept_crops
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError, first_reason
 from greenhouse_sim.services.kept_states import KeptState, keep
 from greenhouse_sim.services.runs import Commanded, RunPlan, RunRequest, checked_moment
-from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids, scenario, version
+from greenhouse_sim.services.scenarios import (
+    DEFAULT_WEATHER,
+    plant_ids,
+    scenario,
+    version,
+    with_weather,
+)
 from greenhouse_sim.services.stores import Store
 
 if TYPE_CHECKING:
@@ -156,7 +162,9 @@ class Checkpoint(BaseModel):
     # run's first day, which draws its first hours from its start (format 2).
     house_before: HouseAir | None = None
     # Each part's model and version, and its state then, if it keeps one
-    # (format 5). A checkpoint of an earlier format names its crop's alone.
+    # (format 5), for every part. A checkpoint of an earlier format names its
+    # crop's alone: its others are its run's, at the version every model had
+    # then.
     models: dict[Part, ModelState]
 
     @property
@@ -250,10 +258,17 @@ def save_checkpoint(
             part: ModelState(
                 model=ran.model, version=ran.version, state=state if part is Part.CROP else None
             )
-            for part, ran in models_run(config).items()
+            for part, ran in _models_run(simulator, run).items()
         },
     )
     return _kept(simulator, checkpoint)
+
+
+def _models_run(simulator: Simulator, run: RunRequest) -> dict[Part, ModelRun]:
+    """Each part's model and version a run runs: its scenario's, under the
+    weather it is asked for, which may be another model's."""
+    config = scenario(simulator.catalogue, run.scenario_id)
+    return models_run(with_weather(config, run.weather or DEFAULT_WEATHER))
 
 
 def checkpoints(simulator: Simulator) -> list[CheckpointSummary]:
@@ -282,6 +297,9 @@ def read_checkpoint(document: JsonValue) -> Checkpoint:
     """A checkpoint as it is written, in this simulator's format or one it
     reads as it (`READ_AS_CURRENT`), as this format holds it. Refused if it
     is not one, or is in a format this simulator does not read."""
+    # A checkpoint of this format names every part's model; one of an
+    # earlier format, its crop's alone.
+    native = isinstance(document, dict) and document.get("checkpoint_format") == CHECKPOINT_FORMAT
     if isinstance(document, dict):
         written_in = document.get("checkpoint_format")
         if written_in != CHECKPOINT_FORMAT and written_in not in READ_AS_CURRENT:
@@ -301,9 +319,16 @@ def read_checkpoint(document: JsonValue) -> Checkpoint:
         if written_in == WITHOUT_MODELS:
             document = _with_models(document)
     try:
-        return Checkpoint.model_validate(document)
+        held = Checkpoint.model_validate(document)
     except ValidationError as error:
         raise InvalidRequest(f"not a checkpoint: {first_reason(error)}") from None
+    unnamed = [part.value for part in Part if part not in held.models]
+    if native and unnamed:
+        raise InvalidRequest(
+            f"not a checkpoint: a format {CHECKPOINT_FORMAT} checkpoint keeps each part's "
+            f"model, and this one none for the {', '.join(unnamed)}"
+        )
+    return held
 
 
 def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
@@ -314,14 +339,26 @@ def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
         raise InvalidRequest(
             f"a checkpoint made with another version of {uploaded.scenario_id}'s manifest"
         )
-    for part, ran in models_run(config).items():
-        kept = uploaded.models.get(part)
-        # A checkpoint of an earlier format names its crop's model alone.
-        if kept is not None and (kept.model, kept.version) != (ran.model, ran.version):
+    runs = _models_run(simulator, uploaded.run())
+    for part, ran in runs.items():
+        # A checkpoint of an earlier format names its crop's model alone:
+        # its others are its run's, at the version every model had then.
+        kept = uploaded.models.get(part) or ModelState(model=ran.model, version=FIRST_VERSION)
+        if (kept.model, kept.version) != (ran.model, ran.version):
             raise InvalidRequest(
                 f"a checkpoint made with the {kept.model} model of the {part}, version "
                 f"{kept.version}: its run's is the {ran.model} model, version {ran.version}"
             )
+    # Kept, it names every part's model, as one saved does, so that it
+    # downloads as one of this format and uploads again.
+    uploaded = uploaded.model_copy(
+        update={
+            "models": {
+                part: uploaded.models.get(part) or ModelState(model=ran.model, version=ran.version)
+                for part, ran in runs.items()
+            }
+        }
+    )
     if uploaded.day > config.duration_days:
         raise InvalidRequest(
             f"a run of {uploaded.scenario_id} has days 0 to {config.duration_days}, "
@@ -498,7 +535,8 @@ def _with_models(document: dict[str, JsonValue]) -> dict[str, JsonValue]:
     """A format 4 checkpoint as format 5 writes it: its plants and the days
     they lived, the organ crop's state, at the version every model had
     then; a checkpoint with no plants, the simple crop's. Its other parts'
-    models it did not name, and its run's are taken for them."""
+    models it did not name: its run's are taken for them, at the version
+    every model had then (`_checked_upload`)."""
     if "models" in document:
         raise InvalidRequest("not a checkpoint: a format 4 checkpoint keeps no models")
     plants, lived = document.get("plants", []), document.get("lived", [])

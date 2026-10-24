@@ -18,8 +18,11 @@ breaks the conformance checks is a major version.
   Checkpoints are written in format 5: each part's model, its version and
   its state, the organ crop's plants and the days they lived under
   `models.crop.state`. A checkpoint made with another model or version of a
-  part is refused, naming the part; formats 2 to 4 are still read, a format
-  4 checkpoint's plants as its organ crop's state.
+  part is refused, naming the part, a run under another weather than its
+  scenario's having that weather's model. A format 5 checkpoint names
+  every part's model; formats 2 to 4 are still read, as made with the
+  first version of each model, a format 4 checkpoint's plants as its organ
+  crop's state.
 
 - `greenhouse-sim`: a scenario's manifest names the model each part of
   its runs runs, from a registry (P14.1, decision 0054). Manifest format 5
