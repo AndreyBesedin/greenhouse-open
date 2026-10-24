@@ -7,6 +7,20 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: a scenario's manifest names the model each part of
+  its runs runs, from a registry (P14.1, decision 0054). Manifest format 5
+  adds `models`: for the weather, the air field, the crop and the crop
+  walk, a model by name and its parameters, checked by that model's
+  parameter model (`scenarios.registry`); a part left out runs its
+  default. The weather, the airflow, the simple crop's settings and the
+  walk's measurement noises are no longer written at a manifest's top, and
+  format 4 manifests are migrated so. `GET /api/scenarios/{id}/manifest`
+  answers `models`, each part's model by part, and QA mode shows them. No
+  run changes: every run id is the same. The packaged scenarios' versions
+  change with their rewritten manifests, so a checkpoint of a packaged
+  scenario downloaded before is refused on upload, as one of another
+  version of its manifest is.
+
 ## 0.4.0 - 2026-10-24
 
 The setup builder (P12.0 to P12.3): a greenhouse's installation drafted
