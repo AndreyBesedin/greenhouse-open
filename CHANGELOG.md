@@ -20,6 +20,10 @@ breaks the conformance checks is a major version.
   change with their rewritten manifests, so a checkpoint of a packaged
   scenario downloaded before is refused on upload, as one of another
   version of its manifest is.
+- viewer: the builder's inspector shows a number to twelve significant
+  digits, so that a float's rounding no longer shows, as in the starting
+  house's rows' origin, 2.4000000000000004. A value left as it is still
+  sends nothing, and the simulator keeps it exact.
 
 ## 0.4.0 - 2026-10-24
 
