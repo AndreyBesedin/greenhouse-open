@@ -1,7 +1,7 @@
 # P13: One action format, and a plan a run's gateway carries out
 
 **Status:** in progress. The design is accepted (decision 0046), its
-questions [decided](#decided); P13.1 and P13.2 are done. Part of the
+questions [decided](#decided); P13.1 to P13.3 are done. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -595,7 +595,7 @@ within the day; the action format needs no change for it.
 | --- | --- | --- | --- |
 | P13.1 | The protocol's types and contracts: `Action`, `ActionId`, `ActionRef`, `PlannedAction`, `Plan`, `Principal`, `Grant`, `AuthorisationGroup`, `AuthorisationConfig`, `ActionOutcome`, `ActionEffect`, `ExecutorRef`, `Assignment`, `ExecutionReport`, the gateway and executor contracts (revocation, status, at most once; listing the actions as they stand, `ActionKey`, `ActionState`; cancelling chosen actions; the epoch on every write; the gateway's limits; carrying actions into a run that continues the clock, as `RunDescriptor.continues_from` says, and dropping them from one that starts over) and `ActionNotExecutable`; checks (a malformed or stale plan refused whole, the graph checked as given, recurrences bounded, grants and delegation, the order across plans, one outcome per action) as conformance functions and their tests, the executor's with one that drops messages, and the gateway's with an in-memory gateway on a clock that continues; the published JSON Schemas. The old names stay, deprecated; the changelog says what each became, and the version moves at the next release (decision 0045). | `feat(protocol): one action, plan, gateway and executor format` | Done: the records (#323) and the contracts |
 | P13.2 | The run carries out a plan of today's kinds: levels, openings, daily commands and targets become a plan internally; `RunRequest` holds it; the address's spellings are read into it. Every run id, replay digest and kept opening day unchanged. Checkpoints in a new format, format 3 read. | `refactor(sim): the run carries out its schedule as a plan` | Done |
-| P13.3 | The simulator's gateway: the playback holds its run's plan and revisions, schedules them onto the run as its executor, writes the outcome log and serves it on the consumer interface; steering as the gateway's rule; the actions as they stand, cancelling chosen ones, and dropping them when the playback starts over. The gateway contract's conformance tests run against it. | `feat(sim): the playback as its run's gateway` | Planned |
+| P13.3 | The simulator's gateway: the playback holds its run's plan and revisions, schedules them onto the run as its executor, writes the outcome log and serves it on the consumer interface; steering as the gateway's rule; the actions as they stand, cancelling chosen ones, and dropping them when the playback starts over. The gateway contract's conformance tests run against it. | `feat(sim): the playback as its run's gateway` | Done |
 | P13.4 | Authorisation in the gateway: principals on every planned action, bound to the authenticated submitter or granted on its behalf; plan ownership; groups and grants in a versioned configuration, an input of the run, its changes recorded; checked when a plan is given and when each action falls due, refusals as outcomes; the local operator group. | `feat(sim): the gateway authorises every action` | Planned |
 | P13.5 | Crop actions on the run: `harvest`, `lower`, `remove_leaf`, `inspect` at a day's start, refused at other instants and `water` refused, with their reasons; the organ model's `PlantAction` renamed `PlantOperation`; the plant lab and crop work give them; events name their actions. | `feat(sim): crop actions and their outcomes on the run` | Planned |
 | P13.6 | The graph, windows and lateness, with a simulated executor whose actions take time and which has a number of hands, so that `late`, `missed`, fallbacks and cancelled dependents happen, deterministically. | `feat(sim): plans with order, windows and lateness` | Planned |
@@ -817,6 +817,51 @@ What the design left to its first step, as P13.1 settles it:
 - **The climate run's schedule** (`greenhouse_sim.climate.commands`) is
   what the run makes of its plan: the executor's inner steps, as the organ
   crop's operations are.
+
+## Settled in P13.3
+
+- **The gateway is the protocol's.** A playback holds its run's plans in the
+  protocol's reference gateway (`InMemoryGateway`), which now takes any
+  executor on its clock (`ClockedExecutor`), names it (`executor_ref`), and
+  knows a run's controller targets from its items. The run is the executor
+  (`greenhouse_sim.services.gateway.RunExecutor`), named
+  `simulated_run:<run id>` in outcomes. The gateway contract's checks hold
+  the pair to every scenario, a clock that continues into another run
+  among them, though a playback only starts its run over. A playback sets
+  no bound on the actions of its plans: the local operator's target
+  changes accumulate in one plan, a revision each.
+- **The lead time is the whole run.** A playback works every day out ahead
+  of its clock, so an action joins the run's plan as soon as the gateway
+  has it. The records from its moment are worked out again while the
+  clock waits there, as decision 0043 has it for every kind. The action is
+  done when the clock passes its moment: an outcome is written as the
+  clock passes it, never ahead.
+- **What the run cannot carry out,** it refuses when the action falls due,
+  in its own words (a run's plan checked), and leaves out of its plan: a
+  level of `auto`, for one. A target off the minute, or a moment outside
+  the run, is not honoured, and is refused at once.
+- **At one moment,** an occurrence of a recurring action comes before a
+  one-off, then each in the order the gateway gave it.
+- **The local operator** (`person:local_operator`) may do every kind, until
+  P13.4 gives a run its own authorisation. The playback's targets route is
+  the local operator's plan `targets`, revised at each change, with its
+  checks and messages as before.
+- **The scenario's standing plan,** its manifest's daily commands, stays
+  the run's own, outside the gateway, and writes no outcomes: some 1,900 a
+  season for the reference run. It becomes a plan when P11.5 writes the
+  reference run again.
+- **Starting over** cancels what is pending, as the new epoch's first
+  outcomes, and forgets the plans; a run played to its end cancels what is
+  left. Started over with its equipment moved, a playback keeps the local
+  operator's target changes, each at its moment, as decision 0049 has it.
+  That later decision takes the place of the design's line above that a
+  playback restarted with another layout drops them.
+- **The consumer interface** serves the outcome log,
+  `GET /consumer/v1/runs/{run_id}/outcomes`, with cursors as the other
+  logs have them.
+- **Later:** the routes that give, steer, list and cancel plans (P13.7),
+  and the viewer's plan lane (P13.8). Until then, the playback's state
+  lists its target changes, not the levels a plan sets.
 
 ## Decided
 

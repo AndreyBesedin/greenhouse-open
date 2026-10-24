@@ -7,6 +7,23 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- `greenhouse-sim`: a playback is its run's gateway (P13.3, decision
+  0046). It holds its run's plans in the protocol's reference gateway, on
+  its clock, with the run as the executor (`services.gateway`). An action
+  joins the run's plan as soon as it is given, its records are worked out
+  again from its moment, and its outcome is written as the clock passes
+  it. The run refuses what it cannot carry out when it falls due. A
+  restart cancels what is pending, as the new epoch's first outcomes, and
+  a run played to its end cancels what is left. The targets route is the
+  local operator's plan, with its checks and messages as before. The
+  consumer interface serves the outcome log:
+  `GET /consumer/v1/runs/{run_id}/outcomes`.
+- `greenhouse-protocol`: the reference gateway acts through any executor
+  on its clock (`ClockedExecutor`), names it (`executor_ref`), and takes
+  plans again when it is started over after it finished. It knows a run's
+  controller targets from its items, as its devices and plants: given
+  items without targets, it refuses a `set_target` as acting on what the
+  run has not.
 - `greenhouse-sim` and the viewer: the builder's zones and fixtures placed
   one by one (P12.3). The simulator's item edits take service zones,
   keep-out volumes, walkways, boxes, cylinders, pipes, pipe runs, rails and

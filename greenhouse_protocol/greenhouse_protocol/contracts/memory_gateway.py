@@ -3,13 +3,15 @@
 that may be told to lose messages. They keep every rule the contracts'
 conformance checks hold an implementation to (`check_gateway`,
 `check_executor`), so a gateway or an executor of one's own is developed
-against them, and they act on nothing: they are not a simulator.
+against them. The memory executor acts on nothing; the gateway acts
+through whichever executor on its clock it is given (`ClockedExecutor`),
+such as a simulator's run.
 """
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Final
+from typing import Final, Protocol
 
 from greenhouse_protocol.actions import (
     Action,
@@ -31,6 +33,7 @@ from greenhouse_protocol.contracts.consumer import OutcomeBatch, RunClock, RunDe
 from greenhouse_protocol.contracts.execution import (
     ActionNotExecutable,
     AssignmentStatus,
+    ExecutorUnderTest,
     Revocation,
 )
 from greenhouse_protocol.contracts.gateway import (
@@ -79,6 +82,14 @@ UNLIMITED: Final = 1_000_000
 FRUIT_G: Final = 50.0
 CONTROLLER_TARGETS: Final = frozenset({"heating_day", "heating_night"})
 NOT_STARTED: Final = frozenset({ActionStateKind.WAITING, ActionStateKind.DUE})
+
+
+class ClockedExecutor(ExecutorUnderTest, Protocol):
+    """An executor on the gateway's own clock: the gateway moves it as its
+    clock moves, and wakes when each of its assignments will finish, as a
+    gateway on a real clock hears the report."""
+
+    def finishes(self) -> tuple[datetime, ...]: ...
 
 
 def effect_of(action: Action) -> ActionEffect:
@@ -283,14 +294,17 @@ def _moved(timing: Timing, by: timedelta) -> Timing:
 class InMemoryGateway:
     """A run's gateway, in memory, on a clock that continues: a restart that
     continues the clock carries what is pending, one that does not starts
-    the run over. `items` is what the run has to act on."""
+    the run over, and may follow a finish. `items` is what the run has to
+    act on, its controller's targets among them, and `executor_ref` names
+    its executor in outcomes and in a plan's `executed_by`."""
 
     def __init__(
         self,
         authorisation: AuthorisationConfig,
         start: datetime,
         *,
-        executor: MemoryExecutor | None = None,
+        executor: ClockedExecutor | None = None,
+        executor_ref: ExecutorRef = EXECUTOR,
         items: ActionTargets | None = None,
         limits: GatewayLimits | None = None,
         greenhouse_id: str = "gh_memory",
@@ -304,9 +318,12 @@ class InMemoryGateway:
         self.started_at = start
         self.continues_from: RunEpoch | None = None
         self.finished = False
-        self._executor = executor or MemoryExecutor(start)
+        self._executor: ClockedExecutor = executor or MemoryExecutor(start)
+        self._executor_ref = executor_ref
         self._items = items or ActionTargets(
-            devices=frozenset({"vent_1", "heater"}), plants=frozenset({"p30", "p31"})
+            devices=frozenset({"vent_1", "heater"}),
+            plants=frozenset({"p30", "p31"}),
+            targets=CONTROLLER_TARGETS,
         )
         self._limits = limits or GatewayLimits(max_actions=100, max_occurrences=1000)
         self._config = authorisation
@@ -504,6 +521,7 @@ class InMemoryGateway:
         else:
             self.now = self.started_at = self._start
             self.continues_from = None
+            self.finished = False
             for action in pending:
                 self._withdraw(action)
                 self._end(action, OutcomeStatus.CANCELLED, reason=f"the run {STARTED_OVER}")
@@ -543,14 +561,16 @@ class InMemoryGateway:
             return f"{principal.id} is not authorised to {action.kind}"
         if action.kind not in self._executor.kinds():
             return f"no executor carries out {action.kind}"
-        if executed_by is not None and not any(_names(each, EXECUTOR) for each in executed_by):
+        if executed_by is not None and not any(
+            _names(each, self._executor_ref) for each in executed_by
+        ):
             permitted = ", ".join(f"{each.kind}:{each.id or 'any'}" for each in executed_by)
             return f"none of those who may carry it out ({permitted}) is this run's executor"
         acted_on = targets_of(action)
         missing = (
             (acted_on.devices - self._items.devices)
             | (acted_on.plants - self._items.plants)
-            | (acted_on.targets - CONTROLLER_TARGETS)
+            | (acted_on.targets - self._items.targets)
         )
         if missing:
             return f"the run has no {', '.join(sorted(missing))}"
@@ -912,7 +932,7 @@ class InMemoryGateway:
             started_at=report.started_at if ran and report else None,
             finished_at=report.finished_at if ran and report else None,
             resolved_at=self.now,
-            executor=EXECUTOR if ran or status == OutcomeStatus.UNCONFIRMED else None,
+            executor=self._executor_ref if ran or status == OutcomeStatus.UNCONFIRMED else None,
             reason=reason,
             cancelled_by=cancelled_by,
             fallback=fallback,

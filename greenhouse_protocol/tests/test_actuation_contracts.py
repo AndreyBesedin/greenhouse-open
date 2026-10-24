@@ -7,9 +7,11 @@ from datetime import UTC, datetime, timedelta
 from greenhouse_protocol.actions import (
     ActionKind,
     ActionRef,
+    ActionTargets,
     Harvest,
     HarvestScope,
     SetLevel,
+    SetTarget,
 )
 from greenhouse_protocol.assignment import Assignment
 from greenhouse_protocol.authorisation import AuthorisationConfig
@@ -379,3 +381,48 @@ def test_executors_of_one_kind_are_checked_with_an_action_of_their_kind() -> Non
     assert check_executor(Harvester, START, action=SetLevel(device_id="vent_1", level=1.0)) == [
         "it was checked with set_level, a kind it does not carry out"
     ]
+
+
+def test_a_gateway_names_the_executor_it_is_given() -> None:
+    """A gateway acting through an executor of its own, such as a
+    simulator's run, names it in its outcomes and in a plan's
+    `executed_by`, not the memory executor."""
+    run = ExecutorRef(kind=ExecutorKind.SIMULATED_RUN, id="run")
+    gateway = InMemoryGateway(
+        conformance_authorisation(), START, executor=MemoryExecutor(START), executor_ref=run
+    )
+    gateway.submit(
+        _plan(gateway, _vent("vent"), _vent("other", executed_by=(EXECUTOR,))), by=OPERATOR
+    )
+    gateway.advance(START + 2 * HOUR)
+    ends = {o.ref.action_id: o for o in gateway.outcomes().outcomes}
+
+    assert (ends["vent"].status, ends["vent"].executor) == (OutcomeStatus.EXECUTED, run)
+    assert ends["other"].status == OutcomeStatus.REFUSED
+
+
+def test_a_target_the_runs_controller_has_not_is_refused_at_once() -> None:
+    gateway = InMemoryGateway(
+        conformance_authorisation(),
+        START,
+        items=ActionTargets(devices=frozenset({"vent_1"}), targets=frozenset({"heating_day"})),
+    )
+    night = SetTarget(target="heating_night", value_c=15.0)
+    gateway.submit(_plan(gateway, _vent("night", action=night)), by=OPERATOR)
+    (refused,) = gateway.outcomes().outcomes
+
+    assert (refused.status, refused.reason) == (
+        OutcomeStatus.REFUSED,
+        "the run has no heating_night",
+    )
+
+
+def test_a_finished_run_started_over_takes_plans_again() -> None:
+    gateway = _gateway(conformance_authorisation(), START)
+    gateway.finish()
+    gateway.restart(continue_clock=False)
+
+    receipt = gateway.submit(_plan(gateway, _vent("vent")), by=OPERATOR)
+
+    assert receipt.accepted
+    assert gateway.run().clock.playing
