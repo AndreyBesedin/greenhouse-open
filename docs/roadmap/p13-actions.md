@@ -880,6 +880,7 @@ What the design left to its first step, as P13.1 settles it:
   authorised".
 - **Refusals say who and what:** a target change the local operator may not
   make is refused, the API answering with the gateway's reason.
+
 ## Settled in P13.5
 
 P13.5 comes in two parts: how the organ crop carries out a crop action,
