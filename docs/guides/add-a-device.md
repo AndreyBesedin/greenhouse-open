@@ -56,7 +56,7 @@ the parts to write. The dehumidifier was added in this order (commits
      `RATINGS`. A device missing from it is quietly left out of the panel;
    - `greenhouse_sim/web/src/scene/moves.ts`: `MOVABLE`, so that it can be
      moved.
-7. **Say so** in `CHANGELOG.md`'s Unreleased section and in
+7. **Say so** in the pull request's `## Changelog` entry and in
    `greenhouse_sim/web/README.md`.
 
 ## Generated files

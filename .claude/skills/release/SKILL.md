@@ -1,6 +1,6 @@
 ---
 name: release
-description: Make a release of greenhouse-open end to end - check who may release, choose the version, bring the changelog up to what was merged, prepare the release branch (versions, protocol range, dated changelog, lock), open the release pull request, record and cut the demo video, get it uploaded and into the README, hand the pull request to the owner to merge, tag the merge as the owner, and confirm that CI published it. Use this whenever the user asks to release, cut, ship, tag or publish a version ("release 0.4.0", "let's do a release", "bump the version"), to prepare a release pull request, or to record or update the README's demo video for a release.
+description: Make a release of greenhouse-open end to end - check who may release, choose the version, write the changelog from the pull requests merged, prepare the release branch (versions, protocol range, dated changelog, lock), open the release pull request, record and cut the demo video, get it uploaded and into the README, hand the pull request to the owner to merge, tag the merge as the owner, and confirm that CI published it. Use this whenever the user asks to release, cut, ship, tag or publish a version ("release 0.4.0", "let's do a release", "bump the version"), to prepare a release pull request, or to record or update the README's demo video for a release.
 ---
 
 # Make a release
@@ -36,8 +36,9 @@ whatever this step finds, so a pull request made anyway is wasted.
   (`../greenhouse-open-release-<version>`), never in the user's own
   checkout, which may be on a tag on purpose.
 - CI's latest run on `main` passed. A release from a red `main` is not made.
-- There is something to release: commits since the last tag, and entries
-  under the changelog's `## Unreleased`.
+- There is something to release: pull requests merged since the last tag
+  that give changelog entries. `uv run release changes` prints them, with
+  any merged pull request that gives neither an entry nor `none`.
 - List the open pull requests. Ask the user which, if any, must land
   first; Dependabot's never hold a release.
 
@@ -54,19 +55,23 @@ From 1.0 on, semantic versioning as the changelog says: a major version when
 the conformance checks break. Propose the version with the entries that
 decide it. The user confirms unless they named one.
 
-## 4. The changelog against what merged
+## 4. The changelog from the pull requests merged
 
 The changelog's section becomes the GitHub release's notes, word for word.
-0.2.0 and 0.3.0 both lacked entries for merged work, and a merge that
-resolved a conflict in the changelog dropped one of 0.3.0's. So:
+Its entries are the pull requests' own (decision 0056): each merged since
+the last tag gives one in its description, under `## Changelog`, or says
+`none`. `prepare` collects them, after any written under Unreleased before
+that decision, and refuses while one gives neither. So:
 
-- List the pull requests merged since the last tag, and match each to an
-  entry. A change a user of the packages or the viewer would notice needs
-  one: a feature, a fix, a changed interface, format or default. Changes to
-  CI, documents and tests alone, and Dependabot's updates, need none.
-- When an entry is missing, compare `main` with that pull request's merge,
-  to tell an entry never written from one a later merge dropped.
-- Remove duplicates, and keep each entry's pull request or issue number.
+- Run `uv run release changes`. For each pull request it lists without an
+  entry, read what it changed and give its description one: an entry if a
+  user of the packages or the viewer would notice it (a feature, a fix, a
+  changed interface, format or default), `none` for CI, documents or tests
+  alone. Edit the description on GitHub; it is the record the release
+  reads. Dependabot's need none and are never listed.
+- Read the entries as `changes` prints them: one that says too little, or
+  breaks something without saying so, is corrected in its description
+  first, so that the record and the notes agree.
 - Open the section with a paragraph saying what the version holds, and
   what breaks: run identities, formats, interfaces, with what is still read.
   0.3.0's paragraph is the model.
@@ -79,10 +84,11 @@ and what it changes, never anyone's plans, events or deadlines.
 - The worktree's branch is `build/release-<version>`, from `origin/main`.
   Run `uv run setup` there once: the video needs the viewer's packages.
 - `uv run release prepare <version>`. It moves the three packages and the
-  protocol's range, puts the Unreleased entries under `## <version> -
-  <today>` beneath an empty `## Unreleased`, and locks. `uv.lock` should
-  move the three versions and nothing else: read its diff.
-- Write the changelog work of step 4 into the new section.
+  protocol's range, writes the entries of step 4 under `## <version> -
+  <today>` beneath an empty `## Unreleased`, each ending with its pull
+  request's number, and locks. `uv.lock` should move the three versions and
+  nothing else: read its diff.
+- Write the section's opening paragraph of step 4 above its entries.
 - The roadmap: mark Done only the steps that the merged work completes,
   in `docs/roadmap/README.md` and in the project's own document.
 - The walk-through, `greenhouse_sim/web/e2e/demo.spec.ts`: when the release
@@ -94,7 +100,8 @@ and what it changes, never anyone's plans, events or deadlines.
   the walk-through as a browser test.
 - Commit with the title `build: release <version>`, signed off, with the
   session's attribution trailer. The body says what moved and why: the
-  versions, the range, the changelog's corrections, the roadmap.
+  versions, the range, the pull requests whose entries were given at
+  release, the roadmap.
 - Push, and open the pull request with that title. Fill in the template
   (`.github/pull_request_template.md`): what changed, the result
   (`importlib.metadata.version` and the viewer's build line say the

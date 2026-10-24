@@ -23,8 +23,8 @@ reports. The weather station's instruments were added this way (commit
    - `GOING_ROUND`, if its readings wrap round, as a wind vane's do.
 4. **A new observation type**, if none fits, in `ObservationType` in
    `greenhouse_protocol/greenhouse_protocol/enums.py`. The protocol is a
-   published contract that consumers read: its change goes in
-   `CHANGELOG.md`, and its own tests run.
+   published contract that consumers read: its change goes in the pull
+   request's `## Changelog` entry, and its own tests run.
 5. **Place one** in a layout
    (`greenhouse_sim/greenhouse_sim/scenarios/layouts/<scenario>/<name>.json`),
    its identifier made of letters, digits, `_`, `.` and `-`.

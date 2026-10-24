@@ -51,7 +51,7 @@ service, an arm among a run's routes, and their tests.
    and body, refusals included, as `greenhouse_sim/tests/test_timeline.py`
    does: `simulator` is the module's, a fixture of conftest's (decision
    0048).
-6. **Say so:** a line in `CHANGELOG.md`'s Unreleased section if clients
+6. **Say so:** a line in the pull request's `## Changelog` entry if clients
    will use it, and in `greenhouse_sim/web/README.md` if the viewer does.
 
 The API's server (`greenhouse_sim/greenhouse_sim/api/server.py`) needs no

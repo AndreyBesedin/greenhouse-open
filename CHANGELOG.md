@@ -5,6 +5,12 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the
 project uses [semantic versioning](https://semver.org/): a change that
 breaks the conformance checks is a major version.
 
+Each version's entries are written at its release, from the descriptions of
+the pull requests merged since the one before, each giving its own under
+`## Changelog` (decision 0056); no pull request edits this file. The
+Unreleased section holds the entries written here before that.
+`uv run release changes` prints what the next release would say.
+
 ## Unreleased
 
 - viewer: a scenario whose rows grow the simple crop draws its crop as it
