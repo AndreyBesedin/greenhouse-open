@@ -7,6 +7,10 @@ breaks the conformance checks is a major version.
 
 ## Unreleased
 
+- viewer: the builder's inspector shows a number to twelve significant
+  digits, so that a float's rounding no longer shows, as in the starting
+  house's rows' origin, 2.4000000000000004. A value left as it is still
+  sends nothing, and the simulator keeps it exact.
 - `greenhouse-sim`: a run's plan holds crop actions (P13.5, decision 0046):
   a harvest, a lowering, a leaf removed or an inspection, at the start of a
   day after its first, on an organ crop. Any other moment is refused, in
