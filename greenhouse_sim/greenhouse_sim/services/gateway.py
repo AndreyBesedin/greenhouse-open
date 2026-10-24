@@ -17,32 +17,45 @@ its lead time is the whole run: every action is in its plan as soon as the
 gateway has it. At one moment, what recurs comes before what does not, and
 then each in the order the gateway gave it.
 
-Until authorisation is given its own configuration (P13.4), the local
-operator, the person at the simulator's own interface, may do every kind.
+Who may do what is the simulator's authorisation (decision 0052): a
+configuration the server is given as a file (`authorisation_file`), or else
+the local operator's, which lets the person at the simulator's own
+interface, its viewer and its API, do every kind. The local API knows no
+one else: whatever reaches it is the local operator's, and a plan's action
+proposed for anyone else is refused unless the configuration grants the
+local operator to propose for them. The gateway checks each action when its
+plan is given and again when it falls due, and records each change of the
+configuration with its moment.
 """
 
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Final
 
 from greenhouse_protocol.actions import Action, ActionKind, ActionTargets
 from greenhouse_protocol.assignment import Assignment, ExecutionReport, ReportStatus
-from greenhouse_protocol.authorisation import AuthorisationConfig, AuthorisationGroup, Grant
+
+# Who may do what, as the protocol writes it: the type the server reads.
+from greenhouse_protocol.authorisation import AuthorisationConfig as AuthorisationConfig
+from greenhouse_protocol.authorisation import AuthorisationGroup, Grant
 from greenhouse_protocol.contracts.execution import AssignmentStatus, Revocation
 from greenhouse_protocol.contracts.memory_gateway import effect_of
 from greenhouse_protocol.plan import Principal, PrincipalKind
+from pydantic import ValidationError
 
 from greenhouse_sim.climate.commands import TARGET_EVERY_S
 from greenhouse_sim.domain.equipment import Target
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.services.errors import InvalidRequest, every_reason, first_reason
 from greenhouse_sim.services.runs import PlannedAt, RunPlan
 from greenhouse_sim.services.scenarios import plant_ids
 
 # The person at the simulator's own interface: its viewer, its API.
 LOCAL_OPERATOR: Final = Principal(kind=PrincipalKind.PERSON, id="local_operator")
-# Who may do what on a simulator's runs, until P13.4 makes it a run's own
-# configuration: the local operator, everything.
+# Who may do what on a simulator's runs, unless it is given a configuration
+# of its own (decision 0052): the local operator, everything.
 LOCAL_AUTHORISATION: Final = AuthorisationConfig(
     version=1,
     groups=(
@@ -59,6 +72,22 @@ UNLIMITED: Final = 1_000_000
 # Why a run refuses an action, or None if it carries it out: the run's own
 # check of one action at a moment, in seconds from its start.
 type Refusal = Callable[[Action, float], str | None]
+
+
+def authorisation_file(path: Path) -> AuthorisationConfig:
+    """The authorisation a file holds, as the protocol writes it
+    (`authorisation.schema.json`): its version, its groups and their
+    grants. Refused, saying why, if it cannot be read or is not one."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as error:
+        raise InvalidRequest(f"no authorisation read from {path}: {error}") from None
+    try:
+        return AuthorisationConfig.model_validate_json(text)
+    except ValidationError as error:
+        raise InvalidRequest(
+            f"not an authorisation in {path}: {first_reason(error)}", every_reason(error)
+        ) from None
 
 
 def run_items(config: ScenarioConfig) -> ActionTargets:
