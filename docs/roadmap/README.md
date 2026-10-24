@@ -400,6 +400,18 @@ sensors and policies, and comparing decisions reproducibly.
   libraries, solver, weather, measured inputs and equipment schedules, and
   report any reproduction or compatibility blockers rather than concealing
   them. Check the artefacts' licences before redistributing anything.
+- **Reproduce a bounded paper result before the whole model.** For the
+  [2026 global-model paper](https://doi.org/10.1371/journal.pone.0340619),
+  first inventory TiGwerLib's data, executable model and published figures;
+  then replicate a short measured period of indoor temperature and relative
+  humidity, with explicit equipment status and weather inputs. Extend to CO₂,
+  utilities or crop yield only when the corresponding inputs and processes
+  can be aligned. The second candidate is the team's
+  [2025 radiation view-factor paper](https://doi.org/10.17660/ActaHortic.2025.1426.1):
+  reproduce one documented geometry/view-factor case where methods and data
+  are accessible, separately from the global climate run. Its full text and
+  reproduction assets must be checked first; an unavailable method is a
+  recorded blocker, not a licence to invent missing values.
 - **Compare on matched inputs, not visual similarity.** Run a comparable
   greenhouse in this simulator with the same period, weather forcing,
   geometry and equipment/control assumptions where possible. Compare indoor
@@ -415,8 +427,13 @@ sensors and policies, and comparing decisions reproducibly.
   Modelica tools already provide from those that need custom integration, and
   record where this simulator is worse or incomplete. A small, repeatable
   research task is more useful than a broad feature checklist.
-- **Get feedback and decide based on evidence.** Seek feedback from at least
-  one academic and one applied/industrial R&D perspective, where available.
+- **Get feedback in two stages and decide based on evidence.** Discuss
+  Modelica R&D workflows with a Greenhouses Library maintainer early, before
+  presuming the current simulator offers unique value. After the first
+  reproducible comparison, share its methods, findings and limitations with
+  the Nantes/Angers paper authors and invite corrections or a technical
+  discussion; also seek an applied/industrial R&D perspective where
+  available.
   Publish a concise comparison with a reproducible reference case,
   performance/fidelity findings, workflow friction, limitations and a clear
   conclusion: complementary research workflow, a justified external-model
