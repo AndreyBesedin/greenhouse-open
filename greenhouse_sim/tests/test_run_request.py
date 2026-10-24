@@ -281,12 +281,14 @@ def test_a_format_3_checkpoint_whose_plan_is_not_one_is_refused(
     assert said in refused.value.message
 
 
-def test_a_format_3_checkpoints_plan_is_the_one_its_run_would_be_saved_with() -> None:
+def test_a_format_3_checkpoints_plan_is_the_one_its_run_would_be_saved_with(
+    simulator: Simulator, afresh: Callable[[], None]
+) -> None:
     """Commands, daily commands and target changes as format 3 wrote them
     are read as the plan a checkpoint of the same run keeps in format 4,
     which then downloads and uploads as itself."""
     commands: list[Commanded] = [(600.0, "roof_vent_1", 1.0), (600.0, "roof_vent_1", 0.5)]
-    daily: list[Commanded] = [(64800.0, "fan_1", 1.0)]
+    daily: list[Commanded] = [(64800.0, "fan_right", 1.0)]
     targets: list[Commanded] = [(86400.0, "heating_night", 12.0), (3600.0, "heating_day", 20.0)]
     written = json.loads(gzip.decompress(opening_file(REFERENCE).read_bytes()))
     as_written = {
@@ -298,8 +300,10 @@ def test_a_format_3_checkpoints_plan_is_the_one_its_run_would_be_saved_with() ->
 
     saved = RunPlan.requested(commands=commands, daily=daily, targets=targets).validated()
     assert read.plan == saved
-    downloaded = json.loads(read.model_dump_json())
-    assert checkpoints.read_checkpoint(downloaded).identifier() == read.identifier()
+    kept = checkpoints.upload_checkpoint(simulator, written | as_written)
+    downloaded = json.loads(checkpoints.checkpoint(simulator, kept.checkpoint_id).model_dump_json())
+    assert downloaded["checkpoint_format"] == checkpoints.CHECKPOINT_FORMAT
+    assert checkpoints.upload_checkpoint(simulator, downloaded) == kept
 
 
 def test_a_runs_targets_are_the_protocols() -> None:
@@ -313,5 +317,5 @@ def test_a_runs_targets_are_the_protocols() -> None:
 
 
 def test_a_checkpoint_in_a_format_no_simulator_wrote_names_those_it_reads() -> None:
-    with pytest.raises(InvalidRequest, match="reads format 4, and formats 2 and 3 as it"):
+    with pytest.raises(InvalidRequest, match="reads format 5, and formats 2, 3 and 4 as it"):
         checkpoints.read_checkpoint({"checkpoint_format": 1})

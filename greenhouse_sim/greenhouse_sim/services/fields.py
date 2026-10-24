@@ -22,6 +22,7 @@ and what a run's climate reads at its moments is given by
 `greenhouse_sim.services.climate_readings`.
 """
 
+import json
 from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Final
 
@@ -34,7 +35,9 @@ from greenhouse_sim.digests import short_digest
 from greenhouse_sim.fields.field import EnvironmentField, FieldDocument, FieldGrid
 from greenhouse_sim.fields.synthetic import shear_field
 from greenhouse_sim.scenarios.catalogue import Scenarios
+from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
+from greenhouse_sim.scenarios.registry import models_run
 from greenhouse_sim.services.climate_runs import (
     RunKey,
     checked_commands,
@@ -235,7 +238,7 @@ def air_through_a_run(
         # A run whose targets are its scenario's own is named as it was before
         # runs had target changes (#274), so its identity stays.
         named = climate.key if climate.key[-1] else climate.key[:-1]
-        digest = _digest(repr(named) + recorded + config.model_dump_json())
+        digest = _digest(repr(named) + recorded + _models_told(config) + config.model_dump_json())
         return (lambda time_s: day.sampled(f"{scenario_id}_{CLIMATE}", time_s)), (
             f"{scenario_id}-climate-{digest}"
         )
@@ -243,8 +246,16 @@ def air_through_a_run(
         simulator.catalogue, scenario(simulator.catalogue, scenario_id), SceneChanges(layout=name)
     )
     own = config.airflow.field(f"{scenario_id}_{config.airflow.kind}", air)
-    digest = _digest(config.model_dump_json())
+    digest = _digest(_models_told(config) + config.model_dump_json())
     return (lambda _: own), f"{scenario_id}-{config.airflow.kind}-{digest}"
+
+
+def _models_told(config: ScenarioConfig) -> str:
+    """What tells a run's models from another's: each part's model and its
+    version (P14.2, decision 0054), so that a model's numbers changed, its
+    version with them, make another run."""
+    runs = {part.value: run.model_dump() for part, run in models_run(config).items()}
+    return json.dumps(runs, sort_keys=True)
 
 
 def _digest(told: str) -> str:

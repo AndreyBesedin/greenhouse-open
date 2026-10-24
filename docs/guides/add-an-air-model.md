@@ -81,6 +81,11 @@ uv run browser-tests e2e/fields.spec.ts
 
 ## What else to know
 
+- **A model's version** (`version` in its registration,
+  `greenhouse_sim/greenhouse_sim/scenarios/registry.py`) goes up by one
+  whenever its numbers change for the same parameters: a run's identity
+  covers it (P14.2), so its runs become other runs and a checkpoint made
+  with the version before is refused.
 - **A field that changes with time is not followed everywhere:** the cells
   read the base flow once, at the start, made to conserve mass
   (`greenhouse_sim/greenhouse_sim/climate/projection.py`), and the viewer

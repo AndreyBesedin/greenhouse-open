@@ -1,6 +1,6 @@
 # P14: Models chosen by the manifest
 
-**Status:** in progress: P14.1 is done; the rest is proposed. Its decision
+**Status:** in progress: P14.1 and P14.2 are done; the rest is proposed. Its decision
 ([0054](../decisions/0054-models-are-chosen-by-the-manifest-from-a-registry.md))
 is Accepted, its open questions settled (below). This is the project that the
 [repository audit](../audits/2026-10-13-repository-audit.md) calls "P10",
@@ -219,7 +219,7 @@ the audit asks: **the simple crop as a rung of the run.**
 | Step | What | Status |
 | --- | --- | --- |
 | P14.1 | **The registry and the manifest's `models`, format 5:** each part's model by name, with its parameters in its own section; today's choices written there by a migration; `RunManifest` lists the parts' models. Every run id, replay digest and kept opening day unchanged. | Done: the registry (`scenarios.registry`) of the weather's, the air field's, the crop's and the crop walk's models, each with its parameter model; manifest format 5's `models`, read into the configuration as it was, so that no run changes; the migration from format 4, the packaged manifests rewritten by it; `RunManifest.models`, shown in QA mode. The packaged manifests' versions change with their files, so the reference greenhouse's kept opening day and replay record its new one, their numbers the same |
-| P14.2 | **Identity and state:** each model's version. The run id covers the parts' models and versions. A checkpoint keeps each stateful model's state by part, model and version, and refuses another model's, naming the part. The packaged runs' ids change once, announced. | Proposed |
+| P14.2 | **Identity and state:** each model's version. The run id covers the parts' models and versions. A checkpoint keeps each stateful model's state by part, model and version, and refuses another model's, naming the part. The packaged runs' ids change once, announced. | Done: every registered model has a version, 1; a run's id covers each part's model and version, so every run id changed once; `RunManifest.models` names each part's model and version; checkpoint format 5 keeps each part's model and version, and the organ crop's plants as its state, a checkpoint of another model or version refused, naming the part; formats 2 to 4 read as it |
 | P14.3 | **The pilot:** the simple crop as a rung of the run, with its section, its state, its conformance test and the viewer. Its settings and the walk's noises leave the top of the scenario. | Proposed |
 | P14.4 | **What the pilot showed:** the registry's needs, recorded in a decision. Models from another package through entry points, if the open question says so. | Proposed |
 | P14.5 | **Devices by capability:** the climate's source terms, the scene and the viewer work by capability and shape. `add-a-device.md` becomes one module and a registration. After P13.3. | Proposed |
