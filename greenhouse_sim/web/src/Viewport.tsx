@@ -1,5 +1,5 @@
 import { Canvas, type ThreeEvent } from "@react-three/fiber";
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, useMemo, useRef } from "react";
 import { type Group, PCFShadowMap } from "three";
 import { CameraRig } from "./CameraRig";
 import {
@@ -111,31 +111,48 @@ export function Viewport({
   children?: ReactNode;
 }) {
   const casters = useRef<Group>(null);
-
-  function pick(event: ThreeEvent<MouseEvent>): void {
-    // Every hit along the ray reaches this group; the nearest entity decides.
-    event.stopPropagation();
-    if (event.delta > CLICK_TOLERANCE_PX) {
-      return;
-    }
-    if (moving !== null) {
-      // Moving, a click picks what to move next; one that misses keeps the
-      // item being moved.
-      const picked = pickEntity(event.intersections);
-      if (picked !== null) {
-        onSelect(picked);
-      }
-      return;
-    }
-    if (onProbe !== null) {
-      const ground = event.intersections.find((hit) => hit.object.name === GROUND);
-      if (ground !== undefined) {
-        onProbe(viewerToWorld(ground.point));
-      }
-      return;
-    }
-    onSelect(pickEntity(event.intersections));
-  }
+  // The latest of what a click or the pointer tells, read by handlers that
+  // stay the same as the page re-renders: a new handler is a changed prop,
+  // and a changed prop draws a frame (decision 0053), so a page re-rendered
+  // for the HUD's report would draw again, and report again.
+  const told = useRef({ moving, onProbe, onSelect, onPointer });
+  told.current = { moving, onProbe, onSelect, onPointer };
+  const handlers = useMemo(
+    () => ({
+      pick(event: ThreeEvent<MouseEvent>): void {
+        // Every hit along the ray reaches this group; the nearest entity decides.
+        event.stopPropagation();
+        if (event.delta > CLICK_TOLERANCE_PX) {
+          return;
+        }
+        const { moving, onProbe, onSelect } = told.current;
+        if (moving !== null) {
+          // Moving, a click picks what to move next; one that misses keeps the
+          // item being moved.
+          const picked = pickEntity(event.intersections);
+          if (picked !== null) {
+            onSelect(picked);
+          }
+          return;
+        }
+        if (onProbe !== null) {
+          const ground = event.intersections.find((hit) => hit.object.name === GROUND);
+          if (ground !== undefined) {
+            onProbe(viewerToWorld(ground.point));
+          }
+          return;
+        }
+        onSelect(pickEntity(event.intersections));
+      },
+      point(event: ThreeEvent<PointerEvent>): void {
+        told.current.onPointer(viewerToWorld(event.point));
+      },
+      leave(): void {
+        told.current.onPointer(null);
+      },
+    }),
+    [],
+  );
 
   return (
     // It draws only when something changes (decision 0053): drawn every
@@ -189,7 +206,7 @@ export function Viewport({
       <gridHelper args={[GRID_SIZE_M, GRID_DIVISIONS, GRID_COLORS.centre, GRID_COLORS.cells]} />
       <group rotation={WORLD_TO_VIEWER_ROTATION}>
         {/* biome-ignore lint/a11y/noStaticElementInteractions: a Three.js group in the canvas, not a page element. */}
-        <group onClick={pick} ref={casters}>
+        <group onClick={handlers.pick} ref={casters}>
           {snapshot === null ? (
             <>
               <axesHelper args={[PLACEHOLDER_AXES_LENGTH_M]} />
@@ -209,11 +226,7 @@ export function Viewport({
             />
           )}
           {/* An undrawn ground plane that reports where the pointer meets the ground. */}
-          <mesh
-            name={GROUND}
-            onPointerMove={(event) => onPointer(viewerToWorld(event.point))}
-            onPointerOut={() => onPointer(null)}
-          >
+          <mesh name={GROUND} onPointerMove={handlers.point} onPointerOut={handlers.leave}>
             <planeGeometry args={[GROUND_SIZE_M, GROUND_SIZE_M]} />
             <meshBasicMaterial visible={false} />
           </mesh>

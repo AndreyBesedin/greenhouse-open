@@ -47,12 +47,23 @@ laptop, its share of a processor.
   sensor's intrinsics. A camera the controls move has its world matrix
   brought up to date as it moves, since a click is picked from that matrix
   and can come before the frame that would update it.
+- **What the scene is given stays the same while nothing changes.** A
+  handler, an object or a colour made anew at each render is a changed
+  prop, which draws a frame: re-rendered for the HUD's report, the page
+  drew again and reported again, once a second, while the HUD said it was
+  idle. The view's handlers keep their identity (`Viewport`), the scene is
+  drawn again only when what it draws changes (`SceneView`), and what is
+  never picked shares one raycast (`hitsNothing`).
+- **A drag draws every frame.** While a drag holds the camera's controls,
+  the view draws every frame, as it did before, whether or not the pointer
+  moves: what it draws is moving, and its frame rate is the renderer's,
+  not the pointer's. The benchmarks orbit with the button held (decision
+  0015), so they measure the renderer as before, not how often the
+  benchmark moves the mouse.
 - **The HUD measures frames drawn in a row.** A gap of more than a second
   between two frames is the view standing still, not a slow frame. Still,
   the HUD's frame rate reads "idle", and its frame time stays that of the
   last frames drawn in a row.
-- **The benchmarks are unchanged.** They measure while the camera orbits
-  (decision 0015), when the view draws frame after frame as before.
 
 ## Consequences
 
@@ -61,6 +72,9 @@ laptop, its share of a processor.
   one. The browser tests, which click on what is drawn, and the visual
   checks, which compare what is drawn, are where that is seen; a new such
   component asks for its frame where it makes the change.
+- A component that gives the scene a new function or object at each render
+  draws a frame whenever the page re-renders. `e2e/drawing.spec.ts` counts
+  the frames a still page draws, and fails on any.
 - A still page leaves the main thread free, so a click is answered in
   milliseconds, not seconds, on CI's software renderer, and a still view
   costs no processor.

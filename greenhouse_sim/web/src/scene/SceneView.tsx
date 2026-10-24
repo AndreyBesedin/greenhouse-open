@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { type ComponentProps, memo, useMemo } from "react";
 
 import { categoryColor } from "../debug/categories";
 import { type Colouring, scalarColor, scalarValue } from "../debug/scalar";
@@ -32,7 +32,7 @@ function shownColor(entity: SceneEntity, colouring: Colouring | null, byCategory
  * landed on (`pickEntity`): an entity's own group carries its identifier, and
  * a batch lists its entities.
  */
-export function SceneView({
+function SceneDrawn({
   snapshot,
   selectedId = null,
   colouring = null,
@@ -120,3 +120,36 @@ export function SceneView({
     </>
   );
 }
+
+/** Whether two sets of moves draw the same: the same entities, each moved as far. */
+function sameMoves(
+  a: Readonly<Record<string, Offset>> | null | undefined,
+  b: Readonly<Record<string, Offset>> | null | undefined,
+): boolean {
+  const these = Object.entries(a ?? {});
+  return (
+    these.length === Object.keys(b ?? {}).length &&
+    these.every(([id, by]) => {
+      const other = b?.[id];
+      return other !== undefined && other.dx === by.dx && other.dy === by.dy;
+    })
+  );
+}
+
+/**
+ * The scene, drawn again only when what it draws changes. Each entity it
+ * draws on its own takes a new colour and identifier object as it renders,
+ * and a changed prop draws a frame (decision 0053): re-rendered with the page
+ * for the HUD's report, the scene drew again, and the HUD reported again.
+ * Its moves are compared by value, as the page makes them anew each render.
+ */
+export const SceneView = memo(
+  SceneDrawn,
+  (before: ComponentProps<typeof SceneDrawn>, after: ComponentProps<typeof SceneDrawn>) =>
+    before.snapshot === after.snapshot &&
+    before.selectedId === after.selectedId &&
+    before.colouring === after.colouring &&
+    before.showBounds === after.showBounds &&
+    before.byCategory === after.byCategory &&
+    sameMoves(before.nudged, after.nudged),
+);

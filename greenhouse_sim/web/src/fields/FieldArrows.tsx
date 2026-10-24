@@ -5,6 +5,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 
 import type { ScalarRange } from "../debug/scalar";
 import { threeColor } from "../scene/ShapeMesh";
+import { hitsNothing } from "../selection";
 import { useDisposable } from "../useDisposable";
 import { fieldArrows, MATRIX_SIZE } from "./arrows";
 import type { EnvironmentField } from "./field";
@@ -65,7 +66,7 @@ export function FieldArrows({ field, range }: { field: EnvironmentField; range: 
     return null;
   }
   return (
-    <instancedMesh key={count} ref={mesh} args={[geometry, undefined, count]} raycast={() => null}>
+    <instancedMesh key={count} ref={mesh} args={[geometry, undefined, count]} raycast={hitsNothing}>
       <meshStandardMaterial />
     </instancedMesh>
   );

@@ -258,9 +258,11 @@ to answer the latest request, as its API says in a `Server-Timing` header.
 The view draws only when something changes: the camera moves, the scene or
 a field changes, the day plays (decision 0053). Standing still, it draws
 nothing and leaves the page free; its frame rate then reads "idle", and its
-frame time is that of the last frames it drew in a row. A component that
-changes what is drawn other than through its props asks for a frame
-(`invalidate()`).
+frame time is that of the last frames it drew in a row. Held in a drag, it
+draws every frame, so that its frame rate is the renderer's. A component
+that changes what is drawn other than through its props asks for a frame
+(`invalidate()`), and one that gives the scene a handler or an object keeps
+it the same from one render to the next, or each render draws a frame.
 
 `npm run bench` measures the stress scene at 1,000 to 100,000 plants while
 orbiting, in the full Chromium on this machine's graphics card, and compares
