@@ -222,7 +222,7 @@ the audit asks: **the simple crop as a rung of the run.**
 | P14.2 | **Identity and state:** each model's version. The run id covers the parts' models and versions. A checkpoint keeps each stateful model's state by part, model and version, and refuses another model's, naming the part. The packaged runs' ids change once, announced. | Done: every registered model has a version, 1; a run's id covers each part's model and version, so every run id changed once; `RunManifest.models` names each part's model and version; checkpoint format 5 keeps each part's model and version, and the organ crop's plants as its state, a checkpoint of another model or version refused, naming the part; formats 2 to 4 read as it |
 | P14.3 | **The pilot:** the simple crop as a rung of the run, with its section, its state, its conformance test and the viewer. Its settings and the walk's noises leave the top of the scenario. | Done: the crop model's parameters and the walk's are each a section of the scenario's configuration (`crop`, of the model its rows grow, and `crop_walk`), the organ crop's taking none, so that the run ids changed in the same release as P14.2's; the crop part's contract (`biology.crop_contract.CropRung`), kept by the organ crop and the simple crop, which a scenario of simple rows grows in its run, draws, keeps in a checkpoint and replays, its version 2, and the conformance test of both (`test_crop_rungs.py`); the viewer draws the simple crop as it stands at a run's moment, each plant's numbers in its inspector; and the crop log records the simple crop's walk and harvests as it records the organ crop's |
 | P14.4 | **What the pilot showed:** the registry's needs, recorded in a decision. Models from another package through entry points, if the open question says so. | Proposed in [0055](../decisions/0055-a-model-is-registered-with-all-that-tells-it-apart.md): a model registered with all that tells it apart (its state's model and check, and what its part's services ask of it), so that no service branches on a model's name; one environment for every model of a part; the engine's settings gone with the engine; no entry point yet |
-| P14.5 | **Devices by capability:** the climate's source terms, the scene and the viewer work by capability and shape. `add-a-device.md` becomes one module and a registration. After P13.3. | Proposed |
+| P14.5 | **Devices by capability:** the climate's source terms, the scene and the viewer work by capability and shape. `add-a-device.md` becomes one module and a registration. After P13.3. | Done: the simulator acts on a device's capabilities, never its kind; the scene draws every device as one kind (`EQUIPMENT`) by its shape and what it does, and the viewer draws, names and lists it so; a kind of equipment is a class and its registration (`register_equipment`), a layout reading each piece by its kind; see "Settled in P14.5" |
 | P14.6 | **The other parts registered:** first the crop's registration taking over the services' branches on its model (decision 0055); then the house's air (the whole house and the grid as rungs), sun and glazing, the sensors' sampler and the controller's loops. The engine's remaining models are re-homed or removed (decision 0035). | Proposed |
 | P14.7 | **The recipes and the QA:** the guides (`add-a-plant-model`, `add-an-air-model`, `add-a-device`, `add-a-sensor-kind`) rewritten for the registry; the QA scenario below. | Proposed |
 
@@ -251,6 +251,14 @@ the audit asks: **the simple crop as a rung of the run.**
   (`purpose`, its first capability other than its waste heat), with its
   kind (`device_kind`), what it is for (`does`) and each capability's
   rating under the capability's name, beside its own rated values.
+- **A kind of equipment is registered** (`register_equipment`, decision
+  0055): a class of `EquipmentPiece` (`Unit` for a box on the floor), named
+  by its `kind`, in a module of its own, in this package or another. A
+  layout reads each piece by the kind it names, among those registered when
+  it is read, refused with the kind's own reasons; the published schemas
+  list the kinds registered when they are written, the packaged ones. A
+  radiant panel registered from a test module is placed by the climate
+  box's layout, warms its house when it runs and is drawn by what it does.
 - **The viewer draws and lists a device by what it does:** its category
   in the categories' view is what it is for (moving air, heating,
   drying), the inspector names its kind, the Equipment panel reads its
