@@ -19,11 +19,11 @@ scenario's settings (`ScenarioConfig.simple_crop`) and from its seed:
 - **Its crown** rises from its foot, as tall as its stem stands.
 """
 
-from typing import Final
+from typing import Final, Self
 
 from greenhouse_protocol.actions import Harvest, Lower, RemoveLeaf
 from greenhouse_protocol.outcome import Harvested, Lowered
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.biology.tomato.simple.daily import advance_plant, initial_plant
@@ -46,13 +46,26 @@ AT_ITS_FOOT: Final = Vector3(x=0.0, y=0.0, z=0.0)
 
 class SimplePlant(BaseModel):
     """A plant of the simple crop in a run: the model's plant, and the values
-    the model keeps for it and for each fruit it has set."""
+    the model keeps for it and for each fruit it has set, which every fruit
+    on it has: its next day reads them."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     plant: PlantWorld
     state: SimplePlantState
     fruits: dict[str, SimpleFruitState] = {}
+
+    @model_validator(mode="after")
+    def _each_of_its_fruits_has_its_values(self) -> Self:
+        missing = [
+            fruit.fruit_id
+            for truss in self.plant.trusses
+            for fruit in truss.fruits
+            if fruit.fruit_id not in self.fruits
+        ]
+        if missing:
+            raise ValueError(f"{self.plant_id} keeps no values for its fruit {missing[0]}")
+        return self
 
     @property
     def plant_id(self) -> str:
