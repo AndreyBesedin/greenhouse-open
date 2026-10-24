@@ -15,20 +15,14 @@ same row on every run; another seed, another row.
 from collections.abc import Iterator
 from typing import Final
 
+from greenhouse_protocol.actions import Harvest, HarvestScope, Lower, RemoveLeaf
 from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.biology.plant.environment import Environment, LocalEnvironment
-from greenhouse_sim.biology.tomato.organ.actions import act
 from greenhouse_sim.biology.tomato.organ.development import live_day
-from greenhouse_sim.biology.tomato.organ.topology import (
-    HarvestFruit,
-    HarvestTruss,
-    LowerStem,
-    Plant,
-    PlantAction,
-    RemoveLeaf,
-)
+from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.biology.tomato.organ.transplants import DEVELOPMENT, transplant
+from greenhouse_sim.core.crop_actions import CropAction, carry_out
 from greenhouse_sim.scene.plants import plant_entities
 from greenhouse_sim.scene.snapshot import (
     AXES_COLOR,
@@ -146,31 +140,35 @@ def _checked_run(run: LabRun) -> None:
             known = ", ".join(ENVIRONMENTS)
             raise InvalidRequest(f"the plant lab has no environment {name!r}, only {known}")
     for action in run.actions:
-        _plant_action(action)
-        if action.plant_id not in plant_ids():
-            raise InvalidRequest(f"the plant lab has no plant {action.plant_id!r} to act on")
+        _crop_action(action)
         if not 0 <= action.day <= LAST_DAY:
             raise InvalidRequest(
                 f"the plant lab runs from day 0 to day {LAST_DAY}, not day {action.day}"
             )
 
 
-def _plant_action(action: LabAction) -> PlantAction:
-    """The plant action a scheduled one asks for."""
+def _crop_action(action: LabAction) -> CropAction:
+    """The crop action a scheduled one asks of its plant: the organ crop's
+    own, carried out as a run carries it out."""
+    if action.kind not in ACTIONS:
+        known = ", ".join(ACTIONS)
+        raise InvalidRequest(f"the plant lab has no action {action.kind!r}, only {known}")
+    if action.kind == "lower_stem" and (not action.target.isdigit() or int(action.target) < 1):
+        raise InvalidRequest(f"lower_stem wants how many internodes, not {action.target!r}")
+    if action.plant_id not in plant_ids():
+        raise InvalidRequest(f"the plant lab has no plant {action.plant_id!r} to act on")
+    if not action.target:
+        raise InvalidRequest(f"{action.kind} wants {ACTIONS[action.kind]}, not ''")
+    plant_id, target = action.plant_id, action.target
     match action.kind:
         case "remove_leaf":
-            return RemoveLeaf(leaf_id=action.target)
+            return RemoveLeaf(plant_id=plant_id, leaf_id=target)
         case "harvest_fruit":
-            return HarvestFruit(fruit_id=action.target)
+            return Harvest(plant_id=plant_id, scope=HarvestScope.FRUIT, organ_id=target)
         case "harvest_truss":
-            return HarvestTruss(truss_id=action.target)
-        case "lower_stem":
-            if not action.target.isdigit() or int(action.target) < 1:
-                raise InvalidRequest(f"lower_stem wants how many internodes, not {action.target!r}")
-            return LowerStem(internodes=int(action.target))
+            return Harvest(plant_id=plant_id, scope=HarvestScope.TRUSS, organ_id=target)
         case _:
-            known = ", ".join(ACTIONS)
-            raise InvalidRequest(f"the plant lab has no action {action.kind!r}, only {known}")
+            return Lower(plant_id=plant_id, by_internodes=int(target))
 
 
 def _days(plant_id: str, run: LabRun, environment: Environment) -> Iterator[Plant]:
@@ -180,7 +178,7 @@ def _days(plant_id: str, run: LabRun, environment: Environment) -> Iterator[Plan
     for day in range(run.day + 1):
         for action in run.actions:
             if action.day == day and action.plant_id == plant_id:
-                plant = act(plant, _plant_action(action))
+                plant = carry_out(plant, _crop_action(action)).plant
         yield plant
         if day < run.day:
             plant = live_day(plant, environment.local(plant_id, day), DEVELOPMENT)

@@ -37,16 +37,17 @@ from collections import OrderedDict
 from collections.abc import Callable, Sequence
 from typing import Final, Protocol
 
+from greenhouse_protocol.actions import Harvest, HarvestScope, Lower
 from pydantic import BaseModel, ConfigDict, NonNegativeFloat, PositiveInt
 
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
-from greenhouse_sim.biology.tomato.organ.actions import harvest_round, lowering_round
 from greenhouse_sim.biology.tomato.organ.development import live_day
 from greenhouse_sim.biology.tomato.organ.geometry import rising_point, stem_height_m
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.biology.tomato.organ.transplants import DEVELOPMENT
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.climate.run import LOOK_AGAIN_S
+from greenhouse_sim.core.crop_actions import CropAction, carry_out
 from greenhouse_sim.core.stopwatch import Stopwatch, timed
 from greenhouse_sim.solar.plants import Crown
 from greenhouse_sim.world.envelope import Envelope
@@ -103,6 +104,17 @@ class CropWork(BaseModel):
     def lowers_on(self, day: int) -> bool:
         """Whether a lowering round starts the run's day `day`."""
         return _due(self.lower_every_days, day)
+
+    def actions_on(self, day: int, plant_id: str) -> list[CropAction]:
+        """The crop actions that start the run's day `day` on a plant, in
+        order: a harvest of every ripe fruit, then a lowering to the head
+        room under its wire, each if it is due."""
+        actions: list[CropAction] = []
+        if self.harvests_on(day):
+            actions.append(Harvest(plant_id=plant_id, scope=HarvestScope.RIPE))
+        if self.lowers_on(day):
+            actions.append(Lower(plant_id=plant_id, to_head_room_m=self.head_room_m))
+        return actions
 
 
 def _due(days: int | None, day: int) -> bool:
@@ -340,12 +352,11 @@ class RunCrop:
         return environments
 
     def _worked(self, day: int, plant: Plant, training: Training) -> Plant:
-        """The plant after the crop work that starts the run's day `day`: a
-        harvest round, then a lowering round, if either is due."""
-        if self.work.harvests_on(day):
-            plant = harvest_round(plant)
-        if self.work.lowers_on(day) and training.wire_m is not None:
-            plant = lowering_round(plant, training.wire_m - self.work.head_room_m, training.path)
+        """The plant after the crop work that starts the run's day `day`, its
+        crop actions carried out in order (`CropWork.actions_on`); a plant
+        that hangs from no wire is not lowered."""
+        for action in self.work.actions_on(day, plant.plant_id):
+            plant = carry_out(plant, action, training).plant
         return plant
 
     def _crowns(self, plants: Sequence[Plant]) -> list[Crown]:
