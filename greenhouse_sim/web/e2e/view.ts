@@ -15,6 +15,41 @@ export function mainView(page: Page): Locator {
   return page.getByTestId("main-view").locator("canvas");
 }
 
+// Each step of an orbit across the view, one move of the mouse. A held drag
+// draws every frame (decision 0053), and each move waits for the frame being
+// drawn: on CI's software renderer, a frame of the stress scene takes about
+// half a second, and five moves took seven seconds there. The orbit is given
+// longer than a check's default to read what it waits for.
+const ORBIT_STEP_PX = 20;
+const ORBIT_TIMEOUT_MS = 20_000;
+
+/**
+ * Orbits the camera across the view, a step at a time, until `readout` says
+ * `text`. The view draws only when something changes (decision 0053), so how
+ * fast it draws is measured while it moves; each poll moves it again.
+ */
+export async function orbitUntil(page: Page, readout: Locator, text: RegExp): Promise<void> {
+  const box = await mainView(page).boundingBox();
+  if (box === null) {
+    throw new Error("the 3D view is not on the page");
+  }
+  const y = box.y + box.height / 2;
+  let x = box.x + box.width / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await expect
+    .poll(
+      async () => {
+        x += ORBIT_STEP_PX;
+        await page.mouse.move(x, y);
+        return readout.textContent();
+      },
+      { timeout: ORBIT_TIMEOUT_MS },
+    )
+    .toMatch(text);
+  await page.mouse.up();
+}
+
 /** Where a world point appears on the page, seen from a camera preset or
  * pose, worked out as the viewer's own camera works it out. */
 export async function onScreen(

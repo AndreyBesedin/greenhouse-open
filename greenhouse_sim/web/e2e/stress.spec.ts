@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { PLANTS_PER_ROW, stressPlantId, stressPlantPosition } from "../src/qa/stressScene.ts";
-import { selectAt } from "./view";
+import { orbitUntil, selectAt } from "./view";
 
 // Enough plants to need instancing, few enough for CI's software renderer.
 const PLANTS = 2_000;
@@ -20,7 +20,6 @@ test("thousands of plants are drawn in a handful of draw calls, and each can be 
   );
   // One batch draws every plant: the draw calls stay in single figures.
   await expect(page.getByTestId("draw-calls")).toHaveText(/^\d \(\d{1,3}(,\d{3})* triangles\)$/);
-  await expect(page.getByTestId("frame-time")).toHaveText(/^\d+\.\d ms, worst \d+\.\d ms$/);
   await expect(page.getByTestId("memory")).toHaveText(/^\d+ geometries, \d+ textures/);
 
   const plant = stressPlantPosition(COLUMN, ROW, ROWS);
@@ -28,4 +27,8 @@ test("thousands of plants are drawn in a handful of draw calls, and each can be 
   await expect(page.getByTestId("selected-position")).toHaveText(
     `x ${plant.x.toFixed(2)}, y ${plant.y.toFixed(2)}, z 0.00`,
   );
+
+  // Its frame time, measured as the camera orbits it: picked from the
+  // default view first, as the orbit moves the camera.
+  await orbitUntil(page, page.getByTestId("frame-time"), /^\d+\.\d ms, worst \d+\.\d ms$/);
 });

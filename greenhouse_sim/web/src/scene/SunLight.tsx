@@ -48,7 +48,7 @@ export function SunLight({
 }) {
   const light = useRef<DirectionalLight>(null);
   const target = useMemo(() => new Object3D(), []);
-  const { gl, scene } = useThree();
+  const { gl, scene, invalidate } = useThree();
 
   useEffect(() => {
     scene.add(target);
@@ -74,7 +74,12 @@ export function SunLight({
     camera.near = SHADOW_NEAR_M;
     camera.far = pose.distanceM * SHADOW_FAR_REACH;
     camera.updateProjectionMatrix();
-  }, [pose, target]);
+    // The view draws only when something changes (decision 0053), and this
+    // effect may come after the frame its pose was drawn in: the shadows are
+    // drawn again over the camera as it now stands.
+    gl.shadowMap.needsUpdate = true;
+    invalidate();
+  }, [pose, target, gl, invalidate]);
 
   // The shadow map is drawn only when what it shows changes: the sun moves,
   // or the scene's meshes come and go, a selection among them; those there

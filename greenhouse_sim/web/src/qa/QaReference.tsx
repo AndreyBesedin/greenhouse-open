@@ -123,7 +123,6 @@ export function QaReference({ search }: { search: string }) {
         initialPose={drawn.pose}
         overlays={overlays}
         sunlight={sunlight}
-        frameloop="demand"
         onSample={ignore}
         onPointer={ignore}
         onSelect={ignore}

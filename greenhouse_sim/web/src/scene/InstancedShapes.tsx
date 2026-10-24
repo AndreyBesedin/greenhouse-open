@@ -1,3 +1,4 @@
+import { useThree } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import type { InstancedMesh } from "three";
 import { useDisposable } from "../useDisposable";
@@ -28,6 +29,7 @@ export function InstancedShapes({
   metallic?: boolean;
 }) {
   const mesh = useRef<InstancedMesh>(null);
+  const invalidate = useThree((state) => state.invalidate);
   // The unit shape, placed as `shapeMatrices` expects.
   const geometry = useDisposable(() => solidGeometry(UNIT_SHAPES[shape]), [shape]);
   const matrices = useMemo(() => shapeMatrices(entities), [entities]);
@@ -50,7 +52,9 @@ export function InstancedShapes({
     // Bounds for clicks and for culling, around the instances as they now stand.
     instanced.computeBoundingBox();
     instanced.computeBoundingSphere();
-  }, [entities, colors, matrices]);
+    // Written to the mesh, not passed as a prop, so the view is told to draw.
+    invalidate();
+  }, [entities, colors, matrices, invalidate]);
 
   return (
     <instancedMesh ref={mesh} args={[geometry, undefined, capacity]}>
