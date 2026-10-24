@@ -3,8 +3,8 @@
 
 A kept state is a run's state at the start of one of its days: its house's
 air then, and an hour before, where the day's first hour draws its field
-from, and its organ-level crop's plants then, with what each experienced
-on each day before. A run of the same house, under the same
+from, and its crop's plants then, of whichever model its rows grow, with
+what each experienced on each day before. A run of the same house, under the same
 weather, with the same doors and vents open from the start, whose schedule
 agrees with the state's up to its moment, is the same run up to then
 (`Schedule.same_until`), so it takes the state over in place of working its
@@ -20,8 +20,8 @@ module looks at neither.
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from greenhouse_sim.biology.crop_contract import CropPlant
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
-from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.core.clock import DAY_S
@@ -40,14 +40,14 @@ type House = tuple[str, str, str, tuple[tuple[str, float], ...]]
 @dataclass(frozen=True)
 class KeptState:
     """A run's state at the start of its day `day`: its house's air then,
-    and its crop's plants then with what they lived through, none where it
-    grows no organ-level crop; its run, `house` under `schedule`."""
+    and its crop's plants then with what they lived through; its run,
+    `house` under `schedule`."""
 
     house: House
     schedule: Schedule
     day: int
     air: HouseAir
-    plants: tuple[Plant, ...] = ()
+    plants: tuple[CropPlant, ...] = ()
     lived: tuple[dict[str, LocalEnvironment], ...] = ()
     # Its house's air at moments before its day began, each with its moment:
     # where the field of the day's first hour starts its grid run.

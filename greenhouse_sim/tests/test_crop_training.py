@@ -17,12 +17,12 @@ from greenhouse_sim.biology.tomato.organ.geometry import (
     stem_height_m,
     top_height_m,
 )
-from greenhouse_sim.biology.tomato.organ.topology import HarvestTruss
+from greenhouse_sim.biology.tomato.organ.topology import HarvestTruss, Plant
 from greenhouse_sim.biology.tomato.organ.transplants import transplant
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.core.crop import CropWork, RunCrop
+from greenhouse_sim.core.crop import CropWork, OrganRung, RunCrop
 from greenhouse_sim.core.timeline import HARVEST_ROUND, LOWERING_ROUND, RunProcesses, events
 from greenhouse_sim.domain.organs import LeafStage
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
@@ -241,13 +241,14 @@ class _Steady:
         return {crown.plant_id: 25.0 for crown in self.crowns}
 
 
-def _season(work: CropWork) -> RunCrop:
+def _season(work: CropWork) -> RunCrop[Plant]:
     """Six plants of a double row whose wires hang 3 m up, so that the lab's
     reference air and light bring them to the wires within the season."""
     return RunCrop(
         [transplant(f"p{n}", 42) for n in range(1, 7)],
         trainings(LOW_ROWS, [])[:6],
         REFERENCE.envelope,
+        rung=OrganRung(42),
         air=lambda _: HouseAir(temperature_c=21.0, humidity_g_kg=8.0, co2_ppm=800.0),
         light=lambda _, crowns: _Steady(crowns),
         work=work,

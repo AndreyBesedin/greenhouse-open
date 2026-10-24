@@ -18,7 +18,7 @@ service zones and keep-out volumes, as the boxes they keep, and an upright
 cylinder per plant, as tall as its visible stem, at its planting position.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from enum import StrEnum
 from typing import Final
 
@@ -206,16 +206,23 @@ def scene_snapshot(
         layout=config.layout,
         levels=levels,
     )
-    positions = config.layout.planting_positions()
-    if len(world.plants) > len(positions):
-        raise ValueError(
-            f"{len(world.plants)} plants, but only {len(positions)} planting positions"
-        )
-    plants = [
-        _plant_entity(plant, config.envelope, position)
-        for plant, position in zip(world.plants, positions, strict=False)
-    ]
+    plants = simple_plant_entities(world.plants, config.layout, config.envelope)
     return greenhouse.model_copy(update={"entities": [*greenhouse.entities, *plants]})
+
+
+def simple_plant_entities(
+    plants: Sequence[PlantWorld], layout: Layout, envelope: Envelope
+) -> list[SceneEntity]:
+    """One entity per plant of the simple crop, each at its planting
+    position in `layout`, the first plant at the first, and so on: a
+    cylinder as tall as its stem stands, with its numbers."""
+    positions = layout.planting_positions()
+    if len(plants) > len(positions):
+        raise ValueError(f"{len(plants)} plants, but only {len(positions)} planting positions")
+    return [
+        _plant_entity(plant, envelope, position)
+        for plant, position in zip(plants, positions, strict=False)
+    ]
 
 
 def greenhouse_scene(

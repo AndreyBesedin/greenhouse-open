@@ -14,6 +14,7 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S, day_start, run_day
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import sensors
+from greenhouse_sim.services.crop import scenario_crop
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.sunlight import plant_light
@@ -130,11 +131,15 @@ def test_the_weather_through_a_later_day(simulator: Simulator) -> None:
 
 
 def test_a_plants_light_integral_is_its_moments_days(simulator: Simulator) -> None:
-    light = plant_light(simulator, "solar_lab", "default", "default")
+    """Its crowns as tall as its simple crop's plants stand that day."""
+    crop = scenario_crop(simulator, RunRequest("solar_lab"))
     body = _body(simulator, f"/api/scenarios/solar_lab/climate/plants?t={SECOND_DAY_S:.0f}")
 
-    assert body["daily_light_integral_mol_m2_d"] == light.daily_light_integral(1)
-    assert body["daily_light_integral_mol_m2_d"] != light.daily_light_integral(0)
+    assert body["daily_light_integral_mol_m2_d"] == crop.light_on(1).daily_light_integral(1)
+    assert body["daily_light_integral_mol_m2_d"] != crop.light_on(0).daily_light_integral(0)
+    # Taller than on the run's first day, they shade one another otherwise.
+    first = plant_light(simulator, "solar_lab", "default", "default")
+    assert body["daily_light_integral_mol_m2_d"] != first.daily_light_integral(1)
 
 
 def test_a_command_may_come_on_any_day_of_the_run(simulator: Simulator) -> None:

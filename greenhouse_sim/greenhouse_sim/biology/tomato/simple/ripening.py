@@ -9,23 +9,19 @@ from greenhouse_sim.biology.tomato.simple.parameters import (
 )
 from greenhouse_sim.biology.tomato.simple.state import SimpleFruitState
 from greenhouse_sim.domain.crop import FruitStatus, RipenessStage
-from greenhouse_sim.world.state import Fruit, GreenhouseEnvironment
+from greenhouse_sim.world.state import Fruit
 
 
-def effective_ripening_day(
-    fruit_state: SimpleFruitState, environment: GreenhouseEnvironment
-) -> float:
+def effective_ripening_day(fruit_state: SimpleFruitState, temperature_c: float) -> float:
     """Warmer greenhouses ripen fruit faster."""
-    temp_factor = 1.0 - RIPENING_SPEEDUP_PER_DEGREE * (
-        environment.air_temperature_c - REFERENCE_TEMPERATURE_C
-    )
+    temp_factor = 1.0 - RIPENING_SPEEDUP_PER_DEGREE * (temperature_c - REFERENCE_TEMPERATURE_C)
     return fruit_state.ripening_day * max(RIPENING_MIN_TIME_FACTOR, temp_factor)
 
 
 def ripeness_stage(
-    fruit: Fruit, fruit_state: SimpleFruitState, environment: GreenhouseEnvironment
+    fruit: Fruit, fruit_state: SimpleFruitState, temperature_c: float
 ) -> RipenessStage:
-    ripening_day = effective_ripening_day(fruit_state, environment)
+    ripening_day = effective_ripening_day(fruit_state, temperature_c)
     progress = fruit.age_days / ripening_day if ripening_day > 0 else 1.0
 
     if progress >= 1.0 + OVERRIPE_AFTER_DAYS / max(ripening_day, 1.0):
@@ -41,10 +37,8 @@ def ripeness_stage(
     return RipenessStage.FRUIT_SET
 
 
-def advance_ripening(
-    fruit: Fruit, fruit_state: SimpleFruitState, environment: GreenhouseEnvironment
-) -> Fruit:
-    stage = ripeness_stage(fruit, fruit_state, environment)
+def advance_ripening(fruit: Fruit, fruit_state: SimpleFruitState, temperature_c: float) -> Fruit:
+    stage = ripeness_stage(fruit, fruit_state, temperature_c)
     status = fruit.status
     if fruit.status == FruitStatus.GROWING and stage in (
         RipenessStage.RIPE,

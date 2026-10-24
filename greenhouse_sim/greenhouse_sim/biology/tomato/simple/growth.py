@@ -11,15 +11,15 @@ from greenhouse_sim.biology.tomato.simple.state import SimpleFruitState, SimpleP
 from greenhouse_sim.core.rng import seeded_rng
 from greenhouse_sim.domain.crop import TrussStage
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.world.state import Fruit, GreenhouseEnvironment, PlantWorld, Truss
+from greenhouse_sim.world.state import Fruit, PlantWorld, Truss
 
 
 def advance_stem(
-    plant_state: SimplePlantState, environment: GreenhouseEnvironment, config: ScenarioConfig
+    plant_state: SimplePlantState, temperature_c: float, config: ScenarioConfig
 ) -> float:
     """Stem length gained today. Stressed or too-hot/cold plants grow slower."""
     water_factor = 1.0 - STEM_GROWTH_LOSS_AT_FULL_WATER_STRESS * plant_state.water_stress
-    temp_deviation = abs(environment.air_temperature_c - REFERENCE_TEMPERATURE_C)
+    temp_deviation = abs(temperature_c - REFERENCE_TEMPERATURE_C)
     temp_factor = max(
         STEM_GROWTH_MIN_TEMPERATURE_FACTOR, 1.0 - temp_deviation * STEM_GROWTH_LOSS_PER_DEGREE
     )

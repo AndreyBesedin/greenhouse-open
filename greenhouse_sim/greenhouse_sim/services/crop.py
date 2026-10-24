@@ -1,8 +1,9 @@
 """A scenario's crop through a run (P09.3), as a client asks for it: the
-light on each of its plants at a moment of the run, and, where it grows
-its crop organ by organ (`greenhouse_sim.core.crop`), its plants as they
-stand then, drawn organ by organ, and each plant's structure, history and
-days.
+light on each of its plants at a moment of the run, and its plants as they
+stand then, drawn, grown by the model its rows grow: organ by organ
+(`greenhouse_sim.core.crop`), each plant's structure, history and days
+listed, or by the simple daily model (`greenhouse_sim.core.simple_crop`,
+P14.3), each drawn with its numbers.
 
 A run is asked for as its climate field is (`greenhouse_sim.services.fields`),
 and refused as it is, as is a moment outside it. Its crop lives in its
@@ -25,23 +26,24 @@ crop actions differ on.
 
 import math
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, TypeIs
 
 from pydantic import BaseModel, ConfigDict
 
+from greenhouse_sim.biology.crop_contract import CropRung
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.biology.tomato.organ.topology import Plant
-from greenhouse_sim.biology.tomato.organ.transplants import transplant
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.day import ClimateDay
 from greenhouse_sim.core.clock import DAY_S, days_ended, run_day
-from greenhouse_sim.core.crop import CropLight, RunCrop
+from greenhouse_sim.core.crop import OrganRung, RunCrop
+from greenhouse_sim.core.simple_crop import SimplePlant, SimpleRung
 from greenhouse_sim.core.stopwatch import Stopwatch
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.scene.plants import crop_entities
-from greenhouse_sim.scene.snapshot import SceneSnapshot
+from greenhouse_sim.scene.snapshot import SceneEntity, SceneSnapshot, simple_plant_entities
 from greenhouse_sim.services.climate_runs import RunKey, climate_run, house_of, run_label
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.kept_states import KeptState, agreeing
@@ -69,6 +71,8 @@ KEPT_CROPS: Final = 4
 # What tells a run's crop from another's: its climate run, and its own crop
 # actions.
 type CropKey = tuple[RunKey, CropPlan]
+# A run's crop, of whichever model its rows grow.
+type AnyCrop = RunCrop[Plant] | RunCrop[SimplePlant]
 
 
 def crop_label(key: CropKey) -> str:
@@ -80,34 +84,48 @@ def crop_label(key: CropKey) -> str:
     return f"{run_label(run_key)} with {len(planned)} crop actions"
 
 
-def new_store() -> Store[CropKey, tuple[RunCrop, Schedule]]:
+def new_store() -> Store[CropKey, tuple[AnyCrop, Schedule]]:
     """A simulator's crops: the latest `KEPT_CROPS` (decision 0048)."""
     return Store("crops", KEPT_CROPS, label=crop_label)
 
 
-def run_crop(simulator: Simulator, run: RunRequest, watch: Stopwatch | None = None) -> RunCrop:
-    """A run's organ-level crop, asked for as its climate field is: one of
-    those kept, or a new one, carrying on from those kept for the same house
-    up to where their air, or their own crop actions, differ, the parts of
-    its days timed on `watch`, for a benchmark. A scenario that grows its
-    crop with the simple daily model has none."""
-    config = scenario(simulator.catalogue, run.scenario_id)
-    if config.crop_model != CropModel.ORGAN:
+def run_crop(
+    simulator: Simulator, run: RunRequest, watch: Stopwatch | None = None
+) -> RunCrop[Plant]:
+    """A run's organ-level crop, as `scenario_crop` gives it; not found for
+    a scenario that grows its crop with the simple daily model."""
+    crop = scenario_crop(simulator, run, watch)
+    if not is_organ(crop):
         raise NotFound(
             f"{run.scenario_id} grows its crop with the simple daily model, not by organ"
         )
+    return crop
+
+
+def is_organ(crop: AnyCrop) -> TypeIs[RunCrop[Plant]]:
+    """Whether a run's crop is the organ crop."""
+    return isinstance(crop.rung, OrganRung)
+
+
+def scenario_crop(simulator: Simulator, run: RunRequest, watch: Stopwatch | None = None) -> AnyCrop:
+    """A run's crop, grown by the model its rows grow, asked for as its
+    climate field is: one of those kept, or a new one, carrying on from
+    those kept for the same house up to where their air, or their own crop
+    actions, differ, the parts of its days timed on `watch`, for a
+    benchmark."""
+    config = scenario(simulator.catalogue, run.scenario_id)
     run_key, climate = climate_run(simulator, run)
     planned = checked_crop_plan(_run_config(simulator, run_key), run.plan)
     key = (run_key, planned)
     schedule = climate.run.schedule
 
-    def make(others: list[tuple[CropKey, tuple[RunCrop, Schedule]]]) -> tuple[RunCrop, Schedule]:
+    def make(others: list[tuple[CropKey, tuple[AnyCrop, Schedule]]]) -> tuple[AnyCrop, Schedule]:
         crop = _new_crop(simulator, key, climate, watch)
         for (_, other_planned), (other, other_schedule) in others:
             until = schedule.same_until(other_schedule)
             shared = config.duration_days if math.isinf(until) else days_ended(until)
             alike = _worked_alike_through(planned, other_planned, config.duration_days)
-            crop.carry_on_from(other, min(shared, alike, config.duration_days))
+            _carried_on(crop, other, min(shared, alike, config.duration_days))
         for state in agreeing(simulator, house_of(run_key), schedule):
             if state.plants and state.crop_agrees(planned):
                 crop.seed(state.day, state.plants, state.lived)
@@ -115,6 +133,17 @@ def run_crop(simulator: Simulator, run: RunRequest, watch: Stopwatch | None = No
 
     crop, _ = simulator.crops.made_once(key, make, lambda other: _same_house(key, other))
     return crop
+
+
+def _carried_on(crop: AnyCrop, other: AnyCrop, days: int) -> None:
+    """`crop` carrying on from `other` through `days`, a crop of the same
+    house, and so of the same model."""
+    if is_organ(crop):
+        if is_organ(other):
+            crop.carry_on_from(other, days)
+        return
+    if not is_organ(other):
+        crop.carry_on_from(other, days)
 
 
 def seed_kept_crops(simulator: Simulator, state: KeptState) -> None:
@@ -156,11 +185,25 @@ def _run_config(simulator: Simulator, key: RunKey) -> ScenarioConfig:
 
 def _new_crop(
     simulator: Simulator, key: CropKey, climate: ClimateDay, watch: Stopwatch | None = None
-) -> RunCrop:
-    """A run's crop from its first day: the scenario's transplants, in its
-    climate run's house air and its sunlight, its crowns grown day by day,
-    and its own crop actions carried out; the parts of its days timed on
-    `watch`, if given."""
+) -> AnyCrop:
+    """A run's crop from its first day, of the model its rows grow: the
+    scenario's transplants, in its climate run's house air and its sunlight,
+    its crowns grown day by day, and its own crop actions carried out; the
+    parts of its days timed on `watch`, if given."""
+    run_key, _ = key
+    config = _run_config(simulator, run_key)
+    if config.crop_model == CropModel.ORGAN:
+        return _grown(simulator, key, climate, OrganRung(config.random_seed), watch)
+    return _grown(simulator, key, climate, SimpleRung(config), watch)
+
+
+def _grown[PlantT: (Plant, SimplePlant)](
+    simulator: Simulator,
+    key: CropKey,
+    climate: ClimateDay,
+    rung: CropRung[PlantT],
+    watch: Stopwatch | None,
+) -> RunCrop[PlantT]:
     run_key, planned = key
     scenario_id, layout, weather, *_ = run_key
     config = _run_config(simulator, run_key)
@@ -171,9 +214,10 @@ def _new_crop(
         return PlantLight(sunlight.shaded_by(shadows), crowns)
 
     return RunCrop(
-        [transplant(plant_id, config.random_seed) for plant_id in plant_ids(config)],
+        [rung.transplant(plant_id) for plant_id in plant_ids(config)],
         config.layout.trainings(),
         config.envelope,
+        rung=rung,
         air=lambda day: climate.house.mean_between(day * DAY_S, (day + 1) * DAY_S),
         light=light,
         work=config.crop_work,
@@ -184,23 +228,26 @@ def _new_crop(
 
 
 def crop_scene(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> SceneSnapshot:
-    """A run's crop `time_s` into it, organ by organ, as a viewer draws it
-    over the scenario's scene: each plant at its planting position, as it
-    stands once it has lived the days ended by then. Asked for as its
+    """A run's crop `time_s` into it, as a viewer draws it over the
+    scenario's scene: each plant at its planting position, as it stands
+    once it has lived the days ended by then, organ by organ, or as the
+    simple crop's plants are drawn, with their numbers. Asked for as its
     climate field is, and refused as it is."""
     checked_moment(scenario(simulator.catalogue, run.scenario_id), time_s)
-    crop = run_crop(simulator, run)
+    crop = scenario_crop(simulator, run)
     day = days_ended(time_s)
     config = changed(
         simulator.catalogue,
         scenario(simulator.catalogue, run.scenario_id),
         SceneChanges(layout=run.layout or DEFAULT_LAYOUT),
     )
-    return SceneSnapshot(
-        greenhouse_id=config.greenhouse_id,
-        simulated_day=day,
-        entities=crop_entities(crop.plants_on(day), config.layout.trainings(), config.envelope),
-    )
+    entities: list[SceneEntity]
+    if is_organ(crop):
+        entities = crop_entities(crop.plants_on(day), config.layout.trainings(), config.envelope)
+    else:
+        plants = [plant.plant for plant in crop.plants_on(day)]
+        entities = simple_plant_entities(plants, config.layout, config.envelope)
+    return SceneSnapshot(greenhouse_id=config.greenhouse_id, simulated_day=day, entities=entities)
 
 
 class CropPlant(BaseModel):
@@ -222,7 +269,8 @@ def crop_plant(
 ) -> CropPlant:
     """One plant of a run's crop `time_s` into it, and its days so far.
     Asked for as its crop is, and refused as it is; a plant it does not have
-    is not found."""
+    is not found, nor one of the simple crop, which has no structure: its
+    numbers are its entity's in the crop's scene (`crop_scene`)."""
     checked_moment(scenario(simulator.catalogue, run.scenario_id), time_s)
     crop = run_crop(simulator, run)
     day = days_ended(time_s)
@@ -253,23 +301,12 @@ class PlantsLight(BaseModel):
 def plants_light(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> PlantsLight:
     """The light on each of a run's plants `time_s` into it, asked for as
     its climate field is, and refused as it is: with its crowns as tall as
-    its plants stand on the moment's day, where it grows its crop organ by
-    organ; or else as they stand before its first day."""
-    scenario_id = run.scenario_id
-    checked_moment(scenario(simulator.catalogue, scenario_id), time_s)
-    key, _ = climate_run(simulator, run)
+    its plants stand on the moment's day."""
+    checked_moment(scenario(simulator.catalogue, run.scenario_id), time_s)
     day = run_day(time_s)
-    light: CropLight
-    if scenario(simulator.catalogue, scenario_id).crop_model == CropModel.ORGAN:
-        crop = run_crop(simulator, run)
-        light = crop.light_on(day)
-        par = light.par_at(time_s)
-        integrals = {plant_id: crop.local(plant_id, day).par_mol_m2_day for plant_id in par}
-    else:
-        _, name, under, *_ = key
-        light = plant_light(simulator, scenario_id, name, under)
-        par = light.par_at(time_s)
-        integrals = light.daily_light_integral(day)
+    crop = scenario_crop(simulator, run)
+    par = crop.light_on(day).par_at(time_s)
+    integrals = {plant_id: crop.local(plant_id, day).par_mol_m2_day for plant_id in par}
     try:
         return PlantsLight(
             time_s=time_s, par_umol_m2_s=par, daily_light_integral_mol_m2_d=integrals

@@ -49,17 +49,19 @@ type CropEffect = Harvested | Lowered | LeafRemoved
 
 
 @dataclass(frozen=True)
-class CarriedOut:
-    """A crop action carried out on a plant: the plant after it, its history
-    longer by the operations it was done by, and either what it did or why
-    it was refused."""
+class CarriedOut[PlantT]:
+    """A crop action carried out on a plant: the plant after it, an organ
+    crop's history longer by the operations it was done by, and either what
+    it did or why it was refused."""
 
-    plant: Plant
+    plant: PlantT
     effect: CropEffect | None = None
     refusal: str | None = None
 
 
-def carry_out(plant: Plant, action: CropAction, training: Training | None = None) -> CarriedOut:
+def carry_out(
+    plant: Plant, action: CropAction, training: Training | None = None
+) -> CarriedOut[Plant]:
     """The crop action carried out on its plant, trained as `training` says,
     or straight along its row and hanging from no wire if it is not given:
     see the module."""
@@ -85,7 +87,7 @@ def _harvest(plant: Plant, action: Harvest) -> Plant:
     return act(plant, topology.HarvestFruit(fruit_id=action.organ_id))
 
 
-def _harvested(before: Plant, after: Plant) -> CarriedOut:
+def _harvested(before: Plant, after: Plant) -> CarriedOut[Plant]:
     picked = _picked(after) - _picked(before)
     events = after.history[len(before.history) :]
     effect = Harvested(
@@ -105,7 +107,7 @@ def _picked(plant: Plant) -> set[str]:
     }
 
 
-def _lower(plant: Plant, action: Lower, training: Training | None) -> CarriedOut:
+def _lower(plant: Plant, action: Lower, training: Training | None) -> CarriedOut[Plant]:
     path = ALONG_THE_ROW if training is None else training.path
     if action.by_internodes is not None:
         after = act(plant, topology.LowerStem(internodes=action.by_internodes))
@@ -126,7 +128,7 @@ def _lower(plant: Plant, action: Lower, training: Training | None) -> CarriedOut
     return _outcome(plant, after, Lowered(by_cm=max(0.0, drop_m) / METRES_PER_CM))
 
 
-def _outcome(before: Plant, after: Plant, effect: CropEffect) -> CarriedOut:
+def _outcome(before: Plant, after: Plant, effect: CropEffect) -> CarriedOut[Plant]:
     """Done, with its effect, unless an operation it was done by was refused:
     then refused, as that operation was."""
     events = after.history[len(before.history) :]

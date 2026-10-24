@@ -53,15 +53,15 @@ PINNED_RUNS = [
         "schedule=600:roof_vent_1:1,600:roof_vent_1:0.5&targets=86400:heating_night:12",
         "reference_greenhouse-climate-c41a7847",
     ),
-    ("climate_box", "", "climate_box-climate-7bcca9ce"),
-    ("climate_box", "set=fan:1&schedule=60:fan:0.5,30:heater:1", "climate_box-climate-5148c4ca"),
+    ("climate_box", "", "climate_box-climate-5f8da7df"),
+    ("climate_box", "set=fan:1&schedule=60:fan:0.5,30:heater:1", "climate_box-climate-8f031188"),
     (
         "climate_box",
         "daily=64800:heater:1,0:fan:1&schedule=0:fan:0",
-        "climate_box-climate-7dc38379",
+        "climate_box-climate-0c5de619",
     ),
-    ("climate_box", "open=roof_vent:0.5&schedule=120:roof_vent:1", "climate_box-climate-2f0cc1fd"),
-    ("climate_box", "weather=cold_spring_day&set=heater:0.5", "climate_box-climate-2ca1585d"),
+    ("climate_box", "open=roof_vent:0.5&schedule=120:roof_vent:1", "climate_box-climate-e662408d"),
+    ("climate_box", "weather=cold_spring_day&set=heater:0.5", "climate_box-climate-3b8aef1c"),
 ]
 
 

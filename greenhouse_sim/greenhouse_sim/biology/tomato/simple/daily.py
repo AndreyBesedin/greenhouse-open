@@ -18,7 +18,7 @@ from greenhouse_sim.biology.tomato.simple.water import advance_water
 from greenhouse_sim.core.rng import seeded_rng
 from greenhouse_sim.domain.crop import FruitStatus
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.world.state import Fruit, GreenhouseEnvironment, PlantWorld, Truss
+from greenhouse_sim.world.state import Fruit, PlantWorld, Truss
 
 
 def initial_plant(plant_id: str, config: ScenarioConfig) -> tuple[PlantWorld, SimplePlantState]:
@@ -34,18 +34,19 @@ def initial_plant(plant_id: str, config: ScenarioConfig) -> tuple[PlantWorld, Si
 def advance_plant(
     plant: PlantWorld,
     state: SimpleTomatoState,
-    environment: GreenhouseEnvironment,
+    temperature_c: float,
     config: ScenarioConfig,
 ) -> tuple[PlantWorld, SimplePlantState, dict[str, SimpleFruitState]]:
-    """Advances one plant by a day in the given, already-advanced environment.
+    """Advances one plant by a day at `temperature_c`, the day's mean air
+    temperature, the one thing it takes from its environment.
 
     Returns the plant, the model's updated values for it, and the model's
     values for any fruit set today. Depends only on the plant, the model's
-    values for it and its fruit, the environment and the scenario: the
+    values for it and its fruit, the temperature and the scenario: the
     plant's random draws are keyed by its own identity.
     """
-    plant, plant_state = advance_water(plant, state.plants[plant.plant_id], environment, config)
-    stem_growth = advance_stem(plant_state, environment, config)
+    plant, plant_state = advance_water(plant, state.plants[plant.plant_id], temperature_c, config)
+    stem_growth = advance_stem(plant_state, temperature_c, config)
     plant = plant.model_copy(
         update={
             "stem_length_cm": plant.stem_length_cm + stem_growth,
@@ -53,7 +54,7 @@ def advance_plant(
         }
     )
 
-    trusses = [_advance_truss(truss, state, environment, config) for truss in plant.trusses]
+    trusses = [_advance_truss(truss, state, temperature_c, config) for truss in plant.trusses]
     new_fruit_states: dict[str, SimpleFruitState] = {}
     initiated = maybe_initiate_truss(plant, config, config.random_seed)
     if initiated is not None:
@@ -66,11 +67,11 @@ def advance_plant(
 def _advance_truss(
     truss: Truss,
     state: SimpleTomatoState,
-    environment: GreenhouseEnvironment,
+    temperature_c: float,
     config: ScenarioConfig,
 ) -> Truss:
     fruits = [
-        _advance_fruit(fruit, state.fruits[fruit.fruit_id], environment, config)
+        _advance_fruit(fruit, state.fruits[fruit.fruit_id], temperature_c, config)
         for fruit in truss.fruits
     ]
     updated = truss.model_copy(update={"age_days": truss.age_days + 1, "fruits": fruits})
@@ -80,7 +81,7 @@ def _advance_truss(
 def _advance_fruit(
     fruit: Fruit,
     fruit_state: SimpleFruitState,
-    environment: GreenhouseEnvironment,
+    temperature_c: float,
     config: ScenarioConfig,
 ) -> Fruit:
     if fruit.status == FruitStatus.HARVESTED:
@@ -91,4 +92,4 @@ def _advance_fruit(
     grown = aged.model_copy(
         update={"diameter_mm": diameter, "mass_g": fruit_mass_g(diameter, config)}
     )
-    return advance_ripening(grown, fruit_state, environment)
+    return advance_ripening(grown, fruit_state, temperature_c)
