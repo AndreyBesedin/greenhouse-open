@@ -300,7 +300,11 @@ def _union(kinds: tuple[type[EquipmentPiece], ...]) -> Any:
 
 def _read(given: Any) -> EquipmentPiece:
     if isinstance(given, EquipmentPiece):
-        return given
+        named = given.kind
+        if EQUIPMENT_KINDS.get(named) is type(given):
+            return given
+        kinds = ", ".join(EQUIPMENT_KINDS)
+        raise ValueError(f"no kind of equipment {named!r} for {type(given).__name__}: the kinds are {kinds}")
     named = given.get("kind") if isinstance(given, dict) else None
     kind = EQUIPMENT_KINDS.get(named) if isinstance(named, str) else None
     if kind is None:
