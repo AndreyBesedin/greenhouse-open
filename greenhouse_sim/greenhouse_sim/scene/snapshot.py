@@ -437,7 +437,7 @@ def _equipment_entity(
         properties={
             "actuator_id": piece.actuator_id,
             "level": level,
-            "device_kind": piece.kind.value,
+            "device_kind": str(piece.kind),
             "does": main.name,
             **dict(capability.rating() for capability in capabilities),
             **piece.rated(),
