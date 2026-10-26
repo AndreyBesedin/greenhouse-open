@@ -41,7 +41,7 @@ from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.kept_states import House, KeptState, agreeing
-from greenhouse_sim.services.runs import Commanded, RunRequest
+from greenhouse_sim.services.runs import Commanded, RunPlan, RunRequest
 from greenhouse_sim.services.scenarios import (
     DEFAULT_WEATHER,
     SceneChanges,
@@ -161,6 +161,16 @@ def checked_targets(config: ScenarioConfig, targets: Sequence[Commanded]) -> tup
                 f"{time:.15g} s"
             )
     return tuple(sorted(targets, key=lambda change: change[0]))
+
+
+def checked_actions(config: ScenarioConfig, plan: RunPlan) -> None:
+    """A plan's levels and target changes, checked as `run_schedule` checks
+    a run's, against a scenario as its run changes it, leaving out the
+    scenario's daily commands, which its run checks: a gateway checks each
+    action as it is given, and a season of daily commands worked out for
+    each would cost every action as much as a whole run's schedule."""
+    checked_commands(config, plan.commanded(), daily=())
+    checked_targets(config, plan.targeted())
 
 
 def run_schedule(catalogue: Scenarios, run: RunRequest) -> Schedule:

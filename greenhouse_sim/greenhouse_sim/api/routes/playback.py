@@ -8,7 +8,9 @@ a consumer follow (P10.2).
     POST /api/scenarios/{id}/playback/start?seconds_per_day=10
                                           started, or played on, at that pace;
                                           &layout=default~heater:-1:0.5 with
-                                          that layout, rearranged
+                                          that layout, rearranged; &hold=true
+                                          held at its start, for a plan given
+                                          before its clock moves (P13.7)
     POST /api/scenarios/{id}/playback/play, /pause, /restart (a new epoch)
     POST /api/scenarios/{id}/playback/restart?layout=default~heater:-1:0.5
                                           started over with another layout:
@@ -17,7 +19,10 @@ a consumer follow (P10.2).
     POST /api/scenarios/{id}/playback/targets?targets=heating_day:24,heating_night:18
                                           its run's targets changed from its
                                           clock's next minute on, in the same
-                                          run and epoch (#274, decision 0043)
+                                          run and epoch (#274, decision 0043):
+                                          deprecated, the next revision of its
+                                          plan `targets`, as the gateway's
+                                          plans route gives one (P13.7)
 """
 
 from http import HTTPStatus
@@ -43,7 +48,9 @@ def post(simulator: Simulator, segments: list[str], query: Query, _body: bytes) 
         case ["api", "scenarios", scenario_id, "playback", "start"]:
             layout = last(query, "layout")
             return answer(
-                lambda: playback.start(simulator, scenario_id, _pace(query), layout=layout)
+                lambda: playback.start(
+                    simulator, scenario_id, _pace(query), layout=layout, hold=_held(query)
+                )
             )
         case ["api", "scenarios", scenario_id, "playback", "targets"]:
             return answer(
@@ -62,6 +69,14 @@ def post(simulator: Simulator, segments: list[str], query: Query, _body: bytes) 
             )
         case _:
             return None
+
+
+def _held(query: Query) -> bool:
+    """Whether a playback started is held at its start: `hold=true`."""
+    given = last(query, "hold")
+    if given not in {None, "true", "false"}:
+        raise InvalidRequest(f"hold is true or false, not {given!r}")
+    return given == "true"
 
 
 def _pace(query: Query) -> float | None:
