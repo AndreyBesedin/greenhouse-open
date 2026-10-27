@@ -469,6 +469,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                         runId: playback.state.runId,
                         epoch: playback.state.epoch,
                         startedAt: playback.state.startedAt,
+                        version: steering.given,
                       }
                     : null
                 }

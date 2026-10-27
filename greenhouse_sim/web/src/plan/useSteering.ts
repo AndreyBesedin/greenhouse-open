@@ -18,8 +18,9 @@ const SAME_LEVEL = 1e-9;
  * (`giveToPlan`); targets, and what is asked of a plant, go at once. Each level asked for is `asked` until
  * the panels show it (`shown`, the levels the run has at its clock), or it
  * is refused; a refusal is `refusal`, in the gateway's words, until the next
- * change is given. Once given, the playback is read again (`onPlayback`),
- * so that the view draws the run with what it was given.
+ * change is given; and `given` counts the plans given, for what reads them.
+ * Once given, the playback is read again (`onPlayback`), so that the view
+ * draws the run with what it was given.
  */
 export function useSteering(
   scenarioId: string | null,
@@ -29,6 +30,9 @@ export function useSteering(
 ) {
   const [asked, setAsked] = useState<Readonly<Record<string, number>>>({});
   const [refusal, setRefusal] = useState<string | null>(null);
+  // How many times the run has been given a plan, accepted or refused: what
+  // reads the plan reads it again after each.
+  const [given, setGiven] = useState(0);
   const waiting = useRef<Record<string, number>>({});
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -37,10 +41,11 @@ export function useSteering(
       if (scenarioId === null || actions.length === 0) {
         return false;
       }
-      const given = await giveToPlan(scenarioId, actions, fetchFn);
-      setRefusal(given.status === "refused" ? given.reason : null);
+      const answer = await giveToPlan(scenarioId, actions, fetchFn);
+      setRefusal(answer.status === "refused" ? answer.reason : null);
+      setGiven((count) => count + 1);
       onPlayback(await loadPlayback(scenarioId, fetchFn));
-      return given.status === "given";
+      return answer.status === "given";
     },
     [scenarioId, onPlayback, fetchFn],
   );
@@ -106,7 +111,7 @@ export function useSteering(
   }, [scenarioId]);
   useEffect(() => () => stopWaiting(timer), []);
 
-  return { asked, refusal, steer, setTargets, act };
+  return { asked, refusal, given, steer, setTargets, act };
 }
 
 /** `levels` without the devices `gone` names, as long as they are asked for

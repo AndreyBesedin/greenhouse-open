@@ -1095,7 +1095,9 @@ plan, the timeline's plan lane, and crop actions given from the viewer.
   come. The window's actions are listed in the order of their moments,
   each with its outcome and, where the run gives one, why; those still to
   come as soon as they can, last. It is read again as the moment drawn
-  moves on.
+  moves on, and each time the viewer gives the run a plan, at a paused
+  clock too. A plan another client gives a paused run shows once its clock
+  moves on, or the timeline is opened again.
 - **A run's crop actions have an address spelling,** `&crop=`, as its
   levels have `&schedule=`: `seconds:plant:kind:what`, the kind the plant
   lab's (`remove_leaf`, `harvest_fruit`, `harvest_truss`, `lower_stem`) or

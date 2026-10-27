@@ -48,7 +48,7 @@ function turns(timeline: Timeline, seconds: number): [string, TimelineEvent[]][]
 }
 
 /** A followed run's plan lane, asked for at a moment: again as the moment
- * moves on, as its clock does. */
+ * moves on, as its clock does, and once the viewer has given it a plan. */
 interface PlanRequest {
   run: PlanLaneRun;
   time: number;
@@ -56,7 +56,8 @@ interface PlanRequest {
 
 const loadPlan = (request: PlanRequest, fetchFn: typeof fetch) =>
   loadPlanLane(request.run, fetchFn);
-const planKey = ({ run, time }: PlanRequest) => `${run.runId}:${run.epoch}:${time}`;
+const planKey = ({ run, time }: PlanRequest) =>
+  `${run.runId}:${run.epoch}:${run.version ?? 0}:${time}`;
 
 /**
  * A run's timeline (P09.2), opened on demand: a lane per process, its events
