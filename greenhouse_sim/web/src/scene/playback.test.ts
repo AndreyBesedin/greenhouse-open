@@ -23,11 +23,14 @@ const ANSWER = {
   worked_out_s: 172_800,
   every_s: 300,
   targets: [[129_660, "heating_night", 22]],
+  commands: [[129_630, "roof_vent", 0.5]],
+  crop: [[172_800, "p30", "lower_stem", "1"]],
 };
 const STATE = {
   runId: "reference_greenhouse-climate-c562c827",
   layout: "default",
   epoch: 0,
+  startedAt: "2026-02-28T23:00:00Z",
   simulatedNow: "2026-03-02T11:00:30Z",
   timeS: 129_630,
   day: 1,
@@ -35,6 +38,8 @@ const STATE = {
   secondsPerDay: 10,
   workedOutS: 172_800,
   targets: [{ timeS: 129_660, target: "heating_night", valueC: 22 }],
+  commands: [{ timeS: 129_630, actuatorId: "roof_vent", level: 0.5 }],
+  crop: [{ timeS: 172_800, plantId: "p30", kind: "lower_stem", target: "1" }],
 };
 
 function answering(status: number, body: unknown): typeof fetch {

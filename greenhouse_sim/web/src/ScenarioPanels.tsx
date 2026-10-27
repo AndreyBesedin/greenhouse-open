@@ -42,6 +42,7 @@ import type { ThermostatAt } from "./scene/equipment";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
 import { scenarioRun } from "./scene/run";
 import type { SetSource } from "./scene/useSource";
+import type { PlanLaneRun } from "./timeline/planLane";
 import { TimelinePanel } from "./timeline/TimelinePanel";
 import { WeatherPanel } from "./weather/WeatherPanel";
 import type { WeatherDayState, WeatherStateOfLoad } from "./weather/weather";
@@ -84,6 +85,8 @@ export function ScenarioPanels({
   thermostat = null,
   setpoints,
   onTargets,
+  steering,
+  played = null,
   onSource,
   onProbes,
   onPlacing,
@@ -118,6 +121,20 @@ export function ScenarioPanels({
   setpoints?: ThermostatAt | null | undefined;
   /** Changes its heating targets from the moment drawn on (#274). */
   onTargets?: (targets: Record<string, number>) => void;
+  /** While its run is followed as it plays (P13.8): the moment its clock
+   * has reached, at which its equipment, doors and vents are shown as the
+   * run has them, with the levels set and not yet shown (`asked`); and
+   * where a level set goes, the run's own plan rather than the address. */
+  steering?:
+    | {
+        at: number;
+        asked: Readonly<Record<string, number>>;
+        onLevels: (levels: Record<string, number>) => void;
+      }
+    | undefined;
+  /** The run followed as it plays, whose plan lane the timeline draws
+   * (P13.8). */
+  played?: PlanLaneRun | null;
   onSource: (change: SetSource) => void;
   onProbes: (probes: Point3[]) => void;
   onPlacing: (placing: boolean) => void;
@@ -181,6 +198,13 @@ export function ScenarioPanels({
   // A card is drawn only with a section in it: a scenario may have no
   // openings, no equipment or no weather.
   const openings = snapshot === null ? [] : openingsIn(snapshot);
+  // What the Equipment and Openings panels show: the run as it stands at the
+  // moment drawn, or at its clock while it is steered as it plays, with the
+  // levels set and not yet shown.
+  const steered = steering === undefined ? source : { ...source, time: steering.at };
+  const openingIds = openings.map((opening) => opening.openingId);
+  const levelsShown = { ...levelsAt(steered), ...steering?.asked };
+  const openingsShown = { ...openingsAt(steered, openingIds), ...steering?.asked };
   const equipped = snapshot !== null && equipmentIn(snapshot).length > 0;
   // The sections grouped in titled cards by topic (#306): the run played
   // back and the climate run's moment and course; the house's air, its
@@ -209,7 +233,12 @@ export function ScenarioPanels({
             </details>
           )}
           {climate && (
-            <TimelinePanel scenarioId={source.scenarioId} run={scenarioRun(source)} time={time} />
+            <TimelinePanel
+              scenarioId={source.scenarioId}
+              run={scenarioRun(source)}
+              time={time}
+              played={played}
+            />
           )}
           {climate && (
             <CheckpointsPanel
@@ -313,21 +342,26 @@ export function ScenarioPanels({
           {snapshot !== null && (
             <OpeningControls
               snapshot={snapshot}
-              requested={openingsAt(
-                source,
-                openings.map((opening) => opening.openingId),
-              )}
+              requested={openingsShown}
               fold={fold("openings")}
-              onChange={(openings) => onSource(withOpenings(source, openings))}
+              onChange={(asked) =>
+                steering === undefined
+                  ? onSource(withOpenings(source, asked))
+                  : steering.onLevels(changedLevels(asked, openingsShown))
+              }
             />
           )}
           {snapshot !== null && (
             <EquipmentControls
               snapshot={snapshot}
-              requested={levelsAt(source)}
+              requested={levelsShown}
               thermostat={thermostat}
               fold={fold("equipment")}
-              onChange={(levels) => onSource(withLevels(source, levels))}
+              onChange={(asked) =>
+                steering === undefined
+                  ? onSource(withLevels(source, asked))
+                  : steering.onLevels(changedLevels(asked, levelsShown))
+              }
             />
           )}
         </PanelCard>
@@ -350,4 +384,13 @@ export function ScenarioPanels({
       )}
     </>
   );
+}
+
+/** The levels of `asked` that differ from those `shown`: what a panel
+ * changed. */
+function changedLevels(
+  asked: Readonly<Record<string, number>>,
+  shown: Readonly<Record<string, number>>,
+): Record<string, number> {
+  return Object.fromEntries(Object.entries(asked).filter(([id, level]) => shown[id] !== level));
 }

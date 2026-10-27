@@ -238,6 +238,14 @@ class PlaybackState(BaseModel):
     # (decision 0049), as its plan holds them: each its moment in seconds,
     # its target and its value in °C, as a run's `&targets=` writes them.
     targets: list[tuple[float, str, float]] = []
+    # The levels its epoch's run has been given, of its equipment, doors and
+    # vents (P13.8), as its plan holds them: each its moment in seconds, its
+    # device and its level, as a run's `&schedule=` writes them.
+    commands: list[tuple[float, str, float]] = []
+    # The crop actions its epoch's run has been given (P13.8): each its
+    # moment in seconds, its plant, its kind and what it acts on, as a run's
+    # `&crop=` writes them.
+    crop: list[tuple[float, str, str, str]] = []
 
 
 @dataclass(frozen=True)
@@ -718,6 +726,7 @@ class Playback:
             if isinstance(self._failure, ServiceError):
                 raise self._failure
             raise PlaybackFailed(self.run_id) from self._failure
+        planned = self._executor.plan()
         return PlaybackState(
             scenario_id=self.scenario_id,
             run_id=self.run_id,
@@ -732,7 +741,9 @@ class Playback:
             seconds_per_day=self._seconds_per_day,
             worked_out_s=self._worked_out_s(),
             every_s=self.every_s,
-            targets=list(self._executor.plan().targeted()),
+            targets=list(planned.targeted()),
+            commands=list(planned.commanded()),
+            crop=list(planned.crop_spelled()),
         )
 
     def state(self) -> PlaybackState:

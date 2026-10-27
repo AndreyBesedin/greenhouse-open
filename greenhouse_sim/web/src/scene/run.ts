@@ -1,6 +1,8 @@
 import { layoutText } from "./moves";
 import {
   apiWeather,
+  type CropCommand,
+  cropText,
   dailyText,
   pairsText,
   type SceneSource,
@@ -25,6 +27,8 @@ export interface RunParts {
   daily?: readonly ScheduledCommand[] | undefined;
   /** Changes to its targets, each from a moment on (#274). */
   targets?: readonly TargetChange[] | undefined;
+  /** Actions on its crop, each at a day's start (P13.8). */
+  crop?: readonly CropCommand[] | undefined;
   /** Seconds into the climate run. */
   time?: number | undefined;
   /** Another weather the run is under, a preset's by name, its clouds
@@ -47,6 +51,7 @@ export const CLIMATE_PARTS: readonly RunPart[] = [
   "schedule",
   "daily",
   "targets",
+  "crop",
   "time",
   "weather",
 ];
@@ -62,14 +67,16 @@ export function scenarioRun(source: Extract<SceneSource, { kind: "scenario" }>):
     schedule: source.schedule,
     daily: source.daily,
     targets: source.targets,
+    crop: source.crop,
     time: source.time,
     weather: apiWeather(source.weather, source.clouds, source.wind),
   };
 }
 
 /** A run's parts as a route's query takes them, in this order: `layout=`,
- * `set=`, `open=`, `schedule=`, `daily=`, `targets=`, `t=` and `weather=`. A part not given, or
- * not among `parts`, is left out, and so is the run's start, `t=0`. */
+ * `set=`, `open=`, `schedule=`, `daily=`, `targets=`, `crop=`, `t=` and
+ * `weather=`. A part not given, or not among `parts`, is left out, and so is
+ * the run's start, `t=0`. */
 export function runParameters(run: RunParts, parts: readonly RunPart[] = CLIMATE_PARTS): string[] {
   const asked = new Set(parts);
   const levels = asked.has("levels") ? pairsText(run.levels) : "";
@@ -77,6 +84,7 @@ export function runParameters(run: RunParts, parts: readonly RunPart[] = CLIMATE
   const schedule = asked.has("schedule") ? scheduleText(run.schedule) : "";
   const daily = asked.has("daily") && run.daily !== undefined ? dailyText(run.daily) : "";
   const targets = asked.has("targets") ? targetsText(run.targets) : "";
+  const crop = asked.has("crop") ? cropText(run.crop) : "";
   const time = asked.has("time") && run.time !== undefined && run.time > 0 ? run.time : null;
   return [
     ...(asked.has("layout") && run.layout !== undefined
@@ -87,6 +95,7 @@ export function runParameters(run: RunParts, parts: readonly RunPart[] = CLIMATE
     ...(schedule === "" ? [] : [`schedule=${schedule}`]),
     ...(daily === "" ? [] : [`daily=${daily}`]),
     ...(targets === "" ? [] : [`targets=${targets}`]),
+    ...(crop === "" ? [] : [`crop=${crop}`]),
     ...(time === null ? [] : [`t=${time}`]),
     ...(asked.has("weather") ? weatherParameter(run.weather) : []),
   ];

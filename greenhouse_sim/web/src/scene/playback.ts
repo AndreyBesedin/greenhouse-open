@@ -4,7 +4,7 @@ import { contractCheck } from "../loadJson";
 import { PLAYBACK_SCHEMA } from "./generated/playbackSchema";
 import type { PlaybackState as ServedPlayback } from "./generated/playbackTypes";
 import { layoutText } from "./moves";
-import type { TargetChange } from "./source";
+import type { CropCommand, ScheduledCommand, TargetChange } from "./source";
 
 // How often a view following a played-back run asks where its clock is.
 const POLL_MS = 1000;
@@ -25,6 +25,8 @@ export interface PlaybackState {
    * moves, `default~heater:-1.0:0.5`. */
   layout: string;
   epoch: number;
+  /** The instant its run's clock started at. */
+  startedAt: string;
   simulatedNow: string;
   timeS: number;
   day: number;
@@ -34,6 +36,13 @@ export interface PlaybackState {
   /** The target changes its epoch has made, from their moments on (#274,
    * decision 0043): a view following it asks for its run with them. */
   targets: TargetChange[];
+  /** The levels its epoch's run has been given, of its equipment, doors and
+   * vents, each from its moment on (P13.8): a view following it asks for
+   * its run with them, as its commands. */
+  commands: ScheduledCommand[];
+  /** The crop actions its epoch's run has been given, each at a day's
+   * start (P13.8): a view following it asks for its crop with them. */
+  crop: CropCommand[];
 }
 
 export type PlaybackLoad =
@@ -63,6 +72,7 @@ export function parsePlayback(body: unknown): PlaybackState | null {
     runId: played.run_id,
     layout: played.layout,
     epoch: played.epoch,
+    startedAt: played.started_at,
     simulatedNow: played.simulated_now,
     timeS: played.time_s,
     day: played.day,
@@ -70,6 +80,12 @@ export function parsePlayback(body: unknown): PlaybackState | null {
     secondsPerDay: played.seconds_per_day,
     workedOutS: played.worked_out_s,
     targets: played.targets.map(([timeS, target, valueC]) => ({ timeS, target, valueC })),
+    commands: played.commands.map(([timeS, actuatorId, level]) => ({
+      timeS,
+      actuatorId,
+      level,
+    })),
+    crop: played.crop.map(([timeS, plantId, kind, target]) => ({ timeS, plantId, kind, target })),
   };
 }
 
@@ -125,28 +141,6 @@ export async function commandPlayback(
   let response: Response;
   try {
     response = await fetchFn(`${playbackUrl(scenarioId)}/${command}${query}`, { method: "POST" });
-  } catch {
-    return { status: "unavailable", reason: "the simulator could not be reached" };
-  }
-  return answered(response);
-}
-
-/** Changes the targets of the run played back from its clock's next minute
- * on (#274, decision 0043), as `heating_day` to 24 °C; answered with its new
- * state, which lists them. */
-export async function setPlaybackTargets(
-  scenarioId: string,
-  targets: Readonly<Record<string, number>>,
-  fetchFn: typeof fetch = fetch,
-): Promise<PlaybackLoad> {
-  const query = Object.entries(targets)
-    .map(([target, valueC]) => `${encodeURIComponent(target)}:${valueC}`)
-    .join(",");
-  let response: Response;
-  try {
-    response = await fetchFn(`${playbackUrl(scenarioId)}/targets?targets=${query}`, {
-      method: "POST",
-    });
   } catch {
     return { status: "unavailable", reason: "the simulator could not be reached" };
   }

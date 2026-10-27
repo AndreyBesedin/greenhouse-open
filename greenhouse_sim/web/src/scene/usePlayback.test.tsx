@@ -31,6 +31,8 @@ function playing(runId: string, timeS: number): Response {
       worked_out_s: 86_400,
       every_s: 300,
       targets: [],
+      commands: [],
+      crop: [],
     }),
   );
 }

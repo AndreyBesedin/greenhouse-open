@@ -9,6 +9,7 @@ from typing import Annotated, Any, Final, Self, cast
 from greenhouse_protocol.actions import (
     ActionKind,
     Harvest,
+    HarvestScope,
     Inspect,
     Lower,
     RemoveLeaf,
@@ -28,6 +29,25 @@ from greenhouse_sim.services.scenarios import plant_ids
 # A daily command's moment is its time of day; a target change's actuator is
 # its target, and its level the value it sets, in °C (#274).
 type Commanded = tuple[float, str, float]
+
+# A crop action as a request writes it (`&crop=`, P13.8): its moment, its
+# plant, its kind as spelled (`CROP_SPELLINGS`), and what it acts on.
+type Spelled = tuple[float, str, str, str]
+
+# How a request spells each of the protocol's crop actions, and what its
+# last part names: the plant lab's spellings (`services.plants.ACTIONS`),
+# and one for each other.
+CROP_SPELLINGS: Final = {
+    "harvest_ripe": "nothing",
+    "harvest_fruit": "a fruit",
+    "harvest_truss": "a truss",
+    "lower_stem": "how many internodes",
+    "lower_cm": "how many centimetres",
+    "lower_to": "the head room left, in metres",
+    "remove_leaf": "a leaf",
+    # Its reason, which holds no comma: a comma parts a request's actions.
+    "inspect": "why",
+}
 
 # The kinds of action a run carries out on its organ crop (P13.5), at the
 # start of a day after its first: the crop steps a day at a time.
@@ -97,12 +117,14 @@ class RunPlan(BaseModel):
         commands: Sequence[Commanded] = (),
         daily: Sequence[Commanded] | None = None,
         targets: Sequence[Commanded] = (),
+        crop: Sequence[Spelled] = (),
     ) -> RunPlan:
         """A plan as a request writes it (`&schedule=`, `&daily=`,
-        `&targets=`), each value as it is given: unchecked, since a run
-        checks the plan it is given before it carries it out
+        `&targets=`, `&crop=`), each value as it is given: unchecked, since
+        a run checks the plan it is given before it carries it out
         (`climate_runs.checked_commands`, `checked_targets`), and refuses
-        what it cannot do in its own words."""
+        what it cannot do in its own words. A crop action is read as the
+        protocol's own (`spelled_crop_action`), refused if it is none."""
         levels = (
             PlannedAt.model_construct(at_s=moment, action=_level(device, level))
             for moment, device, level in commands
@@ -119,7 +141,13 @@ class RunPlan(BaseModel):
                 for time, device, level in daily
             )
         )
-        return cls.model_construct(actions=(*levels, *changes), daily=each_day)
+        worked = (
+            PlannedAt.model_construct(
+                at_s=moment, action=spelled_crop_action(plant_id, kind, target)
+            )
+            for moment, plant_id, kind, target in crop
+        )
+        return cls.model_construct(actions=(*levels, *changes, *worked), daily=each_day)
 
     def commanded(self) -> tuple[Commanded, ...]:
         """Its devices' levels at their moments, as a request writes them,
@@ -151,6 +179,15 @@ class RunPlan(BaseModel):
     def cropped(self) -> tuple[PlannedAt, ...]:
         """Its crop actions, each at its moment, in the order given."""
         return tuple(planned for planned in self.actions if planned.action.kind in CROP_KINDS)
+
+    def crop_spelled(self) -> tuple[Spelled, ...]:
+        """Its crop actions as a request writes them (`&crop=`), in the
+        order given."""
+        return tuple(
+            (planned.at_s, planned.action.plant_id, *crop_spelling(planned.action))
+            for planned in self.cropped()
+            if isinstance(planned.action, Harvest | Lower | RemoveLeaf | Inspect)
+        )
 
     def crop_plan(self) -> CropPlan:
         """Its crop actions that act on its crop, its harvests, lowerings
@@ -254,6 +291,61 @@ def crop_days(planned: CropPlan) -> dict[int, tuple[CropAction, ...]]:
                 day = int(each.at_s // DAY_S)
                 days[day] = (*days.get(day, ()), action)
     return days
+
+
+def spelled_crop_action(
+    plant_id: str, kind: str, target: str
+) -> Harvest | Lower | RemoveLeaf | Inspect:
+    """The crop action a request spells (`CROP_SPELLINGS`), held to the
+    protocol's rules: refused, saying what it wants, if it is none."""
+    wants = CROP_SPELLINGS.get(kind)
+    if wants is None:
+        known = ", ".join(CROP_SPELLINGS)
+        raise InvalidRequest(f"a crop action is one of {known}, not {kind!r}")
+    if wants == "nothing" and target:
+        raise InvalidRequest(f"{kind} acts on nothing, not {target!r}")
+    try:
+        match kind:
+            case "harvest_ripe":
+                return Harvest(plant_id=plant_id, scope=HarvestScope.RIPE)
+            case "harvest_fruit" | "harvest_truss":
+                scope = HarvestScope.FRUIT if kind == "harvest_fruit" else HarvestScope.TRUSS
+                return Harvest(plant_id=plant_id, scope=scope, organ_id=target)
+            case "lower_stem":
+                return Lower(plant_id=plant_id, by_internodes=int(target))
+            case "lower_cm":
+                return Lower(plant_id=plant_id, by_cm=float(target))
+            case "lower_to":
+                return Lower(plant_id=plant_id, to_head_room_m=float(target))
+            case "remove_leaf":
+                return RemoveLeaf(plant_id=plant_id, leaf_id=target)
+            case _:
+                return Inspect(plant_id=plant_id, reason=target)
+    except ValueError:
+        # A pydantic ValidationError is one too.
+        raise InvalidRequest(f"{kind} of {plant_id!r} wants {wants}, not {target!r}") from None
+
+
+def crop_spelling(action: Harvest | Lower | RemoveLeaf | Inspect) -> tuple[str, str]:
+    """How a request spells a crop action: its kind (`CROP_SPELLINGS`), and
+    what it acts on."""
+    match action:
+        case Harvest(scope=HarvestScope.RIPE):
+            return "harvest_ripe", ""
+        case Harvest(scope=HarvestScope.FRUIT, organ_id=organ):
+            return "harvest_fruit", organ or ""
+        case Harvest(organ_id=organ):
+            return "harvest_truss", organ or ""
+        case Lower(by_internodes=int(internodes)):
+            return "lower_stem", str(internodes)
+        case Lower(by_cm=float(centimetres)):
+            return "lower_cm", f"{centimetres:.15g}"
+        case Lower(to_head_room_m=head_room):
+            return "lower_to", f"{head_room:.15g}"
+        case RemoveLeaf(leaf_id=leaf):
+            return "remove_leaf", leaf
+        case _:
+            return "inspect", action.reason
 
 
 def _level(device_id: str, level: float) -> SetLevel:

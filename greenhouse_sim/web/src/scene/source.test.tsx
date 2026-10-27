@@ -10,7 +10,14 @@ import type { SceneSnapshot } from "./generated/snapshotTypes";
 import { placement } from "./placement";
 import { RENDERERS } from "./renderers";
 import { loadScene } from "./sceneLoad";
-import { apiWeather, type SceneSource, searchFor, sourceFromSearch } from "./source";
+import {
+  apiWeather,
+  cropFrom,
+  cropText,
+  type SceneSource,
+  searchFor,
+  sourceFromSearch,
+} from "./source";
 
 const EXAMPLE_TEXT = readFileSync(
   new URL("../../public/scenes/example.json", import.meta.url),
@@ -141,6 +148,43 @@ describe("choosing a scene in the address bar", () => {
   ])("%s", (search, source) => {
     expect(sourceFromSearch(search)).toEqual(source);
     expect(searchFor(source)).toBe(search);
+  });
+});
+
+describe("a run's crop actions in the address (P13.8)", () => {
+  it("are read and written back as the simulator spells them, with or without a field", () => {
+    const search = "?scenario=reference_greenhouse&crop=172800:p30:harvest_truss:p30_t03";
+    const source = sourceFromSearch(search);
+
+    expect(source).toEqual({
+      kind: "scenario",
+      scenarioId: "reference_greenhouse",
+      crop: [{ timeS: 172_800, plantId: "p30", kind: "harvest_truss", target: "p30_t03" }],
+    });
+    expect(searchFor(source)).toBe(search);
+  });
+
+  it("keeps what an action acts on whole, and are none when one is not spelled whole", () => {
+    expect(
+      cropFrom("86400:p30:inspect:spots on: its leaves")?.map((action) => action.target),
+    ).toEqual(["spots on: its leaves"]);
+    expect(cropFrom("86400:p30:lower_stem")).toBeNull();
+    expect(cropFrom("noon:p30:lower_stem:1")).toBeNull();
+  });
+
+  it("come back from the address as they were written, whatever an inspection's reason holds", () => {
+    const source: SceneSource = {
+      kind: "scenario",
+      scenarioId: "reference_greenhouse",
+      crop: [
+        { timeS: 86_400, plantId: "p30", kind: "inspect", target: "humidity 80%: 100% too & more" },
+      ],
+    };
+
+    expect(sourceFromSearch(searchFor(source))).toEqual(source);
+    expect(cropText(source.crop)).toBe(
+      "86400:p30:inspect:humidity%2080%25%3A%20100%25%20too%20%26%20more",
+    );
   });
 });
 

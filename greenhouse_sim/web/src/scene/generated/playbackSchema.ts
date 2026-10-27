@@ -79,6 +79,51 @@ export const PLAYBACK_SCHEMA = {
       },
       "title": "Targets",
       "type": "array"
+    },
+    "commands": {
+      "default": [],
+      "items": {
+        "maxItems": 3,
+        "minItems": 3,
+        "prefixItems": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          }
+        ],
+        "type": "array"
+      },
+      "title": "Commands",
+      "type": "array"
+    },
+    "crop": {
+      "default": [],
+      "items": {
+        "maxItems": 4,
+        "minItems": 4,
+        "prefixItems": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "string"
+          }
+        ],
+        "type": "array"
+      },
+      "title": "Crop",
+      "type": "array"
     }
   },
   "required": [
@@ -95,7 +140,9 @@ export const PLAYBACK_SCHEMA = {
     "seconds_per_day",
     "worked_out_s",
     "every_s",
-    "targets"
+    "targets",
+    "commands",
+    "crop"
   ],
   "title": "PlaybackState",
   "type": "object"

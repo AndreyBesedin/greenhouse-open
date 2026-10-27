@@ -37,6 +37,42 @@ describe("the run a followed view draws, against the one played back", () => {
     expect(runChanges(FOLLOWED, moved)).toEqual(["its layout"]);
   });
 
+  it("takes the levels the run played back was given as its own commands (P13.8)", () => {
+    const given = "129630:roof_vent:0.5";
+    const drawn: ScenarioSource = {
+      ...FOLLOWED,
+      schedule: [{ timeS: 129_630, actuatorId: "roof_vent", level: 0.5 }],
+    };
+
+    expect(runChanges(drawn, "default", given)).toEqual([]);
+    expect(runChanges(FOLLOWED, "default", given)).toEqual(["its commands"]);
+    expect(runChanges(drawn, "default")).toEqual(["its commands"]);
+  });
+
+  it("goes back to the run played back with the levels it was given (P13.8)", () => {
+    const given = [{ timeS: 129_630, actuatorId: "roof_vent", level: 0.5 }];
+    const changed: ScenarioSource = {
+      ...FOLLOWED,
+      schedule: [{ timeS: 60, actuatorId: "heater", level: 1 }],
+    };
+
+    expect(withoutRunChanges(changed, "default", given)).toEqual({
+      ...FOLLOWED,
+      schedule: given,
+    });
+  });
+
+  it("takes the crop actions the run played back was given as its own (P13.8)", () => {
+    const given = [{ timeS: 172_800, plantId: "p30", kind: "lower_stem", target: "1" }];
+    const drawn: ScenarioSource = { ...FOLLOWED, crop: given };
+
+    expect(runChanges(drawn, "default", "", "172800:p30:lower_stem:1")).toEqual([]);
+    expect(runChanges(FOLLOWED, "default", "", "172800:p30:lower_stem:1")).toEqual([
+      "its crop actions",
+    ]);
+    expect(withoutRunChanges(FOLLOWED, "default", [], given)).toEqual(drawn);
+  });
+
   it("goes back to the run played back, keeping the view's own parts", () => {
     const changed: ScenarioSource = { ...FOLLOWED, weather: "cold", openings: { door: 1 } };
 

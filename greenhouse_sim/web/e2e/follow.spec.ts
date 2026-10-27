@@ -3,6 +3,7 @@ import { type CameraPose, framing } from "../src/camera.ts";
 import { DAY_S, dayEnd } from "../src/clock.ts";
 import { formatPoint } from "../src/readouts.ts";
 import { chooser } from "./chooser";
+import { unfold } from "./folds";
 
 const PLAYBACK = "/api/scenarios/climate_box/playback";
 const ARRIVES = { timeout: 60_000 };
@@ -260,6 +261,8 @@ test("followed, a target the run played back changed is asked for with every par
     worked_out_s: DAY_S,
     every_s: 300,
     targets: [[change, "heating_night", 22]],
+    commands: [],
+    crop: [],
   };
   await page.route(`**${PLAYBACK}`, (route) => route.fulfill({ json: played }));
   const asked: string[] = [];
@@ -274,4 +277,70 @@ test("followed, a target the run played back changed is asked for with every par
   const written = `targets=${change}:heating_night:22`;
   await expect(page).toHaveURL(new RegExp(written), ARRIVES);
   await expect.poll(() => asked.some((url) => url.includes(written)), ARRIVES).toBe(true);
+});
+
+test("followed, a level set in the Equipment panel steers the run played back, through its plan (P13.8)", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  // Played back, started here if no test has yet, and started over if its
+  // clock is near the run's end, when it would take no more; held there, so
+  // that its clock waits for the level set.
+  const started = (await (await page.request.post(`${PLAYBACK}/start`)).json()) as {
+    time_s: number;
+  };
+  if (started.time_s > RUN_END_S - 4 * DAY_S) {
+    expect((await page.request.post(`${PLAYBACK}/restart`)).ok()).toBe(true);
+  }
+  expect((await page.request.post(`${PLAYBACK}/pause`)).ok()).toBe(true);
+  await page.goto("/?scenario=climate_box&field=climate&follow=1");
+  const panel = page.getByRole("region", { name: "Run played back" });
+  await expect(panel.getByTestId("playback-status")).toContainText("paused", ARRIVES);
+  await unfold(page, "Equipment");
+  const fan = page.getByRole("group", { name: "Equipment" }).getByRole("checkbox", { name: "fan" });
+  const played = async () =>
+    (await (await page.request.get(PLAYBACK)).json()) as {
+      run_id: string;
+      commands: [number, string, number][];
+    };
+
+  await test.step("switched on, the fan is given to the run played back, as the viewer's plan", async () => {
+    await fan.check();
+    await expect
+      .poll(
+        async () =>
+          (await played()).commands.some(([, device, level]) => device === "fan" && level === 1),
+        ARRIVES,
+      )
+      .toBe(true);
+    // Read as any client reads it, through the run's gateway.
+    const { run_id: runId } = await played();
+    const plan = (await (
+      await page.request.get(`/actuation/v1/runs/${runId}/plans/viewer`)
+    ).json()) as {
+      owner: { id: string };
+      outcomes: { action: { device_id?: string }; status: string }[];
+    };
+    expect(plan.owner.id).toBe("local_operator");
+    expect(
+      plan.outcomes.map((outcome) => [outcome.action.device_id, outcome.status]),
+    ).toContainEqual(["fan", "executed"]);
+  });
+
+  await test.step("the view draws the run played back, with its level, not another run", async () => {
+    await expect(page).toHaveURL(/schedule=[0-9.]+:fan:1(&|$)/, ARRIVES);
+    await expect(panel.getByTestId("playback-another-run")).toHaveCount(0);
+    await expect(fan).toBeChecked();
+  });
+
+  await test.step("the timeline's plan lane says what became of it", async () => {
+    await page.locator("details.timeline").getByText("Timeline").click();
+    await page.getByRole("combobox", { name: "Timeline zoom" }).selectOption({ label: "a day" });
+    await expect(page.getByTestId("timeline-plan")).toHaveText(/^plan, [1-9]\d*$/, ARRIVES);
+    await expect(
+      page
+        .getByTestId("timeline-plan-entry")
+        .filter({ hasText: /fan to 100% \(viewer\/change_\d+\): executed$/ }),
+    ).not.toHaveCount(0);
+  });
 });

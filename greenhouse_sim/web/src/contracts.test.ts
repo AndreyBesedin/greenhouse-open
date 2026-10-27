@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { CONTRACTS, generatedSources } from "../scripts/generateContractSources";
+import { CONTRACTS, generatedSources, PROTOCOL } from "../scripts/generateContractSources";
 
 // The simulator's package, where each schema it publishes lies beside its
 // model.
@@ -31,6 +31,9 @@ describe("the viewer's side of the simulator's contracts", () => {
       .filter((path) => path.endsWith(".schema.json") && !NOT_READ.includes(path))
       .map((path) => `greenhouse_sim/${path}`);
 
-    expect(CONTRACTS.map((contract) => contract.schemaPath).sort()).toEqual(published.sort());
+    const simulators = CONTRACTS.map((contract) => contract.schemaPath).filter(
+      (path) => !path.startsWith(PROTOCOL),
+    );
+    expect(simulators.sort()).toEqual(published.sort());
   });
 });

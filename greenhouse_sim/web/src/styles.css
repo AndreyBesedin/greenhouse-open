@@ -988,6 +988,32 @@ body {
   padding-left: 1.5em;
 }
 
+/* A followed run's plan lane (P13.8): what ran, what did not, and what is
+ * still to come; and each listed with its outcome. */
+.timeline-plan-ran {
+  stroke: #2e8b57;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.timeline-plan-not-ran {
+  stroke: #c0392b;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.timeline-plan-to-come {
+  stroke: var(--chart-strong);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.timeline-plan {
+  margin: 4px 0 0;
+  padding-left: 1.5em;
+}
+
 /* Probes' charts through a climate run: this run's line solid, the run
  * with everything off dashed, and the moment drawn a faint line. */
 .probe-charts figure {

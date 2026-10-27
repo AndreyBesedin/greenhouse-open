@@ -31,9 +31,10 @@ from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR, run_items
 from greenhouse_sim.services.playback import PLAN_OCCURRENCES, TARGETS_PLAN, Playback
 from greenhouse_sim.services.runs import RunPlan
-from greenhouse_sim.services.scenarios import scenario
+from greenhouse_sim.services.scenarios import plant_ids, scenario
 from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
+from greenhouse_sim.units import HOUR_S
 
 SCENARIO: Final = "reference_greenhouse"
 CONFIG: Final = scenario(PACKAGED, SCENARIO)
@@ -407,6 +408,36 @@ def test_the_targets_route_is_an_alias_of_a_revision_of_plan_targets(
     plan = found.plan(TARGETS_PLAN).plan
     assert plan.revision == 3
     assert [each.action_id for each in plan.actions] == ["target_0", "target_1", "target_2"]
+
+
+def test_the_levels_a_run_is_given_are_in_its_playbacks_state_as_its_commands(
+    played: tuple[Simulator, Playback],
+) -> None:
+    simulator, found = played
+    plan = _plan(found, _level("open", 6 * HOUR), _target("warm", 7 * HOUR))
+
+    _receipt(_call(simulator, "POST", f"/runs/{found.run_id}/plans", plan))
+    state = found.state()
+
+    assert state.commands == [(6 * HOUR_S, VENT, 1.0)]
+    assert state.targets == [(7 * HOUR_S, "heating_night", 17.0)]
+
+
+def test_the_crop_actions_a_run_is_given_are_in_its_playbacks_state_as_spelled(
+    played: tuple[Simulator, Playback],
+) -> None:
+    simulator, found = played
+    plant = plant_ids(CONFIG)[0]
+    lower = {
+        "action_id": "lower",
+        "action": {"kind": "lower", "plant_id": plant, "by_internodes": 1},
+        "timing": {"kind": "at", "at": (START + timedelta(days=1)).isoformat()},
+        "proposed_by": ME,
+    }
+
+    _receipt(_call(simulator, "POST", f"/runs/{found.run_id}/plans", _plan(found, lower)))
+
+    assert found.state().crop == [(DAY_S, plant, "lower_stem", "1")]
 
 
 def test_a_playback_started_held_waits_at_its_start(played: tuple[Simulator, Playback]) -> None:
