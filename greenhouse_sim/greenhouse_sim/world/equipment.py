@@ -17,12 +17,32 @@ What a piece does to the air is its capabilities
 (`greenhouse_sim.world.capabilities`): a fan moves air, a heater heats, a
 dehumidifier dries and gives off heat. The climate, its loops and the heat
 log read those, never the piece's kind (P14.5).
+
+**A kind of equipment is registered** (`register_equipment`, decision
+0055): a model of a piece, `EquipmentPiece`'s, named by its `kind`, which
+says where it stands, its shape and body, its rated values and its
+capabilities. A layout's equipment (`Equipment`) is read by the kind each
+piece names, among those registered when it is read, so that a kind is a
+module and its registration, the packaged ones and another package's
+alike; a kind not registered is refused, naming those that are. The
+published schema lists the kinds registered when it is written.
 """
 
 import math
-from typing import Annotated, Final, Literal, Self
+from typing import TYPE_CHECKING, Annotated, Any, Final, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, PositiveFloat
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    GetJsonSchemaHandler,
+    PlainSerializer,
+    PlainValidator,
+    PositiveFloat,
+    TypeAdapter,
+    ValidationError,
+)
+from pydantic.json_schema import JsonSchemaValue
 
 from greenhouse_sim.domain.equipment import ActuatorKind
 from greenhouse_sim.domain.layout import FixtureKind, Material, Obstruction
@@ -36,7 +56,7 @@ from greenhouse_sim.world.capabilities import (
     WasteHeat,
 )
 from greenhouse_sim.world.fixtures import Fixture
-from greenhouse_sim.world.geometry import Box, Cylinder, Quaternion, Transform, Vector3
+from greenhouse_sim.world.geometry import Box, Cylinder, Quaternion, Shape, Transform, Vector3
 from greenhouse_sim.world.identifiers import ItemId
 
 # A fan's housing, along its axis, in metres.
@@ -48,24 +68,60 @@ _BODY_OBSTRUCTS: Final = frozenset({Obstruction.MOVEMENT, Obstruction.AIRFLOW})
 _HANGING_OBSTRUCTS: Final[frozenset[Obstruction]] = frozenset()
 
 
-class _Equipment(BaseModel):
+class EquipmentPiece(BaseModel):
+    """A piece of climate equipment of a kind, `kind`, registered: what every
+    kind says of a piece, which the climate, the scene, moves and the
+    builder ask of it whatever its kind."""
+
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     actuator_id: ItemId
     # Which way it faces, a turn about the vertical from the greenhouse's x;
     # a fan blows that way.
     heading: float = 0.0
+    if TYPE_CHECKING:
+        # Its kind's name, as a layout writes it: each kind's own field, which
+        # it declares after its own others, as its pieces are written.
+        kind: str
 
     def facing(self) -> Vector3:
         """The unit vector it faces along, level."""
         return Vector3(x=math.cos(self.heading), y=math.sin(self.heading), z=0.0)
+
+    def transform(self) -> Transform:
+        """Its body's frame, placed in the greenhouse."""
+        raise NotImplementedError
+
+    def shape(self) -> Shape:
+        """Its body's shape, in its frame."""
+        raise NotImplementedError
+
+    def fixture(self) -> Fixture:
+        """Its body as a fixture, with what it is in the way of."""
+        raise NotImplementedError
+
+    def rated(self) -> dict[str, float]:
+        """Its rated values, what it does at full level, by its own names."""
+        raise NotImplementedError
+
+    def capabilities(self) -> tuple[Capability, ...]:
+        """What it does to the air, at full level."""
+        raise NotImplementedError
+
+    def anchor(self) -> Vector3:
+        """Where it is placed."""
+        raise NotImplementedError
+
+    def displaced(self, by: Vector3) -> Self:
+        """It placed `by` further."""
+        raise NotImplementedError
 
 
 def _plus(point: Vector3, by: Vector3, scale: float = 1.0) -> Vector3:
     return Vector3(x=point.x + by.x * scale, y=point.y + by.y * scale, z=point.z + by.z * scale)
 
 
-class Fan(_Equipment):
+class Fan(EquipmentPiece):
     """A fan: a rotor of a diameter, centred on `position`, blowing its rated
     flow of air along its heading."""
 
@@ -119,9 +175,10 @@ class Fan(_Equipment):
         return self.model_copy(update={"position": _plus(self.position, by)})
 
 
-class _Unit(_Equipment):
+class Unit(EquipmentPiece):
     """A unit standing on the floor or anything else: a box, its base centred
-    on `base`."""
+    on `base`, an obstacle in the way of air and robots. A kind of equipment
+    that stands so is one."""
 
     base: Vector3
     size_x: PositiveFloat
@@ -154,7 +211,7 @@ class _Unit(_Equipment):
         return self.model_copy(update={"base": _plus(self.base, by)})
 
 
-class Heater(_Unit):
+class Heater(Unit):
     """A unit heater: its rated power, all of it given to the air as heat."""
 
     kind: Literal[ActuatorKind.HEATER] = ActuatorKind.HEATER
@@ -177,7 +234,7 @@ class Heater(_Unit):
         return (Heats(power_w=self.power_w, outlet=outlet),)
 
 
-class Dehumidifier(_Unit):
+class Dehumidifier(Unit):
     """A dehumidifier: the water it takes out of the air at full power, and
     the heat it gives the air while it does."""
 
@@ -193,7 +250,82 @@ class Dehumidifier(_Unit):
         return (Dries(removal_kg_h=self.removal_kg_h), WasteHeat(heat_w=self.heat_w))
 
 
-type Equipment = Annotated[Fan | Heater | Dehumidifier, Field(discriminator="kind")]
+# Each kind of equipment registered, by its name.
+EQUIPMENT_KINDS: Final[dict[str, type[EquipmentPiece]]] = {}
+
+
+def register_equipment[Kind: type[EquipmentPiece]](kind: Kind) -> Kind:
+    """Register a kind of equipment, by the name its `kind` field gives it, so
+    that a layout reads a piece of it: refused if it names none, or another
+    kind has its name."""
+    model: type[EquipmentPiece] = kind
+    field = model.model_fields.get("kind")
+    name = None if field is None else field.default
+    if not isinstance(name, str) or not name:
+        raise ValueError(f"{kind.__name__} names no kind: its kind field has no default")
+    known = EQUIPMENT_KINDS.get(name)
+    if known is not None and known is not kind:
+        raise ValueError(f"the kind {name!r} is {known.__name__}'s, not {kind.__name__}'s")
+    EQUIPMENT_KINDS[str(name)] = kind
+    return kind
+
+
+for _packaged in (Fan, Heater, Dehumidifier):
+    register_equipment(_packaged)
+
+
+class _AsRegistered:
+    """The JSON Schema of a layout's piece of equipment: one of the kinds
+    registered when it is written, told apart by its `kind`."""
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls, _schema: Any, handler: GetJsonSchemaHandler
+    ) -> JsonSchemaValue:
+        kinds = tuple(EQUIPMENT_KINDS.values())
+        if len(kinds) == 1:
+            return handler(TypeAdapter(kinds[0]).core_schema)
+        # The union of the kinds registered now, which no annotation names.
+        annotated: Any = Annotated
+        union = annotated[_union(kinds), Field(discriminator="kind")]
+        return handler(TypeAdapter[Any](union).core_schema)
+
+
+def _union(kinds: tuple[type[EquipmentPiece], ...]) -> Any:
+    union: Any = kinds[0]
+    for kind in kinds[1:]:
+        union = union | kind
+    return union
+
+
+def _read(given: Any) -> EquipmentPiece:
+    if isinstance(given, EquipmentPiece):
+        return given
+    named = given.get("kind") if isinstance(given, dict) else None
+    kind = EQUIPMENT_KINDS.get(named) if isinstance(named, str) else None
+    if kind is None:
+        kinds = ", ".join(EQUIPMENT_KINDS)
+        raise ValueError(f"no kind of equipment {named!r}: the kinds are {kinds}")
+    try:
+        return kind.model_validate(given)
+    except ValidationError as error:
+        # Its kind's own reasons, each where it found it.
+        raise ValueError(
+            "; ".join(
+                f"{'.'.join(str(part) for part in found['loc'])}: {found['msg']}"
+                for found in error.errors()
+            )
+        ) from None
+
+
+# A piece of equipment of any kind registered, as a layout holds it: read by
+# the kind it names, and written as its own kind writes it.
+type Equipment = Annotated[
+    EquipmentPiece,
+    PlainValidator(_read),
+    PlainSerializer(lambda piece: piece, return_type=Any),
+    _AsRegistered,
+]
 
 
 def purpose(piece: Device) -> Capability | None:

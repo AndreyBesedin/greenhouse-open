@@ -3,6 +3,7 @@ held to the protocol's executor and gateway contracts, its plan made of the
 actions the gateway gives it, and a target changed while the run plays
 ending in its outcome, which a consumer reads."""
 
+from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
 from typing import Any, Final
@@ -20,10 +21,10 @@ from greenhouse_protocol.plan import ExecutorKind, ExecutorRef
 
 from greenhouse_sim.api.consumer import consumer_respond
 from greenhouse_sim.scenarios.catalogue import PACKAGED
-from greenhouse_sim.services import playback
+from greenhouse_sim.services import crop_models, playback
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR, RunExecutor, run_items, run_kinds
 from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
-from greenhouse_sim.services.runs import CROP_KINDS
+from greenhouse_sim.services.runs import CROP_KINDS, crop_model_refusal
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
@@ -84,6 +85,17 @@ def test_a_gateway_acting_through_a_run_keeps_the_gateway_contract() -> None:
         )
 
     assert check_gateway(make, START) == []
+
+
+def test_a_run_takes_crop_actions_as_its_crop_model_is_registered(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    box = scenario(PACKAGED, "climate_box")
+    taking = replace(crop_models.SIMPLE, takes_crop_actions=True)
+    monkeypatch.setitem(crop_models.CROP_MODELS, crop_models.SIMPLE.name, taking)
+
+    assert run_kinds(box) == {ActionKind.SET_LEVEL} | CROP_KINDS
+    assert crop_model_refusal(box, ActionKind.HARVEST) is None
 
 
 def test_a_run_carries_out_levels_targets_and_crop_actions_it_has() -> None:

@@ -36,7 +36,7 @@ from greenhouse_protocol.contracts.consumer import (
 from greenhouse_protocol.enums import SourceType
 from greenhouse_protocol.greenhouse import GreenhouseDescription, GreenhouseLayout, Plant
 
-from greenhouse_sim.services.errors import InvalidRequest, NotFound
+from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.playback import Playback, Playbacks, PlaybackState
 from greenhouse_sim.services.scenarios import Scenarios, plant_ids, scenario
 
@@ -105,10 +105,7 @@ def runs(reads: Reads) -> RunList:
 
 
 def _played(reads: Reads, run_id: str) -> Playback:
-    for found in reads.playbacks.all():
-        if found.run_id == run_id:
-            return found
-    raise NotFound(f"no run {run_id!r}")
+    return reads.playbacks.of_run(run_id)
 
 
 def run(reads: Reads, run_id: str) -> RunDescriptor:

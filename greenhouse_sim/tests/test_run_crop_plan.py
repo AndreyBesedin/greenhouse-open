@@ -104,7 +104,7 @@ def test_a_run_without_crop_actions_keeps_its_identity_and_one_with_them_has_ano
             "climate_box",
             DAY_S,
             Harvest(plant_id="climate_box_plant_001", scope=HarvestScope.RIPE),
-            "climate_box grows its crop with the simple daily model, which takes no harvest",
+            "climate_box grows its crop with the simple model, which takes no harvest",
         ),
     ],
 )

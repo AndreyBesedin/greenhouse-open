@@ -31,7 +31,7 @@ from pydantic import JsonValue, TypeAdapter
 
 from greenhouse_sim.scenarios.installation import Installation
 from greenhouse_sim.world.envelope import Envelope, Opening, outline
-from greenhouse_sim.world.equipment import Dehumidifier, Equipment, Fan, Heater
+from greenhouse_sim.world.equipment import Equipment, EquipmentPiece
 from greenhouse_sim.world.fixtures import (
     BoxPrimitive,
     CylinderPrimitive,
@@ -334,8 +334,8 @@ def _id(item: Item | Opening) -> str:
     return item.sensor_id if _is_sensor(item) else item.fixture_id
 
 
-def _is_equipment(item: Item) -> TypeIs[Fan | Heater | Dehumidifier]:
-    return isinstance(item, Fan | Heater | Dehumidifier)
+def _is_equipment(item: Item) -> TypeIs[EquipmentPiece]:
+    return isinstance(item, EquipmentPiece)
 
 
 def _is_sensor(item: Item) -> TypeIs[PointSensor | Camera]:
