@@ -615,6 +615,13 @@
       "minimum": 0.0,
       "type": "number"
     },
+    "NoParameters": {
+      "additionalProperties": false,
+      "description": "The parameters of a model that takes none.",
+      "properties": {},
+      "title": "NoParameters",
+      "type": "object"
+    },
     "Opening": {
       "description": "A door or vent: a rectangle on its host surface, centred at `centre` in\nthe host's own x-y plane, `width` along the host's x and `height` along\nits y, open by `opening`, from 0 (closed) to 1.",
       "properties": {
@@ -1644,6 +1651,46 @@
             }
           ],
           "description": "The crop walk's model: 'walk' if none is named."
+        },
+        "sunlight": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "haurwitz_erbs"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/NoParameters"
+                }
+              }
+            }
+          ],
+          "description": "The sunlight's model: 'haurwitz_erbs' if none is named."
+        },
+        "sensors": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "sampled"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/NoParameters"
+                }
+              }
+            }
+          ],
+          "description": "The sensors's model: 'sampled' if none is named."
         }
       },
       "description": "The model each part of a run runs, by part, and its parameters."

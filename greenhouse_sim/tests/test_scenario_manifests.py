@@ -345,6 +345,8 @@ def test_a_run_says_what_it_is_made_from() -> None:
                 "air_field": "uniform",
                 "crop": "organ",
                 "crop_walk": "walk",
+                "sunlight": "haurwitz_erbs",
+                "sensors": "sampled",
             }.items()
         },
     )
@@ -375,7 +377,14 @@ def test_the_schema_writes_each_parts_model_in_its_models_not_at_the_top() -> No
     schema: Any = manifest_json_schema()
 
     models = schema["properties"]["models"]
-    assert set(models["properties"]) == {"weather", "air_field", "crop", "crop_walk"}
+    assert set(models["properties"]) == {
+        "weather",
+        "air_field",
+        "crop",
+        "crop_walk",
+        "sunlight",
+        "sensors",
+    }
     weathers = models["properties"]["weather"]["oneOf"]
     assert [section["properties"]["model"] for section in weathers] == [
         {"const": "constant"},
@@ -421,6 +430,26 @@ def test_each_parts_model_and_its_parameters_are_read_from_its_section() -> None
     # weather left out, the climate box's runs are under a constant one.
     del document["models"]["weather"]
     assert scenario_from_manifest("climate_box", document).weather.kind == "constant"
+
+
+def test_a_part_with_one_model_and_no_parameters_is_named_or_left_out() -> None:
+    """The sunlight's and the sensors' one model each takes no parameters."""
+    document = _models(
+        _manifest("climate_box"),
+        sunlight={"model": "haurwitz_erbs"},
+        sensors={"model": "sampled"},
+    )
+
+    assert scenario_from_manifest("climate_box", document) == SCENARIO_REGISTRY["climate_box"]
+    with pytest.raises(InvalidManifest, match="the sunlight has no model 'perez'"):
+        scenario_from_manifest(
+            "climate_box", _models(_manifest("climate_box"), sunlight={"model": "perez"})
+        )
+    with pytest.raises(InvalidManifest, match=r"(?s)models\.sensors: .*Extra inputs"):
+        scenario_from_manifest(
+            "climate_box",
+            _models(_manifest("climate_box"), sensors={"model": "sampled", "parameters": {"x": 1}}),
+        )
 
 
 @pytest.mark.parametrize(

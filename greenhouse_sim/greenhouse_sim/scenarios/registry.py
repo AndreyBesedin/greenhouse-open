@@ -9,7 +9,8 @@ manifest that gives its parameters. The registry holds each part's models
 by name, with its default: the model a manifest that says nothing of the
 part runs, today's choice. P14.1 registers the parts a manifest chose
 already: the weather, the air field drawn, the crop and the crop walk's
-measurements. The others follow (P14.6).
+measurements. P14.6 registers the others, the sunlight and the sensors
+first, each with the one model it has, which takes no parameters.
 
 A scenario's configuration (`ScenarioConfig`) holds each model's
 parameters under a field of its own, told apart by their `kind`, which is
@@ -44,18 +45,27 @@ from greenhouse_sim.weather.synthetic import SyntheticWeather
 # The field of a parameter model that a configuration's union tells its
 # models apart by: the model's name.
 KIND: Final = "kind"
+# The sunlight's one model, and the sensors'.
+SUNLIGHT: Final = "haurwitz_erbs"
+SAMPLED: Final = "sampled"
+
+
+class NoParameters(BaseModel):
+    """The parameters of a model that takes none."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
 
 @dataclass(frozen=True)
 class Model:
     """A model of a part: its name, its parameters' model, the field of the
     configuration that holds them, with the model's name as their `kind`,
-    and its version."""
+    none for a model that takes no parameters, and its version."""
 
     part: Part
     name: str
-    parameters: type[BaseModel]
-    field: str
+    parameters: type[BaseModel] = NoParameters
+    field: str | None = None
     version: int = 1
 
     def read(self, parameters: Mapping[str, JsonValue]) -> BaseModel:
@@ -64,15 +74,17 @@ class Model:
         is the section's model."""
         if KIND in parameters:
             raise ValueError(f"its {KIND} is its model's name, {self.name!r}")
-        return self.parameters.model_validate(dict(parameters) | {KIND: self.name})
+        named = {} if self.field is None else {KIND: self.name}
+        return self.parameters.model_validate(dict(parameters) | named)
 
     def written(self, parameters: BaseModel) -> dict[str, JsonValue]:
         """Its parameters as a manifest's section writes them."""
         return parameters.model_dump(mode="json", exclude={KIND})
 
     def configured(self, parameters: BaseModel) -> dict[str, JsonValue]:
-        """The configuration's field its parameters are."""
-        return {self.field: parameters.model_dump(mode="json")}
+        """The configuration's field its parameters are; none for a model
+        that takes no parameters."""
+        return {} if self.field is None else {self.field: parameters.model_dump(mode="json")}
 
 
 def _models(*models: Model) -> dict[str, Model]:
@@ -100,6 +112,14 @@ MODELS: Final[Mapping[Part, Mapping[str, Model]]] = {
         Model(Part.CROP, CropModel.ORGAN.value, OrganCrop, "crop"),
     ),
     Part.CROP_WALK: _models(Model(Part.CROP_WALK, WALK, CropWalk, "crop_walk")),
+    # The sun placed and the sky's light after Haurwitz, split into beam and
+    # diffuse after Erbs, through the glazing and the shadows of what stands
+    # in the house (`greenhouse_sim.solar`).
+    Part.SUNLIGHT: _models(Model(Part.SUNLIGHT, SUNLIGHT)),
+    # Each point sensor sampling the run's air where it stands, with its
+    # own imperfections, and the weather station the weather
+    # (`greenhouse_sim.sensors.air`).
+    Part.SENSORS: _models(Model(Part.SENSORS, SAMPLED)),
 }
 
 # The model each part runs when a manifest says nothing of it: the
@@ -109,12 +129,14 @@ DEFAULTS: Final[Mapping[Part, str]] = {
     Part.AIR_FIELD: "uniform",
     Part.CROP: CropModel.SIMPLE.value,
     Part.CROP_WALK: WALK,
+    Part.SUNLIGHT: SUNLIGHT,
+    Part.SENSORS: SAMPLED,
 }
 
 # The configuration's fields that a part's models hold their parameters
 # in, which a manifest writes in its `models` instead.
 CONFIGURED: Final = frozenset(
-    {model.field for models in MODELS.values() for model in models.values()}
+    {model.field for models in MODELS.values() for model in models.values() if model.field}
 )
 
 
@@ -153,6 +175,9 @@ def chosen(config: ScenarioConfig) -> dict[Part, str]:
         Part.AIR_FIELD: config.airflow.kind,
         Part.CROP: config.crop.kind,
         Part.CROP_WALK: config.crop_walk.kind,
+        # Each the one model it has.
+        Part.SUNLIGHT: SUNLIGHT,
+        Part.SENSORS: SAMPLED,
     }
 
 
@@ -173,7 +198,7 @@ def models_json_schema() -> tuple[dict[str, JsonValue], dict[str, JsonValue]]:
         for entry in models.values():
             schema = entry.parameters.model_json_schema(ref_template=_DEFINITION)
             definitions |= schema.pop("$defs", {})
-            schema["properties"].pop(KIND, None)
+            schema.setdefault("properties", {}).pop(KIND, None)
             definitions[entry.parameters.__name__] = schema
             needed: list[JsonValue] = (
                 ["model", "parameters"] if schema.get("required") else ["model"]

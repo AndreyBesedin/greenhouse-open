@@ -41,27 +41,27 @@ def test_a_run_is_named_by_what_its_scenario_is_made_of(
 # same requests must name the same runs, so that every record, replay and
 # kept day made of them stands.
 PINNED_RUNS = [
-    ("reference_greenhouse", "", "reference_greenhouse-climate-9a0075e4"),
-    ("reference_greenhouse", "set=heater:0&daily=none", "reference_greenhouse-climate-15b29f58"),
+    ("reference_greenhouse", "", "reference_greenhouse-climate-7cc45c53"),
+    ("reference_greenhouse", "set=heater:0&daily=none", "reference_greenhouse-climate-ae7c7333"),
     (
         "reference_greenhouse",
         "targets=3600:heating_day:24,60:heating_night:15",
-        "reference_greenhouse-climate-a95a6f0f",
+        "reference_greenhouse-climate-9b20c99d",
     ),
     (
         "reference_greenhouse",
         "schedule=600:roof_vent_1:1,600:roof_vent_1:0.5&targets=86400:heating_night:12",
-        "reference_greenhouse-climate-c41a7847",
+        "reference_greenhouse-climate-f6427b16",
     ),
-    ("climate_box", "", "climate_box-climate-5f8da7df"),
-    ("climate_box", "set=fan:1&schedule=60:fan:0.5,30:heater:1", "climate_box-climate-8f031188"),
+    ("climate_box", "", "climate_box-climate-9418ad32"),
+    ("climate_box", "set=fan:1&schedule=60:fan:0.5,30:heater:1", "climate_box-climate-5395d4af"),
     (
         "climate_box",
         "daily=64800:heater:1,0:fan:1&schedule=0:fan:0",
-        "climate_box-climate-0c5de619",
+        "climate_box-climate-c3a4eeed",
     ),
-    ("climate_box", "open=roof_vent:0.5&schedule=120:roof_vent:1", "climate_box-climate-e662408d"),
-    ("climate_box", "weather=cold_spring_day&set=heater:0.5", "climate_box-climate-3b8aef1c"),
+    ("climate_box", "open=roof_vent:0.5&schedule=120:roof_vent:1", "climate_box-climate-6e682190"),
+    ("climate_box", "weather=cold_spring_day&set=heater:0.5", "climate_box-climate-7e1487a3"),
 ]
 
 

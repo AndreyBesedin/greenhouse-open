@@ -12,3 +12,8 @@ class Part(StrEnum):
     AIR_FIELD = "air_field"
     CROP = "crop"
     CROP_WALK = "crop_walk"
+    # The sun's and the sky's light, through the glazing, onto the house and
+    # its crop (P08, `greenhouse_sim.solar`).
+    SUNLIGHT = "sunlight"
+    # The sensors' readings of the run (P06, `greenhouse_sim.sensors.air`).
+    SENSORS = "sensors"

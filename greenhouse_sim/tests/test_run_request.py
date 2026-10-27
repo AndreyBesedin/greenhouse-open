@@ -318,5 +318,5 @@ def test_a_runs_targets_are_the_protocols() -> None:
 
 
 def test_a_checkpoint_in_a_format_no_simulator_wrote_names_those_it_reads() -> None:
-    with pytest.raises(InvalidRequest, match="reads format 5, and formats 2, 3 and 4 as it"):
+    with pytest.raises(InvalidRequest, match="reads format 6, and formats 2, 3, 4 and 5 as it"):
         checkpoints.read_checkpoint({"checkpoint_format": 1})
