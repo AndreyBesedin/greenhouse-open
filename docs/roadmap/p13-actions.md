@@ -1119,6 +1119,16 @@ plan, the timeline's plan lane, and crop actions given from the viewer.
 - **Not yet:** the schedule's remove and repeat edit the run drawn, not the
   plan, and so make another run while one is followed.
 
+## Settled in P13.9
+
+- **The plant lab takes the protocol's crop actions,** spelled as a run's
+  are. Its run's steps (`LabStep`) are each a day and a `harvest`, `lower`
+  or `remove_leaf`, read from `&act=day:plant:kind:what` by a run's own
+  spelling (`runs.spelled_crop_action`), so `harvest_ripe` and `lower_cm`
+  are the lab's too. It refuses `lower_to` by name, since its plants hang
+  from no wire, and `inspect`, which changes no plant. `LabAction` is
+  gone.
+
 ## Decided
 
 The first draft's questions, as answered in its review:

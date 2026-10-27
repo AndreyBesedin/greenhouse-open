@@ -35,8 +35,8 @@ type Commanded = tuple[float, str, float]
 type Spelled = tuple[float, str, str, str]
 
 # How a request spells each of the protocol's crop actions, and what its
-# last part names: the plant lab's spellings (`services.plants.ACTIONS`),
-# and one for each other.
+# last part names: a run's (`&crop=`) and the plant lab's (`&act=`), which
+# carries out all but those `services.plants.NOT_CARRIED_OUT` names.
 CROP_SPELLINGS: Final = {
     "harvest_ripe": "nothing",
     "harvest_fruit": "a fruit",
