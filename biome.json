@@ -32,6 +32,9 @@
       "style": {
         "noMagicNumbers": "error"
       }
+    },
+    "domains": {
+      "playwright": "none"
     }
   },
   "overrides": [
@@ -41,6 +44,24 @@
         "rules": {
           "style": {
             "noMagicNumbers": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["greenhouse_sim/web/e2e/**"],
+      "linter": {
+        "domains": {
+          "playwright": "recommended"
+        }
+      }
+    },
+    {
+      "includes": ["**/*.test.tsx", "greenhouse_sim/web/src/testing/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noComponentHookFactories": "off"
           }
         }
       }
