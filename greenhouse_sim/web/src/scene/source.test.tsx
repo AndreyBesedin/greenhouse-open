@@ -170,8 +170,20 @@ describe("a run's crop actions in the address (P13.8)", () => {
     ).toEqual(["spots on: its leaves"]);
     expect(cropFrom("86400:p30:lower_stem")).toBeNull();
     expect(cropFrom("noon:p30:lower_stem:1")).toBeNull();
-    expect(cropText([{ timeS: 86_400, plantId: "p 30", kind: "inspect", target: "a, b" }])).toBe(
-      "86400:p%2030:inspect:a%2C%20b",
+  });
+
+  it("come back from the address as they were written, whatever an inspection's reason holds", () => {
+    const source: SceneSource = {
+      kind: "scenario",
+      scenarioId: "reference_greenhouse",
+      crop: [
+        { timeS: 86_400, plantId: "p30", kind: "inspect", target: "humidity 80%: 100% too & more" },
+      ],
+    };
+
+    expect(sourceFromSearch(searchFor(source))).toEqual(source);
+    expect(cropText(source.crop)).toBe(
+      "86400:p30:inspect:humidity%2080%25%3A%20100%25%20too%20%26%20more",
     );
   });
 });

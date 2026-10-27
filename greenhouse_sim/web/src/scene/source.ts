@@ -385,7 +385,8 @@ export function cropText(actions: readonly CropCommand[] | undefined): string {
 }
 
 /** The crop actions an address asks for, or null when it asks for none or
- * says nothing readable. The simulator checks them itself. */
+ * says nothing readable: `value` as the address's parameters read it,
+ * decoded once already. The simulator checks them itself. */
 export function cropFrom(value: string | null): CropCommand[] | null {
   if (!value) {
     return null;
@@ -397,12 +398,7 @@ export function cropFrom(value: string | null): CropCommand[] | null {
     if (!plantId || !kind || rest.length === 0 || !Number.isFinite(timeS)) {
       return null;
     }
-    actions.push({
-      timeS,
-      plantId: decodeURIComponent(plantId),
-      kind,
-      target: decodeURIComponent(rest.join(":")),
-    });
+    actions.push({ timeS, plantId, kind, target: rest.join(":") });
   }
   return actions;
 }

@@ -89,6 +89,10 @@ describe("a scenario's run, as the viewer asks for it", () => {
       "crop=172800:p30:harvest_truss:p30_t03,259200:p30:lower_stem:1",
       "t=30600",
     ]);
+    // Its sensors read the same run, its crop actions and all.
+    expect(sensorsUrl(run.scenarioId, "observations", run)).toContain(
+      "crop=172800:p30:harvest_truss:p30_t03,259200:p30:lower_stem:1",
+    );
   });
 
   it("writes its parts in the API's order, only those asked for, and not its start", () => {
