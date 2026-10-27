@@ -29,6 +29,7 @@ const STATE = {
   runId: "reference_greenhouse-climate-c562c827",
   layout: "default",
   epoch: 0,
+  startedAt: "2026-02-28T23:00:00Z",
   simulatedNow: "2026-03-02T11:00:30Z",
   timeS: 129_630,
   day: 1,

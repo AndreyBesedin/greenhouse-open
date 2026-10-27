@@ -197,6 +197,10 @@ const BUILT = new Set([
   "seen-arrow",
   "seen-dot",
   "seen-line",
+  // `timeline-plan-${name}`, a followed run's plan lane's ticks (P13.8).
+  "timeline-plan-ran",
+  "timeline-plan-not-ran",
+  "timeline-plan-to-come",
 ]);
 
 describe("the stylesheet's classes (AUDIT.20)", () => {

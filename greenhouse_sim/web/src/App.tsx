@@ -461,6 +461,16 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                     ? { at: clockS, asked: steering.asked, onLevels: steering.steer }
                     : undefined
                 }
+                played={
+                  followed !== null && playback.status === "loaded"
+                    ? {
+                        runId: playback.state.runId,
+                        epoch: playback.state.epoch,
+                        startedAt: playback.state.startedAt,
+                        version: steering.given,
+                      }
+                    : null
+                }
                 momentFailed={momentFailed}
                 fieldView={fieldView}
                 fieldSlice={fieldSlice}

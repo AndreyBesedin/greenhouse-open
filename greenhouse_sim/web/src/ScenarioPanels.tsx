@@ -42,6 +42,7 @@ import type { ThermostatAt } from "./scene/equipment";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
 import { scenarioRun } from "./scene/run";
 import type { SetSource } from "./scene/useSource";
+import type { PlanLaneRun } from "./timeline/planLane";
 import { TimelinePanel } from "./timeline/TimelinePanel";
 import { WeatherPanel } from "./weather/WeatherPanel";
 import type { WeatherDayState, WeatherStateOfLoad } from "./weather/weather";
@@ -85,6 +86,7 @@ export function ScenarioPanels({
   setpoints,
   onTargets,
   steering,
+  played = null,
   onSource,
   onProbes,
   onPlacing,
@@ -130,6 +132,9 @@ export function ScenarioPanels({
         onLevels: (levels: Record<string, number>) => void;
       }
     | undefined;
+  /** The run followed as it plays, whose plan lane the timeline draws
+   * (P13.8). */
+  played?: PlanLaneRun | null;
   onSource: (change: SetSource) => void;
   onProbes: (probes: Point3[]) => void;
   onPlacing: (placing: boolean) => void;
@@ -228,7 +233,12 @@ export function ScenarioPanels({
             </details>
           )}
           {climate && (
-            <TimelinePanel scenarioId={source.scenarioId} run={scenarioRun(source)} time={time} />
+            <TimelinePanel
+              scenarioId={source.scenarioId}
+              run={scenarioRun(source)}
+              time={time}
+              played={played}
+            />
           )}
           {climate && (
             <CheckpointsPanel

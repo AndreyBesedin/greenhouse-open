@@ -97,6 +97,7 @@ describe("a followed run steered from the panels", () => {
     });
     expect(played.at(-1)).toMatchObject({ status: "loaded", state: { runId: RUN_ID } });
     expect(steering?.refusal).toBeNull();
+    expect(steering?.given).toBe(1);
   });
 
   it("shows a level as asked until the run has it", async () => {

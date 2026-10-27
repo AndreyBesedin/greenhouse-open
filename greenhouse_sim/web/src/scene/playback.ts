@@ -25,6 +25,8 @@ export interface PlaybackState {
    * moves, `default~heater:-1.0:0.5`. */
   layout: string;
   epoch: number;
+  /** The instant its run's clock started at. */
+  startedAt: string;
   simulatedNow: string;
   timeS: number;
   day: number;
@@ -67,6 +69,7 @@ export function parsePlayback(body: unknown): PlaybackState | null {
     runId: played.run_id,
     layout: played.layout,
     epoch: played.epoch,
+    startedAt: played.started_at,
     simulatedNow: played.simulated_now,
     timeS: played.time_s,
     day: played.day,

@@ -331,4 +331,15 @@ test("followed, a level set in the Equipment panel steers the run played back, t
     await expect(panel.getByTestId("playback-another-run")).toHaveCount(0);
     await expect(fan).toBeChecked();
   });
+
+  await test.step("the timeline's plan lane says what became of it", async () => {
+    await page.locator("details.timeline").getByText("Timeline").click();
+    await page.getByRole("combobox", { name: "Timeline zoom" }).selectOption({ label: "a day" });
+    await expect(page.getByTestId("timeline-plan")).toHaveText(/^plan, [1-9]\d*$/, ARRIVES);
+    await expect(
+      page
+        .getByTestId("timeline-plan-entry")
+        .filter({ hasText: /fan to 100% \(viewer\/change_\d+\): executed$/ }),
+    ).not.toHaveCount(0);
+  });
 });

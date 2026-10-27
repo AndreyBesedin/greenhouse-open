@@ -159,6 +159,18 @@ export const CONTRACTS: readonly Contract[] = [
     "PLAN_STATE_SCHEMA",
   ),
   contract(
+    `${PROTOCOL}/action-state.schema.json`,
+    "ActionState",
+    ["src/plan", "actionState"],
+    "ACTION_STATE_SCHEMA",
+  ),
+  contract(
+    `${PROTOCOL}/outcome-batch.schema.json`,
+    "OutcomeBatch",
+    ["src/plan", "outcomeBatch"],
+    "OUTCOME_BATCH_SCHEMA",
+  ),
+  contract(
     `${SERVICES}/plants_light.schema.json`,
     "PlantsLight",
     ["src/plants", "plantsLight"],
