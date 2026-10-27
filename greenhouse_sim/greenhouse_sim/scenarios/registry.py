@@ -10,14 +10,16 @@ by name, with its default: the model a manifest that says nothing of the
 part runs, today's choice. P14.1 registers the parts a manifest chose
 already: the weather, the air field drawn, the crop and the crop walk's
 measurements. P14.6 registers the others: the sunlight and the sensors,
-each with the one model it has, which takes no parameters, and the house's
-air, as one well-mixed volume or cell by cell beside it.
+each with the one model it has, which takes no parameters; the house's
+air, as one well-mixed volume or cell by cell beside it; and the
+controller, its loops or none.
 
 A scenario's configuration (`ScenarioConfig`) holds each model's
 parameters under a field of its own, told apart by their `kind`, which is
 the model's name: the weather's under `weather`, the air field's under
-`airflow`, the crop's under `crop` and the crop walk's under `crop_walk`
-(P14.3). The crop's model is the one its rows grow (decision 0050): a
+`airflow`, the crop's under `crop`, the crop walk's under `crop_walk`
+(P14.3), the house air's under `climate` and the controller's loops under
+`control` (P14.6). The crop's model is the one its rows grow (decision 0050): a
 manifest's crop section gives that model's parameters, and names it as its
 rows do.
 """
@@ -34,6 +36,7 @@ from greenhouse_sim.airflow.prescribed import (
     UniformAirflow,
     VortexAirflow,
 )
+from greenhouse_sim.climate.control import Control
 from greenhouse_sim.climate.settings import GridAir, WholeHouseAir
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.parts import Part
@@ -53,6 +56,9 @@ SAMPLED: Final = "sampled"
 # The house air's two models.
 GRID: Final = "grid"
 WHOLE_HOUSE: Final = "whole_house"
+# The controller's two models.
+LOOPS: Final = "loops"
+NO_CONTROLLER: Final = "none"
 
 
 class NoParameters(BaseModel):
@@ -131,6 +137,13 @@ MODELS: Final[Mapping[Part, Mapping[str, Model]]] = {
         Model(Part.HOUSE_AIR, GRID, GridAir, "climate"),
         Model(Part.HOUSE_AIR, WHOLE_HOUSE, WholeHouseAir, "climate"),
     ),
+    # Loops that each switch devices by one quantity of the house's air, in
+    # steps, with hysteresis (P11, `greenhouse_sim.climate.control`), or no
+    # controller: the devices run by their commands alone.
+    Part.CONTROLLER: _models(
+        Model(Part.CONTROLLER, LOOPS, Control, "control"),
+        Model(Part.CONTROLLER, NO_CONTROLLER),
+    ),
 }
 
 # The model each part runs when a manifest says nothing of it: the
@@ -143,6 +156,7 @@ DEFAULTS: Final[Mapping[Part, str]] = {
     Part.SUNLIGHT: SUNLIGHT,
     Part.SENSORS: SAMPLED,
     Part.HOUSE_AIR: GRID,
+    Part.CONTROLLER: NO_CONTROLLER,
 }
 
 # The configuration's fields that a part's models hold their parameters
@@ -191,6 +205,7 @@ def chosen(config: ScenarioConfig) -> dict[Part, str]:
         Part.SUNLIGHT: SUNLIGHT,
         Part.SENSORS: SAMPLED,
         Part.HOUSE_AIR: config.climate.kind,
+        Part.CONTROLLER: NO_CONTROLLER if config.control is None else config.control.kind,
     }
 
 

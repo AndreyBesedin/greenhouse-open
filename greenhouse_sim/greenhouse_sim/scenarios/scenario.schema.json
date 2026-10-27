@@ -1423,17 +1423,6 @@
       "title": "Daily",
       "type": "array"
     },
-    "control": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/Control"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null
-    },
     "start_date": {
       "format": "date",
       "title": "Start Date",
@@ -1756,6 +1745,41 @@
             }
           ],
           "description": "The house air's model: 'grid' if none is named."
+        },
+        "controller": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "loops"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/Control"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "none"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/NoParameters"
+                }
+              }
+            }
+          ],
+          "description": "The controller's model: 'none' if none is named."
         }
       },
       "description": "The model each part of a run runs, by part, and its parameters."
@@ -1767,7 +1791,7 @@
       "type": "string"
     },
     "schema_version": {
-      "const": 6
+      "const": 7
     },
     "opening_day": {
       "type": "integer",

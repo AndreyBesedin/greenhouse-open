@@ -68,7 +68,7 @@ def test_a_run_without_crop_actions_keeps_its_identity_and_one_with_them_has_ano
     }
 
     # As test_run_identity pins it: crop actions leave it as it was.
-    assert named["none"] == "reference_greenhouse-climate-2f2dc84a"
+    assert named["none"] == "reference_greenhouse-climate-7828c7c0"
     assert len(set(named.values())) == len(named)
     assert _run_id(simulator, _with((DAY_S, RIPE))) == named["day 1"]
     # Given in another order, the same actions on different days are the

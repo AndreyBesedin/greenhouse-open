@@ -16,10 +16,13 @@ climate computer's heating and venting, but no source has yet been checked
 against each one's specifics. The heating loop is decision 0042's
 thermostat (`climate.thermostat`), which a run follows today; the house
 decides the other loops from P11.2, and until then a scenario's control
-holds its heating loop alone (`scenarios.config`).
+holds its heating loop alone (`scenarios.config`). A manifest gives a
+controller as the parameters of the controller's model `loops` (P14.6,
+`scenarios.registry`); a scenario without one runs its devices by its
+commands alone.
 """
 
-from typing import Annotated, Final, Self
+from typing import Annotated, Final, Literal, Self
 
 from pydantic import (
     BaseModel,
@@ -158,6 +161,8 @@ class Control(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
+    # The controller's model (P14.6, `scenarios.registry`): its loops.
+    kind: Literal["loops"] = "loops"
     day_from_s: TimeOfDay = DAY_FROM_S
     night_from_s: TimeOfDay = NIGHT_FROM_S
     dead_band_c: PositiveFloat = 1.0

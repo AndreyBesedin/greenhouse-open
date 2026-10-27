@@ -1,8 +1,9 @@
 """Scenarios as manifests (P09.1): every scenario is read from its file, in
 a format whose version it states, its house held as an installation (format
 4, decision 0050), each part's model named in its models (format 5,
-decision 0054), its house's air's among them (format 6), and a manifest the
-simulator cannot read exactly is refused with the reason. The manifests name
+decision 0054), its house's air's among them (format 6) and its
+controller's (format 7), and a manifest the simulator cannot read exactly
+is refused with the reason. The manifests name
 `greenhouse_sim/scenarios/scenario.schema.json`, which
 `tests/test_published_schemas.py` holds to the configuration's model.
 """
@@ -15,6 +16,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
+from greenhouse_sim.climate.control import Control, HeatingLoop
 from greenhouse_sim.climate.settings import GridAir, WholeHouseAir
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED
@@ -53,19 +55,33 @@ def _in_format_3(scenario_id: str) -> dict[str, Any]:
     return document
 
 
+def _with_its_part_at_the_top(
+    document: dict[str, Any], version: int, part: str, field: str
+) -> dict[str, Any]:
+    """A manifest as the format `version` wrote it: the parameters of its
+    `part`'s model a field of the configuration's own, `field`, and a note
+    on that part on it."""
+    models = dict(document["models"])
+    section = models.pop(part, None)
+    notes = {
+        (field if about == f"models.{part}" else about): note
+        for about, note in document["notes"].items()
+    }
+    older = document | {"schema_version": version, "models": models, "notes": notes}
+    return older | ({field: section["parameters"]} if section is not None else {})
+
+
+def _in_format_6(scenario_id: str) -> dict[str, Any]:
+    """A packaged manifest as format 6 wrote it: its controller a field of
+    the configuration's own, `control`, and a note on it on it."""
+    return _with_its_part_at_the_top(_manifest(scenario_id), 6, "controller", "control")
+
+
 def _in_format_5(scenario_id: str) -> dict[str, Any]:
     """A packaged manifest as format 5 wrote it: its house's air's settings
     a field of the configuration's own, `climate`, and a note on them on
-    it."""
-    document = _manifest(scenario_id)
-    models = dict(document["models"])
-    air = models.pop("house_air", None)
-    notes = {
-        ("climate" if about == "models.house_air" else about): note
-        for about, note in document["notes"].items()
-    }
-    older = document | {"schema_version": 5, "models": models, "notes": notes}
-    return older | ({"climate": air["parameters"]} if air is not None else {})
+    it, as well as its controller."""
+    return _with_its_part_at_the_top(_in_format_6(scenario_id), 5, "house_air", "climate")
 
 
 def _installation(document: dict[str, Any], **changes: Any) -> dict[str, Any]:
@@ -116,7 +132,7 @@ def test_a_manifest_in_a_format_it_does_not_read_is_refused() -> None:
         document = _manifest("climate_box") | {"schema_version": version}
         with pytest.raises(
             InvalidManifest,
-            match="this simulator reads format 6, and formats 1, 2, 3, 4, 5 migrated to it",
+            match="this simulator reads format 7, and formats 1, 2, 3, 4, 5, 6 migrated to it",
         ):
             scenario_from_manifest("climate_box", document)
 
@@ -174,7 +190,7 @@ def test_an_older_manifest_has_its_thermostat_read_as_its_controls_heating_loop(
 
 
 def test_a_thermostat_is_refused_from_format_3_on_and_a_control_before_it() -> None:
-    current = _manifest("reference_greenhouse")
+    current = _in_format_6("reference_greenhouse")
     thermostat = _with_a_thermostat(current, 2)["thermostat"]
     with pytest.raises(InvalidManifest, match="fields it does not have: thermostat"):
         scenario_from_manifest("reference_greenhouse", current | {"thermostat": thermostat})
@@ -364,6 +380,7 @@ def test_a_run_says_what_it_is_made_from() -> None:
                 "sunlight": "haurwitz_erbs",
                 "sensors": "sampled",
                 "house_air": "grid",
+                "controller": "loops",
             }.items()
         },
     )
@@ -402,6 +419,7 @@ def test_the_schema_writes_each_parts_model_in_its_models_not_at_the_top() -> No
         "sunlight",
         "sensors",
         "house_air",
+        "controller",
     }
     weathers = models["properties"]["weather"]["oneOf"]
     assert [section["properties"]["model"] for section in weathers] == [
@@ -426,9 +444,14 @@ def test_the_schema_writes_each_parts_model_in_its_models_not_at_the_top() -> No
         scenario_from_manifest(
             "climate_box", _models(_manifest("climate_box"), weather={"model": "recorded"})
         )
-    assert not {"weather", "airflow", "max_trusses", "height_noise_cm", "climate"} & set(
-        schema["properties"]
-    )
+    assert not {
+        "weather",
+        "airflow",
+        "max_trusses",
+        "height_noise_cm",
+        "climate",
+        "control",
+    } & set(schema["properties"])
 
 
 def test_each_parts_model_and_its_parameters_are_read_from_its_section() -> None:
@@ -642,3 +665,48 @@ def test_a_house_of_one_well_mixed_air_is_read_from_its_section() -> None:
                 house_air={"model": "whole_house", "parameters": starts | {"mixing_m2_s": 0.1}},
             ),
         )
+
+
+@pytest.mark.parametrize("scenario_id", manifest_ids())
+def test_a_format_6_manifest_writes_its_control_as_its_controllers_loops(
+    scenario_id: str,
+) -> None:
+    """Format 7 writes a controller as the parameters of the controller's
+    model (P14.6): a format 6 manifest is read as one whose controller is
+    its loops, which every controller of format 6 was, to the same
+    scenario, its note on it on that part; one with no control names no
+    controller, and runs none."""
+    older = _in_format_6(scenario_id)
+
+    migrated: Any = _migrated(scenario_id, older, 6)
+
+    assert migrated == _manifest(scenario_id)
+    config = scenario_from_manifest(scenario_id, older)
+    assert config == SCENARIO_REGISTRY[scenario_id]
+    assert ("controller" in migrated["models"]) == ("control" in older)
+    with pytest.raises(
+        InvalidManifest, match="a format 6 manifest names no model of the controller"
+    ):
+        scenario_from_manifest(scenario_id, _models(older, controller={"model": "none"}))
+
+
+def test_a_controller_is_read_from_its_section_and_not_from_the_top() -> None:
+    """A manifest names its controller's loops, with their parameters, or
+    none, which gives its scenario no control; and writes no control of the
+    configuration's own."""
+    current = _manifest("reference_greenhouse")
+    loops = current["models"]["controller"]
+
+    assert scenario_from_manifest("reference_greenhouse", current).control == Control(
+        heating=HeatingLoop(actuator_id="heater", day_c=18.0, night_c=16.0)
+    )
+    climate_box = _models(_manifest("climate_box"), controller={"model": "none"})
+    assert scenario_from_manifest("climate_box", climate_box) == SCENARIO_REGISTRY["climate_box"]
+    with pytest.raises(InvalidManifest, match=r"written in its models.*\['control'\]"):
+        scenario_from_manifest("reference_greenhouse", current | {"control": loops["parameters"]})
+    with pytest.raises(InvalidManifest, match=r"(?s)models\.controller: .*one loop at least"):
+        scenario_from_manifest(
+            "climate_box", _models(_manifest("climate_box"), controller={"model": "loops"})
+        )
+    with pytest.raises(InvalidManifest, match="notes on what it does not have"):
+        scenario_from_manifest("reference_greenhouse", current | {"notes": {"control": "Warm."}})

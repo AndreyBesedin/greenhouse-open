@@ -81,9 +81,10 @@ class ScenarioConfig(BaseModel):
     daily: list[DailyCommand] = []
     # Its climate controller (P11): the loops that run its heater, vents,
     # fans and dehumidifier by the house's air from the start, in place of
-    # daily commands to them; none by default. Its heating loop is the
-    # thermostat on its heater (P10.3); until the house decides every loop
-    # (P11.2), it is the only loop a scenario may have.
+    # daily commands to them: the parameters of the controller's model
+    # `loops` (P14.6); none by default, the model `none`. Its heating loop
+    # is the thermostat on its heater (P10.3); until the house decides
+    # every loop (P11.2), it is the only loop a scenario may have.
     control: Control | None = None
     start_date: date
     duration_days: PositiveInt
