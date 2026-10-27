@@ -22,4 +22,5 @@ export interface PlaybackState {
   worked_out_s: number;
   every_s: number;
   targets: [number, string, number][];
+  commands: [number, string, number][];
 }

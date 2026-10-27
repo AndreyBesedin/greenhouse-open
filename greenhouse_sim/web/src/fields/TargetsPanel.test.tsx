@@ -5,7 +5,6 @@ import { DAY_S } from "../clock";
 import type { ScenarioSource } from "../scene/edits";
 import { withTargetsSet } from "../scene/edits";
 import type { ThermostatAt } from "../scene/equipment";
-import { setPlaybackTargets } from "../scene/playback";
 import { button, click, enter, render, said } from "../testing/render";
 import { describeTargets, settingMoment, TargetsPanel } from "./TargetsPanel";
 
@@ -90,38 +89,5 @@ describe("the heating targets (#274)", () => {
       { timeS: 0, target: "heating_night", valueC: 17 },
       { timeS: 27_060, target: "heating_day", valueC: 24 },
     ]);
-  });
-
-  it("followed, are sent to the playback, which answers with its changes", async () => {
-    const answer = {
-      scenario_id: "reference_greenhouse",
-      run_id: "reference_greenhouse-climate-0b54199d",
-      layout: "default",
-      epoch: 0,
-      greenhouse_id: "reference_greenhouse",
-      started_at: "2026-02-28T23:00:00Z",
-      simulated_now: "2026-03-01T06:00:30Z",
-      time_s: 21_630,
-      day: 0,
-      playing: true,
-      seconds_per_day: 10,
-      worked_out_s: 21_660,
-      every_s: 300,
-      targets: [[21_660, "heating_night", 22]],
-    };
-    const fetchFn = vi.fn(
-      async () => new Response(JSON.stringify(answer), { status: 200 }),
-    ) as unknown as typeof fetch;
-
-    const played = await setPlaybackTargets("reference_greenhouse", { heating_night: 22 }, fetchFn);
-
-    expect(fetchFn).toHaveBeenCalledExactlyOnceWith(
-      "/api/scenarios/reference_greenhouse/playback/targets?targets=heating_night:22",
-      { method: "POST" },
-    );
-    expect(played).toMatchObject({
-      status: "loaded",
-      state: { targets: [{ timeS: 21_660, target: "heating_night", valueC: 22 }] },
-    });
   });
 });

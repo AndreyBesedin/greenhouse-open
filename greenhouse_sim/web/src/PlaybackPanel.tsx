@@ -12,14 +12,17 @@ import {
  * run, its epoch, how fast it plays and where its clock stands across all
  * its days, with its controls, which every viewer and consumer of it
  * shares. Its play and pause are the view's, the climate run's own standing
- * aside (#270). The view draws the run at that clock's moment; a change made
- * here (a command, a weather, an opening) makes another run, which the view
- * then draws in its place, and says so.
+ * aside (#270). The view draws the run at that clock's moment. A level or a
+ * target set in the panels steers the run played back, through its plan
+ * (P13.8), and the panel says why if its gateway refuses it; any other
+ * change made here (a weather, a layout, a command removed) makes another
+ * run, which the view then draws in its place, and says so.
  */
 export function PlaybackPanel({
   load,
   days,
   changed,
+  refusal = null,
   onCommand,
   onStart,
   onOwnRun,
@@ -30,6 +33,8 @@ export function PlaybackPanel({
   days: number | null;
   /** What the view changes of the scenario's own run, if anything. */
   changed: readonly string[];
+  /** Why the run's gateway refused what the panels last set, if it did. */
+  refusal?: string | null;
   onCommand: (command: PlaybackCommand) => void;
   onStart: () => void;
   /** Draws the run played back again, without the view's changes. */
@@ -39,6 +44,11 @@ export function PlaybackPanel({
   return (
     <section className="playback" aria-label="Run played back">
       <Standing load={load} days={days} onCommand={onCommand} onStart={onStart} />
+      {refusal !== null && (
+        <p role="alert" data-testid="playback-refused">
+          The run refused what was set: {refusal}.
+        </p>
+      )}
       {changed.length > 0 && (
         <p role="alert" data-testid="playback-another-run">
           This view draws another run than the one played back: it changes {changed.join(", ")}.{" "}

@@ -600,7 +600,7 @@ within the day; the action format needs no change for it.
 | P13.5 | Crop actions on the run: `harvest`, `lower`, `remove_leaf`, `inspect` at a day's start, refused at other instants and `water` refused, with their reasons; the organ model's `PlantAction` renamed `PlantOperation`; the plant lab and crop work give them; events name their actions. | `feat(sim): crop actions and their outcomes on the run` | Done: the organ crop's operations (#351), the protocol's reasons and events (#353), a run's plan on its crop (#354), and its playback's outcomes (#356) |
 | P13.6 | The graph, windows and lateness, with a simulated executor whose actions take time and which has a number of hands, so that `late`, `missed`, fallbacks and cancelled dependents happen, deterministically. | `feat(sim): plans with order, windows and lateness` | Done: the gateway's start and hands (#363), and the run's crew (#365) |
 | P13.7 | The gateway's write side and its routes: give a plan before a run, steer a playing one, list the actions as they stand, cancel a plan or chosen actions, read the plan in force; the playback's targets route becomes an alias. | `feat(api): give, steer and read a run's plan` | Done |
-| P13.8 | The viewer: the Equipment, Openings and Targets panels and the plant lab write one plan; a plan lane in the timeline shows what was due, what happened and why. | `feat(viewer): one plan, and its outcomes in the timeline` | Planned |
+| P13.8 | The viewer: the Equipment, Openings and Targets panels and the plant lab write one plan; a plan lane in the timeline shows what was due, what happened and why. | `feat(viewer): one plan, and its outcomes in the timeline` | In progress: the panels steer a followed run through its plan |
 | P13.9 | The old paths removed: the engine's actions, `greenhouse_sim.executor`, the deprecated aliases (`RequestedAction`, `ActionResult` and the old execution names), `LabAction`; the close-the-loop example as a policy loop on the run; the protocol's minor version moves again, and the changelog says so. | `refactor: one way to act on a greenhouse` | Planned |
 | P13.10 | The QA scenario below, run and recorded. | `test(e2e): a plan carried out, late, on time and refused` | Planned |
 
@@ -1054,6 +1054,40 @@ which changes no run, then the run carrying out a plan's crop actions.
 - **Not yet:** the number of plans is not bounded, only each plan. No
   route serves a gateway's limits. The viewer's development server does
   not pass `/actuation` on to the API (P13.8).
+
+## Settled in P13.8
+
+P13.8 comes in three parts: the panels steer a followed run through its
+plan, the timeline's plan lane, and crop actions given from the viewer.
+
+- **One plan, while a run is followed.** The run a view follows as it is
+  played back has a gateway, and the Equipment, Openings and Targets panels
+  give it their changes as the local operator's plan `viewer`, through the
+  gateway's routes, as any client would (`src/plan/plan.ts`). Each change
+  is to be carried out as soon as the run can: a level at once, a target
+  on the minute. A revision keeps the actions of the one before not yet
+  resolved and adds the new ones under identifiers no revision used, so
+  the plan holds no more than is still to come, while what was done keeps
+  its outcome. A slider's levels go once it rests, 300 ms after its last
+  step, in one revision. The playback panel says why, in the gateway's
+  words, if the run refuses a change.
+- **The run drawn is the run played back.** A playback's state lists the
+  levels its run was given (`PlaybackState.commands`), beside its target
+  changes, and a view following it asks for its run with them, as its
+  commands. While it follows, the Equipment and Openings panels show the
+  run at its clock, where a level given takes effect; the view draws it
+  from its next minute on.
+- **A view not following a run** has no gateway to give a plan to: its
+  panels write its address, which is the run's own plan, before the run
+  (P13.2), as before.
+- **The targets route** is no longer called by the viewer. It stays, an
+  alias, until P13.9 removes it.
+- **The viewer's development and preview servers** pass `/consumer` and
+  `/actuation` on to the simulator, as they pass `/api`.
+- **Not yet:** the schedule's remove and repeat edit the run drawn, not the
+  plan, and so make another run while one is followed; crop actions given
+  to a followed run are not drawn, since the address has no spelling for
+  them (P13.8's third part).
 
 ## Decided
 

@@ -95,6 +95,7 @@ function playbackAnswer(layout: string, targets: [number, string, number][] = []
       worked_out_s: 0,
       every_s: 300,
       targets,
+      commands: [],
     }),
   );
 }

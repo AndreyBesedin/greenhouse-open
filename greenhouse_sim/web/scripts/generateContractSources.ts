@@ -1,8 +1,10 @@
 // Generates the viewer's side of the simulator's contracts from the schemas
 // it publishes (`tests/test_published_schemas.py` lists them): the scene,
 // the environment field, the CFD geometry, and each service's answer the
-// viewer reads. For each, the TypeScript types, and the schema itself as a
-// module for validation, in its area's `generated` folder.
+// viewer reads; and of the protocol's records the viewer writes and reads
+// through a run's gateway (P13.8), as the protocol publishes them. For each,
+// the TypeScript types, and the schema itself as a module for validation, in
+// its area's `generated` folder.
 //
 //     npm run generate
 //
@@ -26,9 +28,9 @@ export interface Contract {
   schemaConstant: string;
 }
 
-/** The contract published at `schemaPath`, under `greenhouse_sim/`, whose
- * viewer side is `<folder>/generated/<name>Types.ts` and `<name>Schema.ts`,
- * the folder of the module that reads it. */
+/** The contract published at `schemaPath`, from the simulator's project
+ * (`greenhouse_sim/`), whose viewer side is `<folder>/generated/<name>Types.ts`
+ * and `<name>Schema.ts`, the folder of the module that reads it. */
 function contract(
   schemaPath: string,
   rootType: string,
@@ -47,6 +49,8 @@ function contract(
 
 const SERVICES = "greenhouse_sim/services";
 const CLIMATE = "greenhouse_sim/climate";
+// The protocol's schemas, beside the simulator's project.
+export const PROTOCOL = "../greenhouse_protocol/greenhouse_protocol/schemas";
 
 export const CONTRACTS: readonly Contract[] = [
   contract(
@@ -146,6 +150,14 @@ export const CONTRACTS: readonly Contract[] = [
     "PLAYBACK_SCHEMA",
   ),
   contract(`${SERVICES}/live.schema.json`, "LiveState", ["src/scene", "live"], "LIVE_SCHEMA"),
+  contract(`${PROTOCOL}/plan.schema.json`, "Plan", ["src/plan", "plan"], "PLAN_SCHEMA"),
+  contract(`${PROTOCOL}/receipt.schema.json`, "Receipt", ["src/plan", "receipt"], "RECEIPT_SCHEMA"),
+  contract(
+    `${PROTOCOL}/plan-state.schema.json`,
+    "PlanState",
+    ["src/plan", "planState"],
+    "PLAN_STATE_SCHEMA",
+  ),
   contract(
     `${SERVICES}/plants_light.schema.json`,
     "PlantsLight",
