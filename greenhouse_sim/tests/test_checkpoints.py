@@ -2,8 +2,6 @@
 
 from datetime import UTC, datetime, timedelta
 
-from greenhouse_protocol.action import HarvestPlantAction, RequestedAction
-
 from greenhouse_sim.checkpoints import InMemoryWorldCheckpoints, WorldCheckpoints
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
@@ -50,8 +48,7 @@ def test_a_world_saved_as_json_loads_back_unchanged() -> None:
     """A store that persists worlds outside the process, such as a database,
     keeps them as JSON. Everything a run needs to continue, including the
     values a model keeps for itself, must survive the round trip."""
-    # The compartment's season is long enough for fruit to ripen and be
-    # harvested.
+    # The compartment's season is long enough for fruit to ripen.
     config = SCENARIO_REGISTRY["tomato_compartment"]
     engine = SimulationEngine(config)
     plant_ids = ["tomato_compartment_plant_001", "tomato_compartment_plant_002"]
@@ -60,8 +57,6 @@ def test_a_world_saved_as_json_loads_back_unchanged() -> None:
     for day in range(1, config.duration_days + 1):
         timestamp = start + timedelta(days=day - 1)
         world = engine.advance(world, day=day, timestamp=timestamp, simulation_id="sim").world
-        harvest: list[RequestedAction] = [HarvestPlantAction(plant_id=plant_ids[0])]
-        world = engine.apply_actions(world, harvest, day=day, timestamp=timestamp).world
-    assert any(f.status == "HARVESTED" for p in world.plants for t in p.trusses for f in t.fruits)
+    assert any(f.status == "RIPE" for p in world.plants for t in p.trusses for f in t.fruits)
 
     assert GreenhouseWorld.model_validate_json(world.model_dump_json()) == world

@@ -123,8 +123,8 @@ class SimpleRung:
 
 
 def _harvested(plant: SimplePlant) -> CarriedOut[SimplePlant]:
-    """Every ripe fruit picked off the plant, as the engine's harvest picks
-    them (`greenhouse_sim.actions.effects`): done even when none is ripe."""
+    """Every ripe fruit picked off the plant: done even when none is
+    ripe."""
     picked = [
         fruit
         for truss in plant.plant.trusses

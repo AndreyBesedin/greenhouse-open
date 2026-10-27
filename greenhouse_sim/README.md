@@ -5,9 +5,9 @@ Part of [greenhouse-open](../README.md). Apache-2.0.
 
 - **A hidden world, noisy sensors.** `GreenhouseWorld` holds what is really
   true. Each step publishes only noisy `Observation`s of it.
-- **Semantic actions.** `SimulationEngine.apply_actions` validates each
-  `RequestedAction` against the world and executes the accepted ones through
-  a pluggable `ActionExecutor`, returning an `Event` for each.
+- **Actions on the run.** A person, a policy or a schedule gives a run a
+  plan of `greenhouse_protocol` actions through its gateway (`/actuation/v1`),
+  and the run carries each out at its time, with an outcome (decision 0046).
 - **Deterministic.** The same scenario, seed and actions always produce the
   same records.
 - **Ground truth for evaluation only.** `greenhouse_sim.ground_truth` reports
@@ -102,7 +102,6 @@ behind them moves.
 | --- | --- |
 | Run a simulation | `greenhouse_sim.engine`, `greenhouse_sim.scenarios`, `greenhouse_sim.world`, `greenhouse_sim.world.envelope` |
 | Keep a run between steps | `greenhouse_sim.checkpoints` |
-| Carry out actions another way | `greenhouse_sim.executor` |
 | Advance a world without the engine | `greenhouse_sim.world_builder` |
 | Score readings against the truth | `greenhouse_sim.ground_truth`, `greenhouse_sim.evaluation.observation_accuracy` |
 | Write or compose a model | `greenhouse_sim.biology.contract`, `greenhouse_sim.environment.contract`, `greenhouse_sim.sensors.contract`, and the simple models in `greenhouse_sim.biology.tomato.simple.model`, `greenhouse_sim.environment.simple`, `greenhouse_sim.sensors.generation` |

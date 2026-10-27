@@ -5,7 +5,6 @@ import json
 from datetime import UTC, datetime
 
 import pytest
-from greenhouse_protocol.action import LowerPlantAction
 from pydantic import ValidationError
 
 from greenhouse_sim.domain.envelope import OpeningKind, SurfaceCategory
@@ -120,15 +119,10 @@ def test_a_scene_refuses_more_plants_than_planting_positions() -> None:
 def test_a_fully_lowered_plant_has_zero_height() -> None:
     world = _world()
     plant = world.plants[0]
-    lowered = SimulationEngine(CONFIG).apply_actions(
-        world,
-        [LowerPlantAction(plant_id=plant.plant_id, amount_cm=plant.stem_length_cm)],
-        day=8,
-        timestamp=TIMESTAMP,
-    )
-    assert lowered.results[0].accepted
+    lowered = plant.model_copy(update={"lowered_length_cm": plant.stem_length_cm})
+    world = world.model_copy(update={"plants": [lowered, *world.plants[1:]]})
 
-    assert _plants(scene_snapshot(lowered.world, CONFIG))[plant.plant_id][3] == 0.0
+    assert _plants(scene_snapshot(world, CONFIG))[plant.plant_id][3] == 0.0
 
 
 def test_an_unknown_kind_of_entity_is_refused() -> None:

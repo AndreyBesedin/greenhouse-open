@@ -11,14 +11,12 @@ import sys
 import textwrap
 from datetime import UTC, datetime, timedelta
 
-from greenhouse_protocol.action import HarvestPlantAction, LowerPlantAction, WaterPlantAction
-from greenhouse_protocol.enums import ActionExecutorType, EventType, ObservationType
+from greenhouse_protocol.enums import ObservationType
 
 from greenhouse_sim.biology.tomato.simple.model import SimpleTomatoModel
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.environment.contract import EnvironmentModel
 from greenhouse_sim.environment.simple import SimpleEnvironmentModel
-from greenhouse_sim.executor import SimulatedOperatorExecutor, executor_for
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY, ScenarioConfig
 from greenhouse_sim.sensors.generation import SimpleSensorModel
 from greenhouse_sim.world import GreenhouseEnvironment
@@ -63,76 +61,6 @@ def test_the_same_day_advances_the_same_way_twice() -> None:
     )
 
     assert first == second
-
-
-def test_an_accepted_action_changes_the_world_and_reports_an_event() -> None:
-    engine = _engine()
-    world = engine.initialize(PLANT_IDS, greenhouse_id="tomato_compartment")
-    step = engine.advance(world, day=1, timestamp=TIMESTAMP, simulation_id="sim_1")
-    before = step.world.plant(PLANT_IDS[0]).water_reservoir_ml
-
-    execution = engine.apply_actions(
-        step.world,
-        [WaterPlantAction(plant_id=PLANT_IDS[0], amount_ml=500.0)],
-        day=1,
-        timestamp=TIMESTAMP,
-    )
-
-    assert [result.accepted for result in execution.results] == [True]
-    assert [event.event_type for event in execution.events] == [EventType.WATERING]
-    assert execution.world.plant(PLANT_IDS[0]).water_reservoir_ml > before
-
-
-def test_a_rejected_action_keeps_its_place_and_produces_no_event() -> None:
-    """A request is not evidence that anything happened."""
-    engine = _engine()
-    step = engine.advance(
-        engine.initialize(PLANT_IDS, greenhouse_id="tomato_compartment"),
-        day=1,
-        timestamp=TIMESTAMP,
-        simulation_id="sim_1",
-    )
-
-    execution = engine.apply_actions(
-        step.world,
-        [
-            WaterPlantAction(plant_id="no_such_plant", amount_ml=500.0),
-            WaterPlantAction(plant_id=PLANT_IDS[0], amount_ml=999_999.0),
-            HarvestPlantAction(plant_id=PLANT_IDS[0]),
-        ],
-        day=1,
-        timestamp=TIMESTAMP,
-    )
-
-    assert [result.accepted for result in execution.results] == [False, False, True]
-    assert execution.results[0].reason is not None
-    assert len(execution.events) == 1
-
-
-def test_actions_are_applied_in_order_against_one_world() -> None:
-    engine = _engine()
-    step = engine.advance(
-        engine.initialize(PLANT_IDS, greenhouse_id="tomato_compartment"),
-        day=1,
-        timestamp=TIMESTAMP,
-        simulation_id="sim_1",
-    )
-    plant = step.world.plant(PLANT_IDS[0])
-    # Lowering the full visible height is admissible; a second identical
-    # request is not, because the first one already consumed it.
-    amount = plant.stem_length_cm - plant.lowered_length_cm
-
-    execution = engine.apply_actions(
-        step.world,
-        [
-            LowerPlantAction(plant_id=PLANT_IDS[0], amount_cm=amount),
-            LowerPlantAction(plant_id=PLANT_IDS[0], amount_cm=amount),
-        ],
-        day=1,
-        timestamp=TIMESTAMP,
-    )
-
-    assert [result.accepted for result in execution.results] == [True, False]
 
 
 def test_by_default_the_engine_runs_the_simple_models() -> None:
@@ -196,12 +124,6 @@ def test_the_engine_runs_the_environment_model_it_is_given() -> None:
     )
 
 
-def test_executor_for_resolves_the_simulated_operator() -> None:
-    assert isinstance(
-        executor_for(ActionExecutorType.SIMULATED_OPERATOR), SimulatedOperatorExecutor
-    )
-
-
 def test_a_whole_run_loads_no_database_web_framework_or_api() -> None:
     """The simulator runs standalone, checked at runtime.
 
@@ -216,7 +138,6 @@ def test_a_whole_run_loads_no_database_web_framework_or_api() -> None:
         import sys
         from datetime import UTC, datetime
 
-        from greenhouse_protocol.action import WaterPlantAction
         from greenhouse_sim.engine import SimulationEngine
         from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 
@@ -228,12 +149,7 @@ def test_a_whole_run_loads_no_database_web_framework_or_api() -> None:
             step = engine.advance(
                 world, day=day, timestamp=timestamp, simulation_id="sim"
             )
-            world = engine.apply_actions(
-                step.world,
-                [WaterPlantAction(plant_id="p1", amount_ml=100.0)],
-                day=day,
-                timestamp=timestamp,
-            ).world
+            world = step.world
         assert step.observations
 
         leaked = sorted(
