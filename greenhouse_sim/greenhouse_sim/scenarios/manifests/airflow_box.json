@@ -1,6 +1,6 @@
 {
   "$schema": "../scenario.schema.json",
-  "schema_version": 6,
+  "schema_version": 7,
   "greenhouse_id": "airflow_box",
   "name": "Airflow QA Box",
   "description": "Airflow QA case: air blown through a house from door to door, around one block between them, solved with OpenFOAM and compared with a prescribed breeze.",

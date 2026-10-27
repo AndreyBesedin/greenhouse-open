@@ -1,6 +1,6 @@
 {
   "$schema": "../scenario.schema.json",
-  "schema_version": 6,
+  "schema_version": 7,
   "greenhouse_id": "solar_lab",
   "name": "Solar lab",
   "description": "Sun QA case: a small shut house at the March equinox under a clear sky, a row of plants partly shaded by a stack of crates, and PAR sensors in the sun and the shade",

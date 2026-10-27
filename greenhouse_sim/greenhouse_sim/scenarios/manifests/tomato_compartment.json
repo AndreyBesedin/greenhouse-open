@@ -1,6 +1,6 @@
 {
   "$schema": "../scenario.schema.json",
-  "schema_version": 6,
+  "schema_version": 7,
   "greenhouse_id": "tomato_compartment",
   "name": "Tomato compartment",
   "description": "Reference scenario: a 24 by 16 m Venlo-style compartment of 320 high-wire tomato plants in eight rows, 28 days",

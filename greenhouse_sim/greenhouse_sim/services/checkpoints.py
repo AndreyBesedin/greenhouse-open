@@ -97,13 +97,14 @@ if TYPE_CHECKING:
     from greenhouse_sim.services.simulator import Simulator
 
 # The format a checkpoint is written in, which a reader refuses if it does
-# not know it: 7 since a run's house's air is a part with a model of its own
-# (P14.6), which a checkpoint names too, as 6 named its sunlight and sensors.
-CHECKPOINT_FORMAT: Final = 7
+# not know it: 8 since a run's controller is a part with a model of its own
+# (P14.6), which a checkpoint names too, as 7 named its house's air and 6
+# its sunlight and sensors.
+CHECKPOINT_FORMAT: Final = 8
 # The formats before, each read as the one after it: a format 2
 # checkpoint's run changed no target (#274); a format 3 checkpoint's
 # commands, daily commands and target changes are its run's plan; a format
-# 4 checkpoint's plants are its organ crop's state; and a format 5 or 6
+# 4 checkpoint's plants are its organ crop's state; and a format 5, 6 or 7
 # checkpoint names the parts there were then, the others its run's at the
 # version every model had then (P14.2).
 WITHOUT_TARGETS: Final = 2
@@ -111,12 +112,14 @@ WITH_COMMANDS: Final = 3
 WITHOUT_MODELS: Final = 4
 WITH_FOUR_PARTS: Final = 5
 WITH_SIX_PARTS: Final = 6
+WITH_SEVEN_PARTS: Final = 7
 READ_AS_CURRENT: Final = (
     WITHOUT_TARGETS,
     WITH_COMMANDS,
     WITHOUT_MODELS,
     WITH_FOUR_PARTS,
     WITH_SIX_PARTS,
+    WITH_SEVEN_PARTS,
 )
 # The parts a checkpoint of each format with models names, every one of
 # them: a part left out would leave its model and version unchecked.
@@ -129,6 +132,15 @@ NAMED_BY: Final = {
         Part.CROP_WALK,
         Part.SUNLIGHT,
         Part.SENSORS,
+    ),
+    WITH_SEVEN_PARTS: (
+        Part.WEATHER,
+        Part.AIR_FIELD,
+        Part.CROP,
+        Part.CROP_WALK,
+        Part.SUNLIGHT,
+        Part.SENSORS,
+        Part.HOUSE_AIR,
     ),
     CHECKPOINT_FORMAT: tuple(Part),
 }
@@ -336,8 +348,8 @@ def read_checkpoint(document: JsonValue) -> Checkpoint:
     """A checkpoint as it is written, in this simulator's format or one it
     reads as it (`READ_AS_CURRENT`), as this format holds it. Refused if it
     is not one, or is in a format this simulator does not read."""
-    # A checkpoint of this format names every part's model, one of format 5
-    # or 6 every part's there was then, and one of an earlier format its
+    # A checkpoint of this format names every part's model, one of format 5,
+    # 6 or 7 every part's there was then, and one of an earlier format its
     # crop's alone.
     format_given = document.get("checkpoint_format") if isinstance(document, dict) else None
     named = NAMED_BY.get(format_given) if isinstance(format_given, int) else None
@@ -359,7 +371,7 @@ def read_checkpoint(document: JsonValue) -> Checkpoint:
             written_in = WITHOUT_MODELS
         if written_in == WITHOUT_MODELS:
             document = _with_models(document)
-        if written_in in (WITH_FOUR_PARTS, WITH_SIX_PARTS):
+        if written_in in (WITH_FOUR_PARTS, WITH_SIX_PARTS, WITH_SEVEN_PARTS):
             document = document | {"checkpoint_format": CHECKPOINT_FORMAT}
     try:
         held = Checkpoint.model_validate(document)

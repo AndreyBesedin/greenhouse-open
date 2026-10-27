@@ -1,6 +1,6 @@
 {
   "$schema": "../scenario.schema.json",
-  "schema_version": 6,
+  "schema_version": 7,
   "greenhouse_id": "sensor_lab",
   "name": "Sensor lab",
   "description": "Sensor QA case: still air warming steadily along a small house, clean and imperfect thermometers side by side, and a camera looking down the house at boxes that partly hide one another",

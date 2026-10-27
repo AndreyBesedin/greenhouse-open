@@ -20,3 +20,6 @@ class Part(StrEnum):
     # The house's air through the run, as one volume or cell by cell (P05,
     # `greenhouse_sim.climate.day`).
     HOUSE_AIR = "house_air"
+    # What runs the house's devices by its air, if anything does (P11,
+    # `greenhouse_sim.climate.control`).
+    CONTROLLER = "controller"

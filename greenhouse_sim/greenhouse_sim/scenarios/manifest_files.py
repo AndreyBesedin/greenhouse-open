@@ -38,17 +38,25 @@ from greenhouse_sim.scenarios.installation import (
     scenario_house,
 )
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT, LAYOUT_NAME, load_layout
-from greenhouse_sim.scenarios.registry import CONFIGURED, GRID, KIND, model, models_json_schema
+from greenhouse_sim.scenarios.registry import (
+    CONFIGURED,
+    GRID,
+    KIND,
+    LOOPS,
+    model,
+    models_json_schema,
+)
 
 MANIFESTS_DIR: Final = Path(__file__).parent / "manifests"
 MANIFEST_SCHEMA_FILE: Final = Path(__file__).parent / "scenario.schema.json"
 # Where a manifest finds the schema, from the manifests' folder.
 SCHEMA_FROM_A_MANIFEST_FILE: Final = "../scenario.schema.json"
-# The version of the format a manifest is written in: 6 since a manifest
-# writes its house's air's settings as its house air's model's parameters
-# (P14.6), and 5 since it names the model each part of its runs runs
-# (P14.1, decision 0054).
-SCHEMA_VERSION: Final = 6
+# The version of the format a manifest is written in: 7 since a manifest
+# writes its controller as its controller's model's parameters, 6 since it
+# writes its house's air's settings as its house air's model's (P14.6), and
+# 5 since it names the model each part of its runs runs (P14.1, decision
+# 0054).
+SCHEMA_VERSION: Final = 7
 # How many hexadecimal digits of its content's digest name a manifest's
 # version.
 DIGEST_LENGTH: Final = 16
@@ -70,8 +78,6 @@ _MODEL_KEY: Final = "model"
 _PARAMETERS_KEY: Final = "parameters"
 # Where format 5 wrote the house's air's settings.
 _CLIMATE_KEY: Final = "climate"
-# What a format 5 note on them is about in format 6: the house air's section.
-_FORMAT_5_NOTES: Final = {_CLIMATE_KEY: f"{_MODELS_KEY}.{Part.HOUSE_AIR}"}
 # The fields format 4 wrote a part's choice in, an object with its kind, by
 # the part it chose for.
 _FORMAT_4_PARTS: Final = {"weather": Part.WEATHER, "airflow": Part.AIR_FIELD}
@@ -488,25 +494,55 @@ def _from_format_5(scenario_id: str, document: dict[str, JsonValue]) -> dict[str
     of the house air's model (P14.6): the grid's, which every run of format
     5 worked its air out by; and a note on them as a note on that part.
     What a run is does not change."""
+    return _moved_to_its_part(
+        scenario_id, document, written_in=5, key=_CLIMATE_KEY, part=Part.HOUSE_AIR, name=GRID
+    )
+
+
+def _from_format_6(scenario_id: str, document: dict[str, JsonValue]) -> dict[str, JsonValue]:
+    """Format 6 wrote a controller as a field of the configuration's own,
+    `control`. Format 7 writes it as the parameters of the controller's
+    model (P14.6): its loops, which every controller of format 6 was; and a
+    note on it as a note on that part. A scenario without one names no
+    controller, and runs its default, none. What a run is does not
+    change."""
+    return _moved_to_its_part(
+        scenario_id, document, written_in=6, key=_CONTROL_KEY, part=Part.CONTROLLER, name=LOOPS
+    )
+
+
+def _moved_to_its_part(
+    scenario_id: str,
+    document: dict[str, JsonValue],
+    *,
+    written_in: int,
+    key: str,
+    part: Part,
+    name: str,
+) -> dict[str, JsonValue]:
+    """A manifest of the format `written_in`, its field `key` moved to the
+    `models` as the parameters of `part`'s model `name`, and a note on it
+    as a note on that part. Refused if it names a model of that part
+    already, which that format did not."""
     models = document.get(_MODELS_KEY, {})
     if not isinstance(models, dict):
         raise InvalidManifest(f"{scenario_id}: its {_MODELS_KEY} are written by part")
-    if Part.HOUSE_AIR.value in models:
+    if part.value in models:
         raise InvalidManifest(
-            f"{scenario_id}: a format 5 manifest names no model of the {Part.HOUSE_AIR}"
+            f"{scenario_id}: a format {written_in} manifest names no model of the {part}"
         )
     migrated: dict[str, JsonValue] = {}
-    for key, value in document.items():
-        if key == _CLIMATE_KEY:
+    for each, value in document.items():
+        if each == key:
             continue
-        if key == _NOTES_KEY and isinstance(value, dict):
-            migrated[key] = _notes_moved(value, _FORMAT_5_NOTES)
+        if each == _NOTES_KEY and isinstance(value, dict):
+            migrated[each] = _notes_moved(value, {key: f"{_MODELS_KEY}.{part}"})
         else:
-            migrated[key] = value
-    climate = document.get(_CLIMATE_KEY)
-    if climate is not None:
-        section: dict[str, JsonValue] = {_MODEL_KEY: GRID, _PARAMETERS_KEY: climate}
-        moved: dict[str, JsonValue] = {**models, Part.HOUSE_AIR.value: section}
+            migrated[each] = value
+    given = document.get(key)
+    if given is not None:
+        section: dict[str, JsonValue] = {_MODEL_KEY: name, _PARAMETERS_KEY: given}
+        moved: dict[str, JsonValue] = {**models, part.value: section}
         migrated[_MODELS_KEY] = moved
     return migrated
 
@@ -518,6 +554,7 @@ _MIGRATIONS: Final[dict[int, Callable[[str, dict[str, JsonValue]], dict[str, Jso
     3: _from_format_3,
     4: _from_format_4,
     5: _from_format_5,
+    6: _from_format_6,
 }
 
 

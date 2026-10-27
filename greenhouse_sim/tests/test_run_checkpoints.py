@@ -31,7 +31,11 @@ BRANCH = ((DAY_S + HOUR_S, "heater", 0.0),)
 
 # The parts each format before this one did not name, which had a model of
 # their own after it (P14.6).
-NOT_NAMED_BY = {5: ("sunlight", "sensors", "house_air"), 6: ("house_air",)}
+NOT_NAMED_BY = {
+    5: ("sunlight", "sensors", "house_air", "controller"),
+    6: ("house_air", "controller"),
+    7: ("controller",),
+}
 
 # Each test starts with no run, crop or checkpoint kept, as after the API
 # restarts.
@@ -324,6 +328,7 @@ def test_a_checkpoint_keeps_each_parts_model_its_version_and_its_state(
         Part.SUNLIGHT: ("haurwitz_erbs", 1),
         Part.SENSORS: ("sampled", 1),
         Part.HOUSE_AIR: ("grid", 1),
+        Part.CONTROLLER: ("loops", 1),
     }
     # Only the organ crop keeps a state: its plants and the days they lived.
     assert [part for part, run in kept.models.items() if run.state is not None] == [Part.CROP]
@@ -334,16 +339,16 @@ def test_a_checkpoint_keeps_each_parts_model_its_version_and_its_state(
 def test_a_checkpoint_of_an_earlier_format_names_the_parts_there_were_then(
     simulator: Simulator, written_in: int, unnamed: tuple[str, ...]
 ) -> None:
-    """Before the sunlight and the sensors had models of their own, and then
-    the house's air (P14.6): read with theirs at the version every model had
-    then, and refused without one of its own, as this format is without any
-    part."""
+    """Before the sunlight and the sensors had models of their own, then
+    the house's air, then the controller (P14.6): read with theirs at the
+    version every model had then, and refused without one of its own, as
+    this format is without any part."""
     saved = checkpoints.save_checkpoint(simulator, RunRequest("reference_greenhouse"), time_s=DAY_S)
     current = checkpoints.checkpoint(simulator, saved.checkpoint_id).model_dump(mode="json")
     then = {part: kept for part, kept in current["models"].items() if part not in unnamed}
     older = current | {"checkpoint_format": written_in, "models": then}
 
-    assert current["checkpoint_format"] == checkpoints.CHECKPOINT_FORMAT == 7
+    assert current["checkpoint_format"] == checkpoints.CHECKPOINT_FORMAT == 8
     assert checkpoints.upload_checkpoint(simulator, older) == saved
     walkless = {part: kept for part, kept in then.items() if part != "crop_walk"}
     assert (
@@ -351,7 +356,7 @@ def test_a_checkpoint_of_an_earlier_format_names_the_parts_there_were_then(
         "crop_walk"
     ) in _refusal(simulator, older | {"models": walkless})
     assert (
-        f"a format 7 checkpoint keeps each part's model, and this one none for the "
+        f"a format 8 checkpoint keeps each part's model, and this one none for the "
         f"{', '.join(unnamed)}"
     ) in _refusal(simulator, current | {"models": then})
 

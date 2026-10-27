@@ -1,6 +1,6 @@
 {
   "$schema": "../scenario.schema.json",
-  "schema_version": 6,
+  "schema_version": 7,
   "greenhouse_id": "climate_box",
   "name": "Climate box",
   "description": "A small single-span house of 32 tomato plants, shut and still, where climate equipment is tried, 14 days",
