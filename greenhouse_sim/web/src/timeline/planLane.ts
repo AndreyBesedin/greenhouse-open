@@ -40,11 +40,14 @@ export type PlanLaneState =
   | { status: "loaded"; entries: PlanEntry[] };
 
 /** The run whose plan lane is drawn: its identifier, its epoch, and the
- * instant its clock started at. */
+ * instant its clock started at; and how many times the viewer has given it
+ * a plan (`version`), so that the lane is read again after each, even at a
+ * clock that does not move, as a paused run's does not. */
 export interface PlanLaneRun {
   runId: string;
   epoch: number;
   startedAt: string;
+  version?: number;
 }
 
 /** What carried an action out, of the outcomes. */

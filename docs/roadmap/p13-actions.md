@@ -1095,7 +1095,9 @@ plan, the timeline's plan lane, and crop actions given from the viewer.
   come. The window's actions are listed in the order of their moments,
   each with its outcome and, where the run gives one, why; those still to
   come as soon as they can, last. It is read again as the moment drawn
-  moves on.
+  moves on, and each time the viewer gives the run a plan, at a paused
+  clock too. A plan another client gives a paused run shows once its clock
+  moves on, or the timeline is opened again.
 - **Not yet:** the schedule's remove and repeat edit the run drawn, not the
   plan, and so make another run while one is followed; crop actions given
   to a followed run are not drawn, since the address has no spelling for
