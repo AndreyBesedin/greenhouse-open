@@ -24,6 +24,7 @@ const ANSWER = {
   every_s: 300,
   targets: [[129_660, "heating_night", 22]],
   commands: [[129_630, "roof_vent", 0.5]],
+  crop: [[172_800, "p30", "lower_stem", "1"]],
 };
 const STATE = {
   runId: "reference_greenhouse-climate-c562c827",
@@ -38,6 +39,7 @@ const STATE = {
   workedOutS: 172_800,
   targets: [{ timeS: 129_660, target: "heating_night", valueC: 22 }],
   commands: [{ timeS: 129_630, actuatorId: "roof_vent", level: 0.5 }],
+  crop: [{ timeS: 172_800, plantId: "p30", kind: "lower_stem", target: "1" }],
 };
 
 function answering(status: number, body: unknown): typeof fetch {

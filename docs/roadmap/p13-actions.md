@@ -600,7 +600,7 @@ within the day; the action format needs no change for it.
 | P13.5 | Crop actions on the run: `harvest`, `lower`, `remove_leaf`, `inspect` at a day's start, refused at other instants and `water` refused, with their reasons; the organ model's `PlantAction` renamed `PlantOperation`; the plant lab and crop work give them; events name their actions. | `feat(sim): crop actions and their outcomes on the run` | Done: the organ crop's operations (#351), the protocol's reasons and events (#353), a run's plan on its crop (#354), and its playback's outcomes (#356) |
 | P13.6 | The graph, windows and lateness, with a simulated executor whose actions take time and which has a number of hands, so that `late`, `missed`, fallbacks and cancelled dependents happen, deterministically. | `feat(sim): plans with order, windows and lateness` | Done: the gateway's start and hands (#363), and the run's crew (#365) |
 | P13.7 | The gateway's write side and its routes: give a plan before a run, steer a playing one, list the actions as they stand, cancel a plan or chosen actions, read the plan in force; the playback's targets route becomes an alias. | `feat(api): give, steer and read a run's plan` | Done |
-| P13.8 | The viewer: the Equipment, Openings and Targets panels and the plant lab write one plan; a plan lane in the timeline shows what was due, what happened and why. | `feat(viewer): one plan, and its outcomes in the timeline` | In progress: the panels steer a followed run through its plan (#385), and its plan lane |
+| P13.8 | The viewer: the Equipment, Openings and Targets panels and the plant lab write one plan; a plan lane in the timeline shows what was due, what happened and why. | `feat(viewer): one plan, and its outcomes in the timeline` | Done: the panels steer a followed run through its plan (#385), its plan lane (#386), and crop actions given from the viewer |
 | P13.9 | The old paths removed: the engine's actions, `greenhouse_sim.executor`, the deprecated aliases (`RequestedAction`, `ActionResult` and the old execution names), `LabAction`; the close-the-loop example as a policy loop on the run; the protocol's minor version moves again, and the changelog says so. | `refactor: one way to act on a greenhouse` | Planned |
 | P13.10 | The QA scenario below, run and recorded. | `test(e2e): a plan carried out, late, on time and refused` | Planned |
 
@@ -1098,10 +1098,26 @@ plan, the timeline's plan lane, and crop actions given from the viewer.
   moves on, and each time the viewer gives the run a plan, at a paused
   clock too. A plan another client gives a paused run shows once its clock
   moves on, or the timeline is opened again.
+- **A run's crop actions have an address spelling,** `&crop=`, as its
+  levels have `&schedule=`: `seconds:plant:kind:what`, the kind the plant
+  lab's (`remove_leaf`, `harvest_fruit`, `harvest_truss`, `lower_stem`) or
+  one for each other of the protocol's crop actions (`harvest_ripe`,
+  `lower_cm`, `lower_to`, `inspect`, whose last part is its reason). Each
+  is read as the protocol's own action, refused in the request's words if
+  it is none, and a run asked for so is the run of that plan, with its
+  identity (P13.5). A playback's state lists the crop actions its run was
+  given (`PlaybackState.crop`), and a view following it asks for its crop
+  with them, so that it draws what they did.
+- **Crop actions from the viewer.** On a run followed as it plays, the
+  selected organ offers the plant lab's buttons: remove this leaf, harvest
+  this fruit, harvest its truss, lower the stem. Each is given to the run
+  through the viewer's plan, as soon as it can be carried out, at the next
+  day's start.
+- **The plant lab** keeps its own run. It has no playback, and so no
+  gateway; its actions, the protocol's (P13.5), are its address's plan, as
+  a run's are before it runs.
 - **Not yet:** the schedule's remove and repeat edit the run drawn, not the
-  plan, and so make another run while one is followed; crop actions given
-  to a followed run are not drawn, since the address has no spelling for
-  them (P13.8's third part).
+  plan, and so make another run while one is followed.
 
 ## Decided
 

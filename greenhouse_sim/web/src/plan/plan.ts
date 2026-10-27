@@ -1,10 +1,10 @@
 /**
  * The plan the viewer gives a run it follows (P13.8, decision 0046): what a
- * person sets in its panels, a device's level or a heating target, as the
- * local operator's actions, given through the run's gateway
+ * person sets in its panels, a device's level or a heating target, or asks
+ * of a plant, as the local operator's actions, given through the run's gateway
  * (`/actuation/v1`), the protocol's write side, as any client would. Each
  * is to be carried out as soon as the run can: a level at once, a target on
- * the minute.
+ * the minute, a plant's work at its next day's start.
  *
  * One plan, `viewer`, revised at each change: a revision keeps the actions
  * of the one before not yet resolved and adds the new ones, each under an
@@ -13,6 +13,7 @@
  */
 
 import { contractCheck } from "../loadJson";
+import type { LabAction } from "../plants/lab";
 import { loadPlayback } from "../scene/playback";
 import { PLAN_STATE_SCHEMA } from "./generated/planStateSchema";
 import type { PlanState } from "./generated/planStateTypes";
@@ -59,6 +60,22 @@ export function setLevel(deviceId: string, level: number): Action {
 /** A heating target, `heating_day` or `heating_night`, in °C. */
 export function setTarget(target: string, valueC: number): Action {
   return { kind: "set_target", target: target as "heating_day", value_c: valueC };
+}
+
+/** The protocol's action a plant's button asks for, as the plant lab names
+ * it: a leaf removed, a fruit or a truss harvested, the stem lowered by so
+ * many internodes. */
+export function cropAction({ plantId, kind, target }: LabAction): Action {
+  switch (kind) {
+    case "remove_leaf":
+      return { kind: "remove_leaf", plant_id: plantId, leaf_id: target };
+    case "harvest_fruit":
+      return { kind: "harvest", plant_id: plantId, scope: "fruit", organ_id: target };
+    case "harvest_truss":
+      return { kind: "harvest", plant_id: plantId, scope: "truss", organ_id: target };
+    case "lower_stem":
+      return { kind: "lower", plant_id: plantId, by_internodes: Number(target) };
+  }
 }
 
 /**

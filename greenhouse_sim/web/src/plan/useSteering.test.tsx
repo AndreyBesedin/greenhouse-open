@@ -24,6 +24,7 @@ const PLAYBACK = {
   every_s: 300,
   targets: [],
   commands: [],
+  crop: [],
 };
 
 type Steering = ReturnType<typeof useSteering>;
@@ -135,6 +136,19 @@ describe("a followed run steered from the panels", () => {
 
     expect(given[0]).toMatchObject({
       actions: [{ action: { kind: "set_target", target: "heating_day", value_c: 22 } }],
+    });
+  });
+
+  it("gives what is asked of a plant at once", async () => {
+    vi.useFakeTimers();
+    const { fetchFn, given } = gateway();
+    render(<Steered shown={{}} fetchFn={fetchFn} />);
+
+    act(() => steering?.act([{ kind: "lower", plant_id: "p30", by_internodes: 1 }]));
+    await waited(0);
+
+    expect(given[0]).toMatchObject({
+      actions: [{ action: { kind: "lower", plant_id: "p30" }, timing: { kind: "asap" } }],
     });
   });
 });

@@ -39,7 +39,9 @@ export function actionsFor(
 /**
  * Actions on the selected organ's plant, scheduled at the start of the day on
  * show: they change it from then on, and the plant's history says what each
- * did, or why it was refused. The latest action can be taken back, or all.
+ * did, or why it was refused. The latest action can be taken back, or all,
+ * where they can be (`onUndo`, `onClear`): in the plant lab, not on a run
+ * followed as it plays, which is given each through its plan (P13.8).
  */
 export function PlantActions({
   entity,
@@ -55,8 +57,8 @@ export function PlantActions({
   /** How many actions the run schedules already. */
   scheduled: number;
   onAct: (action: LabAction) => void;
-  onUndo: () => void;
-  onClear: () => void;
+  onUndo?: () => void;
+  onClear?: () => void;
 }) {
   const choices = entity === null ? [] : actionsFor(entity, day);
   if (choices.length === 0 && scheduled === 0) {
@@ -69,7 +71,7 @@ export function PlantActions({
           {label}
         </button>
       ))}
-      {scheduled > 0 && (
+      {scheduled > 0 && onUndo !== undefined && onClear !== undefined && (
         <>
           <button type="button" onClick={onUndo}>
             Take back the last action

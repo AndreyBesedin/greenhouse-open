@@ -79,6 +79,22 @@ describe("a scenario's run, as the viewer asks for it", () => {
     );
   });
 
+  it("asks with its crop actions, after its target changes, for every part of it (P13.8)", () => {
+    const run = runOf(
+      "?scenario=reference_greenhouse&field=climate&t=30600&targets=25200:heating_day:24&crop=172800:p30:harvest_truss:p30_t03,259200:p30:lower_stem:1",
+    );
+
+    expect(runParameters(run)).toEqual([
+      "targets=25200:heating_day:24",
+      "crop=172800:p30:harvest_truss:p30_t03,259200:p30:lower_stem:1",
+      "t=30600",
+    ]);
+    // Its sensors read the same run, its crop actions and all.
+    expect(sensorsUrl(run.scenarioId, "observations", run)).toContain(
+      "crop=172800:p30:harvest_truss:p30_t03,259200:p30:lower_stem:1",
+    );
+  });
+
   it("writes its parts in the API's order, only those asked for, and not its start", () => {
     const run = runOf(
       "?scenario=climate_box&layout=open&field=climate&t=0&set=fan:1&schedule=60:fan:0&weather=hot_day",

@@ -62,6 +62,17 @@ describe("the run a followed view draws, against the one played back", () => {
     });
   });
 
+  it("takes the crop actions the run played back was given as its own (P13.8)", () => {
+    const given = [{ timeS: 172_800, plantId: "p30", kind: "lower_stem", target: "1" }];
+    const drawn: ScenarioSource = { ...FOLLOWED, crop: given };
+
+    expect(runChanges(drawn, "default", "", "172800:p30:lower_stem:1")).toEqual([]);
+    expect(runChanges(FOLLOWED, "default", "", "172800:p30:lower_stem:1")).toEqual([
+      "its crop actions",
+    ]);
+    expect(withoutRunChanges(FOLLOWED, "default", [], given)).toEqual(drawn);
+  });
+
   it("goes back to the run played back, keeping the view's own parts", () => {
     const changed: ScenarioSource = { ...FOLLOWED, weather: "cold", openings: { door: 1 } };
 

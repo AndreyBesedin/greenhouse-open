@@ -30,9 +30,11 @@ import { PanelSide } from "./PanelSide";
 import { PlaybackPanel } from "./PlaybackPanel";
 import { usePanelFolds } from "./panelFolds";
 import { usePanelTheme } from "./panelTheme";
+import { cropAction } from "./plan/plan";
 import { useSteering } from "./plan/useSteering";
 import { LabPanels } from "./plants/LabPanels";
 import { type LabRun, PLANT_LAB_POSE } from "./plants/lab";
+import { PlantActions } from "./plants/PlantActions";
 import { PlantDays } from "./plants/PlantDays";
 import { PlantLight } from "./plants/PlantLight";
 import { useLabPlay } from "./plants/useLabPlay";
@@ -486,34 +488,43 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 onOwnRange={() => setFieldRange(null)}
               >
                 {followed !== null && (
-                  <PlaybackPanel
-                    load={playback}
-                    days={summary?.duration_days ?? null}
-                    changed={anotherRun}
-                    refusal={steering.refusal}
-                    onCommand={(command) =>
-                      void commandPlayback(followed, command).then(setPlayback)
-                    }
-                    onStart={() => void commandPlayback(followed, "start").then(setPlayback)}
-                    onOwnRun={() =>
-                      setSource((current) =>
-                        withoutRunChanges(
-                          current,
-                          playedLayout,
-                          playback.status === "loaded" ? playback.state.commands : [],
-                        ),
-                      )
-                    }
-                    onStop={() =>
-                      setSource((current) => {
-                        if (current.kind !== "scenario") {
-                          return current;
-                        }
-                        const { follow: _, ...rest } = current;
-                        return rest;
-                      })
-                    }
-                  />
+                  <>
+                    <PlaybackPanel
+                      load={playback}
+                      days={summary?.duration_days ?? null}
+                      changed={anotherRun}
+                      refusal={steering.refusal}
+                      onCommand={(command) =>
+                        void commandPlayback(followed, command).then(setPlayback)
+                      }
+                      onStart={() => void commandPlayback(followed, "start").then(setPlayback)}
+                      onOwnRun={() =>
+                        setSource((current) =>
+                          withoutRunChanges(
+                            current,
+                            playedLayout,
+                            playback.status === "loaded" ? playback.state.commands : [],
+                            playback.status === "loaded" ? playback.state.crop : [],
+                          ),
+                        )
+                      }
+                      onStop={() =>
+                        setSource((current) => {
+                          if (current.kind !== "scenario") {
+                            return current;
+                          }
+                          const { follow: _, ...rest } = current;
+                          return rest;
+                        })
+                      }
+                    />
+                    <PlantActions
+                      entity={selected}
+                      day={0}
+                      scheduled={0}
+                      onAct={(action) => steering.act([cropAction(action)])}
+                    />
+                  </>
                 )}
               </ScenarioPanels>
             )}

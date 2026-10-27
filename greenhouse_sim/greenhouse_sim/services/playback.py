@@ -242,6 +242,10 @@ class PlaybackState(BaseModel):
     # vents (P13.8), as its plan holds them: each its moment in seconds, its
     # device and its level, as a run's `&schedule=` writes them.
     commands: list[tuple[float, str, float]] = []
+    # The crop actions its epoch's run has been given (P13.8): each its
+    # moment in seconds, its plant, its kind and what it acts on, as a run's
+    # `&crop=` writes them.
+    crop: list[tuple[float, str, str, str]] = []
 
 
 @dataclass(frozen=True)
@@ -739,6 +743,7 @@ class Playback:
             every_s=self.every_s,
             targets=list(planned.targeted()),
             commands=list(planned.commanded()),
+            crop=list(planned.crop_spelled()),
         )
 
     def state(self) -> PlaybackState:

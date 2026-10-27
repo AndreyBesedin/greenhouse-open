@@ -66,6 +66,9 @@ export type SceneSource =
       /** Changes to its targets, each from a moment on, in the order given
        * (#274, decision 0043). */
       targets?: TargetChange[];
+      /** Actions on its crop, each at a day's start, in the order given
+       * (P13.8). */
+      crop?: CropCommand[];
       /** Another of its fields, compared with the drawn one at the probes. */
       compare?: string;
       /** Points the drawn field is read at. */
@@ -90,6 +93,17 @@ export interface TargetChange {
   timeS: number;
   target: string;
   valueC: number;
+}
+
+/** An action on a run's crop at a moment of it, as the address spells it
+ * (P13.8): its plant, its kind (`remove_leaf`, `harvest_fruit`,
+ * `harvest_truss`, `lower_stem`, ...) and what it acts on, as the
+ * simulator's `&crop=` takes them. */
+export interface CropCommand {
+  timeS: number;
+  plantId: string;
+  kind: string;
+  target: string;
 }
 
 /** A command to a piece of equipment at a moment of a climate run. */
@@ -132,6 +146,7 @@ export function sourceFromSearch(search: string): SceneSource {
     const schedule = scheduleFrom(parameters.get("schedule"));
     const daily = dailyFrom(parameters.get("daily"));
     const targets = targetsFrom(parameters.get("targets"));
+    const crop = cropFrom(parameters.get("crop"));
     const probes = probesFrom(parameters.get("probes"));
     const camera = cameraFrom(parameters.get("camera"));
     return {
@@ -148,6 +163,7 @@ export function sourceFromSearch(search: string): SceneSource {
       ...(field && schedule !== null ? { schedule } : {}),
       ...(field && daily !== null ? { daily } : {}),
       ...(field && targets !== null ? { targets } : {}),
+      ...(crop !== null ? { crop } : {}),
       ...(field && compare && compare !== field ? { compare } : {}),
       ...(field && probes ? { probes } : {}),
       ...(parameters.get("cfd") === CFD_BOUNDARIES ? { cfdBoundaries: true as const } : {}),
@@ -249,7 +265,7 @@ export function searchFor(source: SceneSource): string {
         .map((part) => `&${part}`)
         .join(
           "",
-        )}${source.clouds === undefined ? "" : `&clouds=${source.clouds}`}${source.wind === undefined ? "" : `&wind=${source.wind}`}${fieldQuery(source)}${source.cfdBoundaries ? `&cfd=${CFD_BOUNDARIES}` : ""}${source.camera === undefined ? "" : `&camera=${cameraText(source.camera)}`}${source.follow ? "&follow=1" : ""}`;
+        )}${source.clouds === undefined ? "" : `&clouds=${source.clouds}`}${source.wind === undefined ? "" : `&wind=${source.wind}`}${fieldQuery(source)}${source.crop === undefined || source.crop.length === 0 ? "" : `&crop=${cropText(source.crop)}`}${source.cfdBoundaries ? `&cfd=${CFD_BOUNDARIES}` : ""}${source.camera === undefined ? "" : `&camera=${cameraText(source.camera)}`}${source.follow ? "&follow=1" : ""}`;
     case "live":
       return `?live=${encodeURIComponent(source.scenarioId)}`;
   }
@@ -354,6 +370,37 @@ export function scheduleFrom(value: string | null): ScheduledCommand[] | null {
     commands.push({ timeS, actuatorId: decodeURIComponent(actuatorId), level: shown });
   }
   return commands;
+}
+
+/** Crop actions as the address bar and the simulator's API both write them
+ * (P13.8): `86400:p30:lower_stem:1,172800:p30:harvest_truss:p30_t03`, in
+ * the order given. */
+export function cropText(actions: readonly CropCommand[] | undefined): string {
+  return (actions ?? [])
+    .map(
+      ({ timeS, plantId, kind, target }) =>
+        `${timeS}:${encodeURIComponent(plantId)}:${kind}:${encodeURIComponent(target)}`,
+    )
+    .join(",");
+}
+
+/** The crop actions an address asks for, or null when it asks for none or
+ * says nothing readable: `value` as the address's parameters read it,
+ * decoded once already. The simulator checks them itself. */
+export function cropFrom(value: string | null): CropCommand[] | null {
+  if (!value) {
+    return null;
+  }
+  const actions: CropCommand[] = [];
+  for (const action of value.split(",")) {
+    const [time, plantId, kind, ...rest] = action.split(":");
+    const timeS = Number(time);
+    if (!plantId || !kind || rest.length === 0 || !Number.isFinite(timeS)) {
+      return null;
+    }
+    actions.push({ timeS, plantId, kind, target: rest.join(":") });
+  }
+  return actions;
 }
 
 /** Target changes as the address bar and the simulator's API both write
