@@ -245,7 +245,7 @@ jobs:
     # 0014). Its version moves with @playwright/test, by hand on that
     # package's pull request (tests/test_pins.py).
     container:
-      image: mcr.microsoft.com/playwright:v1.64.0-noble-amd64
+      image: mcr.microsoft.com/playwright:v1.64.1-noble-amd64
     defaults:
       run:
         working-directory: greenhouse_sim/web
