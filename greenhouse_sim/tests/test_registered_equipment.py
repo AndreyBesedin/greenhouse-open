@@ -8,7 +8,7 @@ from collections.abc import Iterator
 from typing import Any, Final, Literal
 
 import pytest
-from pydantic import PositiveFloat, ValidationError
+from pydantic import PositiveFloat, TypeAdapter, ValidationError
 
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED, Catalogue
@@ -19,7 +19,13 @@ from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import SceneChanges, initial_scene
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.capabilities import Capability, Heats
-from greenhouse_sim.world.equipment import EQUIPMENT_KINDS, Unit, register_equipment
+from greenhouse_sim.world.equipment import (
+    EQUIPMENT_KINDS,
+    Equipment,
+    Fan,
+    Unit,
+    register_equipment,
+)
 
 SCENARIO: Final = "climate_box"
 HOUR_S: Final = 3600.0
@@ -49,6 +55,17 @@ PANEL: Final = {
     "size_z": 0.8,
     "power_w": 5_000.0,
 }
+
+
+class LoudFan(Fan):
+    """A fan of another class under the packaged fan's kind, which it does
+    not register."""
+
+
+# The climate box's fan, as a layout holds it.
+(FAN,) = [piece for piece in SCENARIO_REGISTRY[SCENARIO].layout.equipment if isinstance(piece, Fan)]
+# A piece of equipment of any kind registered, read as a layout reads it.
+EQUIPMENT: Final = TypeAdapter[Any](Equipment)
 
 
 @pytest.fixture
@@ -120,3 +137,26 @@ def test_a_kind_is_registered_by_its_own_name_once(registered: type[RadiantPanel
     with pytest.raises(ValueError, match="the kind 'radiant_panel' is RadiantPanel's"):
         register_equipment(Another)
     assert register_equipment(registered) is registered
+
+
+@pytest.mark.parametrize(
+    ("piece", "said"),
+    [
+        (RadiantPanel.model_validate(PANEL), "no kind of equipment 'radiant_panel': the kinds"),
+        (LoudFan.model_validate(FAN.model_dump()), "the kind 'fan' is Fan's, not LoudFan's"),
+    ],
+)
+def test_a_piece_given_of_a_class_not_registered_is_refused(piece: Any, said: str) -> None:
+    """A piece given as it is, not written out, is refused as one written
+    out would be: its class not registered, it would be written, and then
+    not read back, or read back as the class registered under its kind."""
+    with pytest.raises(ValidationError, match=said):
+        EQUIPMENT.validate_python(piece)
+
+
+def test_a_piece_given_of_its_kinds_class_is_taken_as_it_is_and_reads_back(
+    registered: type[RadiantPanel],
+) -> None:
+    for piece in (FAN, registered.model_validate(PANEL)):
+        assert EQUIPMENT.validate_python(piece) is piece
+        assert EQUIPMENT.validate_json(EQUIPMENT.dump_json(piece)) == piece

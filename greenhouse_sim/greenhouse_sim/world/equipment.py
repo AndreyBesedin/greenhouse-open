@@ -300,11 +300,7 @@ def _union(kinds: tuple[type[EquipmentPiece], ...]) -> Any:
 
 def _read(given: Any) -> EquipmentPiece:
     if isinstance(given, EquipmentPiece):
-        named = given.kind
-        if EQUIPMENT_KINDS.get(named) is type(given):
-            return given
-        kinds = ", ".join(EQUIPMENT_KINDS)
-        raise ValueError(f"no kind of equipment {named!r} for {type(given).__name__}: the kinds are {kinds}")
+        return _registered(given)
     named = given.get("kind") if isinstance(given, dict) else None
     kind = EQUIPMENT_KINDS.get(named) if isinstance(named, str) else None
     if kind is None:
@@ -320,6 +316,20 @@ def _read(given: Any) -> EquipmentPiece:
                 for found in error.errors()
             )
         ) from None
+
+
+def _registered(piece: EquipmentPiece) -> EquipmentPiece:
+    """A piece given as it is, if its class is the kind registered under
+    its name: one of another class would be written, and then not read
+    back, or read back as another."""
+    named = str(piece.kind)
+    kind = EQUIPMENT_KINDS.get(named)
+    if kind is type(piece):
+        return piece
+    if kind is None:
+        kinds = ", ".join(EQUIPMENT_KINDS)
+        raise ValueError(f"no kind of equipment {named!r}: the kinds are {kinds}")
+    raise ValueError(f"the kind {named!r} is {kind.__name__}'s, not {type(piece).__name__}'s")
 
 
 # A piece of equipment of any kind registered, as a layout holds it: read by
