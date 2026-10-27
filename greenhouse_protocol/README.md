@@ -28,10 +28,9 @@ implement. Part of [greenhouse-open](../README.md). Apache-2.0.
   - `Assignment` and `ExecutionReport` (`assignment`): what a gateway and
     an executor exchange.
 
-  Their JSON Schemas are published in the package (`schemas/`).
-- `RequestedAction` (`action`) and the `ActionOutcome` of `execution`:
-  deprecated, replaced by the above, and kept as they are until the
-  simulator carries the new format out.
+  Their JSON Schemas are published in the package (`schemas/`). They
+  replace the first action format, `RequestedAction` and its outcome,
+  removed in P13.9.
 
 Chronology is the timestamp alone, always timezone-aware: every record
 refuses a naive time (`greenhouse_protocol.instant.Instant`).
@@ -39,12 +38,11 @@ refuses a naive time (`greenhouse_protocol.instant.Instant`).
 What was observed or happened cannot be edited: observations, events,
 captures, frames and sensors are frozen, and so are the records of acting
 on a greenhouse: actions, plans, outcomes, assignments, reports and
-authorisation configurations. A greenhouse description, and the deprecated
-`RequestedAction` and `execution.ActionOutcome`, can be, by assigning a
-field, and each edit is checked as the record was when built; a refused
-edit leaves the record as it was. A
-description's plants, compartments and layout are values that an edit
-replaces, so that the description checks it.
+authorisation configurations. A greenhouse description can be, by
+assigning a field, and each edit is checked as the record was when built; a
+refused edit leaves the record as it was. A description's plants,
+compartments and layout are values that an edit replaces, so that the
+description checks it.
 
 ## Contracts (`greenhouse_protocol.contracts`)
 
@@ -61,8 +59,7 @@ replaces, so that the description checks it.
   and is asked how an assignment stands when its report does not come;
   `check_executor` holds one to that, with an action of a kind it carries
   out: by default the first it names, or one given. How an environment that cannot
-  execute (a recorded history) refuses: `ActionNotExecutable`. Its
-  `ActionExecutionAdapter` is deprecated.
+  execute (a recorded history) refuses: `ActionNotExecutable`.
 - `memory_gateway`: an in-memory reference implementation of the two, a
   gateway on a clock that continues and an executor into which faults can
   be injected (a lost send, an executor that cannot be reached), to

@@ -601,7 +601,7 @@ within the day; the action format needs no change for it.
 | P13.6 | The graph, windows and lateness, with a simulated executor whose actions take time and which has a number of hands, so that `late`, `missed`, fallbacks and cancelled dependents happen, deterministically. | `feat(sim): plans with order, windows and lateness` | Done: the gateway's start and hands (#363), and the run's crew (#365) |
 | P13.7 | The gateway's write side and its routes: give a plan before a run, steer a playing one, list the actions as they stand, cancel a plan or chosen actions, read the plan in force; the playback's targets route becomes an alias. | `feat(api): give, steer and read a run's plan` | Done |
 | P13.8 | The viewer: the Equipment, Openings and Targets panels and the plant lab write one plan; a plan lane in the timeline shows what was due, what happened and why. | `feat(viewer): one plan, and its outcomes in the timeline` | Done: the panels steer a followed run through its plan (#385), its plan lane (#386), and crop actions given from the viewer |
-| P13.9 | The old paths removed: the engine's actions, `greenhouse_sim.executor`, the deprecated aliases (`RequestedAction`, `ActionResult` and the old execution names), `LabAction`; the close-the-loop example as a policy loop on the run; the protocol's minor version moves again, and the changelog says so. | `refactor: one way to act on a greenhouse` | Planned |
+| P13.9 | The old paths removed: the engine's actions, `greenhouse_sim.executor`, the deprecated aliases (`RequestedAction`, `ActionResult` and the old execution names), `LabAction`; the close-the-loop example as a policy loop on the run; the protocol's minor version moves again, and the changelog says so. | `refactor: one way to act on a greenhouse` | Done: the close-the-loop example as a policy (#393), the plant lab's crop actions (#394), the engine's actions and executor (#395), and the protocol's first action format |
 | P13.10 | The QA scenario below, run and recorded. | `test(e2e): a plan carried out, late, on time and refused` | Planned |
 
 ## Acceptance criteria
@@ -1118,6 +1118,36 @@ plan, the timeline's plan lane, and crop actions given from the viewer.
   a run's are before it runs.
 - **Not yet:** the schedule's remove and repeat edit the run drawn, not the
   plan, and so make another run while one is followed.
+
+## Settled in P13.9
+
+- **The plant lab takes the protocol's crop actions,** spelled as a run's
+  are. Its run's steps (`LabStep`) are each a day and a `harvest`, `lower`
+  or `remove_leaf`, read from `&act=day:plant:kind:what` by a run's own
+  spelling (`runs.spelled_crop_action`), so `harvest_ripe` and `lower_cm`
+  are the lab's too. It refuses `lower_to` by name, since its plants hang
+  from no wire, and `inspect`, which changes no plant. `LabAction` is
+  gone.
+- **A policy acts on a run as a person does,** through its gateway
+  (`examples/03_close_the_loop.py`): it reads observations and outcomes
+  through the consumer interface, gives the next revision of its plan as
+  a principal of its own, and moves the run's clock. A playback's moment
+  follows its clock no further than its records are worked out, and they
+  are worked again from each change of its plan, so a policy that moves
+  the clock by hand moves it again from wherever the run stopped short.
+- **The engine takes no actions.** `SimulationEngine.apply_actions`, its
+  executor (`greenhouse_sim.executor`) and `greenhouse_sim.actions` are
+  removed, and watering with them: a run has no water to give.
+- **The protocol has one action format.** Its first, `RequestedAction`,
+  its four types and `ActionResult` (`action`), the old `ActionOutcome`
+  and `ExecutionStatus` (`execution`), `ActionExecutionAdapter` and
+  `ActionExecutorType`, are removed, and a test holds that none comes
+  back (`greenhouse_protocol/tests/test_removed_names.py`).
+  `ActionNotExecutable` stays, as how an environment that cannot execute
+  refuses.
+- **Versions.** As decided in P13.1, a feature moves no version: the
+  release after P13.9 moves the protocol's minor version (decision 0045),
+  and each step's changelog entry names what it removed as breaking.
 
 ## Decided
 

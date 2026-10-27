@@ -172,15 +172,6 @@ class Provenance(StrEnum):
     INFERRED = "INFERRED"
 
 
-class ActionExecutorType(StrEnum):
-    """Who/what actually carries out an accepted action, as opposed to who
-    decided it. Only one member exists today; a second implementation (a
-    simulated robot with different characteristics, later a real one) is a
-    new member plus one new executor, not a refactor."""
-
-    SIMULATED_OPERATOR = "SIMULATED_OPERATOR"
-
-
 class CaptureModality(StrEnum):
     """What a MediaCapture recorded. The WUR canopy cameras (Oak-D S2 POE)
     write an RGB image, a depth image aligned to it, and the left and right
