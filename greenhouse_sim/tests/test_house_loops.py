@@ -24,6 +24,7 @@ from greenhouse_sim.climate.control import (
 )
 from greenhouse_sim.climate.day import ClimateDay
 from greenhouse_sim.climate.house import HouseAir, WholeHouse
+from greenhouse_sim.climate.psychrometrics import humidity_ratio_g_kg
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.thermostat import OFF, ON, Thermostat
 from greenhouse_sim.climate.vents import Vent
@@ -375,3 +376,19 @@ def test_an_edge_the_air_stands_at_is_crossed_only_moving_through_it() -> None:
     start = vented.air_at(0.0)
     vented.seed(600.0, HouseAir(18.0, start.humidity_g_kg, start.co2_ppm, vent_stage=1))
     assert vented.air_at(630.0).vent_stage == 1
+
+
+def test_the_air_outside_counts_drier_only_once_the_house_is_wetter_beyond_the_margin() -> None:
+    # The house's air exactly at the margin above the outside's, 1 g/kg, and
+    # drying: the outside does not count as drier.
+    outside_g_kg = float(humidity_ratio_g_kg(12.0, 50.0))
+    at_the_margin = outside_g_kg + 1.0
+    house = _drying(DRY, heating_c=None).house
+    start = house.air_at(0.0)
+    house.seed(
+        600.0,
+        HouseAir(15.0, at_the_margin, start.co2_ppm, dehumidifying=True, vent_stage=0),
+    )
+
+    assert at_the_margin - outside_g_kg == 1.0
+    assert not house.air_at(630.0).drier

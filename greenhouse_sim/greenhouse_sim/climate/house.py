@@ -180,27 +180,42 @@ class _Course:
             return None
         return (start_g_kg - edge_g_kg) / self.drying_g_kg_s
 
+    def water_heads(self, start_g_kg: float, *, up: bool) -> bool:
+        """Whether the air's humidity ratio at `start_g_kg` moves up, or down
+        if not `up`: the only way it crosses an edge it stands at."""
+        if self.venting_s > 0:
+            change = self.outside_g_kg - self.drying_g_kg_s / self.venting_s - start_g_kg
+        else:
+            change = -self.drying_g_kg_s
+        return change > 0 if up else change < 0
+
     def humidity_reaching_s(
-        self, start_c: float, start_g_kg: float, edge_pct: float, within_s: float
+        self, start_c: float, start_g_kg: float, edge_pct: float, within_s: float, *, up: bool
     ) -> float | None:
-        """How long the air's relative humidity takes to reach `edge_pct`,
-        from `start_c` and `start_g_kg`, if it does within `within_s`: where
-        its humidity ratio meets what air at its temperature then holds at
-        that relative humidity, the first time, found to a nanosecond. Each
-        of the two moves as one exponential, so the edge is bracketed by
-        moments a fraction of the quicker one's time apart, then halved."""
+        """How long the air's relative humidity takes to pass `edge_pct`,
+        rising if `up`, falling if not, from `start_c` and `start_g_kg`, if it
+        does within `within_s`: where its humidity ratio meets what air at
+        its temperature then holds at that relative humidity, the first
+        time, found to a nanosecond. Each of the two moves as one
+        exponential, so the edge is bracketed by moments a fraction of the
+        quicker one's time apart, then halved. An edge it stands at is
+        passed only moving that way."""
 
         def beyond(duration_s: float) -> float:
             temperature = self.temperature_c(start_c, duration_s)
             holds = float(humidity_ratio_g_kg(temperature, edge_pct))
             return self.water_g_kg(start_g_kg, duration_s) - holds
 
-        before = beyond(0.0)
-        if before == 0.0:
-            return 0.0
         quickest = max(self.rate_s, self.venting_s, 1.0 / within_s)
         wanted = math.ceil(within_s * quickest * SAMPLES_A_RATE)
         samples = min(MOST_SAMPLES, max(FEWEST_SAMPLES, wanted))
+        before = beyond(0.0)
+        if before == 0.0:
+            # At its edge: passed at once if it moves that way; otherwise
+            # from the side it moves to.
+            before = beyond(within_s / samples)
+            if (before > 0) == up and before != 0.0:
+                return 0.0
         earlier = 0.0
         for sample in range(1, samples + 1):
             later = within_s * sample / samples
@@ -449,6 +464,7 @@ class WholeHouse:
                 air.humidity_g_kg,
                 drying.edge_pct(air.dehumidifying),
                 within_s,
+                up=not air.dehumidifying,
             )
             if reached is not None and reached < within_s:
                 switches.append((reached, _dehumidifier_switched))
@@ -456,6 +472,9 @@ class WholeHouse:
         if venting_drier is not None:
             edge = course.outside_g_kg + venting_drier.drier_edge_g_kg(air.drier)
             reached = course.water_reaching_s(air.humidity_g_kg, edge)
+            if reached == 0.0 and not course.water_heads(air.humidity_g_kg, up=not air.drier):
+                # At its edge, but moving away from it: not crossed.
+                reached = None
             if reached is not None and reached < within_s:
                 switches.append((reached, _drier_switched))
         return min(switches, key=lambda switch: switch[0]) if switches else None
