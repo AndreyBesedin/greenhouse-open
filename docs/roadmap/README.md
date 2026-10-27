@@ -115,6 +115,8 @@ adds a visible or measurable result.
 | [P13](p13-actions.md) | One action format, and a plan a run's gateway carries out | In progress |
 | [P14](p14-models-by-manifest.md) | Models chosen by the manifest, from a registry | In progress |
 
+**Current priority proposal (2026-10-27):** [Scientific reproduction, validation and experiment priorities](research-validation-priorities.md). This closes the existing audit and viewer workspace work first, then prioritizes measured tomato-model reproduction, reusable validation, a bounded Modelica comparison and policy evaluation. Other crops and the natural-language assistant remain on the longer-term roadmap. The existing P11–P14 project plans remain authoritative for their detailed scope.
+
 A project's document is added when its first pull request lands.
 
 **Dependabot** (recorded 2026-10-13, first after P09, before the CI time
