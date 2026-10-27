@@ -115,7 +115,14 @@ adds a visible or measurable result.
 | [P13](p13-actions.md) | One action format, and a plan a run's gateway carries out | In progress |
 | [P14](p14-models-by-manifest.md) | Models chosen by the manifest, from a registry | In progress |
 
-**Current priority proposal (2026-10-27):** [Scientific reproduction, validation and experiment priorities](research-validation-priorities.md). This closes the existing audit and viewer workspace work first, then prioritizes measured tomato-model reproduction, reusable validation, a bounded Modelica comparison and policy evaluation. Other crops and the natural-language assistant remain on the longer-term roadmap. The existing P11–P14 project plans remain authoritative for their detailed scope.
+**What comes after the projects in progress** (proposed 2026-10-27,
+[decision 0057](../decisions/0057-a-published-model-is-reproduced-and-validated-before-the-crops-grow.md)):
+the [research priorities](research-validation-priorities.md). The audit
+closed and the setup builder finished as far as P12.3; of P14, P11 and P13,
+what a first experiment needs; then a published tomato model reproduced as
+a P14 model, a validation on measured data, a bounded Modelica comparison,
+and the evaluation of policies. The future work below keeps its plans, in
+that order; the projects' own documents keep their scope.
 
 A project's document is added when its first pull request lands.
 
@@ -355,25 +362,33 @@ what is expected from outside it, is designed first, in a decision:
   an evaluation scores one component against another.
 
 **Crop models from plant research** (recorded 2026-10-24, future work,
-after P14, whose registry lets a manifest choose a crop model). The
-simulator grows one crop, the tomato, by its own organ model (P03) and by a
-simple daily model, both its own. Published crop modelling, validated in
-greenhouses, informs the first as a reference only. Planned then:
+after P14, whose registry lets a manifest choose a crop model; ordered by
+decision 0057 on 2026-10-27). The simulator grows one crop, the tomato, by
+its own organ model (P03) and by a simple daily model, both its own, and
+neither held to a published result. Planned then:
 
-- **A survey first,** for tomato, cucumber, strawberry and sweet (bell)
-  pepper: the published models of each crop's growth, development, fruit
-  set, yield and quality; their inputs, time steps and the processes they
-  leave out; the greenhouses and data they were validated against; and
-  their licences, and whether their equations or code are published. Its
-  findings, and which models are adopted, adapted or written anew, are
-  recorded in a decision.
-- **The tomato first:** the organ model's processes compared with the
-  established ones, and replaced where the survey shows them better
-  supported, its version raised with its numbers (P14).
-- **Then cucumber, strawberry and sweet pepper,** each a crop model of the
-  registry: its parameters for each variety (P12.4), its organs drawn by
-  the viewer, its records (fruit counts and mass) in the protocol's terms,
-  and a conformance test with the crop part's other models.
+- **A survey of tomato models first:** the tractable published models of
+  its growth, development, fruit set and yield, Reduced-State TOMGRO and a
+  richer one among them; their equations, parameters and their sources,
+  inputs, time steps and the processes they leave out; the greenhouses and
+  data they were validated against; and their licences, and whether their
+  code or outputs are published. The first one chosen, and what counts as
+  reproducing it, are recorded in a decision.
+- **That model reproduced as a P14 crop model:** registered with its
+  parameters, each with its source, and its version (decisions 0054 and
+  0055); compared, before an experiment uses it, with the original
+  implementation, the authors' code run on the same inputs where it is
+  published and their published outputs otherwise, its differences and
+  their causes recorded. Then held to measured data, as the
+  [research priorities](research-validation-priorities.md) say.
+- **The organ model kept,** as a baseline beside it, not replaced process
+  by process.
+- **Then cucumber, strawberry and sweet pepper,** once the tomato's
+  reproduction has tested the registry's crop interface: a survey of each
+  first, then each a crop model of the registry, with its parameters for
+  each variety (P12.4), its organs drawn by the viewer, its records (fruit
+  counts and mass) in the protocol's terms, and a conformance test with
+  the crop part's other models.
 - **Each model held to its sources:** the data it was validated against
   kept as a reference test, where its licence allows.
 
