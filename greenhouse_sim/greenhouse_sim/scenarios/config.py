@@ -84,7 +84,7 @@ class ScenarioConfig(BaseModel):
     # daily commands to them: the parameters of the controller's model
     # `loops` (P14.6); none by default, the model `none`. Its heating loop
     # is the thermostat on its heater (P10.3); the house decides every loop
-    # (P11.2), but a dehumidifying one, until it follows its air's humidity.
+    # (P11.2).
     control: Control | None = None
     start_date: date
     duration_days: PositiveInt
@@ -234,11 +234,6 @@ class ScenarioConfig(BaseModel):
             raise ValueError(
                 f"its control runs {', '.join(commanded)}: daily commands to {them} would take "
                 f"{them} over"
-            )
-        if control.dehumidifying is not None:
-            raise ValueError(
-                "a scenario's control runs no dehumidifying loop until the house follows its "
-                "air's humidity through a stretch (P11.2)"
             )
         return self
 

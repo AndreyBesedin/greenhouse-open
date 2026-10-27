@@ -15,9 +15,8 @@ The rules are exploratory heuristics: they follow the usual structure of a
 climate computer's heating and venting, but no source has yet been checked
 against each one's specifics. The heating loop is decision 0042's
 thermostat (`climate.thermostat`). The house's air decides every loop's
-switches, at the moment each edge is reached (`climate.house`, P11.2); a
-scenario's control holds no dehumidifying loop until the house follows its
-air's humidity too (`scenarios.config`). A manifest gives a
+switches, at the moment each edge is reached, of its temperature or its
+relative humidity (`climate.house`, P11.2). A manifest gives a
 controller as the parameters of the controller's model `loops` (P14.6,
 `scenarios.registry`); a scenario without one runs its devices by its
 commands alone.
@@ -187,6 +186,42 @@ class DehumidifyingLoop(BaseModel):
                 "narrower than its margin"
             )
         return self
+
+    def edge_pct(self, on: bool) -> float:
+        """The relative humidity at which it switches its dehumidifier, on
+        or not until then: off below its band, on above it."""
+        half = self.band_pct / 2
+        return self.target_pct - half if on else self.target_pct + half
+
+    def on_at(self, humidity_pct: float, on: bool) -> bool:
+        """Whether it runs its dehumidifier from a moment the air's relative
+        humidity is `humidity_pct`, on or not until then."""
+        if humidity_pct > self.target_pct + self.band_pct / 2:
+            return True
+        if humidity_pct < self.target_pct - self.band_pct / 2:
+            return False
+        return on
+
+    def drier_edge_g_kg(self, drier: bool) -> float:
+        """By how much the house's humidity ratio exceeds the outside's when
+        the outside stops being drier enough, or starts to: below its margin
+        less its band, above its margin."""
+        return self.drier_by_g_kg - self.drier_band_g_kg if drier else self.drier_by_g_kg
+
+    def drier_at(self, wetter_by_g_kg: float, drier: bool) -> bool:
+        """Whether the air outside is drier enough to vent into, the house's
+        humidity ratio exceeding the outside's by `wetter_by_g_kg`, and it was
+        or not until then."""
+        if wetter_by_g_kg > self.drier_by_g_kg:
+            return True
+        if wetter_by_g_kg < self.drier_by_g_kg - self.drier_band_g_kg:
+            return False
+        return drier
+
+    def vents(self, *, dehumidifying: bool, heating: bool, drier: bool) -> bool:
+        """Whether it opens the vents' first stage: while it runs its
+        dehumidifier, the heater is off and the air outside is drier."""
+        return self.vents_when_drier and dehumidifying and not heating and drier
 
 
 class Control(BaseModel):
