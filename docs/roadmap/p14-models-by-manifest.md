@@ -164,6 +164,9 @@ its parameters, in a section checked against that model's parameter model:
 - `ScenarioConfig`, the scenario resolved, keeps what the run reads. P14.1
   changes only where the manifest writes a choice, so the resolved scenario
   is unchanged, and so is every run id.
+- Format 6 (P14.6) moves the house's air's settings, `climate` at the top,
+  into the house air's section, as the `grid` model's parameters. The
+  `whole_house` model takes the same settings but the grid's mixing.
 
 ### Identity, state and checkpoints
 

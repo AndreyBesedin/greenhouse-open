@@ -1,8 +1,8 @@
 """Scenarios as manifests (P09.1): every scenario is read from its file, in
 a format whose version it states, its house held as an installation (format
-4, decision 0050) and each part's model named in its models (format 5,
-decision 0054), and a manifest the simulator cannot read exactly is refused
-with the reason. The manifests name
+4, decision 0050), each part's model named in its models (format 5,
+decision 0054), its house's air's among them (format 6), and a manifest the
+simulator cannot read exactly is refused with the reason. The manifests name
 `greenhouse_sim/scenarios/scenario.schema.json`, which
 `tests/test_published_schemas.py` holds to the configuration's model.
 """
@@ -15,6 +15,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
+from greenhouse_sim.climate.settings import GridAir, WholeHouseAir
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.scenarios.crop_parameters import CropWalk, SimpleCrop
@@ -50,6 +51,21 @@ FORMAT_3 = Path(__file__).parent / "fixtures" / "format_3_manifests"
 def _in_format_3(scenario_id: str) -> dict[str, Any]:
     document: dict[str, Any] = json.loads((FORMAT_3 / f"{scenario_id}.json").read_text())
     return document
+
+
+def _in_format_5(scenario_id: str) -> dict[str, Any]:
+    """A packaged manifest as format 5 wrote it: its house's air's settings
+    a field of the configuration's own, `climate`, and a note on them on
+    it."""
+    document = _manifest(scenario_id)
+    models = dict(document["models"])
+    air = models.pop("house_air", None)
+    notes = {
+        ("climate" if about == "models.house_air" else about): note
+        for about, note in document["notes"].items()
+    }
+    older = document | {"schema_version": 5, "models": models, "notes": notes}
+    return older | ({"climate": air["parameters"]} if air is not None else {})
 
 
 def _installation(document: dict[str, Any], **changes: Any) -> dict[str, Any]:
@@ -100,7 +116,7 @@ def test_a_manifest_in_a_format_it_does_not_read_is_refused() -> None:
         document = _manifest("climate_box") | {"schema_version": version}
         with pytest.raises(
             InvalidManifest,
-            match="this simulator reads format 5, and formats 1, 2, 3, 4 migrated to it",
+            match="this simulator reads format 6, and formats 1, 2, 3, 4, 5 migrated to it",
         ):
             scenario_from_manifest("climate_box", document)
 
@@ -347,6 +363,7 @@ def test_a_run_says_what_it_is_made_from() -> None:
                 "crop_walk": "walk",
                 "sunlight": "haurwitz_erbs",
                 "sensors": "sampled",
+                "house_air": "grid",
             }.items()
         },
     )
@@ -384,6 +401,7 @@ def test_the_schema_writes_each_parts_model_in_its_models_not_at_the_top() -> No
         "crop_walk",
         "sunlight",
         "sensors",
+        "house_air",
     }
     weathers = models["properties"]["weather"]["oneOf"]
     assert [section["properties"]["model"] for section in weathers] == [
@@ -408,7 +426,9 @@ def test_the_schema_writes_each_parts_model_in_its_models_not_at_the_top() -> No
         scenario_from_manifest(
             "climate_box", _models(_manifest("climate_box"), weather={"model": "recorded"})
         )
-    assert not {"weather", "airflow", "max_trusses", "height_noise_cm"} & set(schema["properties"])
+    assert not {"weather", "airflow", "max_trusses", "height_noise_cm", "climate"} & set(
+        schema["properties"]
+    )
 
 
 def test_each_parts_model_and_its_parameters_are_read_from_its_section() -> None:
@@ -502,7 +522,7 @@ def test_a_format_4_manifest_writes_its_choices_in_its_models_to_the_same_scenar
     settings and the walk's noises in their parts' sections (P14.1); a
     format 4 manifest is read as one, to the same scenario, its notes on
     them on their parts."""
-    current = _manifest("climate_box")
+    current = _in_format_5("climate_box")
     weather = current["models"]["weather"]
     older = {key: value for key, value in current.items() if key != "models"} | {
         "schema_version": 4,
@@ -522,6 +542,7 @@ def test_a_format_4_manifest_writes_its_choices_in_its_models_to_the_same_scenar
         "air_field": {"model": "vortex"},
         "crop": {"model": "simple", "parameters": {"max_trusses": 4}},
         "crop_walk": {"model": "walk", "parameters": {"height_noise_cm": 0.5}},
+        "house_air": _manifest("climate_box")["models"]["house_air"],
     }
     assert {
         key: migrated["notes"][key] for key in migrated["notes"] if key.startswith("models")
@@ -529,6 +550,7 @@ def test_a_format_4_manifest_writes_its_choices_in_its_models_to_the_same_scenar
         "models.weather": "Cold.",
         "models.crop": "Four.",
         "models.air_field": "Up.",
+        "models.house_air": current["notes"]["climate"],
     }
     config = scenario_from_manifest("climate_box", older)
     assert config == SCENARIO_REGISTRY["climate_box"].model_copy(
@@ -548,7 +570,7 @@ def test_a_scenario_of_organ_rows_gives_its_crop_no_simple_crops_settings() -> N
     manifest of organ rows leaves out the simple crop's settings it wrote
     at the top, by which the engine's day grew the simple crop in its place,
     and a section of the organ crop that gives them is refused."""
-    current = _manifest("reference_greenhouse")
+    current = _in_format_5("reference_greenhouse")
     weather = current["models"]["weather"]
     air = current["models"]["air_field"]
     older = {key: value for key, value in current.items() if key != "models"} | {
@@ -573,4 +595,50 @@ def test_a_scenario_of_organ_rows_gives_its_crop_no_simple_crops_settings() -> N
         scenario_from_manifest(
             "reference_greenhouse",
             _models(current, crop={"model": "organ", "parameters": {"water_capacity_ml": 1500.0}}),
+        )
+
+
+@pytest.mark.parametrize("scenario_id", manifest_ids())
+def test_a_format_5_manifest_writes_its_houses_air_as_the_grids_parameters(
+    scenario_id: str,
+) -> None:
+    """Format 6 writes the house's air's settings as the parameters of its
+    model (P14.6): a format 5 manifest is read as one whose house's air is
+    the grid, which every run of it worked its air out by, to the same
+    scenario, its note on them on that part; one that names no settings
+    runs the grid's defaults."""
+    older = _in_format_5(scenario_id)
+
+    migrated: Any = _migrated(scenario_id, older, 5)
+
+    assert migrated == _manifest(scenario_id)
+    config = scenario_from_manifest(scenario_id, older)
+    assert config == SCENARIO_REGISTRY[scenario_id]
+    assert config.climate.kind == "grid"
+    with pytest.raises(
+        InvalidManifest, match="a format 5 manifest names no model of the house_air"
+    ):
+        scenario_from_manifest(scenario_id, _models(older, house_air={"model": "grid"}))
+
+
+def test_a_house_of_one_well_mixed_air_is_read_from_its_section() -> None:
+    """The whole house's model takes the house's settings without the
+    grid's mixing, which it does not have."""
+    starts = {"start_temperature_c": 16.0, "start_humidity_pct": 85.0}
+    whole = _models(
+        _manifest("climate_box"), house_air={"model": "whole_house", "parameters": starts}
+    )
+
+    config = scenario_from_manifest("climate_box", whole)
+
+    assert config.climate == WholeHouseAir(**starts)
+    assert config.climate.run_settings() == SCENARIO_REGISTRY["climate_box"].climate.run_settings()
+    assert isinstance(SCENARIO_REGISTRY["climate_box"].climate, GridAir)
+    with pytest.raises(InvalidManifest, match=r"(?s)models\.house_air: .*mixing_m2_s.*Extra"):
+        scenario_from_manifest(
+            "climate_box",
+            _models(
+                whole,
+                house_air={"model": "whole_house", "parameters": starts | {"mixing_m2_s": 0.1}},
+            ),
         )

@@ -33,7 +33,7 @@ def _lab_run(simulator: Simulator, *, sunlit: bool) -> ClimateRun:
         base=LAB.airflow,
         equipment=LAB.layout.equipment,
         schedule=Schedule.from_start({}),
-        settings=LAB.climate,
+        settings=LAB.climate.run_settings(),
         grid=grid,
         solid=cfd.geometry(PACKAGED, "solar_lab").solid(),
         weather=LAB.run_weather(),

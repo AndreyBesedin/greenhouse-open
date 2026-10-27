@@ -7,7 +7,7 @@ from greenhouse_sim.airflow.prescribed import PrescribedAirflow, UniformAirflow
 from greenhouse_sim.cfd.setup import CfdSetup
 from greenhouse_sim.climate.commands import DailyCommand
 from greenhouse_sim.climate.control import Control
-from greenhouse_sim.climate.settings import ClimateSettings
+from greenhouse_sim.climate.settings import GridAir, WholeHouseAir
 from greenhouse_sim.climate.thermostat import Thermostat
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.core.crop import CropWork
@@ -34,6 +34,17 @@ from greenhouse_sim.world.site import DEFAULT_SITE, Bearing, Site
 
 # A refusal names this many of the things it refuses, and counts the rest.
 NAMED_IN_A_REFUSAL = 3
+
+
+def _with_its_airs_kind(given: dict[str, Any]) -> dict[str, Any]:
+    """A configuration whose house's air names no model, as one written
+    before P14.6 does, with the grid's: what its runs were."""
+    air = given.get("climate")
+    if isinstance(air, dict) and "kind" not in air:
+        return given | {"climate": air | {"kind": "grid"}}
+    if isinstance(air, BaseModel) and not isinstance(air, GridAir | WholeHouseAir):
+        return given | {"climate": {**air.model_dump(), "kind": "grid"}}
+    return given
 
 
 class ScenarioConfig(BaseModel):
@@ -86,9 +97,10 @@ class ScenarioConfig(BaseModel):
     # How a CFD solver drives its air: by default, in through its first open
     # door or vent and out through the others.
     cfd: CfdSetup = CfdSetup()
-    # What its air starts from, and how it exchanges with the outside, in a
-    # climate run, when its equipment drives it.
-    climate: ClimateSettings = ClimateSettings()
+    # How its runs work out the house's air (P14.6): the whole house alone,
+    # or cell by cell beside it, the default; and what its air starts from,
+    # and how it exchanges with the outside, when its equipment drives it.
+    climate: Annotated[GridAir | WholeHouseAir, Field(discriminator="kind")] = GridAir()
     # Where it lies on the Earth, and the weather outside it.
     site: Site = DEFAULT_SITE
     weather: Annotated[
@@ -111,9 +123,11 @@ class ScenarioConfig(BaseModel):
         P14.3, as one written before may be, takes them in their sections:
         the walk's in its crop walk, the simple crop's in its crop if it is
         the simple crop, and not at all if it is another, since they were
-        the engine's for the simple crop in its place."""
+        the engine's for the simple crop in its place; and given its house's
+        air with no model, as before P14.6, takes the grid's."""
         if not isinstance(given, dict):
             return given
+        given = _with_its_airs_kind(given)
         grown = given.get("crop_model", CropModel.SIMPLE)
         kinds = {"crop": str(grown), "crop_walk": WALK}
         sections = dict(given)

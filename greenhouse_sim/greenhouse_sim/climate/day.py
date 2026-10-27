@@ -1,5 +1,7 @@
 """A climate run through a day (P07.3), and since P09.2 through all its
-scenario's days, the fidelity ladder applied.
+scenario's days, the fidelity ladder applied: the house's air cell by cell
+beside the whole house (`ClimateDay`, the house air's `grid` model), or the
+whole house alone (`WholeHouseDay`, its `whole_house` model, P14.6).
 
 - **The house's air through the run** is the whole house's
   (`climate.house`): one well-mixed volume, from the run's start, under its
@@ -29,12 +31,13 @@ from typing import Final
 
 import numpy as np
 
-from greenhouse_sim.climate.glazing import GlazingAt
+from greenhouse_sim.climate.glazing import GlazingAt, glazing_at
 from greenhouse_sim.climate.house import HouseAir, WholeHouse
 from greenhouse_sim.climate.openings import OpeningsAt
+from greenhouse_sim.climate.probes import DrawnAir
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.transport import AirState
-from greenhouse_sim.fields.field import EnvironmentField
+from greenhouse_sim.fields.field import EnvironmentField, FieldGrid
 from greenhouse_sim.units import HOUR_S
 
 # How long the grid run from the start is drawn, in seconds: its first two
@@ -107,6 +110,11 @@ class ClimateDay:
         start = window_start(time_s)
         return self.run if start == 0 else self._started(start)
 
+    def drawn(self, time_s: float) -> DrawnAir:
+        """The air drawn on its grid around `time_s`, as probes read it: the
+        grid run that draws the field then."""
+        return self.window(time_s)
+
     def field(self, field_id: str, time_s: float) -> EnvironmentField:
         """The air at `time_s`, cell by cell, as its grid run draws it."""
         return self.window(time_s).field(field_id, self.run.grid, time_s)
@@ -149,3 +157,61 @@ class ClimateDay:
             starts = [start for start in other._windows if start < until]
         for start in starts:
             self._started(start)
+
+
+class _UniformAir:
+    """A whole house's air drawn as a field on its run's grid, the same in
+    every cell, as a probe series asks a grid run for it."""
+
+    def __init__(self, day: WholeHouseDay) -> None:
+        self._day = day
+        self.grid = day.run.grid
+
+    def field(self, field_id: str, grid: FieldGrid, time_s: float = 0.0) -> EnvironmentField:
+        if grid != self.grid:
+            raise ValueError("a climate run is drawn on its own grid")
+        return self._day.field(field_id, time_s)
+
+
+class WholeHouseDay(ClimateDay):
+    """A climate run through its days by the whole house alone (P14.6): its
+    air one well-mixed volume, which the field at every moment draws the
+    same in every cell, in the flow its equipment makes then, and which its
+    sensors sample. It works out no air cell by cell: no grid run, from the
+    start or later, unless one is asked for (`window`)."""
+
+    def drawn(self, time_s: float) -> DrawnAir:
+        """The house's air, the same in every cell."""
+        return _UniformAir(self)
+
+    def _air(self, time_s: float) -> AirState:
+        return self._uniform(self.house.air_at(time_s))
+
+    def field(self, field_id: str, time_s: float) -> EnvironmentField:
+        """The house's air at `time_s`, the same in every cell."""
+        return self.run.field_of(self._air(time_s), field_id, time_s)
+
+    def sampled(self, field_id: str, time_s: float) -> EnvironmentField:
+        """The air sensors sample at `time_s`: the house's."""
+        return self.field(field_id, time_s)
+
+    def glazing_at(self, time_s: float) -> GlazingAt:
+        """Each glazed surface at `time_s`, the house's air against it."""
+        return glazing_at(
+            self.run.glazed,
+            self._air(time_s).temperature,
+            self.run.weather.at(time_s),
+            self.run.settings.glazing_u_w_m2k,
+            time_s,
+        )
+
+    def openings_at(self, time_s: float) -> OpeningsAt:
+        """What each open door and vent passes at `time_s`, the house's air
+        on its inside."""
+        flows = self.run.openings_for(self._air(time_s), self.run.weather.at(time_s), time_s)
+        return OpeningsAt(time_s=time_s, openings=list(flows.values()))
+
+
+# A climate day by its house air's model (`scenarios.registry`, decision
+# 0055).
+DAYS: Final[dict[str, type[ClimateDay]]] = {"grid": ClimateDay, "whole_house": WholeHouseDay}

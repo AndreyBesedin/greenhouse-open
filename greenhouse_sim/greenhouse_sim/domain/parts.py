@@ -17,3 +17,6 @@ class Part(StrEnum):
     SUNLIGHT = "sunlight"
     # The sensors' readings of the run (P06, `greenhouse_sim.sensors.air`).
     SENSORS = "sensors"
+    # The house's air through the run, as one volume or cell by cell (P05,
+    # `greenhouse_sim.climate.day`).
+    HOUSE_AIR = "house_air"

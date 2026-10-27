@@ -102,54 +102,6 @@
       "title": "CirculationLoop",
       "type": "object"
     },
-    "ClimateSettings": {
-      "additionalProperties": false,
-      "description": "A scenario's starting air, glazing, infiltration and mixing.",
-      "properties": {
-        "start_temperature_c": {
-          "default": 18.0,
-          "title": "Start Temperature C",
-          "type": "number"
-        },
-        "start_humidity_pct": {
-          "$ref": "#/$defs/Percent",
-          "default": 75.0
-        },
-        "start_co2_ppm": {
-          "default": 420.0,
-          "exclusiveMinimum": 0,
-          "title": "Start Co2 Ppm",
-          "type": "number"
-        },
-        "glazing_u_w_m2k": {
-          "default": 6.0,
-          "exclusiveMaximum": 20.389419544452608,
-          "minimum": 0.0,
-          "title": "Glazing U W M2K",
-          "type": "number"
-        },
-        "mixing_m2_s": {
-          "default": 0.1,
-          "exclusiveMinimum": 0,
-          "title": "Mixing M2 S",
-          "type": "number"
-        },
-        "infiltration_per_h": {
-          "default": 0.25,
-          "minimum": 0,
-          "title": "Infiltration Per H",
-          "type": "number"
-        },
-        "infiltration_per_h_per_m_s": {
-          "default": 0.1,
-          "minimum": 0,
-          "title": "Infiltration Per H Per M S",
-          "type": "number"
-        }
-      },
-      "title": "ClimateSettings",
-      "type": "object"
-    },
     "ConstantWeather": {
       "additionalProperties": false,
       "description": "One weather for the whole of a run, by default a calm 10 °C at 80%,\nits pressure the standard atmosphere's at its site's elevation unless\ngiven.",
@@ -525,6 +477,54 @@
         }
       },
       "title": "GradientAirflow",
+      "type": "object"
+    },
+    "GridAir": {
+      "additionalProperties": false,
+      "description": "The house's air cell by cell, on the field's grid, beside the whole\nhouse's (`greenhouse_sim.climate.day`): the house air's model that draws\nwhere its air is warm, damp or still, its parameters a climate run's.",
+      "properties": {
+        "start_temperature_c": {
+          "default": 18.0,
+          "title": "Start Temperature C",
+          "type": "number"
+        },
+        "start_humidity_pct": {
+          "$ref": "#/$defs/Percent",
+          "default": 75.0
+        },
+        "start_co2_ppm": {
+          "default": 420.0,
+          "exclusiveMinimum": 0,
+          "title": "Start Co2 Ppm",
+          "type": "number"
+        },
+        "glazing_u_w_m2k": {
+          "default": 6.0,
+          "exclusiveMaximum": 20.389419544452608,
+          "minimum": 0.0,
+          "title": "Glazing U W M2K",
+          "type": "number"
+        },
+        "infiltration_per_h": {
+          "default": 0.25,
+          "minimum": 0,
+          "title": "Infiltration Per H",
+          "type": "number"
+        },
+        "infiltration_per_h_per_m_s": {
+          "default": 0.1,
+          "minimum": 0,
+          "title": "Infiltration Per H Per M S",
+          "type": "number"
+        },
+        "mixing_m2_s": {
+          "default": 0.1,
+          "exclusiveMinimum": 0,
+          "title": "Mixing M2 S",
+          "type": "number"
+        }
+      },
+      "title": "GridAir",
       "type": "object"
     },
     "HeatingLoop": {
@@ -1349,6 +1349,48 @@
       },
       "title": "VortexAirflow",
       "type": "object"
+    },
+    "WholeHouseAir": {
+      "additionalProperties": false,
+      "description": "The whole house's air alone, one well-mixed volume, which the run\ndraws the same in every cell (`greenhouse_sim.climate.day`): the house\nair's model that works out no air cell by cell, so none of a grid's\nmixing.",
+      "properties": {
+        "start_temperature_c": {
+          "default": 18.0,
+          "title": "Start Temperature C",
+          "type": "number"
+        },
+        "start_humidity_pct": {
+          "$ref": "#/$defs/Percent",
+          "default": 75.0
+        },
+        "start_co2_ppm": {
+          "default": 420.0,
+          "exclusiveMinimum": 0,
+          "title": "Start Co2 Ppm",
+          "type": "number"
+        },
+        "glazing_u_w_m2k": {
+          "default": 6.0,
+          "exclusiveMaximum": 20.389419544452608,
+          "minimum": 0.0,
+          "title": "Glazing U W M2K",
+          "type": "number"
+        },
+        "infiltration_per_h": {
+          "default": 0.25,
+          "minimum": 0,
+          "title": "Infiltration Per H",
+          "type": "number"
+        },
+        "infiltration_per_h_per_m_s": {
+          "default": 0.1,
+          "minimum": 0,
+          "title": "Infiltration Per H Per M S",
+          "type": "number"
+        }
+      },
+      "title": "WholeHouseAir",
+      "type": "object"
     }
   },
   "description": "The simulated world: its greenhouse, crop, dynamics and sensor noise.\n\nWhich management policy runs against it, and with what thresholds, is\nnot part of the world. That is the caller's choice about a run.",
@@ -1414,18 +1456,6 @@
         "inlet_speed_m_s": 0.5,
         "effective_viscosity_m2_s": 0.01,
         "iterations": 2000
-      }
-    },
-    "climate": {
-      "$ref": "#/$defs/ClimateSettings",
-      "default": {
-        "start_temperature_c": 18.0,
-        "start_humidity_pct": 75.0,
-        "start_co2_ppm": 420.0,
-        "glazing_u_w_m2k": 6.0,
-        "mixing_m2_s": 0.1,
-        "infiltration_per_h": 0.25,
-        "infiltration_per_h_per_m_s": 0.1
       }
     },
     "site": {
@@ -1691,6 +1721,41 @@
             }
           ],
           "description": "The sensors's model: 'sampled' if none is named."
+        },
+        "house_air": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "grid"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/GridAir"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "whole_house"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/WholeHouseAir"
+                }
+              }
+            }
+          ],
+          "description": "The house air's model: 'grid' if none is named."
         }
       },
       "description": "The model each part of a run runs, by part, and its parameters."
@@ -1702,7 +1767,7 @@
       "type": "string"
     },
     "schema_version": {
-      "const": 5
+      "const": 6
     },
     "opening_day": {
       "type": "integer",

@@ -192,7 +192,7 @@ def _box_run(weather: RunWeather) -> ClimateRun:
         base=BOX.airflow,
         equipment=BOX.layout.equipment,
         schedule=Schedule.from_start({}),
-        settings=BOX.climate,
+        settings=BOX.climate.run_settings(),
         grid=air_grid(BOX),
         solid=cfd.geometry(PACKAGED, "climate_box").solid(),
         weather=weather,

@@ -1,6 +1,6 @@
 {
   "$schema": "../scenario.schema.json",
-  "schema_version": 5,
+  "schema_version": 6,
   "greenhouse_id": "reference_greenhouse",
   "name": "Reference greenhouse",
   "description": "The reference scenario: 32 tomato plants in a small three-span house with fans, a heater on a thermostat, a dehumidifier, roof vents, sensors and a camera, from spring into summer under a season's weather, 120 days",
@@ -13,7 +13,7 @@
     "start_date": "1 March, for 120 days: March's nights need heat, June's days need venting, and the crop bears red fruit for its last month or more.",
     "opening_day": "Where the viewer opens it: the run's first day with red fruit, kept beside this manifest as a checkpoint (openings/reference_greenhouse.json.gz), so that its later days carry on from it rather than from the run's start. `python tests/test_opening_day.py --update` writes it again.",
     "random_seed": "Seed 42, which the final QA resets to.",
-    "climate": "A cool, damp March night to start: 14 °C and 80% inside.",
+    "models.house_air": "A cool, damp March night to start: 14 °C and 80% inside.",
     "models.weather": "A season's weather (P10.3, the seasonal kind): each day's coldest and warmest temperatures follow the year at the site, from 0.5 and 5.5 °C on the year's coldest day, 20 January, to 13 and 22.5 °C half a year later, and wander from them in spells, 2.5 °C either way, a day keeping 0.7 of the day before's; each day its own clouds, 55% give or take 40. A day's shape and wind are the cold spring day's: coldest at 6 h, warmest at 15 h, a south-westerly veering to the north-west as it rises.",
     "daily": "Its vents and fans by the clock, every day (P09.4): the roof vents half open at 9 h, fully from 11 h, half from 18 h and shut at 20 h; both fans from 8 h to 20 h. A fixed schedule cannot follow the season: from May the morning's sun warms the house before the vents open fully, and it passes 30 °C by 9 h on a bright day; a climate computer's venting setpoints would follow it.",
     "control": "Its climate controller (P11), with its heating loop alone for now: the thermostat on its heater (P10.3), in place of daily commands to it, 18 °C from 7 h, 16 °C from 19 h, switching on below the setpoint by half a degree and off above it by as much. Its 30 kW hold the house at its setpoints through most of March, on and off as the air crosses its band, and run all night only on a freezing one; by June it runs on cool nights only. The vents keep their own clock, so on a cold day they let out heat the heater has to make up."
@@ -243,10 +243,13 @@
           "z": 0.0
         }
       }
+    },
+    "house_air": {
+      "model": "grid",
+      "parameters": {
+        "start_temperature_c": 14.0,
+        "start_humidity_pct": 80.0
+      }
     }
-  },
-  "climate": {
-    "start_temperature_c": 14.0,
-    "start_humidity_pct": 80.0
   }
 }
