@@ -21,6 +21,16 @@ The write side and the actions as they stand, under `/actuation/v1`:
     GET  /actuation/v1/runs/{run_id}/actions?state=&kind=&target=&plan=     -> ActionState list
     POST /actuation/v1/runs/{run_id}/actions/cancel           chosen actions, by key -> Receipt
 
+A plan is the body of its route, and chosen actions a JSON array of their
+keys (`ActionKey`); a whole plan is cancelled as its `revision` in its
+`epoch` stood, both given. The actions' filters repeat, or list their
+values comma separated, and `target` names a device, a plant or a target.
+A receipt answers whether or not the gateway accepted the write, and says
+which and why. What is not a request of its route, a run, plan or revision
+the gateway does not have, and a write to a run that has finished are
+refused before they reach it: over HTTP, `400`, `404` and `409`, each with
+a `detail` saying why.
+
 The caller's principal is the one the channel or the API authenticated,
 never one a document names.
 

@@ -111,7 +111,7 @@ def test_a_run_says_why_it_does_not_carry_out_what_it_refuses() -> None:
         "the run's crop is planted at its start: its work begins with its second day"
     )
     assert boxed.why_not(ActionKind.HARVEST) == (
-        "climate_box grows its crop with the simple daily model, which takes no harvest"
+        "climate_box grows its crop with the simple model, which takes no harvest"
     )
     assert boxed.why_not(ActionKind.SET_TARGET) == (
         "climate_box has no heating loop to set a target of"

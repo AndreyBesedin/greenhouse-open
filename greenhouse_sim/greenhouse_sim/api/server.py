@@ -7,7 +7,9 @@ needs no cross-origin headers. It binds to the loopback interface: it is a
 tool for a developer's own machine, not a service.
 
 The consumer interface's routes (`/consumer/v1`, `consumer`) answer before
-the viewer's, `GET` only. `--play SCENARIO` plays a scenario's own run back
+the viewer's, `GET` only, and then the gateway's (`/actuation/v1`,
+`actuation`), which give, steer and read a played-back run's plans as the
+local operator (P13.7). `--play SCENARIO` plays a scenario's own run back
 from its start (`services.playback`), for the viewer and a consumer.
 
 Live scenarios stream as Server-Sent Events (decision 0012): a `frame` event
@@ -34,6 +36,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Final, cast
 
+from greenhouse_sim.api.actuation import actuation_respond, is_actuation
 from greenhouse_sim.api.consumer import consumer_respond
 from greenhouse_sim.api.responses import Response
 from greenhouse_sim.api.routes import control, live_stream, respond
@@ -129,6 +132,10 @@ class _Handler(BaseHTTPRequestHandler):
         if consumers is not None:
             self._send(consumers, started)
             return
+        acts = self._safely(lambda: actuation_respond(self._simulator, "GET", self.path))
+        if acts is not None:
+            self._send(acts, started)
+            return
         stream = self._safely(lambda: live_stream(self.path, self._live))
         if isinstance(stream, LiveRun):
             self._stream(stream)
@@ -142,6 +149,16 @@ class _Handler(BaseHTTPRequestHandler):
         consumers = self._safely(lambda: consumer_respond(self._simulator, "POST", self.path))
         if consumers is not None:
             self._send(consumers, started)
+            return
+        if is_actuation(self.path):
+            given = self._body()
+            if isinstance(given, Response):
+                self._send(given, started)
+                return
+            answered = self._safely(
+                lambda: actuation_respond(self._simulator, "POST", self.path, given)
+            )
+            self._send(answered or Response(HTTPStatus.NOT_FOUND, {"detail": "no route"}), started)
             return
         response = self._safely(lambda: control(self.path, self._live))
         if response is None:

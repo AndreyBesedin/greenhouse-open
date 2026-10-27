@@ -49,6 +49,7 @@ changes, each at its moment: the same run, rearranged (decision 0049).
 """
 
 import gzip
+import itertools
 import logging
 import math
 import os
@@ -63,15 +64,28 @@ from pathlib import Path
 from time import monotonic
 from typing import TYPE_CHECKING, Final
 
-from greenhouse_protocol.actions import Action, Harvest, Inspect, Lower, RemoveLeaf, SetTarget
+from greenhouse_protocol.actions import (
+    Action,
+    ActionKind,
+    ActionTargets,
+    Harvest,
+    Inspect,
+    Lower,
+    RemoveLeaf,
+    SetTarget,
+)
 from greenhouse_protocol.assignment import Assignment
 from greenhouse_protocol.authorisation import AuthorisationConfig
 from greenhouse_protocol.contracts.consumer import OutcomeBatch
+from greenhouse_protocol.contracts.execution import ActionNotExecutable
 from greenhouse_protocol.contracts.gateway import GatewayLimits, PlanState, Receipt
 from greenhouse_protocol.contracts.memory_gateway import InMemoryGateway
 from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.plan import (
+    ActionKey,
+    ActionState,
+    ActionStateKind,
     At,
     ExecutorKind,
     ExecutorRef,
@@ -84,9 +98,9 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter
 from greenhouse_sim.climate.commands import TARGET_EVERY_S
 from greenhouse_sim.core.clock import DAY_S, run_day
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
-from greenhouse_sim.services.climate_runs import run_schedule
+from greenhouse_sim.services.climate_runs import checked_actions, run_schedule
 from greenhouse_sim.services.crop_log import CropActionDone, crop_actions_done, crop_records
-from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
+from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound, ServiceError
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.gateway import (
     LOCAL_OPERATOR,
@@ -132,6 +146,11 @@ WAIT_STEP_S: Final = 0.05
 STOP_WAIT_S: Final = 10.0
 # The local operator's plan of a run's target changes, revised at each.
 TARGETS_PLAN: Final = "targets"
+# The most occurrences one plan of a run's may hold, its recurrences
+# expanded: what its gateway takes and lists in about a second, which grows
+# faster than the occurrences do. A recurrence beyond it, a plan given over
+# the API by mistake, is refused whole rather than holding the server.
+PLAN_OCCURRENCES: Final = 1_000
 
 _OBSERVATIONS: Final = TypeAdapter(list[Observation])
 _EVENTS: Final = TypeAdapter(list[Event])
@@ -388,15 +407,13 @@ class Playback:
             executor=self._executor,
             executor_ref=ExecutorRef(kind=ExecutorKind.SIMULATED_RUN, id=self.run_id),
             items=run_items(played),
-            # As many actions as its run is given: the local operator's
+            # As many actions as its occurrences allow: the local operator's
             # target changes accumulate in one plan, a revision each.
-            limits=GatewayLimits(max_actions=UNLIMITED, max_occurrences=UNLIMITED),
+            limits=GatewayLimits(max_actions=UNLIMITED, max_occurrences=PLAN_OCCURRENCES),
             greenhouse_id=self.greenhouse_id,
             run_id=self.run_id,
         )
         self._gateway.epoch = self._epoch
-        self._targets_planned: tuple[PlannedAction, ...] = ()
-        self._targets_revision = 0
         if targets:
             self._plan_targets(targets)
         self._stopped = threading.Event()
@@ -491,14 +508,7 @@ class Playback:
             case _:
                 pass
         try:
-            run_schedule(
-                self._simulator.catalogue,
-                RunRequest(
-                    self.scenario_id,
-                    layout=self.layout,
-                    plan=RunPlan(actions=(PlannedAt(at_s=at_s, action=action),)),
-                ),
-            )
+            checked_actions(self._played, RunPlan(actions=(PlannedAt(at_s=at_s, action=action),)))
         except InvalidRequest as refused:
             return refused.message
         return None
@@ -507,16 +517,24 @@ class Playback:
         """Gives its gateway the local operator's target changes so far and
         `changes`, as the next revision of their plan. Checked first, as a
         run's target changes are, and refused whole, changing nothing, if
-        the local operator may not make every one."""
-        given = len(self._targets_planned)
+        the local operator may not make every one. The plan is the one its
+        gateway holds, however it was last revised: through the actuation
+        routes too (P13.7), where this is its alias."""
+        try:
+            held = self._gateway.plan(TARGETS_PLAN).plan
+            kept, revision = held.actions, held.revision
+        except KeyError:
+            kept, revision = (), 0
+        used = {each.action_id for each in kept}
+        free = (f"target_{n}" for n in itertools.count() if f"target_{n}" not in used)
         added = tuple(
             PlannedAction(
-                action_id=f"target_{given + n}",
+                action_id=next(free),
                 action=SetTarget.model_validate({"target": name, "value_c": value}),
                 timing=At(at=self._executor.instant(moment)),
                 proposed_by=LOCAL_OPERATOR,
             )
-            for n, (moment, name, value) in enumerate(changes)
+            for moment, name, value in changes
         )
         for asked in added:
             change = asked.action
@@ -526,21 +544,20 @@ class Playback:
                 raise InvalidRequest(
                     f"{LOCAL_OPERATOR.id} is not authorised to {change.kind} {change.target}"
                 )
-        planned = (*self._targets_planned, *added)
-        receipt = self._gateway.submit(
-            Plan(
-                plan_id=TARGETS_PLAN,
-                run_id=self.run_id,
-                epoch=self._epoch,
-                revision=self._targets_revision + 1,
-                actions=planned,
-            ),
-            by=LOCAL_OPERATOR,
+        receipt = self._written(
+            lambda: self._gateway.submit(
+                Plan(
+                    plan_id=TARGETS_PLAN,
+                    run_id=self.run_id,
+                    epoch=self._epoch,
+                    revision=revision + 1,
+                    actions=(*kept, *added),
+                ),
+                by=LOCAL_OPERATOR,
+            )
         )
         if not receipt.accepted:
             raise InvalidRequest("; ".join(receipt.errors))
-        self._targets_planned = planned
-        self._targets_revision += 1
         if receipt.refused:
             why = {
                 outcome.ref: outcome.reason
@@ -748,8 +765,6 @@ class Playback:
                         self._gateway.restart(continue_clock=False)
                         self._gateway.epoch = self._epoch
                         self._executor.forget()
-                        self._targets_planned = ()
-                        self._targets_revision = 0
                 return self._state()
         return successor.command(command)
 
@@ -796,8 +811,63 @@ class Playback:
             successor = self._successor
             if successor is None:
                 self._advance()
-                return self._gateway.submit(plan, by=by)
+                return self._written(lambda: self._gateway.submit(plan, by=by))
         return successor.submit(plan, by=by)
+
+    def cancel(self, keys: Sequence[ActionKey], *, by: Principal = LOCAL_OPERATOR) -> Receipt:
+        """Cancels chosen actions of its plans, by `by`, by the keys they
+        stood under when seen: what waits for one is cancelled too, unless
+        its plan says to proceed. A stale key, or one `by` may not cancel,
+        cancels nothing, and its receipt lists it. Once replaced, the one in
+        its place does."""
+        with self._lock:
+            successor = self._successor
+            if successor is None:
+                self._advance()
+                return self._written(lambda: self._gateway.cancel(keys, by=by))
+        return successor.cancel(keys, by=by)
+
+    def cancel_plan(
+        self, plan_id: str, *, revision: int, epoch: int, by: Principal = LOCAL_OPERATOR
+    ) -> Receipt:
+        """Cancels a whole plan, by `by`, as its `revision` in `epoch` stood:
+        every action of it not started. Once replaced, the one in its place
+        does."""
+        with self._lock:
+            successor = self._successor
+            if successor is None:
+                self._advance()
+                return self._written(
+                    lambda: self._gateway.cancel_plan(
+                        plan_id, revision=revision, epoch=epoch, by=by
+                    )
+                )
+        return successor.cancel_plan(plan_id, revision=revision, epoch=epoch, by=by)
+
+    def actions(
+        self,
+        *,
+        states: frozenset[ActionStateKind] | None = None,
+        kinds: frozenset[ActionKind] | None = None,
+        targets: ActionTargets | None = None,
+        plan_id: str | None = None,
+    ) -> tuple[ActionState, ...]:
+        """Its plans' actions not yet resolved, as they stand by its clock,
+        filtered: by state, by kind, by what they act on (any of the targets
+        named), by plan."""
+        with self._lock:
+            self._advance()
+            return self._gateway.actions(
+                states=states, kinds=kinds, targets=targets, plan_id=plan_id
+            )
+
+    def _written(self, write: Callable[[], Receipt]) -> Receipt:
+        """A write to its gateway, refused as a conflict once its run has
+        finished: its plans take nothing more."""
+        try:
+            return write()
+        except ActionNotExecutable as finished:
+            raise Conflict(finished.reason) from None
 
     def authorise(self, authorisation: AuthorisationConfig) -> None:
         """Who may do what on its run from its clock's moment on (decision
@@ -812,16 +882,20 @@ class Playback:
                 return
         successor.authorise(authorisation)
 
-    def plan(self, plan_id: str) -> PlanState:
+    def plan(self, plan_id: str, revision: int | None = None) -> PlanState:
         """A plan of its run's, as its gateway holds it: its revision in
-        force, its owner, its actions not yet resolved, its outcomes, and
-        the changes of the authorisation it was checked under."""
+        force, or `revision` if given, its owner, its actions not yet
+        resolved, its outcomes, and the changes of the authorisation it was
+        checked under."""
+        if revision is not None and revision < 1:
+            raise InvalidRequest(f"a plan's revision is 1 or more, not {revision}")
         with self._lock:
             self._advance()
             try:
-                return self._gateway.plan(plan_id)
+                return self._gateway.plan(plan_id, revision)
             except KeyError:
-                raise NotFound(f"no plan {plan_id!r} of run {self.run_id!r}") from None
+                which = "" if revision is None else f" revision {revision}"
+                raise NotFound(f"no plan {plan_id!r}{which} of run {self.run_id!r}") from None
 
     def set_pace(self, seconds_per_day: float) -> PlaybackState:
         """Plays a simulated day in `seconds_per_day` real seconds; once
@@ -914,6 +988,13 @@ class Playbacks:
 
     def get(self, scenario_id: str) -> Playback | None:
         return self._store.get(scenario_id)
+
+    def of_run(self, run_id: str) -> Playback:
+        """The playback of the run `run_id`, which a client names it by."""
+        for found in self.all():
+            if found.run_id == run_id:
+                return found
+        raise NotFound(f"no run {run_id!r}")
 
     def all(self) -> list[Playback]:
         """Every playback started, in the order they were."""

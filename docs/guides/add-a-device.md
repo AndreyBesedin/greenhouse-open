@@ -10,18 +10,26 @@ the parts to write. The dehumidifier was added in this order (commits
 
 ## Steps
 
-1. **Its kind.** Add a member to `ActuatorKind` in
-   `greenhouse_sim/greenhouse_sim/domain/equipment.py`.
-2. **Its model.** In `greenhouse_sim/greenhouse_sim/world/equipment.py`, add
-   a class:
-   - subclass `_Unit` for a box standing on the floor, or `_Equipment` for
-     a unit that hangs, as `Fan` does;
-   - give it a `kind: Literal[...]`, its rated values and `rated()`;
-   - add it to `type Equipment`.
+1. **Its kind** is one class and its registration
+   ([decision 0055](../decisions/0055-a-model-is-registered-with-all-that-tells-it-apart.md)),
+   in a module of its own, in this package or another:
+   - subclass `Unit` for a box standing on the floor, or `EquipmentPiece`
+     for one placed otherwise, as `Fan` is
+     (`greenhouse_sim/greenhouse_sim/world/equipment.py`);
+   - give it a `kind: Literal[...]` with its name as its default, declared
+     after its other fields, its rated values and `rated()`;
+   - register it: `register_equipment(YourKind)`. A layout then reads a
+     piece of it, by the kind it names; a kind not registered is refused,
+     naming those that are. The packaged kinds register themselves, and
+     have a member of `ActuatorKind`
+     (`greenhouse_sim/greenhouse_sim/domain/equipment.py`).
 
-   A unit inherits where it is placed (`anchor`) and how a move or a copy
-   places it further (`displaced`) from `_Unit`; a device placed otherwise
-   gives its own.
+   `greenhouse_sim/tests/test_registered_equipment.py` adds a radiant panel
+   so, from a test module.
+2. **Where it stands:** a unit inherits where it is placed (`anchor`), how
+   a move or a copy places it further (`displaced`), its shape and its body
+   (`fixture`) from `Unit`; a kind placed otherwise gives its own, as
+   `Fan` does.
 3. **What it does to the air:** its `capabilities()`, made of those in
    `greenhouse_sim/greenhouse_sim/world/capabilities.py` (P14.5): it moves
    air (`MovesAir`, a jet from its outlet), heats (`Heats`, blown from an
