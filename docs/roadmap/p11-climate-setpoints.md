@@ -1,7 +1,8 @@
 # P11: Climate setpoints
 
 **Status:** in progress: P11.1 is done, and P11.3 for the heating loop's
-targets, released in 0.3.0; the rest is proposed. The open questions are
+targets, released in 0.3.0; P11.2 has its first part, the venting and
+circulation loops; the rest is proposed. The open questions are
 at the end.
 Part of the [simulator roadmap](README.md).
 
@@ -106,7 +107,7 @@ keeps it.
 | Step | What | Status |
 | --- | --- | --- |
 | P11.1 | **The controller as data:** `climate/control.py` holds the loops, their targets, bands and stages, and checks them (the dead band between heating and venting, stages in order, times of day on the minute). A manifest's `thermostat` becomes its `control`, in the manifest's next format, with a migration of the one before. | Done (#283) |
-| P11.2 | **The house decides every loop exactly:** the next switch is the earliest moment any loop's edge is reached. The house's course through a stretch gains its humidity, so that a relative humidity's edge is found too. The grid follows each device a loop runs. Checkpoints keep each loop's state, in a checkpoint format of their own; one written before it, whose run has the heating loop alone, is read with the other loops off. **With the heating loop alone, a run is today's run, to the last digit.** | Proposed |
+| P11.2 | **The house decides every loop exactly:** the next switch is the earliest moment any loop's edge is reached. The house's course through a stretch gains its humidity, so that a relative humidity's edge is found too. The grid follows each device a loop runs. Checkpoints keep each loop's state, in a checkpoint format of their own; one written before it, whose run has the heating loop alone, is read with the other loops off. **With the heating loop alone, a run is today's run, to the last digit.** | In progress: venting and circulation |
 | P11.3 | **Targets as a run's input:** a `&targets=` parameter on every route that makes or keeps a run, wherever `&daily=` is read today: the climate's, the crop's, the timeline's, the observations', the playback's and a checkpoint's. It is read once and checked (refused with the reason, as commands are), it is part of the run's identity, and a checkpoint keeps it, so that it is restored as the same run. The audit's run request (W11) would make this one change in one place. The equipment route says which loop runs each device, its state and its target at the moment. | Done for the heating loop's targets, changed from a moment on (#284, #274, decision 0043) |
 | P11.4 | **The viewer:** a Targets panel (heating and venting, each by day and by night, and humidity) that keeps its values in the address, and passes them on every run's request. The Equipment panel names the loop that runs each device. The timeline shows the loops' switches in the air's lane. | Proposed |
 | P11.5 | **The reference greenhouse by its targets, not the clock:** its daily vent and fan commands give way to venting and humidity targets in its manifest. Its run changes, so its opening day, replay, reference views and screenshots are written again, and the changelog says that its identity changes. Consumers follow its run, so when it switches is decided first. | Proposed |
@@ -147,6 +148,42 @@ keeps it.
   reference run's id going from `…-76516b75` to `…-0b54199d`.
 - **No decision record yet.** P11's direction becomes one with P11.2, once
   the open questions below are answered.
+
+### P11.2 as built, its first part
+
+The house decides the venting and circulation loops as it decides the
+heater; the dehumidifying loop, which needs the air's humidity followed
+through a stretch, is the second part.
+
+- **Every loop switches at its edge.** Through a stretch the house finds
+  the first moment any loop's edge is reached, from the air's exact course:
+  its thermostat's band, and its venting loop's next stage to open and last
+  open stage to close. It switches that loop there, and goes on from there.
+  Two loops at one moment switch one after the other, the thermostat first;
+  their bands keep them from meeting otherwise.
+- **The vents' stage is part of the house's air** (`HouseAir.vent_stage`),
+  beside `heating`: how many stages stand open. At a stretch's start the
+  loop opens each stage the air has passed and closes each it has fallen
+  back below by the band; the period's setpoint, by day or by night, at the
+  controller's times.
+- **The fans run with the vents,** from their stage: on while the vents the
+  venting loop runs stand open as far as that stage opens them, or further.
+  A vent held by a command counts at its level.
+- **A command takes a device over,** a vent or a fan as the heater: from its
+  moment, the loop leaves it where the commands put it.
+- **The grid follows** every device the controller runs: the house's
+  decisions are the grid run's levels and openings
+  (`ClimateRun.governed_by`). A run's venting loop's vents are opened in its
+  geometry, as a commanded vent's are, for the cells against them.
+- **With the heating loop alone, a run is today's,** to the last digit: the
+  reference run's replay and opening day do not move, and a heating loop
+  given as a controller gives the air it gave as a thermostat.
+- **Checkpoints in format 9** keep the vents' stage with the house's air;
+  format 8, whose runs ran their heaters alone, is read with every stage
+  shut. An upload whose vents stand at a stage its run lacks is refused.
+- **Not yet:** the dehumidifying loop, its vent crack only while the heater
+  is off and the air outside is drier (the second part); targets for venting
+  and humidity as a run's input (P11.3), and the viewer's (P11.4).
 
 ## Acceptance
 

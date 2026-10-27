@@ -32,13 +32,14 @@ import math
 import threading
 import weakref
 from bisect import bisect_right, insort
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Final
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
+from greenhouse_sim.climate.control import VentingLoop
 from greenhouse_sim.climate.glazing import glazing_u_w_m2k
 from greenhouse_sim.climate.openings import opening_flows
 from greenhouse_sim.climate.psychrometrics import (
@@ -66,8 +67,13 @@ class HouseAir:
     """The house's air at a moment: its temperature (°C), humidity ratio
     (g/kg) and CO₂ (ppm), with the water it has lost so far to equipment and
     to condensation, in kg; the heat its heaters have given it so far, in J;
-    and whether its thermostat ran its heater up to then
-    (`climate.thermostat`)."""
+    and how its controller's loops stood up to then (`climate.control`):
+    whether its thermostat ran its heater (`climate.thermostat`), and how
+    many of its vents' stages stood open (P11.2). The loops' state is kept
+    here, with the air it was decided from, not as the controller's model's
+    state (decision 0055): a checkpoint keeps the house's air at two
+    moments, its day's start and an hour before, and each carries how the
+    loops stood then."""
 
     temperature_c: float
     humidity_g_kg: float
@@ -76,6 +82,7 @@ class HouseAir:
     condensed_kg: float = 0.0
     heated_j: float = 0.0
     heating: bool = False
+    vent_stage: int = 0
 
     def relative_humidity_pct(self) -> float:
         return float(relative_humidity_pct(self.temperature_c, self.humidity_g_kg))
@@ -122,6 +129,14 @@ class _Course:
         if self.warming_c_s == 0 or (edge_c - start_c) / self.warming_c_s < 0:
             return None
         return (edge_c - start_c) / self.warming_c_s
+
+
+def _heating_switched(air: HouseAir) -> HouseAir:
+    return replace(air, heating=not air.heating)
+
+
+def _vents_to(stage: int) -> Callable[[HouseAir], HouseAir]:
+    return lambda air: replace(air, vent_stage=stage)
 
 
 def _towards(value: float, settled: float, rate_s: float, duration_s: float) -> float:
@@ -179,24 +194,74 @@ class WholeHouse:
 
     def _levels(self, time_s: float, air: HouseAir) -> dict[str, float]:
         """Its equipment's levels from `time_s`, the air being `air` then:
-        as the schedule sets them, and its thermostat's heater as the air
-        has the thermostat run it."""
+        as the schedule sets them, its thermostat's heater as the air has the
+        thermostat run it, and its circulation loop's fans as its vents stand
+        open."""
         levels = self.run.scheduled_levels_at(time_s)
         thermostat = self.run.thermostat
         if thermostat is not None and self.run.thermostat_governs(time_s):
             levels[thermostat.actuator_id] = ON if air.heating else OFF
+        control = self.run.control
+        if control is None or control.circulation is None or control.venting is None:
+            return levels
+        fans = [
+            fan
+            for fan in control.circulation.fans
+            if fan in levels and self.run.controls(fan, time_s)
+        ]
+        if fans:
+            openings = self._openings(time_s, air)
+            vents_level = max(openings.get(vent, 0.0) for vent in control.venting.vents)
+            running = control.circulation.runs_at(control.venting, vents_level)
+            levels |= dict.fromkeys(fans, ON if running else OFF)
+        return levels
+
+    def _venting(self, time_s: float) -> VentingLoop | None:
+        """Its venting loop, while it runs one of its vents at `time_s`."""
+        control = self.run.control
+        venting = None if control is None else control.venting
+        if venting is None or not any(self.run.controls(v, time_s) for v in venting.vents):
+            return None
+        return venting
+
+    def _venting_to_c(self, time_s: float) -> float:
+        """The temperature its venting loop vents to at `time_s`."""
+        control = self.run.control
+        assert control is not None and control.venting is not None
+        return control.venting.setpoint_c(control.by_day(time_s))
+
+    def _openings(self, time_s: float, air: HouseAir) -> dict[str, float]:
+        """How far its doors and vents stand open from `time_s`, the air
+        being `air` then: as the schedule has them, and its venting loop's
+        vents at the stage the air has the loop open them to."""
+        levels = self.run.scheduled_openings_at(time_s)
+        venting = self._venting(time_s)
+        if venting is None:
+            return levels
+        level = venting.level_at(air.vent_stage)
+        for vent in venting.vents:
+            if vent in levels and self.run.controls(vent, time_s):
+                levels[vent] = level
         return levels
 
     def _decided(self, time_s: float, air: HouseAir) -> HouseAir:
-        """`air`, with its thermostat's decision at `time_s`, while it runs
-        its heater: on below its band, off above it, as it was between."""
+        """`air`, with its loops' decisions at `time_s`: its thermostat's,
+        while it runs its heater, on below its band, off above it, as it was
+        between; and its venting loop's, each stage open above its edge and
+        closed below it by the band, as it was between."""
         thermostat = self.run.thermostat
-        if thermostat is None or not self.run.thermostat_governs(time_s):
-            return air
-        heating = thermostat.heats(
-            air.temperature_c, air.heating, time_s, self.run.schedule.targets_at(time_s)
-        )
-        return air if heating == air.heating else replace(air, heating=heating)
+        if thermostat is not None and self.run.thermostat_governs(time_s):
+            heating = thermostat.heats(
+                air.temperature_c, air.heating, time_s, self.run.schedule.targets_at(time_s)
+            )
+            if heating != air.heating:
+                air = replace(air, heating=heating)
+        venting = self._venting(time_s)
+        if venting is not None:
+            stage = venting.stage_at(air.temperature_c, air.vent_stage, self._venting_to_c(time_s))
+            if stage != air.vent_stage:
+                air = replace(air, vent_stage=stage)
+        return air
 
     def _switching_s(
         self, air: HouseAir, course: _Course, time_s: float, within_s: float
@@ -213,13 +278,33 @@ class WholeHouse:
         reached = course.reaching_s(air.temperature_c, edge)
         return reached if reached is not None and reached < within_s else None
 
+    def _switch(
+        self, air: HouseAir, course: _Course, time_s: float, within_s: float
+    ) -> tuple[float, Callable[[HouseAir], HouseAir]] | None:
+        """The first of its loops to switch within `within_s` of `time_s`, as
+        the air reaches one of their edges: how long until then, and the
+        switch, made to the air then; its thermostat's first, of two at one
+        moment. None if none switches."""
+        switches: list[tuple[float, Callable[[HouseAir], HouseAir]]] = []
+        heating = self._switching_s(air, course, time_s, within_s)
+        if heating is not None:
+            switches.append((heating, _heating_switched))
+        venting = self._venting(time_s)
+        if venting is not None:
+            opens, closes = venting.edges_c(air.vent_stage, self._venting_to_c(time_s))
+            for edge, step in ((opens, 1), (closes, -1)):
+                reached = None if edge is None else course.reaching_s(air.temperature_c, edge)
+                if reached is not None and reached < within_s:
+                    switches.append((reached, _vents_to(air.vent_stage + step)))
+        return min(switches, key=lambda switch: switch[0]) if switches else None
+
     def _through(
         self, air: HouseAir, start_s: float, end_s: float, until_s: float | None = None
     ) -> HouseAir:
         """The air through one stretch of its run, from `start_s` to `end_s`,
         or only to `until_s` within it: under the weather and the sun at its
-        middle, its levels held but for its thermostat's heater, switched the
-        moment the air reaches its band's edge."""
+        middle, its levels held but for those its loops run, each switched
+        the moment the air reaches one of its loop's edges."""
         middle = (start_s + end_s) / 2
         outside = self.run.weather.at(middle)
         sun = self.run.solar_heat_total_w(middle)
@@ -228,12 +313,12 @@ class WholeHouse:
         while now < end:
             steady = self._held(self._levels(now, air))
             course = self._course(air, steady, outside, now, sun)
-            switch = self._switching_s(air, course, now, end - now)
-            span = end - now if switch is None else switch
+            switch = self._switch(air, course, now, end - now)
+            span = end - now if switch is None else switch[0]
             air = self._advance(air, steady, outside, span, now, sun_w=sun, course=course)
             now = end if switch is None else now + span
             if switch is not None:
-                air = replace(air, heating=not air.heating)
+                air = switch[1](air)
         return air
 
     def _stretch_around(self, time_s: float) -> tuple[float, float]:
@@ -245,6 +330,19 @@ class WholeHouse:
         start = max([step, *(moment for moment in changes if moment <= time_s)])
         end = min([step + STEP_S, *(moment for moment in changes if moment > time_s)])
         return start, end
+
+    def controlled_at(self, time_s: float) -> dict[str, float]:
+        """The levels its controller runs its devices at, at `time_s`, as its
+        air decides them: its heater, its vents and its fans, each from the
+        moment its loop switched it; a device a command has taken over left
+        out."""
+        start, end = self._stretch_around(time_s)
+        with self._working:
+            air = self._through(self.air_at(start), start, end, time_s)
+        levels = self._levels(time_s, air) | self._openings(time_s, air)
+        return {
+            device: level for device, level in levels.items() if self.run.controls(device, time_s)
+        }
 
     def heater_level_at(self, time_s: float) -> float:
         """The level its thermostat runs its heater at, at `time_s`: on from
@@ -296,7 +394,7 @@ class WholeHouse:
         settings = self.run.settings
         u = glazing_u_w_m2k(settings.glazing_u_w_m2k, outside.wind_speed_m_s)
         leaks_m3_s = settings.infiltration_per_s(outside.wind_speed_m_s) * volume
-        levels = self.run.opening_levels_at(time_s)
+        levels = self._openings(time_s, air)
         sites = [vent.site_at(levels[vent.opening_id]) for vent in self.run.vents]
         through = opening_flows(
             [site for site in sites if site.aperture_m2 > 0], air.temperature_c, outside
@@ -359,6 +457,7 @@ class WholeHouse:
             condensed_kg=air.condensed_kg + condensed_kg,
             heated_j=air.heated_j + steady.heater_w * duration_s,
             heating=air.heating,
+            vent_stage=air.vent_stage,
         )
 
     def carry_on_from(self, other: WholeHouse) -> None:
@@ -446,6 +545,7 @@ class WholeHouse:
             condensed_kg=airs[-1].condensed_kg,
             heated_j=airs[-1].heated_j,
             heating=airs[-1].heating,
+            vent_stage=airs[-1].vent_stage,
         )
 
     def heated_j(self, from_s: float, until_s: float) -> float:

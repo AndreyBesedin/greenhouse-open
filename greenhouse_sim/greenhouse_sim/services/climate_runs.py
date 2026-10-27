@@ -324,7 +324,8 @@ def climate_vents(config: ScenarioConfig, geometry: CfdGeometry) -> list[Vent]:
 
 def _new_climate_run(simulator: Simulator, key: RunKey) -> ClimateRun:
     """The climate run `key` names, from its start. Its doors and vents are
-    those open at the start, or opened by a command at a later moment."""
+    those open at the start, opened by a command at a later moment, or run
+    by its controller's venting loop (P11.2)."""
     scenario_id, layout, weather, levels, openings, commands, targets = key
     config = changed(
         simulator.catalogue,
@@ -333,6 +334,8 @@ def _new_climate_run(simulator: Simulator, key: RunKey) -> ClimateRun:
     )
     known = {opening.opening_id for opening in config.envelope.openings}
     commanded = {actuator for _, actuator, _ in commands if actuator in known}
+    if config.control is not None and config.control.venting is not None:
+        commanded |= set(config.control.venting.vents)
     # Every door or vent the run opens, fully, for the cells against it.
     opened = changed(
         simulator.catalogue,
@@ -359,5 +362,5 @@ def _new_climate_run(simulator: Simulator, key: RunKey) -> ClimateRun:
         vents=vents,
         glazed=glazed_cells(config.envelope, grid, geometry.solid()),
         sunlight=plant_light(simulator, scenario_id, layout, weather).sunlight,
-        thermostat=config.thermostat,
+        control=config.control,
     )

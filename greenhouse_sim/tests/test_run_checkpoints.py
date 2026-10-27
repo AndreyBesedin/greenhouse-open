@@ -348,7 +348,7 @@ def test_a_checkpoint_of_an_earlier_format_names_the_parts_there_were_then(
     then = {part: kept for part, kept in current["models"].items() if part not in unnamed}
     older = current | {"checkpoint_format": written_in, "models": then}
 
-    assert current["checkpoint_format"] == checkpoints.CHECKPOINT_FORMAT == 8
+    assert current["checkpoint_format"] == checkpoints.CHECKPOINT_FORMAT == 9
     assert checkpoints.upload_checkpoint(simulator, older) == saved
     walkless = {part: kept for part, kept in then.items() if part != "crop_walk"}
     assert (
@@ -356,7 +356,7 @@ def test_a_checkpoint_of_an_earlier_format_names_the_parts_there_were_then(
         "crop_walk"
     ) in _refusal(simulator, older | {"models": walkless})
     assert (
-        f"a format 8 checkpoint keeps each part's model, and this one none for the "
+        f"a format 9 checkpoint keeps each part's model, and this one none for the "
         f"{', '.join(unnamed)}"
     ) in _refusal(simulator, current | {"models": then})
 
