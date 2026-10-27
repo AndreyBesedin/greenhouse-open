@@ -23,6 +23,7 @@ const ANSWER = {
   worked_out_s: 172_800,
   every_s: 300,
   targets: [[129_660, "heating_night", 22]],
+  commands: [[129_630, "roof_vent", 0.5]],
 };
 const STATE = {
   runId: "reference_greenhouse-climate-c562c827",
@@ -35,6 +36,7 @@ const STATE = {
   secondsPerDay: 10,
   workedOutS: 172_800,
   targets: [{ timeS: 129_660, target: "heating_night", valueC: 22 }],
+  commands: [{ timeS: 129_630, actuatorId: "roof_vent", level: 0.5 }],
 };
 
 function answering(status: number, body: unknown): typeof fetch {

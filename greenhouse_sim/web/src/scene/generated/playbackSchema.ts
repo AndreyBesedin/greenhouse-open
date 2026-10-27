@@ -79,6 +79,27 @@ export const PLAYBACK_SCHEMA = {
       },
       "title": "Targets",
       "type": "array"
+    },
+    "commands": {
+      "default": [],
+      "items": {
+        "maxItems": 3,
+        "minItems": 3,
+        "prefixItems": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          }
+        ],
+        "type": "array"
+      },
+      "title": "Commands",
+      "type": "array"
     }
   },
   "required": [
@@ -95,7 +116,8 @@ export const PLAYBACK_SCHEMA = {
     "seconds_per_day",
     "worked_out_s",
     "every_s",
-    "targets"
+    "targets",
+    "commands"
   ],
   "title": "PlaybackState",
   "type": "object"

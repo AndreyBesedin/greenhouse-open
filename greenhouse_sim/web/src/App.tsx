@@ -30,6 +30,7 @@ import { PanelSide } from "./PanelSide";
 import { PlaybackPanel } from "./PlaybackPanel";
 import { usePanelFolds } from "./panelFolds";
 import { usePanelTheme } from "./panelTheme";
+import { useSteering } from "./plan/useSteering";
 import { LabPanels } from "./plants/LabPanels";
 import { type LabRun, PLANT_LAB_POSE } from "./plants/lab";
 import { PlantDays } from "./plants/PlantDays";
@@ -43,10 +44,17 @@ import type { ViewSample } from "./readouts";
 import { ScenarioPanels } from "./ScenarioPanels";
 import { WhatAmISeeing } from "./SeenInTheView";
 import { DEFAULT_LAYOUT, loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
-import { keptDaily, withItsAir, withOwnDaily, withProbes, withTargetsSet } from "./scene/edits";
+import {
+  keptDaily,
+  levelsAt,
+  withItsAir,
+  withOwnDaily,
+  withProbes,
+  withTargetsSet,
+} from "./scene/edits";
 import { runningThermostat } from "./scene/equipment";
 import { baseLayout } from "./scene/moves";
-import { commandPlayback, setPlaybackTargets } from "./scene/playback";
+import { commandPlayback } from "./scene/playback";
 import { runApartFromItsMoment, scenarioRun } from "./scene/run";
 import { type SceneSource, searchFor, shownBy } from "./scene/source";
 import { useDrawnSnapshot } from "./scene/useDrawnSnapshot";
@@ -192,6 +200,15 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     fieldFailed: failed(fieldProgress.latest),
     onClockMoved: stopClimatePlay,
   });
+  // A run followed as it plays is steered from the panels through its plan
+  // (P13.8): its levels shown as it has them at its clock.
+  const clockS = playback.status === "loaded" ? playback.state.timeS : null;
+  const shownAtClock = useMemo(
+    () =>
+      source.kind === "scenario" && clockS !== null ? levelsAt({ ...source, time: clockS }) : {},
+    [source, clockS],
+  );
+  const steering = useSteering(followed, shownAtClock, setPlayback);
   // What of the moment asked for failed to arrive, while something else of
   // it is drawn in its place: the scene and the field each say why when
   // nothing of them is drawn; the crop never says so itself; nor does a
@@ -432,13 +449,18 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 }
                 onTargets={(targets) => {
                   if (followed !== null) {
-                    void setPlaybackTargets(followed, targets).then(setPlayback);
+                    steering.setTargets(targets);
                     return;
                   }
                   setSource((current) =>
                     current.kind === "scenario" ? withTargetsSet(current, targets) : current,
                   );
                 }}
+                steering={
+                  followed !== null && clockS !== null
+                    ? { at: clockS, asked: steering.asked, onLevels: steering.steer }
+                    : undefined
+                }
                 momentFailed={momentFailed}
                 fieldView={fieldView}
                 fieldSlice={fieldSlice}
@@ -458,12 +480,19 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                     load={playback}
                     days={summary?.duration_days ?? null}
                     changed={anotherRun}
+                    refusal={steering.refusal}
                     onCommand={(command) =>
                       void commandPlayback(followed, command).then(setPlayback)
                     }
                     onStart={() => void commandPlayback(followed, "start").then(setPlayback)}
                     onOwnRun={() =>
-                      setSource((current) => withoutRunChanges(current, playedLayout))
+                      setSource((current) =>
+                        withoutRunChanges(
+                          current,
+                          playedLayout,
+                          playback.status === "loaded" ? playback.state.commands : [],
+                        ),
+                      )
                     }
                     onStop={() =>
                       setSource((current) => {

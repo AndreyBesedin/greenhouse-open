@@ -35,8 +35,8 @@ export function settingMoment(time: number): number {
  * night, as in force at the moment drawn, and changed from then on. Not
  * following, a change is a target change in the address at the moment drawn,
  * the next minute if it lies between two; following, the run played back is
- * changed from its clock's next minute (decision 0043), and the view follows
- * it.
+ * given it through its plan (P13.8), from its clock's next minute (decision
+ * 0043), and the view follows it.
  */
 export function TargetsPanel({
   thermostat,

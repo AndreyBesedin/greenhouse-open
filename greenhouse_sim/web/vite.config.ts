@@ -22,6 +22,10 @@ function simulatorVersion(): string {
 const SIMULATOR_API = simulatorApi(
   Number(process.env.SIMULATOR_API_PORT ?? DEFAULT_SIMULATOR_API_PORT),
 );
+// The simulator's routes the page asks for, by their prefixes.
+const SIMULATOR_ROUTES = Object.fromEntries(
+  ["/api", "/consumer", "/actuation"].map((prefix) => [prefix, SIMULATOR_API]),
+);
 
 // How much of the handwritten code the unit tests run, in %, at least. The
 // 3D drawing, the QA pages and App, which the browser tests run, count as
@@ -49,9 +53,11 @@ export default defineConfig({
   // over the viewer's budget, rather than warn under it (AUDIT.20).
   plugins: [react(), bundleBudget()],
   build: { chunkSizeWarningLimit: BUNDLE_BUDGET_KB.js },
-  // Forward /api to the simulator, so the page and the API share an origin.
-  server: { proxy: { "/api": SIMULATOR_API } },
-  preview: { proxy: { "/api": SIMULATOR_API } },
+  // Forward the simulator's interfaces to it, so that the page and they share
+  // an origin: the viewer's API, and the protocol's consumer interface and a
+  // run's gateway, which the viewer acts through (P13.8).
+  server: { proxy: SIMULATOR_ROUTES },
+  preview: { proxy: SIMULATOR_ROUTES },
   define: {
     __SIMULATOR_VERSION__: JSON.stringify(simulatorVersion()),
     __SOURCE_COMMIT__: JSON.stringify(sourceCommit()),

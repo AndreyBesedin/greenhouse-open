@@ -130,6 +130,16 @@ export function withTargets(
   return changes.length === 0 ? rest : { ...rest, targets: [...changes] };
 }
 
+/** Its commands, as they are: the levels its run is given at their
+ * moments, those of a run followed as it plays them (P13.8). */
+export function withSchedule(
+  source: ScenarioSource,
+  commands: readonly ScheduledCommand[],
+): ScenarioSource {
+  const { schedule: _, ...rest } = source;
+  return commands.length === 0 ? rest : { ...rest, schedule: [...commands] };
+}
+
 /** Its equipment set: while a climate run is drawn past its start, an
  * override at that moment of what changed; otherwise, from the start. */
 export function withLevels(source: ScenarioSource, levels: Record<string, number>): ScenarioSource {
