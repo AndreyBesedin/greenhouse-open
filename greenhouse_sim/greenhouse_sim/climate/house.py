@@ -165,29 +165,21 @@ class _Course:
             )
         return start_g_kg - self.drying_g_kg_s * duration_s
 
-    def water_reaching_s(self, start_g_kg: float, edge_g_kg: float) -> float | None:
-        """How long the air's humidity ratio takes from `start_g_kg` to
-        `edge_g_kg`, if it gets there: none if it goes the other way, or
-        settles short of it."""
-        if self.venting_s > 0:
-            settled = self.outside_g_kg - self.drying_g_kg_s / self.venting_s
-            if not min(start_g_kg, settled) <= edge_g_kg <= max(start_g_kg, settled):
-                return None
-            if edge_g_kg == settled:
-                return None
-            return math.log((start_g_kg - settled) / (edge_g_kg - settled)) / self.venting_s
-        if self.drying_g_kg_s == 0 or (start_g_kg - edge_g_kg) / self.drying_g_kg_s < 0:
-            return None
-        return (start_g_kg - edge_g_kg) / self.drying_g_kg_s
+    def held_water_reaching_s(
+        self, start_c: float, start_g_kg: float, edge_g_kg: float, within_s: float, *, up: bool
+    ) -> float | None:
+        """How long the air's humidity ratio takes to pass `edge_g_kg`,
+        rising if `up`, falling if not, from `start_c` and `start_g_kg`, if it
+        does within `within_s`: the water the air holds, as it is advanced
+        (`WholeHouse._advance`), never less than none, nor more than air at
+        its temperature then holds, the rest condensing."""
 
-    def water_heads(self, start_g_kg: float, *, up: bool) -> bool:
-        """Whether the air's humidity ratio at `start_g_kg` moves up, or down
-        if not `up`: the only way it crosses an edge it stands at."""
-        if self.venting_s > 0:
-            change = self.outside_g_kg - self.drying_g_kg_s / self.venting_s - start_g_kg
-        else:
-            change = -self.drying_g_kg_s
-        return change > 0 if up else change < 0
+        def beyond(duration_s: float) -> float:
+            water = max(self.water_g_kg(start_g_kg, duration_s), 0.0)
+            holds = float(saturation_ratio_g_kg(self.temperature_c(start_c, duration_s)))
+            return min(water, holds) - edge_g_kg
+
+        return self._crossing_s(beyond, within_s, up=up)
 
     def humidity_reaching_s(
         self, start_c: float, start_g_kg: float, edge_pct: float, within_s: float, *, up: bool
@@ -195,17 +187,26 @@ class _Course:
         """How long the air's relative humidity takes to pass `edge_pct`,
         rising if `up`, falling if not, from `start_c` and `start_g_kg`, if it
         does within `within_s`: where its humidity ratio meets what air at
-        its temperature then holds at that relative humidity, the first
-        time, found to a nanosecond. Each of the two moves as one
-        exponential, so the edge is bracketed by moments a fraction of the
-        quicker one's time apart, then halved. An edge it stands at is
-        passed only moving that way."""
+        its temperature then holds at that relative humidity. Water beyond
+        saturation, which condenses, leaves the air saturated, above any
+        edge, as it would be without condensing."""
 
         def beyond(duration_s: float) -> float:
             temperature = self.temperature_c(start_c, duration_s)
             holds = float(humidity_ratio_g_kg(temperature, edge_pct))
             return self.water_g_kg(start_g_kg, duration_s) - holds
 
+        return self._crossing_s(beyond, within_s, up=up)
+
+    def _crossing_s(
+        self, beyond: Callable[[float], float], within_s: float, *, up: bool
+    ) -> float | None:
+        """How long until `beyond`, a smooth quantity of the air through the
+        stretch, passes 0, rising if `up`, falling if not, the first time
+        within `within_s`, found to a nanosecond. What it follows moves as
+        exponentials, so its passing is bracketed by moments a fraction of
+        the quickest one's time apart, then halved. A 0 it stands at is
+        passed only moving that way."""
         quickest = max(self.rate_s, self.venting_s, 1.0 / within_s)
         wanted = math.ceil(within_s * quickest * SAMPLES_A_RATE)
         samples = min(MOST_SAMPLES, max(FEWEST_SAMPLES, wanted))
@@ -343,9 +344,9 @@ class WholeHouse:
 
     def _drying_vents(self, time_s: float) -> DehumidifyingLoop | None:
         """Its dehumidifying loop, while it may open the vents' first stage
-        at `time_s`: one that vents, its venting loop running a vent then."""
-        control = self.run.control
-        drying = None if control is None else control.dehumidifying
+        at `time_s`: one that vents, while it runs its dehumidifier, which a
+        command has not taken over, and its venting loop a vent."""
+        drying = self._dehumidifying(time_s)
         if drying is None or not drying.vents_when_drier or self._venting(time_s) is None:
             return None
         return drying
@@ -471,10 +472,9 @@ class WholeHouse:
         venting_drier = self._drying_vents(time_s)
         if venting_drier is not None:
             edge = course.outside_g_kg + venting_drier.drier_edge_g_kg(air.drier)
-            reached = course.water_reaching_s(air.humidity_g_kg, edge)
-            if reached == 0.0 and not course.water_heads(air.humidity_g_kg, up=not air.drier):
-                # At its edge, but moving away from it: not crossed.
-                reached = None
+            reached = course.held_water_reaching_s(
+                air.temperature_c, air.humidity_g_kg, edge, within_s, up=not air.drier
+            )
             if reached is not None and reached < within_s:
                 switches.append((reached, _drier_switched))
         return min(switches, key=lambda switch: switch[0]) if switches else None

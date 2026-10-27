@@ -261,7 +261,12 @@ def test_the_dehumidifier_switches_the_moment_the_air_reaches_its_humidity_edge(
     assert all(later - earlier > 1.0 for (earlier, _), (later, _) in pairwise(switches))
 
 
-def _drying(weather: ConstantWeather, heating_c: float | None) -> ClimateDay:
+def _drying(
+    weather: ConstantWeather,
+    heating_c: float | None,
+    schedule: Schedule | None = None,
+    drying: DehumidifyingLoop | None = None,
+) -> ClimateDay:
     """The box drying its air to 40 % under `weather`, venting for its
     heat only above 33 °C, and heating to `heating_c`, if given: so dry a
     target that its dehumidifier still runs once the heater has warmed the
@@ -275,9 +280,9 @@ def _drying(weather: ConstantWeather, heating_c: float | None) -> ClimateDay:
     control = Control(
         heating=heating,
         venting=venting,
-        dehumidifying=DehumidifyingLoop(actuator_id="dehumidifier", target_pct=40.0),
+        dehumidifying=drying or DehumidifyingLoop(actuator_id="dehumidifier", target_pct=40.0),
     )
-    return _day(control, Schedule(), weather=weather)
+    return _day(control, schedule or Schedule(), weather=weather)
 
 
 def test_it_vents_for_the_airs_water_while_the_heater_is_off_and_the_air_outside_is_drier() -> None:
@@ -392,3 +397,40 @@ def test_the_air_outside_counts_drier_only_once_the_house_is_wetter_beyond_the_m
 
     assert at_the_margin - outside_g_kg == 1.0
     assert not house.air_at(630.0).drier
+
+
+def test_a_dehumidifier_a_command_takes_over_cracks_the_vents_no_more() -> None:
+    switched_off = Schedule.of([Command(time_s=300.0, actuator_id="dehumidifier", level=0.0)])
+    house = _drying(DRY, heating_c=None, schedule=switched_off).house
+
+    assert house.controlled_at(200.0)["roof_vent"] == VENTING.stages[0].level
+    assert "dehumidifier" not in house.controlled_at(600.0)
+    assert house.controlled_at(600.0)["roof_vent"] == 0.0
+
+
+def test_the_outside_stops_counting_drier_where_the_water_the_air_holds_reaches_its_edge() -> None:
+    # Warm air near saturation in a box under cold damp air: as it cools,
+    # its water condenses, and the outside soon counts as no drier, 1.5 g/kg
+    # below the house's (a margin of 2 less a band of 0.5).
+    damp = ConstantWeather(air_temperature_c=5.0, relative_humidity_pct=95.0)
+    drying = DehumidifyingLoop(
+        actuator_id="dehumidifier", target_pct=40.0, drier_by_g_kg=2.0, drier_band_g_kg=0.5
+    )
+    house = _drying(damp, heating_c=None, drying=drying).house
+    start = house.air_at(0.0)
+    warm = float(humidity_ratio_g_kg(20.0, 99.0))
+    house.seed(600.0, HouseAir(20.0, warm, start.co2_ppm, dehumidifying=True, drier=True))
+    outside_g_kg = float(humidity_ratio_g_kg(5.0, 95.0))
+
+    def drier(time_s: float) -> bool:
+        return house.air_at(time_s).drier
+
+    minute = next(m for m in range(11, 60) if not drier(m * 60.0))
+    low, high = (minute - 1) * 60.0, minute * 60.0
+    while high - low > SWITCH_S:
+        middle = (low + high) / 2
+        low, high = (middle, high) if drier(middle) else (low, middle)
+
+    switched = house.air_at(high)
+    assert switched.condensed_kg > 0
+    assert switched.humidity_g_kg - outside_g_kg == pytest.approx(1.5, abs=1e-3)
