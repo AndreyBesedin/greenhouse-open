@@ -133,6 +133,12 @@ class _Course:
             return _towards(start_c, self.settled_c, self.rate_s, duration_s)
         return start_c + self.warming_c_s * duration_s
 
+    def heads(self, start_c: float, *, up: bool) -> bool:
+        """Whether the air at `start_c` moves up, or down if not `up`: the
+        only way it crosses an edge it stands at."""
+        change = self.settled_c - start_c if self.rate_s > 0 else self.warming_c_s
+        return change > 0 if up else change < 0
+
     def reaching_s(self, start_c: float, edge_c: float) -> float | None:
         """How long the air takes from `start_c` to `edge_c`, if it gets
         there: none if it goes the other way, or settles short of it."""
@@ -410,6 +416,9 @@ class WholeHouse:
         setpoint = thermostat.setpoint_c(time_s, self.run.schedule.targets_at(time_s))
         edge = setpoint + half if air.heating else setpoint - half
         reached = course.reaching_s(air.temperature_c, edge)
+        if reached == 0.0 and not course.heads(air.temperature_c, up=air.heating):
+            # At its edge, but moving away from it: not crossed.
+            return None
         return reached if reached is not None and reached < within_s else None
 
     def _switch(
@@ -428,6 +437,9 @@ class WholeHouse:
             opens, closes = venting.edges_c(air.vent_stage, self._venting_to_c(time_s))
             for edge, step in ((opens, 1), (closes, -1)):
                 reached = None if edge is None else course.reaching_s(air.temperature_c, edge)
+                if reached == 0.0 and not course.heads(air.temperature_c, up=step > 0):
+                    # At its edge, but moving away from it: not crossed.
+                    continue
                 if reached is not None and reached < within_s:
                     switches.append((reached, _vents_to(air.vent_stage + step)))
         drying = self._dehumidifying(time_s)

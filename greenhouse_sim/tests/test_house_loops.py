@@ -5,6 +5,7 @@ taking a vent out of the loop's hands; the grid following what the house
 decides; a heating loop alone giving the run it gave as a thermostat; and a
 checkpoint keeping how its vents stood."""
 
+import re
 from collections.abc import Callable
 from dataclasses import replace
 from itertools import pairwise
@@ -22,15 +23,20 @@ from greenhouse_sim.climate.control import (
     VentStage,
 )
 from greenhouse_sim.climate.day import ClimateDay
-from greenhouse_sim.climate.house import WholeHouse
+from greenhouse_sim.climate.house import HouseAir, WholeHouse
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.thermostat import OFF, ON, Thermostat
 from greenhouse_sim.climate.vents import Vent
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
-from greenhouse_sim.scenarios.catalogue import PACKAGED
+from greenhouse_sim.scenarios.catalogue import PACKAGED, Catalogue
 from greenhouse_sim.services import cfd, checkpoints
-from greenhouse_sim.services.climate_runs import climate_vents
+from greenhouse_sim.services.climate_runs import (
+    checked_targets,
+    climate_run,
+    climate_vents,
+    everything_off,
+)
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.runs import RunRequest
@@ -306,3 +312,66 @@ def test_a_checkpoint_whose_air_runs_a_dehumidifier_its_run_lacks_is_refused(
     assert kept["house"]["dehumidifying"] is False
     with pytest.raises(InvalidRequest, match="runs a dehumidifying loop, and its run has none"):
         checkpoints.upload_checkpoint(simulator, drying)
+
+
+def test_the_all_off_run_neither_vents_nor_runs_its_fans() -> None:
+    warm = BOX.model_copy(
+        update={"weather": ConstantWeather(air_temperature_c=25.0), "control": VENTED}
+    )
+    with Simulator(Catalogue(PACKAGED.with_config(warm))) as simulator:
+        key, vented = climate_run(simulator, RunRequest("climate_box"))
+        off = everything_off(simulator, key)
+
+        # Its own run vents the warm air; with everything off, nothing does.
+        assert vented.house.controlled_at(HOUR_S)["roof_vent"] > 0
+        for minute in range(0, 3 * 60, 10):
+            time_s = minute * 60.0
+            assert off.house.controlled_at(time_s) == {}
+            assert off.run.opening_levels_at(time_s)["roof_vent"] == 0.0
+            assert off.run.levels_at(time_s)["fan"] == 0.0
+
+
+def test_a_heating_target_that_would_heat_while_the_vents_open_is_refused() -> None:
+    # By day the vents' first stage closes at 21 °C (22 + 0 - 1): the heater
+    # switches off 1 °C below it at the most, at a setpoint of 19.5 °C.
+    control = Control(
+        heating=HeatingLoop(actuator_id="heater", day_c=18.0, night_c=16.0),
+        venting=VENTING.model_copy(update={"day_c": 22.0, "night_c": 20.0}),
+    )
+    config = BOX.model_copy(update={"control": control})
+
+    assert checked_targets(config, [(HOUR_S, "heating_day", 19.5)]) == (
+        (HOUR_S, "heating_day", 19.5),
+    )
+    with pytest.raises(
+        InvalidRequest,
+        match=re.escape(
+            "by day of 26 °C leaves less than the dead band of 1 °C below where the vents' "
+            "first stage closes, 21 °C: at most 19.5 °C"
+        ),
+    ):
+        checked_targets(config, [(HOUR_S, "heating_day", 26.0)])
+
+
+def test_an_edge_the_air_stands_at_is_crossed_only_moving_through_it() -> None:
+    # The vents' first stage opens above 18 °C, where the air starts, as it
+    # cools: they stay shut.
+    opening = VENTING.model_copy(update={"day_c": 18.0, "night_c": 18.0})
+    cooling = _day(Control(venting=opening), Schedule(), weather=ConstantWeather()).house
+    assert cooling.controlled_at(60.0)["roof_vent"] == 0.0
+
+    # The heater switches off above 16.5 °C; on there, in a frost it cannot
+    # hold the air against, it stays on.
+    heating = HeatingLoop(actuator_id="heater", day_c=16.0, night_c=16.0)
+    frost = ConstantWeather(air_temperature_c=-10.0)
+    house = _day(Control(heating=heating), Schedule(), weather=frost).house
+    start = house.air_at(0.0)
+    house.seed(600.0, HouseAir(16.5, start.humidity_g_kg, start.co2_ppm, heating=True))
+    assert house.air_at(630.0).heating
+
+    # The first stage closes below 18 °C; open there, the heater warming the
+    # air, it stays open.
+    vented = _day().house
+    start = vented.air_at(0.0)
+    vented.seed(600.0, HouseAir(18.0, start.humidity_g_kg, start.co2_ppm, vent_stage=1))
+    assert vented.air_at(630.0).vent_stage == 1
