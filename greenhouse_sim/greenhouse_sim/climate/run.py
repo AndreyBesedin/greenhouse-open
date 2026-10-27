@@ -42,6 +42,7 @@ import numpy as np
 
 from greenhouse_sim.airflow.contract import AirflowModel
 from greenhouse_sim.climate.commands import Schedule
+from greenhouse_sim.climate.control import Control
 from greenhouse_sim.climate.glazing import GlazedCells, GlazingAt, glazing_at
 from greenhouse_sim.climate.openings import OpeningFlow, opening_flows
 from greenhouse_sim.climate.projection import FaceFlows, conserving, face_flows
@@ -136,6 +137,7 @@ class ClimateRun:
         glazed: Mapping[str, GlazedCells] | None = None,
         sunlight: Sunlight | None = None,
         thermostat: Thermostat | None = None,
+        control: Control | None = None,
     ) -> None:
         nx, ny, nz = grid.shape
         if solid.shape != (nz, ny, nx):
@@ -150,10 +152,20 @@ class ClimateRun:
         self.vents = tuple(vents)
         self.glazed = dict(glazed or {})
         self.sunlight = sunlight
-        self.thermostat = thermostat
-        # What level its thermostat runs its heater at, at a moment: as the
-        # house's air decides it (`governed_by`); until then, none.
-        self._thermostat_level: Callable[[float], float] | None = None
+        # Its climate controller (P11): its loops, the heating loop its
+        # thermostat; or a thermostat alone (P10.3).
+        self.control = control
+        self.thermostat = control.thermostat() if control is not None else thermostat
+        # The devices its controller runs: its thermostat's heater, or every
+        # device its loops run.
+        self._controlled = frozenset(
+            control.runs()
+            if control is not None
+            else ([] if thermostat is None else [thermostat.actuator_id])
+        )
+        # The levels its controller runs its devices at, at a moment: as the
+        # house's air decides them (`governed_by`); until then, none.
+        self._governed: Callable[[float], Mapping[str, float]] | None = None
         self._floor_cells = _lowest_air(solid)
         self._base_velocity = base.field("base", grid).channels[AirQuantity.VELOCITY]
         self._steady: dict[_Levels, tuple[SourceTerms, FaceFlows]] = {}
@@ -214,19 +226,28 @@ class ClimateRun:
             glazed=self.glazed,
             sunlight=self.sunlight,
             thermostat=self.thermostat,
+            control=self.control,
         )
         later._steady = self._steady
         later._steadying = self._steadying
-        later._thermostat_level = self._thermostat_level
+        later._governed = self._governed
         later._through_flows = self._through_flows
         later.start_s = start_s
         later._kept = {start_s: air}
         return later
 
-    def governed_by(self, level: Callable[[float], float]) -> None:
-        """Run its thermostat's heater at `level` at each moment: its house's
-        air decides it (`climate.house`), and this run's air follows."""
-        self._thermostat_level = level
+    def governed_by(self, levels: Callable[[float], Mapping[str, float]]) -> None:
+        """Run the devices its controller runs at `levels` at each moment, by
+        their identifiers: its house's air decides them (`climate.house`),
+        and this run's air follows."""
+        self._governed = levels
+
+    def controls(self, device_id: str, time_s: float) -> bool:
+        """Whether its controller runs `device_id` at `time_s`: one of its
+        loops' devices, until a command to it takes it over."""
+        return device_id in self._controlled and device_id not in self.schedule.commanded_levels(
+            time_s
+        )
 
     def thermostat_governs(self, time_s: float) -> bool:
         """Whether its thermostat runs its heater at `time_s`: if it has one,
@@ -235,8 +256,21 @@ class ClimateRun:
         return (
             thermostat is not None
             and any(piece.actuator_id == thermostat.actuator_id for piece in self.equipment)
-            and thermostat.actuator_id not in self.schedule.commanded_levels(time_s)
+            and self.controls(thermostat.actuator_id, time_s)
         )
+
+    def _with_governed(self, levels: dict[str, float], time_s: float) -> dict[str, float]:
+        """`levels`, with each its controller runs at `time_s` as the
+        controller runs it then."""
+        if not self._controlled:
+            return levels
+        commanded = self.schedule.commanded_levels(time_s)
+        if not any(key in self._controlled and key not in commanded for key in levels):
+            return levels
+        if self._governed is None:
+            raise RuntimeError("a run with a controller is governed by its house's air")
+        governed = self._governed(time_s)
+        return levels | {key: level for key, level in governed.items() if key in levels}
 
     def scheduled_levels_at(self, time_s: float) -> dict[str, float]:
         """Each piece of equipment's level at `time_s`, as its schedule sets
@@ -245,13 +279,8 @@ class ClimateRun:
 
     def levels_at(self, time_s: float) -> dict[str, float]:
         """Each piece of equipment's level at `time_s`: as its schedule sets
-        it, and its thermostat's heater as the thermostat runs it."""
-        levels = self.scheduled_levels_at(time_s)
-        if self.thermostat is not None and self.thermostat_governs(time_s):
-            if self._thermostat_level is None:
-                raise RuntimeError("a run with a thermostat is governed by its house's air")
-            levels[self.thermostat.actuator_id] = self._thermostat_level(time_s)
-        return levels
+        it, and those its controller runs as the controller runs them."""
+        return self._with_governed(self.scheduled_levels_at(time_s), time_s)
 
     def _held(self, levels: Mapping[str, float]) -> tuple[SourceTerms, FaceFlows]:
         """What the equipment does at steady levels: its source terms, and the
@@ -292,14 +321,20 @@ class ClimateRun:
             }
         return self._through_flows
 
-    def opening_levels_at(self, time_s: float) -> dict[str, float]:
-        """How far each of its doors and vents stands open at `time_s`: as
-        far as it is opened at the start, until a command moves it."""
+    def scheduled_openings_at(self, time_s: float) -> dict[str, float]:
+        """How far each of its doors and vents stands open at `time_s` as its
+        schedule has it: as far as it is opened at the start, until a command
+        moves it."""
         commanded = self.schedule.commanded_levels(time_s)
         return {
             vent.opening_id: commanded.get(vent.opening_id, vent.opening.opening)
             for vent in self.vents
         }
+
+    def opening_levels_at(self, time_s: float) -> dict[str, float]:
+        """How far each of its doors and vents stands open at `time_s`: as its
+        schedule has it, and those its controller runs as it runs them."""
+        return self._with_governed(self.scheduled_openings_at(time_s), time_s)
 
     def openings_for(
         self, air: AirState, outside: WeatherState, time_s: float

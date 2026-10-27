@@ -155,12 +155,34 @@ def checked_targets(config: ScenarioConfig, targets: Sequence[Commanded]) -> tup
             raise InvalidRequest(
                 f"a heating setpoint lies from {low:.15g} to {high:.15g} °C, not {value:.15g}"
             )
+        _keeps_the_dead_band(config, target, value)
         if not 0.0 <= time <= length or time % TARGET_EVERY_S:
             raise InvalidRequest(
                 f"a target changes on the minute, within the run, 0 to {length:.15g} s, not at "
                 f"{time:.15g} s"
             )
     return tuple(sorted(targets, key=lambda change: change[0]))
+
+
+def _keeps_the_dead_band(config: ScenarioConfig, target: str, value_c: float) -> None:
+    """Refuse a heating setpoint changed to `value_c` that would leave the
+    heater on while the vents open for heat: in its period, the vents'
+    first stage closes above the temperature the heater switches off at by
+    at least the controller's dead band, as its configuration's do
+    (`climate.control`)."""
+    control = config.control
+    if control is None or control.heating is None or control.venting is None:
+        return
+    by_day = target == Target.HEATING_DAY
+    closes_c = control.venting.first_closes_below_c(control.venting.setpoint_c(by_day))
+    most_c = closes_c - control.dead_band_c - control.heating.band_c / 2
+    if value_c > most_c:
+        period = "by day" if by_day else "by night"
+        raise InvalidRequest(
+            f"a heating setpoint {period} of {value_c:.15g} °C leaves less than the dead band "
+            f"of {control.dead_band_c:.15g} °C below where the vents' first stage closes, "
+            f"{closes_c:.15g} °C: at most {most_c:.15g} °C"
+        )
 
 
 def checked_actions(config: ScenarioConfig, plan: RunPlan) -> None:
@@ -256,19 +278,30 @@ def house_of(key: RunKey) -> House:
 
 def off_levels(catalogue: Scenarios, scenario_id: str) -> dict[str, float]:
     """The levels that switch off, from the start, what a scenario's run
-    would otherwise run by itself: its thermostat's heater, at 0
-    (`climate.thermostat`). With no daily commands and no others, its run
-    has everything off."""
-    thermostat = scenario(catalogue, scenario_id).thermostat
-    return {} if thermostat is None else {thermostat.actuator_id: 0.0}
+    would otherwise run by itself: each piece of equipment its controller
+    runs, at 0 (`climate.control`): its heater, its fans and its
+    dehumidifier. With no daily commands and no others, and its
+    controller's vents held where they start (`everything_off`), its run has
+    everything off."""
+    config = scenario(catalogue, scenario_id)
+    if config.control is None:
+        return {}
+    openings = {opening.opening_id for opening in config.envelope.openings}
+    return {device: 0.0 for device in config.control.runs() if device not in openings}
 
 
 def everything_off(simulator: Simulator, key: RunKey) -> ClimateDay:
     """The run `key` names with everything off: its house, under its
-    weather, its doors and vents as open from the start, and nothing run."""
+    weather, its doors and vents as open from the start, its controller's
+    vents held there by commands from the start, and nothing run."""
     scenario_id, layout, weather, _, openings, *_ = key
     off = tuple(sorted(off_levels(simulator.catalogue, scenario_id).items()))
-    return climate_day(simulator, (scenario_id, layout, weather, off, openings, (), ()))
+    config = scenario(simulator.catalogue, scenario_id)
+    venting = None if config.control is None else config.control.venting
+    start = {opening.opening_id: opening.opening for opening in config.envelope.openings}
+    started = start | dict(openings)
+    held = () if venting is None else tuple((0.0, vent, started[vent]) for vent in venting.vents)
+    return climate_day(simulator, (scenario_id, layout, weather, off, openings, held, ()))
 
 
 def climate_run(simulator: Simulator, run: RunRequest) -> tuple[RunKey, ClimateDay]:
@@ -324,7 +357,8 @@ def climate_vents(config: ScenarioConfig, geometry: CfdGeometry) -> list[Vent]:
 
 def _new_climate_run(simulator: Simulator, key: RunKey) -> ClimateRun:
     """The climate run `key` names, from its start. Its doors and vents are
-    those open at the start, or opened by a command at a later moment."""
+    those open at the start, opened by a command at a later moment, or run
+    by its controller's venting loop (P11.2)."""
     scenario_id, layout, weather, levels, openings, commands, targets = key
     config = changed(
         simulator.catalogue,
@@ -333,6 +367,8 @@ def _new_climate_run(simulator: Simulator, key: RunKey) -> ClimateRun:
     )
     known = {opening.opening_id for opening in config.envelope.openings}
     commanded = {actuator for _, actuator, _ in commands if actuator in known}
+    if config.control is not None and config.control.venting is not None:
+        commanded |= set(config.control.venting.vents)
     # Every door or vent the run opens, fully, for the cells against it.
     opened = changed(
         simulator.catalogue,
@@ -359,5 +395,5 @@ def _new_climate_run(simulator: Simulator, key: RunKey) -> ClimateRun:
         vents=vents,
         glazed=glazed_cells(config.envelope, grid, geometry.solid()),
         sunlight=plant_light(simulator, scenario_id, layout, weather).sunlight,
-        thermostat=config.thermostat,
+        control=config.control,
     )

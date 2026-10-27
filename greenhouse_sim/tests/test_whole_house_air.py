@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 from greenhouse_sim.api.routes.runs import run_request
+from greenhouse_sim.climate.control import CirculationLoop, Control, VentingLoop, VentStage
 from greenhouse_sim.climate.day import FROM_THE_START_S, WholeHouseDay
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.settings import WholeHouseAir
@@ -24,6 +25,7 @@ from greenhouse_sim.services.climate_runs import climate_run
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import HOUR_S
+from greenhouse_sim.weather.sources import ConstantWeather
 
 SCENARIO = "climate_box"
 # Its heater on, then its fan, so that its air changes through the day.
@@ -111,3 +113,42 @@ def test_it_works_out_no_air_cell_by_cell(
 
     assert glazing.surfaces
     assert probes.probes[0].controlled.temperature_c[-1] == pytest.approx(house.temperature_c)
+
+
+def test_its_vents_and_fans_are_as_its_house_decides_them_without_a_grid_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A venting loop's vents and its fans stand as the whole house decides
+    them (P11.2), in its doors' and vents' flows and its levels, with no grid
+    run stepped."""
+    venting = VentingLoop(
+        vents=["roof_vent", "side_vent"],
+        day_c=19.0,
+        night_c=19.0,
+        stages=[VentStage(above_c=0.0, level=0.2), VentStage(above_c=1.5, level=1.0)],
+    )
+    vented = WHOLE.model_copy(
+        update={
+            "weather": ConstantWeather(air_temperature_c=12.0),
+            "control": Control(venting=venting, circulation=CirculationLoop(fans=["fan"])),
+        }
+    )
+
+    def stepped(*_: object) -> None:
+        raise AssertionError("a grid run was stepped")
+
+    monkeypatch.setattr(ClimateRun, "air_at", stepped)
+    monkeypatch.setattr(ClimateRun, "started_at", stepped)
+    with Simulator(Catalogue(PACKAGED.with_config(vented))) as simulator:
+        _, day = climate_run(simulator, run_request(SCENARIO, parse_qs("set=heater:1")))
+        moment = next(
+            minute * 60.0
+            for minute in range(1, 4 * 60)
+            if day.house.controlled_at(minute * 60.0)["roof_vent"] > 0
+        )
+        decided = day.house.controlled_at(moment)
+        passing = {flow.opening_id for flow in day.openings_at(moment).openings}
+
+        assert {"roof_vent", "side_vent"} <= passing
+        assert day.run.levels_at(moment)["fan"] == decided["fan"] == 1.0
+        day.field(FIELD, moment)

@@ -97,22 +97,25 @@ if TYPE_CHECKING:
     from greenhouse_sim.services.simulator import Simulator
 
 # The format a checkpoint is written in, which a reader refuses if it does
-# not know it: 8 since a run's controller is a part with a model of its own
-# (P14.6), which a checkpoint names too, as 7 named its house's air and 6
-# its sunlight and sensors.
-CHECKPOINT_FORMAT: Final = 8
+# not know it: 9 since its house's air keeps how each of its controller's
+# loops stands, its vents' stage beside its heater (P11.2), as 8 named its
+# controller's part (P14.6), 7 its house's air and 6 its sunlight and
+# sensors.
+CHECKPOINT_FORMAT: Final = 9
 # The formats before, each read as the one after it: a format 2
 # checkpoint's run changed no target (#274); a format 3 checkpoint's
 # commands, daily commands and target changes are its run's plan; a format
-# 4 checkpoint's plants are its organ crop's state; and a format 5, 6 or 7
+# 4 checkpoint's plants are its organ crop's state; a format 5, 6 or 7
 # checkpoint names the parts there were then, the others its run's at the
-# version every model had then (P14.2).
+# version every model had then (P14.2); and a format 8 checkpoint's run, whose
+# controller ran its heater alone, had its vents' every stage shut.
 WITHOUT_TARGETS: Final = 2
 WITH_COMMANDS: Final = 3
 WITHOUT_MODELS: Final = 4
 WITH_FOUR_PARTS: Final = 5
 WITH_SIX_PARTS: Final = 6
 WITH_SEVEN_PARTS: Final = 7
+WITH_THE_HEATER_ALONE: Final = 8
 READ_AS_CURRENT: Final = (
     WITHOUT_TARGETS,
     WITH_COMMANDS,
@@ -120,6 +123,7 @@ READ_AS_CURRENT: Final = (
     WITH_FOUR_PARTS,
     WITH_SIX_PARTS,
     WITH_SEVEN_PARTS,
+    WITH_THE_HEATER_ALONE,
 )
 # The parts a checkpoint of each format with models names, every one of
 # them: a part left out would leave its model and version unchecked.
@@ -142,6 +146,7 @@ NAMED_BY: Final = {
         Part.SENSORS,
         Part.HOUSE_AIR,
     ),
+    WITH_THE_HEATER_ALONE: tuple(Part),
     CHECKPOINT_FORMAT: tuple(Part),
 }
 # The version every model had before a checkpoint kept models' versions.
@@ -371,7 +376,12 @@ def read_checkpoint(document: JsonValue) -> Checkpoint:
             written_in = WITHOUT_MODELS
         if written_in == WITHOUT_MODELS:
             document = _with_models(document)
-        if written_in in (WITH_FOUR_PARTS, WITH_SIX_PARTS, WITH_SEVEN_PARTS):
+        if written_in in (
+            WITH_FOUR_PARTS,
+            WITH_SIX_PARTS,
+            WITH_SEVEN_PARTS,
+            WITH_THE_HEATER_ALONE,
+        ):
             document = document | {"checkpoint_format": CHECKPOINT_FORMAT}
     try:
         held = Checkpoint.model_validate(document)
@@ -437,6 +447,14 @@ def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
         raise InvalidRequest(
             f"a crop on day {uploaded.day} has lived {uploaded.day} days, each plant's"
         )
+    venting = None if config.control is None else config.control.venting
+    stages = 0 if venting is None else len(venting.stages)
+    for air in (uploaded.house, uploaded.house_before):
+        if air is not None and not 0 <= air.vent_stage <= stages:
+            raise InvalidRequest(
+                f"a checkpoint's vents stand open at stage {air.vent_stage}, and its run's "
+                f"have {stages}"
+            )
     problems = _implausible(uploaded)
     if problems:
         raise InvalidRequest(f"a checkpoint no run reaches: {problems[0]}")

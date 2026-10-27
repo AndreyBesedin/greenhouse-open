@@ -14,9 +14,10 @@ them, so the house never heats and vents for temperature at once.
 The rules are exploratory heuristics: they follow the usual structure of a
 climate computer's heating and venting, but no source has yet been checked
 against each one's specifics. The heating loop is decision 0042's
-thermostat (`climate.thermostat`), which a run follows today; the house
-decides the other loops from P11.2, and until then a scenario's control
-holds its heating loop alone (`scenarios.config`). A manifest gives a
+thermostat (`climate.thermostat`). The house's air decides every loop's
+switches, at the moment each edge is reached (`climate.house`, P11.2); a
+scenario's control holds no dehumidifying loop until the house follows its
+air's humidity too (`scenarios.config`). A manifest gives a
 controller as the parameters of the controller's model `loops` (P14.6,
 `scenarios.registry`); a scenario without one runs its devices by its
 commands alone.
@@ -35,6 +36,7 @@ from pydantic import (
 )
 
 from greenhouse_sim.climate.thermostat import MINUTE_S, Thermostat, TimeOfDay
+from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.units import HOUR_S
 
 # Where a controller's day and night start, by default: decision 0042's.
@@ -104,6 +106,36 @@ class VentingLoop(BaseModel):
         """The air's temperature below which its first stage closes."""
         return setpoint_c + self.stages[0].above_c - self.band_c
 
+    def setpoint_c(self, by_day: bool) -> float:
+        """The temperature it vents to, by day or by night."""
+        return self.day_c if by_day else self.night_c
+
+    def stage_at(self, temperature_c: float, stage: int, setpoint_c: float) -> int:
+        """How many of its stages stand open from a moment the air is at
+        `temperature_c`, `stage` of them until then: each the air has passed
+        the opening of opened, each it has fallen back below by the band
+        closed, and the rest as they were."""
+        opens, closes = self.edges_c(stage, setpoint_c)
+        while opens is not None and temperature_c > opens:
+            stage += 1
+            opens, closes = self.edges_c(stage, setpoint_c)
+        while closes is not None and temperature_c < closes:
+            stage -= 1
+            opens, closes = self.edges_c(stage, setpoint_c)
+        return stage
+
+    def edges_c(self, stage: int, setpoint_c: float) -> tuple[float | None, float | None]:
+        """The air's temperatures at which, with `stage` stages open, its
+        next stage opens and its last open one closes: none past its last
+        stage, or with none open."""
+        opens = setpoint_c + self.stages[stage].above_c if stage < len(self.stages) else None
+        closes = setpoint_c + self.stages[stage - 1].above_c - self.band_c if stage > 0 else None
+        return opens, closes
+
+    def level_at(self, stage: int) -> float:
+        """How far its vents stand open with `stage` stages open."""
+        return 0.0 if stage == 0 else self.stages[stage - 1].level
+
 
 class CirculationLoop(BaseModel):
     """Run the fans `fans` while the vents stand open at stage `from_stage`,
@@ -119,6 +151,12 @@ class CirculationLoop(BaseModel):
         if len(set(self.fans)) < len(self.fans):
             raise ValueError("a circulation loop names each of its fans once")
         return self
+
+    def runs_at(self, venting: VentingLoop, vents_level: float) -> bool:
+        """Whether its fans run, the vents standing open to `vents_level`: as
+        far as its stage opens them, or further. A vent a command holds counts
+        at its level, as it would at the stage that opens it so far."""
+        return vents_level >= venting.stages[self.from_stage - 1].level
 
 
 class DehumidifyingLoop(BaseModel):
@@ -246,6 +284,10 @@ class Control(BaseModel):
         if self.dehumidifying is not None:
             devices.append(self.dehumidifying.actuator_id)
         return devices
+
+    def by_day(self, time_s: float) -> bool:
+        """Whether `time_s`, a moment of a run, falls in its day."""
+        return self.day_from_s <= time_s % DAY_S < self.night_from_s
 
     def thermostat(self) -> Thermostat | None:
         """Its heating loop as the thermostat a run follows, at its day's and

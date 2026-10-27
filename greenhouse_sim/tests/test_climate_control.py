@@ -2,8 +2,8 @@
 its targets and band, its vents in stages, checked so that heating and
 venting keep a dead band between them, every loop reads what another runs,
 and its day and night fall on the minute; its heating loop the thermostat a
-run follows; and a scenario's control running its own devices, its heating
-loop alone until the house decides every loop (P11.2)."""
+run follows; and a scenario's control running its own devices, by every
+loop but its dehumidifying loop, not yet (P11.2)."""
 
 from typing import Any, Final
 
@@ -187,12 +187,16 @@ def test_a_scenarios_control_takes_no_daily_commands_to_what_it_runs() -> None:
         )
 
 
-def test_a_scenarios_control_runs_its_heating_loop_alone_until_the_house_decides_every_loop() -> (
-    None
-):
-    with pytest.raises(
-        ValidationError,
-        match=r"until the house decides every loop \(P11.2\), not its venting, circulation",
-    ):
-        _reference(venting=VENTING.model_dump(), circulation={"fans": ["fan_left", "fan_right"]})
+def test_a_scenarios_control_runs_its_vents_and_fans_but_not_yet_its_dehumidifier() -> None:
+    vented = _reference(
+        venting=VENTING.model_dump(), circulation={"fans": ["fan_left", "fan_right"]}
+    )
+
+    assert vented.control is not None and vented.control.loops() == [
+        "heating",
+        "venting",
+        "circulation",
+    ]
+    with pytest.raises(ValidationError, match="runs no dehumidifying loop until the house"):
+        _reference(dehumidifying=DEHUMIDIFYING.model_dump(), venting=VENTING.model_dump())
     assert _reference().thermostat == REFERENCE.thermostat
