@@ -98,7 +98,8 @@ if TYPE_CHECKING:
 
 # The format a checkpoint is written in, which a reader refuses if it does
 # not know it: 9 since its house's air keeps how each of its controller's
-# loops stands, its vents' stage beside its heater (P11.2), as 8 named its
+# loops stands, its vents' stage and its dehumidifier beside its heater
+# (P11.2), as 8 named its
 # controller's part (P14.6), 7 its house's air and 6 its sunlight and
 # sensors.
 CHECKPOINT_FORMAT: Final = 9
@@ -108,7 +109,8 @@ CHECKPOINT_FORMAT: Final = 9
 # 4 checkpoint's plants are its organ crop's state; a format 5, 6 or 7
 # checkpoint names the parts there were then, the others its run's at the
 # version every model had then (P14.2); and a format 8 checkpoint's run, whose
-# controller ran its heater alone, had its vents' every stage shut.
+# controller ran its heater alone, had its vents' every stage shut and no
+# dehumidifier running.
 WITHOUT_TARGETS: Final = 2
 WITH_COMMANDS: Final = 3
 WITHOUT_MODELS: Final = 4
@@ -448,12 +450,17 @@ def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
             f"a crop on day {uploaded.day} has lived {uploaded.day} days, each plant's"
         )
     venting = None if config.control is None else config.control.venting
+    drying = None if config.control is None else config.control.dehumidifying
     stages = 0 if venting is None else len(venting.stages)
     for air in (uploaded.house, uploaded.house_before):
         if air is not None and not 0 <= air.vent_stage <= stages:
             raise InvalidRequest(
                 f"a checkpoint's vents stand open at stage {air.vent_stage}, and its run's "
                 f"have {stages}"
+            )
+        if air is not None and drying is None and (air.dehumidifying or air.drier):
+            raise InvalidRequest(
+                "a checkpoint's air runs a dehumidifying loop, and its run has none"
             )
     problems = _implausible(uploaded)
     if problems:

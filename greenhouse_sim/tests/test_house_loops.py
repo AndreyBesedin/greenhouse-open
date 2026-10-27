@@ -16,6 +16,7 @@ from greenhouse_sim.climate.commands import Command, Schedule
 from greenhouse_sim.climate.control import (
     CirculationLoop,
     Control,
+    DehumidifyingLoop,
     HeatingLoop,
     VentingLoop,
     VentStage,
@@ -53,8 +54,12 @@ VENTING: Final = VentingLoop(
     stages=[VentStage(above_c=0.0, level=0.2), VentStage(above_c=1.5, level=1.0)],
 )
 VENTED: Final = Control(venting=VENTING, circulation=CirculationLoop(fans=["fan"], from_stage=2))
-# The heater held on full by a command, so that the vents have the heat to
-# fight.
+# Damp air outside, and dry: the box's dehumidifier fights the first, and
+# its vents can let the second in.
+DAMP: Final = ConstantWeather(air_temperature_c=12.0, relative_humidity_pct=95.0)
+DRY: Final = ConstantWeather(air_temperature_c=12.0, relative_humidity_pct=50.0)
+# Heated full on, the box's air warms; the heater held on full by a command,
+# so that the vents have the heat to fight.
 HEATED: Final = Schedule.of([Command(time_s=0.0, actuator_id="heater", level=1.0)])
 # How closely a switch is found by halving the minute it falls in.
 SWITCH_S: Final = 1e-6
@@ -66,8 +71,9 @@ def _day(
     control: Control | None = VENTED,
     schedule: Schedule = HEATED,
     thermostat: Thermostat | None = None,
+    weather: ConstantWeather = MILD,
 ) -> ClimateDay:
-    config = BOX.model_copy(update={"weather": MILD})
+    config = BOX.model_copy(update={"weather": weather})
     return ClimateDay(
         ClimateRun(
             base=config.airflow,
@@ -217,3 +223,86 @@ def test_a_checkpoint_keeps_how_its_vents_stood_and_refuses_a_stage_its_run_lack
     assert checkpoints.read_checkpoint(earlier).house.vent_stage == 0
     with pytest.raises(InvalidRequest, match="vents stand open at stage 1, and its run's have 0"):
         checkpoints.upload_checkpoint(simulator, vented)
+
+
+@pytest.mark.parametrize(
+    ("humidity_pct", "on", "then"),
+    [(87.6, False, True), (87.4, False, False), (82.6, True, True), (82.4, True, False)],
+)
+def test_the_dehumidifier_runs_above_its_band_and_stops_below_it(
+    humidity_pct: float, on: bool, then: bool
+) -> None:
+    drying = DehumidifyingLoop(actuator_id="dehumidifier", target_pct=85.0, band_pct=5.0)
+
+    assert drying.on_at(humidity_pct, on) is then
+
+
+def test_the_dehumidifier_switches_the_moment_the_air_reaches_its_humidity_edge() -> None:
+    drying = DehumidifyingLoop(
+        actuator_id="dehumidifier", target_pct=85.0, band_pct=5.0, vents_when_drier=False
+    )
+    house = _day(Control(dehumidifying=drying), Schedule(), weather=DAMP).house
+
+    switches = _switches(house, "dehumidifier", 4 * HOUR_S)
+
+    # On and off, more than once, each where the air's relative humidity
+    # meets the edge it crossed.
+    assert len(switches) >= 3
+    for moment, level in switches:
+        edge = 87.5 if level == ON else 82.5
+        assert house.air_at(moment).relative_humidity_pct() == pytest.approx(edge, abs=1e-3)
+    assert all(later - earlier > 1.0 for (earlier, _), (later, _) in pairwise(switches))
+
+
+def _drying(weather: ConstantWeather, heating_c: float | None) -> ClimateDay:
+    """The box drying its air to 40 % under `weather`, venting for its
+    heat only above 33 °C, and heating to `heating_c`, if given: so dry a
+    target that its dehumidifier still runs once the heater has warmed the
+    air."""
+    venting = VENTING.model_copy(update={"day_c": 33.0, "night_c": 33.0})
+    heating = (
+        None
+        if heating_c is None
+        else HeatingLoop(actuator_id="heater", day_c=heating_c, night_c=heating_c)
+    )
+    control = Control(
+        heating=heating,
+        venting=venting,
+        dehumidifying=DehumidifyingLoop(actuator_id="dehumidifier", target_pct=40.0),
+    )
+    return _day(control, Schedule(), weather=weather)
+
+
+def test_it_vents_for_the_airs_water_while_the_heater_is_off_and_the_air_outside_is_drier() -> None:
+    crack = VENTING.stages[0].level
+    at_s = 10 * 60.0
+
+    drying = _drying(DRY, heating_c=None).house
+    heating = _drying(DRY, heating_c=25.0).house
+    wetter_outside = _drying(
+        ConstantWeather(air_temperature_c=18.0, relative_humidity_pct=95.0), heating_c=None
+    ).house
+
+    # Its air starts at 75 %, above the band: the dehumidifier runs.
+    assert drying.controlled_at(at_s)["dehumidifier"] == ON
+    assert drying.air_at(at_s).vent_stage == 0
+    assert drying.controlled_at(at_s)["roof_vent"] == crack
+    # Heating, or under wetter air, it keeps the vents shut, its dehumidifier
+    # running all the same.
+    heated = heating.air_at(at_s)
+    assert heated.heating and heated.dehumidifying and heated.drier
+    assert heating.controlled_at(at_s)["roof_vent"] == 0.0
+    assert not wetter_outside.air_at(at_s).drier
+    assert wetter_outside.controlled_at(at_s)["roof_vent"] == 0.0
+
+
+def test_a_checkpoint_whose_air_runs_a_dehumidifier_its_run_lacks_is_refused(
+    simulator: Simulator,
+) -> None:
+    saved = checkpoints.save_checkpoint(simulator, RunRequest("reference_greenhouse"), time_s=DAY_S)
+    kept = checkpoints.checkpoint(simulator, saved.checkpoint_id).model_dump(mode="json")
+    drying = kept | {"house": kept["house"] | {"dehumidifying": True}}
+
+    assert kept["house"]["dehumidifying"] is False
+    with pytest.raises(InvalidRequest, match="runs a dehumidifying loop, and its run has none"):
+        checkpoints.upload_checkpoint(simulator, drying)
