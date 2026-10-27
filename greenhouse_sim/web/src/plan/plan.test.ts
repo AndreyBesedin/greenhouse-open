@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { PlanState } from "./generated/planStateTypes";
 import {
+  cropAction,
   giveToPlan,
   LOCAL_OPERATOR,
   nextRevision,
@@ -28,6 +29,7 @@ const PLAYBACK = {
   every_s: 300,
   targets: [],
   commands: [],
+  crop: [],
 };
 const ASAP = { kind: "asap" } as const;
 const OPEN = setLevel("roof_vent", 0.5);
@@ -192,5 +194,26 @@ describe("the viewer's plan of a run it follows", () => {
       status: "refused",
       reason: "the run has finished",
     });
+  });
+
+  it("takes a plant's work as the protocol's action, as the plant lab names it", () => {
+    const on = (
+      kind: "remove_leaf" | "harvest_fruit" | "harvest_truss" | "lower_stem",
+      target: string,
+    ) => cropAction({ day: 3, plantId: "p30", kind, target });
+
+    expect(on("remove_leaf", "p30_n02_leaf")).toEqual({
+      kind: "remove_leaf",
+      plant_id: "p30",
+      leaf_id: "p30_n02_leaf",
+    });
+    expect(on("harvest_fruit", "p30_t03_f01")).toEqual({
+      kind: "harvest",
+      plant_id: "p30",
+      scope: "fruit",
+      organ_id: "p30_t03_f01",
+    });
+    expect(on("harvest_truss", "p30_t03")).toMatchObject({ scope: "truss", organ_id: "p30_t03" });
+    expect(on("lower_stem", "1")).toEqual({ kind: "lower", plant_id: "p30", by_internodes: 1 });
   });
 });

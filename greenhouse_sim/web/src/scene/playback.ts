@@ -4,7 +4,7 @@ import { contractCheck } from "../loadJson";
 import { PLAYBACK_SCHEMA } from "./generated/playbackSchema";
 import type { PlaybackState as ServedPlayback } from "./generated/playbackTypes";
 import { layoutText } from "./moves";
-import type { ScheduledCommand, TargetChange } from "./source";
+import type { CropCommand, ScheduledCommand, TargetChange } from "./source";
 
 // How often a view following a played-back run asks where its clock is.
 const POLL_MS = 1000;
@@ -40,6 +40,9 @@ export interface PlaybackState {
    * vents, each from its moment on (P13.8): a view following it asks for
    * its run with them, as its commands. */
   commands: ScheduledCommand[];
+  /** The crop actions its epoch's run has been given, each at a day's
+   * start (P13.8): a view following it asks for its crop with them. */
+  crop: CropCommand[];
 }
 
 export type PlaybackLoad =
@@ -82,6 +85,7 @@ export function parsePlayback(body: unknown): PlaybackState | null {
       actuatorId,
       level,
     })),
+    crop: played.crop.map(([timeS, plantId, kind, target]) => ({ timeS, plantId, kind, target })),
   };
 }
 

@@ -96,6 +96,7 @@ function playbackAnswer(layout: string, targets: [number, string, number][] = []
       every_s: 300,
       targets,
       commands: [],
+      crop: [],
     }),
   );
 }

@@ -32,6 +32,7 @@ function playing(runId: string, timeS: number): Response {
       every_s: 300,
       targets: [],
       commands: [],
+      crop: [],
     }),
   );
 }

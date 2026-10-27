@@ -16,7 +16,12 @@ crop and its timeline, each of the run a query asks for (`run_request`).
                                           none, &targets=3600:heating_day:24
                                           its heating setpoint by day 24 °C
                                           from that moment on, on the minute
-                                          (#274),
+                                          (#274), &crop=86400:p01:lower_stem:1
+                                          its crop's work at a day's start
+                                          (P13.8): harvest_ripe, harvest_fruit,
+                                          harvest_truss, lower_stem, lower_cm,
+                                          lower_to, remove_leaf or inspect,
+                                          and what each acts on,
                                           &open=roof_vent:1 with its vents
                                           open, and &t=600 that many seconds
                                           into the run, to its last day's end,
@@ -210,13 +215,15 @@ def get(simulator: Simulator, segments: list[str], query: Query) -> Response | N
 def run_request(scenario_id: str, query: Query) -> RunRequest:
     """The run a query asks for of a scenario, read once: `layout=`,
     `weather=`, where it starts from (`set=`, `open=`), and its plan
-    (`schedule=`, `daily=`, `targets=`), as written; the run checks it."""
+    (`schedule=`, `daily=`, `targets=`, `crop=`), as written; the run
+    checks it."""
     levels = pairs(query.get("set", []), "set")
     openings = pairs(query.get("open", []), "open")
     plan = RunPlan.requested(
         commands=_commands(query.get("schedule", [])),
         daily=_daily(query),
         targets=_commands(query.get("targets", []), "targets", "seconds:target:celsius"),
+        crop=_crop(query.get("crop", [])),
     )
     return RunRequest(
         scenario_id=scenario_id,
@@ -245,6 +252,29 @@ def _commands(
         except ValueError:
             raise InvalidRequest(f"{name} wants {shape} commands, not {request!r}") from None
     return commands
+
+
+def _crop(requests: list[str]) -> list[tuple[float, str, str, str]]:
+    """`crop=seconds:plant:kind:organ,…` (P13.8) as crop actions, in the
+    order given: each its moment, its plant, its kind as spelled
+    (`runs.CROP_SPELLINGS`) and what it acts on, empty for nothing."""
+    actions = []
+    for request in ",".join(requests).split(","):
+        if not request:
+            continue
+        time, _, rest = request.partition(":")
+        plant_id, _, rest = rest.partition(":")
+        # What it acts on is the rest, an inspection's reason with its colons.
+        kind, spelled, target = rest.partition(":")
+        try:
+            if not spelled:
+                raise ValueError(request)
+            actions.append((float(time), plant_id, kind, target))
+        except ValueError:
+            raise InvalidRequest(
+                f"crop wants seconds:plant:kind:organ actions, not {request!r}"
+            ) from None
+    return actions
 
 
 def _daily(query: Query) -> list[tuple[float, str, float]] | None:

@@ -8,7 +8,13 @@ import { defaultSlice } from "../fields/drawing";
 import type { EnvironmentField } from "../fields/field";
 import { CLIMATE_FIELD } from "../fields/source";
 import type { Point3 } from "../world";
-import { type SceneSource, type ScheduledCommand, scheduleText, type TargetChange } from "./source";
+import {
+  type CropCommand,
+  type SceneSource,
+  type ScheduledCommand,
+  scheduleText,
+  type TargetChange,
+} from "./source";
 
 /** A scenario's source: what its panels change. */
 export type ScenarioSource = Extract<SceneSource, { kind: "scenario" }>;
@@ -128,6 +134,13 @@ export function withTargets(
 ): ScenarioSource {
   const { targets: _, ...rest } = source;
   return changes.length === 0 ? rest : { ...rest, targets: [...changes] };
+}
+
+/** Its crop actions, as they are: those of a run followed as it plays
+ * them (P13.8). */
+export function withCrop(source: ScenarioSource, actions: readonly CropCommand[]): ScenarioSource {
+  const { crop: _, ...rest } = source;
+  return actions.length === 0 ? rest : { ...rest, crop: [...actions] };
 }
 
 /** Its commands, as they are: the levels its run is given at their

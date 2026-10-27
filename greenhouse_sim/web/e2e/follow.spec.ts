@@ -262,6 +262,7 @@ test("followed, a target the run played back changed is asked for with every par
     every_s: 300,
     targets: [[change, "heating_night", 22]],
     commands: [],
+    crop: [],
   };
   await page.route(`**${PLAYBACK}`, (route) => route.fulfill({ json: played }));
   const asked: string[] = [];

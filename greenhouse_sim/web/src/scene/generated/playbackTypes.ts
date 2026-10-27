@@ -23,4 +23,5 @@ export interface PlaybackState {
   every_s: number;
   targets: [number, string, number][];
   commands: [number, string, number][];
+  crop: [number, string, string, string][];
 }

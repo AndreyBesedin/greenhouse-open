@@ -15,7 +15,7 @@ const SAME_LEVEL = 1e-9;
  * A run followed as it plays, steered from the viewer's panels (P13.8): the
  * levels set wait until no more are set for `STEER_PAUSE_MS`, then go to the
  * run's gateway together, as the next revision of the viewer's plan
- * (`giveToPlan`); targets go at once. Each level asked for is `asked` until
+ * (`giveToPlan`); targets, and what is asked of a plant, go at once. Each level asked for is `asked` until
  * the panels show it (`shown`, the levels the run has at its clock), or it
  * is refused; a refusal is `refusal`, in the gateway's words, until the next
  * change is given. Once given, the playback is read again (`onPlayback`),
@@ -68,6 +68,9 @@ export function useSteering(
     [flush],
   );
 
+  /** Gives actions at once, as a plant's work is. */
+  const act = useCallback((actions: Action[]) => void give(actions), [give]);
+
   /** Sets heating targets, from the run's next minute on. */
   const setTargets = useCallback(
     (targets: Readonly<Record<string, number>>) =>
@@ -103,7 +106,7 @@ export function useSteering(
   }, [scenarioId]);
   useEffect(() => () => stopWaiting(timer), []);
 
-  return { asked, refusal, steer, setTargets };
+  return { asked, refusal, steer, setTargets, act };
 }
 
 /** `levels` without the devices `gone` names, as long as they are asked for

@@ -100,6 +100,30 @@ export const PLAYBACK_SCHEMA = {
       },
       "title": "Commands",
       "type": "array"
+    },
+    "crop": {
+      "default": [],
+      "items": {
+        "maxItems": 4,
+        "minItems": 4,
+        "prefixItems": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "string"
+          }
+        ],
+        "type": "array"
+      },
+      "title": "Crop",
+      "type": "array"
     }
   },
   "required": [
@@ -117,7 +141,8 @@ export const PLAYBACK_SCHEMA = {
     "worked_out_s",
     "every_s",
     "targets",
-    "commands"
+    "commands",
+    "crop"
   ],
   "title": "PlaybackState",
   "type": "object"
