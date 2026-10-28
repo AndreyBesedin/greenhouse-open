@@ -46,7 +46,6 @@ from greenhouse_sim.services.climate_readings import EquipmentAt
 from greenhouse_sim.services.crop import CropPlant, PlantsLight
 from greenhouse_sim.services.drafts import DraftListed
 from greenhouse_sim.services.fields import FieldNames
-from greenhouse_sim.services.live import LiveState
 from greenhouse_sim.services.plants import LabChecks
 from greenhouse_sim.services.playback import PlaybackState
 from greenhouse_sim.services.run_state import RunState
@@ -78,7 +77,6 @@ ANSWERS: Final[dict[Path, type[object]]] = {
     SERVICES / "timeline.schema.json": TimelineDocument,
     SERVICES / "checkpoint.schema.json": CheckpointSummary,
     SERVICES / "playback.schema.json": PlaybackState,
-    SERVICES / "live.schema.json": LiveState,
     SERVICES / "plants_light.schema.json": PlantsLight,
     SERVICES / "crop_plant.schema.json": CropPlant,
     SERVICES / "lab_checks.schema.json": LabChecks,

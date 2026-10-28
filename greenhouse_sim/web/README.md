@@ -40,18 +40,16 @@ whether every plant keeps the structure's rules, `?scene=fixtures` is a gallery 
 fixture primitives (`public/scenes/qa-fixtures.json`), one of each, drawn in
 its material, `?scene=stress&plants=10000` is a dense field of
 plants for measuring the renderer, `?scenario=climate_box` is that scenario before
-day one, from the simulator's API, and `?live=climate_box` follows it live as the
-API plays it one simulated day per second (`uv run api --seconds-per-day
-0.2` plays faster). The HUD then shows the stream's state
-and the simulated day; if the API goes away the viewer says so and reconnects
-when it is back. Its controls play, pause, step, reset and speed up the run,
-which every viewer of that scenario shares. The viewer checks every scene
+day one, from the simulator's API, and `?scenario=climate_box&follow=1` follows its
+run as the API plays it back, which every viewer of that scenario shares; its panel
+plays, pauses and starts the run over. The live mode's address, `?live=climate_box`,
+opens the same (decision 0059). The viewer checks every scene
 against the schema the simulator publishes, and says why when it refuses one.
 
 Click an entity to select it: it glows, the inspector shows its identifier,
 transform, shape, material and properties, and debug overlays (its bounding box, its
 origin and axes, and its label) can be switched on and off around it. A
-selection stays on its entity as a live scenario moves on; clicking the sky
+selection stays on its entity as a followed run moves on; clicking the sky
 clears it. "Colour by" shades entities by a numeric property, with a legend,
 "Dimensions and axis labels" measures the greenhouse and names the world's
 axes, drawing its bounds as an outline, and "Categories" colours each part of
@@ -390,8 +388,9 @@ test quickly against ones known to be this checkout's. `TEST_PORT_OFFSET=20`
 moves every port they start a server on by 20 (8786, 4337 and so on), so that
 two checkouts can run their browser tests at once. Once every other browser
 test has passed, `e2e/renderer-smoke.spec.ts` walks through the whole renderer
-as a person would: live play, camera presets, pause, step and reset with a
-deterministic replay, selection and overlays, and the stress scene. The
+as a person would: a run followed as it is played back, camera presets,
+starting over and pausing, selection and overlays, the same plant drawn again
+at the moment held, and the stress scene. The
 plant lab's tests, which grow thousands of entities, run on their own after
 the others too, then the checks of the sun's light (`e2e/light.spec.ts`,
 `e2e/solar-lab.spec.ts` and P08's final QA, `e2e/solar-day.spec.ts`), which

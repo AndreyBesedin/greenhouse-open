@@ -1,8 +1,6 @@
 """The services the local API is an interface to: what each answers, and the
 typed error it raises for each case it refuses, with no HTTP in sight."""
 
-from collections.abc import Iterator
-
 import pytest
 
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
@@ -10,13 +8,6 @@ from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.scene.snapshot import SCHEMA_VERSION, SceneEntityKind
 from greenhouse_sim.services import scenarios, system
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
-from greenhouse_sim.services.live import (
-    SPEEDS,
-    InvalidSpeed,
-    LiveCommand,
-    LiveRuns,
-    LiveState,
-)
 from greenhouse_sim.services.scenarios import SceneChanges
 
 
@@ -120,50 +111,3 @@ def test_a_layout_is_given_as_its_file_holds_it() -> None:
 
     assert default["$schema"] == benches["$schema"]
     assert isinstance(support, dict) and support["kind"] == "bench"
-
-
-@pytest.fixture
-def runs() -> Iterator[LiveRuns]:
-    runs = LiveRuns(PACKAGED, seconds_per_day=60.0)
-    yield runs
-    runs.close()
-
-
-@pytest.mark.parametrize(
-    ("command", "day", "playing"),
-    [
-        (LiveCommand.PAUSE, 0, False),
-        (LiveCommand.PLAY, 0, True),
-        (LiveCommand.STEP, 1, True),
-        (LiveCommand.RESET, 0, True),
-    ],
-)
-def test_a_live_command_answers_with_the_runs_new_state(
-    runs: LiveRuns, command: LiveCommand, day: int, playing: bool
-) -> None:
-    state = runs.command("climate_box", command)
-
-    assert type(state) is LiveState
-    assert (state.day, state.playing) == (day, playing)
-
-
-def test_a_live_run_plays_at_the_speeds_it_offers_and_no_other(runs: LiveRuns) -> None:
-    assert [runs.set_speed("climate_box", speed).speed for speed in SPEEDS] == list(SPEEDS)
-    with pytest.raises(InvalidSpeed, match=r"multiplier must be one of 0\.25, 0\.5, 1, 2, 4, 8"):
-        runs.set_speed("climate_box", 3.0)
-    assert issubclass(InvalidSpeed, InvalidRequest)
-
-
-def test_an_unregistered_scenario_has_no_live_run(runs: LiveRuns) -> None:
-    with pytest.raises(NotFound, match="no scenario 'gh_404'"):
-        runs.run("gh_404")
-    with pytest.raises(NotFound):
-        runs.command("gh_404", LiveCommand.PAUSE)
-    with pytest.raises(NotFound):
-        runs.set_speed("gh_404", 2.0)
-
-
-def test_a_frame_states_its_run_without_its_scene(runs: LiveRuns) -> None:
-    frame = runs.run("climate_box").latest()
-
-    assert frame.state().model_dump() == frame.model_dump(exclude={"snapshot"})

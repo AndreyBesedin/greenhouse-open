@@ -13,5 +13,5 @@ into another's model for its vocabulary:
 
 The domain depends on nothing else in the simulator. A contract's own
 vocabulary stays with its contract: the scene's entity kinds with the scene
-(`greenhouse_sim.scene.snapshot`), a live run's commands with its service.
+(`greenhouse_sim.scene.snapshot`), a playback's commands with its service.
 """

@@ -41,7 +41,7 @@ More complete runs are in the repository's [examples](../examples/).
 
 The simulator core is plain Python with no server, database or browser. Its
 services do what a client asks of it (list scenarios, draw a scene, play a
-scenario live), whatever the transport. The local API and the browser
+scenario's run back), whatever the transport. The local API and the browser
 viewer are adapters around them: the API's routes are only the interface to
 the services, and nothing depends on the API or the viewer.
 
@@ -71,8 +71,8 @@ greenhouse_sim/
                    as an OpenFOAM case, and OpenFOAM run out of process
     scene/         the world as a renderable scene for a viewer
     services/      what the simulator does for a client: scenarios, scenes,
-                   layouts, fields, CFD geometry, live runs and the plant
-                   lab, independent of any transport
+                   layouts, fields, CFD geometry, runs played back and the
+                   plant lab, independent of any transport
     api/           a thin local HTTP API for the viewer (adapter): the
                    interface to the services
   web/             the browser viewer (adapter, not part of the wheel)
@@ -111,7 +111,7 @@ Everything else is internal and may move. `tests/test_public_imports.py`
 lists every public name.
 
 The model contracts above are the engine's: they drive the simple daily
-model, the examples and the live stream. The reference scenario runs
+model and the examples. The reference scenario runs
 through the richer run instead, the house's air (`greenhouse_sim.climate`),
 the sun (`greenhouse_sim.solar`) and the organ-level crop, which have no
 contract of their own for the air yet. The run is the one simulator
@@ -121,9 +121,9 @@ model joins it as one of them.
 
 ## The viewer
 
-The browser viewer shows what the simulator is doing, in 3D: a scenario
-before its first day, or live, growing day by day as the simulator advances
-it, with controls to pause, step, reset and change its speed.
+The browser viewer shows what the simulator is doing, in 3D: a scenario's
+run at a moment of it, or followed as it is played back, growing as its
+clock moves on, with controls to play, pause and start it over.
 `uv run demo`, from a clone, starts both and opens the reference greenhouse
 ([docs/demo.md](../docs/demo.md)), once `uv run setup` has installed the
 viewer's packages (Node 24). Or start the local API, then the viewer:

@@ -10,6 +10,17 @@ const ARRIVES = { timeout: 60_000 };
 // The climate box's run lasts 14 days, and plays a day in 10 s.
 const RUN_END_S = 14 * DAY_S;
 
+test("the live mode's address opens its scenario's run, followed (decision 0059)", async ({
+  page,
+}) => {
+  await page.goto("/?live=climate_box");
+
+  await expect(page.getByTestId("scene-status")).toContainText("scenario climate_box", ARRIVES);
+  await expect(
+    page.getByRole("region", { name: "Run played back" }).getByTestId("playback-status"),
+  ).toContainText(/Following run climate_box-|not played back yet/, ARRIVES);
+});
+
 test("a view follows its scenario's run as it is played back, the run a consumer reads (P10.2)", async ({
   page,
 }) => {

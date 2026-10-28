@@ -333,6 +333,13 @@ describe("following a run as it is played back", () => {
       "follow",
     );
   });
+
+  it("is where the live mode's address opens, the live mode gone (decision 0059)", () => {
+    const source = sourceFromSearch("?live=climate_box");
+
+    expect(source).toEqual({ kind: "scenario", scenarioId: "climate_box", follow: true });
+    expect(searchFor(source)).toBe("?scenario=climate_box&follow=1");
+  });
 });
 
 describe("a run's target changes (#274)", () => {

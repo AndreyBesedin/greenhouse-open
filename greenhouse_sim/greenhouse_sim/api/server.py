@@ -1,6 +1,6 @@
 """Serving the local API over HTTP, on this machine only.
 
-    python -m greenhouse_sim.api [--port PORT] [--seconds-per-day SECONDS] [--play SCENARIO]
+    python -m greenhouse_sim.api [--port PORT] [--play SCENARIO]
 
 The browser viewer's development server forwards `/api` here, so the API
 needs no cross-origin headers. It binds to the loopback interface: it is a
@@ -12,10 +12,8 @@ the viewer's, `GET` only, and then the gateway's (`/actuation/v1`,
 local operator (P13.7). `--play SCENARIO` plays a scenario's own run back
 from its start (`services.playback`), for the viewer and a consumer.
 
-Live scenarios stream as Server-Sent Events (decision 0012): a `frame` event
-per simulated day, and a comment now and then to keep the connection open.
-Commands for a live run (play, pause, step, reset, speed) are POST requests,
-and so are a run's checkpoints, saved or uploaded as a JSON body.
+A run's checkpoints are saved or uploaded as POST requests, with a JSON
+body.
 A request the simulator fails on unexpectedly is answered 500, with the
 failure in the server's log. Every answer says how long the simulator took
 to give it, as a `Server-Timing` header's `sim` metric, in milliseconds
@@ -39,7 +37,7 @@ from typing import Final, cast
 from greenhouse_sim.api.actuation import actuation_respond, is_actuation
 from greenhouse_sim.api.consumer import consumer_respond
 from greenhouse_sim.api.responses import Response
-from greenhouse_sim.api.routes import control, live_stream, respond
+from greenhouse_sim.api.routes import respond
 from greenhouse_sim.services import checkpoints, playback
 from greenhouse_sim.services.drafts import DraftStore, store_at
 from greenhouse_sim.services.errors import InvalidRequest
@@ -48,7 +46,6 @@ from greenhouse_sim.services.gateway import (
     AuthorisationConfig,
     authorisation_file,
 )
-from greenhouse_sim.services.live import DEFAULT_SECONDS_PER_DAY, LiveRun, LiveRuns
 from greenhouse_sim.services.simulator import Simulator
 
 LOOPBACK: Final = "127.0.0.1"
@@ -58,10 +55,6 @@ DEFAULT_PORT: Final = 8765
 # Where, under the user's home, the installations' drafts are kept unless
 # the command line says otherwise (decision 0051): beside no repository.
 DEFAULT_DRAFTS: Final = Path(".greenhouse-sim") / "drafts.sqlite3"
-# How long a quiet stream waits before sending a keep-alive comment.
-KEEPALIVE_SECONDS: Final = 15.0
-# How soon a viewer's browser should try again after losing the stream.
-RECONNECT_AFTER_MS: Final = 1000
 # The `Server-Timing` metric that says how long the simulator took to answer.
 SIMULATOR_METRIC: Final = "sim"
 MS_PER_S: Final = 1000
@@ -95,7 +88,6 @@ class SimulatorServer(ThreadingHTTPServer):
         port: int,
         simulator: Simulator | None = None,
         *,
-        seconds_per_day: float,
         drafts: DraftStore | None = None,
         authorisation: AuthorisationConfig = LOCAL_AUTHORISATION,
     ) -> None:
@@ -104,7 +96,7 @@ class SimulatorServer(ThreadingHTTPServer):
         # Nothing has started yet.
         self._makes_simulator = simulator is None
         self.simulator = (
-            Simulator(seconds_per_day=seconds_per_day, drafts=drafts, authorisation=authorisation)
+            Simulator(drafts=drafts, authorisation=authorisation)
             if simulator is None
             else simulator
         )
@@ -116,8 +108,7 @@ class SimulatorServer(ThreadingHTTPServer):
 
     def server_close(self) -> None:
         # It accepts no request once its socket is closed; then the simulator
-        # goes with the server that made it, its live runs and playbacks
-        # stopped.
+        # goes with the server that made it, its playbacks stopped.
         super().server_close()
         if self._makes_simulator:
             self.simulator.close()
@@ -136,13 +127,7 @@ class _Handler(BaseHTTPRequestHandler):
         if acts is not None:
             self._send(acts, started)
             return
-        stream = self._safely(lambda: live_stream(self.path, self._live))
-        if isinstance(stream, LiveRun):
-            self._stream(stream)
-        elif stream is not None:
-            self._send(stream, started)
-        else:
-            self._send(self._safely(lambda: respond(self._simulator, "GET", self.path)), started)
+        self._send(self._safely(lambda: respond(self._simulator, "GET", self.path)), started)
 
     def do_POST(self) -> None:
         started = time.perf_counter()
@@ -160,14 +145,11 @@ class _Handler(BaseHTTPRequestHandler):
             )
             self._send(answered or Response(HTTPStatus.NOT_FOUND, {"detail": "no route"}), started)
             return
-        response = self._safely(lambda: control(self.path, self._live))
-        if response is None:
-            body = self._body()
-            if isinstance(body, Response):
-                response = body
-            else:
-                response = self._safely(lambda: respond(self._simulator, "POST", self.path, body))
-        self._send(response, started)
+        body = self._body()
+        if isinstance(body, Response):
+            self._send(body, started)
+            return
+        self._send(self._safely(lambda: respond(self._simulator, "POST", self.path, body)), started)
 
     def do_PUT(self) -> None:
         self._send(_refused_method(self.command), time.perf_counter())
@@ -205,10 +187,6 @@ class _Handler(BaseHTTPRequestHandler):
     def _simulator(self) -> Simulator:
         return cast(SimulatorServer, self.server).simulator
 
-    @property
-    def _live(self) -> LiveRuns:
-        return self._simulator.live
-
     def _safely[T](self, answer: Callable[[], T]) -> T | Response:
         """The route's answer, or a 500 if the simulator failed unexpectedly."""
         try:
@@ -235,26 +213,6 @@ class _Handler(BaseHTTPRequestHandler):
             self.close_connection = True
             self.log_message('"%s": the client left before its answer', self.requestline)
 
-    def _stream(self, run: LiveRun) -> None:
-        """Sends the run's frames as Server-Sent Events until either side stops."""
-        self.send_response(HTTPStatus.OK)
-        self.send_header("Content-Type", "text/event-stream")
-        self.send_header("Cache-Control", "no-cache")
-        self.end_headers()
-        sequence: int | None = None
-        try:
-            self.wfile.write(f"retry: {RECONNECT_AFTER_MS}\n\n".encode())
-            while not run.stopped:
-                frame = run.frame_after(sequence, KEEPALIVE_SECONDS)
-                if frame is None:
-                    self.wfile.write(b": keep-alive\n\n")
-                else:
-                    self.wfile.write(f"event: frame\ndata: {frame.model_dump_json()}\n\n".encode())
-                    sequence = frame.sequence
-                self.wfile.flush()
-        except BrokenPipeError, ConnectionResetError:
-            pass
-
 
 def _refused_method(method: str) -> Response:
     return Response(
@@ -265,18 +223,14 @@ def _refused_method(method: str) -> Response:
 def create_server(
     port: int = DEFAULT_PORT,
     *,
-    seconds_per_day: float = DEFAULT_SECONDS_PER_DAY,
     simulator: Simulator | None = None,
     drafts: DraftStore | None = None,
     authorisation: AuthorisationConfig = LOCAL_AUTHORISATION,
 ) -> SimulatorServer:
     """A server on the loopback interface; port 0 picks a free port. It makes
-    its own simulator, live runs paced at `seconds_per_day`, keeping drafts
-    in `drafts` if given, its runs acted on as `authorisation` lets (decision
-    0052), unless it is given a simulator."""
-    return SimulatorServer(
-        port, simulator, seconds_per_day=seconds_per_day, drafts=drafts, authorisation=authorisation
-    )
+    its own simulator, keeping drafts in `drafts` if given, its runs acted on
+    as `authorisation` lets (decision 0052), unless it is given a simulator."""
+    return SimulatorServer(port, simulator, drafts=drafts, authorisation=authorisation)
 
 
 def _authorisation(given: Path | None, parser: argparse.ArgumentParser) -> AuthorisationConfig:
@@ -310,12 +264,6 @@ def _drafts(given: Path | None, parser: argparse.ArgumentParser) -> DraftStore |
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Serve the simulator's local API.")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
-    parser.add_argument(
-        "--seconds-per-day",
-        type=float,
-        default=DEFAULT_SECONDS_PER_DAY,
-        help="how fast live scenarios play",
-    )
     parser.add_argument(
         "--play",
         action="append",
@@ -363,12 +311,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     # the server running, to see where a busy or stuck one is.
     faulthandler.register(signal.SIGUSR1, all_threads=True)
 
-    server = create_server(
-        args.port,
-        seconds_per_day=args.seconds_per_day,
-        drafts=drafts,
-        authorisation=authorisation,
-    )
+    server = create_server(args.port, drafts=drafts, authorisation=authorisation)
     host, port = server.server_address[:2]
     print(f"greenhouse-sim API on http://{host!s}:{port}/api", flush=True)
     for scenario_id in args.play:

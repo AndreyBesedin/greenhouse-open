@@ -72,7 +72,7 @@ describe("the choice of what the viewer shows", () => {
     expect(details.querySelector(".scenario-description")?.textContent).toBe(REFERENCE.description);
   });
 
-  it("opens a scenario on its opening day, or plays it live, and folds once chosen", () => {
+  it("opens a scenario on its opening day, and folds once chosen", () => {
     const { details, onSource } = shown(vi.fn(), true);
 
     click(button(details, "Open reference_greenhouse"));
@@ -83,9 +83,8 @@ describe("the choice of what the viewer shows", () => {
       time: 80 * DAY_S + NOON_S,
     });
     expect(details.open).toBe(false);
-
-    click(button(details, "Play climate_box live"));
-    expect(onSource).toHaveBeenLastCalledWith({ kind: "live", scenarioId: "climate_box" });
+    // The live mode is gone: a scenario is opened or followed (decision 0059).
+    expect(details.querySelector('[aria-label="Play climate_box live"]')).toBeNull();
   });
 
   it("follows a scenario's run, its climate drawn only where its layout makes one", async () => {

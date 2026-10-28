@@ -22,7 +22,7 @@ import { MAX_PROBES } from "./fields/probes";
 import { CLIMATE_FIELD } from "./fields/source";
 import { useClimateLoads } from "./fields/useClimateLoads";
 import { useFieldDrawing } from "./fields/useFieldDrawing";
-import { Hud, type LiveStatus } from "./Hud";
+import { Hud } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
 import { MovePanel } from "./MovePanel";
@@ -62,8 +62,6 @@ import { type SceneSource, searchFor, shownBy } from "./scene/source";
 import { useDrawnSnapshot } from "./scene/useDrawnSnapshot";
 import { useFollow, withoutRunChanges } from "./scene/useFollow";
 import { useFollowFraming } from "./scene/useFollowFraming";
-import { useLiveCommands } from "./scene/useLiveCommands";
-import { useLiveScene } from "./scene/useLiveScene";
 import { useMoveDrag } from "./scene/useMoveDrag";
 import { useSceneLoads } from "./scene/useSceneLoads";
 import { type SetSource, useSource } from "./scene/useSource";
@@ -131,9 +129,6 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // Whether the plant lab names its plants.
   const [showPlantNames, setShowPlantNames] = useState(false);
-  const liveScenario = source.kind === "live" ? source.scenarioId : null;
-  const live = useLiveScene(liveScenario);
-  const commands = useLiveCommands(liveScenario);
 
   // What a view starts with once another is shown, chosen or come back to
   // with Back and Forward (#201): nothing selected, unless another layout of
@@ -252,13 +247,11 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // A choice starts afresh, even of what is shown already.
   function chooseSource(chosen: SceneSource): void {
     const next = withItsAir(source, chosen);
-    commands.forget();
     setSource(next);
     startAfresh(source, next);
   }
 
-  const shown = source.kind === "live" ? live.scene : scene;
-  const shownSnapshot = shown.status === "loaded" ? shown.snapshot : null;
+  const shownSnapshot = scene.status === "loaded" ? scene.snapshot : null;
   const grown = crop.status === "loaded" ? crop.snapshot : null;
   const snapshot = useDrawnSnapshot(shownSnapshot, grown, glazing, openingFlows);
   // Overlays and colours are worked out from the scene, which they only read.
@@ -350,11 +343,6 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   // display options switch and "What am I seeing?" explains (#205).
   const overlaysDrawn = sceneOverlaysDrawn(scenePrimitives, fieldLayer !== null);
 
-  const liveStatus: LiveStatus | null =
-    source.kind === "live"
-      ? { connection: live.connection, frame: live.frame, problem: commands.problem }
-      : null;
-
   function choosePreset(preset: PresetName): void {
     setPresetRequest((previous) => ({ preset, serial: (previous?.serial ?? 0) + 1 }));
   }
@@ -397,8 +385,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             build={build}
             scenarios={scenarios}
             source={source}
-            scene={shown.status === "loaded" && snapshot !== null ? { ...shown, snapshot } : shown}
-            failures={source.kind === "live" ? [] : failures}
+            scene={scene.status === "loaded" && snapshot !== null ? { ...scene, snapshot } : scene}
+            failures={failures}
             chooseFirst={chooseFirst}
             theme={panelTheme}
             onTheme={setPanelTheme}
@@ -589,10 +577,8 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
           <Hud
             sample={sample}
             pointer={pointer}
-            live={liveStatus}
             simulator={simulatorTime}
             onPreset={choosePreset}
-            onCommand={commands.send}
           />
           <div className="legends">
             <ControlsHelp onShow={() => unfold("view")} />

@@ -23,7 +23,6 @@ export interface ViewSample {
 
 const MILLISECONDS_PER_SECOND = 1000;
 // "2026-01-04T12:00" from an ISO 8601 instant: the date, hours and minutes.
-const ISO_DATE_AND_MINUTES_LENGTH = 16;
 
 /** The frame rate over a sampling window, or 0 for an empty window. */
 export function framesPerSecond(frames: number, elapsedMs: number): number {
@@ -49,20 +48,6 @@ const SMALL_SIZE_DECIMALS = 4;
 /** A size in metres: to the centimetre, or finer if it is under one. */
 export function formatSize(value: number): string {
   return Math.abs(value) < SMALL_SIZE_M ? value.toFixed(SMALL_SIZE_DECIMALS) : formatMetres(value);
-}
-
-/** A simulated instant as the HUD writes it, in UTC to the minute. */
-export function formatInstant(iso: string): string {
-  const instant = new Date(iso);
-  if (Number.isNaN(instant.getTime())) {
-    return iso;
-  }
-  return `${instant.toISOString().slice(0, ISO_DATE_AND_MINUTES_LENGTH).replace("T", " ")} UTC`;
-}
-
-/** A speed as a multiple of the simulator's own pace, such as `0.5×`. */
-export function formatSpeed(speed: number): string {
-  return `${speed}×`;
 }
 
 // Enough to tell a quaternion's components apart without implying more precision.

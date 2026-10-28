@@ -1,10 +1,9 @@
 """A simulator's state, in one object (decision 0048): its scenarios and
-its live runs, closed with it; made by the server, or given to it."""
+the runs it plays back, closed with it; made by the server, or given to it."""
 
 import ast
+import errno
 import threading
-import time
-from collections.abc import Callable
 from http import HTTPStatus
 from pathlib import Path
 
@@ -16,22 +15,24 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED, Catalogue
 from greenhouse_sim.services import playback
 from greenhouse_sim.services.fields import air_through_a_run
-from greenhouse_sim.services.live import LiveRun
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
-# Quick enough for a run to step while a test looks.
-QUICK_SECONDS_PER_DAY = 0.01
+# A pace slow enough that a playback is still working its days out when the
+# test closes it.
+SECONDS_PER_DAY = 600.0
 # How long a test waits for a thread it expects to finish.
 WAIT_S = 5.0
 # How long a test gives a thread it expects to be still waiting.
 STILL_WAITING_S = 0.3
 
 
-def _pacing() -> list[str]:
-    """The live runs being paced by a thread, in this process."""
-    return [thread.name for thread in threading.enumerate() if thread.name.startswith("live run")]
+def _playing() -> list[str]:
+    """The playbacks working days out on a thread, in this process."""
+    return [
+        thread.name for thread in threading.enumerate() if thread.name.startswith("playback of")
+    ]
 
 
 def test_a_simulator_knows_the_packaged_scenarios_and_its_own() -> None:
@@ -49,63 +50,53 @@ def test_a_simulator_can_be_given_its_catalogue() -> None:
         assert simulator.catalogue is catalogue
 
 
-def test_closing_a_simulator_stops_its_live_runs_and_waits_for_them() -> None:
-    simulator = Simulator(seconds_per_day=QUICK_SECONDS_PER_DAY)
-    run = simulator.live.run_for(CONFIG)
-    assert "live run of climate_box" in _pacing()
-
-    simulator.close()
-    simulator.close()
-
-    assert simulator.closed and run.stopped
-    assert _pacing() == []
-    with pytest.raises(RuntimeError, match="closed"):
-        simulator.live.run_for(CONFIG)
-
-
 def test_a_simulator_used_as_a_context_is_closed_after_it() -> None:
-    with Simulator(seconds_per_day=QUICK_SECONDS_PER_DAY) as simulator:
-        simulator.live.run_for(CONFIG)
+    with Simulator() as simulator:
+        playback.start(simulator, CONFIG.greenhouse_id, SECONDS_PER_DAY)
 
-    assert simulator.closed and _pacing() == []
+    assert simulator.closed and _playing() == []
 
 
 def test_a_server_closes_the_simulator_it_made() -> None:
-    server = create_server(port=0, seconds_per_day=QUICK_SECONDS_PER_DAY)
-    server.simulator.live.run_for(CONFIG)
+    server = create_server(port=0)
+    playback.start(server.simulator, CONFIG.greenhouse_id, SECONDS_PER_DAY)
 
     server.server_close()
 
-    assert server.simulator.closed and _pacing() == []
+    assert server.simulator.closed and _playing() == []
 
 
 def test_a_server_leaves_a_simulator_it_was_given_to_its_giver() -> None:
-    with Simulator(seconds_per_day=QUICK_SECONDS_PER_DAY) as simulator:
+    with Simulator() as simulator:
         server = create_server(port=0, simulator=simulator)
-        run = simulator.live.run_for(CONFIG)
+        playback.start(simulator, CONFIG.greenhouse_id, SECONDS_PER_DAY)
 
         server.server_close()
 
         assert server.simulator is simulator
-        assert not simulator.closed and not run.stopped
-    assert run.stopped and _pacing() == []
+        assert not simulator.closed and simulator.playbacks.all() != []
+    assert _playing() == []
 
 
-def test_a_second_close_waits_for_the_first(
-    held_in_a_day: Callable[[LiveRun, threading.Event], threading.Event],
-) -> None:
-    simulator = Simulator(seconds_per_day=QUICK_SECONDS_PER_DAY)
-    run = simulator.live.run_for(CONFIG)
-    release = threading.Event()
-    begun = held_in_a_day(run, release)
+def test_a_second_close_waits_for_the_first(monkeypatch: pytest.MonkeyPatch) -> None:
+    simulator = Simulator()
+    release, begun = threading.Event(), threading.Event()
+    stop = simulator.playbacks.close
+
+    def held() -> None:
+        # The first close is held while it stops the playbacks; a second
+        # would not be, if it got this far.
+        if not begun.is_set():
+            begun.set()
+            release.wait(WAIT_S)
+        stop()
+
+    monkeypatch.setattr(simulator.playbacks, "close", held)
     first = threading.Thread(target=simulator.close)
     second = threading.Thread(target=simulator.close)
     try:
-        assert begun.wait(WAIT_S)
         first.start()
-        deadline = time.monotonic() + WAIT_S
-        while not run.stopped and time.monotonic() < deadline:
-            time.sleep(0.01)
+        assert begun.wait(WAIT_S)
         second.start()
         second.join(STILL_WAITING_S)
 
@@ -114,7 +105,18 @@ def test_a_second_close_waits_for_the_first(
         release.set()
     first.join(WAIT_S)
     second.join(WAIT_S)
-    assert simulator.closed and _pacing() == []
+    assert simulator.closed and not first.is_alive() and not second.is_alive()
+
+
+def test_a_port_already_taken_is_reported_as_such() -> None:
+    taken = create_server(port=0)
+    try:
+        with pytest.raises(OSError) as raised:
+            create_server(port=taken.server_address[1])
+    finally:
+        taken.server_close()
+
+    assert raised.value.errno == errno.EADDRINUSE
 
 
 def test_closing_a_simulator_stops_its_playbacks_and_starts_none_after() -> None:
@@ -208,7 +210,6 @@ PROCESS_STATE = frozenset(
         "Thread",
         "Playbacks",
         "Cursors",
-        "LiveRuns",
         "Catalogue",
     }
 )

@@ -10,13 +10,13 @@ export function scenarioMatches(scenario: ScenarioSummary, filter: string): bool
 }
 
 /** The simulator's scenarios, each to be opened, with any of its layouts,
- * or played live; those `filter` matches (`scenarioMatches`). */
+ * or followed as it is played back; those `filter` matches
+ * (`scenarioMatches`). */
 export function ScenarioList({
   state,
   shownLayout = null,
   filter = "",
   onShow,
-  onLive,
   onFollow,
 }: {
   state: ScenariosState;
@@ -24,7 +24,6 @@ export function ScenarioList({
   shownLayout?: { scenarioId: string; layout: string } | null;
   filter?: string;
   onShow?: (scenarioId: string, layout?: string) => void;
-  onLive?: (scenarioId: string) => void;
   /** Follows its own run as it is played back (decision 0041). */
   onFollow?: (scenarioId: string) => void;
 }) {
@@ -53,7 +52,7 @@ export function ScenarioList({
               <th>Plants</th>
               <th>Days</th>
               {choosing && <th>Layout</th>}
-              {(onShow || onLive || onFollow) && <th />}
+              {(onShow || onFollow) && <th />}
             </tr>
           </thead>
           <tbody>
@@ -89,7 +88,7 @@ export function ScenarioList({
                     )}
                   </td>
                 )}
-                {(onShow || onLive || onFollow) && (
+                {(onShow || onFollow) && (
                   // Its ways of being shown in one cell, which wraps them
                   // rather than widen the table past the panel.
                   <td>
@@ -101,15 +100,6 @@ export function ScenarioList({
                           onClick={() => onShow(scenario.id)}
                         >
                           Open
-                        </button>
-                      )}
-                      {onLive && (
-                        <button
-                          type="button"
-                          aria-label={`Play ${scenario.id} live`}
-                          onClick={() => onLive(scenario.id)}
-                        >
-                          Live
                         </button>
                       )}
                       {onFollow && (

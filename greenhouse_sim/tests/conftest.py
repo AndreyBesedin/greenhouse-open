@@ -4,8 +4,7 @@ installed they pull its container the first time, about 2 GB, so neither the
 canonical checks nor the pre-push pass run them.
 
 `finishes_beside_held` tells whether something gets on while another thread
-holds a lock, as a request working a run on holds the run's; `held_in_a_day`
-keeps a live run working a day out until the test lets it finish.
+holds a lock, as a request working a run on holds the run's.
 
 A test that answers requests, plays runs back, or asks a service that
 reads or keeps runs, asks for `simulator` (decision 0048): one a module's
@@ -32,7 +31,6 @@ from greenhouse_sim.cfd import runner
 from greenhouse_sim.scenarios.manifest_files import opening_file
 from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.checkpoints import load_openings
-from greenhouse_sim.services.live import LiveFrame, LiveRun
 from greenhouse_sim.services.playback import stop_playbacks
 from greenhouse_sim.services.simulator import Simulator
 
@@ -57,32 +55,6 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 # How long an action beside a held lock may take before it counts as
 # waiting for the lock.
 _WAIT_S = 2.0
-# How long a live run held in a day waits to be let finish, at most.
-_HELD_DAY_S = 5.0
-
-type _Held = Callable[[LiveRun, threading.Event], threading.Event]
-
-
-@pytest.fixture
-def held_in_a_day(monkeypatch: pytest.MonkeyPatch) -> _Held:
-    """Makes a live run's next day last until `release` is set, its pacing
-    thread holding the run meanwhile, as one working an expensive day out
-    does; answers the event set once that day has begun."""
-
-    def hold(run: LiveRun, release: threading.Event) -> threading.Event:
-        begun = threading.Event()
-        advance = run.advance
-
-        def held() -> LiveFrame:
-            begun.set()
-            release.wait(_HELD_DAY_S)
-            return advance()
-
-        monkeypatch.setattr(run, "advance", held)
-        return begun
-
-    return hold
-
 
 type _Beside = Callable[[AbstractContextManager[bool], Callable[[], object]], bool]
 

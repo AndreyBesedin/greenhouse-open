@@ -21,8 +21,8 @@ const NOTHING: ZoomTowards = { scene: () => null, clipping: () => [] };
 
 // A notch within this long of the one before it, in milliseconds, is part of
 // the same turn of the wheel and keeps its aim. After a pause the scene may
-// have changed under the pointer, as a live run's does, so the wheel aims
-// again.
+// have changed under the pointer, as a followed run's does, so the wheel
+// aims again.
 const AIM_KEPT_MS = 250;
 
 /** The point the wheel last aimed at, in the viewer's axes, or null over the

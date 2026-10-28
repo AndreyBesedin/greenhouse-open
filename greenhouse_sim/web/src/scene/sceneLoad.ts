@@ -31,8 +31,7 @@ function sceneUrl(
   switch (source.kind) {
     case "reference":
     case "stress":
-    case "live":
-      // A stress scene is built here, and a live scene streams in (see useLiveScene).
+      // A stress scene is built here.
       return null;
     case "example":
       return EXAMPLE_SCENE_URL;
@@ -48,7 +47,7 @@ function sceneUrl(
 }
 
 /** What a scene is asked for by: its address, or, for a stress scene, which
- * the viewer builds itself, its size; null for none, or a live one. */
+ * the viewer builds itself, its size; null for none. */
 export function sceneRequest(
   source: SceneSource,
   openingIds: readonly string[] = [],

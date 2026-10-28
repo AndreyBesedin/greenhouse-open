@@ -39,7 +39,7 @@ function matching(choices: readonly Choice[], filter: string): readonly Choice[]
 /**
  * What the viewer shows, and the choice of it (#201): folded, one line that
  * says what is shown, or why it is not; opened, the simulator's scenarios,
- * each opened here or played live, the test scenes and the plant lab, each
+ * each opened here or followed as it is played back, the test scenes and the plant lab, each
  * group saying what it is, and a filter over all of them. It folds again
  * once something is chosen. A choice is a new page in the browser's history
  * (`useSource`), so Back returns to the view before.
@@ -114,7 +114,6 @@ export function SourceChooser({
                 : {}),
             })
           }
-          onLive={(scenarioId) => choose({ kind: "live", scenarioId })}
           onFollow={(scenarioId) =>
             // Its climate drawn, if its layout's equipment makes one; or
             // none, for a scenario whose airflow is its own.
@@ -142,9 +141,8 @@ export function SourceChooser({
         onChoose={choose}
       />
       <p className="chooser-note">
-        Open: its run here, from its start or its opening day. Live: the simulator plays it a day a
-        second, the same for every viewer. Follow: its own run as it is played back, the run a
-        consumer reads. Back returns to the view before.
+        Open: its run here, from its start or its opening day. Follow: its own run as it is played
+        back, the run a consumer reads. Back returns to the view before.
       </p>
     </details>
   );

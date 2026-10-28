@@ -84,8 +84,7 @@ export type SceneSource =
       envelope?: Readonly<Record<string, number>>;
       openings?: Readonly<Record<string, number>>;
       levels?: Readonly<Record<string, number>>;
-    }
-  | { kind: "live"; scenarioId: string };
+    };
 
 /** A change to one of a run's targets, such as its heating setpoint by
  * day, from a moment of its climate run on, in °C (#274). */
@@ -125,9 +124,11 @@ const FULL_TURN_DEG = 360;
 
 export function sourceFromSearch(search: string): SceneSource {
   const parameters = new URLSearchParams(search);
+  // The live mode's address opens the scenario's run, followed as it is
+  // played back, which took its place (decision 0059).
   const liveId = parameters.get("live");
   if (liveId) {
-    return { kind: "live", scenarioId: liveId };
+    return { kind: "scenario", scenarioId: liveId, follow: true };
   }
   const scenarioId = parameters.get("scenario");
   if (scenarioId) {
@@ -230,7 +231,7 @@ function labQuery(run: LabRun, separator: "?" | "&"): string {
 
 /**
  * What a source shows, apart from where in it and how: a scene, the plant
- * lab, or a scenario, its layout and whether it is live. Another of these
+ * lab, or a scenario and its layout. Another of these
  * is a new page in the browser's history, so that Back returns to the view
  * before it (#201); a change within one, a moment, a field or a command,
  * replaces the page.
@@ -239,8 +240,6 @@ export function shownBy(source: SceneSource): string {
   switch (source.kind) {
     case "scenario":
       return `scenario ${source.scenarioId} ${source.layout ?? ""}`;
-    case "live":
-      return `live ${source.scenarioId}`;
     default:
       return source.kind;
   }
@@ -266,8 +265,6 @@ export function searchFor(source: SceneSource): string {
         .join(
           "",
         )}${source.clouds === undefined ? "" : `&clouds=${source.clouds}`}${source.wind === undefined ? "" : `&wind=${source.wind}`}${fieldQuery(source)}${source.crop === undefined || source.crop.length === 0 ? "" : `&crop=${cropText(source.crop)}`}${source.cfdBoundaries ? `&cfd=${CFD_BOUNDARIES}` : ""}${source.camera === undefined ? "" : `&camera=${cameraText(source.camera)}`}${source.follow ? "&follow=1" : ""}`;
-    case "live":
-      return `?live=${encodeURIComponent(source.scenarioId)}`;
   }
 }
 

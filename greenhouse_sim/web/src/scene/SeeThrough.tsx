@@ -37,7 +37,7 @@ export function SeeThrough({
   outlineOnly?: boolean;
   dense?: boolean;
 }) {
-  // Rebuilt with each new scene, which for a live scenario is once a day.
+  // Rebuilt with each new scene, as a followed run moves on.
   const faces = useDisposable(() => flatGeometry(shape), [shape]);
   const edges = useDisposable(() => new EdgesGeometry(faces), [faces]);
   const fill = threeColor(color);

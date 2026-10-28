@@ -184,7 +184,6 @@ step removes it.
   light, and a crown's height changes the light the next day.
 - A lowered crop's stems lie along one line on each gutter edge, without
   twine or hooks.
-- The live stream grows every scenario with the simple daily model.
 
 **The sensors and the camera** (P06):
 
