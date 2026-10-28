@@ -68,6 +68,7 @@ changes course is a new record that supersedes the old one.
 | [0055](0055-a-model-is-registered-with-all-that-tells-it-apart.md) | A model is registered with all that tells it apart | Accepted |
 | [0056](0056-a-changelog-is-written-at-release-from-the-pull-requests-merged.md) | A changelog is written at release, from the pull requests merged | Accepted |
 | [0057](0057-a-published-model-is-reproduced-and-validated-before-the-crops-grow.md) | A published model is reproduced and validated before the crops grow | Proposed |
+| [0058](0058-a-climate-controller-switches-each-loop-at-its-edge.md) | A climate controller switches each loop at its edge, from the house's air | Proposed |
 
 ## Template
 

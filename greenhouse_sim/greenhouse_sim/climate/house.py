@@ -39,7 +39,7 @@ from typing import Final
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from greenhouse_sim.climate.control import VentingLoop
+from greenhouse_sim.climate.control import DehumidifyingLoop, VentingLoop
 from greenhouse_sim.climate.glazing import glazing_u_w_m2k
 from greenhouse_sim.climate.openings import opening_flows
 from greenhouse_sim.climate.psychrometrics import (
@@ -60,6 +60,13 @@ from greenhouse_sim.world.capabilities import Heats
 # The longest stretch advanced at once, in seconds: the weather is taken at
 # the middle of each.
 STEP_S: Final = KEEP_EVERY_S
+# How a relative humidity's edge is found through a stretch: bracketed by
+# moments so many to each of its quicker exponential's time constants, from
+# so few to so many in a stretch, then halved to so many seconds.
+SAMPLES_A_RATE: Final = 8
+FEWEST_SAMPLES: Final = 16
+MOST_SAMPLES: Final = 1024
+HUMIDITY_EDGE_S: Final = 1e-9
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,8 +75,10 @@ class HouseAir:
     (g/kg) and CO₂ (ppm), with the water it has lost so far to equipment and
     to condensation, in kg; the heat its heaters have given it so far, in J;
     and how its controller's loops stood up to then (`climate.control`):
-    whether its thermostat ran its heater (`climate.thermostat`), and how
-    many of its vents' stages stood open (P11.2). The loops' state is kept
+    whether its thermostat ran its heater (`climate.thermostat`), how many
+    of its vents' stages stood open, whether its dehumidifying loop ran its
+    dehumidifier, and whether it held the air outside drier enough to vent
+    into (P11.2). The loops' state is kept
     here, with the air it was decided from, not as the controller's model's
     state (decision 0055): a checkpoint keeps the house's air at two
     moments, its day's start and an hour before, and each carries how the
@@ -83,6 +92,8 @@ class HouseAir:
     heated_j: float = 0.0
     heating: bool = False
     vent_stage: int = 0
+    dehumidifying: bool = False
+    drier: bool = False
 
     def relative_humidity_pct(self) -> float:
         return float(relative_humidity_pct(self.temperature_c, self.humidity_g_kg))
@@ -102,15 +113,20 @@ class _Steady:
 
 @dataclass(frozen=True)
 class _Course:
-    """How the house's air temperature goes through a stretch: towards
+    """How the house's air goes through a stretch: its temperature towards
     `settled_c` at `rate_s` per second while it exchanges air with the
-    outside; or, shut off from it, by `warming_c_s` a second. With what it
-    exchanges through its doors, vents and gaps (m³/s)."""
+    outside, or, shut off from it, by `warming_c_s` a second; with what it
+    exchanges through its doors, vents and gaps (m³/s), `venting_s` of its
+    air a second, its water towards the outside's, `outside_g_kg`, as its
+    equipment takes `drying_g_kg_s` of it."""
 
     settled_c: float
     rate_s: float
     warming_c_s: float
     venting_m3_s: float
+    venting_s: float = 0.0
+    outside_g_kg: float = 0.0
+    drying_g_kg_s: float = 0.0
 
     def temperature_c(self, start_c: float, duration_s: float) -> float:
         if self.rate_s > 0:
@@ -136,9 +152,101 @@ class _Course:
             return None
         return (edge_c - start_c) / self.warming_c_s
 
+    def water_g_kg(self, start_g_kg: float, duration_s: float) -> float:
+        """The air's humidity ratio after `duration_s`, from `start_g_kg`:
+        before equipment that takes more than the air holds is held to it,
+        or saturation to what the air can hold."""
+        if self.venting_s > 0:
+            return _towards(
+                start_g_kg,
+                self.outside_g_kg - self.drying_g_kg_s / self.venting_s,
+                self.venting_s,
+                duration_s,
+            )
+        return start_g_kg - self.drying_g_kg_s * duration_s
+
+    def held_water_reaching_s(
+        self, start_c: float, start_g_kg: float, edge_g_kg: float, within_s: float, *, up: bool
+    ) -> float | None:
+        """How long the air's humidity ratio takes to pass `edge_g_kg`,
+        rising if `up`, falling if not, from `start_c` and `start_g_kg`, if it
+        does within `within_s`: the water the air holds, as it is advanced
+        (`WholeHouse._advance`), never less than none, nor more than air at
+        its temperature then holds, the rest condensing."""
+
+        def beyond(duration_s: float) -> float:
+            water = max(self.water_g_kg(start_g_kg, duration_s), 0.0)
+            holds = float(saturation_ratio_g_kg(self.temperature_c(start_c, duration_s)))
+            return min(water, holds) - edge_g_kg
+
+        return self._crossing_s(beyond, within_s, up=up)
+
+    def humidity_reaching_s(
+        self, start_c: float, start_g_kg: float, edge_pct: float, within_s: float, *, up: bool
+    ) -> float | None:
+        """How long the air's relative humidity takes to pass `edge_pct`,
+        rising if `up`, falling if not, from `start_c` and `start_g_kg`, if it
+        does within `within_s`: where its humidity ratio meets what air at
+        its temperature then holds at that relative humidity. Water beyond
+        saturation, which condenses, leaves the air saturated, above any
+        edge, as it would be without condensing."""
+
+        def beyond(duration_s: float) -> float:
+            temperature = self.temperature_c(start_c, duration_s)
+            holds = float(humidity_ratio_g_kg(temperature, edge_pct))
+            return self.water_g_kg(start_g_kg, duration_s) - holds
+
+        return self._crossing_s(beyond, within_s, up=up)
+
+    def _crossing_s(
+        self, beyond: Callable[[float], float], within_s: float, *, up: bool
+    ) -> float | None:
+        """How long until `beyond`, a smooth quantity of the air through the
+        stretch, passes 0, rising if `up`, falling if not, the first time
+        within `within_s`, found to a nanosecond. What it follows moves as
+        exponentials, so its passing is bracketed by moments a fraction of
+        the quickest one's time apart, then halved. A 0 it stands at is
+        passed only moving that way."""
+        quickest = max(self.rate_s, self.venting_s, 1.0 / within_s)
+        wanted = math.ceil(within_s * quickest * SAMPLES_A_RATE)
+        samples = min(MOST_SAMPLES, max(FEWEST_SAMPLES, wanted))
+        before = beyond(0.0)
+        if before == 0.0:
+            # At its edge: passed at once if it moves that way; otherwise
+            # from the side it moves to.
+            before = beyond(within_s / samples)
+            if (before > 0) == up and before != 0.0:
+                return 0.0
+        earlier = 0.0
+        for sample in range(1, samples + 1):
+            later = within_s * sample / samples
+            if (beyond(later) > 0) != (before > 0):
+                while later - earlier > HUMIDITY_EDGE_S:
+                    middle = (earlier + later) / 2
+                    if (beyond(middle) > 0) == (before > 0):
+                        earlier = middle
+                    else:
+                        later = middle
+                return later
+            earlier = later
+        return None
+
+
+def _outside_water_g_kg(outside: WeatherState) -> float:
+    """The outside air's humidity ratio, in g/kg."""
+    return float(humidity_ratio_g_kg(outside.air_temperature_c, outside.relative_humidity_pct))
+
 
 def _heating_switched(air: HouseAir) -> HouseAir:
     return replace(air, heating=not air.heating)
+
+
+def _dehumidifier_switched(air: HouseAir) -> HouseAir:
+    return replace(air, dehumidifying=not air.dehumidifying)
+
+
+def _drier_switched(air: HouseAir) -> HouseAir:
+    return replace(air, drier=not air.drier)
 
 
 def _vents_to(stage: int) -> Callable[[HouseAir], HouseAir]:
@@ -207,6 +315,9 @@ class WholeHouse:
         thermostat = self.run.thermostat
         if thermostat is not None and self.run.thermostat_governs(time_s):
             levels[thermostat.actuator_id] = ON if air.heating else OFF
+        drying = self._dehumidifying(time_s)
+        if drying is not None and drying.actuator_id in levels:
+            levels[drying.actuator_id] = ON if air.dehumidifying else OFF
         control = self.run.control
         if control is None or control.circulation is None or control.venting is None:
             return levels
@@ -221,6 +332,24 @@ class WholeHouse:
             running = control.circulation.runs_at(control.venting, vents_level)
             levels |= dict.fromkeys(fans, ON if running else OFF)
         return levels
+
+    def _dehumidifying(self, time_s: float) -> DehumidifyingLoop | None:
+        """Its dehumidifying loop, while it runs its dehumidifier at
+        `time_s`."""
+        control = self.run.control
+        drying = None if control is None else control.dehumidifying
+        if drying is None or not self.run.controls(drying.actuator_id, time_s):
+            return None
+        return drying
+
+    def _drying_vents(self, time_s: float) -> DehumidifyingLoop | None:
+        """Its dehumidifying loop, while it may open the vents' first stage
+        at `time_s`: one that vents, while it runs its dehumidifier, which a
+        command has not taken over, and its venting loop a vent."""
+        drying = self._dehumidifying(time_s)
+        if drying is None or not drying.vents_when_drier or self._venting(time_s) is None:
+            return None
+        return drying
 
     def _venting(self, time_s: float) -> VentingLoop | None:
         """Its venting loop, while it runs one of its vents at `time_s`."""
@@ -245,16 +374,26 @@ class WholeHouse:
         if venting is None:
             return levels
         level = venting.level_at(air.vent_stage)
+        drying = self._drying_vents(time_s)
+        if drying is not None and drying.vents(
+            dehumidifying=air.dehumidifying, heating=air.heating, drier=air.drier
+        ):
+            # For the air's water: the first stage, unless the vents stand
+            # open further for its heat.
+            level = max(level, venting.level_at(1))
         for vent in venting.vents:
             if vent in levels and self.run.controls(vent, time_s):
                 levels[vent] = level
         return levels
 
-    def _decided(self, time_s: float, air: HouseAir) -> HouseAir:
-        """`air`, with its loops' decisions at `time_s`: its thermostat's,
-        while it runs its heater, on below its band, off above it, as it was
-        between; and its venting loop's, each stage open above its edge and
-        closed below it by the band, as it was between."""
+    def _decided(self, time_s: float, air: HouseAir, outside: WeatherState) -> HouseAir:
+        """`air`, with its loops' decisions at `time_s`, under the weather
+        `outside`: its thermostat's, while it runs its heater, on below its
+        band, off above it, as it was between; its venting loop's, each stage
+        open above its edge and closed below it by the band, as it was
+        between; and its dehumidifying loop's, its dehumidifier on above its
+        band and off below it, and the air outside drier enough above its
+        margin and not below it less its band, each as it was between."""
         thermostat = self.run.thermostat
         if thermostat is not None and self.run.thermostat_governs(time_s):
             heating = thermostat.heats(
@@ -267,6 +406,17 @@ class WholeHouse:
             stage = venting.stage_at(air.temperature_c, air.vent_stage, self._venting_to_c(time_s))
             if stage != air.vent_stage:
                 air = replace(air, vent_stage=stage)
+        drying = self._dehumidifying(time_s)
+        if drying is not None:
+            on = drying.on_at(air.relative_humidity_pct(), air.dehumidifying)
+            if on != air.dehumidifying:
+                air = replace(air, dehumidifying=on)
+        venting_drier = self._drying_vents(time_s)
+        if venting_drier is not None:
+            wetter_by = air.humidity_g_kg - _outside_water_g_kg(outside)
+            drier = venting_drier.drier_at(wetter_by, air.drier)
+            if drier != air.drier:
+                air = replace(air, drier=drier)
         return air
 
     def _switching_s(
@@ -308,6 +458,25 @@ class WholeHouse:
                     continue
                 if reached is not None and reached < within_s:
                     switches.append((reached, _vents_to(air.vent_stage + step)))
+        drying = self._dehumidifying(time_s)
+        if drying is not None:
+            reached = course.humidity_reaching_s(
+                air.temperature_c,
+                air.humidity_g_kg,
+                drying.edge_pct(air.dehumidifying),
+                within_s,
+                up=not air.dehumidifying,
+            )
+            if reached is not None and reached < within_s:
+                switches.append((reached, _dehumidifier_switched))
+        venting_drier = self._drying_vents(time_s)
+        if venting_drier is not None:
+            edge = course.outside_g_kg + venting_drier.drier_edge_g_kg(air.drier)
+            reached = course.held_water_reaching_s(
+                air.temperature_c, air.humidity_g_kg, edge, within_s, up=not air.drier
+            )
+            if reached is not None and reached < within_s:
+                switches.append((reached, _drier_switched))
         return min(switches, key=lambda switch: switch[0]) if switches else None
 
     def _through(
@@ -321,7 +490,7 @@ class WholeHouse:
         outside = self.run.weather.at(middle)
         sun = self.run.solar_heat_total_w(middle)
         now, end = start_s, end_s if until_s is None else until_s
-        air = self._decided(now, air)
+        air = self._decided(now, air, outside)
         while now < end:
             steady = self._held(self._levels(now, air))
             course = self._course(air, steady, outside, now, sun)
@@ -414,12 +583,16 @@ class WholeHouse:
         entering = sum(max(flow.net_m3_s, 0.0) + flow.exchange_m3_s for flow in through)
         venting_m3_s = entering + leaks_m3_s
         exchange = u * steady.glass_m3_s_per_u + venting_m3_s
+        air_kg = AIR_DENSITY_KG_M3 * volume
         return _Course(
             settled_c=outside.air_temperature_c
             + (heat_w / (heat_per_k * exchange) if exchange > 0 else 0.0),
             rate_s=exchange / volume,
             warming_c_s=heat_w / (heat_per_k * volume),
             venting_m3_s=venting_m3_s,
+            venting_s=venting_m3_s / volume,
+            outside_g_kg=_outside_water_g_kg(outside),
+            drying_g_kg_s=steady.water_removed_kg_s * GRAMS_PER_KG / air_kg,
         )
 
     def _advance(
@@ -436,23 +609,11 @@ class WholeHouse:
         volume = self.volume_m3
         course = course or self._course(air, steady, outside, time_s, sun_w)
         temperature = course.temperature_c(air.temperature_c, duration_s)
-        venting_m3_s = course.venting_m3_s
         air_kg = AIR_DENSITY_KG_M3 * volume
-        outside_water = float(
-            humidity_ratio_g_kg(outside.air_temperature_c, outside.relative_humidity_pct)
-        )
-        drying_g_kg_s = steady.water_removed_kg_s * GRAMS_PER_KG / air_kg
-        venting_s = venting_m3_s / volume
-        if venting_s > 0:
-            water = _towards(
-                air.humidity_g_kg,
-                outside_water - drying_g_kg_s / venting_s,
-                venting_s,
-                duration_s,
-            )
-            co2 = _towards(air.co2_ppm, outside.co2_ppm, venting_s, duration_s)
+        water = course.water_g_kg(air.humidity_g_kg, duration_s)
+        if course.venting_s > 0:
+            co2 = _towards(air.co2_ppm, outside.co2_ppm, course.venting_s, duration_s)
         else:
-            water = air.humidity_g_kg - drying_g_kg_s * duration_s
             co2 = air.co2_ppm
         removed_kg = steady.water_removed_kg_s * duration_s
         if water < 0:
@@ -470,6 +631,8 @@ class WholeHouse:
             heated_j=air.heated_j + steady.heater_w * duration_s,
             heating=air.heating,
             vent_stage=air.vent_stage,
+            dehumidifying=air.dehumidifying,
+            drier=air.drier,
         )
 
     def carry_on_from(self, other: WholeHouse) -> None:
@@ -558,6 +721,8 @@ class WholeHouse:
             heated_j=airs[-1].heated_j,
             heating=airs[-1].heating,
             vent_stage=airs[-1].vent_stage,
+            dehumidifying=airs[-1].dehumidifying,
+            drier=airs[-1].drier,
         )
 
     def heated_j(self, from_s: float, until_s: float) -> float:

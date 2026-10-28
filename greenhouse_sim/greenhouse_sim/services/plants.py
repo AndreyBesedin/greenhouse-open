@@ -7,15 +7,15 @@ transplants of one crop, each with traits drawn from the lab's seed, grown by
 the development model day by day from day 0 to `LAST_DAY`, in one of the
 lab's environments; with another beside it, every second plant lives in that
 instead, so the two can be compared side by side. A run may also schedule
-actions, pruning, harvesting or lowering a plant at the start of a day, which
-then shape that plant on every day after. The same seed and schedule give the
-same row on every run; another seed, another row.
+the protocol's crop actions, pruning, harvesting or lowering a plant at the
+start of a day, which then shape that plant on every day after. The same seed
+and schedule give the same row on every run; another seed, another row.
 """
 
 from collections.abc import Iterator
 from typing import Final
 
-from greenhouse_protocol.actions import Harvest, HarvestScope, Lower, RemoveLeaf
+from greenhouse_protocol.actions import Inspect
 from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.biology.plant.environment import Environment, LocalEnvironment
@@ -33,6 +33,7 @@ from greenhouse_sim.scene.snapshot import (
     SceneSnapshot,
 )
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
+from greenhouse_sim.services.runs import CROP_SPELLINGS, crop_spelling, spelled_crop_action
 from greenhouse_sim.world.geometry import Axes, Plane, Transform, Vector3
 
 LAB_ID: Final = "plant_lab"
@@ -65,33 +66,32 @@ ENVIRONMENTS: Final = {
 _ORIGIN: Final = Transform(position=Vector3(x=0.0, y=0.0, z=0.0))
 
 
-# The actions a run can schedule, by name, with what each acts on.
-ACTIONS: Final = {
-    "remove_leaf": "a leaf",
-    "harvest_fruit": "a fruit",
-    "harvest_truss": "a truss",
-    "lower_stem": "how many internodes",
+# The crop actions, as a request spells them (`runs.CROP_SPELLINGS`), that a
+# run of the lab does not carry out on its plants (`crop_actions.carry_out`),
+# and why not.
+NOT_CARRIED_OUT: Final = {
+    "lower_to": "its plants hang from no wire",
+    "inspect": "an inspection changes no plant, and the lab keeps no outcomes",
 }
+# The crop actions it does carry out, as a request spells them.
+LAB_KINDS: Final = tuple(kind for kind in CROP_SPELLINGS if kind not in NOT_CARRIED_OUT)
 
 
-class LabAction(BaseModel):
-    """An action a run asks of one of its plants at the start of a day: its
-    kind (`ACTIONS`) and the organ it acts on, or for lowering, by how many
-    internodes."""
+class LabStep(BaseModel):
+    """A crop action of the protocol's that a run of the lab carries out on
+    one of its plants at the start of a day (P13.9, decision 0046)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     day: int
-    plant_id: str
-    kind: str
-    target: str
+    action: CropAction
 
 
 class LabRun(BaseModel):
     """Which run of the lab: the day shown, the seed its row is drawn from,
     the environment its plants live in and, if `versus` names another, the
     environment every second plant lives in instead, beside the first; and
-    the actions it schedules, in the order they are asked."""
+    the crop actions it carries out, in the order they are asked."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -99,7 +99,28 @@ class LabRun(BaseModel):
     seed: int = LAB_SEED
     environment: str = REFERENCE
     versus: str | None = None
-    actions: tuple[LabAction, ...] = ()
+    actions: tuple[LabStep, ...] = ()
+
+
+def lab_step(day: int, plant_id: str, kind: str, target: str) -> LabStep:
+    """A crop action of a lab's run as a request spells it: on that day, of
+    `kind` (`LAB_KINDS`) on the plant, acting on `target`, read as a run
+    reads one (`runs.spelled_crop_action`). Refused (`InvalidRequest`) if it
+    is none, saying what it wants, or by name if it is an inspection; the
+    run it is given to is checked for the rest, its plant, its day and a
+    lowering to a head room, when it is shown."""
+    if kind not in CROP_SPELLINGS:
+        known = ", ".join(LAB_KINDS)
+        raise InvalidRequest(f"the plant lab has no action {kind!r}, only {known}")
+    match spelled_crop_action(plant_id, kind, target):
+        case Inspect():
+            raise InvalidRequest(_not_carried_out(kind))
+        case action:
+            return LabStep(day=day, action=action)
+
+
+def _not_carried_out(kind: str) -> str:
+    return f"the plant lab does not carry out {kind}: {NOT_CARRIED_OUT[kind]}"
 
 
 def plant_ids() -> list[str]:
@@ -139,46 +160,26 @@ def _checked_run(run: LabRun) -> None:
         if name is not None and name not in ENVIRONMENTS:
             known = ", ".join(ENVIRONMENTS)
             raise InvalidRequest(f"the plant lab has no environment {name!r}, only {known}")
-    for action in run.actions:
-        _crop_action(action)
-        if not 0 <= action.day <= LAST_DAY:
+    for step in run.actions:
+        if step.action.plant_id not in plant_ids():
+            raise InvalidRequest(f"the plant lab has no plant {step.action.plant_id!r} to act on")
+        kind, _ = crop_spelling(step.action)
+        if kind in NOT_CARRIED_OUT:
+            raise InvalidRequest(_not_carried_out(kind))
+        if not 0 <= step.day <= LAST_DAY:
             raise InvalidRequest(
-                f"the plant lab runs from day 0 to day {LAST_DAY}, not day {action.day}"
+                f"the plant lab runs from day 0 to day {LAST_DAY}, not day {step.day}"
             )
-
-
-def _crop_action(action: LabAction) -> CropAction:
-    """The crop action a scheduled one asks of its plant: the organ crop's
-    own, carried out as a run carries it out."""
-    if action.kind not in ACTIONS:
-        known = ", ".join(ACTIONS)
-        raise InvalidRequest(f"the plant lab has no action {action.kind!r}, only {known}")
-    if action.kind == "lower_stem" and (not action.target.isdigit() or int(action.target) < 1):
-        raise InvalidRequest(f"lower_stem wants how many internodes, not {action.target!r}")
-    if action.plant_id not in plant_ids():
-        raise InvalidRequest(f"the plant lab has no plant {action.plant_id!r} to act on")
-    if not action.target:
-        raise InvalidRequest(f"{action.kind} wants {ACTIONS[action.kind]}, not ''")
-    plant_id, target = action.plant_id, action.target
-    match action.kind:
-        case "remove_leaf":
-            return RemoveLeaf(plant_id=plant_id, leaf_id=target)
-        case "harvest_fruit":
-            return Harvest(plant_id=plant_id, scope=HarvestScope.FRUIT, organ_id=target)
-        case "harvest_truss":
-            return Harvest(plant_id=plant_id, scope=HarvestScope.TRUSS, organ_id=target)
-        case _:
-            return Lower(plant_id=plant_id, by_internodes=int(target))
 
 
 def _days(plant_id: str, run: LabRun, environment: Environment) -> Iterator[Plant]:
     """The plant on each day of the run up to its day, as it is shown: after
-    that day's actions."""
+    that day's actions, each carried out as a run carries it out."""
     plant = transplant(plant_id, run.seed)
     for day in range(run.day + 1):
-        for action in run.actions:
-            if action.day == day and action.plant_id == plant_id:
-                plant = carry_out(plant, _crop_action(action)).plant
+        for step in run.actions:
+            if step.day == day and step.action.plant_id == plant_id:
+                plant = carry_out(plant, step.action).plant
         yield plant
         if day < run.day:
             plant = live_day(plant, environment.local(plant_id, day), DEVELOPMENT)
