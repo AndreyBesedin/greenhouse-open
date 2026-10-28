@@ -19,10 +19,6 @@ whatever number of times it receives it; a gateway may revoke one not yet
 started, and ask how one stands when its report does not come. The
 channel must be authenticated, each end sure of the other; how is the
 deployment's.
-
-`ActionExecutionAdapter` is deprecated (decision 0046): a run's gateway and
-its executors replace it. It stays, as it is, until the simulator carries
-the new format out.
 """
 
 from collections.abc import Callable, Sequence
@@ -30,7 +26,6 @@ from datetime import datetime, timedelta
 from enum import StrEnum
 from typing import Final, Protocol, runtime_checkable
 
-from greenhouse_protocol.action import RequestedAction
 from greenhouse_protocol.actions import (
     Action,
     ActionKind,
@@ -45,7 +40,6 @@ from greenhouse_protocol.actions import (
     Water,
 )
 from greenhouse_protocol.assignment import Assignment, ExecutionReport
-from greenhouse_protocol.execution import ActionOutcome
 
 
 class ActionNotExecutable(Exception):
@@ -55,20 +49,6 @@ class ActionNotExecutable(Exception):
         super().__init__(reason)
         self.greenhouse_id = greenhouse_id
         self.reason = reason
-
-
-class ActionExecutionAdapter(Protocol):
-    def execute(
-        self, greenhouse_id: str, actions: list[RequestedAction], *, at: datetime
-    ) -> list[ActionOutcome]:
-        """Validates and carries out each action, in order.
-
-        Returns one outcome per action given, positionally, so a refused
-        action keeps its place. Raises `ActionNotExecutable` if the
-        environment cannot execute at all, which is a different thing from
-        refusing a particular action.
-        """
-        ...
 
 
 class Revocation(StrEnum):
