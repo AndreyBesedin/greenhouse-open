@@ -50,7 +50,10 @@ data.
    run on the same inputs, where it is published, and their published
    outputs otherwise, with the differences and their causes recorded. The
    organ model stays, as a baseline. The roadmap's crop models from plant
-   research hold the rest of the plan.
+   research hold the rest of the plan. The survey is
+   [the tomato model memo](../research/tomato-model-feasibility.md), and
+   decision [0060](../decisions/0060-the-first-tomato-model-reproduced-is-vanthoors-as-greenlight-runs-it.md)
+   proposes the first model.
 5. **Validate on measured data, as a workflow others can repeat.** Begin
    with the WUR AGC4 dataset, through its adapter, where what it measures
    and its licence allow: inventory what it records (weather, climate,

@@ -70,6 +70,7 @@ changes course is a new record that supersedes the old one.
 | [0057](0057-a-published-model-is-reproduced-and-validated-before-the-crops-grow.md) | A published model is reproduced and validated before the crops grow | Proposed |
 | [0058](0058-a-climate-controller-switches-each-loop-at-its-edge.md) | A climate controller switches each loop at its edge, from the house's air | Proposed |
 | [0059](0059-the-engines-day-gives-way-to-the-run.md) | The engine's day gives way to the run | Accepted |
+| [0060](0060-the-first-tomato-model-reproduced-is-vanthoors-as-greenlight-runs-it.md) | The first tomato model reproduced is Vanthoor's, as GreenLight runs it | Proposed |
 
 ## Template
 
