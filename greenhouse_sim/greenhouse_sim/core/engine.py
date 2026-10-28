@@ -1,8 +1,9 @@
 """Stepping a simulated greenhouse forward. No database, no server.
 
-This is the simulator's own API: create a world, advance it, apply actions,
-collect observations. Persisting any of it, deciding what to do with the
-observations, and running a management policy are the caller's business.
+This is the simulator's own API: create a world, advance it, collect
+observations. Persisting any of it, deciding what to do with the
+observations, and running a management policy are the caller's business. A
+policy acts on the run, through its gateway (P13.9), not on this day.
 
 Two deliberate omissions:
 
@@ -11,8 +12,8 @@ Two deliberate omissions:
   owns checkpointing it, but everything a consumer uses to decide should be
   derived from `SimulationStep.observations`. Evaluation is the explicit
   exception (`greenhouse_sim.ground_truth`).
-- The environment, plant and sensor models and the executor are injected,
-  each defaulting to the simple implementation, so a different fidelity
+- The environment, plant and sensor models are injected, each defaulting
+  to the simple implementation, so a different fidelity
   level or a specialized physics backend plugs in without changing this
   interface. What each model must do is stated in its domain's
   `contract.py`.
@@ -20,13 +21,9 @@ Two deliberate omissions:
 
 from datetime import datetime
 
-from greenhouse_protocol.action import ActionResult, RequestedAction
-from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
 from pydantic import BaseModel
 
-from greenhouse_sim.actions.executor import ActionExecutor, SimulatedOperatorExecutor
-from greenhouse_sim.actions.validation import validate_action
 from greenhouse_sim.biology.contract import PlantModel
 from greenhouse_sim.biology.tomato.simple.model import SimpleTomatoModel
 from greenhouse_sim.environment.contract import EnvironmentModel
@@ -47,25 +44,11 @@ class SimulationStep(BaseModel):
     observations: list[Observation]
 
 
-class ActionExecution(BaseModel):
-    """The outcome of offering actions to the world.
-
-    `results` is positional with the actions given, so a rejected request
-    keeps its place. `events` covers only the accepted ones - a request is
-    not evidence that anything happened.
-    """
-
-    world: GreenhouseWorld
-    results: list[ActionResult]
-    events: list[Event]
-
-
 class SimulationEngine:
     def __init__(
         self,
         config: ScenarioConfig,
         *,
-        executor: ActionExecutor | None = None,
         environment_model: EnvironmentModel | None = None,
         plant_model: PlantModel[PlantModelState] | None = None,
         sensor_model: SensorModel | None = None,
@@ -73,7 +56,6 @@ class SimulationEngine:
         """`plant_model` is limited to models whose state the world can carry
         (`PlantModelState`)."""
         self._config = config
-        self._executor = executor or SimulatedOperatorExecutor()
         self._environment_model = environment_model or SimpleEnvironmentModel()
         self._plant_model = plant_model or SimpleTomatoModel()
         self._sensor_model = sensor_model or SimpleSensorModel()
@@ -118,31 +100,3 @@ class SimulationEngine:
         return SimulationStep(
             day=day, timestamp=timestamp, world=advanced, observations=observations
         )
-
-    def apply_actions(
-        self,
-        world: GreenhouseWorld,
-        actions: list[RequestedAction],
-        *,
-        day: int,
-        timestamp: datetime,
-    ) -> ActionExecution:
-        """Validates each action against the world and executes the accepted ones.
-
-        Every action is checked here, however it was proposed or approved.
-        Actions are applied in order against one in-memory
-        world, so a caller approving several at once pays for one world
-        round-trip rather than one per action.
-        """
-        results: list[ActionResult] = []
-        events: list[Event] = []
-        for action in actions:
-            result = validate_action(world, action)
-            results.append(result)
-            if not result.accepted:
-                continue
-            world, event = self._executor.apply(
-                world, action, self._config, day=day, timestamp=timestamp
-            )
-            events.append(event)
-        return ActionExecution(world=world, results=results, events=events)

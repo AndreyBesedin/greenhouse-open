@@ -2,13 +2,13 @@
 
 `test_run_characterization.py` pins one small run in detail. This pins each
 registered scenario as a caller would run it: every plant the scenario
-describes, for its whole duration, under a fixed schedule of actions that
-reaches every action type and every refusal. Each simulated day is reduced
-to four digests (hidden state, observations, ground truth and action
-outcomes) and each run to a readable summary of where it ended.
+describes, for its whole duration, as its days advance with no action
+taken: a policy acts on the run, not on the engine's day (P13.9). Each
+simulated day is reduced to three digests (hidden state, observations and
+ground truth) and each run to a readable summary of where it ended.
 
 A failure names the scenario, the first day that diverged and which of the
-four parts moved, so a restructuring that is meant to preserve behaviour
+three parts moved, so a restructuring that is meant to preserve behaviour
 shows exactly where it did not.
 
 The hidden-state digest covers what the world is: sizes, stages, water,
@@ -42,15 +42,6 @@ from pathlib import Path
 from statistics import fmean
 
 import pytest
-from greenhouse_protocol.action import (
-    ActionResult,
-    HarvestPlantAction,
-    LowerPlantAction,
-    RequestedAction,
-    ScheduleInspectionAction,
-    WaterPlantAction,
-)
-from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
 
 from greenhouse_sim.domain.crop import FruitStatus
@@ -64,7 +55,7 @@ FIXTURE = Path(__file__).resolve().parent / "fixtures" / "reference_baseline.jso
 SCENARIOS = sorted(SCENARIO_REGISTRY)
 SIMULATION_ID = "sim_reference_baseline"
 DECIMALS = 6
-PARTS = ("state", "observations", "ground_truth", "actions")
+PARTS = ("state", "observations", "ground_truth")
 
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 
@@ -73,31 +64,6 @@ type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 class Baseline:
     days: list[str]
     summary: dict[str, Json]
-
-
-def _schedule(day: int, plant_ids: list[str]) -> list[RequestedAction]:
-    """A fixed schedule that reaches every action type and every refusal.
-
-    It depends only on the day and each plant's position, never on the
-    hidden world, so it cannot mask a behaviour change by adapting to it.
-    """
-    actions: list[RequestedAction] = []
-    if day == 2:
-        actions += [
-            WaterPlantAction(plant_id="no_such_plant", amount_ml=100.0),
-            WaterPlantAction(plant_id=plant_ids[0], amount_ml=0.0),
-            LowerPlantAction(plant_id=plant_ids[0], amount_cm=10_000.0),
-            ScheduleInspectionAction(plant_id=plant_ids[0], reason="   "),
-        ]
-    if day % 3 == 0:
-        actions += [WaterPlantAction(plant_id=p, amount_ml=450.0) for p in plant_ids[::2]]
-    if day % 4 == 0:
-        actions += [HarvestPlantAction(plant_id=p) for p in plant_ids]
-    if day % 5 == 0:
-        actions += [LowerPlantAction(plant_id=p, amount_cm=10.0) for p in plant_ids[::3]]
-    if day % 7 == 0:
-        actions.append(ScheduleInspectionAction(plant_id=plant_ids[0], reason="baseline check"))
-    return actions
 
 
 @cache
@@ -112,8 +78,6 @@ def _run(scenario_id: str) -> Baseline:
     days: list[str] = []
     observations: list[Observation] = []
     truths: list[GroundTruth] = []
-    results: list[ActionResult] = []
-    events: list[Event] = []
 
     for day in range(1, config.duration_days + 1):
         timestamp = start + timedelta(days=day - 1)
@@ -121,29 +85,20 @@ def _run(scenario_id: str) -> Baseline:
         truth = ground_truth(
             step.world, timestamp=timestamp, water_capacity_ml=config.simple_crop.water_capacity_ml
         )
-        execution = engine.apply_actions(
-            step.world, _schedule(day, plant_ids), day=day, timestamp=timestamp
-        )
-        world = execution.world
+        world = step.world
 
         parts: dict[str, Json] = {
             "state": _state(world),
             "observations": [o.model_dump(mode="json") for o in step.observations],
             "ground_truth": truth.model_dump(mode="json"),
-            "actions": {
-                "results": [r.model_dump(mode="json") for r in execution.results],
-                "events": [e.model_dump(mode="json") for e in execution.events],
-            },
         }
         digests = " ".join(f"{name}={_digest(parts[name])}" for name in PARTS)
         days.append(f"day {day:02d}: {digests}")
 
         observations.extend(step.observations)
         truths.append(truth)
-        results.extend(execution.results)
-        events.extend(execution.events)
 
-    return Baseline(days, _summary(world, observations, truths, results, events))
+    return Baseline(days, _summary(world, observations, truths))
 
 
 def _state(world: GreenhouseWorld) -> Json:
@@ -194,8 +149,6 @@ def _summary(
     world: GreenhouseWorld,
     observations: list[Observation],
     truths: list[GroundTruth],
-    results: list[ActionResult],
-    events: list[Event],
 ) -> dict[str, Json]:
     """Where a run ended, in numbers a reviewer can read in a diff."""
     fruits = [fruit for plant in world.plants for truss in plant.trusses for fruit in truss.fruits]
@@ -226,8 +179,6 @@ def _summary(
         "fruits_by_ripeness": _counts(fruit.ripeness_stage.value for fruit in fruits),
         "fruit_mass_on_plants_g": round(sum(fruit.mass_g for fruit in on_plants), 2),
         "cumulative_harvest_g": round(sum(p.cumulative_harvest_g for p in world.plants), 2),
-        "actions": _counts("accepted" if r.accepted else "refused" for r in results),
-        "events_by_type": _counts(event.event_type.value for event in events),
         "observations_by_type": {k: len(v) for k, v in sorted(values_by_type.items())},
         "observation_value_sums": {k: round(sum(v), 1) for k, v in sorted(values_by_type.items())},
         "observation_mean_absolute_error": {
@@ -293,18 +244,6 @@ def test_a_reference_scenario_runs_day_by_day_as_recorded(scenario_id: str) -> N
 @pytest.mark.parametrize("scenario_id", SCENARIOS)
 def test_a_reference_scenario_ends_where_recorded(scenario_id: str) -> None:
     assert _run(scenario_id).summary == _recorded()[scenario_id]["summary"]
-
-
-@pytest.mark.parametrize("scenario_id", SCENARIOS)
-def test_the_schedule_reaches_every_action_path(scenario_id: str) -> None:
-    """Otherwise the baseline would silently stop protecting an action."""
-    summary = _run(scenario_id).summary
-    events, actions = summary["events_by_type"], summary["actions"]
-    assert isinstance(events, dict) and isinstance(actions, dict)
-
-    assert sorted(events) == ["HARVEST", "LOWERING", "MANUAL_INSPECTION", "WATERING"]
-    # The four deliberate refusals on day 2, plus any the world itself causes.
-    assert isinstance(actions["refused"], int) and actions["refused"] >= 4
 
 
 def _update() -> None:

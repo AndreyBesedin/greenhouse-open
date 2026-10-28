@@ -3,8 +3,6 @@
 import re
 from datetime import UTC, datetime
 
-from greenhouse_protocol.action import WaterPlantAction
-
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.records import event_id, observation_id
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
@@ -42,16 +40,8 @@ def test_published_records_carry_no_simulator_day_counter() -> None:
     for day in (1, 2, 3):
         timestamp = datetime(2026, 10, 12 + day, 12, 0, tzinfo=UTC)
         step = engine.advance(world, day=day, timestamp=timestamp, simulation_id="sim")
-        execution = engine.apply_actions(
-            step.world,
-            [WaterPlantAction(plant_id="tomato_compartment_plant_001", amount_ml=100.0)],
-            day=day,
-            timestamp=timestamp,
-        )
-        world = execution.world
+        world = step.world
 
-        for record_id in [o.observation_id for o in step.observations] + [
-            e.event_id for e in execution.events
-        ]:
+        for record_id in [o.observation_id for o in step.observations]:
             assert not day_counter.search(record_id), record_id
             assert timestamp.strftime("%Y%m%dT%H%M%SZ") in record_id

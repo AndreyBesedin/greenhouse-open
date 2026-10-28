@@ -17,7 +17,7 @@ import importlib
 import pytest
 
 PUBLIC_IMPORTS: dict[str, tuple[str, ...]] = {
-    "greenhouse_sim.engine": ("ActionExecution", "SimulationEngine", "SimulationStep"),
+    "greenhouse_sim.engine": ("SimulationEngine", "SimulationStep"),
     "greenhouse_sim.scenarios": ("SCENARIO_REGISTRY", "ScenarioConfig"),
     "greenhouse_sim.scenarios.config": ("ScenarioConfig",),
     "greenhouse_sim.world": (
@@ -32,7 +32,6 @@ PUBLIC_IMPORTS: dict[str, tuple[str, ...]] = {
         "TrussStage",
     ),
     "greenhouse_sim.world_builder": ("advance_world", "initialize_world"),
-    "greenhouse_sim.executor": ("ActionExecutor", "SimulatedOperatorExecutor", "executor_for"),
     "greenhouse_sim.checkpoints": ("InMemoryWorldCheckpoints", "WorldCheckpoints"),
     "greenhouse_sim.ground_truth": ("GroundTruth", "PlantTruth", "ground_truth"),
     "greenhouse_sim.evaluation.observation_accuracy": (
@@ -76,3 +75,23 @@ PUBLIC_IMPORTS: dict[str, tuple[str, ...]] = {
 )
 def test_a_public_import_path_resolves(module: str, name: str) -> None:
     assert hasattr(importlib.import_module(module), name), f"from {module} import {name}"
+
+
+# The engine's actions and its executor, removed (P13.9): a policy acts on the
+# run, through its gateway, as a person in the viewer does (decision 0046).
+REMOVED_MODULES = ("greenhouse_sim.actions", "greenhouse_sim.executor")
+REMOVED_NAMES = {"greenhouse_sim.engine": ("ActionExecution",)}
+
+
+@pytest.mark.parametrize("module", REMOVED_MODULES)
+def test_a_removed_module_does_not_come_back(module: str) -> None:
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module(module)
+
+
+def test_the_engine_takes_no_actions() -> None:
+    engine = importlib.import_module("greenhouse_sim.engine")
+
+    for module, names in REMOVED_NAMES.items():
+        assert not any(hasattr(importlib.import_module(module), name) for name in names)
+    assert not hasattr(engine.SimulationEngine, "apply_actions")

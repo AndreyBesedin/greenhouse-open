@@ -13,7 +13,6 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from greenhouse_adapters.wur.agc4_challenge_2024.compartments import compartment
 from greenhouse_adapters.wur.agc4_challenge_2024.timeseries import parse_timeseries
-from greenhouse_protocol.action import WaterPlantAction
 from greenhouse_protocol.contracts.conformance import (
     check_events,
     check_frames,
@@ -31,9 +30,14 @@ from greenhouse_protocol.media import CameraFrame, CameraPose, MediaCapture
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.provenance import RecordSource
 from greenhouse_protocol.sensor import CameraIntrinsics
+from greenhouse_sim.core.crop import CropWork
 from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.catalogue import PACKAGED, Catalogue
+from greenhouse_sim.scenarios.crop_parameters import SimpleCrop
 from greenhouse_sim.services import sensors
+from greenhouse_sim.services.crop_log import crop_records
+from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
 from pydantic import ValidationError
@@ -53,24 +57,33 @@ time,compartment/air_temperature,compartment/relative_humidity,compartment/heati
 
 
 def _simulated() -> tuple[list[Observation], list[Event]]:
+    """The engine's observations through a week, and the harvests of a run:
+    a climate box whose fruit ripens within days, harvested every third."""
     engine = SimulationEngine(CONFIG)
     world = engine.initialize(PLANT_IDS, greenhouse_id="tomato_compartment")
     observations: list[Observation] = []
-    events: list[Event] = []
-
     for day in range(1, 8):
         timestamp = START + timedelta(days=day - 1)
         step = engine.advance(world, day=day, timestamp=timestamp, simulation_id="sim_conformance")
-        execution = engine.apply_actions(
-            step.world,
-            [WaterPlantAction(plant_id=PLANT_IDS[0], amount_ml=250.0)],
-            day=day,
-            timestamp=timestamp,
-        )
-        world = execution.world
+        world = step.world
         observations.extend(step.observations)
-        events.extend(execution.events)
 
+    ripening = SCENARIO_REGISTRY["climate_box"].model_copy(
+        update={
+            "crop": SimpleCrop(truss_interval_days=2, ripening_days_bounds=(3, 4)),
+            "crop_work": CropWork(harvest_every_days=3),
+            "duration_days": 9,
+        }
+    )
+    run = RunRequest("climate_box")
+    with Simulator(Catalogue(PACKAGED.with_config(ripening))) as simulator:
+        _, run_id = air_through_a_run(simulator, run)
+        start = sensors.run_start(simulator.catalogue, "climate_box")
+        events = [
+            event
+            for day in range(10)
+            for event in crop_records(simulator, run, day, start, run_id)[1]
+        ]
     return observations, events
 
 
