@@ -24,7 +24,7 @@ describe("the HUD", () => {
 
   it("moves the camera to the preset whose button is pressed", () => {
     const onPreset = vi.fn();
-    hud = render(<Hud sample={null} pointer={null} onPreset={onPreset} onCommand={ignore} />);
+    hud = render(<Hud sample={null} pointer={null} onPreset={onPreset} />);
 
     for (const label of ["Top", "Front", "Side", "Isometric"]) {
       click(button(hud.container, label));
@@ -34,14 +34,7 @@ describe("the HUD", () => {
   });
 
   it("shows readouts once the view has been sampled", () => {
-    hud = render(
-      <Hud
-        sample={SAMPLE}
-        pointer={{ x: 1.234, y: -0.5, z: 0 }}
-        onPreset={ignore}
-        onCommand={ignore}
-      />,
-    );
+    hud = render(<Hud sample={SAMPLE} pointer={{ x: 1.234, y: -0.5, z: 0 }} onPreset={ignore} />);
     const { container } = hud;
 
     expect(said(container, "camera-position")).toBe("x 5.20, y -5.20, z 5.20");
@@ -54,7 +47,7 @@ describe("the HUD", () => {
   });
 
   it("says nothing is measured yet before the first sample", () => {
-    hud = render(<Hud sample={null} pointer={null} onPreset={ignore} onCommand={ignore} />);
+    hud = render(<Hud sample={null} pointer={null} onPreset={ignore} />);
 
     expect(said(hud.container, "camera-position")).toBe("…");
     expect(said(hud.container, "pointer-position")).toBe("—");
@@ -62,28 +55,14 @@ describe("the HUD", () => {
   });
 
   it("says the view is idle while it stands still, with the frame time it last drew at", () => {
-    hud = render(
-      <Hud
-        sample={{ ...SAMPLE, drawing: false }}
-        pointer={null}
-        onPreset={ignore}
-        onCommand={ignore}
-      />,
-    );
+    hud = render(<Hud sample={{ ...SAMPLE, drawing: false }} pointer={null} onPreset={ignore} />);
 
     expect(said(hud.container, "frame-rate")).toBe("idle");
     expect(said(hud.container, "frame-time")).toBe("16.8 ms, worst 33.4 ms");
   });
 
   it("waits for frames drawn in a row before giving a rate", () => {
-    hud = render(
-      <Hud
-        sample={{ ...SAMPLE, rate: null }}
-        pointer={null}
-        onPreset={ignore}
-        onCommand={ignore}
-      />,
-    );
+    hud = render(<Hud sample={{ ...SAMPLE, rate: null }} pointer={null} onPreset={ignore} />);
 
     expect(said(hud.container, "frame-rate")).toBe("…");
     expect(said(hud.container, "frame-time")).toBe("…");
@@ -91,7 +70,7 @@ describe("the HUD", () => {
   });
 
   it("folds to its header, and unfolds with its readouts as they were", async () => {
-    hud = render(<Hud sample={SAMPLE} pointer={null} onPreset={ignore} onCommand={ignore} />);
+    hud = render(<Hud sample={SAMPLE} pointer={null} onPreset={ignore} />);
     const section = hud.container.querySelector("section");
     const header = hud.container.querySelector("summary");
     if (section === null || header === null) {
@@ -123,7 +102,6 @@ describe("the HUD", () => {
         pointer={null}
         simulator={{ path: "scenarios/climate_box/fields/climate", ms: 1234.5 }}
         onPreset={ignore}
-        onCommand={ignore}
       />,
     );
 

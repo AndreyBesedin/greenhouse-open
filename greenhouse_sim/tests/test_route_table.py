@@ -4,10 +4,10 @@
 with that method, and every route its code answers is listed there.
 
 The tables are written by hand, for a reader; this holds each to the
-`match` arms of its module's `get` and `live_stream` (GET), and `post` and
-`control` (POST). A path's `{…}` is a segment a route captures, a query
-after `?` is an example, `/play, /pause` lists two routes beside each
-other, and a path ending in `/...` points to another table. A segment an
+`match` arms of its module's `get` (GET) and `post` (POST). A path's `{…}`
+is a segment a route captures, a query after `?` is an example, `/play,
+/pause` lists two routes beside each other, and a path ending in `/...`
+points to another table. A segment an
 arm captures and then refuses unless it is one of an enum's values
 (`if action not in PlaybackCommand`) is each of those values, each a route
 the tables list. And `respond` asks every module that answers routes.
@@ -32,7 +32,7 @@ MODULES: Final = {
     for found in pkgutil.iter_modules(routes.__path__)
 }
 # The functions whose `match` arms are routes, and the method each answers.
-ROUTING: Final = {"get": "GET", "live_stream": "GET", "post": "POST", "control": "POST"}
+ROUTING: Final = {"get": "GET", "post": "POST"}
 # A table's line: its method, its path, and what follows it.
 LISTED: Final = re.compile(r"^\s+(GET|POST) (/api/\S+)(.*)$")
 # A route listed beside the one before it: `, /pause`.
@@ -186,11 +186,11 @@ def test_each_command_a_guarded_route_takes_is_listed_on_its_own() -> None:
     """A command the playback takes is a route of its own: one left out of
     the table is not hidden by the others."""
     restart = ("playback", "POST", ("api", "scenarios", "{id}", "playback", "restart"))
-    reset = ("live", "POST", ("api", "scenarios", "{id}", "live", "reset"))
+    pause = ("playback", "POST", ("api", "scenarios", "{id}", "playback", "pause"))
 
     assert ("playback", "POST", ("api", "scenarios", None, "playback", "restart")) in ANSWERED
-    assert ("live", "POST", ("api", "scenarios", None, "live", "reset")) in ANSWERED
-    for left_out in (restart, reset):
+    assert ("playback", "POST", ("api", "scenarios", None, "playback", "pause")) in ANSWERED
+    for left_out in (restart, pause):
         without = LISTED_ROUTES - {left_out}
         arm = tuple(None if part.startswith("{") else part for part in left_out[2])
         assert not any(m == "POST" and _answers(path, arm) for _, m, path in without)

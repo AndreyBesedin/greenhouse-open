@@ -27,8 +27,6 @@ function describeSource(source: SceneSource, day = 0): string {
       const moves = moved.length === 0 ? "" : `, ${moved.join(", ")} moved`;
       return `scenario ${source.scenarioId}${layout}${moves}${when}`;
     }
-    case "live":
-      return `scenario ${source.scenarioId}, live`;
   }
 }
 

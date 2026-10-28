@@ -308,19 +308,6 @@ body {
   white-space: nowrap;
 }
 
-.hud .time-controls {
-  align-items: center;
-  margin: 8px 0 0;
-}
-
-.hud .time-controls label {
-  margin-left: auto;
-}
-
-.hud .command-problem {
-  margin: 6px 0 0;
-}
-
 /* The HUD folds to its header, a tab in the view's corner, and moves where
  * its header is dragged (#204). */
 .hud summary {

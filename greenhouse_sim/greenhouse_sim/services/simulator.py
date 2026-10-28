@@ -1,10 +1,10 @@
 """A simulator's state, in one object (decision 0048, AUDIT.15).
 
 A `Simulator` owns what a simulator keeps and runs: the scenarios it knows,
-packaged and registered (`scenarios.catalogue`), its live runs, the runs it
-plays back, the cursors it has given consumers, the installations' drafts
-it is given a store of (`builder.drafts`, decision 0051), and who may act on
-its runs (`authorisation`, decision 0052). The server makes one, or is given
+packaged and registered (`scenarios.catalogue`), the runs it plays back,
+the cursors it has given consumers, the installations' drafts it is given a
+store of (`builder.drafts`, decision 0051), and who may act on its runs
+(`authorisation`, decision 0052). The server makes one, or is given
 one; a test makes its own. Closing it stops what it runs, waiting for each
 run's thread, and it starts nothing after.
 
@@ -25,7 +25,6 @@ from greenhouse_sim.scenarios.catalogue import Catalogue
 from greenhouse_sim.services import checkpoints, climate_runs, crop, kept_states, sunlight
 from greenhouse_sim.services.consumer import Cursors
 from greenhouse_sim.services.gateway import LOCAL_AUTHORISATION, NO_CREW, Crew
-from greenhouse_sim.services.live import DEFAULT_SECONDS_PER_DAY, LiveRuns
 from greenhouse_sim.services.playback import Playbacks
 
 
@@ -34,7 +33,6 @@ class Simulator:
         self,
         catalogue: Catalogue | None = None,
         *,
-        seconds_per_day: float = DEFAULT_SECONDS_PER_DAY,
         drafts: DraftStore | None = None,
         authorisation: AuthorisationConfig = LOCAL_AUTHORISATION,
         crew: Crew = NO_CREW,
@@ -50,7 +48,6 @@ class Simulator:
         # Where the drafts it is asked for are kept, if anywhere: a file of
         # its user's, which outlives it, and which it never forgets.
         self.drafts = drafts
-        self.live = LiveRuns(self.catalogue, seconds_per_day=seconds_per_day)
         self.playbacks = Playbacks()
         self.cursors = Cursors()
         # What the services keep, this simulator's alone.
@@ -90,14 +87,13 @@ class Simulator:
         self.cursors.forget()
 
     def close(self) -> None:
-        """Stops the live runs and the playbacks, waits for them, and lets go
-        of everything kept. A close asked for while another is under way
+        """Stops the playbacks, waits for them, and lets go of everything
+        kept. A close asked for while another is under way
         waits for it; one asked for after does nothing."""
         with self._closing:
             if self._closed:
                 return
             try:
-                self.live.close()
                 self.playbacks.close()
                 self.forget()
             finally:

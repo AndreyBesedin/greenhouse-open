@@ -22,7 +22,6 @@ of its routes at its top:
   crop and timeline;
 - `checkpoints`: a run's checkpoints, made, listed, downloaded and uploaded;
 - `playback`: a scenario's run played back against one clock;
-- `live`: a scenario played live, and its commands;
 - `lab`: the plant lab;
 - `builder`: the setup builder, its drafts and its first form.
 
@@ -46,11 +45,10 @@ from greenhouse_sim.api.routes import (
     scenarios,
     system,
 )
-from greenhouse_sim.api.routes.live import control, live_stream
 from greenhouse_sim.api.routes.shared import Query, error, segments_of
 from greenhouse_sim.services.simulator import Simulator
 
-__all__ = ["control", "live_stream", "respond"]
+__all__ = ["respond"]
 
 type Getting = Callable[[Simulator, list[str], Query], Response | None]
 type Posting = Callable[[Simulator, list[str], Query, bytes], Response | None]

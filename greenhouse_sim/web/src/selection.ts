@@ -83,7 +83,8 @@ function nearestEntity(hits: readonly Hit[]): string | null {
 }
 
 /** The selected entity as the given scene has it. A selection is kept by
- * identifier, so it follows its entity from one live frame to the next. */
+ * identifier, so it follows its entity from one scene to the next, as a
+ * followed run moves on. */
 export function selectedEntity(
   snapshot: SceneSnapshot | null,
   entityId: string | null,

@@ -5,15 +5,12 @@ import { type Box, isMoved, type Offset, UNMOVED, unmoved, within } from "./hudP
 import {
   formatCount,
   formatFrameTime,
-  formatInstant,
   formatMemory,
   formatMetres,
   formatPoint,
   type ViewSample,
 } from "./readouts";
-import type { LiveCommand, LiveConnection, LiveFrame } from "./scene/live";
 import { describeSimulatorTime, type SimulatorTime } from "./simulatorTime";
-import { TimeControls } from "./TimeControls";
 import type { Point3 } from "./world";
 
 const PRESET_LABELS: Record<PresetName, string> = {
@@ -49,35 +46,17 @@ interface Drag {
   moved: boolean;
 }
 
-const CONNECTION_LABELS: Record<LiveConnection, string> = {
-  connecting: "connecting…",
-  live: "live",
-  disconnected: "disconnected, reconnecting…",
-};
-
-/** A live scenario's progress, when one is being followed. */
-export interface LiveStatus {
-  connection: LiveConnection;
-  frame: LiveFrame | null;
-  /** Why the latest command was not taken, if it was not. */
-  problem: string | null;
-}
-
 export function Hud({
   sample,
   pointer,
-  live = null,
   simulator = null,
   onPreset,
-  onCommand,
 }: {
   sample: ViewSample | null;
   pointer: Point3 | null;
-  live?: LiveStatus | null;
   /** How long the simulator took to answer the latest request (P09.8). */
   simulator?: SimulatorTime | null;
   onPreset: (preset: PresetName) => void;
-  onCommand: (command: LiveCommand) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [offset, setOffset] = useState<Offset>(UNMOVED);
@@ -169,14 +148,7 @@ export function Hud({
         >
           View
         </summary>
-        <HudBody
-          sample={sample}
-          pointer={pointer}
-          live={live}
-          simulator={simulator}
-          onPreset={onPreset}
-          onCommand={onCommand}
-        />
+        <HudBody sample={sample} pointer={pointer} simulator={simulator} onPreset={onPreset} />
         {isMoved(offset) && (
           <button type="button" className="hud-put-back" onClick={() => setOffset(UNMOVED)}>
             Put it back
@@ -187,21 +159,17 @@ export function Hud({
   );
 }
 
-/** The HUD's presets, readouts and live controls, under its header. */
+/** The HUD's presets and readouts, under its header. */
 function HudBody({
   sample,
   pointer,
-  live,
   simulator,
   onPreset,
-  onCommand,
 }: {
   sample: ViewSample | null;
   pointer: Point3 | null;
-  live: LiveStatus | null;
   simulator: SimulatorTime | null;
   onPreset: (preset: PresetName) => void;
-  onCommand: (command: LiveCommand) => void;
 }) {
   return (
     <>
@@ -259,33 +227,7 @@ function HudBody({
         >
           {simulator ? describeSimulatorTime(simulator) : "—"}
         </dd>
-        {live && (
-          <>
-            <dt>Stream</dt>
-            <dd data-testid="stream-status">{CONNECTION_LABELS[live.connection]}</dd>
-            <dt>Simulation</dt>
-            <dd data-testid="simulation-time">
-              {live.frame
-                ? `day ${live.frame.day} · ${formatInstant(live.frame.timestamp)}`
-                : PENDING}
-            </dd>
-          </>
-        )}
       </dl>
-      {live && (
-        <>
-          <TimeControls
-            frame={live.frame}
-            connected={live.connection === "live"}
-            onCommand={onCommand}
-          />
-          {live.problem && (
-            <p className="command-problem" role="alert" data-testid="command-problem">
-              {live.problem}
-            </p>
-          )}
-        </>
-      )}
     </>
   );
 }
