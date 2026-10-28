@@ -1,6 +1,6 @@
 # 0059: The engine's day gives way to the run
 
-**Status:** Proposed, for P14.6's last step
+**Status:** Accepted, for P14.6's last step
 ([P14](../roadmap/p14-models-by-manifest.md)).
 **Date:** 2026-10-28
 
@@ -75,13 +75,16 @@ Three ways were weighed:
 
 ## Decision
 
-The engine's day is removed, in four steps, each a pull request of its own:
+The engine's day is removed, in four steps, each a pull request of its own,
+all four in 0.5.0:
 
 1. **The viewer's live mode gives way to a scenario's run.** Every packaged
    scenario already has a run the viewer draws, with its timeline, and a
    playback the viewer follows (decision 0041). The live source, its
    routes, its stream and `services/live.py` are removed. A `?live=<id>`
-   address opens that scenario's run instead.
+   address opens that scenario's run instead. The live mode is not kept as
+   a view of a scenario's playback either: the playback the viewer follows
+   has pace controls of its own.
 2. **The examples run on the run:**
    - 01 plays a scenario's run and reads its observations, as a consumer
      does;
@@ -108,8 +111,9 @@ The engine's day is removed, in four steps, each a pull request of its own:
    kept opening day and its run ids.
 
 The public API (decision 0011) loses the modules above, and the README's
-table and `test_public_imports.py` say so. It is a breaking change, named
-in the changelog of the release it lands in.
+table and `test_public_imports.py` say so. It is a breaking change, and
+lands in 0.5.0 with that release's others (P13.9's, P14's formats), so that
+callers of the engine's day move once; its changelog names it.
 
 ## Consequences
 
@@ -131,10 +135,10 @@ in the changelog of the release it lands in.
   cannot give, a fast rung of each part, chosen by the manifest, would give
   it within the run, rather than a second simulator.
 
-## Open questions
+## Decided in its review
 
-1. **The live mode:** removed (above), or kept as a pace-only view of a
-   scenario's playback? Removing it is less to keep, and the playback the
+1. **The live mode** is removed, not kept as a pace-only view of a
+   scenario's playback: removing it is less to keep, and the playback the
    viewer follows already has pace controls.
-2. **Release:** with 0.5.0's other breaking changes (P13.9, P14's formats),
-   or in the next release?
+2. **The release:** all four steps land in 0.5.0, with its other breaking
+   changes (P13.9, P14's formats), rather than in the release after.
