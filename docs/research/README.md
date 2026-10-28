@@ -9,3 +9,4 @@ and is not rewritten as they change: a later check is a new memo.
 | Memo | Question | Priority |
 | --- | --- | --- |
 | [Which published tomato model to reproduce first](tomato-model-feasibility.md) | Reduced-State TOMGRO or Vanthoor's model, on what a reproduction needs | 4 |
+| [What a policy reads and gives](policy-evaluation-contract.md) | A policy's interface, and where its evaluation stands | 7 |

@@ -71,7 +71,10 @@ data.
    clock, never the ground truth, and acts through the protocol's plans;
    the evaluation alone reads the truth. A documented rule-based baseline
    comes first, and others are compared with it on the same scenarios,
-   seeds and budgets.
+   seeds and budgets. The contract is in
+   [the policy evaluation memo](../research/policy-evaluation-contract.md),
+   which decision [0061](../decisions/0061-a-policy-acts-on-a-run-as-a-consumer-and-is-scored-from-outside-it.md)
+   proposes.
 8. **P12.4, crop parameters as versioned assets,** once the registry and
    the first published model carry versioned parameters. A calibration
    never changes a model's published defaults.

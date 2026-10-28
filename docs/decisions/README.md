@@ -71,6 +71,7 @@ changes course is a new record that supersedes the old one.
 | [0058](0058-a-climate-controller-switches-each-loop-at-its-edge.md) | A climate controller switches each loop at its edge, from the house's air | Proposed |
 | [0059](0059-the-engines-day-gives-way-to-the-run.md) | The engine's day gives way to the run | Accepted |
 | [0060](0060-the-first-tomato-model-reproduced-is-vanthoors-as-greenlight-runs-it.md) | The first tomato model reproduced is Vanthoor's, as GreenLight runs it | Proposed |
+| [0061](0061-a-policy-acts-on-a-run-as-a-consumer-and-is-scored-from-outside-it.md) | A policy acts on a run as a consumer does, and is scored from outside it | Proposed |
 
 ## Template
 
