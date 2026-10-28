@@ -51,7 +51,7 @@ changes course is a new record that supersedes the old one.
 | [0037](0037-the-simulators-subpackages-tangle-no-further.md) | The simulator's subpackages tangle no further | Accepted |
 | [0038](0038-hooks-merge-like-dev-dependencies-review-waits-for-a-second-maintainer.md) | Hook updates merge like development dependencies; review changes with a second maintainer | Accepted |
 | [0039](0039-develop-with-uv-one-workspace-a-command-for-each-task.md) | Develop with uv: one workspace, a command for each task | Accepted |
-| [0041](0041-one-run-for-the-viewer-and-a-consumer-played-back-against-one-clock.md) | One run for the viewer and a consumer, played back against one clock | Accepted |
+| [0041](0041-one-run-for-the-viewer-and-a-consumer-played-back-against-one-clock.md) | One run for the viewer and a consumer, played back against one clock | Accepted; the simple live mode it kept superseded by 0059 |
 | [0042](0042-a-season-a-thermostat-and-the-heat-it-gives-as-a-modelled-record.md) | A season, a thermostat, and the heat it gives as a modelled record | Accepted |
 | [0043](0043-a-target-changed-while-a-run-plays-steers-it-from-then-on.md) | A target changed while a run plays steers it from then on | Accepted |
 | [0044](0044-public-records-speak-for-the-project.md) | Public records speak for the project | Accepted |
@@ -69,6 +69,7 @@ changes course is a new record that supersedes the old one.
 | [0056](0056-a-changelog-is-written-at-release-from-the-pull-requests-merged.md) | A changelog is written at release, from the pull requests merged | Accepted |
 | [0057](0057-a-published-model-is-reproduced-and-validated-before-the-crops-grow.md) | A published model is reproduced and validated before the crops grow | Proposed |
 | [0058](0058-a-climate-controller-switches-each-loop-at-its-edge.md) | A climate controller switches each loop at its edge, from the house's air | Proposed |
+| [0059](0059-the-engines-day-gives-way-to-the-run.md) | The engine's day gives way to the run | Accepted |
 
 ## Template
 

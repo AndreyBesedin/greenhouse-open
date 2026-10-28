@@ -1,6 +1,6 @@
 # 0041: One run for the viewer and a consumer, played back against one clock
 
-**Status:** Accepted
+**Status:** Accepted; the simple live mode it kept superseded by [0059](0059-the-engines-day-gives-way-to-the-run.md)
 **Date:** 2026-10-20
 
 ## Context
