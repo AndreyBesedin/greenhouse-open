@@ -1,6 +1,6 @@
 # 0012: Stream to the viewer with Server-Sent Events
 
-**Status:** Accepted
+**Status:** Accepted; superseded by [0059](0059-the-engines-day-gives-way-to-the-run.md), whose first step removes the live mode and its stream
 **Date:** 2026-10-03
 
 ## Context
