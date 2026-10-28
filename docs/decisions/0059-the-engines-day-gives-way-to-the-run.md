@@ -130,9 +130,7 @@ callers of the engine's day move once; its changelog names it.
     minutes to work out (decision 0041).
 - **Downstream callers** of the engine's day move to the run and its
   consumer interface, as callers of its actions already do (P13.9).
-- **Supersedes** 0041's "the simple live mode stays", and 0012's stream,
-  which only the live mode used: a followed run's view asks its playback
-  where its clock stands (decision 0041).
+- **Supersedes** 0041's "the simple live mode stays".
 - **Worth revisiting:** if a caller needs a season in seconds that a run
   cannot give, a fast rung of each part, chosen by the manifest, would give
   it within the run, rather than a second simulator.
