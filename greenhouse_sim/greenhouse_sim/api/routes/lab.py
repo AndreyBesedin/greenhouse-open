@@ -7,12 +7,14 @@ day by day, as a query asks (`lab_run`).
                                           run, ?seed=7 drawn from another seed,
                                           ?environment=cool_dim in another of
                                           its environments, &versus=warm_bright
-                                          every second plant in another
+                                          every second plant in another, and
                                           &act=30:p01:remove_leaf:p01_n02_leaf
-                                          schedules an action (repeatable):
-                                          remove_leaf, harvest_fruit,
-                                          harvest_truss, or lower_stem by a
-                                          number of internodes
+                                          a crop action at that day's start
+                                          (repeatable), spelled as a run's
+                                          &crop= is: harvest_ripe,
+                                          harvest_fruit, harvest_truss,
+                                          lower_stem, lower_cm or remove_leaf,
+                                          and what each acts on
     GET /api/plants/structure             one of the lab's plants, organ by organ;
                                           ?plant=p07 another plant, and the rest
                                           as for its scene
@@ -62,14 +64,15 @@ def lab_run(query: Query) -> plants.LabRun:
         seed=whole(query, "seed", plants.LAB_SEED),
         environment=last(query, "environment") or plants.REFERENCE,
         versus=last(query, "versus"),
-        actions=tuple(_lab_action(text) for text in query.get("act", [])),
+        actions=tuple(_lab_step(text) for text in query.get("act", [])),
     )
 
 
-def _lab_action(text: str) -> plants.LabAction:
-    """A scheduled action as a query writes it: `day:plant:action:organ`."""
+def _lab_step(text: str) -> plants.LabStep:
+    """A crop action of the run as a query writes it: `day:plant:action:organ`,
+    its action one the lab carries out (`plants.LAB_KINDS`)."""
     parts = text.split(":")
     if len(parts) != len(LAB_ACTION_PARTS) or not parts[0].isdigit():
         raise InvalidRequest(f"act wants day:plant:action:organ, not {text!r}")
     day, plant_id, kind, target = parts
-    return plants.LabAction(day=int(day), plant_id=plant_id, kind=kind, target=target)
+    return plants.lab_step(int(day), plant_id, kind, target)

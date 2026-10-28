@@ -4,13 +4,14 @@ what a plant may do from one day to the next, and says what is wrong."""
 from http import HTTPStatus
 
 import pytest
+from greenhouse_protocol.actions import Lower, RemoveLeaf
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.biology.tomato.organ.development import DevelopmentParams
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.services import plants
-from greenhouse_sim.services.plants import LabAction, LabChecks, LabRun
+from greenhouse_sim.services.plants import LabChecks, LabRun, LabStep
 from greenhouse_sim.services.simulator import Simulator
 
 
@@ -23,9 +24,9 @@ from greenhouse_sim.services.simulator import Simulator
         LabRun(
             day=40,
             actions=(
-                LabAction(day=30, plant_id="p01", kind="remove_leaf", target="p01_n01_leaf"),
-                LabAction(day=31, plant_id="p01", kind="lower_stem", target="1"),
-                LabAction(day=31, plant_id="p02", kind="lower_stem", target="1"),
+                LabStep(day=30, action=RemoveLeaf(plant_id="p01", leaf_id="p01_n01_leaf")),
+                LabStep(day=31, action=Lower(plant_id="p01", by_internodes=1)),
+                LabStep(day=31, action=Lower(plant_id="p02", by_internodes=1)),
             ),
         ),
     ],

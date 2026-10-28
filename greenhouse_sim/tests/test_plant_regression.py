@@ -14,11 +14,13 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+from greenhouse_protocol.actions import Harvest, HarvestScope, Lower, RemoveLeaf
+
 from greenhouse_sim.biology.tomato.organ.fruit import maturity
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.domain.organs import FlowerStage, FruitStage, LeafStage
 from greenhouse_sim.services import plants
-from greenhouse_sim.services.plants import LabAction, LabRun
+from greenhouse_sim.services.plants import LabRun, LabStep
 
 GOLDEN_FILE = Path(__file__).parent / "golden" / "plant_lab.json"
 # Summaries are kept to this many decimals, enough to show any real change.
@@ -28,11 +30,11 @@ DECIMALS = 1
 # and its stem lowered over them.
 _TENDED = (
     *(
-        LabAction(day=80, plant_id="p01", kind="remove_leaf", target=f"p01_n{rank:02d}_leaf")
+        LabStep(day=80, action=RemoveLeaf(plant_id="p01", leaf_id=f"p01_n{rank:02d}_leaf"))
         for rank in range(1, 9)
     ),
-    LabAction(day=85, plant_id="p01", kind="harvest_truss", target="p01_t01"),
-    LabAction(day=85, plant_id="p01", kind="lower_stem", target="8"),
+    LabStep(day=85, action=Harvest(plant_id="p01", scope=HarvestScope.TRUSS, organ_id="p01_t01")),
+    LabStep(day=85, action=Lower(plant_id="p01", by_internodes=8)),
 )
 
 REFERENCES: dict[str, tuple[LabRun, str]] = {

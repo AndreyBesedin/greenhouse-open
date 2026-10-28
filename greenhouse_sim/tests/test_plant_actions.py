@@ -4,6 +4,7 @@ after."""
 
 import math
 from http import HTTPStatus
+from typing import Final
 
 import pytest
 
@@ -26,13 +27,23 @@ from greenhouse_sim.biology.tomato.organ.topology import (
 from greenhouse_sim.domain.organs import FlowerStage, FruitStage, LeafStage
 from greenhouse_sim.scene.snapshot import SceneSnapshot
 from greenhouse_sim.services import plants
-from greenhouse_sim.services.plants import LabAction, LabRun
+from greenhouse_sim.services.plants import LabRun, lab_step
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Vector3
 
 # The lab's first plant on day 85: two red trusses, and more ripening above.
 PLANT = plants.structure(LabRun(day=85))
 UP = Vector3(x=0.0, y=0.0, z=1.0)
+# Each crop action the lab carries out, as `&act=` spells it, and what it
+# acts on on that plant, once its lowest leaf is off.
+CARRIED_OUT: Final = {
+    "harvest_ripe": "",
+    "harvest_fruit": "p01_t01_fr01",
+    "harvest_truss": "p01_t02",
+    "lower_stem": "1",
+    "lower_cm": "10",
+    "remove_leaf": "p01_n02_leaf",
+}
 
 
 def _fruits(plant: Plant) -> dict[str, Fruit]:
@@ -63,13 +74,7 @@ def _drawn(plant: Plant) -> set[str]:
 
 
 def _run(day: int, *actions: tuple[int, str, str, str]) -> LabRun:
-    return LabRun(
-        day=day,
-        actions=tuple(
-            LabAction(day=on, plant_id=plant_id, kind=kind, target=target)
-            for on, plant_id, kind, target in actions
-        ),
-    )
+    return LabRun(day=day, actions=tuple(lab_step(*action) for action in actions))
 
 
 def test_removing_a_leaf_prunes_it_off_and_keeps_it_in_the_history() -> None:
@@ -231,6 +236,19 @@ def test_the_lab_schedules_actions_from_its_query_and_shows_them(simulator: Simu
     assert [event.note for event in structure.history] == ["removed p01_n02_leaf"]
 
 
+@pytest.mark.parametrize(("kind", "target"), CARRIED_OUT.items())
+def test_each_crop_action_the_lab_carries_out_is_done_to_its_plant(
+    simulator: Simulator, kind: str, target: str
+) -> None:
+    query = f"day=85&act=85:p01:remove_leaf:p01_n01_leaf&act=85:p01:{kind}:{target}"
+    answer = respond(simulator, "GET", f"/api/plants/structure?{query}")
+    plant = Plant.model_validate(answer.body)
+
+    assert answer.status == HTTPStatus.OK
+    assert len(plant.history) > 1
+    assert all(event.applied for event in plant.history)
+
+
 @pytest.mark.parametrize(
     ("act_query", "reason"),
     [
@@ -241,12 +259,21 @@ def test_the_lab_schedules_actions_from_its_query_and_shows_them(simulator: Simu
         ),
         (
             "30:p01:water:p01_n02_leaf",
-            "the plant lab has no action 'water', "
-            "only remove_leaf, harvest_fruit, harvest_truss, lower_stem",
+            "the plant lab has no action 'water', only harvest_ripe, harvest_fruit, "
+            "harvest_truss, lower_stem, lower_cm, remove_leaf",
+        ),
+        (
+            "30:p01:inspect:spots",
+            "the plant lab does not carry out inspect: "
+            "an inspection changes no plant, and the lab keeps no outcomes",
+        ),
+        (
+            "30:p01:lower_to:0.3",
+            "the plant lab does not carry out lower_to: its plants hang from no wire",
         ),
         ("30:p99:remove_leaf:p99_n02_leaf", "the plant lab has no plant 'p99' to act on"),
-        ("30:p01:lower_stem:far", "lower_stem wants how many internodes, not 'far'"),
-        ("30:p01:remove_leaf:", "remove_leaf wants a leaf, not ''"),
+        ("30:p01:lower_stem:far", "lower_stem of 'p01' wants how many internodes, not 'far'"),
+        ("30:p01:remove_leaf:", "remove_leaf of 'p01' wants a leaf, not ''"),
         ("91:p01:remove_leaf:p01_n02_leaf", "the plant lab runs from day 0 to day 90, not day 91"),
     ],
 )
