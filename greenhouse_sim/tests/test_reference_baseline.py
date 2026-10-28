@@ -4,11 +4,11 @@
 registered scenario as a caller would run it: every plant the scenario
 describes, for its whole duration, as its days advance with no action
 taken: a policy acts on the run, not on the engine's day (P13.9). Each
-simulated day is reduced to three digests (hidden state, observations and
-ground truth) and each run to a readable summary of where it ended.
+simulated day is reduced to two digests (hidden state and observations)
+and each run to a readable summary of where it ended.
 
 A failure names the scenario, the first day that diverged and which of the
-three parts moved, so a restructuring that is meant to preserve behaviour
+two parts moved, so a restructuring that is meant to preserve behaviour
 shows exactly where it did not.
 
 The hidden-state digest covers what the world is: sizes, stages, water,
@@ -46,8 +46,6 @@ from greenhouse_protocol.observation import Observation
 
 from greenhouse_sim.domain.crop import FruitStatus
 from greenhouse_sim.engine import SimulationEngine
-from greenhouse_sim.evaluation.observation_accuracy import observation_accuracy
-from greenhouse_sim.ground_truth import GroundTruth, ground_truth
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.world import GreenhouseWorld
 
@@ -55,7 +53,7 @@ FIXTURE = Path(__file__).resolve().parent / "fixtures" / "reference_baseline.jso
 SCENARIOS = sorted(SCENARIO_REGISTRY)
 SIMULATION_ID = "sim_reference_baseline"
 DECIMALS = 6
-PARTS = ("state", "observations", "ground_truth")
+PARTS = ("state", "observations")
 
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 
@@ -77,28 +75,22 @@ def _run(scenario_id: str) -> Baseline:
 
     days: list[str] = []
     observations: list[Observation] = []
-    truths: list[GroundTruth] = []
 
     for day in range(1, config.duration_days + 1):
         timestamp = start + timedelta(days=day - 1)
         step = engine.advance(world, day=day, timestamp=timestamp, simulation_id=SIMULATION_ID)
-        truth = ground_truth(
-            step.world, timestamp=timestamp, water_capacity_ml=config.simple_crop.water_capacity_ml
-        )
         world = step.world
 
         parts: dict[str, Json] = {
             "state": _state(world),
             "observations": [o.model_dump(mode="json") for o in step.observations],
-            "ground_truth": truth.model_dump(mode="json"),
         }
         digests = " ".join(f"{name}={_digest(parts[name])}" for name in PARTS)
         days.append(f"day {day:02d}: {digests}")
 
         observations.extend(step.observations)
-        truths.append(truth)
 
-    return Baseline(days, _summary(world, observations, truths))
+    return Baseline(days, _summary(world, observations))
 
 
 def _state(world: GreenhouseWorld) -> Json:
@@ -148,7 +140,6 @@ def _state(world: GreenhouseWorld) -> Json:
 def _summary(
     world: GreenhouseWorld,
     observations: list[Observation],
-    truths: list[GroundTruth],
 ) -> dict[str, Json]:
     """Where a run ended, in numbers a reviewer can read in a diff."""
     fruits = [fruit for plant in world.plants for truss in plant.trusses for fruit in truss.fruits]
@@ -157,7 +148,6 @@ def _summary(
     values_by_type: dict[str, list[float]] = {}
     for observation in observations:
         values_by_type.setdefault(observation.observation_type.value, []).append(observation.value)
-    accuracy = observation_accuracy(observations, truths)
 
     return {
         "plants": len(world.plants),
@@ -181,10 +171,6 @@ def _summary(
         "cumulative_harvest_g": round(sum(p.cumulative_harvest_g for p in world.plants), 2),
         "observations_by_type": {k: len(v) for k, v in sorted(values_by_type.items())},
         "observation_value_sums": {k: round(sum(v), 1) for k, v in sorted(values_by_type.items())},
-        "observation_mean_absolute_error": {
-            entry.observation_type.value: round(entry.mean_absolute_error, 3)
-            for entry in accuracy.by_type
-        },
     }
 
 

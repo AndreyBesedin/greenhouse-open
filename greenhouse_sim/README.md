@@ -11,8 +11,9 @@ Part of [greenhouse-open](../README.md). Apache-2.0.
 - **Deterministic.** The same scenario, seed and actions always produce the
   same records.
 - **Ground truth for evaluation only.** `greenhouse_sim.ground_truth` reports
-  the noiseless values, and `greenhouse_sim.evaluation` scores observations
-  against them. Nothing on the observation path exposes them.
+  what a run's sensors and its crop walk truly measured, reading by reading,
+  and `greenhouse_sim.evaluation` scores observations against it. Nothing on
+  the observation path exposes it.
 - **Scenarios.** `greenhouse_sim.scenarios` holds ready-made worlds; a
   `ScenarioConfig` describes the greenhouse (its `Envelope` and its
   `Layout`), crop, dynamics and sensor noise, and nothing about who manages
