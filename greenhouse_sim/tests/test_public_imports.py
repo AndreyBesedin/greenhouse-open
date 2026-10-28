@@ -33,7 +33,7 @@ PUBLIC_IMPORTS: dict[str, tuple[str, ...]] = {
     ),
     "greenhouse_sim.world_builder": ("advance_world", "initialize_world"),
     "greenhouse_sim.checkpoints": ("InMemoryWorldCheckpoints", "WorldCheckpoints"),
-    "greenhouse_sim.ground_truth": ("GroundTruth", "PlantTruth", "ground_truth"),
+    "greenhouse_sim.ground_truth": ("GroundTruth", "TrueReading", "ground_truth"),
     "greenhouse_sim.evaluation.observation_accuracy": (
         "AccuracyByType",
         "AccuracyReport",

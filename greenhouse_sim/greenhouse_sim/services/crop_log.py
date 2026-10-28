@@ -94,7 +94,7 @@ def crop_records(
                 _harvested(plant.plant_id, day_start, config.greenhouse_id, mass_g, count)
             )
     measured = [grown_by.measured(plant) for plant in plants]
-    walked = day_start + timedelta(seconds=WALK_S)
+    walked = walk_moment(start, day)
     source = RecordSource(type=SourceType.SIMULATION, source_id=run_id)
     observations = [
         observation
@@ -190,6 +190,22 @@ def _harvested(plant_id: str, at: datetime, greenhouse_id: str, mass_g: float, c
         # (`actions.effects`).
         parameters={"harvested_mass_g": round(mass_g, 1), "harvested_fruit_count": count},
     )
+
+
+def walk_moment(start: datetime, day: int) -> datetime:
+    """When a run that starts at `start` walks its crop on its day `day`."""
+    return start + timedelta(seconds=day * DAY_S + WALK_S)
+
+
+def walked_truly(plant: Measured) -> dict[ObservationType, float]:
+    """What a walk measures of a plant, without its errors: each reading
+    `_walk` records with them, for evaluation only (`greenhouse_sim.ground_truth`)."""
+    return {
+        ObservationType.VISIBLE_FRUIT_COUNT: float(plant.fruits),
+        ObservationType.RIPE_FRUIT_COUNT: float(plant.ripe),
+        ObservationType.ESTIMATED_RIPE_MASS_G: plant.ripe_mass_g,
+        ObservationType.VISIBLE_HEIGHT_CM: plant.height_cm,
+    }
 
 
 def _walk(

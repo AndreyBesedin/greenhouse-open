@@ -1,51 +1,54 @@
-"""Score what the sensors reported against what was really true.
+"""Score what a run's sensors and its crop walk reported against what was really true.
 
     python examples/04_score_against_ground_truth.py
 
 Only a simulation knows the truth behind its observations. Ground truth
-leaves the simulator through a separate, evaluation-only interface
+leaves the run through a separate, evaluation-only interface
 (`greenhouse_sim.ground_truth`), never as an observation, so decision logic
-cannot accidentally use it. Here it measures how noisy the sensing is: the
-baseline any state reconstruction has to beat.
+cannot accidentally use it. Here it measures how noisy the sensing is, the
+baseline any state reconstruction has to beat: each sensor's readings
+against the air or the weather it truly sampled, and each day's walk
+through the crop against each plant as its crop model measures it.
+
+The run is the climate box's, through its first two days and up to the
+third day's walk at noon.
 """
 
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
+from typing import Final
 
 from greenhouse_protocol.observation import Observation
-from greenhouse_sim.engine import SimulationEngine
+from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.evaluation.observation_accuracy import observation_accuracy
-from greenhouse_sim.ground_truth import GroundTruth, ground_truth
-from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.ground_truth import ground_truth
+from greenhouse_sim.services import sensors
+from greenhouse_sim.services.crop_log import WALK_S, crop_records
+from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 
-SCENARIO = SCENARIO_REGISTRY["tomato_compartment"]
-START = datetime(2026, 3, 1, 12, 0, tzinfo=UTC)
+SCENARIO: Final = "climate_box"  # a small, shut house of 32 plants
+DAYS: Final = 3
+UNTIL_S: Final = (DAYS - 1) * DAY_S + WALK_S
 
 
 def main() -> None:
-    engine = SimulationEngine(SCENARIO)
-    plant_ids = [f"{SCENARIO.greenhouse_id}_plant_{i:03d}" for i in range(1, 11)]
-    world = engine.initialize(plant_ids, greenhouse_id=SCENARIO.greenhouse_id)
+    run = RunRequest(SCENARIO)
+    with Simulator() as simulator:
+        # The run's observation log, as its consumers are delivered it: its
+        # sensors' readings, and each day's walk through its crop.
+        log = sensors.observations(simulator, run, UNTIL_S, from_s=0.0)
+        observations: list[Observation] = list(log.observations)
+        for day in range(DAYS):
+            walked, _ = crop_records(simulator, run, day, log.start, log.run_id)
+            until = log.start + timedelta(seconds=UNTIL_S)
+            observations += [o for o in walked if o.timestamp <= until]
+        truth = ground_truth(simulator, run, UNTIL_S)
 
-    observations: list[Observation] = []
-    truth: list[GroundTruth] = []
-    for day in range(1, 31):
-        timestamp = START + timedelta(days=day - 1)
-        step = engine.advance(world, day=day, timestamp=timestamp, simulation_id="example")
-        world = step.world
-        observations.extend(step.observations)
-        truth.append(
-            ground_truth(
-                world, timestamp=timestamp, water_capacity_ml=SCENARIO.simple_crop.water_capacity_ml
-            )
-        )
-
-    # Nobody waters in this run, so soil moisture falls towards zero and its
-    # error is large relative to what little water is left.
     report = observation_accuracy(observations, truth)
-    print(f"scored {report.readings} readings from {len(plant_ids)} plants over 30 days")
+    print(f"scored {report.readings} readings of {report.run_id} over {DAYS} days")
     for entry in report.by_type:
         print(
-            f"  {entry.observation_type.value:24} mean error {entry.mean_absolute_error:7.2f}"
+            f"  {entry.observation_type.value:30} mean error {entry.mean_absolute_error:8.2f}"
             f"  ({entry.mean_relative_error:6.1%} of the average true value)"
         )
 
