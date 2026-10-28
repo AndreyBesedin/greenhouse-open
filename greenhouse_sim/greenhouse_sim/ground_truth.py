@@ -89,10 +89,14 @@ def reading(observation: Observation) -> Reading:
     )
 
 
-def ground_truth(simulator: Simulator, run: RunRequest, until_s: float) -> GroundTruth:
+def ground_truth(
+    simulator: Simulator, run: RunRequest, until_s: float, *, named: str | None = None
+) -> GroundTruth:
     """What a run's point sensors truly sampled from its start to `until_s`,
     and what its walks through the crop truly found on each day walked by
-    then."""
+    then. It is named by `named`, by default the run's identity, as the
+    run's readings are: a playback names those of a run whose plan it
+    changed by its own run, its `run_id` (decision 0043)."""
     config = scenario(simulator.catalogue, run.scenario_id)
     start = sensors.run_start(simulator.catalogue, run.scenario_id)
     sampled = sensors.truth(simulator, run, until_s, from_s=0.0)
@@ -117,4 +121,6 @@ def ground_truth(simulator: Simulator, run: RunRequest, until_s: float) -> Groun
             for plant in grown.plants_on(day)
             for kind, value in walked_truly(measured(plant)).items()
         ]
-    return GroundTruth(run_id=sampled.run_id, greenhouse_id=config.greenhouse_id, readings=readings)
+    return GroundTruth(
+        run_id=named or sampled.run_id, greenhouse_id=config.greenhouse_id, readings=readings
+    )

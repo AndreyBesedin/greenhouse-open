@@ -18,7 +18,8 @@ from greenhouse_sim.scenarios.crop_parameters import CropWalk
 from greenhouse_sim.services import sensors
 from greenhouse_sim.services.crop_log import _walk, crop_records, walked_truly
 from greenhouse_sim.services.crop_models import Measured
-from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.fields import air_through_a_run
+from greenhouse_sim.services.runs import RunPlan, RunRequest
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import HOUR_S
 
@@ -132,6 +133,32 @@ def test_readings_with_no_true_reading_are_skipped_not_scored(
 
     assert 0 < report.readings < len(observations)
     assert other.readings == 0
+
+
+def test_a_steered_playbacks_readings_are_scored_under_the_name_it_gives_them(
+    simulator: Simulator,
+) -> None:
+    """A playback names the readings of a run whose plan it changed by its
+    own run (decision 0043), not by the steered run's identity: truth named
+    as they are scores every one, and the steered run's own none."""
+    scenario_id = "reference_greenhouse"
+    # Heated to 24 °C from 7 h, rather than its thermostat's 18 °C.
+    steered = RunRequest(
+        scenario_id, plan=RunPlan.requested(targets=((7 * HOUR_S, "heating_day", 24.0),))
+    )
+    _, played = air_through_a_run(simulator, RunRequest(scenario_id))
+    until_s = 9 * HOUR_S
+    readings, steered_id = sensors.delivered_between(
+        simulator, steered, None, until_s, named=played
+    )
+
+    named = observation_accuracy(readings, ground_truth(simulator, steered, until_s, named=played))
+    unnamed = observation_accuracy(readings, ground_truth(simulator, steered, until_s))
+
+    assert steered_id != played
+    assert named.run_id == played
+    assert named.readings == len(readings) > 0
+    assert unnamed.readings == 0
 
 
 @pytest.mark.parametrize("kind", sorted(WALK_KINDS))
