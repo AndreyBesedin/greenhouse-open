@@ -3,7 +3,7 @@ from pydantic import ValidationError
 
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.scenarios.crop_parameters import CropWalk, SimpleCrop
+from greenhouse_sim.scenarios.crop_parameters import RETIRED, CropWalk, SimpleCrop
 
 
 def test_registry_contains_exactly_the_configured_greenhouses() -> None:
@@ -103,6 +103,31 @@ def test_a_configuration_written_with_its_settings_at_its_top_reads_them_in_its_
         match="its crop holds truss_interval_days, ripening_days_bounds, not beside",
     ):
         ScenarioConfig.model_validate(written | {"crop": {"kind": "simple"}})
+
+
+def test_the_settings_of_the_engines_day_are_read_without_them() -> None:
+    """The bounds its air drifted within and its sensors' noises, which no
+    run read, until the engine was removed (decision 0059): written in a
+    configuration's crop, or at its top as before P14.3, they are dropped;
+    a setting the simple crop never had is still refused."""
+    config = SCENARIO_REGISTRY["climate_box"]
+    retired = {
+        "air_temperature_bounds": [18.0, 32.0],
+        "humidity_bounds": [45.0, 85.0],
+        "soil_moisture_noise_pct": 3.0,
+        "air_temperature_noise_c": 0.4,
+    }
+    written = config.model_dump(mode="json")
+    crop = written.pop("crop")
+    in_its_crop = written | {"crop": crop | retired}
+    at_its_top = written | {name: value for name, value in crop.items() if name != "kind"}
+
+    assert set(retired) == set(RETIRED)
+    assert ScenarioConfig.model_validate(in_its_crop) == config
+    assert ScenarioConfig.model_validate(at_its_top | retired) == config
+    assert SimpleCrop.model_validate(retired) == SimpleCrop()
+    with pytest.raises(ValidationError, match="never_a_setting"):
+        SimpleCrop.model_validate({"never_a_setting": 1.0})
 
 
 def test_a_configuration_of_the_organ_crop_written_so_leaves_the_simple_crops_settings() -> None:

@@ -5,8 +5,9 @@ from enum import StrEnum
 
 
 class CropModel(StrEnum):
-    """How a scenario's run grows its crop: by the simple daily model,
-    through the engine, or organ by organ (`greenhouse_sim.core.crop`)."""
+    """How a scenario's run grows its crop: by the simple daily model
+    (`greenhouse_sim.core.simple_crop`), or organ by organ
+    (`greenhouse_sim.core.crop`)."""
 
     SIMPLE = "simple"
     ORGAN = "organ"

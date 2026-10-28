@@ -7,7 +7,7 @@ research datasets into that format.
 | Package | What it is |
 | --- | --- |
 | [`greenhouse-protocol`](greenhouse_protocol/) | Canonical records (observations, events, media captures, sensors, semantic actions and their outcomes, greenhouse descriptions) and the contracts a producer or consumer implements: record stores and queries, action execution, conformance checks, and an in-memory reference store. |
-| [`greenhouse-sim`](greenhouse_sim/) | A simulator with a hidden world and noisy sensors. It publishes canonical observations, accepts semantic actions, and exposes ground truth only through a separate evaluation interface. Plant, environment and sensor models plug in through small contracts, and a browser viewer shows what it is doing. |
+| [`greenhouse-sim`](greenhouse_sim/) | A simulator with a hidden truth and noisy sensors. Its runs publish canonical observations, accept semantic actions, and expose ground truth only through a separate evaluation interface. Each part of a run is a ladder of models a scenario's manifest chooses from, and a browser viewer shows what it is doing. |
 | [`greenhouse-adapters`](greenhouse_adapters/) | Reproducible adapters from recorded datasets to canonical records, starting with the Wageningen University & Research Autonomous Greenhouse Challenge datasets, and the `greenhouse-data` command. |
 
 ## Demo

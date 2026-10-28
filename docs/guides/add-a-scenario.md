@@ -49,20 +49,14 @@ no opening day.
    - `greenhouse_sim/tests/test_opening_day.py`: the scenarios without an
      opening day;
    - `greenhouse_sim/tests/test_api.py`: its other layouts, if it has some.
-4. **Its baseline:** the reference baseline records every scenario's first
-   week, so it is written again (below).
-5. **The viewer** needs nothing: its scenario list reads the API's. A
+4. **The viewer** needs nothing: its scenario list reads the API's. A
    browser test of what is special about it, as
    `greenhouse_sim/web/e2e/reference-greenhouse.spec.ts` is for the
    reference greenhouse, is worth writing.
 
 ## Generated files
 
-```bash
-uv run python greenhouse_sim/tests/test_reference_baseline.py --update
-```
-
-An **opening day** (`opening_day` in the manifest) needs its kept day, and
+None, unless it has an opening day. An **opening day** (`opening_day` in the manifest) needs its kept day, and
 its kept day with everything off, in `greenhouse_sim/greenhouse_sim/scenarios/openings/`.
 `greenhouse_sim/tests/test_opening_day.py --update` writes them, for the
 reference greenhouse only today, in about six minutes: another scenario's
@@ -73,8 +67,7 @@ needs that test extended.
 ```bash
 uv run pytest greenhouse_sim/tests/test_scenarios.py greenhouse_sim/tests/test_scenario_manifests.py \
   greenhouse_sim/tests/test_layout_files.py greenhouse_sim/tests/test_api.py \
-  greenhouse_sim/tests/test_airflow.py greenhouse_sim/tests/test_weather.py \
-  greenhouse_sim/tests/test_reference_baseline.py
+  greenhouse_sim/tests/test_airflow.py greenhouse_sim/tests/test_weather.py
 uv run check --fast
 ```
 

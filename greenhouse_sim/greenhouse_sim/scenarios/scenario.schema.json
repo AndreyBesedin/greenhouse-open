@@ -232,7 +232,7 @@
       "type": "object"
     },
     "CropModel": {
-      "description": "How a scenario's run grows its crop: by the simple daily model,\nthrough the engine, or organ by organ (`greenhouse_sim.core.crop`).",
+      "description": "How a scenario's run grows its crop: by the simple daily model\n(`greenhouse_sim.core.simple_crop`), or organ by organ\n(`greenhouse_sim.core.crop`).",
       "enum": [
         "simple",
         "organ"
@@ -242,7 +242,7 @@
     },
     "CropWalk": {
       "additionalProperties": false,
-      "description": "The daily walk through the crop's measurement errors, on either\ncrop's walk (`greenhouse_sim.services.crop_log`, and the engine's\nsensors): the chance that a count is one off, and the standard\ndeviations of the ripe fruits' estimated mass, in percent, and of a\nplant's measured height, in cm.",
+      "description": "The daily walk through the crop's measurement errors, on either\ncrop's walk (`greenhouse_sim.services.crop_log`): the chance that a\ncount is one off, and the standard deviations of the ripe fruits'\nestimated mass, in percent, and of a plant's measured height, in cm.",
       "properties": {
         "fruit_count_noise_probability": {
           "default": 0.1,
@@ -906,44 +906,8 @@
     },
     "SimpleCrop": {
       "additionalProperties": false,
-      "description": "The simple daily crop's settings (`greenhouse_sim.biology.tomato.simple`),\nand those of the engine's day it grows in: the bounds its air drifts\nwithin (`greenhouse_sim.environment.simple`) and its sensors' noises\n(`greenhouse_sim.sensors.generation`), until the engine goes (decision\n0035).",
+      "description": "The simple daily crop's settings\n(`greenhouse_sim.biology.tomato.simple`).",
       "properties": {
-        "air_temperature_bounds": {
-          "default": [
-            18.0,
-            32.0
-          ],
-          "maxItems": 2,
-          "minItems": 2,
-          "prefixItems": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "number"
-            }
-          ],
-          "title": "Air Temperature Bounds",
-          "type": "array"
-        },
-        "humidity_bounds": {
-          "default": [
-            45.0,
-            85.0
-          ],
-          "maxItems": 2,
-          "minItems": 2,
-          "prefixItems": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "number"
-            }
-          ],
-          "title": "Humidity Bounds",
-          "type": "array"
-        },
         "initial_water_reservoir_ml": {
           "default": 600.0,
           "title": "Initial Water Reservoir Ml",
@@ -1056,16 +1020,6 @@
           ],
           "title": "Ripening Days Bounds",
           "type": "array"
-        },
-        "soil_moisture_noise_pct": {
-          "default": 3.0,
-          "title": "Soil Moisture Noise Pct",
-          "type": "number"
-        },
-        "air_temperature_noise_c": {
-          "default": 0.4,
-          "title": "Air Temperature Noise C",
-          "type": "number"
         }
       },
       "title": "SimpleCrop",

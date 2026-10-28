@@ -3324,7 +3324,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.34993436676149303
+        "height": 0.309178708162438
       },
       "color": {
         "r": 0.2,
@@ -3336,7 +3336,7 @@
       "properties": {
         "planting_position": "row_1_position_1",
         "age_days": 9,
-        "visible_height_cm": 34.9934366761493,
+        "visible_height_cm": 30.9178708162438,
         "trusses": 1,
         "fruits_on_plant": 4,
         "ripe_fruits": 0,
@@ -3362,7 +3362,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.3484014626754485
+        "height": 0.30806248316702056
       },
       "color": {
         "r": 0.2,
@@ -3374,7 +3374,7 @@
       "properties": {
         "planting_position": "row_1_position_2",
         "age_days": 9,
-        "visible_height_cm": 34.84014626754485,
+        "visible_height_cm": 30.806248316702057,
         "trusses": 1,
         "fruits_on_plant": 6,
         "ripe_fruits": 0,
@@ -3400,7 +3400,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.36177795779899974
+        "height": 0.3178029348651536
       },
       "color": {
         "r": 0.2,
@@ -3412,7 +3412,7 @@
       "properties": {
         "planting_position": "row_1_position_3",
         "age_days": 9,
-        "visible_height_cm": 36.177795779899974,
+        "visible_height_cm": 31.78029348651536,
         "trusses": 1,
         "fruits_on_plant": 5,
         "ripe_fruits": 0,
@@ -3438,7 +3438,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.35161666943112246
+        "height": 0.3104037217212076
       },
       "color": {
         "r": 0.2,
@@ -3450,7 +3450,7 @@
       "properties": {
         "planting_position": "row_1_position_4",
         "age_days": 9,
-        "visible_height_cm": 35.161666943112245,
+        "visible_height_cm": 31.040372172120758,
         "trusses": 1,
         "fruits_on_plant": 5,
         "ripe_fruits": 0,
@@ -3476,7 +3476,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.3370523774630393
+        "height": 0.29979834407016287
       },
       "color": {
         "r": 0.2,
@@ -3488,7 +3488,7 @@
       "properties": {
         "planting_position": "row_1_position_5",
         "age_days": 9,
-        "visible_height_cm": 33.70523774630393,
+        "visible_height_cm": 29.979834407016284,
         "trusses": 1,
         "fruits_on_plant": 3,
         "ripe_fruits": 0,
@@ -3514,7 +3514,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.3525201190496858
+        "height": 0.3110615926575053
       },
       "color": {
         "r": 0.2,
@@ -3526,7 +3526,7 @@
       "properties": {
         "planting_position": "row_1_position_6",
         "age_days": 9,
-        "visible_height_cm": 35.252011904968576,
+        "visible_height_cm": 31.10615926575053,
         "trusses": 1,
         "fruits_on_plant": 3,
         "ripe_fruits": 0,
@@ -3552,7 +3552,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.32335297098001015
+        "height": 0.2898227558530298
       },
       "color": {
         "r": 0.2,
@@ -3564,7 +3564,7 @@
       "properties": {
         "planting_position": "row_1_position_7",
         "age_days": 9,
-        "visible_height_cm": 32.335297098001014,
+        "visible_height_cm": 28.98227558530298,
         "trusses": 1,
         "fruits_on_plant": 6,
         "ripe_fruits": 0,
@@ -3590,7 +3590,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.3499101772566126
+        "height": 0.30916109392928404
       },
       "color": {
         "r": 0.2,
@@ -3602,7 +3602,7 @@
       "properties": {
         "planting_position": "row_1_position_8",
         "age_days": 9,
-        "visible_height_cm": 34.99101772566126,
+        "visible_height_cm": 30.9161093929284,
         "trusses": 1,
         "fruits_on_plant": 3,
         "ripe_fruits": 0,
@@ -3628,7 +3628,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.3595762213947684
+        "height": 0.3161996817783507
       },
       "color": {
         "r": 0.2,
@@ -3640,7 +3640,7 @@
       "properties": {
         "planting_position": "row_1_position_9",
         "age_days": 9,
-        "visible_height_cm": 35.95762213947684,
+        "visible_height_cm": 31.619968177835073,
         "trusses": 1,
         "fruits_on_plant": 4,
         "ripe_fruits": 0,
@@ -3666,7 +3666,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.35159671651436747
+        "height": 0.31038919247269414
       },
       "color": {
         "r": 0.2,
@@ -3678,7 +3678,7 @@
       "properties": {
         "planting_position": "row_1_position_10",
         "age_days": 9,
-        "visible_height_cm": 35.159671651436746,
+        "visible_height_cm": 31.038919247269416,
         "trusses": 1,
         "fruits_on_plant": 3,
         "ripe_fruits": 0,
@@ -3704,7 +3704,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.3517911678853465
+        "height": 0.31053078742482204
       },
       "color": {
         "r": 0.2,
@@ -3716,7 +3716,7 @@
       "properties": {
         "planting_position": "row_1_position_11",
         "age_days": 9,
-        "visible_height_cm": 35.17911678853465,
+        "visible_height_cm": 31.053078742482203,
         "trusses": 1,
         "fruits_on_plant": 6,
         "ripe_fruits": 0,
@@ -3742,7 +3742,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.32940907102317435
+        "height": 0.29423266662596786
       },
       "color": {
         "r": 0.2,
@@ -3754,7 +3754,7 @@
       "properties": {
         "planting_position": "row_1_position_12",
         "age_days": 9,
-        "visible_height_cm": 32.94090710231743,
+        "visible_height_cm": 29.423266662596784,
         "trusses": 1,
         "fruits_on_plant": 3,
         "ripe_fruits": 0,
@@ -3780,7 +3780,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.36120510987562887
+        "height": 0.31738580037092085
       },
       "color": {
         "r": 0.2,
@@ -3792,7 +3792,7 @@
       "properties": {
         "planting_position": "row_1_position_13",
         "age_days": 9,
-        "visible_height_cm": 36.12051098756289,
+        "visible_height_cm": 31.73858003709208,
         "trusses": 1,
         "fruits_on_plant": 4,
         "ripe_fruits": 0,
@@ -3818,7 +3818,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.35022507036184536
+        "height": 0.3093903917425951
       },
       "color": {
         "r": 0.2,
@@ -3830,7 +3830,7 @@
       "properties": {
         "planting_position": "row_1_position_14",
         "age_days": 9,
-        "visible_height_cm": 35.022507036184535,
+        "visible_height_cm": 30.939039174259506,
         "trusses": 1,
         "fruits_on_plant": 5,
         "ripe_fruits": 0,
@@ -3856,7 +3856,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.3362600870735137
+        "height": 0.29922141669129504
       },
       "color": {
         "r": 0.2,
@@ -3868,7 +3868,7 @@
       "properties": {
         "planting_position": "row_1_position_15",
         "age_days": 9,
-        "visible_height_cm": 33.62600870735137,
+        "visible_height_cm": 29.922141669129502,
         "trusses": 1,
         "fruits_on_plant": 4,
         "ripe_fruits": 0,
@@ -3894,7 +3894,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.3483880592214893
+        "height": 0.30805272308452725
       },
       "color": {
         "r": 0.2,
@@ -3906,7 +3906,7 @@
       "properties": {
         "planting_position": "row_1_position_16",
         "age_days": 9,
-        "visible_height_cm": 34.83880592214893,
+        "visible_height_cm": 30.80527230845272,
         "trusses": 1,
         "fruits_on_plant": 3,
         "ripe_fruits": 0,
@@ -3932,7 +3932,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.3519971681939413
+        "height": 0.31068079204390453
       },
       "color": {
         "r": 0.2,
@@ -3944,7 +3944,7 @@
       "properties": {
         "planting_position": "row_2_position_1",
         "age_days": 9,
-        "visible_height_cm": 35.199716819394126,
+        "visible_height_cm": 31.068079204390454,
         "trusses": 1,
         "fruits_on_plant": 3,
         "ripe_fruits": 0,
@@ -3970,7 +3970,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.335711104686631
+        "height": 0.29882166052399056
       },
       "color": {
         "r": 0.2,
@@ -3982,7 +3982,7 @@
       "properties": {
         "planting_position": "row_2_position_2",
         "age_days": 9,
-        "visible_height_cm": 33.5711104686631,
+        "visible_height_cm": 29.882166052399054,
         "trusses": 1,
         "fruits_on_plant": 6,
         "ripe_fruits": 0,
@@ -4008,7 +4008,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.35139391353057287
+        "height": 0.3102415160709429
       },
       "color": {
         "r": 0.2,
@@ -4020,7 +4020,7 @@
       "properties": {
         "planting_position": "row_2_position_3",
         "age_days": 9,
-        "visible_height_cm": 35.139391353057285,
+        "visible_height_cm": 31.024151607094293,
         "trusses": 1,
         "fruits_on_plant": 4,
         "ripe_fruits": 0,
@@ -4046,7 +4046,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.35768013602220805
+        "height": 0.31481899664249297
       },
       "color": {
         "r": 0.2,
@@ -4058,7 +4058,7 @@
       "properties": {
         "planting_position": "row_2_position_4",
         "age_days": 9,
-        "visible_height_cm": 35.768013602220805,
+        "visible_height_cm": 31.481899664249298,
         "trusses": 1,
         "fruits_on_plant": 3,
         "ripe_fruits": 0,
@@ -4084,7 +4084,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.3299374663713676
+        "height": 0.2946174317919591
       },
       "color": {
         "r": 0.2,
@@ -4096,7 +4096,7 @@
       "properties": {
         "planting_position": "row_2_position_5",
         "age_days": 9,
-        "visible_height_cm": 32.99374663713676,
+        "visible_height_cm": 29.46174317919591,
         "trusses": 1,
         "fruits_on_plant": 5,
         "ripe_fruits": 0,
@@ -4122,7 +4122,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.33398428192815055
+        "height": 0.29756422847509756
       },
       "color": {
         "r": 0.2,
@@ -4134,7 +4134,7 @@
       "properties": {
         "planting_position": "row_2_position_6",
         "age_days": 9,
-        "visible_height_cm": 33.398428192815054,
+        "visible_height_cm": 29.756422847509754,
         "trusses": 1,
         "fruits_on_plant": 4,
         "ripe_fruits": 0,
@@ -4160,7 +4160,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.3549855043960512
+        "height": 0.31285682875348964
       },
       "color": {
         "r": 0.2,
@@ -4172,7 +4172,7 @@
       "properties": {
         "planting_position": "row_2_position_7",
         "age_days": 9,
-        "visible_height_cm": 35.49855043960512,
+        "visible_height_cm": 31.28568287534896,
         "trusses": 1,
         "fruits_on_plant": 4,
         "ripe_fruits": 0,
@@ -4198,7 +4198,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.3608701448377085
+        "height": 0.3171418866444708
       },
       "color": {
         "r": 0.2,
@@ -4210,7 +4210,7 @@
       "properties": {
         "planting_position": "row_2_position_8",
         "age_days": 9,
-        "visible_height_cm": 36.08701448377085,
+        "visible_height_cm": 31.71418866444708,
         "trusses": 1,
         "fruits_on_plant": 5,
         "ripe_fruits": 0,
@@ -4236,7 +4236,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.34163739054188663
+        "height": 0.3031370436336373
       },
       "color": {
         "r": 0.2,
@@ -4248,7 +4248,7 @@
       "properties": {
         "planting_position": "row_2_position_9",
         "age_days": 9,
-        "visible_height_cm": 34.16373905418866,
+        "visible_height_cm": 30.31370436336373,
         "trusses": 1,
         "fruits_on_plant": 4,
         "ripe_fruits": 0,
@@ -4274,7 +4274,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.3566802840604793
+        "height": 0.31409092776880465
       },
       "color": {
         "r": 0.2,
@@ -4286,7 +4286,7 @@
       "properties": {
         "planting_position": "row_2_position_10",
         "age_days": 9,
-        "visible_height_cm": 35.66802840604793,
+        "visible_height_cm": 31.409092776880463,
         "trusses": 1,
         "fruits_on_plant": 6,
         "ripe_fruits": 0,
@@ -4312,7 +4312,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.34209198113031286
+        "height": 0.30346806589530567
       },
       "color": {
         "r": 0.2,
@@ -4324,7 +4324,7 @@
       "properties": {
         "planting_position": "row_2_position_11",
         "age_days": 9,
-        "visible_height_cm": 34.209198113031285,
+        "visible_height_cm": 30.346806589530566,
         "trusses": 1,
         "fruits_on_plant": 5,
         "ripe_fruits": 0,
@@ -4350,7 +4350,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.3440739937622906
+        "height": 0.30491132125693454
       },
       "color": {
         "r": 0.2,
@@ -4362,7 +4362,7 @@
       "properties": {
         "planting_position": "row_2_position_12",
         "age_days": 9,
-        "visible_height_cm": 34.40739937622906,
+        "visible_height_cm": 30.491132125693454,
         "trusses": 1,
         "fruits_on_plant": 5,
         "ripe_fruits": 0,
@@ -4388,7 +4388,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.33874251707203584
+        "height": 0.3010290643053571
       },
       "color": {
         "r": 0.2,
@@ -4400,7 +4400,7 @@
       "properties": {
         "planting_position": "row_2_position_13",
         "age_days": 9,
-        "visible_height_cm": 33.874251707203584,
+        "visible_height_cm": 30.102906430535707,
         "trusses": 1,
         "fruits_on_plant": 4,
         "ripe_fruits": 0,
@@ -4426,7 +4426,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.3572662914175112
+        "height": 0.3145176446556422
       },
       "color": {
         "r": 0.2,
@@ -4438,7 +4438,7 @@
       "properties": {
         "planting_position": "row_2_position_14",
         "age_days": 9,
-        "visible_height_cm": 35.72662914175112,
+        "visible_height_cm": 31.451764465564217,
         "trusses": 1,
         "fruits_on_plant": 3,
         "ripe_fruits": 0,
@@ -4464,7 +4464,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.36042964353228185
+        "height": 0.31682112387000383
       },
       "color": {
         "r": 0.2,
@@ -4476,7 +4476,7 @@
       "properties": {
         "planting_position": "row_2_position_15",
         "age_days": 9,
-        "visible_height_cm": 36.042964353228186,
+        "visible_height_cm": 31.682112387000384,
         "trusses": 1,
         "fruits_on_plant": 3,
         "ripe_fruits": 0,
@@ -4502,7 +4502,7 @@
       "shape": {
         "shape": "cylinder",
         "radius": 0.02,
-        "height": 0.34867410971368523
+        "height": 0.3082610183798738
       },
       "color": {
         "r": 0.2,
@@ -4514,7 +4514,7 @@
       "properties": {
         "planting_position": "row_2_position_16",
         "age_days": 9,
-        "visible_height_cm": 34.86741097136852,
+        "visible_height_cm": 30.826101837987377,
         "trusses": 1,
         "fruits_on_plant": 6,
         "ripe_fruits": 0,

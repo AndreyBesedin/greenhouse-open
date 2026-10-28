@@ -5,7 +5,7 @@ import { clickAt, clickSky, onScreen, selectAt } from "./view";
 
 // The climate box's first plant stands on its gutter's slab, 0.675 m up.
 // Clicked halfway up its stem in the example scene.
-const EXAMPLE_PLANT = { x: 2.25, y: 2.4, z: 0.85 };
+const EXAMPLE_PLANT = { x: 2.25, y: 2.4, z: 0.83 };
 // A plant of the solar lab's row, on its gutter's slab too, low on its stem,
 // where its young plants are shorter: the sixth, which its crates hide from
 // none of the camera's presets, as they hide the first. No other test of
@@ -39,7 +39,7 @@ test("clicking an entity selects it, and the inspector shows what it is and wher
     "w 1.000, x 0.000, y 0.000, z 0.000",
   );
   await expect(page.getByTestId("selected-shape")).toHaveText(
-    "cylinder, radius 0.02 m, height 0.35 m",
+    "cylinder, radius 0.02 m, height 0.31 m",
   );
   await expect(page.getByTestId("debug-label")).toHaveText("climate_box_plant_001");
 

@@ -71,7 +71,7 @@ def test_a_scenarios_crop_takes_the_parameters_of_the_model_its_rows_grow() -> N
     organ = ScenarioConfig.model_validate(given)
 
     assert organ.crop == OrganCrop()
-    # The engine's day grows the simple crop by its own settings in its place.
+    # Its simple crop's settings are the simple crop's own defaults.
     assert organ.simple_crop == SimpleCrop()
     with pytest.raises(ValidationError, match="the simple crop's, but it grows the organ crop"):
         ScenarioConfig.model_validate(given | {"crop": {"kind": "simple"}})

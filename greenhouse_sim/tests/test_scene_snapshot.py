@@ -2,21 +2,23 @@
 coordinates (metres, right-handed, z up)."""
 
 import json
-from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
 
+from greenhouse_sim.biology.plant.environment import LocalEnvironment
+from greenhouse_sim.core.simple_crop import SimpleRung
 from greenhouse_sim.domain.envelope import OpeningKind, SurfaceCategory
-from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scene.snapshot import (
     _SURFACE_KINDS,
     SceneEntityKind,
     SceneSnapshot,
-    scene_snapshot,
+    greenhouse_scene,
+    simple_plant_entities,
 )
-from greenhouse_sim.world import GreenhouseWorld
+from greenhouse_sim.world import PlantWorld
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.geometry import Box, Cylinder, Quaternion, Transform, Vector3
 
@@ -24,15 +26,32 @@ CONFIG = SCENARIO_REGISTRY["tomato_compartment"]
 # More plants than one of the compartment's rows holds (40), so they wrap
 # onto a second.
 PLANT_IDS = [f"tomato_compartment_plant_{i:03d}" for i in range(1, 44)]
-TIMESTAMP = datetime(2026, 1, 9, 12, 0, tzinfo=UTC)
+# A day as a greenhouse's might be, the same every day; and how many of them
+# the plants have lived, enough for them to differ in height.
+STEADY = LocalEnvironment(mean_temperature_c=22.0, par_mol_m2_day=20.0, co2_ppm=600.0)
+DAYS = 8
 
 
-def _world(days: int = 8) -> GreenhouseWorld:
-    engine = SimulationEngine(CONFIG)
-    world = engine.initialize(PLANT_IDS, greenhouse_id="tomato_compartment")
-    for day in range(1, days + 1):
-        world = engine.advance(world, day=day, timestamp=TIMESTAMP, simulation_id="sim").world
-    return world
+def _grown(days: int = DAYS) -> list[PlantWorld]:
+    """`PLANT_IDS` as the simple crop grows them through `days` days of
+    `STEADY`."""
+    rung = SimpleRung(CONFIG)
+    plants = [rung.transplant(plant_id) for plant_id in PLANT_IDS]
+    for _ in range(days):
+        plants = [rung.live_day(plant, STEADY) for plant in plants]
+    return [plant.plant for plant in plants]
+
+
+def _scene(
+    config: ScenarioConfig = CONFIG, plants: list[PlantWorld] | None = None
+) -> SceneSnapshot:
+    """The scene a viewer draws of `config`'s greenhouse on day `DAYS`, as a
+    run's is drawn: its house, and `plants` over it, each at its planting
+    position, the first at the first, and so on."""
+    house = greenhouse_scene(config.greenhouse_id, config.envelope, DAYS, layout=config.layout)
+    grown = _grown() if plants is None else plants
+    drawn = simple_plant_entities(grown, config.layout, config.envelope)
+    return house.model_copy(update={"entities": [*house.entities, *drawn]})
 
 
 def _plants(snapshot: SceneSnapshot) -> dict[str, tuple[float, float, float, float]]:
@@ -46,24 +65,21 @@ def _plants(snapshot: SceneSnapshot) -> dict[str, tuple[float, float, float, flo
     return plants
 
 
-def test_the_same_world_gives_the_same_scene() -> None:
-    world = _world()
+def test_the_same_plants_give_the_same_scene() -> None:
+    plants = _grown()
 
-    assert (
-        scene_snapshot(world, CONFIG).model_dump_json()
-        == scene_snapshot(world, CONFIG).model_dump_json()
-    )
+    assert _scene(plants=plants).model_dump_json() == _scene(plants=plants).model_dump_json()
 
 
 def test_a_scene_survives_a_json_round_trip() -> None:
-    snapshot = scene_snapshot(_world(), CONFIG)
+    snapshot = _scene()
 
     assert SceneSnapshot.model_validate_json(snapshot.model_dump_json()) == snapshot
 
 
 def test_a_scene_holds_the_greenhouse_the_axes_and_every_plant() -> None:
-    world = _world()
-    snapshot = scene_snapshot(world, CONFIG)
+    plants = _grown()
+    snapshot = _scene(plants=plants)
     kinds = [entity.kind for entity in snapshot.entities]
 
     assert kinds.count(SceneEntityKind.FLOOR) == 1
@@ -75,19 +91,18 @@ def test_a_scene_holds_the_greenhouse_the_axes_and_every_plant() -> None:
     assert kinds.count(SceneEntityKind.GREENHOUSE_BOUNDS) == 1
     assert kinds.count(SceneEntityKind.AXES) == 1
     assert SceneEntityKind.GROUND not in kinds
-    assert list(_plants(snapshot)) == [plant.plant_id for plant in world.plants]
+    assert list(_plants(snapshot)) == [plant.plant_id for plant in plants]
     assert len({entity.entity_id for entity in snapshot.entities}) == len(snapshot.entities)
     assert (snapshot.greenhouse_id, snapshot.simulated_day) == ("tomato_compartment", 8)
 
 
 def test_a_plant_is_as_tall_as_its_visible_stem_in_metres() -> None:
-    world = _world()
+    plants = _grown()
     heights = {
-        plant_id: height
-        for plant_id, (_, _, _, height) in _plants(scene_snapshot(world, CONFIG)).items()
+        plant_id: height for plant_id, (_, _, _, height) in _plants(_scene(plants=plants)).items()
     }
 
-    for plant in world.plants:
+    for plant in plants:
         visible_cm = plant.stem_length_cm - plant.lowered_length_cm
         assert heights[plant.plant_id] == pytest.approx(visible_cm / 100)
 
@@ -95,7 +110,7 @@ def test_a_plant_is_as_tall_as_its_visible_stem_in_metres() -> None:
 def test_plants_stand_at_their_planting_positions_in_order() -> None:
     """The first plant at the first row's first position, and so on: with 43
     plants and rows of 40, the 41st starts the second row."""
-    snapshot = scene_snapshot(_world(), CONFIG)
+    snapshot = _scene()
     by_id = {entity.entity_id: entity for entity in snapshot.entities}
     positions = CONFIG.layout.planting_positions()
 
@@ -109,25 +124,22 @@ def test_plants_stand_at_their_planting_positions_in_order() -> None:
 
 
 def test_a_scene_refuses_more_plants_than_planting_positions() -> None:
-    world = _world(days=0)
-    crowded = world.model_copy(update={"plants": world.plants * 8})
+    crowded = _grown(days=0) * 8
 
     with pytest.raises(ValueError, match="344 plants, but only 320 planting positions"):
-        scene_snapshot(crowded, CONFIG)
+        _scene(plants=crowded)
 
 
 def test_a_fully_lowered_plant_has_zero_height() -> None:
-    world = _world()
-    plant = world.plants[0]
+    plant, *others = _grown()
     lowered = plant.model_copy(update={"lowered_length_cm": plant.stem_length_cm})
-    world = world.model_copy(update={"plants": [lowered, *world.plants[1:]]})
 
-    assert _plants(scene_snapshot(world, CONFIG))[plant.plant_id][3] == 0.0
+    assert _plants(_scene(plants=[lowered, *others]))[plant.plant_id][3] == 0.0
 
 
 def test_an_unknown_kind_of_entity_is_refused() -> None:
     """A viewer must not have to guess what to draw."""
-    document = json.loads(scene_snapshot(_world(), CONFIG).model_dump_json())
+    document = json.loads(_scene().model_dump_json())
     document["entities"][0]["kind"] = "TREE"
 
     with pytest.raises(ValidationError):
@@ -157,9 +169,7 @@ def test_the_scene_schema_tells_a_viewer_exactly_what_it_may_receive() -> None:
 def test_the_greenhouse_bounds_are_a_box_standing_on_the_middle_of_its_floor() -> None:
     envelope = CONFIG.envelope
     [bounds] = [
-        entity
-        for entity in scene_snapshot(_world(), CONFIG).entities
-        if entity.kind == SceneEntityKind.GREENHOUSE_BOUNDS
+        entity for entity in _scene().entities if entity.kind == SceneEntityKind.GREENHOUSE_BOUNDS
     ]
 
     assert bounds.entity_id == "tomato_compartment_bounds"
@@ -185,7 +195,7 @@ def test_the_bounds_follow_a_greenhouse_placed_elsewhere_in_the_world() -> None:
     )
     [bounds] = [
         entity
-        for entity in scene_snapshot(_world(), placed).entities
+        for entity in _scene(placed).entities
         if entity.kind == SceneEntityKind.GREENHOUSE_BOUNDS
     ]
 
@@ -202,7 +212,7 @@ def test_the_floor_and_walls_are_the_envelopes_surfaces_in_the_world() -> None:
             )
         }
     )
-    entities = {entity.entity_id: entity for entity in scene_snapshot(_world(), placed).entities}
+    entities = {entity.entity_id: entity for entity in _scene(placed).entities}
 
     for surface in placed.envelope.surfaces_in_world():
         entity = entities[f"tomato_compartment_{surface.surface_id}"]
@@ -214,7 +224,7 @@ def test_the_floor_and_walls_are_the_envelopes_surfaces_in_the_world() -> None:
 
 def test_a_gutter_is_a_channel_along_its_eave_with_its_top_at_the_eave() -> None:
     envelope = CONFIG.envelope
-    entities = {entity.entity_id: entity for entity in scene_snapshot(_world(), CONFIG).entities}
+    entities = {entity.entity_id: entity for entity in _scene().entities}
     gutter = entities[f"tomato_compartment_gutter_{envelope.spans}"]
 
     assert gutter.kind == SceneEntityKind.GUTTER
@@ -227,7 +237,7 @@ def test_a_gutter_is_a_channel_along_its_eave_with_its_top_at_the_eave() -> None
 
 def test_a_structural_member_is_a_cylinder_from_its_foot_to_its_head() -> None:
     envelope = CONFIG.envelope
-    entities = {entity.entity_id: entity for entity in scene_snapshot(_world(), CONFIG).entities}
+    entities = {entity.entity_id: entity for entity in _scene().entities}
 
     for member in envelope.members():
         entity = entities[f"tomato_compartment_{member.member_id}"]
@@ -242,7 +252,7 @@ def test_every_part_of_the_envelope_is_drawn_as_its_semantic_category() -> None:
     """Every surface, opening, gutter and structural member becomes one entity
     whose kind says what it is; no category of surface lacks a kind."""
     envelope = CONFIG.envelope
-    kinds = [entity.kind for entity in scene_snapshot(_world(), CONFIG).entities]
+    kinds = [entity.kind for entity in _scene().entities]
     surfaces = envelope.surfaces()
 
     assert set(_SURFACE_KINDS) == set(SurfaceCategory)
