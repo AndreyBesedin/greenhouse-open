@@ -41,7 +41,14 @@ from greenhouse_sim.climate.settings import GridAir, WholeHouseAir
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.scenarios.crop_parameters import RETIRED, WALK, CropWalk, OrganCrop, SimpleCrop
+from greenhouse_sim.scenarios.crop_parameters import (
+    RETIRED,
+    WALK,
+    CropWalk,
+    OrganCrop,
+    ReducedTomgroCrop,
+    SimpleCrop,
+)
 from greenhouse_sim.weather.recorded import RecordedWeather
 from greenhouse_sim.weather.seasonal import SeasonalWeather
 from greenhouse_sim.weather.sources import ConstantWeather
@@ -131,6 +138,8 @@ MODELS: Final[Mapping[Part, Mapping[str, Model]]] = {
             retired=frozenset(RETIRED),
         ),
         Model(Part.CROP, CropModel.ORGAN.value, OrganCrop, "crop"),
+        # Grown by area (decision 0062), from its reproduction (decision 0060).
+        Model(Part.CROP, CropModel.REDUCED_TOMGRO.value, ReducedTomgroCrop, "crop"),
     ),
     Part.CROP_WALK: _models(Model(Part.CROP_WALK, WALK, CropWalk, "crop_walk")),
     # The sun placed and the sky's light after Haurwitz, split into beam and

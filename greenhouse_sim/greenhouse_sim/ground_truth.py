@@ -112,7 +112,13 @@ def ground_truth(
         if value is not None
     ]
     grown = crop.scenario_crop(simulator, run)
-    measured = registration(config).plants.measured
+    grown_by = registration(config).plants
+    if grown_by is None or not crop.of_plants(grown):
+        # A crop grown by area has no plants for a walk to measure.
+        return GroundTruth(
+            run_id=named or sampled.run_id, greenhouse_id=config.greenhouse_id, readings=readings
+        )
+    measured = grown_by.measured
     walked = [day for day in range(config.duration_days) if day * DAY_S + WALK_S <= until_s]
     for day in walked:
         at = walk_moment(start, day)

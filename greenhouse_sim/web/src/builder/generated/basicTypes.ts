@@ -2,11 +2,12 @@
 // Do not edit: change the simulator's types and regenerate.
 
 /**
- * How a scenario's run grows its crop: by the simple daily model
- * (`greenhouse_sim.core.simple_crop`), or organ by organ
- * (`greenhouse_sim.core.crop`).
+ * How a scenario's run grows its crop: plant by plant, by the simple
+ * daily model (`greenhouse_sim.core.simple_crop`) or organ by organ
+ * (`greenhouse_sim.core.crop`); or by area, by Reduced-State TOMGRO
+ * (`greenhouse_sim.core.tomgro_crop`, decision 0060).
  */
-export type CropModel = "simple" | "organ";
+export type CropModel = "simple" | "organ" | "reduced_tomgro";
 
 /**
  * The values of the builder's first form, in metres. Each field's title

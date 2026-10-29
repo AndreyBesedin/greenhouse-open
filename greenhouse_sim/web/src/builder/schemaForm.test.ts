@@ -23,7 +23,7 @@ describe("a form read from the schema the simulator publishes (P12.2)", () => {
     });
     expect(fields.find((field) => field.name === "crop_model")).toMatchObject({
       kind: "choice",
-      choices: ["simple", "organ"],
+      choices: ["simple", "organ", "reduced_tomgro"],
     });
     expect(fields.find((field) => field.name === "name")?.kind).toBe("text");
   });

@@ -232,10 +232,11 @@
       "type": "object"
     },
     "CropModel": {
-      "description": "How a scenario's run grows its crop: by the simple daily model\n(`greenhouse_sim.core.simple_crop`), or organ by organ\n(`greenhouse_sim.core.crop`).",
+      "description": "How a scenario's run grows its crop: plant by plant, by the simple\ndaily model (`greenhouse_sim.core.simple_crop`) or organ by organ\n(`greenhouse_sim.core.crop`); or by area, by Reduced-State TOMGRO\n(`greenhouse_sim.core.tomgro_crop`, decision 0060).",
       "enum": [
         "simple",
-        "organ"
+        "organ",
+        "reduced_tomgro"
       ],
       "title": "CropModel",
       "type": "string"
@@ -762,6 +763,38 @@
         "file"
       ],
       "title": "RecordedWeather",
+      "type": "object"
+    },
+    "ReducedTomgroCrop": {
+      "additionalProperties": false,
+      "description": "Reduced-State TOMGRO's settings, grown by area\n(`greenhouse_sim.biology.tomato.tomgro`, decisions 0060 and 0062): the\npublished parameter set it runs, the driver profile, named and\nversioned, through which the run gives it its drivers\n(`greenhouse_sim.core.drivers`), and the height above its planting\npositions at which the light above its canopy is read, which the model\ndoes not grow: the run's choice, in m, not the model's.",
+      "properties": {
+        "parameter_set": {
+          "const": "gnvman",
+          "default": "gnvman",
+          "title": "Parameter Set",
+          "type": "string"
+        },
+        "driver_profile": {
+          "const": "house_hours",
+          "default": "house_hours",
+          "title": "Driver Profile",
+          "type": "string"
+        },
+        "driver_profile_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Driver Profile Version",
+          "type": "integer"
+        },
+        "canopy_height_m": {
+          "default": 2.0,
+          "exclusiveMinimum": 0,
+          "title": "Canopy Height M",
+          "type": "number"
+        }
+      },
+      "title": "ReducedTomgroCrop",
       "type": "object"
     },
     "RowCrop": {
@@ -1599,6 +1632,21 @@
                 },
                 "parameters": {
                   "$ref": "#/$defs/OrganCrop"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "reduced_tomgro"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/ReducedTomgroCrop"
                 }
               }
             }

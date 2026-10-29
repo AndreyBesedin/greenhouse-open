@@ -19,6 +19,7 @@ from greenhouse_sim.scenarios.crop_parameters import (
     WALK,
     CropWalk,
     OrganCrop,
+    ReducedTomgroCrop,
     SimpleCrop,
 )
 from greenhouse_sim.weather.recorded import RecordedWeather
@@ -68,11 +69,14 @@ class ScenarioConfig(BaseModel):
     columns: PositiveInt
     # How its runs grow the crop: by the simple daily model, or organ by
     # organ, each day from the run's air and each plant's own light
-    # (`greenhouse_sim.core.crop`); and what they do to it.
+    # (`greenhouse_sim.core.crop`), or by area (`greenhouse_sim.core.area_crop`);
+    # and what they do to it.
     crop_model: CropModel = CropModel.SIMPLE
     # Its crop model's parameters, of the model its rows grow: by default,
     # that model's own (`greenhouse_sim.scenarios.crop_parameters`).
-    crop: Annotated[SimpleCrop | OrganCrop, Field(discriminator="kind")] = SimpleCrop()
+    crop: Annotated[SimpleCrop | OrganCrop | ReducedTomgroCrop, Field(discriminator="kind")] = (
+        SimpleCrop()
+    )
     crop_work: CropWork = CropWork()
     # The daily walk through its crop's measurement errors.
     crop_walk: CropWalk = CropWalk()

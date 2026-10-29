@@ -29,7 +29,7 @@ from pydantic import BaseModel, ConfigDict, JsonValue
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.digests import short_digest
 from greenhouse_sim.services.climate_runs import climate_run
-from greenhouse_sim.services.crop import scenario_crop
+from greenhouse_sim.services.crop import of_plants, scenario_crop
 from greenhouse_sim.services.crop_models import registration
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import scenario
@@ -86,7 +86,7 @@ def day_probes(simulator: Simulator, run: RunRequest, days: int) -> list[DayProb
     for day in range(days):
         end = (day + 1) * DAY_S
         air = climate.house.air_at(end)
-        plants = crop.plants_on(day + 1)
+        grown = crop.on(day + 1)
         readings: list[JsonValue] = [
             [observation.sensor_id, (hour + 1) * HOUR_S, observation.value]
             for hour in range(HOURS_A_DAY)
@@ -101,12 +101,18 @@ def day_probes(simulator: Simulator, run: RunRequest, days: int) -> list[DayProb
             {
                 "day": day,
                 "house": [air.temperature_c, air.humidity_g_kg, air.co2_ppm],
-                "plants": [plant.model_dump(mode="json") for plant in plants],
+                ("plants" if of_plants(crop) else "instances"): [
+                    unit.model_dump(mode="json") for unit in grown
+                ],
                 "readings": readings,
             }
         )
         text = json.dumps(probe, sort_keys=True, separators=(",", ":"))
-        organs, thermal_cd = grown_by.plants.probed(plants)
+        organs, thermal_cd = (
+            grown_by.plants.probed(grown)
+            if grown_by.plants is not None and of_plants(crop)
+            else (0, 0.0)
+        )
         probes.append(
             DayProbe(
                 day=day,

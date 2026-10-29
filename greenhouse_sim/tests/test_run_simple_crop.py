@@ -14,7 +14,7 @@ from greenhouse_sim.core.crop import OrganRung
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.climate_runs import climate_run
-from greenhouse_sim.services.crop import of_organs, scenario_crop
+from greenhouse_sim.services.crop import of_organs, of_plants, scenario_crop
 from greenhouse_sim.services.crop_models import SimpleCropState
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.runs import RunRequest
@@ -33,7 +33,7 @@ def test_its_run_grows_its_simple_crop_a_day_at_a_time_in_its_air(simulator: Sim
     crop = scenario_crop(simulator, RUN)
     _, climate = climate_run(simulator, RUN)
 
-    assert not of_organs(crop)
+    assert of_plants(crop) and not of_organs(crop)
     assert [plant.plant_id for plant in crop.plants_on(3)] == PLANTS
     assert {plant.plant.age_days for plant in crop.plants_on(3)} == {3}
     for day in range(3):
@@ -51,7 +51,7 @@ def test_its_crop_is_drawn_as_it_stands_with_its_numbers(simulator: Simulator) -
     assert response.status == HTTPStatus.OK, response.body
     body: Any = response.body
     crop = scenario_crop(simulator, RUN)
-    assert not of_organs(crop)
+    assert of_plants(crop) and not of_organs(crop)
     plants = crop.plants_on(3)
     assert body["simulated_day"] == 3
     assert [entity["entity_id"] for entity in body["entities"]] == PLANTS
@@ -72,6 +72,7 @@ def test_a_checkpoint_keeps_its_simple_crop_and_a_run_carries_on_from_it(
 ) -> None:
     document = _saved(simulator)
     crop = scenario_crop(simulator, RUN)
+    assert of_plants(crop)
     kept = checkpoints.read_checkpoint(document)
 
     assert isinstance(kept.crop, SimpleCropState)
@@ -85,6 +86,7 @@ def test_a_checkpoint_keeps_its_simple_crop_and_a_run_carries_on_from_it(
 
     # The run made again takes its plants on its day over from it.
     restored = scenario_crop(simulator, RUN)
+    assert of_plants(restored)
     assert restored.plants_on(2) == tuple(kept.crop.plants)
     assert restored.plants_on(4) == crop.plants_on(4)
 

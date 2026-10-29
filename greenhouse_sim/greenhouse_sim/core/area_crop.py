@@ -18,7 +18,7 @@ Its days are kept as every run's crop keeps them
 by area (`AreaGrowth`).
 """
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 
 from pydantic import BaseModel, ConfigDict
 
@@ -81,10 +81,18 @@ class AreaGrowth[StateT: BaseModel]:
     def made_of(self) -> str:
         return f"{self.rung.state_type.__name__} canopies"
 
-    def read(self, state: object) -> tuple[AreaInstance[StateT], ...] | None:
+    def read(
+        self, state: object, lived: Sequence[object]
+    ) -> tuple[tuple[AreaInstance[StateT], ...], list[dict[str, DayCourse]]] | None:
         """Its instances, as a sequence of each scope's, in their order, of
-        its rung's states (`AreaRung.state_type`)."""
+        its rung's states (`AreaRung.state_type`), and what each lived on
+        each day, by scope."""
         if not isinstance(state, Sequence):
+            return None
+        days = [dict(day) for day in lived if isinstance(day, Mapping)]
+        if len(days) != len(lived) or not all(
+            isinstance(course, DayCourse) for day in days for course in day.values()
+        ):
             return None
         instances = tuple(state)
         names = [scope.scope_id for scope in self.scopes]
@@ -95,7 +103,10 @@ class AreaGrowth[StateT: BaseModel]:
             for each in instances
         ):
             return None
-        return tuple(AreaInstance(scope_id=each.scope_id, state=each.state) for each in instances)
+        own: tuple[AreaInstance[StateT], ...] = tuple(
+            AreaInstance(scope_id=each.scope_id, state=each.state) for each in instances
+        )
+        return own, days
 
 
 class AreaCrop[StateT: BaseModel](CropDays[tuple[AreaInstance[StateT], ...], dict[str, DayCourse]]):

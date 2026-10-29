@@ -233,7 +233,9 @@ def test_a_format_3_manifest_names_its_crop_and_is_called_by_its_name_or_identif
     assert renamed["installation"]["name"] == "climate_box"
     with pytest.raises(InvalidManifest, match="a crop's variety is named, not ''"):
         scenario_from_manifest("climate_box", older | {"variety": ""})
-    with pytest.raises(InvalidManifest, match="a crop model is one of simple, organ, not 'tree'"):
+    with pytest.raises(
+        InvalidManifest, match="a crop model is one of simple, organ, reduced_tomgro, not 'tree'"
+    ):
         scenario_from_manifest("climate_box", older | {"crop_model": "tree"})
     with pytest.raises(InvalidManifest, match=r"a crop model is one of .*, not \['organ'\]"):
         scenario_from_manifest("climate_box", older | {"crop_model": ["organ"]})

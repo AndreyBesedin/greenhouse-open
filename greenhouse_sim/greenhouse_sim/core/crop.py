@@ -249,12 +249,22 @@ class PlantGrowth[PlantT: CropPlant]:
     def made_of(self) -> str:
         return f"{self.rung.plant_type.__name__} plants"
 
-    def read(self, state: object) -> tuple[PlantT, ...] | None:
-        """Its plants, as a sequence of its rung's (`CropRung.plant_type`)."""
+    def read(
+        self, state: object, lived: Sequence[object]
+    ) -> tuple[tuple[PlantT, ...], list[dict[str, LocalEnvironment]]] | None:
+        """Its plants, as a sequence of its rung's (`CropRung.plant_type`),
+        and what each experienced on each day, by plant."""
         if not isinstance(state, Sequence):
             return None
         plants = tuple(state)
-        return plants if _of_type(plants, self.rung.plant_type) else None
+        days = [dict(day) for day in lived if isinstance(day, Mapping)]
+        if len(days) != len(lived) or not all(
+            isinstance(environment, LocalEnvironment)
+            for day in days
+            for environment in day.values()
+        ):
+            return None
+        return (plants, days) if _of_type(plants, self.rung.plant_type) else None
 
     def crowns(self, plants: Sequence[PlantT]) -> list[Crown]:
         """Its plants' crowns, `plants` on a day."""

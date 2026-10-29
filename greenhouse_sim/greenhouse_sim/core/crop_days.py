@@ -85,9 +85,10 @@ class Growth[StateT, LivedT](Protocol):
         """What the crop is made of, as a refusal names it."""
         ...
 
-    def read(self, state: object) -> StateT | None:
-        """`state` as a state of this crop, as a checkpoint gives one back;
-        None if it is not one."""
+    def read(self, state: object, lived: Sequence[object]) -> tuple[StateT, list[LivedT]] | None:
+        """`state` as a state of this crop, and `lived` as what it
+        experienced on each day before, as a checkpoint gives them back;
+        None if they are not this crop's."""
         ...
 
 
@@ -206,7 +207,7 @@ class CropDays[StateT, LivedT]:
                 self._day(day, self.on(day))
             return self._lived[day]
 
-    def seed(self, day: int, state: object, lived: Sequence[LivedT]) -> None:
+    def seed(self, day: int, state: object, lived: Sequence[object]) -> None:
         """Take `state` as the crop on the run's `day`, and `lived` as what
         it experienced on each day before it, from a checkpoint of the same
         run (P09.5): later days carry on from them. Refused if it is not
@@ -214,12 +215,13 @@ class CropDays[StateT, LivedT]:
         self.checked(day, self.days)
         if len(lived) != day:
             raise ValueError(f"a crop on day {day} has lived {day} days, not {len(lived)}")
-        own = self.growth.read(state)
-        if own is None:
+        read = self.growth.read(state, lived)
+        if read is None:
             raise ValueError(f"a crop of {self.growth.made_of} takes no others")
+        own, days = read
         with self._working, self._keeping:
             if len(self._lived) < day:
-                self._lived = list(lived)
+                self._lived = days
             self._kept.setdefault(day, own)
 
     def carry_on_from(self, other: CropDays[StateT, LivedT], days: int) -> None:

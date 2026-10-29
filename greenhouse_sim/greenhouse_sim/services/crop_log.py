@@ -45,7 +45,7 @@ from greenhouse_sim.core.crop_actions import CropAction
 from greenhouse_sim.core.rng import seeded_rng
 from greenhouse_sim.records import event_id, observation_id
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.services.crop import scenario_crop
+from greenhouse_sim.services.crop import of_plants, scenario_crop
 from greenhouse_sim.services.crop_models import Measured, registration
 from greenhouse_sim.services.gateway import Carried
 from greenhouse_sim.services.runs import RunRequest
@@ -78,7 +78,11 @@ def crop_records(
     `day`, which starts `day` days after `start`, each named by `run_id`."""
     config = scenario(simulator.catalogue, run.scenario_id)
     crop = scenario_crop(simulator, run)
-    grown_by = registration(config)
+    grown_by = registration(config).plants
+    if grown_by is None or not of_plants(crop):
+        # A crop grown by area has no plants to walk among, nor their
+        # harvests: what is measured of it is its measurement models'.
+        return [], []
     day_start = start + timedelta(seconds=day * DAY_S)
     plants = crop.plants_on(day)
     before = crop.plants_on(day - 1) if day > 0 else plants
@@ -87,12 +91,12 @@ def crop_records(
     ends = {} if work is None else work.work_ends
     events = []
     for plant, earlier in zip(plants, before, strict=True):
-        count, mass_g = grown_by.plants.picked(plant, earlier, ends.get(plant.plant_id))
+        count, mass_g = grown_by.picked(plant, earlier, ends.get(plant.plant_id))
         if count:
             events.append(
                 _harvested(plant.plant_id, day_start, config.greenhouse_id, mass_g, count)
             )
-    measured = [grown_by.plants.measured(plant) for plant in plants]
+    measured = [grown_by.measured(plant) for plant in plants]
     walked = walk_moment(start, day)
     source = RecordSource(type=SourceType.SIMULATION, source_id=run_id)
     observations = [

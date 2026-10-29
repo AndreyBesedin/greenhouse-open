@@ -33,11 +33,22 @@ and its manifest gives that model's parameters in its `models.crop` section.
 
 This recipe is for a model of single plants. A model that grows a crop per
 square metre of ground, with no plants of its own, as the published canopy
-models do, takes an area-based contract of its own beside `CropRung`
+models do, keeps an area-based contract of its own beside `CropRung`
 ([decision 0062](../decisions/0062-a-crop-model-declares-its-scope-drivers-outputs-and-capabilities.md)):
-a scope with its areas, a driver profile and a measurement model. That
-contract is P14.9 of the [P14 roadmap](../roadmap/p14-models-by-manifest.md),
-not yet code.
+`AreaRung` (`greenhouse_sim/greenhouse_sim/biology/area_contract.py`), its
+state per m² of the area it declares (`AreaBasis`, a scope's floor or its
+cultivated ground, `greenhouse_sim/greenhouse_sim/world/scopes.py`), the
+drivers it reads hour by hour, given through a named, versioned driver
+profile (`greenhouse_sim/greenhouse_sim/core/drivers.py`), and each row's
+instance living its day in its course
+(`greenhouse_sim/greenhouse_sim/core/area_crop.py`). Its registration
+declares `area`, an `AreaAdapter`, in place of `plants`, and its checkpoint
+state is an `AreaCropState` of its own state. Reduced-State TOMGRO is the
+first (`greenhouse_sim/greenhouse_sim/core/tomgro_crop.py`), held to its
+reproduction's reference by `greenhouse_sim/tests/test_tomgro.py` and to
+the contract by `greenhouse_sim/tests/test_area_crop.py`. What is measured
+of it, its measurement models, is still to come in P14.9 of the
+[P14 roadmap](../roadmap/p14-models-by-manifest.md).
 
 ## Steps
 
@@ -72,7 +83,8 @@ not yet code.
    `CropRegistration` of what the model declares:
    - **its state:** its state model, added to `CropModelState`, and what no
      run of it reaches in a checkpoint (`implausible`);
-   - **its plants** (`plants`, a `PlantAdapter`): its rung, built from the
+   - **its plants** (`plants`, a `PlantAdapter`; `None` for a model grown
+     by area, which declares `area` instead): its rung, built from the
      scenario; how its plants are drawn (`drawn`); how a walk measures a
      plant (`measured`) and what a harvest round picked from one
      (`picked`); and what a replay reads beside a day's digest (`probed`);

@@ -13,11 +13,12 @@ it does not have, is refused with the reason.
 import math
 from collections.abc import Mapping, Sequence
 from datetime import date
-from typing import Final
+from typing import Any, Final
 
 from pydantic import BaseModel, ConfigDict, JsonValue, ValidationError
 
 from greenhouse_sim.climate.commands import DailyCommand
+from greenhouse_sim.core.area_crop import AreaInstance
 
 # `Scenarios` is the services' too: the consumer's service names it from here.
 from greenhouse_sim.scenarios.catalogue import CatalogueEntry
@@ -30,13 +31,14 @@ from greenhouse_sim.scenarios.layout_files import (
 )
 from greenhouse_sim.scenarios.manifest_files import SCHEMA_VERSION as MANIFEST_FORMAT
 from greenhouse_sim.scenarios.registry import ModelRun, models_run
-from greenhouse_sim.scene.snapshot import SceneSnapshot, greenhouse_scene
+from greenhouse_sim.scene.snapshot import SceneEntity, SceneSnapshot, greenhouse_scene
 from greenhouse_sim.services.crop_models import registration
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.units import FULL_TURN_DEG
 from greenhouse_sim.weather.presets import PRESETS
 from greenhouse_sim.weather.recorded import recorded_weathers
 from greenhouse_sim.world.moves import Move, moved
+from greenhouse_sim.world.scopes import row_scopes
 
 # The envelope's dimensions a client may change.
 DIMENSIONS: Final = ("length", "width", "spans", "bays", "eave_height", "ridge_height")
@@ -227,9 +229,19 @@ def initial_scene(
     house = greenhouse_scene(
         config.greenhouse_id, config.envelope, layout=config.layout, levels=levels
     )
-    grown_by = registration(config).plants
-    rung = grown_by.rung(config)
-    crop = grown_by.drawn([rung.transplant(plant_id) for plant_id in plant_ids(config)], config)
+    grown_by = registration(config)
+    crop: list[SceneEntity] = []
+    if grown_by.plants is not None:
+        rung = grown_by.plants.rung(config)
+        transplants = [rung.transplant(plant_id) for plant_id in plant_ids(config)]
+        crop = grown_by.plants.drawn(transplants, config)
+    elif grown_by.area is not None:
+        planted = grown_by.area.rung(config).planted()
+        instances: list[AreaInstance[Any]] = [
+            AreaInstance(scope_id=scope.scope_id, state=planted)
+            for scope in row_scopes(config.layout, config.envelope)
+        ]
+        crop = grown_by.area.drawn(instances, config)
     return house.model_copy(update={"entities": [*house.entities, *crop]})
 
 

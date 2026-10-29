@@ -6,12 +6,14 @@ from enum import StrEnum
 
 
 class CropModel(StrEnum):
-    """How a scenario's run grows its crop: by the simple daily model
-    (`greenhouse_sim.core.simple_crop`), or organ by organ
-    (`greenhouse_sim.core.crop`)."""
+    """How a scenario's run grows its crop: plant by plant, by the simple
+    daily model (`greenhouse_sim.core.simple_crop`) or organ by organ
+    (`greenhouse_sim.core.crop`); or by area, by Reduced-State TOMGRO
+    (`greenhouse_sim.core.tomgro_crop`, decision 0060)."""
 
     SIMPLE = "simple"
     ORGAN = "organ"
+    REDUCED_TOMGRO = "reduced_tomgro"
 
 
 class FruitStatus(StrEnum):

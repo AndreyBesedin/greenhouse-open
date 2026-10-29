@@ -81,6 +81,25 @@ class OrganCrop(BaseModel):
     kind: Literal["organ"] = "organ"
 
 
+class ReducedTomgroCrop(BaseModel):
+    """Reduced-State TOMGRO's settings, grown by area
+    (`greenhouse_sim.biology.tomato.tomgro`, decisions 0060 and 0062): the
+    published parameter set it runs, the driver profile, named and
+    versioned, through which the run gives it its drivers
+    (`greenhouse_sim.core.drivers`), and the height above its planting
+    positions at which the light above its canopy is read, which the model
+    does not grow: the run's choice, in m, not the model's."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["reduced_tomgro"] = "reduced_tomgro"
+
+    parameter_set: Literal["gnvman"] = "gnvman"
+    driver_profile: Literal["house_hours"] = "house_hours"
+    driver_profile_version: Literal[1] = 1
+    canopy_height_m: PositiveFloat = 2.0
+
+
 class CropWalk(BaseModel):
     """The daily walk through the crop's measurement errors, on either
     crop's walk (`greenhouse_sim.services.crop_log`): the chance that a

@@ -180,10 +180,11 @@
       "type": "object"
     },
     "CropModel": {
-      "description": "How a scenario's run grows its crop: by the simple daily model\n(`greenhouse_sim.core.simple_crop`), or organ by organ\n(`greenhouse_sim.core.crop`).",
+      "description": "How a scenario's run grows its crop: plant by plant, by the simple\ndaily model (`greenhouse_sim.core.simple_crop`) or organ by organ\n(`greenhouse_sim.core.crop`); or by area, by Reduced-State TOMGRO\n(`greenhouse_sim.core.tomgro_crop`, decision 0060).",
       "enum": [
         "simple",
-        "organ"
+        "organ",
+        "reduced_tomgro"
       ],
       "title": "CropModel",
       "type": "string"

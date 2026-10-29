@@ -34,8 +34,11 @@ class _Counted:
     ) -> tuple[int, DayWork | None]:
         return state + lived, (DayWork((), {}) if planned else None)
 
-    def read(self, state: object) -> int | None:
-        return state if isinstance(state, int) else None
+    def read(self, state: object, lived: Sequence[object]) -> tuple[int, list[int]] | None:
+        days = [day for day in lived if isinstance(day, int)]
+        if not isinstance(state, int) or len(days) != len(lived):
+            return None
+        return state, days
 
 
 def _days() -> tuple[CropDays[int, int], _Counted]:

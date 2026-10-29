@@ -40,8 +40,12 @@ def new_store() -> Store[tuple[str, str, str], PlantLight]:
 def first_crowns(config: ScenarioConfig) -> list[Crown]:
     """A scenario's plants' crowns before its first day: its transplants', as
     the model its rows grow starts and stands them
-    (`greenhouse_sim.services.crop_models`)."""
-    rung = registration(config).plants.rung(config)
+    (`greenhouse_sim.services.crop_models`); none for a crop grown by area,
+    which has no crowns."""
+    grown_by = registration(config).plants
+    if grown_by is None:
+        return []
+    rung = grown_by.rung(config)
     transplants = [rung.transplant(plant_id) for plant_id in plant_ids(config)]
     return crowns(rung, transplants, config.layout.trainings(), config.envelope)
 
