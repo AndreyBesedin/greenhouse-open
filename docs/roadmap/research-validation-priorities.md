@@ -40,23 +40,38 @@ data.
    Modelica comparison; the rest waits. The gateway's speed, which bounds a
    plan at 1,000 occurrences, waits for an experiment that needs larger
    plans.
-4. **Reproduce a published tomato model.** Survey the tractable published
-   tomato models, Reduced-State TOMGRO and a richer one among them, for
-   their equations, parameters and sources, inputs, time steps, published
-   outputs and licences, and choose one, in a decision. It is written as a
-   P14 crop model, registered with its parameters, each with its source,
-   and its version (decisions 0054 and 0055). Before an experiment uses
-   it, it is compared with the original implementation: the authors' code,
-   run on the same inputs, where it is published, and their published
-   outputs otherwise, with the differences and their causes recorded. The
-   organ model stays, as a baseline. The roadmap's crop models from plant
-   research hold the rest of the plan.
+4. **Reproduce two published tomato models, then make them crop models of
+   the run.** Reduced-State TOMGRO, five daily states, a compact and fast
+   model, and Vanthoor's model as Katzin simplified it, a richer one with
+   sub-daily dynamics, answer different questions: both are planned, and
+   neither waits on the other's success (decision
+   [0060](../decisions/0060-two-published-tomato-models-become-crop-models-of-the-run.md),
+   after [the tomato model memo](../research/tomato-model-feasibility.md)).
+   Each goes through three milestones, each its own claim:
+   - **(A) Reproduced on its own,** outside the packages, from the
+     publications, and compared on the same inputs with a pinned reference
+     implementation, named for what it is: GreenLight, the Katzin group's,
+     for Vanthoor's model; Oliveira et al.'s, a later implementation, not
+     the 1999 authors', for Reduced-State TOMGRO. Agreement shows the
+     implementation, not the model.
+   - **(B) A crop model of the run,** registered with its parameters, each
+     with its source, and its version (decisions 0054 and 0055), chosen by
+     the manifest, integrated as decision
+     [0062](../decisions/0062-a-crop-model-declares-its-scope-drivers-outputs-and-capabilities.md)
+     has it (a declared scope and reference area, a named driver profile,
+     declared capabilities), checkpointed and replayed, held to a
+     conformance test, and shown in a documented scenario; its outputs are
+     predictions until (C).
+   - **(C) Validated on measured crop data** (item 5).
+   The organ and simple models stay, as baselines.
 5. **Validate on measured data, as a workflow others can repeat.** Begin
    with the WUR AGC4 dataset, through its adapter, where what it measures
    and its licence allow: inventory what it records (weather, climate,
    CO₂, light, equipment, crop and yield measurements), its sampling and
-   what is missing. Fix the calibration and test data before any tuning,
-   by held-out compartments or periods. Report the metrics, sample counts,
+   what is missing, and
+   assess Oliveira et al.'s greenhouse tomato observations the same way,
+   their licence (non-commercial) included. Fix the calibration and test
+   data before any tuning, by held-out compartments or periods. Report the metrics, sample counts,
    missing data and run times, and compare crop or climate outputs only
    where their definitions and units match.
 6. **Compare with Modelica, bounded.** As the roadmap's greenhouse R&D
@@ -101,11 +116,15 @@ signal is not a measurement.
 
 ## First deliverables
 
-- A survey of tomato models, and the first one chosen, in a decision.
-- That model reproduced as a P14 crop model, compared with its original
-  implementation, the differences explained.
-- An inventory of the AGC4 dataset for that model, with its calibration
-  and test data fixed.
+- A survey of tomato models, and the two chosen, in a decision (0060), with
+  how a crop model declares its scope, drivers, outputs and capabilities
+  (0062).
+- Both models reproduced on their own, each compared with its pinned
+  reference implementation, the differences explained (milestone A).
+- Both made crop models of the run, chosen by the manifest (milestone B).
+- An inventory of the AGC4 dataset, and an assessment of Oliveira et al.'s
+  observations, for those models, with their calibration and test data
+  fixed.
 - TiGwerLib's documented interval reproduced in OpenModelica, or its
   blockers recorded.
 - The policies' evaluation decided, then its rule-based baseline.
@@ -118,6 +137,6 @@ replaced; and no claim that the simulator does what Modelica does.
 
 ## To decide before the work starts
 
-Which tomato model comes first, and what counts as reproducing it; which
-of AGC4's measurements constrain it; the first splits and metrics; and how
-a policy's evaluation is scored.
+Each reproduction's tolerances, stated before its run (decision 0060);
+which measured data constrain the models, AGC4's or Oliveira et al.'s; the
+first splits and metrics; and how a policy's evaluation is scored.

@@ -119,9 +119,9 @@ adds a visible or measurable result.
 [decision 0057](../decisions/0057-a-published-model-is-reproduced-and-validated-before-the-crops-grow.md)):
 the [research priorities](research-validation-priorities.md). The audit
 closed and the setup builder finished as far as P12.3; of P14, P11 and P13,
-what a first experiment needs; then a published tomato model reproduced as
-a P14 model, a validation on measured data, a bounded Modelica comparison,
-and the evaluation of policies. The future work below keeps its plans, in
+what a first experiment needs; then two published tomato models reproduced
+and made P14 models, a validation on measured data, a bounded Modelica
+comparison, and the evaluation of policies. The future work below keeps its plans, in
 that order; the projects' own documents keep their scope.
 
 A project's document is added when its first pull request lands.
@@ -372,19 +372,25 @@ neither held to a published result. Planned then:
   richer one among them; their equations, parameters and their sources,
   inputs, time steps and the processes they leave out; the greenhouses and
   data they were validated against; and their licences, and whether their
-  code or outputs are published. The first one chosen, and what counts as
-  reproducing it, are recorded in a decision.
-- **That model reproduced as a P14 crop model:** registered with its
-  parameters, each with its source, and its version (decisions 0054 and
-  0055); compared, before an experiment uses it, with the original
-  implementation, the authors' code run on the same inputs where it is
-  published and their published outputs otherwise, its differences and
-  their causes recorded. Then held to measured data, as the
+  code or outputs are published. Done in
+  [the tomato model memo](../research/tomato-model-feasibility.md): two
+  chosen, Reduced-State TOMGRO and Vanthoor's model as Katzin simplified
+  it, and what counts as reproducing each, in decision
+  [0060](../decisions/0060-two-published-tomato-models-become-crop-models-of-the-run.md).
+- **Both reproduced, then both P14 crop models:** each reproduced on its
+  own and compared with a pinned reference implementation run on the same
+  inputs, the authors' code where it is published and a named later
+  implementation where it is not, its differences and their causes
+  recorded; then registered with its parameters, each with its source, and
+  its version (decisions 0054 and 0055), and integrated as decision
+  [0062](../decisions/0062-a-crop-model-declares-its-scope-drivers-outputs-and-capabilities.md)
+  has it, by what it declares, its outputs predictions until validated. Then held to measured data, as the
   [research priorities](research-validation-priorities.md) say.
-- **The organ model kept,** as a baseline beside it, not replaced process
-  by process.
+- **The organ and simple models kept,** as baselines beside them, the
+  organ model the one of single plants and organs, not replaced process by
+  process.
 - **Then cucumber, strawberry and sweet pepper,** once the tomato's
-  reproduction has tested the registry's crop interface: a survey of each
+  reproductions have tested the registry's crop interface: a survey of each
   first, then each a crop model of the registry, with its parameters for
   each variety (P12.4), its organs drawn by the viewer, its records (fruit
   counts and mass) in the protocol's terms, and a conformance test with
