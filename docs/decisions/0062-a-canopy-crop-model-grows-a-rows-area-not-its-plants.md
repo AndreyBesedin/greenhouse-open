@@ -48,22 +48,28 @@ would change the simple and organ models to fit two others.
   widened, and the simple and organ models do not change.
 - **Its unit is a row's area.** Each row the canopy model grows is one
   unit, known by the row (`row_1`, ...), its draws seeded by it and its
-  units kept in the rows' order. Its area is the ground the row takes,
-  its length by its spacing, from the layout's crop rows; its density is
-  the row's planting positions over that area, so that a per-plant and a
-  canopy model agree on one installation. Its state is per m² of that
-  area, kept per unit. "Per m²" means per m² of crop area wherever a canopy
+  units kept in the rows' order. Its area is the ground its planting
+  positions take, from the layout's crop rows: its positions by the plant
+  pitch by its share of the rows' spacing (`row_spacing`, halved for
+  paired rows, whose spacing is pair to pair); positions kept clear, under
+  paths, are no area. Its density is its planting positions over that
+  area, so that a per-plant and a canopy model agree on one installation,
+  per m² of crop, by construction. Its state is per m² of that area, kept
+  per unit. "Per m²" means per m² of crop area wherever a canopy
   model says it, apart from the floor's, by which heat is given.
 - **Rows name it,** as they name every crop model (decision 0050): each
   canopy model is a member of `CropModel`, which regenerates the
   installation's, the builder's and the scenario's schemas, and the
   viewer's types made from them.
 - **The day stays the unit of work.** The run gives a unit its day as it
-  gives a plant its day, and its course besides: hour by hour, the air's
-  temperature, the PAR above the canopy and the CO₂. Checkpoints, crop work
-  and replay keep their shape; the days lived grow by about 24 values per
-  unit and day. A model that needs a finer step integrates within the day
-  from the hours it is given.
+  gives a plant its day, and its course besides: hour by hour, the same
+  air every plant reads today, the whole house's (`mean_between` over each
+  hour, as the day's mean is over the day), its temperature and its CO₂,
+  and the PAR above the canopy. Air from the cells along a row is a later
+  refinement. Checkpoints, crop work and replay keep their shape; the days
+  lived grow by 24 hours of three values per unit and day. A model that
+  needs a finer step integrates within the day from the hours it is
+  given.
 - **Light above the canopy, absorbed by the model.** The sun's part gives
   each unit the PAR above it, along the row at the canopy's height, which
   a canopy model's parameters give, since neither model grows a height.
@@ -71,17 +77,21 @@ would change the simple and organ models to fit two others.
   reflection, is the model's. Incident and absorbed PAR are named apart
   wherever either appears. A canopy is not a crown: it shades nothing in
   the house's light.
-- **Registered as the others are** (decision 0055): a registry entry with
+- **Registered beside the others** (decision 0055): a registry entry with
   its parameters, version 1, and a published parameter set named as a
-  field of the parameters, with its default; a registration with its
-  state, which survives a JSON round trip as a new member of the crop
-  part's state in checkpoints. Adding the models moves no pinned run.
+  field of the parameters, with its default; and a canopy registration, a
+  sibling of the per-plant one (`CropRegistration`, whose fields but its
+  state are per plant), with its state, which survives a JSON round trip as
+  a new member of the crop part's state in checkpoints. Adding the models
+  moves no pinned run.
 - **Observed per m², or not at all.** What a canopy model can honestly
   give a consumer is per area: its leaf area index, its fruit's dry weight
   standing, and the dry weight it harvested, per m² of crop area. These
   are new observation types of the protocol, of the crop as a whole (its
   units' values weighted by their areas, with no plant named), with their
-  truth from the model's state. The walk's per plant records (heights,
+  truth from the model's state. They are dry weights; a fresh weight, if
+  one is ever observed, comes from a dry-matter fraction named as a
+  parameter, never assumed. The walk's per plant records (heights,
   fruit counts, ripe mass) and plants' harvest events are not produced for
   a canopy, and nothing per m² is mapped onto them. The greenhouse a
   consumer is described says its crop is grown by area, with its rows and
@@ -92,7 +102,8 @@ would change the simple and organ models to fit two others.
   scenario whose rows grow a canopy model sets no crop work; one that does
   is refused, saying why. Its harvest is its own rule's, not a round.
 - **Drawn as a proxy:** a row of a canopy model is drawn as a canopy
-  volume, its height and density from its state, as an entity kind of its
+  volume, its height from its parameters and its density from its leaf
+  area index, as an entity kind of its
   own that says it is a proxy, never as plants. That is a change to the
   scene's schema and the viewer's types.
 - **One way, from the air to the crop,** as for every crop model now. The
@@ -114,8 +125,14 @@ would change the simple and organ models to fit two others.
   in the protocol, and the greenhouse description of a crop grown by area;
   the sun's PAR above a row; a scene entity for the proxy; the crop part's
   closed unions of states (`CropModelState`, a checkpoint's), which grow a
-  member each; and checkpoints, the timeline and the gateway's targets,
-  which name units where they named plants.
+  member each; the callers of the crop's registration, which ask which
+  kind it is, as `services.crop.is_organ` asks of the organ model today;
+  and checkpoints, the timeline and the gateway's targets, which name units
+  where they named plants.
+- **The evaluation needs no new key:** a reading of the crop as a whole
+  names neither a sensor nor a plant, which the ground truth's readings
+  allow (`TrueReading`) and the scoring keys on; only the canopy's truth,
+  from its state, is new.
 - **What stays per plant:** the plant inspector's route answers the organ
   model alone, as it does for the simple one.
 - **A row grows one model:** mixed rows wait (P12.5 and P12.6).
