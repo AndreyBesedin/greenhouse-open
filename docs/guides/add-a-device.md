@@ -1,11 +1,13 @@
 # Add a device
 
 A device is a kind of climate equipment that a layout places and the climate
-run drives: a fan, a heater and a dehumidifier today. Every level, command and
-schedule refers to a piece of equipment by its `actuator_id`, not by its kind,
-so a new kind does not touch the API, the commands or the live stream. What
-it does to the air, how the scene draws it and how the viewer shows it are
-the parts to write. The dehumidifier was added in this order (commits
+run drives: a fan, a heater and a dehumidifier today. Every level, command,
+schedule and plan's action names a piece of equipment by its identifier
+(`actuator_id`), not by its kind, so a new kind does not touch the API, the
+commands or the gateway. It is no model of a part chosen by the manifest:
+a kind is registered by itself, and the run acts on what it does, its
+capabilities, never on its kind (P14.5). What it does to the air, how the
+scene draws it and how the viewer shows it are the parts to write. The dehumidifier was added in this order (commits
 `23a0637`, `8624e23`, `7ee11b4`, `b5b70d4` and `9052f49`).
 
 ## Steps
