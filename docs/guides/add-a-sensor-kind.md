@@ -47,9 +47,9 @@ without its imperfections (`truth` in
 `greenhouse_sim/greenhouse_sim/services/sensors.py`), which the ground
 truth gives (`greenhouse_sim/greenhouse_sim/ground_truth.py`) and against
 which `observation_accuracy` scores its observations
-(`greenhouse_sim/greenhouse_sim/evaluation/observation_accuracy.py`). A
-reading that wraps round is listed there too, in its own `GOING_ROUND`,
-by its observation type.
+(`greenhouse_sim/greenhouse_sim/evaluation/observation_accuracy.py`), the
+error of a reading that wraps round taken the shorter way round, as the
+sensors' `GOING_ROUND` lists it.
 
 ## Generated files
 
