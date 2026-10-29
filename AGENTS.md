@@ -86,12 +86,9 @@ fails when it drifts from its source.
   (`greenhouse_sim/greenhouse_sim/climate/`), the sun
   (`greenhouse_sim/greenhouse_sim/solar/`) and the organ-level crop
   (`greenhouse_sim/greenhouse_sim/core/crop.py`), served by
-  `greenhouse_sim/greenhouse_sim/services/`. The engine's day
-  (`greenhouse_sim/greenhouse_sim/core/engine.py`) and its model contracts
-  drive the simple daily model and the examples, but no scenario's run and
-  no view of the viewer. The run is the one simulator (decision 0035): a
-  new model is a rung of one of its parts, and the engine's day only takes
-  fixes until it is removed (decision 0059).
+  `greenhouse_sim/greenhouse_sim/services/`. The run is the one simulator
+  (decisions 0035 and 0059): every scenario, view and example goes through
+  it, and a new model is a rung of one of its parts.
 - An API route: the route checks the request and maps the result; the
   logic is a service's (decision 0021).
 - A dataset: `greenhouse_adapters`, from a manifest to canonical records.

@@ -30,8 +30,7 @@ There is one simulator, **the run**
 It is made of parts: the weather, the house's air, the light, the crop, the
 sensors and the devices. Each part is a ladder of implementations, from the
 simplest to the richest, and a scenario takes one rung of each. A new
-model is a rung of one part. The engine's day
-(`greenhouse_sim/greenhouse_sim/core/engine.py`) only takes fixes.
+model is a rung of one part.
 
 Not every part has its contract yet. The weather has one
 (`WeatherSource`), and so do the patterns of the air (`AirflowModel`), but

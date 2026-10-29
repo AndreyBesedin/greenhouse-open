@@ -40,8 +40,8 @@ describe("the inspector", () => {
     // On its gutter's slab, at the first row's first place.
     expect(html).toContain('data-testid="selected-position">x 2.25, y 2.40, z 0.67<');
     expect(html).toContain('data-testid="selected-rotation">w 1.000, x 0.000, y 0.000, z 0.000<');
-    expect(html).toContain('data-testid="selected-shape">cylinder, radius 0.02 m, height 0.35 m<');
-    expect(html).toContain('data-testid="property-visible_height_cm">34.99<');
+    expect(html).toContain('data-testid="selected-shape">cylinder, radius 0.02 m, height 0.31 m<');
+    expect(html).toContain('data-testid="property-visible_height_cm">30.92<');
     expect(html).toContain('data-testid="property-fruits_on_plant">4<');
   });
 
@@ -110,7 +110,7 @@ describe("what the inspector says an entity is", () => {
   });
 
   it("measures a standing cylinder's height, and a lying one's length", () => {
-    expect(describeDimensions(PLANT)).toBe("diameter 0.04 m, height 0.35 m");
+    expect(describeDimensions(PLANT)).toBe("diameter 0.04 m, height 0.31 m");
     expect(describeDimensions(layoutEntity("heating_pipes_left_1"))).toBe(
       "diameter 0.05 m, length 14.50 m",
     );

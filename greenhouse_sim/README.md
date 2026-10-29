@@ -3,8 +3,10 @@
 A deterministic greenhouse simulator that produces canonical observations.
 Part of [greenhouse-open](../README.md). Apache-2.0.
 
-- **A hidden world, noisy sensors.** `GreenhouseWorld` holds what is really
-  true. Each step publishes only noisy `Observation`s of it.
+- **One simulator, the run.** A scenario's run works out its house's air,
+  its sun, its crop and its devices, and publishes only noisy
+  `Observation`s of them, as its sensors and the people walking its crop
+  would (decisions 0035 and 0059).
 - **Actions on the run.** A person, a policy or a schedule gives a run a
   plan of `greenhouse_protocol` actions through its gateway (`/actuation/v1`),
   and the run carries each out at its time, with an outcome (decision 0046).
@@ -22,21 +24,18 @@ Part of [greenhouse-open](../README.md). Apache-2.0.
   [0031](../docs/decisions/0031-scenarios-are-versioned-json-manifests.md)),
   and its layouts are JSON files in `scenarios/layouts/` (decision
   [0020](../docs/decisions/0020-scenario-layouts-are-declarative-json-files.md)).
-- **Pluggable models.** Plant, environment and sensor models plug into the
-  engine through small contracts. Simple reference models are the default.
+- **Models chosen by the manifest.** Each part of a run is a ladder of
+  models, from the simplest to the richest, and a scenario's manifest names
+  one rung of each (decision 0054).
 
-```python
-from datetime import UTC, datetime
-from greenhouse_sim.engine import SimulationEngine
-from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+A consumer reads a run as it reads any producer, through the local API's
+consumer interface (decision 0040); the repository's
+[examples](../examples/) play a scenario's run, store its records, score
+them against its truth and act on it:
 
-engine = SimulationEngine(SCENARIO_REGISTRY["climate_box"])
-world = engine.initialize(["climate_box_plant_001"], greenhouse_id="climate_box")
-step = engine.advance(world, day=1, timestamp=datetime(2026, 3, 1, tzinfo=UTC), simulation_id="run")
-print(step.observations)
+```bash
+python examples/01_run_a_simulation.py
 ```
-
-More complete runs are in the repository's [examples](../examples/).
 
 ## How it is built
 
@@ -51,16 +50,18 @@ greenhouse_sim/
   greenhouse_sim/
     domain/        the shared vocabulary: kinds, categories and stages that
                    more than one package uses; depends on nothing else
-    core/          the engine, world checkpoints and seeded randomness
-    world/         the hidden world's state, geometry conventions, and the
-                   site that places the world on the Earth
-    biology/       plant models; tomato/simple is the reference model,
+    core/          a run's clock and timeline, its crop, and seeded
+                   randomness
+    world/         the greenhouse's geometry conventions, house, layout and
+                   equipment, the simple crop's plants, and the site that
+                   places the greenhouse on the Earth
+    biology/       plant models; tomato/simple is the simplest,
                    plant/ what fruiting crops' organ-level models share,
                    tomato/organ the tomato's organ-level model
-    environment/   environment models; simple.py is the reference model
-    sensors/       sensor models: what instruments report of the world
-    actions/       validating and carrying out semantic actions
-    scenarios/     ready-made worlds
+    climate/       the house's air, its equipment and its control
+    solar/         the sun's light, inside and on each plant
+    sensors/       what instruments report of a run
+    scenarios/     ready-made greenhouses, and the registry of models
     evaluation/    scoring against ground truth, its only reader
     weather/       the weather outside: its state at a moment, and where it
                    comes from
@@ -70,7 +71,7 @@ greenhouse_sim/
                    patterns today
     cfd/           the air's geometry as a CFD solver is given it, written
                    as an OpenFOAM case, and OpenFOAM run out of process
-    scene/         the world as a renderable scene for a viewer
+    scene/         a greenhouse and its crop as a renderable scene for a viewer
     services/      what the simulator does for a client: scenarios, scenes,
                    layouts, fields, CFD geometry, runs played back and the
                    plant lab, independent of any transport
@@ -79,15 +80,14 @@ greenhouse_sim/
   web/             the browser viewer (adapter, not part of the wheel)
 ```
 
-- **A day.** The environment model produces the day's climate, the plant
-  model develops the crop in it, and the sensor model reports what
-  instruments would read. Each model is passed to `SimulationEngine` and
-  defaults to the simple reference model. What a model must do is stated in
-  its domain's `contract.py`, and contract tests check every implementation.
-- **World and model state.** The world's entities describe what is: sizes,
-  ages, stages, root-zone water, harvest. The values a model invents for
-  itself, such as a plant's vigour, live in that model's own section of the
-  world (`GreenhouseWorld.plant_model`), which nothing else reads.
+- **A run's moments.** At each moment, commands set the devices, the air
+  is worked out, the plants live each day that ended at a midnight, and
+  the sensors and cameras sample what is there
+  ([how a run's moments are worked out](../docs/guides/README.md#how-a-runs-moments-are-worked-out)).
+- **Truth and model state.** What a part works out describes what is:
+  the air, sizes, ages, stages, harvest. The values a model invents for
+  itself, such as a plant's vigour, are its own, and nothing else reads
+  them.
 - **Geometry.** Metres and radians, right-handed axes with z up, the ground
   at z = 0.
 - **Headless by design.** Tests fail if a simulator module imports the API,
@@ -101,24 +101,20 @@ behind them moves.
 
 | To | Import from |
 | --- | --- |
-| Run a simulation | `greenhouse_sim.engine`, `greenhouse_sim.scenarios`, `greenhouse_sim.world`, `greenhouse_sim.world.envelope` |
-| Keep a run between steps | `greenhouse_sim.checkpoints` |
-| Advance a world without the engine | `greenhouse_sim.world_builder` |
+| Describe a greenhouse | `greenhouse_sim.scenarios`, `greenhouse_sim.world`, `greenhouse_sim.world.envelope` |
 | Score readings against the truth | `greenhouse_sim.ground_truth`, `greenhouse_sim.evaluation.observation_accuracy` |
-| Write or compose a model | `greenhouse_sim.biology.contract`, `greenhouse_sim.environment.contract`, `greenhouse_sim.sensors.contract`, and the simple models in `greenhouse_sim.biology.tomato.simple.model`, `greenhouse_sim.environment.simple`, `greenhouse_sim.sensors.generation` |
 | Draw a simulation | `greenhouse_sim.world.geometry`, `greenhouse_sim.scene.snapshot` |
 
-Everything else is internal and may move. `tests/test_public_imports.py`
-lists every public name.
+A run itself is reached through the local API (`python -m greenhouse_sim.api`):
+its consumer interface delivers a run's records, and its gateway takes a
+plan of actions for it. Everything else is internal and may move.
+`tests/test_public_imports.py` lists every public name.
 
-The model contracts above are the engine's: they drive the simple daily
-model and the examples. The reference scenario runs
-through the richer run instead, the house's air (`greenhouse_sim.climate`),
-the sun (`greenhouse_sim.solar`) and the organ-level crop, which have no
-contract of their own for the air yet. The run is the one simulator
-(decision 0035): each of its parts gets a contract and a ladder of models
-from the simplest to the richest, the engine's models among them, and a new
-model joins it as one of them.
+The engine's day (`SimulationEngine`), its world, its model contracts, its
+simple models and its checkpoints were removed in 0.5.0 (decision 0059):
+the run is the one simulator, each of its parts a ladder of models from the
+simplest to the richest, and a new model joins it as a rung of one of them
+([recipes for contributors](../docs/guides/README.md)).
 
 ## The viewer
 

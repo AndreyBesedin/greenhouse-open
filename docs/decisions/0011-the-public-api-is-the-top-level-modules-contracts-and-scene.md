@@ -1,6 +1,6 @@
 # 0011: The public API is the top-level modules, the model contracts and the scene
 
-**Status:** Accepted
+**Status:** Accepted; the engine's modules, its model contracts and its simple models superseded by [0059](0059-the-engines-day-gives-way-to-the-run.md), which removes them
 **Date:** 2026-10-03
 
 ## Context

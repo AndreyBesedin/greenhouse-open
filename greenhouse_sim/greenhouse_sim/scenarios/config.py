@@ -66,9 +66,9 @@ class ScenarioConfig(BaseModel):
     # positions in order.
     rows: PositiveInt
     columns: PositiveInt
-    # How its runs grow the crop: by the simple daily model, through the
-    # engine, or organ by organ, each day from the run's air and each plant's
-    # own light (`greenhouse_sim.core.crop`); and what they do to it.
+    # How its runs grow the crop: by the simple daily model, or organ by
+    # organ, each day from the run's air and each plant's own light
+    # (`greenhouse_sim.core.crop`); and what they do to it.
     crop_model: CropModel = CropModel.SIMPLE
     # Its crop model's parameters, of the model its rows grow: by default,
     # that model's own (`greenhouse_sim.scenarios.crop_parameters`).
@@ -124,8 +124,8 @@ class ScenarioConfig(BaseModel):
         P14.3, as one written before may be, takes them in their sections:
         the walk's in its crop walk, the simple crop's in its crop if it is
         the simple crop, and not at all if it is another, since they were
-        the engine's for the simple crop in its place; and given its house's
-        air with no model, as before P14.6, takes the grid's."""
+        the engine's day's for the simple crop in its place; and given its
+        house's air with no model, as before P14.6, takes the grid's."""
         if not isinstance(given, dict):
             return given
         given = _with_its_airs_kind(given)
@@ -155,9 +155,8 @@ class ScenarioConfig(BaseModel):
 
     @property
     def simple_crop(self) -> SimpleCrop:
-        """The simple crop's settings, by which the engine's day grows its
-        crop: its crop's, or the simple crop's own if its crop is of another
-        model."""
+        """The simple crop's settings: its crop's, or the simple crop's own
+        defaults if its crop is of another model."""
         return self.crop if isinstance(self.crop, SimpleCrop) else DEFAULT_SIMPLE_CROP
 
     def run_start(self) -> datetime:

@@ -12,10 +12,9 @@ at noon, and measures each plant as its model has it:
 - **the organ crop:** the fruits attached, the red ones and their mass, and
   how high its top stands; its harvest round picks fruit by fruit, which
   each plant's history keeps, with its fresh mass;
-- **the simple crop** (P14.3): as the engine's sensors measure it, the
-  fruits not harvested, the ripe ones and their mass, and how tall its stem
-  stands; its harvest round picks every ripe fruit at once, which adds
-  their mass to its plant's harvest.
+- **the simple crop** (P14.3): the fruits not harvested, the ripe ones and
+  their mass, and how tall its stem stands; its harvest round picks every
+  ripe fruit at once, which adds their mass to its plant's harvest.
 
 The run's own crop actions are the organ crop's: the simple crop is given
 none (`runs.crop_moment_refusal`).

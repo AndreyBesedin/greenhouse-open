@@ -1,13 +1,11 @@
 # Add a plant model
 
-The crop is one part of the run, and a new plant model is a rung of it,
-never a model of the engine's day ([decision 0035](../decisions/0035-one-simulator-the-run-every-part-on-a-ladder-of-fidelity.md)).
+The crop is one part of the run, and a new plant model is a rung of it
+([decision 0035](../decisions/0035-one-simulator-the-run-every-part-on-a-ladder-of-fidelity.md)).
 Its ladder today:
 
 - **the simple daily model** (`greenhouse_sim/greenhouse_sim/biology/tomato/simple/`),
-  a rung as `SimpleRung` (`greenhouse_sim/greenhouse_sim/core/simple_crop.py`),
-  which the engine's day also drives, through `PlantModel`
-  (`greenhouse_sim/greenhouse_sim/biology/contract.py`), until the engine goes;
+  a rung as `SimpleRung` (`greenhouse_sim/greenhouse_sim/core/simple_crop.py`);
 - **the organ-level tomato** (`greenhouse_sim/greenhouse_sim/biology/tomato/organ/`),
   a rung as `OrganRung` (`greenhouse_sim/greenhouse_sim/core/crop.py`).
 
@@ -95,8 +93,7 @@ reference greenhouse, its replay, opening day and views
 
 ```bash
 uv run pytest greenhouse_sim/tests/test_crop_rungs.py greenhouse_sim/tests/test_run_crop.py \
-  greenhouse_sim/tests/test_run_simple_crop.py greenhouse_sim/tests/test_model_contracts.py \
-  greenhouse_sim/tests/test_checkpoints.py greenhouse_sim/tests/test_run_checkpoints.py \
+  greenhouse_sim/tests/test_run_simple_crop.py greenhouse_sim/tests/test_run_checkpoints.py \
   greenhouse_sim/tests/test_crop_log.py greenhouse_sim/tests/test_replay.py \
   greenhouse_sim/tests/test_domain.py greenhouse_sim/tests/test_subpackage_imports.py
 uv run check --fast
@@ -110,8 +107,6 @@ uv run browser-tests e2e/crop.spec.ts
   whenever its numbers change for the same parameters: a run's identity
   covers it (P14.2), so its runs become other runs and a checkpoint made
   with the version before is refused.
-- **Nothing new goes on the engine's day** (`greenhouse_sim/greenhouse_sim/core/engine.py`):
-  it only takes fixes.
 - **Where a model's parameters live:** in a parameter model of its own,
   never as flat fields of the scenario's configuration. A crop model's are
   in `greenhouse_sim/greenhouse_sim/scenarios/crop_parameters.py`, told

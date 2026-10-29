@@ -56,8 +56,8 @@ with the contract the run calls: what it reads of `WholeHouse` today
 (`air_at`, `mean_between`, `heated_j`, `heater_level_at`, `seed`,
 `carry_on_from`), as a `typing.Protocol` in a `contract.py` under
 `greenhouse_sim/greenhouse_sim/climate/`, with a conformance test run over
-every implementation, as `greenhouse_sim/tests/test_model_contracts.py`
-does for the engine's. Then `ClimateDay` takes the contract instead of
+every implementation, as `greenhouse_sim/tests/test_crop_rungs.py` does
+for the crop's rungs. Then `ClimateDay` takes the contract instead of
 building `WholeHouse` itself, in a pull request of its own that changes no
 number. How a scenario names its rung is not decided yet: the first such
 model writes that decision.
@@ -66,8 +66,11 @@ model writes that decision.
 
 ```bash
 uv run python greenhouse_sim/tests/test_published_schemas.py --update     # a new kind in the manifests' schema
-uv run python greenhouse_sim/tests/test_reference_baseline.py --update    # a scenario whose air changed
 ```
+
+A change to the reference greenhouse's air moves its replay and its opening
+day (`greenhouse_sim/tests/test_replay.py`, `greenhouse_sim/tests/test_opening_day.py`,
+each with `--update`).
 
 ## Tests
 

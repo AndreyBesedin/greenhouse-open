@@ -188,8 +188,8 @@ def _simple_drawn(plants: Sequence[SimplePlant], config: ScenarioConfig) -> list
 
 
 def _simple_measured(plant: SimplePlant) -> Measured:
-    """As the engine's sensors measure it: the fruits not harvested, the
-    ripe ones, and how tall its stem stands."""
+    """The fruits not harvested, the ripe ones and their mass, and how tall
+    its stem stands."""
     fruits = [
         fruit
         for truss in plant.plant.trusses

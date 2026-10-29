@@ -1,8 +1,8 @@
 """The simple daily crop as a rung of the run's crop (P14.3, decision 0035).
 
 The simple tomato model (`greenhouse_sim.biology.tomato.simple`) grows each
-plant by its daily rules, in the run as in the engine's day, by its
-scenario's settings (`ScenarioConfig.simple_crop`) and from its seed:
+plant by its daily rules, by its scenario's settings
+(`ScenarioConfig.simple_crop`) and from its seed:
 
 - **A plant** is the model's plant, with the values the model keeps for it
   and for each of its fruits (`SimplePlant`), so that a plant lives its day
