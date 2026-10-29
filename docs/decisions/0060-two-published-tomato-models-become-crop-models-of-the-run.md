@@ -24,8 +24,9 @@ weighs two, with their sources:
 
 They answer different questions: a fast, lower-complexity model of a
 canopy's growth and yield, and a richer one of how the day's climate
-drives them. Both grow a canopy per m², which the run's crop part, built
-for single plants, cannot grow as it stands (decision 0062).
+drives them. Both grow a crop per unit of ground area, which the run's
+crop part, built for single plants, cannot integrate as it stands
+(decision 0062).
 
 ## Decision
 
@@ -58,11 +59,15 @@ for single plants, cannot grow as it stands (decision 0062).
     code documents, never by transplanting its source; and compared, on the
     same inputs, with the reference run at its pinned version. It shows
     that the implementation agrees with the reference, not that the model
-    is right for a greenhouse.
+    is right for a greenhouse; and it is a claim about that forcing, which
+    does not carry over to the model driven by the run.
   - **(B) A crop model of the run,** as decision 0062 has it: registered
-    with its version and a named, sourced parameter set, kept in
-    checkpoints and replayed, held to its conformance test, chosen by the
-    manifest, and shown in a documented scenario with its outputs.
+    with its version and a named, sourced parameter set, on a declared
+    reference area, driven through a named driver profile whose effect is
+    measured against the reference's own forcing, kept in checkpoints and
+    replayed, held to its conformance test, chosen by the manifest, and
+    shown in a documented scenario with its outputs. Its outputs are
+    predictions, unvalidated, until milestone C.
   - **(C) Validated on measured crop data,** with its calibration and test
     data, and its metrics, fixed before any tuning (item 5 of the
     priorities): Oliveira et al.'s observations and AGC4's are the
@@ -76,20 +81,24 @@ for single plants, cannot grow as it stands (decision 0062).
   tolerance; and the commands. Then:
   - **Reduced-State TOMGRO:** its five states, day by day.
   - **Vanthoor's model:** its six states at the reference's output step,
-    the leaf area index derived, and the harvested dry matter accumulated
-    from its rate the same way in both.
+    the leaf area index derived, and the harvested carbohydrate equivalent
+    (mg CH₂O m⁻²) accumulated from its rate the same way in both: its
+    native quantities, never called dry matter.
   - Each difference beyond its tolerance is reported with its cause, or as
     unexplained; an equation is never changed to force agreement, and a
     failed reproduction is recorded as a result.
-- **Like is compared with like:** dry matter with dry matter, never with
-  fresh market yield; harvested with harvested, never with fruit standing;
-  per m² with per m², never with per plant, unless a stated conversion
-  stands between them.
+- **Like is compared with like:** each model in its native quantities and
+  on its own reference area; carbohydrate equivalents with carbohydrate
+  equivalents, dry matter with dry matter, never either with fresh market
+  yield; harvested with harvested, never with fruit standing; per m² of one
+  area with per m² of the same area, never with per plant. A conversion
+  between them is named, sourced and given its uncertainty.
 - **The run's day is not either model's input as it stands:** a day's mean
   temperature and PAR integral (`LocalEnvironment`) is not what either
-  reference takes. Decision 0062 gives a canopy model its day's hours; any
-  aggregation of the drivers is a documented approximation with a test of
-  what it changes.
+  reference takes. Decision 0062 gives a model its drivers through a
+  named, versioned profile, whose effect is measured: any aggregation of
+  the drivers, or substitution of one quantity for another, is a documented
+  approximation with a test of what it changes.
 - **Each licence kept apart:** GreenLight's BSD 3-Clause Clear; Oliveira
   et al.'s code, MIT on its repository (its Zenodo record says CC BY 4.0;
   the mismatch is recorded); the GreenLight trial's data on 4TU, CC BY-SA
@@ -104,10 +113,12 @@ for single plants, cannot grow as it stands (decision 0062).
   author's group's own implementation; Oliveira et al.'s is an independent
   later one, following an unpublished spreadsheet. Agreement with it shows
   agreement with that variant, not with the 1999 paper.
-- **The crop part changes** to grow a canopy by area, as decision 0062
-  has it, without changing the simple and organ models.
-- **New observation types** per m² reach the protocol, for the canopy
-  models' outputs (decision 0062).
+- **The crop part is generalised** over instances and the capabilities
+  they declare, as decision 0062 has it; the simple and organ models'
+  runs do not change.
+- **What a consumer observes of these crops** comes from measurement
+  models, not from their state, which stays the evaluation's truth
+  (decision 0062).
 - **Worth revisiting:** if the 1999 paper's forms and the spreadsheet
   variant's differ enough to change a comparison's outcome; if a
   reproduction cannot be brought within tolerances declared beforehand;

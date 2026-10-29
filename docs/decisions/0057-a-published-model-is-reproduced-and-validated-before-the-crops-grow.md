@@ -1,4 +1,4 @@
-# 0057: Published models are reproduced and validated before the crops grow
+# 0057: Published models are reproduced, then integrated, then validated
 
 **Status:** Proposed
 **Date:** 2026-10-27
@@ -23,7 +23,7 @@ crop research began with breadth, four crops at once.
 
 ## Decision
 
-- **Reproduce first, then validate, then grow.** The work after the
+- **Reproduce, then integrate, then validate.** The work after the
   projects in progress is, in this order of priority:
   1. the repository audit closed: its table maps each finding to the work
      that answered it, and `AUDIT.1` to `AUDIT.4` close with P14;
@@ -54,7 +54,9 @@ crop research began with breadth, four crops at once.
 - **Three milestones, each its own claim:** (A) a model reproduced on its
   own, which shows its implementation agrees with a reference, not that
   the model is right; (B) the model made a crop model of the run, chosen
-  by the manifest; (C) the model validated on measured crop data.
+  by the manifest, its outputs unvalidated predictions; (C) the model
+  validated on measured crop data, after which its outputs are claims of
+  the strength the validation supports.
 - **The organ and simple models are kept,** as baselines beside the
   published ones, the organ model the one of single plants and organs, not
   replaced process by process. Changing either is a version of its own,
@@ -92,5 +94,5 @@ crop research began with breadth, four crops at once.
 - Still to decide, each in its own record when it is reached: the first
   dataset's splits and metrics, and how a policy's evaluation is scored.
   Which tomato models, and what counts as reproducing each, is decision
-  0060; how a model grown by area becomes a crop model of the run, decision
+  0060; what a crop model declares for the run to integrate it, decision
   0062.
