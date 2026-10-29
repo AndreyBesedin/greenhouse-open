@@ -56,10 +56,12 @@ data.
      implementation, not the model.
    - **(B) A crop model of the run,** registered with its parameters, each
      with its source, and its version (decisions 0054 and 0055), chosen by
-     the manifest, grown by area as decision
-     [0062](../decisions/0062-a-canopy-crop-model-grows-a-rows-area-not-its-plants.md)
-     has it, checkpointed and replayed, held to a conformance test, and
-     shown in a documented scenario.
+     the manifest, integrated as decision
+     [0062](../decisions/0062-a-crop-model-declares-its-scope-drivers-outputs-and-capabilities.md)
+     has it (a declared scope and reference area, a named driver profile,
+     declared capabilities), checkpointed and replayed, held to a
+     conformance test, and shown in a documented scenario; its outputs are
+     predictions until (C).
    - **(C) Validated on measured crop data** (item 5).
    The organ and simple models stay, as baselines.
 5. **Validate on measured data, as a workflow others can repeat.** Begin
@@ -128,7 +130,8 @@ signal is not a measurement.
 ## First deliverables
 
 - A survey of tomato models, and the two chosen, in a decision (0060), with
-  how a model grown by area becomes a crop model of the run (0062).
+  how a crop model declares its scope, drivers, outputs and capabilities
+  (0062).
 - Both models reproduced on their own, each compared with its pinned
   reference implementation, the differences explained (milestone A).
 - Both made crop models of the run, chosen by the manifest (milestone B).

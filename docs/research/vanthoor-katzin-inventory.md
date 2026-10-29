@@ -139,8 +139,9 @@ taken to be outdoors. Its time zone is not stated.
 Every state, input and derived variable, interpolated linearly onto an
 hourly grid that leaves out the last moment. The harvests are rates
 (`mcFruitHar`, `mcLeafHar`, mg{CH2O} m⁻² s⁻¹), not states: the harvested
-fruit is their integral over time. Every crop quantity is a mass of
-carbohydrate (CH₂O); the files give no factor to dry or fresh matter.
+carbohydrate equivalent is their integral over time. Every crop quantity
+is a mass of carbohydrate equivalent (CH₂O), per m² of greenhouse floor;
+the files give no factor to dry or fresh matter, so none is assumed.
 
 ## Solver
 

@@ -386,9 +386,9 @@ neither held to a published result. Planned then:
   inputs, the authors' code where it is published and a named later
   implementation where it is not, its differences and their causes
   recorded; then registered with its parameters, each with its source, and
-  its version (decisions 0054 and 0055), and grown by area as decision
-  [0062](../decisions/0062-a-canopy-crop-model-grows-a-rows-area-not-its-plants.md)
-  has it. Then held to measured data, as the
+  its version (decisions 0054 and 0055), and integrated as decision
+  [0062](../decisions/0062-a-crop-model-declares-its-scope-drivers-outputs-and-capabilities.md)
+  has it, by what it declares, its outputs predictions until validated. Then held to measured data, as the
   [research priorities](research-validation-priorities.md) say.
 - **The organ and simple models kept,** as baselines beside them, the
   organ model the one of single plants and organs, not replaced process by

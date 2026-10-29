@@ -8,8 +8,8 @@ parameters with their sources, drivers, a reference implementation to
 compare with, data, and licences. It sets out each reproduction's recipe.
 Decision [0060](../decisions/0060-two-published-tomato-models-become-crop-models-of-the-run.md)
 proposes the plan, and decision
-[0062](../decisions/0062-a-canopy-crop-model-grows-a-rows-area-not-its-plants.md)
-how a model grown by area becomes a crop model of the run.
+[0062](../decisions/0062-a-crop-model-declares-its-scope-drivers-outputs-and-capabilities.md)
+how a model declares what the run must give it and may take from it.
 
 Its sources were checked on 2026-10-28 and 2026-10-29: DOIs against
 Crossref and DataCite, code against its repositories and releases, data
@@ -182,26 +182,39 @@ inventories hold the detail:
 | Measured crop data, open | Oliveira et al.'s, CC BY-NC 4.0 | None found; the trial's climate only, CC BY-SA 4.0 |
 | Question it answers | A canopy's growth and yield, compactly and fast | How the day's climate drives growth and yield |
 
-## What the simulator gives a crop model today
+## From reproduction to integration
 
 A crop model is a rung of the run's crop part (`biology/crop_contract.py`),
 built for single plants. The run lives each plant a day at a time and
 gives it its day (`LocalEnvironment`): the day's mean air temperature,
-the PAR its crown received that day, the CO₂ and its water status.
+the PAR its crown received that day, the CO₂ and its water status. Neither
+published model takes that as it stands, and integrating either changes
+what it is given. Decision 0062 makes each change a named, versioned
+profile, measured against the reproduction's own forcing:
 
-- **Not either model's input:** neither model's reference takes a day's
-  mean temperature and PAR integral. Reduced TOMGRO as Oliveira et al. run
-  it needs the day's hours, and Vanthoor's model their course.
-- **Any aggregation is an approximation:** a documented one, with a test
-  of what it changes.
-- **Air for canopy:** the house has no canopy temperature. Its air's
-  temperature stands for it, as it does in both references' example runs.
-  That is recorded as a difference.
-- **CO₂:** the house's follows the outside's through its vents; no crop
-  takes it up, and nothing enriches it.
-- **A canopy is not a plant:** both models grow a canopy per m², with no
-  plants, organs or geometry. Decision 0062 makes that a crop model of its
-  own kind, with the day's hours among what the run gives it.
+| | Reduced-State TOMGRO | Vanthoor, as Katzin simplified it |
+| --- | --- | --- |
+| Reference area | per m², at the plants' density `ro` (plants per m²); which area that density is of, the reproduction states | per m² of greenhouse floor (`laiMax`, and the pools) |
+| Native quantities | dry masses (g m⁻²), nodes, leaf area index | carbohydrate equivalents (mg CH₂O m⁻²), two temperatures, leaf area index derived |
+| Drivers, as its reference takes them | hourly air temperature and PPFD inside, CO₂ once a day | the canopy's temperature, the PAR above the canopy, the CO₂, sub-daily, interpolated |
+| Light | PPFD inside, absorbed through its leaf area | incident PAR above the canopy; the absorbed worked out by the extension |
+| What the run would substitute | the whole house's hourly air for the crop's; the light above the scope for the PPFD at the canopy | the house's air temperature for the canopy's; hourly means for the reference's resolution |
+
+- **A reproduction's claim stays with its forcing:** agreement in milestone
+  A shows the implementation, on the reference's drivers. A model driven
+  by the run, through a profile, on the run's reference area, is an
+  integration (milestone B): its departure from the reference under the
+  same profile, from hourly means, from the air's temperature for the
+  canopy's, and from a reference area converted, is measured and reported.
+- **Reference areas are converted, never assumed:** a scope's floor,
+  cultivated area and beds are apart, and a model's parameters keep their
+  own basis; a conversion between them is recorded and tested (decision
+  0062).
+- **No other modelled quantity stands in silently:** the house's CO₂
+  follows the outside's through its vents, with no crop taking it up and
+  nothing enriching it; the air does not answer the crop.
+- **What a consumer sees of these crops** comes from measurement models,
+  not from their state (decision 0062).
 
 ## The plan
 
@@ -230,7 +243,7 @@ manifest that the comparison reads:
 | Initial state | The reference run's: n 4, LAI 0.014, W 0.09, Wf 0, Wm 0 | GreenLight's six initial values |
 | Drivers | Hourly air temperature, PPFD and CO₂, 24 a day | The same series, as canopy temperature, PAR above the canopy and CO₂ |
 | Step and solver | Daily Euler, hourly sums | BDF, `max_step` 3600 s, `atol` 1e-3, `rtol` 1e-6, matched by ours |
-| Compared | The five states, day by day | The six states, hourly; the leaf area index derived; the harvested fruit integrated from its rate, alike in both |
+| Compared | The five states, day by day, in their native units | The six states, hourly, in their native units; the leaf area index derived; the harvested carbohydrate equivalent integrated from its rate, alike in both |
 
 **The drivers:** a series both use, fixed and checksummed, with its
 units, time zone and step stated.
