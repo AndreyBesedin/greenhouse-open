@@ -343,10 +343,14 @@ truth; beyond the climate controller's loops (P11), nothing in it reads
 observations and chooses what to do. What belongs in the repository, and
 what is expected from outside it, is designed first, in a decision:
 
-- **One interface** for every such component, in the repository or outside
-  it: what it reads (observations and the run's clock, never the ground
-  truth), what it gives (actions and plans in the protocol's format,
-  forecasts as records), and when a run asks it, at its own rate.
+- **One foundation** for every such component, in the repository or
+  outside it: what it reads (observations available when it decides, the
+  run's clock and a capability and goal context, never the ground truth),
+  its identity and version, and when it acts, at its own rate. On it,
+  specialisations: control policies first, giving plans in the protocol's
+  format through an authenticated policy-facing interface; forecasts and
+  perception later, giving typed, timestamped records (decision
+  [0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md)).
 - **Base components in the simulator,** behind that interface: simple,
   documented with their limits, as its base models are, so that a run, a
   policy's evaluation and the viewer work with nothing from outside. A
