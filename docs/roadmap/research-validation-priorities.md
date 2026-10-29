@@ -76,15 +76,25 @@ data.
    workflows and Modelica comparison plan it: one documented, measured
    interval of TiGwerLib reproduced in OpenModelica, then compared on
    matched inputs, its blockers recorded rather than worked around.
-7. **Evaluate policies.** Through the intelligence components' interface,
-   as the roadmap plans it: a policy reads observations and the run's
-   clock, never the ground truth, and acts through the protocol's plans;
-   the evaluation alone reads the truth. A documented rule-based baseline
-   comes first, and others are compared with it on the same scenarios,
-   seeds and budgets. The contract is in
-   [the policy evaluation memo](../research/policy-evaluation-contract.md),
-   which decision [0061](../decisions/0061-a-policy-acts-on-a-run-as-a-consumer-and-is-scored-from-outside-it.md)
-   proposes.
+7. **Benchmark greenhouse decisions, repeatably.** Not only an interface
+   and a rule: a capability to compare decisions fairly (decision
+   [0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md),
+   after [the policy evaluation memo](../research/policy-evaluation-contract.md)).
+   A policy reads observations and the run's clock, never the truth, and
+   acts through the protocol's plans; the evaluation alone reads the
+   truth. In stages:
+   1. the contracts: observations, actions, capabilities, identity and
+      security, and the clock, for policies in the process and remote;
+   2. an experiment harness: the policy's identity, its actions' trace,
+      paired seeds and weather;
+   3. the measures, defined exactly, with the evaluator's instrumentation
+      and the constraints' handling;
+   4. a portfolio of baselines, from the literature and from growers'
+      practice and simple rules, each with its provenance;
+   5. comparisons with policies of increasing complexity.
+   Climate-only experiments can run early; claims on yield or economics
+   wait for the crop models of item 4. Forecasts and perception stay with
+   the intelligence components, on the same foundation.
 8. **P12.4, crop parameters as versioned assets,** once the registry and
    the first published model carry versioned parameters. A calibration
    never changes a model's published defaults.
@@ -127,7 +137,8 @@ signal is not a measurement.
   fixed.
 - TiGwerLib's documented interval reproduced in OpenModelica, or its
   blockers recorded.
-- The policies' evaluation decided, then its rule-based baseline.
+- The benchmark decided (0061), then its contracts and harness, then its
+  baselines.
 
 ## Not now
 
@@ -139,4 +150,5 @@ replaced; and no claim that the simulator does what Modelica does.
 
 Each reproduction's tolerances, stated before its run (decision 0060);
 which measured data constrain the models, AGC4's or Oliveira et al.'s; the
-first splits and metrics; and how a policy's evaluation is scored.
+first splits and metrics; and which baselines and measures a first
+benchmark uses.

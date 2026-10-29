@@ -71,7 +71,7 @@ changes course is a new record that supersedes the old one.
 | [0058](0058-a-climate-controller-switches-each-loop-at-its-edge.md) | A climate controller switches each loop at its edge, from the house's air | Proposed |
 | [0059](0059-the-engines-day-gives-way-to-the-run.md) | The engine's day gives way to the run | Accepted |
 | [0060](0060-two-published-tomato-models-become-crop-models-of-the-run.md) | Two published tomato models become crop models of the run | Proposed |
-| [0061](0061-a-policy-acts-on-a-run-as-a-consumer-and-is-scored-from-outside-it.md) | A policy acts on a run as a consumer does, and is scored from outside it | Proposed |
+| [0061](0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md) | Greenhouse decisions are benchmarked through interfaces built for it | Proposed |
 | [0062](0062-a-canopy-crop-model-grows-a-rows-area-not-its-plants.md) | A canopy crop model grows a row's area, not its plants | Proposed |
 
 ## Template

@@ -11,4 +11,4 @@ and is not rewritten as they change: a later check is a new memo.
 | [Two published tomato models, and how each is reproduced](tomato-model-feasibility.md) | What Reduced-State TOMGRO and Vanthoor's model need, and each reproduction's recipe | 4 |
 | [Vanthoor's model as GreenLight implements it](vanthoor-katzin-inventory.md) | Its states, parameters, derived variables, inputs, outputs and solver, with their sources | 4 |
 | [Reduced-State TOMGRO as Oliveira et al. implement it](reduced-tomgro-inventory.md) | Its states, drivers, parameters and departures from the 1999 paper | 4 |
-| [What a policy reads and gives](policy-evaluation-contract.md) | A policy's interface, and where its evaluation stands | 7 |
+| [Benchmarking greenhouse decisions](policy-evaluation-contract.md) | What exists and is missing for a fair, reproducible benchmark, and the baselines it could start from | 7 |
