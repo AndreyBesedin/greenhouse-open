@@ -13,6 +13,7 @@ fails if any lies beyond its tolerance.
 import csv
 import hashlib
 import json
+import math
 import sys
 from dataclasses import dataclass
 from itertools import groupby
@@ -81,6 +82,14 @@ def reference(path: Path) -> list[State]:
         ]
 
 
+def _how_far(difference: Difference) -> float:
+    """How far a difference goes into what is allowed, past it beyond 1. A
+    state that is not a number is the furthest: NaN compares false with
+    everything, so `max` would pass over it."""
+    ratio = difference.absolute / difference.allowed
+    return math.inf if math.isnan(ratio) else ratio
+
+
 def compare() -> list[Difference]:
     """Each state's largest difference from the reference, over its days."""
     m = manifest()
@@ -108,7 +117,7 @@ def compare() -> list[Difference]:
             )
             for day, (mine, other) in enumerate(zip(ours, theirs, strict=True))
         ]
-        largest.append(max(found, key=lambda each: each.absolute / each.allowed))
+        largest.append(max(found, key=_how_far))
     return largest
 
 
