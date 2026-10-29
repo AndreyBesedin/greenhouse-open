@@ -67,7 +67,13 @@ data.
    TOMGRO's milestone A,
    [`research/reproductions/reduced_tomgro`](../../research/reproductions/reduced_tomgro/README.md),
    which agrees with Oliveira et al.'s implementation on every state and
-   day of a synthetic season.
+   day of a synthetic season; and Vanthoor's model's,
+   [`research/reproductions/vanthoor_katzin`](../../research/reproductions/vanthoor_katzin/README.md),
+   whose rates agree with GreenLight's at the same states, and whose run
+   agrees with GreenLight's, both converged, on every output and hour of
+   the same season. At GreenLight's default solver settings, the run
+   reproduces neither GreenLight's answer nor GreenLight's own answer to
+   the declared tolerances.
 5. **Validate on measured data, as a workflow others can repeat.** Begin
    with the WUR AGC4 dataset, through its adapter, where what it measures
    and its licence allow: inventory what it records (weather, climate,
