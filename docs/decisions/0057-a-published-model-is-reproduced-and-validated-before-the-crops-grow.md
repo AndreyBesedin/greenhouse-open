@@ -1,4 +1,4 @@
-# 0057: A published model is reproduced and validated before the crops grow
+# 0057: Published models are reproduced and validated before the crops grow
 
 **Status:** Proposed
 **Date:** 2026-10-27
@@ -31,7 +31,8 @@ crop research began with breadth, four crops at once.
      its open questions answered or carried into P12.4 to P12.6;
   3. P14's registry, and of P11 and P13 only what a first experiment needs
      (below);
-  4. one published tomato model reproduced;
+  4. two published tomato models reproduced, then made crop models of
+     the run (decision 0060);
   5. a validation on measured data, a workflow others can repeat;
   6. a bounded comparison with Modelica, as the roadmap records it;
   7. the evaluation of policies, through the intelligence components'
@@ -42,15 +43,22 @@ crop research began with breadth, four crops at once.
   inventory goes on beside the first three.
 - **A published model is a P14 crop model.** It is registered as the organ
   and simple models are (decisions 0054 and 0055), with its parameters,
-  each with its source, and its version. Before an experiment uses it, it
-  is compared with the original implementation: the authors' code, run on
-  the same inputs, where it is published, and their published outputs
-  otherwise. The differences, and what causes them, are recorded with it.
-  Its authors, the publication, the equations' and the parameters' sources,
-  and the licences of what is reused are named.
-- **The organ model is kept,** as a baseline beside the published one, not
-  replaced process by process. Changing it is a version of its own, for a
-  reason of its own.
+  each with its source, and its version. Before it grows the run's crop,
+  it is reproduced on its own and compared with a reference
+  implementation, run on the same inputs: the authors' code where it is
+  published, a named later implementation where it is not, said to be
+  that, and their published outputs besides. The differences, and what
+  causes them, are recorded with it. Its authors, the publication, the
+  equations' and the parameters' sources, and the licences of what is
+  reused are named.
+- **Three milestones, each its own claim:** (A) a model reproduced on its
+  own, which shows its implementation agrees with a reference, not that
+  the model is right; (B) the model made a crop model of the run, chosen
+  by the manifest; (C) the model validated on measured crop data.
+- **The organ and simple models are kept,** as baselines beside the
+  published ones, the organ model the one of single plants and organs, not
+  replaced process by process. Changing either is a version of its own,
+  for a reason of its own.
 - **Validation is held apart from tests.** A software contract test, a
   deterministic regression test, a published result reproduced and a
   validation on measured data are four things, and each says which it is.
@@ -74,13 +82,15 @@ crop research began with breadth, four crops at once.
 
 - The roadmap's crop research is rewritten to match, and the order is kept
   in [the research priorities](../roadmap/research-validation-priorities.md).
-- The first published model has to bring what a reproduction needs:
-  equations, parameters with their sources, and an original implementation
-  or published outputs to compare with. A model without them is a blocker
+- Each published model has to bring what a reproduction needs: equations,
+  parameters with their sources, and a reference implementation or
+  published outputs to compare with. A model without them is a blocker
   recorded, not a gap filled by guesses.
 - A reproduction that fails is a result, and is recorded as one.
 - The assistant, the second audit and the second CI pass stay on the
   roadmap, after these.
-- Still to decide, each in its own record when it is reached: which tomato
-  model comes first and what counts as reproducing it; the first dataset's
-  splits and metrics; and how a policy's evaluation is scored.
+- Still to decide, each in its own record when it is reached: the first
+  dataset's splits and metrics, and how a policy's evaluation is scored.
+  Which tomato models, and what counts as reproducing each, is decision
+  0060; how a model grown by area becomes a crop model of the run, decision
+  0062.

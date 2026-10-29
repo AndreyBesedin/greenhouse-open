@@ -67,10 +67,11 @@ changes course is a new record that supersedes the old one.
 | [0054](0054-models-are-chosen-by-the-manifest-from-a-registry.md) | Models are chosen by the manifest, from a registry | Accepted |
 | [0055](0055-a-model-is-registered-with-all-that-tells-it-apart.md) | A model is registered with all that tells it apart | Accepted |
 | [0056](0056-a-changelog-is-written-at-release-from-the-pull-requests-merged.md) | A changelog is written at release, from the pull requests merged | Accepted |
-| [0057](0057-a-published-model-is-reproduced-and-validated-before-the-crops-grow.md) | A published model is reproduced and validated before the crops grow | Proposed |
+| [0057](0057-a-published-model-is-reproduced-and-validated-before-the-crops-grow.md) | Published models are reproduced and validated before the crops grow | Proposed |
 | [0058](0058-a-climate-controller-switches-each-loop-at-its-edge.md) | A climate controller switches each loop at its edge, from the house's air | Proposed |
 | [0059](0059-the-engines-day-gives-way-to-the-run.md) | The engine's day gives way to the run | Accepted |
-| [0060](0060-the-first-tomato-model-reproduced-is-vanthoors-as-greenlight-runs-it.md) | The first tomato model reproduced is Vanthoor's, as GreenLight runs it | Proposed |
+| [0060](0060-two-published-tomato-models-become-crop-models-of-the-run.md) | Two published tomato models become crop models of the run | Proposed |
+| [0062](0062-a-canopy-crop-model-grows-a-rows-area-not-its-plants.md) | A canopy crop model grows a row's area, not its plants | Proposed |
 
 ## Template
 
