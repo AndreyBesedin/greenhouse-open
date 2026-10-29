@@ -41,7 +41,7 @@ def first_crowns(config: ScenarioConfig) -> list[Crown]:
     """A scenario's plants' crowns before its first day: its transplants', as
     the model its rows grow starts and stands them
     (`greenhouse_sim.services.crop_models`)."""
-    rung = registration(config).rung(config)
+    rung = registration(config).plants.rung(config)
     transplants = [rung.transplant(plant_id) for plant_id in plant_ids(config)]
     return crowns(rung, transplants, config.layout.trainings(), config.envelope)
 

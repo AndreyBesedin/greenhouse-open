@@ -91,11 +91,22 @@ def test_a_run_takes_crop_actions_as_its_crop_model_is_registered(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     box = scenario(PACKAGED, "climate_box")
-    taking = replace(crop_models.SIMPLE, takes_crop_actions=True)
+    taking = replace(crop_models.SIMPLE, crop_actions=crop_models.CropActions(CROP_KINDS))
     monkeypatch.setitem(crop_models.CROP_MODELS, crop_models.SIMPLE.name, taking)
 
     assert run_kinds(box) == {ActionKind.SET_LEVEL} | CROP_KINDS
     assert crop_model_refusal(box, ActionKind.HARVEST) is None
+
+    # Routed by kind: a model that takes harvests alone refuses a lowering.
+    harvesting = crop_models.CropActions(frozenset({ActionKind.HARVEST}))
+    monkeypatch.setitem(
+        crop_models.CROP_MODELS, taking.name, replace(taking, crop_actions=harvesting)
+    )
+    assert run_kinds(box) == {ActionKind.SET_LEVEL, ActionKind.HARVEST}
+    assert crop_model_refusal(box, ActionKind.HARVEST) is None
+    assert crop_model_refusal(box, ActionKind.LOWER) == (
+        "climate_box grows its crop with the simple model, which takes no lower"
+    )
 
 
 def test_a_run_carries_out_levels_targets_and_crop_actions_it_has() -> None:
