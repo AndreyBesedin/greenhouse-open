@@ -29,16 +29,9 @@ from greenhouse_sim.biology.tomato.organ.transplants import transplant
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.core.clock import DAY_S, days_ended
-from greenhouse_sim.core.crop import (
-    KEPT_DAYS,
-    CropDone,
-    CropLight,
-    CropWork,
-    DayWork,
-    OrganRung,
-    RunCrop,
-)
+from greenhouse_sim.core.crop import CropLight, CropWork, OrganRung, RunCrop
 from greenhouse_sim.core.crop_actions import CropAction, carry_out
+from greenhouse_sim.core.crop_days import KEPT_DAYS, CropDone, DayWork
 from greenhouse_sim.core.timeline import HARVEST_ROUND, RunProcesses, events
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.organs import FruitStage
