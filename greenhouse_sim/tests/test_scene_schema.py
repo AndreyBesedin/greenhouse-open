@@ -21,20 +21,18 @@ its export with the others, in `tests/test_published_schemas.py`.
 import json
 import math
 import sys
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.envelope import OpeningKind
 from greenhouse_sim.domain.layout import Material, ZoneKind
-from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT, schema_text
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
-from greenhouse_sim.scene.snapshot import (
-    greenhouse_scene,
-    scene_snapshot,
-    snapshot_json_schema,
-)
+from greenhouse_sim.scene.snapshot import greenhouse_scene, snapshot_json_schema
 from greenhouse_sim.services import plants
+from greenhouse_sim.services.crop import crop_scene
+from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.envelope import Envelope, Opening
 from greenhouse_sim.world.fixtures import (
     BoxPrimitive,
@@ -227,8 +225,10 @@ QA_LAYOUT = Layout(
         ),
     ],
 )
-# Long enough in climate_box for the plants to differ in height.
-EXAMPLE_DAYS = 9
+# The example scene is the climate box's run on this day: long enough for its
+# plants to differ in height.
+EXAMPLE_SCENARIO = "climate_box"
+EXAMPLE_DAY = 9
 # How closely the example scene's numbers must match: its plants grow through
 # exponentials whose last bit differs from one platform's maths library to
 # another's.
@@ -236,15 +236,16 @@ EXAMPLE_RELATIVE_TOLERANCE = 1e-12
 
 
 def _example_scene() -> object:
-    config = SCENARIO_REGISTRY["climate_box"]
-    engine = SimulationEngine(config)
-    plant_ids = [f"climate_box_plant_{i:03d}" for i in range(1, config.rows * config.columns + 1)]
-    world = engine.initialize(plant_ids, greenhouse_id="climate_box")
-    start = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
-    for day in range(1, EXAMPLE_DAYS + 1):
-        timestamp = start + timedelta(days=day - 1)
-        world = engine.advance(world, day=day, timestamp=timestamp, simulation_id="example").world
-    return scene_snapshot(world, config).model_dump(mode="json")
+    """The climate box as a viewer draws its run's `EXAMPLE_DAY`: its house,
+    and its crop once it has lived that many days."""
+    config = SCENARIO_REGISTRY[EXAMPLE_SCENARIO]
+    with Simulator() as simulator:
+        crop = crop_scene(simulator, RunRequest(EXAMPLE_SCENARIO), EXAMPLE_DAY * DAY_S)
+    house = greenhouse_scene(
+        config.greenhouse_id, config.envelope, EXAMPLE_DAY, layout=config.layout
+    )
+    scene = house.model_copy(update={"entities": [*house.entities, *crop.entities]})
+    return scene.model_dump(mode="json")
 
 
 def test_the_published_schema_is_plain_json_schema() -> None:

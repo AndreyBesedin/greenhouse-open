@@ -20,7 +20,7 @@ from greenhouse_sim.climate.control import Control, HeatingLoop
 from greenhouse_sim.climate.settings import GridAir, WholeHouseAir
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED
-from greenhouse_sim.scenarios.crop_parameters import CropWalk, SimpleCrop
+from greenhouse_sim.scenarios.crop_parameters import RETIRED, CropWalk, SimpleCrop
 from greenhouse_sim.scenarios.layout_files import load_layout
 from greenhouse_sim.scenarios.manifest_files import (
     FIRST_SCENARIO,
@@ -619,6 +619,50 @@ def test_a_scenario_of_organ_rows_gives_its_crop_no_simple_crops_settings() -> N
             "reference_greenhouse",
             _models(current, crop={"model": "organ", "parameters": {"water_capacity_ml": 1500.0}}),
         )
+
+
+# The simple crop's settings of the engine's day, as a manifest written
+# before it was removed may give them (decision 0059).
+ENGINES_DAY = {
+    "air_temperature_bounds": [18.0, 32.0],
+    "humidity_bounds": [45.0, 85.0],
+    "soil_moisture_noise_pct": 3.0,
+    "air_temperature_noise_c": 0.4,
+}
+
+
+def test_a_manifest_that_gives_the_settings_of_the_engines_day_is_read_without_them() -> None:
+    """Given in its crop's section, or at the top by a format 4 manifest,
+    they are dropped, to the same scenario as without them; a setting the
+    simple crop never had is still refused."""
+    document = _manifest("climate_box")
+    expected = SCENARIO_REGISTRY["climate_box"].model_copy(
+        update={"crop": SimpleCrop(max_trusses=4)}
+    )
+    current = _in_format_5("climate_box")
+    weather = current["models"]["weather"]
+    air = current["models"]["air_field"]
+    older = {key: value for key, value in current.items() if key != "models"} | {
+        "schema_version": 4,
+        "weather": {"kind": weather["model"], **weather["parameters"]},
+        "airflow": {"kind": air["model"], **air["parameters"]},
+        "max_trusses": 4,
+        "notes": {
+            ("weather" if key == "models.weather" else key): note
+            for key, note in current["notes"].items()
+        },
+    }
+
+    assert set(ENGINES_DAY) == set(RETIRED)
+    crop = {"model": "simple", "parameters": {"max_trusses": 4}}
+    assert scenario_from_manifest("climate_box", _models(document, crop=crop)) == expected
+    retired = {"model": "simple", "parameters": {"max_trusses": 4} | ENGINES_DAY}
+    assert scenario_from_manifest("climate_box", _models(document, crop=retired)) == expected
+    assert scenario_from_manifest("climate_box", older) == expected
+    assert scenario_from_manifest("climate_box", older | ENGINES_DAY) == expected
+    never = {"model": "simple", "parameters": ENGINES_DAY | {"never_a_setting": 1.0}}
+    with pytest.raises(InvalidManifest, match=r"(?s)models\.crop: .*never_a_setting"):
+        scenario_from_manifest("climate_box", _models(document, crop=never))
 
 
 @pytest.mark.parametrize("scenario_id", manifest_ids())

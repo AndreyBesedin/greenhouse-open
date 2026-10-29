@@ -20,12 +20,10 @@ from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.core.crop import CropLight, CropWork, OrganRung, RunCrop
 from greenhouse_sim.core.simple_crop import SimplePlant, SimpleRung
 from greenhouse_sim.domain.crop import FruitStatus
-from greenhouse_sim.environment.simple import SimpleEnvironmentModel
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services.scenarios import plant_ids
 from greenhouse_sim.solar.plants import Crown
 from greenhouse_sim.world.training import Training
-from greenhouse_sim.world_builder import advance_world, initialize_world
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
 SEED = CONFIG.random_seed
@@ -183,25 +181,37 @@ def test_a_run_of_each_rung_carries_on_from_a_checkpoint_of_its_own_plants(
         _crop(rung).seed(0, [other.transplant(PLANTS[0])], [])
 
 
-def test_the_simple_rung_grows_a_plant_as_the_engine_does_at_the_same_temperatures() -> None:
-    """The simple model keeps its numbers as a rung of the run (decision
-    0035): given each day's temperature the engine's air drifts to, it grows
-    the engine's plants."""
-    rung = SimpleRung(CONFIG)
-    world = initialize_world(CONFIG, PLANTS)
-    plants = [rung.transplant(plant_id) for plant_id in PLANTS]
-    environment = SimpleEnvironmentModel()
-    for day in range(1, DAYS + 1):
-        air = environment.advance(world.environment, CONFIG, day)
-        world = advance_world(world, CONFIG, day)
-        assert world.environment == air
-        lived = LocalEnvironment(
-            mean_temperature_c=air.air_temperature_c, par_mol_m2_day=0.0, co2_ppm=0.0
-        )
-        plants = [rung.live_day(plant, lived) for plant in plants]
+# What the simple rung grows each of `PLANTS` to in `DAYS` days of `STEADY`:
+# its stem's length in cm, its trusses, its fruits, the ripe ones and their
+# mass in g. Its numbers were pinned by the engine's reference baseline, which
+# grew it by the same rules, until the engine was removed (decision 0059). A
+# change to them is a new version of the simple crop
+# (`greenhouse_sim.scenarios.registry`).
+SIMPLE_GROWN = {
+    "climate_box_plant_001": (60.37103, 6, 27, 11, 28.792441),
+    "climate_box_plant_002": (59.958283, 6, 29, 13, 34.880631),
+    "climate_box_plant_003": (63.560011, 6, 25, 10, 28.734932),
+}
 
-    assert [plant.plant for plant in plants] == world.plants
-    assert any(fruit.status == FruitStatus.RIPE for fruit in _fruits(plants[0]))
+
+def test_the_simple_rung_keeps_its_numbers() -> None:
+    rung = SimpleRung(CONFIG)
+    grown = {}
+    for plant_id in PLANTS:
+        plant = _lived(rung, rung.transplant(plant_id))[-1]
+        fruits = _fruits(plant)
+        ripe = [fruit for fruit in fruits if fruit.status == FruitStatus.RIPE]
+        grown[plant_id] = (
+            plant.plant.stem_length_cm,
+            len(plant.plant.trusses),
+            len(fruits),
+            len(ripe),
+            sum(fruit.mass_g for fruit in ripe),
+        )
+
+    assert grown == {
+        plant_id: pytest.approx(numbers, rel=1e-6) for plant_id, numbers in SIMPLE_GROWN.items()
+    }
 
 
 def _fruits(plant: SimplePlant) -> list[Any]:

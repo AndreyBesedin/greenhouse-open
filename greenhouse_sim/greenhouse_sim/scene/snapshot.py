@@ -28,7 +28,6 @@ from greenhouse_sim.domain.crop import FruitStatus
 from greenhouse_sim.domain.envelope import OpeningKind, SurfaceCategory
 from greenhouse_sim.domain.layout import FixtureKind, Material, Obstruction, ZoneKind
 from greenhouse_sim.json_schemas import answer_json_schema
-from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.units import METRES_PER_CENTIMETRE
 from greenhouse_sim.world.capabilities import Dries, Heats, MovesAir, WasteHeat
 from greenhouse_sim.world.envelope import Envelope, Gutter, Member, OpeningPanel, Surface
@@ -46,7 +45,7 @@ from greenhouse_sim.world.geometry import (
 from greenhouse_sim.world.layout import Layout
 from greenhouse_sim.world.rows import PlantingPosition
 from greenhouse_sim.world.sensors import Camera, Sensor
-from greenhouse_sim.world.state import GreenhouseWorld, PlantWorld
+from greenhouse_sim.world.state import PlantWorld
 from greenhouse_sim.world.zones import Zone
 
 # Bumped when a change to these types would break an existing viewer, as a new
@@ -193,26 +192,6 @@ class SceneSnapshot(BaseModel):
     greenhouse_id: str
     simulated_day: int
     entities: list[SceneEntity]
-
-
-def scene_snapshot(
-    world: GreenhouseWorld,
-    config: ScenarioConfig,
-    levels: Mapping[str, float] | None = None,
-) -> SceneSnapshot:
-    """The scene a viewer draws for `world`: its greenhouse and layout, as
-    `greenhouse_scene` draws them, with its equipment at `levels`, and one
-    entity per plant, each at its planting position: the first plant at the
-    first, and so on."""
-    greenhouse = greenhouse_scene(
-        world.greenhouse_id,
-        config.envelope,
-        world.simulated_day,
-        layout=config.layout,
-        levels=levels,
-    )
-    plants = simple_plant_entities(world.plants, config.layout, config.envelope)
-    return greenhouse.model_copy(update={"entities": [*greenhouse.entities, *plants]})
 
 
 def simple_plant_entities(

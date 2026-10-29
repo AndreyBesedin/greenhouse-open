@@ -187,7 +187,7 @@ def test_protocol_change_requires_manual_review() -> None:
 def test_cross_package_change_requires_manual_review() -> None:
     reasons = _risk_reasons(
         [
-            "greenhouse_sim/greenhouse_sim/engine.py",
+            "greenhouse_sim/greenhouse_sim/services/runs.py",
             "greenhouse_adapters/greenhouse_adapters/cli.py",
         ],
         30,

@@ -10,9 +10,7 @@ from pydantic import ValidationError
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.domain.envelope import MemberKind, SurfaceCategory
-from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
-from greenhouse_sim.scene.snapshot import SceneEntityKind, scene_snapshot
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.envelope import GUTTER_DEPTH_M, Envelope, Surface
 from greenhouse_sim.world.envelope_checks import Point, inverted_surfaces, outline, shared_edges
@@ -111,18 +109,16 @@ def test_a_ridge_below_the_eaves_is_refused_and_one_level_with_them_is_flat() ->
 
 @pytest.mark.parametrize("scenario_id", sorted(SCENARIO_REGISTRY))
 def test_every_scenario_keeps_its_plants_inside_its_greenhouse(scenario_id: str) -> None:
+    """Each of its plants, rows times columns, stands at a planting position
+    of its layout, the first at the first, and so on."""
     config = SCENARIO_REGISTRY[scenario_id]
-    plant_ids = [f"{scenario_id}_plant_{i:03d}" for i in range(1, config.rows * config.columns + 1)]
-    world = SimulationEngine(config).initialize(plant_ids, greenhouse_id=scenario_id)
-    scene = scene_snapshot(world, config)
+    planted = config.layout.planting_positions()[: config.rows * config.columns]
     _, far_corner = config.envelope.bounds()
 
-    for entity in scene.entities:
-        if entity.kind != SceneEntityKind.PLANT:
-            continue
-        position = entity.transform.position
-        assert 0.0 < position.x < far_corner.x, entity.entity_id
-        assert 0.0 < position.y < far_corner.y, entity.entity_id
+    assert len(planted) == config.rows * config.columns
+    for position in planted:
+        assert 0.0 < position.point.x < far_corner.x, position.position_id
+        assert 0.0 < position.point.y < far_corner.y, position.position_id
 
 
 def test_the_envelope_has_a_floor_four_walls_and_two_roof_slopes() -> None:

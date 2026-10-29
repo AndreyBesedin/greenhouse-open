@@ -1,10 +1,11 @@
 """What the simple tomato model keeps for itself about each plant and fruit.
 
-These values are how the model generates a world, not part of what the world
-is: a plant's vigour and water stress, and each fruit's drawn target size,
-growth rate and ripening day. No sensor measures them, and nothing outside
-the model reads them. The world carries them in `GreenhouseWorld.plant_model`
-only so that a run can be saved and resumed.
+These values are how the model grows a plant, not part of what the plant
+is: its vigour and water stress, and each fruit's drawn target size, growth
+rate and ripening day. No sensor measures them, and nothing outside the
+model reads them. A run keeps them beside each plant
+(`greenhouse_sim.core.simple_crop.SimplePlant`) only so that it can be saved
+and resumed.
 """
 
 from typing import Literal

@@ -83,7 +83,7 @@ _CLIMATE_KEY: Final = "climate"
 _FORMAT_4_PARTS: Final = {"weather": Part.WEATHER, "airflow": Part.AIR_FIELD}
 # The settings format 4 wrote at the configuration's top, by the part
 # whose model's parameters they are in format 5: the simple crop's, with
-# those of the engine's day it grows in, and the crop walk's.
+# those of the engine's day it grew in, and the crop walk's.
 _FORMAT_4_SETTINGS: Final = {
     Part.CROP: HELD_AT_THE_TOP["crop"],
     Part.CROP_WALK: HELD_AT_THE_TOP["crop_walk"],
@@ -257,7 +257,8 @@ def _configured(scenario_id: str, written: JsonValue) -> tuple[dict[str, JsonVal
     """The configuration's fields a manifest's `models` give, and the crop
     model they name, if they name one. Refused, with the reason, if they
     name a part or a model the registry does not have, or give parameters
-    their model refuses or does not have."""
+    their model refuses or does not have; read without those it no longer
+    has."""
     if written is None:
         return {}, None
     if not isinstance(written, dict):
@@ -287,7 +288,8 @@ def _configured(scenario_id: str, written: JsonValue) -> tuple[dict[str, JsonVal
             read = chosen.read(parameters)
         except ValueError as error:
             raise InvalidManifest(f"{scenario_id}: {where}: {error}") from None
-        unknown = unknown_fields(parameters, chosen.written(read))
+        kept = {key: value for key, value in parameters.items() if key not in chosen.retired}
+        unknown = unknown_fields(kept, chosen.written(read))
         if unknown:
             named = ", ".join(f"{where}.{_PARAMETERS_KEY}.{field}" for field in unknown)
             raise InvalidManifest(f"{scenario_id}: fields it does not have: {named}")

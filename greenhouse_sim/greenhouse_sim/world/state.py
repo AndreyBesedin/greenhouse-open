@@ -1,28 +1,21 @@
-"""The simulator's hidden state: what is true of the simulated world.
+"""The simple crop's plants: what is true of each, as the simple tomato
+model grows it.
 
 None of this could exist at a real greenhouse's boundary. The entities below
-describe what the world is: sizes, ages, stages, the water in each plant's
-root zone, what has been harvested. `simulated_day` is the simulator's own
-clock. Shared records hold only what could be observed for real, and a
-consumer reconstructs its picture from evidence rather than reading this one.
+describe what a plant is: its size, its age, its trusses and fruit, the
+water in its root zone, what has been harvested from it. Shared records hold
+only what could be observed for real, and a consumer reconstructs its
+picture from evidence rather than reading this one.
 
-How the world is generated is kept apart. `GreenhouseWorld.plant_model` holds
-the values the plant model invents for itself, such as a plant's vigour or a
-fruit's drawn ripening day. It belongs to that model: it travels with the
-world so a run can be saved and resumed, and nothing else reads it.
-
-What leaves the simulator on the normal path is `SimulationStep.observations`;
-this is what those observations are noisy measurements *of*.
+How a plant is grown is kept apart: the values the model invents for itself,
+such as a plant's vigour or a fruit's drawn ripening day, are the model's
+own (`greenhouse_sim.biology.tomato.simple.state`), and the run keeps them
+beside each plant (`greenhouse_sim.core.simple_crop.SimplePlant`).
 """
 
 from pydantic import BaseModel
 
-from greenhouse_sim.biology.tomato.simple.state import SimpleTomatoState
 from greenhouse_sim.domain.crop import FruitStatus, RipenessStage, TrussStage
-
-# The state of the plant models a world can carry in `plant_model`. Only the
-# simple tomato model's today; a second plant model makes this a union.
-type PlantModelState = SimpleTomatoState
 
 
 class Fruit(BaseModel):
@@ -53,22 +46,3 @@ class PlantWorld(BaseModel):
     water_reservoir_ml: float
     trusses: list[Truss] = []
     cumulative_harvest_g: float = 0.0
-
-
-class GreenhouseEnvironment(BaseModel):
-    air_temperature_c: float
-    humidity_pct: float
-
-
-class GreenhouseWorld(BaseModel):
-    greenhouse_id: str
-    simulated_day: int
-    environment: GreenhouseEnvironment
-    plants: list[PlantWorld]
-    plant_model: PlantModelState
-
-    def plant(self, plant_id: str) -> PlantWorld:
-        for plant in self.plants:
-            if plant.plant_id == plant_id:
-                return plant
-        raise LookupError(f"no plant {plant_id!r} in greenhouse world {self.greenhouse_id!r}")

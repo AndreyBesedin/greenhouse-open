@@ -1,1 +1,1 @@
-"""Virtual sensors: what an instrument would report about the hidden world."""
+"""Virtual sensors: what an instrument would report of a run."""

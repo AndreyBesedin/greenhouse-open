@@ -21,9 +21,7 @@ TANGLED: frozenset[tuple[str, str]] = frozenset(
         ("cfd", "services"),
         ("climate", "core"),
         ("climate", "weather"),
-        ("core", "environment"),
         ("core", "scenarios"),
-        ("core", "sensors"),
         ("solar", "weather"),
     }
 )

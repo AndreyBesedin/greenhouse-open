@@ -15,11 +15,11 @@
   daily light integral, in place of a preset's, through the plant model's
   `Environment` contract (decision 0024), the rest of its day as another
   environment says. Its crowns stand as tall as the plants it is given;
-  a run's organ-level crop gives it each day's (`greenhouse_sim.core.crop`).
+  a run's crop gives it each day's (`greenhouse_sim.core.crop`).
 """
 
 import math
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final
 
@@ -28,11 +28,8 @@ import numpy as np
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.solar.inside import UP, Sunlight
 from greenhouse_sim.solar.sky import PAR_UMOL_M2_S_PER_W_M2
-from greenhouse_sim.units import DAY_S, METRES_PER_CENTIMETRE
-from greenhouse_sim.world.envelope import Envelope
+from greenhouse_sim.units import DAY_S
 from greenhouse_sim.world.geometry import Cylinder, Transform, Vector3
-from greenhouse_sim.world.rows import PlantingPosition
-from greenhouse_sim.world.state import PlantWorld
 
 # A crown's width; how many points around its top, besides its middle, its
 # light is the mean of, and how far out, as a share of its radius; and how
@@ -80,32 +77,6 @@ class Crown:
                 ),
             ]
         )
-
-
-def placed_crowns(
-    heights: Mapping[str, float], positions: Sequence[PlantingPosition], envelope: Envelope
-) -> list[Crown]:
-    """Each plant's crown as tall as `heights` says, in metres, by plant, the
-    first plant at the first planting position, and so on, placed in the
-    world; none for a plant with no stem showing."""
-    return [
-        Crown(plant_id=plant_id, base=envelope.to_world(position.point), height_m=height)
-        for (plant_id, height), position in zip(heights.items(), positions, strict=False)
-        if height > 0
-    ]
-
-
-def crowns(
-    plants: Sequence[PlantWorld], positions: Sequence[PlantingPosition], envelope: Envelope
-) -> list[Crown]:
-    """Each plant's crown, the first plant at the first planting position,
-    and so on, placed in the world: as tall as its visible stem; none for a
-    plant with no stem showing."""
-    heights = {
-        plant.plant_id: (plant.stem_length_cm - plant.lowered_length_cm) * METRES_PER_CENTIMETRE
-        for plant in plants
-    }
-    return placed_crowns(heights, positions, envelope)
 
 
 class PlantLight:

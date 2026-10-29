@@ -183,7 +183,7 @@ export const ASSESSED_SCHEMA = {
       "type": "object"
     },
     "CropModel": {
-      "description": "How a scenario's run grows its crop: by the simple daily model,\nthrough the engine, or organ by organ (`greenhouse_sim.core.crop`).",
+      "description": "How a scenario's run grows its crop: by the simple daily model\n(`greenhouse_sim.core.simple_crop`), or organ by organ\n(`greenhouse_sim.core.crop`).",
       "enum": [
         "simple",
         "organ"

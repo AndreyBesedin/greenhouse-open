@@ -33,9 +33,9 @@ function entity(entityId: string): SceneEntity {
 
 const PLANT = entity("climate_box_plant_001");
 // The example scene's first plant stands on its gutter's slab, 0.675 m up, at
-// the first row's first place; its stem is 0.35 m tall and 0.02 m in radius.
+// the first row's first place; its stem is 0.31 m tall and 0.02 m in radius.
 const BASE = { x: 2.25, y: 2.4, z: 0.675 };
-const STEM_M = 0.3499;
+const STEM_M = 0.3092;
 const RADIUS_M = 0.02;
 // A quarter turn about +x tips the plant's +z over onto -y.
 const QUARTER_TURN = Math.SQRT1_2;

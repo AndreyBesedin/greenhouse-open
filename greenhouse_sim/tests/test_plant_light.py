@@ -15,20 +15,18 @@ from greenhouse_sim.biology.plant.variation import draw_traits
 from greenhouse_sim.biology.tomato.organ.development import develop, emerged, live_day
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.biology.tomato.organ.transplants import DEVELOPMENT, TRANSPLANT_CD, VARIATION
-from greenhouse_sim.engine import SimulationEngine
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.services import sensors
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, plant_ids
 from greenhouse_sim.services.simulator import Simulator
-from greenhouse_sim.services.sunlight import plant_light
+from greenhouse_sim.services.sunlight import first_crowns, plant_light
 from greenhouse_sim.solar.plants import (
     CROWN_DIAMETER_M,
     Crown,
     PlantLight,
     SunlitEnvironment,
-    crowns,
 )
 from greenhouse_sim.solar.shadows import Shadows
 from greenhouse_sim.world.geometry import Vector3
@@ -50,8 +48,7 @@ def _light(simulator: Simulator) -> PlantLight:
 
 
 def _lab_crowns() -> list[Crown]:
-    world = SimulationEngine(LAB).initialize(plant_ids(LAB), greenhouse_id=LAB.greenhouse_id)
-    return crowns(world.plants, LAB.layout.planting_positions(), LAB.envelope)
+    return first_crowns(LAB)
 
 
 def test_each_plant_has_a_crown_about_its_stem_as_tall_as_it_shows() -> None:
