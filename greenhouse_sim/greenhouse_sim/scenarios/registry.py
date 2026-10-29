@@ -41,7 +41,7 @@ from greenhouse_sim.climate.settings import GridAir, WholeHouseAir
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.scenarios.crop_parameters import WALK, CropWalk, OrganCrop, SimpleCrop
+from greenhouse_sim.scenarios.crop_parameters import RETIRED, WALK, CropWalk, OrganCrop, SimpleCrop
 from greenhouse_sim.weather.recorded import RecordedWeather
 from greenhouse_sim.weather.seasonal import SeasonalWeather
 from greenhouse_sim.weather.sources import ConstantWeather
@@ -71,13 +71,16 @@ class NoParameters(BaseModel):
 class Model:
     """A model of a part: its name, its parameters' model, the field of the
     configuration that holds them, with the model's name as their `kind`,
-    none for a model that takes no parameters, and its version."""
+    none for a model that takes no parameters, its version, and the
+    parameters it no longer has, which a manifest written before may still
+    give and which its parameters' model drops."""
 
     part: Part
     name: str
     parameters: type[BaseModel] = NoParameters
     field: str | None = None
     version: int = 1
+    retired: frozenset[str] = frozenset()
 
     def read(self, parameters: Mapping[str, JsonValue]) -> BaseModel:
         """Its parameters as a manifest's section gives them, checked:
@@ -119,7 +122,14 @@ MODELS: Final[Mapping[Part, Mapping[str, Model]]] = {
     Part.CROP: _models(
         # 2: grown in the run, from its air, rather than in the engine's day
         # alone (P14.3).
-        Model(Part.CROP, CropModel.SIMPLE.value, SimpleCrop, "crop", version=2),
+        Model(
+            Part.CROP,
+            CropModel.SIMPLE.value,
+            SimpleCrop,
+            "crop",
+            version=2,
+            retired=frozenset(RETIRED),
+        ),
         Model(Part.CROP, CropModel.ORGAN.value, OrganCrop, "crop"),
     ),
     Part.CROP_WALK: _models(Model(Part.CROP_WALK, WALK, CropWalk, "crop_walk")),
