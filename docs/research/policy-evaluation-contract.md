@@ -90,22 +90,32 @@ code against its repositories. What could not be read is said to be so.
 As decision 0061 has them, each stage its own pull requests:
 
 - **(A) The ports:**
-  - a policy-facing interface of its own: observations, events,
-    outcomes, the capability and goal context, and plans, nothing else;
+  - a policy-facing interface of its own, forwarding only what an
+    observation process makes (the sensors' readings, the measurement
+    models' outputs, decision 0062), never a model's latent state, with an
+    explicit allowlist of the fields a policy reads, tested;
   - an authenticated caller acting as its own principal, policy,
     operator and evaluator told apart;
-  - the same semantics in the process and over the network;
+  - the same decision semantics in the process and over the network; a
+    policy in the process trusted and held to the contract by tests, which
+    are not a sandbox, and one not trusted run in a process or service of
+    its own, reaching only the policy-facing interface;
+  - an information budget declared: forecasts from named, versioned
+    providers with their issue time, horizon and uncertainty, and
+    prediction models or calibrations given as versioned assets, never the
+    simulator's future truth;
   - a versioned capability and goal context in the protocol;
   - a stated lifecycle;
   - a simulation-only experiment runner, stepping by deterministic
     barriers.
-- **(B) The baselines and scenarios:** the portfolio below, each with its
-  provenance and a reference test; comparable scenarios, with paired
-  weather, fixed starting states and matched sensors, permissions and
-  budgets.
-- **(C) The measures:**
-  - each defined with its source, unit, denominator and missing
-    processes;
+- **(B) A first scenario, its measures frozen, and one baseline:** the
+  scenario's objectives, constraints, units and a minimal implementation of
+  its measures fixed before any baseline is tuned or compared; then the
+  conventional heating and venting controller below.
+- **(C) The wider portfolio and its statistics:**
+  - the other baselines, each with its provenance and a reference test;
+  - comparable scenarios, with paired weather, fixed starting states and
+    matched sensors, permissions, forecasts and budgets;
   - evaluator-only instrumentation: the true air through time, and the
     controller's switches;
   - repeated trials, held-out periods, uncertainty and trade-offs;
@@ -118,7 +128,7 @@ As decision 0061 has them, each stage its own pull requests:
 | Source | What it is | Crop and model | Code | Data | What its controller sees | How reproducible |
 | --- | --- | --- | --- | --- | --- | --- |
 | The example's rule | Heater on below a band, off above it, by one sensor | the run's | in the repository | none | one sensor's readings | exactly; a smoke test only |
-| An observation-driven conventional controller | Heating, venting and CO₂ lines with smoothed proportional bands, as GreenLight's rule-based controls (Katzin 2021) and Panagopoulos et al.'s secondary controller write them | the run's | to write | none | the sensors' readings | from the published rules; the matched baseline |
+| A conventional heating and venting controller | One named, executable variant of one source's rules: GreenLight's rule-based climate controls for Katzin (2021) (`controls_katzin_2021.json`, BSD 3-Clause Clear), its heating and ventilation lines with their smoothed proportional bands, restricted to the equipment the scenario has | the run's | to write, from that source | none | the sensors' readings, with their latency | from the published rules; the matched baseline |
 | The climate controller's loops | Staged heating, venting, circulation and dehumidifying, with hysteresis (P11.2) | the run's | in the repository | none | the true air | exactly; a privileged reference |
 | AGC2's grower reference (Hemming et al. 2020) | Three Dutch growers' manual setpoints, against five AI teams | cherry tomato, a real greenhouse | none | AGC2 dataset, CC0: setpoints requested and realised, climate, resources, harvest (contents read only from its description) | real observations | as a labelled proxy only: the climate computer's logic is unpublished |
 | Panagopoulos et al. 2025 | Economic NMPC choosing a rule-based controller's lines | lettuce, van Henten's model | public, no licence file (its citation file says MIT) | its weather and outputs | true state, a perfect forecast | high, from the paper; its rules transfer, its crop does not |
@@ -168,12 +178,26 @@ As decision 0061 has them, each stage its own pull requests:
     is copied into this Apache-2.0 repository: AGPL code cannot be, and
     code without a licence is not.
 
-**A tractable first benchmark:** climate-only, on the run's own house, in
-three steps:
-1. the example's rule, as the smoke test;
-2. the observation-driven conventional controller as the matched
-   baseline;
-3. the controller's loops as the privileged reference beside both.
+**A tractable first benchmark:** climate-only, on the run's own house,
+with what the simulator can act on today:
+- **Equipment:** the scenario's heater, roof vents and circulation fans;
+  a dehumidifier where it has one. The simulator has no CO₂ source and no
+  crop takes CO₂ up, so CO₂ control waits on both, and on their
+  instrumentation: a named prerequisite, not a part of this benchmark. The
+  CO₂ dosing records some datasets carry are not a capability of the
+  simulated house.
+- **Climate variables:** the air's temperature and humidity, read by the
+  scenario's sensors, with their noise and latency.
+- **Constraints:** the air's temperature within a band by day and by
+  night, its humidity below a limit.
+- **Objective:** the heat given, in MJ per m² of floor, and the time
+  outside the constraints, both reported, fixed before any baseline runs.
+- **Policies:** the example's rule as the smoke test; the conventional
+  heating and venting controller as the matched baseline; and the climate
+  controller's loops as the privileged reference beside both.
+
+Panagopoulos et al.'s rules, for lettuce, are a separate candidate, not
+mixed into it.
 
 AGC2's grower proxy and the published controllers come after, each once
 its fidelity is known.
@@ -189,6 +213,14 @@ its fidelity is known.
 | Late, missed, refused | outcomes | actions, with reasons | — | nothing |
 | Labour | the crew's hands and times | actions and seconds | hours paid, cost | a labour model, if a comparison needs one |
 | Compute and latency | the runner | seconds per decision | — | the runner's record |
+
+**Across crop models:** a yield, resource or economic measure compared
+between crop models says its spatial denominator and its quantity, each
+model's reference area and native quantities converted by named
+conversions (decision 0062). A measure with no common basis is marked not
+comparable, not given a number. The evaluation framework, not a policy,
+applies the rule, and tests it. Climate-only comparisons stay apart from
+crop and economic ones until the crop models are validated.
 
 ## Open
 

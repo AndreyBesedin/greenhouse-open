@@ -60,16 +60,37 @@ out what exists and what is missing:
     records, evaluated by measures of their own;
   - **perception later,** from the cameras' images, likewise.
 - **A policy-facing interface of its own** (decision 0036's revisit):
-  observations, events and outcomes, the capability and goal context, and
-  plans, and nothing else of the simulated world. Its caller is
+  observations, events and outcomes, the capability and goal context, the
+  inputs its information budget allows (below), and plans, and nothing
+  else of the simulated world. It forwards only what an observation process
+  makes: the sensors' readings and the measurement models' outputs
+  (decision 0062), never a model's latent state, which is the evaluator's
+  truth alone, however a consumer record could carry it. What a policy may
+  read is an explicit allowlist of fields, and a test holds the interface
+  to it. Its caller is
   authenticated and acts as its own principal, with the least privilege
   the authorisation grants it (decision 0052's grants), and a policy, an
   operator and an evaluator are told apart; tests hold each to what it may
   read and do. The same contract holds in the process and over the
   network, a test giving the same plan the same receipt by either.
+- **Trusted in the process, isolated outside it:** a policy run in the
+  simulator's process is trusted code, held to the contract by conformance
+  tests and the dependency test, which are not a sandbox: nothing promises
+  that code in the same interpreter cannot reach the truth. A policy that
+  is not trusted runs in a process or a service of its own, reaching only
+  the policy-facing interface over the network, with its authorisation, and
+  no route of the local API.
 - **The local API stays what it is:** the local operator's tool for people,
   on this machine (decisions 0009, 0036 and 0052). It is not the policies'
   interface, and no policy reads it.
+- **An information budget, declared:** besides observations and the
+  clock, a policy may be given forecasts (each from a named, versioned
+  provider, with its issue time, horizon and uncertainty) and prediction
+  models or calibrations, each a versioned asset given explicitly. None is
+  the simulator's future truth or its hidden state. Comparisons match
+  policies' budgets; a method given perfect information (the full state, a
+  perfect forecast) is labelled a privileged or oracle reference, never a
+  matched comparator.
 - **A capability and goal context:** a versioned record, part of the
   protocol, of what a policy may read and do: the sensors and their
   quantities, units and cadences (not their imperfections, which are the
@@ -98,6 +119,14 @@ out what exists and what is missing:
   evaluation's version and its measures' definitions. A deterministic
   replay is a tested property of a given policy, not a promise for every
   one; a stochastic or remote policy's repeatability is measured.
+- **Compared only on a declared basis:** a yield, resource or economic
+  measure compared across crop models says its spatial denominator and its
+  quantity, converted as decision 0062 has it (each model's reference area,
+  named conversions between native quantities); a measure with no common
+  basis is marked not comparable rather than given a number. The
+  evaluation framework, not each policy, applies and tests it. Climate-only
+  comparisons stay apart from crop and economic ones until the crop models
+  are validated (decision 0060, milestone C).
 - **Measures defined by what they measure:** each named with its source,
   unit and denominator, and its missing processes; evaluator-only
   instrumentation added where a measure needs it (the true air through
@@ -109,7 +138,9 @@ out what exists and what is missing:
   reported, not one opaque reward.
 - **A portfolio of baselines, each with its provenance:** the example's
   rule, as a smoke test; an observation-driven conventional controller, the
-  matched baseline; documented grower practice, reconstructed as a labelled
+  matched baseline, a named, executable variant of one source's rules, for
+  the equipment the scenario has (heating and venting, today; CO₂ control
+  once a CO₂ source and the crop's uptake exist, a named prerequisite); documented grower practice, reconstructed as a labelled
   proxy, never as a counterfactual; published rule-based, MPC and learning
   controllers, once their sources are checked; and the climate controller's
   loops, reading the true air, as a labelled privileged reference, not a
@@ -120,11 +151,16 @@ out what exists and what is missing:
   yield or economics wait for the crop models reproduced and validated
   (decision 0060). A result says how a policy did in this simulator, not in
   a greenhouse.
+- **Measures before baselines:** a benchmark's objectives, constraints,
+  units and a minimal implementation of its measures are fixed before any
+  baseline is tuned or compared, so that no score moves with a controller.
 - **Staged, each stage its own pull requests:** (A) the policy-facing
-  interface, its identity and capability context, and the experiment
-  runner; (B) the baseline portfolio and comparable scenarios; (C) the
-  evaluator's instrumentation, the measures and multi-run reports; (D)
-  richer policies, and crop and economic scenarios on validated models.
+  interface, its identity, its information budget and capability context,
+  and the experiment runner; (B) a first scenario, its objectives,
+  constraints and minimal measures frozen, and one conventional baseline;
+  (C) the wider baseline portfolio, the evaluator's further
+  instrumentation, and statistics over repeated trials; (D) richer
+  policies, and crop and economic scenarios on validated models.
 
 ## Consequences
 
