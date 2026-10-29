@@ -52,8 +52,11 @@ code changes to meet it.
   row, a bed, a growing zone, a compartment, the house), with that scope's
   geometry. The model and its scope are apart: the first implementation may
   give each row an instance, and a zone or a compartment is as possible.
-  One generalised crop part keeps instances of both representations; no
-  second run is kept beside the first.
+  A per-plant model's instance holds its scope's plants, and its contract
+  still runs plant by plant within it (each plant transplanted, living its
+  day, its crown giving it its light); an area-based model's holds its
+  scope's area. One generalised crop part keeps instances of both
+  representations; no second run is kept beside the first.
 - **Each model's reference area is its own.** A model declares the area
   its quantities are per, and the density it assumes or takes: GreenLight's
   leaf area index is per m² of greenhouse floor, for instance. A scope's
@@ -87,12 +90,19 @@ code changes to meet it.
   - **measurements,** made by a versioned measurement model with its
     sampling, availability, delay, noise and bias, its spatial identity and
     units: a weighing of the harvest, a destructive sample, an instrument's
-    reading. A perfect measurement is a research instrument, declared as
-    one, never the default;
+    reading. Measurement models are models of the registry, of a
+    measurement part, as the crop walk already is (`walk`, its noises its
+    parameters, decision 0054), not a mechanism beside it. A perfect
+    measurement is a research instrument, declared as one, never the
+    default;
   - **estimates and forecasts,** inferences from measurements, records of
     their own (decision 0061).
   No latent quantity reaches the consumer interface because the model knows
   it.
+- **In the run's identity:** a driver profile and a measurement model are
+  named and versioned, and both, with their versions, are part of the run's
+  identity, as a model's version is (P14.2): two runs under different
+  profiles never share an id.
 - **Native quantities first.** Each model registers its outputs in its own
   quantities and units, on its own reference area: GreenLight's
   carbohydrate equivalents (mg CH₂O m⁻²), TOMGRO's dry masses. A dry or
@@ -128,15 +138,33 @@ code changes to meet it.
 
 - **The crop part is generalised,** over instances and the capabilities
   they declare: the registration's per-plant fields become typed adapters,
-  and the callers that ask which model they hold ask what it declares. The
-  simple and organ models declare what they do today, and their runs do not
-  change.
+  and the callers that ask which model they hold ask what it declares. A
+  declaration is a typed field of the one registration, optional where a
+  model may lack it (its inspection, its crop actions, its drawing), so
+  that the type checker makes every caller handle a model without it; never
+  a string flag or a set of names. The simple and organ models declare what
+  they do today.
+- **The generalisation is a refactor, and proved one:** the simple and
+  organ scenarios' run ids, the reference greenhouse's opening day and its
+  replay's day digests do not move, and `test_crop_rungs.py` holds as it
+  stands. The crop part's state in checkpoints (plants become instances'
+  plants) takes a new checkpoint format, the older ones migrated, as P14.2
+  to P14.6 did.
+- **Plants keep their addresses:** a per-plant model's plants keep the ids
+  the consumer interface, the gateway and the crop actions address them by;
+  an instance's id, its scope, is added beside them, never in their place.
+- **Milestone B in phases:** first the refactor, the crop part generalised
+  over instances and declarations with the simple and organ models alone,
+  pinned as above; then the area-based contract and the first area-based
+  model, on a scope per row, with the first driver profile; then the
+  second. The refactor lands before any new model, so that a pin that
+  moves is a defect, not a new model.
 - **Changes beyond the crop part,** each in a pull request of its own: the
   scope's geometry and areas; the driver profiles; the light above a scope;
   the measurement models and the observation types they make; the scene's
   proxies; new `CropModel` members and the schemas they regenerate; and
-  checkpoints, the timeline and the gateway, which name instances where
-  they named plants.
+  checkpoints, the timeline and the gateway, which name an instance beside
+  the plants they name.
 - **A climate-coupling decision** comes before any model's fluxes reach the
   house's air.
 - **What it gives up:** a model that declares nothing costs the
