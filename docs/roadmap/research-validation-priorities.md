@@ -63,7 +63,11 @@ data.
      conformance test, and shown in a documented scenario; its outputs are
      predictions until (C).
    - **(C) Validated on measured crop data** (item 5).
-   The organ and simple models stay, as baselines.
+   The organ and simple models stay, as baselines. Done: Reduced-State
+   TOMGRO's milestone A,
+   [`research/reproductions/reduced_tomgro`](../../research/reproductions/reduced_tomgro/README.md),
+   which agrees with Oliveira et al.'s implementation on every state and
+   day of a synthetic season.
 5. **Validate on measured data, as a workflow others can repeat.** Begin
    with the WUR AGC4 dataset, through its adapter, where what it measures
    and its licence allow: inventory what it records (weather, climate,
