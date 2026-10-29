@@ -35,7 +35,7 @@ from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.day import ClimateDay
 from greenhouse_sim.core.clock import DAY_S, days_ended, run_day
-from greenhouse_sim.core.crop import OrganRung, RunCrop
+from greenhouse_sim.core.crop import RunCrop
 from greenhouse_sim.core.stopwatch import Stopwatch
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
@@ -90,19 +90,20 @@ def new_store() -> Store[CropKey, tuple[AnyCrop, Schedule]]:
 def run_crop(
     simulator: Simulator, run: RunRequest, watch: Stopwatch | None = None
 ) -> RunCrop[Plant]:
-    """A run's organ-level crop, as `scenario_crop` gives it; not found for
-    a scenario that grows its crop with the simple daily model."""
+    """A run's crop of plants grown organ by organ, as `scenario_crop`
+    gives it; not found for a scenario whose crop's model grows its plants
+    otherwise."""
     crop = scenario_crop(simulator, run, watch)
-    if not is_organ(crop):
-        raise NotFound(
-            f"{run.scenario_id} grows its crop with the simple daily model, not by organ"
-        )
+    if not of_organs(crop):
+        name = registration(scenario(simulator.catalogue, run.scenario_id)).name
+        raise NotFound(f"{run.scenario_id} grows its crop with the {name} model, not by organ")
     return crop
 
 
-def is_organ(crop: AnyCrop) -> TypeIs[RunCrop[Plant]]:
-    """Whether a run's crop is the organ crop."""
-    return isinstance(crop.rung, OrganRung)
+def of_organs(crop: AnyCrop) -> TypeIs[RunCrop[Plant]]:
+    """Whether a run's crop grows its plants organ by organ, as its model's
+    rung declares its plants (`CropRung.plant_type`)."""
+    return crop.rung.plant_type is Plant
 
 
 def scenario_crop(simulator: Simulator, run: RunRequest, watch: Stopwatch | None = None) -> AnyCrop:
@@ -180,7 +181,7 @@ def _new_crop(
     run_key, planned = key
     scenario_id, layout, weather, *_ = run_key
     config = _run_config(simulator, run_key)
-    rung = registration(config).rung(config)
+    rung = registration(config).plants.rung(config)
     sunlight = plant_light(simulator, scenario_id, layout, weather).sunlight
 
     def light(_day: int, crowns: Sequence[Crown]) -> PlantLight:
@@ -215,7 +216,7 @@ def crop_scene(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> Sc
         scenario(simulator.catalogue, run.scenario_id),
         SceneChanges(layout=run.layout or DEFAULT_LAYOUT),
     )
-    entities = registration(config).drawn(crop.plants_on(day), config)
+    entities = registration(config).plants.drawn(crop.plants_on(day), config)
     return SceneSnapshot(greenhouse_id=config.greenhouse_id, simulated_day=day, entities=entities)
 
 

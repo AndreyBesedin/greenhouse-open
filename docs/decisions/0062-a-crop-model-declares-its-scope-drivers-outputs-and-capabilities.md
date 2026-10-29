@@ -1,6 +1,6 @@
 # 0062: A crop model declares its scope, drivers, outputs and capabilities
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-10-29
 
 ## Context
