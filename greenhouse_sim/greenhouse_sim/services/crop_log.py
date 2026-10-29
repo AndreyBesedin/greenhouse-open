@@ -45,7 +45,7 @@ from greenhouse_sim.core.crop_actions import CropAction
 from greenhouse_sim.core.rng import seeded_rng
 from greenhouse_sim.records import event_id, observation_id
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.services.crop import run_crop, scenario_crop
+from greenhouse_sim.services.crop import scenario_crop
 from greenhouse_sim.services.crop_models import Measured, registration
 from greenhouse_sim.services.gateway import Carried
 from greenhouse_sim.services.runs import RunRequest
@@ -87,12 +87,12 @@ def crop_records(
     ends = {} if work is None else work.work_ends
     events = []
     for plant, earlier in zip(plants, before, strict=True):
-        count, mass_g = grown_by.picked(plant, earlier, ends.get(plant.plant_id))
+        count, mass_g = grown_by.plants.picked(plant, earlier, ends.get(plant.plant_id))
         if count:
             events.append(
                 _harvested(plant.plant_id, day_start, config.greenhouse_id, mass_g, count)
             )
-    measured = [grown_by.measured(plant) for plant in plants]
+    measured = [grown_by.plants.measured(plant) for plant in plants]
     walked = walk_moment(start, day)
     source = RecordSource(type=SourceType.SIMULATION, source_id=run_id)
     observations = [
@@ -127,7 +127,7 @@ def crop_actions_done(
     its own, named by its assignment, and naming its action; each refused
     says why, in the organ model's words."""
     config = scenario(simulator.catalogue, run.scenario_id)
-    work = run_crop(simulator, run).worked_on(day)
+    work = scenario_crop(simulator, run).worked_on(day)
     worked = iter(() if work is None else work.done)
     at = start + timedelta(seconds=day * DAY_S)
     made = []

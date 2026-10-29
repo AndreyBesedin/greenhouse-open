@@ -19,10 +19,15 @@ from greenhouse_protocol.observation import Observation
 from pydantic import BaseModel
 
 from greenhouse_sim.ground_truth import GroundTruth, reading
+from greenhouse_sim.sensors.air import GOING_ROUND as SENSORS_GOING_ROUND
+from greenhouse_sim.sensors.air import OBSERVATION_TYPES
 from greenhouse_sim.units import FULL_TURN_DEG
 
 # What is read round the compass: a reading's error is the shorter way round.
-GOING_ROUND: Final = frozenset({ObservationType.OUTSIDE_WIND_DIRECTION_DEG})
+# The observations of the sensors whose readings go round, as the sensors
+# list them (`greenhouse_sim.sensors.air.GOING_ROUND`), so that a kind is
+# listed once.
+GOING_ROUND: Final = frozenset(OBSERVATION_TYPES[kind] for kind in SENSORS_GOING_ROUND)
 
 
 class AccuracyByType(BaseModel):

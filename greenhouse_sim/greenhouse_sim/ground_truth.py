@@ -112,7 +112,7 @@ def ground_truth(
         if value is not None
     ]
     grown = crop.scenario_crop(simulator, run)
-    measured = registration(config).measured
+    measured = registration(config).plants.measured
     walked = [day for day in range(config.duration_days) if day * DAY_S + WALK_S <= until_s]
     for day in walked:
         at = walk_moment(start, day)

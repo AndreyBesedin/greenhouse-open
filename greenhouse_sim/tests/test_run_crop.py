@@ -29,16 +29,9 @@ from greenhouse_sim.biology.tomato.organ.transplants import transplant
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.core.clock import DAY_S, days_ended
-from greenhouse_sim.core.crop import (
-    KEPT_DAYS,
-    CropDone,
-    CropLight,
-    CropWork,
-    DayWork,
-    OrganRung,
-    RunCrop,
-)
+from greenhouse_sim.core.crop import CropLight, CropWork, OrganRung, RunCrop
 from greenhouse_sim.core.crop_actions import CropAction, carry_out
+from greenhouse_sim.core.crop_days import KEPT_DAYS, CropDone, DayWork
 from greenhouse_sim.core.timeline import HARVEST_ROUND, RunProcesses, events
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.organs import FruitStage
@@ -466,7 +459,7 @@ def test_the_reference_greenhouse_grows_its_crop_organ_by_organ(simulator: Simul
     refused = respond(simulator, "GET", f"/api/scenarios/climate_box/crop/{plant}?t=0")
     assert refused.status == HTTPStatus.NOT_FOUND
     assert refused.body == {
-        "error": "climate_box grows its crop with the simple daily model, not by organ"
+        "error": "climate_box grows its crop with the simple model, not by organ"
     }
 
 
