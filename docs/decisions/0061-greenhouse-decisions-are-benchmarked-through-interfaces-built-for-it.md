@@ -1,6 +1,6 @@
 # 0061: Greenhouse decisions are benchmarked through interfaces built for it
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-10-29
 
 ## Context

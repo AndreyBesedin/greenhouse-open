@@ -86,7 +86,8 @@ data.
    acts through the protocol's plans; the evaluation alone reads the
    truth. In stages:
    1. the contracts: observations, actions, capabilities, identity and
-      security, and the clock, for policies in the process and remote;
+      security, and the clock, for policies in the process and remote
+      ([P15](p15-policy-port.md));
    2. an experiment harness: the policy's identity, its actions' trace,
       paired seeds and weather;
    3. the measures, defined exactly, with the evaluator's instrumentation
