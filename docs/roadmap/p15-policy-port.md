@@ -106,7 +106,7 @@ port gives to, field by field:
 | What | From | Fields |
 | --- | --- | --- |
 | Observations | the observation log as delivered: noisy, late, clipped | every `Observation` field; the types of the run's sensors and measurement models, as the context lists them |
-| Events | the crop work's and the crew's | `Event`'s fields; of `parameters`, per type: `HARVEST` `harvested_mass_g`, `harvested_fruit_count`, `action`; `LOWERING` `amount_cm`, `action`; `PRUNING` `leaf_id`, `action`; `MANUAL_INSPECTION` `reason`, `action` |
+| Events | the crop work's and the crew's, on plants | `Event`'s fields; of `parameters`, per type: `HARVEST` `harvested_mass_g`, `harvested_fruit_count`, `action`; `LOWERING` `amount_cm`, `action`; `PRUNING` `leaf_id`, `action`; `MANUAL_INSPECTION` `reason`, `action` |
 | Outcomes | the outcome log, of plans this principal owns | every `ActionOutcome` field |
 | Forecasts | its budget's providers | every `Forecast` field |
 | Its plans | the gateway | `PlanState`, of plans it owns |
@@ -119,6 +119,11 @@ port gives to, field by field:
 - **A parameter the allowlist does not name is dropped.** A test fails
   when the simulator writes one, so that letting a new one through is a
   decision, made in the allowlist.
+- **A crop grown by area** is observed on its scope, not on a plant
+  (decision 0062): its harvest, for one, is a measurement model's
+  observation, a weighing of the scope, not a plant's `HARVEST` event. Such
+  an observation names its scope and no plant, by the optional scope id the
+  protocol gains with P14.9's measurement outputs.
 - **The dependency test** keeps the port's modules from importing the
   ground truth, the fields, the crop's state or the local API.
 
@@ -131,15 +136,23 @@ authorisation, once for each epoch.
 
 - **The run:** its id, epoch and greenhouse, and the principal the context
   is for.
-- **Sensors:** each sensor's id, its observation types, their units, its
-  cadence and where it is (compartment, zone, plant). Not its noise, drift
-  or faults, which are the simulated world's.
+- **Observation sources:** each sensor and each measurement model, with
+  its id, its observation types, their units, its cadence and where it is:
+  a compartment, a zone, a plant, or a crop's scope (a row, as
+  `world.scopes` names it). Not its noise, drift or faults, which are the
+  simulated world's.
 - **Devices:** each device's id and kind, the actions that set it, and
   their ranges and units (a level from 0 to 1, or `auto`; an opening).
 - **Targets:** each target's name, range and unit. The target in force is
   observed, as its setpoint observation type, not given here.
-- **Crop work:** the crop actions the run carries out and when (at a day's
-  start), and the plants, as `GreenhouseDescription` lists them.
+- **The crop:** each crop instance, whether it is grown by plant or by
+  area, and its scopes, each with its id, kind and areas (cultivated and
+  floor, in m²). The plants, as `GreenhouseDescription` lists them, only
+  for a crop grown by plant.
+- **Crop work:** the crop actions as each crop's model declares them
+  (`CropActions`, decision 0062), and when they are carried out (at a
+  day's start); none for a model that declares none, as neither published
+  model does.
 - **The gateway's limits:** `GatewayLimits`.
 - **This principal's grants:** the action kinds and targets it may act on,
   and on whose behalf.
@@ -287,8 +300,8 @@ digest or kept opening day moves.
 - A port opened for a policy cannot give a plan as the operator or as
   another policy unless the authorisation grants it; a test holds each
   role to what it may read and do.
-- The context lists every sensor, device, target and limit the run has,
-  and example 03 names nothing by hand.
+- The context lists every observation source, device, target, crop scope
+  and limit the run has, and example 03 names nothing by hand.
 - Two runner episodes with the same scenario, policy and seed give the
   same receipts, outcomes and observations.
 - A forecast reaches a policy no earlier than its issue time; a budget
