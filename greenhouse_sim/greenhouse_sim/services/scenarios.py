@@ -227,7 +227,7 @@ def initial_scene(
     house = greenhouse_scene(
         config.greenhouse_id, config.envelope, layout=config.layout, levels=levels
     )
-    grown_by = registration(config)
+    grown_by = registration(config).plants
     rung = grown_by.rung(config)
     crop = grown_by.drawn([rung.transplant(plant_id) for plant_id in plant_ids(config)], config)
     return house.model_copy(update={"entities": [*house.entities, *crop]})

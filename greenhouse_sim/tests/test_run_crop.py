@@ -466,7 +466,7 @@ def test_the_reference_greenhouse_grows_its_crop_organ_by_organ(simulator: Simul
     refused = respond(simulator, "GET", f"/api/scenarios/climate_box/crop/{plant}?t=0")
     assert refused.status == HTTPStatus.NOT_FOUND
     assert refused.body == {
-        "error": "climate_box grows its crop with the simple daily model, not by organ"
+        "error": "climate_box grows its crop with the simple model, not by organ"
     }
 
 

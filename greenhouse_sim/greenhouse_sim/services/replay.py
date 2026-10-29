@@ -106,7 +106,7 @@ def day_probes(simulator: Simulator, run: RunRequest, days: int) -> list[DayProb
             }
         )
         text = json.dumps(probe, sort_keys=True, separators=(",", ":"))
-        organs, thermal_cd = grown_by.probed(plants)
+        organs, thermal_cd = grown_by.plants.probed(plants)
         probes.append(
             DayProbe(
                 day=day,
