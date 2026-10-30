@@ -21,9 +21,11 @@ import pytest
 from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.biology.area_contract import AreaRung, HourDrivers, StepCourse
+from greenhouse_sim.biology.tomato.tomgro.parameters import TomgroParameters
 from greenhouse_sim.core.area_crop import AreaCrop, AreaInstance
 from greenhouse_sim.core.clock import steps_a_day
 from greenhouse_sim.core.drivers import HOUSE_HOURS, DriverProfile, house_hours
+from greenhouse_sim.core.tomgro_crop import TomgroRung
 from greenhouse_sim.domain.crop import Driver
 from greenhouse_sim.domain.scopes import AreaBasis
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
@@ -91,7 +93,11 @@ class Canopy:
         return CanopyState(dry_mass_g=dry_mass, leaf_area_index=dry_mass / 100.0)
 
 
-AREA_RUNGS: Final[list[AreaRung[Any]]] = [Canopy(), Canopy(HOUR_S)]
+AREA_RUNGS: Final[list[AreaRung[Any]]] = [
+    Canopy(),
+    Canopy(HOUR_S),
+    TomgroRung(TomgroParameters(), 2.0),
+]
 
 
 def course(
