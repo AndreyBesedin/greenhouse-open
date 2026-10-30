@@ -16,6 +16,11 @@ Greenhouse Open v0.5.0 — Greenhouse Simulation
 
 https://github.com/user-attachments/assets/a09386c8-7823-4321-992f-0261f37bf91d
 
+The whole walk-through at its own pace, each step held under its caption,
+recorded from 0.5.0:
+
+[![The whole walk-through, on YouTube](https://img.youtube.com/vi/APUb6oex13o/maxresdefault.jpg)](https://youtu.be/APUb6oex13o)
+
 ## Why a shared format
 
 Simulated, recorded and live greenhouses should look the same to whatever
