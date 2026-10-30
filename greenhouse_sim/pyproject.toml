@@ -1,12 +1,12 @@
 [project]
 name = "greenhouse-sim"
-version = "0.4.0"
+version = "0.5.0"
 description = "A deterministic greenhouse simulator that produces canonical observations"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.14"
 dependencies = [
-    "greenhouse-protocol>=0.4.0,<0.5",
+    "greenhouse-protocol>=0.5.0,<0.6",
     "pydantic>=2.12.2",
     "numpy>=2.0",
 ]

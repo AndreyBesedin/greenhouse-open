@@ -166,7 +166,7 @@ wheels = [
 
 [[package]]
 name = "greenhouse-adapters"
-version = "0.4.0"
+version = "0.5.0"
 source = { editable = "greenhouse_adapters" }
 dependencies = [
     { name = "greenhouse-protocol" },
@@ -232,7 +232,7 @@ toolchain = [
 
 [[package]]
 name = "greenhouse-protocol"
-version = "0.4.0"
+version = "0.5.0"
 source = { editable = "greenhouse_protocol" }
 dependencies = [
     { name = "pydantic" },
@@ -243,7 +243,7 @@ requires-dist = [{ name = "pydantic", specifier = ">=2.12.2" }]
 
 [[package]]
 name = "greenhouse-sim"
-version = "0.4.0"
+version = "0.5.0"
 source = { editable = "greenhouse_sim" }
 dependencies = [
     { name = "greenhouse-protocol" },
