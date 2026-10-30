@@ -76,6 +76,7 @@ from greenhouse_protocol.actions import (
 )
 from greenhouse_protocol.assignment import Assignment
 from greenhouse_protocol.authorisation import AuthorisationConfig
+from greenhouse_protocol.context import CapabilityContext
 from greenhouse_protocol.contracts.consumer import OutcomeBatch
 from greenhouse_protocol.contracts.execution import ActionNotExecutable
 from greenhouse_protocol.contracts.gateway import GatewayLimits, PlanState, Receipt
@@ -111,6 +112,7 @@ from greenhouse_sim.services.gateway import (
     run_unhonoured,
 )
 from greenhouse_sim.services.heat_log import heat_records
+from greenhouse_sim.services.policy_context import run_context
 from greenhouse_sim.services.runs import (
     Commanded,
     PlannedAt,
@@ -907,6 +909,21 @@ class Playback:
             except KeyError:
                 which = "" if revision is None else f" revision {revision}"
                 raise NotFound(f"no plan {plan_id!r}{which} of run {self.run_id!r}") from None
+
+    def context(self, principal: Principal) -> CapabilityContext:
+        """What `principal` may read and do in its run's epoch, as a policy's
+        port gives it (decision 0061): from its installation as it plays,
+        its scenario and the authorisation in force (`policy_context`)."""
+        with self._lock:
+            return run_context(
+                self._played,
+                run_id=self.run_id,
+                epoch=self._epoch,
+                principal=principal,
+                authorisation=self._authorisation,
+                limits=self._gateway.limits(),
+                every_s=self.every_s,
+            )
 
     def set_pace(self, seconds_per_day: float) -> PlaybackState:
         """Plays a simulated day in `seconds_per_day` real seconds; once

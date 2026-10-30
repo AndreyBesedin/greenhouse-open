@@ -34,11 +34,11 @@ from greenhouse_protocol.contracts.consumer import (
     RunList,
 )
 from greenhouse_protocol.enums import SourceType
-from greenhouse_protocol.greenhouse import GreenhouseDescription, GreenhouseLayout, Plant
+from greenhouse_protocol.greenhouse import GreenhouseDescription, GreenhouseLayout
 
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.playback import Playback, Playbacks, PlaybackState
-from greenhouse_sim.services.scenarios import Scenarios, plant_ids, scenario
+from greenhouse_sim.services.scenarios import Scenarios, described_plants, scenario
 
 # The most records a batch holds, whatever a client asks for.
 MOST_PER_BATCH: Final = 5_000
@@ -118,15 +118,6 @@ def greenhouse(reads: Reads, run_id: str) -> GreenhouseDescription:
     scenario lays them out, described when its run starts."""
     found = _played(reads, run_id)
     config = scenario(reads.catalogue, found.scenario_id)
-    plants = tuple(
-        Plant(
-            plant_id=plant_id,
-            variety=config.variety,
-            row=index // config.columns + 1,
-            position_in_row=index % config.columns + 1,
-        )
-        for index, plant_id in enumerate(plant_ids(config))
-    )
     return GreenhouseDescription(
         greenhouse_id=config.greenhouse_id,
         name=config.name,
@@ -134,7 +125,7 @@ def greenhouse(reads: Reads, run_id: str) -> GreenhouseDescription:
         source_type=SourceType.SIMULATION,
         crop=config.variety,
         layout=GreenhouseLayout(kind="grid", rows=config.rows, columns=config.columns),
-        plants=plants,
+        plants=described_plants(config),
         created_at=found.start,
     )
 

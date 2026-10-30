@@ -31,6 +31,7 @@ from greenhouse_protocol.provenance import RecordSource
 
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.records import observation_id
+from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services.climate_runs import climate_run
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import scenario
@@ -49,6 +50,11 @@ DECIMALS: Final = 3
 EVERY_S: Final = HOUR_S
 
 
+def heats(config: ScenarioConfig) -> bool:
+    """Whether a scenario's run has a heater, whose heat it logs."""
+    return any(can(piece, Heats) for piece in config.layout.equipment)
+
+
 def heat_records(
     simulator: Simulator, run: RunRequest, day: int, start: datetime, run_id: str
 ) -> list[Observation]:
@@ -57,7 +63,7 @@ def heat_records(
     layout rearranged or targets changed, each named by `run_id`: a record
     at the end of each of its hours, or none if it has no heater."""
     config = scenario(simulator.catalogue, run.scenario_id)
-    if not any(can(piece, Heats) for piece in config.layout.equipment):
+    if not heats(config):
         return []
     _, climate = climate_run(simulator, run)
     floor_m2 = config.envelope.length * config.envelope.width
