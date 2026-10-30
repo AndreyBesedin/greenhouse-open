@@ -41,7 +41,7 @@ release = "greenhouse_dev.commands:main"
 # packages, and CI with `uv sync --locked`.
 [dependency-groups]
 dev = [
-    "pytest==9.1.1",
+    "pytest==9.2.0",
     "pytest-xdist==3.8.0",
     "mypy==2.4.0",
     "ruff==0.17.2",
