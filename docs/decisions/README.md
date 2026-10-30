@@ -73,7 +73,7 @@ changes course is a new record that supersedes the old one.
 | [0060](0060-two-published-tomato-models-become-crop-models-of-the-run.md) | Two published tomato models become crop models of the run | Accepted |
 | [0061](0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md) | Greenhouse decisions are benchmarked through interfaces built for it | Proposed |
 | [0062](0062-a-crop-model-declares-its-scope-drivers-outputs-and-capabilities.md) | A crop model declares its scope, drivers, outputs and capabilities | Accepted |
-| [0063](0063-a-data-file-is-generated-committed-or-fetched-by-one-rule.md) | A data file is generated, committed or fetched, by one rule | Proposed |
+| [0063](0063-a-data-file-is-generated-committed-or-fetched-by-one-rule.md) | A data file is generated, committed or fetched, by one rule | Accepted |
 
 ## Template
 

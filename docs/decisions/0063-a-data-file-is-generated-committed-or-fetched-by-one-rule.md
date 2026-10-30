@@ -1,6 +1,6 @@
 # 0063: A data file is generated, committed or fetched, by one rule
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-10-30
 
 ## Context
