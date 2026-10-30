@@ -24,6 +24,7 @@ import csv
 import hashlib
 import itertools
 import json
+import math
 import sys
 import time
 from collections.abc import Sequence
@@ -149,6 +150,14 @@ def ours(solver: str) -> tuple[list[float], dict[str, list[float]], float]:
     return found.times, _outputs(found, float(m["output_step_s"])), took
 
 
+def _how_far(difference: Difference) -> float:
+    """How far a difference goes into what is allowed, past it beyond 1. An
+    output that is not a number is the furthest: NaN compares false with
+    everything, so `max` would pass over it."""
+    ratio = difference.absolute / difference.allowed
+    return math.inf if math.isnan(ratio) else ratio
+
+
 def _largest(
     name: str,
     moments: Sequence[float],
@@ -169,7 +178,7 @@ def _largest(
             )
             for moment, value, other in zip(moments, mine, theirs, strict=True)
         ),
-        key=lambda each: each.absolute / each.allowed,
+        key=_how_far,
     )
 
 

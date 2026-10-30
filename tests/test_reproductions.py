@@ -21,6 +21,7 @@ from research.reproductions.reduced_tomgro import compare as tomgro
 from research.reproductions.reduced_tomgro.model import Hour, State, run
 from research.reproductions.vanthoor_katzin import compare as vanthoor
 from research.reproductions.vanthoor_katzin.model import STATES as VANTHOOR_STATES
+from research.reproductions.vanthoor_katzin.model import derivatives
 
 
 def test_reduced_tomgro_agrees_with_its_reference_on_every_state_and_day() -> None:
@@ -87,6 +88,32 @@ def test_the_rates_see_a_parameter_moved_by_a_millionth(monkeypatch: pytest.Monk
     monkeypatch.setattr(vanthoor, "manifest", lambda: moved)
 
     assert not all(each.within for each in vanthoor.compare_rates())
+
+
+def test_a_rate_that_is_not_a_number_is_beyond_its_tolerance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """As for Reduced-State TOMGRO: the buffer's rate gone to NaN from the
+    60th point is seen."""
+    worked_out = 0
+
+    def gone_to_nan(
+        state: Sequence[float],
+        t_can: float,
+        par_gh: float,
+        co2_ppm: float,
+        p: Mapping[str, float],
+    ) -> list[float]:
+        nonlocal worked_out
+        worked_out += 1
+        rates = derivatives(state, t_can, par_gh, co2_ppm, p)
+        return [math.nan, *rates[1:]] if worked_out > 60 else rates
+
+    monkeypatch.setattr(vanthoor, "derivatives", gone_to_nan)
+
+    buffer = next(each for each in vanthoor.compare_rates() if each.output == "rate of cBuf")
+    assert math.isnan(buffer.absolute)
+    assert not buffer.within
 
 
 @pytest.mark.slow
