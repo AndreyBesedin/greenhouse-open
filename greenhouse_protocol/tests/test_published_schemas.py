@@ -1,5 +1,6 @@
 """Every JSON Schema the protocol publishes, from one list: the records a
-run's gateway takes and writes, and what its routes answer (decision 0046), each committed file its
+run's gateway takes and writes, and what its routes answer (decision 0046),
+and what a policy's port answers beside them (decision 0061), each committed file its
 model's export in the 2020-12 dialect, written one way. They live in the
 package (`greenhouse_protocol/schemas/`), for a consumer, a platform or an
 executor in another language to check documents against.
@@ -20,8 +21,11 @@ from pydantic import BaseModel
 
 from greenhouse_protocol.assignment import Assignment, ExecutionReport
 from greenhouse_protocol.authorisation import AuthorisationConfig
-from greenhouse_protocol.contracts.consumer import OutcomeBatch
+from greenhouse_protocol.budget import InformationBudget
+from greenhouse_protocol.context import CapabilityContext
+from greenhouse_protocol.contracts.consumer import ForecastBatch, OutcomeBatch
 from greenhouse_protocol.contracts.gateway import GatewayLimits, PlanState, Receipt
+from greenhouse_protocol.forecast import Forecast
 from greenhouse_protocol.outcome import ActionOutcome
 from greenhouse_protocol.plan import ActionKey, ActionState, Plan
 
@@ -40,6 +44,10 @@ PUBLISHED: Final[dict[str, type[BaseModel]]] = {
     "plan-state.schema.json": PlanState,
     "gateway-limits.schema.json": GatewayLimits,
     "outcome-batch.schema.json": OutcomeBatch,
+    "capability-context.schema.json": CapabilityContext,
+    "information-budget.schema.json": InformationBudget,
+    "forecast.schema.json": Forecast,
+    "forecast-batch.schema.json": ForecastBatch,
 }
 
 
@@ -88,6 +96,14 @@ def test_the_schemas_say_what_a_record_refuses_across_its_fields() -> None:
     assert defs["Harvest"]["else"]["required"] == ["organ_id"]
     assert defs["Lateness"]["then"]["required"] == ["fallback"]
     assert [case["required"] for case in defs["Recurrence"]["oneOf"]] == [["count"], ["until"]]
+    budget = json.loads((SCHEMAS_DIR / "information-budget.schema.json").read_text())
+    assert [case["required"] for case in budget["if"]["anyOf"]] == [
+        ["full_state"],
+        ["forecasts"],
+        ["assets"],
+    ]
+    assert budget["then"] == {"properties": {"oracle": {"const": True}}, "required": ["oracle"]}
+    assert budget["else"] == {"properties": {"oracle": {"const": False}}}
 
 
 def test_no_schema_is_published_outside_the_list() -> None:
