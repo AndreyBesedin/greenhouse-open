@@ -213,6 +213,32 @@ def test_a_pull_requests_entry_is_what_its_description_gives_under_its_section(
     assert release.changelog_entry(body) == entry
 
 
+def test_a_pull_requests_last_section_ends_where_reviewable_appends_its_own() -> None:
+    body = (
+        "## Changelog\n\nnone\n\n<!-- Reviewable:start -->\n- - -\n"
+        "This change is [<img src=x>](https://reviewable.io/reviews/o/r/1)\n"
+        "<!-- Reviewable:end -->\n"
+    )
+
+    assert release.changelog_entry(body) == "none"
+
+
+@pytest.mark.parametrize(
+    ("entry", "none"),
+    [
+        ("none", True),
+        ("None.", True),
+        ("None: documentation only.", True),
+        ("none (examples only)", True),
+        ("none: docs only (a decision record and the roadmap).", True),
+        ("None of the defaults change: a fan turns.", False),
+        ("`greenhouse-sim`: a fan that turns.", False),
+    ],
+)
+def test_none_is_given_alone_or_with_its_reason(entry: str, none: bool) -> None:
+    assert release.gives_none(entry) is none
+
+
 @pytest.mark.parametrize(
     ("body", "bot", "branch", "said"),
     [
