@@ -10,6 +10,7 @@ at every hour of a run with the manifest's converged solver.
 """
 
 import copy
+import hashlib
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
@@ -20,6 +21,7 @@ import pytest
 from research.reproductions.reduced_tomgro import compare as tomgro
 from research.reproductions.reduced_tomgro.model import Hour, State, run
 from research.reproductions.vanthoor_katzin import compare as vanthoor
+from research.reproductions.vanthoor_katzin.drivers import csv_text
 from research.reproductions.vanthoor_katzin.model import STATES as VANTHOOR_STATES
 from research.reproductions.vanthoor_katzin.model import derivatives
 
@@ -125,10 +127,17 @@ def test_vanthoor_katzin_agrees_with_its_reference_when_both_are_converged() -> 
     assert all(each.within for each in differences), differences
 
 
-def test_vanthoor_katzin_refuses_drivers_other_than_the_pinned_ones(tmp_path: Path) -> None:
-    pinned = vanthoor.HERE / "drivers.csv"
-    changed = tmp_path / "drivers.csv"
-    changed.write_bytes(pinned.read_bytes().replace(b"520.000000000000", b"521.000000000000", 1))
+def test_vanthoor_katzin_drivers_are_made_as_the_manifest_pins_them() -> None:
+    """They are made, not committed (decision 0063, rule 2), and the
+    reference read them from a file: they must come out byte for byte, on
+    every platform this runs on."""
+    made = csv_text().encode()
+
+    assert hashlib.sha256(made).hexdigest() == vanthoor.manifest()["drivers"]["sha256"]
+
+
+def test_vanthoor_katzin_refuses_drivers_other_than_the_pinned_ones() -> None:
+    changed = csv_text().encode().replace(b"520.000000000000", b"521.000000000000", 1)
 
     with pytest.raises(ValueError, match="sha256"):
         vanthoor.drivers(changed, vanthoor.manifest()["drivers"]["sha256"])

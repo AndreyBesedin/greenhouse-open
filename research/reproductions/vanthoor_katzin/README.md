@@ -32,8 +32,12 @@ same drivers with a pinned reference implementation.
   - the drivers and their sha256;
   - the two solvers' settings;
   - what is compared, with its tolerances.
-- **The drivers:** [`drivers.csv`](drivers.csv), written by
-  [`drivers.py`](drivers.py). They are the numbers of the
+- **The drivers:** made by [`drivers.py`](drivers.py), not committed
+  (decision
+  [0063](../../../docs/decisions/0063-a-data-file-is-generated-committed-or-fetched-by-one-rule.md),
+  rule 2): the comparison makes them in memory, and the reference reads
+  them from the file it writes. The manifest pins their sha256, and a test
+  holds what `drivers.py` makes to it. They are the numbers of the
   [TOMGRO reproduction's](../reduced_tomgro/README.md) synthetic season,
   120 days hour by hour, so that both models are driven alike:
   - its air temperature as the canopy's;
@@ -54,8 +58,9 @@ same drivers with a pinned reference implementation.
 
 ## The results
 
-There are three comparisons, each against the reference's kept output on
-these drivers.
+There are three comparisons, each against the reference's output on these
+drivers: the rates and the converged run are held, against its kept
+outputs; the run with its defaults is recorded.
 
 **The rates, at the same states:** the six states' rates of change at 2,879
 points. Each point is half an hour between output moments, at states from
@@ -92,7 +97,10 @@ equations':
   answers are 8 to 9e-3 °C day from it.
 
 The tolerances stay as declared, and the defaults' comparison is recorded
-as this result, not held.
+as this result, not held. Since no test compares against it, the
+reference's output with these settings is not kept (decision 0063):
+`run_reference.py` writes it into its scratch folder, and the comparison,
+given its path, prints this table again.
 
 **The run, with a converged solver** (BDF, `rtol` 1e-10, `atol` 1e-7), against
 the same tolerances. These settings were declared after the first run. They
@@ -124,8 +132,9 @@ converged, and GreenLight took 4.8 s and 19.5 s.
 [`tests/test_reproductions.py`](../../../tests/test_reproductions.py)
 holds the rates on every run of the root tests, and the converged run
 where the slow tests run (CI). It also checks that the rates catch a
-parameter moved by a millionth, and that drivers other than the pinned
-ones are refused. Three changes to `model.py` each fail the rates:
+parameter moved by a millionth and a rate gone to NaN, that the drivers
+are made as the manifest pins them, and that drivers other than the
+pinned ones are refused. Three changes to `model.py` each fail the rates:
 - the leaves' published pruning rate, 5e4, in place of GreenLight's 1e5;
 - the first hour interpolated rather than held;
 - Γ's reference temperature moved by a millionth.
@@ -149,19 +158,22 @@ solved tightly, give its answer on these drivers.
 # environment with what its run imports.
 research/reproductions/vanthoor_katzin/reference/setup.sh /tmp/greenlight-reference
 mkdir -p /tmp/greenlight-reference/scratch
+# The drivers, into the file it reads; this prints the sha256 the manifest pins.
+python -m research.reproductions.vanthoor_katzin.drivers /tmp/greenlight-reference/drivers.csv
 /tmp/greenlight-reference/venv/bin/python -I \
     research/reproductions/vanthoor_katzin/reference/run_reference.py \
-    research/reproductions/vanthoor_katzin/drivers.csv \
+    /tmp/greenlight-reference/drivers.csv \
     research/reproductions/vanthoor_katzin/reference \
     /tmp/greenlight-reference/scratch
 
-# This implementation, against it.
-python -m research.reproductions.vanthoor_katzin.compare
+# This implementation, against it, and against its run with the defaults.
+python -m research.reproductions.vanthoor_katzin.compare \
+    /tmp/greenlight-reference/scratch/defaults.csv
 ```
 
-The reference's three outputs come back byte for byte. They are
-`reference/defaults.csv`, `reference/converged.csv` and
-`reference/rates.csv`, its outputs on these drivers, kept so that the
-comparison runs without the reference. They are the work of GreenLight's
-BSD 3-Clause Clear-licensed code (Copyright (c) 2025 David Katzin,
-Wageningen Research Foundation), run here unmodified.
+The reference's three outputs come back byte for byte. Two are kept, so
+that the comparison runs without the reference (decision 0063, rule 3):
+`reference/converged.csv` and `reference/rates.csv`, 461 and 718 KB. The
+third, `defaults.csv`, stays in the scratch folder. They are the work of
+GreenLight's BSD 3-Clause Clear-licensed code (Copyright (c) 2025 David
+Katzin, Wageningen Research Foundation), run here unmodified.

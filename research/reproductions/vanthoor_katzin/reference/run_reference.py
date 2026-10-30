@@ -2,15 +2,18 @@
 
     <its venv>/bin/python -I run_reference.py <drivers.csv> <reference folder> <scratch folder>
 
-GreenLight runs unmodified: the crop's definition and the standalone
-extension, as its `main_vanthoor_crop.json` composes them, with the
-reproduction's drivers in place of that file's EnergyPlus series, from 0 s
-to 120 days. It runs twice, with the manifest's two solver settings:
+The drivers are the file `drivers.py` writes. GreenLight runs unmodified:
+the crop's definition and the standalone extension, as its
+`main_vanthoor_crop.json` composes them, with the reproduction's drivers in
+place of that file's EnergyPlus series, from 0 s to 120 days. It runs
+twice, with the manifest's two solver settings:
 
-- `defaults.csv`: its default options, checked here before the run;
+- `defaults.csv`: its default options, checked here before the run. It is
+  written into the scratch folder, not kept: no test compares against it
+  (decision 0063), and `compare.py` reports it when given its path;
 - `converged.csv`: the same, its tolerances tightened to the manifest's.
 
-Each keeps, at the hourly output step, the six states, the leaf area index
+Each holds, at the hourly output step, the six states, the leaf area index
 and the rate of the fruit's harvest, every value in full (`repr`).
 
 - `rates.csv`: the six states' rates of change as GreenLight works them
@@ -117,7 +120,7 @@ def main(drivers: Path, folder: Path, scratch: Path) -> None:
         raise SystemExit(f"GreenLight {greenlight.__version__} is installed, not {VERSION}")
     defaults, _, _ = solve(drivers, scratch, "defaults", {})
     write(
-        folder / "defaults.csv",
+        scratch / "defaults.csv",
         KEPT,
         zip(*(defaults[name].to_numpy() for name in KEPT), strict=True),
     )

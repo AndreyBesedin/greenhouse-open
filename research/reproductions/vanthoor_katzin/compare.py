@@ -1,27 +1,31 @@
 """Compares this implementation with the reference's outputs.
 
-    python -m research.reproductions.vanthoor_katzin.compare
+    python -m research.reproductions.vanthoor_katzin.compare [<defaults.csv>]
 
-It checks the drivers against the manifest's checksum, then makes the
-manifest's three comparisons, each against the reference's kept output
+It makes the drivers and checks them against the manifest's checksum, then
+makes the manifest's comparisons against the reference's kept outputs
 (`reference/`, made by `reference/run_reference.py`):
 
 - the rates: the six states' rates of change, at the same moments and
   states, with no solver between;
-- the run with each of the manifest's two solvers, `defaults` and
-  `converged`: each output at each hourly moment, the six states, the leaf
-  area index and the fruit harvested, accumulated alike from both rates.
+- the run with the manifest's `converged` solver: each output at each
+  hourly moment, the six states, the leaf area index and the fruit
+  harvested, accumulated alike from both rates.
 
-It prints each output's largest difference, as a share of what its
+Given the reference's run with its `defaults` solver, which
+`run_reference.py` writes into its scratch folder, it compares that run
+too. It prints each output's largest difference, as a share of what its
 tolerance allows, and each run's time. It fails if a difference lies
 beyond its tolerance in the rates or the converged run. The defaults'
 comparison is reported, not held: their answer moves beyond the
 tolerances when the reference's own tolerance moves by a part in 10⁷
-(README.md).
+(README.md). No test compares against it, so its output is not kept
+(decision 0063).
 """
 
 import csv
 import hashlib
+import io
 import itertools
 import json
 import math
@@ -32,6 +36,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
 
+from research.reproductions.vanthoor_katzin.drivers import csv_text
 from research.reproductions.vanthoor_katzin.model import (
     STATES,
     Drivers,
@@ -45,6 +50,7 @@ HERE: Final = Path(__file__).resolve().parent
 
 COMPARED: Final = (*STATES, "lai", "harvested_fruit")
 HELD: Final = "converged"
+REPORTED: Final = "defaults"
 
 
 @dataclass(frozen=True)
@@ -69,13 +75,12 @@ def manifest() -> dict[str, Any]:
     return loaded
 
 
-def drivers(path: Path, sha256: str) -> Drivers:
+def drivers(content: bytes, sha256: str) -> Drivers:
     """The drivers, refused if they are not the ones the manifest pins."""
-    found = hashlib.sha256(path.read_bytes()).hexdigest()
+    found = hashlib.sha256(content).hexdigest()
     if found != sha256:
         raise ValueError(f"the drivers' sha256 is {found}, not {sha256}")
-    with path.open(newline="") as file:
-        rows = list(csv.DictReader(file))
+    rows = list(csv.DictReader(io.StringIO(content.decode())))
     return Drivers(
         times=[float(row["Time"]) for row in rows],
         t_can=[float(row["tCan"]) for row in rows],
@@ -85,7 +90,7 @@ def drivers(path: Path, sha256: str) -> Drivers:
 
 
 def _pinned_drivers(m: dict[str, Any]) -> Drivers:
-    return drivers(HERE / m["drivers"]["file"], m["drivers"]["sha256"])
+    return drivers(csv_text().encode(), m["drivers"]["sha256"])
 
 
 def _parameters(m: dict[str, Any]) -> dict[str, float]:
@@ -182,15 +187,15 @@ def _largest(
     )
 
 
-def compare_run(solver: str) -> tuple[list[Difference], float]:
+def compare_run(solver: str, output: Path | None = None) -> tuple[list[Difference], float]:
     """Each output's largest difference from the reference's run with the
-    same solver, over its moments, and this implementation's run's time
-    (s)."""
+    same solver, its kept output or `output`, over its moments, and this
+    implementation's run's time (s)."""
     m = manifest()
     moments, mine, took = ours(solver)
-    their_moments, theirs = reference(
-        HERE / m["solving"]["solvers"][solver]["reference_output"], float(m["output_step_s"])
-    )
+    if output is None:
+        output = HERE / m["solving"]["solvers"][solver]["reference_output"]
+    their_moments, theirs = reference(output, float(m["output_step_s"]))
     if moments != their_moments:
         raise ValueError("this implementation's output moments are not the reference's")
     tolerances = m["compared"]["tolerances"]
@@ -243,20 +248,19 @@ def _report(differences: Sequence[Difference]) -> None:
         )
 
 
-def main() -> int:
+def main(defaults: Path | None) -> int:
     rates = compare_rates()
     print("The rates, at the same moments and states:")
     _report(rates)
-    held = list(rates)
-    for solver in manifest()["solving"]["solvers"]:
-        differences, took = compare_run(solver)
-        role = "held" if solver == HELD else "reported, not held"
-        print(f"The run with the {solver} solver ({role}; ours took {took:.1f} s):")
-        _report(differences)
-        if solver == HELD:
-            held += differences
-    return 0 if all(each.within for each in held) else 1
+    differences, took = compare_run(HELD)
+    print(f"The run with the {HELD} solver (held; ours took {took:.1f} s):")
+    _report(differences)
+    if defaults is not None:
+        reported, took = compare_run(REPORTED, defaults)
+        print(f"The run with the {REPORTED} solver (reported, not held; ours took {took:.1f} s):")
+        _report(reported)
+    return 0 if all(each.within for each in [*rates, *differences]) else 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(Path(sys.argv[1]) if len(sys.argv) > 1 else None))

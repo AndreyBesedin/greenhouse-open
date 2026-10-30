@@ -244,9 +244,8 @@
     }
   },
   "drivers": {
-    "file": "drivers.csv",
     "sha256": "30893a9a0ce51af9e781d43ec7c919e0720e50c65840001b1a8a3dbe3f85c3de",
-    "written_by": "drivers.py, from reduced_tomgro's drivers: the same numbers",
+    "written_by": "drivers.py, from reduced_tomgro's drivers: the same numbers; made, not committed (decision 0063, rule 2), in memory for the comparison and into the file the reference reads",
     "columns": {
       "Time": "s from the season's start; hour h of day d at ((d - 1) * 24 + h) * 3600",
       "tCan": "°C, the canopy's temperature: the TOMGRO drivers' air temperature",
@@ -267,7 +266,7 @@
         "atol": 0.001,
         "rtol": 1e-06,
         "declared": "before the first run: GreenLight's default options",
-        "reference_output": "reference/defaults.csv"
+        "kept": "no (decision 0063): no test compares against its output; its comparison is reported, not held, and recorded in README.md, and run_reference.py writes the output into its scratch folder"
       },
       "converged": {
         "method": "BDF",
