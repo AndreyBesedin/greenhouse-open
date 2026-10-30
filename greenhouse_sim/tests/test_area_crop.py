@@ -213,6 +213,22 @@ def test_a_canopy_of_an_hours_step_meets_one_of_a_days_at_every_midnight() -> No
     assert hourly.course(SCOPES[0].scope_id, 30) == course(400.0, hours=range(6, 7))
 
 
+def test_a_canopy_of_an_hours_step_is_as_the_hours_ended_have_it() -> None:
+    """P16's QA, its fourth point: asked for at 09:00, 09:30, 10:00, 09:00
+    again and 10:00 again, the canopy is each time as 9, 9, 10, 9 and 10 of
+    the day's hours have it, and at the run's end as a canopy nobody asked
+    about."""
+    asked = _crop(step_s=HOUR_S)
+    moments = [9 * HOUR_S, 9.5 * HOUR_S, 10 * HOUR_S, 9 * HOUR_S, 10 * HOUR_S]
+
+    seen = [asked.at(moment) for moment in moments]
+
+    nobody = _crop(step_s=HOUR_S)
+    assert seen == [nobody.on(9), nobody.on(9), nobody.on(10), nobody.on(9), nobody.on(10)]
+    assert seen[0] != seen[2]
+    assert asked.at(DAYS * DAY_S) == _crop(step_s=HOUR_S).at(DAYS * DAY_S)
+
+
 def test_two_rows_in_one_course_grow_the_same_per_m2() -> None:
     """Whatever their areas, as an area model grows per m² of its basis."""
     instances = _crop().instances_on(DAYS)

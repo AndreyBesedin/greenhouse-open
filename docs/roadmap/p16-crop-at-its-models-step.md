@@ -61,10 +61,12 @@ run has keep a day's step, and nothing of theirs moves.
 ### The crop at an instant
 
 - `core/clock.steps_ended(time_s, step_s)`: the steps a crop has lived by a
-  moment, as `days_ended` is for a day's step.
-- The scene, a plant's panel, the light, a checkpoint, the run's state and
-  the walk's truth read the crop at the steps ended by their moment. For a
-  model of a day's step, that is the day's start, as today.
+  moment, as `days_ended` is for a day's step; `CropSteps.at(time_s)`, the
+  crop once it has lived them.
+- The scene, a plant's panel, and the walk's records and truth read the
+  crop at their moment (`at`). For a model of a day's step, that is the
+  day's start, as before. A checkpoint is taken at a day's start, which
+  every step passes, and the run's state counts the days lived.
 - The crop's states depend on its grid alone, never on the moments asked
   about: a test asks at many moments, in any order and any number of times,
   and compares each with a run nobody asked about.
@@ -108,7 +110,7 @@ run has keep a day's step, and nothing of theirs moves.
 | --- | --- | --- | --- |
 | P16.1 | A crop's step: `core/crop_days.CropDays` becomes `core/crop_steps.CropSteps`, keeping a crop's states by its growth's step, a whole divisor of a day (`core/clock.steps_a_day`), which a growth declares (`step_s`) and works out (`next_step`); a day for every crop today, so that a crop grown plant by plant has its days as its steps, and one grown by area its days as a view of them. No behaviour changes. | `refactor(sim): a run's crop keeps its states by its model's step (0064)` | Done |
 | P16.2 | A model grown by area at its own step: `AreaRung.step_s` and `live_step`, `StepCourse`; a profile's resolution (`DriverProfile.resolution_s`), and its refusal of a step that is not a whole number of its spans; `house_hours` giving a step's hours; the test canopy at an hour's step, meeting the day's at every midnight. | `feat(sim): a crop grown by area steps at its model's step (0064)` | Done |
-| P16.3 | The crop at an instant: `core/clock.steps_ended`; the scene, a plant, the light, the checkpoint, the run's state and the walk's truth read the steps ended by their moment; the test that asking never changes the crop. | `feat(sim): a run's crop at an instant, as its steps have it (0064)` | Planned |
+| P16.3 | The crop at an instant: `core/clock.steps_ended` and `CropSteps.at`; the scene, a plant's panel, and the walk's records and truth read the crop at their moment; the tests that asking never changes the crop, the hourly canopy's among them (the QA scenario's fourth point). | `feat(sim): a run's crop at an instant, as its steps have it (0064)` | Done |
 | P16.4 | Crop work at a step's boundary: the crop registration declaring its model's step; the plan's check, the gateway's `why_not` and `earliest`, and planned actions kept by step, from that step; refusals naming it. | `feat(sim): crop work at a boundary of its model's step (0064)` | Planned |
 | P16.5 | The plant model guide says how a model declares its step; the QA scenario below, run and recorded. | `docs: a crop model's step, and P16's QA` | Planned |
 

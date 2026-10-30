@@ -33,7 +33,14 @@ def days_ended(time_s: float) -> int:
     """How many of a run's days have ended by a moment, at it or before: the
     days its crop has lived (`greenhouse_sim.core.crop`), as its plants live
     each at the midnight that ends it."""
-    return math.floor(time_s / DAY_S)
+    return steps_ended(time_s, DAY_S)
+
+
+def steps_ended(time_s: float, step_s: float) -> int:
+    """How many steps of `step_s` seconds have ended by a moment, at it or
+    before: the steps a crop of that step has lived (decision 0064), as a
+    crop grown plant by plant has lived the days ended."""
+    return math.floor(time_s / step_s)
 
 
 def steps_a_day(step_s: float) -> int:

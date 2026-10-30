@@ -26,7 +26,9 @@ one, whose step is a day (`greenhouse_sim.core.crop.PlantGrowth`, decision
   the steps a request is working through rather than living them beside it.
 
 Since a step divides a day, the run's day `d` begins the crop's step
-`d × steps_a_day`.
+`d × steps_a_day`. Between two steps, the crop is as at the earlier
+(`at`): its steps are worked out on their grid alone, however often, and
+in whatever order, anyone asks for it (decision 0064).
 """
 
 import threading
@@ -37,7 +39,7 @@ from dataclasses import dataclass
 from typing import Final, Protocol
 
 from greenhouse_sim.climate.run import LOOK_AGAIN_S
-from greenhouse_sim.core.clock import DAY_S, steps_a_day
+from greenhouse_sim.core.clock import DAY_S, steps_a_day, steps_ended
 from greenhouse_sim.core.crop_actions import CropAction, CropEffect
 
 # How many steps' states a crop keeps besides its first step's and its
@@ -182,6 +184,11 @@ class CropSteps[StateT, LivedT]:
                     self._kept_changed.notify_all()
             self._keep(step, state)
             return state
+
+    def at(self, time_s: float) -> StateT:
+        """The crop `time_s` into the run, from its start to its end: once it
+        has lived the steps ended by then, after the last one's crop work."""
+        return self.on(steps_ended(time_s, self.growth.step_s))
 
     def _lived_through(self, start: int, step: int) -> StateT:
         state = self._kept[start]

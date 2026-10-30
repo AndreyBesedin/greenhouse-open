@@ -92,7 +92,9 @@ def crop_records(
             events.append(
                 _harvested(plant.plant_id, day_start, config.greenhouse_id, mass_g, count)
             )
-    measured = [grown_by.plants.measured(plant) for plant in plants]
+    # The walk finds the crop as the steps ended by its moment have it.
+    walked_crop = crop.at(day * DAY_S + WALK_S)
+    measured = [grown_by.plants.measured(plant) for plant in walked_crop]
     walked = walk_moment(start, day)
     source = RecordSource(type=SourceType.SIMULATION, source_id=run_id)
     observations = [
