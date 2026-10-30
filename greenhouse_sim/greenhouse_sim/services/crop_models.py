@@ -51,7 +51,11 @@ from greenhouse_sim.biology.tomato.organ.fruit import is_red
 from greenhouse_sim.biology.tomato.organ.geometry import top_height_m
 from greenhouse_sim.biology.tomato.organ.topology import HarvestFruit, Plant
 from greenhouse_sim.biology.tomato.organ.transplants import DEVELOPMENT, TRANSPLANT_CD
-from greenhouse_sim.biology.tomato.tomgro.parameters import TomgroParameters, TomgroState
+from greenhouse_sim.biology.tomato.tomgro.parameters import (
+    INITIAL_STATE,
+    TomgroParameters,
+    TomgroState,
+)
 from greenhouse_sim.core.area_crop import AreaInstance
 from greenhouse_sim.core.crop import OrganRung
 from greenhouse_sim.core.drivers import DriverProfile, driver_profile
@@ -207,6 +211,10 @@ class CropRegistration[PlantT: CropPlant]:
     # None for a model that takes none of the run's own crop actions.
     crop_actions: CropActions | None
 
+    def __post_init__(self) -> None:
+        if (self.plants is None) == (self.area is None):
+            raise ValueError(f"the {self.name} crop model grows single plants or by area: one")
+
 
 def _organ_implausible(state: CropState, day: int) -> list[str]:
     """A plant that breaks the structure's rules, or whose thermal time is
@@ -324,6 +332,11 @@ def _simple_probed(_plants: Sequence[SimplePlant]) -> tuple[int, float]:
     return 0, 0.0
 
 
+# Reduced-State TOMGRO's parameter sets, by the name a scenario's section
+# gives (`ReducedTomgroCrop.parameter_set`).
+TOMGRO_PARAMETERS: Final = {"gnvman": TomgroParameters()}
+
+
 def _tomgro_crop(config: ScenarioConfig) -> ReducedTomgroCrop:
     """A scenario's Reduced-State TOMGRO section, which its rows grow."""
     crop = config.crop
@@ -333,24 +346,32 @@ def _tomgro_crop(config: ScenarioConfig) -> ReducedTomgroCrop:
 
 
 def _tomgro_rung(config: ScenarioConfig) -> TomgroRung:
-    """The model with its parameter set, its light read at its section's
-    canopy height."""
-    return TomgroRung(TomgroParameters(), _tomgro_crop(config).canopy_height_m)
+    """The model with its section's parameter set, its light read at its
+    section's canopy height."""
+    section = _tomgro_crop(config)
+    return TomgroRung(TOMGRO_PARAMETERS[section.parameter_set], section.canopy_height_m)
 
 
-def _tomgro_implausible(state: TomgroCropState, _day: int) -> list[str]:
-    """A canopy that is not finite, or whose leaf area index is past the
-    most the model grows."""
-    most = TomgroParameters().lai_max
+def _tomgro_implausible(state: TomgroCropState, day: int) -> list[str]:
+    """A canopy that is not finite; whose nodes or leaf area index are
+    negative, or the leaf area index past the most any parameter set grows;
+    or, on the run's first day, that is not as the model plants it. Its
+    weights may fall, as its net growth may be negative, and are not
+    bounded."""
+    most = max(parameters.lai_max for parameters in TOMGRO_PARAMETERS.values())
     problems = []
     for instance in state.instances:
         canopy = instance.state
         if not all(map(math.isfinite, canopy.model_dump().values())):
             problems.append(f"{instance.scope_id}'s canopy is not finite")
+        elif canopy.n < 0 or canopy.lai < 0:
+            problems.append(f"{instance.scope_id}'s nodes or leaf area index are negative")
         elif canopy.lai > most:
             problems.append(
                 f"{instance.scope_id}'s leaf area index is {canopy.lai:.6g}, past {most:.6g}"
             )
+        elif day == 0 and canopy != INITIAL_STATE:
+            problems.append(f"{instance.scope_id}'s canopy is not as the model plants it")
     return problems
 
 

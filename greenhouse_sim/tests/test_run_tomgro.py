@@ -4,11 +4,13 @@ house's air and the light above each row, hour by hour; keep it in a
 checkpoint and carry on from it; and ask nothing of it they ask of plants.
 """
 
+import re
 from collections.abc import Iterator
 from typing import Final
 
 import pytest
 from greenhouse_protocol.actions import ActionKind
+from pydantic import ValidationError
 
 from greenhouse_sim.biology.tomato.tomgro.parameters import INITIAL_STATE
 from greenhouse_sim.core.clock import DAY_S
@@ -23,7 +25,7 @@ from greenhouse_sim.services.crop_models import AreaCropState, TomgroCropState, 
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.runs import RunRequest, crop_model_refusal
-from greenhouse_sim.services.scenarios import initial_scene
+from greenhouse_sim.services.scenarios import initial_scene, plant_ids
 from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.scopes import row_scopes
@@ -89,13 +91,48 @@ def test_it_takes_no_crop_actions_and_no_crop_work(grown: Simulator) -> None:
     assert crop_model_refusal(CONFIG, ActionKind.HARVEST) == (
         "tomgro_box grows its crop with the reduced_tomgro model, which takes no harvest"
     )
-    worked = ScenarioConfig.model_validate(
-        CONFIG.model_dump()
-        | {"greenhouse_id": "worked_tomgro_box", "crop_work": {"harvest_every_days": 7}}
-    )
-    grown.catalogue.register(worked)
-    with pytest.raises(InvalidRequest, match="grows its crop by area, which takes no crop work"):
-        scenario_crop(grown, RunRequest("worked_tomgro_box"))
+    assert plant_ids(CONFIG) == []
+    # Refused when it is read, rather than whenever its crop is asked for.
+    with pytest.raises(ValidationError, match="grown by area, which takes no crop work"):
+        ScenarioConfig.model_validate(
+            CONFIG.model_dump()
+            | {"greenhouse_id": "worked_tomgro_box", "crop_work": {"harvest_every_days": 7}}
+        )
+
+
+def test_its_canopy_stands_under_the_eaves() -> None:
+    # Its light is read at the canopy's top: 0.675 m of planting and 4 m.
+    with pytest.raises(
+        ValidationError, match=re.escape("its canopy's top, 4.675 m, stands above the eaves, 4 m")
+    ):
+        ScenarioConfig.model_validate(
+            CONFIG.model_dump() | {"crop": {"kind": "reduced_tomgro", "canopy_height_m": 4.0}}
+        )
+
+
+@pytest.mark.parametrize(
+    ("day", "changed", "refused"),
+    [
+        (2, {"hours": 1}, "a crop's step of its model is 24 hours, each lived so"),
+        (2, {"lai": -1.0}, "row_1's nodes or leaf area index are negative"),
+        (0, {"lai": 3.0}, "row_1's canopy is not as the model plants it"),
+    ],
+)
+def test_an_uploaded_checkpoint_no_run_reaches_is_refused(
+    day: int, changed: dict[str, float], refused: str
+) -> None:
+    with _simulator() as simulator:
+        saved = checkpoints.save_checkpoint(simulator, RUN, time_s=day * DAY_S)
+        document = checkpoints.checkpoint(simulator, saved.checkpoint_id).model_dump(mode="json")
+    state = document["models"]["crop"]["state"]
+    if "hours" in changed:
+        first = state["lived"][0]["row_1"]
+        first["hours"] = first["hours"][: int(changed["hours"])]
+    else:
+        state["instances"][0]["state"]["lai"] = changed["lai"]
+
+    with _simulator() as simulator, pytest.raises(InvalidRequest, match=re.escape(refused)):
+        checkpoints.upload_checkpoint(simulator, document)
 
 
 def test_its_records_and_its_truth_name_no_plant(grown: Simulator) -> None:

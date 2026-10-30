@@ -57,10 +57,11 @@ from pydantic import (
 from greenhouse_sim.climate.day import window_start
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.climate.psychrometrics import saturation_ratio_g_kg
-from greenhouse_sim.core.clock import DAY_S, days_ended
+from greenhouse_sim.core.clock import DAY_S, days_ended, steps_a_day
 from greenhouse_sim.digests import short_digest
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.parts import Part
+from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.scenarios.manifest_files import opening_file
 from greenhouse_sim.scenarios.registry import ModelRun, models_run
@@ -91,6 +92,7 @@ from greenhouse_sim.services.scenarios import (
     with_weather,
 )
 from greenhouse_sim.services.stores import Store
+from greenhouse_sim.units import HOUR_S
 from greenhouse_sim.world.scopes import row_scopes
 
 if TYPE_CHECKING:
@@ -437,24 +439,10 @@ def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
             "first day, and only then"
         )
     climate_run(simulator, uploaded.run())
-    checked_crop_plan(
-        changed(simulator.catalogue, config, SceneChanges(layout=uploaded.layout)), uploaded.plan
-    )
-    by_plant = registration(config).plants is not None
-    expected = (
-        plant_ids(config)
-        if by_plant
-        else [scope.scope_id for scope in row_scopes(config.layout, config.envelope)]
-    )
-    units = "plants" if by_plant else "scopes"
-    if uploaded.crop.named != expected:
-        raise InvalidRequest(f"a checkpoint's {units} are {uploaded.scenario_id}'s, in order")
-    if len(uploaded.crop.lived) != uploaded.day or any(
-        set(day) != set(expected) for day in uploaded.crop.lived
-    ):
-        raise InvalidRequest(
-            f"a crop on day {uploaded.day} has lived {uploaded.day} days, each of its {units}'"
-        )
+    # Its run's scenario, with the checkpoint's own layout.
+    its_run = changed(simulator.catalogue, config, SceneChanges(layout=uploaded.layout))
+    checked_crop_plan(its_run, uploaded.plan)
+    _check_crop(uploaded, its_run)
     venting = None if config.control is None else config.control.venting
     drying = None if config.control is None else config.control.dehumidifying
     stages = 0 if venting is None else len(venting.stages)
@@ -472,6 +460,35 @@ def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
     if problems:
         raise InvalidRequest(f"a checkpoint no run reaches: {problems[0]}")
     return uploaded
+
+
+def _check_crop(uploaded: Checkpoint, its_run: ScenarioConfig) -> None:
+    """A checkpoint's crop made of its run's plants, or of its scopes on its
+    own layout, in order, having lived each day before its own, or each of
+    its model's steps, each of them for the step's hours; refused if not."""
+    area = registration(its_run).area
+    if area is None:
+        expected, lived = plant_ids(its_run), uploaded.day
+        said = f"{uploaded.day} days, each of its plants'"
+        if uploaded.crop.named != expected:
+            raise InvalidRequest(f"a checkpoint's plants are {uploaded.scenario_id}'s, in order")
+    else:
+        step_s = area.rung(its_run).step_s
+        expected = [scope.scope_id for scope in row_scopes(its_run.layout, its_run.envelope)]
+        lived = uploaded.day * steps_a_day(step_s)
+        said = f"{lived} of its model's steps, each of its scopes'"
+        if uploaded.crop.named != expected:
+            raise InvalidRequest(
+                f"a checkpoint's scopes are its layout's rows in {uploaded.scenario_id}, in order"
+            )
+        hours = round(step_s / HOUR_S)
+        courses = [course for step in uploaded.crop.lived for course in step.values()]
+        if any(len(getattr(course, "hours", ())) != hours for course in courses):
+            raise InvalidRequest(f"a crop's step of its model is {hours} hours, each lived so")
+    if len(uploaded.crop.lived) != lived or any(
+        set(step) != set(expected) for step in uploaded.crop.lived
+    ):
+        raise InvalidRequest(f"a crop on day {uploaded.day} has lived {said}")
 
 
 def _implausible(checkpoint: Checkpoint) -> list[str]:

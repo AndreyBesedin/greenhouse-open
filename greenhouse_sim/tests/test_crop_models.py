@@ -3,6 +3,7 @@
 under the same name, what it declares, which every registration answers as
 the services take it, and which no service asks of it by its name."""
 
+import dataclasses
 import re
 from pathlib import Path
 from typing import Any, Final
@@ -21,6 +22,8 @@ from greenhouse_sim.scenarios.crop_parameters import ReducedTomgroCrop
 from greenhouse_sim.scenarios.registry import MODELS
 from greenhouse_sim.services.crop_models import (
     CROP_MODELS,
+    ORGAN,
+    REDUCED_TOMGRO,
     CropActions,
     CropRegistration,
     registration,
@@ -183,3 +186,9 @@ def test_no_service_asks_which_crop_model_it_holds() -> None:
     ]
     assert len(modules) > 20
     assert asking == []
+
+
+@pytest.mark.parametrize(("plants", "area"), [(None, None), (ORGAN.plants, REDUCED_TOMGRO.area)])
+def test_a_registration_grows_single_plants_or_by_area(plants: Any, area: Any) -> None:
+    with pytest.raises(ValueError, match="grows single plants or by area: one"):
+        dataclasses.replace(REDUCED_TOMGRO, plants=plants, area=area)
