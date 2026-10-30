@@ -43,6 +43,15 @@ class AreaInstance[StateT: BaseModel](BaseModel):
     state: StateT
 
 
+def planted[StateT: BaseModel](
+    scopes: Sequence[CropScope], rung: AreaRung[StateT]
+) -> tuple[AreaInstance[StateT], ...]:
+    """A crop grown by `rung` on each of `scopes` as it is planted, before
+    its first step: each scope's canopy as its model starts one."""
+    first = rung.planted()
+    return tuple(AreaInstance(scope_id=scope.scope_id, state=first) for scope in scopes)
+
+
 class AreaGrowth[StateT: BaseModel]:
     """A crop grown by area (`greenhouse_sim.core.crop_steps.Growth`): `rung`
     on each of `scopes`, each of its steps in its course, as `courses` gives
@@ -60,8 +69,7 @@ class AreaGrowth[StateT: BaseModel]:
         return self.rung.step_s
 
     def first(self) -> tuple[AreaInstance[StateT], ...]:
-        planted = self.rung.planted()
-        return tuple(AreaInstance(scope_id=scope.scope_id, state=planted) for scope in self.scopes)
+        return planted(self.scopes, self.rung)
 
     def lived(self, step: int, state: tuple[AreaInstance[StateT], ...]) -> dict[str, StepCourse]:
         """Each scope's course on the run's step `step`."""

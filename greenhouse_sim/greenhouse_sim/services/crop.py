@@ -37,7 +37,7 @@ from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.day import ClimateDay
 from greenhouse_sim.core.area_crop import AreaCrop
-from greenhouse_sim.core.clock import DAY_S, days_ended, run_day
+from greenhouse_sim.core.clock import DAY_S, days_ended, run_day, steps_a_day
 from greenhouse_sim.core.crop import RunCrop
 from greenhouse_sim.core.drivers import step_courses
 from greenhouse_sim.core.stopwatch import Stopwatch
@@ -236,19 +236,20 @@ def _area_crop(
 ) -> AreaCrop[Any]:
     """A run's crop grown by area from its first day: its model on each
     row's scope, each of its steps in its course as its driver profile gives
-    it, the house's air and the light above each scope under `sunlight`. Refused if
-    its profile does not give a driver its model reads, or if its scenario
-    sets crop work, which a crop grown by area does not take."""
+    it, the house's air and the light above each scope under `sunlight`.
+    Refused if its profile does not give a driver its model reads, or cannot
+    give its model's step, or if that step does not divide a day. A scenario
+    that sets crop work for it is refused when it is read
+    (`ScenarioConfig`)."""
     rung = area.rung(config)
     profile = area.profile(config)
-    refused = profile.refusal(rung.drivers)
+    refused = profile.refusal(rung.drivers) or profile.step_refusal(rung.step_s)
     if refused is not None:
         raise InvalidRequest(f"{config.greenhouse_id}: {refused}")
-    work = config.crop_work
-    if work.harvest_every_days is not None or work.lower_every_days is not None:
-        raise InvalidRequest(
-            f"{config.greenhouse_id} grows its crop by area, which takes no crop work"
-        )
+    try:
+        steps_a_day(rung.step_s)
+    except ValueError as error:
+        raise InvalidRequest(f"{config.greenhouse_id}: {error}") from error
     scopes = row_scopes(config.layout, config.envelope)
     light = ScopeLight(sunlight, scopes, rung.canopy_height_m)
     return AreaCrop(

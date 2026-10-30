@@ -19,7 +19,7 @@ from greenhouse_protocol.greenhouse import Plant
 from pydantic import BaseModel, ConfigDict, JsonValue, ValidationError
 
 from greenhouse_sim.climate.commands import DailyCommand
-from greenhouse_sim.core.area_crop import AreaInstance
+from greenhouse_sim.core.area_crop import AreaInstance, planted
 
 # `Scenarios` is the services' too: the consumer's service names it from here.
 from greenhouse_sim.scenarios.catalogue import CatalogueEntry
@@ -213,7 +213,11 @@ def scenario(catalogue: Scenarios, scenario_id: str) -> ScenarioConfig:
 
 
 def plant_ids(config: ScenarioConfig) -> list[str]:
-    """The identifiers of a scenario's whole crop: rows times columns plants."""
+    """The identifiers of a scenario's whole crop: rows times columns plants;
+    none if its crop is grown by area, which has no plants (decision
+    0062)."""
+    if registration(config).plants is None:
+        return []
     plant_count = config.rows * config.columns
     return [f"{config.greenhouse_id}_plant_{i:03d}" for i in range(1, plant_count + 1)]
 
@@ -251,11 +255,10 @@ def initial_scene(
         transplants = [rung.transplant(plant_id) for plant_id in plant_ids(config)]
         crop = grown_by.plants.drawn(transplants, config)
     elif grown_by.area is not None:
-        planted = grown_by.area.rung(config).planted()
-        instances: list[AreaInstance[Any]] = [
-            AreaInstance(scope_id=scope.scope_id, state=planted)
-            for scope in row_scopes(config.layout, config.envelope)
-        ]
+        canopy = grown_by.area.rung(config)
+        instances: tuple[AreaInstance[Any], ...] = planted(
+            row_scopes(config.layout, config.envelope), canopy
+        )
         crop = grown_by.area.drawn(instances, config)
     return house.model_copy(update={"entities": [*house.entities, *crop]})
 

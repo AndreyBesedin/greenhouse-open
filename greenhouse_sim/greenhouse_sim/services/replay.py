@@ -86,7 +86,8 @@ def day_probes(simulator: Simulator, run: RunRequest, days: int) -> list[DayProb
     for day in range(days):
         end = (day + 1) * DAY_S
         air = climate.house.air_at(end)
-        grown = crop.on(day + 1)
+        # The crop at the day's end, in its model's steps.
+        grown = crop.on((day + 1) * crop.steps_a_day)
         readings: list[JsonValue] = [
             [observation.sensor_id, (hour + 1) * HOUR_S, observation.value]
             for hour in range(HOURS_A_DAY)

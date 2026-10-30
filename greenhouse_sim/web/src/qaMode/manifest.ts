@@ -120,10 +120,17 @@ export async function loadRunManifest(
   return answer.status === "loaded" ? { status: "loaded", manifest: answer.value } : answer;
 }
 
+/** Each crop model in words, by its registry's name; one the viewer was
+ * not built with by that name. */
 const CROP_MODELS: Readonly<Record<string, string>> = {
   organ: "organ by organ",
   simple: "the simple daily model",
+  reduced_tomgro: "Reduced-State TOMGRO, by area on each row",
 };
+
+export function cropModelInWords(model: string): string {
+  return CROP_MODELS[model] ?? model;
+}
 
 /** A run's manifest in words, a line for each of its parts. */
 export function describeManifest(manifest: RunManifest): {
@@ -146,7 +153,7 @@ export function describeManifest(manifest: RunManifest): {
     season: `from ${manifest.startDate}, ${manifest.days} days${
       manifest.openingDay === null ? "" : `, opening on day ${manifest.openingDay}`
     }`,
-    crop: `${manifest.variety}, ${CROP_MODELS[manifest.cropModel] ?? manifest.cropModel}`,
+    crop: `${manifest.variety}, ${cropModelInWords(manifest.cropModel)}`,
     airflow: `${manifest.airflow}, prescribed`,
     weather: [`${weatherName}, ${manifest.weatherKind}`, ...overrides].join(", "),
     models: Object.entries(manifest.models)

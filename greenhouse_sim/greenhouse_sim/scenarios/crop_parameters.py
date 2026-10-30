@@ -8,7 +8,7 @@ weather's and the air field's; and the walk's measurement noises under its
 (`greenhouse_sim.scenarios.registry`).
 """
 
-from typing import Any, Final, Literal
+from typing import Any, ClassVar, Final, Literal
 
 from pydantic import (
     BaseModel,
@@ -39,6 +39,11 @@ class SimpleCrop(BaseModel):
     (`greenhouse_sim.biology.tomato.simple`)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
+
+    # Whether the model grows the crop by area, with no plants (decision
+    # 0062), so that it takes no crop work and its canopy stands under the
+    # eaves.
+    BY_AREA: ClassVar[bool] = False
 
     kind: Literal["simple"] = "simple"
 
@@ -78,6 +83,8 @@ class OrganCrop(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
+    BY_AREA: ClassVar[bool] = False
+
     kind: Literal["organ"] = "organ"
 
 
@@ -91,6 +98,8 @@ class ReducedTomgroCrop(BaseModel):
     does not grow: the run's choice, in m, not the model's."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
+
+    BY_AREA: ClassVar[bool] = True
 
     kind: Literal["reduced_tomgro"] = "reduced_tomgro"
 

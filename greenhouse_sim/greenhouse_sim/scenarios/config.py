@@ -157,6 +157,29 @@ class ScenarioConfig(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def _a_crop_grown_by_area_fits(self) -> Self:
+        """A crop grown by area takes no crop work, which works plants, and
+        its canopy, whose light is read at its top, stands under the
+        eaves."""
+        if not self.crop.BY_AREA:
+            return self
+        work = self.crop_work
+        if work.harvest_every_days is not None or work.lower_every_days is not None:
+            raise ValueError(
+                f"its {self.crop.kind} crop is grown by area, which takes no crop work"
+            )
+        rows = self.layout.crop_rows
+        height = getattr(self.crop, "canopy_height_m", None)
+        if rows is not None and height is not None:
+            top = rows.planting_height + height
+            if top > self.envelope.eave_height:
+                raise ValueError(
+                    f"its canopy's top, {top:g} m, stands above the eaves, "
+                    f"{self.envelope.eave_height:g} m"
+                )
+        return self
+
     @property
     def simple_crop(self) -> SimpleCrop:
         """The simple crop's settings: its crop's, or the simple crop's own
