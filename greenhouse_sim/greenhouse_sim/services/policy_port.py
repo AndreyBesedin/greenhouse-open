@@ -83,6 +83,8 @@ class PlayedRun(Protocol):
 
     def cancel_plan(self, plan_id: str, *, revision: int, epoch: int, by: Principal) -> Receipt: ...
 
+    def owner_of(self, outcome: ActionOutcome) -> Principal | None: ...
+
 
 @dataclass
 class _Kept[RecordT]:
@@ -132,8 +134,6 @@ class RunPolicyPort:
         self._outcomes: _Kept[ActionOutcome] = _Kept()
         # The types its context's sources observe, in an epoch.
         self._observed: tuple[int, frozenset[ObservationType]] = (NO_EPOCH, frozenset())
-        # Who owns each plan of an epoch, once asked.
-        self._owners: dict[tuple[int, str], Principal] = {}
 
     def run(self) -> RunDescriptor:
         return run_descriptor(self._played.state())
@@ -264,12 +264,14 @@ class RunPolicyPort:
         keep: Callable[[RecordT, int], RecordT | None],
     ) -> PlaybackState:
         """Reads the run's log on from where it last read, keeping what its
-        principal reads: from its start again in a new epoch."""
+        principal reads: from its start again in a new epoch, read again
+        until a cut is of the epoch it keeps, however often the run starts
+        over meanwhile."""
         while True:
             cut = read(kept.read)
             if cut.state.epoch != kept.epoch:
                 kept.epoch, kept.read, kept.records = cut.state.epoch, 0, []
-                cut = read(0)
+                continue
             kept.records += [
                 kept_record
                 for record in cut.records
@@ -297,10 +299,7 @@ class RunPolicyPort:
         return observation if observation.observation_type in self._observed[1] else None
 
     def _owned(self, outcome: ActionOutcome, epoch: int) -> ActionOutcome | None:
-        key = (epoch, outcome.plan_id)
-        if key not in self._owners:
-            self._owners[key] = self._played.plan(outcome.plan_id).owner
-        return outcome if self._owners[key] == self.principal else None
+        return outcome if self._played.owner_of(outcome) == self.principal else None
 
 
 def policy_port(playbacks: Playbacks, run_id: str, principal: Principal) -> RunPolicyPort:

@@ -79,10 +79,11 @@ from greenhouse_protocol.authorisation import AuthorisationConfig
 from greenhouse_protocol.context import CapabilityContext
 from greenhouse_protocol.contracts.consumer import OutcomeBatch
 from greenhouse_protocol.contracts.execution import ActionNotExecutable
-from greenhouse_protocol.contracts.gateway import GatewayLimits, PlanState, Receipt
+from greenhouse_protocol.contracts.gateway import STARTED_OVER, GatewayLimits, PlanState, Receipt
 from greenhouse_protocol.contracts.memory_gateway import InMemoryGateway
 from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
+from greenhouse_protocol.outcome import ActionOutcome, OutcomeStatus
 from greenhouse_protocol.plan import (
     ActionKey,
     ActionState,
@@ -409,8 +410,10 @@ class Playback:
             unhonoured=run_unhonoured(played),
             crew=simulator.crew,
         )
-        # Who may do what on its run, as its gateway enforces it.
+        # Who may do what on its run, as its gateway enforces it; and who
+        # owns each plan given it, by the epoch it was given in.
         self._authorisation = simulator.authorisation
+        self._owners: dict[tuple[int, str], Principal] = {}
         self._gateway = InMemoryGateway(
             simulator.authorisation,
             self.start,
@@ -584,17 +587,15 @@ class Playback:
                 raise InvalidRequest(
                     f"{LOCAL_OPERATOR.id} is not authorised to {change.kind} {change.target}"
                 )
-        receipt = self._written(
-            lambda: self._gateway.submit(
-                Plan(
-                    plan_id=TARGETS_PLAN,
-                    run_id=self.run_id,
-                    epoch=self._epoch,
-                    revision=revision + 1,
-                    actions=(*kept, *added),
-                ),
-                by=LOCAL_OPERATOR,
-            )
+        receipt = self._given(
+            Plan(
+                plan_id=TARGETS_PLAN,
+                run_id=self.run_id,
+                epoch=self._epoch,
+                revision=revision + 1,
+                actions=(*kept, *added),
+            ),
+            by=LOCAL_OPERATOR,
         )
         if not receipt.accepted:
             raise InvalidRequest("; ".join(receipt.errors))
@@ -854,7 +855,7 @@ class Playback:
             successor = self._successor
             if successor is None:
                 self._advance()
-                return self._written(lambda: self._gateway.submit(plan, by=by))
+                return self._given(plan, by=by)
         return successor.submit(plan, by=by)
 
     def cancel(self, keys: Sequence[ActionKey], *, by: Principal = LOCAL_OPERATOR) -> Receipt:
@@ -903,6 +904,30 @@ class Playback:
             return self._gateway.actions(
                 states=states, kinds=kinds, targets=targets, plan_id=plan_id
             )
+
+    def _given(self, plan: Plan, *, by: Principal) -> Receipt:
+        """A plan given to its gateway by `by`, its owner if it is the
+        first to give it in its epoch, as the gateway has it."""
+        receipt = self._written(lambda: self._gateway.submit(plan, by=by))
+        if receipt.accepted:
+            self._owners.setdefault((plan.epoch, plan.plan_id), by)
+        return receipt
+
+    def owner_of(self, outcome: ActionOutcome) -> Principal | None:
+        """Who owns the plan an outcome of its run's is of: whoever first gave
+        it in the epoch it was given in. An action the run cancelled as it
+        started over ends in the new epoch, among its first outcomes, its
+        plan the epoch's before, which the gateway no longer holds."""
+        given_in = outcome.epoch
+        started_over = (
+            outcome.status == OutcomeStatus.CANCELLED
+            and outcome.cancelled_by is None
+            and STARTED_OVER in (outcome.reason or "")
+        )
+        if started_over:
+            given_in -= 1
+        with self._lock:
+            return self._owners.get((given_in, outcome.plan_id))
 
     def _written(self, write: Callable[[], Receipt]) -> Receipt:
         """A write to its gateway, refused as a conflict once its run has
