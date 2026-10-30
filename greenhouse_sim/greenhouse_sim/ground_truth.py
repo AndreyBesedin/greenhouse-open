@@ -118,7 +118,7 @@ def ground_truth(
         at = walk_moment(start, day)
         readings += [
             TrueReading(plant_id=plant.plant_id, observation_type=kind, timestamp=at, value=value)
-            for plant in grown.plants_on(day)
+            for plant in grown.at(day * DAY_S + WALK_S)
             for kind, value in walked_truly(measured(plant)).items()
         ]
     return GroundTruth(

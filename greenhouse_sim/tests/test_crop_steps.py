@@ -85,6 +85,21 @@ def test_a_crop_of_an_hours_step_keeps_its_hours_and_meets_each_midnight() -> No
         crop.on(2 * HOURS_A_DAY + 1)
 
 
+def test_the_crop_at_a_moment_is_the_same_whoever_asks_when() -> None:
+    """Decision 0064: between two of its steps a crop is as at the earlier,
+    and its steps are worked out on their grid alone, so asking for it at
+    any moments, in any order and as often as anyone likes, never changes
+    it."""
+    asked, _ = _steps(HOUR_S, 2 * HOURS_A_DAY)
+    moments = [9 * HOUR_S, 9.5 * HOUR_S, 10 * HOUR_S, 9 * HOUR_S, 30.25 * HOUR_S, 10 * HOUR_S]
+
+    seen = [asked.at(moment) for moment in moments]
+
+    assert seen == [sum(range(int(moment // HOUR_S))) for moment in moments]
+    nobody, _ = _steps(HOUR_S, 2 * HOURS_A_DAY)
+    assert asked.at(2 * DAY_S) == nobody.at(2 * DAY_S)
+
+
 @pytest.mark.parametrize("step_s", [7 * HOUR_S, 0.0, -HOUR_S, 2 * DAY_S])
 def test_a_step_that_does_not_divide_a_day_is_refused(step_s: float) -> None:
     with pytest.raises(ValueError, match="a crop's step divides a day"):
