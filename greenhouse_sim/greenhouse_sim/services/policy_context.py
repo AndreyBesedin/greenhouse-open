@@ -68,9 +68,10 @@ from greenhouse_sim.world.scopes import row_scopes, scope_plants
 from greenhouse_sim.world.sensors import PointSensor
 
 # The sources that name no sensor in their records, as the context names
-# them.
-HEAT_METER: Final = "heat_meter"
-CROP_WALK: Final = "crop_walk"
+# them: with a ':', which no sensor's identifier holds (`ITEM_ID_PATTERN`),
+# so that none is a sensor's too.
+HEAT_METER: Final = "meter:heating"
+CROP_WALK: Final = "measurement:crop_walk"
 # What a door or a vent does, at a level: it opens.
 OPENS: Final = "opens"
 CELSIUS: Final = "°C"
@@ -107,8 +108,9 @@ def run_context(
 def delivered_every_s(cadence_s: float, every_s: float) -> float:
     """How often a sensor that samples every `cadence_s` reaches a consumer
     that receives the samples taken at multiples of `every_s`: the least
-    common multiple of the two."""
-    sampled, received = Fraction(cadence_s), Fraction(every_s)
+    common multiple of the two, each the decimal it is written as, 1.2 s
+    for 1.2 rather than the binary fraction nearest it."""
+    sampled, received = Fraction(str(cadence_s)), Fraction(str(every_s))
     return float(
         Fraction(
             math.lcm(sampled.numerator, received.numerator),

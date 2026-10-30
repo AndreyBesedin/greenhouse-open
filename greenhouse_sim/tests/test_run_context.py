@@ -4,6 +4,7 @@ installation as it plays, its scenario and its authorisation. It names
 what the run's gateway acts on, and every source of what the run delivers,
 at the cadence it delivers it."""
 
+import re
 from collections import defaultdict
 from collections.abc import Iterator
 from itertools import pairwise
@@ -19,8 +20,10 @@ from greenhouse_protocol.enums import ObservationType
 from greenhouse_protocol.plan import Principal, PrincipalKind
 
 from greenhouse_sim.climate.control import Control, HeatingLoop, VentingLoop, VentStage
+from greenhouse_sim.domain.sensors import SensorKind
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.layout_files import layout_names
+from greenhouse_sim.sensors.air import samples
 from greenhouse_sim.services.climate_runs import most_heating_c
 from greenhouse_sim.services.crop_log import WALKED
 from greenhouse_sim.services.crop_models import registration
@@ -41,6 +44,9 @@ from greenhouse_sim.services.policy_context import (
 from greenhouse_sim.services.scenarios import SceneChanges, changed, scenario
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import DAY_S
+from greenhouse_sim.world.geometry import Vector3
+from greenhouse_sim.world.identifiers import ITEM_ID_PATTERN
+from greenhouse_sim.world.sensors import PointSensor
 
 SCENARIO: Final = "reference_greenhouse"
 LIMITS: Final = GatewayLimits(max_actions=10, max_occurrences=100)
@@ -175,12 +181,54 @@ def test_a_heating_target_goes_no_higher_than_the_dead_band_allows(plain: Simula
 
 @pytest.mark.parametrize(
     ("cadence_s", "every_s", "delivered_s"),
-    [(60.0, 300.0, 300.0), (300.0, 60.0, 300.0), (7.0, 300.0, 2100.0), (1.5, 2.0, 6.0)],
+    [
+        (60.0, 300.0, 300.0),
+        (300.0, 60.0, 300.0),
+        (7.0, 300.0, 2100.0),
+        (1.5, 2.0, 6.0),
+        (1.2, 300.0, 300.0),
+        (2.5, 300.0, 300.0),
+    ],
 )
 def test_a_sensor_reaches_a_consumer_at_the_least_common_multiple(
     cadence_s: float, every_s: float, delivered_s: float
 ) -> None:
+    """As the sampling delivers it: every sample a sensor takes at a
+    multiple of the consumer's cadence, its moments worked out as a run
+    works them out (`sensors.air.samples`)."""
+    sensor = PointSensor(
+        sensor_id="s",
+        kind=SensorKind.TEMPERATURE,
+        position=Vector3(x=0.0, y=0.0, z=1.0),
+        cadence_s=cadence_s,
+    )
+    delivered = [moment for moment in samples(sensor, DAY_S) if moment % every_s == 0]
+
     assert delivered_every_s(cadence_s, every_s) == delivered_s
+    assert {later - earlier for earlier, later in pairwise(delivered)} == {delivered_s}
+
+
+def test_a_source_that_names_no_sensor_is_named_as_no_sensor_is(plain: Simulator) -> None:
+    config = scenario(plain.catalogue, SCENARIO)
+    first, *others = config.layout.sensors
+    renamed = [first.model_copy(update={"sensor_id": "heat_meter"}), *others]
+    sensed = config.model_copy(
+        update={"layout": config.layout.model_copy(update={"sensors": renamed})}
+    )
+
+    context = run_context(
+        sensed,
+        run_id="run",
+        epoch=0,
+        principal=LOCAL_OPERATOR,
+        authorisation=LOCAL_AUTHORISATION,
+        limits=LIMITS,
+        every_s=EVERY_S,
+    )
+
+    ids = [source.source_id for source in context.sources]
+    assert {"heat_meter", HEAT_METER, CROP_WALK} <= set(ids)
+    assert not any(re.fullmatch(ITEM_ID_PATTERN, name) for name in (HEAT_METER, CROP_WALK))
 
 
 class _Clock:
