@@ -94,6 +94,10 @@ description checks it.
   through a harness that moves its run.
 - `memory_policy`: an in-memory reference implementation of a policy's
   port, on the in-memory gateway, to develop a port against.
+- `policy_client`: a policy's port over HTTP (`HttpPolicyPort`), each call
+  a request to the port's routes with the policy's bearer token, made with
+  the standard library alone, so that a policy in a process of its own
+  depends on the protocol only.
 - `consumer`: the interface a client reads a running producer through:
   `/consumer/v1` routes answering a run's identity, epoch and clock, its
   greenhouse description, and its observations and events after a cursor,

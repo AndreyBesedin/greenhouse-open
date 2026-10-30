@@ -114,8 +114,70 @@ class SimulatorServer(ThreadingHTTPServer):
             self.simulator.close()
 
 
-class _Handler(BaseHTTPRequestHandler):
+class JsonHandler(BaseHTTPRequestHandler):
+    """A handler that reads a request's JSON body as far as it says, and
+    answers JSON, saying how long the simulator took: the local API's and
+    a policy's port's."""
+
     timeout = READ_TIMEOUT_S
+
+    def _body(self) -> bytes | Response:
+        """The request's body, as long as its `Content-Length` says, or the
+        refusal if that is not a length, is more than the API reads, or is
+        more than the client sends."""
+        declared = self.headers.get("Content-Length") or "0"
+        if not declared.isdigit():
+            return Response(
+                HTTPStatus.BAD_REQUEST, {"error": f"Content-Length {declared!r} is not a length"}
+            )
+        length = int(declared)
+        if length > MAX_BODY_BYTES:
+            return Response(
+                HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+                {"error": f"a body of {length:,} bytes; the API reads {MAX_BODY_BYTES:,} at most"},
+            )
+        try:
+            body = self.rfile.read(length)
+        except TimeoutError:
+            body = b""
+        if len(body) < length:
+            self.close_connection = True
+            return Response(
+                HTTPStatus.REQUEST_TIMEOUT,
+                {"error": f"the body stopped short of the {length:,} bytes announced"},
+            )
+        return body
+
+    def _safely[T](self, answer: Callable[[], T]) -> T | Response:
+        """The route's answer, or a 500 if the simulator failed unexpectedly."""
+        try:
+            return answer()
+        except Exception:  # every failure is answered, and logged
+            self.log_error("failed to answer %s %s", self.command, self.path)
+            traceback.print_exc()
+            return Response(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": UNEXPECTED_FAILURE})
+
+    def _send(self, response: Response, started: float) -> None:
+        """Sends the answer, saying how long the simulator took to give it,
+        from `started`, its JSON written. A client gone by then, as a viewer
+        goes from a request it no longer wants, is let go."""
+        body = json.dumps(response.body).encode()
+        took_ms = (time.perf_counter() - started) * MS_PER_S
+        self.send_response(response.status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Server-Timing", f"{SIMULATOR_METRIC};dur={took_ms:.1f}")
+        try:
+            self.end_headers()
+            self.wfile.write(body)
+        except BrokenPipeError, ConnectionResetError:
+            self.close_connection = True
+            self.log_message('"%s": the client left before its answer', self.requestline)
+
+
+class _Handler(JsonHandler):
+    """The local API's: the consumer interface's routes, the gateway's, then
+    the viewer's."""
 
     def do_GET(self) -> None:
         started = time.perf_counter()
@@ -156,62 +218,9 @@ class _Handler(BaseHTTPRequestHandler):
 
     do_PATCH = do_DELETE = do_PUT
 
-    def _body(self) -> bytes | Response:
-        """The request's body, as long as its `Content-Length` says, or the
-        refusal if that is not a length, is more than the API reads, or is
-        more than the client sends."""
-        declared = self.headers.get("Content-Length") or "0"
-        if not declared.isdigit():
-            return Response(
-                HTTPStatus.BAD_REQUEST, {"error": f"Content-Length {declared!r} is not a length"}
-            )
-        length = int(declared)
-        if length > MAX_BODY_BYTES:
-            return Response(
-                HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
-                {"error": f"a body of {length:,} bytes; the API reads {MAX_BODY_BYTES:,} at most"},
-            )
-        try:
-            body = self.rfile.read(length)
-        except TimeoutError:
-            body = b""
-        if len(body) < length:
-            self.close_connection = True
-            return Response(
-                HTTPStatus.REQUEST_TIMEOUT,
-                {"error": f"the body stopped short of the {length:,} bytes announced"},
-            )
-        return body
-
     @property
     def _simulator(self) -> Simulator:
         return cast(SimulatorServer, self.server).simulator
-
-    def _safely[T](self, answer: Callable[[], T]) -> T | Response:
-        """The route's answer, or a 500 if the simulator failed unexpectedly."""
-        try:
-            return answer()
-        except Exception:  # every failure is answered, and logged
-            self.log_error("failed to answer %s %s", self.command, self.path)
-            traceback.print_exc()
-            return Response(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": UNEXPECTED_FAILURE})
-
-    def _send(self, response: Response, started: float) -> None:
-        """Sends the answer, saying how long the simulator took to give it,
-        from `started`, its JSON written. A client gone by then, as a viewer
-        goes from a request it no longer wants, is let go."""
-        body = json.dumps(response.body).encode()
-        took_ms = (time.perf_counter() - started) * MS_PER_S
-        self.send_response(response.status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Server-Timing", f"{SIMULATOR_METRIC};dur={took_ms:.1f}")
-        try:
-            self.end_headers()
-            self.wfile.write(body)
-        except BrokenPipeError, ConnectionResetError:
-            self.close_connection = True
-            self.log_message('"%s": the client left before its answer', self.requestline)
 
 
 def _refused_method(method: str) -> Response:

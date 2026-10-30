@@ -5,9 +5,16 @@ and what is the simulator's own: cursors kept apart from the consumer
 interface's, the operator's plans unseen, a new epoch's logs started
 again."""
 
-from collections.abc import Callable, Sequence
+import json
+import threading
+from collections.abc import Callable, Iterator, Sequence
+from contextlib import ExitStack, contextmanager
 from datetime import datetime, timedelta
+from http import HTTPStatus
+from pathlib import Path
 from typing import Final
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
 
 import pytest
 from greenhouse_protocol.actions import SetLevel
@@ -23,13 +30,23 @@ from greenhouse_protocol.contracts.policy import (
     check_policy_port,
     conformance_policy_authorisation,
 )
+from greenhouse_protocol.contracts.policy_client import HttpPolicyPort, PortRefused
 from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.outcome import ActionOutcome, OutcomeStatus
 from greenhouse_protocol.plan import ActionKey, At, Plan, PlannedAction, Principal
 
+from greenhouse_sim.api import policy_server
+from greenhouse_sim.api.policy_server import PolicyPortServer
 from greenhouse_sim.services import playback
-from greenhouse_sim.services.errors import NotFound
+from greenhouse_sim.services.credentials import (
+    Credentials,
+    Role,
+    credentials_file,
+    new_credential,
+    new_credential_for,
+)
+from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR
 from greenhouse_sim.services.playback import (
     Playback,
@@ -38,7 +55,8 @@ from greenhouse_sim.services.playback import (
     RecordsAfter,
     delivered,
 )
-from greenhouse_sim.services.policy_port import RunPolicyPort, policy_port
+from greenhouse_sim.services.policy_port import PlayedRun, RunPolicyPort, policy_port
+from greenhouse_sim.services.policy_requests import ServedPorts
 from greenhouse_sim.services.simulator import Simulator
 
 # Its run's days cost next to nothing, and it has doors to set.
@@ -300,3 +318,168 @@ def test_a_port_is_opened_on_a_run_played_back(
     assert port.context().principal == POLICY
     with pytest.raises(NotFound):
         policy_port(simulator.playbacks, "no-such-run", POLICY)
+
+
+# Over the network (P15.5).
+
+
+@contextmanager
+def _served(
+    run: PlayedRun, principals: Sequence[Principal], *, role: Role = Role.POLICY
+) -> Iterator[tuple[str, dict[Principal, str]]]:
+    """A port's server on `run`, its credentials one token for each of
+    `principals`, in `role`: its root URL, and each principal's token."""
+    tokens: dict[Principal, str] = {}
+    credentials = []
+    for principal in principals:
+        tokens[principal], credential = new_credential(principal, role)
+        credentials.append(credential)
+    server = PolicyPortServer(ServedPorts(run, Credentials(credentials=tuple(credentials))))
+    serving = threading.Thread(target=server.serve_forever, daemon=True)
+    serving.start()
+    host, port = server.server_address[:2]
+    try:
+        yield f"http://{host!s}:{port}", tokens
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+class _OverHttp(HttpPolicyPort):
+    """A port over HTTP on a run a test steps and delivers records to."""
+
+    def __init__(self, url: str, tokens: dict[Principal, str], run: _Delivering) -> None:
+        super().__init__(url, tokens[POLICY])
+        self._url, self._tokens, self._run = url, tokens, run
+
+    def advance(self, to: datetime) -> None:
+        self._run.advance(to)
+
+    def deliver(self, records: Sequence[Delivered]) -> None:
+        self._run.deliver(records)
+
+    def open(self, principal: Principal) -> PolicyPort:
+        return HttpPolicyPort(self._url, self._tokens[principal])
+
+
+def test_a_port_over_the_network_keeps_the_contract(simulator: Simulator) -> None:
+    with ExitStack() as servers:
+
+        def make(authorisation: AuthorisationConfig, start: datetime) -> _OverHttp:
+            harness, _ = _port(simulator, SCENARIO, authorisation)
+            run = harness._delivering
+            url, tokens = servers.enter_context(_served(run, [POLICY, RIVAL]))
+            return _OverHttp(url, tokens, run)
+
+        assert check_policy_port(make, Playback(simulator, SCENARIO).start) == []
+
+
+def test_the_same_plan_has_the_same_receipt_by_either_transport(simulator: Simulator) -> None:
+    near, near_run = _port(simulator)
+    far_port, far_run = _port(simulator)
+    with _served(far_port._delivering, [POLICY]) as (url, tokens):
+        far = HttpPolicyPort(url, tokens[POLICY])
+        door = min(device.device_id for device in near.context().devices)
+        receipts = []
+        for port in (near, far):
+            run = port.run()
+            plans = [
+                Plan(
+                    plan_id=plan_id,
+                    run_id=run.run_id,
+                    epoch=run.epoch,
+                    revision=1,
+                    actions=(
+                        PlannedAction(
+                            action_id="open",
+                            action=SetLevel(device_id=door, level=1.0),
+                            timing=At(at=near_run.start + HOUR),
+                            proposed_by=proposer,
+                        ),
+                    ),
+                )
+                for plan_id, proposer in (("mine", POLICY), ("for_the_operator", LOCAL_OPERATOR))
+            ]
+            receipts.append([port.submit(plan) for plan in plans])
+
+        assert receipts[0] == receipts[1]
+        assert [receipt.accepted for receipt in receipts[1]] == [True, False]
+        assert far.plan("mine") == near.plan("mine") is not None
+        assert far.plan("for_the_operator") is None
+        assert far_run.run_id == near_run.run_id
+
+
+def _status(url: str, path: str, token: str | None = None, method: str = "GET") -> int:
+    headers = {} if token is None else {"Authorization": f"Bearer {token}"}
+    data = b"{}" if method == "POST" else None
+    try:
+        with urlopen(Request(url + path, data=data, method=method, headers=headers)) as answer:
+            status: int = answer.status
+            return status
+    except HTTPError as refused:
+        return refused.code
+
+
+def test_the_port_answers_policies_alone_and_none_of_the_local_apis_routes(
+    simulator: Simulator,
+) -> None:
+    port, _ = _port(simulator)
+    with (
+        _served(port._delivering, [POLICY]) as (url, tokens),
+        _served(port._delivering, [LOCAL_OPERATOR], role=Role.OPERATOR) as (operators, held),
+    ):
+        token = tokens[POLICY]
+
+        assert _status(url, "/policy/v1/run", token) == HTTPStatus.OK
+        assert _status(url, "/policy/v1/run") == HTTPStatus.UNAUTHORIZED
+        assert _status(url, "/policy/v1/run", "not-a-token") == HTTPStatus.UNAUTHORIZED
+        assert _status(operators, "/policy/v1/run", held[LOCAL_OPERATOR]) == HTTPStatus.FORBIDDEN
+        for route in (
+            "/api/scenarios",
+            "/consumer/v1/runs",
+            f"/actuation/v1/runs/{port.run().run_id}/plans/x",
+            "/policy/v2/run",
+        ):
+            assert _status(url, route, token) == HTTPStatus.NOT_FOUND, route
+        assert _status(url, "/policy/v1/plans", token) == HTTPStatus.METHOD_NOT_ALLOWED
+        assert _status(url, "/policy/v1/run", token, "PUT") == HTTPStatus.METHOD_NOT_ALLOWED
+        assert _status(url, "/policy/v1/plans", token, "POST") == HTTPStatus.BAD_REQUEST
+        with pytest.raises(PortRefused) as refused:
+            HttpPolicyPort(url, "not-a-token").context()
+        assert refused.value.status == HTTPStatus.UNAUTHORIZED
+        assert refused.value.detail == "no credential holds that token"
+
+
+def test_a_credentials_file_keeps_each_tokens_hash_and_never_the_token(tmp_path: Path) -> None:
+    token, credential = new_credential(POLICY)
+    rival_token, rival = new_credential(RIVAL)
+    path = tmp_path / "credentials.json"
+    path.write_text(Credentials(credentials=(credential, rival)).model_dump_json())
+
+    read = credentials_file(path)
+
+    assert token not in path.read_text() and rival_token not in path.read_text()
+    assert read.holder(token) == credential
+    assert read.holder(rival_token) == rival
+    assert read.holder(token + "x") is None
+    twice = Credentials(credentials=(credential,)).model_dump(mode="json")
+    twice["credentials"] *= 2
+    path.write_text(json.dumps(twice))
+    with pytest.raises(InvalidRequest, match="more than one credential"):
+        credentials_file(path)
+    with pytest.raises(InvalidRequest, match="kind:id"):
+        new_credential_for("naive_heating")
+
+
+def test_the_command_makes_a_credential_and_names_what_it_serves(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert policy_server.main(["--new-credential", "policy:naive_heating"]) == 0
+    printed = capsys.readouterr().out.splitlines()
+    token = printed[0].removeprefix("token, for its holder alone: ")
+    credential = Credentials.model_validate(
+        {"credentials": [json.loads(printed[1].removeprefix("its credential, for the file: "))]}
+    )
+    assert credential.holder(token) is not None
+    with pytest.raises(SystemExit):
+        policy_server.main([])

@@ -24,16 +24,12 @@ outcomes: it reaches the simulator through `services.actuation` alone. The
 server binds it, as the viewer's API, to this machine's loopback interface.
 """
 
-from collections.abc import Callable, Sequence
 from http import HTTPStatus
 from typing import Final
 from urllib.parse import parse_qs, urlsplit
 
-from pydantic import BaseModel, JsonValue
-
-from greenhouse_sim.api.responses import Response
+from greenhouse_sim.api.responses import Response, answer, detail, whole
 from greenhouse_sim.services import actuation
-from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound, ServiceError
 
 _PREFIX: Final = [segment for segment in actuation.ROUTES_PREFIX.split("/") if segment]
 
@@ -57,21 +53,21 @@ def actuation_respond(
     query = parse_qs(url.query, keep_blank_values=True)
     match method, segments:
         case "POST", ["runs", run_id, "plans"]:
-            return _answer(lambda: actuation.give(acts, run_id, body))
+            return answer(lambda: actuation.give(acts, run_id, body))
         case "POST", ["runs", run_id, "plans", plan_id, "cancel"]:
-            return _answer(
+            return answer(
                 lambda: actuation.cancel_plan(
                     acts,
                     run_id,
                     plan_id,
-                    revision=_whole(query, "revision"),
-                    epoch=_whole(query, "epoch"),
+                    revision=whole(query, "revision"),
+                    epoch=whole(query, "epoch"),
                 )
             )
         case "GET", ["runs", run_id, "plans", plan_id]:
-            return _answer(lambda: actuation.plan(acts, run_id, plan_id, _whole(query, "revision")))
+            return answer(lambda: actuation.plan(acts, run_id, plan_id, whole(query, "revision")))
         case "GET", ["runs", run_id, "actions"]:
-            return _answer(
+            return answer(
                 lambda: actuation.actions(
                     acts,
                     run_id,
@@ -82,7 +78,7 @@ def actuation_respond(
                 )
             )
         case "POST", ["runs", run_id, "actions", "cancel"]:
-            return _answer(lambda: actuation.cancel(acts, run_id, body))
+            return answer(lambda: actuation.cancel(acts, run_id, body))
         case _, (
             ["runs", _, "plans"]
             | ["runs", _, "plans", _, "cancel"]
@@ -90,22 +86,11 @@ def actuation_respond(
             | ["runs", _, "actions"]
             | ["runs", _, "actions", "cancel"]
         ):
-            return _detail(
+            return detail(
                 HTTPStatus.METHOD_NOT_ALLOWED, f"{url.path} answers another method than {method}"
             )
         case _:
-            return _detail(HTTPStatus.NOT_FOUND, f"no actuation route {url.path!r}")
-
-
-def _whole(query: dict[str, list[str]], name: str) -> int | None:
-    """A parameter's last value, a whole number, if the query gives it."""
-    values = query.get(name)
-    if not values:
-        return None
-    try:
-        return int(values[-1])
-    except ValueError:
-        raise InvalidRequest(f"{name} is a whole number, not {values[-1]!r}") from None
+            return detail(HTTPStatus.NOT_FOUND, f"no actuation route {url.path!r}")
 
 
 def _last(query: dict[str, list[str]], name: str) -> str | None:
@@ -117,26 +102,3 @@ def _last(query: dict[str, list[str]], name: str) -> str | None:
 def _listed(query: dict[str, list[str]], name: str) -> list[str]:
     """A filter's values: each it repeats, each comma separated."""
     return [value for given in query.get(name, []) for value in given.split(",") if value]
-
-
-def _answer(call: Callable[[], BaseModel | Sequence[BaseModel]]) -> Response:
-    try:
-        found = call()
-    except NotFound as error:
-        return _detail(HTTPStatus.NOT_FOUND, error.message)
-    except Conflict as error:
-        return _detail(HTTPStatus.CONFLICT, error.message)
-    except InvalidRequest as error:
-        return _detail(HTTPStatus.BAD_REQUEST, error.message, error.problems)
-    except ServiceError as error:
-        return _detail(HTTPStatus.BAD_REQUEST, error.message)
-    if isinstance(found, BaseModel):
-        return Response(HTTPStatus.OK, found.model_dump(mode="json"))
-    return Response(HTTPStatus.OK, [each.model_dump(mode="json") for each in found])
-
-
-def _detail(status: HTTPStatus, message: str, problems: Sequence[tuple[str, str]] = ()) -> Response:
-    body: dict[str, JsonValue] = {"detail": message}
-    if problems:
-        body["problems"] = [{"field": field, "message": said} for field, said in problems]
-    return Response(status, body)
