@@ -398,6 +398,38 @@ def test_a_release_with_entries_left_under_unreleased_is_not_tagged(root: Path) 
     assert merged(root) == ["CHANGELOG.md's Unreleased entries would be left out of the notes"]
 
 
+def test_a_release_whose_notes_leave_out_a_pull_request_merged_is_not_tagged(
+    root: Path,
+) -> None:
+    """Merged after the release was prepared, a pull request's entry would
+    be in no release's notes, the next counting it as released. One that
+    needs none, and the release's own, #7, are not waited for."""
+    in_time = _merged(40, "In time", "A thing in time.")
+    release.prepare("0.4.0", DAY, root, [in_time])
+    since_the_last = [
+        in_time,
+        _merged(41, "Late", "A late thing."),
+        _merged(42, "Late, needing none", "none"),
+        _merged(43, "Late and silent", None),
+        _merged(7, "The release", None),
+    ]
+
+    found = release.problems(
+        release.Merge.of(pull()),
+        OWNER,
+        OWNER,
+        managers=set(),
+        tags=TAGGED,
+        merged=since_the_last,
+        root=root,
+    )
+
+    assert found == [
+        "#43 Late and silent: no changelog entry, nor none",
+        "#41 Late: its entry is not in the notes",
+    ]
+
+
 def git(repo: Path, *arguments: str) -> str:
     return subprocess.run(
         ("git", *arguments), cwd=repo, check=True, capture_output=True, text=True
@@ -464,6 +496,13 @@ def test_verify_prints_the_version_of_the_tag_pushed(
     monkeypatch.setattr(release, "_head", lambda root: MERGE)
     monkeypatch.setattr(release, "_tags", lambda root: {**TAGGED, "v0.4.0": MERGE})
     monkeypatch.setattr(release, "managers_at", lambda revision, root: set())
+    counted: list[dict[str, Any]] = []
+
+    def merged_since_release(root: Path, **counting: Any) -> list[release.Merged]:
+        counted.append(counting)
+        return []
+
+    monkeypatch.setattr(release, "merged_since_release", merged_since_release)
     pulls = f"api repos/{{owner}}/{{repo}}/commits/{MERGE}/pulls"
     monkeypatch.setattr(
         release,
@@ -479,6 +518,8 @@ def test_verify_prints_the_version_of_the_tag_pushed(
 
     assert release.main([*verify, "--tag", "v0.4.0"]) == 0
     assert capsys.readouterr().out == "version=0.4.0\n"
+    # Up to the merge, from the release before it, though its own tag is in.
+    assert counted == [{"until": MERGE, "before": "0.4.0"}]
     assert release.main([*verify, "--tag", "v0.4.1"]) == 1
     assert "tag v0.4.1 does not name 0.4.0" in capsys.readouterr().err
 
@@ -497,6 +538,8 @@ def merged_release(
     git(repository, "remote", "add", "origin", str(origin))
     git(repository, "push", "-q", "origin", "main")
     monkeypatch.setattr(release, "ROOT", repository)
+    # Nothing merged but the release itself, whose notes are checked above.
+    monkeypatch.setattr(release, "merged_since_release", lambda root, **counting: [])
     answer = pull(merge_commit_sha=merge, base={"sha": base})
     monkeypatch.setattr(
         release,
@@ -598,3 +641,36 @@ def test_the_pull_requests_merged_since_the_last_release_are_those_after_its_tag
     assert [pull.number for pull in release.merged_since_release(repository)] == [2, 3]
     (arguments,) = asked
     assert "merged:>=" + git(repository, "show", "-s", "--format=%cs", "v0.3.0") in arguments
+
+
+def test_the_pull_requests_merged_up_to_a_release_are_counted_from_the_tag_before_it(
+    repository: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """As `verify` asks once the release's own tag is pushed: from the last
+    release before it, up to its merge, and none merged after."""
+    before = commit(repository, "merged before 0.3.0")
+    git(repository, "tag", "v0.3.0")
+    first = commit(repository, "merged after it")
+    merge = commit(repository, "0.4.0's release, merged")
+    git(repository, "tag", "v0.4.0")
+    later = commit(repository, "merged after the release")
+    listed: list[dict[str, Any]] = [
+        {"number": 1, "mergeCommit": {"oid": before}, "mergedAt": "2026-10-24T09:00:00Z"},
+        {"number": 2, "mergeCommit": {"oid": first}, "mergedAt": "2026-10-25T10:00:00Z"},
+        {"number": 3, "mergeCommit": {"oid": merge}, "mergedAt": "2026-10-25T11:00:00Z"},
+        {"number": 4, "mergeCommit": {"oid": later}, "mergedAt": "2026-10-25T12:00:00Z"},
+    ]
+    monkeypatch.setattr(
+        release,
+        "_gh",
+        lambda *_: [
+            {"title": f"#{pull['number']}", "body": "", "author": {"is_bot": False}, **pull}
+            for pull in listed
+        ],
+    )
+
+    up_to = release.merged_since_release(repository, until=merge, before="0.4.0")
+
+    assert [pull.number for pull in up_to] == [2, 3]
+    # Counted from the latest tag, its own, it would find none.
+    assert release.merged_since_release(repository, until=merge) == []
