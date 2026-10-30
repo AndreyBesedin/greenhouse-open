@@ -98,9 +98,10 @@ class Growth[StateT, LivedT](Protocol):
         """What the crop is made of, as a refusal names it."""
         ...
 
-    def read(self, state: object) -> StateT | None:
-        """`state` as a state of this crop, as a checkpoint gives one back;
-        None if it is not one."""
+    def read(self, state: object, lived: Sequence[object]) -> tuple[StateT, list[LivedT]] | None:
+        """`state` as a state of this crop, and `lived` as what it
+        experienced on each step before, as a checkpoint gives them back;
+        None if they are not this crop's."""
         ...
 
 
@@ -234,7 +235,7 @@ class CropSteps[StateT, LivedT]:
                 self._step(step, self.on(step))
             return self._lived[step]
 
-    def seed(self, step: int, state: object, lived: Sequence[LivedT]) -> None:
+    def seed(self, step: int, state: object, lived: Sequence[object]) -> None:
         """Take `state` as the crop at the run's `step`, and `lived` as what
         it experienced on each step before it, from a checkpoint of the same
         run (P09.5): later steps carry on from them. Refused if it is not
@@ -243,12 +244,13 @@ class CropSteps[StateT, LivedT]:
         if len(lived) != step:
             one, several = self._named()
             raise ValueError(f"a crop on {one} {step} has lived {step} {several}, not {len(lived)}")
-        own = self.growth.read(state)
-        if own is None:
+        read = self.growth.read(state, lived)
+        if read is None:
             raise ValueError(f"a crop of {self.growth.made_of} takes no others")
+        own, steps = read
         with self._working, self._keeping:
             if len(self._lived) < step:
-                self._lived = list(lived)
+                self._lived = steps
             self._kept.setdefault(step, own)
 
     def carry_on_from(self, other: CropSteps[StateT, LivedT], steps: int) -> None:

@@ -38,8 +38,11 @@ class _Counted:
     ) -> tuple[int, StepWork | None]:
         return state + lived, (StepWork((), {}) if planned else None)
 
-    def read(self, state: object) -> int | None:
-        return state if isinstance(state, int) else None
+    def read(self, state: object, lived: Sequence[object]) -> tuple[int, list[int]] | None:
+        steps = [step for step in lived if isinstance(step, int)]
+        if not isinstance(state, int) or len(steps) != len(lived):
+            return None
+        return state, steps
 
 
 def _steps(step_s: float = DAY_S, steps: int = DAYS) -> tuple[CropSteps[int, int], _Counted]:

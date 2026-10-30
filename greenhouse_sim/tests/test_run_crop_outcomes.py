@@ -222,6 +222,7 @@ def test_a_day_s_harvest_event_counts_its_crop_work_alone() -> None:
     )
     after = act(worked, HarvestFruit(fruit_id=unripe))
 
+    assert ORGAN.plants is not None
     whole, _ = ORGAN.plants.picked(after, plant, None)
     round_only, _ = ORGAN.plants.picked(after, plant, len(worked.history))
 

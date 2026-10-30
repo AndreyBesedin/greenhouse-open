@@ -100,6 +100,28 @@ HOUSE_HOURS: Final = DriverProfile(
 DRIVER_PROFILES: Final = {profile.name: profile for profile in (HOUSE_HOURS,)}
 
 
+def driver_profile(name: str, version: int) -> DriverProfile:
+    """The driver profile `name` at its `version`; refused, saying which it
+    has, if there is none of that name and version."""
+    found = DRIVER_PROFILES.get(name)
+    if found is None or found.version != version:
+        known = ", ".join(f"{each.name} {each.version}" for each in DRIVER_PROFILES.values())
+        raise ValueError(f"no driver profile {name} {version}: there are {known}")
+    return found
+
+
+def step_courses(
+    profile: DriverProfile, air: MeanAir, light: ScopeLight, *, step_s: float
+) -> Callable[[int], dict[str, StepCourse]]:
+    """Each scope's course on a step of the run, of `step_s` seconds, as
+    `profile` gives it, from the house's air, `air` its mean between two
+    moments, and the light above each scope; refused for a profile the run
+    has no way of giving."""
+    if profile is not HOUSE_HOURS:
+        raise ValueError(f"the run gives no drivers by the {profile.name} profile")
+    return house_hours(air, light, step_s=step_s)
+
+
 def house_hours(
     air: MeanAir, light: ScopeLight, *, step_s: float
 ) -> Callable[[int], dict[str, StepCourse]]:

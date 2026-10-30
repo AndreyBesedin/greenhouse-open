@@ -1,6 +1,6 @@
 # P14: Models chosen by the manifest
 
-**Status:** in progress: P14.1 to P14.3 and P14.5 to P14.8 are done, P14.7 but for its QA scenario; P14.9 is done but for its measurement part, and P14.10 is in progress; the rest is proposed. Its decision
+**Status:** in progress: P14.1 to P14.3 and P14.5 to P14.8 are done, P14.7 but for its QA scenario; P14.9 is done but for its measurement part, and P14.10 is in progress; the rest is proposed. What its reviews leave for later is in [the P14 clean-up](p14-cleanup.md). Its decision
 ([0054](../decisions/0054-models-are-chosen-by-the-manifest-from-a-registry.md))
 is Accepted, its open questions settled (below). This is the project that the
 [repository audit](../audits/2026-10-13-repository-audit.md) calls "P10",

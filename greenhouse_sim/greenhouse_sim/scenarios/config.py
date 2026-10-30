@@ -19,6 +19,7 @@ from greenhouse_sim.scenarios.crop_parameters import (
     WALK,
     CropWalk,
     OrganCrop,
+    ReducedTomgroCrop,
     SimpleCrop,
 )
 from greenhouse_sim.weather.recorded import RecordedWeather
@@ -68,11 +69,14 @@ class ScenarioConfig(BaseModel):
     columns: PositiveInt
     # How its runs grow the crop: by the simple daily model, or organ by
     # organ, each day from the run's air and each plant's own light
-    # (`greenhouse_sim.core.crop`); and what they do to it.
+    # (`greenhouse_sim.core.crop`), or by area (`greenhouse_sim.core.area_crop`);
+    # and what they do to it.
     crop_model: CropModel = CropModel.SIMPLE
     # Its crop model's parameters, of the model its rows grow: by default,
     # that model's own (`greenhouse_sim.scenarios.crop_parameters`).
-    crop: Annotated[SimpleCrop | OrganCrop, Field(discriminator="kind")] = SimpleCrop()
+    crop: Annotated[SimpleCrop | OrganCrop | ReducedTomgroCrop, Field(discriminator="kind")] = (
+        SimpleCrop()
+    )
     crop_work: CropWork = CropWork()
     # The daily walk through its crop's measurement errors.
     crop_walk: CropWalk = CropWalk()
@@ -151,6 +155,29 @@ class ScenarioConfig(BaseModel):
                 f"its crop's parameters are the {self.crop.kind} crop's, but it grows the "
                 f"{self.crop_model} crop"
             )
+        return self
+
+    @model_validator(mode="after")
+    def _a_crop_grown_by_area_fits(self) -> Self:
+        """A crop grown by area takes no crop work, which works plants, and
+        its canopy, whose light is read at its top, stands under the
+        eaves."""
+        if not self.crop.BY_AREA:
+            return self
+        work = self.crop_work
+        if work.harvest_every_days is not None or work.lower_every_days is not None:
+            raise ValueError(
+                f"its {self.crop.kind} crop is grown by area, which takes no crop work"
+            )
+        rows = self.layout.crop_rows
+        height = getattr(self.crop, "canopy_height_m", None)
+        if rows is not None and height is not None:
+            top = rows.planting_height + height
+            if top > self.envelope.eave_height:
+                raise ValueError(
+                    f"its canopy's top, {top:g} m, stands above the eaves, "
+                    f"{self.envelope.eave_height:g} m"
+                )
         return self
 
     @property

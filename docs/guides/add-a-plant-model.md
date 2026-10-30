@@ -57,6 +57,21 @@ of its step:
   `greenhouse_sim/tests/test_area_crop.py`, which holds every area model
   to the contract's rules at its own step.
 
+Its state is per m² of the area it declares (`AreaBasis`, a scope's floor
+or its cultivated ground, `greenhouse_sim/greenhouse_sim/world/scopes.py`),
+and each row's instance lives its steps in its course
+(`greenhouse_sim/greenhouse_sim/core/area_crop.py`). Its registration
+declares `area`, an `AreaAdapter`, in place of `plants`: its rung, its
+driver profile by name and version, and how its instances are drawn. Its
+checkpoint state is an `AreaCropState` of its own state. Reduced-State
+TOMGRO is the first (`greenhouse_sim/greenhouse_sim/core/tomgro_crop.py`),
+held to its reproduction's reference by
+`greenhouse_sim/tests/test_tomgro.py`, to the contract by
+`greenhouse_sim/tests/test_area_crop.py`, and to a scenario's run by
+`greenhouse_sim/tests/test_run_tomgro.py`. What is measured of it, its
+measurement models, is still to come in P14.9 of the
+[P14 roadmap](../roadmap/p14-models-by-manifest.md).
+
 ## Steps
 
 1. **The model's package:** a crop of its own under
@@ -90,7 +105,8 @@ of its step:
    `CropRegistration` of what the model declares:
    - **its state:** its state model, added to `CropModelState`, and what no
      run of it reaches in a checkpoint (`implausible`);
-   - **its plants** (`plants`, a `PlantAdapter`): its rung, built from the
+   - **its plants** (`plants`, a `PlantAdapter`; `None` for a model grown
+     by area, which declares `area` instead): its rung, built from the
      scenario; how its plants are drawn (`drawn`); how a walk measures a
      plant (`measured`) and what a harvest round picked from one
      (`picked`); and what a replay reads beside a day's digest (`probed`);

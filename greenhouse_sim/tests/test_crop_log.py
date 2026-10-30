@@ -87,7 +87,7 @@ def test_a_day_s_walk_through_the_simple_crop_records_each_plant_as_it_stands(
     assert {o.source.source_id for o in walked} == {run_id}
     assert check_observations(walked) == []
     grown = crop.scenario_crop(simulator, run)
-    assert not crop.of_organs(grown)
+    assert crop.of_plants(grown) and not crop.of_organs(grown)
     plants = grown.plants_on(3)
     heights = {
         o.plant_id: o.value
@@ -131,6 +131,7 @@ def test_the_simple_crop_s_harvest_round_is_an_event_per_plant_picked(
     with Simulator(Catalogue(PACKAGED.with_config(config))) as ripening:
         _, run_id = air_through_a_run(ripening, run)
         grown = crop.scenario_crop(ripening, run)
+        assert crop.of_plants(grown)
         rounds = {day: crop_records(ripening, run, day, start, run_id)[1] for day in range(10)}
         plants = {day: {p.plant_id: p for p in grown.plants_on(day)} for day in range(10)}
 

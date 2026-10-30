@@ -17,11 +17,10 @@ The climate's and the crop's services look here when they make a run; this
 module looks at neither.
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from greenhouse_sim.biology.crop_contract import CropPlant
-from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.core.clock import DAY_S
@@ -40,15 +39,18 @@ type House = tuple[str, str, str, tuple[tuple[str, float], ...]]
 @dataclass(frozen=True)
 class KeptState:
     """A run's state at the start of its day `day`: its house's air then,
-    and its crop's plants then with what they lived through; its run,
+    and its crop then with what it lived through; its run,
     `house` under `schedule`."""
 
     house: House
     schedule: Schedule
     day: int
     air: HouseAir
-    plants: tuple[CropPlant, ...] = ()
-    lived: tuple[dict[str, LocalEnvironment], ...] = ()
+    # Its crop then, as a run's crop takes it back: its plants, or, grown
+    # by area, its instances; and what each experienced on each day
+    # before, by its name.
+    crop: tuple[object, ...] = ()
+    lived: tuple[Mapping[str, object], ...] = ()
     # Its house's air at moments before its day began, each with its moment:
     # where the field of the day's first hour starts its grid run.
     earlier: tuple[tuple[float, HouseAir], ...] = ()

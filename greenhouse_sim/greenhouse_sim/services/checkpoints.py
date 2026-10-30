@@ -41,6 +41,7 @@ import dataclasses
 import gzip
 import json
 import math
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Final
 
 from pydantic import (
@@ -56,20 +57,20 @@ from pydantic import (
 from greenhouse_sim.climate.day import window_start
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.climate.psychrometrics import saturation_ratio_g_kg
-from greenhouse_sim.core.clock import DAY_S, days_ended
+from greenhouse_sim.core.clock import DAY_S, days_ended, steps_a_day
 from greenhouse_sim.digests import short_digest
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.parts import Part
+from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
 from greenhouse_sim.scenarios.manifest_files import opening_file
 from greenhouse_sim.scenarios.registry import ModelRun, models_run
 from greenhouse_sim.services.climate_runs import climate_run, run_schedule, seed_kept_climate_runs
-from greenhouse_sim.services.crop import scenario_crop, seed_kept_crops
+from greenhouse_sim.services.crop import AnyCrop, of_plants, scenario_crop, seed_kept_crops
 from greenhouse_sim.services.crop_models import (
     CROP_MODELS,
     CropModelState,
     CropState,
-    SimpleCropState,
     registration,
 )
 from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError, first_reason
@@ -91,6 +92,8 @@ from greenhouse_sim.services.scenarios import (
     with_weather,
 )
 from greenhouse_sim.services.stores import Store
+from greenhouse_sim.units import HOUR_S
+from greenhouse_sim.world.scopes import row_scopes
 
 if TYPE_CHECKING:
     # Typed only: the simulator imports the services that take it.
@@ -173,7 +176,7 @@ class ModelState(BaseModel):
 
     model: str
     version: PositiveInt
-    state: CropState | SimpleCropState | None = None
+    state: CropModelState | None = None
 
 
 class Checkpoint(BaseModel):
@@ -226,8 +229,9 @@ class Checkpoint(BaseModel):
         return given | {"models": models | {Part.CROP.value: crop | {"state": state}}}
 
     @property
-    def crop(self) -> CropState | SimpleCropState:
-        """Its crop's plants and the days they lived, or none."""
+    def crop(self) -> CropModelState:
+        """Its crop's state, its plants or its instances and the days they
+        lived, or none."""
         kept = self.models.get(Part.CROP)
         return CropState() if kept is None or kept.state is None else kept.state
 
@@ -297,9 +301,7 @@ def save_checkpoint(
     moment = day * DAY_S
     _, climate = climate_run(simulator, run)
     crop = scenario_crop(simulator, run)
-    state: CropModelState = registration(config).state(
-        plants=list(crop.plants_on(day)), lived=crop.lived_through(day)
-    )
+    state = _crop_state(registration(config).state, crop, day)
     before = window_start(moment)
     checkpoint = Checkpoint(
         scenario_id=scenario_id,
@@ -437,18 +439,10 @@ def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
             "first day, and only then"
         )
     climate_run(simulator, uploaded.run())
-    checked_crop_plan(
-        changed(simulator.catalogue, config, SceneChanges(layout=uploaded.layout)), uploaded.plan
-    )
-    expected = plant_ids(config)
-    if [plant.plant_id for plant in uploaded.crop.plants] != expected:
-        raise InvalidRequest(f"a checkpoint's plants are {uploaded.scenario_id}'s, in order")
-    if len(uploaded.crop.lived) != uploaded.day or any(
-        set(day) != set(expected) for day in uploaded.crop.lived
-    ):
-        raise InvalidRequest(
-            f"a crop on day {uploaded.day} has lived {uploaded.day} days, each plant's"
-        )
+    # Its run's scenario, with the checkpoint's own layout.
+    its_run = changed(simulator.catalogue, config, SceneChanges(layout=uploaded.layout))
+    checked_crop_plan(its_run, uploaded.plan)
+    _check_crop(uploaded, its_run)
     venting = None if config.control is None else config.control.venting
     drying = None if config.control is None else config.control.dehumidifying
     stages = 0 if venting is None else len(venting.stages)
@@ -468,6 +462,35 @@ def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
     return uploaded
 
 
+def _check_crop(uploaded: Checkpoint, its_run: ScenarioConfig) -> None:
+    """A checkpoint's crop made of its run's plants, or of its scopes on its
+    own layout, in order, having lived each day before its own, or each of
+    its model's steps, each of them for the step's hours; refused if not."""
+    area = registration(its_run).area
+    if area is None:
+        expected, lived = plant_ids(its_run), uploaded.day
+        said = f"{uploaded.day} days, each of its plants'"
+        if uploaded.crop.named != expected:
+            raise InvalidRequest(f"a checkpoint's plants are {uploaded.scenario_id}'s, in order")
+    else:
+        step_s = area.rung(its_run).step_s
+        expected = [scope.scope_id for scope in row_scopes(its_run.layout, its_run.envelope)]
+        lived = uploaded.day * steps_a_day(step_s)
+        said = f"{lived} of its model's steps, each of its scopes'"
+        if uploaded.crop.named != expected:
+            raise InvalidRequest(
+                f"a checkpoint's scopes are its layout's rows in {uploaded.scenario_id}, in order"
+            )
+        hours = round(step_s / HOUR_S)
+        courses = [course for step in uploaded.crop.lived for course in step.values()]
+        if any(len(getattr(course, "hours", ())) != hours for course in courses):
+            raise InvalidRequest(f"a crop's step of its model is {hours} hours, each lived so")
+    if len(uploaded.crop.lived) != lived or any(
+        set(step) != set(expected) for step in uploaded.crop.lived
+    ):
+        raise InvalidRequest(f"a crop on day {uploaded.day} has lived {said}")
+
+
 def _implausible(checkpoint: Checkpoint) -> list[str]:
     """What, in a checkpoint that fits its run's shape, no run could have
     reached: air out of bounds, what a plant lived not finite, or a crop
@@ -478,15 +501,41 @@ def _implausible(checkpoint: Checkpoint) -> list[str]:
         if air is not None
         for problem in _air_problems(air)
     ]
-    for day, lived in enumerate(checkpoint.crop.lived):
-        for plant_id, environment in lived.items():
-            if not all(map(math.isfinite, environment.model_dump().values())):
-                problems.append(f"what {plant_id} lived on day {day} is not finite")
+    days: Sequence[Mapping[str, BaseModel]] = checkpoint.crop.lived
+    for day, lived in enumerate(days):
+        for name, environment in lived.items():
+            if not _finite(environment.model_dump()):
+                problems.append(f"what {name} lived on day {day} is not finite")
     if problems:
         return problems
     kept = checkpoint.models.get(Part.CROP)
     crop = None if kept is None else CROP_MODELS.get(kept.model)
     return [] if crop is None else crop.implausible(checkpoint.crop, checkpoint.day)
+
+
+def _finite(value: object) -> bool:
+    """Whether every number in `value`, a model written out, is finite."""
+    if isinstance(value, dict):
+        return all(_finite(each) for each in value.values())
+    if isinstance(value, (list, tuple)):
+        return all(_finite(each) for each in value)
+    return not isinstance(value, float) or math.isfinite(value)
+
+
+def _crop_state(state: type[CropModelState], crop: AnyCrop, day: int) -> CropModelState:
+    """A run's crop's state on its day `day`, as its model keeps it in a
+    checkpoint: its plants, or its instances, and what each lived on each
+    day before."""
+    if of_plants(crop):
+        return state.model_validate(
+            {"plants": list(crop.plants_on(day)), "lived": crop.lived_through(day)}
+        )
+    return state.model_validate(
+        {
+            "instances": list(crop.instances_on(day)),
+            "lived": [crop.lived_on(step) for step in range(day * crop.steps_a_day)],
+        }
+    )
 
 
 def _air_problems(air: HouseAir) -> list[str]:
@@ -560,7 +609,7 @@ def _kept(
         schedule=run_schedule(simulator.catalogue, checkpoint.run()),
         day=checkpoint.day,
         air=checkpoint.house,
-        plants=tuple(checkpoint.crop.plants),
+        crop=checkpoint.crop.kept,
         lived=tuple(checkpoint.crop.lived),
         earlier=(
             ()

@@ -36,14 +36,16 @@ from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.day import ClimateDay
-from greenhouse_sim.core.clock import DAY_S, days_ended, run_day
+from greenhouse_sim.core.area_crop import AreaCrop
+from greenhouse_sim.core.clock import DAY_S, days_ended, run_day, steps_a_day
 from greenhouse_sim.core.crop import RunCrop
+from greenhouse_sim.core.drivers import step_courses
 from greenhouse_sim.core.stopwatch import Stopwatch
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
-from greenhouse_sim.scene.snapshot import SceneSnapshot
+from greenhouse_sim.scene.snapshot import SceneEntity, SceneSnapshot
 from greenhouse_sim.services.climate_runs import RunKey, climate_run, house_of, run_label
-from greenhouse_sim.services.crop_models import registration
+from greenhouse_sim.services.crop_models import AreaAdapter, registration
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.kept_states import KeptState, agreeing
 from greenhouse_sim.services.runs import (
@@ -56,8 +58,11 @@ from greenhouse_sim.services.runs import (
 from greenhouse_sim.services.scenarios import SceneChanges, changed, plant_ids, scenario
 from greenhouse_sim.services.stores import Store
 from greenhouse_sim.services.sunlight import plant_light
+from greenhouse_sim.solar.inside import Sunlight
 from greenhouse_sim.solar.plants import Crown, PlantLight
+from greenhouse_sim.solar.scopes import ScopeLight
 from greenhouse_sim.solar.shadows import Shadows
+from greenhouse_sim.world.scopes import row_scopes
 
 if TYPE_CHECKING:
     # Typed only: the simulator imports the services that take it.
@@ -71,8 +76,8 @@ KEPT_CROPS: Final = 4
 # actions.
 type CropKey = tuple[RunKey, CropPlan]
 # A run's crop, of whichever model its rows grow
-# (`greenhouse_sim.services.crop_models`).
-type AnyCrop = RunCrop[Any]
+# (`greenhouse_sim.services.crop_models`): grown plant by plant, or by area.
+type AnyCrop = RunCrop[Any] | AreaCrop[Any]
 
 
 def crop_label(key: CropKey) -> str:
@@ -102,10 +107,15 @@ def run_crop(
     return crop
 
 
+def of_plants(crop: AnyCrop) -> TypeIs[RunCrop[Any]]:
+    """Whether a run's crop is grown plant by plant, rather than by area."""
+    return isinstance(crop, RunCrop)
+
+
 def of_organs(crop: AnyCrop) -> TypeIs[RunCrop[Plant]]:
     """Whether a run's crop grows its plants organ by organ, as its model's
     rung declares its plants (`CropRung.plant_type`)."""
-    return crop.rung.plant_type is Plant
+    return of_plants(crop) and crop.rung.plant_type is Plant
 
 
 def scenario_crop(simulator: Simulator, run: RunRequest, watch: Stopwatch | None = None) -> AnyCrop:
@@ -126,10 +136,10 @@ def scenario_crop(simulator: Simulator, run: RunRequest, watch: Stopwatch | None
             until = schedule.same_until(other_schedule)
             shared = config.duration_days if math.isinf(until) else days_ended(until)
             alike = _worked_alike_through(planned, other_planned, config.duration_days)
-            crop.carry_on_from(other, min(shared, alike, config.duration_days))
+            _carry_on(crop, other, min(shared, alike, config.duration_days))
         for state in agreeing(simulator, house_of(run_key), schedule):
-            if state.plants and state.crop_agrees(planned):
-                crop.seed(state.day, state.plants, state.lived)
+            if state.crop and state.crop_agrees(planned):
+                crop.seed(state.day * crop.steps_a_day, state.crop, state.lived)
         return crop, schedule
 
     crop, _ = simulator.crops.made_once(key, make, lambda other: _same_house(key, other))
@@ -137,12 +147,24 @@ def scenario_crop(simulator: Simulator, run: RunRequest, watch: Stopwatch | None
 
 
 def seed_kept_crops(simulator: Simulator, state: KeptState) -> None:
-    """Give a kept state's plants to the crops kept that agree with it."""
-    if not state.plants:
+    """Give a kept state's crop to the crops kept that agree with it."""
+    if not state.crop:
         return
     for (run_key, planned), (crop, schedule) in simulator.crops.values():
         if state.agrees(house_of(run_key), schedule) and state.crop_agrees(planned):
-            crop.seed(state.day, state.plants, state.lived)
+            crop.seed(state.day * crop.steps_a_day, state.crop, state.lived)
+
+
+def _carry_on(crop: AnyCrop, other: AnyCrop, days: int) -> None:
+    """`crop` carrying on from `other` through the run's first `days` days,
+    in its model's steps: two crops of one house are grown alike, both
+    plant by plant or both by area."""
+    steps = days * crop.steps_a_day
+    if isinstance(crop, RunCrop) and isinstance(other, RunCrop):
+        crop.carry_on_from(other, steps)
+        return
+    if isinstance(crop, AreaCrop) and isinstance(other, AreaCrop):
+        crop.carry_on_from(other, steps)
 
 
 def _same_house(key: CropKey, other: CropKey) -> bool:
@@ -183,8 +205,13 @@ def _new_crop(
     run_key, planned = key
     scenario_id, layout, weather, *_ = run_key
     config = _run_config(simulator, run_key)
-    rung = registration(config).plants.rung(config)
+    grown_by = registration(config)
     sunlight = plant_light(simulator, scenario_id, layout, weather).sunlight
+    if grown_by.area is not None:
+        return _area_crop(config, grown_by.area, climate, sunlight)
+    if grown_by.plants is None:
+        raise InvalidRequest(f"{scenario_id}'s crop model grows neither plants nor an area")
+    rung = grown_by.plants.rung(config)
 
     def light(_day: int, crowns: Sequence[Crown]) -> PlantLight:
         shadows = Shadows.of(config.envelope, config.layout, [crown.solid() for crown in crowns])
@@ -204,6 +231,35 @@ def _new_crop(
     )
 
 
+def _area_crop(
+    config: ScenarioConfig, area: AreaAdapter[Any], climate: ClimateDay, sunlight: Sunlight
+) -> AreaCrop[Any]:
+    """A run's crop grown by area from its first day: its model on each
+    row's scope, each of its steps in its course as its driver profile gives
+    it, the house's air and the light above each scope under `sunlight`.
+    Refused if its profile does not give a driver its model reads, or cannot
+    give its model's step, or if that step does not divide a day. A scenario
+    that sets crop work for it is refused when it is read
+    (`ScenarioConfig`)."""
+    rung = area.rung(config)
+    profile = area.profile(config)
+    refused = profile.refusal(rung.drivers) or profile.step_refusal(rung.step_s)
+    if refused is not None:
+        raise InvalidRequest(f"{config.greenhouse_id}: {refused}")
+    try:
+        steps_a_day(rung.step_s)
+    except ValueError as error:
+        raise InvalidRequest(f"{config.greenhouse_id}: {error}") from error
+    scopes = row_scopes(config.layout, config.envelope)
+    light = ScopeLight(sunlight, scopes, rung.canopy_height_m)
+    return AreaCrop(
+        scopes,
+        rung=rung,
+        courses=step_courses(profile, climate.house.mean_between, light, step_s=rung.step_s),
+        days=config.duration_days,
+    )
+
+
 def crop_scene(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> SceneSnapshot:
     """A run's crop `time_s` into it, as a viewer draws it over the
     scenario's scene: each plant at its planting position, as it stands
@@ -218,7 +274,12 @@ def crop_scene(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> Sc
         scenario(simulator.catalogue, run.scenario_id),
         SceneChanges(layout=run.layout or DEFAULT_LAYOUT),
     )
-    entities = registration(config).plants.drawn(crop.at(time_s), config)
+    grown_by = registration(config)
+    entities: list[SceneEntity] = []
+    if of_plants(crop) and grown_by.plants is not None:
+        entities = grown_by.plants.drawn(crop.at(time_s), config)
+    elif not of_plants(crop) and grown_by.area is not None:
+        entities = grown_by.area.drawn(crop.at(time_s), config)
     return SceneSnapshot(greenhouse_id=config.greenhouse_id, simulated_day=day, entities=entities)
 
 
@@ -277,6 +338,9 @@ def plants_light(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> 
     checked_moment(scenario(simulator.catalogue, run.scenario_id), time_s)
     day = run_day(time_s)
     crop = scenario_crop(simulator, run)
+    if not of_plants(crop):
+        # A crop grown by area has no plants, and no crowns to light.
+        return PlantsLight(time_s=time_s, par_umol_m2_s={}, daily_light_integral_mol_m2_d={})
     par = crop.light_on(day).par_at(time_s)
     integrals = {plant_id: crop.local(plant_id, day).par_mol_m2_day for plant_id in par}
     try:

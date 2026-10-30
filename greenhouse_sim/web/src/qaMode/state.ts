@@ -6,6 +6,7 @@ import { type CameraFrame, type SensorFreshness, secondsInto } from "../sensors/
 import { PERCENT } from "../units";
 import { RUN_STATE_SCHEMA } from "./generated/runStateSchema";
 import type { RunState as ServedState } from "./generated/runStateTypes";
+import { cropModelInWords } from "./manifest";
 
 /** A command a run gave its equipment, a door or a vent, at a moment. */
 export interface GivenCommand {
@@ -134,8 +135,9 @@ export function describeRunState(state: RunState): {
       air === null
         ? "none: without equipment the run has no climate"
         : `${formatValue(air.temperatureC)} °C, ${formatValue(air.humidityPct)}%, ${formatValue(air.co2Ppm)} ppm`,
-    crop: `${state.plants} plants, ${state.cropModel === "organ" ? "organ by organ" : "the simple daily model"}; ${
-      lastDay < 0 ? "no day lived yet" : `last plant day ${lastDay}`
+    // A crop grown by area has no plants to count.
+    crop: `${state.plants > 0 ? `${state.plants} plants, ` : ""}${cropModelInWords(state.cropModel)}; ${
+      lastDay < 0 ? "no day lived yet" : `last ${state.plants > 0 ? "plant " : ""}day ${lastDay}`
     }`,
     levels:
       Object.keys(state.levels).length === 0

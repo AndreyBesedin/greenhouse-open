@@ -3,6 +3,7 @@
 under the same name, what it declares, which every registration answers as
 the services take it, and which no service asks of it by its name."""
 
+import dataclasses
 import re
 from pathlib import Path
 from typing import Any, Final
@@ -10,18 +11,27 @@ from typing import Any, Final
 import pytest
 
 import greenhouse_sim
+from greenhouse_sim.biology.area_contract import HourDrivers, StepCourse
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
+from greenhouse_sim.core.area_crop import AreaInstance
+from greenhouse_sim.core.drivers import HOUSE_HOURS
 from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.scenarios.crop_parameters import ReducedTomgroCrop
 from greenhouse_sim.scenarios.registry import MODELS
 from greenhouse_sim.services.crop_models import (
     CROP_MODELS,
+    ORGAN,
+    REDUCED_TOMGRO,
     CropActions,
     CropRegistration,
     registration,
 )
 from greenhouse_sim.services.runs import CROP_KINDS
 from greenhouse_sim.services.scenarios import plant_ids
+from greenhouse_sim.units import HOURS_A_DAY
+from greenhouse_sim.world.scopes import row_scopes
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
 PLANTS = plant_ids(CONFIG)[:2]
@@ -37,8 +47,24 @@ def test_every_crop_model_of_the_registry_is_registered_for_the_services() -> No
     assert registration(CONFIG) is CROP_MODELS[CONFIG.crop.kind]
 
 
+def test_each_crop_model_grows_single_plants_or_an_area() -> None:
+    """One of the two, as it declares (decision 0062)."""
+    assert {
+        name: (each.plants is None, each.area is None) for name, each in CROP_MODELS.items()
+    } == {
+        "organ": (False, True),
+        "simple": (False, True),
+        "reduced_tomgro": (True, False),
+    }
+
+
+# The registrations of the models that grow single plants.
+GROWN_BY_PLANT: Final = [each for each in CROP_MODELS.values() if each.plants is not None]
+
+
 def _grown(registered: CropRegistration[Any]) -> tuple[list[Any], list[dict[str, Any]]]:
     """Its transplants after `DAYS` days in `STEADY`, and what they lived."""
+    assert registered.plants is not None
     rung = registered.plants.rung(CONFIG)
     plants = [rung.transplant(plant_id) for plant_id in PLANTS]
     for _ in range(DAYS):
@@ -46,15 +72,16 @@ def _grown(registered: CropRegistration[Any]) -> tuple[list[Any], list[dict[str,
     return plants, [dict.fromkeys(PLANTS, STEADY) for _ in range(DAYS)]
 
 
-@pytest.mark.parametrize("registered", list(CROP_MODELS.values()), ids=list(CROP_MODELS))
+@pytest.mark.parametrize("registered", GROWN_BY_PLANT, ids=[each.name for each in GROWN_BY_PLANT])
 def test_a_registration_answers_what_the_services_ask_of_a_crop_model(
     registered: CropRegistration[Any],
 ) -> None:
     plants, lived = _grown(registered)
+    assert registered.plants is not None
 
     # Its state, as a checkpoint keeps and reads it back, plausible on its
     # day, and not on another.
-    state = registered.state(plants=plants, lived=lived)
+    state = registered.state.model_validate({"plants": plants, "lived": lived})
     assert registered.state.model_validate_json(state.model_dump_json()) == state
     assert registered.implausible(state, DAYS) == []
     # Drawn, each plant in the scene; measured as a walk finds it.
@@ -71,7 +98,7 @@ def test_a_registration_answers_what_the_services_ask_of_a_crop_model(
 
 def test_the_organs_registration_finds_what_no_run_of_it_reaches() -> None:
     plants, lived = _grown(CROP_MODELS["organ"])
-    state = CROP_MODELS["organ"].state(plants=plants, lived=lived[1:])
+    state = CROP_MODELS["organ"].state.model_validate({"plants": plants, "lived": lived[1:]})
 
     (problem, *_) = CROP_MODELS["organ"].implausible(state, DAYS)
     assert "thermal time" in problem
@@ -83,7 +110,52 @@ def test_only_the_organ_crop_takes_the_runs_own_crop_actions() -> None:
     assert {name: each.crop_actions for name, each in CROP_MODELS.items()} == {
         "organ": CropActions(CROP_KINDS),
         "simple": None,
+        "reduced_tomgro": None,
     }
+
+
+# The climate box, its rows growing Reduced-State TOMGRO.
+TOMGRO_BOX: Final = ScenarioConfig.model_validate(
+    CONFIG.model_dump() | {"crop_model": "reduced_tomgro", "crop": {"kind": "reduced_tomgro"}}
+)
+
+
+def test_reduced_tomgros_registration_answers_what_the_services_ask_of_it() -> None:
+    """A model grown by area (decision 0062): its rung, its driver profile,
+    its state as a checkpoint keeps it, plausible, and no plants drawn."""
+    registered = registration(TOMGRO_BOX)
+    assert registered.area is not None
+    rung = registered.area.rung(TOMGRO_BOX)
+    profile = registered.area.profile(TOMGRO_BOX)
+    scopes = row_scopes(TOMGRO_BOX.layout, TOMGRO_BOX.envelope)
+    course = StepCourse(
+        hours=tuple(
+            HourDrivers(
+                temperature_c=22.0, par_above_umol_m2_s=400.0 * (6 <= hour < 18), co2_ppm=420.0
+            )
+            for hour in range(HOURS_A_DAY)
+        )
+    )
+    grown = rung.planted()
+    for _ in range(DAYS):
+        grown = rung.live_step(grown, course)
+    instances: list[AreaInstance[Any]] = [
+        AreaInstance(scope_id=scope.scope_id, state=grown) for scope in scopes
+    ]
+    lived = [dict.fromkeys((scope.scope_id for scope in scopes), course)] * DAYS
+
+    assert profile is HOUSE_HOURS and profile.refusal(rung.drivers) is None
+    assert rung.canopy_height_m == ReducedTomgroCrop().canopy_height_m
+    state = registered.state.model_validate({"instances": instances, "lived": lived})
+    assert registered.state.model_validate_json(state.model_dump_json()) == state
+    assert state.named == [scope.scope_id for scope in scopes] and state.plants == []
+    assert registered.implausible(state, DAYS) == []
+    past = grown.model_copy(update={"lai": 5.0})
+    (problem,) = registered.implausible(
+        state.model_copy(update={"instances": [AreaInstance(scope_id="row_1", state=past)]}), DAYS
+    )
+    assert problem == "row_1's leaf area index is 5, past 4"
+    assert registered.area.drawn(instances, TOMGRO_BOX) == []
 
 
 # What asks a crop model for anything: the services, the routes over them
@@ -114,3 +186,9 @@ def test_no_service_asks_which_crop_model_it_holds() -> None:
     ]
     assert len(modules) > 20
     assert asking == []
+
+
+@pytest.mark.parametrize(("plants", "area"), [(None, None), (ORGAN.plants, REDUCED_TOMGRO.area)])
+def test_a_registration_grows_single_plants_or_by_area(plants: Any, area: Any) -> None:
+    with pytest.raises(ValueError, match="grows single plants or by area: one"):
+        dataclasses.replace(REDUCED_TOMGRO, plants=plants, area=area)

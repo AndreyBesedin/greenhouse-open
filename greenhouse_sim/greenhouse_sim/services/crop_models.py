@@ -10,13 +10,16 @@ its declarations:
 
 - **its state in a checkpoint**: its plants and what each lived
   (`state`), and what no run of it reaches (`implausible`);
-- **how it grows single plants** (`plants`, a `PlantAdapter`): its rung,
+- **how it grows single plants** (`plants`, a `PlantAdapter`), if it does: its rung,
   built from a scenario (`greenhouse_sim.biology.crop_contract.CropRung`);
   how its plants are drawn (`drawn`); how a walk measures a plant
   (`measured`), and what a day's harvest round picked from one (`picked`);
   and what a replay reads beside a day's digest (`probed`): the crop's
   organs and their plants' mean thermal time, none for a model without
   organs;
+- **how it grows by area** (`area`, an `AreaAdapter`), if it does: its
+  rung, its driver profile, and how its instances are drawn (decision
+  0062);
 - **the run's own crop actions it takes** (`crop_actions`), by kind: the
   harvests, lowerings, leaves removed and inspections a plan asks for
   (P13.5), which the run routes to it; none for a model that takes none,
@@ -39,6 +42,7 @@ from typing import Any, Final
 from greenhouse_protocol.actions import ActionKind
 from pydantic import BaseModel, ConfigDict
 
+from greenhouse_sim.biology.area_contract import AreaRung, StepCourse
 from greenhouse_sim.biology.crop_contract import CropPlant, CropRung
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.biology.plant.organs import Fruit
@@ -47,11 +51,20 @@ from greenhouse_sim.biology.tomato.organ.fruit import is_red
 from greenhouse_sim.biology.tomato.organ.geometry import top_height_m
 from greenhouse_sim.biology.tomato.organ.topology import HarvestFruit, Plant
 from greenhouse_sim.biology.tomato.organ.transplants import DEVELOPMENT, TRANSPLANT_CD
+from greenhouse_sim.biology.tomato.tomgro.parameters import (
+    INITIAL_STATE,
+    TomgroParameters,
+    TomgroState,
+)
+from greenhouse_sim.core.area_crop import AreaInstance
 from greenhouse_sim.core.crop import OrganRung
+from greenhouse_sim.core.drivers import DriverProfile, driver_profile
 from greenhouse_sim.core.simple_crop import SimplePlant, SimpleRung
+from greenhouse_sim.core.tomgro_crop import TomgroRung
 from greenhouse_sim.domain.crop import CropModel, FruitStatus
 from greenhouse_sim.domain.organs import FruitStage
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.scenarios.crop_parameters import ReducedTomgroCrop
 from greenhouse_sim.scene.plants import crop_entities
 from greenhouse_sim.scene.snapshot import SceneEntity, simple_plant_entities
 
@@ -61,7 +74,24 @@ CM_PER_M: Final = 100.0
 THERMAL_TIME_TOLERANCE: Final = 1e-9
 
 
-class CropState(BaseModel):
+class _GrownByPlant(BaseModel):
+    """What a crop grown plant by plant keeps at a checkpoint's day, as a
+    run's crop takes it back: its plants, by name."""
+
+    plants: list[Any]
+
+    @property
+    def kept(self) -> tuple[object, ...]:
+        """What a run's crop takes back: its plants."""
+        return tuple(self.plants)
+
+    @property
+    def named(self) -> list[str]:
+        """What it is made of, by name: its plants."""
+        return [plant.plant_id for plant in self.plants]
+
+
+class CropState(_GrownByPlant):
     """The organ crop's state at a checkpoint's day: its plants, and what
     each experienced on each day before, by plant."""
 
@@ -71,7 +101,7 @@ class CropState(BaseModel):
     lived: list[dict[str, LocalEnvironment]] = []
 
 
-class SimpleCropState(BaseModel):
+class SimpleCropState(_GrownByPlant):
     """The simple crop's state at a checkpoint's day: its plants, with the
     values the model keeps for each, and what each experienced on each day
     before, by plant."""
@@ -82,8 +112,38 @@ class SimpleCropState(BaseModel):
     lived: list[dict[str, LocalEnvironment]] = []
 
 
-# A crop model's state, as a checkpoint keeps it.
-type CropModelState = CropState | SimpleCropState
+class AreaCropState[StateT: BaseModel](BaseModel):
+    """A crop grown by area's state at a checkpoint's day: each scope's
+    instance, its canopy per m² of its model's basis, and what each lived on
+    each of its model's steps before, by scope (decision 0062). It has no
+    plants."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    instances: list[AreaInstance[StateT]] = []
+    lived: list[dict[str, StepCourse]] = []
+
+    @property
+    def plants(self) -> list[CropPlant]:
+        """None: a crop grown by area has no plants."""
+        return []
+
+    @property
+    def kept(self) -> tuple[object, ...]:
+        """What a run's crop takes back: its instances."""
+        return tuple(self.instances)
+
+    @property
+    def named(self) -> list[str]:
+        """What it is made of, by name: its scopes."""
+        return [instance.scope_id for instance in self.instances]
+
+
+# Reduced-State TOMGRO's state in a checkpoint.
+TomgroCropState = AreaCropState[TomgroState]
+
+# A crop model's state, as a checkpoint keeps it: a member for each model.
+type CropModelState = CropState | SimpleCropState | TomgroCropState
 
 
 @dataclass(frozen=True)
@@ -116,6 +176,18 @@ class PlantAdapter[PlantT: CropPlant]:
 
 
 @dataclass(frozen=True)
+class AreaAdapter[StateT: BaseModel]:
+    """What the services ask of a crop model grown by area (decision 0062):
+    its rung, built from a scenario; the driver profile through which the
+    run gives it its drivers, as its parameters name it; and how its
+    instances are drawn, none of them as plants."""
+
+    rung: Callable[[ScenarioConfig], AreaRung[StateT]]
+    profile: Callable[[ScenarioConfig], DriverProfile]
+    drawn: Callable[[Sequence[AreaInstance[StateT]], ScenarioConfig], list[SceneEntity]]
+
+
+@dataclass(frozen=True)
 class CropActions:
     """The run's own crop actions a crop model takes (P13.5), by kind,
     carried out on its plants by its rung (`CropRung.carry_out`)."""
@@ -133,9 +205,15 @@ class CropRegistration[PlantT: CropPlant]:
     # What no run of the model reaches in a checkpoint's state on its day,
     # which fits its run's shape, as reasons; none if it is plausible.
     implausible: Callable[[Any, int], list[str]]
-    plants: PlantAdapter[PlantT]
+    # How it grows single plants, or by area: one of the two.
+    plants: PlantAdapter[PlantT] | None
+    area: AreaAdapter[Any] | None
     # None for a model that takes none of the run's own crop actions.
     crop_actions: CropActions | None
+
+    def __post_init__(self) -> None:
+        if (self.plants is None) == (self.area is None):
+            raise ValueError(f"the {self.name} crop model grows single plants or by area: one")
 
 
 def _organ_implausible(state: CropState, day: int) -> list[str]:
@@ -254,6 +332,57 @@ def _simple_probed(_plants: Sequence[SimplePlant]) -> tuple[int, float]:
     return 0, 0.0
 
 
+# Reduced-State TOMGRO's parameter sets, by the name a scenario's section
+# gives (`ReducedTomgroCrop.parameter_set`).
+TOMGRO_PARAMETERS: Final = {"gnvman": TomgroParameters()}
+
+
+def _tomgro_crop(config: ScenarioConfig) -> ReducedTomgroCrop:
+    """A scenario's Reduced-State TOMGRO section, which its rows grow."""
+    crop = config.crop
+    if not isinstance(crop, ReducedTomgroCrop):
+        raise ValueError(f"{config.greenhouse_id}'s rows grow {crop.kind}, not reduced_tomgro")
+    return crop
+
+
+def _tomgro_rung(config: ScenarioConfig) -> TomgroRung:
+    """The model with its section's parameter set, its light read at its
+    section's canopy height."""
+    section = _tomgro_crop(config)
+    return TomgroRung(TOMGRO_PARAMETERS[section.parameter_set], section.canopy_height_m)
+
+
+def _tomgro_implausible(state: TomgroCropState, day: int) -> list[str]:
+    """A canopy that is not finite; whose nodes or leaf area index are
+    negative, or the leaf area index past the most any parameter set grows;
+    or, on the run's first day, that is not as the model plants it. Its
+    weights may fall, as its net growth may be negative, and are not
+    bounded."""
+    most = max(parameters.lai_max for parameters in TOMGRO_PARAMETERS.values())
+    problems = []
+    for instance in state.instances:
+        canopy = instance.state
+        if not all(map(math.isfinite, canopy.model_dump().values())):
+            problems.append(f"{instance.scope_id}'s canopy is not finite")
+        elif canopy.n < 0 or canopy.lai < 0:
+            problems.append(f"{instance.scope_id}'s nodes or leaf area index are negative")
+        elif canopy.lai > most:
+            problems.append(
+                f"{instance.scope_id}'s leaf area index is {canopy.lai:.6g}, past {most:.6g}"
+            )
+        elif day == 0 and canopy != INITIAL_STATE:
+            problems.append(f"{instance.scope_id}'s canopy is not as the model plants it")
+    return problems
+
+
+def _no_entities(
+    _instances: Sequence[AreaInstance[Any]], _config: ScenarioConfig
+) -> list[SceneEntity]:
+    # A canopy is drawn as a proxy of its own, which the scene does not
+    # have yet: none, rather than plants it does not have.
+    return []
+
+
 # The run's own crop actions the organ crop takes: every kind a plan may
 # ask of a plant (`greenhouse_sim.services.runs.CROP_KINDS`).
 ORGAN_CROP_ACTIONS: Final = CropActions(
@@ -271,6 +400,7 @@ ORGAN: Final = CropRegistration[Plant](
         picked=_organ_picked,
         probed=_organ_probed,
     ),
+    area=None,
     crop_actions=ORGAN_CROP_ACTIONS,
 )
 SIMPLE: Final = CropRegistration[SimplePlant](
@@ -284,13 +414,29 @@ SIMPLE: Final = CropRegistration[SimplePlant](
         picked=_simple_picked,
         probed=_simple_probed,
     ),
+    area=None,
     # Its crop work's harvests and lowerings are its rung's; it takes none
     # of a plan's (P14.3).
     crop_actions=None,
 )
+REDUCED_TOMGRO: Final = CropRegistration[Any](
+    name=CropModel.REDUCED_TOMGRO.value,
+    state=TomgroCropState,
+    implausible=_tomgro_implausible,
+    plants=None,
+    area=AreaAdapter(
+        rung=_tomgro_rung,
+        profile=lambda config: driver_profile(
+            _tomgro_crop(config).driver_profile, _tomgro_crop(config).driver_profile_version
+        ),
+        drawn=_no_entities,
+    ),
+    # Its harvest is the model's own rule; it takes none of a plan's.
+    crop_actions=None,
+)
 # Each crop model's registration, by its registry's name.
 CROP_MODELS: Final[dict[str, CropRegistration[Any]]] = {
-    registration.name: registration for registration in (ORGAN, SIMPLE)
+    registration.name: registration for registration in (ORGAN, SIMPLE, REDUCED_TOMGRO)
 }
 
 
