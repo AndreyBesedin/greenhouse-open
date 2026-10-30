@@ -5,32 +5,32 @@ grown per m² on each of its scopes, through the run's days.
   rows each (`greenhouse_sim.world.scopes`), in the rows' order: each
   instance's state is the canopy per m² of the area its model declares
   (`AreaRung.basis`), every instance starting as its model plants it.
-- **Each instance lives each day** in its day's course, which the run's
-  driver profile gives it hour by hour (`greenhouse_sim.core.drivers`): the
-  house's air and the light above its canopy.
+- **Each instance lives each step** of its model (`AreaRung.step_s`,
+  decision 0064) in its step's course, which the run's driver profile gives
+  it hour by hour (`greenhouse_sim.core.drivers`): the house's air and the
+  light above its canopy.
 - **No crop work and no crop actions:** a crop grown by area takes none of
   the run's crop actions, and a run of it is given none
   (`greenhouse_sim.services.crop_models.CropRegistration.crop_actions`);
   its harvest is its model's own rule.
 
 Its steps are kept as every run's crop keeps them
-(`greenhouse_sim.core.crop_steps.CropSteps`), its step a day until its
-model declares its own (P16.2): what is its own is how it grows by area
-(`AreaGrowth`).
+(`greenhouse_sim.core.crop_steps.CropSteps`), its days a view of them:
+what is its own is how it grows by area (`AreaGrowth`).
 """
 
 from collections.abc import Callable, Sequence
 
 from pydantic import BaseModel, ConfigDict
 
-from greenhouse_sim.biology.area_contract import AreaRung, DayCourse
-from greenhouse_sim.core.clock import DAY_S, steps_a_day
+from greenhouse_sim.biology.area_contract import AreaRung, StepCourse
+from greenhouse_sim.core.clock import steps_a_day
 from greenhouse_sim.core.crop_actions import CropAction
 from greenhouse_sim.core.crop_steps import CropSteps, StepWork
 from greenhouse_sim.world.scopes import CropScope
 
-# Each scope's course on a day of the run, by its name.
-type DayCourses = Callable[[int], dict[str, DayCourse]]
+# Each scope's course on a step of the run, by its name.
+type StepCourses = Callable[[int], dict[str, StepCourse]]
 
 
 class AreaInstance[StateT: BaseModel](BaseModel):
@@ -45,10 +45,11 @@ class AreaInstance[StateT: BaseModel](BaseModel):
 
 class AreaGrowth[StateT: BaseModel]:
     """A crop grown by area (`greenhouse_sim.core.crop_steps.Growth`): `rung`
-    on each of `scopes`, each day in its course, as `courses` gives it."""
+    on each of `scopes`, each of its steps in its course, as `courses` gives
+    it."""
 
     def __init__(
-        self, scopes: Sequence[CropScope], *, rung: AreaRung[StateT], courses: DayCourses
+        self, scopes: Sequence[CropScope], *, rung: AreaRung[StateT], courses: StepCourses
     ) -> None:
         self.rung = rung
         self.scopes = list(scopes)
@@ -56,21 +57,21 @@ class AreaGrowth[StateT: BaseModel]:
 
     @property
     def step_s(self) -> float:
-        return DAY_S
+        return self.rung.step_s
 
     def first(self) -> tuple[AreaInstance[StateT], ...]:
         planted = self.rung.planted()
         return tuple(AreaInstance(scope_id=scope.scope_id, state=planted) for scope in self.scopes)
 
-    def lived(self, day: int, state: tuple[AreaInstance[StateT], ...]) -> dict[str, DayCourse]:
-        """Each scope's course on the run's day `day`."""
-        return self._courses(day)
+    def lived(self, step: int, state: tuple[AreaInstance[StateT], ...]) -> dict[str, StepCourse]:
+        """Each scope's course on the run's step `step`."""
+        return self._courses(step)
 
     def next_step(
         self,
-        day: int,
+        step: int,
         state: tuple[AreaInstance[StateT], ...],
-        lived: dict[str, DayCourse],
+        lived: dict[str, StepCourse],
         planned: Sequence[CropAction],
     ) -> tuple[tuple[AreaInstance[StateT], ...], StepWork | None]:
         if planned:
@@ -78,7 +79,7 @@ class AreaGrowth[StateT: BaseModel]:
         return tuple(
             AreaInstance(
                 scope_id=instance.scope_id,
-                state=self.rung.live_day(instance.state, lived[instance.scope_id]),
+                state=self.rung.live_step(instance.state, lived[instance.scope_id]),
             )
             for instance in state
         ), None
@@ -105,10 +106,11 @@ class AreaGrowth[StateT: BaseModel]:
 
 
 class AreaCrop[StateT: BaseModel](
-    CropSteps[tuple[AreaInstance[StateT], ...], dict[str, DayCourse]]
+    CropSteps[tuple[AreaInstance[StateT], ...], dict[str, StepCourse]]
 ):
     """A run's crop grown by `rung` on each of `scopes` through its `days`,
-    each day in its course, as `courses` gives it: see the module."""
+    each of its model's steps in its course, as `courses` gives it: see the
+    module."""
 
     growth: AreaGrowth[StateT]
 
@@ -117,7 +119,7 @@ class AreaCrop[StateT: BaseModel](
         scopes: Sequence[CropScope],
         *,
         rung: AreaRung[StateT],
-        courses: DayCourses,
+        courses: StepCourses,
         days: int,
     ) -> None:
         self.rung = rung
@@ -130,7 +132,7 @@ class AreaCrop[StateT: BaseModel](
         canopy once it has lived the days before it."""
         return self.on(day * self.steps_a_day)
 
-    def course(self, scope_id: str, step: int) -> DayCourse:
+    def course(self, scope_id: str, step: int) -> StepCourse:
         """What a scope's canopy lived on the run's step `step`, from 0 to
         its last."""
         found = self.lived_on(step).get(scope_id)

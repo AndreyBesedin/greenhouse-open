@@ -4,12 +4,15 @@
 A profile says, for each driver a model may declare
 (`greenhouse_sim.biology.area_contract.Driver`), which quantity of the run
 it gives in its place: the driver itself, or a substitute, which the
-profile names. A model declaring a driver the profile does not give is
-refused, saying which.
+profile names; and its resolution, each driver's mean through a span of
+it. A model declaring a driver the profile does not give is refused, saying
+which, and so is a model whose step is not a whole number of the profile's
+spans (decision 0064).
 
 The first profile, `HOUSE_HOURS`, is the run as it is:
 
-- **the whole house's air, hour by hour,** each hour's mean
+- **the whole house's air, hour by hour,** each hour's mean, a step's
+  hours from its start
   (`WholeHouse.mean_between` over the hour), the same air every plant reads
   the day's mean of, so that a crop grown by area and one grown by plant
   live in one air;
@@ -29,11 +32,12 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Final
 
-from greenhouse_sim.biology.area_contract import DayCourse, HourDrivers
+from greenhouse_sim.biology.area_contract import HourDrivers, StepCourse
 from greenhouse_sim.climate.house import HouseAir
+from greenhouse_sim.core.clock import steps_a_day
 from greenhouse_sim.domain.crop import Driver
 from greenhouse_sim.solar.scopes import ScopeLight
-from greenhouse_sim.units import DAY_S, HOUR_S, HOURS_A_DAY
+from greenhouse_sim.units import DAY_S, HOUR_S
 
 # The house's mean air between two moments of a run, in seconds from its
 # start (`WholeHouse.mean_between`).
@@ -43,12 +47,14 @@ type MeanAir = Callable[[float, float], HouseAir]
 @dataclass(frozen=True)
 class DriverProfile:
     """How the run gives a crop grown by area its drivers: its name and
-    version, and, for each driver it gives, the quantity it gives in its
-    place, itself or a substitute."""
+    version; for each driver it gives, the quantity it gives in its place,
+    itself or a substitute; and its resolution, the span each driver is the
+    mean through, in seconds."""
 
     name: str
     version: int
     gives: Mapping[Driver, Driver]
+    resolution_s: float
 
     def refusal(self, drivers: frozenset[Driver]) -> str | None:
         """Why the profile cannot drive a model that reads `drivers`, if it
@@ -57,6 +63,17 @@ class DriverProfile:
         if not missing:
             return None
         return f"the {self.name} drivers give no {', '.join(missing)}"
+
+    def step_refusal(self, step_s: float) -> str | None:
+        """Why the profile cannot drive a model of a step of `step_s`
+        seconds, if it cannot: the step is not a whole number of its spans."""
+        spans = round(step_s / self.resolution_s)
+        if spans >= 1 and spans * self.resolution_s == step_s:
+            return None
+        return (
+            f"the {self.name} drivers come {self.resolution_s:g} s at a time, "
+            f"and a step of {step_s:g} s is not a whole number of them"
+        )
 
     def substitutes(self, drivers: frozenset[Driver]) -> dict[Driver, Driver]:
         """The drivers of `drivers` it gives another quantity in place of,
@@ -77,31 +94,41 @@ HOUSE_HOURS: Final = DriverProfile(
         Driver.PAR_ABOVE: Driver.PAR_ABOVE,
         Driver.CO2: Driver.CO2,
     },
+    resolution_s=HOUR_S,
 )
 # Each driver profile, by its name.
 DRIVER_PROFILES: Final = {profile.name: profile for profile in (HOUSE_HOURS,)}
 
 
-def house_hours(air: MeanAir, light: ScopeLight) -> Callable[[int], dict[str, DayCourse]]:
-    """Each scope's course on a day of the run, as `HOUSE_HOURS` gives it:
-    the house's air through each hour, `air` its mean between two moments,
-    and the PAR above the scope's canopy through each hour, as `light` reads
-    it."""
+def house_hours(
+    air: MeanAir, light: ScopeLight, *, step_s: float
+) -> Callable[[int], dict[str, StepCourse]]:
+    """Each scope's course on a step of the run, of `step_s` seconds, as
+    `HOUSE_HOURS` gives it: the house's air through each of the step's
+    hours, `air` its mean between two moments, and the PAR above the scope's
+    canopy through each, as `light` reads it. Refused if the step is not a
+    whole number of hours, or does not divide a day."""
+    refused = HOUSE_HOURS.step_refusal(step_s)
+    if refused is not None:
+        raise ValueError(refused)
+    steps_a_day(step_s)
+    hours_a_step = round(step_s / HOUR_S)
 
-    def courses(day: int) -> dict[str, DayCourse]:
-        start = day * DAY_S
+    def courses(step: int) -> dict[str, StepCourse]:
+        start = step * step_s
+        day, first = int(start // DAY_S), round(start % DAY_S / HOUR_S)
         hours = [
-            air(start + hour * HOUR_S, start + (hour + 1) * HOUR_S) for hour in range(HOURS_A_DAY)
+            air(start + hour * HOUR_S, start + (hour + 1) * HOUR_S) for hour in range(hours_a_step)
         ]
         return {
-            scope_id: DayCourse(
+            scope_id: StepCourse(
                 hours=tuple(
                     HourDrivers(
                         temperature_c=mean.temperature_c,
                         par_above_umol_m2_s=par,
                         co2_ppm=mean.co2_ppm,
                     )
-                    for mean, par in zip(hours, pars, strict=True)
+                    for mean, par in zip(hours, pars[first : first + hours_a_step], strict=True)
                 )
             )
             for scope_id, pars in light.hours_par(day).items()
