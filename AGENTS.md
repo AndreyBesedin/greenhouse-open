@@ -92,6 +92,9 @@ fails when it drifts from its source.
 - An API route: the route checks the request and maps the result; the
   logic is a service's (decision 0021).
 - A dataset: `greenhouse_adapters`, from a manifest to canonical records.
+- A data file, such as a fixture, an expected answer or a reproduction's
+  drivers: generated when needed, committed, or fetched on first use, by
+  the first of decision 0063's rules that applies.
 - The viewer: `greenhouse_sim/web`, which only displays what the simulator
   serves.
 
@@ -179,6 +182,10 @@ Do not request speculative work or more documentation/tests by default.
   on-disk representations. Prefer compatibility or an explicit migration.
 - Check changes to dependency ownership, package metadata, security-sensitive
   boundaries and external/tool execution where relevant.
+- Hold data files to decision 0063: flag a committed file that could be
+  generated when needed, one over its size limit, a check that fetches
+  what every run needs, and any publisher's dataset or reference's data
+  committed at all.
 
 ### 5. Scientific grounding and model credibility
 
