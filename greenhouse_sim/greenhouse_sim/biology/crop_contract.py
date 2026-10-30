@@ -68,6 +68,6 @@ class CropRung[PlantT: CropPlant](Protocol):
 
     def recorded(self, plant: PlantT) -> int:
         """How many events its history holds: where a day's crop work ends,
-        before the run's own crop actions (`DayWork`); none if it keeps no
+        before the run's own crop actions (`StepWork`); none if it keeps no
         history."""
         ...

@@ -31,7 +31,7 @@ from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.core.clock import DAY_S, days_ended
 from greenhouse_sim.core.crop import CropLight, CropWork, OrganRung, RunCrop
 from greenhouse_sim.core.crop_actions import CropAction, carry_out
-from greenhouse_sim.core.crop_days import KEPT_DAYS, CropDone, DayWork
+from greenhouse_sim.core.crop_steps import KEPT_STEPS, CropDone, StepWork
 from greenhouse_sim.core.timeline import HARVEST_ROUND, RunProcesses, events
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.organs import FruitStage
@@ -349,7 +349,7 @@ def test_a_crop_keeps_no_more_days_for_what_it_takes_over() -> None:
         first.plants_on(day)
         second.local("p1", day - 1)
 
-    assert len(second._kept) <= KEPT_DAYS + 2
+    assert len(second._kept) <= KEPT_STEPS + 2
 
 
 # A run's own crop actions on the day of its first red harvest round: a leaf
@@ -372,7 +372,7 @@ def test_a_runs_own_crop_actions_follow_its_crop_work_in_the_order_planned() -> 
 
     assert crop.plants_on(FIRST_RED_ROUND - 1) == worked.plants_on(FIRST_RED_ROUND - 1)
     assert crop.plants_on(FIRST_RED_ROUND) == (lowered.plant, picked.plant, before[2])
-    assert crop.worked_on(FIRST_RED_ROUND) == DayWork(
+    assert crop.worked_on(FIRST_RED_ROUND) == StepWork(
         done=(
             CropDone(LeafRemoved(leaf_id="p1_n01_leaf")),
             CropDone(Harvested(fruit_count=0, fresh_mass_g=0.0)),

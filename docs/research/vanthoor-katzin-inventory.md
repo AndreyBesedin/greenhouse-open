@@ -29,7 +29,9 @@ files write them. Checked on 2026-10-29, by the
   Release 0.1 of the same project, from 2010, is unrelated software: a
   loose version range could install it.
 - **Its dependencies** (numpy, scipy, pandas, numexpr) carry no bounds in
-  2.0.7, so the reproduction locks them itself.
+  2.0.7, so the reproduction locks them itself. Its metadata also asks for
+  matplotlib and tkcalendar, which only its user interface imports; a
+  crop's run needs neither.
 - **The source cited** is the commit; its crop, solver and conversion files
   are byte for byte the wheel's. The repository's test data are Git LFS
   pointers, so the wheel, not a checkout, is what runs.
@@ -124,7 +126,9 @@ the greenhouse model.
 `tCan` (°C, the canopy's temperature), `parGh` (µmol photons m⁻² s⁻¹, the
 PAR above the canopy) and `co2InPpm` (ppm), each a column of a series
 whose `Time` is in seconds, interpolated linearly between rows, and held
-at its first or last row outside them.
+at its first or last row outside them. Up to the second row it holds the
+first, rather than interpolating: the row its search for the moment finds
+is taken as the first whenever its index is 0 or less.
 
 The example's series (`main_vanthoor_crop.json`, 120 days from 15 May) is
 not in the repository: it is made from an EnergyPlus weather file by
@@ -147,7 +151,11 @@ the files give no factor to dry or fresh matter, so none is assumed.
 
 scipy's `solve_ivp`, method BDF, `max_step` 3600 s, `atol` 1e-3 (one
 scalar, in each state's own unit), `rtol` 1e-6, output every 3600 s. It
-sets NaNs to 0 and clips values past ±1e38 without saying so.
+sets NaNs to 0 and clips values past ±1e38 without saying so. At these
+settings, its answer moves when its `rtol` moves by one part in 10⁷:
+the buffer by about 15 mg CH₂O m⁻², the temperature sum by 6e-3 °C day,
+over a season (the
+[reproduction](../../research/reproductions/vanthoor_katzin/README.md)).
 
 ## Departures the files note
 

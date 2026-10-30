@@ -23,11 +23,11 @@ quantity of a scope is converted from one basis to another explicitly
 adds up to the house's.
 """
 
-from enum import StrEnum
 from typing import Final
 
 from pydantic import BaseModel, ConfigDict, PositiveFloat, PositiveInt
 
+from greenhouse_sim.domain.scopes import AreaBasis, ScopeKind
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.layout import Layout
 from greenhouse_sim.world.rows import PlantingPosition
@@ -36,23 +36,6 @@ from greenhouse_sim.world.rows import PlantingPosition
 ROW_SCOPE: Final = "row_{row}"
 # Paired rows share one spacing, from a pair to the next, two to a pair.
 ROWS_TO_A_PAIR: Final = 2
-
-
-class ScopeKind(StrEnum):
-    """What a crop instance grows on: one row of the crop rows. A bed, a
-    growing zone, a compartment and the house are as possible (decision
-    0062), and none is a scope yet."""
-
-    ROW = "row"
-
-
-class AreaBasis(StrEnum):
-    """The area a crop model's quantities are per m² of: a scope's floor,
-    its share of the house's, or its cultivated area, the ground its
-    planting positions take."""
-
-    FLOOR = "floor"
-    CULTIVATED = "cultivated"
 
 
 class CropScope(BaseModel):

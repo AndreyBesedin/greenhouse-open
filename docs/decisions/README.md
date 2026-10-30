@@ -74,6 +74,7 @@ changes course is a new record that supersedes the old one.
 | [0061](0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md) | Greenhouse decisions are benchmarked through interfaces built for it | Accepted |
 | [0062](0062-a-crop-model-declares-its-scope-drivers-outputs-and-capabilities.md) | A crop model declares its scope, drivers, outputs and capabilities | Accepted |
 | [0063](0063-a-data-file-is-generated-committed-or-fetched-by-one-rule.md) | A data file is generated, committed or fetched, by one rule | Accepted |
+| [0064](0064-a-runs-crop-steps-at-its-models-step-not-the-runs-day.md) | A run's crop steps at its model's step, not the run's day | Accepted |
 
 ## Template
 

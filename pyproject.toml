@@ -47,6 +47,9 @@ dev = [
     "ruff==0.17.2",
     "pre-commit==4.7.0",
     "types-openpyxl==3.1.5.20261017",
+    # research/reproductions/vanthoor_katzin solves its model with the solver
+    # its reference solves it with.
+    "scipy==1.18.1",
 ]
 # What runs the workspace rather than in it, pinned here so that uv.lock
 # records it and Dependabot proposes its releases; `uv sync` leaves it out,
