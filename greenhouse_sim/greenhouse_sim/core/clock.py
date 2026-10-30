@@ -34,3 +34,13 @@ def days_ended(time_s: float) -> int:
     days its crop has lived (`greenhouse_sim.core.crop`), as its plants live
     each at the midnight that ends it."""
     return math.floor(time_s / DAY_S)
+
+
+def steps_a_day(step_s: float) -> int:
+    """How many steps of `step_s` seconds a day holds: refused unless it is
+    a whole number, so that every crop's steps pass each midnight (decision
+    0064)."""
+    count = round(DAY_S / step_s) if step_s > 0 else 0
+    if count < 1 or count * step_s != DAY_S:
+        raise ValueError(f"a crop's step divides a day, which {step_s:g} s does not")
+    return count

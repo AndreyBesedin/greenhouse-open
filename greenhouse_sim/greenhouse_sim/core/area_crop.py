@@ -13,9 +13,10 @@ grown per m² on each of its scopes, through the run's days.
   (`greenhouse_sim.services.crop_models.CropRegistration.crop_actions`);
   its harvest is its model's own rule.
 
-Its days are kept as every run's crop keeps them
-(`greenhouse_sim.core.crop_days.CropDays`): what is its own is how it grows
-by area (`AreaGrowth`).
+Its steps are kept as every run's crop keeps them
+(`greenhouse_sim.core.crop_steps.CropSteps`), its step a day until its
+model declares its own (P16.2): what is its own is how it grows by area
+(`AreaGrowth`).
 """
 
 from collections.abc import Callable, Sequence
@@ -23,8 +24,9 @@ from collections.abc import Callable, Sequence
 from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.biology.area_contract import AreaRung, DayCourse
+from greenhouse_sim.core.clock import DAY_S, steps_a_day
 from greenhouse_sim.core.crop_actions import CropAction
-from greenhouse_sim.core.crop_days import CropDays, DayWork
+from greenhouse_sim.core.crop_steps import CropSteps, StepWork
 from greenhouse_sim.world.scopes import CropScope
 
 # Each scope's course on a day of the run, by its name.
@@ -42,7 +44,7 @@ class AreaInstance[StateT: BaseModel](BaseModel):
 
 
 class AreaGrowth[StateT: BaseModel]:
-    """A crop grown by area (`greenhouse_sim.core.crop_days.Growth`): `rung`
+    """A crop grown by area (`greenhouse_sim.core.crop_steps.Growth`): `rung`
     on each of `scopes`, each day in its course, as `courses` gives it."""
 
     def __init__(
@@ -52,6 +54,10 @@ class AreaGrowth[StateT: BaseModel]:
         self.scopes = list(scopes)
         self._courses = courses
 
+    @property
+    def step_s(self) -> float:
+        return DAY_S
+
     def first(self) -> tuple[AreaInstance[StateT], ...]:
         planted = self.rung.planted()
         return tuple(AreaInstance(scope_id=scope.scope_id, state=planted) for scope in self.scopes)
@@ -60,13 +66,13 @@ class AreaGrowth[StateT: BaseModel]:
         """Each scope's course on the run's day `day`."""
         return self._courses(day)
 
-    def next_day(
+    def next_step(
         self,
         day: int,
         state: tuple[AreaInstance[StateT], ...],
         lived: dict[str, DayCourse],
         planned: Sequence[CropAction],
-    ) -> tuple[tuple[AreaInstance[StateT], ...], DayWork | None]:
+    ) -> tuple[tuple[AreaInstance[StateT], ...], StepWork | None]:
         if planned:
             raise ValueError("a crop grown by area takes none of the run's crop actions")
         return tuple(
@@ -98,7 +104,9 @@ class AreaGrowth[StateT: BaseModel]:
         return tuple(AreaInstance(scope_id=each.scope_id, state=each.state) for each in instances)
 
 
-class AreaCrop[StateT: BaseModel](CropDays[tuple[AreaInstance[StateT], ...], dict[str, DayCourse]]):
+class AreaCrop[StateT: BaseModel](
+    CropSteps[tuple[AreaInstance[StateT], ...], dict[str, DayCourse]]
+):
     """A run's crop grown by `rung` on each of `scopes` through its `days`,
     each day in its course, as `courses` gives it: see the module."""
 
@@ -114,17 +122,18 @@ class AreaCrop[StateT: BaseModel](CropDays[tuple[AreaInstance[StateT], ...], dic
     ) -> None:
         self.rung = rung
         self.scopes = list(scopes)
-        super().__init__(AreaGrowth(scopes, rung=rung, courses=courses), days=days, planned={})
+        growth = AreaGrowth(scopes, rung=rung, courses=courses)
+        super().__init__(growth, steps=days * steps_a_day(growth.step_s), planned={})
 
     def instances_on(self, day: int) -> tuple[AreaInstance[StateT], ...]:
         """The crop on the run's day `day`, from 0 to its days: each scope's
         canopy once it has lived the days before it."""
-        return self.on(day)
+        return self.on(day * self.steps_a_day)
 
-    def course(self, scope_id: str, day: int) -> DayCourse:
-        """What a scope's canopy lived on the run's day `day`, from 0 to its
-        last."""
-        found = self.lived_on(day).get(scope_id)
+    def course(self, scope_id: str, step: int) -> DayCourse:
+        """What a scope's canopy lived on the run's step `step`, from 0 to
+        its last."""
+        found = self.lived_on(step).get(scope_id)
         if found is None:
             raise LookupError(f"no scope {scope_id!r} in this crop")
         return found

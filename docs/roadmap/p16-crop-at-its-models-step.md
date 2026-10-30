@@ -13,7 +13,7 @@ states by that step, shows the crop at an instant as the steps ended by then
 have it, and carries crop work out at its step's boundaries. The models the
 run has keep a day's step, and nothing of theirs moves.
 
-## Where the day is built in
+## Where the day was built in, before P16
 
 - **The models:** `CropRung.live_day` (decision 0024) and
   `AreaRung.live_day`, whose day is given hour by hour (`DayCourse`,
@@ -36,13 +36,14 @@ run has keep a day's step, and nothing of theirs moves.
 
 - A crop model declares its step, `step_s`, a whole divisor of a day. A
   step that is not one is refused when the model is registered.
-- `CropDays` keeps a crop's states by step, from the run's start: the first
-  step's, the latest worked out's, and a few last asked for, as it keeps
-  days today. It lives the others again from what the crop experienced on
-  each step. A day is a view of its steps: day `d` is step
-  `d × steps_per_day`.
-- A growth works a step out (`lived`, `next_step`): for a model of a day's
-  step, exactly as it works a day out today.
+- `core/crop_steps.CropSteps`, which `CropDays` became, keeps a crop's
+  states by step, from the run's start: the first step's, the latest
+  worked out's, and a few last asked for, as it kept days. It lives the
+  others again from what the crop experienced on each step. A day is a view
+  of its steps: day `d` begins step `d × steps_a_day`.
+- A growth declares its step (`step_s`) and works a step out (`lived`,
+  `next_step`): for a model of a day's step, exactly as it worked a day
+  out.
 
 ### Drivers per step
 
@@ -101,10 +102,10 @@ run has keep a day's step, and nothing of theirs moves.
 
 | Step | Scope | Pull request | Status |
 | --- | --- | --- | --- |
-| P16.1 | A crop's step: `CropDays` keeps a crop's states by step, a whole divisor of a day, its days a view of them; growths work a step out; the crop registration declares the step, a day for every model today; `core/clock.steps_ended`. No behaviour changes. | `refactor(sim): a run's crop keeps its states by its model's step (0064)` | Planned |
+| P16.1 | A crop's step: `core/crop_days.CropDays` becomes `core/crop_steps.CropSteps`, keeping a crop's states by its growth's step, a whole divisor of a day (`core/clock.steps_a_day`), which a growth declares (`step_s`) and works out (`next_step`); a day for every crop today, so that a crop grown plant by plant has its days as its steps, and one grown by area its days as a view of them. No behaviour changes. | `refactor(sim): a run's crop keeps its states by its model's step (0064)` | Done |
 | P16.2 | A model grown by area at its own step: `AreaRung.step_s` and `live_step`, `StepCourse`; a profile's resolution, and the refusals; a test canopy of an hourly step; the checkpoint format for a crop of a shorter step. | `feat(sim): a crop grown by area steps at its model's step (0064)` | Planned |
-| P16.3 | The crop at an instant: the scene, a plant, the light, the checkpoint, the run's state and the walk's truth read the steps ended by their moment; the test that asking never changes the crop. | `feat(sim): a run's crop at an instant, as its steps have it (0064)` | Planned |
-| P16.4 | Crop work at a step's boundary: the plan's check, the gateway's `why_not` and `earliest`, and planned actions kept by step, from the model's step; refusals naming it. | `feat(sim): crop work at a boundary of its model's step (0064)` | Planned |
+| P16.3 | The crop at an instant: `core/clock.steps_ended`; the scene, a plant, the light, the checkpoint, the run's state and the walk's truth read the steps ended by their moment; the test that asking never changes the crop. | `feat(sim): a run's crop at an instant, as its steps have it (0064)` | Planned |
+| P16.4 | Crop work at a step's boundary: the crop registration declaring its model's step; the plan's check, the gateway's `why_not` and `earliest`, and planned actions kept by step, from that step; refusals naming it. | `feat(sim): crop work at a boundary of its model's step (0064)` | Planned |
 | P16.5 | The plant model guide says how a model declares its step; the QA scenario below, run and recorded. | `docs: a crop model's step, and P16's QA` | Planned |
 
 ## Acceptance criteria
