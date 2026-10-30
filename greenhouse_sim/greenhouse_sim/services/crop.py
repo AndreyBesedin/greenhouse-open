@@ -9,8 +9,10 @@ A run is asked for as its climate field is (`greenhouse_sim.services.fields`),
 and refused as it is, as is a moment outside it. Its crop lives in its
 climate run's house air, whether or not its layout places equipment, and
 in its scenario's sunlight under its weather, its crowns as tall as its
-plants stand each day. At a moment, the crop has lived the run's days that
-have ended by then (`greenhouse_sim.core.clock.days_ended`).
+plants stand each day. At a moment, the crop is as the steps of its model
+ended by then have it (`greenhouse_sim.core.crop_steps.CropSteps.at`,
+decision 0064): for a crop grown plant by plant, the run's days that have
+ended by then (`greenhouse_sim.core.clock.days_ended`).
 
 A run's own crop actions (P13.5), its plan's harvests, lowerings and leaves
 removed at the start of a day, are carried out on its crop after that
@@ -205,7 +207,7 @@ def _new_crop(
 def crop_scene(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> SceneSnapshot:
     """A run's crop `time_s` into it, as a viewer draws it over the
     scenario's scene: each plant at its planting position, as it stands
-    once it has lived the days ended by then, drawn as its model draws it
+    once it has lived the steps ended by then, drawn as its model draws it
     (`CropRegistration.drawn`). Asked for as its climate field is, and
     refused as it is."""
     checked_moment(scenario(simulator.catalogue, run.scenario_id), time_s)
@@ -216,7 +218,7 @@ def crop_scene(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> Sc
         scenario(simulator.catalogue, run.scenario_id),
         SceneChanges(layout=run.layout or DEFAULT_LAYOUT),
     )
-    entities = registration(config).plants.drawn(crop.plants_on(day), config)
+    entities = registration(config).plants.drawn(crop.at(time_s), config)
     return SceneSnapshot(greenhouse_id=config.greenhouse_id, simulated_day=day, entities=entities)
 
 
@@ -244,7 +246,7 @@ def crop_plant(
     checked_moment(scenario(simulator.catalogue, run.scenario_id), time_s)
     crop = run_crop(simulator, run)
     day = days_ended(time_s)
-    plant = next((plant for plant in crop.plants_on(day) if plant.plant_id == plant_id), None)
+    plant = next((plant for plant in crop.at(time_s) if plant.plant_id == plant_id), None)
     if plant is None:
         raise NotFound(f"{run.scenario_id} has no plant {plant_id!r}")
     return CropPlant(
