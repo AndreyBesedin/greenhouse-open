@@ -20,8 +20,9 @@ an entry nor `none`. `changes` prints those entries, and the pull requests
 that give neither. `check-description` holds a pull request's description
 to the same rule. `video` points the
 README's demo at a video uploaded to GitHub, captioned with the packages'
-version. `tag` checks a merged release pull request and, for the
-repository's owner, tags its merge commit and pushes the tag; `verify` is
+version. `tag` checks a merged release pull request, its notes holding
+every pull request merged since the last release that gives an entry, and,
+for the repository's owner, tags its merge commit and pushes the tag; `verify` is
 the same check, which the release workflow makes of a pushed tag before it
 publishes the release, and prints `version=<version>` for its next step.
 A tag already on the merge commit passes both, so that either can be run
@@ -337,13 +338,16 @@ def problems(
     *,
     managers: set[str],
     tags: Mapping[str, str],
+    merged: Sequence[Merged] = (),
     root: Path = ROOT,
 ) -> list[str]:
     """Why `merge` is not tagged and released; none when it is.
 
     `managers` are the release managers as listed before the pull request,
     which cannot then add its own author; `tags` maps each `v*` tag to the
-    commit it tags."""
+    commit it tags; `merged` are the pull requests merged since the last
+    release, in the merge's history, each of which gives `none` or has its
+    entry in the notes."""
     version = current_version(root)
     found = []
     if merge.branch != f"{RELEASE_BRANCH}{version}":
@@ -368,13 +372,30 @@ def problems(
         if expected not in (root / package / "pyproject.toml").read_text()
     )
     try:
-        notes(version, root)
+        given = notes(version, root)
         changelog = (root / CHANGELOG).read_text()
         body, end = _section(changelog, UNRELEASED)
         if changelog[body:end].strip():
             found.append(f"{CHANGELOG}'s Unreleased entries would be left out of the notes")
+        found.extend(left_out(given, merged, merge.number))
     except Refused as refused:
         found.append(str(refused))
+    return found
+
+
+def left_out(given: str, merged: Sequence[Merged], release: int) -> list[str]:
+    """The pull requests merged, other than release `release` itself, that
+    give neither an entry nor `none`, or whose entry the notes `given` leave
+    out: merged after the release was prepared, as a rule, which would
+    otherwise be released without their entries, and counted as released by
+    the next release."""
+    others = [pull for pull in merged if pull.number != release]
+    _, missing = entries_merged(others)
+    found = [f"{pull}: no changelog entry, nor {NO_ENTRY}" for pull in missing]
+    for pull in others:
+        entries, _ = entries_merged([pull])
+        if entries and f"(#{pull.number})" not in given:
+            found.append(f"#{pull.number} {pull.title}: its entry is not in the notes")
     return found
 
 
@@ -419,11 +440,19 @@ def merged_as(commit: str) -> Merge:
     return pull_request(numbers[0])
 
 
-def merged_since_release(root: Path = ROOT) -> list[Merged]:
+def merged_since_release(
+    root: Path = ROOT, until: str = "HEAD", before: str | None = None
+) -> list[Merged]:
     """The pull requests merged into `main` since the last release's tag, in
-    the order they were merged: those whose merge commit is in the
-    checkout's history and not in the tag's."""
-    tags = _tags(root)
+    the order they were merged: those whose merge commit is in `until`'s
+    history and not in the tag's. With `before`, a version, the last release
+    is the last tagged before it, which `verify` asks once its own tag is
+    pushed."""
+    tags = {
+        name: commit
+        for name, commit in _tags(root).items()
+        if before is None or parse_version(name.removeprefix("v")) < parse_version(before)
+    }
     if not tags:
         raise Refused("no release tag to count the pull requests merged from")
     last = max(tags, key=lambda name: parse_version(name.removeprefix("v")))
@@ -445,7 +474,7 @@ def merged_since_release(root: Path = ROOT) -> list[Merged]:
     )
 
     def since_the_tag(commit: str) -> bool:
-        in_history = _git(root, "merge-base", "--is-ancestor", commit, "HEAD").returncode == 0
+        in_history = _git(root, "merge-base", "--is-ancestor", commit, until).returncode == 0
         tagged_too = _git(root, "merge-base", "--is-ancestor", commit, tagged).returncode == 0
         return in_history and not tagged_too
 
@@ -475,17 +504,18 @@ def tag(number: int, root: Path = ROOT) -> int:
     _git(root, "fetch", "--quiet", "--tags", "origin")
     owner = _gh("api", "repos/{owner}/{repo}")["owner"]["login"]
     tags = _tags(root)
+    version = current_version(root)
     found = problems(
         merge,
         owner,
         _gh("api", "user")["login"],
         managers=managers_at(merge.base, root),
         tags=tags,
+        merged=merged_since_release(root, until=merge.commit, before=version),
         root=root,
     )
     if found:
         return _report(found)
-    version = current_version(root)
     name = f"v{version}"
     if name not in tags:
         message = f"greenhouse-open {version}. See CHANGELOG.md."
@@ -556,10 +586,16 @@ def main(arguments: Sequence[str] | None = None) -> int:
         else:
             merge = merged_as(_head(ROOT))
             managers = managers_at(merge.base, ROOT)
-            found = problems(
-                merge, args.owner, args.tagged_by, managers=managers, tags=_tags(ROOT), root=ROOT
-            )
             version = current_version(ROOT)
+            found = problems(
+                merge,
+                args.owner,
+                args.tagged_by,
+                managers=managers,
+                tags=_tags(ROOT),
+                merged=merged_since_release(ROOT, until=merge.commit, before=version),
+                root=ROOT,
+            )
             if args.tag != f"v{version}":
                 found.append(f"tag {args.tag} does not name {version}, the packages' version")
             if found:

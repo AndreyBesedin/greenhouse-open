@@ -71,10 +71,11 @@ gh api "repos/{owner}/{repo}/issues/<n>/comments" --paginate \
   | grep -oE 'https://github\.com/user-attachments/assets/[0-9a-f-]+' | tail -1
 ```
 
-Is it this recording:
+Is it this recording. GitHub serves an upload only to a signed-in viewer
+(a plain `curl` gets 404), so it is read as the user, through `gh`:
 
 ```bash
-curl -sL "<url>" | shasum -a 256
+gh api -H "Accept: application/octet-stream" "<url>" | shasum -a 256
 shasum -a 256 "<the cut's path>"
 ```
 

@@ -40,7 +40,9 @@ whatever this step finds, so a pull request made anyway is wasted.
   that give changelog entries. `uv run release changes` prints them, with
   any merged pull request that gives neither an entry nor `none`.
 - List the open pull requests. Ask the user which, if any, must land
-  first; Dependabot's never hold a release.
+  first; Dependabot's never hold a release. Tell them that from `prepare`
+  until the release's merge, a pull request merged into `main` is released
+  without its entry, and that `tag` then refuses until the notes hold it.
 
 ## 3. The version
 
@@ -137,9 +139,11 @@ viewer's build line in the video names the version.
    that. Ask the user to drag the MP4, by its full path, into a comment on
    the release pull request and post it. Stop the turn and wait for them.
 6. Read the URL from the comment that the owner or a release manager
-   posted. Download it and compare its SHA-256 with the local file's, to
-   check it is this recording. If they differ, ask the user which upload
-   is meant; never guess.
+   posted, or from the user, who may paste it. Download it as the user,
+   through `gh`: GitHub serves an upload only to a signed-in viewer, and
+   answers 404 without a session. Compare its SHA-256 with the local
+   file's, to check it is this recording. If they differ, ask the user
+   which upload is meant; never guess.
 7. `uv run release video <url>` points the README's demo at it and sets the
    caption's version. Commit `docs(readme): the demo video recorded from
    <version>`, signed off, and push it to the release branch.
@@ -166,10 +170,13 @@ request.
   checks the release and pushes `v<version>`, annotated. When `gh` acts as
   a release manager, ask the owner to run that command, and give it to
   them with the pull request's number.
-- If `tag` refuses, it says why. A refusal, such as a range left behind or
-  entries left under Unreleased, is fixed by a pull request from a branch
-  of the same name, `build/release-<version>`, which the owner merges and
-  tags in turn.
+- If `tag` refuses, it says why. A refusal, such as a range left behind,
+  entries left under Unreleased, or a pull request merged since the last
+  release whose entry the notes leave out (merged after `prepare`), is
+  fixed by a pull request from a branch of the same name,
+  `build/release-<version>`, which the owner merges and tags in turn. For a
+  pull request merged late, that branch writes its entry into the
+  version's section.
 - **The release.** The tag's push runs the `Release` workflow. Watch it,
   then check that the GitHub release is the latest, on `v<version>`, with
   the changelog's section as its notes. If the run failed, its log says
