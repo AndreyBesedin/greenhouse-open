@@ -1,0 +1,772 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "ActionCadence": {
+      "additionalProperties": false,
+      "description": "The instants at which a run carries a kind of action out: every\n`every_s` seconds from `first_s` after its epoch's start, such as a\ncrop's work at the start of each day after the first. A window or an\nas-soon-as-possible action starts at the next; one due at another\ninstant is refused.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/ActionKind"
+        },
+        "every_s": {
+          "exclusiveMinimum": 0,
+          "title": "Every S",
+          "type": "number"
+        },
+        "first_s": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "First S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "kind",
+        "every_s"
+      ],
+      "title": "ActionCadence",
+      "type": "object"
+    },
+    "ActionKind": {
+      "enum": [
+        "set_level",
+        "set_target",
+        "water",
+        "harvest",
+        "lower",
+        "remove_leaf",
+        "inspect"
+      ],
+      "title": "ActionKind",
+      "type": "string"
+    },
+    "CropBasis": {
+      "description": "How a crop instance is grown, as its model is (decision 0062).",
+      "enum": [
+        "plant",
+        "area"
+      ],
+      "title": "CropBasis",
+      "type": "string"
+    },
+    "CropInstance": {
+      "additionalProperties": false,
+      "description": "An instance of the run's crop: a model on a scope, named by its\nscope (decision 0062). Its areas, in m²: the ground its planting\npositions take, and its share of the house's floor. Its plants, as a\ngreenhouse description lists them, only if it is grown by plant; and\nthe crop actions its model takes, each of which names a plant.",
+      "properties": {
+        "scope_id": {
+          "$ref": "#/$defs/Name"
+        },
+        "scope_kind": {
+          "$ref": "#/$defs/Name"
+        },
+        "grown_by": {
+          "$ref": "#/$defs/CropBasis"
+        },
+        "cultivated_m2": {
+          "exclusiveMinimum": 0,
+          "title": "Cultivated M2",
+          "type": "number"
+        },
+        "floor_m2": {
+          "exclusiveMinimum": 0,
+          "title": "Floor M2",
+          "type": "number"
+        },
+        "plants": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Plant"
+          },
+          "title": "Plants",
+          "type": "array"
+        },
+        "crop_actions": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ActionKind"
+          },
+          "title": "Crop Actions",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "scope_id",
+        "scope_kind",
+        "grown_by",
+        "cultivated_m2",
+        "floor_m2"
+      ],
+      "title": "CropInstance",
+      "type": "object"
+    },
+    "DeviceControl": {
+      "additionalProperties": false,
+      "description": "A device a policy may set, by `set_level`, the one action on a\ndevice: what it does, by name, as the installation names it (`heats`,\n`moves_air`, `dries`, `opens`), and the levels it may be given, each a\nshare of what it does at full level, or of fully open. `auto` hands it\nback to its control loop, where it has one.",
+      "properties": {
+        "device_id": {
+          "$ref": "#/$defs/Name"
+        },
+        "compartment_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Name"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "does": {
+          "items": {
+            "$ref": "#/$defs/Name"
+          },
+          "minItems": 1,
+          "title": "Does",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "low": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Low",
+          "type": "number"
+        },
+        "high": {
+          "default": 1.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "High",
+          "type": "number"
+        },
+        "auto": {
+          "default": false,
+          "title": "Auto",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "device_id",
+        "does"
+      ],
+      "title": "DeviceControl",
+      "type": "object"
+    },
+    "GatewayLimits": {
+      "additionalProperties": false,
+      "description": "How much one plan may hold: actions, and their occurrences expanded.",
+      "properties": {
+        "max_actions": {
+          "minimum": 1,
+          "title": "Max Actions",
+          "type": "integer"
+        },
+        "max_occurrences": {
+          "minimum": 1,
+          "title": "Max Occurrences",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_actions",
+        "max_occurrences"
+      ],
+      "title": "GatewayLimits",
+      "type": "object"
+    },
+    "Goal": {
+      "additionalProperties": false,
+      "description": "An experiment's objective or constraint: what is measured, in which\nunit, and which way, or within which bounds.",
+      "properties": {
+        "goal_id": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "description": {
+          "$ref": "#/$defs/Name"
+        },
+        "unit": {
+          "$ref": "#/$defs/Name"
+        },
+        "sense": {
+          "$ref": "#/$defs/GoalSense"
+        },
+        "low": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Low"
+        },
+        "high": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "High"
+        }
+      },
+      "required": [
+        "goal_id",
+        "description",
+        "unit",
+        "sense"
+      ],
+      "title": "Goal",
+      "type": "object"
+    },
+    "GoalSense": {
+      "enum": [
+        "minimise",
+        "maximise",
+        "within"
+      ],
+      "title": "GoalSense",
+      "type": "string"
+    },
+    "Grant": {
+      "additionalProperties": false,
+      "properties": {
+        "kinds": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ActionKind"
+          },
+          "title": "Kinds",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "targets": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TargetSelector"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "on_behalf_of": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Principal"
+          },
+          "title": "On Behalf Of",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "manage_plans": {
+          "default": false,
+          "title": "Manage Plans",
+          "type": "boolean"
+        }
+      },
+      "title": "Grant",
+      "type": "object"
+    },
+    "Identifier": {
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9_.-]+$",
+      "type": "string"
+    },
+    "Name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "ObservationSource": {
+      "additionalProperties": false,
+      "description": "Where a policy's observations come from: a source by its id, what it\nobserves, and where. A source in a compartment may be in one zone of\nit, at one plant, or on one crop instance's scope; none of them for the\ncompartment, or the greenhouse, as a whole.",
+      "properties": {
+        "source_id": {
+          "$ref": "#/$defs/Name"
+        },
+        "kind": {
+          "$ref": "#/$defs/SourceKind"
+        },
+        "quantities": {
+          "items": {
+            "$ref": "#/$defs/ObservedQuantity"
+          },
+          "minItems": 1,
+          "title": "Quantities",
+          "type": "array"
+        },
+        "compartment_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Name"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "zone_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Name"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "plant_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Name"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "scope_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Name"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "source_id",
+        "kind",
+        "quantities"
+      ],
+      "title": "ObservationSource",
+      "type": "object"
+    },
+    "ObservationType": {
+      "description": "What an Observation measures. The value doubles as the unit-bearing\nfield name on the reconstructed state models (EnvironmentState,\nGreenhouseEnvironmentState), so a new greenhouse-level type is one enum\nmember plus one optional field, no mapping table.\n\nPlant-level readings come from a sensor or vision pass on one plant;\ngreenhouse-level readings (plant_id None) describe the compartment's\nclimate, its control state, or a manual sample across plants. Recorded\nsetpoints are observations of what the controller was asked to do, not\nevents: they are continuous 5-minute state, not discrete interventions.",
+      "enum": [
+        "soil_moisture_pct",
+        "visible_fruit_count",
+        "ripe_fruit_count",
+        "estimated_ripe_mass_g",
+        "visible_height_cm",
+        "plant_height_cm",
+        "leaf_count",
+        "leaf_length_cm",
+        "leaf_width_cm",
+        "truss_count",
+        "open_flower_count",
+        "green_fruit_count",
+        "coloured_fruit_count",
+        "air_temperature_c",
+        "relative_humidity_pct",
+        "humidity_deficit_g_m3",
+        "co2_ppm",
+        "par_umol_m2_s",
+        "air_speed_m_s",
+        "heating_pipe_temperature_c",
+        "energy_screen_position_pct",
+        "blackout_screen_position_pct",
+        "window_position_lee_pct",
+        "window_position_wind_pct",
+        "lamps_activation_pct",
+        "heating_temperature_setpoint_c",
+        "ventilation_temperature_setpoint_c",
+        "co2_setpoint_ppm",
+        "humidity_deficit_setpoint_g_m3",
+        "lamps_activation_setpoint_pct",
+        "energy_screen_setpoint_pct",
+        "blackout_screen_setpoint_pct",
+        "irrigation_interval_setpoint_min",
+        "minimum_pipe_temperature_setpoint_c",
+        "minimum_window_position_lee_setpoint_pct",
+        "heating_temperature_effective_c",
+        "ventilation_temperature_lee_effective_c",
+        "ventilation_temperature_wind_effective_c",
+        "co2_effective_ppm",
+        "humidity_deficit_effective_g_m3",
+        "energy_screen_effective_pct",
+        "blackout_screen_effective_pct",
+        "irrigation_interval_effective_min",
+        "minimum_pipe_temperature_effective_c",
+        "minimum_window_position_lee_effective_pct",
+        "co2_dosing_on",
+        "co2_dosing_minutes_since_reset",
+        "heating_energy_increment_mj_m2",
+        "lighting_electricity_increment_kwh_m2",
+        "co2_dosed_increment_kg_m2",
+        "heating_cost_increment_eur_m2",
+        "lighting_cost_increment_eur_m2",
+        "co2_cost_increment_eur_m2",
+        "fixed_cost_increment_eur_m2",
+        "irrigation_flow_duration_min",
+        "drain_water_volume_l_m2",
+        "drain_ec_ds_m",
+        "drain_ph",
+        "sampled_fruit_count_per_plant",
+        "sampled_fruit_fresh_weight_g_per_plant",
+        "plant_density_per_m2",
+        "outside_air_temperature_c",
+        "outside_relative_humidity_pct",
+        "outside_humidity_deficit_g_m3",
+        "outside_absolute_humidity_g_m3",
+        "outside_global_radiation_w_m2",
+        "outside_radiation_sum_j_cm2",
+        "outside_wind_speed_m_s",
+        "outside_wind_direction_deg",
+        "outside_barometric_pressure_hpa",
+        "outside_cloud_cover_pct",
+        "outside_rain",
+        "outside_par_umol_m2_s",
+        "outside_heat_emission_w_m2",
+        "outside_co2_ppm",
+        "forecast_radiation_sum_today_j_cm2"
+      ],
+      "title": "ObservationType",
+      "type": "string"
+    },
+    "ObservedQuantity": {
+      "additionalProperties": false,
+      "description": "A quantity a source observes, in the unit its type names, and how\noften: every so many seconds, or None when not at a fixed cadence.",
+      "properties": {
+        "observation_type": {
+          "$ref": "#/$defs/ObservationType"
+        },
+        "every_s": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Every S"
+        }
+      },
+      "required": [
+        "observation_type"
+      ],
+      "title": "ObservedQuantity",
+      "type": "object"
+    },
+    "Plant": {
+      "properties": {
+        "plant_id": {
+          "title": "Plant Id",
+          "type": "string"
+        },
+        "variety": {
+          "title": "Variety",
+          "type": "string"
+        },
+        "row": {
+          "title": "Row",
+          "type": "integer"
+        },
+        "position_in_row": {
+          "title": "Position In Row",
+          "type": "integer"
+        },
+        "x": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "X"
+        },
+        "y": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Y"
+        },
+        "zone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Zone"
+        },
+        "tray_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tray Id"
+        }
+      },
+      "required": [
+        "plant_id",
+        "variety",
+        "row",
+        "position_in_row"
+      ],
+      "title": "Plant",
+      "type": "object"
+    },
+    "Principal": {
+      "additionalProperties": false,
+      "description": "Who asks for an action, by identity: a person, a control policy, a\nschedule, a scenario's own plan, a platform.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/PrincipalKind"
+        },
+        "id": {
+          "$ref": "#/$defs/Name"
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ],
+      "title": "Principal",
+      "type": "object"
+    },
+    "PrincipalKind": {
+      "enum": [
+        "person",
+        "policy",
+        "schedule",
+        "scenario",
+        "platform"
+      ],
+      "title": "PrincipalKind",
+      "type": "string"
+    },
+    "SourceKind": {
+      "enum": [
+        "sensor",
+        "meter",
+        "measurement",
+        "controller"
+      ],
+      "title": "SourceKind",
+      "type": "string"
+    },
+    "TargetControl": {
+      "additionalProperties": false,
+      "description": "A controller's target a policy may set, by `set_target`, its range\nand unit, and the observation type the target in force is observed\nas, when a source observes it.",
+      "properties": {
+        "target": {
+          "$ref": "#/$defs/Name"
+        },
+        "unit": {
+          "$ref": "#/$defs/Name"
+        },
+        "low": {
+          "title": "Low",
+          "type": "number"
+        },
+        "high": {
+          "title": "High",
+          "type": "number"
+        },
+        "observed_as": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObservationType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "target",
+        "unit",
+        "low",
+        "high"
+      ],
+      "title": "TargetControl",
+      "type": "object"
+    },
+    "TargetSelector": {
+      "additionalProperties": false,
+      "description": "The targets a grant is limited to, by kind of target: an action's\ndevices must all be among `devices`, its plants among `plants`, its\ncontroller targets among `targets`. A kind left None is not limited.",
+      "properties": {
+        "devices": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Devices"
+        },
+        "plants": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Plants"
+        },
+        "targets": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Targets"
+        }
+      },
+      "title": "TargetSelector",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A principal's context in one epoch of a run: see the module.",
+  "properties": {
+    "context_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Context Version",
+      "type": "integer"
+    },
+    "run_id": {
+      "$ref": "#/$defs/Name"
+    },
+    "epoch": {
+      "minimum": 0,
+      "title": "Epoch",
+      "type": "integer"
+    },
+    "greenhouse_id": {
+      "$ref": "#/$defs/Name"
+    },
+    "principal": {
+      "$ref": "#/$defs/Principal"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/ObservationSource"
+      },
+      "title": "Sources",
+      "type": "array"
+    },
+    "devices": {
+      "items": {
+        "$ref": "#/$defs/DeviceControl"
+      },
+      "title": "Devices",
+      "type": "array"
+    },
+    "targets": {
+      "items": {
+        "$ref": "#/$defs/TargetControl"
+      },
+      "title": "Targets",
+      "type": "array"
+    },
+    "crops": {
+      "items": {
+        "$ref": "#/$defs/CropInstance"
+      },
+      "title": "Crops",
+      "type": "array"
+    },
+    "cadences": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ActionCadence"
+      },
+      "title": "Cadences",
+      "type": "array"
+    },
+    "limits": {
+      "$ref": "#/$defs/GatewayLimits"
+    },
+    "grants": {
+      "items": {
+        "$ref": "#/$defs/Grant"
+      },
+      "title": "Grants",
+      "type": "array"
+    },
+    "goals": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Goal"
+      },
+      "title": "Goals",
+      "type": "array"
+    }
+  },
+  "required": [
+    "run_id",
+    "epoch",
+    "greenhouse_id",
+    "principal",
+    "sources",
+    "devices",
+    "targets",
+    "crops",
+    "limits",
+    "grants"
+  ],
+  "title": "CapabilityContext",
+  "type": "object"
+}

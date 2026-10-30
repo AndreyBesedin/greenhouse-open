@@ -1,10 +1,8 @@
 # P15: A policy's port, and an experiment that steps a run
 
-**Status:** proposed: the design below, for review before P15.1. Stage A
-of decision
-[0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md),
-which this document's pull request marks Accepted. Part of the
-[simulator roadmap](README.md).
+**Status:** in progress: P15.1 done. Stage A of decision
+[0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md).
+Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -77,6 +75,7 @@ A contract in the protocol, `PolicyPort`, beside the gateway's
 | --- | --- |
 | `run()` | the `RunDescriptor`: run id, epoch, clock |
 | `context()` | the `CapabilityContext` below |
+| `budget()` | the `InformationBudget` below |
 | `observations(after, limit)` | an `ObservationBatch` of what the allowlist lets through |
 | `events(after, limit)` | an `EventBatch`, likewise |
 | `outcomes(after, limit)` | an `OutcomeBatch` of the actions of plans this principal owns |
@@ -281,7 +280,7 @@ digest or kept opening day moves.
 
 | Step | Scope | Pull request | Status |
 | --- | --- | --- | --- |
-| P15.1 | The protocol's records and contracts: `PolicyPort`, `CapabilityContext`, `InformationBudget`, `Forecast`, `Policy`, `Delivery`, `Decision`, the allowlist, and `check_policy_port`, with an in-memory reference; the published JSON Schemas. | `feat(protocol): a policy's port, its context and its budget` | Planned |
+| P15.1 | The protocol's records and contracts: `PolicyPort`, `CapabilityContext`, `InformationBudget`, `Forecast`, `Policy`, `Delivery`, `Decision`, the allowlist, and `check_policy_port`, with an in-memory reference; the published JSON Schemas. | `feat(protocol): a policy's port, its context and its budget` | Done: the records (`context`, `budget`, `forecast`), the context saying when the run carries each kind of action out (`cadences`: crop work at a day's start, a target on the minute); the port's contract, its routes and its allowlist (`contracts.policy`), and the forecasts as a fourth log with the consumer interface's rules; `check_policy_port`, which finds a port that gives another's plans or outcomes, an unobserved reading, an unnamed parameter or an unbudgeted forecast; the in-memory reference (`contracts.memory_policy`); four published schemas. The port gained `budget()`, so that a policy outside reads its budget as it reads its context |
 | P15.2 | A run's capability and goal context, built from its installation, scenario and authorisation. | `feat(sim): a run's capability and goal context` | Planned |
 | P15.3 | The policy's port in the process: bound to a principal, its own cursors, the allowlist applied, its outcomes and plans only; the conformance tests and the dependency test. | `feat(sim): a policy's port in the process` | Planned |
 | P15.4 | The experiment runner: `step_to`, the barriers, the lifecycle, the determinism test; example 03 on it. | `feat(sim): an experiment that steps a run` | Planned |

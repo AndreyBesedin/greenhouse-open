@@ -25,6 +25,7 @@ from datetime import datetime
 from typing import Protocol
 
 from greenhouse_protocol.event import Event
+from greenhouse_protocol.forecast import Forecast
 from greenhouse_protocol.media import CameraFrame, MediaCapture
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.outcome import ActionOutcome
@@ -136,6 +137,27 @@ def check_outcomes(outcomes: Iterable[ActionOutcome]) -> list[str]:
         for (epoch, plan_id, revision, ref), count in ends.items()
         if count > 1
     ]
+    return violations
+
+
+def check_forecasts(forecasts: Iterable[Forecast]) -> list[str]:
+    """What forecasts must hold, beyond their model: instants, one identity
+    for one issue, a real number, and a greenhouse."""
+    records = list(forecasts)
+    violations: list[str] = []
+    for forecast in records:
+        label = f"forecast {forecast.forecast_id!r}"
+        for name in ("issued_at", "valid_from", "valid_until"):
+            moment: datetime = getattr(forecast, name)
+            if moment.tzinfo is None or moment.utcoffset() is None:
+                violations.append(f"{label} has {name} with no timezone: {moment!r}")
+        if not math.isfinite(forecast.value):
+            violations.append(f"{label} has a non-finite value ({forecast.value!r})")
+        if not forecast.greenhouse_id.strip():
+            violations.append(f"{label} names no greenhouse")
+    violations += _check_identities_are_unique(
+        [(f.forecast_id, f.issued_at) for f in records], "forecast"
+    )
     return violations
 
 
