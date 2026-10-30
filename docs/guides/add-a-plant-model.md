@@ -15,13 +15,17 @@ The run drives either through `RunCrop` (`greenhouse_sim/greenhouse_sim/core/cro
 which `greenhouse_sim/greenhouse_sim/services/crop.py` builds with the rung
 of the model a scenario's rows grow.
 
-**How the crop's moments are worked out:** a day at a time. At each
-midnight, every plant lives the day that just ended in a `LocalEnvironment`
+**How the crop's moments are worked out:** a day at a time, the step of
+every model grown plant by plant. At each midnight, every plant lives the
+day that just ended in a `LocalEnvironment`
 (`greenhouse_sim/greenhouse_sim/biology/plant/environment.py`,
 [decision 0024](../decisions/0024-plants-take-their-environment-a-day-at-a-time.md)):
 the house's mean temperature and CO₂ through that day, its own day's light
 integral, and its water. Then the next day's crop work starts: a harvest
-round, then a lowering round.
+round, then a lowering round. Between two midnights, the crop is as at the
+last ([decision 0064](../decisions/0064-a-runs-crop-steps-at-its-models-step-not-the-runs-day.md)):
+the viewer, a plant's panel and the walk read it there
+(`CropSteps.at`, `greenhouse_sim/greenhouse_sim/core/crop_steps.py`).
 
 A rung keeps the crop's contract, `CropRung`
 (`greenhouse_sim/greenhouse_sim/biology/crop_contract.py`): its plants start,
@@ -33,11 +37,25 @@ and its manifest gives that model's parameters in its `models.crop` section.
 
 This recipe is for a model of single plants. A model that grows a crop per
 square metre of ground, with no plants of its own, as the published canopy
-models do, takes an area-based contract of its own beside `CropRung`
+models do, keeps an area-based contract of its own beside `CropRung`
 ([decision 0062](../decisions/0062-a-crop-model-declares-its-scope-drivers-outputs-and-capabilities.md)):
-a scope with its areas, a driver profile and a measurement model. That
-contract is P14.9 of the [P14 roadmap](../roadmap/p14-models-by-manifest.md),
-not yet code.
+`AreaRung` (`greenhouse_sim/greenhouse_sim/biology/area_contract.py`), on
+a scope with its areas, driven through a driver profile
+(`greenhouse_sim/greenhouse_sim/core/drivers.py`). Its rules, and those
+of its step:
+
+- **Its step** (`step_s`, [decision 0064](../decisions/0064-a-runs-crop-steps-at-its-models-step-not-the-runs-day.md)):
+  a whole number of its profile's spans that divides a day, an hour or
+  more with `house_hours`. A model whose state moves within a day takes a
+  step shorter than a day; between two steps, the run shows it as at the
+  earlier.
+- **A step lived** (`live_step`): given its step's course (`StepCourse`),
+  its drivers hour by hour from the step's start, it returns its canopy
+  once it has lived it, the same every time, whatever other scopes grow
+  beside it.
+- **Its tests:** its rung added to `AREA_RUNGS` in
+  `greenhouse_sim/tests/test_area_crop.py`, which holds every area model
+  to the contract's rules at its own step.
 
 ## Steps
 
