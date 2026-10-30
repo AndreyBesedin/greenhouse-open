@@ -104,11 +104,24 @@ behind them moves.
 | Describe a greenhouse | `greenhouse_sim.scenarios`, `greenhouse_sim.world`, `greenhouse_sim.world.envelope` |
 | Score readings against the truth | `greenhouse_sim.ground_truth`, `greenhouse_sim.evaluation.observation_accuracy` |
 | Draw a simulation | `greenhouse_sim.world.geometry`, `greenhouse_sim.scene.snapshot` |
+| Steer a run as a policy | `greenhouse_sim.experiment` |
 
 A run itself is reached through the local API (`python -m greenhouse_sim.api`):
 its consumer interface delivers a run's records, and its gateway takes a
 plan of actions for it. Everything else is internal and may move.
 `tests/test_public_imports.py` lists every public name.
+
+A control policy reaches a run through a port of its own (decision 0061):
+what an observation process makes, what it may know of the greenhouse,
+and its own plans, as its own principal, and nothing of the simulated
+world's truth.
+- **In the process,** an experiment steps a run for it, decision by
+  decision (`greenhouse_sim.experiment.run_episode`), as
+  `examples/03_close_the_loop.py` does.
+- **In a process of its own,** given only a port's address and its token,
+  it reads the port's server (`python -m greenhouse_sim.api.policy_server`)
+  through the protocol's client
+  (`greenhouse_protocol.contracts.policy_client`).
 
 The engine's day (`SimulationEngine`), its world, its model contracts, its
 simple models and its checkpoints were removed in 0.5.0 (decision 0059):
