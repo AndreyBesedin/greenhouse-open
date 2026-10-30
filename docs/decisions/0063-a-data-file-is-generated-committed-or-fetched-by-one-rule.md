@@ -46,6 +46,9 @@ What weighs on the choice:
   only what the wheel holds.
 - **Review:** an expected answer that changes is only reviewed where the
   pull request shows it.
+- **Forks:** a pull request from a fork runs CI without the repository's
+  secrets, so a file a check needs must be readable without credentials,
+  by anyone.
 - **Git LFS,** weighed for the larger files and left out: a clone without
   it holds pointer files in place of the data, and GitHub meters its
   storage and bandwidth, forks' included.
@@ -93,12 +96,21 @@ applies to it.
    request that commits more than 1 MB of data in all lists the files and
    their sizes in its description.
 4. **Needed but too large for rule 3: fetched.** It is published outside
-   the Git history, as a release asset of this repository or, for research
-   data, in an archive that gives it a DOI. A manifest names its address,
-   size, sha256 and licence. It is fetched on first use into
-   `GREENHOUSE_DATA_DIR` through the adapters' storage: a local copy, then
-   a configured mirror, such as a bucket, then its source, its checksum
-   checked whenever it is fetched. CI keeps that folder in its cache.
+   the Git history, where anyone can read it without an account:
+   - a file a check or an example needs: as an asset of a release of this
+     repository, under a tag of its own (`data-<name>-<version>`), which
+     the packages' release workflow, run on `v*` tags, leaves alone. A
+     changed file is a new release, never an asset replaced;
+   - research data meant to be cited, such as a reproduction's inputs and
+     outputs: in an archive that gives it a DOI;
+   - a bucket, such as one a downstream application keeps, only as a
+     mirror: never a file's source, and never needed.
+
+   A manifest names each file's address, size, sha256 and licence. It is
+   fetched on first use into `GREENHOUSE_DATA_DIR` through the adapters'
+   storage: a local copy, then a configured mirror, then its source, its
+   checksum checked whenever it is fetched. CI keeps that folder in its
+   cache.
 5. **Whatever the rule, what is needed on every run is never fetched.**
    What `uv run check --fast` reads, or a package reads at run time, is
    generated (rule 2) or committed (rule 3). A check that needs a file too
@@ -125,21 +137,21 @@ applies to it.
   | The adapters' datasets | 1, fetched as in 4 | None |
 
 - **Rule 4 has no file yet** other than the publishers' datasets. The first
-  file it applies to brings a manifest for the repository's own artifacts
-  and the step that publishes them.
+  file it applies to brings a manifest for the repository's own files, the
+  step that publishes them, and a check that each address in it is a data
+  release of this repository or a DOI.
+- **Who publishes:** a data release is a tag, which the repository's tag
+  ruleset keeps to its owner. A contributor whose change needs a new large
+  file attaches it to the pull request, or to a release of their fork, and
+  the owner publishes it before the pull request merges.
+- **Forks need no change:** they read the same files at the same
+  addresses, without credentials, and so does CI on their pull requests.
+- **GitHub's immutable releases** would lock a data release's assets,
+  where a checksum only catches a change; but the setting covers the
+  packages' releases too, so turning it on waits until their workflow is
+  checked against it.
 - **A large expected answer** is reduced before it is committed, to the
   steps and states a test compares, rather than fetched for every run.
 - **Worth revisiting** if the history grows past about 100 MB, if a file
-  every run needs outgrows rule 3, or if the host of rule 4's files stops
-  serving them.
-
-## Open questions
-
-1. **The limits:** 1 MB for a committed file, and 5 seconds to generate one.
-   The largest committed today is the QA scene, at 810 KB gzipped.
-2. **Rule 4's host:**
-   - this repository's release assets, versioned with its tags and readable
-     without an account;
-   - a research archive with a DOI, permanent and citable;
-   - a bucket, as a mirror only, never the source, since anything a public
-     repository needs must be readable without credentials.
+  every run needs outgrows rule 3, or if release assets stop being free to
+  serve or a file outgrows their 2 GiB.
