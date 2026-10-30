@@ -443,6 +443,38 @@ class Playback:
         """Starts working the run's days out, ahead of the clock."""
         self._worker.start()
 
+    def step_to(self, time_s: float) -> PlaybackState:
+        """Works its run out to `time_s` into it and moves its clock there,
+        in the caller's thread, with no sleeping and no polling: an
+        experiment's barrier (decision 0061). Its gateway moves with it, and
+        a change of its plan on the way, such as an action carried out, is
+        worked into the run before the clock passes it. Only for a playback
+        whose worker has not begun and which does not play, so that nothing
+        else moves it; a moment before its clock or past its run is refused."""
+        with self._lock:
+            if self._worker.is_alive() or self._playing:
+                raise Conflict(f"the playback of {self.run_id} plays or works on its own")
+            if not self._time_s <= time_s <= self.end_s:
+                raise InvalidRequest(
+                    f"a playback steps on from {self._time_s:.15g} s, to {self.end_s:.15g} s "
+                    f"at the most, not to {time_s:.15g} s"
+                )
+        while True:
+            with self._lock:
+                # Its first day worked out even for its first moment, whose
+                # readings are delivered as it starts.
+                if self._worked and self._worked_out_s() >= time_s:
+                    self._time_s = self._gateway_to(time_s)
+                    if self._time_s >= time_s:
+                        if self._time_s >= self.end_s and not self._gateway.finished:
+                            self._gateway.finish()
+                        return self._state()
+                day, run, changes = self._next_day(), self._run(), self._changes
+                assigned = self._executor.crop_actions_on(day)
+            if not self._work_day(day, run, changes, assigned):
+                with self._lock:
+                    return self._state()
+
     def plays(self, layout: str | None) -> bool:
         """Whether it plays the run of `layout`: its own, when None."""
         return layout is None or layout_name(layout) == self.layout
