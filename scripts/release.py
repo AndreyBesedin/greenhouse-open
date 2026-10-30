@@ -72,7 +72,13 @@ _CAPTIONED_VERSION = re.compile(r"\bv\d+\.\d+\.\d+\b")
 # An HTML comment, which an unterminated `<!--` extends to the end: the
 # template's guidance, which GitHub does not show.
 _COMMENT = re.compile(r"<!--.*?(?:-->|\Z)", re.DOTALL)
+# What Reviewable appends to a description, between its two comments: no
+# part of the section above it.
+_REVIEWABLE = re.compile(r"<!-- Reviewable:start -->.*?<!-- Reviewable:end -->", re.DOTALL)
 _CHANGELOG_SECTION = re.compile(r"^## Changelog[ \t]*$", re.MULTILINE)
+# `none`, alone or with its reason after a stop, a colon or a parenthesis:
+# "None: documentation only.", "none (examples only)".
+_NONE = re.compile(r"none\s*(?:[.:(].*)?", re.IGNORECASE | re.DOTALL)
 
 
 class Refused(ValueError):
@@ -132,9 +138,10 @@ class Merged:
 
 def changelog_entry(description: str) -> str | None:
     """A pull request's changelog entry, as its description gives it under
-    `## Changelog`, without the template's comments: empty where it gives
-    nothing there, and None without the section."""
-    text = _COMMENT.sub("", description.replace("\r\n", "\n"))
+    `## Changelog`, without the template's comments or what Reviewable
+    appends: empty where it gives nothing there, and None without the
+    section."""
+    text = _COMMENT.sub("", _REVIEWABLE.sub("", description.replace("\r\n", "\n")))
     found = _CHANGELOG_SECTION.search(text)
     if found is None:
         return None
@@ -143,8 +150,9 @@ def changelog_entry(description: str) -> str | None:
 
 
 def gives_none(entry: str) -> bool:
-    """Whether an entry says the change needs none."""
-    return entry.strip().rstrip(".").lower() == NO_ENTRY
+    """Whether an entry says the change needs none, with or without its
+    reason."""
+    return _NONE.fullmatch(entry.strip()) is not None
 
 
 def entries_merged(merged: Sequence[Merged]) -> tuple[list[str], list[str]]:
