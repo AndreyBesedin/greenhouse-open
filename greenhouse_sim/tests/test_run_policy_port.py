@@ -84,7 +84,9 @@ class _Delivering:
         more = after + len(chosen) < len(self._observations)
         if self.starts_over_to_s is not None:
             to_s, self.starts_over_to_s = self.starts_over_to_s, None
+            # A restart plays on; held again, it is stepped.
             self.played.command(PlaybackCommand.RESTART)
+            self.played.command(PlaybackCommand.PAUSE)
             self.advance(self.played.start + timedelta(seconds=to_s))
         return RecordsAfter(records=chosen, next=after + len(chosen), has_more=more, state=state)
 
