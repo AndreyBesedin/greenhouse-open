@@ -65,7 +65,12 @@ applies to it.
    - it is made from what the repository holds, and nothing else;
    - deterministically, byte for byte the same on every platform that CI
      and development use;
-   - in under 5 seconds on a developer's machine.
+   - in under 5 seconds on a developer's machine;
+   - and nothing needs it as it is: whatever reads it can run the code
+     that makes it first, and no test compares against it. A published
+     schema, a golden file or a screenshot baseline is not generated so:
+     made when a test runs, it would hold the code to itself, and a change
+     to it would go unseen in review.
 
    It is computed in memory, or written to a temporary or cache folder when
    first needed. If an outside tool read it, such as a reference

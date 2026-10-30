@@ -182,8 +182,8 @@ Do not request speculative work or more documentation/tests by default.
   on-disk representations. Prefer compatibility or an explicit migration.
 - Check changes to dependency ownership, package metadata, security-sensitive
   boundaries and external/tool execution where relevant.
-- Hold data files to decision 0063: flag a committed file that could be
-  generated when needed, one over its size limit, a check that fetches
+- Hold data files to decision 0063: flag a committed file that its rule 2
+  would generate, one over its size limit, a check that fetches
   what every run needs, and any publisher's dataset or reference's data
   committed at all.
 
