@@ -319,7 +319,8 @@ function always(view: ViewState): SeenRow[] {
       name: "Canopy (a proxy)",
       meaning:
         "A crop grown by area, which has no plants: a volume over its row, as tall as its " +
-        "canopy and as dense as the light its leaves take. Its numbers are predictions.",
+        "canopy and as dense as the light its leaves take. Its numbers are predictions." +
+        (colourBy === null ? "" : ` Shaded by ${colourBy} where it has a value.`),
     });
   }
   const equipment = EQUIPMENT_CATEGORIES.filter((category) => kinds.has(category));

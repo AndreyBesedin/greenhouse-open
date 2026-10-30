@@ -256,10 +256,9 @@ def initial_scene(
         crop = grown_by.plants.drawn(transplants, config)
     elif grown_by.area is not None:
         canopy = grown_by.area.rung(config)
-        instances: tuple[AreaInstance[Any], ...] = planted(
-            row_scopes(config.layout, config.envelope), canopy
-        )
-        crop = grown_by.area.drawn(instances, config)
+        scopes = row_scopes(config.layout, config.envelope)
+        instances: tuple[AreaInstance[Any], ...] = planted(scopes, canopy)
+        crop = grown_by.area.drawn(instances, scopes, config)
     return house.model_copy(update={"entities": [*house.entities, *crop]})
 
 

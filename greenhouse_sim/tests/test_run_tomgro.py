@@ -15,6 +15,7 @@ from pydantic import ValidationError
 
 from greenhouse_sim.biology.tomato.tomgro.parameters import INITIAL_STATE, TomgroParameters
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.domain.scopes import AreaBasis
 from greenhouse_sim.ground_truth import ground_truth
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import Catalogue
@@ -30,7 +31,7 @@ from greenhouse_sim.services.runs import RunRequest, crop_model_refusal
 from greenhouse_sim.services.scenarios import initial_scene, plant_ids
 from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
-from greenhouse_sim.world.scopes import row_scopes
+from greenhouse_sim.world.scopes import converted, row_scopes
 
 # The climate box, its rows growing Reduced-State TOMGRO.
 CONFIG: Final = ScenarioConfig.model_validate(
@@ -95,10 +96,16 @@ def test_its_scene_draws_each_rows_canopy_and_no_plant_it_does_not_have(
         assert entity.properties["lai"] == instance.state.lai
         assert entity.properties["model"] == "reduced_tomgro"
         assert entity.properties["proxy"] is True and entity.properties["prediction"] is True
-        # As dense as the share of the light its leaves take.
+        # As dense as the share of the light its leaves take over the ground
+        # it is drawn on: its leaf area per m² of floor, over its cultivated
+        # ground.
+        scope = {scope.scope_id: scope for scope in crop.scopes}[instance.scope_id]
+        on_its_ground = converted(instance.state.lai, scope, AreaBasis.FLOOR, AreaBasis.CULTIVATED)
+        assert on_its_ground > instance.state.lai
+        assert entity.properties["canopy_lai"] == pytest.approx(on_its_ground, rel=1e-12)
         k = TomgroParameters().k
         assert entity.properties["density"] == pytest.approx(
-            1 - math.exp(-k * instance.state.lai), rel=1e-12
+            1 - math.exp(-k * on_its_ground), rel=1e-12
         )
     scene = initial_scene(grown.catalogue, "tomgro_box")
     assert not [entity for entity in scene.entities if "plant_id" in entity.properties]

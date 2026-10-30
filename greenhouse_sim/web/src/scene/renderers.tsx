@@ -15,7 +15,11 @@ export interface EntityLook {
   emphasised: boolean;
 }
 
-function seeThrough(entity: SceneEntity, look: EntityLook, outlineOnly = false): ReactElement {
+function seeThrough(
+  entity: SceneEntity,
+  look: EntityLook,
+  { outlineOnly = false, opacity }: { outlineOnly?: boolean; opacity?: number } = {},
+): ReactElement {
   const { shape } = entity;
   return shape.shape === "box" || shape.shape === "plane" || shape.shape === "polygon" ? (
     <SeeThrough
@@ -23,7 +27,9 @@ function seeThrough(entity: SceneEntity, look: EntityLook, outlineOnly = false):
       color={look.color}
       highlighted={look.selected}
       outlineOnly={outlineOnly}
-      dense={look.emphasised}
+      // An opacity of its own says something: a debug colouring keeps it.
+      dense={look.emphasised && opacity === undefined}
+      opacity={opacity}
     />
   ) : (
     <ShapeMesh shape={shape} color={look.color} highlighted={look.selected} />
@@ -57,7 +63,7 @@ export const RENDERERS: Record<
   ),
   // A space rather than a solid, lying on the greenhouse's walls: an outline
   // that takes no clicks, so the walls and floor take them.
-  GREENHOUSE_BOUNDS: (entity, look) => seeThrough(entity, look, true),
+  GREENHOUSE_BOUNDS: (entity, look) => seeThrough(entity, look, { outlineOnly: true }),
   // The floor lies at the grid's depth, as the ground does.
   FLOOR: (entity, look) => (
     <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} behindLines />
@@ -117,17 +123,6 @@ export const RENDERERS: Record<
   ),
   // A crop grown by area, which has no plants: a see-through volume over its
   // row, as dense as the light its leaves take, marked as a proxy (decision
-  // 0062). Picked only where nothing solid lies behind it, as glazing is.
-  CANOPY: (entity, look) =>
-    entity.shape.shape === "box" ? (
-      <SeeThrough
-        shape={entity.shape}
-        color={look.color}
-        highlighted={look.selected}
-        dense={look.emphasised}
-        opacity={canopyOpacity(entity)}
-      />
-    ) : (
-      solid(entity, look)
-    ),
+  // 0062). It is picked as a volume, as a zone is (`pickEntity`).
+  CANOPY: (entity, look) => seeThrough(entity, look, { opacity: canopyOpacity(entity) }),
 };

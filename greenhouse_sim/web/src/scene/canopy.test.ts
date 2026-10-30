@@ -26,10 +26,11 @@ describe("a canopy drawn as dense as the light its leaves take (decision 0062)",
     );
   });
 
-  it("takes a density missing or out of range at its nearest bound", () => {
+  it("takes a density out of range at its nearest bound, and one not a number at its clearest", () => {
     expect(canopyOpacity(canopy({}))).toBe(CANOPY_CLEAREST);
     expect(canopyOpacity(canopy({ density: "dense" }))).toBe(CANOPY_CLEAREST);
     expect(canopyOpacity(canopy({ density: -0.2 }))).toBe(CANOPY_CLEAREST);
     expect(canopyOpacity(canopy({ density: 1.4 }))).toBe(CANOPY_DENSEST);
+    expect(canopyOpacity(canopy({ density: Number.NaN }))).toBe(CANOPY_CLEAREST);
   });
 });

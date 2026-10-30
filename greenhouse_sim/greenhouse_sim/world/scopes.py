@@ -30,7 +30,7 @@ from pydantic import BaseModel, ConfigDict, PositiveFloat, PositiveInt
 from greenhouse_sim.domain.scopes import AreaBasis, ScopeKind
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.layout import Layout
-from greenhouse_sim.world.rows import PlantingPosition
+from greenhouse_sim.world.rows import CropRows, PlantingPosition
 
 # How a row's scope is named, by its number from 1.
 ROW_SCOPE: Final = "row_{row}"
@@ -65,13 +65,30 @@ class CropScope(BaseModel):
         return plants / self.area_m2(basis)
 
 
+def row_share(rows: CropRows) -> float:
+    """How wide each row's share of the ground is, across the rows: from one
+    row to the next, or, with paired rows, half a pair's (m)."""
+    return rows.row_spacing if rows.pair_gap is None else rows.row_spacing / ROWS_TO_A_PAIR
+
+
+def band_offset(rows: CropRows, row: int) -> float:
+    """Where the middle of row `row`'s share of the ground lies, across the
+    rows from the row itself (m): on it, or, with paired rows, so that the
+    pair's two shares meet halfway between its rows."""
+    if rows.pair_gap is None:
+        return 0.0
+    toward_its_pair = (rows.pair_gap - row_share(rows)) / 2
+    first_of_its_pair = (row - 1) % ROWS_TO_A_PAIR == 0
+    return toward_its_pair if first_of_its_pair else -toward_its_pair
+
+
 def row_scopes(layout: Layout, envelope: Envelope) -> list[CropScope]:
     """A scope for each row of the layout's crop rows that keeps a planting
     position, in the rows' order; none without crop rows."""
     rows = layout.crop_rows
     if rows is None:
         return []
-    share = rows.row_spacing if rows.pair_gap is None else rows.row_spacing / ROWS_TO_A_PAIR
+    share = row_share(rows)
     kept = layout.planting_positions()
     by_row = {
         row: tuple(position for position in kept if position.row == row)

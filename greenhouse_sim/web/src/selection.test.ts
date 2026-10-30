@@ -85,6 +85,21 @@ describe("picking a zone", () => {
       "tomato_compartment_floor",
     );
   });
+
+  it("picks a row's canopy as the crop it is: over the slab beneath, after a post before it", () => {
+    const canopy = drawnEntity("tomgro_box_row_1_canopy", "CANOPY");
+    canopy.mesh.userData.seeThrough = true;
+    const slab = drawnEntity("tomgro_box_row_1_slab", "SLAB");
+    const floor = drawnEntity("tomgro_box_floor", "FLOOR");
+    const post = drawnEntity("tomgro_box_post_1", "FRAME");
+
+    expect(
+      pickEntity([{ object: canopy.mesh }, { object: slab.mesh }, { object: floor.mesh }]),
+    ).toBe("tomgro_box_row_1_canopy");
+    expect(
+      pickEntity([{ object: post.mesh }, { object: canopy.mesh }, { object: slab.mesh }]),
+    ).toBe("tomgro_box_post_1");
+  });
 });
 
 describe("picking an instance of a batch", () => {

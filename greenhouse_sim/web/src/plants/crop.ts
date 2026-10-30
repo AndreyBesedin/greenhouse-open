@@ -23,16 +23,20 @@ export function cropUrl(run: ScenarioRun): string {
   return scenarioUrl(run.scenarioId, "crop", runParameters(atItsCropsDay(run)));
 }
 
-/** The scene with the crop drawn as `crop` has it: every organ and every
- * plant drawn whole the scene draws gives way to the crop's, on the crop's
- * day. */
+// The kinds a crop is drawn as whole, besides its organs: a plant, or a
+// crop grown by area's canopy over a row.
+const DRAWN_WHOLE: ReadonlySet<string> = new Set(["PLANT", "CANOPY"]);
+
+/** The scene with the crop drawn as `crop` has it: every organ, every plant
+ * drawn whole and every canopy the scene draws gives way to the crop's, on
+ * the crop's day. */
 export function withCrop(scene: SceneSnapshot, crop: SceneSnapshot): SceneSnapshot {
   return {
     ...scene,
     simulated_day: crop.simulated_day,
     entities: [
       ...scene.entities.filter(
-        (entity) => typeof entity.properties.organ_id !== "string" && entity.kind !== "PLANT",
+        (entity) => typeof entity.properties.organ_id !== "string" && !DRAWN_WHOLE.has(entity.kind),
       ),
       ...crop.entities,
     ],

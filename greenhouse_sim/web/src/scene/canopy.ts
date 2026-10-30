@@ -7,10 +7,11 @@ export const CANOPY_DENSEST = 0.55;
 
 /** How opaque a crop grown by area's canopy is drawn: from its clearest to
  * its densest as its density, the share of the light its leaves take, goes
- * from 0 to 1. A density missing or out of range is taken at its nearest
- * bound. */
+ * from 0 to 1. A density out of range is taken at its nearest bound, and one
+ * missing or not a number at its clearest. */
 export function canopyOpacity(entity: SceneEntity): number {
   const { density } = entity.properties;
-  const share = typeof density === "number" ? Math.min(1, Math.max(0, density)) : 0;
+  const share =
+    typeof density === "number" && Number.isFinite(density) ? Math.min(1, Math.max(0, density)) : 0;
   return CANOPY_CLEAREST + (CANOPY_DENSEST - CANOPY_CLEAREST) * share;
 }

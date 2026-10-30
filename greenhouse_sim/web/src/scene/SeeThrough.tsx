@@ -38,8 +38,8 @@ export function SeeThrough({
   outlineOnly?: boolean;
   dense?: boolean;
   /** Its faces' own opacity, such as a canopy's from its density, in place
-   * of glazing's; a debug colouring still draws them dense. */
-  opacity?: number;
+   * of glazing's. */
+  opacity?: number | undefined;
 }) {
   // Rebuilt with each new scene, as a followed run moves on.
   const faces = useDisposable(() => flatGeometry(shape), [shape]);

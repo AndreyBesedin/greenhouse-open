@@ -20,7 +20,6 @@ A crop grown by area, which has no plants, is drawn as a canopy over each
 of its scopes, a see-through volume marked as a proxy (decision 0062).
 """
 
-import math
 from collections.abc import Mapping, Sequence
 from enum import StrEnum
 from typing import Final
@@ -47,7 +46,7 @@ from greenhouse_sim.world.geometry import (
 )
 from greenhouse_sim.world.layout import Layout
 from greenhouse_sim.world.rows import PlantingPosition
-from greenhouse_sim.world.scopes import CropScope
+from greenhouse_sim.world.scopes import CropScope, band_offset, row_share
 from greenhouse_sim.world.sensors import Camera, Sensor
 from greenhouse_sim.world.state import PlantWorld
 from greenhouse_sim.world.zones import Zone
@@ -548,51 +547,58 @@ def _plant_entity(plant: PlantWorld, envelope: Envelope, position: PlantingPosit
     )
 
 
-def canopy_entity(
+def canopy_entities(
     scope: CropScope,
+    layout: Layout,
     envelope: Envelope,
     *,
     entity_id: str,
     height_m: float,
     density: float,
     properties: Mapping[str, str | int | float | bool],
-) -> SceneEntity:
+) -> list[SceneEntity]:
     """A crop grown by area on `scope`, drawn as what it is (decision 0062):
-    a volume over the scope's ground, along its planting positions and as
-    wide as its cultivated area, `height_m` tall, as dense as `density`, the
-    share of the light its leaves take, from 0 to 1. It is marked as a
-    proxy, and its numbers as predictions; `properties` are its model's."""
-    points = [position.point for position in scope.positions]
-    xs, ys = [point.x for point in points], [point.y for point in points]
-    along_x = max(xs) - min(xs) >= max(ys) - min(ys)
-    spread = max(xs) - min(xs) if along_x else max(ys) - min(ys)
-    # The row runs a spacing beyond its first and last positions, half at
-    # each end; a row of one position is a square of its area.
-    length = spread * len(points) / (len(points) - 1) if len(points) > 1 else 0.0
-    if length <= 0.0:
-        length = math.sqrt(scope.cultivated_m2)
-    width = scope.cultivated_m2 / length
-    base = Vector3(x=sum(xs) / len(xs), y=sum(ys) / len(ys), z=min(point.z for point in points))
-    return SceneEntity(
-        entity_id=entity_id,
-        kind=SceneEntityKind.CANOPY,
-        transform=envelope.origin.after(Transform(position=base)),
-        shape=Box(
-            size_x=length if along_x else width,
-            size_y=width if along_x else length,
-            size_z=height_m,
-        ),
-        color=CANOPY_COLOR,
-        label=f"{scope.scope_id} canopy (a proxy)",
-        properties={
-            "scope": scope.scope_id,
-            "proxy": True,
-            "prediction": True,
-            "density": density,
-            "height_m": height_m,
-            **properties,
-        },
-    )
+    a see-through volume over each unbroken run of its row's planting
+    positions, along the row as far as their pitches reach and across it as
+    wide as the row's share of the ground, `height_m` tall, as dense as
+    `density`, the share of the light its leaves take, from 0 to 1. The
+    volumes cover the scope's cultivated area. Each is marked as a proxy and
+    its numbers as predictions, which a model's own `properties` cannot
+    unmark."""
+    rows = layout.crop_rows
+    if rows is None:
+        return []
+    runs = [run for run, *_ in rows.run_spans(scope.row, layout.kept_clear())]
+    upright = Quaternion.about(Vector3(x=0.0, y=0.0, z=1.0), rows.heading)
+    drawn = []
+    for number, (first, last) in enumerate(runs, start=1):
+        middle = ((first + last) / 2 - 1) * rows.plant_pitch
+        base = rows.point(
+            scope.row, middle, across=band_offset(rows, scope.row), z=rows.planting_height
+        )
+        drawn.append(
+            SceneEntity(
+                entity_id=entity_id if len(runs) == 1 else f"{entity_id}_{number}",
+                kind=SceneEntityKind.CANOPY,
+                transform=envelope.origin.after(Transform(position=base, rotation=upright)),
+                shape=Box(
+                    size_x=(last - first + 1) * rows.plant_pitch,
+                    size_y=row_share(rows),
+                    size_z=height_m,
+                ),
+                color=CANOPY_COLOR,
+                label=f"{scope.scope_id} canopy (a proxy)",
+                properties={
+                    **properties,
+                    "scope": scope.scope_id,
+                    "proxy": True,
+                    "prediction": True,
+                    "density": density,
+                    "height_m": height_m,
+                },
+            )
+        )
+    return drawn
 
 
 def snapshot_json_schema() -> dict[str, JsonValue]:

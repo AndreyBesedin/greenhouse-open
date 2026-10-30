@@ -279,7 +279,7 @@ def crop_scene(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> Sc
     if of_plants(crop) and grown_by.plants is not None:
         entities = grown_by.plants.drawn(crop.at(time_s), config)
     elif not of_plants(crop) and grown_by.area is not None:
-        entities = grown_by.area.drawn(crop.at(time_s), config)
+        entities = grown_by.area.drawn(crop.at(time_s), crop.scopes, config)
     return SceneSnapshot(greenhouse_id=config.greenhouse_id, simulated_day=day, entities=entities)
 
 

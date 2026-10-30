@@ -157,7 +157,7 @@ def test_reduced_tomgros_registration_answers_what_the_services_ask_of_it() -> N
         state.model_copy(update={"instances": [AreaInstance(scope_id="row_1", state=past)]}), DAYS
     )
     assert problem == "row_1's leaf area index is 5, past 4"
-    drawn = registered.area.drawn(instances, TOMGRO_BOX)
+    drawn = registered.area.drawn(instances, scopes, TOMGRO_BOX)
     assert [(entity.kind, entity.properties["scope"]) for entity in drawn] == [
         (SceneEntityKind.CANOPY, instance.scope_id) for instance in instances
     ]

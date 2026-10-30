@@ -125,6 +125,15 @@ describe("what the view is drawing, explained", () => {
         "canopy and as dense as the light its leaves take. Its numbers are predictions.",
     );
     expect(names(seenInTheView(VIEW).always)).not.toContain("Canopy (a proxy)");
+    // Coloured by one of its numbers, it says so, as every row does.
+    const coloured = seenInTheView({
+      ...VIEW,
+      kinds: new Set([...HOUSE, "CANOPY"]),
+      colourBy: "lai",
+    });
+    expect(coloured.always.find((each) => each.key === "canopy")?.meaning).toMatch(
+      / Shaded by lai where it has a value\.$/,
+    );
   });
 });
 
