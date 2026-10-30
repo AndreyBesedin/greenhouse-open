@@ -1,0 +1,231 @@
+{
+  "model": "Reduced-State TOMGRO",
+  "publication": {
+    "citation": "Jones, J. W., Kenig, A. and Vallejos, C. E. (1999), Reduced state-variable tomato growth model, Transactions of the ASAE 42(1), 255-265",
+    "doi": "10.13031/2013.13203",
+    "full_text_read": false
+  },
+  "variant": "Oliveira et al.'s implementation: Jones et al. (1999) and (1991), with the forms of Jones's spreadsheet where they differ from the paper; see docs/research/reduced-tomgro-inventory.md",
+  "reference": {
+    "repository": "https://github.com/mnqoliveira/data-assimilation-tomato-models",
+    "release": "v0.4.0",
+    "commit": "b9b2c80a57ba80a0838929ab8ae1263838f32458",
+    "doi": "10.5281/zenodo.13294322",
+    "archive_md5": "43302bcf319dba522f84d80e9b4280a5",
+    "licence": "MIT (its repository's LICENSE; its Zenodo record says CC BY 4.0)",
+    "run": "simulations/run_Model_ReducedTomgro.py run_simul, unmodified",
+    "environment": {
+      "python": "3.12",
+      "numpy": "2.5.4",
+      "pandas": "3.1.0",
+      "opencv-python-headless": "5.0.0"
+    }
+  },
+  "parameter_set": "gnvman",
+  "inputs_set": "gnv_n01",
+  "parameters": {
+    "alpha_F": {
+      "value": 0.8,
+      "unit": "fraction d⁻¹",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "beta": {
+      "value": 0.169,
+      "unit": "node⁻¹",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "delta": {
+      "value": 0.038,
+      "unit": "m² leaf node⁻¹",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "DFmax": {
+      "value": 0.08,
+      "unit": "d⁻¹",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "E": {
+      "value": 0.75,
+      "unit": "g dry weight g⁻¹ CH₂O",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "K": {
+      "value": 0.58,
+      "unit": "-",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "K_F": {
+      "value": 5.0,
+      "unit": "nodes",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "m": {
+      "value": 0.1,
+      "unit": "-",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "N_b": {
+      "value": 16.0,
+      "unit": "node",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "N_FF": {
+      "value": 22.0,
+      "unit": "node",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "N_max": {
+      "value": 0.5,
+      "unit": "node d⁻¹",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "p_1": {
+      "value": 2.0,
+      "unit": "g leaf node⁻¹",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "Q10": {
+      "value": 1.4,
+      "unit": "-",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "Qe": {
+      "value": 0.08,
+      "unit": "µmol CO₂ µmol⁻¹ photon",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "rm": {
+      "value": 0.016,
+      "unit": "d⁻¹, applied as rm / 24 an hour",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "sl_N1": {
+      "value": 0.025,
+      "unit": "°C⁻¹",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "sl_N2": {
+      "value": 0.05,
+      "unit": "°C⁻¹",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "sl_R": {
+      "value": 0.0032,
+      "unit": "node⁻¹",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "T_crit": {
+      "value": 24.4,
+      "unit": "°C",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "tau1": {
+      "value": 0.07428,
+      "unit": "µmol m⁻² s⁻¹ ppm⁻¹",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "tau2": {
+      "value": 0.05848,
+      "unit": "µmol m⁻² s⁻¹ ppm⁻¹",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "tmaxPg": {
+      "value": 35.0,
+      "unit": "°C",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "tmin_fr_gr": {
+      "value": 8.5,
+      "unit": "°C",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "TQe": {
+      "value": 23.0,
+      "unit": "°C (unused: the temperature-dependent Qe is commented out)",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "TSlop": {
+      "value": 20.6,
+      "unit": "°C",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "V": {
+      "value": 0.135,
+      "unit": "node⁻¹",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    },
+    "V_max": {
+      "value": 8.0,
+      "unit": "g dry weight node⁻¹",
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does"
+    }
+  },
+  "inputs": {
+    "D": {
+      "value": 2.5926912,
+      "unit": "converts gross photosynthesis from µmol CO₂ m⁻² s⁻¹ to g CH₂O m⁻² d⁻¹",
+      "source": "tomgro_i.csv, 'all': Jones et al. 1999, spreadsheet"
+    },
+    "TRGH": {
+      "value": 1.0,
+      "unit": "-",
+      "source": "tomgro_i.csv, 'all': transmissivity of the cover, Jones et al. 1999, spreadsheet (inferred)"
+    },
+    "LAI_max": {
+      "value": 4.0,
+      "unit": "m² leaf m⁻²",
+      "source": "tomgro_i.csv, gnv_n01"
+    },
+    "ro": {
+      "value": 3.5,
+      "unit": "plants m⁻²",
+      "source": "tomgro_i.csv, gnv_n01"
+    }
+  },
+  "initial_state": {
+    "n": 4.0,
+    "lai": 0.014,
+    "w": 0.09,
+    "wf": 0.0,
+    "wm": 0.0
+  },
+  "initial_state_source": "the reference runner's default (simulations/run_Model_ReducedTomgro.py)",
+  "states": {
+    "n": "nodes on the main stem",
+    "lai": "m² leaf m⁻²",
+    "w": "g dry weight m⁻², above ground",
+    "wf": "g dry weight m⁻², fruit",
+    "wm": "g dry weight m⁻², mature fruit"
+  },
+  "drivers": {
+    "file": "drivers.csv",
+    "sha256": "622d137eba75b4b673e6807709feb239d1aa3f598ecf9fc7d1f34ece1bd5c5f0",
+    "written_by": "drivers.py",
+    "step": "an hour; 24 rows a day, hour 0 first; no time zone",
+    "columns": {
+      "dat": "day after transplanting, from 1",
+      "hour": "0 to 23",
+      "tmean": "the hour's mean air temperature, °C",
+      "rad": "the hour's mean PPFD inside the greenhouse, µmol m⁻² s⁻¹",
+      "co2": "ppm; the model reads each day's first hour's"
+    }
+  },
+  "solver": "a daily explicit Euler step; gross photosynthesis, maintenance respiration and the node rate summed over the day's 24 hours; the states updated in the order n, lai, wm, wf, w",
+  "compared": {
+    "outputs": [
+      "n",
+      "lai",
+      "w",
+      "wf",
+      "wm"
+    ],
+    "when": "each day, from day 0 to the last",
+    "in": "their native units"
+  },
+  "tolerances": {
+    "relative": 1e-09,
+    "absolute": 1e-12,
+    "rule": "a value agrees when |ours - reference| <= absolute + relative * |reference|"
+  },
+  "reference_output": "reference/output.csv"
+}
