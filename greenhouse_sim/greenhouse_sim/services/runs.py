@@ -223,10 +223,13 @@ class RunPlan(BaseModel):
 
 def crop_model_refusal(config: ScenarioConfig, kind: ActionKind) -> str | None:
     """Why a run of a scenario takes no action of `kind` on its crop at all,
-    if it takes none: its crop's model takes none, as it is registered
-    (`crop_models.CropRegistration.takes_crop_actions`)."""
+    if it takes none: its crop's model takes none of the run's own crop
+    actions, or none of that kind, as it is registered
+    (`crop_models.CropRegistration.crop_actions`). An action of a kind that
+    is no crop action is not its model's to refuse."""
     model = registration(config)
-    if model.takes_crop_actions:
+    taken = model.crop_actions
+    if taken is not None and (kind in taken.kinds or kind not in CROP_KINDS):
         return None
     grower = config.greenhouse_id
     return f"{grower} grows its crop with the {model.name} model, which takes no {kind}"

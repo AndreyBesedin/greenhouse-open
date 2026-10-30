@@ -1,27 +1,34 @@
-"""The crop's models as the services know them (P14.6, decision 0055).
+"""The crop's models as the services know them (P14.6, decisions 0055 and
+0062).
 
 Each model of the crop part is registered with all that tells it apart, so
-that no service branches on its name. The registry
+that no service branches on its name, nor asks which model it holds: it
+asks what the model declares. The registry
 (`greenhouse_sim.scenarios.registry`) holds its name, version and
 parameters; its registration here, under the same name (`CROP_MODELS`),
-what the services ask of it:
+its declarations:
 
-- **its rung**, built from a scenario (`greenhouse_sim.biology.crop_contract.CropRung`);
 - **its state in a checkpoint**: its plants and what each lived
   (`state`), and what no run of it reaches (`implausible`);
-- **how its plants are drawn** (`drawn`);
-- **how a walk measures a plant** (`measured`), and what a day's harvest
-  round picked from one (`picked`);
-- **what a replay reads beside a day's digest** (`probed`): the crop's
+- **how it grows single plants** (`plants`, a `PlantAdapter`): its rung,
+  built from a scenario (`greenhouse_sim.biology.crop_contract.CropRung`);
+  how its plants are drawn (`drawn`); how a walk measures a plant
+  (`measured`), and what a day's harvest round picked from one (`picked`);
+  and what a replay reads beside a day's digest (`probed`): the crop's
   organs and their plants' mean thermal time, none for a model without
   organs;
-- **whether it takes the run's own crop actions** (`takes_crop_actions`),
-  the harvests, lowerings and leaves removed a plan asks for (P13.5): the
-  organ crop does, the simple crop does not.
+- **the run's own crop actions it takes** (`crop_actions`), by kind: the
+  harvests, lowerings, leaves removed and inspections a plan asks for
+  (P13.5), which the run routes to it; none for a model that takes none,
+  whose run refuses them, saying why. The organ crop takes them, the
+  simple crop none.
 
-A model may answer more than the crop part asks, as the organ crop answers
-a plant's structure (`greenhouse_sim.services.crop.crop_plant`): that
-answer stays its own route's.
+A declaration a model may lack is optional, so that the type checker makes
+every service handle a model without it, rather than a flag or a name it
+might forget to ask. A model may answer more than the crop part asks, as
+the organ crop answers a plant's structure
+(`greenhouse_sim.services.crop.crop_plant`): that answer stays its own
+route's, which asks what its plants are (`CropRung.plant_type`).
 """
 
 import math
@@ -29,6 +36,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any, Final
 
+from greenhouse_protocol.actions import ActionKind
 from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.biology.crop_contract import CropPlant, CropRung
@@ -92,16 +100,11 @@ class Measured:
 
 
 @dataclass(frozen=True)
-class CropRegistration[PlantT: CropPlant]:
-    """A crop model as the services know it, under its registry's name:
-    see the module."""
+class PlantAdapter[PlantT: CropPlant]:
+    """What the services ask of a crop model that grows single plants
+    (decision 0062): see the module."""
 
-    name: str
     rung: Callable[[ScenarioConfig], CropRung[PlantT]]
-    state: type[CropModelState]
-    # What no run of the model reaches in a checkpoint's state on its day,
-    # which fits its run's shape, as reasons; none if it is plausible.
-    implausible: Callable[[Any, int], list[str]]
     drawn: Callable[[Sequence[PlantT], ScenarioConfig], list[SceneEntity]]
     measured: Callable[[PlantT], Measured]
     # The fruits a plant's harvest round picked since `earlier`, and their
@@ -110,7 +113,29 @@ class CropRegistration[PlantT: CropPlant]:
     picked: Callable[[PlantT, PlantT, int | None], tuple[int, float]]
     # The crop's organs, and its plants' mean thermal time, in °Cd.
     probed: Callable[[Sequence[PlantT]], tuple[int, float]]
-    takes_crop_actions: bool
+
+
+@dataclass(frozen=True)
+class CropActions:
+    """The run's own crop actions a crop model takes (P13.5), by kind,
+    carried out on its plants by its rung (`CropRung.carry_out`)."""
+
+    kinds: frozenset[ActionKind]
+
+
+@dataclass(frozen=True)
+class CropRegistration[PlantT: CropPlant]:
+    """A crop model as the services know it, under its registry's name:
+    see the module."""
+
+    name: str
+    state: type[CropModelState]
+    # What no run of the model reaches in a checkpoint's state on its day,
+    # which fits its run's shape, as reasons; none if it is plausible.
+    implausible: Callable[[Any, int], list[str]]
+    plants: PlantAdapter[PlantT]
+    # None for a model that takes none of the run's own crop actions.
+    crop_actions: CropActions | None
 
 
 def _organ_implausible(state: CropState, day: int) -> list[str]:
@@ -229,27 +254,39 @@ def _simple_probed(_plants: Sequence[SimplePlant]) -> tuple[int, float]:
     return 0, 0.0
 
 
+# The run's own crop actions the organ crop takes: every kind a plan may
+# ask of a plant (`greenhouse_sim.services.runs.CROP_KINDS`).
+ORGAN_CROP_ACTIONS: Final = CropActions(
+    frozenset({ActionKind.HARVEST, ActionKind.LOWER, ActionKind.REMOVE_LEAF, ActionKind.INSPECT})
+)
+
 ORGAN: Final = CropRegistration[Plant](
     name=CropModel.ORGAN.value,
-    rung=lambda config: OrganRung(config.random_seed),
     state=CropState,
     implausible=_organ_implausible,
-    drawn=_organ_drawn,
-    measured=_organ_measured,
-    picked=_organ_picked,
-    probed=_organ_probed,
-    takes_crop_actions=True,
+    plants=PlantAdapter(
+        rung=lambda config: OrganRung(config.random_seed),
+        drawn=_organ_drawn,
+        measured=_organ_measured,
+        picked=_organ_picked,
+        probed=_organ_probed,
+    ),
+    crop_actions=ORGAN_CROP_ACTIONS,
 )
 SIMPLE: Final = CropRegistration[SimplePlant](
     name=CropModel.SIMPLE.value,
-    rung=SimpleRung,
     state=SimpleCropState,
     implausible=_simple_implausible,
-    drawn=_simple_drawn,
-    measured=_simple_measured,
-    picked=_simple_picked,
-    probed=_simple_probed,
-    takes_crop_actions=False,
+    plants=PlantAdapter(
+        rung=SimpleRung,
+        drawn=_simple_drawn,
+        measured=_simple_measured,
+        picked=_simple_picked,
+        probed=_simple_probed,
+    ),
+    # Its crop work's harvests and lowerings are its rung's; it takes none
+    # of a plan's (P14.3).
+    crop_actions=None,
 )
 # Each crop model's registration, by its registry's name.
 CROP_MODELS: Final[dict[str, CropRegistration[Any]]] = {

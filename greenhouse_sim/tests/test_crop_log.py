@@ -87,7 +87,7 @@ def test_a_day_s_walk_through_the_simple_crop_records_each_plant_as_it_stands(
     assert {o.source.source_id for o in walked} == {run_id}
     assert check_observations(walked) == []
     grown = crop.scenario_crop(simulator, run)
-    assert not crop.is_organ(grown)
+    assert not crop.of_organs(grown)
     plants = grown.plants_on(3)
     heights = {
         o.plant_id: o.value

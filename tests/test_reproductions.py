@@ -10,11 +10,15 @@ at every hour of a run with the manifest's converged solver.
 """
 
 import copy
+import math
+from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
 from research.reproductions.reduced_tomgro import compare as tomgro
+from research.reproductions.reduced_tomgro.model import Hour, State, run
 from research.reproductions.vanthoor_katzin import compare as vanthoor
 from research.reproductions.vanthoor_katzin.model import STATES as VANTHOOR_STATES
 
@@ -37,6 +41,28 @@ def test_the_comparison_sees_a_parameter_moved_by_a_millionth(
     monkeypatch.setattr(tomgro, "manifest", lambda: moved)
 
     assert not all(each.within for each in tomgro.compare())
+
+
+def test_a_state_that_is_not_a_number_is_beyond_its_tolerance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """NaN compares false with everything, so the largest difference must
+    not pass over it: the dry weight gone to NaN from day 60 is seen."""
+
+    def gone_to_nan(
+        days: Sequence[Sequence[Hour]],
+        initial: State,
+        p: Mapping[str, float],
+        i: Mapping[str, float],
+    ) -> list[State]:
+        states = run(days, initial, p, i)
+        return [*states[:60], *(replace(each, w=math.nan) for each in states[60:])]
+
+    monkeypatch.setattr(tomgro, "run", gone_to_nan)
+
+    w = next(each for each in tomgro.compare() if each.state == "w")
+    assert math.isnan(w.absolute)
+    assert not w.within
 
 
 def test_drivers_other_than_the_pinned_ones_are_refused(tmp_path: Path) -> None:

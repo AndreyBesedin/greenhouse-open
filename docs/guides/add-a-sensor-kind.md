@@ -7,6 +7,17 @@ reads, its unit, the field quantity it samples and the observation type it
 reports. The weather station's instruments were added this way (commit
 `9e19e21`), with the protocol's observation types they lacked.
 
+The sensors are a part of the run with one model, `sampled`
+(`greenhouse_sim/greenhouse_sim/sensors/air.py`), registered with no
+parameters in `greenhouse_sim/greenhouse_sim/scenarios/registry.py`
+([decision 0054](../decisions/0054-models-are-chosen-by-the-manifest-from-a-registry.md)):
+each point sensor sampling the run's air where it stands, or the weather,
+with its own imperfections. A new kind is an instrument that model
+samples, not a model of its own: nothing in the registry names it, and a
+run's identity covers it through the layout that places it. Sampling
+otherwise would be another model of the sensors, registered beside
+`sampled` with its version.
+
 ## Steps
 
 1. **Its kind:** a member of `SensorKind` in
@@ -30,7 +41,15 @@ reports. The weather station's instruments were added this way (commit
    its identifier made of letters, digits, `_`, `.` and `-`.
 
 The scene's schema does not change: a sensor's kind is a property of its
-entity, not an entity kind.
+entity, not an entity kind. Its truth, what a perfect instrument would
+have read at each of its sample moments, comes from the same sampling
+without its imperfections (`truth` in
+`greenhouse_sim/greenhouse_sim/services/sensors.py`), which the ground
+truth gives (`greenhouse_sim/greenhouse_sim/ground_truth.py`) and against
+which `observation_accuracy` scores its observations
+(`greenhouse_sim/greenhouse_sim/evaluation/observation_accuracy.py`), the
+error of a reading that wraps round taken the shorter way round, as the
+sensors' `GOING_ROUND` lists it.
 
 ## Generated files
 
@@ -42,7 +61,8 @@ uv run python greenhouse_sim/tests/test_published_schemas.py --update   # layout
 
 ```bash
 uv run pytest greenhouse_sim/tests/test_sensors.py greenhouse_sim/tests/test_sensor_observations.py \
-  greenhouse_sim/tests/test_weather_station.py greenhouse_sim/tests/test_published_schemas.py
+  greenhouse_sim/tests/test_weather_station.py greenhouse_sim/tests/test_observation_accuracy.py \
+  greenhouse_sim/tests/test_published_schemas.py
 uv run pytest greenhouse_protocol/tests/test_enums.py tests/test_conformance.py
 uv run check --fast
 uv run browser-tests e2e/sensors.spec.ts

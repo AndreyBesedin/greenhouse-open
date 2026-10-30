@@ -114,6 +114,7 @@ adds a visible or measurable result.
 | [P12](p12-setup-builder.md) | The setup builder: greenhouse installations authored, assessed and exchanged | In progress |
 | [P13](p13-actions.md) | One action format, and a plan a run's gateway carries out | In progress |
 | [P14](p14-models-by-manifest.md) | Models chosen by the manifest, from a registry | In progress |
+| [P15](p15-policy-port.md) | A policy's port, and an experiment that steps a run | Proposed |
 
 **What comes after the projects in progress** (proposed 2026-10-27,
 [decision 0057](../decisions/0057-a-published-model-is-reproduced-and-validated-before-the-crops-grow.md)):
@@ -350,7 +351,8 @@ what is expected from outside it, is designed first, in a decision:
   specialisations: control policies first, giving plans in the protocol's
   format through an authenticated policy-facing interface; forecasts and
   perception later, giving typed, timestamped records (decision
-  [0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md)).
+  [0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md);
+  its stage A is [P15](p15-policy-port.md)).
 - **Base components in the simulator,** behind that interface: simple,
   documented with their limits, as its base models are, so that a run, a
   policy's evaluation and the viewer work with nothing from outside. A

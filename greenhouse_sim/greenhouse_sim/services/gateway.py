@@ -145,8 +145,9 @@ def run_kinds(config: ScenarioConfig) -> frozenset[ActionKind]:
     kinds = {ActionKind.SET_LEVEL}
     if config.thermostat is not None:
         kinds.add(ActionKind.SET_TARGET)
-    if registration(config).takes_crop_actions:
-        kinds |= CROP_KINDS
+    taken = registration(config).crop_actions
+    if taken is not None:
+        kinds |= taken.kinds
     return frozenset(kinds)
 
 

@@ -1,17 +1,26 @@
-"""Each crop model is registered with all that tells it apart (decision
-0055, P14.6): the registry's name, version and parameters, and, under the
-same name, what the services ask of it, which every registration answers
-as the services take it."""
+"""Each crop model is registered with all that tells it apart (decisions
+0055 and 0062, P14.6): the registry's name, version and parameters, and,
+under the same name, what it declares, which every registration answers as
+the services take it, and which no service asks of it by its name."""
 
-from typing import Any
+import re
+from pathlib import Path
+from typing import Any, Final
 
 import pytest
 
+import greenhouse_sim
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.registry import MODELS
-from greenhouse_sim.services.crop_models import CROP_MODELS, CropRegistration, registration
+from greenhouse_sim.services.crop_models import (
+    CROP_MODELS,
+    CropActions,
+    CropRegistration,
+    registration,
+)
+from greenhouse_sim.services.runs import CROP_KINDS
 from greenhouse_sim.services.scenarios import plant_ids
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
@@ -30,7 +39,7 @@ def test_every_crop_model_of_the_registry_is_registered_for_the_services() -> No
 
 def _grown(registered: CropRegistration[Any]) -> tuple[list[Any], list[dict[str, Any]]]:
     """Its transplants after `DAYS` days in `STEADY`, and what they lived."""
-    rung = registered.rung(CONFIG)
+    rung = registered.plants.rung(CONFIG)
     plants = [rung.transplant(plant_id) for plant_id in PLANTS]
     for _ in range(DAYS):
         plants = [rung.live_day(plant, STEADY) for plant in plants]
@@ -49,14 +58,14 @@ def test_a_registration_answers_what_the_services_ask_of_a_crop_model(
     assert registered.state.model_validate_json(state.model_dump_json()) == state
     assert registered.implausible(state, DAYS) == []
     # Drawn, each plant in the scene; measured as a walk finds it.
-    drawn = registered.drawn(plants, CONFIG)
+    drawn = registered.plants.drawn(plants, CONFIG)
     assert {entity.properties.get("plant_id", entity.entity_id) for entity in drawn} == set(PLANTS)
-    measured = [registered.measured(plant) for plant in plants]
+    measured = [registered.plants.measured(plant) for plant in plants]
     assert [plant.plant_id for plant in measured] == PLANTS
     assert all(plant.height_cm > 0 and plant.fruits >= plant.ripe >= 0 for plant in measured)
     # A plant has picked nothing since itself; a replay counts its organs.
-    assert [registered.picked(plant, plant, None) for plant in plants] == [(0, 0.0)] * 2
-    organs, thermal_cd = registered.probed(plants)
+    assert [registered.plants.picked(plant, plant, None) for plant in plants] == [(0, 0.0)] * 2
+    organs, thermal_cd = registered.plants.probed(plants)
     assert organs >= 0 and thermal_cd >= 0.0
 
 
@@ -69,8 +78,39 @@ def test_the_organs_registration_finds_what_no_run_of_it_reaches() -> None:
 
 
 def test_only_the_organ_crop_takes_the_runs_own_crop_actions() -> None:
-    """As the run carries a plan's crop actions out (P13.5)."""
-    assert {name: each.takes_crop_actions for name, each in CROP_MODELS.items()} == {
-        "organ": True,
-        "simple": False,
+    """As the run carries a plan's crop actions out (P13.5): every kind of
+    them a plan may ask."""
+    assert {name: each.crop_actions for name, each in CROP_MODELS.items()} == {
+        "organ": CropActions(CROP_KINDS),
+        "simple": None,
     }
+
+
+# What asks a crop model for anything: the services, the routes over them
+# and the ground truth; and what may name a model's rung or its plants' type
+# among them: its registration.
+_ASKING: Final = ("services", "api", "ground_truth.py")
+_REGISTERED: Final = "services/crop_models.py"
+
+
+def test_no_service_asks_which_crop_model_it_holds() -> None:
+    """A service asks what a crop model declares (decision 0062), never which
+    model it is: none but its registration names a model's rung or the
+    simple crop's plants."""
+    package = Path(greenhouse_sim.__file__).parent
+    modules = [
+        path
+        for asking in _ASKING
+        for path in sorted(
+            (package / asking).rglob("*.py") if (package / asking).is_dir() else [package / asking]
+        )
+        if path.relative_to(package).as_posix() != _REGISTERED
+    ]
+    asking = [
+        f"{path.relative_to(package).as_posix()}: {name}"
+        for path in modules
+        for name in ("OrganRung", "SimpleRung", "SimplePlant", "is_organ")
+        if re.search(rf"\b{name}\b", path.read_text())
+    ]
+    assert len(modules) > 20
+    assert asking == []
