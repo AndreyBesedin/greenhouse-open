@@ -49,10 +49,12 @@ run has keep a day's step, and nothing of theirs moves.
 
 - `AreaRung` declares its step and lives one (`live_step(state, course)`),
   given its step's course: its profile's hours from the step's start
-  (`StepCourse`, which `DayCourse` becomes).
-- A profile declares its resolution: `house_hours`, an hour. A model whose
-  step is shorter than its profile's resolution is refused, naming both. A
-  finer profile is a profile of its own (decision 0062).
+  (`StepCourse`, which `DayCourse` became).
+- A profile declares its resolution (`DriverProfile.resolution_s`):
+  `house_hours`, an hour. A model whose step is not a whole number of its
+  profile's spans, a shorter one among them, is refused, naming both
+  (`step_refusal`). A finer profile is a profile of its own (decision
+  0062).
 - A model grown plant by plant keeps a day's step and its day's
   `LocalEnvironment` (decision 0024).
 
@@ -80,7 +82,9 @@ run has keep a day's step, and nothing of theirs moves.
 
 - A checkpoint, at a day's start, keeps a crop's state and what it
   experienced on each step before. Its format moves when a crop of a
-  shorter step is first kept, and still reads those of a day's step.
+  shorter step is first kept, and still reads those of a day's step. No
+  crop grown by area is kept by a checkpoint yet: the first that is
+  brings it.
 - P15's experiment runner works the crop to each barrier step by step, as a
   playback works it to each day it publishes. Neither waits for the other.
 
@@ -103,7 +107,7 @@ run has keep a day's step, and nothing of theirs moves.
 | Step | Scope | Pull request | Status |
 | --- | --- | --- | --- |
 | P16.1 | A crop's step: `core/crop_days.CropDays` becomes `core/crop_steps.CropSteps`, keeping a crop's states by its growth's step, a whole divisor of a day (`core/clock.steps_a_day`), which a growth declares (`step_s`) and works out (`next_step`); a day for every crop today, so that a crop grown plant by plant has its days as its steps, and one grown by area its days as a view of them. No behaviour changes. | `refactor(sim): a run's crop keeps its states by its model's step (0064)` | Done |
-| P16.2 | A model grown by area at its own step: `AreaRung.step_s` and `live_step`, `StepCourse`; a profile's resolution, and the refusals; a test canopy of an hourly step; the checkpoint format for a crop of a shorter step. | `feat(sim): a crop grown by area steps at its model's step (0064)` | Planned |
+| P16.2 | A model grown by area at its own step: `AreaRung.step_s` and `live_step`, `StepCourse`; a profile's resolution (`DriverProfile.resolution_s`), and its refusal of a step that is not a whole number of its spans; `house_hours` giving a step's hours; the test canopy at an hour's step, meeting the day's at every midnight. | `feat(sim): a crop grown by area steps at its model's step (0064)` | Done |
 | P16.3 | The crop at an instant: `core/clock.steps_ended`; the scene, a plant, the light, the checkpoint, the run's state and the walk's truth read the steps ended by their moment; the test that asking never changes the crop. | `feat(sim): a run's crop at an instant, as its steps have it (0064)` | Planned |
 | P16.4 | Crop work at a step's boundary: the crop registration declaring its model's step; the plan's check, the gateway's `why_not` and `earliest`, and planned actions kept by step, from that step; refusals naming it. | `feat(sim): crop work at a boundary of its model's step (0064)` | Planned |
 | P16.5 | The plant model guide says how a model declares its step; the QA scenario below, run and recorded. | `docs: a crop model's step, and P16's QA` | Planned |
