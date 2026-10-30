@@ -115,7 +115,7 @@ adds a visible or measurable result.
 | [P13](p13-actions.md) | One action format, and a plan a run's gateway carries out | In progress |
 | [P14](p14-models-by-manifest.md) | Models chosen by the manifest, from a registry | In progress |
 | [P15](p15-policy-port.md) | A policy's port, and an experiment that steps a run | Proposed |
-| [P16](p16-crop-at-its-models-step.md) | A run's crop at its model's step, not the run's day | Planned |
+| [P16](p16-crop-at-its-models-step.md) | A run's crop at its model's step, not the run's day | Done, but for P16.4, deferred until a model takes crop work within its day |
 
 **What comes after the projects in progress** (proposed 2026-10-27,
 [decision 0057](../decisions/0057-a-published-model-is-reproduced-and-validated-before-the-crops-grow.md)):
