@@ -13,6 +13,28 @@ Unreleased section holds the entries written here before that.
 
 ## Unreleased
 
+## 0.5.0 - 2026-10-30
+
+A scenario's run is the one simulator (decision 0059): the engine's day,
+its world, its model contracts, its simple models and its checkpoints are
+removed, and so is the viewer's live mode; the examples, the ground truth
+and the accuracy report read a scenario's run. Each part of a run is a
+model chosen by name and version from a registry (P14, decisions 0054 and
+0055): the weather, the house's air (`grid` or `whole_house`), the
+sunlight, the sensors, the controller (`loops` or `none`), the crop and its
+walk; a piece of equipment is known by what it can do, and drawn as one
+kind of entity. A run is acted on through its gateway (P13, decision
+0046): a plan's crop actions among its others, carried out by a crew at the
+earliest instant each can be, which the viewer gives a followed run as its
+plan and its timeline shows. The protocol's first action format is
+removed, and a control policy's port is added (decision 0061). A crop
+model declares how it grows (decision 0062): a crop's scopes, the light
+above them, a crop grown by area, and Reduced-State TOMGRO, the first
+published model grown so, not yet chosen by a scenario. Every run's
+identity changes. Scenario manifests are written in format 7,
+checkpoints in format 9 and scenes in schema 16; manifests in formats 1 to
+6, and checkpoints in formats 2 to 8, are still read.
+
 - `greenhouse-sim`: a run's crew (P13.6, decision 0046). A simulator may
   be given one, `Simulator(crew=Crew(hands=..., durations_s=...))`: so
   many hands, each crop action holding one for as long as its kind takes.
@@ -44,7 +66,6 @@ Unreleased section holds the entries written here before that.
   `capacity`. An executor that does not say when, with unlimited
   capacity, is dealt with as before.
 
-- `greenhouse-sim`: **every run id changes, once** (P14.2, decision 0054).
 - viewer: a scenario whose rows grow the simple crop draws its crop as it
   stands at the moment of its run, as it draws the organ crop, once a day
   has ended: each plant a cylinder as tall as its stem stands, in place of
@@ -184,6 +205,72 @@ Unreleased section holds the entries written here before that.
   a scheduled action that names no organ. The organ model's `PlantAction`
   is renamed `PlantOperation`, and so is its definition in the plant
   schemas; its events' `action` field and kinds are unchanged.
+- viewer: the main view, and a sensor camera's picture, are drawn only when something changes (decision 0053), not frame after frame: a still page draws nothing and answers input at once, and the HUD's frame rate reads "idle" while the view stands still. (#361)
+- `greenhouse-sim`: a device's effect on the air is read from what it can do, its capabilities (`world.capabilities`: `MovesAir`, `Heats`, `Dries`, and `WasteHeat`), never from its kind (P14.5). The source terms, the house's heating, the heat log, the controller's loops and the builder's findings read them, so a device made of these capabilities needs no change to the climate. `climate.sources.source_terms` takes any `Device`, and `climate.jets.jet_velocity` takes the air a device moves (`MovesAir`) in place of a fan. No run changes. (#370)
+- `greenhouse-sim`: each crop model is registered with all that tells it apart (decision 0055, P14.6): `services.crop_models.CROP_MODELS`, by the registry's name. That covers its rung, its checkpoint state and what no run of it reaches, how its plants are drawn, how a walk measures a plant and what a harvest picked, what a replay reads, and whether it takes the run's own crop actions (`takes_crop_actions`). The services ask it, rather than branching on the crop's model. `CropState` and `SimpleCropState` move from `services.checkpoints` to `services.crop_models`. No run changes. (#372)
+- `greenhouse-sim` and viewer: the scene draws every device as one kind of entity, `EQUIPMENT` (scene schema 16), known by what it does: its shape; its colour while running, which is that of what it is for; its kind (`device_kind`), what it is for (`does`), and each capability's rating under the capability's name (`moves_air_m3_s`, `heats_w`, `dries_kg_h`, `gives_off_heat_w`). The `FAN`, `HEATER` and `DEHUMIDIFIER` kinds are gone. The viewer draws, names, categorises (moving air, heating, drying) and lists a device by these, so it shows a kind of device it was not built with (P14.5). (#371)
+- `greenhouse-sim`: a kind of equipment is a class and its registration (P14.5, decision 0055). Each kind is a class of `world.equipment.EquipmentPiece` (`Unit` for a box on the floor), registered with `register_equipment`. A layout reads each piece by the kind it names, among those registered. A kind not registered is refused, naming those that are, and a piece its kind refuses gets its kind's own reasons. The packaged kinds, their files and run ids are unchanged. (#373)
+- greenhouse-sim:
+  - `/actuation/v1` gives, revises, cancels and reads a played-back run's plans as the local operator, and lists its actions as they stand.
+  - `POST /api/scenarios/{id}/playback/start` takes `hold=true`, to give a plan before the clock moves.
+  - `POST /api/scenarios/{id}/playback/targets` is deprecated. It is now an alias that gives the plan `targets` its next revision.
+  - A plan holds at most 1,000 occurrences. (#375)
+- greenhouse-sim: a crop action refused because the crop's model takes none now names the model as it is registered: "…with the simple model, which takes no harvest", where it said "the simple daily model". Whether a run takes crop actions follows the crop model's registration (`takes_crop_actions`). (#376)
+- `greenhouse-sim`: the sunlight (`haurwitz_erbs`) and the sensors (`sampled`) are parts with a model each, which takes no parameters (P14.6). A run's identity and its manifest name them, so every run id changes again, in this release with P14.2's and P14.3's changes. Checkpoints are written in format 6, naming them. Format 5 is still read, its sunlight's and sensors' models taken at their first version. (#374)
+- `greenhouse-sim`: a layout given a piece of equipment as an object, rather than written out, refuses one whose class is not the kind registered under its name, as it refuses one written out. An object of an unregistered class was accepted, and then written in a form no layout reads back, or read back as another class. (#378)
+- `greenhouse-sim`: the house's air is a part with two models (P14.6): `grid`, cell by cell beside the whole house, the default and what every run had; and `whole_house`, the whole house alone, drawn the same in every cell, which works out no air cell by cell. Manifests are written in format 6, the house's air's settings in `models.house_air` rather than `climate` at the top; format 5 is still read, as the grid. Checkpoints are written in format 7; formats 5 and 6 are still read. Every run id changes again, in this release with P14.2's, P14.3's and the sunlight's and sensors' changes. (#377)
+- viewer:
+  - While following a played-back run, the Equipment, Openings and Targets panels steer that run through its gateway, as the local operator's plan `viewer`, and say why when the run refuses a change. Before, they made the drawn run another run.
+  - The dev and preview servers forward `/consumer` and `/actuation`.
+
+  greenhouse-sim: the playback's state lists the levels its run was given (`commands`), beside its target changes. (#385)
+- viewer: the timeline of a followed run has a plan lane: each action its plans had due in the window, drawn and listed with what became of it and why (executed, late, refused, missed, cancelled, superseded), and what is still to come. (#386)
+- greenhouse-sim:
+  - A run's crop actions can be asked for in its address: `&crop=seconds:plant:kind:what`, for every crop action the protocol has.
+  - The playback's state lists the crop actions its run was given (`crop`).
+
+  viewer: on a followed run, the selected organ offers the plant lab's actions (remove a leaf, harvest a fruit or its truss, lower the stem). Each is given to the run's plan and drawn once the run has carried it out. (#387)
+- `greenhouse-sim`: the controller is a part with two models (P14.6): `loops`, the climate controller's loops (P11), and `none`, the default, a house whose devices run by their commands alone. Manifests are written in format 7, a controller in `models.controller` rather than `control` at the top; format 6 is still read. Checkpoints are written in format 8; formats 5 to 7 are still read. Every run id changes again, in this release with the other P14 changes. (#389)
+- greenhouse-sim:
+  - A scenario's climate controller can now run its vents in stages, opening each the moment the house's air passes its edge and closing it the moment the air falls back below that by the band, with its fans running from a chosen stage. A command to a vent or fan takes it over. Runs with a heating loop alone are unchanged.
+  - Checkpoints are written in format 9, which keeps the vents' stage. Format 8 is still read. (#390)
+- greenhouse-sim:
+  - A scenario's climate controller can run its dehumidifier by a relative-humidity target, switching it at the moment the air crosses its band.
+  - The controller also cracks the vents for the air's water, only while the heater is off and the outside air is drier.
+  - Checkpoints in format 9 keep the dehumidifier's state.
+  - Runs without a dehumidifying loop are unchanged. (#391)
+- greenhouse-sim: the plant lab's actions are the protocol's crop actions; `&act=` takes every crop action the lab carries out, refusing the rest by name. (#394)
+- **Breaking**, `greenhouse-sim`: `SimulationEngine.apply_actions`, `ActionExecution`, `SimulationEngine(executor=…)`, `greenhouse_sim.executor` and `greenhouse_sim.actions` are removed (P13.9). A run is acted on through its gateway, with a plan of `greenhouse_protocol` actions (`/actuation/v1`). The engine's day still advances and observes a world. (#395)
+- greenhouse-protocol: **breaking.** The first action format is removed: `greenhouse_protocol.action` (`RequestedAction`, its four types, `ActionResult`), `greenhouse_protocol.execution` (its `ActionOutcome`, `ExecutionStatus`), `contracts.execution.ActionExecutionAdapter` and `enums.ActionExecutorType`. Give a run's gateway a `Plan` of `greenhouse_protocol.actions`, and read what became of each action as an `outcome.ActionOutcome`. `ActionNotExecutable` stays. (#396)
+- greenhouse-sim and viewer: **breaking.** The live mode is removed (decision 0059):
+  - `GET /api/scenarios/{id}/live` and its POST commands (play, pause, step, reset, speed);
+  - `greenhouse_sim.services.live`;
+  - the API's `--seconds-per-day` option, and `Simulator(seconds_per_day=)`.
+
+  Follow a scenario's run as it is played back instead (`/api/scenarios/{id}/playback`, or `?scenario=<id>&follow=1` in the viewer). A `?live=<id>` address opens it. (#399)
+- **Breaking**, `greenhouse-sim`: ground truth describes a run (decision 0059). `greenhouse_sim.ground_truth.ground_truth(simulator, run, until_s, named=None)` gives what a run's sensors and its crop walk truly measured, reading by reading (`TrueReading`, in place of `PlantTruth`). `observation_accuracy(observations, truth)` scores a run's observations against it, a wind direction the shorter way round, and its report names the run. (#401)
+- **Breaking**, `greenhouse-sim`: the engine's day is removed (decision 0059). Gone are:
+  - `SimulationEngine` and `world_builder`;
+  - `GreenhouseWorld`, `GreenhouseEnvironment` and `PlantModelState`;
+  - the world checkpoints (`greenhouse_sim.checkpoints`);
+  - the model contracts (`biology.contract`, `environment.contract`, `sensors.contract`);
+  - the simple models (`SimpleTomatoModel`, `SimpleEnvironmentModel`, `SimpleSensorModel`);
+  - `scene_snapshot`.
+
+  A scenario's run is the one simulator. Play it back and read its records through the local API's consumer interface, as the examples do. (#404)
+- **Breaking**, `greenhouse-sim`: the simple crop's settings lose `air_temperature_bounds`, `humidity_bounds`, `soil_moisture_noise_pct` and `air_temperature_noise_c`. An older manifest or configuration that holds them still reads, and they are dropped. The simple-crop scenarios' run ids change. (#404)
+- **Changed**, `greenhouse-sim`: a crop model's registration (`services.crop_models.CropRegistration`) declares what it does: its per-plant adapter (`plants`, a `PlantAdapter`) and the run's own crop actions it takes, by kind (`crop_actions`, replacing `takes_crop_actions`). The run routes crop actions by those kinds. `services.crop.of_organs` replaces `is_organ`. (#406)
+- **Changed**, `greenhouse-sim`: a run's crop keeps its days in `core.crop_days.CropDays`, which `core.crop.RunCrop` now builds on, with its plants grown by `PlantGrowth`. `KEPT_DAYS`, `CropDone` and `DayWork` are imported from `core.crop_days`. (#409)
+- **Added**, `greenhouse-sim`: a crop's scope (`world.scopes`): a row of the crop rows with its cultivated area and its floor kept apart, and the explicit conversions of a quantity between them (decision 0062). (#412)
+- **Added**, `greenhouse-sim`: the sun's light above a scope's canopy (`solar.scopes.ScopeLight`), at a moment and hour by hour, which a crop grown by area is driven by (decision 0062). (#414)
+- **Added**, `greenhouse-sim`: a crop grown by area (decision 0062):
+  - its contract (`biology.area_contract.AreaRung`, `DayCourse`);
+  - the first driver profile (`core.drivers.HOUSE_HOURS`, version 1);
+  - the run's crop of it (`core.area_crop.AreaCrop`).
+
+  `world.scopes`' `ScopeKind` and `AreaBasis` move to `domain.scopes`. (#415)
+- `greenhouse-protocol`: a control policy's port (`contracts.policy`, decision 0061). The `CapabilityContext`, `InformationBudget` and `Forecast` records, with their JSON Schemas; the `PolicyPort` contract, its `/policy/v1` routes, its allowlist of what a policy reads, and `check_policy_port`; the `Policy`, `Delivery` and `Decision` an experiment's runner steps a policy with; and an in-memory reference (`contracts.memory_policy`). The consumer interface's batch rules also cover a fourth log, the forecasts (`ForecastBatch`). Nothing existing changes. (#419)
+- **Added**, `greenhouse-sim`: Reduced-State TOMGRO as a crop grown by area (`biology.tomato.tomgro`, `core.tomgro_crop.TomgroRung`), agreeing with Oliveira et al.'s implementation on its reproduction's drivers. It is not yet chosen by a scenario. (#416)
 
 ## 0.4.0 - 2026-10-24
 
