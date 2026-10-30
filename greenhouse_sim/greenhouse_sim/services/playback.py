@@ -461,7 +461,9 @@ class Playback:
                 )
         while True:
             with self._lock:
-                if self._worked_out_s() >= time_s:
+                # Its first day worked out even for its first moment, whose
+                # readings are delivered as it starts.
+                if self._worked and self._worked_out_s() >= time_s:
                     self._time_s = self._gateway_to(time_s)
                     if self._time_s >= time_s:
                         if self._time_s >= self.end_s and not self._gateway.finished:

@@ -36,6 +36,7 @@ a policy held at barriers in a process of its own, come later (decision
 """
 
 import hashlib
+import math
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -144,10 +145,12 @@ class Steering:
         return receipt
 
     def cancel(self) -> Receipt | None:
-        """Cancels the plan in force, what of it has not started; none if
-        it has no revision yet."""
+        """Cancels the plan in force, what of it has not started, as its
+        revision in force stands, whoever gave that; none if it has no
+        revision yet."""
         if self.revision == 0:
             return None
+        self._caught_up()
         return self._port.cancel_plan(
             self.plan_id, revision=self.revision, epoch=self._port.run().epoch
         )
@@ -183,21 +186,26 @@ def run_episode(
     """Runs `episode` on a run of its own of the simulator's: see the
     module. `timer` measures each decision's time against its budget."""
     played = Playback(simulator, episode.scenario_id, layout=episode.layout)
-    port = RunPolicyPort(played, episode.principal)
     policy = episode.policy
+    if not 0.0 <= episode.end_s <= played.end_s:
+        raise ValueError(
+            f"an episode ends within its run, 0 to {played.end_s:.15g} s, "
+            f"not at {episode.end_s:.15g} s"
+        )
+    moments = _decision_moments(policy.decide_every_s, episode.end_s, played.end_s)
+    port = RunPolicyPort(played, episode.principal)
     budget = port.budget()
     policy.start(port.context(), budget)
     steering = Steering(port, episode.plan_id)
-    every = timedelta(seconds=policy.decide_every_s)
     read = _Reader(port)
     given: list[Given] = []
     skipped: list[Skipped] = []
     digest = hashlib.sha256()
     decisions = 0
     try:
-        at = played.start
-        while at <= played.start + timedelta(seconds=episode.end_s):
-            played.step_to((at - played.start).total_seconds())
+        for moment_s in moments:
+            at = played.start + timedelta(seconds=moment_s)
+            played.step_to(moment_s)
             delivered = read.since_last()
             digest.update(delivered.model_dump_json().encode())
             started = timer()
@@ -211,7 +219,8 @@ def run_episode(
                 if receipt is not None:
                     given.append(Given(at=at, receipt=receipt))
                     digest.update(receipt.model_dump_json().encode())
-            at += every
+        # The rest of the episode, to its end, without deciding again.
+        played.step_to(episode.end_s)
     finally:
         policy.stop()
     outcomes = read.outcomes_to_date()
@@ -231,6 +240,21 @@ def run_episode(
         skipped=tuple(skipped),
         digest=digest.hexdigest(),
     )
+
+
+def _decision_moments(every_s: float, end_s: float, run_end_s: float) -> list[float]:
+    """The moments a policy decides at, in seconds into the run: every
+    `every_s` from its start, through the episode's end, but not at the
+    run's own end, after which its gateway takes nothing more. A cadence
+    that would not move the clock on, at a datetime's resolution, is
+    refused."""
+    if not math.isfinite(every_s) or timedelta(seconds=every_s) <= timedelta(0):
+        raise ValueError(f"a policy decides every so many seconds, more than none: not {every_s!r}")
+    return [
+        moment
+        for moment in (n * every_s for n in range(math.floor(end_s / every_s) + 1))
+        if moment <= end_s and moment < run_end_s
+    ]
 
 
 def _act(steering: Steering, decision: Keep | Revise | CancelPlan) -> Receipt | None:
