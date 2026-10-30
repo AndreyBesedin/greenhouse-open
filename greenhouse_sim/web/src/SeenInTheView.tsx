@@ -34,6 +34,8 @@ import { SUN_COLOR, WIND_COLOR } from "./weather/weather";
 // (scene/snapshot.py), and of a scale as the card hints at it.
 const AXES_COLORS = "linear-gradient(90deg, #e03c31 33%, #2e9e44 33% 66%, #2f6fd6 66%)";
 const PLANTING_COLOR = "#d99940";
+// As the simulator draws a canopy (`scene/snapshot.py`, `CANOPY_COLOR`).
+const CANOPY_COLOR = "#5ca84d";
 const GLASS_COLOR = "#9ec7e0";
 const EQUIPMENT_OFF_COLOR = "#8c8c8c";
 const SCALE_COLORS = "linear-gradient(90deg, #440154, #21918c, #fde725)";
@@ -307,6 +309,17 @@ function always(view: ViewState): SeenRow[] {
       glyph: "dot",
       name: "Planting positions",
       ...own(PLANTING_COLOR, "A disc on the floor where a plant can stand.", ["PLANTING_POSITION"]),
+    });
+  }
+  if (kinds.has("CANOPY")) {
+    rows.push({
+      key: "canopy",
+      glyph: "square",
+      color: CANOPY_COLOR,
+      name: "Canopy (a proxy)",
+      meaning:
+        "A crop grown by area, which has no plants: a volume over its row, as tall as its " +
+        "canopy and as dense as the light its leaves take. Its numbers are predictions.",
     });
   }
   const equipment = EQUIPMENT_CATEGORIES.filter((category) => kinds.has(category));

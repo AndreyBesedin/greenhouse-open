@@ -16,8 +16,11 @@ a box), its layout's planting positions, each marked by a disc on the floor,
 its fixtures, each with what it is made of and what it obstructs, and its
 service zones and keep-out volumes, as the boxes they keep, and an upright
 cylinder per plant, as tall as its visible stem, at its planting position.
+A crop grown by area, which has no plants, is drawn as a canopy over each
+of its scopes, a see-through volume marked as a proxy (decision 0062).
 """
 
+import math
 from collections.abc import Mapping, Sequence
 from enum import StrEnum
 from typing import Final
@@ -44,6 +47,7 @@ from greenhouse_sim.world.geometry import (
 )
 from greenhouse_sim.world.layout import Layout
 from greenhouse_sim.world.rows import PlantingPosition
+from greenhouse_sim.world.scopes import CropScope
 from greenhouse_sim.world.sensors import Camera, Sensor
 from greenhouse_sim.world.state import PlantWorld
 from greenhouse_sim.world.zones import Zone
@@ -69,7 +73,9 @@ from greenhouse_sim.world.zones import Zone
 #     (P14.5): its kind, its main capability and each capability's rating
 #     as its properties, in place of a kind of entity for each kind of
 #     equipment.
-SCHEMA_VERSION: Final = 16
+# 17: a crop grown by area's canopy over a scope, drawn as a proxy, never as
+#     plants (decision 0062).
+SCHEMA_VERSION: Final = 17
 
 PLANT_STEM_RADIUS_M: Final = 0.02
 AXES_LENGTH_M: Final = 1.0
@@ -94,6 +100,7 @@ VENT_COLOR: Final = Color(r=0.55, g=0.74, b=0.86)
 DOOR_COLOR: Final = Color(r=0.45, g=0.5, b=0.56)
 AXES_COLOR: Final = Color(r=0.5, g=0.5, b=0.5)
 PLANT_COLOR: Final = Color(r=0.2, g=0.55, b=0.24)
+CANOPY_COLOR: Final = Color(r=0.36, g=0.66, b=0.3)
 # A planting position is marked by a disc this wide and thick, wider than a
 # stem, so that it shows around a plant standing on it.
 PLANTING_MARKER_RADIUS_M: Final = 0.06
@@ -160,6 +167,8 @@ class SceneEntityKind(StrEnum):
     SENSOR = "SENSOR"
     CAMERA = "CAMERA"
     PLANT = "PLANT"
+    # A crop grown by area, which has no plants: its canopy over a scope.
+    CANOPY = "CANOPY"
     # A plant organ by organ, as the organ-level model grows it.
     INTERNODE = "INTERNODE"
     LEAF = "LEAF"
@@ -535,6 +544,53 @@ def _plant_entity(plant: PlantWorld, envelope: Envelope, position: PlantingPosit
             "fruits_on_plant": len(on_plant),
             "ripe_fruits": sum(fruit.status == FruitStatus.RIPE for fruit in on_plant),
             "cumulative_harvest_g": plant.cumulative_harvest_g,
+        },
+    )
+
+
+def canopy_entity(
+    scope: CropScope,
+    envelope: Envelope,
+    *,
+    entity_id: str,
+    height_m: float,
+    density: float,
+    properties: Mapping[str, str | int | float | bool],
+) -> SceneEntity:
+    """A crop grown by area on `scope`, drawn as what it is (decision 0062):
+    a volume over the scope's ground, along its planting positions and as
+    wide as its cultivated area, `height_m` tall, as dense as `density`, the
+    share of the light its leaves take, from 0 to 1. It is marked as a
+    proxy, and its numbers as predictions; `properties` are its model's."""
+    points = [position.point for position in scope.positions]
+    xs, ys = [point.x for point in points], [point.y for point in points]
+    along_x = max(xs) - min(xs) >= max(ys) - min(ys)
+    spread = max(xs) - min(xs) if along_x else max(ys) - min(ys)
+    # The row runs a spacing beyond its first and last positions, half at
+    # each end; a row of one position is a square of its area.
+    length = spread * len(points) / (len(points) - 1) if len(points) > 1 else 0.0
+    if length <= 0.0:
+        length = math.sqrt(scope.cultivated_m2)
+    width = scope.cultivated_m2 / length
+    base = Vector3(x=sum(xs) / len(xs), y=sum(ys) / len(ys), z=min(point.z for point in points))
+    return SceneEntity(
+        entity_id=entity_id,
+        kind=SceneEntityKind.CANOPY,
+        transform=envelope.origin.after(Transform(position=base)),
+        shape=Box(
+            size_x=length if along_x else width,
+            size_y=width if along_x else length,
+            size_z=height_m,
+        ),
+        color=CANOPY_COLOR,
+        label=f"{scope.scope_id} canopy (a proxy)",
+        properties={
+            "scope": scope.scope_id,
+            "proxy": True,
+            "prediction": True,
+            "density": density,
+            "height_m": height_m,
+            **properties,
         },
     )
 

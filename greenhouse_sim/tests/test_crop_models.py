@@ -19,6 +19,7 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.crop_parameters import ReducedTomgroCrop
 from greenhouse_sim.scenarios.registry import MODELS
+from greenhouse_sim.scene.snapshot import SceneEntityKind
 from greenhouse_sim.services.crop_models import (
     CROP_MODELS,
     CropActions,
@@ -119,7 +120,8 @@ TOMGRO_BOX: Final = ScenarioConfig.model_validate(
 
 def test_reduced_tomgros_registration_answers_what_the_services_ask_of_it() -> None:
     """A model grown by area (decision 0062): its rung, its driver profile,
-    its state as a checkpoint keeps it, plausible, and no plants drawn."""
+    its state as a checkpoint keeps it, plausible, and drawn as each row's
+    canopy, a proxy, rather than plants."""
     registered = registration(TOMGRO_BOX)
     assert registered.area is not None
     rung = registered.area.rung(TOMGRO_BOX)
@@ -152,7 +154,10 @@ def test_reduced_tomgros_registration_answers_what_the_services_ask_of_it() -> N
         state.model_copy(update={"instances": [AreaInstance(scope_id="row_1", state=past)]}), DAYS
     )
     assert problem == "row_1's leaf area index is 5, past 4"
-    assert registered.area.drawn(instances, TOMGRO_BOX) == []
+    drawn = registered.area.drawn(instances, TOMGRO_BOX)
+    assert [(entity.kind, entity.properties["scope"]) for entity in drawn] == [
+        (SceneEntityKind.CANOPY, instance.scope_id) for instance in instances
+    ]
 
 
 # What asks a crop model for anything: the services, the routes over them

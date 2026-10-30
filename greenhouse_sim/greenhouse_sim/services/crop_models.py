@@ -62,7 +62,8 @@ from greenhouse_sim.domain.organs import FruitStage
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.crop_parameters import ReducedTomgroCrop
 from greenhouse_sim.scene.plants import crop_entities
-from greenhouse_sim.scene.snapshot import SceneEntity, simple_plant_entities
+from greenhouse_sim.scene.snapshot import SceneEntity, canopy_entity, simple_plant_entities
+from greenhouse_sim.world.scopes import row_scopes
 
 CM_PER_M: Final = 100.0
 # How far a plant's thermal time may be from the sum of the days it lived,
@@ -354,12 +355,34 @@ def _tomgro_implausible(state: TomgroCropState, _day: int) -> list[str]:
     return problems
 
 
-def _no_entities(
-    _instances: Sequence[AreaInstance[Any]], _config: ScenarioConfig
+def _tomgro_drawn(
+    instances: Sequence[AreaInstance[TomgroState]], config: ScenarioConfig
 ) -> list[SceneEntity]:
-    # A canopy is drawn as a proxy of its own, which the scene does not
-    # have yet: none, rather than plants it does not have.
-    return []
+    """Each row's canopy, drawn as a proxy (decision 0062): as tall as its
+    section's canopy height, as dense as the light its leaf area index
+    takes, `1 - exp(-K · LAI)`, with the model's five states, per m² of
+    floor."""
+    rung = _tomgro_rung(config)
+    scopes = {scope.scope_id: scope for scope in row_scopes(config.layout, config.envelope)}
+    return [
+        canopy_entity(
+            scopes[instance.scope_id],
+            config.envelope,
+            entity_id=f"{config.greenhouse_id}_{instance.scope_id}_canopy",
+            height_m=rung.canopy_height_m,
+            density=1 - math.exp(-rung.parameters.k * instance.state.lai),
+            properties={
+                "model": CropModel.REDUCED_TOMGRO.value,
+                "basis": rung.basis.value,
+                "nodes": instance.state.n,
+                "lai": instance.state.lai,
+                "dry_weight_g_m2": instance.state.w,
+                "fruit_g_m2": instance.state.wf,
+                "mature_fruit_g_m2": instance.state.wm,
+            },
+        )
+        for instance in instances
+    ]
 
 
 # The run's own crop actions the organ crop takes: every kind a plan may
@@ -408,7 +431,7 @@ REDUCED_TOMGRO: Final = CropRegistration[Any](
         profile=lambda config: driver_profile(
             _tomgro_crop(config).driver_profile, _tomgro_crop(config).driver_profile_version
         ),
-        drawn=_no_entities,
+        drawn=_tomgro_drawn,
     ),
     # Its harvest is the model's own rule; it takes none of a plan's.
     crop_actions=None,

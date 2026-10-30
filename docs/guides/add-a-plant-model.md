@@ -62,7 +62,10 @@ or its cultivated ground, `greenhouse_sim/greenhouse_sim/world/scopes.py`),
 and each row's instance lives its steps in its course
 (`greenhouse_sim/greenhouse_sim/core/area_crop.py`). Its registration
 declares `area`, an `AreaAdapter`, in place of `plants`: its rung, its
-driver profile by name and version, and how its instances are drawn. Its
+driver profile by name and version, and how its instances are drawn, each
+a canopy over its row (`canopy_entity` in
+`greenhouse_sim/greenhouse_sim/scene/snapshot.py`), as dense as the light
+its leaves take and marked as a proxy, never as plants it does not have. Its
 checkpoint state is an `AreaCropState` of its own state. Reduced-State
 TOMGRO is the first (`greenhouse_sim/greenhouse_sim/core/tomgro_crop.py`),
 held to its reproduction's reference by

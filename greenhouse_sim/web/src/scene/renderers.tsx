@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { canopyOpacity } from "./canopy";
 import { FanArrow } from "./FanArrow";
 import type { Color, SceneEntity, SceneEntityKind } from "./generated/snapshotTypes";
 import { isMetal } from "./materials";
@@ -114,4 +115,19 @@ export const RENDERERS: Record<
   PLANT: (entity, look) => (
     <ShapeMesh shape={entity.shape} color={look.color} highlighted={look.selected} />
   ),
+  // A crop grown by area, which has no plants: a see-through volume over its
+  // row, as dense as the light its leaves take, marked as a proxy (decision
+  // 0062). Picked only where nothing solid lies behind it, as glazing is.
+  CANOPY: (entity, look) =>
+    entity.shape.shape === "box" ? (
+      <SeeThrough
+        shape={entity.shape}
+        color={look.color}
+        highlighted={look.selected}
+        dense={look.emphasised}
+        opacity={canopyOpacity(entity)}
+      />
+    ) : (
+      solid(entity, look)
+    ),
 };
