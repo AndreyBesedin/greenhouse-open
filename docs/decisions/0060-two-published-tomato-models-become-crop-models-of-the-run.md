@@ -1,6 +1,6 @@
 # 0060: Two published tomato models become crop models of the run
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-10-29
 
 ## Context
