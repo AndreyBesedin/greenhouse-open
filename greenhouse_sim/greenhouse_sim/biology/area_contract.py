@@ -17,7 +17,7 @@ beside each scope's (`greenhouse_sim.core.area_crop.AreaCrop`).
   give, since it grows no height of its own.
 - **A day at a time:** the run gives an instance its day's course, its
   drivers hour by hour from the day's start, and keeps what it returns, as
-  it keeps a plant's day (`greenhouse_sim.core.crop_days`).
+  it keeps a plant's day (`greenhouse_sim.core.crop_steps`).
 
 `greenhouse_sim/tests/test_area_crop.py` holds every model of it to the
 rules of `AreaRung`.

@@ -23,7 +23,7 @@ from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.core.crop_actions import carry_out
-from greenhouse_sim.core.crop_days import CropDone
+from greenhouse_sim.core.crop_steps import CropDone
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services.crop import run_crop
 from greenhouse_sim.services.errors import InvalidRequest

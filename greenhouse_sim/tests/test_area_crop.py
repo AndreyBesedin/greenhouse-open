@@ -177,7 +177,7 @@ def test_a_crop_grown_by_area_carries_on_from_its_instances_read_back() -> None:
     with pytest.raises(ValueError, match="a crop of CanopyState canopies takes no others"):
         _crop().seed(0, list(reversed(source.instances_on(0))), [])
     with pytest.raises(ValueError, match="takes none of the run's crop actions"):
-        source.growth.next_day(0, source.instances_on(0), source.lived_on(0), [object()])  # type: ignore[list-item]
+        source.growth.next_step(0, source.instances_on(0), source.lived_on(0), [object()])  # type: ignore[list-item]
 
 
 def test_the_house_hours_give_each_driver_or_say_what_stands_for_it() -> None:
