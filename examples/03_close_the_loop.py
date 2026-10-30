@@ -2,29 +2,31 @@
 
     python examples/03_close_the_loop.py
 
-A policy acts on a run as a person in the viewer does, through the run's
-gateway (decision 0046). It reads what the run's sensors delivered, and what
-became of the actions it gave, through the consumer interface; it gives the
-gateway the next revision of its plan when its mind changes; and the run's
-clock moves on. Here the run is the climate box played back, its clock moved
-by hand five minutes at a time, and the policy a naive rule: the heater on below
-15 °C and off above 17 °C, by what a sensor reads, never by the air itself.
-The point is the shape of the loop, not the climate.
+A policy steers a run through its port (decision 0061), as its own
+principal. It reads its context, what the run's sensors delivered and
+what became of the actions it gave, and answers each time with a decision.
+An experiment's runner gives the decision to the run's gateway as the next
+revision of the policy's plan. The runner moves the run's clock to each
+decision, five minutes apart, for two hours: nothing waits, and no clock
+is moved by hand.
+
+Here the run is the climate box's, and the policy a naive rule: the heater
+on below 15 °C and off above 17 °C, by what a sensor reads, never by the
+air itself. It names its heater and its sensor from its context. The
+point is the shape of the loop, not the climate.
 """
 
-import tempfile
-import time
-from pathlib import Path
+from datetime import datetime
 from typing import Final
 
 from greenhouse_protocol.actions import ActionKind, SetLevel
 from greenhouse_protocol.authorisation import AuthorisationConfig, AuthorisationGroup, Grant
-from greenhouse_protocol.observation import Observation
-from greenhouse_protocol.outcome import ActionOutcome
-from greenhouse_protocol.plan import Asap, Plan, PlannedAction, Principal, PrincipalKind
-from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.services import consumer, playback
-from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
+from greenhouse_protocol.budget import InformationBudget
+from greenhouse_protocol.context import CapabilityContext, SourceKind
+from greenhouse_protocol.contracts.policy import Decision, Delivery, Keep, PolicyIdentity, Revise
+from greenhouse_protocol.enums import ObservationType
+from greenhouse_protocol.plan import Asap, PlannedAction, Principal, PrincipalKind
+from greenhouse_sim.experiment import Episode, run_episode
 from greenhouse_sim.services.simulator import Simulator
 
 SCENARIO: Final = "climate_box"
@@ -41,26 +43,13 @@ AUTHORISATION: Final = AuthorisationConfig(
         ),
     ),
 )
-HEATER: Final = "heater"
-SENSOR: Final = "temperature_front"
+# What a heater does, as a context names it.
+HEATS: Final = "heats"
 ON_BELOW_C: Final = 15.0
 OFF_ABOVE_C: Final = 17.0
-# The run plays a simulated day in a day of its clock, which the loop moves
-# five minutes at a time, for two hours.
-SECONDS_PER_DAY: Final = DAY_S
+# A decision every five minutes, for two hours.
 STEP_S: Final = 300.0
 STEPS: Final = 24
-WAIT_S: Final = 0.05
-
-
-class Clock:
-    """The seconds a playback reads its moment from, moved by the loop."""
-
-    def __init__(self) -> None:
-        self.now = 0.0
-
-    def __call__(self) -> float:
-        return self.now
 
 
 def format_time(time_s: float) -> str:
@@ -81,89 +70,71 @@ def decide(reads_c: float | None, heating: bool) -> bool:
     return heating
 
 
-def advance(played: Playback, clock: Clock, time_s: float) -> None:
-    """Moves the run to `time_s` into it. A playback's moment follows its
-    clock no further than its records are worked out, ahead of the clock
-    and again from each change of its plan, such as an action carried out:
-    so the clock moves once they reach `time_s`, and again from wherever
-    the run stopped short."""
-    while (state := played.state()).time_s < time_s:
-        if state.worked_out_s < time_s:
-            time.sleep(WAIT_S)
-            continue
-        clock.now += (time_s - state.time_s) / DAY_S * SECONDS_PER_DAY
+class NaiveHeating:
+    """The rule as a policy: its heater and its sensor from its context, and
+    a revision of its plan each time its mind changes."""
+
+    identity: Final = PolicyIdentity(name="naive_heating", version="1")
+    decide_every_s: Final = STEP_S
+
+    def start(self, context: CapabilityContext, budget: InformationBudget) -> None:
+        self._principal = context.principal
+        self._heater = next(d.device_id for d in context.devices if HEATS in d.does)
+        self._sensor = next(
+            source.source_id
+            for source in context.sources
+            if source.kind == SourceKind.SENSOR
+            and source.quantities[0].observation_type == ObservationType.AIR_TEMPERATURE_C
+        )
+        self._heating = False
+        self._changes = 0
+        self._first: datetime | None = None
+
+    def decide(self, at: datetime, delivered: Delivery) -> Decision:
+        self._first = self._first or at
+        readings = [o.value for o in delivered.observations if o.sensor_id == self._sensor]
+        reads_c = readings[-1] if readings else None
+        wanted = decide(reads_c, self._heating)
+        reads = "   -   " if reads_c is None else f"{reads_c:4.1f} °C"
+        ended = ", ".join(f"{o.ref} {o.status}" for o in delivered.outcomes) or "-"
+        print(
+            f"{format_time((at - self._first).total_seconds())}  {self._sensor} reads {reads}, "
+            f"heater {'on ' if wanted else 'off'}; outcomes: {ended}"
+        )
+        if wanted == self._heating:
+            return Keep()
+        self._heating = wanted
+        self._changes += 1
+        return Revise(
+            actions=(
+                PlannedAction(
+                    action_id=f"{self._heater}_{self._changes}",
+                    action=SetLevel(device_id=self._heater, level=1.0 if wanted else 0.0),
+                    timing=Asap(),
+                    proposed_by=self._principal,
+                ),
+            )
+        )
+
+    def stop(self) -> None:
+        self._heating = False
 
 
 def main() -> None:
-    with (
-        tempfile.TemporaryDirectory() as kept,
-        Simulator(authorisation=AUTHORISATION) as simulator,
-    ):
-        clock = Clock()
-        run_id = playback.start(
+    with Simulator(authorisation=AUTHORISATION) as simulator:
+        summary = run_episode(
             simulator,
-            SCENARIO,
-            SECONDS_PER_DAY,
-            hold=True,
-            clock=clock,
-            epochs=Epochs(Path(kept)),
-        ).run_id
-        played = playback.playback(simulator, SCENARIO)
-        played.command(PlaybackCommand.PLAY)
-        seen: int | None = None
-        ended: int | None = None
-        heating, revision = False, 0
-
-        for step in range(1, STEPS + 1):
-            advance(played, clock, step * STEP_S)
-            # Observe: what the sensors delivered, and what became of the
-            # actions given, since the last look.
-            observations: list[Observation] = []
-            while True:
-                delivered = consumer.observations(simulator, run_id, after=seen)
-                observations += delivered.observations
-                seen = delivered.next
-                if not delivered.has_more:
-                    break
-            outcomes: list[ActionOutcome] = []
-            while True:
-                resolved = consumer.outcomes(simulator, run_id, after=ended)
-                outcomes += resolved.outcomes
-                ended = resolved.next
-                if not resolved.has_more:
-                    break
-            readings = [o.value for o in observations if o.sensor_id == SENSOR]
-            reads_c = readings[-1] if readings else None
-            # Decide, and act: the plan's next revision, when its mind changes.
-            wanted = decide(reads_c, heating)
-            if wanted != heating:
-                revision += 1
-                receipt = played.submit(
-                    Plan(
-                        plan_id="heating",
-                        run_id=run_id,
-                        epoch=played.state().epoch,
-                        revision=revision,
-                        actions=(
-                            PlannedAction(
-                                action_id=f"heater_{revision}",
-                                action=SetLevel(device_id=HEATER, level=1.0 if wanted else 0.0),
-                                timing=Asap(),
-                                proposed_by=POLICY,
-                            ),
-                        ),
-                    ),
-                    by=POLICY,
-                )
-                if not receipt.accepted:
-                    raise RuntimeError(f"the plan was refused: {receipt.errors}")
-                heating = wanted
-            reads = "   -   " if reads_c is None else f"{reads_c:4.1f} °C"
-            ended_as = ", ".join(f"{o.ref} {o.status}" for o in outcomes) or "-"
-            print(
-                f"{format_time(step * STEP_S)}  {SENSOR} reads {reads}, "
-                f"heater {'on ' if heating else 'off'}; outcomes: {ended_as}"
-            )
+            Episode(
+                scenario_id=SCENARIO,
+                policy=NaiveHeating(),
+                principal=POLICY,
+                end_s=STEPS * STEP_S,
+            ),
+        )
+    print(
+        f"{summary.decisions} decisions, {len(summary.given)} revisions given, "
+        f"{len(summary.outcomes)} outcomes; the episode's digest {summary.digest[:16]}"
+    )
 
 
 if __name__ == "__main__":

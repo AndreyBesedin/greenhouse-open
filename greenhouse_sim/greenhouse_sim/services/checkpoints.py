@@ -516,7 +516,7 @@ def _crop_state(state: type[CropModelState], crop: AnyCrop, day: int) -> CropMod
     return state.model_validate(
         {
             "instances": list(crop.instances_on(day)),
-            "lived": [crop.lived_on(lived) for lived in range(day)],
+            "lived": [crop.lived_on(step) for step in range(day * crop.steps_a_day)],
         }
     )
 

@@ -9,8 +9,10 @@ A run is asked for as its climate field is (`greenhouse_sim.services.fields`),
 and refused as it is, as is a moment outside it. Its crop lives in its
 climate run's house air, whether or not its layout places equipment, and
 in its scenario's sunlight under its weather, its crowns as tall as its
-plants stand each day. At a moment, the crop has lived the run's days that
-have ended by then (`greenhouse_sim.core.clock.days_ended`).
+plants stand each day. At a moment, the crop is as the steps of its model
+ended by then have it (`greenhouse_sim.core.crop_steps.CropSteps.at`,
+decision 0064): for a crop grown plant by plant, the run's days that have
+ended by then (`greenhouse_sim.core.clock.days_ended`).
 
 A run's own crop actions (P13.5), its plan's harvests, lowerings and leaves
 removed at the start of a day, are carried out on its crop after that
@@ -37,7 +39,7 @@ from greenhouse_sim.climate.day import ClimateDay
 from greenhouse_sim.core.area_crop import AreaCrop
 from greenhouse_sim.core.clock import DAY_S, days_ended, run_day
 from greenhouse_sim.core.crop import RunCrop
-from greenhouse_sim.core.drivers import day_courses
+from greenhouse_sim.core.drivers import step_courses
 from greenhouse_sim.core.stopwatch import Stopwatch
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
@@ -137,7 +139,7 @@ def scenario_crop(simulator: Simulator, run: RunRequest, watch: Stopwatch | None
             _carry_on(crop, other, min(shared, alike, config.duration_days))
         for state in agreeing(simulator, house_of(run_key), schedule):
             if state.crop and state.crop_agrees(planned):
-                crop.seed(state.day, state.crop, state.lived)
+                crop.seed(state.day * crop.steps_a_day, state.crop, state.lived)
         return crop, schedule
 
     crop, _ = simulator.crops.made_once(key, make, lambda other: _same_house(key, other))
@@ -150,18 +152,19 @@ def seed_kept_crops(simulator: Simulator, state: KeptState) -> None:
         return
     for (run_key, planned), (crop, schedule) in simulator.crops.values():
         if state.agrees(house_of(run_key), schedule) and state.crop_agrees(planned):
-            crop.seed(state.day, state.crop, state.lived)
+            crop.seed(state.day * crop.steps_a_day, state.crop, state.lived)
 
 
 def _carry_on(crop: AnyCrop, other: AnyCrop, days: int) -> None:
-    """`crop` carrying on from `other` through the run's first `days` days:
-    two crops of one house are grown alike, both plant by plant or both by
-    area."""
+    """`crop` carrying on from `other` through the run's first `days` days,
+    in its model's steps: two crops of one house are grown alike, both
+    plant by plant or both by area."""
+    steps = days * crop.steps_a_day
     if isinstance(crop, RunCrop) and isinstance(other, RunCrop):
-        crop.carry_on_from(other, days)
+        crop.carry_on_from(other, steps)
         return
     if isinstance(crop, AreaCrop) and isinstance(other, AreaCrop):
-        crop.carry_on_from(other, days)
+        crop.carry_on_from(other, steps)
 
 
 def _same_house(key: CropKey, other: CropKey) -> bool:
@@ -232,8 +235,8 @@ def _area_crop(
     config: ScenarioConfig, area: AreaAdapter[Any], climate: ClimateDay, sunlight: Sunlight
 ) -> AreaCrop[Any]:
     """A run's crop grown by area from its first day: its model on each
-    row's scope, each day in its course as its driver profile gives it, the
-    house's air and the light above each scope under `sunlight`. Refused if
+    row's scope, each of its steps in its course as its driver profile gives
+    it, the house's air and the light above each scope under `sunlight`. Refused if
     its profile does not give a driver its model reads, or if its scenario
     sets crop work, which a crop grown by area does not take."""
     rung = area.rung(config)
@@ -251,7 +254,7 @@ def _area_crop(
     return AreaCrop(
         scopes,
         rung=rung,
-        courses=day_courses(profile, climate.house.mean_between, light),
+        courses=step_courses(profile, climate.house.mean_between, light, step_s=rung.step_s),
         days=config.duration_days,
     )
 
@@ -259,7 +262,7 @@ def _area_crop(
 def crop_scene(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> SceneSnapshot:
     """A run's crop `time_s` into it, as a viewer draws it over the
     scenario's scene: each plant at its planting position, as it stands
-    once it has lived the days ended by then, drawn as its model draws it
+    once it has lived the steps ended by then, drawn as its model draws it
     (`CropRegistration.drawn`). Asked for as its climate field is, and
     refused as it is."""
     checked_moment(scenario(simulator.catalogue, run.scenario_id), time_s)
@@ -273,9 +276,9 @@ def crop_scene(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> Sc
     grown_by = registration(config)
     entities: list[SceneEntity] = []
     if of_plants(crop) and grown_by.plants is not None:
-        entities = grown_by.plants.drawn(crop.plants_on(day), config)
+        entities = grown_by.plants.drawn(crop.at(time_s), config)
     elif not of_plants(crop) and grown_by.area is not None:
-        entities = grown_by.area.drawn(crop.instances_on(day), config)
+        entities = grown_by.area.drawn(crop.at(time_s), config)
     return SceneSnapshot(greenhouse_id=config.greenhouse_id, simulated_day=day, entities=entities)
 
 
@@ -303,7 +306,7 @@ def crop_plant(
     checked_moment(scenario(simulator.catalogue, run.scenario_id), time_s)
     crop = run_crop(simulator, run)
     day = days_ended(time_s)
-    plant = next((plant for plant in crop.plants_on(day) if plant.plant_id == plant_id), None)
+    plant = next((plant for plant in crop.at(time_s) if plant.plant_id == plant_id), None)
     if plant is None:
         raise NotFound(f"{run.scenario_id} has no plant {plant_id!r}")
     return CropPlant(

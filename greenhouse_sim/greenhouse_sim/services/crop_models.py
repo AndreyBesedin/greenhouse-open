@@ -42,7 +42,7 @@ from typing import Any, Final
 from greenhouse_protocol.actions import ActionKind
 from pydantic import BaseModel, ConfigDict
 
-from greenhouse_sim.biology.area_contract import AreaRung, DayCourse
+from greenhouse_sim.biology.area_contract import AreaRung, StepCourse
 from greenhouse_sim.biology.crop_contract import CropPlant, CropRung
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.biology.plant.organs import Fruit
@@ -111,12 +111,13 @@ class SimpleCropState(_GrownByPlant):
 class AreaCropState[StateT: BaseModel](BaseModel):
     """A crop grown by area's state at a checkpoint's day: each scope's
     instance, its canopy per m² of its model's basis, and what each lived on
-    each day before, by scope (decision 0062). It has no plants."""
+    each of its model's steps before, by scope (decision 0062). It has no
+    plants."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     instances: list[AreaInstance[StateT]] = []
-    lived: list[dict[str, DayCourse]] = []
+    lived: list[dict[str, StepCourse]] = []
 
     @property
     def plants(self) -> list[CropPlant]:

@@ -30,7 +30,10 @@ is a new version segment; the old one may be served beside it.
 The outcomes are what became of the actions a run's gateway carried out or
 not (decision 0046, `greenhouse_protocol.outcome`): a third log, beside the
 observations and the events, kept by the same rules; an outcome is
-delivered at its `delivered_at`, or else when it was resolved.
+delivered at its `delivered_at`, or else when it was resolved. A policy's
+port serves a fourth, its forecasts (decision 0061,
+`greenhouse_protocol.contracts.policy`), by the same rules again: a
+forecast is delivered when it was issued.
 
 An unknown run is `404`. `after` is a cursor (below), `0` when omitted;
 `limit` caps a batch's size and a producer may cap it lower.
@@ -109,10 +112,12 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from greenhouse_protocol.contracts.conformance import (
     check_events,
+    check_forecasts,
     check_observations,
     check_outcomes,
 )
 from greenhouse_protocol.event import Event
+from greenhouse_protocol.forecast import Forecast
 from greenhouse_protocol.instant import Instant
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.outcome import ActionOutcome
@@ -233,19 +238,40 @@ class OutcomeBatch(BaseModel):
         return self.outcomes
 
 
-type Batch = ObservationBatch | EventBatch | OutcomeBatch
-type LogRecord = Observation | Event | ActionOutcome
+class ForecastBatch(BaseModel):
+    """The forecasts delivered after a cursor, in delivery order: a policy's
+    port's (`greenhouse_protocol.contracts.policy`)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    run_id: str = Field(min_length=1)
+    epoch: int = Field(ge=0)
+    after: int = Field(ge=0)
+    next: int = Field(ge=0)
+    simulated_now: Instant
+    has_more: bool = False
+    forecasts: tuple[Forecast, ...]
+
+    @property
+    def records(self) -> tuple[Forecast, ...]:
+        return self.forecasts
+
+
+type Batch = ObservationBatch | EventBatch | OutcomeBatch | ForecastBatch
+type LogRecord = Observation | Event | ActionOutcome | Forecast
 
 
 def delivered_at(record: LogRecord) -> datetime:
     """When a record reached the producer: its delivery time, or the instant
     it describes when it was delivered as it was taken; for an outcome, when
-    it was resolved."""
+    it was resolved; for a forecast, when it was issued."""
     match record:
         case Observation(delivered_at=delivered) if delivered is not None:
             return delivered
         case ActionOutcome(delivered_at=delivered, resolved_at=resolved):
             return resolved if delivered is None else delivered
+        case Forecast(issued_at=issued):
+            return issued
         case _:
             return record.timestamp
 
@@ -257,6 +283,8 @@ def record_id(record: LogRecord) -> str:
         case ActionOutcome(outcome_id=identity):
             return identity
         case Event(event_id=identity):
+            return identity
+        case Forecast(forecast_id=identity):
             return identity
 
 
@@ -319,6 +347,8 @@ def check_batch(batch: Batch, *, greenhouse_id: str | None = None) -> list[str]:
             violations += check_events(events)
         case OutcomeBatch(outcomes=outcomes):
             violations += check_outcomes(outcomes)
+        case ForecastBatch(forecasts=forecasts):
+            violations += check_forecasts(forecasts)
     return violations
 
 
@@ -409,4 +439,6 @@ def _label(batch: Batch) -> str:
             kind = "events"
         case OutcomeBatch():
             kind = "outcomes"
+        case ForecastBatch():
+            kind = "forecasts"
     return f"{kind} batch of run {batch.run_id!r} epoch {batch.epoch} after={batch.after}"

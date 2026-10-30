@@ -27,16 +27,16 @@ What it reaches is a simulator's (decision 0048), as `Acts` names it: the
 runs it plays back, and nothing else of it.
 """
 
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from enum import StrEnum
 from typing import Final, Protocol
 
 from greenhouse_protocol.actions import ActionKind, ActionTargets
 from greenhouse_protocol.contracts.gateway import ACTUATION_PREFIX, PlanState, Receipt
 from greenhouse_protocol.plan import ActionKey, ActionState, ActionStateKind, Plan
-from pydantic import TypeAdapter, ValidationError
+from pydantic import TypeAdapter
 
-from greenhouse_sim.services.errors import InvalidRequest, every_reason, first_reason
+from greenhouse_sim.services.errors import InvalidRequest, read_as
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR
 from greenhouse_sim.services.playback import Playback, Playbacks
 
@@ -56,7 +56,7 @@ class Acts(Protocol):
 def give(acts: Acts, run_id: str, body: bytes) -> Receipt:
     """Gives a run's gateway a plan, or a revision of one, as the body
     writes it (`Plan`), as the local operator."""
-    plan = _read("a plan", lambda: Plan.model_validate_json(body))
+    plan = read_as("a plan", lambda: Plan.model_validate_json(body))
     return _played(acts, run_id).submit(plan, by=LOCAL_OPERATOR)
 
 
@@ -77,7 +77,7 @@ def cancel_plan(
 def cancel(acts: Acts, run_id: str, body: bytes) -> Receipt:
     """Cancels chosen actions of a run's plans, by the keys the body lists
     (`ActionKey`, in a JSON array), as the local operator."""
-    keys = _read("a list of action keys", lambda: _KEYS.validate_json(body))
+    keys = read_as("a list of action keys", lambda: _KEYS.validate_json(body))
     return _played(acts, run_id).cancel(keys, by=LOCAL_OPERATOR)
 
 
@@ -125,12 +125,3 @@ def _members[E: StrEnum](kind: type[E], given: Sequence[str], name: str) -> froz
             f"no {name} {unknown[0]!r}: one of {', '.join(sorted(known))}", [(name, unknown[0])]
         )
     return frozenset(known[value] for value in given)
-
-
-def _read[T](what: str, read: Callable[[], T]) -> T:
-    """A body as the record it should be, or refused, saying why, before it
-    reaches the gateway."""
-    try:
-        return read()
-    except ValidationError as error:
-        raise InvalidRequest(f"not {what}: {first_reason(error)}", every_reason(error)) from None

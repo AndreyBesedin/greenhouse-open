@@ -16,7 +16,7 @@ differ.
 import logging
 from collections.abc import Sequence
 from dataclasses import replace
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, NamedTuple
 
 from greenhouse_protocol.actions import HEATING_SETPOINT_RANGE_C
 
@@ -164,24 +164,48 @@ def checked_targets(config: ScenarioConfig, targets: Sequence[Commanded]) -> tup
     return tuple(sorted(targets, key=lambda change: change[0]))
 
 
-def _keeps_the_dead_band(config: ScenarioConfig, target: str, value_c: float) -> None:
-    """Refuse a heating setpoint changed to `value_c` that would leave the
-    heater on while the vents open for heat: in its period, the vents'
-    first stage closes above the temperature the heater switches off at by
-    at least the controller's dead band, as its configuration's do
-    (`climate.control`)."""
+class _DeadBand(NamedTuple):
+    """In a target's period: where the vents' first stage closes, the
+    controller's dead band, and the highest heating setpoint that keeps it."""
+
+    closes_c: float
+    band_c: float
+    most_c: float
+
+
+def _dead_band(config: ScenarioConfig, target: str) -> _DeadBand | None:
+    """The dead band a heating setpoint keeps in `target`'s period: the
+    vents' first stage closes above the temperature the heater switches off
+    at by at least the controller's dead band, as its configuration's do
+    (`climate.control`). None without both a heating and a venting loop."""
     control = config.control
     if control is None or control.heating is None or control.venting is None:
-        return
-    by_day = target == Target.HEATING_DAY
-    closes_c = control.venting.first_closes_below_c(control.venting.setpoint_c(by_day))
-    most_c = closes_c - control.dead_band_c - control.heating.band_c / 2
-    if value_c > most_c:
-        period = "by day" if by_day else "by night"
+        return None
+    closes_c = control.venting.first_closes_below_c(
+        control.venting.setpoint_c(target == Target.HEATING_DAY)
+    )
+    return _DeadBand(
+        closes_c, control.dead_band_c, closes_c - control.dead_band_c - control.heating.band_c / 2
+    )
+
+
+def most_heating_c(config: ScenarioConfig, target: str) -> float | None:
+    """The highest heating setpoint `target` may be changed to, that keeps
+    the dead band (`_dead_band`); None if nothing but its range bounds it."""
+    band = _dead_band(config, target)
+    return None if band is None else band.most_c
+
+
+def _keeps_the_dead_band(config: ScenarioConfig, target: str, value_c: float) -> None:
+    """Refuse a heating setpoint changed to `value_c` that would leave the
+    heater on while the vents open for heat."""
+    band = _dead_band(config, target)
+    if band is not None and value_c > band.most_c:
+        period = "by day" if target == Target.HEATING_DAY else "by night"
         raise InvalidRequest(
             f"a heating setpoint {period} of {value_c:.15g} °C leaves less than the dead band "
-            f"of {control.dead_band_c:.15g} °C below where the vents' first stage closes, "
-            f"{closes_c:.15g} °C: at most {most_c:.15g} °C"
+            f"of {band.band_c:.15g} °C below where the vents' first stage closes, "
+            f"{band.closes_c:.15g} °C: at most {band.most_c:.15g} °C"
         )
 
 

@@ -65,8 +65,9 @@ def test_its_run_grows_its_crop_by_area_on_each_row(grown: Simulator) -> None:
     assert [instance.scope_id for instance in instances] == ROWS == ["row_1", "row_2"]
     for instance in instances:
         expected = INITIAL_STATE
-        for day in range(3):
-            expected = model.live_day(expected, crop.course(instance.scope_id, day))
+        # Its model's step is a day.
+        for step in range(3):
+            expected = model.live_step(expected, crop.course(instance.scope_id, step))
         assert instance.state == expected
         # Its nodes grow with the air's warmth; in the box's cold, dim air its
         # dry weight respires more than it gains.

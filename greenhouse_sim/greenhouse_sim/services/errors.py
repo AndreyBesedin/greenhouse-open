@@ -5,7 +5,7 @@ where it helps, what would be accepted instead. An interface turns each kind
 into its own answer, such as an HTTP status; a service never chooses one.
 """
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 from pydantic import ValidationError
 
@@ -37,6 +37,14 @@ class Conflict(ServiceError):
     something already made otherwise."""
 
 
+class Unauthenticated(ServiceError):
+    """The request names no caller the service knows."""
+
+
+class Forbidden(ServiceError):
+    """The caller is known, and may not make the request."""
+
+
 def first_reason(error: ValidationError) -> str:
     """Why a model refused what it was given, in a sentence: its first
     reason, by the field at fault, and how many more there are."""
@@ -54,3 +62,12 @@ def every_reason(error: ValidationError) -> list[tuple[str, str]]:
 
 def _field(loc: Sequence[int | str]) -> str:
     return ".".join(str(part) for part in loc)
+
+
+def read_as[T](what: str, read: Callable[[], T]) -> T:
+    """A body read as the record it should be, or refused, saying why,
+    before it reaches what takes it."""
+    try:
+        return read()
+    except ValidationError as error:
+        raise InvalidRequest(f"not {what}: {first_reason(error)}", every_reason(error)) from None

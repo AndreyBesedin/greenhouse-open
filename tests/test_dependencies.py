@@ -13,6 +13,7 @@ import pathlib
 import re
 import sys
 import tomllib
+from typing import Final
 
 import pytest
 
@@ -82,6 +83,59 @@ def test_ground_truth_is_read_only_by_the_simulators_evaluation() -> None:
         if not path.startswith("greenhouse_sim/greenhouse_sim/evaluation/")
     )
     assert not readers, readers
+
+
+# What a policy's port is made of in the simulator's process (decision
+# 0061), and what of the simulated world it imports nothing of: the ground
+# truth and the evaluation that reads it, the air's fields and flows, the
+# crop's state, the weather's series, the scene, the timeline, and the
+# local API.
+POLICY_PORT_MODULES: Final = (
+    "greenhouse_sim/greenhouse_sim/services/policy_port.py",
+    "greenhouse_sim/greenhouse_sim/services/policy_context.py",
+)
+NOT_A_POLICYS: Final = (
+    "greenhouse_sim.ground_truth",
+    "greenhouse_sim.evaluation",
+    "greenhouse_sim.fields",
+    "greenhouse_sim.airflow",
+    "greenhouse_sim.cfd",
+    "greenhouse_sim.services.fields",
+    "greenhouse_sim.services.grid",
+    "greenhouse_sim.biology",
+    "greenhouse_sim.core.crop",
+    "greenhouse_sim.services.crop",
+    "greenhouse_sim.services.plants",
+    "greenhouse_sim.weather",
+    "greenhouse_sim.scene",
+    "greenhouse_sim.services.timeline",
+    "greenhouse_sim.api",
+)
+
+
+def test_a_policys_port_imports_nothing_a_policy_may_not_read() -> None:
+    """Its modules reach the run through the playback and the context's
+    sources, not the simulated world's state. This holds what they import
+    themselves; it is not a sandbox."""
+    imported = sorted(
+        (path, lineno, module)
+        for path in POLICY_PORT_MODULES
+        for lineno, module in _modules_imported(OPEN / path)
+        if any(module == banned or module.startswith(f"{banned}.") for banned in NOT_A_POLICYS)
+    )
+    assert not imported, imported
+
+
+def _modules_imported(path: pathlib.Path) -> list[tuple[int, str]]:
+    """Each module a file imports, by its full name, with its line."""
+    found = []
+    for node in ast.walk(ast.parse(path.read_text(), str(path))):
+        if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            found += [(node.lineno, node.module)]
+            found += [(node.lineno, f"{node.module}.{alias.name}") for alias in node.names]
+        elif isinstance(node, ast.Import):
+            found += [(node.lineno, alias.name) for alias in node.names]
+    return found
 
 
 def _imports_with_modules(package: str) -> set[tuple[str, int, str]]:

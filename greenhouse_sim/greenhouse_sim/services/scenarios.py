@@ -15,6 +15,7 @@ from collections.abc import Mapping, Sequence
 from datetime import date
 from typing import Any, Final
 
+from greenhouse_protocol.greenhouse import Plant
 from pydantic import BaseModel, ConfigDict, JsonValue, ValidationError
 
 from greenhouse_sim.climate.commands import DailyCommand
@@ -215,6 +216,20 @@ def plant_ids(config: ScenarioConfig) -> list[str]:
     """The identifiers of a scenario's whole crop: rows times columns plants."""
     plant_count = config.rows * config.columns
     return [f"{config.greenhouse_id}_plant_{i:03d}" for i in range(1, plant_count + 1)]
+
+
+def described_plants(config: ScenarioConfig) -> tuple[Plant, ...]:
+    """A scenario's plants as a consumer is told of them: row by row of its
+    grid, in the order of their identifiers."""
+    return tuple(
+        Plant(
+            plant_id=plant_id,
+            variety=config.variety,
+            row=index // config.columns + 1,
+            position_in_row=index % config.columns + 1,
+        )
+        for index, plant_id in enumerate(plant_ids(config))
+    )
 
 
 def initial_scene(

@@ -9,15 +9,17 @@ beside each scope's (`greenhouse_sim.core.area_crop.AreaCrop`).
 
 - **Its drivers** are declared (`drivers`): the quantities it reads, hour by
   hour, each the mean through its hour. The run gives them through a driver
-  profile, named and versioned, which says how it provides each and what it
-  substitutes (`greenhouse_sim.core.drivers`).
+  profile, named and versioned, which says how it provides each, what it
+  substitutes, and at what resolution (`greenhouse_sim.core.drivers`).
 - **The light it is given** is the PAR above its canopy, incident: how much
   of it the canopy absorbs, through its leaf area, is the model's. It is
   read at the canopy's height (`canopy_height_m`), which its parameters
   give, since it grows no height of its own.
-- **A day at a time:** the run gives an instance its day's course, its
-  drivers hour by hour from the day's start, and keeps what it returns, as
-  it keeps a plant's day (`greenhouse_sim.core.crop_days`).
+- **A step at a time,** at the step it declares (`step_s`, decision 0064):
+  a whole number of its profile's hours that divides a day. The run gives
+  an instance its step's course, its drivers hour by hour from the step's
+  start, and keeps what it returns, as it keeps a plant's day
+  (`greenhouse_sim.core.crop_steps`).
 
 `greenhouse_sim/tests/test_area_crop.py` holds every model of it to the
 rules of `AreaRung`.
@@ -44,23 +46,24 @@ class HourDrivers(BaseModel):
     co2_ppm: NonNegativeFloat
 
 
-class DayCourse(BaseModel):
-    """A scope's day, hour by hour from its start: what a crop grown by area
-    lives it in."""
+class StepCourse(BaseModel):
+    """A scope's step, hour by hour from its start, as many hours as the
+    step holds: what a crop grown by area lives it in."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    hours: Annotated[tuple[HourDrivers, ...], Field(min_length=HOURS_A_DAY, max_length=HOURS_A_DAY)]
+    hours: Annotated[tuple[HourDrivers, ...], Field(min_length=1, max_length=HOURS_A_DAY)]
 
 
 class AreaRung[StateT: BaseModel](Protocol):
     """A model of the run's crop grown by area, a rung of the crop part's
     ladder (decision 0035) beside the per-plant ones (`CropRung`): how it
-    starts a scope's canopy and lives it a day at a time, per m² of its
-    basis. The run gives each instance its day's course and keeps the
+    starts a scope's canopy and lives it a step at a time, per m² of its
+    basis. The run gives each instance its step's course and keeps the
     states; a rung keeps nothing of them. A rung must:
 
-    - start a canopy, and live its day, the same every time it is given the
+    - step at a whole number of hours that divides a day;
+    - start a canopy, and live its step, the same every time it is given the
       same state and course, whatever other scopes grow beside it;
     - leave the state it is given as it was, returning another;
     - grow the same per m² on two scopes given the same course, whatever
@@ -71,6 +74,11 @@ class AreaRung[StateT: BaseModel](Protocol):
     @property
     def state_type(self) -> type[StateT]:
         """What its states are, as a checkpoint reads them back."""
+        ...
+
+    @property
+    def step_s(self) -> float:
+        """Its step, in seconds (decision 0064)."""
         ...
 
     @property
@@ -90,10 +98,9 @@ class AreaRung[StateT: BaseModel](Protocol):
         ...
 
     def planted(self) -> StateT:
-        """Its canopy, per m² of its basis, as the run's first day finds
-        it."""
+        """Its canopy, per m² of its basis, as the run's start finds it."""
         ...
 
-    def live_day(self, state: StateT, course: DayCourse) -> StateT:
-        """Its canopy once it has lived a day of `course`."""
+    def live_step(self, state: StateT, course: StepCourse) -> StateT:
+        """Its canopy once it has lived a step of `course`."""
         ...

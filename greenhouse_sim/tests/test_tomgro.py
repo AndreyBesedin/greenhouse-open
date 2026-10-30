@@ -13,7 +13,7 @@ from typing import Any, Final
 
 import pytest
 
-from greenhouse_sim.biology.area_contract import DayCourse, HourDrivers
+from greenhouse_sim.biology.area_contract import HourDrivers, StepCourse
 from greenhouse_sim.biology.tomato.tomgro.parameters import (
     INITIAL_STATE,
     TomgroParameters,
@@ -66,7 +66,7 @@ def _manifest() -> dict[str, Any]:
     return loaded
 
 
-def _courses() -> list[DayCourse]:
+def _courses() -> list[StepCourse]:
     """The reproduction's drivers, day by day, checked against the sha256
     its manifest pins."""
     pinned = _manifest()["drivers"]
@@ -75,7 +75,7 @@ def _courses() -> list[DayCourse]:
     with path.open(newline="") as file:
         rows = list(csv.DictReader(file))
     return [
-        DayCourse(
+        StepCourse(
             hours=tuple(
                 HourDrivers(
                     temperature_c=float(row["tmean"]),
@@ -119,7 +119,7 @@ def test_it_agrees_with_the_reference_on_every_state_every_day() -> None:
     state = rung.planted()
     grown = [state]
     for course in _courses():
-        state = rung.live_day(state, course)
+        state = rung.live_step(state, course)
         grown.append(state)
 
     assert len(grown) == len(reference)

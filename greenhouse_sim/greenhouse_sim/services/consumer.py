@@ -34,11 +34,11 @@ from greenhouse_protocol.contracts.consumer import (
     RunList,
 )
 from greenhouse_protocol.enums import SourceType
-from greenhouse_protocol.greenhouse import GreenhouseDescription, GreenhouseLayout, Plant
+from greenhouse_protocol.greenhouse import GreenhouseDescription, GreenhouseLayout
 
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.playback import Playback, Playbacks, PlaybackState
-from greenhouse_sim.services.scenarios import Scenarios, plant_ids, scenario
+from greenhouse_sim.services.scenarios import Scenarios, described_plants, scenario
 
 # The most records a batch holds, whatever a client asks for.
 MOST_PER_BATCH: Final = 5_000
@@ -46,7 +46,7 @@ MOST_PER_BATCH: Final = 5_000
 ROUTES_PREFIX: Final = CONSUMER_PREFIX
 
 
-def _descriptor(state: PlaybackState) -> RunDescriptor:
+def run_descriptor(state: PlaybackState) -> RunDescriptor:
     return RunDescriptor(
         run_id=state.run_id,
         epoch=state.epoch,
@@ -101,7 +101,7 @@ class Reads(Protocol):
 
 def runs(reads: Reads) -> RunList:
     """The runs a consumer can follow: every playback started."""
-    return RunList(runs=tuple(_descriptor(found.state()) for found in reads.playbacks.all()))
+    return RunList(runs=tuple(run_descriptor(found.state()) for found in reads.playbacks.all()))
 
 
 def _played(reads: Reads, run_id: str) -> Playback:
@@ -110,7 +110,7 @@ def _played(reads: Reads, run_id: str) -> Playback:
 
 def run(reads: Reads, run_id: str) -> RunDescriptor:
     """A run's identity, epoch and clock."""
-    return _descriptor(_played(reads, run_id).state())
+    return run_descriptor(_played(reads, run_id).state())
 
 
 def greenhouse(reads: Reads, run_id: str) -> GreenhouseDescription:
@@ -118,15 +118,6 @@ def greenhouse(reads: Reads, run_id: str) -> GreenhouseDescription:
     scenario lays them out, described when its run starts."""
     found = _played(reads, run_id)
     config = scenario(reads.catalogue, found.scenario_id)
-    plants = tuple(
-        Plant(
-            plant_id=plant_id,
-            variety=config.variety,
-            row=index // config.columns + 1,
-            position_in_row=index % config.columns + 1,
-        )
-        for index, plant_id in enumerate(plant_ids(config))
-    )
     return GreenhouseDescription(
         greenhouse_id=config.greenhouse_id,
         name=config.name,
@@ -134,12 +125,12 @@ def greenhouse(reads: Reads, run_id: str) -> GreenhouseDescription:
         source_type=SourceType.SIMULATION,
         crop=config.variety,
         layout=GreenhouseLayout(kind="grid", rows=config.rows, columns=config.columns),
-        plants=plants,
+        plants=described_plants(config),
         created_at=found.start,
     )
 
 
-def _limit(limit: int | None) -> int:
+def batch_limit(limit: int | None) -> int:
     if limit is None:
         return MOST_PER_BATCH
     if limit < 1:
@@ -152,8 +143,8 @@ def observations(
 ) -> ObservationBatch:
     """The observations a run's sensors delivered after the cursor, by its
     clock, in delivery order, from the first if no cursor is given."""
-    cursor = _cursor(after)
-    cut = _played(reads, run_id).records_after(cursor, _limit(limit))
+    cursor = batch_cursor(after)
+    cut = _played(reads, run_id).records_after(cursor, batch_limit(limit))
     # Judged by the epoch the records were cut in, which a restart between
     # a look at the epoch and the cut could not change.
     known = reads.cursors.knows(run_id, "observations", cut.state.epoch, cursor)
@@ -176,8 +167,8 @@ def events(
     """The events delivered in a run after the cursor, by its clock, in
     delivery order, from the first if no cursor is given: its crop's
     harvests."""
-    cursor = _cursor(after)
-    cut = _played(reads, run_id).events_after(cursor, _limit(limit))
+    cursor = batch_cursor(after)
+    cut = _played(reads, run_id).events_after(cursor, batch_limit(limit))
     known = reads.cursors.knows(run_id, "events", cut.state.epoch, cursor)
     if known:
         reads.cursors.give(run_id, "events", cut.state.epoch, cut.next)
@@ -198,8 +189,8 @@ def outcomes(
     """The outcomes of a run's actions written after the cursor, by its
     clock, in the order written, from the first if no cursor is given: each
     action done, refused, cancelled or replaced, and why."""
-    cursor = _cursor(after)
-    cut, state = _played(reads, run_id).outcomes_after(cursor, _limit(limit))
+    cursor = batch_cursor(after)
+    cut, state = _played(reads, run_id).outcomes_after(cursor, batch_limit(limit))
     known = reads.cursors.knows(run_id, "outcomes", state.epoch, cursor)
     if known:
         reads.cursors.give(run_id, "outcomes", state.epoch, cut.next)
@@ -214,7 +205,7 @@ def outcomes(
     )
 
 
-def _cursor(after: int | None) -> int:
+def batch_cursor(after: int | None) -> int:
     cursor = FIRST_CURSOR if after is None else after
     if cursor < FIRST_CURSOR:
         raise InvalidRequest("a cursor is 0 or more")

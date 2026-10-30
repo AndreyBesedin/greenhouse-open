@@ -31,6 +31,18 @@ implement. Part of [greenhouse-open](../README.md). Apache-2.0.
   Their JSON Schemas are published in the package (`schemas/`). They
   replace the first action format, `RequestedAction` and its outcome,
   removed in P13.9.
+- **What a policy decides with** (decision 0061):
+  - `CapabilityContext` (`context`): what a principal may read and do in
+    a run: its observation sources, devices, targets, crop instances,
+    when each kind of action is carried out, the gateway's limits, its
+    grants, and an experiment's goals;
+  - `InformationBudget` (`budget`): the forecast providers and prediction
+    assets it is given beyond the observations and the clock, labelled an
+    oracle exactly when any of them is the simulated world's truth;
+  - `Forecast` (`forecast`): a provider's forecast of a quantity, for a
+    moment or a period, with its issue time and its uncertainty.
+
+  Their JSON Schemas are published beside the others.
 
 Chronology is the timestamp alone, always timezone-aware: every record
 refuses a naive time (`greenhouse_protocol.instant.Instant`).
@@ -69,6 +81,23 @@ description checks it.
   as plain functions returning a list of violations.
 - `memory`: an in-memory reference implementation of the store and query
   contracts, precise about the semantics a real store must share.
+- `policy` (decision 0061): a policy's port (`PolicyPort`), what a control
+  policy reads of a run and gives it, as its own principal: its context,
+  its budget, the observations of its context's sources, the events with
+  the parameters their types allow, the outcomes and plans of its own,
+  and its budget's forecasts, each no earlier than issued; and nothing of
+  the simulated world's truth. Its routes under `/policy/v1`; what it may
+  read, field by field (`READABLE_FIELDS`, `READABLE_EVENT_PARAMETERS`),
+  which `check_readable` holds its records to; the `Policy` an
+  experiment's runner steps, given a `Delivery` and answering a
+  `Decision`; and `check_policy_port`, which holds a port to the contract
+  through a harness that moves its run.
+- `memory_policy`: an in-memory reference implementation of a policy's
+  port, on the in-memory gateway, to develop a port against.
+- `policy_client`: a policy's port over HTTP (`HttpPolicyPort`), each call
+  a request to the port's routes with the policy's bearer token, made with
+  the standard library alone, so that a policy in a process of its own
+  depends on the protocol only.
 - `consumer`: the interface a client reads a running producer through:
   `/consumer/v1` routes answering a run's identity, epoch and clock, its
   greenhouse description, and its observations and events after a cursor,

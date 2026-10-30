@@ -10,7 +10,7 @@ from typing import Any, Final
 import pytest
 
 import greenhouse_sim
-from greenhouse_sim.biology.area_contract import DayCourse, HourDrivers
+from greenhouse_sim.biology.area_contract import HourDrivers, StepCourse
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.core.area_crop import AreaInstance
 from greenhouse_sim.core.drivers import HOUSE_HOURS
@@ -125,7 +125,7 @@ def test_reduced_tomgros_registration_answers_what_the_services_ask_of_it() -> N
     rung = registered.area.rung(TOMGRO_BOX)
     profile = registered.area.profile(TOMGRO_BOX)
     scopes = row_scopes(TOMGRO_BOX.layout, TOMGRO_BOX.envelope)
-    course = DayCourse(
+    course = StepCourse(
         hours=tuple(
             HourDrivers(
                 temperature_c=22.0, par_above_umol_m2_s=400.0 * (6 <= hour < 18), co2_ppm=420.0
@@ -135,7 +135,7 @@ def test_reduced_tomgros_registration_answers_what_the_services_ask_of_it() -> N
     )
     grown = rung.planted()
     for _ in range(DAYS):
-        grown = rung.live_day(grown, course)
+        grown = rung.live_step(grown, course)
     instances: list[AreaInstance[Any]] = [
         AreaInstance(scope_id=scope.scope_id, state=grown) for scope in scopes
     ]
