@@ -115,6 +115,26 @@ describe("what the view is drawing, explained", () => {
       names(seenInTheView({ ...VIEW, kinds: new Set(["FLOOR"]), axesLengthM: null }).always),
     ).toEqual(["Ground grid"]);
   });
+
+  it("says a crop grown by area's canopy is a proxy, its numbers predictions", () => {
+    const { always } = seenInTheView({ ...VIEW, kinds: new Set([...HOUSE, "CANOPY"]) });
+
+    expect(names(always)).toContain("Canopy (a proxy)");
+    expect(always.find((each) => each.key === "canopy")?.meaning).toBe(
+      "A crop grown by area, which has no plants: a volume over its row, as tall as its " +
+        "canopy and as dense as the light its leaves take. Its numbers are predictions.",
+    );
+    expect(names(seenInTheView(VIEW).always)).not.toContain("Canopy (a proxy)");
+    // Coloured by one of its numbers, it says so, as every row does.
+    const coloured = seenInTheView({
+      ...VIEW,
+      kinds: new Set([...HOUSE, "CANOPY"]),
+      colourBy: "lai",
+    });
+    expect(coloured.always.find((each) => each.key === "canopy")?.meaning).toMatch(
+      / Shaded by lai where it has a value\.$/,
+    );
+  });
 });
 
 // Each row says what the view draws, as it draws it (the Codex review of #241).

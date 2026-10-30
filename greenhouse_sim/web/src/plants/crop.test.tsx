@@ -144,6 +144,22 @@ describe("a run's crop", () => {
 
     expect(withCrop(scene, crop)).toEqual({ ...scene, simulated_day: 3, entities: [wall, grown] });
   });
+
+  it("takes the place of every canopy of a crop grown by area the scene draws", () => {
+    const wall = entity("wall", {});
+    const planted = { ...entity("row_1_canopy", { lai: 0.014 }), kind: "CANOPY" } as SceneEntity;
+    const scene = {
+      schema_version: 1,
+      greenhouse_id: "tomgro_box",
+      simulated_day: 0,
+      entities: [wall, planted],
+    } as SceneSnapshot;
+    const grown = { ...entity("row_1_canopy", { lai: 0.75 }), kind: "CANOPY" } as SceneEntity;
+    const crop = { ...scene, simulated_day: 3, entities: [grown] };
+
+    // Once, as the crop has it on its day, not twice under one id.
+    expect(withCrop(scene, crop)).toEqual({ ...scene, simulated_day: 3, entities: [wall, grown] });
+  });
 });
 
 describe("a plant's days", () => {

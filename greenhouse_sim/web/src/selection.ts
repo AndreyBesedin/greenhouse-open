@@ -14,6 +14,10 @@ const BACKGROUND_KINDS: ReadonlySet<string> = new Set(["FLOOR", "GROUND"]);
 // See-through volumes kept for a purpose: picked before the floor they stand
 // on, but after anything solid inside them.
 const VOLUME_KINDS: ReadonlySet<string> = new Set(["SERVICE_ZONE", "KEEP_OUT"]);
+// A crop drawn see-through, as a canopy over its row: the crop itself, so
+// picked as anything solid is, the nearest first, rather than giving way to
+// the slab and the floor beneath it.
+const CROP_VOLUME_KINDS: ReadonlySet<string> = new Set(["CANOPY"]);
 
 /** The raycast of what is drawn but never picked, such as a field or a
  * boundary, so that a click passes through it. One function for all of them:
@@ -27,14 +31,17 @@ export function hitsNothing(): null {
  * The entity a click landed on: the nearest hit drawn as part of an entity.
  * `SceneView` marks each entity's group with its identifier and kind, and an
  * instanced batch lists its entities in instance order. Hits rank by what
- * they are: anything solid first; then the see-through volumes of zones; then
+ * they are: anything solid, or a crop's canopy, first; then the see-through
+ * volumes of zones; then
  * the floor; and glazing, which is see-through, last. A click through a
  * greenhouse's glass reaches the plants and floor inside, and a click on the
  * floor inside a zone picks the zone.
  */
 export function pickEntity(hits: readonly Hit[]): string | null {
   const ranks: ((hit: Hit) => boolean)[] = [
-    (hit) => !isSeeThrough(hit) && !BACKGROUND_KINDS.has(kindOf(hit)),
+    (hit) =>
+      (!isSeeThrough(hit) && !BACKGROUND_KINDS.has(kindOf(hit))) ||
+      CROP_VOLUME_KINDS.has(kindOf(hit)),
     (hit) => isSeeThrough(hit) && VOLUME_KINDS.has(kindOf(hit)),
     (hit) => !isSeeThrough(hit),
   ];

@@ -4,6 +4,7 @@ house's air and the light above each row, hour by hour; keep it in a
 checkpoint and carry on from it; and ask nothing of it they ask of plants.
 """
 
+import math
 import re
 from collections.abc import Iterator
 from typing import Final
@@ -12,12 +13,14 @@ import pytest
 from greenhouse_protocol.actions import ActionKind
 from pydantic import ValidationError
 
-from greenhouse_sim.biology.tomato.tomgro.parameters import INITIAL_STATE
+from greenhouse_sim.biology.tomato.tomgro.parameters import INITIAL_STATE, TomgroParameters
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.domain.scopes import AreaBasis
 from greenhouse_sim.ground_truth import ground_truth
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import Catalogue
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.scene.snapshot import SceneEntityKind
 from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.crop import crop_scene, of_plants, plants_light, scenario_crop
 from greenhouse_sim.services.crop_log import crop_records
@@ -28,7 +31,7 @@ from greenhouse_sim.services.runs import RunRequest, crop_model_refusal
 from greenhouse_sim.services.scenarios import initial_scene, plant_ids
 from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
-from greenhouse_sim.world.scopes import row_scopes
+from greenhouse_sim.world.scopes import converted, row_scopes
 
 # The climate box, its rows growing Reduced-State TOMGRO.
 CONFIG: Final = ScenarioConfig.model_validate(
@@ -79,8 +82,31 @@ def test_its_run_grows_its_crop_by_area_on_each_row(grown: Simulator) -> None:
     assert len(crop.course("row_1", 0).hours) == 24 and run_id
 
 
-def test_its_scene_draws_no_plant_it_does_not_have(grown: Simulator) -> None:
-    assert crop_scene(grown, RUN, time_s=3 * DAY_S).entities == []
+def test_its_scene_draws_each_rows_canopy_and_no_plant_it_does_not_have(
+    grown: Simulator,
+) -> None:
+    drawn = crop_scene(grown, RUN, time_s=3 * DAY_S).entities
+    crop = scenario_crop(grown, RUN)
+    assert not of_plants(crop)
+    instances = crop.instances_on(3)
+
+    assert [entity.kind for entity in drawn] == [SceneEntityKind.CANOPY] * len(ROWS)
+    for entity, instance in zip(drawn, instances, strict=True):
+        assert entity.properties["scope"] == instance.scope_id
+        assert entity.properties["lai"] == instance.state.lai
+        assert entity.properties["model"] == "reduced_tomgro"
+        assert entity.properties["proxy"] is True and entity.properties["prediction"] is True
+        # As dense as the share of the light its leaves take over the ground
+        # it is drawn on: its leaf area per m² of floor, over its cultivated
+        # ground.
+        scope = {scope.scope_id: scope for scope in crop.scopes}[instance.scope_id]
+        on_its_ground = converted(instance.state.lai, scope, AreaBasis.FLOOR, AreaBasis.CULTIVATED)
+        assert on_its_ground > instance.state.lai
+        assert entity.properties["canopy_lai"] == pytest.approx(on_its_ground, rel=1e-12)
+        k = TomgroParameters().k
+        assert entity.properties["density"] == pytest.approx(
+            1 - math.exp(-k * on_its_ground), rel=1e-12
+        )
     scene = initial_scene(grown.catalogue, "tomgro_box")
     assert not [entity for entity in scene.entities if "plant_id" in entity.properties]
     light = plants_light(grown, RUN, time_s=DAY_S / 2)

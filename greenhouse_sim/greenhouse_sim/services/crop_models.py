@@ -63,10 +63,12 @@ from greenhouse_sim.core.simple_crop import SimplePlant, SimpleRung
 from greenhouse_sim.core.tomgro_crop import TomgroRung
 from greenhouse_sim.domain.crop import CropModel, FruitStatus
 from greenhouse_sim.domain.organs import FruitStage
+from greenhouse_sim.domain.scopes import AreaBasis
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.crop_parameters import ReducedTomgroCrop
 from greenhouse_sim.scene.plants import crop_entities
-from greenhouse_sim.scene.snapshot import SceneEntity, simple_plant_entities
+from greenhouse_sim.scene.snapshot import SceneEntity, canopy_entities, simple_plant_entities
+from greenhouse_sim.world.scopes import CropScope, converted
 
 CM_PER_M: Final = 100.0
 # How far a plant's thermal time may be from the sum of the days it lived,
@@ -184,7 +186,9 @@ class AreaAdapter[StateT: BaseModel]:
 
     rung: Callable[[ScenarioConfig], AreaRung[StateT]]
     profile: Callable[[ScenarioConfig], DriverProfile]
-    drawn: Callable[[Sequence[AreaInstance[StateT]], ScenarioConfig], list[SceneEntity]]
+    drawn: Callable[
+        [Sequence[AreaInstance[StateT]], Sequence[CropScope], ScenarioConfig], list[SceneEntity]
+    ]
 
 
 @dataclass(frozen=True)
@@ -375,12 +379,41 @@ def _tomgro_implausible(state: TomgroCropState, day: int) -> list[str]:
     return problems
 
 
-def _no_entities(
-    _instances: Sequence[AreaInstance[Any]], _config: ScenarioConfig
+def _tomgro_drawn(
+    instances: Sequence[AreaInstance[TomgroState]],
+    scopes: Sequence[CropScope],
+    config: ScenarioConfig,
 ) -> list[SceneEntity]:
-    # A canopy is drawn as a proxy of its own, which the scene does not
-    # have yet: none, rather than plants it does not have.
-    return []
+    """Each row's canopy, drawn as a proxy (decision 0062): as tall as its
+    section's canopy height, and as dense as the light its leaves take over
+    the ground it is drawn on, `1 - exp(-K · LAI)`, its leaf area index per
+    m² of floor converted to the row's cultivated ground (`canopy_lai`). Its
+    properties are the model's five states, per m² of floor."""
+    rung = _tomgro_rung(config)
+    by_id = {scope.scope_id: scope for scope in scopes}
+    drawn: list[SceneEntity] = []
+    for instance in instances:
+        scope = by_id[instance.scope_id]
+        canopy_lai = converted(instance.state.lai, scope, rung.basis, AreaBasis.CULTIVATED)
+        drawn += canopy_entities(
+            scope,
+            config.layout,
+            config.envelope,
+            entity_id=f"{config.greenhouse_id}_{instance.scope_id}_canopy",
+            height_m=rung.canopy_height_m,
+            density=1 - math.exp(-rung.parameters.k * canopy_lai),
+            properties={
+                "model": CropModel.REDUCED_TOMGRO.value,
+                "basis": rung.basis.value,
+                "nodes": instance.state.n,
+                "lai": instance.state.lai,
+                "canopy_lai": canopy_lai,
+                "dry_weight_g_m2": instance.state.w,
+                "fruit_g_m2": instance.state.wf,
+                "mature_fruit_g_m2": instance.state.wm,
+            },
+        )
+    return drawn
 
 
 # The run's own crop actions the organ crop takes: every kind a plan may
@@ -429,7 +462,7 @@ REDUCED_TOMGRO: Final = CropRegistration[Any](
         profile=lambda config: driver_profile(
             _tomgro_crop(config).driver_profile, _tomgro_crop(config).driver_profile_version
         ),
-        drawn=_no_entities,
+        drawn=_tomgro_drawn,
     ),
     # Its harvest is the model's own rule; it takes none of a plan's.
     crop_actions=None,

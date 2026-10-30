@@ -16,6 +16,8 @@ a box), its layout's planting positions, each marked by a disc on the floor,
 its fixtures, each with what it is made of and what it obstructs, and its
 service zones and keep-out volumes, as the boxes they keep, and an upright
 cylinder per plant, as tall as its visible stem, at its planting position.
+A crop grown by area, which has no plants, is drawn as a canopy over each
+of its scopes, a see-through volume marked as a proxy (decision 0062).
 """
 
 from collections.abc import Mapping, Sequence
@@ -44,6 +46,7 @@ from greenhouse_sim.world.geometry import (
 )
 from greenhouse_sim.world.layout import Layout
 from greenhouse_sim.world.rows import PlantingPosition
+from greenhouse_sim.world.scopes import CropScope, band_offset, row_share
 from greenhouse_sim.world.sensors import Camera, Sensor
 from greenhouse_sim.world.state import PlantWorld
 from greenhouse_sim.world.zones import Zone
@@ -69,7 +72,9 @@ from greenhouse_sim.world.zones import Zone
 #     (P14.5): its kind, its main capability and each capability's rating
 #     as its properties, in place of a kind of entity for each kind of
 #     equipment.
-SCHEMA_VERSION: Final = 16
+# 17: a crop grown by area's canopy over a scope, drawn as a proxy, never as
+#     plants (decision 0062).
+SCHEMA_VERSION: Final = 17
 
 PLANT_STEM_RADIUS_M: Final = 0.02
 AXES_LENGTH_M: Final = 1.0
@@ -94,6 +99,7 @@ VENT_COLOR: Final = Color(r=0.55, g=0.74, b=0.86)
 DOOR_COLOR: Final = Color(r=0.45, g=0.5, b=0.56)
 AXES_COLOR: Final = Color(r=0.5, g=0.5, b=0.5)
 PLANT_COLOR: Final = Color(r=0.2, g=0.55, b=0.24)
+CANOPY_COLOR: Final = Color(r=0.36, g=0.66, b=0.3)
 # A planting position is marked by a disc this wide and thick, wider than a
 # stem, so that it shows around a plant standing on it.
 PLANTING_MARKER_RADIUS_M: Final = 0.06
@@ -160,6 +166,8 @@ class SceneEntityKind(StrEnum):
     SENSOR = "SENSOR"
     CAMERA = "CAMERA"
     PLANT = "PLANT"
+    # A crop grown by area, which has no plants: its canopy over a scope.
+    CANOPY = "CANOPY"
     # A plant organ by organ, as the organ-level model grows it.
     INTERNODE = "INTERNODE"
     LEAF = "LEAF"
@@ -537,6 +545,60 @@ def _plant_entity(plant: PlantWorld, envelope: Envelope, position: PlantingPosit
             "cumulative_harvest_g": plant.cumulative_harvest_g,
         },
     )
+
+
+def canopy_entities(
+    scope: CropScope,
+    layout: Layout,
+    envelope: Envelope,
+    *,
+    entity_id: str,
+    height_m: float,
+    density: float,
+    properties: Mapping[str, str | int | float | bool],
+) -> list[SceneEntity]:
+    """A crop grown by area on `scope`, drawn as what it is (decision 0062):
+    a see-through volume over each unbroken run of its row's planting
+    positions, along the row as far as their pitches reach and across it as
+    wide as the row's share of the ground, `height_m` tall, as dense as
+    `density`, the share of the light its leaves take, from 0 to 1. The
+    volumes cover the scope's cultivated area. Each is marked as a proxy and
+    its numbers as predictions, which a model's own `properties` cannot
+    unmark."""
+    rows = layout.crop_rows
+    if rows is None:
+        return []
+    runs = [run for run, *_ in rows.run_spans(scope.row, layout.kept_clear())]
+    upright = Quaternion.about(Vector3(x=0.0, y=0.0, z=1.0), rows.heading)
+    drawn = []
+    for number, (first, last) in enumerate(runs, start=1):
+        middle = ((first + last) / 2 - 1) * rows.plant_pitch
+        base = rows.point(
+            scope.row, middle, across=band_offset(rows, scope.row), z=rows.planting_height
+        )
+        drawn.append(
+            SceneEntity(
+                entity_id=entity_id if len(runs) == 1 else f"{entity_id}_{number}",
+                kind=SceneEntityKind.CANOPY,
+                transform=envelope.origin.after(Transform(position=base, rotation=upright)),
+                shape=Box(
+                    size_x=(last - first + 1) * rows.plant_pitch,
+                    size_y=row_share(rows),
+                    size_z=height_m,
+                ),
+                color=CANOPY_COLOR,
+                label=f"{scope.scope_id} canopy (a proxy)",
+                properties={
+                    **properties,
+                    "scope": scope.scope_id,
+                    "proxy": True,
+                    "prediction": True,
+                    "density": density,
+                    "height_m": height_m,
+                },
+            )
+        )
+    return drawn
 
 
 def snapshot_json_schema() -> dict[str, JsonValue]:

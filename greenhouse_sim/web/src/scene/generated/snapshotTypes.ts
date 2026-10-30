@@ -27,6 +27,7 @@ export type SceneEntityKind =
   | "SENSOR"
   | "CAMERA"
   | "PLANT"
+  | "CANOPY"
   | "INTERNODE"
   | "LEAF"
   | "TRUSS"
