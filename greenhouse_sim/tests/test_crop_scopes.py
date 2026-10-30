@@ -8,20 +8,13 @@ from typing import Any, Final
 import pytest
 
 from greenhouse_sim.domain.layout import ZoneKind
+from greenhouse_sim.domain.scopes import AreaBasis, ScopeKind
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services.scenarios import plant_ids
 from greenhouse_sim.world.geometry import Point2
 from greenhouse_sim.world.layout import Layout
 from greenhouse_sim.world.rows import CropRows
-from greenhouse_sim.world.scopes import (
-    AreaBasis,
-    CropScope,
-    ScopeKind,
-    converted,
-    row_scopes,
-    scope_plants,
-    total,
-)
+from greenhouse_sim.world.scopes import CropScope, converted, row_scopes, scope_plants, total
 from greenhouse_sim.world.zones import Strip, Zone
 
 

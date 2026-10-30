@@ -1,5 +1,6 @@
-"""The crop's models, and the simple crop model's stages: of its fruits,
-their ripeness, and its trusses (`greenhouse_sim.biology.tomato.simple`)."""
+"""The crop's models; the simple crop model's stages: of its fruits, their
+ripeness, and its trusses (`greenhouse_sim.biology.tomato.simple`); and what
+a crop grown by area is driven by (`greenhouse_sim.biology.area_contract`)."""
 
 from enum import StrEnum
 
@@ -33,3 +34,14 @@ class TrussStage(StrEnum):
     FRUITING = "FRUITING"
     HARVESTABLE = "HARVESTABLE"
     INACTIVE = "INACTIVE"
+
+
+class Driver(StrEnum):
+    """A quantity a crop grown by area may be driven by, each hour's mean:
+    the air's temperature or the canopy's, in °C; the PAR above the canopy,
+    in µmol/m²/s; and the CO₂ in the air, in ppm."""
+
+    AIR_TEMPERATURE = "air_temperature_c"
+    CANOPY_TEMPERATURE = "canopy_temperature_c"
+    PAR_ABOVE = "par_above_umol_m2_s"
+    CO2 = "co2_ppm"
