@@ -581,6 +581,21 @@ def _ids[RecordT: (Observation, Event, Forecast)](records: Iterable[RecordT]) ->
     return [_identity(record) for record in _own(records)]
 
 
+def _drained[BatchT: (ObservationBatch, EventBatch, OutcomeBatch, ForecastBatch)](
+    read: Callable[[int], BatchT], after: int = 0
+) -> list[BatchT]:
+    """Every batch from `after` on, polled again at once while the port
+    says it cut one short, as a client does."""
+    batches = [read(after)]
+    while batches[-1].has_more and batches[-1].next > batches[-1].after:
+        batches.append(read(batches[-1].next))
+    return batches
+
+
+def _outcomes(port: PolicyPort) -> list[ActionOutcome]:
+    return [outcome for batch in _drained(port.outcomes) for outcome in batch.outcomes]
+
+
 def _describes_its_run(port: PortUnderTest) -> list[str]:
     run = port.run()
     violations = check_run(run)
@@ -619,18 +634,21 @@ def _observations_as_delivered(port: PortUnderTest) -> list[str]:
         ]
         expected = ([f"{CHECK}-read"], [f"{CHECK}-late"])
     port.deliver(records)
-    first = port.observations()
+    first = _drained(port.observations)
     port.advance(now + HOUR)
-    second = port.observations(after=first.next)
-    for batch, wanted in zip((first, second), expected, strict=True):
-        if _ids(batch.observations) != wanted:
+    second = _drained(port.observations, first[-1].next)
+    for batches, wanted in zip((first, second), expected, strict=True):
+        given = _ids(o for batch in batches for o in batch.observations)
+        if given != wanted:
             violations.append(
-                f"by {batch.simulated_now.isoformat()} it gave {_ids(batch.observations)}, "
-                f"not {wanted}: the readings of the context's types, each once it was delivered"
+                f"by {batches[-1].simulated_now.isoformat()} it gave {given}, not {wanted}: "
+                "the readings of the context's types, each once it was delivered"
             )
-    violations += check_polls([first, second], greenhouse_id=port.run().greenhouse_id)
+    violations += check_polls([*first, *second], greenhouse_id=port.run().greenhouse_id)
     violations += check_readable(
-        [*first.observations, *second.observations], context=context, budget=port.budget()
+        [o for batch in (*first, *second) for o in batch.observations],
+        context=context,
+        budget=port.budget(),
     )
     return violations
 
@@ -647,15 +665,16 @@ def _events_as_allowed(port: PortUnderTest) -> list[str]:
     )
     watering = _event(port, "watering", EventType.WATERING, {"amount_ml": WATERED_ML})
     port.deliver([harvest, watering])
-    batch = port.events()
-    given = {event.event_id: event.parameters for event in _own(batch.events)}
+    batches = _drained(port.events)
+    events = [event for batch in batches for event in batch.events]
+    given = {event.event_id: event.parameters for event in _own(events)}
     wanted = {harvest.event_id: picked, watering.event_id: {}}
     if given != wanted:
         violations.append(
             f"it gave the events' parameters {given}, not those their types allow {wanted}"
         )
-    violations += check_polls([batch], greenhouse_id=port.run().greenhouse_id)
-    violations += check_readable(batch.events, context=port.context(), budget=port.budget())
+    violations += check_polls(batches, greenhouse_id=port.run().greenhouse_id)
+    violations += check_readable(events, context=port.context(), budget=port.budget())
     return violations
 
 
@@ -676,22 +695,25 @@ def _forecasts_of_its_budget(port: PortUnderTest) -> list[str]:
         ]
         wanted = [f"{CHECK}-later"]
     port.deliver(records)
-    first = port.forecasts()
-    if _ids(first.forecasts):
+    first = _drained(port.forecasts)
+    before = _ids(f for batch in first for f in batch.forecasts)
+    if before:
         violations.append(
-            f"it gave {_ids(first.forecasts)}: forecasts its budget does not name, "
-            "or before they were issued"
+            f"it gave {before}: forecasts its budget does not name, or before they were issued"
         )
     port.advance(now + HOUR)
-    second = port.forecasts(after=first.next)
-    if _ids(second.forecasts) != wanted:
+    second = _drained(port.forecasts, first[-1].next)
+    issued = _ids(f for batch in second for f in batch.forecasts)
+    if issued != wanted:
         violations.append(
-            f"once it was issued, it gave {_ids(second.forecasts)}, not {wanted}: "
+            f"once it was issued, it gave {issued}, not {wanted}: "
             "its budget's provider's forecast of a quantity it forecasts"
         )
-    violations += check_polls([first, second], greenhouse_id=port.run().greenhouse_id)
+    violations += check_polls([*first, *second], greenhouse_id=port.run().greenhouse_id)
     violations += check_readable(
-        [*first.forecasts, *second.forecasts], context=port.context(), budget=budget
+        [f for batch in (*first, *second) for f in batch.forecasts],
+        context=port.context(),
+        budget=budget,
     )
     return violations
 
@@ -713,11 +735,12 @@ def _plans_as_its_principal(port: PortUnderTest) -> list[str]:
             "a plan proposed for the operator, which its grants do not allow, was accepted"
         )
     port.advance(now + 2 * HOUR)
-    outcomes = port.outcomes()
-    ends = [(o.plan_id, str(o.ref)) for o in _own_ends(outcomes.outcomes)]
+    batches = _drained(port.outcomes)
+    outcomes = [outcome for batch in batches for outcome in batch.outcomes]
+    ends = [(o.plan_id, str(o.ref)) for o in _own_ends(outcomes)]
     if ends != [(f"{CHECK}-mine", "level")]:
         violations.append(f"its own action's outcome was not given once: {ends}")
-    violations += check_polls([outcomes], greenhouse_id=port.run().greenhouse_id)
+    violations += check_polls(batches, greenhouse_id=port.run().greenhouse_id)
     return violations
 
 
@@ -736,9 +759,9 @@ def _others_plans_unseen(port: PortUnderTest) -> list[str]:
     if revised.accepted:
         violations.append("it revised another principal's plan")
     port.advance(now + 2 * HOUR)
-    if any(o.plan_id == f"{CHECK}-theirs" for o in port.outcomes().outcomes):
+    if any(o.plan_id == f"{CHECK}-theirs" for o in _outcomes(port)):
         violations.append("it gave the outcome of another principal's action")
-    if not any(o.plan_id == f"{CHECK}-theirs" for o in rival.outcomes().outcomes):
+    if not any(o.plan_id == f"{CHECK}-theirs" for o in _outcomes(rival)):
         violations.append("another principal's port did not give its own action's outcome")
     return violations
 
@@ -781,7 +804,7 @@ def _cancelled_as_its_principal(port: PortUnderTest) -> list[str]:
         for receipt in (whole, chosen)
         if not receipt.accepted or [ref.action_id for ref in receipt.cancelled] != ["level"]
     ]
-    ends = [(o.plan_id, o.status, o.cancelled_by) for o in _own_ends(port.outcomes().outcomes)]
+    ends = [(o.plan_id, o.status, o.cancelled_by) for o in _own_ends(_outcomes(port))]
     wanted = [
         (f"{CHECK}-later", OutcomeStatus.CANCELLED, POLICY),
         (f"{CHECK}-chosen", OutcomeStatus.CANCELLED, POLICY),

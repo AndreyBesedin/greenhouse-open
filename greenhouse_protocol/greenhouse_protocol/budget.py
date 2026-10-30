@@ -29,12 +29,20 @@ from pydantic import (
     field_serializer,
     model_validator,
 )
+from pydantic.config import JsonDict
 
 from greenhouse_protocol.actions import Identifier
 from greenhouse_protocol.enums import ObservationType
 
 type Name = Annotated[str, StringConstraints(min_length=1)]
 type Sha256 = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$")]
+
+# A forecast provider or an asset made from the simulated world's truth, as
+# the published schema matches it.
+_PRIVILEGED: Final[JsonDict] = {
+    "properties": {"basis": {"const": "privileged"}},
+    "required": ["basis"],
+}
 
 
 class InformationBasis(StrEnum):
@@ -97,7 +105,27 @@ class PredictionAsset(BaseModel):
 class InformationBudget(BaseModel):
     """An episode's budget: see the module."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+        allow_inf_nan=False,
+        # Labelled exactly when it gives the truth, as the published schema
+        # says it too.
+        json_schema_extra={
+            "if": {
+                "anyOf": [
+                    {"properties": {"full_state": {"const": True}}, "required": ["full_state"]},
+                    {
+                        "properties": {"forecasts": {"contains": _PRIVILEGED}},
+                        "required": ["forecasts"],
+                    },
+                    {"properties": {"assets": {"contains": _PRIVILEGED}}, "required": ["assets"]},
+                ]
+            },
+            "then": {"properties": {"oracle": {"const": True}}, "required": ["oracle"]},
+            "else": {"properties": {"oracle": {"const": False}}},
+        },
+    )
 
     budget_id: Identifier
     forecasts: tuple[ForecastProvider, ...] = ()

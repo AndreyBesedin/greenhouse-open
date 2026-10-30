@@ -96,6 +96,14 @@ def test_the_schemas_say_what_a_record_refuses_across_its_fields() -> None:
     assert defs["Harvest"]["else"]["required"] == ["organ_id"]
     assert defs["Lateness"]["then"]["required"] == ["fallback"]
     assert [case["required"] for case in defs["Recurrence"]["oneOf"]] == [["count"], ["until"]]
+    budget = json.loads((SCHEMAS_DIR / "information-budget.schema.json").read_text())
+    assert [case["required"] for case in budget["if"]["anyOf"]] == [
+        ["full_state"],
+        ["forecasts"],
+        ["assets"],
+    ]
+    assert budget["then"] == {"properties": {"oracle": {"const": True}}, "required": ["oracle"]}
+    assert budget["else"] == {"properties": {"oracle": {"const": False}}}
 
 
 def test_no_schema_is_published_outside_the_list() -> None:

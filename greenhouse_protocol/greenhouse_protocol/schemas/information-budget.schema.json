@@ -204,6 +204,65 @@
   },
   "additionalProperties": false,
   "description": "An episode's budget: see the module.",
+  "else": {
+    "properties": {
+      "oracle": {
+        "const": false
+      }
+    }
+  },
+  "if": {
+    "anyOf": [
+      {
+        "properties": {
+          "full_state": {
+            "const": true
+          }
+        },
+        "required": [
+          "full_state"
+        ]
+      },
+      {
+        "properties": {
+          "forecasts": {
+            "contains": {
+              "properties": {
+                "basis": {
+                  "const": "privileged"
+                }
+              },
+              "required": [
+                "basis"
+              ]
+            }
+          }
+        },
+        "required": [
+          "forecasts"
+        ]
+      },
+      {
+        "properties": {
+          "assets": {
+            "contains": {
+              "properties": {
+                "basis": {
+                  "const": "privileged"
+                }
+              },
+              "required": [
+                "basis"
+              ]
+            }
+          }
+        },
+        "required": [
+          "assets"
+        ]
+      }
+    ]
+  },
   "properties": {
     "budget_id": {
       "$ref": "#/$defs/Identifier"
@@ -238,6 +297,16 @@
   "required": [
     "budget_id"
   ],
+  "then": {
+    "properties": {
+      "oracle": {
+        "const": true
+      }
+    },
+    "required": [
+      "oracle"
+    ]
+  },
   "title": "InformationBudget",
   "type": "object"
 }

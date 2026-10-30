@@ -85,6 +85,30 @@ def test_it_keeps_it_with_a_budget_of_observations_only() -> None:
     assert check_policy_port(given_none, START) == []
 
 
+class _OneAtATime(InMemoryPolicyPort):
+    """Cuts every batch at one record, as the consumer interface lets a
+    producer cap a batch, saying it has more."""
+
+    def observations(self, after: int = 0, limit: int | None = None) -> ObservationBatch:
+        return super().observations(after, 1)
+
+    def events(self, after: int = 0, limit: int | None = None) -> EventBatch:
+        return super().events(after, 1)
+
+    def outcomes(self, after: int = 0, limit: int | None = None) -> OutcomeBatch:
+        return super().outcomes(after, 1)
+
+    def forecasts(self, after: int = 0, limit: int | None = None) -> ForecastBatch:
+        return super().forecasts(after, 1)
+
+
+def test_a_port_that_cuts_its_batches_short_keeps_the_contract() -> None:
+    def one_at_a_time(config: AuthorisationConfig, start: datetime) -> InMemoryPolicyPort:
+        return _OneAtATime(InMemoryRun(config, start), POLICY)
+
+    assert check_policy_port(one_at_a_time, START) == []
+
+
 # Ports that give what a policy does not read, each the check finds.
 
 
