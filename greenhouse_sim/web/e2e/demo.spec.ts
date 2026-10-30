@@ -125,9 +125,11 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   // while running, the dehumidifier's that of drying.
   const seen = page.getByRole("region", { name: "What am I seeing?" });
   await page.getByRole("button", { name: "What am I seeing?" }).click();
-  await expect(seen.getByTestId("seen-equipment")).toContainText(
-    "in the colour of what it is for while running",
-  );
+  const equipment = seen.getByTestId("seen-equipment");
+  await expect(equipment).toContainText("in the colour of what it is for while running");
+  // The card opens at its top, the air's lines first: its equipment's, below
+  // them, is brought into view for the video.
+  await equipment.scrollIntoViewIfNeeded();
   await say(page, "New in 0.5.0: each device drawn by what it does, in its colour while running");
   await page.getByRole("button", { name: "Close what am I seeing" }).click();
   await expect(seen).toHaveCount(0);
