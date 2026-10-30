@@ -38,34 +38,20 @@ from greenhouse_sim.services.playback import (
 )
 from greenhouse_sim.services.policy_port import RunPolicyPort, policy_port
 from greenhouse_sim.services.simulator import Simulator
-from greenhouse_sim.units import DAY_S
 
 # Its run's days cost next to nothing, and it has doors to set.
 SCENARIO: Final = "airflow_box"
 SECONDS_PER_DAY: Final = 24.0
 HOUR: Final = timedelta(hours=1)
-# How many times a step works a day out, at the most, before it gives up.
-STEPS: Final = 100
-
-
-class _Clock:
-    """A clock a test moves by hand, in real seconds."""
-
-    def __init__(self) -> None:
-        self.now = 0.0
-
-    def __call__(self) -> float:
-        return self.now
 
 
 class _Delivering:
-    """A playback, played by a test that steps its clock, whose logs also
-    take the records the test delivers: each joins its log once the clock
-    reaches its delivery, in delivery order, as its producer's do."""
+    """A playback, stepped by a test, whose logs also take the records the
+    test delivers: each joins its log once the clock reaches its delivery,
+    in delivery order, as its producer's do."""
 
-    def __init__(self, played: Playback, clock: _Clock) -> None:
+    def __init__(self, played: Playback) -> None:
         self.played = played
-        self._clock = clock
         self._pending: list[Observation | Event] = []
         self._observations: list[Observation] = []
         self._events: list[Event] = []
@@ -76,16 +62,7 @@ class _Delivering:
         self._pending += [r for r in records if isinstance(r, Observation | Event)]
 
     def advance(self, to: datetime) -> None:
-        """Works the run out to `to` and moves its clock there."""
-        target_s = (to - self.played.start).total_seconds()
-        for _ in range(STEPS):
-            state = self.played.state()
-            if state.time_s >= target_s:
-                return
-            if state.worked_out_s <= state.time_s:
-                assert self.played.work_day(int(state.worked_out_s // DAY_S))
-            self._clock.now += (target_s - state.time_s) / DAY_S * SECONDS_PER_DAY
-        raise AssertionError(f"the run did not reach {to.isoformat()}")
+        self.played.step_to((to - self.played.start).total_seconds())
 
     # What a port reads and gives.
 
@@ -171,11 +148,9 @@ def _port(
 ) -> tuple[_Harness, Playback]:
     """A port for `POLICY` on a new playback of a scenario's run, played by
     a test, under the conformance check's authorisation or `authorisation`."""
-    clock = _Clock()
-    played = Playback(simulator, scenario_id, seconds_per_day=SECONDS_PER_DAY, clock=clock)
+    played = Playback(simulator, scenario_id)
     played.authorise(authorisation or conformance_policy_authorisation())
-    played.command(PlaybackCommand.PLAY)
-    return _Harness(_Delivering(played, clock), POLICY), played
+    return _Harness(_Delivering(played), POLICY), played
 
 
 @pytest.mark.parametrize(
@@ -232,7 +207,9 @@ def test_a_new_epoch_starts_the_ports_logs_again(simulator: Simulator) -> None:
     before = port.observations()
     assert before.observations != ()
 
+    # A restart plays on; the test holds it again, to step it.
     played.command(PlaybackCommand.RESTART)
+    played.command(PlaybackCommand.PAUSE)
     port.advance(played.start + 13 * HOUR)
     after = port.observations(after=before.next)
     again = port.observations()
