@@ -198,6 +198,15 @@ def walk_moment(start: datetime, day: int) -> datetime:
     return start + timedelta(seconds=day * DAY_S + WALK_S)
 
 
+# What a walk measures of each plant.
+WALKED: Final = (
+    ObservationType.VISIBLE_FRUIT_COUNT,
+    ObservationType.RIPE_FRUIT_COUNT,
+    ObservationType.ESTIMATED_RIPE_MASS_G,
+    ObservationType.VISIBLE_HEIGHT_CM,
+)
+
+
 def walked_truly(plant: Measured) -> dict[ObservationType, float]:
     """What a walk measures of a plant, without its errors: each reading
     `_walk` records with them, for evaluation only (`greenhouse_sim.ground_truth`)."""
