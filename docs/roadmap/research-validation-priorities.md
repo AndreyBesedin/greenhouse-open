@@ -67,17 +67,23 @@ data.
    TOMGRO's milestone A,
    [`research/reproductions/reduced_tomgro`](../../research/reproductions/reduced_tomgro/README.md),
    which agrees with Oliveira et al.'s implementation on every state and
-   day of a synthetic season.
+   day of a synthetic season; and Vanthoor's model's,
+   [`research/reproductions/vanthoor_katzin`](../../research/reproductions/vanthoor_katzin/README.md),
+   whose rates agree with GreenLight's at the same states, and whose run
+   agrees with GreenLight's, both converged, on every output and hour of
+   the same season. At GreenLight's default solver settings, the run
+   reproduces neither GreenLight's answer nor GreenLight's own answer to
+   the declared tolerances.
 5. **Validate on measured data, as a workflow others can repeat.** Begin
    with the WUR AGC4 dataset, through its adapter, where what it measures
    and its licence allow: inventory what it records (weather, climate,
    CO₂, light, equipment, crop and yield measurements), its sampling and
-   what is missing, and
+   what is missing ([the AGC4 memo](../research/agc4-coverage.md)), and
    assess Oliveira et al.'s greenhouse tomato observations the same way,
    their licence (non-commercial) included. Fix the calibration and test
-   data before any tuning, by held-out compartments or periods. Report the metrics, sample counts,
-   missing data and run times, and compare crop or climate outputs only
-   where their definitions and units match.
+   data before any tuning, by held-out compartments or periods. Report the
+   metrics, sample counts, missing data and run times, and compare crop or
+   climate outputs only where their definitions and units match.
 6. **Compare with Modelica, bounded.** As the roadmap's greenhouse R&D
    workflows and Modelica comparison plan it: one documented, measured
    interval of TiGwerLib reproduced in OpenModelica, then compared on
@@ -90,7 +96,8 @@ data.
    acts through the protocol's plans; the evaluation alone reads the
    truth. In stages:
    1. the contracts: observations, actions, capabilities, identity and
-      security, and the clock, for policies in the process and remote;
+      security, and the clock, for policies in the process and remote
+      ([P15](p15-policy-port.md));
    2. an experiment harness: the policy's identity, its actions' trace,
       paired seeds and weather;
    3. the measures, defined exactly, with the evaluator's instrumentation
