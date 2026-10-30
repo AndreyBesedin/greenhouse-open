@@ -176,6 +176,27 @@ def test_prepare_waits_for_every_pull_request_merged_to_give_an_entry_or_none(
     assert missing == ["#21 Silent", "#22 Empty"]
 
 
+def test_a_pull_request_merged_before_decision_0056_needs_no_section(root: Path) -> None:
+    """Its entry, if it needed one, was written under Unreleased: only one
+    merged from then on is waited for."""
+    before = release.Merged.of(
+        {
+            "number": 30,
+            "title": "Before",
+            "body": "## What changed?\n\nSomething.\n",
+            "author": {"is_bot": False},
+            "mergedAt": "2026-10-24T21:07:48Z",
+        }
+    )
+    merged = [before, _merged(31, "From then", None, merged_at=release.DESCRIPTIONS_FROM)]
+
+    entries, missing = release.unreleased(root, merged)
+
+    assert before.before_descriptions
+    assert missing == ["#31 From then"]
+    assert "#30" not in entries
+
+
 @pytest.mark.parametrize(
     ("body", "entry"),
     [

@@ -58,6 +58,10 @@ DEMO = "## Demo"
 # says when a change needs none: CI, documents or tests alone.
 CHANGELOG_SECTION = "## Changelog"
 NO_ENTRY = "none"
+# When decision 0056 took effect, as #369 merged. A pull request merged
+# before then wrote its entry, if it needed one, under Unreleased, and its
+# description has no such section.
+DESCRIPTIONS_FROM = datetime.datetime(2026, 10, 24, 21, 7, 49, tzinfo=datetime.UTC)
 # The first line of every GitHub release's notes, above the changelog's.
 NOTES_INTRO = "Not on PyPI yet: install from a clone, see the README."
 
@@ -117,17 +121,26 @@ class Merged:
     bot: bool = False
     # The paths its own diff changed.
     files: tuple[str, ...] = ()
+    # When it merged, if GitHub says.
+    merged_at: datetime.datetime | None = None
 
     @classmethod
     def of(cls, pull: Mapping[str, Any]) -> Merged:
-        """From `gh pr list --json number,title,body,author,files`."""
+        """From `gh pr list --json number,title,body,author,files,mergedAt`."""
+        merged_at = pull.get("mergedAt")
         return cls(
             number=pull["number"],
             title=pull["title"],
             body=pull.get("body") or "",
             bot=bool(pull["author"].get("is_bot")),
             files=tuple(changed["path"] for changed in pull.get("files") or ()),
+            merged_at=datetime.datetime.fromisoformat(merged_at) if merged_at else None,
         )
+
+    @property
+    def before_descriptions(self) -> bool:
+        """Whether it merged before decision 0056 took effect."""
+        return self.merged_at is not None and self.merged_at < DESCRIPTIONS_FROM
 
 
 def changelog_entry(description: str) -> str | None:
@@ -152,11 +165,12 @@ def entries_merged(merged: Sequence[Merged]) -> tuple[list[str], list[str]]:
     they were merged, each a list item ending with its pull request's
     number; and the pull requests that give neither an entry nor `none`.
     A bot's pull request gives none, and one whose own diff edited the
-    changelog has its entry there, as each did before decision 0056."""
+    changelog has its entry there, as each did before decision 0056; one
+    merged before it gives none in its description either."""
     entries: list[str] = []
     missing: list[str] = []
     for pull in merged:
-        if pull.bot or CHANGELOG.as_posix() in pull.files:
+        if pull.bot or CHANGELOG.as_posix() in pull.files or pull.before_descriptions:
             continue
         entry = changelog_entry(pull.body)
         if not entry:
