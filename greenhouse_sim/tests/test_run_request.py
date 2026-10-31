@@ -82,6 +82,7 @@ def test_a_run_is_its_parts_and_not_its_moment() -> None:
         "levels",
         "openings",
         "plan",
+        "seed",
     ]
 
 

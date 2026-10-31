@@ -49,7 +49,7 @@ from greenhouse_sim.services.crop import of_plants, scenario_crop
 from greenhouse_sim.services.crop_models import Measured, registration
 from greenhouse_sim.services.gateway import Carried
 from greenhouse_sim.services.runs import RunRequest
-from greenhouse_sim.services.scenarios import scenario
+from greenhouse_sim.services.scenarios import scenario, with_weather
 from greenhouse_sim.units import HOUR_S
 
 if TYPE_CHECKING:
@@ -76,7 +76,9 @@ def crop_records(
     """The harvests and the walk through the crop of a run, such as a
     scenario's own with a layout rearranged or targets changed, on its day
     `day`, which starts `day` days after `start`, each named by `run_id`."""
-    config = scenario(simulator.catalogue, run.scenario_id)
+    config = with_weather(
+        scenario(simulator.catalogue, run.scenario_id), run.weather_name(simulator.catalogue)
+    )
     crop = scenario_crop(simulator, run)
     grown_by = registration(config).plants
     if grown_by is None or not of_plants(crop):
@@ -132,7 +134,9 @@ def crop_actions_done(
     them, in the order the run's plan has them. Each done makes an event of
     its own, named by its assignment, and naming its action; each refused
     says why, in the organ model's words."""
-    config = scenario(simulator.catalogue, run.scenario_id)
+    config = with_weather(
+        scenario(simulator.catalogue, run.scenario_id), run.weather_name(simulator.catalogue)
+    )
     work = scenario_crop(simulator, run).worked_on(day)
     worked = iter(() if work is None else work.done)
     at = start + timedelta(seconds=day * DAY_S)
