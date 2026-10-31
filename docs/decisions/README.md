@@ -76,6 +76,7 @@ changes course is a new record that supersedes the old one.
 | [0063](0063-a-data-file-is-generated-committed-or-fetched-by-one-rule.md) | A data file is generated, committed or fetched, by one rule | Accepted |
 | [0064](0064-a-runs-crop-steps-at-its-models-step-not-the-runs-day.md) | A run's crop steps at its model's step, not the run's day | Accepted |
 | [0065](0065-a-run-is-a-scenario-at-a-seed-kept-in-a-store-and-played-from-it.md) | A run is a scenario at a seed, kept in a store and played from it | Accepted |
+| [0066](0066-run-records-are-parquet-segments-read-and-written-with-duckdb.md) | Run records are Parquet segments, read and written with DuckDB | Accepted |
 
 ## Template
 
