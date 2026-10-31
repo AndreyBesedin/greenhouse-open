@@ -132,11 +132,16 @@ declares the instants it cannot be checkpointed at and why. Models do not
 share step boundaries, and a checkpoint's cadence never sets a model's
 integration cadence (decisions 0062 and 0064).
 
-A `present` store keeps what its promise needs: enough to show the present
-and the observation window it supports, and to resume if it promises that.
-A `present` store keeps the latest checkpoint, the segments of a window of
-simulated days (a setting, one day by default), and the log (see the
-measurements).
+A `present` store promises a window of `W` simulated time (a setting, one day
+by default) behind its frontier `F`, and resuming. Its invariant: every instant
+in `[F - W, F]` is reconstructible, so it keeps the newest checkpoint at or
+before `F - W`, every segment and every log entry from that checkpoint's
+instant to `F`, and anything a model needs from the run's drivers over that
+span. As the frontier advances, a checkpoint and the segments before it are
+dropped only when a kept checkpoint at or before the new `F - W` remains.
+Resuming needs a checkpoint at or before `F` and the log after it, which the
+invariant holds. What is kept is a policy that follows from the guarantee, not
+a number of objects.
 
 ### Commits and recovery
 
@@ -210,7 +215,7 @@ days, and a run's records for a given seed.
 | --- | --- | --- | --- |
 | P17.1 | Measurements on the reference greenhouse and on a crop grown by area: a segment's records, a checkpoint's states, time to seek and restore, and what a worker costs a process that is working. The physical commit, the store's first backend, the default interval, the `present` mode's retention and the worker technology fixed from them (below). | `docs(roadmap): the run store's format, from measurements` | Done: measured on one machine; see the measurements |
 | P17.2 | The seed on `RunRequest` and in the identity, without moving an id: a test holds every kept run id and digest. | `feat(sim): a run's seed is its input` | Planned |
-| P17.3 | (a) Completed runs persisted: the store interface and its folder backend, the manifest, segments as Parquet (adding DuckDB, decision 0066), checkpoints under the checkpoint contract, commits and the trajectory digest; an epoch executed in the process is written to it; the epoch file moves into it. Several runs of a scenario, at different seeds. | `feat(sim): finished runs are kept in a store` | Planned |
+| P17.3 | (a) Completed runs persisted: the store interface and its folder backend, the manifest, segments as Parquet (adding DuckDB, decision 0066), checkpoints under the checkpoint contract, commits and the trajectory digest, validated as the acceptance criteria say; an epoch executed in the process is written to it; the epoch file moves into it. Several runs of a scenario, at different seeds. | `feat(sim): finished runs are kept in a store` | Planned |
 | P17.4 | (b) Playback as a position: seek over a stored epoch, many over one, the API's run routes, the consumer interface and port reading the store. | `feat(api): runs are listed, opened and played from the store` | Planned |
 | P17.5 | The viewer's addresses; the landing page, the scenario picker with search, the run dialog, deletion, the builder's two ending actions. | `feat(viewer): a place to choose a scenario and a run` | Planned |
 | P17.6 | Replay: a timeline over the stored epoch, day navigation, `present` stores. | `feat(viewer): move through a run that has been computed` | Planned |
@@ -316,42 +321,54 @@ one run each):
   128 to 512 plants (records: 0.16 s, then 0.38 s). Extended at the 128 to 512
   slope, 10,000 plants take about 1.2 hours of records for each simulated
   day; a fit with a square term gives far more. Three points do not support
-  either; they show that plant-level computation does not reach 10,000 plants
-  as the models are.
+  either; they show that the current plant-level implementation scales poorly,
+  not that it cannot be made to scale.
+
+**What these figures are.** Baselines of the checkpoint code that exists,
+before the store does. They do not test that a state round-trips exactly, nor
+a resumed trajectory, nor the Parquet files, the commits and the disk: P17.3
+validates those (below), and its figures replace these as the store's.
 
 ### What the measurements settle
 
-1. **Workers.** The API's workers are processes: a thread slows work in the
-   same interpreter by 46%. A thread worker stays where a caller steps the run
+1. **Workers.** The API's workers start as processes: beside a thread a
+   CPU-bound state step took 46% longer, beside a process 5% at most, on this
+   machine. That is a default to start from, not a general result: viewer
+   rendering, the throughput of several workers, start-up and message costs and
+   memory were not measured. A thread worker stays where a caller steps the run
    itself (the experiment runner, tests), since nothing else then waits.
 2. **The physical commit.** Objects are written whole, in order, the commit
    last (a folder backend writes each through a temporary name and renames it;
    an object store puts it). No database file is the store. A 120-day `full`
-   run is about 240 objects. The largest measured for the reference and
+   run is about 600 objects (up to 360 Parquet files, 120 checkpoints, 120
+   commits, a manifest and the log; a log with nothing in it need not be
+   written). The largest measured for the reference and
    `tomgro_house` is a day-120 checkpoint of 321 kB compressed, so one put holds
    it; a crop of thousands of plants has checkpoints of hundreds of
    megabytes, which need a columnar format and a multipart put.
 3. **The first backend** is the folder under the state folder. An object-store
-   backend meets no obstacle in these sizes (a few hundred objects a run, none
-   over a few hundred kilobytes), and is a later step, taken when a shared
+   backend meets no obstacle in these sizes (about 600 objects a run, none over
+   a few hundred kilobytes; the object count is the cost to watch there), and is a later step, taken when a shared
    deployment needs it.
 4. **The default interval** stays 24 hours. A seek then costs at most about
    1.5 s of state work and a `full` run of 120 days about 24 MB
    (reference) or 11 MB (`tomgro_house`). The interval is a setting: every
    10 days a reference run's checkpoints total about 1.8 MB, and a seek costs
    up to about 13 s.
-5. **`present` keeps** the latest checkpoint, the segments of a window of
-   simulated days (one by default), and the log: at day 120 about 0.14 MB
-   (`tomgro_house`) to 0.37 MB (reference), against about 24 MB and 11 MB
-   for `full`. A batch of runs for training keeps `present`, or a long
+5. **`present` keeps** what its invariant needs (above): with a window of one
+   day and daily checkpoints, one checkpoint and about two days of segments
+   and the log, at day 120 about 0.18 MB (`tomgro_house`) to 0.42 MB
+   (reference), against about 24 MB and 11 MB for `full`. A batch of runs for training keeps `present`, or a long
    interval, unless its records are the product.
 6. **Formats** (decision 0066): records are Parquet with zstd, read and
    written with DuckDB, half the size and a type selected in 1.2 ms instead of
    57; a checkpoint is an object its model serializes, with a content type;
    the manifest, commits and log are small JSON.
-7. **A crop of thousands of plants** is a crop grown by area (decision 0062):
-   its checkpoint depends on its scopes and steps, not its plants, and
-   plant-level computation does not reach 10,000 plants.
+7. **A crop of thousands of plants** is, with the plant-level models as they
+   are, practical as a crop grown by area (decision 0062), whose checkpoint
+   depends on its scopes and steps, not its plants. That is the present
+   envelope of the models, not a rule: an optimized plant-level model may
+   change it.
 8. **To watch:** the reference crop's checkpoint grows faster than the day.
    If a longer run or a larger crop makes `full` too large, a checkpoint
    that keeps its history compacted is the remedy (decision 0065's
@@ -359,6 +376,13 @@ one run each):
 
 ## Acceptance criteria
 
+- (P17.3) A state written to the store and restored is exact, sub-day and
+  adaptive-step model state included: the run worked on from it gives the
+  trajectory digest of the run worked straight through. The Parquet files keep
+  their schema and order, and a consumer's cursor over them is the cursor it
+  has over the records today. Writing a segment and a checkpoint, reading them
+  back and seeking are measured end to end, on disk, and those figures are the
+  store's.
 - Two runs of one scenario at different seeds exist at once, each listed with
   its seed, and differ in their records.
 - A run at the scenario's own seed has the `run_id`, replay digest and

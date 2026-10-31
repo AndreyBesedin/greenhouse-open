@@ -14,10 +14,12 @@ and on `tomgro_house`, and at 32, 128 and 512 plants.
   49.2 kB as gzip JSON, read by parsing the whole day: 57 ms to select one
   type. As zstd Parquet the same day is 24.8 kB, and selecting one type takes
   1.2 ms. Parquet with snappy was 56 kB, with gzip 30.9 kB.
-- **A database file cannot be the store.** While a process holds a DuckDB
-  file for writing, no other process opens it, read-only included (`Could not
-  set lock on file`). A viewer following an epoch that a worker is computing
-  is exactly that.
+- **A DuckDB file held for writing cannot be read elsewhere.** While one
+  process holds it, no other process opens it, read-only included (`Could not
+  set lock on file`), so a viewer could not follow an epoch that a worker is
+  computing. This is DuckDB's rule; SQLite in WAL mode lets readers work beside
+  a writer, and a small index beside Parquet payloads is possible. The test
+  settles nothing about them.
 - **Checkpoints are not tabular in general.** A crop grown by plant keeps
   organs for each plant: about 4.6 kB of JSON a plant at day 1, about 65 kB by
   day 120, so 10,000 plants are about 650 MB of JSON in one checkpoint. A crop
@@ -36,9 +38,12 @@ and on `tomgro_house`, and at 32, 128 and 512 plants.
   runs (`read_parquet` over a glob). It is a runtime dependency of
   `greenhouse_sim`, added by the pull request that first needs it (P17.3).
   DuckDB writes Parquet itself, so no other Parquet library is added.
-- **A DuckDB or SQLite file is never the store.** A run's objects are
-  immutable files and a commit written last (decision 0065); the same
-  layout serves a folder and an object store.
+- **The store is immutable objects and a commit written last** (decision
+  0065), the same layout for a folder and an object store. That is an
+  architectural choice, made for those two backends and for readers that need
+  no lock, not a finding that no database file could serve. A database kept
+  beside the objects, for an index or a catalogue, is not excluded; it would
+  be rebuildable from them.
 - **A checkpoint is an opaque object with a content type.** Its model
   serializes it. JSON compressed with zstd is the default; a model that keeps
   a large population declares a columnar or array format for it. The store
