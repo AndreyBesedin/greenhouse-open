@@ -66,8 +66,12 @@ interface's rules (decision 0040); checkpoints and branches from a day
   - its **manifest:** the run request, its seed, the installation's digest,
     the models' and the code's versions, its store mode and its status;
   - its **days,** appended once each, whole or not at all: the records
-    (observations, events, outcomes), and the state at the day's start from
-    which the scene is drawn and a run resumes (`kept_states`);
+    (observations, events, outcomes), and the states at the day's start from
+    which the scene is drawn and a run resumes (`kept_states`). The store
+    keeps each model's state as that model declares it, and assumes nothing
+    of its shape: a crop grown by plant keeps plants, one grown by area keeps
+    its scopes and what it lived in each of its model's steps (decisions 0062
+    and 0064), with no plant identifiers and more than one course a day;
   - its **intervention log:** every change made to it while it ran, each
     with its moment, as the gateway's plans and receipts have it.
 - **Store modes.** `full` keeps every day, so that any moment up to the
@@ -133,7 +137,7 @@ interface's rules (decision 0040); checkpoints and branches from a day
   deletes;** its per-scenario playback routes remain until the viewer and
   the consumer interface read stored runs, then go (by a decision of their
   own if a downstream application reads them).
-- **Disk use becomes a concern.** A `full` epoch keeps a state for every day.
+- **Disk use becomes a concern.** A `full` epoch keeps its models' states for every day, and a crop's size varies with its model's steps.
   The sizes are measured on the reference scenario before the format is
   fixed (P17.1), and a store says where it keeps its files and how a run is
   deleted.

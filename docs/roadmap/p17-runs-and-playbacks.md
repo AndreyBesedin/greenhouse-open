@@ -38,8 +38,12 @@ one resumes. The viewer and a consumer read the same stored epoch.
   The port's `PlayedRun` interface and `Playback.step_to` are the seam.
 - **P09.5, checkpoints and branches:** a fork is a branch from a stored
   state.
-- **P16, the crop at its model's step:** the state kept for a day is the
-  crop's states at the steps that end it.
+- **P16, the crop at its model's step, and decision 0062's crops grown by
+  area:** what a day keeps of the crop is the model's own state: plants for a
+  crop grown by plant, and for one grown by area its scopes with a course for
+  each step before the day (`AreaCropState`, no plant identifiers). The store
+  treats a model's state as opaque, and a checkpoint's scopes come from its
+  own layout.
 - **P12, the setup builder:** a draft's installation is named by digest.
 
 ## Design
@@ -74,7 +78,8 @@ epoch:
 - `manifest.json`: the run request, the seed, the installation's digest, the
   models' and code's versions, the store mode, the status and the frontier.
   Written to a temporary file and renamed, so that it is whole or absent.
-- `days/NNNN`: a day's records and the state at its start. Written once,
+- `days/NNNN`: a day's records and the models' states at its start, each
+  as its model declares it. Written once,
   whole, then the frontier moves. A day not whole is ignored and worked
   again.
 - `interventions.jsonl`: each change given to the epoch, with its moment.
@@ -135,7 +140,7 @@ days, and a run's records for a given seed.
 
 | Step | Scope | Pull request | Status |
 | --- | --- | --- | --- |
-| P17.1 | Measurements on the reference scenario: a day's state, a day's records, time to seek, time to restore. The store's format fixed from them, in this document. | `docs(roadmap): the run store's format, from measurements` | Planned |
+| P17.1 | Measurements on the reference scenario, and on a crop grown by area once one is registered: a day's states, a day's records, time to seek, time to restore. The store's format fixed from them, in this document. | `docs(roadmap): the run store's format, from measurements` | Planned |
 | P17.2 | The seed on `RunRequest` and in the identity, without moving an id: a test holds every kept run id and digest. | `feat(sim): a run's seed is its input` | Planned |
 | P17.3 | The run store: manifest, whole days, status, reading; the playback writes through it; the epoch file moves into it. No behaviour a client sees. | `feat(sim): a run store on disk` | Planned |
 | P17.4 | Workers and the scheduler: `execute` over the three drivers, threads and processes, a limit, a queue. | `feat(sim): workers that run epochs into the store` | Planned |
