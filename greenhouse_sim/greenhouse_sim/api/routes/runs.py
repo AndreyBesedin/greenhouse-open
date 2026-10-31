@@ -30,7 +30,9 @@ crop and its timeline, each of the run a query asks for (`run_request`).
                                           preset weather, not its own; @80
                                           after its name overrides its
                                           clouds, and ~90 its wind's
-                                          direction, for QA
+                                          direction, for QA; &seed=7 runs
+                                          it at that seed in place of the
+                                          scenario's own (decision 0065)
     GET /api/scenarios/{id}/climate/probes what probes at ?probes=3:3.2:0.75,… read
                                           of its climate run every minute up to
                                           &t=600, and of the same run with all
@@ -232,7 +234,18 @@ def run_request(scenario_id: str, query: Query) -> RunRequest:
         levels=levels,
         openings=openings,
         plan=plan,
+        seed=_seed(last(query, "seed")),
     )
+
+
+def _seed(text: str | None) -> int | None:
+    """A run's seed as an address writes it, `&seed=7`, or none: the scenario's
+    own."""
+    if text is None:
+        return None
+    if not text.isascii() or not text.isdigit():
+        raise InvalidRequest(f"a seed is a whole number, 0 or more, not {text!r}")
+    return int(text)
 
 
 def _commands(

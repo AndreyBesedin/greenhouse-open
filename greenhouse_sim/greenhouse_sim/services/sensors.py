@@ -27,7 +27,13 @@ from greenhouse_sim.sensors.air import AirAt, WeatherAt, observe, reads, samples
 from greenhouse_sim.sensors.log import SensorFreshness, frames, freshness
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.runs import RunRequest, checked_window
-from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, SceneChanges, changed, scenario
+from greenhouse_sim.services.scenarios import (
+    DEFAULT_WEATHER,
+    SceneChanges,
+    changed,
+    scenario,
+    with_weather,
+)
 from greenhouse_sim.world.sensors import Camera, PointSensor
 
 if TYPE_CHECKING:
@@ -99,6 +105,12 @@ def _cameras(catalogue: Scenarios, scenario_id: str, layout: str) -> list[Camera
     return [sensor for sensor in config.layout.sensors if isinstance(sensor, Camera)]
 
 
+def _seed(catalogue: Scenarios, scenario_id: str, weather: str) -> int:
+    """The seed a scenario's run under `weather` is at: its own, or the one
+    the weather's name ends with (`SEED_MARK`)."""
+    return with_weather(scenario(catalogue, scenario_id), weather).random_seed
+
+
 def _weather_at(catalogue: Scenarios, scenario_id: str, weather: str | None) -> WeatherAt:
     """The weather a scenario's run is under, on its clock: its own, or a
     preset's."""
@@ -125,7 +137,9 @@ def observations(
     first = checked_window(scenario(simulator.catalogue, scenario_id), from_s, until_s)
     name = run.layout or DEFAULT_LAYOUT
     air_at, run_id = air_through_a_run(simulator, run)
-    weather_at = _weather_at(simulator.catalogue, scenario_id, run.weather)
+    weather_at = _weather_at(
+        simulator.catalogue, scenario_id, run.weather_name(simulator.catalogue)
+    )
     start = run_start(simulator.catalogue, scenario_id)
     greenhouse_id = scenario(simulator.catalogue, scenario_id).greenhouse_id
     point_sensors = _point_sensors(simulator.catalogue, scenario_id, name)
@@ -136,7 +150,7 @@ def observations(
         start=start,
         greenhouse_id=greenhouse_id,
         run_id=run_id,
-        seed=scenario(simulator.catalogue, scenario_id).random_seed,
+        seed=_seed(simulator.catalogue, scenario_id, run.weather_name(simulator.catalogue)),
         clean=clean,
         weather_at=weather_at,
         from_s=first,
@@ -151,6 +165,7 @@ def observations(
             point_sensors,
             air_at,
             weather_at,
+            weather=run.weather_name(simulator.catalogue),
             until_s=until_s,
             clean=clean,
         ),
@@ -190,7 +205,9 @@ def delivered_between(
     no other moment's air is worked out: `Stopped` is raised instead, so
     that a playback stopped does not finish the day it was working out."""
     scenario_id = run.scenario_id
-    config = scenario(simulator.catalogue, scenario_id)
+    config = with_weather(
+        scenario(simulator.catalogue, scenario_id), run.weather_name(simulator.catalogue)
+    )
     point_sensors = _point_sensors(simulator.catalogue, scenario_id, run.layout or DEFAULT_LAYOUT)
     air_at, run_id = air_through_a_run(simulator, run)
     if stop is not None:
@@ -205,7 +222,9 @@ def delivered_between(
         greenhouse_id=config.greenhouse_id,
         run_id=named or run_id,
         seed=config.random_seed,
-        weather_at=_weather_at(simulator.catalogue, scenario_id, run.weather),
+        weather_at=_weather_at(
+            simulator.catalogue, scenario_id, run.weather_name(simulator.catalogue)
+        ),
         from_s=0.0 if after_s is None else max(0.0, after_s - latest),
         every_s=every_s,
     )
@@ -260,7 +279,8 @@ def sensors_at(simulator: Simulator, run: RunRequest, until_s: float = 0.0) -> S
             scenario_id,
             _point_sensors(simulator.catalogue, scenario_id, name),
             air_at,
-            _weather_at(simulator.catalogue, scenario_id, run.weather),
+            _weather_at(simulator.catalogue, scenario_id, run.weather_name(simulator.catalogue)),
+            weather=run.weather_name(simulator.catalogue),
             until_s=until_s,
         ),
         cameras=cameras,
@@ -274,6 +294,7 @@ def _freshness(
     air_at: AirAt,
     weather_at: WeatherAt,
     *,
+    weather: str,
     until_s: float,
     clean: bool = False,
 ) -> list[SensorFreshness]:
@@ -286,7 +307,7 @@ def _freshness(
         point_sensors,
         until_s,
         start=run_start(catalogue, scenario_id),
-        seed=scenario(catalogue, scenario_id).random_seed,
+        seed=_seed(catalogue, scenario_id, weather),
         unavailable=unavailable,
         clean=clean,
     )
@@ -308,7 +329,7 @@ def truth(
             _point_sensors(simulator.catalogue, scenario_id, name),
             air_at,
             until_s,
-            _weather_at(simulator.catalogue, scenario_id, run.weather),
+            _weather_at(simulator.catalogue, scenario_id, run.weather_name(simulator.catalogue)),
             from_s=first,
         ),
     )

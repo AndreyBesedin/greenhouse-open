@@ -43,7 +43,6 @@ from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.kept_states import House, KeptState, agreeing
 from greenhouse_sim.services.runs import Commanded, RunPlan, RunRequest
 from greenhouse_sim.services.scenarios import (
-    DEFAULT_WEATHER,
     SceneChanges,
     changed,
     equipment_levels,
@@ -333,7 +332,7 @@ def climate_run(simulator: Simulator, run: RunRequest) -> tuple[RunKey, ClimateD
     what tells it from another: the air its crop lives in, whether or not
     its layout places equipment."""
     name = run.layout or DEFAULT_LAYOUT
-    under = run.weather or DEFAULT_WEATHER
+    under = run.weather_name(simulator.catalogue)
     config = changed(
         simulator.catalogue,
         scenario(simulator.catalogue, run.scenario_id),

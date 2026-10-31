@@ -51,6 +51,12 @@ CLOUDS_MARK: Final = "@"
 MOST_CLOUD_PCT: Final = 100.0
 # And then with this and a bearing, which overrides its wind's direction.
 WIND_MARK: Final = "~"
+# And last with this and a whole number, the run's seed in place of the
+# scenario's own: its weather, its sensors' noise and its crop's draws
+# (`default#7`). A run asked for at a seed names its weather so, which is how
+# every part that honours the weather honours the seed, and how the run's
+# identity changes with it.
+SEED_MARK: Final = "#"
 # What follows it in a layout's name are moves of its equipment and sensors
 # (#209): `default~heater:1.2:-0.4`.
 MOVES_MARK: Final = "~"
@@ -193,7 +199,7 @@ def run_manifest(catalogue: Scenarios, scenario_id: str, weather: str | None = N
         crop_model=config.crop_model.value,
         variety=config.variety,
         airflow=config.airflow.kind,
-        weather=name.partition(WIND_MARK)[0].partition(CLOUDS_MARK)[0],
+        weather=name.partition(SEED_MARK)[0].partition(WIND_MARK)[0].partition(CLOUDS_MARK)[0],
         weather_kind=config.weather.kind,
         cloud_cover_pct=config.cloud_cover_pct,
         wind_from_deg=config.wind_from_deg,
@@ -307,6 +313,11 @@ def with_weather(config: ScenarioConfig, name: str) -> ScenarioConfig:
     compass bearing, from 0 to 360°, the wind's direction, which overrides
     the weather's (`default~90`, `cold_spring_day@80~270`, P09.4); any other
     is refused."""
+    seeded, marked_seed, seed_text = name.partition(SEED_MARK)
+    if marked_seed:
+        if not seed_text.isascii() or not seed_text.isdigit():
+            raise InvalidRequest(f"a seed is a whole number, 0 or more, not {seed_text!r}")
+        return with_weather(config, seeded).model_copy(update={"random_seed": int(seed_text)})
     rest, winded, wind = name.partition(WIND_MARK)
     if winded:
         try:

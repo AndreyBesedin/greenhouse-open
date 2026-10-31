@@ -53,7 +53,6 @@ from greenhouse_sim.services.runs import (
     checked_moment,
 )
 from greenhouse_sim.services.scenarios import (
-    DEFAULT_WEATHER,
     SceneChanges,
     changed,
     equipment_levels,
@@ -119,7 +118,7 @@ def _models(simulator: Simulator, run: RunRequest) -> dict[str, AirflowModel]:
     set it, its doors and vents open as it asks, and its climate under a
     weather; its own airflow first."""
     layout = run.layout or DEFAULT_LAYOUT
-    weather = run.weather or DEFAULT_WEATHER
+    weather = run.weather_name(simulator.catalogue)
     config = changed(
         simulator.catalogue,
         scenario(simulator.catalogue, run.scenario_id),
