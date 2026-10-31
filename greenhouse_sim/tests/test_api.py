@@ -32,7 +32,9 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.manifest_files import manifest_digest, opening_day
 from greenhouse_sim.scene.snapshot import SCHEMA_VERSION, SceneEntityKind, SceneSnapshot
 from greenhouse_sim.services import system
+from greenhouse_sim.services.crop_models import registration
 from greenhouse_sim.services.simulator import Simulator
+from greenhouse_sim.world.scopes import row_scopes
 
 PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "greenhouse_sim"
 # Long enough for any answer of the local server's.
@@ -155,12 +157,20 @@ def test_a_scenario_has_a_scene_before_its_first_day(
 
     assert response.status == HTTPStatus.OK
     snapshot = SceneSnapshot.model_validate(response.body)
-    # Its whole crop: each plant a stem, or organ by organ.
+    # Its whole crop: each plant a stem, or organ by organ; or, grown by
+    # area, each row's canopy, with no plant.
     plants = {e.entity_id for e in snapshot.entities if e.kind == SceneEntityKind.PLANT} | {
         e.properties["plant_id"] for e in snapshot.entities if "organ_id" in e.properties
     }
+    canopies = {
+        e.properties["scope"] for e in snapshot.entities if e.kind == SceneEntityKind.CANOPY
+    }
     assert (snapshot.greenhouse_id, snapshot.simulated_day) == (scenario_id, 0)
-    assert len(plants) == config.rows * config.columns
+    if registration(config).plants is None:
+        assert not plants
+        assert canopies == {scope.scope_id for scope in row_scopes(config.layout, config.envelope)}
+    else:
+        assert len(plants) == config.rows * config.columns and not canopies
 
 
 @pytest.mark.parametrize(

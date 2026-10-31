@@ -110,7 +110,8 @@ def test_the_kept_opening_day_is_the_manifests_and_bears_red_fruit() -> None:
     assert off.house.temperature_c < kept.house.temperature_c
     listed = next(s for s in scenario_summaries(PACKAGED) if s.id == SCENARIO)
     assert listed.opening_day == day
-    assert [s.opening_day for s in scenario_summaries(PACKAGED) if s.id != SCENARIO] == [None] * 5
+    others = [s.opening_day for s in scenario_summaries(PACKAGED) if s.id != SCENARIO]
+    assert others == [None] * (len(scenario_summaries(PACKAGED)) - 1)
 
 
 def test_kept_as_the_api_starts_the_runs_later_days_carry_on_from_it(simulator: Simulator) -> None:

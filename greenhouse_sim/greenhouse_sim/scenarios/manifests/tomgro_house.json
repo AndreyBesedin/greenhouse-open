@@ -1,0 +1,260 @@
+{
+  "$schema": "../scenario.schema.json",
+  "schema_version": 7,
+  "greenhouse_id": "tomgro_house",
+  "name": "TOMGRO house",
+  "description": "The reference greenhouse's house and season, its four rows growing Reduced-State TOMGRO by area: its crop's numbers are predictions, 120 days",
+  "notes": {
+    "scenario": "Reduced-State TOMGRO as a crop model of the run (decision 0060, milestone B): the reference greenhouse's house, season, schedule and controller, its rows growing the published model per m² of floor in place of plants. What its crop gives are predictions, not validated on measured data (milestone C), and the viewer marks them so. It is the reference greenhouse's in all but its crop, the model of its house's air and its crop work, so that the two can be set side by side.",
+    "installation.envelope": "Three 3.2 m spans, three 4 m bays, 4 m to the gutters: a small Venlo-style roof. Inside the house, a lattice girder under the gutters spans each frame from side wall to side wall, so that no post stands in the paths between the rows. A vent near each span's ridge, along the middle of the house, shut until commanded; a door in the front gable, by the path.",
+    "installation.layout": "The reference greenhouse's: four rows of eight planting positions along the house, 1.6 m apart about its middle, 0.75 m between positions, on gutters under crop wires, with its equipment and sensors. Each row is a scope of the crop (decision 0062), its cultivated ground a 1.6 m share along its positions and its floor a quarter of the house's.",
+    "installation.row_crops": "Reduced-State TOMGRO (Jones et al. 1999, as Oliveira et al. implement it, reproduced in research/reproductions/reduced_tomgro), grown by area: each row a canopy of five states per m² of floor, nodes, leaf area index, the dry weight above ground, of the fruit and of the mature fruit, living each day in the house's air hour by hour and the light above it. Its parameter set, gnvman, names no cultivar, so its rows' variety is a tomato's alone. It has no plants: the viewer draws each row as a canopy, a proxy, as dense as the light its leaves take.",
+    "start_date": "1 March, for 120 days: March's nights need heat, June's days need venting, and the crop bears red fruit for its last month or more.",
+    "random_seed": "Seed 4201, its own, as every packaged scenario's is: its season is the reference greenhouse's, its weather wandering from it on days of its own.",
+    "models.house_air": "The whole house's air alone, one well-mixed volume (P14.6), rather than the reference greenhouse's grid: the crop reads the house's mean air hour by hour, which the whole house gives, and a season's run takes some three minutes in place of the grid's twenty or more. A cool, damp March night to start: 14 °C and 80% inside.",
+    "models.weather": "A season's weather (P10.3, the seasonal kind): each day's coldest and warmest temperatures follow the year at the site, from 0.5 and 5.5 °C on the year's coldest day, 20 January, to 13 and 22.5 °C half a year later, and wander from them in spells, 2.5 °C either way, a day keeping 0.7 of the day before's; each day its own clouds, 55% give or take 40. A day's shape and wind are the cold spring day's: coldest at 6 h, warmest at 15 h, a south-westerly veering to the north-west as it rises.",
+    "daily": "Its vents and fans by the clock, every day (P09.4): the roof vents half open at 9 h, fully from 11 h, half from 18 h and shut at 20 h; both fans from 8 h to 20 h. A fixed schedule cannot follow the season: from May the morning's sun warms the house before the vents open fully, and it passes 30 °C by 9 h on a bright day; a climate computer's venting setpoints would follow it.",
+    "models.controller": "Its climate controller (P11), with its heating loop alone for now: the thermostat on its heater (P10.3), in place of daily commands to it, 18 °C from 7 h, 16 °C from 19 h, switching on below the setpoint by half a degree and off above it by as much. Its 30 kW hold the house at its setpoints through most of March, on and off as the air crosses its band, and run all night only on a freezing one; by June it runs on cool nights only. The vents keep their own clock, so on a cold day they let out heat the heater has to make up.",
+    "models.crop": "Its parameter set, gnvman, and the inputs gnv_n01, each with its source in the reproduction's manifest; the house_hours driver profile, version 1: the house's air hour by hour, its temperature taken for the canopy's, the PAR above each row's canopy and the CO2; and the canopy 2 m above its planting positions, where its light is read: the run's choice, the model growing no height. The canopy's top, 2.675 m up, stands under the eaves, 4 m."
+  },
+  "installation": {
+    "installation_id": "tomgro_house",
+    "name": "TOMGRO house",
+    "envelope": {
+      "length": 12.0,
+      "width": 9.6,
+      "eave_height": 4.0,
+      "ridge_height": 4.7,
+      "spans": 3,
+      "bays": 3,
+      "inner_posts": [
+        0,
+        3
+      ],
+      "openings": [
+        {
+          "opening_id": "roof_vent_1",
+          "kind": "roof_vent",
+          "surface_id": "roof_1_right",
+          "centre": {
+            "x": 0.0,
+            "y": 0.4
+          },
+          "width": 4.0,
+          "height": 0.8,
+          "opening": 0.0
+        },
+        {
+          "opening_id": "roof_vent_2",
+          "kind": "roof_vent",
+          "surface_id": "roof_2_right",
+          "centre": {
+            "x": 0.0,
+            "y": 0.4
+          },
+          "width": 4.0,
+          "height": 0.8,
+          "opening": 0.0
+        },
+        {
+          "opening_id": "roof_vent_3",
+          "kind": "roof_vent",
+          "surface_id": "roof_3_right",
+          "centre": {
+            "x": 0.0,
+            "y": 0.4
+          },
+          "width": 4.0,
+          "height": 0.8,
+          "opening": 0.0
+        },
+        {
+          "opening_id": "door",
+          "kind": "door",
+          "surface_id": "end_wall_front",
+          "centre": {
+            "x": 4.8,
+            "y": 1.1
+          },
+          "width": 1.6,
+          "height": 2.2
+        }
+      ]
+    },
+    "layout": "default",
+    "row_crops": [
+      {
+        "row": 1,
+        "crop_model": "reduced_tomgro",
+        "variety": "tomato"
+      },
+      {
+        "row": 2,
+        "crop_model": "reduced_tomgro",
+        "variety": "tomato"
+      },
+      {
+        "row": 3,
+        "crop_model": "reduced_tomgro",
+        "variety": "tomato"
+      },
+      {
+        "row": 4,
+        "crop_model": "reduced_tomgro",
+        "variety": "tomato"
+      }
+    ]
+  },
+  "start_date": "2026-03-01",
+  "duration_days": 120,
+  "random_seed": 4201,
+  "daily": [
+    {
+      "time_of_day_s": 28800.0,
+      "actuator_id": "fan_left",
+      "level": 1.0
+    },
+    {
+      "time_of_day_s": 28800.0,
+      "actuator_id": "fan_right",
+      "level": 1.0
+    },
+    {
+      "time_of_day_s": 32400.0,
+      "actuator_id": "roof_vent_1",
+      "level": 0.5
+    },
+    {
+      "time_of_day_s": 32400.0,
+      "actuator_id": "roof_vent_2",
+      "level": 0.5
+    },
+    {
+      "time_of_day_s": 32400.0,
+      "actuator_id": "roof_vent_3",
+      "level": 0.5
+    },
+    {
+      "time_of_day_s": 39600.0,
+      "actuator_id": "roof_vent_1",
+      "level": 1.0
+    },
+    {
+      "time_of_day_s": 39600.0,
+      "actuator_id": "roof_vent_2",
+      "level": 1.0
+    },
+    {
+      "time_of_day_s": 39600.0,
+      "actuator_id": "roof_vent_3",
+      "level": 1.0
+    },
+    {
+      "time_of_day_s": 64800.0,
+      "actuator_id": "roof_vent_1",
+      "level": 0.5
+    },
+    {
+      "time_of_day_s": 64800.0,
+      "actuator_id": "roof_vent_2",
+      "level": 0.5
+    },
+    {
+      "time_of_day_s": 64800.0,
+      "actuator_id": "roof_vent_3",
+      "level": 0.5
+    },
+    {
+      "time_of_day_s": 72000.0,
+      "actuator_id": "roof_vent_1",
+      "level": 0.0
+    },
+    {
+      "time_of_day_s": 72000.0,
+      "actuator_id": "roof_vent_2",
+      "level": 0.0
+    },
+    {
+      "time_of_day_s": 72000.0,
+      "actuator_id": "roof_vent_3",
+      "level": 0.0
+    },
+    {
+      "time_of_day_s": 72000.0,
+      "actuator_id": "fan_left",
+      "level": 0.0
+    },
+    {
+      "time_of_day_s": 72000.0,
+      "actuator_id": "fan_right",
+      "level": 0.0
+    }
+  ],
+  "models": {
+    "weather": {
+      "model": "seasonal",
+      "parameters": {
+        "coldest_c": [
+          0.5,
+          13.0
+        ],
+        "warmest_c": [
+          5.5,
+          22.5
+        ],
+        "coldest_day": 20,
+        "day_to_day_c": 2.5,
+        "persistence": 0.7,
+        "coldest_hour": 6.0,
+        "warmest_hour": 15.0,
+        "humidity_at_coldest_pct": 92.0,
+        "calmest_m_s": 1.5,
+        "windiest_m_s": 6.0,
+        "wind_from_deg": 225.0,
+        "veer_deg": 90.0,
+        "gustiness": 0.2,
+        "cloud_cover_pct": 55.0,
+        "cloud_spread_pct": 40.0
+      }
+    },
+    "air_field": {
+      "model": "uniform",
+      "parameters": {
+        "velocity_m_s": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      }
+    },
+    "house_air": {
+      "model": "whole_house",
+      "parameters": {
+        "start_temperature_c": 14.0,
+        "start_humidity_pct": 80.0
+      }
+    },
+    "controller": {
+      "model": "loops",
+      "parameters": {
+        "day_from_s": 25200.0,
+        "night_from_s": 68400.0,
+        "heating": {
+          "actuator_id": "heater",
+          "day_c": 18.0,
+          "night_c": 16.0,
+          "band_c": 1.0
+        }
+      }
+    },
+    "crop": {
+      "model": "reduced_tomgro",
+      "parameters": {
+        "parameter_set": "gnvman",
+        "driver_profile": "house_hours",
+        "driver_profile_version": 1,
+        "canopy_height_m": 2.0
+      }
+    }
+  }
+}

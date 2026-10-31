@@ -450,7 +450,13 @@ def test_the_reference_greenhouse_grows_its_crop_organ_by_organ(simulator: Simul
     assert REFERENCE.crop_work == CropWork(
         harvest_every_days=7, lower_every_days=7, head_room_m=0.3
     )
-    others = [s for s in SCENARIO_REGISTRY.values() if s.greenhouse_id != "reference_greenhouse"]
+    # The others grow the simple crop, but the TOMGRO house, grown by area.
+    assert SCENARIO_REGISTRY["tomgro_house"].crop_model == CropModel.REDUCED_TOMGRO
+    others = [
+        s
+        for s in SCENARIO_REGISTRY.values()
+        if s.greenhouse_id not in ("reference_greenhouse", "tomgro_house")
+    ]
     assert all(other.crop_model == CropModel.SIMPLE for other in others)
 
     # A plant of the simple crop has no structure to list: its numbers are

@@ -158,6 +158,7 @@ def test_each_scenario_names_its_own_airflow_which_it_offers_first(simulator: Si
         "climate_box": "uniform",
         "sensor_lab": "gradient",
         "solar_lab": "uniform",
+        "tomgro_house": "uniform",
     }
     for scenario_id, kind in kinds.items():
         assert fields.field_names(simulator, scenario_id)[0] == kind
