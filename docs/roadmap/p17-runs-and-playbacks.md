@@ -89,8 +89,8 @@ The store is an interface over named objects (put one whole, get, list,
 delete). Its first backend is a folder under the user's state folder
 (`XDG_STATE_HOME`, or `~/.local/state`, where the epochs are kept today), so
 that every checkout and worktree on the machine shares it; a backend over an
-S3-compatible object store is chosen or not after P17.1, and the same format
-serves both. A commit is then an object written after the objects it names
+S3-compatible object store is a later backend (see the measurements), and the
+same format serves both. A commit is then an object written after the objects it names
 (an object store has no rename). Its logical parts:
 
 - **The manifest:** the initial inputs, the store mode, the status.
@@ -117,7 +117,9 @@ integration cadence (decisions 0062 and 0064).
 
 A `present` store keeps what its promise needs: enough to show the present
 and the observation window it supports, and to resume if it promises that.
-How many segments and checkpoints that is, is fixed by P17.1.
+A `present` store keeps the latest checkpoint, the segments of a window of
+simulated days (a setting, one day by default), and the log (see the
+measurements).
 
 ### Commits and recovery
 
@@ -146,8 +148,8 @@ the log from there.
 A worker is `execute(epoch, store, driver)`, one function over three drivers:
 *free*, *paced* and *stepped* (`step_to`). A scheduler runs up to a configured
 number of workers and queues the rest. Whether a worker is a thread or a
-process is decided from P17.1's measurement of what threads cost the viewer
-(open question 3); the store is the only channel between a worker and the
+process is decided by the measurements: processes for the API's workers,
+threads where a caller steps the run itself; the store is the only channel between a worker and the
 API, so either serves. The API reads the store and holds no run's
 computation.
 
@@ -189,7 +191,7 @@ days, and a run's records for a given seed.
 
 | Step | Scope | Pull request | Status |
 | --- | --- | --- | --- |
-| P17.1 | Measurements on the reference scenario, and on a crop grown by area once one is registered: a segment's records, a checkpoint's states, time to seek, time to restore, and what threads cost a playing viewer. The physical commit and format, the store's backend, the default segment length, the `present` mode's retention and the worker technology fixed from them, in this document. | `docs(roadmap): the run store's format, from measurements` | Planned |
+| P17.1 | Measurements on the reference greenhouse and on a crop grown by area: a segment's records, a checkpoint's states, time to seek and restore, and what a worker costs a process that is working. The physical commit, the store's first backend, the default interval, the `present` mode's retention and the worker technology fixed from them (below). | `docs(roadmap): the run store's format, from measurements` | Done: measured on one machine; see the measurements |
 | P17.2 | The seed on `RunRequest` and in the identity, without moving an id: a test holds every kept run id and digest. | `feat(sim): a run's seed is its input` | Planned |
 | P17.3 | (a) Completed runs persisted: the store interface and its folder backend, the manifest, segments, checkpoints under the checkpoint contract, commits and the trajectory digest; an epoch executed in the process is written to it; the epoch file moves into it. Several runs of a scenario, at different seeds. | `feat(sim): finished runs are kept in a store` | Planned |
 | P17.4 | (b) Playback as a position: seek over a stored epoch, many over one, the API's run routes, the consumer interface and port reading the store. | `feat(api): runs are listed, opened and played from the store` | Planned |
@@ -199,6 +201,98 @@ days, and a run's records for a given seed.
 | P17.8 | (d) Interventions in the log; forks with their parent, instant and inheritance; a layout rearranged as a fork that leaves its run served. | `feat(sim): a change is the epoch's own and a fork is a new run` | Planned |
 | P17.9 | (e) Resuming an interrupted epoch: detection, restore from a checkpoint, the log applied again; the kill-and-resume tests, with a crash between the log and the commit. Scheduled when P17.1's costs justify it. | `feat(sim): an interrupted run resumes` | Planned |
 | P17.10 | The QA scenario below, for what is delivered, run and recorded. | `test: runs kept, played and replayed` | Planned |
+
+## Measurements (P17.1)
+
+**Method.** One machine (Apple M2, 8 cores, 8 GB, Python 3.14.7, the default
+build), one seed each, the scenarios' own. Each figure is from
+`Playback.work_day` (records), `checkpoints.save_checkpoint` and
+`upload_checkpoint` (states), run in a fresh `Simulator` with the scenarios'
+opening days kept, as the API's server keeps them. The checkpoint's size is its
+JSON as downloaded and that JSON compressed with gzip, as a day's records
+are. Sizes are exact; times are one run each, but for the worker comparison,
+which is four. Not measured: the viewer's own drawing of a scene (the air
+field), a crop other than the two below, other machines.
+
+**Records.** A day's observations, events and outcomes at the consumer's
+cadence:
+
+| Scenario | Compressed a day | Time to compute a day | Read back |
+| --- | --- | --- | --- |
+| Reference greenhouse (crop by plant, 32 plants) | 49.2 to 49.4 kB (4 days) | 5.6 s, 7.6 s the first | 34 ms for the first 5,000 |
+| `tomgro_house` (crop by area) | 47.9 to 48.1 kB (4 days) | 4.5 s | 38 ms |
+
+A day's records are flat in size, so a run of 120 days keeps about 5.9 MB
+(5.8 MB for `tomgro_house`) of records. No crop action was given, so events
+are 22 bytes a day.
+
+**Checkpoints** (a run's whole state at the start of a day):
+
+| Day | Reference: JSON | Reference: gzip | `tomgro_house`: JSON | `tomgro_house`: gzip |
+| --- | --- | --- | --- | --- |
+| 1 | 157 kB | 27.1 kB | 10.0 kB | 1.4 kB |
+| 6 | 213 kB | 33.8 kB | 51.6 kB | 4.6 kB |
+| 30 | 458 kB | 63.9 kB | 252 kB | 18.8 kB |
+| 60 | 884 kB | 127 kB | 507 kB | 39.0 kB |
+| 120 | 2.09 MB | 321 kB | 1.02 MB | 87.0 kB |
+
+A checkpoint grows with the day: it keeps what each plant, or each scope,
+lived through. A crop grown by area grows in step with the day (about 8.5 kB
+of JSON a day, no plants). A crop grown by plant grows faster than the day
+(organs accumulate): from 60 to 120 days its checkpoint is 2.4 times larger.
+A checkpoint every day for a 120-day run therefore totals about 17.7 MB
+compressed for the reference greenhouse and 5.0 MB for `tomgro_house`
+(trapezoid over the measured days; an estimate), beside the records' 5.9 MB.
+
+**Seek and restore.**
+
+| | Reference | `tomgro_house` |
+| --- | --- | --- |
+| Reading a checkpoint into a fresh simulator (day 1 to 60) | 9 to 26 ms | 22 to 64 ms |
+| Working one day on from a checkpoint (day 1, 30, 60) | 1.17 s, 1.35 s, 1.49 s | 1.02 s, 1.27 s, 1.38 s |
+| Working the days from the start (no checkpoint) | 36 s to day 30; 1.2 s a day | 33 s to day 30; 1.1 s a day |
+
+A seek to a moment is the nearest earlier checkpoint, read in tens of
+milliseconds, and the days between worked on, about 1.0 to 1.5 s of state work
+for each. With a checkpoint a day, a seek is at most one day's work; with none,
+a seek to day 60 is the 77 s of working 60 days out. These are the models'
+state; drawing a scene at the moment is the viewer's cost on top, unmeasured here.
+
+**A worker beside a process that is working.** A state step (one
+`save_checkpoint` at day 2) takes 2.27 to 2.28 s alone (four runs). With a
+worker computing days in a thread of the same interpreter it takes 3.31 to
+3.35 s, 46% longer. With the worker in a process of its own it takes 2.29 to
+2.38 s, within 5% of alone. A thread costs the foreground work half again as
+much; a process costs it almost nothing, on this 8-core machine.
+
+### What the measurements settle
+
+1. **Workers.** The API's workers are processes: a thread slows work in the
+   same interpreter by 46%. A thread worker stays where a caller steps the run
+   itself (the experiment runner, tests), since nothing else then waits.
+2. **The physical commit.** Objects are written whole, in order, the commit
+   last (a folder backend writes each through a temporary name and renames it;
+   an object store puts it). The largest object measured is a day-120
+   checkpoint of 321 kB compressed, so one put holds any object; an embedded
+   database is not needed. A 120-day `full` run is about 240 objects.
+3. **The first backend** is the folder under the state folder. An object-store
+   backend meets no obstacle in these sizes (a few hundred objects a run, none
+   over a few hundred kilobytes), and is a later step, taken when a shared
+   deployment needs it.
+4. **The default interval** stays 24 hours. A seek then costs at most about
+   1.5 s of state work and a `full` run of 120 days about 24 MB
+   (reference) or 11 MB (`tomgro_house`). The interval is a setting: every
+   10 days a reference run's checkpoints total about 1.8 MB, and a seek costs
+   up to about 13 s.
+5. **`present` keeps** the latest checkpoint, the segments of a window of
+   simulated days (one by default), and the log: at day 120 about 0.14 MB
+   (`tomgro_house`) to 0.37 MB (reference), against about 24 MB and 11 MB
+   for `full`. A batch of runs for training keeps `present`, or a long
+   interval, unless its records are the product.
+6. **To watch:** the reference crop's checkpoint grows faster than the day.
+   If a longer run or a larger crop makes `full` too large, a checkpoint
+   that keeps its history compacted is the remedy (decision 0065's
+   revisit clause).
 
 ## Acceptance criteria
 
@@ -244,7 +338,7 @@ once P17.8 is):
 ## Settled in review
 
 1. **A repeated launch** opens the stored run and offers a new epoch.
-2. **The default store mode** is `full`, to be revisited after P17.1.
+2. **The default store mode** is `full`; P17.1 measured what that costs.
 3. **Retention:** a stored run is removed by a person, through the
    interface. The scenario picker warns when stored runs take a set share of
    the free space.
@@ -257,9 +351,7 @@ once P17.8 is):
 
 ## Open questions
 
-1. **Processes or threads** for the API's workers, and the store's backend,
-   after P17.1's measurements.
-2. **The physical commit** (objects written in order, or an embedded
-   database), after P17.1.
-3. **The `present` mode's retention:** how many segments and checkpoints its
-   promise needs, after P17.1.
+None open from the design. The first backend, the commit, the interval, the
+`present` mode and the workers are settled by the measurements above; an
+object-store backend and a compacted checkpoint are later steps, taken when a
+deployment or a longer run needs them.
