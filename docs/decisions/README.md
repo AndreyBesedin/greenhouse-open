@@ -51,7 +51,7 @@ changes course is a new record that supersedes the old one.
 | [0037](0037-the-simulators-subpackages-tangle-no-further.md) | The simulator's subpackages tangle no further | Accepted |
 | [0038](0038-hooks-merge-like-dev-dependencies-review-waits-for-a-second-maintainer.md) | Hook updates merge like development dependencies; review changes with a second maintainer | Accepted |
 | [0039](0039-develop-with-uv-one-workspace-a-command-for-each-task.md) | Develop with uv: one workspace, a command for each task | Accepted |
-| [0041](0041-one-run-for-the-viewer-and-a-consumer-played-back-against-one-clock.md) | One run for the viewer and a consumer, played back against one clock | Accepted; the simple live mode it kept superseded by 0059 |
+| [0041](0041-one-run-for-the-viewer-and-a-consumer-played-back-against-one-clock.md) | One run for the viewer and a consumer, played back against one clock | Accepted; the simple live mode it kept superseded by 0059; its one playback a scenario, shared clock and unkept runs superseded by 0065 |
 | [0042](0042-a-season-a-thermostat-and-the-heat-it-gives-as-a-modelled-record.md) | A season, a thermostat, and the heat it gives as a modelled record | Accepted |
 | [0043](0043-a-target-changed-while-a-run-plays-steers-it-from-then-on.md) | A target changed while a run plays steers it from then on | Accepted |
 | [0044](0044-public-records-speak-for-the-project.md) | Public records speak for the project | Accepted |
@@ -59,7 +59,7 @@ changes course is a new record that supersedes the old one.
 | [0046](0046-one-action-format-and-plan.md) | One action format, and a plan a run's gateway carries out | Accepted |
 | [0047](0047-python-lint-rules-a-family-at-a-time.md) | Python lint rules, a family at a time | Accepted |
 | [0048](0048-a-simulators-state-is-one-object-passed-explicitly.md) | A simulator's state is one object, passed explicitly | Accepted |
-| [0049](0049-a-run-started-from-moves-keeps-its-target-changes.md) | A run started from moves keeps its target changes | Accepted |
+| [0049](0049-a-run-started-from-moves-keeps-its-target-changes.md) | A run started from moves keeps its target changes | Accepted; its run no longer served superseded by 0065 |
 | [0050](0050-an-installation-is-the-house-part-of-a-scenario.md) | An installation is the house part of a scenario | Accepted |
 | [0051](0051-drafts-are-kept-in-a-local-sqlite-file.md) | Drafts are kept in a local SQLite file | Accepted |
 | [0052](0052-a-simulators-authorisation-is-a-file-it-is-given.md) | A simulator's authorisation is a file it is given, the local operator's by default | Accepted |
@@ -75,7 +75,7 @@ changes course is a new record that supersedes the old one.
 | [0062](0062-a-crop-model-declares-its-scope-drivers-outputs-and-capabilities.md) | A crop model declares its scope, drivers, outputs and capabilities | Accepted |
 | [0063](0063-a-data-file-is-generated-committed-or-fetched-by-one-rule.md) | A data file is generated, committed or fetched, by one rule | Accepted |
 | [0064](0064-a-runs-crop-steps-at-its-models-step-not-the-runs-day.md) | A run's crop steps at its model's step, not the run's day | Accepted |
-| [0065](0065-a-run-is-a-scenario-at-a-seed-kept-in-a-store-and-played-from-it.md) | A run is a scenario at a seed, kept in a store and played from it | Proposed |
+| [0065](0065-a-run-is-a-scenario-at-a-seed-kept-in-a-store-and-played-from-it.md) | A run is a scenario at a seed, kept in a store and played from it | Accepted |
 
 ## Template
 

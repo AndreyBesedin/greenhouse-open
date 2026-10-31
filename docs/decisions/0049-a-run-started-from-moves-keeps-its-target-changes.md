@@ -1,6 +1,6 @@
 # 0049: A run started from moves keeps its target changes
 
-**Status:** Accepted
+**Status:** Accepted; its run no longer served superseded by [0065](0065-a-run-is-a-scenario-at-a-seed-kept-in-a-store-and-played-from-it.md)
 **Date:** 2026-10-23
 
 ## Context

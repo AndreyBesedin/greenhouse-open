@@ -1,6 +1,6 @@
 # 0065: A run is a scenario at a seed, kept in a store and played from it
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-10-31
 
 ## Context
@@ -163,11 +163,10 @@ interface's rules (decision 0040); checkpoints and branches from a day
   for a new scenario, which ends in *save and start a run* or *save and go
   back*. A run opens at an address of its own, naming its run
   and epoch.
-- **What it supersedes in decisions 0041 and 0049, once accepted:** one
+- **What it supersedes in decisions 0041 and 0049:** one
   playback a scenario; one clock that the viewer and a consumer share; a
   restart as the only way back; runs that are not kept; and 0049's "the run
-  played before is no longer served". The records of the earlier decisions
-  are marked then, not before. Their run's determinism, working out ahead of
+  played before is no longer served". Their run's determinism, working out ahead of
   what is played, consumer cadence and records' compression stand.
 
 ## Consequences
