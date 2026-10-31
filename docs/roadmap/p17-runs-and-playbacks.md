@@ -77,7 +77,7 @@ the inputs it changes.
 ```mermaid
 flowchart LR
     S["Scheduler: up to N workers, the rest queued"] --> W["Worker: one epoch"]
-    W -- "segments, checkpoints, commits" --> St[("Run store on disk")]
+    W -- "segments, checkpoints, commits" --> St[("Run store")]
     St --> A["Local API: lists, opens, launches, deletes"]
     St --> C["Consumer interface and policy port"]
     A --> V["Viewer: landing page, playbacks"]
@@ -85,9 +85,13 @@ flowchart LR
     W -- "intervention log" --> St
 ```
 
-Under the user's state folder (`XDG_STATE_HOME`, or `~/.local/state`, as the
-epochs are kept today), a folder for each run and a subfolder for each epoch.
-Its logical parts, whatever their physical form (P17.1):
+The store is an interface over named objects (put one whole, get, list,
+delete). Its first backend is a folder under the user's state folder
+(`XDG_STATE_HOME`, or `~/.local/state`, where the epochs are kept today), so
+that every checkout and worktree on the machine shares it; a backend over an
+S3-compatible object store is chosen or not after P17.1, and the same format
+serves both. A commit is then an object written after the objects it names
+(an object store has no rename). Its logical parts:
 
 - **The manifest:** the initial inputs, the store mode, the status.
 - **Segments:** the epoch's records (observations, events, outcomes) for a
@@ -101,14 +105,23 @@ Its logical parts, whatever their physical form (P17.1):
 - **Commits.**
 
 Segments and checkpoints are by simulated instant. Their lengths are
-settings, a day by default. A checkpoint falls on a step boundary of every
-model the run has (decisions 0062 and 0064), so that an action within a day
-or a restart at an instant restores the nearest checkpoint before it and
+settings, 24 hours of simulated time by default (not the light period).
+Seeking to an instant restores the nearest checkpoint at or before it and
 works forward.
 
-A `present` store keeps only the latest checkpoint and segment and the log.
+**The checkpoint contract.** At a requested instant a model exports a state
+sufficient to restart it, its solver's or internal state included, or
+declares the instants it cannot be checkpointed at and why. Models do not
+share step boundaries, and a checkpoint's cadence never sets a model's
+integration cadence (decisions 0062 and 0064).
+
+A `present` store keeps what its promise needs: enough to show the present
+and the observation window it supports, and to resume if it promises that.
+How many segments and checkpoints that is, is fixed by P17.1.
 
 ### Commits and recovery
+
+Specified now, delivered in P17.9; the earlier steps write the same commits.
 
 One commit advances the frontier. It names the segment, the checkpoint if
 any, the position reached in the intervention log and the trajectory digest
@@ -160,7 +173,7 @@ is not removed and the fork is listed beside it.
 | Page | Address | Does |
 | --- | --- | --- |
 | Landing | `/` | a scenario picker, a dropdown with search; opening a scenario shows its stored runs (seed, epoch, status, progress, mode, created) and *New run* (seed, store mode, pace), with *Build a scenario* beside it |
-| Builder | its own address, as today | draft and edit an installation |
+| Builder | its own address, as today | draft and edit an installation; it ends in two actions, *save and start a run* (the new run's dialog) and *save and go back* (the landing page) |
 | Run | one that names the run and the epoch | the viewer over a playback of that epoch |
 
 The viewer gains an address for each, and a server (the API's static
@@ -176,16 +189,16 @@ days, and a run's records for a given seed.
 
 | Step | Scope | Pull request | Status |
 | --- | --- | --- | --- |
-| P17.1 | Measurements on the reference scenario, and on a crop grown by area once one is registered: a segment's records, a checkpoint's states, time to seek, time to restore, and what threads cost a playing viewer. The physical commit and format, the default segment length and the worker technology fixed from them, in this document. | `docs(roadmap): the run store's format, from measurements` | Planned |
+| P17.1 | Measurements on the reference scenario, and on a crop grown by area once one is registered: a segment's records, a checkpoint's states, time to seek, time to restore, and what threads cost a playing viewer. The physical commit and format, the store's backend, the default segment length, the `present` mode's retention and the worker technology fixed from them, in this document. | `docs(roadmap): the run store's format, from measurements` | Planned |
 | P17.2 | The seed on `RunRequest` and in the identity, without moving an id: a test holds every kept run id and digest. | `feat(sim): a run's seed is its input` | Planned |
-| P17.3 | The run store: manifest, segments, checkpoints, commits, status, reading, the trajectory digest; the playback writes through it; the epoch file moves into it. No behaviour a client sees. | `feat(sim): a run store on disk` | Planned |
-| P17.4 | Workers and the scheduler: `execute` over the three drivers, threads and processes, a limit, a queue. | `feat(sim): workers that run epochs into the store` | Planned |
-| P17.5 | Resuming: interrupted detection, restore from a checkpoint and the intervention log; the kill-and-resume tests, with a crash between the log and the commit. | `feat(sim): an interrupted run resumes` | Planned |
-| P17.6 | Playback as a position: seek, follow, many over one epoch; the API's run routes; the consumer interface and port read the store. | `feat(api): runs are listed, opened and played from the store` | Planned |
-| P17.7 | Interventions in the log; forks with their parent, instant and inheritance; a layout rearranged as a fork that leaves its run served. | `feat(sim): a change is the epoch's own and a fork is a new run` | Planned |
-| P17.8 | The viewer's addresses; the landing page, the scenario picker with search, the run dialog. | `feat(viewer): a place to choose a scenario and a run` | Planned |
-| P17.9 | Replay: a timeline bounded by the frontier, day navigation, following the frontier, `present` stores. | `feat(viewer): move through a run that has been computed` | Planned |
-| P17.10 | The QA scenario below, run and recorded. | `test: runs kept, resumed and replayed` | Planned |
+| P17.3 | (a) Completed runs persisted: the store interface and its folder backend, the manifest, segments, checkpoints under the checkpoint contract, commits and the trajectory digest; an epoch executed in the process is written to it; the epoch file moves into it. Several runs of a scenario, at different seeds. | `feat(sim): finished runs are kept in a store` | Planned |
+| P17.4 | (b) Playback as a position: seek over a stored epoch, many over one, the API's run routes, the consumer interface and port reading the store. | `feat(api): runs are listed, opened and played from the store` | Planned |
+| P17.5 | The viewer's addresses; the landing page, the scenario picker with search, the run dialog, deletion, the builder's two ending actions. | `feat(viewer): a place to choose a scenario and a run` | Planned |
+| P17.6 | Replay: a timeline over the stored epoch, day navigation, `present` stores. | `feat(viewer): move through a run that has been computed` | Planned |
+| P17.7 | (c) Workers and the scheduler: `execute` over the three drivers, a limit, a queue; a frontier that a playback follows while the run computes. | `feat(sim): workers that run epochs into the store` | Planned |
+| P17.8 | (d) Interventions in the log; forks with their parent, instant and inheritance; a layout rearranged as a fork that leaves its run served. | `feat(sim): a change is the epoch's own and a fork is a new run` | Planned |
+| P17.9 | (e) Resuming an interrupted epoch: detection, restore from a checkpoint, the log applied again; the kill-and-resume tests, with a crash between the log and the commit. Scheduled when P17.1's costs justify it. | `feat(sim): an interrupted run resumes` | Planned |
+| P17.10 | The QA scenario below, for what is delivered, run and recorded. | `test: runs kept, played and replayed` | Planned |
 
 ## Acceptance criteria
 
@@ -193,16 +206,17 @@ days, and a run's records for a given seed.
   its seed, and differ in their records.
 - A run at the scenario's own seed has the `run_id`, replay digest and
   records it has before P17.
-- A viewer can seek anywhere up to the frontier of a run that is still
-  running, and a consumer reading it is not moved by the seek.
-- The API restarted, finished runs are listed and replayable; a run that was
-  running is `interrupted` and resumes to the digests of an uninterrupted
-  one.
-- An epoch is resumed at a checkpoint inside a day, and an intervention
-  logged before a crash is applied exactly once.
-- Two epochs of one run with different interventions have different
+- A viewer can seek anywhere in a finished run (P17.4), and in a run that is
+  still running up to its frontier (P17.7), without moving what a consumer
+  reading it is given.
+- The API restarted, finished runs are listed and replayable.
+- (P17.8) Two epochs of one run with different interventions have different
   trajectory digests; a fork names its parent and instant.
-- N runs asked for with a limit of M execute M at a time and queue the rest.
+- (P17.9) A run that was running is `interrupted` and resumes, at a
+  checkpoint that may lie inside a day, to the digests of an uninterrupted
+  one; an intervention logged before a crash is applied exactly once.
+- (P17.7) N runs asked for with a limit of M execute M at a time and queue
+  the rest.
 - The viewer opens on a page from which a scenario is chosen, a run
   launched, a stored run opened, or the builder entered.
 - A policy port and an experiment runner give the receipts and digests they
@@ -210,7 +224,8 @@ days, and a run's records for a given seed.
 
 ## Final QA scenario
 
-On the reference greenhouse:
+On the reference greenhouse (steps 4 and 5 once P17.9 is delivered, 7 and 8
+once P17.8 is):
 1. Open the landing page, search for the scenario, open it: no stored runs.
 2. Launch a run at seed 1 and another at seed 2, both `full`. Both are
    listed with their progress.
@@ -226,23 +241,25 @@ On the reference greenhouse:
    change is shown at its moment.
 8. From a position in the past, fork: a new run, listed beside the first.
 
+## Settled in review
+
+1. **A repeated launch** opens the stored run and offers a new epoch.
+2. **The default store mode** is `full`, to be revisited after P17.1.
+3. **Retention:** a stored run is removed by a person, through the
+   interface. The scenario picker warns when stored runs take a set share of
+   the free space.
+4. **Where the store lives:** under the state folder, shared by every
+   checkout, behind an interface that admits an object-store backend.
+5. **Drafts:** a run of a draft names its installation by digest, kept in the
+   manifest.
+6. **Addresses:** a path for each page.
+7. **Segment length:** 24 hours of simulated time by default.
+
 ## Open questions
 
-1. **A repeated launch.** Launching a run whose seed and inputs match a
-   stored one with no interventions is a new epoch (as a restart is today)
-   or opens the stored one (proposed, with *New epoch* offered).
-2. **The default store mode:** `full` (proposed) or `present`.
-3. **Processes or threads** for the API's workers: decided by P17.1's
-   measurement of what a thread costs a viewer.
-4. **Retention.** What removes a stored run: deletion by a person only
-   (proposed), or also a size limit.
-5. **Where the store lives** and whether it is configurable: the state
-   folder, with a setting (proposed).
-6. **Drafts.** How a run of a draft is opened after the draft changes: by its
-   digest kept in the manifest (proposed) or by keeping the installation in
-   the store.
-7. **Addresses:** a path for each page (proposed), or the hash.
-8. **The default segment and checkpoint length:** a day (proposed), or a
-   multiple of the shortest model step.
-9. **The physical commit:** files renamed into place (proposed) or an
-   embedded database, after P17.1.
+1. **Processes or threads** for the API's workers, and the store's backend,
+   after P17.1's measurements.
+2. **The physical commit** (objects written in order, or an embedded
+   database), after P17.1.
+3. **The `present` mode's retention:** how many segments and checkpoints its
+   promise needs, after P17.1.

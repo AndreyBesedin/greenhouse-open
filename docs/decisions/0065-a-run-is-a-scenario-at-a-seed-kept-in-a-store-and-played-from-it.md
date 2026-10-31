@@ -72,19 +72,27 @@ interface's rules (decision 0040); checkpoints and branches from a day
     and intervention log up to its frontier, extended at each commit and
     checked on reading. It is what tells two epochs of one run apart.
 - **A run is executed into a store.** An epoch is executed by a worker,
-  which writes it to a run store on disk and is the only writer. The API
-  never computes an epoch itself; it reads the store.
+  which writes it to a run store and is the only writer. The API never
+  computes an epoch itself; it reads the store. The store is an interface
+  over named objects (put one whole, get, list, delete), so that a local
+  folder under the state folder, shared by every checkout on the machine,
+  and an S3-compatible object store are interchangeable backends. The first
+  is built first; the second is chosen or not after P17.1's measurements.
 - **The store is divided by simulated instants, not by days.** Records are
   kept in segments, and models' states in checkpoints, each at an instant.
-  A segment's length and the checkpoint interval are settings, a day by
-  default. A checkpoint falls on a step boundary of every model the run has
-  (decisions 0062 and 0064), so a model that steps within a day is restored
-  exactly. Seeking and resuming work to an instant: a restart, or an action
-  within a day, restores the nearest checkpoint at or before it and works
-  forward. The store keeps each model's state as that model declares it and
-  assumes nothing of its shape: a crop grown by plant keeps plants, one grown
-  by area keeps its scopes and what it lived in each of its model's steps,
-  with no plant identifiers and more than one course a day.
+  A segment's length and the checkpoint interval are settings, 24 hours of
+  simulated time (86,400 s) by default; a day here is that span, not the
+  light period. Seeking works to an instant: the nearest checkpoint at or
+  before it is restored and the run works forward.
+- **A checkpoint is a contract with each model,** not a step boundary all
+  models share. At a requested instant a model exports a state sufficient to
+  restart it, its solver's or internal state included, or declares the
+  instants it cannot be checkpointed at and why. The store keeps each model's
+  state as the model declares it and assumes nothing of its shape: a crop
+  grown by plant keeps plants, one grown by area keeps its scopes and what it
+  lived in each of its model's steps (decisions 0062 and 0064), with no plant
+  identifiers and more than one course a day. A checkpoint's cadence never
+  dictates a model's integration cadence.
 - **One commit advances the frontier.** A commit names the segment, the
   checkpoint if there is one, the position reached in the intervention log
   and the trajectory digest so far. A reader sees what the last commit
@@ -96,16 +104,18 @@ interface's rules (decision 0040); checkpoints and branches from a day
   physical (files renamed into place, a database) is left to the
   measurements of P17.1.
 - **Store modes.** `full` keeps every segment and checkpoint, so that any
-  moment up to the frontier can be played. `present` keeps the latest
-  checkpoint and segment and the intervention log: the epoch can be watched
-  at its present, followed and resumed, but not replayed. A run is stored in
-  the mode it was asked for.
+  moment up to the frontier can be played. `present` keeps what its promise
+  needs: enough segments and checkpoints to show the epoch at its present
+  and the observation window it supports, and to resume it if it promises
+  that. How many that takes is a storage policy fixed by P17.1. A run is
+  stored in the mode it was asked for, `full` by default.
 - **Status.** An epoch is `queued`, `running`, `finished`, `failed` (with its
   reason) or `interrupted`: found at startup in `running` with no worker
-  alive. An `interrupted` epoch **resumes** from its last committed
-  checkpoint with the log applied again. Runs are deterministic, so a resumed
-  epoch is the epoch that was never interrupted, and a test holds the
-  trajectory digests equal.
+  alive. An `interrupted` epoch can **resume** from its last committed
+  checkpoint with the log applied again; runs are deterministic, so a
+  resumed epoch is the epoch that was never interrupted, and a test holds
+  the trajectory digests equal. Resuming is a capability delivered after the
+  first (below); the commit and the log are specified now so that it can be.
 - **Workers and many runs.** A worker executes one epoch through one
   interface, `execute(epoch, store, driver)`. A scheduler runs workers up to
   a configured number and queues the rest, so that many runs at different
@@ -138,10 +148,20 @@ interface's rules (decision 0040); checkpoints and branches from a day
   then on. It does not compute what lies before the instant. A layout
   rearranged (#271, decision 0049) is a fork; the epoch it came from stays in
   the store and is still served.
+- **Delivered in order, the contracts fixed now.** The commit, the
+  checkpoint contract, the identities and the intervention log are defined
+  here so that later capabilities do not change what is stored. The
+  capabilities arrive as: (a) completed runs persisted, and a seed that
+  varies; (b) a playback that seeks; (c) concurrent execution, and a
+  frontier that is followed while a run computes; (d) interventions and
+  forks; (e) deterministic recovery of an interrupted run, when the cost of
+  restoring models' states is known. Each is a step of P17 and none is
+  required for the one before.
 - **A place to choose.** The viewer's first page lists the scenarios, with a
   search, and from one of them the stored runs of that scenario, a way to
   launch another (its seed, its store mode, its pace), and the setup builder
-  for a new scenario. A run opens at an address of its own, naming its run
+  for a new scenario, which ends in *save and start a run* or *save and go
+  back*. A run opens at an address of its own, naming its run
   and epoch.
 - **What it supersedes in decisions 0041 and 0049, once accepted:** one
   playback a scenario; one clock that the viewer and a consumer share; a
