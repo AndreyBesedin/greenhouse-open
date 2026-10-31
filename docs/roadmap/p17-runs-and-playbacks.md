@@ -45,6 +45,8 @@ one resumes. The viewer and a consumer read the same stored epoch.
   treats a model's state as opaque, and a checkpoint's scopes come from its
   own layout.
 - **P12, the setup builder:** a draft's installation is named by digest.
+- **DuckDB** (decision 0066), a runtime dependency added by P17.3, to read and
+  write the records' Parquet files.
 
 ## Design
 
@@ -95,14 +97,29 @@ same format serves both. A commit is then an object written after the objects it
 
 - **The manifest:** the initial inputs, the store mode, the status.
 - **Segments:** the epoch's records (observations, events, outcomes) for a
-  span of simulated time.
+  span of simulated time, each log a zstd Parquet file written once, read and
+  written with DuckDB (decision 0066).
 - **Checkpoints:** the models' states at an instant, each as its model
   declares it (plants for a crop grown by plant; for one grown by area its
   scopes with a course for each step before the instant, `AreaCropState`, no
   plant identifiers). The store treats a state as opaque, and a checkpoint's
-  scopes come from its own layout.
-- **The intervention log.**
-- **Commits.**
+  scopes come from its own layout. A checkpoint is an object with a content
+  type: JSON with zstd by default, a columnar or array format a model that
+  keeps a large population declares.
+- **The intervention log:** JSON Lines.
+- **Commits:** small JSON, written last.
+
+```
+store/runs/{run_id}/epochs/{n}/
+  manifest.json            inputs, seed, versions, store mode, status
+  commits/{seq}.json       frontier, the segment and checkpoint named, log position, trajectory digest
+  segments/{t0}-{t1}/
+    observations.parquet
+    events.parquet
+    outcomes.parquet
+  checkpoints/{t}.<ext>    a model's state, opaque, with a content type
+  interventions.jsonl      ordered: sequence number, instant, who, what
+```
 
 Segments and checkpoints are by simulated instant. Their lengths are
 settings, 24 hours of simulated time by default (not the light period).
@@ -193,7 +210,7 @@ days, and a run's records for a given seed.
 | --- | --- | --- | --- |
 | P17.1 | Measurements on the reference greenhouse and on a crop grown by area: a segment's records, a checkpoint's states, time to seek and restore, and what a worker costs a process that is working. The physical commit, the store's first backend, the default interval, the `present` mode's retention and the worker technology fixed from them (below). | `docs(roadmap): the run store's format, from measurements` | Done: measured on one machine; see the measurements |
 | P17.2 | The seed on `RunRequest` and in the identity, without moving an id: a test holds every kept run id and digest. | `feat(sim): a run's seed is its input` | Planned |
-| P17.3 | (a) Completed runs persisted: the store interface and its folder backend, the manifest, segments, checkpoints under the checkpoint contract, commits and the trajectory digest; an epoch executed in the process is written to it; the epoch file moves into it. Several runs of a scenario, at different seeds. | `feat(sim): finished runs are kept in a store` | Planned |
+| P17.3 | (a) Completed runs persisted: the store interface and its folder backend, the manifest, segments as Parquet (adding DuckDB, decision 0066), checkpoints under the checkpoint contract, commits and the trajectory digest; an epoch executed in the process is written to it; the epoch file moves into it. Several runs of a scenario, at different seeds. | `feat(sim): finished runs are kept in a store` | Planned |
 | P17.4 | (b) Playback as a position: seek over a stored epoch, many over one, the API's run routes, the consumer interface and port reading the store. | `feat(api): runs are listed, opened and played from the store` | Planned |
 | P17.5 | The viewer's addresses; the landing page, the scenario picker with search, the run dialog, deletion, the builder's two ending actions. | `feat(viewer): a place to choose a scenario and a run` | Planned |
 | P17.6 | Replay: a timeline over the stored epoch, day navigation, `present` stores. | `feat(viewer): move through a run that has been computed` | Planned |
@@ -265,6 +282,43 @@ worker computing days in a thread of the same interpreter it takes 3.31 to
 2.38 s, within 5% of alone. A thread costs the foreground work half again as
 much; a process costs it almost nothing, on this 8-core machine.
 
+**The records' format.** The same day of 3,888 observations (1.53 MB as JSON):
+
+| Form | Size | Select one type |
+| --- | --- | --- |
+| gzip JSON (kept today) | 49.2 kB | 57 ms (parse the day) |
+| Parquet, zstd (DuckDB) | 24.8 kB | 1.2 ms |
+| Parquet, zstd, sorted by type, sensor, time | 25.6 kB | |
+| Parquet, gzip / snappy | 30.9 kB / 56.0 kB | |
+
+A DuckDB database file held for writing by one process cannot be opened by
+another, read-only included (`Could not set lock on file`), so a viewer could
+not follow an epoch that a worker is computing. DuckDB 2.0.0 installed on
+Python 3.14 (macOS arm64) as a 16.8 MiB wheel.
+
+**Scale: more plants.** The reference greenhouse with 32, 128 and 512 plants
+(rows of the same crop in a larger house, registered in memory; day 1 and 3;
+one run each):
+
+| Plants | Checkpoint day 1: JSON / gzip | A day's observations, gzip | Compute a day's records | State work a day (day 1 to 3) |
+| --- | --- | --- | --- | --- |
+| 32 | 157 kB / 27 kB | 49 kB | 4.5 s | 0.53 s |
+| 128 | 591 kB / 103 kB | 52 kB | 21 s | 2.3 s |
+| 512 | 2.34 MB / 403 kB | 64 kB | 186 s | 18.4 s |
+
+- **Storage is linear in plants.** A checkpoint is about 4.6 kB of JSON a
+  plant at day 1 (0.79 kB gzip) and, from the reference run, 65 kB of JSON (10
+  kB gzip) by day 120. For 10,000 plants that is about 46 MB of JSON at day 1
+  and about 650 MB of JSON (about 100 MB gzip) by day 120; a checkpoint every
+  day of a 120-day run totals about 5.5 GB gzip. A day's observations grow
+  about 30 bytes a plant (about 360 kB a day at 10,000, an extrapolation).
+- **Compute is superlinear.** The cost of a plant a day roughly doubles from
+  128 to 512 plants (records: 0.16 s, then 0.38 s). Extended at the 128 to 512
+  slope, 10,000 plants take about 1.2 hours of records for each simulated
+  day; a fit with a square term gives far more. Three points do not support
+  either; they show that plant-level computation does not reach 10,000 plants
+  as the models are.
+
 ### What the measurements settle
 
 1. **Workers.** The API's workers are processes: a thread slows work in the
@@ -272,9 +326,11 @@ much; a process costs it almost nothing, on this 8-core machine.
    itself (the experiment runner, tests), since nothing else then waits.
 2. **The physical commit.** Objects are written whole, in order, the commit
    last (a folder backend writes each through a temporary name and renames it;
-   an object store puts it). The largest object measured is a day-120
-   checkpoint of 321 kB compressed, so one put holds any object; an embedded
-   database is not needed. A 120-day `full` run is about 240 objects.
+   an object store puts it). No database file is the store. A 120-day `full`
+   run is about 240 objects. The largest measured for the reference and
+   `tomgro_house` is a day-120 checkpoint of 321 kB compressed, so one put holds
+   it; a crop of thousands of plants has checkpoints of hundreds of
+   megabytes, which need a columnar format and a multipart put.
 3. **The first backend** is the folder under the state folder. An object-store
    backend meets no obstacle in these sizes (a few hundred objects a run, none
    over a few hundred kilobytes), and is a later step, taken when a shared
@@ -289,7 +345,14 @@ much; a process costs it almost nothing, on this 8-core machine.
    (`tomgro_house`) to 0.37 MB (reference), against about 24 MB and 11 MB
    for `full`. A batch of runs for training keeps `present`, or a long
    interval, unless its records are the product.
-6. **To watch:** the reference crop's checkpoint grows faster than the day.
+6. **Formats** (decision 0066): records are Parquet with zstd, read and
+   written with DuckDB, half the size and a type selected in 1.2 ms instead of
+   57; a checkpoint is an object its model serializes, with a content type;
+   the manifest, commits and log are small JSON.
+7. **A crop of thousands of plants** is a crop grown by area (decision 0062):
+   its checkpoint depends on its scopes and steps, not its plants, and
+   plant-level computation does not reach 10,000 plants.
+8. **To watch:** the reference crop's checkpoint grows faster than the day.
    If a longer run or a larger crop makes `full` too large, a checkpoint
    that keeps its history compacted is the remedy (decision 0065's
    revisit clause).
@@ -351,7 +414,9 @@ once P17.8 is):
 
 ## Open questions
 
-None open from the design. The first backend, the commit, the interval, the
+One: the columnar format a plant-level model declares for a large
+population's checkpoint, taken when a model needs one. Otherwise none open
+from the design. The first backend, the commit, the interval, the
 `present` mode and the workers are settled by the measurements above; an
 object-store backend and a compacted checkpoint are later steps, taken when a
 deployment or a longer run needs them.
