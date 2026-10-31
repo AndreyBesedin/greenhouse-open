@@ -38,13 +38,13 @@ a policy held at barriers in a process of its own, come later (decision
 import hashlib
 import math
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Final
 
 from greenhouse_protocol.actions import Identifier
-from greenhouse_protocol.budget import InformationBudget
+from greenhouse_protocol.budget import OBSERVATIONS_ONLY, InformationBudget
 from greenhouse_protocol.contracts.consumer import (
     EventBatch,
     ForecastBatch,
@@ -66,6 +66,7 @@ from greenhouse_protocol.outcome import ActionOutcome
 from greenhouse_protocol.plan import Plan, PlannedAction, Principal
 from pydantic import BaseModel, ConfigDict
 
+from greenhouse_sim.services.forecasts import PERSISTENCE, Forecaster
 from greenhouse_sim.services.playback import Playback
 from greenhouse_sim.services.policy_port import RunPolicyPort
 from greenhouse_sim.services.simulator import Simulator
@@ -79,7 +80,8 @@ class Episode:
     """A policy and its principal on a scenario's run, from its start to
     `end_s` into it; `layout`, the scenario's own unless named; each
     decision given `compute_budget_s` of the runner's timer, or any time if
-    None."""
+    None; its policy given `budget`, which the run's port must be able to
+    serve."""
 
     scenario_id: str
     policy: Policy
@@ -88,6 +90,8 @@ class Episode:
     layout: str | None = None
     plan_id: Identifier = PLAN_ID
     compute_budget_s: float | None = None
+    # What it is given besides the observations and the clock.
+    budget: InformationBudget = OBSERVATIONS_ONLY
 
 
 class Given(BaseModel):
@@ -181,10 +185,15 @@ class Steering:
 
 
 def run_episode(
-    simulator: Simulator, episode: Episode, *, timer: Callable[[], float] = time.perf_counter
+    simulator: Simulator,
+    episode: Episode,
+    *,
+    timer: Callable[[], float] = time.perf_counter,
+    forecasters: Sequence[Forecaster] = (PERSISTENCE,),
 ) -> EpisodeSummary:
     """Runs `episode` on a run of its own of the simulator's: see the
-    module. `timer` measures each decision's time against its budget."""
+    module. `timer` measures each decision's time against its budget, and
+    `forecasters` are the providers its budget may name."""
     played = Playback(simulator, episode.scenario_id, layout=episode.layout)
     policy = episode.policy
     if not 0.0 <= episode.end_s <= played.end_s:
@@ -193,7 +202,7 @@ def run_episode(
             f"not at {episode.end_s:.15g} s"
         )
     moments = _decision_moments(policy.decide_every_s, episode.end_s, played.end_s)
-    port = RunPolicyPort(played, episode.principal)
+    port = RunPolicyPort(played, episode.principal, budget=episode.budget, forecasters=forecasters)
     budget = port.budget()
     policy.start(port.context(), budget)
     steering = Steering(port, episode.plan_id)

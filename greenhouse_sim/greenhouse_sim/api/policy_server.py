@@ -39,8 +39,9 @@ from greenhouse_sim.api.server import LOOPBACK, PENDING_CONNECTIONS, JsonHandler
 from greenhouse_sim.services import checkpoints, playback
 from greenhouse_sim.services.credentials import credentials_file, new_credential_for
 from greenhouse_sim.services.errors import InvalidRequest
+from greenhouse_sim.services.forecasts import PERSISTENCE_ID
 from greenhouse_sim.services.gateway import LOCAL_AUTHORISATION, authorisation_file
-from greenhouse_sim.services.policy_requests import ServedPorts
+from greenhouse_sim.services.policy_requests import ServedPorts, served_budget
 from greenhouse_sim.services.simulator import Simulator
 
 DEFAULT_PORT: Final = 8770
@@ -105,6 +106,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument("--hold", action="store_true", help="hold the run's clock at its start")
     parser.add_argument(
+        "--forecasts",
+        choices=(PERSISTENCE_ID,),
+        default=None,
+        help="give the policies this forecast provider's forecasts; by default none",
+    )
+    parser.add_argument(
         "--new-credential",
         metavar="KIND:ID",
         help="make a token for a principal, print it and its credential, and stop",
@@ -137,7 +144,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         epochs=playback.default_epochs(),
     )
     played = playback.playback(simulator, args.scenario)
-    server = PolicyPortServer(ServedPorts(played, credentials), host=args.host, port=args.port)
+    try:
+        budget = served_budget(played, args.forecasts)
+    except InvalidRequest as error:
+        parser.error(error.message)
+    server = PolicyPortServer(
+        ServedPorts(played, credentials, budget=budget), host=args.host, port=args.port
+    )
     host, port = server.server_address[:2]
     print(
         f"a policy's port on {state.run_id}, epoch {state.epoch}, at http://{host!s}:{port}"
