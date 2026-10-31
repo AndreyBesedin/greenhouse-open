@@ -8,9 +8,13 @@ plan, revision and cancellation it gives goes to the run's gateway as that
 principal; the authorisation in force decides the rest. It reads:
 
 - its **context,** the run's for its principal (`policy_context`);
-- its **budget:** the observations and the clock alone. Forecasts come
-  with P15.6, so its forecast log stays empty;
+- its **budget,** given when it is opened: the observations and the clock
+  alone, or also the forecasts of providers the simulator serves
+  (`services.forecasts`). A budget the port cannot serve is refused when
+  it is opened;
 - the run's **observations,** of the types its context's sources observe;
+- the **forecasts** of its budget's providers, each no earlier than it was
+  issued, made from the observations it has read;
 - the run's **events,** each with only the parameters its type lets a
   policy read;
 - the **outcomes** of the plans its principal owns, and those **plans.**
@@ -28,9 +32,10 @@ test. Neither is a sandbox.
 import threading
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Final, Protocol
 
-from greenhouse_protocol.budget import OBSERVATIONS_ONLY, InformationBudget
+from greenhouse_protocol.budget import OBSERVATIONS_ONLY, InformationBasis, InformationBudget
 from greenhouse_protocol.context import CapabilityContext
 from greenhouse_protocol.contracts.consumer import (
     EventBatch,
@@ -40,9 +45,10 @@ from greenhouse_protocol.contracts.consumer import (
     RunDescriptor,
 )
 from greenhouse_protocol.contracts.gateway import PlanState, Receipt
-from greenhouse_protocol.contracts.policy import readable_event
+from greenhouse_protocol.contracts.policy import readable_event, readable_forecast
 from greenhouse_protocol.enums import ObservationType
 from greenhouse_protocol.event import Event
+from greenhouse_protocol.forecast import Forecast
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.outcome import ActionOutcome
 from greenhouse_protocol.plan import ActionKey, Plan, Principal
@@ -53,7 +59,8 @@ from greenhouse_sim.services.consumer import (
     batch_limit,
     run_descriptor,
 )
-from greenhouse_sim.services.errors import NotFound
+from greenhouse_sim.services.errors import InvalidRequest, NotFound
+from greenhouse_sim.services.forecasts import PERSISTENCE, Forecaster
 from greenhouse_sim.services.playback import Playbacks, PlaybackState, RecordsAfter
 
 # How many of the run's records a port reads at once, catching up.
@@ -97,6 +104,16 @@ class _Kept[RecordT]:
     records: list[RecordT] = field(default_factory=list)
 
 
+@dataclass
+class _Issued:
+    """The forecasts its forecasters have issued in an epoch, in the order
+    they were issued, and the moment they were last asked up to."""
+
+    epoch: int = NO_EPOCH
+    until: datetime | None = None
+    forecasts: list[Forecast] = field(default_factory=list)
+
+
 @dataclass(frozen=True)
 class _Cut[RecordT]:
     """A cut of a run's log: its records after a position, the position
@@ -124,14 +141,25 @@ class RunPolicyPort:
     """A policy's port on a run played back, for one principal: see the
     module."""
 
-    def __init__(self, played: PlayedRun, principal: Principal) -> None:
+    def __init__(
+        self,
+        played: PlayedRun,
+        principal: Principal,
+        *,
+        budget: InformationBudget = OBSERVATIONS_ONLY,
+        forecasters: Sequence[Forecaster] = (PERSISTENCE,),
+    ) -> None:
         self._played = played
         self.principal = principal
+        self._budget = budget
+        self._forecasters = self._served(budget, forecasters)
         self._lock = threading.Lock()
         self._cursors = Cursors()
         self._observations: _Kept[Observation] = _Kept()
         self._events: _Kept[Event] = _Kept()
         self._outcomes: _Kept[ActionOutcome] = _Kept()
+        self._forecasts: _Kept[Forecast] = _Kept()
+        self._issued = _Issued()
         # The types its context's sources observe, in an epoch.
         self._observed: tuple[int, frozenset[ObservationType]] = (NO_EPOCH, frozenset())
 
@@ -142,7 +170,7 @@ class RunPolicyPort:
         return self._played.context(self.principal)
 
     def budget(self) -> InformationBudget:
-        return OBSERVATIONS_ONLY
+        return self._budget
 
     def observations(self, after: int = 0, limit: int | None = None) -> ObservationBatch:
         answer = self._answer(
@@ -197,17 +225,22 @@ class RunPolicyPort:
         )
 
     def forecasts(self, after: int = 0, limit: int | None = None) -> ForecastBatch:
-        """None: its budget has no forecast provider."""
-        cursor = batch_cursor(after)
-        batch_limit(limit)
-        state = self._played.state()
+        answer = self._answer(
+            "forecasts",
+            self._forecasts,
+            self._read_forecasts,
+            lambda forecast, _: forecast,
+            after=after,
+            limit=limit,
+        )
         return ForecastBatch(
-            run_id=state.run_id,
-            epoch=state.epoch,
-            after=cursor,
-            next=cursor,
-            simulated_now=state.simulated_now,
-            forecasts=(),
+            run_id=answer.state.run_id,
+            epoch=answer.state.epoch,
+            after=answer.after,
+            next=answer.next,
+            simulated_now=answer.state.simulated_now,
+            has_more=answer.has_more,
+            forecasts=answer.records,
         )
 
     def plan(self, plan_id: str) -> PlanState | None:
@@ -293,6 +326,69 @@ class RunPolicyPort:
         cut, state = self._played.outcomes_after(after, READ_AT_ONCE)
         return _Cut(cut.outcomes, cut.next, cut.has_more, state)
 
+    def _read_forecasts(self, after: int) -> _Cut[Forecast]:
+        """Its forecasters' forecasts, asked for what fell due since they
+        were last asked, from the observations it has read as far as its
+        clock; those of its budget's providers and quantities only."""
+        state = self._caught_up(self._observations, self._read_observations, self._observed_now)
+        if self._issued.epoch != state.epoch:
+            self._issued = _Issued(epoch=state.epoch)
+        issued = self._issued
+        if issued.until is None or state.simulated_now > issued.until:
+            due = [
+                forecast
+                for forecaster in self._forecasters
+                for forecast in forecaster.issue_due(
+                    self._observations.records,
+                    start=state.started_at,
+                    greenhouse_id=state.greenhouse_id,
+                    after=issued.until,
+                    until=state.simulated_now,
+                )
+                if readable_forecast(forecast, self._budget)
+            ]
+            issued.forecasts += sorted(due, key=lambda forecast: forecast.issued_at)
+            issued.until = state.simulated_now
+        return _Cut(issued.forecasts[after:], len(issued.forecasts), False, state)
+
+    def _served(
+        self, budget: InformationBudget, forecasters: Sequence[Forecaster]
+    ) -> tuple[Forecaster, ...]:
+        """The forecasters that serve `budget`'s providers, each as the
+        budget names it; a budget the port cannot serve is refused."""
+        if budget.full_state:
+            raise InvalidRequest("a port does not give a policy the run's full state")
+        serving: list[Forecaster] = []
+        observed = self.context().observed_types() if budget.forecasts else frozenset()
+        for wanted in budget.forecasts:
+            found = next(
+                (f for f in forecasters if f.provider.provider_id == wanted.provider_id), None
+            )
+            if found is None or found.provider.version != wanted.version:
+                raise InvalidRequest(
+                    f"no forecaster serves provider {wanted.provider_id!r} at version "
+                    f"{wanted.version!r}"
+                )
+            offered = found.provider
+            if (
+                offered.basis != wanted.basis
+                or offered.issued_every_s != wanted.issued_every_s
+                or offered.horizon_s != wanted.horizon_s
+                or offered.uncertainty != wanted.uncertainty
+                or not wanted.quantities <= offered.quantities
+            ):
+                raise InvalidRequest(
+                    f"provider {wanted.provider_id!r} is not served as the budget names it"
+                )
+            unobserved = wanted.quantities - observed
+            if wanted.basis == InformationBasis.OBSERVED and unobserved:
+                raise InvalidRequest(
+                    f"provider {wanted.provider_id!r} is made from observations, and the run "
+                    f"observes no {sorted(unobserved)}"
+                )
+            serving.append(found)
+        return tuple(serving)
+
     def _observed_now(self, observation: Observation, epoch: int) -> Observation | None:
         if self._observed[0] != epoch:
             self._observed = (epoch, self.context().observed_types())
@@ -302,7 +398,13 @@ class RunPolicyPort:
         return outcome if self._played.owner_of(outcome) == self.principal else None
 
 
-def policy_port(playbacks: Playbacks, run_id: str, principal: Principal) -> RunPolicyPort:
-    """A port for `principal` on the run `run_id` played back; a run not
-    played back is not found."""
-    return RunPolicyPort(playbacks.of_run(run_id), principal)
+def policy_port(
+    playbacks: Playbacks,
+    run_id: str,
+    principal: Principal,
+    *,
+    budget: InformationBudget = OBSERVATIONS_ONLY,
+) -> RunPolicyPort:
+    """A port for `principal` on the run `run_id` played back, under
+    `budget`; a run not played back is not found."""
+    return RunPolicyPort(playbacks.of_run(run_id), principal, budget=budget)

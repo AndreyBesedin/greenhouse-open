@@ -92,6 +92,7 @@ def test_ground_truth_is_read_only_by_the_simulators_evaluation() -> None:
 # local API.
 POLICY_PORT_MODULES: Final = (
     "greenhouse_sim/greenhouse_sim/services/policy_port.py",
+    "greenhouse_sim/greenhouse_sim/services/forecasts.py",
     "greenhouse_sim/greenhouse_sim/services/policy_context.py",
 )
 NOT_A_POLICYS: Final = (

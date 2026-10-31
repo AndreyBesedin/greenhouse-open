@@ -19,6 +19,13 @@ from urllib.request import Request, urlopen
 import pytest
 from greenhouse_protocol.actions import SetLevel
 from greenhouse_protocol.authorisation import AuthorisationConfig
+from greenhouse_protocol.budget import (
+    OBSERVATIONS_ONLY,
+    ForecastProvider,
+    ForecastUncertainty,
+    InformationBasis,
+    InformationBudget,
+)
 from greenhouse_protocol.context import CapabilityContext
 from greenhouse_protocol.contracts.consumer import OutcomeBatch, check_polls
 from greenhouse_protocol.contracts.gateway import STARTED_OVER, PlanState, Receipt
@@ -31,7 +38,9 @@ from greenhouse_protocol.contracts.policy import (
     conformance_policy_authorisation,
 )
 from greenhouse_protocol.contracts.policy_client import HttpPolicyPort, PortRefused
+from greenhouse_protocol.enums import ObservationType
 from greenhouse_protocol.event import Event
+from greenhouse_protocol.forecast import Forecast
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.outcome import ActionOutcome, OutcomeStatus
 from greenhouse_protocol.plan import ActionKey, At, Plan, PlannedAction, Principal
@@ -47,6 +56,12 @@ from greenhouse_sim.services.credentials import (
     new_credential_for,
 )
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
+from greenhouse_sim.services.forecasts import (
+    PERSISTED,
+    PERSISTENCE,
+    Forecaster,
+    persistence_budget,
+)
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR
 from greenhouse_sim.services.playback import (
     Playback,
@@ -55,9 +70,10 @@ from greenhouse_sim.services.playback import (
     RecordsAfter,
     delivered,
 )
-from greenhouse_sim.services.policy_port import PlayedRun, RunPolicyPort, policy_port
+from greenhouse_sim.services.policy_port import RunPolicyPort, policy_port
 from greenhouse_sim.services.policy_requests import ServedPorts
 from greenhouse_sim.services.simulator import Simulator
+from greenhouse_sim.units import DAY_S
 
 # Its run's days cost next to nothing, and it has doors to set.
 SCENARIO: Final = "airflow_box"
@@ -65,13 +81,42 @@ SECONDS_PER_DAY: Final = 24.0
 HOUR: Final = timedelta(hours=1)
 
 
+class _Delivered:
+    """A forecaster of the forecasts a test delivers: each is issued once
+    the clock reaches its issue, whatever the port has read of it."""
+
+    def __init__(self, provider: ForecastProvider) -> None:
+        self.provider = provider
+        self._pending: list[Forecast] = []
+
+    def deliver(self, forecasts: Sequence[Forecast]) -> None:
+        self._pending += forecasts
+
+    def issue_due(
+        self,
+        observed: Sequence[Observation],
+        *,
+        start: datetime,
+        greenhouse_id: str,
+        after: datetime | None,
+        until: datetime,
+    ) -> list[Forecast]:
+        due = sorted((f for f in self._pending if f.issued_at <= until), key=lambda f: f.issued_at)
+        self._pending = [f for f in self._pending if f.issued_at > until]
+        return due
+
+
 class _Delivering:
     """A playback, stepped by a test, whose logs also take the records the
     test delivers: each joins its log once the clock reaches its delivery,
     in delivery order, as its producer's do."""
 
-    def __init__(self, played: Playback) -> None:
+    def __init__(self, played: Playback, budget: InformationBudget = OBSERVATIONS_ONLY) -> None:
         self.played = played
+        self.budget = budget
+        # The providers a test delivers forecasts for are a weather
+        # service's, not made from the run.
+        self.forecasters = tuple(_Delivered(provider) for provider in budget.forecasts)
         self._pending: list[Observation | Event] = []
         self._epoch = played.state().epoch
         self._observations: list[Observation] = []
@@ -82,8 +127,9 @@ class _Delivering:
         self.starts_over_to_s: float | None = None
 
     def deliver(self, records: Sequence[Delivered]) -> None:
-        # The port has no forecast log: its budget names no provider.
         self._pending += [r for r in records if isinstance(r, Observation | Event)]
+        for forecaster in self.forecasters:
+            forecaster.deliver([r for r in records if isinstance(r, Forecast)])
 
     def advance(self, to: datetime) -> None:
         self.played.step_to((to - self.played.start).total_seconds())
@@ -165,7 +211,7 @@ class _Harness(RunPolicyPort):
     """A port on a run a test steps and delivers records to."""
 
     def __init__(self, run: _Delivering, principal: Principal) -> None:
-        super().__init__(run, principal)
+        super().__init__(run, principal, budget=run.budget, forecasters=run.forecasters)
         self._delivering = run
 
     def advance(self, to: datetime) -> None:
@@ -175,19 +221,26 @@ class _Harness(RunPolicyPort):
         self._delivering.deliver(records)
 
     def open(self, principal: Principal) -> PolicyPort:
-        return RunPolicyPort(self._delivering, principal)
+        return RunPolicyPort(
+            self._delivering,
+            principal,
+            budget=self._delivering.budget,
+            forecasters=self._delivering.forecasters,
+        )
 
 
 def _port(
     simulator: Simulator,
     scenario_id: str = SCENARIO,
     authorisation: AuthorisationConfig | None = None,
+    budget: InformationBudget = OBSERVATIONS_ONLY,
 ) -> tuple[_Harness, Playback]:
     """A port for `POLICY` on a new playback of a scenario's run, played by
-    a test, under the conformance check's authorisation or `authorisation`."""
+    a test, under the conformance check's authorisation or `authorisation`,
+    and `budget`."""
     played = Playback(simulator, scenario_id)
     played.authorise(authorisation or conformance_policy_authorisation())
-    return _Harness(_Delivering(played), POLICY), played
+    return _Harness(_Delivering(played, budget), POLICY), played
 
 
 @pytest.mark.parametrize(
@@ -198,6 +251,135 @@ def test_a_port_on_a_run_keeps_the_contract(simulator: Simulator, scenario_id: s
         return _port(simulator, scenario_id, authorisation)[0]
 
     assert check_policy_port(make, Playback(simulator, scenario_id).start) == []
+
+
+# What a weather service forecasts, to a run that is not made of it.
+WEATHER_SERVICE: Final = InformationBudget(
+    budget_id="weather_service",
+    forecasts=(
+        ForecastProvider(
+            provider_id="weather_service",
+            version="2",
+            basis=InformationBasis.EXTERNAL,
+            quantities=frozenset({ObservationType.OUTSIDE_AIR_TEMPERATURE_C}),
+            issued_every_s=HOUR.total_seconds(),
+            horizon_s=DAY_S,
+            uncertainty=ForecastUncertainty.NONE,
+        ),
+    ),
+)
+
+
+def test_a_port_with_forecasts_keeps_the_contract(simulator: Simulator) -> None:
+    def make(authorisation: AuthorisationConfig, start: datetime) -> _Harness:
+        return _port(simulator, authorisation=authorisation, budget=WEATHER_SERVICE)[0]
+
+    assert check_policy_port(make, Playback(simulator, SCENARIO).start) == []
+
+
+def _forecast(issued_at: datetime, name: str = "f") -> Forecast:
+    return Forecast(
+        forecast_id=name,
+        greenhouse_id="airflow_box",
+        provider_id="weather_service",
+        provider_version="2",
+        issued_at=issued_at,
+        valid_from=issued_at + HOUR,
+        valid_until=issued_at + 2 * HOUR,
+        quantity=ObservationType.OUTSIDE_AIR_TEMPERATURE_C,
+        value=12.5,
+    )
+
+
+def test_a_forecast_reaches_the_port_no_earlier_than_it_was_issued(simulator: Simulator) -> None:
+    port, played = _port(simulator, budget=WEATHER_SERVICE)
+    port.deliver([_forecast(played.start + 2 * HOUR)])
+
+    port.advance(played.start + HOUR)
+    early = port.forecasts()
+    port.advance(played.start + 2 * HOUR)
+    on_time = port.forecasts(after=early.next)
+
+    assert early.forecasts == ()
+    assert [f.forecast_id for f in on_time.forecasts] == ["f"]
+    assert on_time.simulated_now == played.start + 2 * HOUR
+    assert port.forecasts(after=7).forecasts == ()
+
+
+def test_a_new_epoch_starts_the_forecasts_again(simulator: Simulator) -> None:
+    port, played = _port(simulator, budget=WEATHER_SERVICE)
+    port.deliver([_forecast(played.start + HOUR)])
+    port.advance(played.start + HOUR)
+    before = port.forecasts()
+    assert [f.forecast_id for f in before.forecasts] == ["f"]
+
+    played.command(PlaybackCommand.RESTART)
+    played.command(PlaybackCommand.PAUSE)
+    port.advance(played.start + HOUR)
+    after = port.forecasts(after=before.next)
+
+    assert (after.epoch, after.forecasts) == (before.epoch + 1, ())
+    assert check_polls([before, after], greenhouse_id=port.run().greenhouse_id) == []
+
+
+def test_the_same_forecasts_are_read_by_either_transport(simulator: Simulator) -> None:
+    near, played = _port(simulator, budget=WEATHER_SERVICE)
+    far_port, _ = _port(simulator, budget=WEATHER_SERVICE)
+    with _served(far_port._delivering, [POLICY]) as (url, tokens):
+        far = HttpPolicyPort(url, tokens[POLICY])
+        for port in (near, far_port):
+            port.deliver([_forecast(played.start + HOUR)])
+            port.advance(played.start + HOUR)
+        batches = [port.forecasts().model_dump(exclude={"run_id"}) for port in (near, far)]
+        assert far.budget() == near.budget() == WEATHER_SERVICE
+
+    assert batches[0] == batches[1]
+    assert batches[0]["forecasts"] != ()
+
+
+def test_a_budget_the_port_cannot_serve_is_refused_when_it_is_opened(
+    simulator: Simulator,
+) -> None:
+    played = Playback(simulator, SCENARIO)
+    (served,) = WEATHER_SERVICE.forecasts
+
+    def refused(budget: InformationBudget, *forecasters: Forecaster) -> str:
+        with pytest.raises(InvalidRequest) as error:
+            RunPolicyPort(played, POLICY, budget=budget, forecasters=forecasters)
+        return error.value.message
+
+    def named(**changes: object) -> InformationBudget:
+        provider = served.model_copy(update=changes)
+        return InformationBudget(budget_id="other", forecasts=(provider,))
+
+    nobody = refused(WEATHER_SERVICE)
+    assert "no forecaster serves" in nobody
+    service = _Delivered(served)
+    assert "no forecaster serves" in refused(named(version="3"), service)
+    assert "not served as the budget names it" in refused(
+        named(horizon_s=served.horizon_s * 2), service
+    )
+    assert "not served as the budget names it" in refused(
+        named(quantities=frozenset({ObservationType.OUTSIDE_WIND_SPEED_M_S})), service
+    )
+    assert "full state" in refused(InformationBudget(budget_id="all", full_state=True, oracle=True))
+    # Made from observations the run does not make: the airflow box has no
+    # weather station.
+    assert "observes no" in refused(persistence_budget(PERSISTED), PERSISTENCE)
+    # Named as it is served, it is opened.
+    assert RunPolicyPort(played, POLICY, budget=WEATHER_SERVICE, forecasters=(service,))
+
+
+def test_a_budget_that_gives_the_truth_is_labelled_an_oracle() -> None:
+    (served,) = WEATHER_SERVICE.forecasts
+    oracle = served.model_copy(update={"basis": InformationBasis.PRIVILEGED})
+
+    with pytest.raises(ValueError, match="labelled an oracle"):
+        InformationBudget(budget_id="future", forecasts=(oracle,))
+    with pytest.raises(ValueError, match="labelled an oracle"):
+        InformationBudget(budget_id="future", forecasts=(served,), oracle=True)
+    assert InformationBudget(budget_id="future", forecasts=(oracle,), oracle=True).oracle
+    assert not WEATHER_SERVICE.oracle
 
 
 def test_a_cursor_the_port_never_gave_is_answered_with_nothing(simulator: Simulator) -> None:
@@ -325,7 +507,7 @@ def test_a_port_is_opened_on_a_run_played_back(
 
 @contextmanager
 def _served(
-    run: PlayedRun, principals: Sequence[Principal], *, role: Role = Role.POLICY
+    run: _Delivering, principals: Sequence[Principal], *, role: Role = Role.POLICY
 ) -> Iterator[tuple[str, dict[Principal, str]]]:
     """A port's server on `run`, its credentials one token for each of
     `principals`, in `role`: its root URL, and each principal's token."""
@@ -334,7 +516,14 @@ def _served(
     for principal in principals:
         tokens[principal], credential = new_credential(principal, role)
         credentials.append(credential)
-    server = PolicyPortServer(ServedPorts(run, Credentials(credentials=tuple(credentials))))
+    server = PolicyPortServer(
+        ServedPorts(
+            run,
+            Credentials(credentials=tuple(credentials)),
+            budget=run.budget,
+            forecasters=run.forecasters,
+        )
+    )
     serving = threading.Thread(target=server.serve_forever, daemon=True)
     serving.start()
     host, port = server.server_address[:2]
@@ -362,11 +551,14 @@ class _OverHttp(HttpPolicyPort):
         return HttpPolicyPort(self._url, self._tokens[principal])
 
 
-def test_a_port_over_the_network_keeps_the_contract(simulator: Simulator) -> None:
+@pytest.mark.parametrize("budget", [OBSERVATIONS_ONLY, WEATHER_SERVICE])
+def test_a_port_over_the_network_keeps_the_contract(
+    simulator: Simulator, budget: InformationBudget
+) -> None:
     with ExitStack() as servers:
 
         def make(authorisation: AuthorisationConfig, start: datetime) -> _OverHttp:
-            harness, _ = _port(simulator, SCENARIO, authorisation)
+            harness, _ = _port(simulator, SCENARIO, authorisation, budget)
             run = harness._delivering
             url, tokens = servers.enter_context(_served(run, [POLICY, RIVAL]))
             return _OverHttp(url, tokens, run)

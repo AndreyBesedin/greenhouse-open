@@ -17,9 +17,10 @@ why.
 """
 
 import threading
+from collections.abc import Sequence
 from typing import Final
 
-from greenhouse_protocol.budget import InformationBudget
+from greenhouse_protocol.budget import OBSERVATIONS_ONLY, InformationBudget
 from greenhouse_protocol.context import CapabilityContext
 from greenhouse_protocol.contracts.consumer import (
     EventBatch,
@@ -42,6 +43,13 @@ from greenhouse_sim.services.errors import (
     Unauthenticated,
     read_as,
 )
+from greenhouse_sim.services.forecasts import (
+    PERSISTENCE,
+    PERSISTENCE_ID,
+    Forecaster,
+    persistence_budget,
+)
+from greenhouse_sim.services.gateway import LOCAL_OPERATOR
 from greenhouse_sim.services.policy_port import PlayedRun, RunPolicyPort
 
 # Where a policy's port's routes live: `/policy/v1`.
@@ -52,12 +60,32 @@ BEARER: Final = "Bearer "
 _KEYS: Final = TypeAdapter(tuple[ActionKey, ...])
 
 
+def served_budget(played: PlayedRun, forecasts: str | None) -> InformationBudget:
+    """The budget a run's policies are given: the observations and the
+    clock alone, or also the forecasts of the provider `forecasts` names,
+    of the quantities the run observes."""
+    if forecasts is None:
+        return OBSERVATIONS_ONLY
+    if forecasts != PERSISTENCE_ID:
+        raise InvalidRequest(f"no forecast provider {forecasts!r}: {PERSISTENCE_ID!r}")
+    return persistence_budget(played.context(LOCAL_OPERATOR).observed_types())
+
+
 class ServedPorts:
     """The ports a server serves on one run: see the module."""
 
-    def __init__(self, played: PlayedRun, credentials: Credentials) -> None:
+    def __init__(
+        self,
+        played: PlayedRun,
+        credentials: Credentials,
+        *,
+        budget: InformationBudget = OBSERVATIONS_ONLY,
+        forecasters: Sequence[Forecaster] = (PERSISTENCE,),
+    ) -> None:
         self._played = played
         self._credentials = credentials
+        self._budget = budget
+        self._forecasters = forecasters
         self._lock = threading.Lock()
         self._ports: dict[Principal, RunPolicyPort] = {}
 
@@ -76,7 +104,10 @@ class ServedPorts:
             found = self._ports.get(credential.principal)
             if found is None:
                 found = self._ports[credential.principal] = RunPolicyPort(
-                    self._played, credential.principal
+                    self._played,
+                    credential.principal,
+                    budget=self._budget,
+                    forecasters=self._forecasters,
                 )
             return found
 

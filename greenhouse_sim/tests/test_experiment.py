@@ -3,14 +3,20 @@ stepped to a moment in the caller's thread, and a policy steering a run
 through its port at the runner's barriers, deterministically when the
 policy is, its stale revisions given again, its slow decisions skipped."""
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from datetime import datetime, timedelta
 from typing import Final
 
 import pytest
 from greenhouse_protocol.actions import ActionKind, SetLevel
 from greenhouse_protocol.authorisation import AuthorisationConfig, AuthorisationGroup, Grant
-from greenhouse_protocol.budget import InformationBudget
+from greenhouse_protocol.budget import (
+    OBSERVATIONS_ONLY,
+    ForecastProvider,
+    ForecastUncertainty,
+    InformationBasis,
+    InformationBudget,
+)
 from greenhouse_protocol.context import CapabilityContext
 from greenhouse_protocol.contracts.policy import (
     CancelPlan,
@@ -19,6 +25,9 @@ from greenhouse_protocol.contracts.policy import (
     PolicyIdentity,
     Revise,
 )
+from greenhouse_protocol.enums import ObservationType
+from greenhouse_protocol.forecast import Forecast
+from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.outcome import OutcomeStatus
 from greenhouse_protocol.plan import Asap, At, Plan, PlannedAction, Principal, PrincipalKind
 
@@ -147,6 +156,60 @@ def test_the_same_policy_on_the_same_scenario_gives_the_same_episode(
     assert again.digest == first.digest
     assert again.model_dump(exclude={"digest"}) == first.model_dump(exclude={"digest"})
     assert other.digest != first.digest
+
+
+class _Foresight:
+    """A forecaster of the run's future truth: one forecast of the outside
+    air's temperature at each moment it is asked, for the hour after."""
+
+    provider = ForecastProvider(
+        provider_id="foresight",
+        version="1",
+        basis=InformationBasis.PRIVILEGED,
+        quantities=frozenset({ObservationType.OUTSIDE_AIR_TEMPERATURE_C}),
+        issued_every_s=HOUR_S,
+        horizon_s=HOUR_S,
+        uncertainty=ForecastUncertainty.NONE,
+    )
+
+    def issue_due(
+        self,
+        observed: Sequence[Observation],
+        *,
+        start: datetime,
+        greenhouse_id: str,
+        after: datetime | None,
+        until: datetime,
+    ) -> list[Forecast]:
+        return [
+            Forecast(
+                forecast_id=f"foresight-{int((until - start).total_seconds())}",
+                greenhouse_id=greenhouse_id,
+                provider_id="foresight",
+                provider_version="1",
+                issued_at=until,
+                valid_from=until,
+                valid_until=until + timedelta(hours=1),
+                quantity=ObservationType.OUTSIDE_AIR_TEMPERATURE_C,
+                value=20.0,
+            )
+        ]
+
+
+def test_an_episode_says_what_it_gave_its_policy_and_an_oracle_is_labelled(
+    simulator: Simulator,
+) -> None:
+    oracle = InformationBudget(budget_id="foresight", forecasts=(_Foresight.provider,), oracle=True)
+
+    given = run_episode(simulator, _episode(_Doors(), budget=oracle), forecasters=(_Foresight(),))
+    plain = run_episode(simulator, _episode(_Doors()))
+
+    assert (given.budget, given.budget.oracle) == (oracle, True)
+    assert (plain.budget, plain.budget.oracle) == (OBSERVATIONS_ONLY, False)
+    assert given.digest != plain.digest
+    # A run is not given a budget that names a provider it does not serve.
+    with pytest.raises(InvalidRequest, match="no forecaster serves"):
+        run_episode(simulator, _episode(_Doors(), budget=oracle))
 
 
 def test_a_decision_past_its_compute_budget_is_skipped_and_recorded(

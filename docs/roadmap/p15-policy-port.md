@@ -1,6 +1,6 @@
 # P15: A policy's port, and an experiment that steps a run
 
-**Status:** in progress: P15.1 to P15.5 done. Stage A of decision
+**Status:** in progress: P15.1 to P15.6 done. Stage A of decision
 [0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md).
 Part of the [simulator roadmap](README.md).
 
@@ -205,10 +205,13 @@ earlier than its delivery.
 - **None is the simulator's future truth.** A budget that gives the full
   state, or a forecast with no error, is labelled an oracle, and an
   experiment compares only budgets alike.
-- **The first provider:** persistence, which forecasts the outside air and
-  radiation of the next day from what was observed on the last. It uses
-  observations alone, so a policy given it has nothing a matched baseline
-  could not have.
+- **The first provider:** persistence, which forecasts each hour of the
+  next day's outside air as the same hour of the last was observed, from
+  the readings delivered by the day's start. It uses observations alone,
+  so a policy given it has nothing a matched baseline could not have. It
+  forecasts the outside quantities a run's weather station reads, the air's
+  temperature and relative humidity; the simulator delivers no reading of
+  outside radiation, so none is forecast until a source of one exists.
 - **`FORECAST_RADIATION_SUM_TODAY_J_CM2`** stays an observation type, for
   recorded data that carries a forecast as a reading (AGC4). A simulated
   forecast is a `Forecast`.
@@ -285,7 +288,7 @@ digest or kept opening day moves.
 | P15.3 | The policy's port in the process: bound to a principal, its own cursors, the allowlist applied, its outcomes and plans only; the conformance tests and the dependency test. | `feat(sim): a policy's port in the process` | Done: `services.policy_port.RunPolicyPort` on a playback, opened by `policy_port(playbacks, run_id, principal)`. Its logs are its own: each keeps what its principal reads of the run's log, read on as far as the clock, its cursors given and checked apart from the consumer interface's, by the same rules, and started again in a new epoch. Its budget is the observations and the clock alone, so its forecast log is empty until P15.6. It keeps `check_policy_port` on the airflow box in the fast pass and the climate box in the slow one, through a harness that steps the playback and delivers records into its logs as its producer does. A test of the repository's dependencies keeps its modules from importing the ground truth, the evaluation, the air's fields and flows, the crop's state, the weather's series, the scene, the timeline and the local API |
 | P15.4 | The experiment runner: `step_to`, the barriers, the lifecycle, the determinism test; example 03 on it. | `feat(sim): an experiment that steps a run` | Done: `Playback.step_to`, which works a run out to a moment and moves its clock there in the caller's thread, a change of its plan worked in before the clock passes it, for a playback that neither plays nor works on its own. `greenhouse_sim.experiment.run_episode` runs an `Episode`: a scenario, a policy and its principal, its end, and a compute budget. At each decision moment through the episode's end, but not at the run's own, it advances, observes (a `Delivery` from the port) and acts (a revision or a cancellation of the one plan it names, given through the port by `Steering`, which gives a revision refused as stale once more after the one in force). A decision past its budget is skipped and recorded. After the last decision it steps on to the episode's end; a cadence that would not move the clock, or an end past the run's, is refused. It returns an `EpisodeSummary`, whose digest covers every delivery, receipt and outcome; the same policy on the same scenario gives the same one. The run's randomness is its scenario's seed: an episode's own seed waits for scenarios that vary it (stage B). Example 03 runs on it, naming its heater and sensor from its context, with no clock moved by hand and nothing waiting |
 | P15.5 | The port over the network: its own server and command, the credentials file, the roles, a client in the protocol; the same receipt by either transport. | `feat(api): a policy's port over the network` | Done: `python -m greenhouse_sim.api.policy_server --scenario … --credentials …` plays a scenario's run and serves its port alone, on loopback unless told another host, its routes (`api.policy`) reaching the simulator through `services.policy_requests` alone. Its credentials file holds, for each principal, its role and its bearer token's SHA-256, never the token (`services.credentials`; `--new-credential kind:id` makes one); a request without a token it holds is `401`, an operator's or an evaluator's `403`, and every route of the local API `404`. Each policy has a port of its own, kept from one request to the next. `greenhouse_protocol.contracts.policy_client.HttpPolicyPort` is the client, on the standard library alone. The conformance check passes over HTTP; the same plans give the same receipts by either transport |
-| P15.6 | The information budget: forecasts on the port, persistence as the first provider, the oracle label. | `feat(sim): forecasts in a policy's budget` | Planned |
+| P15.6 | The information budget: forecasts on the port, persistence as the first provider, the oracle label. | `feat(sim): forecasts in a policy's budget` | Done: a port is opened under a budget (`RunPolicyPort(budget=…)`, `Episode.budget`, `--forecasts persistence` on the port's server), the observations and the clock alone by default, so no run id, digest or delivery moves. A budget the port cannot serve is refused when it is opened: a provider no forecaster serves, or at another version, horizon or cadence than the budget names; a quantity of an observed provider that the run does not observe; the full state. Its forecast log is its fourth, with the consumer interface's cursor rules, started again in a new epoch. `services.forecasts` holds the forecasters and persistence (`persistence_budget`, naming the outside quantities the run observes): at each day's start after the first, an hourly forecast of the day ahead, a period's mean as the last day's was, from readings delivered by then, with no stated uncertainty. A forecast reaches a policy no earlier than its issue, and the port drops one outside its budget's providers and quantities. The conformance check passes with a forecasting budget in the process and over HTTP; the summary of an episode carries its budget, whose oracle label is checked by the record. On the climate box, a policy's forecasts equal the means of the readings it was given, and the same episode gives the same digest |
 | P15.7 | The QA scenario below, run and recorded. | `test: a policy in its own process steers a run` | Planned |
 
 ## Acceptance criteria
@@ -329,6 +332,8 @@ On the reference greenhouse:
    (proposed), or in `greenhouse_adapters`.
 2. **The credentials:** a file of hashed bearer tokens given to the
    server (proposed), or mutual TLS from the start.
-3. **The first forecast provider:** persistence alone (proposed), or also
-   a forecast made from the scenario's weather with a declared error
-   model, labelled as derived from the future's truth.
+3. **The first forecast provider:** persistence alone, answered in P15.6.
+   A forecast made from the scenario's weather with a declared error model,
+   labelled as derived from the future's truth, is left to a later step; a
+   forecaster of that kind is a `Forecaster` with a privileged basis, and a
+   budget that names it is labelled an oracle.
