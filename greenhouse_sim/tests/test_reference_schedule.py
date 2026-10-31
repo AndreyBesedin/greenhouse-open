@@ -54,8 +54,14 @@ def test_the_reference_run_vents_and_stirs_its_house_by_the_clock_and_heats_it_b
         "roof_vent_2",
         "roof_vent_3",
     }
-    # Every other scenario's runs give none of their own.
-    others = [s for s in SCENARIO_REGISTRY.values() if s is not REFERENCE]
+    # Every other scenario's runs give none of their own, but the TOMGRO
+    # house's, which keeps the reference greenhouse's.
+    assert SCENARIO_REGISTRY["tomgro_house"].daily == REFERENCE.daily
+    others = [
+        s
+        for s in SCENARIO_REGISTRY.values()
+        if s.greenhouse_id not in (REFERENCE.greenhouse_id, "tomgro_house")
+    ]
     assert all(other.daily == [] for other in others)
 
 

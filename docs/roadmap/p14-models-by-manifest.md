@@ -234,7 +234,7 @@ the audit asks: **the simple crop as a rung of the run.**
 | P14.7 | **The recipes and the QA:** the guides (`add-a-plant-model`, `add-an-air-model`, `add-a-device`, `add-a-sensor-kind`) rewritten for the registry; the QA scenario below. | Done for the recipes: a plant model registered as the registry and its registration's declarations have it (`PlantAdapter`, `CropActions`), with a pointer to the area-based contract of P14.9; a model of the house's air beside `grid` and `whole_house`, its parameters, its days and its choice; a device as a kind registered by itself, acted on by its capabilities; a sensor kind as an instrument of the sensors' one model, with its truth; and the recipes' index naming each part's models. The QA scenario stays proposed: its fogger needs a capability that adds water to the air, which no device has yet |
 | P14.8 | **The crop part generalised ([0062](../decisions/0062-a-crop-model-declares-its-scope-drivers-outputs-and-capabilities.md), milestone B's first phase):** a pure refactor, with the simple and organ models alone. First, the registration as declarations: what a model that grows single plants is asked of them, a typed adapter, and the run's own crop actions it takes, by kind, routed by them; no service asks which model it holds. Then the run's crop over instances, each a model on a spatial scope, its plants keeping their ids. Every pinned run id, the reference greenhouse's opening day and its replay's day digests unchanged, and `test_crop_rungs.py` as it stands. | Done: the registration's declarations (`services.crop_models`: `PlantAdapter`, `CropActions`), the gateway and the run routing crop actions by the kinds a model declares, and a test that no service names a model's rung or the simple crop's plants; and what every run's crop keeps of its days, whatever grows it (`core.crop_days.CropDays` and its `Growth`, `core.crop_steps.CropSteps` since P16.1), the per-plant crop one growth on it (`core.crop.PlantGrowth`, `RunCrop`). No pin moved. The instances come with their scopes in P14.9: a per-plant crop's instance is its row, read from its layout, so its checkpoint state stays its plants and needs no new format; an area-based crop's state, per instance, is a member of the crop's state of its own |
 | P14.9 | **A crop grown by area:** the area-based contract beside the per-plant one; a scope's geometry and areas, with every conversion to a model's reference area explicit and conserved across layouts; the first driver profile (the whole house's air hour by hour, the PAR above a scope); a measurement part of the registry; each in its own pull request, before any area-based model. | Done but for the measurement part of the registry: the area-based contract (`biology.area_contract`: `AreaRung`, `DayCourse`, `HourDrivers`) and the run's crop of it (`core.area_crop.AreaCrop`, #415); a scope per row, its cultivated area and floor kept apart, with the explicit conversions between them (`world.scopes`, #412); the PAR above a scope's canopy (`solar.scopes.ScopeLight`, #414); and the first driver profile, `house_hours` version 1, the whole house's air hour by hour (`core.drivers`, #415). |
-| P14.10 | **The two published models as crop models of the run** ([0060](../decisions/0060-two-published-tomato-models-become-crop-models-of-the-run.md), milestone B): Reduced-State TOMGRO, then Vanthoor's model as Katzin simplified it, each from its reproduction (milestone A), on a scope per row, registered with its version and named parameter set, held to the area-based contract test, and shown in a documented scenario, its outputs labelled predictions. | In progress: Reduced-State TOMGRO as an area-based model, held to its reproduction's reference output on every state and day (`biology.tomato.tomgro`, `core.tomgro_crop.TomgroRung`, #416), not yet chosen by a scenario. |
+| P14.10 | **The two published models as crop models of the run** ([0060](../decisions/0060-two-published-tomato-models-become-crop-models-of-the-run.md), milestone B): Reduced-State TOMGRO, then Vanthoor's model as Katzin simplified it, each from its reproduction (milestone A), on a scope per row, registered with its version and named parameter set, held to the area-based contract test, and shown in a documented scenario, its outputs labelled predictions. | In progress: Reduced-State TOMGRO as an area-based model, held to its reproduction's reference output on every state and day (`biology.tomato.tomgro`, `core.tomgro_crop.TomgroRung`, #416); registered, its rows a scenario's choice (#432); drawn as each row's canopy, a proxy (#433); and grown in the TOMGRO house, whose season is documented below. Still to come: the driver profile's effect measured against the reproduction's forcing, and Vanthoor's model. |
 
 ## Settled in P14.5
 
@@ -275,6 +275,58 @@ the audit asks: **the simple crop as a rung of the run.**
   rating by what it is for, and it is drawn by its shape, with the arrow
   of the air it moves on a cylinder that moves air. A device of a kind
   the viewer was not built with is drawn, named and listed the same way.
+
+## Reduced-State TOMGRO in a season (P14.10)
+
+The TOMGRO house (`greenhouse_sim/greenhouse_sim/scenarios/manifests/tomgro_house.json`)
+is the reference greenhouse's house, season, daily schedule and controller,
+its four rows growing Reduced-State TOMGRO by area, each row a scope
+([0062](../decisions/0062-a-crop-model-declares-its-scope-drivers-outputs-and-capabilities.md)).
+It differs from the reference greenhouse in four ways:
+
+- **Its crop:** the model with Oliveira et al.'s `gnvman` parameter set,
+  driven through the `house_hours` profile, version 1, its canopy's light
+  read 2 m above its planting positions. It takes no crop work.
+- **Its house's air:** the whole house alone, one well-mixed volume
+  (`whole_house`), which gives the crop the house's mean air hour by hour
+  as the grid does, at a fraction of the grid's cost. Its season's crop
+  takes some two and a half minutes.
+- **Its seed:** 4201, its own. Its weather follows the reference
+  greenhouse's season and wanders from it on days of its own.
+- **No kept opening day:** the viewer opens it on its first day.
+
+**What it predicts,** per m² of floor. Where two values are given, the
+first is rows 1 and 3, the second rows 2 and 4, which take less light:
+
+| Day | Nodes | Leaf area index | Dry weight above ground (g m⁻²) | Fruit (g m⁻²) | Mature fruit (g m⁻²) |
+| --- | --- | --- | --- | --- | --- |
+| 30 | 14.1 | 0.34 | 33.6 / 32.3 | 0 | 0 |
+| 60 | 24.9 | 1.24 | 250 / 212 | 8.9 / 6.5 | 0 |
+| 90 | 36.3 | 2.60 | 746 / 591 | 215 / 162 | 107 / 78 |
+| 120 | 48.0 | 4.0 | 1366 / 1184 | 538 / 467 | 398 / 337 |
+
+- **Nodes and leaf area** follow the house's air alone, the same over every
+  row. The leaf area index reaches the model's most, 4, by the season's end.
+- **The weights** follow the light above each row as well.
+- **Fruit** sets in the season's second month and matures from its third.
+
+`greenhouse_sim/tests/test_tomgro_house.py` holds days 60 and 120 to the
+run, and marks the test slow.
+
+**What these numbers are:** predictions, not validated on measured data
+([0060](../decisions/0060-two-published-tomato-models-become-crop-models-of-the-run.md),
+milestone C). The viewer draws each row as a canopy marked as a proxy, its
+numbers as predictions. They also rest on how the run drives the model,
+which the reproduction does not cover:
+
+- the canopy's temperature is the house air's, hour by hour;
+- the PAR is the light above each row's canopy, under the house's glazing
+  and structure;
+- the CO₂ is the house air's, which the crop takes none of, since the
+  coupling is one-way.
+
+How far the profile moves the model from its reproduction's forcing is
+still to be measured, as milestone B asks.
 
 ## Acceptance criteria
 

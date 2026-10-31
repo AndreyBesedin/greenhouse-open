@@ -11,7 +11,7 @@ is refused with the reason. The manifests name
 import json
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 import pytest
 from pydantic import ValidationError
@@ -198,7 +198,12 @@ def test_a_thermostat_is_refused_from_format_3_on_and_a_control_before_it() -> N
         scenario_from_manifest("reference_greenhouse", current | {"schema_version": 2})
 
 
-@pytest.mark.parametrize("scenario_id", manifest_ids())
+# The packaged manifests written in format 3 before format 4, which the
+# fixtures keep as they were; one written since has no format 3 form.
+WRITTEN_IN_FORMAT_3: Final = sorted(path.stem for path in FORMAT_3.glob("*.json"))
+
+
+@pytest.mark.parametrize("scenario_id", WRITTEN_IN_FORMAT_3)
 def test_a_format_3_manifest_holds_its_house_as_an_installation(scenario_id: str) -> None:
     """Format 4 holds a scenario's house as an installation (P12.1); a
     format 3 manifest is read as one, each row growing its crop, to the same
@@ -667,7 +672,12 @@ def test_a_manifest_that_gives_the_settings_of_the_engines_day_is_read_without_t
         scenario_from_manifest("climate_box", _models(document, crop=never))
 
 
-@pytest.mark.parametrize("scenario_id", manifest_ids())
+@pytest.mark.parametrize(
+    "scenario_id",
+    # Format 5 knew the grid alone: a manifest whose house's air is another
+    # model has no format 5 form.
+    [sid for sid in manifest_ids() if SCENARIO_REGISTRY[sid].climate.kind == "grid"],
+)
 def test_a_format_5_manifest_writes_its_houses_air_as_the_grids_parameters(
     scenario_id: str,
 ) -> None:
