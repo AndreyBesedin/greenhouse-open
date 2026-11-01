@@ -27,14 +27,16 @@ whole record as JSON, which is how they come back exactly.
 
 import hashlib
 import json
+import math
 import os
 import tempfile
 from collections.abc import Callable, Iterable, Sequence
 from compression import zstd
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from enum import StrEnum
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Final, Protocol
 
 import duckdb
@@ -47,8 +49,11 @@ from pydantic import BaseModel, ConfigDict, JsonValue
 
 FORMAT: Final = "run-store-1"
 CHECKPOINT_TYPE: Final = "application/json+zstd"
-# How an instant is written in a name, so that names sort as instants do.
-INSTANT_DIGITS: Final = 9
+# An instant is written in a name as whole microseconds, zero-padded, so that
+# names sort as instants do and two instants a microsecond apart never share
+# one. Sixteen digits hold a run of more than a century.
+MICROSECONDS_A_SECOND: Final = 1_000_000
+INSTANT_DIGITS: Final = 16
 SEQ_DIGITS: Final = 8
 _PARTIAL: Final = ".partial"
 # The instant instants are counted from in a segment's file.
@@ -124,11 +129,19 @@ class FolderStore:
             return None
 
     def names(self, prefix: str = "") -> list[str]:
-        if not self.root.is_dir():
+        """The objects whose names begin with `prefix`, sorted. Only the
+        folder the prefix names (what precedes its last `/`) is walked, so
+        that listing one epoch's commits costs what it holds, not what the
+        store does; a partial name after it is a filter."""
+        directory = PurePosixPath(prefix.rpartition("/")[0])
+        if directory.is_absolute() or ".." in directory.parts:
+            return []
+        walked = self.root / directory
+        if not walked.is_dir():
             return []
         found = (
             path.relative_to(self.root).as_posix()
-            for path in self.root.rglob("*")
+            for path in walked.rglob("*")
             if path.is_file() and path.suffix != _PARTIAL
         )
         return sorted(name for name in found if name.startswith(prefix))
@@ -360,8 +373,21 @@ def decompress(data: bytes) -> str:
     return zstd.decompress(data).decode()
 
 
+def instant_us(seconds: float) -> int:
+    """An instant, in seconds into a run, as whole microseconds: the number
+    it is written as in the shortest decimal that gives the float (`0.1` is
+    100,000), so that no instant is rounded into another's name. Refused if it
+    is not a whole number of microseconds, or not an instant of a run."""
+    if not math.isfinite(seconds) or seconds < 0:
+        raise ValueError(f"an instant of a run is 0 or more seconds, not {seconds!r}")
+    microseconds = Decimal(repr(seconds)) * MICROSECONDS_A_SECOND
+    if microseconds != microseconds.to_integral_value():
+        raise ValueError(f"an instant is a whole number of microseconds, not {seconds!r} s")
+    return int(microseconds)
+
+
 def instant_name(seconds: float) -> str:
-    return f"{round(seconds):0{INSTANT_DIGITS}d}"
+    return f"{instant_us(seconds):0{INSTANT_DIGITS}d}"
 
 
 def _extend(previous: str, parts: Sequence[tuple[str, bytes]]) -> str:
@@ -445,9 +471,12 @@ class EpochStore:
     ) -> Commit:
         """Writes a span's segment, its checkpoint and the log's new entries,
         then the commit that names them, last."""
+        # Named, and so refused if an instant cannot be, before anything is written.
+        segment = f"{instant_name(start_s)}-{instant_name(end_s)}"
+        if end_s < start_s:
+            raise ValueError(f"a span ends no earlier than it starts, not {start_s}-{end_s} s")
         commits = self.commits()
         previous = commits[-1] if commits else None
-        segment = f"{instant_name(start_s)}-{instant_name(end_s)}"
         parts: list[tuple[str, bytes]] = []
         counts = {
             Kind.OBSERVATIONS: len(observations),
@@ -539,6 +568,9 @@ class EpochStore:
                 best = commit
         if best is None or best.checkpoint is None or best.checkpoint_type is None:
             return None
+        # A state restored is the trajectory's: checked against its commit, as
+        # the records are.
+        self._verify_commit(best)
         data = self.objects.get(best.checkpoint)
         if data is None:
             raise StoreCorrupt(f"commit {best.seq} of {self._home} names a checkpoint that is gone")
