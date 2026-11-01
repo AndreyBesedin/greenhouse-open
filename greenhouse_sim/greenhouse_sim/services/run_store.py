@@ -92,6 +92,8 @@ class ObjectStore(Protocol):
 
     def children(self, prefix: str = "") -> list[str]: ...
 
+    def size(self, name: str) -> int | None: ...
+
     def delete(self, name: str) -> None: ...
 
 
@@ -148,6 +150,13 @@ class FolderStore:
         )
         return sorted(name for name in found if name.startswith(prefix))
 
+    def size(self, name: str) -> int | None:
+        """How many bytes an object holds, or none if there is none."""
+        try:
+            return (self.root / name).stat().st_size
+        except FileNotFoundError:
+            return None
+
     def children(self, prefix: str = "") -> list[str]:
         """What is directly under the folder `prefix` names (its objects and
         its folders, by their own names, sorted), so that finding a store's
@@ -180,6 +189,8 @@ class EpochManifest(BaseModel):
     # How long the run lasts, in seconds, when its writer knows: what its
     # progress is a part of.
     duration_s: float | None = None
+    # When the epoch was started, when its writer says.
+    created_at: datetime | None = None
 
 
 class LogEntry(BaseModel):
@@ -459,6 +470,10 @@ class EpochStore:
         commits = self.commits()
         return commits[-1].end_s if commits else 0.0
 
+    def size_bytes(self) -> int:
+        """How many bytes the epoch's objects hold."""
+        return sum(self.objects.size(name) or 0 for name in self.objects.names(f"{self._home}/"))
+
     def log(self) -> list[LogEntry]:
         """The changes given to the epoch up to the last commit."""
         commits = self.commits()
@@ -640,7 +655,10 @@ class StoredRun(BaseModel):
     layout: str
     status: Status
     frontier_s: float
+    duration_s: float | None
     progress: float | None
+    created_at: datetime | None
+    size_bytes: int
 
 
 def stored_runs(objects: ObjectStore, scenario_id: str | None = None) -> list[StoredRun]:
@@ -663,7 +681,10 @@ def stored_runs(objects: ObjectStore, scenario_id: str | None = None) -> list[St
                     layout=manifest.layout,
                     status=manifest.status,
                     frontier_s=frontier,
+                    duration_s=manifest.duration_s,
                     progress=None if not manifest.duration_s else frontier / manifest.duration_s,
+                    created_at=manifest.created_at,
+                    size_bytes=epoch.size_bytes(),
                 )
             )
     return found

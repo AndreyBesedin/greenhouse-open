@@ -142,3 +142,15 @@ def pairs(requests: list[str], name: str) -> dict[str, float]:
         except ValueError:
             raise InvalidRequest(f"{name} wants key:number pairs, not {request!r}") from None
     return found
+
+
+def pace(query: Query) -> float | None:
+    """The real seconds a playback plays a simulated day in, if the query
+    gives them."""
+    given = last(query, "seconds_per_day")
+    if given is None:
+        return None
+    try:
+        return float(given)
+    except ValueError:
+        raise InvalidRequest(f"seconds_per_day is a number, not {given!r}") from None

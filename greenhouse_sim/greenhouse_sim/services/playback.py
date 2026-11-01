@@ -58,7 +58,7 @@ from collections import OrderedDict
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import suppress
 from dataclasses import dataclass, replace
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
 from time import monotonic
@@ -480,6 +480,7 @@ class Playback:
                 seed=self.seed,
                 layout=self.layout,
                 duration_s=self.end_s,
+                created_at=datetime.now(UTC),
             )
         )
 
