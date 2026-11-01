@@ -7,7 +7,7 @@ import threading
 import time
 from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
 import pytest
 
@@ -19,6 +19,8 @@ from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
 from greenhouse_sim.services.run_store import EpochStore, Status, StoredRun, stored_runs
 from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.scenarios import layout_name
+from greenhouse_sim.services.sensors import delivered_between
 from greenhouse_sim.services.simulator import Simulator
 
 BOX: Final = "climate_box"
@@ -142,6 +144,64 @@ def test_a_restart_and_a_stop_tell_the_epoch_it_was_interrupted(
     assert by_epoch == {0: Status.INTERRUPTED, 1: Status.INTERRUPTED}
 
 
+def test_a_restart_while_the_last_day_is_kept_leaves_the_new_epoch_running(
+    played: Callable[[Epochs, Clock], Playback], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The old epoch's last day is committed outside the lock: a restart
+    meanwhile says it was interrupted and opens the next, which the old
+    one's end does not end, and which goes on keeping its own days."""
+    epochs, clock = Epochs(tmp_path), Clock()
+    committing, restarted = threading.Event(), threading.Event()
+    commit = EpochStore.commit
+
+    def held_at_the_last_day(store: EpochStore, start_s: float, *args: Any, **kept: Any) -> Any:
+        if store.epoch == 0 and start_s == DAY_S:
+            committing.set()
+            assert restarted.wait(WAIT_S)
+        return commit(store, start_s, *args, **kept)
+
+    monkeypatch.setattr(EpochStore, "commit", held_at_the_last_day)
+    run = played(epochs, clock)
+    assert run.wait_for(2, timeout_s=WAIT_S)
+    run.command(PlaybackCommand.PLAY)
+    clock.now += 20.0
+    assert committing.wait(WAIT_S)
+
+    run.command(PlaybackCommand.RESTART)
+    restarted.set()
+    assert run.wait_for(1, timeout_s=WAIT_S)
+    run.command(PlaybackCommand.PLAY)
+    clock.now += 10.0
+
+    def new_epoch() -> StoredRun:
+        return next(r for r in stored_runs(epochs.objects, SHORT) if r.epoch == 1)
+
+    _until(lambda: new_epoch().frontier_s == DAY_S, "the new epoch's first day to be kept")
+    by_epoch = {r.epoch: r.status for r in stored_runs(epochs.objects, SHORT)}
+    assert by_epoch == {0: Status.INTERRUPTED, 1: Status.RUNNING}
+
+
+def test_a_run_whose_simulation_fails_is_kept_as_failed(
+    played: Callable[[Epochs, Clock], Playback], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Its worker stops on the failure, which its epoch says, rather than
+    that it was interrupted."""
+    epochs, clock = Epochs(tmp_path), Clock()
+
+    def failing_on_the_second_day(
+        simulator: Simulator, run: RunRequest, *args: Any, **kw: Any
+    ) -> Any:
+        if args and args[0] == DAY_S:
+            raise RuntimeError("a simulation that fails")
+        return delivered_between(simulator, run, *args, **kw)
+
+    monkeypatch.setattr(playback, "delivered_between", failing_on_the_second_day)
+    played(epochs, clock)
+
+    _until(lambda: _kept(epochs).status != Status.RUNNING, "the run to end")
+    assert _kept(epochs).status == Status.FAILED
+
+
 def test_a_run_is_asked_for_at_a_seed(short: Simulator, tmp_path: Path) -> None:
     epochs, clock = Epochs(tmp_path), Clock()
     own = SCENARIO_REGISTRY[REFERENCE].random_seed
@@ -179,6 +239,11 @@ def test_a_playback_started_at_another_seed_starts_over(
     # Rearranged, it keeps the seed.
     moved = playback.command(simulator, BOX, PlaybackCommand.RESTART, "default~heater:-1:0.5")
     assert playback.playback(simulator, BOX).seed == 7 and moved.run_id != other.run_id
+    # Asked for at another seed alone, it keeps its layout.
+    again = playback.start(simulator, BOX, 10.0, seed=8, hold=True, clock=clock, epochs=epochs)
+    kept = playback.playback(simulator, BOX)
+    assert (kept.seed, kept.layout) == (8, layout_name("default~heater:-1:0.5"))
+    assert again.run_id not in (other.run_id, moved.run_id)
 
 
 def test_the_epochs_kept_by_files_before_are_counted_on_from(tmp_path: Path) -> None:

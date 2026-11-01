@@ -685,16 +685,24 @@ class Playback:
                 if not self._work_day(day, run, changes, assigned):
                     return
         finally:
-            self._end_store(Status.INTERRUPTED)
+            # Its work failed, or it was stopped.
+            with self._lock:
+                failed = self._failure is not None
+            self._end_store(Status.FAILED if failed else Status.INTERRUPTED)
 
-    def _end_store(self, status: Status) -> None:
+    def _end_store(self, status: Status, store: EpochStore | None = None) -> None:
         """Says in the run store how its epoch ended, unless it ended already:
-        finished, failed, or interrupted by the producer stopping."""
+        finished, failed, or interrupted by the producer stopping. Given the
+        `store` of the epoch whose end it says, it says nothing once a restart
+        has put another epoch's store in its place, which said that one was
+        interrupted: the new epoch is not ended for the old one."""
         with self._lock:
-            store, ended = self._store, self._store_ended
-            self._store_ended = self._store_ended or store is not None
-        if store is not None and not ended:
-            store.set_status(status)
+            current = self._store
+            another = store is not None and store is not current
+            if current is None or self._store_ended or another:
+                return
+            self._store_ended = True
+        current.set_status(status)
 
     def _keep_closed_days(self) -> None:
         """Writes to the run store the days of the epoch that are worked out
@@ -716,7 +724,7 @@ class Playback:
             todo = list(enumerate(self._worked))[first:closed]
             outcomes = self._outcomes_until(closed * DAY_S) if todo else []
         if failed:
-            self._end_store(Status.FAILED)
+            self._end_store(Status.FAILED, store)
             return
         try:
             for day, (observed, happened) in todo:
@@ -733,14 +741,14 @@ class Playback:
                 )
         except Exception:
             logger.exception("the run store could not keep %s", self.run_id)
-            self._end_store(Status.FAILED)
+            self._end_store(Status.FAILED, store)
             return
         with self._lock:
             if self._store is store:
                 self._stored_days = closed
                 self._stored_outcomes += len(outcomes)
         if closed == days and todo:
-            self._end_store(Status.FINISHED)
+            self._end_store(Status.FINISHED, store)
 
     def _outcomes_until(self, until_s: float) -> list[ActionOutcome]:
         """The outcomes in its gateway's log not yet written to the store
@@ -1263,9 +1271,10 @@ def start(
     one already started, or a new one from the run's start, on `clock`, of
     its own layout or `layout`; playing, unless `hold`, when its clock waits
     for a play command while the run is worked out ahead of it. One started
-    with another layout than `layout` starts over with it, as a restart
-    with a layout does (`command`). A pace or a layout refused starts
-    nothing."""
+    with another layout than `layout`, or another seed than `seed`, starts
+    over with them, as a restart with a layout does (`command`), keeping
+    its own layout or seed where none is given. A pace or a layout refused
+    starts nothing."""
     if seconds_per_day is not None:
         _check_pace(seconds_per_day)
 
@@ -1284,7 +1293,8 @@ def start(
 
     found = simulator.playbacks.made_once(scenario_id, begun)
     if not found.plays(layout, seed):
-        found = _rearranged(simulator, found, layout or DEFAULT_LAYOUT, seed)
+        # Asked for at a seed alone, it keeps its layout.
+        found = _rearranged(simulator, found, layout or found.layout, seed)
     if seconds_per_day is not None:
         found.set_pace(seconds_per_day)
     return found.state() if hold else found.command(PlaybackCommand.PLAY)
