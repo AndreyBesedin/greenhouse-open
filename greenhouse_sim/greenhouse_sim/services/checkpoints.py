@@ -307,7 +307,7 @@ def save_checkpoint(
         scenario_id=scenario_id,
         manifest=version(simulator.catalogue, scenario_id),
         layout=run.layout or DEFAULT_LAYOUT,
-        weather=run.weather or DEFAULT_WEATHER,
+        weather=run.weather_name(simulator.catalogue),
         levels=dict(run.levels),
         openings=dict(run.openings),
         plan=run.plan.before(moment).validated(),
@@ -328,7 +328,7 @@ def _models_run(simulator: Simulator, run: RunRequest) -> dict[Part, ModelRun]:
     """Each part's model and version a run runs: its scenario's, under the
     weather it is asked for, which may be another model's."""
     config = scenario(simulator.catalogue, run.scenario_id)
-    return models_run(with_weather(config, run.weather or DEFAULT_WEATHER))
+    return models_run(with_weather(config, run.weather_name(simulator.catalogue)))
 
 
 def checkpoints(simulator: Simulator) -> list[CheckpointSummary]:

@@ -20,10 +20,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from greenhouse_sim.core.clock import DAY_S, day_start
 from greenhouse_sim.core.crop_actions import CropAction
+from greenhouse_sim.scenarios.catalogue import Scenarios
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services.crop_models import registration
 from greenhouse_sim.services.errors import InvalidRequest
-from greenhouse_sim.services.scenarios import plant_ids
+from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, SEED_MARK, plant_ids, scenario
 
 # A command as a request writes it: its moment, its actuator and its level.
 # A daily command's moment is its time of day; a target change's actuator is
@@ -375,7 +376,7 @@ class RunRequest:
     once by the API and taken by every service that runs one:
 
     - its scenario, one of its layouts and a weather, each by name, or its
-      own when None;
+      own when None, and a seed, or the scenario's own when None;
     - its equipment's levels and its doors' and vents' openings from the
       start, by identifier: where it starts from;
     - its plan: what it does once it has started (`RunPlan`).
@@ -392,6 +393,16 @@ class RunRequest:
     levels: Mapping[str, float] = field(default_factory=dict)
     openings: Mapping[str, float] = field(default_factory=dict)
     plan: RunPlan = field(default_factory=RunPlan)
+    seed: int | None = None
+
+    def weather_name(self, catalogue: Scenarios) -> str:
+        """The weather the run is under, ending with its seed (`SEED_MARK`)
+        if it is not the scenario's own: a run at the scenario's own seed is
+        named as it always was."""
+        name = self.weather or DEFAULT_WEATHER
+        if self.seed is None or self.seed == scenario(catalogue, self.scenario_id).random_seed:
+            return name
+        return f"{name}{SEED_MARK}{self.seed}"
 
 
 def checked_moment(config: ScenarioConfig, time_s: float) -> float:
