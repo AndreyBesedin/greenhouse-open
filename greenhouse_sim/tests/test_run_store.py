@@ -45,6 +45,7 @@ from greenhouse_sim.services.run_store import (
     compress,
     decompress,
     epochs,
+    instant_name,
 )
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
@@ -110,6 +111,10 @@ def _outcomes(count: int) -> list[ActionOutcome]:
         )
         for i in range(count)
     ]
+
+
+def _span(start_s: float, end_s: float) -> str:
+    return f"{instant_name(start_s)}-{instant_name(end_s)}"
 
 
 def _epoch(root: Path, run_id: str = "run_a", epoch: int = 0) -> EpochStore:
@@ -191,7 +196,7 @@ def test_a_cursor_counts_across_segments_as_one_log(tmp_path: Path) -> None:
 def test_a_segments_schema_is_the_logs_and_its_order_the_records(tmp_path: Path) -> None:
     store = _epoch(tmp_path)
     store.commit(0.0, DAY_S, observations=_observations(12))
-    name = "run_a/0/segments/000000000-000086400/observations.parquet"
+    name = f"run_a/0/segments/{_span(0.0, DAY_S)}/observations.parquet"
     with duckdb.connect() as con:
         described = con.execute(f"DESCRIBE SELECT * FROM read_parquet('{tmp_path / name}')")
         columns = [(row[0], row[1]) for row in described.fetchall()]
@@ -208,7 +213,7 @@ def test_a_reader_sees_only_what_the_last_commit_names(tmp_path: Path) -> None:
     store.commit(100.0, 200.0, observations=_observations(2, first=3))
     objects = FolderStore(tmp_path)
     # A worker that died after its segment, before its commit.
-    objects.put("run_a/0/segments/000000200-000000300/observations.parquet", b"not a commit's")
+    objects.put(f"run_a/0/segments/{_span(200.0, 300.0)}/observations.parquet", b"not a commit's")
 
     assert store.frontier_s() == 200.0
     assert [o.observation_id for o in store.observations().records] == [f"o{i}" for i in range(5)]
@@ -227,7 +232,7 @@ def test_a_changed_object_is_told_by_the_digest(tmp_path: Path) -> None:
     store.commit(0.0, 100.0, observations=_observations(3), events=_events(1))
     store.commit(100.0, 200.0, observations=_observations(2, first=3))
     store.verify()
-    segment = "run_a/0/segments/000000000-000000100/observations.parquet"
+    segment = f"run_a/0/segments/{_span(0.0, 100.0)}/observations.parquet"
     original = FolderStore(tmp_path).get(segment)
     assert original is not None
 
@@ -295,3 +300,117 @@ def test_a_checkpoint_kept_restores_a_run_that_replays_as_the_straight_run(
         load_openings(fresh)
         checkpoints.upload_checkpoint(fresh, json.loads(restored.model_dump_json()))
         assert day_probes(fresh, run, 3) == straight
+
+
+def test_spans_a_fraction_of_a_second_apart_keep_their_own_objects(tmp_path: Path) -> None:
+    store = _epoch(tmp_path)
+    first, second = _observations(3), _observations(2, first=3)
+
+    store.commit(0.0, 0.1, observations=first, checkpoint=compress('{"state": 1}'))
+    store.commit(0.1, 0.2, observations=second, checkpoint=compress('{"state": 2}'))
+
+    store.verify()
+    assert store.observations().records == first + second
+    assert [c.segment for c in store.commits()] == [_span(0.0, 0.1), _span(0.1, 0.2)]
+    assert len({c.segment for c in store.commits()}) == 2
+    for at_s, state in ((0.1, 1), (0.15, 1), (0.2, 2), (5.0, 2)):
+        found = store.checkpoint_at(at_s)
+        assert found is not None and decompress(found[0]) == f'{{"state": {state}}}'
+    assert store.checkpoint_at(0.05) is None
+    # Names sort as the instants do.
+    names = [instant_name(x) for x in (0.0, 0.000001, 0.1, 1.0, 86_400.0, 10_368_000.0)]
+    assert names == sorted(names) and len(set(names)) == len(names)
+
+
+@pytest.mark.parametrize(
+    ("start_s", "end_s"),
+    [
+        (0.0, 1e-7),
+        (0.0, 0.0000015),
+        (float("nan"), 1.0),
+        (0.0, float("inf")),
+        (-1.0, 1.0),
+        (5.0, 4.0),
+    ],
+)
+def test_an_instant_that_cannot_be_named_is_refused_before_anything_is_written(
+    tmp_path: Path, start_s: float, end_s: float
+) -> None:
+    store = _epoch(tmp_path)
+    before = FolderStore(tmp_path).names()
+
+    with pytest.raises(ValueError, match=r"instant|span"):
+        store.commit(start_s, end_s, observations=_observations(2), checkpoint=compress("{}"))
+
+    assert FolderStore(tmp_path).names() == before
+    assert store.commits() == []
+
+
+def test_a_checkpoint_replaced_by_another_valid_one_is_refused_on_read(tmp_path: Path) -> None:
+    store = _epoch(tmp_path)
+    store.commit(0.0, 100.0, checkpoint=compress('{"state": "true"}'))
+    name = f"run_a/0/checkpoints/{instant_name(100.0)}.json.zst"
+    assert store.checkpoint_at(100.0) is not None
+
+    FolderStore(tmp_path).put(name, compress('{"state": "another trajectory"}'))
+    with pytest.raises(StoreCorrupt, match="commit 0"):
+        store.checkpoint_at(100.0)
+    FolderStore(tmp_path).delete(name)
+    with pytest.raises(StoreCorrupt, match="gone"):
+        store.checkpoint_at(100.0)
+
+
+def test_listing_walks_only_the_folder_a_prefix_names(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    objects = FolderStore(tmp_path)
+    kept = [
+        "a/0/commits/00000000.json",
+        "a/0/commits/00000001.json",
+        "a/0/manifest.json",
+        "a/1/commits/00000000.json",
+        "ab/0/manifest.json",
+        "b/0/commits/00000000.json",
+        "b/0/segments/0000000000000000-0000000000100000/events.parquet",
+        "top.json",
+    ]
+    for name in kept:
+        objects.put(name, b"x")
+    (tmp_path / "a" / "0" / "commits" / "00000002.json.partial").write_bytes(b"half")
+
+    def everything(prefix: str) -> list[str]:
+        return sorted(n for n in kept if n.startswith(prefix))
+
+    for prefix in (
+        "",
+        "a",
+        "a/",
+        "a/0",
+        "a/0/",
+        "a/0/commits/",
+        "a/0/commits/0000000",
+        "a/0/commits/00000001.json",
+        "a/0/c",
+        "a/0/m",
+        "ab",
+        "b/0/segments/",
+        "t",
+        "top.json",
+        "none/",
+        "a/none/",
+        "a/0/commits/9",
+    ):
+        assert objects.names(prefix) == everything(prefix), prefix
+    assert objects.names("../") == objects.names("a/../") == objects.names("/etc/") == []
+
+    walked: list[Path] = []
+    real = Path.rglob
+
+    def spy(self: Path, pattern: str):  # type: ignore[no-untyped-def]
+        walked.append(self)
+        return real(self, pattern)
+
+    monkeypatch.setattr(Path, "rglob", spy)
+    objects.names("a/0/commits/")
+    objects.names("a/0/commits/0000")
+    assert walked == [tmp_path / "a" / "0" / "commits"] * 2
