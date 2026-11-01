@@ -218,18 +218,31 @@ The **scenario file** is a scenario's manifest written out the way an
 installation's file is: its layout written rather than named, the manifests'
 one format version and migrations (`manifest_files.SCHEMA_VERSION`), a
 published JSON Schema, a size limit, a refusal that names the field at fault,
-and no code (a crop is named by its model). Nothing new is invented: the file
+and no code (a crop is named by its model; a recorded weather is data, carried
+in the file). Nothing new is invented: the file
 is the manifest in a portable form, so a packaged scenario can be written
 out, edited and read back.
 
 - **Download** from the builder writes it from the draft and its run
   settings; the builder keeps those settings with the draft's revision, so
   that downloading, closing and reopening loses nothing.
-- **Upload** from the landing page validates it, registers it as a scenario
-  as a draft's run is (decision 0048), lists it with its runs, and opens it in
-  the builder to edit or in the run dialog to run. An installation file, which
-  has no settings, opens in the builder to be given them. A scenario whose
-  identifier is a packaged scenario's, or another's registered, is refused.
+- **Upload** from the landing page validates the file, registers it as a
+  scenario as a draft's run is (decision 0048), and opens it in the setup
+  builder, never straight into a run: the builder shows the house and the run
+  settings, and ends in *save and start a run* or *save and go back*. An
+  installation file, which has no settings, opens there to be given them. A
+  scenario whose identifier is a packaged scenario's, or another's
+  registered, is refused.
+- **A recorded weather travels in the file.** A scenario that runs under a
+  recorded weather (a CSV, identified by its content) carries that CSV in its
+  file, with its digest, so that the colleague needs nothing else. On upload it
+  is kept beside the scenario file and offered with the packaged ones, under
+  its digest, so that a run under it has the identity of the original's
+  (`RecordedWeather.identity`). A weather whose name is a packaged weather's
+  with other content is kept under a name that includes its digest, and a
+  file whose digest does not match its content is refused. The builder says,
+  when it downloads, that the weather is included, since a recording may be
+  data its owner does not want sent on.
 - **Identity and durability.** A run's manifest keeps the scenario file's
   digest (decision 0065), so that a stored run of an uploaded scenario opens
   after a restart, and uploading the same file again is the same scenario.
@@ -434,8 +447,8 @@ validates those (below), and its figures replace these as the store's.
   one; an intervention logged before a crash is applied exactly once.
 - (P17.7) N runs asked for with a limit of M execute M at a time and queue
   the rest.
-- (P17.11) A scenario downloaded from the builder and uploaded on a clean
-  store is listed, runs, and gives the run id of the original; a packaged
+- (P17.11) A scenario downloaded from the builder, with a recorded weather,
+  and uploaded on a clean store is listed, opens in the builder, runs, and gives the run id of the original; a packaged
   scenario written out and read back is unchanged; a file with an unknown
   field, a wrong version, or a packaged scenario's identifier is refused,
   naming why.
@@ -489,13 +502,12 @@ from the design. The first backend, the commit, the interval, the
 object-store backend and a compacted checkpoint are later steps, taken when a
 deployment or a longer run needs them.
 
-Two more come with the scenario file (P17.11):
+One more comes with the scenario file (P17.11); the question whether it
+needs a decision record of its own was answered in review: it does not, being
+the manifest in portable form:
 
-1. **The decision record.** The scenario file is the manifest in a portable
-   form, which extends decision 0050's file. Whether that is recorded in a
-   decision of its own or as an addition to 0050, it is written in P17.11's
-   pull request.
-2. **A weather recorded in a file the uploader does not have.** A scenario
-   that names a recorded weather (identified by its file's content) is
-   refused naming it, or carries it; refused is proposed, with the weather's
-   name and digest in the message.
+1. **The size of an embedded weather.** The importer refuses a file over
+   8 MB (`MAX_IMPORT_BYTES`), and the one packaged recorded weather, a day, is
+   7 kB; a season's or a year's CSV is larger in proportion to its rows. P17.11
+   measures one and sets the limit, compressing the embedded CSV if it needs
+   to.
