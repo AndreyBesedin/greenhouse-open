@@ -233,16 +233,20 @@ out, edited and read back.
   installation file, which has no settings, opens there to be given them. A
   scenario whose identifier is a packaged scenario's, or another's
   registered, is refused.
-- **A recorded weather travels in the file.** A scenario that runs under a
-  recorded weather (a CSV, identified by its content) carries that CSV in its
-  file, with its digest, so that the colleague needs nothing else. On upload it
-  is kept beside the scenario file and offered with the packaged ones, under
-  its digest, so that a run under it has the identity of the original's
-  (`RecordedWeather.identity`). A weather whose name is a packaged weather's
-  with other content is kept under a name that includes its digest, and a
-  file whose digest does not match its content is refused. The builder says,
-  when it downloads, that the weather is included, since a recording may be
-  data its owner does not want sent on.
+- **A recorded weather is carried or named, as the sender chooses.** A scenario
+  that runs under a recorded weather (a CSV, identified by its content) is
+  downloaded with a tick, *Include the recorded weather*, on by default. Ticked,
+  the file carries the CSV with its digest, so that the colleague needs nothing
+  else: on upload it is kept beside the scenario file and offered with the
+  packaged ones under its digest, so that a run under it has the identity of
+  the original's (`RecordedWeather.identity`). Unticked, for a recording its
+  owner does not want sent on, the file names the weather and its digest only:
+  on upload the builder opens with a finding that the weather is missing, and
+  the scenario cannot be run until its CSV is added there (a file whose
+  content has that digest) or another weather is chosen. A weather whose name
+  is a packaged weather's with other content is kept under a name that
+  includes its digest, and a file whose digest does not match its content is
+  refused.
 - **Identity and durability.** A run's manifest keeps the scenario file's
   digest (decision 0065), so that a stored run of an uploaded scenario opens
   after a restart, and uploading the same file again is the same scenario.
@@ -447,11 +451,13 @@ validates those (below), and its figures replace these as the store's.
   one; an intervention logged before a crash is applied exactly once.
 - (P17.7) N runs asked for with a limit of M execute M at a time and queue
   the rest.
-- (P17.11) A scenario downloaded from the builder, with a recorded weather,
-  and uploaded on a clean store is listed, opens in the builder, runs, and gives the run id of the original; a packaged
+- (P17.11) A scenario downloaded from the builder, with its recorded weather
+  ticked in, and uploaded on a clean store is listed, opens in the builder,
+  runs, and gives the run id of the original; a packaged
   scenario written out and read back is unchanged; a file with an unknown
   field, a wrong version, or a packaged scenario's identifier is refused,
-  naming why.
+  naming why. With the weather ticked out, the upload opens with the weather
+  reported missing and does not run until it is supplied or replaced.
 - The viewer opens on a page from which a scenario is chosen, a run
   launched, a stored run opened, or the builder entered.
 - A policy port and an experiment runner give the receipts and digests they
