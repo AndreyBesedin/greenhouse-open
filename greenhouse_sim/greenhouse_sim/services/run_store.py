@@ -90,6 +90,8 @@ class ObjectStore(Protocol):
 
     def names(self, prefix: str = "") -> list[str]: ...
 
+    def children(self, prefix: str = "") -> list[str]: ...
+
     def delete(self, name: str) -> None: ...
 
 
@@ -145,6 +147,18 @@ class FolderStore:
             if path.is_file() and path.suffix != _PARTIAL
         )
         return sorted(name for name in found if name.startswith(prefix))
+
+    def children(self, prefix: str = "") -> list[str]:
+        """What is directly under the folder `prefix` names (its objects and
+        its folders, by their own names, sorted), so that finding a store's
+        runs reads their folders and not their segments."""
+        directory = PurePosixPath(prefix.rstrip("/"))
+        if prefix.startswith("/") or ".." in directory.parts:
+            return []
+        walked = self.root / directory
+        if not walked.is_dir():
+            return []
+        return sorted(path.name for path in walked.iterdir() if path.suffix != _PARTIAL)
 
     def delete(self, name: str) -> None:
         (self.root / name).unlink(missing_ok=True)
@@ -428,11 +442,12 @@ class EpochStore:
         manifest = self.manifest().model_copy(update={"status": status})
         self.objects.put(f"{self._home}/manifest.json", manifest.model_dump_json().encode())
 
-    def commits(self) -> list[Commit]:
-        """The commits in order: those from the first with no gap, so that a
-        commit past a missing one is not seen."""
+    def commits(self, after: int = 0) -> list[Commit]:
+        """The commits in order, from number `after` (a reader that has the
+        first few asks only for the rest): those with no gap before them, so
+        that a commit past a missing one is not seen."""
         found: list[Commit] = []
-        for seq in range(len(self.objects.names(f"{self._home}/commits/"))):
+        for seq in range(after, len(self.objects.names(f"{self._home}/commits/"))):
             data = self.objects.get(f"{self._home}/commits/{seq:0{SEQ_DIGITS}d}.json")
             if data is None:
                 break
@@ -603,13 +618,13 @@ class EpochStore:
 
 
 def epochs(objects: ObjectStore, run_id: str) -> list[int]:
-    """The epochs a run has in a store, in order."""
-    found = {
-        int(name.split("/")[1])
-        for name in objects.names(f"{run_id}/")
-        if name.split("/")[1].isdigit() and name.endswith("/manifest.json")
-    }
-    return sorted(found)
+    """The epochs a run has in a store, in order: the folders of its own whose
+    manifests are there."""
+    return sorted(
+        int(name)
+        for name in objects.children(f"{run_id}/")
+        if name.isdigit() and objects.get(f"{run_id}/{name}/manifest.json") is not None
+    )
 
 
 class StoredRun(BaseModel):
@@ -630,28 +645,25 @@ class StoredRun(BaseModel):
 
 def stored_runs(objects: ObjectStore, scenario_id: str | None = None) -> list[StoredRun]:
     """The epochs a store holds, those of `scenario_id` if given, by run and
-    epoch."""
+    epoch. Only the runs' folders are read, not their segments."""
     found = []
-    for name in objects.names():
-        run_id, _, rest = name.partition("/")
-        epoch_text, _, leaf = rest.partition("/")
-        if leaf != "manifest.json" or not epoch_text.isdigit():
-            continue
-        epoch = EpochStore(objects, run_id, int(epoch_text))
-        manifest = epoch.manifest()
-        if scenario_id is not None and manifest.scenario_id != scenario_id:
-            continue
-        frontier = epoch.frontier_s()
-        found.append(
-            StoredRun(
-                run_id=run_id,
-                epoch=manifest.epoch,
-                scenario_id=manifest.scenario_id,
-                seed=manifest.seed,
-                layout=manifest.layout,
-                status=manifest.status,
-                frontier_s=frontier,
-                progress=None if not manifest.duration_s else frontier / manifest.duration_s,
+    for run_id in objects.children():
+        for epoch_number in epochs(objects, run_id):
+            epoch = EpochStore(objects, run_id, epoch_number)
+            manifest = epoch.manifest()
+            if scenario_id is not None and manifest.scenario_id != scenario_id:
+                continue
+            frontier = epoch.frontier_s()
+            found.append(
+                StoredRun(
+                    run_id=run_id,
+                    epoch=manifest.epoch,
+                    scenario_id=manifest.scenario_id,
+                    seed=manifest.seed,
+                    layout=manifest.layout,
+                    status=manifest.status,
+                    frontier_s=frontier,
+                    progress=None if not manifest.duration_s else frontier / manifest.duration_s,
+                )
             )
-        )
     return found

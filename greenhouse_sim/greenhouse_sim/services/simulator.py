@@ -26,6 +26,7 @@ from greenhouse_sim.services import checkpoints, climate_runs, crop, kept_states
 from greenhouse_sim.services.consumer import Cursors
 from greenhouse_sim.services.gateway import LOCAL_AUTHORISATION, NO_CREW, Crew
 from greenhouse_sim.services.playback import Playbacks
+from greenhouse_sim.services.stored_playback import Positions
 
 
 class Simulator:
@@ -49,6 +50,7 @@ class Simulator:
         # its user's, which outlives it, and which it never forgets.
         self.drafts = drafts
         self.playbacks = Playbacks()
+        self.positions = Positions()
         self.cursors = Cursors()
         # What the services keep, this simulator's alone.
         self.states = kept_states.new_store()
@@ -79,6 +81,7 @@ class Simulator:
         runs go; a checkpoint takes its state with it; the cursors given go
         too. The scenarios it knows stay."""
         self.playbacks.stop()
+        self.positions.forget()
         self.checkpoints.forget()
         self.crops.forget()
         self.climate_runs.forget()

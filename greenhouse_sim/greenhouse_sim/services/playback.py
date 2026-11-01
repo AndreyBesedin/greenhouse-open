@@ -376,7 +376,7 @@ class Playback:
     ) -> None:
         self._simulator = simulator
         config = scenario(simulator.catalogue, scenario_id)
-        _check_pace(seconds_per_day)
+        check_pace(seconds_per_day)
         self.scenario_id = scenario_id
         self.greenhouse_id = config.greenhouse_id
         self.start = run_start(simulator.catalogue, scenario_id)
@@ -1125,7 +1125,7 @@ class Playback:
     def set_pace(self, seconds_per_day: float) -> PlaybackState:
         """Plays a simulated day in `seconds_per_day` real seconds; once
         replaced, the one in its place does."""
-        _check_pace(seconds_per_day)
+        check_pace(seconds_per_day)
         with self._lock:
             successor = self._successor
             if successor is None:
@@ -1170,7 +1170,7 @@ class Playback:
         return RecordsAfter(records=records, next=next_, has_more=more, state=state)
 
 
-def _check_pace(seconds_per_day: float) -> None:
+def check_pace(seconds_per_day: float) -> None:
     if not (math.isfinite(seconds_per_day) and seconds_per_day > 0):
         raise InvalidRequest("a day takes some time to play: seconds_per_day is above 0")
 
@@ -1276,7 +1276,7 @@ def start(
     its own layout or seed where none is given. A pace or a layout refused
     starts nothing."""
     if seconds_per_day is not None:
-        _check_pace(seconds_per_day)
+        check_pace(seconds_per_day)
 
     def begun(_: object) -> Playback:
         found = Playback(
