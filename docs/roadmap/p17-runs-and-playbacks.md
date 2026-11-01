@@ -44,7 +44,8 @@ one resumes. The viewer and a consumer read the same stored epoch.
   each step before the day (`AreaCropState`, no plant identifiers). The store
   treats a model's state as opaque, and a checkpoint's scopes come from its
   own layout.
-- **P12, the setup builder:** a draft's installation is named by digest.
+- **P12, the setup builder:** a draft's installation is named by digest, and
+  its file (decision 0050) is what the scenario file extends.
 - **DuckDB** (decision 0066), a runtime dependency added by P17.3, to read and
   write the records' Parquet files.
 
@@ -196,12 +197,46 @@ is not removed and the fork is listed beside it.
 
 | Page | Address | Does |
 | --- | --- | --- |
-| Landing | `/` | a scenario picker, a dropdown with search; opening a scenario shows its stored runs (seed, epoch, status, progress, mode, created) and *New run* (seed, store mode, pace), with *Build a scenario* beside it |
-| Builder | its own address, as today | draft and edit an installation; it ends in two actions, *save and start a run* (the new run's dialog) and *save and go back* (the landing page) |
+| Landing | `/` | a scenario picker, a dropdown with search; opening a scenario shows its stored runs (seed, epoch, status, progress, mode, created) and *New run* (seed, store mode, pace); beside the picker, *Open the builder* and *Upload a scenario file*; in the header, *Contribute*, a link to the project's repository that opens in a new tab |
+| Builder | its own address, as today | draft and edit an installation; it ends in *Download scenario file* and two actions, *save and start a run* (the new run's dialog) and *save and go back* (the landing page) |
 | Run | one that names the run and the epoch | the viewer over a playback of that epoch |
 
 The viewer gains an address for each, and a server (the API's static
 serving, the dev server) answers each with the viewer's page.
+
+### The scenario file
+
+A scenario is an installation (the house part, decision 0050) and what a run
+adds to it: the period, site, seed, weather and the models' settings, which
+a scenario's manifest holds (decision 0031). Today the builder's file is the
+installation alone (`builder.portable`, with *Export* and a start from a
+file), and a draft takes its run settings (`DraftRun`) only when it is run,
+so a file sent to a colleague carries the house and not what makes it a
+scenario.
+
+The **scenario file** is a scenario's manifest written out the way an
+installation's file is: its layout written rather than named, the manifests'
+one format version and migrations (`manifest_files.SCHEMA_VERSION`), a
+published JSON Schema, a size limit, a refusal that names the field at fault,
+and no code (a crop is named by its model). Nothing new is invented: the file
+is the manifest in a portable form, so a packaged scenario can be written
+out, edited and read back.
+
+- **Download** from the builder writes it from the draft and its run
+  settings; the builder keeps those settings with the draft's revision, so
+  that downloading, closing and reopening loses nothing.
+- **Upload** from the landing page validates it, registers it as a scenario
+  as a draft's run is (decision 0048), lists it with its runs, and opens it in
+  the builder to edit or in the run dialog to run. An installation file, which
+  has no settings, opens in the builder to be given them. A scenario whose
+  identifier is a packaged scenario's, or another's registered, is refused.
+- **Identity and durability.** A run's manifest keeps the scenario file's
+  digest (decision 0065), so that a stored run of an uploaded scenario opens
+  after a restart, and uploading the same file again is the same scenario.
+  The file is kept beside the store, so that the scenario survives the
+  simulator closing.
+- **Sharing** is the file, between colleagues who do not touch the code, or
+  a reviewed pull request that adds it as a packaged scenario (P12).
 
 ### What does not change
 
@@ -217,12 +252,13 @@ days, and a run's records for a given seed.
 | P17.2 | The seed on `RunRequest` and in the identity, without moving an id: a test holds every kept run id and digest. | `feat(sim): a run's seed is its input` | Done: `RunRequest.seed`, and `&seed=` on the run routes. The seed rides the run's weather name (`default#7`, `SEED_MARK`), the variation channel the cloud and wind overrides use, so each part that honours the weather honours the seed and the run's identity changes with it; a seed equal to the scenario's own is dropped from the name (`RunRequest.weather_name`), so that run keeps its identity. It reaches the weather, the sensors' noise and the crop's walk; the simulator's whole suite passes, no id, digest or golden file moved |
 | P17.3 | (a) Completed runs persisted: the store interface and its folder backend, the manifest, segments as Parquet (adding DuckDB, decision 0066), checkpoints under the checkpoint contract, commits and the trajectory digest, validated as the acceptance criteria say; an epoch executed in the process is written to it; the epoch file moves into it. Several runs of a scenario, at different seeds. | `feat(sim): finished runs are kept in a store` | Planned |
 | P17.4 | (b) Playback as a position: seek over a stored epoch, many over one, the API's run routes, the consumer interface and port reading the store. | `feat(api): runs are listed, opened and played from the store` | Planned |
-| P17.5 | The viewer's addresses; the landing page, the scenario picker with search, the run dialog, deletion, the builder's two ending actions. | `feat(viewer): a place to choose a scenario and a run` | Planned |
+| P17.5 | The viewer's addresses; the landing page, the scenario picker with search, the run dialog, deletion, the *Contribute* link, the builder's two ending actions (the upload entry is wired by P17.11). | `feat(viewer): a place to choose a scenario and a run` | Planned |
 | P17.6 | Replay: a timeline over the stored epoch, day navigation, `present` stores. | `feat(viewer): move through a run that has been computed` | Planned |
 | P17.7 | (c) Workers and the scheduler: `execute` over the three drivers, a limit, a queue; a frontier that a playback follows while the run computes. | `feat(sim): workers that run epochs into the store` | Planned |
 | P17.8 | (d) Interventions in the log; forks with their parent, instant and inheritance; a layout rearranged as a fork that leaves its run served. | `feat(sim): a change is the epoch's own and a fork is a new run` | Planned |
 | P17.9 | (e) Resuming an interrupted epoch: detection, restore from a checkpoint, the log applied again; the kill-and-resume tests, with a crash between the log and the commit. Scheduled when P17.1's costs justify it. | `feat(sim): an interrupted run resumes` | Planned |
 | P17.10 | The QA scenario below, for what is delivered, run and recorded. | `test: runs kept, played and replayed` | Planned |
+| P17.11 | The scenario file: a manifest in portable form with its schema and migrations; the builder keeps a draft's run settings and downloads the file; the landing page uploads it, registers the scenario, and keeps the file beside the store. A packaged scenario written out and read back is the same scenario (the same run id). | `feat(sim): a scenario is a file that can be downloaded and uploaded` | Planned |
 
 ## Measurements (P17.1)
 
@@ -398,6 +434,11 @@ validates those (below), and its figures replace these as the store's.
   one; an intervention logged before a crash is applied exactly once.
 - (P17.7) N runs asked for with a limit of M execute M at a time and queue
   the rest.
+- (P17.11) A scenario downloaded from the builder and uploaded on a clean
+  store is listed, runs, and gives the run id of the original; a packaged
+  scenario written out and read back is unchanged; a file with an unknown
+  field, a wrong version, or a packaged scenario's identifier is refused,
+  naming why.
 - The viewer opens on a page from which a scenario is chosen, a run
   launched, a stored run opened, or the builder entered.
 - A policy port and an experiment runner give the receipts and digests they
@@ -421,6 +462,9 @@ once P17.8 is):
 7. Set a target while a run plays, then replay that run from the start: the
    change is shown at its moment.
 8. From a position in the past, fork: a new run, listed beside the first.
+9. (Once P17.11 is delivered.) In the builder, download the scenario; on a
+   clean store upload it from the landing page: it is listed, a run of it
+   gives the run id of the original's.
 
 ## Settled in review
 
@@ -444,3 +488,14 @@ from the design. The first backend, the commit, the interval, the
 `present` mode and the workers are settled by the measurements above; an
 object-store backend and a compacted checkpoint are later steps, taken when a
 deployment or a longer run needs them.
+
+Two more come with the scenario file (P17.11):
+
+1. **The decision record.** The scenario file is the manifest in a portable
+   form, which extends decision 0050's file. Whether that is recorded in a
+   decision of its own or as an addition to 0050, it is written in P17.11's
+   pull request.
+2. **A weather recorded in a file the uploader does not have.** A scenario
+   that names a recorded weather (identified by its file's content) is
+   refused naming it, or carries it; refused is proposed, with the weather's
+   name and digest in the message.
