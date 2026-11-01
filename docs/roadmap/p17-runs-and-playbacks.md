@@ -215,7 +215,7 @@ days, and a run's records for a given seed.
 | --- | --- | --- | --- |
 | P17.1 | Measurements on the reference greenhouse and on a crop grown by area: a segment's records, a checkpoint's states, time to seek and restore, and what a worker costs a process that is working. The physical commit, the store's first backend, the default interval, the `present` mode's retention and the worker technology fixed from them (below). | `docs(roadmap): the run store's format, from measurements` | Done: measured on one machine; see the measurements |
 | P17.2 | The seed on `RunRequest` and in the identity, without moving an id: a test holds every kept run id and digest. | `feat(sim): a run's seed is its input` | Done: `RunRequest.seed`, and `&seed=` on the run routes. The seed rides the run's weather name (`default#7`, `SEED_MARK`), the variation channel the cloud and wind overrides use, so each part that honours the weather honours the seed and the run's identity changes with it; a seed equal to the scenario's own is dropped from the name (`RunRequest.weather_name`), so that run keeps its identity. It reaches the weather, the sensors' noise and the crop's walk; the simulator's whole suite passes, no id, digest or golden file moved |
-| P17.3 | (a) Completed runs persisted: the store interface and its folder backend, the manifest, segments as Parquet (adding DuckDB, decision 0066), checkpoints under the checkpoint contract, commits and the trajectory digest, validated as the acceptance criteria say; an epoch executed in the process is written to it; the epoch file moves into it. Several runs of a scenario, at different seeds. | `feat(sim): finished runs are kept in a store` | Planned |
+| P17.3 | (a) Completed runs persisted: the store interface and its folder backend, the manifest, segments as Parquet (adding DuckDB, decision 0066), checkpoints under the checkpoint contract, commits and the trajectory digest, validated as the acceptance criteria say; an epoch executed in the process is written to it; the epoch file moves into it. Several runs of a scenario, at different seeds. | `feat(sim): finished runs are kept in a store` | Done, in two pull requests: the store (`services.run_store`: the object interface and its folder backend, the epoch's manifest, Parquet segments, checkpoints, the log, commits with their running digest, a cursor across segments, `verify`), and the playback writing through it. A playback given epochs writes each day the clock has passed (a day not yet reached may still be worked again under a change of the plan) as a segment with the outcomes its gateway held by then and a checkpoint of the run at its end, one commit a day, and tells its epoch `running`, `finished`, `failed` or `interrupted` (a restart, or the producer stopping). `Epochs` now counts a run's epochs from the store's manifests, counting on from the files that kept them before; a playback takes a seed (`start(seed=)`), and a stored run is listed with its seed, status and progress (`stored_runs`) and read after a cursor. No run id, replay digest or golden file moved; the playback without epochs is as it was. The measurements below are its figures |
 | P17.4 | (b) Playback as a position: seek over a stored epoch, many over one, the API's run routes, the consumer interface and port reading the store. | `feat(api): runs are listed, opened and played from the store` | Planned |
 | P17.5 | The viewer's addresses; the landing page, the scenario picker with search, the run dialog, deletion, the builder's two ending actions. | `feat(viewer): a place to choose a scenario and a run` | Planned |
 | P17.6 | Replay: a timeline over the stored epoch, day navigation, `present` stores. | `feat(viewer): move through a run that has been computed` | Planned |
@@ -328,6 +328,27 @@ one run each):
 before the store does. They do not test that a state round-trips exactly, nor
 a resumed trajectory, nor the Parquet files, the commits and the disk: P17.3
 validates those (below), and its figures replace these as the store's.
+
+**End to end, on disk (P17.3).** The reference greenhouse cut to four days, played
+with a clock a test moves, its store on the same machine's disk, then read as
+a producer started again reads it:
+
+| What | Figure |
+| --- | --- |
+| Writing a day the clock has passed (segment, checkpoint, commit) | 55 to 63 ms, after the day's state is made (0 to 0.16 s, already worked); all four days 0.58 s |
+| A day on disk | 24.8 to 25.9 kB of observations, 28.7 to 33.7 kB of checkpoint; 21 objects, 230 kB for four days |
+| Listing a scenario's stored runs | 2 ms |
+| A first page of 5,000 observations | 59 ms |
+| A page of 100 observations in any day | 31 to 61 ms (the day's file is read and checked each time) |
+| Checking every commit's digest, four days | 2 ms |
+| A seek: reading a checkpoint | 2 to 3 ms |
+| A seek: restoring it in a simulator with none | 32 ms |
+| A seek: working on one day from it | 1.31 to 1.32 s |
+
+Inserting a day's rows into DuckDB one by one took 1.0 s a day; handing them over as
+lines of JSON it reads in bulk took 0.07 s, and is what the store does. The
+baselines above (checkpoint save, upload) stand: a seek is the checkpoint read
+and restored in tens of milliseconds, and the days worked on from it.
 
 ### What the measurements settle
 

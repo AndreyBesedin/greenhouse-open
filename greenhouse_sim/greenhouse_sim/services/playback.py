@@ -52,11 +52,11 @@ import gzip
 import itertools
 import logging
 import math
-import os
 import threading
 from bisect import bisect_right
 from collections import OrderedDict
 from collections.abc import Callable, Mapping, Sequence
+from contextlib import suppress
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from enum import StrEnum
@@ -100,6 +100,7 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter
 from greenhouse_sim.climate.commands import TARGET_EVERY_S
 from greenhouse_sim.core.clock import DAY_S, run_day
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
+from greenhouse_sim.services.checkpoints import make_checkpoint
 from greenhouse_sim.services.climate_runs import checked_actions, run_schedule
 from greenhouse_sim.services.crop_log import CropActionDone, crop_actions_done, crop_records
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound, ServiceError
@@ -114,6 +115,15 @@ from greenhouse_sim.services.gateway import (
 )
 from greenhouse_sim.services.heat_log import heat_records
 from greenhouse_sim.services.policy_context import run_context
+from greenhouse_sim.services.run_store import (
+    EpochManifest,
+    EpochStore,
+    FolderStore,
+    Status,
+    compress,
+    default_root,
+)
+from greenhouse_sim.services.run_store import epochs as stored_epochs
 from greenhouse_sim.services.runs import (
     Commanded,
     PlannedAt,
@@ -142,6 +152,8 @@ CONSUMER_CADENCE_S: Final = 300.0
 FIRST_EPOCH: Final = 0
 # How many days' records are kept read back at once.
 DAYS_READ_BACK: Final = 4
+# How many of its gateway's outcomes are read at once, to be kept.
+READ_OUTCOMES_AT_ONCE: Final = 5_000
 # How often a wait for worked-out days looks again.
 WAIT_STEP_S: Final = 0.05
 # How long stopping waits for playbacks, in all: one stops at the moment it
@@ -160,41 +172,41 @@ _EVENTS: Final = TypeAdapter(list[Event])
 
 
 class Epochs:
-    """The epochs of runs played back, kept in `folder` across the
-    producer's restarts, a file per run holding the last one started: so
-    that a consumer reconnecting after a restart sees a new epoch of the
-    run, never its first again, and starts it afresh (decision 0040)."""
+    """The epochs of runs played back, kept in a run store under `folder`
+    across the producer's restarts: an epoch is a folder of its run's whose
+    manifest says it was started, so that a consumer reconnecting after a
+    restart sees a new epoch of the run, never its first again, and starts
+    it afresh (decision 0040). The same store keeps what each epoch worked
+    out (`run_store`). `legacy` is where the epochs were kept before, a file
+    a run holding the last one started, counted on from."""
 
-    def __init__(self, folder: Path) -> None:
+    def __init__(self, folder: Path, legacy: Path | None = None) -> None:
         self.folder = folder
-
-    def _file(self, run_id: str) -> Path:
-        return self.folder / f"{run_id}.epoch"
+        self.objects = FolderStore(folder)
+        self._legacy = legacy
 
     def next(self, run_id: str) -> int:
-        """The epoch a run starts now: the one after the last kept, or the
-        first; kept in turn."""
-        try:
-            last = int(self._file(run_id).read_text())
-        except FileNotFoundError, ValueError:
-            epoch = FIRST_EPOCH
-        else:
-            epoch = last + 1
-        self.started(run_id, epoch)
-        return epoch
+        """The epoch a run starts now: the one after the last started, or the
+        first. It is started when its manifest is written (`open`)."""
+        started = stored_epochs(self.objects, run_id)
+        last = started[-1] if started else FIRST_EPOCH - 1
+        if self._legacy is not None:
+            with suppress(FileNotFoundError, ValueError):
+                last = max(last, int((self._legacy / f"{run_id}.epoch").read_text()))
+        return last + 1
 
-    def started(self, run_id: str, epoch: int) -> None:
-        """Keeps `epoch` as the run's last started."""
-        self.folder.mkdir(parents=True, exist_ok=True)
-        self._file(run_id).write_text(f"{epoch}\n")
+    def open(self, manifest: EpochManifest) -> EpochStore:
+        """Starts an epoch, the one `manifest` names."""
+        return EpochStore.create(self.objects, manifest)
 
 
 def default_epochs() -> Epochs:
-    """Where a played-back run's epochs are kept on this machine: the user's
-    state folder (`XDG_STATE_HOME`, or ~/.local/state), under
-    greenhouse-sim."""
-    state = os.environ.get("XDG_STATE_HOME") or str(Path.home() / ".local" / "state")
-    return Epochs(Path(state) / "greenhouse-sim" / "playback-epochs")
+    """Where a played-back run's epochs are kept on this machine: the run
+    store under the user's state folder (`XDG_STATE_HOME`, or
+    ~/.local/state), under greenhouse-sim, counting on from the files
+    that kept them there before."""
+    root = default_root()
+    return Epochs(root, legacy=root.parent / "playback-epochs")
 
 
 class PlaybackFailed(RuntimeError):
@@ -315,6 +327,10 @@ class _Log[R: (Observation, Event)]:
             first += count
         return tuple(records), max(after, until), until < total
 
+    def day(self, index: int, day: _Packed) -> list[R]:
+        """A day's records, as `after` reads them."""
+        return self._day(index, day)
+
     def _day(self, index: int, day: _Packed) -> list[R]:
         """A day's records, read back, the latest few kept so."""
         with self._lock:
@@ -351,6 +367,7 @@ class Playback:
         scenario_id: str,
         *,
         layout: str | None = None,
+        seed: int | None = None,
         targets: Sequence[Commanded] = (),
         seconds_per_day: float = DEFAULT_SECONDS_PER_DAY,
         every_s: float = CONSUMER_CADENCE_S,
@@ -366,13 +383,20 @@ class Playback:
         self.end_s = config.duration_days * DAY_S
         self.every_s = every_s
         self.layout = layout_name(layout or DEFAULT_LAYOUT)
-        _, self.run_id = air_through_a_run(simulator, RunRequest(scenario_id, layout=self.layout))
+        # The seed the run is at, or none: the scenario's own.
+        self.seed = seed
+        _, self.run_id = air_through_a_run(
+            simulator, RunRequest(scenario_id, layout=self.layout, seed=seed)
+        )
         if targets:
             # Checked as a run's target changes are; refused, nothing starts.
             run_schedule(
                 simulator.catalogue,
                 RunRequest(
-                    scenario_id, layout=self.layout, plan=RunPlan.requested(targets=targets)
+                    scenario_id,
+                    layout=self.layout,
+                    plan=RunPlan.requested(targets=targets),
+                    seed=seed,
                 ),
             )
         self._clock = clock
@@ -385,6 +409,13 @@ class Playback:
         # started again is a new epoch of its run, never its first again.
         self._epochs = epochs
         self._epoch = FIRST_EPOCH if epochs is None else epochs.next(self.run_id)
+        # What the epoch worked out and the clock has passed, kept in the
+        # run store if there is one: the epoch's store, how many days and
+        # outcomes of it are written.
+        self._store: EpochStore | None = None if epochs is None else self._open_epoch(epochs)
+        self._stored_days = 0
+        self._stored_outcomes = 0
+        self._store_ended = False
         self._time_s = 0.0
         self._playing = False
         self._seconds_per_day = seconds_per_day
@@ -439,8 +470,23 @@ class Playback:
             target=self._work, name=f"playback of {self.run_id}", daemon=True
         )
 
+    def _open_epoch(self, epochs: Epochs) -> EpochStore:
+        """The epoch it is starting, in the run store."""
+        return epochs.open(
+            EpochManifest(
+                run_id=self.run_id,
+                epoch=self._epoch,
+                scenario_id=self.scenario_id,
+                seed=self.seed,
+                layout=self.layout,
+                duration_s=self.end_s,
+            )
+        )
+
     def begin(self) -> None:
         """Starts working the run's days out, ahead of the clock."""
+        if self._store is not None:
+            self._store.set_status(Status.RUNNING)
         self._worker.start()
 
     def step_to(self, time_s: float) -> PlaybackState:
@@ -475,11 +521,14 @@ class Playback:
                 with self._lock:
                     return self._state()
 
-    def plays(self, layout: str | None) -> bool:
-        """Whether it plays the run of `layout`: its own, when None."""
-        return layout is None or layout_name(layout) == self.layout
+    def plays(self, layout: str | None, seed: int | None = None) -> bool:
+        """Whether it plays the run of `layout` at `seed`: its own layout,
+        when None, and the seed it has, when None."""
+        return (layout is None or layout_name(layout) == self.layout) and (
+            seed is None or seed == self.seed
+        )
 
-    def rearranged(self, layout: str) -> Playback:
+    def rearranged(self, layout: str, seed: int | None = None) -> Playback:
         """A playback of the same scenario with `layout`, at the same pace and
         cadence, on the same clock, with the same target changes, counting the
         epochs of its own run where this one counts its: not begun. From then
@@ -491,6 +540,7 @@ class Playback:
                 self._simulator,
                 self.scenario_id,
                 layout=layout,
+                seed=self.seed if seed is None else seed,
                 targets=self._executor.plan().targeted(),
                 seconds_per_day=self._seconds_per_day,
                 every_s=self.every_s,
@@ -542,7 +592,9 @@ class Playback:
     def _run(self) -> RunRequest:
         """The run it plays: its scenario's own, with its layout and its
         epoch's target changes."""
-        return RunRequest(self.scenario_id, layout=self.layout, plan=self._executor.plan())
+        return RunRequest(
+            self.scenario_id, layout=self.layout, plan=self._executor.plan(), seed=self.seed
+        )
 
     def _refusal(self, action: Action, at_s: float) -> str | None:
         """Why its run would refuse `action` at `at_s` seconds, as a run's
@@ -619,17 +671,92 @@ class Playback:
 
     def _work(self) -> None:
         days = round(self.end_s / DAY_S)
-        while not self._stopped.is_set():
-            with self._lock:
-                day, run, changes = self._next_day(), self._run(), self._changes
-                assigned = self._executor.crop_actions_on(day)
-                self._changed.clear()
-            if day >= days:
-                # Every day worked out, until a change has some worked again.
-                self._changed.wait(WAIT_STEP_S)
-                continue
-            if not self._work_day(day, run, changes, assigned):
+        try:
+            while not self._stopped.is_set():
+                with self._lock:
+                    day, run, changes = self._next_day(), self._run(), self._changes
+                    assigned = self._executor.crop_actions_on(day)
+                    self._changed.clear()
+                self._keep_closed_days()
+                if day >= days:
+                    # Every day worked out, until a change has some worked again.
+                    self._changed.wait(WAIT_STEP_S)
+                    continue
+                if not self._work_day(day, run, changes, assigned):
+                    return
+        finally:
+            self._end_store(Status.INTERRUPTED)
+
+    def _end_store(self, status: Status) -> None:
+        """Says in the run store how its epoch ended, unless it ended already:
+        finished, failed, or interrupted by the producer stopping."""
+        with self._lock:
+            store, ended = self._store, self._store_ended
+            self._store_ended = self._store_ended or store is not None
+        if store is not None and not ended:
+            store.set_status(status)
+
+    def _keep_closed_days(self) -> None:
+        """Writes to the run store the days of the epoch that are worked out
+        and that the clock has passed, each as a segment of its records with
+        the outcomes written by then and a checkpoint of the run at its end,
+        committed one by one. A day the clock has not reached may yet be
+        worked again under a change of the plan, so it is not written. The
+        epoch is told finished once its last day is, or failed if it failed."""
+        with self._lock:
+            store = self._store
+            if store is None or self._store_ended:
                 return
+            self._advance()
+            failed = self._failure is not None
+            days = round(self.end_s / DAY_S)
+            passed = days if self._time_s >= self.end_s else math.floor(self._time_s / DAY_S)
+            closed = min(passed, len(self._worked))
+            first, run = self._stored_days, self._run()
+            todo = list(enumerate(self._worked))[first:closed]
+            outcomes = self._outcomes_until(closed * DAY_S) if todo else []
+        if failed:
+            self._end_store(Status.FAILED)
+            return
+        try:
+            for day, (observed, happened) in todo:
+                kept = outcomes if day == todo[-1][0] else []
+                store.commit(
+                    day * DAY_S,
+                    (day + 1) * DAY_S,
+                    observations=self._observations.day(day, observed),
+                    events=self._events.day(day, happened),
+                    outcomes=kept,
+                    checkpoint=compress(
+                        make_checkpoint(self._simulator, run, (day + 1) * DAY_S).model_dump_json()
+                    ),
+                )
+        except Exception:
+            logger.exception("the run store could not keep %s", self.run_id)
+            self._end_store(Status.FAILED)
+            return
+        with self._lock:
+            if self._store is store:
+                self._stored_days = closed
+                self._stored_outcomes += len(outcomes)
+        if closed == days and todo:
+            self._end_store(Status.FINISHED)
+
+    def _outcomes_until(self, until_s: float) -> list[ActionOutcome]:
+        """The outcomes in its gateway's log not yet written to the store
+        that were delivered by `until_s` into the run, in the log's order."""
+        limit = self.start + timedelta(seconds=until_s)
+        found: list[ActionOutcome] = []
+        position = self._stored_outcomes
+        while True:
+            batch = self._gateway.outcomes(position, READ_OUTCOMES_AT_ONCE)
+            for outcome in batch.outcomes:
+                if (outcome.delivered_at or outcome.resolved_at) > limit:
+                    return found
+                found.append(outcome)
+            position = batch.next
+            if not batch.has_more:
+                return found
 
     def work_day(self, day: int) -> bool:
         """Works the run's day `day` out and publishes its records, the day
@@ -802,7 +929,12 @@ class Playback:
                     case PlaybackCommand.RESTART:
                         self._epoch += 1
                         if self._epochs is not None:
-                            self._epochs.started(self.run_id, self._epoch)
+                            if self._store is not None and not self._store_ended:
+                                self._store.set_status(Status.INTERRUPTED)
+                            self._store = self._open_epoch(self._epochs)
+                            self._store.set_status(Status.RUNNING)
+                            self._stored_days = self._stored_outcomes = 0
+                            self._store_ended = False
                         self._time_s = 0.0
                         self._playing = True
                         # The scenario's own run again: what was pending is
@@ -1122,6 +1254,7 @@ def start(
     seconds_per_day: float | None = None,
     *,
     layout: str | None = None,
+    seed: int | None = None,
     hold: bool = False,
     clock: Callable[[], float] = monotonic,
     epochs: Epochs | None = None,
@@ -1141,6 +1274,7 @@ def start(
             simulator,
             scenario_id,
             layout=layout,
+            seed=seed,
             seconds_per_day=DEFAULT_SECONDS_PER_DAY if seconds_per_day is None else seconds_per_day,
             clock=clock,
             epochs=epochs,
@@ -1149,14 +1283,16 @@ def start(
         return found
 
     found = simulator.playbacks.made_once(scenario_id, begun)
-    if not found.plays(layout):
-        found = _rearranged(simulator, found, layout or DEFAULT_LAYOUT)
+    if not found.plays(layout, seed):
+        found = _rearranged(simulator, found, layout or DEFAULT_LAYOUT, seed)
     if seconds_per_day is not None:
         found.set_pace(seconds_per_day)
     return found.state() if hold else found.command(PlaybackCommand.PLAY)
 
 
-def _rearranged(simulator: Simulator, found: Playback, layout: str) -> Playback:
+def _rearranged(
+    simulator: Simulator, found: Playback, layout: str, seed: int | None = None
+) -> Playback:
     """The scenario's playback with `layout` in place of the one it has, as
     `found` was: begun, and the one it replaces stopped, without waiting for
     the day it is working out, so that the new run starts at once. One put
@@ -1166,9 +1302,9 @@ def _rearranged(simulator: Simulator, found: Playback, layout: str) -> Playback:
     with playbacks.rearranging:
         playbacks.refuse_if_closed()
         current = playbacks.get(found.scenario_id) or found
-        if current.plays(layout):
+        if current.plays(layout, seed):
             return current
-        replacing = current.rearranged(layout)
+        replacing = current.rearranged(layout, seed)
         replacing.begin()
         playbacks.replace(found.scenario_id, replacing, current)
     current.stop(wait=False)
