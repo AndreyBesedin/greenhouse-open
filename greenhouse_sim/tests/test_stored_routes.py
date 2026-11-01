@@ -10,9 +10,9 @@ from typing import Final
 
 import pytest
 from greenhouse_protocol.contracts.consumer import ObservationBatch
-from greenhouse_protocol.enums import ObservationType
+from greenhouse_protocol.enums import ObservationType, SourceType
 from greenhouse_protocol.observation import Observation
-from greenhouse_protocol.provenance import RecordSource, SourceType
+from greenhouse_protocol.provenance import RecordSource
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
