@@ -239,22 +239,45 @@ class Position:
         self._following = False
         self._seconds_per_day = seconds_per_day
         self._since = clock()
+        # Whether it waited at the frontier of an epoch still computing when
+        # it last looked, and the epoch's status then.
+        self._waiting = False
+        self._status = epoch.status()
 
     def _advance(self) -> float:
         """Moves the position on by the real time since it last looked, to
         the epoch's frontier at most, and returns the frontier. It waits at
-        the frontier of an epoch still computing; at the end of a finished one
-        it stops."""
+        the frontier of an epoch still computing, and the time it waited is
+        not played when the epoch computes on, as a playback's clock starts
+        again from the work done; at the end of a finished epoch it stops.
+
+        The status is read before the frontier: a worker commits its last day
+        before it tells the epoch finished, so a finished epoch's frontier,
+        read after, is its last, and a position never stops short of it."""
         now = self._clock()
         elapsed, self._since = now - self._since, now
+        self._status = self.epoch.status()
         frontier = self.epoch.frontier_s()
         if self._following:
             self._time_s = frontier
         elif self._playing:
+            if self._waiting:
+                elapsed = 0.0
             self._time_s = min(frontier, self._time_s + elapsed / self._seconds_per_day * DAY_S)
-            if self._time_s >= frontier and self.epoch.status() == Status.FINISHED:
+            if self._time_s >= frontier and self._status == Status.FINISHED:
                 self._playing = False
+        self._wait_if_at(frontier)
         return frontier
+
+    def _wait_if_at(self, frontier: float) -> None:
+        """Notes whether the position, playing, stands at the frontier of an
+        epoch that is not finished: then it waits."""
+        self._waiting = (
+            self._playing
+            and not self._following
+            and self._time_s >= frontier
+            and self._status != Status.FINISHED
+        )
 
     def _state(self, frontier: float) -> PositionState:
         epoch = self.epoch
@@ -265,7 +288,7 @@ class Position:
             epoch=epoch.epoch,
             layout=epoch.layout,
             seed=epoch.seed,
-            status=epoch.status(),
+            status=self._status,
             started_at=epoch.start,
             simulated_now=epoch.start + timedelta(seconds=self._time_s),
             time_s=self._time_s,
@@ -287,15 +310,15 @@ class Position:
         with self._lock:
             frontier = self._advance()
             self._following = False
-            self._playing = not (
-                self._time_s >= frontier and self.epoch.status() == Status.FINISHED
-            )
+            self._playing = not (self._time_s >= frontier and self._status == Status.FINISHED)
+            self._wait_if_at(frontier)
             return self._state(frontier)
 
     def pause(self) -> PositionState:
         with self._lock:
             frontier = self._advance()
             self._playing = self._following = False
+            self._wait_if_at(frontier)
             return self._state(frontier)
 
     def set_pace(self, seconds_per_day: float) -> PositionState:
@@ -317,6 +340,7 @@ class Position:
                     f"{frontier:.15g} s, not at {time_s:.15g} s"
                 )
             self._time_s, self._following = time_s, False
+            self._wait_if_at(frontier)
             at = self._time_s
         self.epoch.restore_near(at)
         with self._lock:
@@ -327,6 +351,7 @@ class Position:
         with self._lock:
             frontier = self._advance()
             self._time_s, self._following, self._playing = frontier, True, False
+            self._wait_if_at(frontier)
         self.epoch.restore_near(frontier)
         with self._lock:
             return self._state(frontier)
