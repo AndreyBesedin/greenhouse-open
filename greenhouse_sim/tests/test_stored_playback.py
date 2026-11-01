@@ -280,6 +280,8 @@ def test_a_position_cannot_pass_the_frontier_of_an_epoch_still_computing(
     assert (waiting.time_s, waiting.playing) == (DAY_S, True)
     store.commit(DAY_S, 2 * DAY_S)
     clock.now += 0.5
+    assert position.state().time_s == DAY_S  # the first look after spends the wait on nothing
+    clock.now += 0.5
     assert position.state().time_s == pytest.approx(1.5 * DAY_S)
 
     # Following, it stays at the frontier as the worker moves it.
@@ -289,6 +291,62 @@ def test_a_position_cannot_pass_the_frontier_of_an_epoch_still_computing(
     assert other.state().time_s == 3 * DAY_S
     store.set_status(Status.FINISHED)
     assert position.state().frontier_s == 3 * DAY_S
+
+
+def test_a_position_does_not_play_the_time_it_waited_at_the_frontier(
+    computing: tuple[Simulator, EpochStore],
+) -> None:
+    simulator, store = computing
+    clock = Clock()
+    position = simulator.positions.open(simulator, store.objects, "computing", 0, clock=clock)
+    position.set_pace(1.0)
+    position.seek(DAY_S)
+    position.play()
+    assert position.state().time_s == DAY_S  # waiting at the first day's end
+    # Nobody looks while the worker computes for a long time and commits.
+    clock.now += 100.0
+    store.commit(DAY_S, 2 * DAY_S)
+    # The first look after finds the new day, and does not spend the wait on it.
+    clock.now += 0.5
+    assert position.state().time_s == DAY_S
+    clock.now += 0.5
+    assert position.state().time_s == pytest.approx(1.5 * DAY_S)
+    clock.now += 0.5
+    assert position.state().time_s == 2 * DAY_S  # the new frontier, waited at again
+
+
+def test_a_position_does_not_stop_short_of_the_last_commit_of_an_epoch_that_finishes(
+    computing: tuple[Simulator, EpochStore],
+) -> None:
+    simulator, store = computing
+    store.commit(DAY_S, 2 * DAY_S)
+    clock = Clock()
+    position = simulator.positions.open(simulator, store.objects, "computing", 0, clock=clock)
+    position.set_pace(1.0)
+    position.seek(2 * DAY_S)
+    position.play()
+
+    # The worker writes its last commit and tells the epoch finished between
+    # the position's reads of the epoch.
+    read = position.epoch.frontier_s
+    done: list[bool] = []
+
+    def frontier_then_the_last_commit() -> float:
+        seen = read()
+        if not done:
+            done.append(True)
+            store.commit(2 * DAY_S, 3 * DAY_S)
+            store.set_status(Status.FINISHED)
+        return seen
+
+    position.epoch.frontier_s = frontier_then_the_last_commit  # type: ignore[method-assign]
+    clock.now += 1.0
+    assert position.state().playing  # it did not see the epoch finished: it plays on
+    clock.now += 0.5
+    position.state()  # sees the finished epoch and its last day
+    clock.now += 1.0
+    ended = position.state()
+    assert (ended.time_s, ended.playing, ended.status) == (3 * DAY_S, False, Status.FINISHED)
 
 
 def test_no_checkpoint_is_restored_before_the_first_is_kept(
