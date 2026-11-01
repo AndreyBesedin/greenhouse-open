@@ -58,6 +58,7 @@ from greenhouse_sim.services.scenarios import (
     equipment_levels,
     layout_name,
     scenario,
+    with_weather,
 )
 from greenhouse_sim.weather.recorded import RecordedWeather
 
@@ -252,8 +253,17 @@ def air_through_a_run(
         return (lambda time_s: day.sampled(f"{scenario_id}_{CLIMATE}", time_s)), (
             f"{scenario_id}-climate-{digest}"
         )
+    # Its airflow is the same under any weather, so the weather named is not
+    # applied (nor does it make another run), but the seed is: it draws the
+    # sensors' readings and the crop's, which another seed makes another run.
     config = changed(
         simulator.catalogue, scenario(simulator.catalogue, scenario_id), SceneChanges(layout=name)
+    ).model_copy(
+        update={
+            "random_seed": with_weather(
+                scenario(simulator.catalogue, scenario_id), run.weather_name(simulator.catalogue)
+            ).random_seed
+        }
     )
     own = config.airflow.field(f"{scenario_id}_{config.airflow.kind}", air)
     digest = _digest(_models_told(config) + config.model_dump_json() + _cropped(config, run))
