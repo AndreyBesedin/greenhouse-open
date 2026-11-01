@@ -13,9 +13,11 @@ from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.outcome import ActionOutcome
 
+from greenhouse_sim.services.consumer import batch_cursor, batch_limit
 from greenhouse_sim.services.errors import NotFound
 from greenhouse_sim.services.playback import DEFAULT_SECONDS_PER_DAY
-from greenhouse_sim.services.run_store import ObjectStore, StoredRun, stored_runs
+from greenhouse_sim.services.run_store import ObjectStore, StoredRun, stored_run, stored_runs
+from greenhouse_sim.services.run_store import epochs as stored_epochs
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.stored_playback import Position, PositionState, Records, StoredEpoch
 
@@ -36,10 +38,10 @@ def runs_of(simulator: Simulator, scenario_id: str) -> list[StoredRun]:
 
 def epoch_of(simulator: Simulator, run_id: str, epoch: int) -> StoredRun:
     """One stored epoch, as the list shows it."""
-    for found in stored_runs(_objects(simulator)):
-        if (found.run_id, found.epoch) == (run_id, epoch):
-            return found
-    raise NotFound(f"run {run_id} has no epoch {epoch} in the store")
+    objects = _objects(simulator)
+    if epoch not in stored_epochs(objects, run_id):
+        raise NotFound(f"run {run_id} has no epoch {epoch} in the store")
+    return stored_run(objects, run_id, epoch)
 
 
 def _stored(simulator: Simulator, run_id: str, epoch: int) -> StoredEpoch:
@@ -55,15 +57,16 @@ def epoch_observations(
     run_id: str,
     epoch: int,
     *,
-    after: int,
-    limit: int,
+    after: int | None,
+    limit: int | None,
     at_s: float | None,
 ) -> ObservationBatch:
     """An epoch's observations after a cursor that were delivered by `at_s`
     into its run, by default its frontier."""
+    cursor, most = batch_cursor(after), batch_limit(limit)
     kept = _stored(simulator, run_id, epoch)
     moment = _at(kept, at_s)
-    return _observations(kept, after, kept.observations(after, limit, moment), moment)
+    return _observations(kept, cursor, kept.observations(cursor, most, moment), moment)
 
 
 def epoch_events(
@@ -71,13 +74,14 @@ def epoch_events(
     run_id: str,
     epoch: int,
     *,
-    after: int,
-    limit: int,
+    after: int | None,
+    limit: int | None,
     at_s: float | None,
 ) -> EventBatch:
+    cursor, most = batch_cursor(after), batch_limit(limit)
     kept = _stored(simulator, run_id, epoch)
     moment = _at(kept, at_s)
-    return _events(kept, after, kept.events(after, limit, moment), moment)
+    return _events(kept, cursor, kept.events(cursor, most, moment), moment)
 
 
 def epoch_outcomes(
@@ -85,13 +89,14 @@ def epoch_outcomes(
     run_id: str,
     epoch: int,
     *,
-    after: int,
-    limit: int,
+    after: int | None,
+    limit: int | None,
     at_s: float | None,
 ) -> OutcomeBatch:
+    cursor, most = batch_cursor(after), batch_limit(limit)
     kept = _stored(simulator, run_id, epoch)
     moment = _at(kept, at_s)
-    return _outcomes(kept, after, kept.outcomes(after, limit, moment), moment)
+    return _outcomes(kept, cursor, kept.outcomes(cursor, most, moment), moment)
 
 
 def _observations(
@@ -180,24 +185,29 @@ def close(simulator: Simulator, position_id: str) -> None:
 
 
 def position_observations(
-    simulator: Simulator, position_id: str, after: int, limit: int
+    simulator: Simulator, position_id: str, after: int | None, limit: int | None
 ) -> ObservationBatch:
     """The observations after a cursor that the position's epoch delivered by
     its moment."""
+    cursor, most = batch_cursor(after), batch_limit(limit)
     held = _position(simulator, position_id)
     moment = held.state().time_s
-    return _observations(held.epoch, after, held.epoch.observations(after, limit, moment), moment)
+    return _observations(held.epoch, cursor, held.epoch.observations(cursor, most, moment), moment)
 
 
-def position_events(simulator: Simulator, position_id: str, after: int, limit: int) -> EventBatch:
+def position_events(
+    simulator: Simulator, position_id: str, after: int | None, limit: int | None
+) -> EventBatch:
+    cursor, most = batch_cursor(after), batch_limit(limit)
     held = _position(simulator, position_id)
     moment = held.state().time_s
-    return _events(held.epoch, after, held.epoch.events(after, limit, moment), moment)
+    return _events(held.epoch, cursor, held.epoch.events(cursor, most, moment), moment)
 
 
 def position_outcomes(
-    simulator: Simulator, position_id: str, after: int, limit: int
+    simulator: Simulator, position_id: str, after: int | None, limit: int | None
 ) -> OutcomeBatch:
+    cursor, most = batch_cursor(after), batch_limit(limit)
     held = _position(simulator, position_id)
     moment = held.state().time_s
-    return _outcomes(held.epoch, after, held.epoch.outcomes(after, limit, moment), moment)
+    return _outcomes(held.epoch, cursor, held.epoch.outcomes(cursor, most, moment), moment)

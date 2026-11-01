@@ -661,30 +661,35 @@ class StoredRun(BaseModel):
     size_bytes: int
 
 
+def stored_run(objects: ObjectStore, run_id: str, epoch_number: int) -> StoredRun:
+    """One epoch as a list of them shows it. Only its own folder is read."""
+    epoch = EpochStore(objects, run_id, epoch_number)
+    manifest = epoch.manifest()
+    frontier = epoch.frontier_s()
+    return StoredRun(
+        run_id=run_id,
+        epoch=manifest.epoch,
+        scenario_id=manifest.scenario_id,
+        seed=manifest.seed,
+        layout=manifest.layout,
+        status=manifest.status,
+        frontier_s=frontier,
+        duration_s=manifest.duration_s,
+        progress=None if not manifest.duration_s else frontier / manifest.duration_s,
+        created_at=manifest.created_at,
+        size_bytes=epoch.size_bytes(),
+    )
+
+
 def stored_runs(objects: ObjectStore, scenario_id: str | None = None) -> list[StoredRun]:
     """The epochs a store holds, those of `scenario_id` if given, by run and
     epoch. Only the runs' folders are read, not their segments."""
     found = []
     for run_id in objects.children():
         for epoch_number in epochs(objects, run_id):
-            epoch = EpochStore(objects, run_id, epoch_number)
-            manifest = epoch.manifest()
-            if scenario_id is not None and manifest.scenario_id != scenario_id:
-                continue
-            frontier = epoch.frontier_s()
-            found.append(
-                StoredRun(
-                    run_id=run_id,
-                    epoch=manifest.epoch,
-                    scenario_id=manifest.scenario_id,
-                    seed=manifest.seed,
-                    layout=manifest.layout,
-                    status=manifest.status,
-                    frontier_s=frontier,
-                    duration_s=manifest.duration_s,
-                    progress=None if not manifest.duration_s else frontier / manifest.duration_s,
-                    created_at=manifest.created_at,
-                    size_bytes=epoch.size_bytes(),
-                )
-            )
+            if scenario_id is not None:
+                manifest = EpochStore(objects, run_id, epoch_number).manifest()
+                if manifest.scenario_id != scenario_id:
+                    continue
+            found.append(stored_run(objects, run_id, epoch_number))
     return found

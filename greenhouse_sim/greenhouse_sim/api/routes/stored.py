@@ -34,8 +34,6 @@ from greenhouse_sim.services import runs_kept
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.simulator import Simulator
 
-# How many records a page of an epoch's log holds, unless the query says.
-PAGE: int = 1_000
 KINDS = ("observations", "events", "outcomes")
 
 
@@ -100,6 +98,11 @@ def _closed(simulator: Simulator, position_id: str) -> dict[str, JsonValue]:
     return {"closed": position_id}
 
 
+def _count(query: Query, name: str) -> int | None:
+    """A cursor or a limit the query gives, for the service to check, or none."""
+    return None if last(query, name) is None else whole(query, name, 0)
+
+
 def _at(query: Query) -> float | None:
     return None if last(query, "t") is None else seconds(query)
 
@@ -107,7 +110,7 @@ def _at(query: Query) -> float | None:
 def _epoch_records(
     simulator: Simulator, run_id: str, number: str, kind: str, query: Query
 ) -> BaseModel:
-    after, limit = whole(query, "after", 0), whole(query, "limit", PAGE)
+    after, limit = _count(query, "after"), _count(query, "limit")
     reads = {
         "observations": runs_kept.epoch_observations,
         "events": runs_kept.epoch_events,
@@ -117,7 +120,7 @@ def _epoch_records(
 
 
 def _position_records(simulator: Simulator, position_id: str, kind: str, query: Query) -> BaseModel:
-    after, limit = whole(query, "after", 0), whole(query, "limit", PAGE)
+    after, limit = _count(query, "after"), _count(query, "limit")
     reads = {
         "observations": runs_kept.position_observations,
         "events": runs_kept.position_events,

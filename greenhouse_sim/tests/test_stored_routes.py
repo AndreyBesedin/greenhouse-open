@@ -189,3 +189,56 @@ def test_a_position_is_opened_moved_and_closed(simulator: Simulator) -> None:
 def test_a_route_that_is_not_one_is_not_answered(simulator: Simulator) -> None:
     assert _get(simulator, "/api/positions/x/nothing")[0] == HTTPStatus.NOT_FOUND
     assert _post(simulator, "/api/positions/x/jump")[0] == HTTPStatus.METHOD_NOT_ALLOWED
+
+
+def test_a_cursor_or_a_limit_that_is_not_one_is_refused_before_anything_is_read(
+    simulator: Simulator,
+) -> None:
+    _, opened = _post(simulator, f"/api/runs/{RUN}/epochs/0/positions")
+    position = PositionState.model_validate(opened).position_id
+    for kind in ("observations", "events", "outcomes"):
+        for base in (f"/api/runs/{RUN}/epochs/0/{kind}", f"/api/positions/{position}/{kind}"):
+            for query in ("after=-1", "limit=0", "limit=-3"):
+                status, body = _get(simulator, f"{base}?{query}")
+                assert status == HTTPStatus.BAD_REQUEST, (base, query)
+                assert isinstance(body, dict) and "error" in body
+    # A limit above the most a batch holds is held to it, not refused.
+    assert _get(simulator, f"/api/runs/{RUN}/epochs/0/observations?limit=1000000")[0] == (
+        HTTPStatus.OK
+    )
+
+
+class Listing(FolderStore):
+    """A folder store that notes the folders it was asked to list."""
+
+    def __init__(self, root: Path) -> None:
+        super().__init__(root)
+        self.listed: list[str] = []
+
+    def names(self, prefix: str = "") -> list[str]:
+        self.listed.append(prefix)
+        return super().names(prefix)
+
+    def children(self, prefix: str = "") -> list[str]:
+        self.listed.append(prefix)
+        return super().children(prefix)
+
+
+def test_one_epoch_is_looked_up_without_reading_the_others(tmp_path: Path) -> None:
+    objects = Listing(tmp_path)
+    for run_id in ("first-run", "second-run"):
+        EpochStore.create(
+            objects,
+            EpochManifest(run_id=run_id, epoch=0, scenario_id=SCENARIO, layout="default"),
+        ).commit(0.0, DAY_S)
+    with Simulator(runs=objects) as made:
+        objects.listed.clear()
+        status, body = _get(made, "/api/runs/second-run/epochs/0")
+        assert status == HTTPStatus.OK and isinstance(body, dict)
+        assert body["run_id"] == "second-run"
+        assert objects.listed and all(p.startswith("second-run/") for p in objects.listed)
+
+        objects.listed.clear()
+        assert _get(made, "/api/runs/missing-run/epochs/0")[0] == HTTPStatus.NOT_FOUND
+        assert _get(made, "/api/runs/first-run/epochs/7")[0] == HTTPStatus.NOT_FOUND
+        assert all(p.startswith(("missing-run/", "first-run/")) for p in objects.listed)
