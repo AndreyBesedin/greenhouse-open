@@ -69,25 +69,29 @@ def epoch_of(simulator: Simulator, run_id: str, epoch: int) -> StoredRun:
 
 def delete_epoch(simulator: Simulator, run_id: str, epoch: int) -> dict[str, JsonValue]:
     """Removes a stored epoch a person no longer wants, with the positions
-    over it. One still being computed is not removed, but one the store
-    says is running and no playback is working on, its producer gone, is."""
+    over it. One the store calls queued or running is not removed, whoever
+    works on it: a worker in a process of its own is seen by no playback here.
+    Nor is one a replaced producer is still writing, whatever the store says
+    yet. A run left running by a producer that is gone stays so until it is
+    marked interrupted (P17.9)."""
     objects = _objects(simulator)
     if epoch not in stored_epochs(objects, run_id):
         raise NotFound(f"run {run_id} has no epoch {epoch} in the store")
-    if stored_run(objects, run_id, epoch).status in (Status.QUEUED, Status.RUNNING) and (
-        _being_computed(simulator, run_id, epoch)
-    ):
+    if stored_run(objects, run_id, epoch).status in (
+        Status.QUEUED,
+        Status.RUNNING,
+    ) or _winding_down(simulator, run_id, epoch):
         raise Conflict(f"run {run_id}, epoch {epoch} is being computed: wait for it, or stop it")
     simulator.positions.close_over(run_id, epoch)
     delete_stored_epoch(objects, run_id, epoch)
     return {"deleted": f"{run_id}/{epoch}"}
 
 
-def _being_computed(simulator: Simulator, run_id: str, epoch: int) -> bool:
-    """Whether a playback is working an epoch out: one in place, or one
-    replaced that has not yet stopped."""
-    for playing in [*simulator.playbacks.all(), *simulator.playbacks.retiring()]:
-        state = playing.state()
+def _winding_down(simulator: Simulator, run_id: str, epoch: int) -> bool:
+    """Whether a playback replaced by another, told to stop, is still writing
+    an epoch."""
+    for retiring in simulator.playbacks.retiring():
+        state = retiring.state()
         if (state.run_id, state.epoch) == (run_id, epoch):
             return True
     return False

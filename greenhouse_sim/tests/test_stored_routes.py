@@ -302,28 +302,34 @@ def test_a_stored_epoch_is_deleted_with_its_positions_and_keeps_its_number(
     assert _post(simulator, f"/api/runs/{RUN}/epochs/0/delete")[0] == HTTPStatus.NOT_FOUND
 
 
-def test_an_epoch_whose_producer_is_gone_is_deleted_though_its_status_says_running(
-    simulator: Simulator,
+@pytest.mark.parametrize("status", [Status.QUEUED, Status.RUNNING])
+def test_an_epoch_the_store_calls_queued_or_running_is_refused_whoever_works_on_it(
+    simulator: Simulator, status: Status
 ) -> None:
+    # A worker in a process of its own is seen by no playback of this one.
     assert simulator.runs is not None
-    EpochStore.create(
+    left = EpochStore.create(
         simulator.runs,
         EpochManifest(
-            run_id="left-running",
+            run_id="worked-elsewhere",
             epoch=0,
             scenario_id=SCENARIO,
             seed=None,
             layout="default",
-            status=Status.RUNNING,
+            status=status,
             duration_s=None,
             created_at=None,
         ),
     )
 
-    status, _ = _post(simulator, "/api/runs/left-running/epochs/0/delete")
+    refused = _post(simulator, "/api/runs/worked-elsewhere/epochs/0/delete")
+    left.set_status(Status.INTERRUPTED)
+    allowed = _post(simulator, "/api/runs/worked-elsewhere/epochs/0/delete")
 
-    assert status == HTTPStatus.OK
-    assert started_epochs(simulator.runs, "left-running") == [0]
+    assert refused[0] == HTTPStatus.CONFLICT
+    assert "being computed" in str(refused[1])
+    assert allowed[0] == HTTPStatus.OK
+    assert started_epochs(simulator.runs, "worked-elsewhere") == [0]
 
 
 def test_an_epoch_a_playback_is_working_on_is_refused_until_it_stops(
@@ -425,9 +431,10 @@ class Retiring:
         self.working = False
 
 
-def test_an_epoch_a_replaced_producer_is_still_writing_is_refused_until_it_stops(
+def test_an_epoch_a_replaced_producer_is_still_writing_is_refused_whatever_the_store_says(
     simulator: Simulator,
 ) -> None:
+    # The store says finished, yet the producer, told to stop, writes still.
     assert simulator.runs is not None
     EpochStore.create(
         simulator.runs,
@@ -437,7 +444,7 @@ def test_an_epoch_a_replaced_producer_is_still_writing_is_refused_until_it_stops
             scenario_id=SCENARIO,
             seed=None,
             layout="default",
-            status=Status.RUNNING,
+            status=Status.FINISHED,
             duration_s=None,
             created_at=None,
         ),
