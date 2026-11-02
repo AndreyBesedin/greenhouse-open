@@ -20,6 +20,9 @@ const OWN_PREVIEW_PORT = 4317;
 // Where the simulator served keeps the drafts the tests save: a folder of
 // this run's own.
 const TEST_DRAFTS = join(mkdtempSync(join(tmpdir(), "greenhouse-sim-drafts-")), "drafts.sqlite3");
+// The runs the tests play are kept in a folder of the run's own, never in the
+// user's: the landing page lists whatever the API has kept.
+const TEST_STATE = mkdtempSync(join(tmpdir(), "greenhouse-sim-state-"));
 const PREVIEW_PORT = testPort(OWN_PREVIEW_PORT);
 const IN_CI = process.env.CI !== undefined;
 // Screenshot comparisons and the benchmark have their own configurations.
@@ -140,6 +143,7 @@ export default defineConfig({
       // the user's (P12.2).
       command: simulatorServer(TEST_SIMULATOR_API_PORT, undefined, TEST_DRAFTS),
       url: `${simulatorApi(TEST_SIMULATOR_API_PORT)}/api/health`,
+      env: { XDG_STATE_HOME: TEST_STATE },
       reuseExistingServer: REUSE_TEST_SERVERS,
     },
     {

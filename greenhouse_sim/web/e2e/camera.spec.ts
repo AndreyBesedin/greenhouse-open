@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 
 import { CAMERA_PRESETS, DEFAULT_PRESET, PRESET_ORDER, type PresetName } from "../src/camera.ts";
+import { VIEWER_PATH } from "../src/landing/paths";
 import { formatPoint } from "../src/readouts.ts";
 import type { Point3 } from "../src/world.ts";
 import { mainView, onScreen, orbitUntil } from "./view.ts";
@@ -22,7 +23,7 @@ async function viewCentre(page: Page): Promise<{ x: number; y: number }> {
 }
 
 test("each preset button moves the camera to its pose", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(VIEWER_PATH);
   const camera = page.getByTestId("camera-position");
 
   for (const preset of PRESET_ORDER) {
@@ -32,7 +33,7 @@ test("each preset button moves the camera to its pose", async ({ page }) => {
 });
 
 test("dragging orbits the camera, and a refresh restores the default view", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(VIEWER_PATH);
   const camera = page.getByTestId("camera-position");
   await expect(camera).toHaveText(DEFAULT_VIEW);
 
@@ -48,7 +49,7 @@ test("dragging orbits the camera, and a refresh restores the default view", asyn
 });
 
 test("the HUD reports frame rate, objects and the pointer on the ground", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(VIEWER_PATH);
   const frameRate = page.getByTestId("frame-rate");
 
   await expect(page.getByTestId("object-count")).toHaveText(/^[1-9]\d*$/);
@@ -146,7 +147,7 @@ test("the wheel zooms towards the greenhouse under the pointer, which stays unde
 test("over the sky, the wheel zooms towards the middle of the view, as before", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto(VIEWER_PATH);
   const camera = page.getByTestId("camera-position");
   await page.getByRole("button", { name: "Front" }).click();
   await expect(camera).toHaveText(formatPoint(CAMERA_PRESETS.front.position));

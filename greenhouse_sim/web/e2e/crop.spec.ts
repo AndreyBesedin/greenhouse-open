@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import type { CameraPose } from "../src/camera.ts";
+import { VIEWER_PATH } from "../src/landing/paths";
 import { chooser } from "./chooser";
 import { unfold } from "./folds";
 import { clickAt } from "./view";
@@ -102,7 +103,7 @@ test("crop: shown from the list, the reference greenhouse opens on its first day
   page,
 }) => {
   test.setTimeout(300_000);
-  await page.goto("/");
+  await page.goto(VIEWER_PATH);
   await (await chooser(page)).getByRole("button", { name: "Open reference_greenhouse" }).click();
   await expect(page).toHaveURL(/[?&]field=climate(&|$)/);
   await expect(page).toHaveURL(new RegExp(`&t=${86.5 * DAY_S}(&|$)`));

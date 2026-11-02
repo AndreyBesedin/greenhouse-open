@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 import { expect, type Page, test } from "@playwright/test";
-
+import { VIEWER_PATH } from "../../src/landing/paths";
 import { type Orbited, orbit, type RanOn, ranOn } from "./measuring";
 
 /**
@@ -51,7 +51,7 @@ test("the stress scene's frame rate, at several sizes, while orbiting", async ({
   page,
   browser,
 }) => {
-  await page.goto("/");
+  await page.goto(VIEWER_PATH);
   const benchmark: Benchmark = { ...(await ranOn(page, browser)), measurements: [] };
   for (const plants of SIZES) {
     benchmark.measurements.push(await measure(page, plants));

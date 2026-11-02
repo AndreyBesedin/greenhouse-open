@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { VIEWER_PATH } from "../src/landing/paths";
 
 /** Everything the page reports as an error, so a test can insist on none. */
 function collectErrors(page: Page): string[] {
@@ -17,7 +18,7 @@ function collectErrors(page: Page): string[] {
 test("the viewer lists the simulator's scenarios, without console errors", async ({ page }) => {
   const errors = collectErrors(page);
 
-  await page.goto("/");
+  await page.goto(VIEWER_PATH);
 
   await expect(page.getByRole("heading", { name: "greenhouse-sim viewer" })).toBeVisible();
   const scenarios = page.getByRole("table", { name: "Scenarios" });
@@ -41,7 +42,7 @@ test("the 3D view fills the window and follows its size", async ({ page }) => {
   const errors = collectErrors(page);
   await page.setViewportSize({ width: 1000, height: 700 });
 
-  await page.goto("/");
+  await page.goto(VIEWER_PATH);
   const view = page.locator("canvas");
   await expect(view).toBeVisible();
   await expect.poll(() => view.boundingBox()).toMatchObject({ width: 1000, height: 700 });

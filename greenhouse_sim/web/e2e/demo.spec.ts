@@ -1,5 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import { expect, type Page, test } from "@playwright/test";
+import { VIEWER_PATH } from "../src/landing/paths";
 import { QA_REFERENCE_PATH } from "../src/qa/referencePage.ts";
 import { chooser } from "./chooser";
 import { unfold } from "./folds";
@@ -65,7 +66,7 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   const run = page.getByRole("group", { name: "Climate run" });
 
   // 1. The reference scenario, seed 42, opened on its first day with red fruit.
-  await page.goto("/");
+  await page.goto(VIEWER_PATH);
   await say(page, "1. The reference greenhouse, seed 42, from the scenario list");
   await (await chooser(page)).getByRole("button", { name: "Open reference_greenhouse" }).click();
   await expect(moment).toHaveText("day 86, 12 h 00 min", ARRIVES);

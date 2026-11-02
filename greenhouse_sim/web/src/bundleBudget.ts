@@ -12,9 +12,10 @@ export interface BundleWeight {
  * above its weight on 2026-10-23, 1,586 kB of scripts, Three.js about a
  * megabyte of them, and 16 kB of styles. A change that adds much to it
  * fails its build, so that it is weighed in its pull request; the budget is
- * raised there, if the weight is meant.
+ * raised there, if the weight is meant. Raised on 2026-11-02 by the landing
+ * page (P17.5), 1,703 kB of scripts and 22 kB of styles.
  */
-export const BUNDLE_BUDGET_KB: BundleWeight = { js: 1700, css: 20 };
+export const BUNDLE_BUDGET_KB: BundleWeight = { js: 1710, css: 24 };
 
 const BYTES_PER_KB = 1000;
 

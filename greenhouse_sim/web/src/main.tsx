@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
 import { BUILDER_PATH, Builder } from "./builder/Builder";
+import { Landing } from "./landing/Landing";
+import { pageAt } from "./landing/paths";
 import { showPanels, storedPanelTheme } from "./panelTheme";
 import { QA_AIRFLOW_PATH } from "./qa/airflowViews";
 import { QA_GREENHOUSE_PATH } from "./qa/greenhouseViews";
@@ -25,7 +27,8 @@ if (root === null) {
   throw new Error("index.html has no #root element");
 }
 
-// The renderer's canonical screenshot page; every other address is the viewer.
+// The renderer's canonical screenshot page, the builder, and the landing page at the
+// bare address; every other address is the viewer.
 const path = location.pathname.replace(/\/$/, "");
 const page =
   path === QA_RENDERER_PATH ? (
@@ -44,6 +47,8 @@ const page =
     <QaReference search={location.search} />
   ) : path === BUILDER_PATH ? (
     <Builder />
+  ) : pageAt(location.pathname, location.search) === "landing" ? (
+    <Landing />
   ) : (
     <App />
   );
@@ -52,6 +57,10 @@ const page =
 // panels they were drawn with (#208); the viewer and the builder show the
 // theme chosen. Set before the first render, so that the panels never show
 // the other first.
-showPanels(page.type === App || page.type === Builder ? storedPanelTheme() : "light");
+showPanels(
+  page.type === App || page.type === Builder || page.type === Landing
+    ? storedPanelTheme()
+    : "light",
+);
 
 createRoot(root).render(<StrictMode>{page}</StrictMode>);

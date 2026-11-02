@@ -107,6 +107,39 @@ def test_a_scenarios_stored_runs_are_listed_as_a_list_shows_them(simulator: Simu
     assert _get(simulator, f"/api/runs/{RUN}/epochs/x")[0] == HTTPStatus.BAD_REQUEST
 
 
+def test_every_stored_run_is_listed_the_newest_started_first(simulator: Simulator) -> None:
+    assert simulator.runs is not None
+    start = run_start(simulator.catalogue, SCENARIO)
+    for run_id, scenario_id, started in (
+        ("zz-later", "tomgro_house", start + timedelta(days=1)),
+        ("aa-unstarted", SCENARIO, None),
+    ):
+        EpochStore.create(
+            simulator.runs,
+            EpochManifest(
+                run_id=run_id,
+                epoch=0,
+                scenario_id=scenario_id,
+                seed=None,
+                layout="default",
+                status=Status.QUEUED,
+                duration_s=None,
+                created_at=started,
+            ),
+        )
+
+    status, body = _get(simulator, "/api/runs")
+
+    assert status == HTTPStatus.OK
+    assert isinstance(body, list)
+    listed = [StoredRun.model_validate(each) for each in body]
+    assert [(each.run_id, each.scenario_id) for each in listed] == [
+        ("zz-later", "tomgro_house"),
+        (RUN, SCENARIO),
+        ("aa-unstarted", SCENARIO),
+    ]
+
+
 def test_a_simulator_with_no_run_store_says_so() -> None:
     with Simulator() as without:
         status, body = _get(without, f"/api/scenarios/{SCENARIO}/runs")

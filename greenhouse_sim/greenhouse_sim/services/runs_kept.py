@@ -36,6 +36,21 @@ def runs_of(simulator: Simulator, scenario_id: str) -> list[StoredRun]:
     return stored_runs(_objects(simulator), scenario_id)
 
 
+def all_runs(simulator: Simulator) -> list[StoredRun]:
+    """Every stored epoch, the newest started first and those with no start
+    time last: what a landing page shows of the runs of all scenarios."""
+    found = stored_runs(_objects(simulator))
+    return sorted(
+        found,
+        key=lambda run: (
+            run.created_at is None,
+            -(run.created_at.timestamp() if run.created_at is not None else 0.0),
+            run.run_id,
+            run.epoch,
+        ),
+    )
+
+
 def epoch_of(simulator: Simulator, run_id: str, epoch: int) -> StoredRun:
     """One stored epoch, as the list shows it."""
     objects = _objects(simulator)

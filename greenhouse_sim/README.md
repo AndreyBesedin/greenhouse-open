@@ -143,6 +143,10 @@ uv run api      # http://127.0.0.1:8765/api
 uv run viewer   # http://localhost:5173, in a second terminal
 ```
 
+The viewer's first page is where a scenario is chosen, a run followed or the
+builder opened; the viewer itself is at `/view`, and an address with a query
+(`/?scenario=climate_box`) still opens it directly.
+
 See [web/README.md](web/README.md) for the viewer's own checks.
 
 ## CFD, optionally

@@ -1,6 +1,8 @@
 """The runs kept in the run store, and the positions a viewer takes over
 them (P17.4, decision 0065).
 
+    GET /api/runs                         every stored run, the newest started
+                                          first, as a landing page lists them
     GET /api/scenarios/{id}/runs          a scenario's stored runs, by run and
                                           epoch: seed, layout, status, how far
                                           each is committed, when it was
@@ -39,6 +41,8 @@ KINDS = ("observations", "events", "outcomes")
 
 def get(simulator: Simulator, segments: list[str], query: Query) -> Response | None:
     match segments:
+        case ["api", "runs"]:
+            return answer(lambda: runs_kept.all_runs(simulator))
         case ["api", "scenarios", scenario_id, "runs"]:
             return answer(lambda: runs_kept.runs_of(simulator, scenario_id))
         case ["api", "runs", run_id, "epochs", number]:
