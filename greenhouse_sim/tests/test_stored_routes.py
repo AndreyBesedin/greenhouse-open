@@ -16,12 +16,15 @@ from greenhouse_protocol.provenance import RecordSource
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.services import playback
 from greenhouse_sim.services.run_store import (
     EpochManifest,
     EpochStore,
     FolderStore,
     Status,
     StoredRun,
+    epochs,
+    started_epochs,
 )
 from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
@@ -275,3 +278,102 @@ def test_one_epoch_is_looked_up_without_reading_the_others(tmp_path: Path) -> No
         assert _get(made, "/api/runs/missing-run/epochs/0")[0] == HTTPStatus.NOT_FOUND
         assert _get(made, "/api/runs/first-run/epochs/7")[0] == HTTPStatus.NOT_FOUND
         assert all(p.startswith(("missing-run/", "first-run/")) for p in objects.listed)
+
+
+def _post(simulator: Simulator, path: str) -> tuple[HTTPStatus, object]:
+    response = respond(simulator, "POST", path)
+    return response.status, response.body
+
+
+def test_a_stored_epoch_is_deleted_with_its_positions_and_keeps_its_number(
+    simulator: Simulator,
+) -> None:
+    assert simulator.runs is not None
+    _, opened = _post(simulator, f"/api/runs/{RUN}/epochs/0/positions")
+    position_id = PositionState.model_validate(opened).position_id
+
+    status, body = _post(simulator, f"/api/runs/{RUN}/epochs/0/delete")
+
+    assert (status, body) == (HTTPStatus.OK, {"deleted": f"{RUN}/0"})
+    assert _get(simulator, f"/api/scenarios/{SCENARIO}/runs") == (HTTPStatus.OK, [])
+    assert _get(simulator, f"/api/runs/{RUN}/epochs/0")[0] == HTTPStatus.NOT_FOUND
+    assert _get(simulator, f"/api/positions/{position_id}")[0] == HTTPStatus.NOT_FOUND
+    # The epoch is gone, and its number is not given to another (decision 0040).
+    assert epochs(simulator.runs, RUN) == []
+    assert started_epochs(simulator.runs, RUN) == [0]
+    # By a mark of its own: a store of objects has no folder to keep the number.
+    assert simulator.runs.names(f"{RUN}/0/") == [f"{RUN}/0/deleted.json"]
+    assert _post(simulator, f"/api/runs/{RUN}/epochs/0/delete")[0] == HTTPStatus.NOT_FOUND
+
+
+def test_an_epoch_whose_producer_is_gone_is_deleted_though_its_status_says_running(
+    simulator: Simulator,
+) -> None:
+    assert simulator.runs is not None
+    EpochStore.create(
+        simulator.runs,
+        EpochManifest(
+            run_id="left-running",
+            epoch=0,
+            scenario_id=SCENARIO,
+            seed=None,
+            layout="default",
+            status=Status.RUNNING,
+            duration_s=None,
+            created_at=None,
+        ),
+    )
+
+    status, _ = _post(simulator, "/api/runs/left-running/epochs/0/delete")
+
+    assert status == HTTPStatus.OK
+    assert started_epochs(simulator.runs, "left-running") == [0]
+
+
+def test_an_epoch_a_playback_is_working_on_is_refused_until_it_stops(simulator: Simulator) -> None:
+    assert simulator.runs is not None
+    try:
+        started = respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start?hold=true")
+        assert started.status == HTTPStatus.OK
+        # A playback with no store of its own writes none: stand its epoch in.
+        working = playback.playback(simulator, SCENARIO).state()
+        EpochStore.create(
+            simulator.runs,
+            EpochManifest(
+                run_id=working.run_id,
+                epoch=working.epoch,
+                scenario_id=SCENARIO,
+                seed=None,
+                layout="default",
+                status=Status.RUNNING,
+                duration_s=None,
+                created_at=None,
+            ),
+        )
+
+        refused = _post(simulator, f"/api/runs/{working.run_id}/epochs/{working.epoch}/delete")
+        playback.stop_playbacks(simulator)
+        allowed = _post(simulator, f"/api/runs/{working.run_id}/epochs/{working.epoch}/delete")
+    finally:
+        playback.stop_playbacks(simulator)
+
+    assert refused[0] == HTTPStatus.CONFLICT
+    assert "being computed" in str(refused[1])
+    assert allowed[0] == HTTPStatus.OK
+
+
+def test_a_run_is_started_at_a_seed_and_a_seed_that_is_not_one_is_refused(
+    simulator: Simulator,
+) -> None:
+    path = f"/api/scenarios/{SCENARIO}/playback/start?hold=true"
+    try:
+        plain = respond(simulator, "POST", path)
+        seeded = respond(simulator, "POST", f"{path}&seed=7")
+        refused = respond(simulator, "POST", f"{path}&seed=seven")
+    finally:
+        playback.stop_playbacks(simulator)
+
+    assert plain.status == seeded.status == HTTPStatus.OK
+    assert isinstance(plain.body, dict) and isinstance(seeded.body, dict)
+    assert plain.body["run_id"] != seeded.body["run_id"]
+    assert refused.status == HTTPStatus.BAD_REQUEST

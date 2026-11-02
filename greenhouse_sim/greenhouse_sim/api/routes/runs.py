@@ -101,7 +101,7 @@ crop and its timeline, each of the run a query asks for (`run_request`).
 from typing import Final
 
 from greenhouse_sim.api.responses import Response
-from greenhouse_sim.api.routes.shared import Query, answer, last, pairs, seconds, since
+from greenhouse_sim.api.routes.shared import Query, answer, last, pairs, seconds, seed, since
 from greenhouse_sim.services import (
     climate_readings,
     crop,
@@ -234,18 +234,8 @@ def run_request(scenario_id: str, query: Query) -> RunRequest:
         levels=levels,
         openings=openings,
         plan=plan,
-        seed=_seed(last(query, "seed")),
+        seed=seed(query),
     )
-
-
-def _seed(text: str | None) -> int | None:
-    """A run's seed as an address writes it, `&seed=7`, or none: the scenario's
-    own."""
-    if text is None:
-        return None
-    if not text.isascii() or not text.isdigit():
-        raise InvalidRequest(f"a seed is a whole number, 0 or more, not {text!r}")
-    return int(text)
 
 
 def _commands(

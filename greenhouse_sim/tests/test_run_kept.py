@@ -17,7 +17,14 @@ from greenhouse_sim.services import playback
 from greenhouse_sim.services.checkpoints import load_openings
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
-from greenhouse_sim.services.run_store import EpochStore, Status, StoredRun, stored_runs
+from greenhouse_sim.services.run_store import (
+    EpochManifest,
+    EpochStore,
+    Status,
+    StoredRun,
+    delete_epoch,
+    stored_runs,
+)
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import layout_name
 from greenhouse_sim.services.sensors import delivered_between
@@ -256,3 +263,26 @@ def test_the_epochs_kept_by_files_before_are_counted_on_from(tmp_path: Path) -> 
     assert epochs.next("run_x") == 5
     assert epochs.next("run_y") == 0
     assert epochs.next("run_z") == 0
+
+
+def test_a_deleted_epochs_number_is_not_given_to_the_next(tmp_path: Path) -> None:
+    epochs = Epochs(tmp_path)
+    for number in (0, 1):
+        epochs.open(
+            EpochManifest(
+                run_id="run",
+                epoch=number,
+                scenario_id=BOX,
+                seed=None,
+                layout="default",
+                status=Status.FINISHED,
+                duration_s=None,
+                created_at=None,
+            )
+        )
+
+    delete_epoch(epochs.objects, "run", 1)
+
+    assert epochs.next("run") == 2
+    delete_epoch(epochs.objects, "run", 0)
+    assert epochs.next("run") == 2

@@ -122,8 +122,8 @@ from greenhouse_sim.services.run_store import (
     Status,
     compress,
     default_root,
+    started_epochs,
 )
-from greenhouse_sim.services.run_store import epochs as stored_epochs
 from greenhouse_sim.services.runs import (
     Commanded,
     PlannedAt,
@@ -188,7 +188,7 @@ class Epochs:
     def next(self, run_id: str) -> int:
         """The epoch a run starts now: the one after the last started, or the
         first. It is started when its manifest is written (`open`)."""
-        started = stored_epochs(self.objects, run_id)
+        started = started_epochs(self.objects, run_id)
         last = started[-1] if started else FIRST_EPOCH - 1
         if self._legacy is not None:
             with suppress(FileNotFoundError, ValueError):

@@ -642,6 +642,30 @@ def epochs(objects: ObjectStore, run_id: str) -> list[int]:
     )
 
 
+# What an epoch deleted leaves in its folder, so that its number is not used again.
+DELETED: Final = "deleted.json"
+
+
+def started_epochs(objects: ObjectStore, run_id: str) -> list[int]:
+    """Every epoch a run has ever started in a store, in order: those it
+    holds and those that were deleted, which keep their numbers."""
+    return sorted(int(name) for name in objects.children(f"{run_id}/") if name.isdigit())
+
+
+def delete_epoch(objects: ObjectStore, run_id: str, epoch: int) -> None:
+    """Removes an epoch's objects, leaving a mark that it was, so that no
+    epoch of the run takes its number (decision 0040). The mark is written
+    first and the manifest removed next, so that a deletion cut short leaves
+    an epoch no list shows and no run reuses."""
+    home = f"{run_id}/{epoch}/"
+    objects.put(f"{home}{DELETED}", b'{"deleted": true}')
+    manifest = f"{home}manifest.json"
+    objects.delete(manifest)
+    for name in objects.names(home):
+        if name not in (manifest, f"{home}{DELETED}"):
+            objects.delete(name)
+
+
 class StoredRun(BaseModel):
     """An epoch as a person's list shows it: which run, whose seed, in what
     state, and how far it is committed."""
