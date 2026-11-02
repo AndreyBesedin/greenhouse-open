@@ -22,7 +22,14 @@ from greenhouse_protocol.authorisation import AuthorisationConfig
 
 from greenhouse_sim.builder.drafts import DraftStore
 from greenhouse_sim.scenarios.catalogue import Catalogue
-from greenhouse_sim.services import checkpoints, climate_runs, crop, kept_states, sunlight
+from greenhouse_sim.services import (
+    checkpoints,
+    climate_runs,
+    crop,
+    kept_states,
+    scenario_files,
+    sunlight,
+)
 from greenhouse_sim.services.consumer import Cursors
 from greenhouse_sim.services.gateway import LOCAL_AUTHORISATION, NO_CREW, Crew
 from greenhouse_sim.services.playback import Playbacks
@@ -52,7 +59,8 @@ class Simulator:
         # its user's, which outlives it, and which it never forgets.
         self.drafts = drafts
         # Where the runs it plays are kept, and read back, if anywhere: the
-        # run store (decision 0065), which outlives it.
+        # run store (decision 0065), which outlives it, and the scenario
+        # files uploaded to it (P17.11).
         self.runs = runs
         self.playbacks = Playbacks()
         self.positions = Positions()
@@ -65,6 +73,9 @@ class Simulator:
         self.checkpoints = checkpoints.new_store(self.states)
         self._closing = threading.Lock()
         self._closed = False
+        # The scenarios uploaded as files beside the run store are known
+        # again (P17.11).
+        scenario_files.restore(self)
 
     @property
     def closed(self) -> bool:
