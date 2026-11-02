@@ -64,10 +64,10 @@ test("builder: a house drafted, edited, saved, exported, run, reopened and impor
   await expect(page.getByRole("button", { name: "Run this revision" })).toBeDisabled();
 
   // Saved: the first revision of a new draft.
-  await page.getByRole("button", { name: "Save" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(status).toHaveText("Saved as revision 1.", ARRIVES);
   await expect(page.getByTestId("builder-draft")).toHaveText(`The test house (${id}), revision 1`);
-  await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
 
   // Exported, as a file an import reads.
   const downloading = page.waitForEvent("download");
@@ -133,11 +133,49 @@ test("builder: a house drafted, edited, saved, exported, run, reopened and impor
   const identity = page.locator(".builder-identity");
   await identity.getByLabel("Identifier").fill(`${id}_b`);
   await identity.getByRole("button", { name: "Rename" }).click();
-  await page.getByRole("button", { name: "Save" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(status).toHaveText("Saved as revision 1.", ARRIVES);
   await expect(page.getByTestId("builder-draft")).toHaveText(
     `The test house (${id}_b), revision 1`,
   );
+});
+
+test("builder: a draft saved and a run of it started in one step, followed in the viewer", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const id = `finish_${Date.now()}`;
+  await page.goto("/builder");
+  const copy = page.locator(".builder-copy");
+  await copy.getByLabel("Scenario").selectOption({ label: "Climate box" });
+  await copy.getByLabel("The copy's identifier").fill(id);
+  await copy.getByRole("button", { name: "Copy its house" }).click();
+  await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
+
+  // The run step's days are kept for the run the one step makes.
+  await page.locator(".builder-run").getByLabel("Days").fill("2");
+  await page.getByRole("button", { name: "Save and start a run" }).click();
+
+  await expect(page).toHaveURL(new RegExp(`/view\\?scenario=${id}_r1.*follow=1`), ARRIVES);
+  await expect(page.getByTestId("scene-status")).toContainText(`${id}_r1`, ARRIVES);
+});
+
+test("builder: a draft saved and the start page reached in one step", async ({ page }) => {
+  const id = `leave_${Date.now()}`;
+  await page.goto("/builder");
+  await page.locator(".builder-form").getByLabel("Identifier").fill(id);
+  await page.getByRole("button", { name: "Draft this house" }).click();
+  await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
+
+  await page.getByRole("button", { name: "Save and go back" }).click();
+
+  await expect(page).toHaveURL(/\/$/, ARRIVES);
+  await expect(page.getByRole("heading", { name: "What would you like to do?" })).toBeVisible(
+    ARRIVES,
+  );
+  // The draft was saved: the builder lists it.
+  await page.goto("/builder");
+  await expect(page.getByRole("button", { name: "My greenhouse" }).first()).toBeVisible(ARRIVES);
 });
 
 test("builder: values no greenhouse can have are refused by field", async ({ page }) => {
@@ -174,7 +212,7 @@ test("builder: a scenario's house copied under an identifier of its own, and sav
   await expect(page.locator(".builder-rows tbody tr")).toHaveCount(2);
   await expect(page.getByTestId("builder-view").locator("canvas")).toBeVisible(ARRIVES);
 
-  await page.getByRole("button", { name: "Save" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(status).toHaveText("Saved as revision 1.", ARRIVES);
 });
 

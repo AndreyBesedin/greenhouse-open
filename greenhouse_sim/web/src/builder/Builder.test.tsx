@@ -130,6 +130,77 @@ function give(within: HTMLElement, row: number, variety: string): void {
   click(box);
 }
 
+const SCENARIO = {
+  id: "my_greenhouse_run",
+  name: "My greenhouse",
+  description: "",
+  plants: 3,
+  duration_days: 30,
+  crop_model: "simple",
+  daily: [],
+  openings: [],
+  opening_day: null,
+  layouts: ["default"],
+  weathers: ["default"],
+  thermostat: null,
+};
+
+const PLAYBACK = {
+  scenario_id: "my_greenhouse_run",
+  run_id: "my_greenhouse_run-abc",
+  layout: "default",
+  epoch: 0,
+  greenhouse_id: "my_greenhouse_run",
+  started_at: "2026-04-01T00:00:00Z",
+  simulated_now: "2026-04-01T00:00:00Z",
+  time_s: 0,
+  day: 0,
+  playing: true,
+  seconds_per_day: 10,
+  worked_out_s: 0,
+  every_s: 300,
+  targets: [],
+  commands: [],
+  crop: [],
+};
+
+/** A simulator that saves, runs a draft as a scenario and starts its run;
+ * every request is kept, as its method and address with the body. */
+function runningDrafts(starts: Response = answer(PLAYBACK)): string[] {
+  const asked: string[] = [];
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    asked.push(`${init?.method ?? "GET"} ${url} ${init?.body ?? ""}`.trim());
+    if (url.startsWith("/api/builder/basic") || url.startsWith("/api/builder/assess")) {
+      return answer(STARTING_HOUSE);
+    }
+    if (url.includes("/save")) {
+      const { schema_version, ...installation } = JSON.parse(String(init?.body));
+      return answer({
+        schema_version,
+        installation,
+        findings: [],
+        draft: {
+          draft_id: installation.installation_id,
+          revision: 1,
+          saved_at: "2026-10-23T12:00:00Z",
+        },
+      });
+    }
+    if (url.includes("/run?")) {
+      return answer(SCENARIO);
+    }
+    if (url.includes("/playback/start")) {
+      return starts;
+    }
+    if (url.startsWith("/api/drafts") || url.startsWith("/api/scenarios")) {
+      return answer(url.startsWith("/api/scenarios") ? [SCENARIO] : []);
+    }
+    return answer({ error: "not here" }, 404);
+  });
+  return asked;
+}
+
 describe("the setup builder (P12.2)", () => {
   let shown: Rendered | undefined;
   afterEach(() => {
@@ -285,5 +356,121 @@ describe("the setup builder (P12.2)", () => {
     click(button(page, "List the scenarios again"));
     await settled();
     expect(asked.filter((url) => url.startsWith("/api/scenarios"))).toHaveLength(2);
+  });
+  it("saves the draft and goes back to the start page (P17.11)", async () => {
+    const asked = runningDrafts();
+    const went: string[] = [];
+    shown = render(<Builder navigate={(address) => went.push(address)} />);
+    const page = shown.container;
+    await settled();
+    click(button(page, "Draft this house"));
+    await settled();
+
+    click(button(page, "Save and go back"));
+    await settled();
+
+    expect(asked.filter((each) => each.includes("/save"))).toHaveLength(1);
+    expect(went).toEqual(["/"]);
+  });
+
+  it("goes back without saving again what is saved (P17.11)", async () => {
+    const asked = runningDrafts();
+    const went: string[] = [];
+    shown = render(<Builder navigate={(address) => went.push(address)} />);
+    const page = shown.container;
+    await settled();
+    click(button(page, "Draft this house"));
+    await settled();
+    click(button(page, "Save"));
+    await settled();
+
+    click(button(page, "Save and go back"));
+    await settled();
+
+    expect(asked.filter((each) => each.includes("/save"))).toHaveLength(1);
+    expect(went).toEqual(["/"]);
+  });
+
+  it("saves, runs the draft under the run step's settings and follows the run started (P17.11)", async () => {
+    const asked = runningDrafts();
+    const went: string[] = [];
+    shown = render(<Builder navigate={(address) => went.push(address)} />);
+    const page = shown.container;
+    await settled();
+    click(button(page, "Draft this house"));
+    await settled();
+    const days = page.querySelector<HTMLInputElement>('.builder-run input[type="number"]');
+    enter(days as HTMLInputElement, "30");
+
+    click(button(page, "Save and start a run"));
+    await settled();
+
+    const ran = asked.find((each) => each.includes("/run?"));
+    expect(ran).toContain("POST /api/drafts/my_greenhouse/run?revision=1");
+    expect(JSON.parse(ran?.split("revision=1 ")[1] ?? "{}")).toMatchObject({
+      start_date: "2026-04-01",
+      duration_days: 30,
+      random_seed: 0,
+    });
+    expect(
+      asked.some((each) => each.startsWith("POST /api/scenarios/my_greenhouse_run/playback/start")),
+    ).toBe(true);
+    expect(went).toEqual(["/view?scenario=my_greenhouse_run&field=climate&follow=1"]);
+  });
+
+  it("says that the run was registered and not started when the simulator refuses to start it (P17.11)", async () => {
+    runningDrafts(answer({ error: "no room for another run" }, 409));
+    const went: string[] = [];
+    shown = render(<Builder navigate={(address) => went.push(address)} />);
+    const page = shown.container;
+    await settled();
+    click(button(page, "Draft this house"));
+    await settled();
+
+    click(button(page, "Save and start a run"));
+    await settled();
+
+    expect(went).toEqual([]);
+    expect(said(page, "builder-status")).toContain(
+      "registered as my_greenhouse_run, but not started: no room for another run",
+    );
+  });
+
+  it("keeps the run step's settings through edits, and forgets them with the draft (P17.11)", async () => {
+    runningDrafts();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    shown = render(<Builder />);
+    const page = shown.container;
+    await settled();
+    click(button(page, "Draft this house"));
+    await settled();
+    const days = () => page.querySelector<HTMLInputElement>('.builder-run input[type="number"]');
+    enter(days() as HTMLInputElement, "45");
+
+    give(page, 1, "roma");
+    expect(days()?.value).toBe("45");
+
+    click(button(page, "Start again"));
+    click(button(page, "Draft this house"));
+    await settled();
+    expect(days()?.value).toBe("7");
+  });
+
+  it("offers the scenario's file once the draft is run as a scenario (P17.11)", async () => {
+    runningDrafts();
+    shown = render(<Builder />);
+    const page = shown.container;
+    await settled();
+    click(button(page, "Draft this house"));
+    await settled();
+    expect(page.querySelector(".builder-share")).toBeNull();
+
+    click(button(page, "Save"));
+    await settled();
+    click(button(page, "Run this revision"));
+    await settled();
+
+    expect(page.querySelector(".builder-share")).not.toBeNull();
+    expect(button(page, "Download scenario file")).toBeDefined();
   });
 });
