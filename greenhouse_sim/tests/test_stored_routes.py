@@ -280,11 +280,6 @@ def test_one_epoch_is_looked_up_without_reading_the_others(tmp_path: Path) -> No
         assert all(p.startswith(("missing-run/", "first-run/")) for p in objects.listed)
 
 
-def _post(simulator: Simulator, path: str) -> tuple[HTTPStatus, object]:
-    response = respond(simulator, "POST", path)
-    return response.status, response.body
-
-
 def test_a_stored_epoch_is_deleted_with_its_positions_and_keeps_its_number(
     simulator: Simulator,
 ) -> None:

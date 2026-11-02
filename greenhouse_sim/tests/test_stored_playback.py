@@ -114,6 +114,7 @@ class Listing(FolderStore):
 
 
 def test_the_runs_of_a_store_are_found_by_their_folders(kept: Kept) -> None:
+    assert kept.epochs.folder is not None
     objects = Listing(kept.epochs.folder)
     (found,) = stored_runs(objects, STORED)
     assert (found.run_id, found.status) == (kept.run_id, Status.FINISHED)
