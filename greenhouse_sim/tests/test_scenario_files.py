@@ -2,7 +2,7 @@
 back, and refused, naming the field at fault, when it is not one."""
 
 import json
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from typing import Any, Final
 
 import pytest
@@ -21,11 +21,10 @@ from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import with_weather
 from greenhouse_sim.services.simulator import Simulator
-from greenhouse_sim.weather import recorded
 from greenhouse_sim.weather.recorded import (
     RECORDED_DIRECTORY,
     RecordedWeather,
-    keep_recording,
+    checked_recording,
     recording_digest,
 )
 
@@ -34,12 +33,6 @@ CSV: Final = (
     "timestamp,outside_air_temperature_c,outside_relative_humidity_pct\n"
     "2026-04-01T00:00Z,8,90\n2026-04-01T01:00Z,9,85\n"
 )
-
-
-@pytest.fixture(autouse=True)
-def _no_recordings_kept(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    monkeypatch.setattr(recorded, "_KEPT", {})
-    yield
 
 
 def _config(scenario_id: str = SCENARIO) -> ScenarioConfig:
@@ -110,7 +103,7 @@ def test_a_scenario_that_does_not_fill_its_layout_is_not_written() -> None:
         export_scenario_file(fewer)
 
 
-def test_a_recorded_weather_is_carried_with_its_digest() -> None:
+def test_a_packaged_recorded_weather_is_named_with_its_digest_and_carried_on_request() -> None:
     config = with_weather(_config(), "example_day")
     content = (RECORDED_DIRECTORY / "example_day.csv").read_bytes()
     document = _document(config)
@@ -123,32 +116,46 @@ def test_a_recorded_weather_is_carried_with_its_digest() -> None:
     back = import_scenario_file(json.dumps(document))
     assert back.config == config
     assert back.recording is not None and back.recording.csv == content
-    assert not back.recording_missing
+    assert not back.needs_recording
+    # The packaged file is the weather's, which carries nothing.
+    assert back.config.weather == RecordedWeather(file="example_day.csv")
 
 
-def test_a_recorded_weather_ticked_out_is_named_and_missing_where_it_is_not_offered() -> None:
-    keep_recording("mine.csv", CSV.encode())
-    config = _config().model_copy(update={"weather": RecordedWeather(file="mine.csv")})
-    document = _document(config, with_recording=False)
+def test_a_recording_a_file_brings_is_carried_by_the_scenario_it_registers() -> None:
+    weather = checked_recording("mine.csv", CSV.encode())
+    config = _config().model_copy(update={"weather": weather})
+
+    back = import_scenario_file(export_scenario_file(config))
+
+    assert back.config == config
+    assert back.config.weather == weather and not back.needs_recording
+    assert isinstance(back.config.weather, RecordedWeather)
+    assert back.config.weather.identity() == recording_digest(CSV.encode())
+
+
+def test_a_recorded_weather_ticked_out_is_named_and_needed_unless_it_is_packaged() -> None:
+    mine = _config().model_copy(update={"weather": checked_recording("mine.csv", CSV.encode())})
+    document = _document(mine, with_recording=False)
 
     assert "csv" not in document[RECORDED_WEATHER]
     assert document[RECORDED_WEATHER]["digest"] == recording_digest(CSV.encode())
-    # Where the recording is offered, the file needs nothing else.
-    assert not import_scenario_file(json.dumps(document)).recording_missing
-    # Where it is not, the scenario cannot be run yet.
-    recorded._KEPT.clear()
-    missing = import_scenario_file(json.dumps(document))
-    assert missing.recording_missing
-    assert missing.config == config
+    needed = import_scenario_file(json.dumps(document))
+    assert needed.needs_recording
+    assert isinstance(needed.config.weather, RecordedWeather) and needed.config.weather.text is None
+    packaged = _document(with_weather(_config(), "example_day"), with_recording=False)
+    assert not import_scenario_file(json.dumps(packaged)).needs_recording
 
 
-def test_a_recording_of_the_same_name_and_other_content_is_not_taken_for_it() -> None:
-    keep_recording("mine.csv", CSV.encode())
-    config = _config().model_copy(update={"weather": RecordedWeather(file="mine.csv")})
-    document = _document(config, with_recording=False)
-    document[RECORDED_WEATHER]["digest"] = recording_digest(b"other")
+def test_a_packaged_name_with_other_content_is_not_taken_for_the_packaged_recording() -> None:
+    packaged = _document(with_weather(_config(), "example_day"), with_recording=False)
+    packaged[RECORDED_WEATHER]["digest"] = recording_digest(CSV.encode())
 
-    assert import_scenario_file(json.dumps(document)).recording_missing
+    assert import_scenario_file(json.dumps(packaged)).needs_recording
+    packaged[RECORDED_WEATHER]["csv"] = CSV
+    back = import_scenario_file(json.dumps(packaged))
+    assert isinstance(back.config.weather, RecordedWeather)
+    assert back.config.weather.file == f"example_day-{recording_digest(CSV.encode())[:12]}.csv"
+    assert not back.needs_recording
 
 
 # What a stranger's file may be: each is refused, naming why.
