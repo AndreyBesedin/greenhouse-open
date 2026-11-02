@@ -2,7 +2,7 @@
 (P17.4, decision 0065): a scenario's stored runs, an epoch's records after a
 cursor by a moment, and the positions a viewer takes over an epoch."""
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from datetime import timedelta
 from http import HTTPStatus
 from pathlib import Path
@@ -330,17 +330,19 @@ def test_an_epoch_whose_producer_is_gone_is_deleted_though_its_status_says_runni
     assert started_epochs(simulator.runs, "left-running") == [0]
 
 
-def test_an_epoch_a_playback_is_working_on_is_refused_until_it_stops(simulator: Simulator) -> None:
+def test_an_epoch_a_playback_is_working_on_is_refused_until_it_stops(
+    simulator: Simulator, no_playbacks: Callable[[], None]
+) -> None:
     assert simulator.runs is not None
     try:
         started = respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start?hold=true")
         assert started.status == HTTPStatus.OK
         working = playback.playback(simulator, SCENARIO).state()
         refused = _post(simulator, f"/api/runs/{working.run_id}/epochs/{working.epoch}/delete")
-        playback.stop_playbacks(simulator)
+        no_playbacks()
         allowed = _post(simulator, f"/api/runs/{working.run_id}/epochs/{working.epoch}/delete")
     finally:
-        playback.stop_playbacks(simulator)
+        no_playbacks()
 
     assert refused[0] == HTTPStatus.CONFLICT
     assert "being computed" in str(refused[1])
@@ -348,7 +350,7 @@ def test_an_epoch_a_playback_is_working_on_is_refused_until_it_stops(simulator: 
 
 
 def test_a_run_is_started_at_a_seed_and_a_seed_that_is_not_one_is_refused(
-    simulator: Simulator,
+    simulator: Simulator, no_playbacks: Callable[[], None]
 ) -> None:
     path = f"/api/scenarios/{SCENARIO}/playback/start?hold=true"
     try:
@@ -356,7 +358,7 @@ def test_a_run_is_started_at_a_seed_and_a_seed_that_is_not_one_is_refused(
         seeded = respond(simulator, "POST", f"{path}&seed=7")
         refused = respond(simulator, "POST", f"{path}&seed=seven")
     finally:
-        playback.stop_playbacks(simulator)
+        no_playbacks()
 
     assert plain.status == seeded.status == HTTPStatus.OK
     assert isinstance(plain.body, dict) and isinstance(seeded.body, dict)
@@ -364,7 +366,9 @@ def test_a_run_is_started_at_a_seed_and_a_seed_that_is_not_one_is_refused(
     assert refused.status == HTTPStatus.BAD_REQUEST
 
 
-def test_a_run_started_over_the_api_is_kept_and_listed_with_its_seed(simulator: Simulator) -> None:
+def test_a_run_started_over_the_api_is_kept_and_listed_with_its_seed(
+    simulator: Simulator, no_playbacks: Callable[[], None]
+) -> None:
     try:
         started = respond(
             simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start?hold=true&seed=7"
@@ -372,7 +376,7 @@ def test_a_run_started_over_the_api_is_kept_and_listed_with_its_seed(simulator: 
         assert started.status == HTTPStatus.OK
         status, listed = _get(simulator, f"/api/scenarios/{SCENARIO}/runs")
     finally:
-        playback.stop_playbacks(simulator)
+        no_playbacks()
 
     assert status == HTTPStatus.OK
     assert isinstance(listed, list)
