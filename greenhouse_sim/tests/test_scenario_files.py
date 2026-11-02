@@ -174,6 +174,7 @@ def test_a_file_over_the_limit_is_refused_before_it_is_read() -> None:
         ('{"schema_version": NaN}', "NaN is not a JSON number"),
         ('{"schema_version": 1e999}', "too large a number"),
         ("[" * 100_000, "nested too deeply"),
+        ('{"a":' * 5_000 + "1" + "}" * 5_000, "nested too deeply"),
     ],
 )
 def test_a_file_that_is_not_json_this_simulator_reads_is_refused(text: str, why: str) -> None:
@@ -280,3 +281,9 @@ def test_a_recorded_weather_section_for_another_weather_is_refused() -> None:
     document = _document() | {RECORDED_WEATHER: {"file": "x.csv", "digest": "0" * 64}}
 
     assert _refused(document).field == RECORDED_WEATHER
+
+
+def test_brackets_in_a_string_are_not_nesting() -> None:
+    config = _config().model_copy(update={"description": '[{"' * 500 + '\\"]'})
+
+    assert import_scenario_file(export_scenario_file(config)).config == config
