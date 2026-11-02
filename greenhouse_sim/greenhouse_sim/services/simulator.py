@@ -67,6 +67,8 @@ class Simulator:
         self.workers = workers
         self.scheduler: Scheduler | None = None
         self.scheduling = threading.Lock()
+        # Set under `scheduling` when it closes: no scheduler is made after.
+        self.scheduling_closed = False
         self.playbacks = Playbacks()
         self.positions = Positions()
         self.cursors = Cursors()
@@ -116,6 +118,7 @@ class Simulator:
                 return
             try:
                 with self.scheduling:
+                    self.scheduling_closed = True
                     scheduler = self.scheduler
                 if scheduler is not None:
                     scheduler.close()

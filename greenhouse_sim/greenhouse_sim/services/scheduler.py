@@ -169,9 +169,13 @@ class Scheduler:
 
     def _watch(self) -> None:
         while not self._closed.wait(LOOK_EVERY_S):
-            with self._lock:
-                self._reap()
-                self._launch()
+            try:
+                with self._lock:
+                    self._reap()
+                    self._launch()
+            except Exception:
+                # Whatever a look found wrong, the next finds the workers still.
+                logger.exception("the workers' scheduler could not look at them")
 
     def _launch(self) -> None:
         """Under the lock: a worker for each epoch waiting while there is room."""
@@ -183,7 +187,14 @@ class Scheduler:
                 name=f"worker of {job.run_id}",
                 daemon=True,
             )
-            process.start()
+            try:
+                process.start()
+            except Exception:
+                # The machine's limit of processes, say: this epoch is told,
+                # and the ones behind it are given workers as there is room.
+                logger.exception("no worker could be started for %s", job.run_id)
+                self._say((job.run_id, job.epoch), Status.FAILED)
+                continue
             self._running[(job.run_id, job.epoch)] = process
 
     def _reap(self) -> None:
@@ -226,6 +237,8 @@ def of(simulator: Simulator) -> Scheduler:
     simulator must keep its runs in a folder, which a worker's process
     reaches by its path."""
     with simulator.scheduling:
+        if simulator.scheduling_closed:
+            raise Conflict("the simulator is closed")
         if simulator.scheduler is None:
             if simulator.runs is None:
                 raise NotFound("this simulator keeps no runs: it was made with no run store")

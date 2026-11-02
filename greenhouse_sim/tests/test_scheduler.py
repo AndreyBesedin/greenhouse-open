@@ -10,6 +10,7 @@ import threading
 import time
 from collections.abc import Callable, Iterator
 from http import HTTPStatus
+from multiprocessing.context import SpawnProcess
 from pathlib import Path
 from typing import Final
 
@@ -293,3 +294,66 @@ class _Elsewhere:
 
     def delete(self, name: str) -> None:
         self._held.pop(name, None)
+
+
+def test_no_scheduler_is_made_after_the_simulator_is_closed(tmp_path: Path) -> None:
+    """A simulator closed before its first run asked for would otherwise make a
+    scheduler no close will end."""
+    objects = FolderStore(tmp_path)
+    simulator = workers_support.short_simulator()
+    simulator.runs = objects
+    simulator.close()
+
+    with pytest.raises(Conflict):
+        scheduler.start(simulator, SHORT)
+
+    assert simulator.scheduler is None
+    assert objects.children() == []
+
+
+def _refusing_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The next process to start is refused, as the machine's limit would."""
+    real = SpawnProcess.start
+    refusals = [True]
+
+    def starting(self: SpawnProcess) -> None:
+        if refusals:
+            refusals.pop()
+            raise OSError("too many processes")
+        real(self)
+
+    monkeypatch.setattr(SpawnProcess, "start", starting)
+
+
+def test_a_worker_that_cannot_be_started_leaves_its_epoch_failed_and_the_queue_going(
+    simulator: Simulator, objects: FolderStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The epoch is told, nothing is left of it in the scheduler, and the next
+    run asked for is given a worker."""
+    _refusing_once(monkeypatch)
+    scheduling = Scheduler(simulator, objects.root, limit=1, made_by=workers_support.MADE_BY)
+    try:
+        refused = scheduling.start(SHORT, seed=1)
+        assert _status(objects, refused) == Status.FAILED
+        assert scheduling.workers() == [] and scheduling.waiting() == []
+
+        followed = scheduling.start(SHORT, seed=2)
+        _until(lambda: _status(objects, followed) == Status.FINISHED, "the next run to finish")
+    finally:
+        scheduling.close()
+
+
+def test_a_worker_that_cannot_be_started_by_the_watcher_does_not_end_it(
+    simulator: Simulator, objects: FolderStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scheduling = Scheduler(simulator, objects.root, limit=1, made_by=workers_support.MADE_BY)
+    try:
+        running = scheduling.start(LONG, seed=1)
+        waiting, behind = scheduling.start(SHORT, seed=2), scheduling.start(SHORT, seed=3)
+        _refusing_once(monkeypatch)
+        scheduling.cancel(running.run_id, running.epoch)
+
+        _until(lambda: _status(objects, waiting) == Status.FAILED, "the refused run to be told")
+        _until(lambda: _status(objects, behind) == Status.FINISHED, "the run behind it to finish")
+    finally:
+        scheduling.close()
