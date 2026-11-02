@@ -275,7 +275,7 @@ days, and a run's records for a given seed.
 | P17.8 | (d) Interventions in the log; forks with their parent, instant and inheritance; a layout rearranged as a fork that leaves its run served. | `feat(sim): a change is the epoch's own and a fork is a new run` | Planned |
 | P17.9 | (e) Resuming an interrupted epoch: detection, restore from a checkpoint, the log applied again; the kill-and-resume tests, with a crash between the log and the commit. Scheduled when P17.1's costs justify it. | `feat(sim): an interrupted run resumes` | Planned |
 | P17.10 | The QA scenario below, for what is delivered, run and recorded. | `test: runs kept, played and replayed` | Planned |
-| P17.11 | The scenario file: a manifest in portable form with its schema and migrations; the builder keeps a draft's run settings and downloads the file; the landing page uploads it, registers the scenario, and keeps the file beside the store. A packaged scenario written out and read back is the same scenario (the same run id). | `feat(sim): a scenario is a file that can be downloaded and uploaded` | Planned |
+| P17.11 | The scenario file: a manifest in portable form with its schema and migrations; the builder keeps a draft's run settings and downloads the file; the landing page uploads it, registers the scenario, and keeps the file beside the store. A packaged scenario written out and read back is the same scenario (the same run id). | `feat(sim): a scenario is a file that can be downloaded and uploaded` | In progress, in three parts. Done: the file (`scenarios.scenario_files`: `export_scenario_file` and `import_scenario_file`, the manifest with its layout written out and the manifests' format version and migrations; a recorded weather named by file and digest and carried or not at the sender's choice; refusals that name the field; the 8 MB limit; every packaged scenario written out and read back is the same configuration, and two of them give the same run id), and the recordings a file brings (`weather.recorded.checked_recording`: carried by the `RecordedWeather` of the scenario that registers them, as text outside its written form and so outside every run's identity, and not offered by name; under a name with its digest when a packaged recording of other content has the name). Not yet: the service and routes that download, upload, register and keep the file beside the store; the builder keeping a draft's run settings, the download and the upload button (they wait for P17.5); the file's JSON Schema, which also needs the viewer's contract test told it is not read |
 
 ## Measurements (P17.1)
 
@@ -533,8 +533,12 @@ One more comes with the scenario file (P17.11); the question whether it
 needs a decision record of its own was answered in review: it does not, being
 the manifest in portable form:
 
-1. **The size of an embedded weather.** The importer refuses a file over
-   8 MB (`MAX_IMPORT_BYTES`), and the one packaged recorded weather, a day, is
-   7 kB; a season's or a year's CSV is larger in proportion to its rows. P17.11
-   measures one and sets the limit, compressing the embedded CSV if it needs
-   to.
+1. **The size of an embedded weather.** *Answered by measurement.* The
+   importer refuses a file over 8 MB (`MAX_IMPORT_BYTES`). The file is the
+   scenario's 13 kB plus the CSV, written as one JSON string (a few percent
+   over the CSV): the packaged recorded day, 7 kB, gives a 20 kB file; a year
+   of hourly rows (365 kB of CSV) a 386 kB file; a year at ten minutes (2.2 MB)
+   a 2.3 MB file, read and checked in 0.12 s on the measuring machine (synthetic
+   rows, five quantities). The limit holds about three and a half years at ten
+   minutes, so the CSV is not compressed; a longer recording is the
+   packaged-scenario route (P12), or a reason to raise the limit.

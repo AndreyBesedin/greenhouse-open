@@ -23,7 +23,7 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Final
 
-from pydantic import JsonValue
+from pydantic import JsonValue, ValidationError
 
 from greenhouse_sim.digests import short_digest
 from greenhouse_sim.domain.crop import CropModel
@@ -190,9 +190,12 @@ def manifest_digest(scenario_id: str) -> str:
     return short_digest(canonical, DIGEST_LENGTH)
 
 
-def scenario_from_manifest(scenario_id: str, document: dict[str, JsonValue]) -> ScenarioConfig:
+def scenario_from_manifest(
+    scenario_id: str, document: dict[str, JsonValue], *, layout_written: bool = False
+) -> ScenarioConfig:
     """The scenario a manifest describes, its house its installation's, with
-    its layout read from the file it names. Refused, with the reason, if the
+    its layout read from the file it names, or, as a scenario file writes it
+    (`layout_written`, P17.11), written out in the installation. Refused, with the reason, if the
     manifest is in a format this simulator does not read, names another
     scenario, notes a field it does not have, has a field the configuration
     or the installation does not, writes its house outside its installation
@@ -234,7 +237,7 @@ def scenario_from_manifest(scenario_id: str, document: dict[str, JsonValue]) -> 
     unnoted = set(notes) - _NOTED
     if unnoted:
         raise InvalidManifest(f"{scenario_id}: notes on what it does not have: {sorted(unnoted)}")
-    installation = _installation(scenario_id, document.get(_INSTALLATION_KEY))
+    installation = _installation(scenario_id, document.get(_INSTALLATION_KEY), layout_written)
     try:
         house = scenario_house(installation)
     except CannotRun as error:
@@ -299,14 +302,33 @@ def _configured(scenario_id: str, written: JsonValue) -> tuple[dict[str, JsonVal
     return configured, crop
 
 
-def _installation(scenario_id: str, written: JsonValue) -> Installation:
+def _installation(scenario_id: str, written: JsonValue, layout_written: bool) -> Installation:
     """The installation a manifest holds, with its layout read from the file
-    it names. Refused if it is not written out in the manifest, names its
-    layout wrongly, or has a field an installation does not."""
+    it names, or written out in it if `layout_written`. Refused if it is not
+    written out in the manifest, names (or writes) its layout wrongly, or has
+    a field an installation does not."""
     if not isinstance(written, dict):
         raise InvalidManifest(
             f"{scenario_id}: a manifest holds its {_INSTALLATION_KEY}, written out, not {written!r}"
         )
+    if layout_written:
+        if not isinstance(written.get(_LAYOUT_KEY), dict):
+            raise InvalidManifest(
+                f"{scenario_id}: a scenario file writes its {_INSTALLATION_KEY}'s layout out"
+            )
+        try:
+            installation = Installation.model_validate(written)
+        except ValidationError as error:
+            first = error.errors()[0]
+            where = ".".join(str(part) for part in first["loc"])
+            raise InvalidManifest(
+                f"{scenario_id}: {_INSTALLATION_KEY}.{where}: {first['msg']}"
+            ) from None
+        unknown = unknown_fields(written, installation.model_dump(mode="json"))
+        if unknown:
+            named = ", ".join(f"{_INSTALLATION_KEY}.{where}" for where in unknown)
+            raise InvalidManifest(f"{scenario_id}: fields it does not have: {named}")
+        return installation
     layout = written.get(_LAYOUT_KEY, DEFAULT_LAYOUT)
     if not isinstance(layout, str) or not LAYOUT_NAME.fullmatch(layout):
         raise InvalidManifest(f"{scenario_id}: a layout is named, not {layout!r}")
