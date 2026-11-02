@@ -373,6 +373,7 @@ class Playback:
         every_s: float = CONSUMER_CADENCE_S,
         clock: Callable[[], float] = monotonic,
         epochs: Epochs | None = None,
+        epoch: EpochStore | None = None,
     ) -> None:
         self._simulator = simulator
         config = scenario(simulator.catalogue, scenario_id)
@@ -409,10 +410,20 @@ class Playback:
         # started again is a new epoch of its run, never its first again.
         self._epochs = epochs
         self._epoch = FIRST_EPOCH if epochs is None else epochs.next(self.run_id)
+        if epoch is not None:
+            # An epoch a worker was given, started already (`workers`): the
+            # one this run is.
+            if epochs is not None:
+                raise ValueError("a playback has epochs or an epoch of them, not both")
+            if epoch.run_id != self.run_id:
+                raise ValueError(f"epoch {epoch.epoch} is of run {epoch.run_id}, not {self.run_id}")
+            self._epoch = epoch.epoch
         # What the epoch worked out and the clock has passed, kept in the
         # run store if there is one: the epoch's store, how many days and
         # outcomes of it are written.
-        self._store: EpochStore | None = None if epochs is None else self._open_epoch(epochs)
+        self._store: EpochStore | None = epoch
+        if epochs is not None:
+            self._store = self._open_epoch(epochs)
         self._stored_days = 0
         self._stored_outcomes = 0
         self._store_ended = False
@@ -704,6 +715,11 @@ class Playback:
                 return
             self._store_ended = True
         current.set_status(status)
+
+    def keep(self) -> None:
+        """Writes to the run store the days the clock has passed and not yet
+        written, as the worker does between its moments (`_keep_closed_days`)."""
+        self._keep_closed_days()
 
     def _keep_closed_days(self) -> None:
         """Writes to the run store the days of the epoch that are worked out
