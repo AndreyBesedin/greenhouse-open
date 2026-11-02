@@ -416,6 +416,16 @@ class Positions:
             if self._held.pop(position_id, None) is None:
                 raise NotFound(f"no position {position_id!r}")
 
+    def close_over(self, run_id: str, epoch: int) -> None:
+        """Closes the positions over an epoch, which is going."""
+        with self._lock:
+            for position_id in [
+                held_id
+                for held_id, held in self._held.items()
+                if (held.epoch.run_id, held.epoch.epoch) == (run_id, epoch)
+            ]:
+                del self._held[position_id]
+
     def forget(self) -> None:
         with self._lock:
             self._held.clear()

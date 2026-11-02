@@ -12,11 +12,19 @@ from greenhouse_protocol.contracts.consumer import EventBatch, ObservationBatch,
 from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.outcome import ActionOutcome
+from pydantic import JsonValue
 
 from greenhouse_sim.services.consumer import batch_cursor, batch_limit
-from greenhouse_sim.services.errors import NotFound
+from greenhouse_sim.services.errors import Conflict, NotFound
 from greenhouse_sim.services.playback import DEFAULT_SECONDS_PER_DAY
-from greenhouse_sim.services.run_store import ObjectStore, StoredRun, stored_run, stored_runs
+from greenhouse_sim.services.run_store import (
+    ObjectStore,
+    Status,
+    StoredRun,
+    stored_run,
+    stored_runs,
+)
+from greenhouse_sim.services.run_store import delete_epoch as delete_stored_epoch
 from greenhouse_sim.services.run_store import epochs as stored_epochs
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.stored_playback import Position, PositionState, Records, StoredEpoch
@@ -57,6 +65,36 @@ def epoch_of(simulator: Simulator, run_id: str, epoch: int) -> StoredRun:
     if epoch not in stored_epochs(objects, run_id):
         raise NotFound(f"run {run_id} has no epoch {epoch} in the store")
     return stored_run(objects, run_id, epoch)
+
+
+def delete_epoch(simulator: Simulator, run_id: str, epoch: int) -> dict[str, JsonValue]:
+    """Removes a stored epoch a person no longer wants, with the positions
+    over it. One the store calls queued or running is not removed, whoever
+    works on it: a worker in a process of its own is seen by no playback here.
+    Nor is one a replaced producer is still writing, whatever the store says
+    yet. A run left running by a producer that is gone stays so until it is
+    marked interrupted (P17.9)."""
+    objects = _objects(simulator)
+    if epoch not in stored_epochs(objects, run_id):
+        raise NotFound(f"run {run_id} has no epoch {epoch} in the store")
+    if stored_run(objects, run_id, epoch).status in (
+        Status.QUEUED,
+        Status.RUNNING,
+    ) or _winding_down(simulator, run_id, epoch):
+        raise Conflict(f"run {run_id}, epoch {epoch} is being computed: wait for it, or stop it")
+    simulator.positions.close_over(run_id, epoch)
+    delete_stored_epoch(objects, run_id, epoch)
+    return {"deleted": f"{run_id}/{epoch}"}
+
+
+def _winding_down(simulator: Simulator, run_id: str, epoch: int) -> bool:
+    """Whether a playback replaced by another, told to stop, is still writing
+    an epoch."""
+    for retiring in simulator.playbacks.retiring():
+        state = retiring.state()
+        if (state.run_id, state.epoch) == (run_id, epoch):
+            return True
+    return False
 
 
 def _stored(simulator: Simulator, run_id: str, epoch: int) -> StoredEpoch:

@@ -119,11 +119,12 @@ from greenhouse_sim.services.run_store import (
     EpochManifest,
     EpochStore,
     FolderStore,
+    ObjectStore,
     Status,
     compress,
     default_root,
+    started_epochs,
 )
-from greenhouse_sim.services.run_store import epochs as stored_epochs
 from greenhouse_sim.services.runs import (
     Commanded,
     PlannedAt,
@@ -180,15 +181,23 @@ class Epochs:
     out (`run_store`). `legacy` is where the epochs were kept before, a file
     a run holding the last one started, counted on from."""
 
-    def __init__(self, folder: Path, legacy: Path | None = None) -> None:
+    def __init__(
+        self,
+        folder: Path | None = None,
+        legacy: Path | None = None,
+        *,
+        objects: ObjectStore | None = None,
+    ) -> None:
+        if (folder is None) == (objects is None):
+            raise ValueError("epochs are kept in a folder, or in a store of objects, not both")
         self.folder = folder
-        self.objects = FolderStore(folder)
+        self.objects = FolderStore(folder) if objects is None else objects
         self._legacy = legacy
 
     def next(self, run_id: str) -> int:
         """The epoch a run starts now: the one after the last started, or the
         first. It is started when its manifest is written (`open`)."""
-        started = stored_epochs(self.objects, run_id)
+        started = started_epochs(self.objects, run_id)
         last = started[-1] if started else FIRST_EPOCH - 1
         if self._legacy is not None:
             with suppress(FileNotFoundError, ValueError):
@@ -1242,6 +1251,12 @@ class Playbacks:
         """Every playback started, in the order they were."""
         return [found for _, found in self._store.values()]
 
+    def retiring(self) -> list[Playback]:
+        """The playbacks replaced that are still working a run out: stopped,
+        but not waited for, so that their epochs are being written yet."""
+        with self.rearranging:
+            return [found for found in self._replaced if found.working]
+
     def replace(self, scenario_id: str, replacing: Playback, replaced: Playback) -> None:
         """Keeps `replacing` in `replaced`'s place, under `rearranging`; those
         replaced before that have stopped are let go."""
@@ -1280,20 +1295,28 @@ def start(
     *,
     layout: str | None = None,
     seed: int | None = None,
+    its_own_seed: bool = False,
     hold: bool = False,
     clock: Callable[[], float] = monotonic,
     epochs: Epochs | None = None,
 ) -> PlaybackState:
     """The scenario's playback, started, at `seconds_per_day` if given: the
     one already started, or a new one from the run's start, on `clock`, of
-    its own layout or `layout`; playing, unless `hold`, when its clock waits
+    its own layout or `layout`; kept in the simulator's run store, if it has
+    one, unless `epochs` says where; playing, unless `hold`, when its clock waits
     for a play command while the run is worked out ahead of it. One started
     with another layout than `layout`, or another seed than `seed`, starts
     over with them, as a restart with a layout does (`command`), keeping
-    its own layout or seed where none is given. A pace or a layout refused
-    starts nothing."""
+    its own layout or seed where none is given, or at the scenario's own seed
+    if `its_own_seed`. A pace or a layout refused starts nothing."""
     if seconds_per_day is not None:
         check_pace(seconds_per_day)
+    if its_own_seed:
+        # No seed keeps the one a playback has; the scenario's own is asked for.
+        seed = scenario(simulator.catalogue, scenario_id).random_seed
+    if epochs is None and simulator.runs is not None:
+        # A simulator that keeps runs keeps those it starts.
+        epochs = Epochs(objects=simulator.runs)
 
     def begun(_: object) -> Playback:
         found = Playback(

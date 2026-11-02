@@ -43,6 +43,11 @@ test("a scenario is searched for and opened in the viewer", async ({ page }) => 
   await expect(page.getByRole("option")).toHaveCount(2);
   await search.press("Enter");
 
+  // The scenario's runs are in a dialog, from which the viewer opens on it.
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading")).toContainText("Climate box");
+  await dialog.getByRole("link", { name: "Open in the viewer" }).click();
+
   await expect(page).toHaveURL(/\/view\?scenario=climate_box$/);
   await expect(page.locator("canvas")).toBeVisible();
 });
@@ -58,4 +63,31 @@ test("the viewer is at its own address, and an address with a query is still the
   await page.goto("/?scenario=climate_box");
   await expect(page.getByTestId("scene-status")).toContainText("climate_box, day 0");
   await expect(page.getByRole("heading", { name: "What would you like to do?" })).toHaveCount(0);
+});
+
+test("a run is started at a seed from a scenario's dialog, listed, and not removed while it computes", async ({
+  page,
+}) => {
+  await page.goto(LANDING_PATH);
+  const search = page.getByRole("combobox", { name: "Scenario" });
+  await search.fill("solar_lab");
+  await search.press("Enter");
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading")).toContainText("Solar");
+
+  await dialog.getByRole("button", { name: "New run" }).click();
+  await dialog.getByLabel("Seed").fill("7");
+  await dialog.getByLabel("Seconds per simulated day").fill("1");
+  await dialog.getByRole("button", { name: "Start run" }).click();
+
+  await expect(dialog.getByRole("link", { name: "Follow it in the viewer" })).toBeVisible();
+  const row = dialog.locator(".landing-run").filter({ hasText: "Seed 7" });
+  await expect(row).toBeVisible();
+  await row.getByRole("button", { name: /^Delete the run with seed 7/ }).click();
+  await dialog.getByRole("button", { name: /^Delete the run with seed 7/ }).click();
+  await expect(dialog.getByRole("alert")).toContainText("being computed");
+  await expect(row).toBeVisible();
+
+  await dialog.getByRole("button", { name: "Close" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });

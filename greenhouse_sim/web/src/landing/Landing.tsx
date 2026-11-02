@@ -1,18 +1,18 @@
+import { useState } from "react";
+
 import { BUILDER_PATH } from "../builder/Builder";
 import { loadScenarios, SCENARIOS_URL, type ScenariosState } from "../scenarios";
 import { useLoad } from "../useLoad";
 import { followAddress } from "./follow";
-import { REPOSITORY_URL, viewerAddress } from "./paths";
+import { newRunScenario, REPOSITORY_URL } from "./paths";
 import { loadPlaying, runKey } from "./playing";
+import { RunProgress, StatusChip } from "./RunParts";
+import { RunsDialog } from "./RunsDialog";
 import { ScenarioCombobox } from "./ScenarioCombobox";
 import {
   isComputing,
   loadStoredRuns,
-  progressShare,
-  progressText,
   runCounts,
-  STATUS_LABEL,
-  STORED_RUNS_URL,
   type StoredRun,
   type StoredRunsState,
   startedText,
@@ -33,9 +33,26 @@ function goTo(address: string): void {
  * scenario, or build one, or pick up a run where it was left. The scenarios
  * and the runs kept are the simulator's; `navigate` goes to another page.
  */
-export function Landing({ navigate = goTo }: { navigate?: (address: string) => void }) {
+export function Landing({
+  navigate = goTo,
+  hash = location.hash,
+}: {
+  navigate?: (address: string) => void;
+  /** The address's fragment, which can ask for a scenario's new-run form. */
+  hash?: string;
+}) {
   const scenarios = useLoad(SCENARIOS_URL, (_url, fetchFn) => loadScenarios(fetchFn));
-  const runs = useLoad(STORED_RUNS_URL, (_url, fetchFn) => loadStoredRuns(fetchFn));
+  // The runs kept are asked for again each time one is started or removed.
+  const [asked, setAsked] = useState(0);
+  const runs = useLoad(asked, (_asked, fetchFn) => loadStoredRuns(fetchFn), {
+    key: (each) => `runs-${each}`,
+  });
+  const [opened, setOpened] = useState(() => newRunScenario(hash));
+  const [form, setForm] = useState(() => newRunScenario(hash) !== null);
+  const chosen =
+    opened !== null && scenarios.status === "loaded"
+      ? scenarios.scenarios.find((each) => each.id === opened)
+      : undefined;
   const counts = runs.status === "loaded" ? runCounts(runs.runs) : null;
   // A run is followed from here only if its scenario's playback is playing it.
   const computing =
@@ -43,7 +60,8 @@ export function Landing({ navigate = goTo }: { navigate?: (address: string) => v
       ? [...new Set(runs.runs.filter(isComputing).map((run) => run.scenario_id))].sort()
       : [];
   const playing = useLoad(computing.length === 0 ? null : computing, loadPlaying, {
-    key: (ids) => ids.join(","),
+    // Asked again with the runs, since a start changes which epoch plays.
+    key: (ids) => `${asked}:${ids.join(",")}`,
   });
   const followed = playing.status === "loaded" ? playing.epochs : NOT_PLAYING;
   const names = new Map(
@@ -69,7 +87,10 @@ export function Landing({ navigate = goTo }: { navigate?: (address: string) => v
             <ScenarioChoice
               scenarios={scenarios}
               counts={counts}
-              onChoose={(id) => navigate(viewerAddress(id))}
+              onChoose={(id) => {
+                setForm(false);
+                setOpened(id);
+              }}
               onBuild={() => navigate(BUILDER_PATH)}
             />
           </section>
@@ -86,6 +107,19 @@ export function Landing({ navigate = goTo }: { navigate?: (address: string) => v
           <RecentRuns runs={runs} names={names} followed={followed} />
         </section>
       </main>
+      {chosen !== undefined && (
+        <RunsDialog
+          key={chosen.id}
+          scenario={chosen}
+          runs={
+            runs.status === "loaded" ? runs.runs.filter((run) => run.scenario_id === chosen.id) : []
+          }
+          followed={followed}
+          newRun={form}
+          onClose={() => setOpened(null)}
+          onChanged={() => setAsked((previous) => previous + 1)}
+        />
+      )}
     </div>
   );
 }
@@ -128,7 +162,7 @@ function RecentRuns({
   names,
   followed,
 }: {
-  runs: StoredRunsState;
+  runs: StoredRunsState | { status: "none" };
   names: ReadonlyMap<string, string>;
   /** The stored epochs that their scenarios' playbacks are playing. */
   followed: ReadonlySet<string>;
@@ -166,26 +200,18 @@ function RunRow({
   following: boolean;
 }) {
   const started = startedText(run);
+  const whose = name ?? run.scenario_id;
   return (
     <li className="landing-run">
       <div className="landing-run-name">
-        <strong>{name ?? run.scenario_id}</strong>
+        <strong>{whose}</strong>
         <span>
           {run.seed === null ? "the scenario's seed" : `seed ${run.seed}`} · epoch {run.epoch}
           {started === "" ? "" : ` · ${started}`}
         </span>
       </div>
-      <span className={`landing-status landing-status-${run.status}`}>
-        {STATUS_LABEL[run.status]}
-      </span>
-      <div className="landing-run-progress">
-        <progress
-          max={1}
-          value={progressShare(run)}
-          aria-label={`Progress of the run of ${name ?? run.scenario_id}`}
-        />
-        <span>{progressText(run)}</span>
-      </div>
+      <StatusChip run={run} />
+      <RunProgress run={run} name={`the run of ${whose}`} />
       {following && (
         <a href={followAddress(run.scenario_id, run.layout)} className="landing-link-button">
           Follow

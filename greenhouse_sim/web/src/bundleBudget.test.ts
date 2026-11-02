@@ -16,9 +16,9 @@ describe("the viewer's bundle budget (AUDIT.20)", () => {
 
   it("passes a build within it, and says what weighs over it", () => {
     expect(overBudget({ js: 1586, css: 16 }, BUNDLE_BUDGET_KB)).toEqual([]);
-    expect(overBudget({ js: 1801.4, css: 25 }, BUNDLE_BUDGET_KB)).toEqual([
-      "the viewer's js weighs 1801 kB minified, over its budget of 1710 kB (src/bundleBudget.ts)",
-      "the viewer's css weighs 25 kB minified, over its budget of 24 kB (src/bundleBudget.ts)",
+    expect(overBudget({ js: 1801.4, css: 27 }, BUNDLE_BUDGET_KB)).toEqual([
+      "the viewer's js weighs 1801 kB minified, over its budget of 1720 kB (src/bundleBudget.ts)",
+      "the viewer's css weighs 27 kB minified, over its budget of 26 kB (src/bundleBudget.ts)",
     ]);
   });
 });
