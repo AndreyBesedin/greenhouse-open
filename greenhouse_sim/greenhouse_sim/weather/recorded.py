@@ -32,14 +32,14 @@ import hashlib
 import io
 import math
 import re
-import threading
 from bisect import bisect_right
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Final, Literal
+from typing import Annotated, Final, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.json_schema import SkipJsonSchema
 
 from greenhouse_sim.units import HALF_TURN_DEG
 from greenhouse_sim.weather.sources import WeatherSource
@@ -212,20 +212,23 @@ class RecordedWeather(BaseModel):
 
     kind: Literal["recorded"] = "recorded"
     file: str
+    # A recording a scenario file brought (P17.11), carried by the weather of
+    # the scenario that registered it, so that it is that simulator's and not
+    # the process's. Not part of the written form, which names the file.
+    text: Annotated[SkipJsonSchema[str | None], Field(exclude=True, repr=False)] = None
 
     def path(self) -> Path:
         return RECORDED_DIRECTORY / self.file
 
     def content(self) -> bytes:
-        """Its file's content: from the recorded weather's directory, or a
-        recording kept while the process runs (`keep_recording`)."""
+        """Its file's content: the recording it carries, or the file of the
+        recorded weather's directory."""
+        if self.text is not None:
+            return self.text.encode()
         path = self.path()
-        if path.is_file():
-            return path.read_bytes()
-        kept = kept_recording(self.file)
-        if kept is None:
+        if not path.is_file():
             raise FileNotFoundError(f"no recorded weather {self.file!r}")
-        return kept
+        return path.read_bytes()
 
     def identity(self) -> str:
         """Its file's content, as a digest: a run under it is told apart by
@@ -248,42 +251,32 @@ def recording_digest(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
-# The recordings scenario files brought (P17.11), by file name, kept while the
-# process runs and offered with the packaged ones.
-_KEPT: dict[str, bytes] = {}
-_KEPT_LOCK = threading.Lock()
-
-
-def kept_recording(file: str) -> bytes | None:
-    """The content of the recording kept under this file name, if any."""
-    with _KEPT_LOCK:
-        return _KEPT.get(file)
-
-
-def keep_recording(file: str, content: bytes) -> str:
-    """Offer a recording with the packaged ones, and answer the file name it
-    is known by: `file`, or, if a recording of another content has that name
-    already, packaged or kept, the name with the content's digest added.
-    Keeping the same content again changes nothing. Refused if the name is
-    not a plain one, or the content is not a weather file."""
+def checked_recording(file: str, content: bytes) -> RecordedWeather:
+    """The weather of a recording a scenario file brings, carrying its
+    content, under the name it can be kept by: `file`, or, if the packaged
+    recording of that name has other content, the name with the content's
+    digest added (the whole digest, if the packaged directory has that name
+    too). Refused if the name is not a plain one, or the content is not a
+    weather file."""
     if not RECORDING_NAME.fullmatch(file):
         raise ValueError(f"{file!r} is not a recording's name: lowercase letters, digits, _.-.csv")
     try:
-        read_records(content.decode())
+        text = content.decode()
+        read_records(text)
     except UnicodeDecodeError:
         raise WeatherFileError("a weather file is UTF-8 text") from None
     digest = recording_digest(content)
-    with _KEPT_LOCK:
-        known = _packaged_content(file) or _KEPT.get(file)
-        if known is not None and recording_digest(known) != digest:
-            file = f"{file.removesuffix('.csv')}-{digest[:NAME_DIGEST_LENGTH]}.csv"
-        _KEPT.setdefault(file, content)
-    return file
+    stem = file.removesuffix(".csv")
+    for name in (file, f"{stem}-{digest[:NAME_DIGEST_LENGTH]}.csv", f"{stem}-{digest}.csv"):
+        packaged = _packaged_content(name)
+        if packaged is None or recording_digest(packaged) == digest:
+            return RecordedWeather(file=name, text=text)
+    raise ValueError(f"{file!r}: every name it could be kept under is a packaged recording's")
 
 
-def recording_available(file: str, digest: str) -> bool:
-    """Whether a recording of this name and content is offered."""
-    content = _packaged_content(file) or kept_recording(file)
+def packaged_recording_is(file: str, digest: str) -> bool:
+    """Whether the packaged recording of this name has this content."""
+    content = _packaged_content(file)
     return content is not None and recording_digest(content) == digest
 
 
@@ -293,12 +286,8 @@ def _packaged_content(file: str) -> bytes | None:
 
 
 def recorded_weathers() -> dict[str, RecordedWeather]:
-    """The recorded weather files a scenario can be run under, by name: the
-    packaged ones, then those kept."""
-    packaged = {
+    """The recorded weather files a scenario can be run under, by name."""
+    return {
         path.stem: RecordedWeather(file=path.name)
         for path in sorted(RECORDED_DIRECTORY.glob("*.csv"))
     }
-    with _KEPT_LOCK:
-        kept = {file.removesuffix(".csv"): RecordedWeather(file=file) for file in sorted(_KEPT)}
-    return kept | packaged
