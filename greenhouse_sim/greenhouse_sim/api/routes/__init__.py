@@ -22,6 +22,8 @@ of its routes at its top:
   crop and timeline;
 - `checkpoints`: a run's checkpoints, made, listed, downloaded and uploaded;
 - `playback`: a scenario's run played back against one clock;
+- `stored`: the runs kept in the run store, and the positions a viewer
+  takes over them;
 - `lab`: the plant lab;
 - `builder`: the setup builder, its drafts and its first form.
 
@@ -43,6 +45,7 @@ from greenhouse_sim.api.routes import (
     playback,
     runs,
     scenarios,
+    stored,
     system,
 )
 from greenhouse_sim.api.routes.shared import Query, error, segments_of
@@ -60,10 +63,16 @@ GETS: Final[tuple[Getting, ...]] = (
     runs.get,
     checkpoints.get,
     playback.get,
+    stored.get,
     lab.get,
     builder.get,
 )
-POSTS: Final[tuple[Posting, ...]] = (checkpoints.post, playback.post, builder.post)
+POSTS: Final[tuple[Posting, ...]] = (
+    checkpoints.post,
+    playback.post,
+    stored.post,
+    builder.post,
+)
 
 
 def respond(simulator: Simulator, method: str, path: str, body: bytes = b"") -> Response:

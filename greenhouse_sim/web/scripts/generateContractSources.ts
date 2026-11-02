@@ -149,6 +149,18 @@ export const CONTRACTS: readonly Contract[] = [
     ["src/scene", "playback"],
     "PLAYBACK_SCHEMA",
   ),
+  contract(
+    `${SERVICES}/stored_run.schema.json`,
+    "StoredRun",
+    ["src/scene", "storedRun"],
+    "STORED_RUN_SCHEMA",
+  ),
+  contract(
+    `${SERVICES}/position.schema.json`,
+    "PositionState",
+    ["src/scene", "position"],
+    "POSITION_SCHEMA",
+  ),
   contract(`${PROTOCOL}/plan.schema.json`, "Plan", ["src/plan", "plan"], "PLAN_SCHEMA"),
   contract(`${PROTOCOL}/receipt.schema.json`, "Receipt", ["src/plan", "receipt"], "RECEIPT_SCHEMA"),
   contract(

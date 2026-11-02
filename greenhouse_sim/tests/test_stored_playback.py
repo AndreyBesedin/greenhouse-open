@@ -117,9 +117,9 @@ def test_the_runs_of_a_store_are_found_by_their_folders(kept: Kept) -> None:
     objects = Listing(kept.epochs.folder)
     (found,) = stored_runs(objects, STORED)
     assert (found.run_id, found.status) == (kept.run_id, Status.FINISHED)
-    # Nothing listed every object of the store: only a run's commits.
+    # Nothing listed every object of the store: only the folder of an epoch.
     assert "" not in objects.listed
-    assert all(prefix.endswith("/commits/") for prefix in objects.listed)
+    assert all(prefix.startswith(f"{kept.run_id}/{kept.epoch}/") for prefix in objects.listed)
     assert stored_runs(objects, "no_such_scenario") == []
 
 

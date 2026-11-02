@@ -1,0 +1,121 @@
+// Generated from greenhouse_sim/services/position.schema.json by `npm run generate`.
+// Do not edit: change the simulator's types and regenerate.
+
+export const POSITION_SCHEMA = {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Status": {
+      "enum": [
+        "queued",
+        "running",
+        "finished",
+        "failed",
+        "interrupted"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "description": "Where a position stands over its epoch: the epoch, the moment, both as\nan instant and as seconds into the run (as the viewer asks for a moment),\nwhether it plays or follows, and how far the epoch is committed.",
+  "properties": {
+    "position_id": {
+      "title": "Position Id",
+      "type": "string"
+    },
+    "scenario_id": {
+      "title": "Scenario Id",
+      "type": "string"
+    },
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "epoch": {
+      "title": "Epoch",
+      "type": "integer"
+    },
+    "layout": {
+      "title": "Layout",
+      "type": "string"
+    },
+    "seed": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Seed"
+    },
+    "status": {
+      "$ref": "#/$defs/Status"
+    },
+    "started_at": {
+      "format": "date-time",
+      "title": "Started At",
+      "type": "string"
+    },
+    "simulated_now": {
+      "format": "date-time",
+      "title": "Simulated Now",
+      "type": "string"
+    },
+    "time_s": {
+      "title": "Time S",
+      "type": "number"
+    },
+    "day": {
+      "title": "Day",
+      "type": "integer"
+    },
+    "playing": {
+      "title": "Playing",
+      "type": "boolean"
+    },
+    "following": {
+      "title": "Following",
+      "type": "boolean"
+    },
+    "seconds_per_day": {
+      "title": "Seconds Per Day",
+      "type": "number"
+    },
+    "frontier_s": {
+      "title": "Frontier S",
+      "type": "number"
+    },
+    "duration_s": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Duration S"
+    }
+  },
+  "required": [
+    "position_id",
+    "scenario_id",
+    "run_id",
+    "epoch",
+    "layout",
+    "seed",
+    "status",
+    "started_at",
+    "simulated_now",
+    "time_s",
+    "day",
+    "playing",
+    "following",
+    "seconds_per_day",
+    "frontier_s",
+    "duration_s"
+  ],
+  "title": "PositionState",
+  "type": "object"
+};
