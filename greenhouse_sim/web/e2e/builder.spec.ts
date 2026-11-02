@@ -93,6 +93,13 @@ test("builder: a house drafted, edited, saved, exported, run, reopened and impor
     `/#run=${id}_r1`,
   );
   await expect(page.getByRole("link", { name: "Back to the start" })).toHaveAttribute("href", "/");
+  // The scenario is a file to share: downloaded as the simulator writes it.
+  const sharing = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download scenario file" }).click();
+  const shared = await sharing;
+  expect(shared.suggestedFilename()).toBe(`${id}_r1.scenario.json`);
+  const sharedFile = JSON.parse(readFileSync(await shared.path(), "utf8"));
+  expect(typeof sharedFile.schema_version).toBe("number");
   await page.getByRole("link", { name: "Open The test house in the viewer" }).click();
   await expect(page).toHaveURL(new RegExp(`scenario=${id}_r1`));
   await expect(page.getByTestId("scene-status")).toContainText(`${id}_r1`, ARRIVES);

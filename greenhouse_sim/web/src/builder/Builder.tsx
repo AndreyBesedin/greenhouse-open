@@ -34,6 +34,8 @@ import { Items } from "./Items";
 import { drawnAs } from "./palette";
 import { RowCrops } from "./RowCrops";
 import { RunStep } from "./RunStep";
+import { ShareScenario } from "./ShareScenario";
+import { offerFile } from "./scenarioFile";
 
 /** What outlines an item an error names, on the house. */
 const FINDING_COLOR = "#e5484d";
@@ -416,13 +418,7 @@ export function Builder() {
       return;
     }
     const present = editing.history.present;
-    const file = installationFile(editing.schemaVersion, present);
-    const url = URL.createObjectURL(new Blob([file], { type: "application/json" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${present.installation_id}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    offerFile(`${present.installation_id}.json`, installationFile(editing.schemaVersion, present));
   }
 
   async function run(settings: RunSettings): Promise<void> {
@@ -661,6 +657,7 @@ export function Builder() {
               why={runWhy}
               onRun={(settings) => void run(settings)}
             />
+            {ran !== null && <ShareScenario key={ran.scenarioId} scenarioId={ran.scenarioId} />}
           </>
         )}
       </div>
