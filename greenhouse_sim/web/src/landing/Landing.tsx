@@ -60,7 +60,8 @@ export function Landing({
       ? [...new Set(runs.runs.filter(isComputing).map((run) => run.scenario_id))].sort()
       : [];
   const playing = useLoad(computing.length === 0 ? null : computing, loadPlaying, {
-    key: (ids) => ids.join(","),
+    // Asked again with the runs, since a start changes which epoch plays.
+    key: (ids) => `${asked}:${ids.join(",")}`,
   });
   const followed = playing.status === "loaded" ? playing.epochs : NOT_PLAYING;
   const names = new Map(
@@ -116,7 +117,7 @@ export function Landing({
           followed={followed}
           newRun={form}
           onClose={() => setOpened(null)}
-          onChanged={() => setAsked(asked + 1)}
+          onChanged={() => setAsked((previous) => previous + 1)}
         />
       )}
     </div>

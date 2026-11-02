@@ -198,6 +198,58 @@ describe("the page where a person decides what to do", () => {
     );
   });
 
+  it("asks for the runs again after each removal, however many are in flight together", async () => {
+    const first = run({ epoch: 0, seed: 1 });
+    const second = run({ epoch: 1, seed: 2 });
+    // The removals answer only when released, so that both are under way
+    // before either is done.
+    const release: Array<() => void> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith("/delete")) {
+          await new Promise<void>((resolve) => release.push(resolve));
+          return new Response(JSON.stringify({ deleted: url }));
+        }
+        const bodies: Record<string, unknown> = {
+          "/api/scenarios": SCENARIOS,
+          "/api/runs": [first, second],
+        };
+        return new Response(JSON.stringify(bodies[url]), { status: url in bodies ? 200 : 404 });
+      }),
+    );
+    const navigate = vi.fn();
+    page = render(<Landing navigate={navigate} />);
+    const { container } = page;
+    await vi.waitFor(() => expect(container.textContent).toContain("epoch 1"));
+    const input = container.querySelector("input");
+    act(() => input?.click());
+    act(() => {
+      container
+        .querySelector('[role="option"]')
+        ?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    });
+    const named = (name: string) =>
+      [...container.querySelectorAll<HTMLButtonElement>("dialog button")].find(
+        (each) => (each.getAttribute("aria-label") ?? each.textContent?.trim()) === name,
+      );
+    const asks = () =>
+      vi.mocked(fetch).mock.calls.filter(([url]) => String(url) === "/api/runs").length;
+    expect(asks()).toBe(1);
+
+    for (const who of ["seed 1, epoch 0", "seed 2, epoch 1"]) {
+      act(() => named(`Delete the run with ${who}`)?.click());
+      act(() => named(`Delete the run with ${who}`)?.click());
+    }
+    expect(release).toHaveLength(2);
+
+    act(() => release[0]?.());
+    await vi.waitFor(() => expect(asks()).toBe(2));
+    act(() => release[1]?.());
+    await vi.waitFor(() => expect(asks()).toBe(3));
+  });
+
   it("opens a scenario's form for a new run when the address asks for it", async () => {
     simulator({ "/api/scenarios": SCENARIOS, "/api/runs": [] });
     page = render(<Landing hash="#run=tomgro_house" navigate={vi.fn()} />);
