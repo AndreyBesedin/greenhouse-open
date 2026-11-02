@@ -294,6 +294,12 @@ def save_checkpoint(
     """A checkpoint of a run, asked for as its climate field is, at the
     start of the day `time_s` lies in, or ends: its state then, worked out
     if it has not been, kept."""
+    return _kept(simulator, make_checkpoint(simulator, run, time_s))
+
+
+def make_checkpoint(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> Checkpoint:
+    """A checkpoint of a run as `save_checkpoint` makes it, and not kept: for
+    a store of runs, which keeps its own."""
     scenario_id = run.scenario_id
     config = scenario(simulator.catalogue, scenario_id)
     checked_moment(config, time_s)
@@ -303,7 +309,7 @@ def save_checkpoint(
     crop = scenario_crop(simulator, run)
     state = _crop_state(registration(config).state, crop, day)
     before = window_start(moment)
-    checkpoint = Checkpoint(
+    return Checkpoint(
         scenario_id=scenario_id,
         manifest=version(simulator.catalogue, scenario_id),
         layout=run.layout or DEFAULT_LAYOUT,
@@ -321,7 +327,6 @@ def save_checkpoint(
             for part, ran in _models_run(simulator, run).items()
         },
     )
-    return _kept(simulator, checkpoint)
 
 
 def _models_run(simulator: Simulator, run: RunRequest) -> dict[Part, ModelRun]:
