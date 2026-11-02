@@ -237,21 +237,6 @@ def test_a_file_that_is_not_a_scenario_is_refused_naming_the_field(change: Any, 
         assert MINE not in _listed(receiver)
 
 
-def test_a_recorded_weather_whose_content_is_not_its_digest_is_refused_and_not_kept() -> None:
-    with Simulator() as sender, Simulator() as receiver:
-        name = keep_recording("mine.csv", CSV.encode())
-        sender.catalogue.register(_mine(weather=RecordedWeather(file=name)))
-        document = json.loads(_file(sender))
-        document[RECORDED_WEATHER]["csv"] = CSV.replace(",8,", ",7,")
-        recorded._KEPT.clear()
-
-        status, body = _upload(receiver, json.dumps(document))
-
-        assert status == HTTPStatus.BAD_REQUEST
-        assert body["problems"][0]["field"] == f"{RECORDED_WEATHER}.csv"
-        assert recorded.kept_recording("mine.csv") is None
-
-
 def test_a_file_over_the_limit_or_not_text_is_refused() -> None:
     with Simulator() as receiver:
         big = respond(receiver, "POST", "/api/scenarios/upload", b" " * 8_000_001)

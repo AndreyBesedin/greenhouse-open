@@ -1,17 +1,13 @@
 """A scenario as a file: downloaded, and uploaded, registered and kept
 (P17.11).
 
-The file is a scenario's manifest in a portable form
-(`greenhouse_sim.scenarios.scenario_files`). Uploading one validates it,
-registers its scenario with the simulator as a draft's run is (decision
-0048), and, if the simulator has a run store, keeps the file beside it, so
-that the scenario is registered again when a simulator is started on the
-store. The upload never starts a run: it answers the house and the run
-settings, for the setup builder to open.
-
-A file whose scenario runs under a recorded weather it does not carry, and
-that this process does not offer, is not registered: the answer says which
-weather is missing, and the scenario can be uploaded again with it.
+An upload validates the file (`greenhouse_sim.scenarios.scenario_files`),
+registers its scenario as a draft's run is (decision 0048) and, with a run
+store, keeps the file beside it, so that a simulator started on the store
+registers the scenario again. It never starts a run: it answers the house and
+the run settings, for the setup builder to open. A scenario under a recorded
+weather the file does not carry and this process does not offer is not
+registered; the answer names the weather.
 """
 
 import logging
