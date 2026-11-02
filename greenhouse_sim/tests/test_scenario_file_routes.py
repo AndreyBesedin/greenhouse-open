@@ -130,7 +130,6 @@ def test_a_recorded_weather_ticked_out_leaves_the_scenario_unregistered_until_it
         }
         assert MINE not in _listed(receiver)
         assert FolderStore(tmp_path / "b").names(KEPT_FOLDER) == []
-        # With the weather, the same scenario is registered.
         assert _upload(receiver, full)[1]["scenario"]["id"] == MINE
 
 
@@ -210,7 +209,6 @@ def test_a_recording_under_a_packaged_ones_name_with_other_content_is_kept_under
         assert isinstance(weather, RecordedWeather)
         assert weather.file == f"example_day-{recording_digest(other)[:12]}.csv"
         assert weather.identity() == recording_digest(other)
-        # The packaged recording is as it was.
         assert RecordedWeather(file="example_day.csv").identity() != recording_digest(other)
 
 
