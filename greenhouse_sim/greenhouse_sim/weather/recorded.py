@@ -31,13 +31,15 @@ import csv
 import hashlib
 import io
 import math
+import re
 from bisect import bisect_right
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Final, Literal
+from typing import Annotated, Final, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.json_schema import SkipJsonSchema
 
 from greenhouse_sim.units import HALF_TURN_DEG
 from greenhouse_sim.weather.sources import WeatherSource
@@ -46,6 +48,12 @@ from greenhouse_sim.world.site import Site, bearing
 
 # Where the recorded weather files a scenario can be run under are kept.
 RECORDED_DIRECTORY: Final = Path(__file__).parent / "recorded"
+# What a recording's file may be called: a plain name, since a scenario file
+# brings it (P17.11) and the name is part of every run's identity.
+RECORDING_NAME: Final = re.compile(r"[a-z0-9][a-z0-9_.-]{0,95}\.csv")
+# How many hexadecimal digits of its digest a recording's name adds when
+# another recording has its name.
+NAME_DIGEST_LENGTH: Final = 12
 TIMESTAMP: Final = "timestamp"
 PREFIX: Final = "outside_"
 # The quantities a file must give.
@@ -204,24 +212,80 @@ class RecordedWeather(BaseModel):
 
     kind: Literal["recorded"] = "recorded"
     file: str
+    # A recording a scenario file brought (P17.11), carried by the weather of
+    # the scenario that registered it, so that it is that simulator's and not
+    # the process's. Not part of the written form, which names the file.
+    text: Annotated[SkipJsonSchema[str | None], Field(exclude=True, repr=False)] = None
 
     def path(self) -> Path:
         return RECORDED_DIRECTORY / self.file
 
+    def content(self) -> bytes:
+        """Its file's content: the recording it carries, or the file of the
+        recorded weather's directory."""
+        if self.text is not None:
+            return self.text.encode()
+        path = self.path()
+        if not path.is_file():
+            raise FileNotFoundError(f"no recorded weather {self.file!r}")
+        return path.read_bytes()
+
     def identity(self) -> str:
         """Its file's content, as a digest: a run under it is told apart by
         it."""
-        return hashlib.sha256(self.path().read_bytes()).hexdigest()
+        return recording_digest(self.content())
 
     def source(self, site: Site, seed: int = 0, start: datetime | None = None) -> WeatherSource:
         """Its weather at `site`, its first day's midnight replayed at
         `start`; nothing in it is drawn from `seed`."""
-        known = read_records(self.path().read_text())
+        known = read_records(self.content().decode())
         first = min(series.moments[0] for series in known.values() if series.moments)
         local = first.astimezone(site.zone())
         midnight = site.midnight(local.date())
         offset = timedelta(0) if start is None else midnight - start
         return _Recorded(known, site, offset)
+
+
+def recording_digest(content: bytes) -> str:
+    """What names a recording's content: its SHA-256, in hexadecimal."""
+    return hashlib.sha256(content).hexdigest()
+
+
+def checked_recording(file: str, content: bytes) -> RecordedWeather:
+    """The weather of a recording a scenario file brings, carrying its
+    content, under the name it can be kept by: `file`, or, if the packaged
+    recording of that name has other content, the name with the content's
+    digest added (the whole digest, if the packaged directory has that name
+    too). A recording the packaged directory has is that file's weather, which
+    carries nothing. Refused if the name is not a plain one, or the content is
+    not a weather file."""
+    if not RECORDING_NAME.fullmatch(file):
+        raise ValueError(f"{file!r} is not a recording's name: lowercase letters, digits, _.-.csv")
+    try:
+        text = content.decode()
+        read_records(text)
+    except UnicodeDecodeError:
+        raise WeatherFileError("a weather file is UTF-8 text") from None
+    digest = recording_digest(content)
+    stem = file.removesuffix(".csv")
+    for name in (file, f"{stem}-{digest[:NAME_DIGEST_LENGTH]}.csv", f"{stem}-{digest}.csv"):
+        packaged = _packaged_content(name)
+        if packaged is None:
+            return RecordedWeather(file=name, text=text)
+        if recording_digest(packaged) == digest:
+            return RecordedWeather(file=name)
+    raise ValueError(f"{file!r}: every name it could be kept under is a packaged recording's")
+
+
+def packaged_recording_is(file: str, digest: str) -> bool:
+    """Whether the packaged recording of this name has this content."""
+    content = _packaged_content(file)
+    return content is not None and recording_digest(content) == digest
+
+
+def _packaged_content(file: str) -> bytes | None:
+    path = RECORDED_DIRECTORY / file
+    return path.read_bytes() if path.is_file() else None
 
 
 def recorded_weathers() -> dict[str, RecordedWeather]:

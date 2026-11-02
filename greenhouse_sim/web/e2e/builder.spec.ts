@@ -87,9 +87,21 @@ test("builder: a house drafted, edited, saved, exported, run, reopened and impor
   await page.locator(".builder-run").getByLabel("Days").fill("3");
   await page.getByRole("button", { name: "Run this revision" }).click();
   await expect(status).toContainText(`Its run is registered as ${id}_r1.`, ARRIVES);
+  // Where to go from there: to a run of it, or back to the page that chooses.
+  await expect(page.getByRole("link", { name: "Start a run of it" })).toHaveAttribute(
+    "href",
+    `/#run=${id}_r1`,
+  );
+  await expect(page.getByRole("link", { name: "Back to the start" })).toHaveAttribute("href", "/");
   await page.getByRole("link", { name: "Open The test house in the viewer" }).click();
   await expect(page).toHaveURL(new RegExp(`scenario=${id}_r1`));
   await expect(page.getByTestId("scene-status")).toContainText(`${id}_r1`, ARRIVES);
+
+  // The scenario it registered is one a run is started of, from the page that
+  // chooses: the builder's second link opens its new-run form.
+  await page.goto(`/#run=${id}_r1`);
+  await expect(page.getByRole("dialog", { name: "The test house" })).toBeVisible(ARRIVES);
+  await expect(page.getByRole("button", { name: "Start run" })).toBeVisible();
 
   // Back in the builder: the draft is kept, and reopens as saved.
   await page.goto("/builder");

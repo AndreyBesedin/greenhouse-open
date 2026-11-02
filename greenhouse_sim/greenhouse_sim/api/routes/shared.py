@@ -144,6 +144,17 @@ def pairs(requests: list[str], name: str) -> dict[str, float]:
     return found
 
 
+def seed(query: Query) -> int | None:
+    """A run's seed as an address writes it, `&seed=7`, or none: the
+    scenario's own."""
+    text = last(query, "seed")
+    if text is None:
+        return None
+    if not text.isascii() or not text.isdigit():
+        raise InvalidRequest(f"a seed is a whole number, 0 or more, not {text!r}")
+    return int(text)
+
+
 def pace(query: Query) -> float | None:
     """The real seconds a playback plays a simulated day in, if the query
     gives them."""
@@ -154,14 +165,3 @@ def pace(query: Query) -> float | None:
         return float(given)
     except ValueError:
         raise InvalidRequest(f"seconds_per_day is a number, not {given!r}") from None
-
-
-def seed(query: Query) -> int | None:
-    """A run's seed as an address writes it, `&seed=7`, or none: the scenario's
-    own."""
-    text = last(query, "seed")
-    if text is None:
-        return None
-    if not text.isascii() or not text.isdigit():
-        raise InvalidRequest(f"a seed is a whole number, 0 or more, not {text!r}")
-    return int(text)

@@ -2,10 +2,11 @@
 (P17.4, decision 0065): a scenario's stored runs, an epoch's records after a
 cursor by a moment, and the positions a viewer takes over an epoch."""
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from datetime import timedelta
 from http import HTTPStatus
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Final
 
 import pytest
@@ -16,12 +17,15 @@ from greenhouse_protocol.provenance import RecordSource
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.services import playback
 from greenhouse_sim.services.run_store import (
     EpochManifest,
     EpochStore,
     FolderStore,
     Status,
     StoredRun,
+    epochs,
+    started_epochs,
 )
 from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
@@ -275,3 +279,185 @@ def test_one_epoch_is_looked_up_without_reading_the_others(tmp_path: Path) -> No
         assert _get(made, "/api/runs/missing-run/epochs/0")[0] == HTTPStatus.NOT_FOUND
         assert _get(made, "/api/runs/first-run/epochs/7")[0] == HTTPStatus.NOT_FOUND
         assert all(p.startswith(("missing-run/", "first-run/")) for p in objects.listed)
+
+
+def test_a_stored_epoch_is_deleted_with_its_positions_and_keeps_its_number(
+    simulator: Simulator,
+) -> None:
+    assert simulator.runs is not None
+    _, opened = _post(simulator, f"/api/runs/{RUN}/epochs/0/positions")
+    position_id = PositionState.model_validate(opened).position_id
+
+    status, body = _post(simulator, f"/api/runs/{RUN}/epochs/0/delete")
+
+    assert (status, body) == (HTTPStatus.OK, {"deleted": f"{RUN}/0"})
+    assert _get(simulator, f"/api/scenarios/{SCENARIO}/runs") == (HTTPStatus.OK, [])
+    assert _get(simulator, f"/api/runs/{RUN}/epochs/0")[0] == HTTPStatus.NOT_FOUND
+    assert _get(simulator, f"/api/positions/{position_id}")[0] == HTTPStatus.NOT_FOUND
+    # The epoch is gone, and its number is not given to another (decision 0040).
+    assert epochs(simulator.runs, RUN) == []
+    assert started_epochs(simulator.runs, RUN) == [0]
+    # By a mark of its own: a store of objects has no folder to keep the number.
+    assert simulator.runs.names(f"{RUN}/0/") == [f"{RUN}/0/deleted.json"]
+    assert _post(simulator, f"/api/runs/{RUN}/epochs/0/delete")[0] == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.parametrize("status", [Status.QUEUED, Status.RUNNING])
+def test_an_epoch_the_store_calls_queued_or_running_is_refused_whoever_works_on_it(
+    simulator: Simulator, status: Status
+) -> None:
+    # A worker in a process of its own is seen by no playback of this one.
+    assert simulator.runs is not None
+    left = EpochStore.create(
+        simulator.runs,
+        EpochManifest(
+            run_id="worked-elsewhere",
+            epoch=0,
+            scenario_id=SCENARIO,
+            seed=None,
+            layout="default",
+            status=status,
+            duration_s=None,
+            created_at=None,
+        ),
+    )
+
+    refused = _post(simulator, "/api/runs/worked-elsewhere/epochs/0/delete")
+    left.set_status(Status.INTERRUPTED)
+    allowed = _post(simulator, "/api/runs/worked-elsewhere/epochs/0/delete")
+
+    assert refused[0] == HTTPStatus.CONFLICT
+    assert "being computed" in str(refused[1])
+    assert allowed[0] == HTTPStatus.OK
+    assert started_epochs(simulator.runs, "worked-elsewhere") == [0]
+
+
+def test_an_epoch_a_playback_is_working_on_is_refused_until_it_stops(
+    simulator: Simulator, no_playbacks: Callable[[], None]
+) -> None:
+    assert simulator.runs is not None
+    try:
+        started = respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start?hold=true")
+        assert started.status == HTTPStatus.OK
+        working = playback.playback(simulator, SCENARIO).state()
+        refused = _post(simulator, f"/api/runs/{working.run_id}/epochs/{working.epoch}/delete")
+        no_playbacks()
+        allowed = _post(simulator, f"/api/runs/{working.run_id}/epochs/{working.epoch}/delete")
+    finally:
+        no_playbacks()
+
+    assert refused[0] == HTTPStatus.CONFLICT
+    assert "being computed" in str(refused[1])
+    assert allowed[0] == HTTPStatus.OK
+
+
+def test_a_run_is_started_at_a_seed_and_a_seed_that_is_not_one_is_refused(
+    simulator: Simulator, no_playbacks: Callable[[], None]
+) -> None:
+    path = f"/api/scenarios/{SCENARIO}/playback/start?hold=true"
+    try:
+        plain = respond(simulator, "POST", path)
+        seeded = respond(simulator, "POST", f"{path}&seed=7")
+        refused = respond(simulator, "POST", f"{path}&seed=seven")
+    finally:
+        no_playbacks()
+
+    assert plain.status == seeded.status == HTTPStatus.OK
+    assert isinstance(plain.body, dict) and isinstance(seeded.body, dict)
+    assert plain.body["run_id"] != seeded.body["run_id"]
+    assert refused.status == HTTPStatus.BAD_REQUEST
+
+
+def test_a_run_started_over_the_api_is_kept_and_listed_with_its_seed(
+    simulator: Simulator, no_playbacks: Callable[[], None]
+) -> None:
+    try:
+        started = respond(
+            simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start?hold=true&seed=7"
+        )
+        assert started.status == HTTPStatus.OK
+        status, listed = _get(simulator, f"/api/scenarios/{SCENARIO}/runs")
+    finally:
+        no_playbacks()
+
+    assert status == HTTPStatus.OK
+    assert isinstance(listed, list)
+    seeded = [StoredRun.model_validate(each) for each in listed if each["seed"] == 7]
+    assert len(seeded) == 1
+    assert seeded[0].status in (Status.QUEUED, Status.RUNNING)
+    assert seeded[0].scenario_id == SCENARIO
+
+
+def test_a_run_is_started_at_the_scenarios_own_seed_after_another_seed_was_played(
+    simulator: Simulator, no_playbacks: Callable[[], None]
+) -> None:
+    path = f"/api/scenarios/{SCENARIO}/playback/start?hold=true"
+    try:
+        plain = respond(simulator, "POST", path)
+        seeded = respond(simulator, "POST", f"{path}&seed=7")
+        # No seed keeps the playback's, as a restart does; "default" asks for the own.
+        kept = respond(simulator, "POST", path)
+        back = respond(simulator, "POST", f"{path}&seed=default")
+    finally:
+        no_playbacks()
+
+    ids = [
+        each.body["run_id"] for each in (plain, seeded, kept, back) if isinstance(each.body, dict)
+    ]
+    assert len(ids) == 4
+    plain_id, seeded_id, kept_id, back_id = ids
+    assert seeded_id != plain_id
+    assert kept_id == seeded_id
+    assert back_id == plain_id
+
+
+class Retiring:
+    """A playback replaced by another, still working its run out."""
+
+    def __init__(self, run_id: str, epoch: int) -> None:
+        self.working = True
+        self._state = SimpleNamespace(run_id=run_id, epoch=epoch)
+
+    def state(self) -> SimpleNamespace:
+        return self._state
+
+    def stop(self, *, wait: bool = True) -> None:
+        self.working = False
+
+    def tell_to_stop(self) -> None:
+        self.working = False
+
+    def finish(self, deadline: float) -> None:
+        self.working = False
+
+
+def test_an_epoch_a_replaced_producer_is_still_writing_is_refused_whatever_the_store_says(
+    simulator: Simulator,
+) -> None:
+    # The store says finished, yet the producer, told to stop, writes still.
+    assert simulator.runs is not None
+    EpochStore.create(
+        simulator.runs,
+        EpochManifest(
+            run_id="winding-down",
+            epoch=0,
+            scenario_id=SCENARIO,
+            seed=None,
+            layout="default",
+            status=Status.FINISHED,
+            duration_s=None,
+            created_at=None,
+        ),
+    )
+    old, new = Retiring("winding-down", 0), Retiring("replacement", 0)
+    simulator.playbacks.replace(SCENARIO, new, old)  # type: ignore[arg-type]
+    try:
+        refused = _post(simulator, "/api/runs/winding-down/epochs/0/delete")
+        old.working = False
+        allowed = _post(simulator, "/api/runs/winding-down/epochs/0/delete")
+    finally:
+        old.working = new.working = False
+
+    assert refused[0] == HTTPStatus.CONFLICT
+    assert "being computed" in str(refused[1])
+    assert allowed[0] == HTTPStatus.OK

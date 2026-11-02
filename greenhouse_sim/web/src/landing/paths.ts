@@ -24,3 +24,25 @@ export function pageAt(pathname: string, search: string): Page {
 export function viewerAddress(scenarioId: string, more = ""): string {
   return `${VIEWER_PATH}?scenario=${encodeURIComponent(scenarioId)}${more}`;
 }
+
+const NEW_RUN = "#run=";
+
+/** The landing page with the new-run form open for a scenario: where the
+ * builder sends a person who has saved one. A fragment, so that it is still
+ * the bare address (`pageAt`). */
+export function newRunAddress(scenarioId: string): string {
+  return `${LANDING_PATH}${NEW_RUN}${encodeURIComponent(scenarioId)}`;
+}
+
+/** The scenario whose new-run form an address's fragment asks for, if it
+ * does. */
+export function newRunScenario(hash: string): string | null {
+  if (!hash.startsWith(NEW_RUN) || hash.length === NEW_RUN.length) {
+    return null;
+  }
+  try {
+    return decodeURIComponent(hash.slice(NEW_RUN.length));
+  } catch {
+    return null;
+  }
+}

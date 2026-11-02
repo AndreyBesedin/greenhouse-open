@@ -106,6 +106,7 @@ export function ScenarioCombobox({
       <input
         id={`${id}-input`}
         type="text"
+        className="landing-input"
         role="combobox"
         aria-expanded={open}
         aria-controls={`${id}-list`}

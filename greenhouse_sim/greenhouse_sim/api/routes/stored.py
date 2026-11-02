@@ -26,6 +26,10 @@ them (P17.4, decision 0065).
                                           a position at the epoch's start
     GET /api/positions/{id}               where it stands: the moment, whether
                                           it plays or follows, the frontier
+    POST /api/runs/{run}/epochs/{n}/delete
+                                          removes a stored epoch that is not
+                                          being computed, and its positions;
+                                          its number is not used again
     POST /api/positions/{id}/play, /pause, /follow, /close
     POST /api/positions/{id}/pace?seconds_per_day=5
     POST /api/positions/{id}/seek?t=3600  to a moment from the start to the
@@ -81,6 +85,8 @@ def post(simulator: Simulator, segments: list[str], query: Query, _body: bytes) 
             )
         case ["api", "runs", run_id, "epochs", number, "stop"]:
             return answer(lambda: scheduler.cancel(simulator, run_id, _epoch(number)))
+        case ["api", "runs", run_id, "epochs", number, "delete"]:
+            return answer(lambda: runs_kept.delete_epoch(simulator, run_id, _epoch(number)))
         case ["api", "runs", run_id, "epochs", number, "positions"]:
             return answer(
                 lambda: runs_kept.open_position(simulator, run_id, _epoch(number), pace(query))
