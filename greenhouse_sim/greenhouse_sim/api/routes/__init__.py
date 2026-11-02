@@ -17,7 +17,7 @@ of its routes at its top:
 
 - `system`: whether the API is up, and its version;
 - `scenarios`: the scenarios, and each one's manifest, scene, weather,
-  CFD geometry and layout;
+  CFD geometry, layout and file, and the upload of a scenario file;
 - `runs`: what a scenario's run holds at a moment, its fields, climate,
   crop and timeline;
 - `checkpoints`: a run's checkpoints, made, listed, downloaded and uploaded;
@@ -68,6 +68,7 @@ GETS: Final[tuple[Getting, ...]] = (
     builder.get,
 )
 POSTS: Final[tuple[Posting, ...]] = (
+    scenarios.post,
     checkpoints.post,
     playback.post,
     stored.post,

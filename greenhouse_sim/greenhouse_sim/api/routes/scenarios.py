@@ -27,11 +27,22 @@ its layout, its weather and its CFD geometry.
                                           to its mesh; changed as for its scene
     GET /api/scenarios/{id}/layout        a scenario's layout, as its file holds
                                           it; ?layout=propagation another of them
+    GET /api/scenarios/{id}/file          the scenario as a file to download
+                                          (P17.11): its text, a name for it, and
+                                          whether it carries its recorded weather;
+                                          ?recording=0 leaves the weather's CSV out
+    POST /api/scenarios/upload            a scenario file, the body, validated,
+                                          registered and, with a run store, kept;
+                                          answers the scenario, its house and its
+                                          run settings, for the builder to open. A
+                                          file refused is 400 with `problems`; a
+                                          scenario named as a packaged one or
+                                          another registered is 409
 """
 
 from greenhouse_sim.api.responses import Response
-from greenhouse_sim.api.routes.shared import Query, answer, last, pairs, seconds
-from greenhouse_sim.services import cfd, scenarios, weather
+from greenhouse_sim.api.routes.shared import Query, answer, last, pairs, seconds, text_body
+from greenhouse_sim.services import cfd, scenario_files, scenarios, weather
 from greenhouse_sim.services.simulator import Simulator
 
 
@@ -72,6 +83,17 @@ def get(simulator: Simulator, segments: list[str], query: Query) -> Response | N
             if name is None:
                 return answer(lambda: scenarios.layout(simulator.catalogue, scenario_id))
             return answer(lambda: scenarios.layout(simulator.catalogue, scenario_id, name))
+        case ["api", "scenarios", scenario_id, "file"]:
+            carried = last(query, "recording") != "0"
+            return answer(lambda: scenario_files.download(simulator, scenario_id, carried))
+        case _:
+            return None
+
+
+def post(simulator: Simulator, segments: list[str], _query: Query, body: bytes) -> Response | None:
+    match segments:
+        case ["api", "scenarios", "upload"]:
+            return answer(lambda: scenario_files.upload(simulator, text_body(body)))
         case _:
             return None
 
