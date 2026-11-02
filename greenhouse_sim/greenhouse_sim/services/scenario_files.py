@@ -11,28 +11,35 @@ registered; the answer names the weather.
 """
 
 import logging
+from datetime import date
 from typing import TYPE_CHECKING, Final
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, NonNegativeInt, PositiveInt, ValidationError
 
 from greenhouse_sim.scenarios.catalogue import ScenarioRefused
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.installation import CannotCopy, Installation, scenario_installation
 from greenhouse_sim.scenarios.scenario_files import (
-    ScenarioFile,
+    Recording,
     ScenarioFileError,
     export_scenario_file,
     import_scenario_file,
 )
-from greenhouse_sim.services.drafts import DraftRun
-from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound, ServiceError
+from greenhouse_sim.services.errors import (
+    Conflict,
+    InvalidRequest,
+    NotFound,
+    ServiceError,
+    first_reason,
+)
 from greenhouse_sim.services.scenarios import (
     DEFAULT_WEATHER,
     ScenarioSummary,
     scenario,
     scenario_summary,
 )
-from greenhouse_sim.weather.recorded import RecordedWeather, keep_recording
+from greenhouse_sim.weather.recorded import RecordedWeather, checked_recording
+from greenhouse_sim.world.site import Site
 
 if TYPE_CHECKING:
     # Typed only: the simulator restores the files it was given at its start.
@@ -68,11 +75,30 @@ class MissingWeather(BaseModel):
     digest: str
 
 
+class RunSettings(BaseModel):
+    """What a scenario file holds of a run besides its house, as the scenario
+    holds it: the file's contract, whose ranges are the scenario's own. The
+    weather is `default`, the scenario's own; a draft's run
+    (`services.drafts.DraftRun`) limits some of these further, and refuses
+    them when it is asked."""
+
+    model_config = ConfigDict(frozen=True)
+
+    scenario_id: str
+    name: str
+    description: str
+    start_date: date
+    duration_days: PositiveInt
+    random_seed: NonNegativeInt
+    site: Site
+    weather: str = DEFAULT_WEATHER
+
+
 class ScenarioUploaded(BaseModel):
     """What an upload answers: the scenario as the list shows it (none if
     its weather is missing, which stops it being registered), its house as an
-    installation and its run settings as a draft's run holds them, for the
-    setup builder to open; and whether the file was kept."""
+    installation and its run settings, for the setup builder to open; and
+    whether the file was kept."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -80,7 +106,7 @@ class ScenarioUploaded(BaseModel):
     scenario: ScenarioSummary | None
     kept: bool
     installation: Installation
-    settings: DraftRun
+    settings: RunSettings
     missing_weather: MissingWeather | None
 
 
@@ -116,26 +142,50 @@ def upload(simulator: Simulator, text: str) -> ScenarioUploaded:
 
 def restore(simulator: Simulator) -> int:
     """The scenarios of the files kept beside the run store, registered
-    again; how many were. A file that can no longer be read or registered is
-    left where it is and logged."""
+    again; how many were. A file whose recording another file carries waits
+    until that one is registered, whatever order the store lists them in;
+    one that can no longer be read or registered is left where it is and
+    logged."""
     if simulator.runs is None:
         return 0
+    waiting = simulator.runs.names(KEPT_FOLDER)
     restored = 0
-    for name in simulator.runs.names(KEPT_FOLDER):
-        data = simulator.runs.get(name)
-        try:
-            if data is None:
-                raise NotFound(f"{name} is gone")
-            if _registered(simulator, data.decode()).scenario is not None:
-                restored += 1
-        except (ServiceError, UnicodeDecodeError) as error:
-            logger.warning(
-                "scenario files: %s not restored: %s",
-                name,
-                getattr(error, "message", error),
-                extra={"event": "not_restored", "label": name},
-            )
+    while waiting:
+        deferred = []
+        for name in waiting:
+            registered = _restored(simulator, name)
+            restored += registered is True
+            if registered is None:
+                deferred.append(name)
+        if len(deferred) == len(waiting):
+            for name in deferred:
+                _not_restored(name, "its recorded weather is not here")
+            break
+        waiting = deferred
     return restored
+
+
+def _restored(simulator: Simulator, name: str) -> bool | None:
+    """Whether the kept file `name` was registered; None if it waits for a
+    recording."""
+    assert simulator.runs is not None
+    try:
+        data = simulator.runs.get(name)
+        if data is None:
+            raise NotFound(f"{name} is gone")
+        return None if _registered(simulator, data.decode()).scenario is None else True
+    except (ServiceError, UnicodeDecodeError) as error:
+        _not_restored(name, getattr(error, "message", str(error)))
+        return False
+
+
+def _not_restored(name: str, why: str) -> None:
+    logger.warning(
+        "scenario files: %s not restored: %s",
+        name,
+        why,
+        extra={"event": "not_restored", "label": name},
+    )
 
 
 def _registered(simulator: Simulator, text: str) -> ScenarioUploaded:
@@ -143,27 +193,20 @@ def _registered(simulator: Simulator, text: str) -> ScenarioUploaded:
         read = import_scenario_file(text)
     except ScenarioFileError as error:
         raise InvalidRequest(str(error), [(error.field, error.message)]) from None
-    config = _with_its_recording(read)
+    config, recording = read.config, read.recording
+    missing = None
+    if read.needs_recording and recording is not None:
+        found = _carried_elsewhere(simulator, recording)
+        if found is None:
+            missing = MissingWeather(file=recording.file, digest=recording.digest)
+        else:
+            config = config.model_copy(update={"weather": found})
     try:
         house = scenario_installation(config)
     except CannotCopy as error:
         raise InvalidRequest(f"not a scenario file: {error}") from None
-    settings = DraftRun(
-        scenario_id=config.greenhouse_id,
-        name=config.name,
-        description=config.description,
-        start_date=config.start_date,
-        duration_days=config.duration_days,
-        random_seed=config.random_seed,
-        site=config.site,
-        weather=DEFAULT_WEATHER,
-    )
-    recording = read.recording
-    missing = (
-        MissingWeather(file=recording.file, digest=recording.digest)
-        if read.recording_missing and recording is not None
-        else None
-    )
+    except ValidationError as error:
+        raise InvalidRequest(f"not a scenario file: {first_reason(error)}") from None
     summary = None
     if missing is None:
         try:
@@ -181,20 +224,34 @@ def _registered(simulator: Simulator, text: str) -> ScenarioUploaded:
         scenario=summary,
         kept=False,
         installation=house,
-        settings=settings,
+        settings=_settings(config),
         missing_weather=missing,
     )
 
 
-def _with_its_recording(read: ScenarioFile) -> ScenarioConfig:
-    """The scenario of a file, its recorded weather, if the file carries it,
-    offered with the packaged ones: under the file's name, or, if that name
-    is taken by other content, under a name with the content's digest, which
-    the scenario then runs under."""
-    recording = read.recording
-    if recording is None or recording.csv is None:
-        return read.config
-    kept = keep_recording(recording.file, recording.csv)
-    if kept == recording.file:
-        return read.config
-    return read.config.model_copy(update={"weather": RecordedWeather(file=kept)})
+def _settings(config: ScenarioConfig) -> RunSettings:
+    return RunSettings(
+        scenario_id=config.greenhouse_id,
+        name=config.name,
+        description=config.description,
+        start_date=config.start_date,
+        duration_days=config.duration_days,
+        random_seed=config.random_seed,
+        site=config.site,
+    )
+
+
+def _carried_elsewhere(simulator: Simulator, recording: Recording) -> RecordedWeather | None:
+    """The weather that carries the recording a file names and does not
+    carry, as another scenario this simulator knows carries it: the same
+    content, under the name the file gives it."""
+    for scenario_id in simulator.catalogue.ids():
+        entry = simulator.catalogue.entry(scenario_id)
+        weather = None if entry is None else entry.config.weather
+        if (
+            isinstance(weather, RecordedWeather)
+            and weather.text is not None
+            and weather.identity() == recording.digest
+        ):
+            return checked_recording(recording.file, weather.content())
+    return None

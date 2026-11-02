@@ -3,7 +3,6 @@
 again when a simulator is started on the store."""
 
 import json
-from collections.abc import Iterator
 from http import HTTPStatus
 from pathlib import Path
 from typing import Any, Final
@@ -18,9 +17,9 @@ from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.run_store import FolderStore
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenario_files import KEPT_FOLDER
+from greenhouse_sim.services.scenarios import weather_names
 from greenhouse_sim.services.simulator import Simulator
-from greenhouse_sim.weather import recorded
-from greenhouse_sim.weather.recorded import RecordedWeather, keep_recording, recording_digest
+from greenhouse_sim.weather.recorded import RecordedWeather, checked_recording, recording_digest
 
 MINE: Final = "my_box"
 CSV: Final = (
@@ -29,17 +28,15 @@ CSV: Final = (
 )
 
 
-@pytest.fixture(autouse=True)
-def _no_recordings_kept(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    monkeypatch.setattr(recorded, "_KEPT", {})
-    yield
-
-
 def _mine(**changes: Any) -> ScenarioConfig:
     """A scenario of someone's own: a packaged one under another name."""
     return PACKAGED.configs["climate_box"].model_copy(
         update={"greenhouse_id": MINE, "name": "My box"} | changes
     )
+
+
+def _recorded() -> RecordedWeather:
+    return checked_recording("mine.csv", CSV.encode())
 
 
 def _simulator(folder: Path) -> Simulator:
@@ -93,13 +90,11 @@ def test_a_downloaded_scenario_uploaded_to_a_clean_simulator_runs_as_the_origina
 
 def test_a_recorded_weather_ticked_in_comes_with_the_file_and_gives_the_originals_run() -> None:
     with Simulator() as sender, Simulator() as receiver:
-        name = keep_recording("mine.csv", CSV.encode())
-        sender.catalogue.register(_mine(weather=RecordedWeather(file=name)))
+        sender.catalogue.register(_mine(weather=_recorded()))
         downloaded = _get(sender, f"/api/scenarios/{MINE}/file")[1]
         assert downloaded["has_recording"]
         assert json.loads(downloaded["text"])[RECORDED_WEATHER]["csv"] == CSV
         original = _run_id(sender)
-        recorded._KEPT.clear()
 
         status, body = _upload(receiver, downloaded["text"])
 
@@ -111,12 +106,10 @@ def test_a_recorded_weather_ticked_out_leaves_the_scenario_unregistered_until_it
     tmp_path: Path,
 ) -> None:
     with _simulator(tmp_path / "a") as sender, _simulator(tmp_path / "b") as receiver:
-        name = keep_recording("mine.csv", CSV.encode())
-        sender.catalogue.register(_mine(weather=RecordedWeather(file=name)))
+        sender.catalogue.register(_mine(weather=_recorded()))
         bare = _get(sender, f"/api/scenarios/{MINE}/file?recording=0")[1]
         full = _file(sender)
         assert not bare["has_recording"] and "csv" not in json.loads(bare["text"])[RECORDED_WEATHER]
-        recorded._KEPT.clear()
 
         status, body = _upload(receiver, bare["text"])
 
@@ -164,13 +157,11 @@ def test_a_scenario_uploaded_is_registered_again_when_a_simulator_starts_on_the_
 ) -> None:
     store = tmp_path / "store"
     with Simulator() as sender:
-        name = keep_recording("mine.csv", CSV.encode())
-        sender.catalogue.register(_mine(weather=RecordedWeather(file=name)))
+        sender.catalogue.register(_mine(weather=_recorded()))
         text = _file(sender)
         original = _run_id(sender)
     with _simulator(store) as first:
         assert _upload(first, text)[0] == HTTPStatus.OK
-    recorded._KEPT.clear()
 
     with _simulator(store) as second:
         assert MINE in _listed(second)
@@ -255,3 +246,87 @@ def test_an_unknown_scenario_has_no_file_and_one_that_cannot_be_written_is_refus
         status, body = _get(simulator, f"/api/scenarios/{MINE}/file")
         assert status == HTTPStatus.BAD_REQUEST
         assert "cannot be written as a file" in str(body)
+
+
+def test_a_recording_belongs_to_the_simulator_that_registered_it() -> None:
+    names = weather_names()
+    with Simulator() as sender, Simulator() as first, Simulator() as second:
+        sender.catalogue.register(_mine(weather=_recorded()))
+        full = _file(sender)
+        bare = _get(sender, f"/api/scenarios/{MINE}/file?recording=0")[1]["text"]
+        packaged = full.replace(f'"greenhouse_id": "{MINE}"', '"greenhouse_id": "climate_box"')
+
+        # A refused upload leaves its recording nowhere.
+        assert _upload(first, packaged)[0] == HTTPStatus.CONFLICT
+        assert _upload(first, bare)[1]["missing_weather"] is not None
+        # An accepted one gives it to this simulator alone.
+        assert _upload(first, full)[0] == HTTPStatus.OK
+        assert _upload(second, bare)[1]["missing_weather"] is not None
+        assert weather_names() == names
+
+
+def test_a_file_without_its_recording_takes_it_from_a_scenario_that_carries_it() -> None:
+    with Simulator() as sender, Simulator() as receiver:
+        sender.catalogue.register(_mine(weather=_recorded()))
+        full = _file(sender)
+        bare = _get(sender, f"/api/scenarios/{MINE}/file?recording=0")[1]["text"]
+        another = bare.replace(f'"greenhouse_id": "{MINE}"', '"greenhouse_id": "another_box"')
+
+        assert _upload(receiver, full)[0] == HTTPStatus.OK
+        status, body = _upload(receiver, another)
+
+        assert status == HTTPStatus.OK and body["missing_weather"] is None
+        entry = receiver.catalogue.entry("another_box")
+        assert entry is not None and isinstance(entry.config.weather, RecordedWeather)
+        assert entry.config.weather.identity() == recording_digest(CSV.encode())
+
+
+def test_a_kept_file_waits_for_the_recording_another_carries(tmp_path: Path) -> None:
+    store = FolderStore(tmp_path / "store")
+    with Simulator() as sender:
+        sender.catalogue.register(_mine(weather=_recorded()))
+        full = _file(sender)
+        bare = _get(sender, f"/api/scenarios/{MINE}/file?recording=0")[1]["text"]
+    another = bare.replace(f'"greenhouse_id": "{MINE}"', '"greenhouse_id": "another_box"')
+    # The store lists the file that needs the recording before the one that has it.
+    store.put(f"{KEPT_FOLDER}0-needs.json", another.encode())
+    store.put(f"{KEPT_FOLDER}1-carries.json", full.encode())
+
+    with Simulator(runs=store) as simulator:
+        assert {MINE, "another_box"} <= set(_listed(simulator))
+
+
+def test_a_run_settings_range_is_the_scenarios_own() -> None:
+    with Simulator() as sender, Simulator() as receiver:
+        sender.catalogue.register(_mine())
+        long = json.dumps(json.loads(_file(sender)) | {"duration_days": 367})
+
+        status, body = _upload(receiver, long)
+
+        # A draft's run is limited to 366 days; a scenario's is not.
+        assert status == HTTPStatus.OK
+        assert body["settings"]["duration_days"] == 367
+
+
+def test_a_name_an_installation_cannot_have_is_refused_not_failed() -> None:
+    with Simulator() as sender, Simulator() as receiver:
+        sender.catalogue.register(_mine())
+        unnamed = json.dumps(json.loads(_file(sender)) | {"name": ""})
+
+        status, body = _upload(receiver, unnamed)
+
+        assert status == HTTPStatus.BAD_REQUEST and "not a scenario file" in body["error"]
+
+
+def test_a_recording_of_other_content_is_not_taken_for_the_one_a_file_names() -> None:
+    with Simulator() as sender, Simulator() as receiver:
+        sender.catalogue.register(_mine(weather=_recorded()))
+        full = _file(sender)
+        bare = json.loads(_get(sender, f"/api/scenarios/{MINE}/file?recording=0")[1]["text"])
+        bare["greenhouse_id"] = "another_box"
+        bare[RECORDED_WEATHER]["digest"] = recording_digest(b"other")
+
+        assert _upload(receiver, full)[0] == HTTPStatus.OK
+        body = _upload(receiver, json.dumps(bare))[1]
+
+        assert body["scenario"] is None and body["missing_weather"]["file"] == "mine.csv"
