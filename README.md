@@ -80,6 +80,7 @@ uv run python examples/01_run_a_simulation.py        # a deterministic run and i
 uv run python examples/02_store_and_query.py         # store, query, and never see the future
 uv run python examples/03_close_the_loop.py          # observe, decide, act, observe again
 uv run python examples/04_score_against_ground_truth.py  # how noisy is the sensing?
+uv run python examples/05_policy_in_its_own_process.py  # a policy that knows only a port's address and token
 ```
 
 Recorded data, with nothing heavier than about 10 MB downloaded:
