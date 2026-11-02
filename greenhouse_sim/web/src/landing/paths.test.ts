@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { followAddress, LANDING_PATH, pageAt, VIEWER_PATH, viewerAddress } from "./paths";
+import {
+  followAddress,
+  LANDING_PATH,
+  newRunAddress,
+  newRunScenario,
+  pageAt,
+  VIEWER_PATH,
+  viewerAddress,
+} from "./paths";
 
 describe("the viewer's addresses", () => {
   it("shows the landing page at the bare address, with or without its slash", () => {
@@ -24,5 +32,15 @@ describe("the viewer's addresses", () => {
     expect(viewerAddress("climate_box")).toBe("/view?scenario=climate_box");
     expect(viewerAddress("a b&c")).toBe("/view?scenario=a%20b%26c");
     expect(followAddress("climate_box")).toBe("/view?scenario=climate_box&field=climate&follow=1");
+  });
+
+  it("asks the landing page for a scenario's new-run form by a fragment, which is still the bare address", () => {
+    expect(newRunAddress("my house/1")).toBe("/#run=my%20house%2F1");
+    expect(pageAt("/", "")).toBe("landing");
+    expect(newRunScenario("#run=my%20house%2F1")).toBe("my house/1");
+    expect(newRunScenario("")).toBeNull();
+    expect(newRunScenario("#run=")).toBeNull();
+    expect(newRunScenario("#elsewhere")).toBeNull();
+    expect(newRunScenario("#run=%E0%A4%A")).toBeNull();
   });
 });

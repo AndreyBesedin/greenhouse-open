@@ -13,6 +13,7 @@
   --panel-accent: #e277b5;
   --label-bg: rgb(17 24 39 / 85%);
   --landing-bg: #0b1220;
+  --landing-backdrop: rgb(0 0 0 / 60%);
   --chart-face: #1e293b;
   --chart-ring: #6b7a90;
   --chart-neutral: #b8c2d1;
@@ -35,6 +36,7 @@
   --panel-accent: #aa3377;
   --label-bg: rgb(255 255 255 / 85%);
   --landing-bg: #f4f6f3;
+  --landing-backdrop: rgb(20 30 25 / 50%);
   --chart-face: #ffffff;
   --chart-ring: #999999;
   --chart-neutral: #555555;
@@ -1793,16 +1795,22 @@ body {
   color: var(--panel-muted-strong);
 }
 
-.landing-combobox input {
+.landing-input {
   box-sizing: border-box;
-  width: 100%;
-  min-height: 48px;
-  padding: 0 14px;
+  min-height: 44px;
+  padding: 0 12px;
   border: 1px solid var(--panel-muted);
   border-radius: 8px;
   background: var(--landing-bg);
   color: var(--panel-text);
   font: inherit;
+  font-size: 15px;
+}
+
+.landing-combobox .landing-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
   font-size: 16px;
 }
 
@@ -1926,4 +1934,126 @@ body {
 .landing-status-interrupted {
   border-color: var(--panel-warn);
   color: var(--panel-warn);
+}
+
+/* The runs of a scenario, in a dialog of their own (P17.5). */
+.landing-dialog {
+  box-sizing: border-box;
+  width: min(900px, calc(100% - 32px));
+  max-height: calc(100% - 64px);
+  padding: 0 0 8px;
+  overflow-y: auto;
+  border: 1px solid var(--panel-rule);
+  border-radius: 14px;
+  background: var(--landing-bg);
+  color: var(--panel-text);
+  color-scheme: var(--panel-scheme);
+}
+
+.landing-dialog::backdrop {
+  background: var(--landing-backdrop);
+}
+
+.landing-dialog-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: 20px 24px 12px;
+  border-bottom: 1px solid var(--panel-rule);
+}
+
+.landing-dialog-head h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.landing-dialog-head p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--panel-muted-strong);
+}
+
+.landing-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.landing-dialog p[role="alert"],
+.landing-dialog p[role="status"] {
+  margin: 0;
+  padding: 10px 24px;
+}
+
+.landing-dialog p[role="alert"] {
+  color: var(--panel-warn);
+}
+
+.landing-button {
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--panel-rule);
+  border-radius: 8px;
+  background: var(--landing-bg);
+  color: var(--panel-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.landing-button-primary {
+  border-color: var(--panel-link);
+  color: var(--panel-link);
+}
+
+.landing-button-danger {
+  border-color: var(--panel-warn);
+  color: var(--panel-warn);
+}
+
+.landing-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 24px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--panel-rule);
+  background: var(--panel-bg);
+}
+
+.landing-field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--panel-muted-strong);
+}
+
+.landing-note {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 13px;
+  color: var(--panel-muted-strong);
+}
+
+.landing-empty {
+  padding: 32px 24px;
+  text-align: center;
+  color: var(--panel-muted-strong);
+}
+
+.landing-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.landing-dialog .landing-runs {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
 }

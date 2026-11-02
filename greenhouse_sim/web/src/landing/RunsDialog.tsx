@@ -1,0 +1,215 @@
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
+
+import { refusal } from "../builder/api";
+import type { ScenarioSummary } from "../scenarios";
+import { followAddress, viewerAddress } from "./paths";
+import { RunProgress, StatusChip } from "./RunParts";
+import { isComputing, type StoredRun, sizeText, startedText } from "./storedRuns";
+
+/** The pace a run is started at unless another is entered, in real seconds
+ * for a simulated day. */
+const DEFAULT_PACE_S = "10";
+
+/** The runs of a scenario the simulator has kept, with a way to start another
+ * and to remove one (P17.5, decision 0065). A modal dialog: the browser keeps
+ * the keyboard in it and closes it on Escape. */
+export function RunsDialog({
+  scenario,
+  runs,
+  newRun = false,
+  onClose,
+  onChanged,
+}: {
+  scenario: ScenarioSummary;
+  /** The scenario's runs, the newest first. */
+  runs: readonly StoredRun[];
+  /** Whether the form for a new run is open as the dialog opens. */
+  newRun?: boolean;
+  onClose: () => void;
+  /** The runs kept have changed: ask for them again. */
+  onChanged: () => void;
+}) {
+  const heading = useId();
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [formOpen, setFormOpen] = useState(newRun);
+  const [seed, setSeed] = useState("");
+  const [pace, setPace] = useState(DEFAULT_PACE_S);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [started, setStarted] = useState(false);
+  const [confirming, setConfirming] = useState<string | null>(null);
+
+  useEffect(() => {
+    const shown = dialog.current;
+    if (shown !== null && !shown.open) {
+      // A browser makes it modal; a DOM without that only opens it.
+      if (typeof shown.showModal === "function") {
+        shown.showModal();
+      } else {
+        shown.setAttribute("open", "");
+      }
+    }
+  }, []);
+
+  async function startRun(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    const query = new URLSearchParams({ seconds_per_day: pace });
+    if (seed !== "") {
+      query.set("seed", seed);
+    }
+    const response = await fetch(
+      `/api/scenarios/${encodeURIComponent(scenario.id)}/playback/start?${query}`,
+      { method: "POST" },
+    ).catch(() => null);
+    if (response === null || !response.ok) {
+      setProblem(
+        response === null ? "The simulator could not be reached." : await refusal(response),
+      );
+      return;
+    }
+    setProblem(null);
+    setStarted(true);
+    setFormOpen(false);
+    setSeed("");
+    onChanged();
+  }
+
+  async function remove(run: StoredRun): Promise<void> {
+    const response = await fetch(
+      `/api/runs/${encodeURIComponent(run.run_id)}/epochs/${run.epoch}/delete`,
+      {
+        method: "POST",
+      },
+    ).catch(() => null);
+    setConfirming(null);
+    if (response === null || !response.ok) {
+      setProblem(
+        response === null ? "The simulator could not be reached." : await refusal(response),
+      );
+      return;
+    }
+    setProblem(null);
+    onChanged();
+  }
+
+  return (
+    <dialog ref={dialog} className="landing-dialog" aria-labelledby={heading} onClose={onClose}>
+      <header className="landing-dialog-head">
+        <div>
+          <h2 id={heading}>{scenario.name}</h2>
+          <p>
+            {scenario.id} · {scenario.description}
+          </p>
+        </div>
+        <div className="landing-dialog-actions">
+          <a href={viewerAddress(scenario.id)} className="landing-link-button">
+            Open in the viewer
+          </a>
+          <button type="button" className="landing-button" onClick={() => setFormOpen(!formOpen)}>
+            New run
+          </button>
+          <button type="button" className="landing-button" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </header>
+
+      {formOpen && (
+        <form className="landing-form" onSubmit={(event) => void startRun(event)}>
+          <label className="landing-field">
+            <span>Seed</span>
+            <input
+              className="landing-input"
+              type="text"
+              inputMode="numeric"
+              placeholder="The scenario's own"
+              value={seed}
+              onChange={(event) => setSeed(event.target.value.replace(/\D/g, ""))}
+            />
+          </label>
+          <label className="landing-field">
+            <span>Seconds per simulated day</span>
+            <input
+              className="landing-input"
+              type="number"
+              min={1}
+              step={1}
+              required
+              value={pace}
+              onChange={(event) => setPace(event.target.value)}
+            />
+          </label>
+          <button type="submit" className="landing-button landing-button-primary">
+            Start run
+          </button>
+          <p className="landing-note">
+            Starting a run replaces the one now playing for this scenario, which stays in the list.
+          </p>
+        </form>
+      )}
+
+      {problem !== null && <p role="alert">{problem}</p>}
+      {started && (
+        <p role="status">
+          Run started. <a href={followAddress(scenario.id)}>Follow it in the viewer</a>.
+        </p>
+      )}
+
+      {runs.length === 0 ? (
+        <p className="landing-empty">No runs of this scenario yet. Start one with New run.</p>
+      ) : (
+        <ul className="landing-runs">
+          {runs.map((run) => {
+            const key = `${run.run_id}/${run.epoch}`;
+            const who = `${run.seed === null ? "the scenario's seed" : `seed ${run.seed}`}, epoch ${run.epoch}`;
+            const when = startedText(run);
+            return (
+              <li key={key} className="landing-run">
+                <div className="landing-run-name">
+                  <strong>{run.seed === null ? "The scenario's seed" : `Seed ${run.seed}`}</strong>
+                  <span>
+                    epoch {run.epoch}
+                    {when === "" ? "" : ` · ${when}`} · {sizeText(run.size_bytes)}
+                  </span>
+                </div>
+                <StatusChip run={run} />
+                <RunProgress run={run} name={`the run with ${who}`} />
+                {isComputing(run) && (
+                  <a href={followAddress(run.scenario_id)} className="landing-link-button">
+                    Follow
+                  </a>
+                )}
+                {confirming === key ? (
+                  <span className="landing-confirm">
+                    <button
+                      type="button"
+                      className="landing-button landing-button-danger"
+                      onClick={() => void remove(run)}
+                    >
+                      Delete the run with {who}
+                    </button>
+                    <button
+                      type="button"
+                      className="landing-button"
+                      onClick={() => setConfirming(null)}
+                    >
+                      Keep it
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className="landing-button"
+                    aria-label={`Delete the run with ${who}`}
+                    onClick={() => setConfirming(key)}
+                  >
+                    Delete
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </dialog>
+  );
+}

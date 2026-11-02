@@ -6,7 +6,7 @@ import { DAY_S } from "../clock";
 import type { ScenarioSummary } from "../scenarios";
 import { type Rendered, render } from "../testing/render";
 import { Landing } from "./Landing";
-import { followAddress, REPOSITORY_URL, viewerAddress } from "./paths";
+import { followAddress, REPOSITORY_URL } from "./paths";
 import type { StoredRun } from "./storedRuns";
 
 // What the simulator sends of a scenario besides its name: how it grows its
@@ -107,7 +107,7 @@ describe("the page where a person decides what to do", () => {
     expect(link(container, "Open the builder")?.getAttribute("href")).toBe("/builder");
   });
 
-  it("opens the viewer on the scenario that is chosen, or the builder", async () => {
+  it("opens the runs of the scenario that is chosen in a dialog, and the builder in a page", async () => {
     const { container, navigate } = await shown(
       { "/api/scenarios": SCENARIOS, "/api/runs": [run({})] },
       "Reference greenhouse",
@@ -115,21 +115,75 @@ describe("the page where a person decides what to do", () => {
     const input = container.querySelector("input");
     act(() => input?.click());
     const options = () => [...container.querySelectorAll('[role="option"]')];
+    const pointOn = (option: Element | undefined) =>
+      act(() => {
+        option?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+      });
 
     expect(options()[0]?.textContent).toContain("1 run");
     expect(options()[1]?.textContent).toContain("no runs");
-    act(() => {
-      options()[1]?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
-    });
-    expect(navigate).toHaveBeenLastCalledWith(viewerAddress("tomgro_house"));
+    pointOn(options()[1]);
+
+    expect(container.querySelector("dialog h2")?.textContent).toBe("TOMGRO house");
+    expect(container.querySelector("dialog")?.textContent).toContain(
+      "No runs of this scenario yet.",
+    );
+    expect(navigate).not.toHaveBeenCalled();
+    act(() =>
+      container
+        .querySelector<HTMLButtonElement>(".landing-dialog-actions button:last-child")
+        ?.click(),
+    );
+    expect(container.querySelector("dialog")).toBeNull();
 
     act(() => input?.click());
+    pointOn(options().at(-1));
+    expect(navigate).toHaveBeenLastCalledWith("/builder");
+  });
+
+  it("shows only the chosen scenario's runs in its dialog, and asks for them again once one is removed", async () => {
+    const mine = run({ epoch: 4, seed: 9 });
+    const { container } = await shown(
+      {
+        "/api/scenarios": SCENARIOS,
+        "/api/runs": [mine, run({ scenario_id: "tomgro_house", epoch: 0, seed: 3 })],
+        "/api/runs/reference_greenhouse-climate-abc/epochs/4/delete": { deleted: "x" },
+      },
+      "epoch 4",
+    );
+    const input = container.querySelector("input");
+    act(() => input?.click());
     act(() => {
-      options()
-        .at(-1)
+      container
+        .querySelector('[role="option"]')
         ?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
     });
-    expect(navigate).toHaveBeenLastCalledWith("/builder");
+
+    const inDialog = () => [...container.querySelectorAll("dialog .landing-run")];
+    expect(inDialog().map((row) => row.textContent)).toEqual([expect.stringContaining("Seed 9")]);
+    const named = (name: string) =>
+      [...container.querySelectorAll<HTMLButtonElement>("dialog button")].find(
+        (each) => (each.getAttribute("aria-label") ?? each.textContent?.trim()) === name,
+      );
+    act(() => (named("Delete the run with seed 9, epoch 4") as HTMLButtonElement).click());
+    act(() => (named("Delete the run with seed 9, epoch 4") as HTMLButtonElement).click());
+
+    await vi.waitFor(() =>
+      expect(
+        vi.mocked(fetch).mock.calls.filter(([url]) => String(url) === "/api/runs"),
+      ).toHaveLength(2),
+    );
+  });
+
+  it("opens a scenario's form for a new run when the address asks for it", async () => {
+    simulator({ "/api/scenarios": SCENARIOS, "/api/runs": [] });
+    page = render(<Landing hash="#run=tomgro_house" navigate={vi.fn()} />);
+    const { container } = page;
+
+    await vi.waitFor(() =>
+      expect(container.querySelector("dialog h2")?.textContent).toBe("TOMGRO house"),
+    );
+    expect(container.querySelector("dialog form")).not.toBeNull();
   });
 
   it("lists the latest runs in words, and offers to follow only one still computing", async () => {
