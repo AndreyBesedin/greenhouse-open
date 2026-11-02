@@ -49,8 +49,10 @@ from greenhouse_sim.services.fields import FieldNames
 from greenhouse_sim.services.plants import LabChecks
 from greenhouse_sim.services.playback import PlaybackState
 from greenhouse_sim.services.run_state import RunState
+from greenhouse_sim.services.run_store import StoredRun
 from greenhouse_sim.services.scenarios import RunManifest, ScenarioSummary
 from greenhouse_sim.services.sensors import SensorObservations, SensorTruths
+from greenhouse_sim.services.stored_playback import PositionState
 from greenhouse_sim.services.system import Version
 from greenhouse_sim.services.timeline import TimelineDocument
 from greenhouse_sim.services.weather import WeatherAtAMoment, WeatherThroughADay
@@ -77,6 +79,10 @@ ANSWERS: Final[dict[Path, type[object]]] = {
     SERVICES / "timeline.schema.json": TimelineDocument,
     SERVICES / "checkpoint.schema.json": CheckpointSummary,
     SERVICES / "playback.schema.json": PlaybackState,
+    # A stored run as a list of them shows it, and a position over its epoch
+    # (P17.4).
+    SERVICES / "stored_run.schema.json": StoredRun,
+    SERVICES / "position.schema.json": PositionState,
     SERVICES / "plants_light.schema.json": PlantsLight,
     SERVICES / "crop_plant.schema.json": CropPlant,
     SERVICES / "lab_checks.schema.json": LabChecks,

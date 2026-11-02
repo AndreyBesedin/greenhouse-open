@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import { CAMERA_PRESETS, PRESET_ORDER, type PresetName } from "../src/camera.ts";
 import { DAY_S } from "../src/clock.ts";
+import { VIEWER_PATH } from "../src/landing/paths";
 import { DEFAULT_QA_SEED, QA_RENDERER_PATH, QA_SELECTED_ID } from "../src/qa/qaPage.ts";
 import {
   DEFAULT_STRESS_PLANTS,
@@ -153,7 +154,7 @@ test("renderer-smoke: the renderer, end to end", async ({ page }) => {
   });
 
   await test.step("the stress scene stays interactive", async () => {
-    await page.goto("/");
+    await page.goto(VIEWER_PATH);
     await (await chooser(page)).getByRole("button", { name: "Stress scene" }).click();
     await expect(page.getByTestId("scene-status")).toContainText(
       `${DEFAULT_STRESS_PLANTS + 2} entities`,

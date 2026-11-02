@@ -62,8 +62,9 @@ const FEATURES = new Set([
   "hud",
   "legends",
   "build",
-  // The setup builder's page (P12.2).
+  // The setup builder's page (P12.2), and the page before it (P17.5).
   "builder",
+  "landing",
   "debug",
   "select",
   // Choosing what is shown, and how.
@@ -201,6 +202,11 @@ const BUILT = new Set([
   "timeline-plan-ran",
   "timeline-plan-not-ran",
   "timeline-plan-to-come",
+  // `landing-status-${run.status}`, a stored run's status on the landing page (P17.5).
+  "landing-status-failed",
+  "landing-status-interrupted",
+  "landing-status-queued",
+  "landing-status-running",
 ]);
 
 describe("the stylesheet's classes (AUDIT.20)", () => {

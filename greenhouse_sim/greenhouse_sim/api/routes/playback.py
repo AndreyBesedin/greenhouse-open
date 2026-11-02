@@ -28,7 +28,7 @@ a consumer follow (P10.2).
 from http import HTTPStatus
 
 from greenhouse_sim.api.responses import Response
-from greenhouse_sim.api.routes.shared import Query, answer, error, last, pairs
+from greenhouse_sim.api.routes.shared import Query, answer, error, last, pace, pairs
 from greenhouse_sim.services import playback
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.playback import PlaybackCommand
@@ -49,7 +49,7 @@ def post(simulator: Simulator, segments: list[str], query: Query, _body: bytes) 
             layout = last(query, "layout")
             return answer(
                 lambda: playback.start(
-                    simulator, scenario_id, _pace(query), layout=layout, hold=_held(query)
+                    simulator, scenario_id, pace(query), layout=layout, hold=_held(query)
                 )
             )
         case ["api", "scenarios", scenario_id, "playback", "targets"]:
@@ -59,7 +59,7 @@ def post(simulator: Simulator, segments: list[str], query: Query, _body: bytes) 
                 )
             )
         case ["api", "scenarios", scenario_id, "playback", "pace"]:
-            return answer(lambda: playback.set_pace(simulator, scenario_id, _pace(query) or 0.0))
+            return answer(lambda: playback.set_pace(simulator, scenario_id, pace(query) or 0.0))
         case ["api", "scenarios", scenario_id, "playback", action]:
             if action not in PlaybackCommand:
                 return error(HTTPStatus.NOT_FOUND, f"no playback command {action!r}")
@@ -77,15 +77,3 @@ def _held(query: Query) -> bool:
     if given not in {None, "true", "false"}:
         raise InvalidRequest(f"hold is true or false, not {given!r}")
     return given == "true"
-
-
-def _pace(query: Query) -> float | None:
-    """The real seconds a playback plays a simulated day in, if the query
-    gives them."""
-    given = last(query, "seconds_per_day")
-    if given is None:
-        return None
-    try:
-        return float(given)
-    except ValueError:
-        raise InvalidRequest(f"seconds_per_day is a number, not {given!r}") from None

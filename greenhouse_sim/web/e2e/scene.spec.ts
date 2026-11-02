@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { VIEWER_PATH } from "../src/landing/paths";
 import { chooser } from "./chooser";
 import { unfold } from "./folds";
 import { selectAt } from "./view";
@@ -24,7 +25,7 @@ async function objectCount(page: Page): Promise<number> {
 
 test("the example scene is drawn from its JSON file", async ({ page }) => {
   const errors = collectErrors(page);
-  await page.goto("/");
+  await page.goto(VIEWER_PATH);
   const referenceObjects = await objectCount(page);
 
   await page.goto("/?scene=example");
@@ -40,7 +41,7 @@ test("a scenario's scene comes from the simulator and stays chosen on refresh", 
   page,
 }) => {
   const errors = collectErrors(page);
-  await page.goto("/");
+  await page.goto(VIEWER_PATH);
 
   await (await chooser(page)).getByRole("button", { name: "Open tomato_compartment" }).click();
 

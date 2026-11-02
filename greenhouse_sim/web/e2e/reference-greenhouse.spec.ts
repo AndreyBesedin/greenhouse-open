@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { VIEWER_PATH } from "../src/landing/paths";
 import { chooser } from "./chooser";
 import { unfold } from "./folds";
 
@@ -9,7 +10,7 @@ import { unfold } from "./folds";
 test("reference greenhouse: its manifest boots the whole scene, and it is listed first", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto(VIEWER_PATH);
   const firstRow = (await chooser(page))
     .getByRole("table", { name: "Scenarios" })
     .locator("tbody tr")
