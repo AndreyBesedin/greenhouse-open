@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { BuildInfo } from "./buildInfo";
+import { HomeButton } from "./landing/HomeButton";
 import type { PanelTheme } from "./panelTheme";
 import { SceneFailures } from "./SceneStatus";
 import { SourceChooser } from "./SourceChooser";
@@ -37,7 +38,10 @@ export function InfoPanel({
 }) {
   return (
     <aside className="info-panel">
-      <h1>greenhouse-sim viewer</h1>
+      <div className="panel-head">
+        <HomeButton />
+        <h1>greenhouse-sim viewer</h1>
+      </div>
       <SourceChooser
         scenarios={scenarios}
         source={source}
