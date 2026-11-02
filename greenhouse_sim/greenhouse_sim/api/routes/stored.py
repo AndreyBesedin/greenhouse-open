@@ -12,6 +12,16 @@ them (P17.4, decision 0065).
                                           its records after a cursor that were
                                           delivered by t seconds into the run,
                                           by default its frontier
+    POST /api/scenarios/{id}/runs?seed=7&layout=default&seconds_per_day=10
+                                          a run asked for: an epoch started in
+                                          the store, queued, and executed by a
+                                          worker when one is free, as fast as it
+                                          goes or at that pace; the epoch as the
+                                          list shows it. Several at once, of one
+                                          scenario or of many
+    POST /api/runs/{run}/epochs/{n}/stop  an epoch waiting for a worker or being
+                                          executed, ended: interrupted, with what
+                                          it had committed
     POST /api/runs/{run}/epochs/{n}/positions?seconds_per_day=10
                                           a position at the epoch's start
     GET /api/positions/{id}               where it stands: the moment, whether
@@ -31,8 +41,8 @@ it changes nothing a consumer reads.
 from pydantic import BaseModel
 
 from greenhouse_sim.api.responses import JsonValue, Response
-from greenhouse_sim.api.routes.shared import Query, answer, last, pace, seconds, whole
-from greenhouse_sim.services import runs_kept
+from greenhouse_sim.api.routes.shared import Query, answer, last, pace, seconds, seed, whole
+from greenhouse_sim.services import runs_kept, scheduler
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.simulator import Simulator
 
@@ -59,6 +69,18 @@ def get(simulator: Simulator, segments: list[str], query: Query) -> Response | N
 
 def post(simulator: Simulator, segments: list[str], query: Query, _body: bytes) -> Response | None:
     match segments:
+        case ["api", "scenarios", scenario_id, "runs"]:
+            return answer(
+                lambda: scheduler.start(
+                    simulator,
+                    scenario_id,
+                    layout=last(query, "layout"),
+                    seed=seed(query),
+                    seconds_per_day=pace(query),
+                )
+            )
+        case ["api", "runs", run_id, "epochs", number, "stop"]:
+            return answer(lambda: scheduler.cancel(simulator, run_id, _epoch(number)))
         case ["api", "runs", run_id, "epochs", number, "positions"]:
             return answer(
                 lambda: runs_kept.open_position(simulator, run_id, _epoch(number), pace(query))
