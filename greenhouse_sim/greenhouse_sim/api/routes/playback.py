@@ -10,7 +10,11 @@ a consumer follow (P10.2).
                                           &layout=default~heater:-1:0.5 with
                                           that layout, rearranged; &hold=true
                                           held at its start, for a plan given
-                                          before its clock moves (P13.7)
+                                          before its clock moves (P13.7);
+                                          &seed=7 at that seed, in place of
+                                          the scenario's own (decision 0065),
+                                          &seed=default at the scenario's own,
+                                          none keeping the playback's
     POST /api/scenarios/{id}/playback/play, /pause, /restart (a new epoch)
     POST /api/scenarios/{id}/playback/restart?layout=default~heater:-1:0.5
                                           started over with another layout:
@@ -26,13 +30,17 @@ a consumer follow (P10.2).
 """
 
 from http import HTTPStatus
+from typing import Final
 
 from greenhouse_sim.api.responses import Response
-from greenhouse_sim.api.routes.shared import Query, answer, error, last, pace, pairs
+from greenhouse_sim.api.routes.shared import Query, answer, error, last, pace, pairs, seed
 from greenhouse_sim.services import playback
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.playback import PlaybackCommand
 from greenhouse_sim.services.simulator import Simulator
+
+# What `&seed=` says for the scenario's own seed, as against none, which keeps a playback's.
+OWN_SEED: Final = "default"
 
 
 def get(simulator: Simulator, segments: list[str], _query: Query) -> Response | None:
@@ -47,9 +55,16 @@ def post(simulator: Simulator, segments: list[str], query: Query, _body: bytes) 
     match segments:
         case ["api", "scenarios", scenario_id, "playback", "start"]:
             layout = last(query, "layout")
+            its_own_seed = last(query, "seed") == OWN_SEED
             return answer(
                 lambda: playback.start(
-                    simulator, scenario_id, pace(query), layout=layout, hold=_held(query)
+                    simulator,
+                    scenario_id,
+                    pace(query),
+                    layout=layout,
+                    seed=None if its_own_seed else seed(query),
+                    its_own_seed=its_own_seed,
+                    hold=_held(query),
                 )
             )
         case ["api", "scenarios", scenario_id, "playback", "targets"]:
