@@ -256,8 +256,9 @@ def checked_recording(file: str, content: bytes) -> RecordedWeather:
     content, under the name it can be kept by: `file`, or, if the packaged
     recording of that name has other content, the name with the content's
     digest added (the whole digest, if the packaged directory has that name
-    too). Refused if the name is not a plain one, or the content is not a
-    weather file."""
+    too). A recording the packaged directory has is that file's weather, which
+    carries nothing. Refused if the name is not a plain one, or the content is
+    not a weather file."""
     if not RECORDING_NAME.fullmatch(file):
         raise ValueError(f"{file!r} is not a recording's name: lowercase letters, digits, _.-.csv")
     try:
@@ -269,8 +270,10 @@ def checked_recording(file: str, content: bytes) -> RecordedWeather:
     stem = file.removesuffix(".csv")
     for name in (file, f"{stem}-{digest[:NAME_DIGEST_LENGTH]}.csv", f"{stem}-{digest}.csv"):
         packaged = _packaged_content(name)
-        if packaged is None or recording_digest(packaged) == digest:
+        if packaged is None:
             return RecordedWeather(file=name, text=text)
+        if recording_digest(packaged) == digest:
+            return RecordedWeather(file=name)
     raise ValueError(f"{file!r}: every name it could be kept under is a packaged recording's")
 
 

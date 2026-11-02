@@ -59,7 +59,8 @@ def test_a_recording_of_a_packaged_ones_name_and_other_content_is_named_by_its_d
     same = (recorded.RECORDED_DIRECTORY / "example_day.csv").read_bytes()
     other = OTHER.encode()
 
-    assert checked_recording("example_day.csv", same).file == "example_day.csv"
+    # The packaged file is the weather's, which carries nothing.
+    assert checked_recording("example_day.csv", same) == RecordedWeather(file="example_day.csv")
     assert (
         checked_recording("example_day.csv", other).file
         == f"example_day-{recording_digest(other)[:NAME_DIGEST_LENGTH]}.csv"
