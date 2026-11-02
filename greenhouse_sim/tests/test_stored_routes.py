@@ -335,22 +335,7 @@ def test_an_epoch_a_playback_is_working_on_is_refused_until_it_stops(simulator: 
     try:
         started = respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start?hold=true")
         assert started.status == HTTPStatus.OK
-        # A playback with no store of its own writes none: stand its epoch in.
         working = playback.playback(simulator, SCENARIO).state()
-        EpochStore.create(
-            simulator.runs,
-            EpochManifest(
-                run_id=working.run_id,
-                epoch=working.epoch,
-                scenario_id=SCENARIO,
-                seed=None,
-                layout="default",
-                status=Status.RUNNING,
-                duration_s=None,
-                created_at=None,
-            ),
-        )
-
         refused = _post(simulator, f"/api/runs/{working.run_id}/epochs/{working.epoch}/delete")
         playback.stop_playbacks(simulator)
         allowed = _post(simulator, f"/api/runs/{working.run_id}/epochs/{working.epoch}/delete")
@@ -377,3 +362,21 @@ def test_a_run_is_started_at_a_seed_and_a_seed_that_is_not_one_is_refused(
     assert isinstance(plain.body, dict) and isinstance(seeded.body, dict)
     assert plain.body["run_id"] != seeded.body["run_id"]
     assert refused.status == HTTPStatus.BAD_REQUEST
+
+
+def test_a_run_started_over_the_api_is_kept_and_listed_with_its_seed(simulator: Simulator) -> None:
+    try:
+        started = respond(
+            simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start?hold=true&seed=7"
+        )
+        assert started.status == HTTPStatus.OK
+        status, listed = _get(simulator, f"/api/scenarios/{SCENARIO}/runs")
+    finally:
+        playback.stop_playbacks(simulator)
+
+    assert status == HTTPStatus.OK
+    assert isinstance(listed, list)
+    seeded = [StoredRun.model_validate(each) for each in listed if each["seed"] == 7]
+    assert len(seeded) == 1
+    assert seeded[0].status in (Status.QUEUED, Status.RUNNING)
+    assert seeded[0].scenario_id == SCENARIO

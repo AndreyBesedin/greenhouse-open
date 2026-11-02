@@ -119,6 +119,7 @@ from greenhouse_sim.services.run_store import (
     EpochManifest,
     EpochStore,
     FolderStore,
+    ObjectStore,
     Status,
     compress,
     default_root,
@@ -180,9 +181,17 @@ class Epochs:
     out (`run_store`). `legacy` is where the epochs were kept before, a file
     a run holding the last one started, counted on from."""
 
-    def __init__(self, folder: Path, legacy: Path | None = None) -> None:
+    def __init__(
+        self,
+        folder: Path | None = None,
+        legacy: Path | None = None,
+        *,
+        objects: ObjectStore | None = None,
+    ) -> None:
+        if (folder is None) == (objects is None):
+            raise ValueError("epochs are kept in a folder, or in a store of objects, not both")
         self.folder = folder
-        self.objects = FolderStore(folder)
+        self.objects = FolderStore(folder) if objects is None else objects
         self._legacy = legacy
 
     def next(self, run_id: str) -> int:
@@ -1270,7 +1279,8 @@ def start(
 ) -> PlaybackState:
     """The scenario's playback, started, at `seconds_per_day` if given: the
     one already started, or a new one from the run's start, on `clock`, of
-    its own layout or `layout`; playing, unless `hold`, when its clock waits
+    its own layout or `layout`; kept in the simulator's run store, if it has
+    one, unless `epochs` says where; playing, unless `hold`, when its clock waits
     for a play command while the run is worked out ahead of it. One started
     with another layout than `layout`, or another seed than `seed`, starts
     over with them, as a restart with a layout does (`command`), keeping
@@ -1278,6 +1288,9 @@ def start(
     starts nothing."""
     if seconds_per_day is not None:
         check_pace(seconds_per_day)
+    if epochs is None and simulator.runs is not None:
+        # A simulator that keeps runs keeps those it starts.
+        epochs = Epochs(objects=simulator.runs)
 
     def begun(_: object) -> Playback:
         found = Playback(
