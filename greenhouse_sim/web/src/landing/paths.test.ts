@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { followAddress, LANDING_PATH, pageAt, VIEWER_PATH, viewerAddress } from "./paths";
+import { LANDING_PATH, pageAt, VIEWER_PATH, viewerAddress } from "./paths";
 
 describe("the viewer's addresses", () => {
   it("shows the landing page at the bare address, with or without its slash", () => {
@@ -23,6 +23,5 @@ describe("the viewer's addresses", () => {
   it("writes an address that names the scenario, its identifier made safe", () => {
     expect(viewerAddress("climate_box")).toBe("/view?scenario=climate_box");
     expect(viewerAddress("a b&c")).toBe("/view?scenario=a%20b%26c");
-    expect(followAddress("climate_box")).toBe("/view?scenario=climate_box&field=climate&follow=1");
   });
 });

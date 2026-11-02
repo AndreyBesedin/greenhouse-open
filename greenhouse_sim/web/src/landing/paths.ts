@@ -24,8 +24,3 @@ export function pageAt(pathname: string, search: string): Page {
 export function viewerAddress(scenarioId: string, more = ""): string {
   return `${VIEWER_PATH}?scenario=${encodeURIComponent(scenarioId)}${more}`;
 }
-
-/** The viewer following a scenario's run as it is played back. */
-export function followAddress(scenarioId: string): string {
-  return viewerAddress(scenarioId, "&field=climate&follow=1");
-}

@@ -1,11 +1,25 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { scenarioMatches } from "../ScenarioList";
 import type { ScenarioSummary } from "../scenarios";
 import { runCountText } from "./storedRuns";
 
-/** The entry after the scenarios, which builds one instead of choosing one. */
-const BUILD = "build";
+/** What an entry of the list does: opens a scenario, or, as the last one,
+ * builds one. Tagged, since no scenario identifier is reserved. */
+type Entry = { kind: "scenario"; id: string } | { kind: "build" };
+
+/** Where an options list is scrolled to, so that an option shows in it: where
+ * it is if it already does, else the least that brings it to the near edge. */
+export function scrolledTo(
+  list: { scrollTop: number; clientHeight: number },
+  option: { offsetTop: number; offsetHeight: number },
+): number {
+  if (option.offsetTop < list.scrollTop) {
+    return option.offsetTop;
+  }
+  const bottom = option.offsetTop + option.offsetHeight;
+  return bottom > list.scrollTop + list.clientHeight ? bottom - list.clientHeight : list.scrollTop;
+}
 
 /**
  * The scenario to open, searched by name, identifier or description: an
@@ -30,18 +44,32 @@ export function ScenarioCombobox({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const listed = scenarios.filter((scenario) => scenarioMatches(scenario, query));
-  const entries: readonly (string | typeof BUILD)[] = [...listed.map((s) => s.id), BUILD];
+  const entries: readonly Entry[] = [
+    ...listed.map((scenario): Entry => ({ kind: "scenario", id: scenario.id })),
+    { kind: "build" },
+  ];
   const last = entries.length - 1;
   const optionId = (index: number) => `${id}-option-${index}`;
+  const options = useRef<HTMLUListElement>(null);
 
-  function choose(entry: string): void {
+  // The input keeps focus, so the active option is brought into view in the
+  // list itself, and not the page.
+  useEffect(() => {
+    const list = options.current;
+    const option = open ? document.getElementById(`${id}-option-${active}`) : null;
+    if (list !== null && option !== null && list.contains(option)) {
+      list.scrollTop = scrolledTo(list, option);
+    }
+  }, [open, active, id]);
+
+  function choose(entry: Entry): void {
     setOpen(false);
     setQuery("");
     setActive(0);
-    if (entry === BUILD) {
+    if (entry.kind === "build") {
       onBuild();
     } else {
-      onChoose(entry);
+      onChoose(entry.id);
     }
   }
 
@@ -101,6 +129,7 @@ export function ScenarioCombobox({
         // Chosen on mouse down, which comes before the input loses focus and
         // closes the list.
         <ul
+          ref={options}
           id={`${id}-list`}
           // biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: the editable combobox pattern (WAI-ARIA): the list is read through aria-activedescendant while focus stays on the input, so its options take no focus.
           role="listbox"
@@ -118,7 +147,7 @@ export function ScenarioCombobox({
               className="landing-option"
               onMouseDown={(event) => {
                 event.preventDefault();
-                choose(scenario.id);
+                choose({ kind: "scenario", id: scenario.id });
               }}
             >
               <span className="landing-option-line">
@@ -144,7 +173,7 @@ export function ScenarioCombobox({
             className="landing-option landing-option-build"
             onMouseDown={(event) => {
               event.preventDefault();
-              choose(BUILD);
+              choose({ kind: "build" });
             }}
           >
             Build a new scenario
