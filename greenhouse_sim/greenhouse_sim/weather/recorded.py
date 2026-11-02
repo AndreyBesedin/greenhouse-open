@@ -31,6 +31,8 @@ import csv
 import hashlib
 import io
 import math
+import re
+import threading
 from bisect import bisect_right
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -46,6 +48,12 @@ from greenhouse_sim.world.site import Site, bearing
 
 # Where the recorded weather files a scenario can be run under are kept.
 RECORDED_DIRECTORY: Final = Path(__file__).parent / "recorded"
+# What a recording's file may be called: a plain name, since a scenario file
+# brings it (P17.11) and the name is part of every run's identity.
+RECORDING_NAME: Final = re.compile(r"[a-z0-9][a-z0-9_.-]{0,95}\.csv")
+# How many hexadecimal digits of its digest a recording's name adds when
+# another recording has its name.
+NAME_DIGEST_LENGTH: Final = 12
 TIMESTAMP: Final = "timestamp"
 PREFIX: Final = "outside_"
 # The quantities a file must give.
@@ -208,15 +216,26 @@ class RecordedWeather(BaseModel):
     def path(self) -> Path:
         return RECORDED_DIRECTORY / self.file
 
+    def content(self) -> bytes:
+        """Its file's content: from the recorded weather's directory, or a
+        recording kept while the process runs (`keep_recording`)."""
+        path = self.path()
+        if path.is_file():
+            return path.read_bytes()
+        kept = kept_recording(self.file)
+        if kept is None:
+            raise FileNotFoundError(f"no recorded weather {self.file!r}")
+        return kept
+
     def identity(self) -> str:
         """Its file's content, as a digest: a run under it is told apart by
         it."""
-        return hashlib.sha256(self.path().read_bytes()).hexdigest()
+        return recording_digest(self.content())
 
     def source(self, site: Site, seed: int = 0, start: datetime | None = None) -> WeatherSource:
         """Its weather at `site`, its first day's midnight replayed at
         `start`; nothing in it is drawn from `seed`."""
-        known = read_records(self.path().read_text())
+        known = read_records(self.content().decode())
         first = min(series.moments[0] for series in known.values() if series.moments)
         local = first.astimezone(site.zone())
         midnight = site.midnight(local.date())
@@ -224,9 +243,62 @@ class RecordedWeather(BaseModel):
         return _Recorded(known, site, offset)
 
 
+def recording_digest(content: bytes) -> str:
+    """What names a recording's content: its SHA-256, in hexadecimal."""
+    return hashlib.sha256(content).hexdigest()
+
+
+# The recordings scenario files brought (P17.11), by file name, kept while the
+# process runs and offered with the packaged ones.
+_KEPT: dict[str, bytes] = {}
+_KEPT_LOCK = threading.Lock()
+
+
+def kept_recording(file: str) -> bytes | None:
+    """The content of the recording kept under this file name, if any."""
+    with _KEPT_LOCK:
+        return _KEPT.get(file)
+
+
+def keep_recording(file: str, content: bytes) -> str:
+    """Offer a recording with the packaged ones, and answer the file name it
+    is known by: `file`, or, if a recording of another content has that name
+    already, packaged or kept, the name with the content's digest added.
+    Keeping the same content again changes nothing. Refused if the name is
+    not a plain one, or the content is not a weather file."""
+    if not RECORDING_NAME.fullmatch(file):
+        raise ValueError(f"{file!r} is not a recording's name: lowercase letters, digits, _.-.csv")
+    try:
+        read_records(content.decode())
+    except UnicodeDecodeError:
+        raise WeatherFileError("a weather file is UTF-8 text") from None
+    digest = recording_digest(content)
+    with _KEPT_LOCK:
+        known = _packaged_content(file) or _KEPT.get(file)
+        if known is not None and recording_digest(known) != digest:
+            file = f"{file.removesuffix('.csv')}-{digest[:NAME_DIGEST_LENGTH]}.csv"
+        _KEPT.setdefault(file, content)
+    return file
+
+
+def recording_available(file: str, digest: str) -> bool:
+    """Whether a recording of this name and content is offered."""
+    content = _packaged_content(file) or kept_recording(file)
+    return content is not None and recording_digest(content) == digest
+
+
+def _packaged_content(file: str) -> bytes | None:
+    path = RECORDED_DIRECTORY / file
+    return path.read_bytes() if path.is_file() else None
+
+
 def recorded_weathers() -> dict[str, RecordedWeather]:
-    """The recorded weather files a scenario can be run under, by name."""
-    return {
+    """The recorded weather files a scenario can be run under, by name: the
+    packaged ones, then those kept."""
+    packaged = {
         path.stem: RecordedWeather(file=path.name)
         for path in sorted(RECORDED_DIRECTORY.glob("*.csv"))
     }
+    with _KEPT_LOCK:
+        kept = {file.removesuffix(".csv"): RecordedWeather(file=file) for file in sorted(_KEPT)}
+    return kept | packaged
