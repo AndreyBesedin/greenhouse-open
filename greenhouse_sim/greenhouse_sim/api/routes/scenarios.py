@@ -33,11 +33,9 @@ its layout, its weather and its CFD geometry.
                                           ?recording=0 leaves the weather's CSV out
     POST /api/scenarios/upload            a scenario file, the body, validated,
                                           registered and, with a run store, kept;
-                                          answers the scenario, its house and its
-                                          run settings, for the builder to open. A
-                                          file refused is 400 with `problems`; a
-                                          scenario named as a packaged one or
-                                          another registered is 409
+                                          answers it, its house and its run
+                                          settings. Refused: 400 with `problems`;
+                                          a taken identifier: 409
 """
 
 from greenhouse_sim.api.responses import Response
