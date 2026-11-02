@@ -41,9 +41,8 @@ from greenhouse_sim.scenarios.registry import CONFIGURED, chosen, model
 from greenhouse_sim.weather.recorded import (
     RECORDING_NAME,
     RecordedWeather,
-    WeatherFileError,
-    read_records,
-    recording_available,
+    checked_recording,
+    packaged_recording_is,
     recording_digest,
 )
 
@@ -78,12 +77,14 @@ class ScenarioFileError(ValueError):
 @dataclass(frozen=True)
 class Recording:
     """The recorded weather a scenario runs under, as its file names it: the
-    file's name, the digest of its content, and the content if the file
-    carries it."""
+    file's name, the digest of its content, and, if the file carries it,
+    the content and the weather that carries it under the name it can be
+    kept by (`checked_recording`)."""
 
     file: str
     digest: str
-    csv: bytes | None
+    csv: bytes | None = None
+    carried: RecordedWeather | None = None
 
 
 @dataclass(frozen=True)
@@ -97,15 +98,15 @@ class ScenarioFile:
     digest: str
 
     @property
-    def recording_missing(self) -> bool:
-        """Whether the scenario runs under a recorded weather this process has
-        not got: the file does not carry it, and none of that name and
-        content is offered."""
+    def needs_recording(self) -> bool:
+        """Whether the scenario runs under a recorded weather the file does
+        not carry and the packaged ones do not have: the simulator that
+        registers it must find the recording elsewhere, or not register it."""
         recording = self.recording
         return (
             recording is not None
             and recording.csv is None
-            and not recording_available(recording.file, recording.digest)
+            and not packaged_recording_is(recording.file, recording.digest)
         )
 
 
@@ -183,6 +184,8 @@ def import_scenario_file(text: str) -> ScenarioFile:
     except InvalidManifest as error:
         raise ScenarioFileError("", str(error)) from None
     recording = _recording(config, document.get(RECORDED_WEATHER))
+    if recording is not None and recording.carried is not None:
+        config = config.model_copy(update={"weather": recording.carried})
     canonical = json.dumps(document, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return ScenarioFile(config, recording, short_digest(canonical, DIGEST_LENGTH))
 
@@ -234,10 +237,10 @@ def _recording(config: ScenarioConfig, written: JsonValue) -> Recording | None:
             f"{RECORDED_WEATHER}.csv", "its content is not the one the digest names"
         )
     try:
-        read_records(csv)
-    except WeatherFileError as error:
+        carried = checked_recording(weather.file, content)
+    except ValueError as error:
         raise ScenarioFileError(f"{RECORDED_WEATHER}.csv", str(error)) from None
-    return Recording(weather.file, digest, content)
+    return Recording(weather.file, digest, content, carried)
 
 
 class _NotJson(ValueError):
