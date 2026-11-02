@@ -6,6 +6,7 @@ from collections.abc import Callable, Iterator
 from datetime import timedelta
 from http import HTTPStatus
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Final
 
 import pytest
@@ -379,3 +380,77 @@ def test_a_run_started_over_the_api_is_kept_and_listed_with_its_seed(
     assert len(seeded) == 1
     assert seeded[0].status in (Status.QUEUED, Status.RUNNING)
     assert seeded[0].scenario_id == SCENARIO
+
+
+def test_a_run_is_started_at_the_scenarios_own_seed_after_another_seed_was_played(
+    simulator: Simulator, no_playbacks: Callable[[], None]
+) -> None:
+    path = f"/api/scenarios/{SCENARIO}/playback/start?hold=true"
+    try:
+        plain = respond(simulator, "POST", path)
+        seeded = respond(simulator, "POST", f"{path}&seed=7")
+        # No seed keeps the playback's, as a restart does; "default" asks for the own.
+        kept = respond(simulator, "POST", path)
+        back = respond(simulator, "POST", f"{path}&seed=default")
+    finally:
+        no_playbacks()
+
+    ids = [
+        each.body["run_id"] for each in (plain, seeded, kept, back) if isinstance(each.body, dict)
+    ]
+    assert len(ids) == 4
+    plain_id, seeded_id, kept_id, back_id = ids
+    assert seeded_id != plain_id
+    assert kept_id == seeded_id
+    assert back_id == plain_id
+
+
+class Retiring:
+    """A playback replaced by another, still working its run out."""
+
+    def __init__(self, run_id: str, epoch: int) -> None:
+        self.working = True
+        self._state = SimpleNamespace(run_id=run_id, epoch=epoch)
+
+    def state(self) -> SimpleNamespace:
+        return self._state
+
+    def stop(self, *, wait: bool = True) -> None:
+        self.working = False
+
+    def tell_to_stop(self) -> None:
+        self.working = False
+
+    def finish(self, deadline: float) -> None:
+        self.working = False
+
+
+def test_an_epoch_a_replaced_producer_is_still_writing_is_refused_until_it_stops(
+    simulator: Simulator,
+) -> None:
+    assert simulator.runs is not None
+    EpochStore.create(
+        simulator.runs,
+        EpochManifest(
+            run_id="winding-down",
+            epoch=0,
+            scenario_id=SCENARIO,
+            seed=None,
+            layout="default",
+            status=Status.RUNNING,
+            duration_s=None,
+            created_at=None,
+        ),
+    )
+    old, new = Retiring("winding-down", 0), Retiring("replacement", 0)
+    simulator.playbacks.replace(SCENARIO, new, old)  # type: ignore[arg-type]
+    try:
+        refused = _post(simulator, "/api/runs/winding-down/epochs/0/delete")
+        old.working = False
+        allowed = _post(simulator, "/api/runs/winding-down/epochs/0/delete")
+    finally:
+        old.working = new.working = False
+
+    assert refused[0] == HTTPStatus.CONFLICT
+    assert "being computed" in str(refused[1])
+    assert allowed[0] == HTTPStatus.OK

@@ -84,8 +84,9 @@ def delete_epoch(simulator: Simulator, run_id: str, epoch: int) -> dict[str, Jso
 
 
 def _being_computed(simulator: Simulator, run_id: str, epoch: int) -> bool:
-    """Whether a playback is working an epoch out."""
-    for playing in simulator.playbacks.all():
+    """Whether a playback is working an epoch out: one in place, or one
+    replaced that has not yet stopped."""
+    for playing in [*simulator.playbacks.all(), *simulator.playbacks.retiring()]:
         state = playing.state()
         if (state.run_id, state.epoch) == (run_id, epoch):
             return True
