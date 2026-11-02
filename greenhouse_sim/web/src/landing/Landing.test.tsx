@@ -5,8 +5,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DAY_S } from "../clock";
 import type { ScenarioSummary } from "../scenarios";
 import { type Rendered, render } from "../testing/render";
+import { followAddress } from "./follow";
 import { Landing } from "./Landing";
-import { followAddress, REPOSITORY_URL } from "./paths";
+import { REPOSITORY_URL } from "./paths";
 import type { StoredRun } from "./storedRuns";
 
 // What the simulator sends of a scenario besides its name: how it grows its
@@ -39,6 +40,28 @@ const SCENARIOS: ScenarioSummary[] = [
     layouts: ["default"],
   },
 ];
+
+/** A scenario's playback, as the simulator answers for it. */
+function playing(runId: string, epoch: number, layout = "default") {
+  return {
+    scenario_id: "reference_greenhouse",
+    run_id: runId,
+    layout,
+    epoch,
+    greenhouse_id: "reference_greenhouse",
+    started_at: "2026-02-28T23:00:00Z",
+    simulated_now: "2026-03-02T11:00:30Z",
+    time_s: 129_630,
+    day: 1,
+    playing: true,
+    seconds_per_day: 10,
+    worked_out_s: 172_800,
+    every_s: 300,
+    targets: [],
+    commands: [],
+    crop: [],
+  };
+}
 
 function run(more: Partial<StoredRun>): StoredRun {
   return {
@@ -186,12 +209,19 @@ describe("the page where a person decides what to do", () => {
     expect(container.querySelector("dialog form")).not.toBeNull();
   });
 
-  it("lists the latest runs in words, and offers to follow only one still computing", async () => {
+  it("lists the latest runs in words, and offers to follow only one its playback is playing", async () => {
+    const running = run({
+      epoch: 1,
+      seed: 2,
+      status: "running",
+      frontier_s: 41 * DAY_S,
+      progress: 41 / 120,
+    });
     const { container } = await shown(
       {
         "/api/scenarios": SCENARIOS,
         "/api/runs": [
-          run({ epoch: 1, seed: 2, status: "running", frontier_s: 41 * DAY_S, progress: 41 / 120 }),
+          running,
           run({
             scenario_id: "tomgro_house",
             seed: null,
@@ -200,6 +230,7 @@ describe("the page where a person decides what to do", () => {
           }),
           run({ epoch: 3, status: "failed", frontier_s: 5 * DAY_S, created_at: null }),
         ],
+        "/api/scenarios/reference_greenhouse/playback": playing(running.run_id, 1),
       },
       "Recent runs",
     );
@@ -215,12 +246,66 @@ describe("the page where a person decides what to do", () => {
     expect(rows[1]).toContain("Interrupted");
     expect(rows[2]).toContain("Failed");
     expect(rows[2]).not.toContain("Oct");
-    const follows = [...container.querySelectorAll("a")].filter(
-      (each) => each.textContent === "Follow",
-    );
-    expect(follows.map((each) => each.getAttribute("href"))).toEqual([
+    const follows = () =>
+      [...container.querySelectorAll("a")].filter((each) => each.textContent === "Follow");
+    await vi.waitFor(() => expect(follows()).toHaveLength(1));
+    expect(follows().map((each) => each.getAttribute("href"))).toEqual([
       followAddress("reference_greenhouse"),
     ]);
+  });
+
+  it("does not offer to follow a run that its scenario's playback replaced", async () => {
+    const replaced = run({ epoch: 1, status: "running", progress: 0.3 });
+    const { container } = await shown(
+      {
+        "/api/scenarios": SCENARIOS,
+        "/api/runs": [replaced],
+        // The playback is at the run's next epoch by now.
+        "/api/scenarios/reference_greenhouse/playback": playing(replaced.run_id, 2),
+      },
+      "epoch 1",
+    );
+    // Wait for the playback to have been asked about.
+    await vi.waitFor(() =>
+      expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url))).toContain(
+        "/api/scenarios/reference_greenhouse/playback",
+      ),
+    );
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+    expect(container.textContent).toContain("Running");
+    expect(
+      [...container.querySelectorAll("a")].filter((each) => each.textContent === "Follow"),
+    ).toHaveLength(0);
+  });
+
+  it("follows a run in the layout it has", async () => {
+    const moved = run({ status: "running", progress: 0.3, layout: "default~heater:-1:0.5" });
+    const { container } = await shown(
+      {
+        "/api/scenarios": SCENARIOS,
+        "/api/runs": [moved],
+        "/api/scenarios/reference_greenhouse/playback": playing(
+          moved.run_id,
+          0,
+          "default~heater:-1:0.5",
+        ),
+      },
+      "epoch 0",
+    );
+    await vi.waitFor(() =>
+      expect(
+        [...container.querySelectorAll("a")].find((each) => each.textContent === "Follow"),
+      ).toBeDefined(),
+    );
+
+    expect(
+      [...container.querySelectorAll("a")]
+        .find((each) => each.textContent === "Follow")
+        ?.getAttribute("href"),
+    ).toBe(followAddress("reference_greenhouse", "default~heater:-1:0.5"));
   });
 
   it("lists no more than the latest few", async () => {

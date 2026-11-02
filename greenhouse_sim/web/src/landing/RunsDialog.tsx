@@ -2,9 +2,11 @@ import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 
 import { refusal } from "../builder/api";
 import type { ScenarioSummary } from "../scenarios";
-import { followAddress, viewerAddress } from "./paths";
+import { followAddress } from "./follow";
+import { viewerAddress } from "./paths";
+import { runKey } from "./playing";
 import { RunProgress, StatusChip } from "./RunParts";
-import { isComputing, type StoredRun, sizeText, startedText } from "./storedRuns";
+import { type StoredRun, sizeText, startedText } from "./storedRuns";
 
 /** The pace a run is started at unless another is entered, in real seconds
  * for a simulated day. */
@@ -16,6 +18,7 @@ const DEFAULT_PACE_S = "10";
 export function RunsDialog({
   scenario,
   runs,
+  followed,
   newRun = false,
   onClose,
   onChanged,
@@ -23,6 +26,9 @@ export function RunsDialog({
   scenario: ScenarioSummary;
   /** The scenario's runs, the newest first. */
   runs: readonly StoredRun[];
+  /** The stored epochs that playbacks are playing now (`loadPlaying`): those
+   * a link to follow reaches, and not a replacement. */
+  followed: ReadonlySet<string>;
   /** Whether the form for a new run is open as the dialog opens. */
   newRun?: boolean;
   onClose: () => void;
@@ -173,8 +179,11 @@ export function RunsDialog({
                 </div>
                 <StatusChip run={run} />
                 <RunProgress run={run} name={`the run with ${who}`} />
-                {isComputing(run) && (
-                  <a href={followAddress(run.scenario_id)} className="landing-link-button">
+                {followed.has(runKey(run)) && (
+                  <a
+                    href={followAddress(run.scenario_id, run.layout)}
+                    className="landing-link-button"
+                  >
                     Follow
                   </a>
                 )}

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ScenarioSummary } from "../scenarios";
 import { enter, type Rendered, render } from "../testing/render";
-import { ScenarioCombobox } from "./ScenarioCombobox";
+import { ScenarioCombobox, scrolledTo } from "./ScenarioCombobox";
 
 function scenario(id: string, name: string, description: string): ScenarioSummary {
   return { id, name, description, plants: 4, duration_days: 120, layouts: ["default"] };
@@ -163,5 +163,96 @@ describe("the choice of a scenario to open", () => {
     press("Escape");
     press("Enter");
     expect(onChoose).not.toHaveBeenCalled();
+  });
+
+  it("opens a scenario whose identifier is the one the builder entry might have had", () => {
+    const onChoose = vi.fn();
+    const onBuild = vi.fn();
+    const rendered = render(
+      <ScenarioCombobox
+        scenarios={[scenario("build", "Build", "a scenario that is named so")]}
+        counts={null}
+        onChoose={onChoose}
+        onBuild={onBuild}
+      />,
+    );
+    drawn = rendered;
+    const input = rendered.container.querySelector("input") as HTMLInputElement;
+    act(() => input.focus());
+    const options = () => [...rendered.container.querySelectorAll('[role="option"]')];
+    const pointOn = (option: Element | undefined) =>
+      act(() => {
+        option?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+      });
+
+    pointOn(options()[0]);
+    expect(onChoose).toHaveBeenCalledExactlyOnceWith("build");
+    expect(onBuild).not.toHaveBeenCalled();
+
+    act(() => input.click());
+    pointOn(options()[1]);
+    expect(onBuild).toHaveBeenCalledTimes(1);
+    expect(onChoose).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the active option in view in the list when the arrows move it", () => {
+    // Options 60 px tall in a list 180 px high: three show at a time.
+    const spies: { mockRestore: () => void }[] = [
+      vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(60),
+      vi.spyOn(HTMLElement.prototype, "offsetTop", "get").mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return Number(/-option-(\d+)$/.exec(this.id)?.[1] ?? 0) * 60;
+      }),
+      vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(180),
+    ];
+    const scrolled = new WeakMap<Element, number>();
+    spies.push(
+      vi.spyOn(Element.prototype, "scrollTop", "get").mockImplementation(function (this: Element) {
+        return scrolled.get(this) ?? 0;
+      }),
+      vi.spyOn(Element.prototype, "scrollTop", "set").mockImplementation(function (
+        this: Element,
+        top: number,
+      ) {
+        scrolled.set(this, top);
+      }),
+    );
+    try {
+      const { input, press, options } = shown();
+      act(() => input.focus());
+      const list = input.parentElement?.querySelector('[role="listbox"]') as HTMLElement;
+
+      press("ArrowDown");
+      press("ArrowDown");
+      expect(list.scrollTop).toBe(0);
+      press("ArrowDown");
+      // The fourth option, from 180 px to 240, is past the list's foot.
+      expect(options()).toHaveLength(4);
+      expect(list.scrollTop).toBe(60);
+      press("ArrowUp");
+      press("ArrowUp");
+      expect(list.scrollTop).toBe(60);
+      press("ArrowUp");
+      expect(list.scrollTop).toBe(0);
+    } finally {
+      for (const spy of spies) {
+        spy.mockRestore();
+      }
+    }
+  });
+});
+
+describe("where an options list scrolls to", () => {
+  const list = { scrollTop: 100, clientHeight: 180 };
+
+  it("stays where it is while the option shows", () => {
+    expect(scrolledTo(list, { offsetTop: 100, offsetHeight: 60 })).toBe(100);
+    expect(scrolledTo(list, { offsetTop: 220, offsetHeight: 60 })).toBe(100);
+  });
+
+  it("goes the least that brings the option to the edge it is past", () => {
+    expect(scrolledTo(list, { offsetTop: 40, offsetHeight: 60 })).toBe(40);
+    expect(scrolledTo(list, { offsetTop: 240, offsetHeight: 60 })).toBe(120);
   });
 });

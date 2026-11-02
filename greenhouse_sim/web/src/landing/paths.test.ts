@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  followAddress,
   LANDING_PATH,
   newRunAddress,
   newRunScenario,
@@ -31,7 +30,6 @@ describe("the viewer's addresses", () => {
   it("writes an address that names the scenario, its identifier made safe", () => {
     expect(viewerAddress("climate_box")).toBe("/view?scenario=climate_box");
     expect(viewerAddress("a b&c")).toBe("/view?scenario=a%20b%26c");
-    expect(followAddress("climate_box")).toBe("/view?scenario=climate_box&field=climate&follow=1");
   });
 
   it("asks the landing page for a scenario's new-run form by a fragment, which is still the bare address", () => {

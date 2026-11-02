@@ -5,7 +5,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DAY_S } from "../clock";
 import type { ScenarioSummary } from "../scenarios";
 import { button, click, enter, type Rendered, render } from "../testing/render";
-import { followAddress, viewerAddress } from "./paths";
+import { followAddress } from "./follow";
+import { viewerAddress } from "./paths";
+import { runKey } from "./playing";
 import { RunsDialog } from "./RunsDialog";
 import type { StoredRun } from "./storedRuns";
 
@@ -58,13 +60,14 @@ describe("the runs of a scenario, in a dialog", () => {
     vi.unstubAllGlobals();
   });
 
-  function shown(runs: StoredRun[], newRun = false) {
+  function shown(runs: StoredRun[], newRun = false, followed: ReadonlySet<string> = new Set()) {
     const onClose = vi.fn();
     const onChanged = vi.fn();
     const rendered = render(
       <RunsDialog
         scenario={SCENARIO}
         runs={runs}
+        followed={followed}
         newRun={newRun}
         onClose={onClose}
         onChanged={onChanged}
@@ -95,12 +98,23 @@ describe("the runs of a scenario, in a dialog", () => {
     expect(container.querySelector(`a[href="${viewerAddress(SCENARIO.id)}"]`)).not.toBeNull();
   });
 
-  it("lists each run in words, and offers to follow only one still computing", () => {
-    const { rows } = shown([
-      run({ epoch: 2, seed: 2, status: "running", frontier_s: 41 * DAY_S, progress: 41 / 120 }),
-      run({ epoch: 1, seed: null, status: "interrupted", frontier_s: 63 * DAY_S }),
-      run({ epoch: 0, size_bytes: 400 * 1024, created_at: null }),
-    ]);
+  it("lists each run in words, and offers to follow only the one its playback is playing", () => {
+    const playing = run({
+      epoch: 2,
+      seed: 2,
+      status: "running",
+      frontier_s: 41 * DAY_S,
+      progress: 41 / 120,
+    });
+    const { rows } = shown(
+      [
+        playing,
+        run({ epoch: 1, seed: null, status: "interrupted", frontier_s: 63 * DAY_S }),
+        run({ epoch: 0, size_bytes: 400 * 1024, created_at: null }),
+      ],
+      false,
+      new Set([runKey(playing)]),
+    );
     const texts = rows().map((row) => row.textContent);
 
     expect(texts[0]).toContain("Seed 2");

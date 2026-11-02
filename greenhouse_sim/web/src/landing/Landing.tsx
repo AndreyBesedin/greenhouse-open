@@ -3,7 +3,9 @@ import { useState } from "react";
 import { BUILDER_PATH } from "../builder/Builder";
 import { loadScenarios, SCENARIOS_URL, type ScenariosState } from "../scenarios";
 import { useLoad } from "../useLoad";
-import { followAddress, newRunScenario, REPOSITORY_URL } from "./paths";
+import { followAddress } from "./follow";
+import { newRunScenario, REPOSITORY_URL } from "./paths";
+import { loadPlaying, runKey } from "./playing";
 import { RunProgress, StatusChip } from "./RunParts";
 import { RunsDialog } from "./RunsDialog";
 import { ScenarioCombobox } from "./ScenarioCombobox";
@@ -18,6 +20,8 @@ import {
 
 /** How many of the latest runs the page lists. */
 const RECENT_RUNS = 5;
+
+const NOT_PLAYING: ReadonlySet<string> = new Set();
 
 /** Goes to an address, a page of its own. */
 function goTo(address: string): void {
@@ -50,6 +54,15 @@ export function Landing({
       ? scenarios.scenarios.find((each) => each.id === opened)
       : undefined;
   const counts = runs.status === "loaded" ? runCounts(runs.runs) : null;
+  // A run is followed from here only if its scenario's playback is playing it.
+  const computing =
+    runs.status === "loaded"
+      ? [...new Set(runs.runs.filter(isComputing).map((run) => run.scenario_id))].sort()
+      : [];
+  const playing = useLoad(computing.length === 0 ? null : computing, loadPlaying, {
+    key: (ids) => ids.join(","),
+  });
+  const followed = playing.status === "loaded" ? playing.epochs : NOT_PLAYING;
   const names = new Map(
     scenarios.status === "loaded" ? scenarios.scenarios.map((s) => [s.id, s.name]) : [],
   );
@@ -90,7 +103,7 @@ export function Landing({
         </div>
         <section aria-labelledby="landing-recent">
           <h3 id="landing-recent">Recent runs</h3>
-          <RecentRuns runs={runs} names={names} />
+          <RecentRuns runs={runs} names={names} followed={followed} />
         </section>
       </main>
       {chosen !== undefined && (
@@ -100,6 +113,7 @@ export function Landing({
           runs={
             runs.status === "loaded" ? runs.runs.filter((run) => run.scenario_id === chosen.id) : []
           }
+          followed={followed}
           newRun={form}
           onClose={() => setOpened(null)}
           onChanged={() => setAsked(asked + 1)}
@@ -145,9 +159,12 @@ function ScenarioChoice({
 function RecentRuns({
   runs,
   names,
+  followed,
 }: {
   runs: StoredRunsState | { status: "none" };
   names: ReadonlyMap<string, string>;
+  /** The stored epochs that their scenarios' playbacks are playing. */
+  followed: ReadonlySet<string>;
 }) {
   if (runs.status === "unavailable") {
     return <p role="alert">The runs kept cannot be listed: {runs.reason}.</p>;
@@ -161,13 +178,26 @@ function RecentRuns({
   return (
     <ul className="landing-runs">
       {runs.runs.slice(0, RECENT_RUNS).map((run) => (
-        <RunRow key={`${run.run_id}/${run.epoch}`} run={run} name={names.get(run.scenario_id)} />
+        <RunRow
+          key={runKey(run)}
+          run={run}
+          name={names.get(run.scenario_id)}
+          following={followed.has(runKey(run))}
+        />
       ))}
     </ul>
   );
 }
 
-function RunRow({ run, name }: { run: StoredRun; name: string | undefined }) {
+function RunRow({
+  run,
+  name,
+  following,
+}: {
+  run: StoredRun;
+  name: string | undefined;
+  following: boolean;
+}) {
   const started = startedText(run);
   const whose = name ?? run.scenario_id;
   return (
@@ -181,8 +211,8 @@ function RunRow({ run, name }: { run: StoredRun; name: string | undefined }) {
       </div>
       <StatusChip run={run} />
       <RunProgress run={run} name={`the run of ${whose}`} />
-      {isComputing(run) && (
-        <a href={followAddress(run.scenario_id)} className="landing-link-button">
+      {following && (
+        <a href={followAddress(run.scenario_id, run.layout)} className="landing-link-button">
           Follow
         </a>
       )}
