@@ -1,6 +1,6 @@
 # P15: A policy's port, and an experiment that steps a run
 
-**Status:** in progress: P15.1 to P15.6 done. Stage A of decision
+**Status:** done: P15.1 to P15.7, the final QA passed on 2026-11-01. Stage A of decision
 [0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md).
 Part of the [simulator roadmap](README.md).
 
@@ -289,7 +289,7 @@ digest or kept opening day moves.
 | P15.4 | The experiment runner: `step_to`, the barriers, the lifecycle, the determinism test; example 03 on it. | `feat(sim): an experiment that steps a run` | Done: `Playback.step_to`, which works a run out to a moment and moves its clock there in the caller's thread, a change of its plan worked in before the clock passes it, for a playback that neither plays nor works on its own. `greenhouse_sim.experiment.run_episode` runs an `Episode`: a scenario, a policy and its principal, its end, and a compute budget. At each decision moment through the episode's end, but not at the run's own, it advances, observes (a `Delivery` from the port) and acts (a revision or a cancellation of the one plan it names, given through the port by `Steering`, which gives a revision refused as stale once more after the one in force). A decision past its budget is skipped and recorded. After the last decision it steps on to the episode's end; a cadence that would not move the clock, or an end past the run's, is refused. It returns an `EpisodeSummary`, whose digest covers every delivery, receipt and outcome; the same policy on the same scenario gives the same one. The run's randomness is its scenario's seed: an episode's own seed waits for scenarios that vary it (stage B). Example 03 runs on it, naming its heater and sensor from its context, with no clock moved by hand and nothing waiting |
 | P15.5 | The port over the network: its own server and command, the credentials file, the roles, a client in the protocol; the same receipt by either transport. | `feat(api): a policy's port over the network` | Done: `python -m greenhouse_sim.api.policy_server --scenario … --credentials …` plays a scenario's run and serves its port alone, on loopback unless told another host, its routes (`api.policy`) reaching the simulator through `services.policy_requests` alone. Its credentials file holds, for each principal, its role and its bearer token's SHA-256, never the token (`services.credentials`; `--new-credential kind:id` makes one); a request without a token it holds is `401`, an operator's or an evaluator's `403`, and every route of the local API `404`. Each policy has a port of its own, kept from one request to the next. `greenhouse_protocol.contracts.policy_client.HttpPolicyPort` is the client, on the standard library alone. The conformance check passes over HTTP; the same plans give the same receipts by either transport |
 | P15.6 | The information budget: forecasts on the port, persistence as the first provider, the oracle label. | `feat(sim): forecasts in a policy's budget` | Done: a port is opened under a budget (`RunPolicyPort(budget=…)`, `Episode.budget`, `--forecasts persistence` on the port's server), the observations and the clock alone by default, so no run id, digest or delivery moves. A budget the port cannot serve is refused when it is opened: a provider no forecaster serves, or at another version, horizon or cadence than the budget names; a quantity of an observed provider that the run does not observe; the full state. Its forecast log is its fourth, with the consumer interface's cursor rules, started again in a new epoch. `services.forecasts` holds the forecasters and persistence (`persistence_budget`, naming the outside quantities the run observes): at each day's start after the first, an hourly forecast of the day ahead, a period's mean as the last day's was, from readings delivered by then, with no stated uncertainty. A forecast reaches a policy no earlier than its issue, and the port drops one outside its budget's providers and quantities. The conformance check passes with a forecasting budget in the process and over HTTP; the summary of an episode carries its budget, whose oracle label is checked by the record. On the climate box, a policy's forecasts equal the means of the readings it was given, and the same episode gives the same digest |
-| P15.7 | The QA scenario below, run and recorded. | `test: a policy in its own process steers a run` | Planned |
+| P15.7 | The QA scenario below, run and recorded. | `test: a policy in its own process steers a run` | Done: `examples/05_policy_in_its_own_process.py` is example 03's rule as a program that knows a port's address and its token and imports the protocol alone (`HttpPolicyPort`); run on its own it starts the port's server for the climate box, makes the policy a token and starts itself as the policy. `tests/test_policy_in_its_own_process.py` runs the scenario on the reference greenhouse with the server and the policy as real processes, and holds each numbered point; the run of record steered a whole day (`GREENHOUSE_QA_HOURS=24`), the tests four hours. It is recorded under *QA scenario, run on 2026-11-01*. A run that is held does not move on the port, which serves no play command, so the server plays the run on the wall clock |
 
 ## Acceptance criteria
 
@@ -313,8 +313,9 @@ digest or kept opening day moves.
 ## Final QA scenario
 
 On the reference greenhouse:
-1. The port's server is started for a held run, with a credentials file
-   naming one policy.
+1. The port's server is started for a run that plays on the wall clock
+   (a held run's clock does not move, since the port serves no play
+   command), with a credentials file naming one policy.
 2. Example 03's policy runs in a process of its own, given the address and
    its token. It reads its context and steers the heater for a day.
 3. A request with an unknown token, and one for a local API route, are
@@ -324,6 +325,88 @@ On the reference greenhouse:
 5. The same policy runs through the runner, in the process, on the same
    scenario and seed. Its receipts and outcomes are recorded beside the
    remote run's, and the differences the wall clock makes are explained.
+
+## QA scenario, run on 2026-11-01
+
+The reference greenhouse's own run (seed 42, `reference_greenhouse-climate-7828c7c0`,
+epoch 0) was played back at 20 s a simulated day by the port's server, and a
+policy steered its heater through the first day, at `main` ccf3477 (#442
+merged) with the example and the test of this step. The server
+(`python -m greenhouse_sim.api.policy_server --scenario reference_greenhouse
+--credentials … --authorisation … --seconds-per-day 20`) and the policy
+(`examples/05_policy_in_its_own_process.py`) were two processes; the token
+was made by `--new-credential policy:naive_heating`, and the credentials file
+held its SHA-256 and not the token. The policy was given the address and the
+token (in its environment) and nothing else. Run again at four hours, the
+tests hold what follows.
+
+1. **The server** printed the run and epoch it plays and the address of its
+   port, and served that port alone.
+2. **The policy steered the heater for the whole day:** it read its context
+   (the `heater` that `heats`, and `temperature_front` as its sensor), decided
+   249 times through 86,319 s of the run's clock, and gave 138 revisions of
+   its plan, all accepted. The run carried out 138 actions, all
+   `executed`, all the policy's own (`policy:naive_heating`); the plan in
+   force is the policy's, at revision 138. The first action ran at minute 10.
+3. **Refused:** a request with a token the server does not hold, and one with
+   none, were `401`. With the policy's own token, `GET /api/scenarios`, a
+   scenario's playback and its sensors' truth, `POST` to its playback, and
+   `GET /consumer/v1/runs` were each `404`: the local API was not served.
+4. **A revision given twice:** the policy gave its first revision again, and
+   the port refused it with the receipt `stale: revision 1 of 'policy' is not
+   newer`. The policy read the plan in force (revision 1, the one it had
+   given), counted on from it, and its later revisions were 2, 3, … 138 in
+   order, none refused.
+5. **The same policy through the runner,** in the process, on the same
+   scenario (`run_episode`, decisions every 300 s from 0 to 86,400 s): 289
+   decisions, 271 revisions, all accepted, 271 outcomes, all `executed`, none
+   skipped; the episode's digest `a9b5bfb430dd5035…`.
+
+| | Remote, on the wall clock | Runner, in the process |
+| --- | --- | --- |
+| Decisions | 249 | 289 |
+| Revisions given and carried out | 138 | 271 |
+| Gap between decisions, in the run's clock | 300 s at least, 334 s at the median, 998 s at most | 300 s |
+| An action starts after its decision, in the run's clock | 16 s at least, 71 s at the median, 998 s at most | 0 s |
+| First action carried out | minute 10 | minute 0 |
+| Time to steer the day | 524.6 s | about 7 minutes, not timed alone |
+
+**What the wall clock changes.** The two runs are not equal, and are not
+meant to be:
+
+- **The policy decides when it sees the clock reach a moment,** after a poll
+  and a request, so its decisions fall later than the barrier, 34 s of the
+  run's clock at the median, and sometimes much later. The runner decides at
+  the barrier, the run held there. So the remote policy decides 249 times in
+  a day and the runner 289.
+- **An action starts later.** The remote policy's actions started 16 to
+  998 s of the run's clock after the decision that gave them, 71 s at the
+  median; the runner's start at the barrier, with none between. The heater
+  acts at other moments, so the air and the readings that follow differ, and
+  so do the policy's decisions: it revised on 138 of its 249 decisions where
+  the runner revised on 271 of its 289. The rule is the same; the
+  observations it was given are not, once the heater acts at other
+  moments.
+- **A change of the run's plan makes the run work its records again from
+  that moment, while the clock waits** (`services.playback`). Each of the
+  138 revisions made the server work the rest of its day again, so the day
+  took 524.6 s of wall time at a pace of 20 s a day, 3.8 s for each
+  revision. The runner pays the same work, but nothing waits on its clock.
+  A remote policy that revises often slows the run it steers.
+
+Held equal by both: the principal that gave each plan, the plan's revisions
+counted from 1 and accepted in order, every action carried out, and the rule's
+shape (the heater on first, then alternating). The tests also hold that the
+rule of example 03 and example 05 gives the same digest on the climate box.
+
+**Limits.** One seed and one run of each; the figures are not repeated, and
+the decision gaps and times depend on the machine (an Apple M2). The gaps of
+up to 998 s, between decisions and from a decision to its action, are
+consistent with a request waiting while the run works its records again,
+which was not isolated. The runner's wall time was not measured by
+itself. A remote policy held at the runner's barriers, so that two such runs
+could be compared decision by decision, is the remote stepping design
+decision 0061 leaves for later.
 
 ## Open questions
 
