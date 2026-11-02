@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { entityBounds, type OverlayPrimitive } from "../debug/overlays";
+import { LANDING_PATH, newRunAddress } from "../landing/paths";
 import { greenhouseExtent, qaGreenhousePose } from "../qa/greenhouseViews";
 import type { ScenarioSummary, ScenariosState } from "../scenarios";
 import { loadScenarios } from "../scenarios";
@@ -557,7 +558,9 @@ export function Builder() {
               {" "}
               <a href={`/?scenario=${encodeURIComponent(ran.scenarioId)}`}>
                 Open {ran.name} in the viewer
-              </a>
+              </a>{" "}
+              <a href={newRunAddress(ran.scenarioId)}>Start a run of it</a>{" "}
+              <a href={LANDING_PATH}>Back to the start</a>
             </>
           )}
         </p>

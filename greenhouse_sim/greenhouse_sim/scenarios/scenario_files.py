@@ -52,6 +52,11 @@ MAX_IMPORT_BYTES: Final = 8_000_000
 # The first format a scenario file was written in. A manifest's migrations
 # carry an older file on to the current format.
 FIRST_FORMAT: Final = 7
+# How deep arrays and objects may nest in a file: a scenario's deepest, its
+# layout, nests a dozen.
+MAX_NESTING: Final = 64
+# What counts in a text for its depth: a string (whose brackets do not) or a bracket.
+_BRACKETS: Final = re.compile(r'"(?:[^"\\]|\\.)*"|[\[\]{}]')
 RECORDED_WEATHER: Final = "recorded_weather"
 _VERSION_KEY: Final = "schema_version"
 _INSTALLATION_KEY: Final = "installation"
@@ -260,7 +265,25 @@ def _finite(written: str) -> float:
     return number
 
 
+def _too_deep(text: str) -> bool:
+    """Whether the text nests arrays or objects deeper than a scenario does.
+    Counted before parsing: how deep the parser can go depends on the Python
+    and its stack, and a document it reads can still be too deep for the
+    models that read it."""
+    depth = 0
+    for token in _BRACKETS.findall(text):
+        if token == "[" or token == "{":
+            depth += 1
+            if depth > MAX_NESTING:
+                return True
+        elif token in "]}":
+            depth -= 1
+    return False
+
+
 def _parsed(text: str) -> dict[str, Any]:
+    if _too_deep(text):
+        raise ScenarioFileError("", "not JSON this simulator reads: nested too deeply")
     try:
         document = json.loads(text, parse_constant=_not_json, parse_float=_finite)
     except (json.JSONDecodeError, _NotJson) as error:
