@@ -90,6 +90,10 @@ class ObjectStore(Protocol):
 
     def names(self, prefix: str = "") -> list[str]: ...
 
+    def children(self, prefix: str = "") -> list[str]: ...
+
+    def size(self, name: str) -> int | None: ...
+
     def delete(self, name: str) -> None: ...
 
 
@@ -146,6 +150,25 @@ class FolderStore:
         )
         return sorted(name for name in found if name.startswith(prefix))
 
+    def size(self, name: str) -> int | None:
+        """How many bytes an object holds, or none if there is none."""
+        try:
+            return (self.root / name).stat().st_size
+        except FileNotFoundError:
+            return None
+
+    def children(self, prefix: str = "") -> list[str]:
+        """What is directly under the folder `prefix` names (its objects and
+        its folders, by their own names, sorted), so that finding a store's
+        runs reads their folders and not their segments."""
+        directory = PurePosixPath(prefix.rstrip("/"))
+        if prefix.startswith("/") or ".." in directory.parts:
+            return []
+        walked = self.root / directory
+        if not walked.is_dir():
+            return []
+        return sorted(path.name for path in walked.iterdir() if path.suffix != _PARTIAL)
+
     def delete(self, name: str) -> None:
         (self.root / name).unlink(missing_ok=True)
 
@@ -166,6 +189,8 @@ class EpochManifest(BaseModel):
     # How long the run lasts, in seconds, when its writer knows: what its
     # progress is a part of.
     duration_s: float | None = None
+    # When the epoch was started, when its writer says.
+    created_at: datetime | None = None
 
 
 class LogEntry(BaseModel):
@@ -428,11 +453,12 @@ class EpochStore:
         manifest = self.manifest().model_copy(update={"status": status})
         self.objects.put(f"{self._home}/manifest.json", manifest.model_dump_json().encode())
 
-    def commits(self) -> list[Commit]:
-        """The commits in order: those from the first with no gap, so that a
-        commit past a missing one is not seen."""
+    def commits(self, after: int = 0) -> list[Commit]:
+        """The commits in order, from number `after` (a reader that has the
+        first few asks only for the rest): those with no gap before them, so
+        that a commit past a missing one is not seen."""
         found: list[Commit] = []
-        for seq in range(len(self.objects.names(f"{self._home}/commits/"))):
+        for seq in range(after, len(self.objects.names(f"{self._home}/commits/"))):
             data = self.objects.get(f"{self._home}/commits/{seq:0{SEQ_DIGITS}d}.json")
             if data is None:
                 break
@@ -443,6 +469,10 @@ class EpochStore:
         """How far the epoch is committed, in seconds into its run."""
         commits = self.commits()
         return commits[-1].end_s if commits else 0.0
+
+    def size_bytes(self) -> int:
+        """How many bytes the epoch's objects hold."""
+        return sum(self.objects.size(name) or 0 for name in self.objects.names(f"{self._home}/"))
 
     def log(self) -> list[LogEntry]:
         """The changes given to the epoch up to the last commit."""
@@ -603,13 +633,13 @@ class EpochStore:
 
 
 def epochs(objects: ObjectStore, run_id: str) -> list[int]:
-    """The epochs a run has in a store, in order."""
-    found = {
-        int(name.split("/")[1])
-        for name in objects.names(f"{run_id}/")
-        if name.split("/")[1].isdigit() and name.endswith("/manifest.json")
-    }
-    return sorted(found)
+    """The epochs a run has in a store, in order: the folders of its own whose
+    manifests are there."""
+    return sorted(
+        int(name)
+        for name in objects.children(f"{run_id}/")
+        if name.isdigit() and objects.get(f"{run_id}/{name}/manifest.json") is not None
+    )
 
 
 class StoredRun(BaseModel):
@@ -625,33 +655,41 @@ class StoredRun(BaseModel):
     layout: str
     status: Status
     frontier_s: float
+    duration_s: float | None
     progress: float | None
+    created_at: datetime | None
+    size_bytes: int
+
+
+def stored_run(objects: ObjectStore, run_id: str, epoch_number: int) -> StoredRun:
+    """One epoch as a list of them shows it. Only its own folder is read."""
+    epoch = EpochStore(objects, run_id, epoch_number)
+    manifest = epoch.manifest()
+    frontier = epoch.frontier_s()
+    return StoredRun(
+        run_id=run_id,
+        epoch=manifest.epoch,
+        scenario_id=manifest.scenario_id,
+        seed=manifest.seed,
+        layout=manifest.layout,
+        status=manifest.status,
+        frontier_s=frontier,
+        duration_s=manifest.duration_s,
+        progress=None if not manifest.duration_s else frontier / manifest.duration_s,
+        created_at=manifest.created_at,
+        size_bytes=epoch.size_bytes(),
+    )
 
 
 def stored_runs(objects: ObjectStore, scenario_id: str | None = None) -> list[StoredRun]:
     """The epochs a store holds, those of `scenario_id` if given, by run and
-    epoch."""
+    epoch. Only the runs' folders are read, not their segments."""
     found = []
-    for name in objects.names():
-        run_id, _, rest = name.partition("/")
-        epoch_text, _, leaf = rest.partition("/")
-        if leaf != "manifest.json" or not epoch_text.isdigit():
-            continue
-        epoch = EpochStore(objects, run_id, int(epoch_text))
-        manifest = epoch.manifest()
-        if scenario_id is not None and manifest.scenario_id != scenario_id:
-            continue
-        frontier = epoch.frontier_s()
-        found.append(
-            StoredRun(
-                run_id=run_id,
-                epoch=manifest.epoch,
-                scenario_id=manifest.scenario_id,
-                seed=manifest.seed,
-                layout=manifest.layout,
-                status=manifest.status,
-                frontier_s=frontier,
-                progress=None if not manifest.duration_s else frontier / manifest.duration_s,
-            )
-        )
+    for run_id in objects.children():
+        for epoch_number in epochs(objects, run_id):
+            if scenario_id is not None:
+                manifest = EpochStore(objects, run_id, epoch_number).manifest()
+                if manifest.scenario_id != scenario_id:
+                    continue
+            found.append(stored_run(objects, run_id, epoch_number))
     return found

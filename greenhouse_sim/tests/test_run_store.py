@@ -414,3 +414,18 @@ def test_listing_walks_only_the_folder_a_prefix_names(
     objects.names("a/0/commits/")
     objects.names("a/0/commits/0000")
     assert walked == [tmp_path / "a" / "0" / "commits"] * 2
+
+
+def test_a_folder_store_lists_what_is_directly_under_a_folder(tmp_path: Path) -> None:
+    objects = FolderStore(tmp_path)
+    for name in ("run-a/0/manifest.json", "run-a/1/manifest.json", "run-b/0/manifest.json"):
+        objects.put(name, b"{}")
+    (tmp_path / "run-a" / "2").mkdir()
+    (tmp_path / "run-a" / "left.partial").write_bytes(b"half")
+
+    assert objects.children() == ["run-a", "run-b"]
+    assert objects.children("run-a/") == ["0", "1", "2"]
+    assert objects.children("run-a/0") == ["manifest.json"]
+    assert objects.children("run-c/") == []
+    # A prefix that leaves the store lists nothing.
+    assert objects.children("../") == objects.children("/") == []

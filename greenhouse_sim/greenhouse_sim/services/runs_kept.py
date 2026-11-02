@@ -1,0 +1,213 @@
+"""The runs kept in a simulator's run store, as a client lists, opens and
+plays them (P17.4, decision 0065): a scenario's stored runs, one epoch of
+one, the records it delivered by a moment, and the positions a viewer takes
+over an epoch (`stored_playback`). The routes call these and answer with what
+they return (decision 0021). A simulator made with no run store keeps none:
+every question about its runs is a refusal that says so.
+"""
+
+from datetime import timedelta
+
+from greenhouse_protocol.contracts.consumer import EventBatch, ObservationBatch, OutcomeBatch
+from greenhouse_protocol.event import Event
+from greenhouse_protocol.observation import Observation
+from greenhouse_protocol.outcome import ActionOutcome
+
+from greenhouse_sim.services.consumer import batch_cursor, batch_limit
+from greenhouse_sim.services.errors import NotFound
+from greenhouse_sim.services.playback import DEFAULT_SECONDS_PER_DAY
+from greenhouse_sim.services.run_store import ObjectStore, StoredRun, stored_run, stored_runs
+from greenhouse_sim.services.run_store import epochs as stored_epochs
+from greenhouse_sim.services.simulator import Simulator
+from greenhouse_sim.services.stored_playback import Position, PositionState, Records, StoredEpoch
+
+
+def _objects(simulator: Simulator) -> ObjectStore:
+    if simulator.runs is None:
+        raise NotFound("this simulator keeps no runs: it was made with no run store")
+    return simulator.runs
+
+
+def runs_of(simulator: Simulator, scenario_id: str) -> list[StoredRun]:
+    """The stored epochs of a scenario's runs, by run and epoch. A scenario
+    the simulator does not know is not found."""
+    if simulator.catalogue.entry(scenario_id) is None:
+        raise NotFound(f"there is no scenario {scenario_id!r}")
+    return stored_runs(_objects(simulator), scenario_id)
+
+
+def epoch_of(simulator: Simulator, run_id: str, epoch: int) -> StoredRun:
+    """One stored epoch, as the list shows it."""
+    objects = _objects(simulator)
+    if epoch not in stored_epochs(objects, run_id):
+        raise NotFound(f"run {run_id} has no epoch {epoch} in the store")
+    return stored_run(objects, run_id, epoch)
+
+
+def _stored(simulator: Simulator, run_id: str, epoch: int) -> StoredEpoch:
+    return StoredEpoch(simulator, _objects(simulator), run_id, epoch)
+
+
+def _at(epoch: StoredEpoch, at_s: float | None) -> float:
+    return epoch.frontier_s() if at_s is None else at_s
+
+
+def epoch_observations(
+    simulator: Simulator,
+    run_id: str,
+    epoch: int,
+    *,
+    after: int | None,
+    limit: int | None,
+    at_s: float | None,
+) -> ObservationBatch:
+    """An epoch's observations after a cursor that were delivered by `at_s`
+    into its run, by default its frontier."""
+    cursor, most = batch_cursor(after), batch_limit(limit)
+    kept = _stored(simulator, run_id, epoch)
+    moment = _at(kept, at_s)
+    return _observations(kept, cursor, kept.observations(cursor, most, moment), moment)
+
+
+def epoch_events(
+    simulator: Simulator,
+    run_id: str,
+    epoch: int,
+    *,
+    after: int | None,
+    limit: int | None,
+    at_s: float | None,
+) -> EventBatch:
+    cursor, most = batch_cursor(after), batch_limit(limit)
+    kept = _stored(simulator, run_id, epoch)
+    moment = _at(kept, at_s)
+    return _events(kept, cursor, kept.events(cursor, most, moment), moment)
+
+
+def epoch_outcomes(
+    simulator: Simulator,
+    run_id: str,
+    epoch: int,
+    *,
+    after: int | None,
+    limit: int | None,
+    at_s: float | None,
+) -> OutcomeBatch:
+    cursor, most = batch_cursor(after), batch_limit(limit)
+    kept = _stored(simulator, run_id, epoch)
+    moment = _at(kept, at_s)
+    return _outcomes(kept, cursor, kept.outcomes(cursor, most, moment), moment)
+
+
+def _observations(
+    kept: StoredEpoch, after: int, found: Records[Observation], moment_s: float
+) -> ObservationBatch:
+    return ObservationBatch(
+        run_id=kept.run_id,
+        epoch=kept.epoch,
+        after=after,
+        next=found.next,
+        simulated_now=kept.start + timedelta(seconds=moment_s),
+        has_more=found.has_more,
+        observations=found.records,
+    )
+
+
+def _events(kept: StoredEpoch, after: int, found: Records[Event], moment_s: float) -> EventBatch:
+    return EventBatch(
+        run_id=kept.run_id,
+        epoch=kept.epoch,
+        after=after,
+        next=found.next,
+        simulated_now=kept.start + timedelta(seconds=moment_s),
+        has_more=found.has_more,
+        events=found.records,
+    )
+
+
+def _outcomes(
+    kept: StoredEpoch, after: int, found: Records[ActionOutcome], moment_s: float
+) -> OutcomeBatch:
+    return OutcomeBatch(
+        run_id=kept.run_id,
+        epoch=kept.epoch,
+        after=after,
+        next=found.next,
+        simulated_now=kept.start + timedelta(seconds=moment_s),
+        has_more=found.has_more,
+        outcomes=found.records,
+    )
+
+
+def open_position(
+    simulator: Simulator, run_id: str, epoch: int, seconds_per_day: float | None = None
+) -> PositionState:
+    """A new position at the start of a stored epoch, paused."""
+    return simulator.positions.open(
+        simulator,
+        _objects(simulator),
+        run_id,
+        epoch,
+        seconds_per_day=DEFAULT_SECONDS_PER_DAY if seconds_per_day is None else seconds_per_day,
+    ).state()
+
+
+def _position(simulator: Simulator, position_id: str) -> Position:
+    return simulator.positions.get(position_id)
+
+
+def position(simulator: Simulator, position_id: str) -> PositionState:
+    return _position(simulator, position_id).state()
+
+
+def play(simulator: Simulator, position_id: str) -> PositionState:
+    return _position(simulator, position_id).play()
+
+
+def pause(simulator: Simulator, position_id: str) -> PositionState:
+    return _position(simulator, position_id).pause()
+
+
+def follow(simulator: Simulator, position_id: str) -> PositionState:
+    return _position(simulator, position_id).follow()
+
+
+def set_pace(simulator: Simulator, position_id: str, seconds_per_day: float) -> PositionState:
+    return _position(simulator, position_id).set_pace(seconds_per_day)
+
+
+def seek(simulator: Simulator, position_id: str, time_s: float) -> PositionState:
+    return _position(simulator, position_id).seek(time_s)
+
+
+def close(simulator: Simulator, position_id: str) -> None:
+    simulator.positions.close(position_id)
+
+
+def position_observations(
+    simulator: Simulator, position_id: str, after: int | None, limit: int | None
+) -> ObservationBatch:
+    """The observations after a cursor that the position's epoch delivered by
+    its moment."""
+    cursor, most = batch_cursor(after), batch_limit(limit)
+    held = _position(simulator, position_id)
+    moment = held.state().time_s
+    return _observations(held.epoch, cursor, held.epoch.observations(cursor, most, moment), moment)
+
+
+def position_events(
+    simulator: Simulator, position_id: str, after: int | None, limit: int | None
+) -> EventBatch:
+    cursor, most = batch_cursor(after), batch_limit(limit)
+    held = _position(simulator, position_id)
+    moment = held.state().time_s
+    return _events(held.epoch, cursor, held.epoch.events(cursor, most, moment), moment)
+
+
+def position_outcomes(
+    simulator: Simulator, position_id: str, after: int | None, limit: int | None
+) -> OutcomeBatch:
+    cursor, most = batch_cursor(after), batch_limit(limit)
+    held = _position(simulator, position_id)
+    moment = held.state().time_s
+    return _outcomes(held.epoch, cursor, held.epoch.outcomes(cursor, most, moment), moment)

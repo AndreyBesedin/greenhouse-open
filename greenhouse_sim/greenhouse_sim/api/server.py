@@ -46,6 +46,7 @@ from greenhouse_sim.services.gateway import (
     AuthorisationConfig,
     authorisation_file,
 )
+from greenhouse_sim.services.run_store import FolderStore, ObjectStore
 from greenhouse_sim.services.simulator import Simulator
 
 LOOPBACK: Final = "127.0.0.1"
@@ -90,13 +91,14 @@ class SimulatorServer(ThreadingHTTPServer):
         *,
         drafts: DraftStore | None = None,
         authorisation: AuthorisationConfig = LOCAL_AUTHORISATION,
+        runs: ObjectStore | None = None,
     ) -> None:
         # Before binding: a server that fails to bind closes itself, which
         # closes a simulator it made, and then raises the bind's own error.
         # Nothing has started yet.
         self._makes_simulator = simulator is None
         self.simulator = (
-            Simulator(drafts=drafts, authorisation=authorisation)
+            Simulator(drafts=drafts, authorisation=authorisation, runs=runs)
             if simulator is None
             else simulator
         )
@@ -235,11 +237,13 @@ def create_server(
     simulator: Simulator | None = None,
     drafts: DraftStore | None = None,
     authorisation: AuthorisationConfig = LOCAL_AUTHORISATION,
+    runs: ObjectStore | None = None,
 ) -> SimulatorServer:
     """A server on the loopback interface; port 0 picks a free port. It makes
     its own simulator, keeping drafts in `drafts` if given, its runs acted on
-    as `authorisation` lets (decision 0052), unless it is given a simulator."""
-    return SimulatorServer(port, simulator, drafts=drafts, authorisation=authorisation)
+    as `authorisation` lets (decision 0052), reading the runs kept in `runs`,
+    unless it is given a simulator."""
+    return SimulatorServer(port, simulator, drafts=drafts, authorisation=authorisation, runs=runs)
 
 
 def _authorisation(given: Path | None, parser: argparse.ArgumentParser) -> AuthorisationConfig:
@@ -320,7 +324,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     # the server running, to see where a busy or stuck one is.
     faulthandler.register(signal.SIGUSR1, all_threads=True)
 
-    server = create_server(args.port, drafts=drafts, authorisation=authorisation)
+    server = create_server(
+        args.port, drafts=drafts, authorisation=authorisation, runs=FolderStore()
+    )
     host, port = server.server_address[:2]
     print(f"greenhouse-sim API on http://{host!s}:{port}/api", flush=True)
     for scenario_id in args.play:
