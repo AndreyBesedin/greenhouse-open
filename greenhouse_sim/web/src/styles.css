@@ -17,7 +17,7 @@
 .scalar-legend,
 .qa-caption {
   padding: 8px 12px;
-  background: var(--panel-bg);
+  background: var(--surface-panel);
   border-radius: 6px;
   font-size: 13px;
 }
@@ -30,8 +30,8 @@
 .legends,
 .debug-label,
 .qa-caption {
-  color: var(--panel-text);
-  color-scheme: var(--panel-scheme);
+  color: var(--text);
+  color-scheme: var(--scheme);
 }
 
 .info-panel {
@@ -63,15 +63,15 @@
   min-width: 44px;
   min-height: 44px;
   padding: 0 12px;
-  border: 1px solid var(--panel-rule);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  color: var(--panel-text);
+  color: var(--text);
   font-weight: 600;
   text-decoration: none;
 }
 
 .home-button:focus-visible {
-  outline: 3px solid var(--panel-link);
+  outline: 3px solid var(--action);
   outline-offset: 2px;
 }
 
@@ -122,7 +122,7 @@
 .panel-card {
   margin: 10px 0 4px;
   padding: 2px 6px 4px;
-  border: 1px solid var(--panel-rule);
+  border: 1px solid var(--border);
   border-radius: 4px;
 }
 
@@ -130,8 +130,8 @@
   width: fit-content;
   margin: -0.75em 0 0;
   padding: 0 4px;
-  background: var(--panel-bg);
-  color: var(--panel-muted);
+  background: var(--surface-panel);
+  color: var(--text-muted);
   font-size: 0.7em;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -171,7 +171,7 @@
 
 .build-line {
   margin: 8px 0 0;
-  color: var(--panel-muted);
+  color: var(--text-muted);
   font-size: 12px;
 }
 
@@ -215,7 +215,7 @@
 
 .chooser-note {
   margin: 2px 0 4px;
-  color: var(--panel-muted);
+  color: var(--text-muted);
   font-size: 12px;
 }
 
@@ -238,7 +238,7 @@
   width: 0;
   min-width: 100%;
   overflow: hidden;
-  color: var(--panel-muted);
+  color: var(--text-muted);
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -362,7 +362,7 @@
   max-height: 50vh;
   overflow: auto;
   padding: 8px 12px;
-  background: var(--panel-bg);
+  background: var(--surface-panel);
   border-radius: 6px;
   font-size: 13px;
 }
@@ -381,7 +381,7 @@
 
 .controls-help h3 {
   margin-top: 6px;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 .controls-help dl {
@@ -394,7 +394,7 @@
 
 .controls-help dd {
   margin: 0 0 2px 12px;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 /* An action's inputs, a device to a line, under the action and what it does
@@ -418,12 +418,12 @@
 .controls-device {
   display: inline-block;
   min-width: 64px;
-  color: var(--panel-muted);
+  color: var(--text-muted);
 }
 
 .controls-open kbd {
   padding: 0 4px;
-  border: 1px solid var(--panel-muted);
+  border: 1px solid var(--text-muted);
   border-radius: 3px;
   font-size: 11px;
 }
@@ -437,7 +437,7 @@
   max-height: 50vh;
   overflow: auto;
   padding: 8px 12px;
-  background: var(--panel-bg);
+  background: var(--surface-panel);
   border-radius: 6px;
   font-size: 13px;
 }
@@ -463,12 +463,12 @@
 
 .seen-in-the-view dd {
   margin: 0 0 4px 18px;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 .seen-in-the-view p {
   margin: 6px 0 0;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 .seen-glyph {
@@ -546,7 +546,7 @@
   top: 0;
   left: 0;
   padding: 1px 4px;
-  background: var(--label-bg);
+  background: var(--surface-label);
   border: 1px solid var(--data-orange);
   border-radius: 3px;
   font-size: 12px;
@@ -807,7 +807,7 @@
 
 .wind-compass-north {
   font-size: 8px;
-  fill: var(--panel-muted);
+  fill: var(--text-muted);
 }
 
 .wind-compass-needle {
@@ -951,7 +951,7 @@
   display: block;
   width: 100%;
   height: 10px;
-  border-bottom: 1px solid var(--panel-rule);
+  border-bottom: 1px solid var(--border);
 }
 
 .timeline-ticks {
@@ -1007,7 +1007,7 @@
   display: block;
   width: 100%;
   height: 52px;
-  border: 1px solid var(--panel-rule);
+  border: 1px solid var(--border);
 }
 
 .probe-chart polyline {
@@ -1041,7 +1041,7 @@
 .camera-frames {
   margin: 0 0 8px;
   padding: 0 0 8px;
-  border-bottom: 1px solid var(--panel-rule);
+  border-bottom: 1px solid var(--border);
 }
 
 .camera-panel p {
@@ -1077,7 +1077,7 @@
 
 /* A sensor whose due reading has not come. */
 .sensor-panel .stale {
-  color: var(--panel-warn);
+  color: var(--warn);
 }
 
 /* QA mode's panel (P09.6), marked as QA's as the sensor's truth is: what
@@ -1086,12 +1086,12 @@
 .qa-panel {
   margin: 0 0 8px;
   padding: 2px 6px;
-  border: 1px dashed var(--panel-accent);
+  border: 1px dashed var(--mark);
   font-variant-numeric: tabular-nums;
 }
 
 .qa-panel .stale {
-  color: var(--panel-warn);
+  color: var(--warn);
 }
 
 /* A sensor or a camera in the developer panel, which selects it. */
@@ -1099,14 +1099,14 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--panel-link);
+  color: var(--action);
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
 
 .qa-panel .stale .select-link {
-  color: var(--panel-warn);
+  color: var(--warn);
 }
 
 /* A camera's frames, as the run's log records them. */
@@ -1157,7 +1157,7 @@
   width: 100%;
   height: 52px;
   margin: 0 0 4px;
-  border: 1px solid var(--panel-rule);
+  border: 1px solid var(--border);
 }
 
 .sensor-chart-off {
@@ -1180,7 +1180,7 @@
 
 .sensor-truth {
   padding: 2px 6px;
-  border: 1px dashed var(--panel-accent);
+  border: 1px dashed var(--mark);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1213,7 +1213,7 @@
 }
 
 .plant-history .refused {
-  color: var(--panel-warn);
+  color: var(--warn);
 }
 
 /* The plant lab's debug tree: an organ per line, scrolling on its own. */
@@ -1233,7 +1233,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--panel-link);
+  color: var(--action);
   font: inherit;
   cursor: pointer;
 }
@@ -1243,7 +1243,7 @@
 }
 
 .plant-structure .organ-detail {
-  color: var(--panel-muted);
+  color: var(--text-muted);
 }
 
 /* The panels stand in two columns at the sides of the view: the info panel
@@ -1305,8 +1305,8 @@
   padding: 0;
   border: none;
   border-radius: 4px;
-  background: var(--panel-rule);
-  color: var(--panel-text);
+  background: var(--border);
+  color: var(--text);
   font-size: 10px;
   cursor: pointer;
   opacity: 0.7;
@@ -1315,7 +1315,7 @@
 
 .panel-stripe:hover,
 .panel-stripe:focus-visible {
-  background: var(--panel-accent);
+  background: var(--mark);
   opacity: 1;
 }
 
@@ -1535,10 +1535,10 @@
 .builder-side {
   overflow-y: auto;
   padding: 12px 16px;
-  background: var(--panel-bg);
-  color: var(--panel-text);
-  color-scheme: var(--panel-scheme);
-  border-right: 1px solid var(--panel-rule);
+  background: var(--surface-panel);
+  color: var(--text);
+  color-scheme: var(--scheme);
+  border-right: 1px solid var(--border);
   font-size: 14px;
 }
 
@@ -1560,11 +1560,11 @@
 
 .builder-status {
   min-height: 1.4em;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 .builder-status a {
-  color: var(--panel-link);
+  color: var(--action);
 }
 
 .builder-field {
@@ -1588,11 +1588,11 @@
 }
 
 .builder-finding-error {
-  color: var(--panel-warn);
+  color: var(--warn);
 }
 
 .builder-finding-warning {
-  color: var(--panel-muted);
+  color: var(--text-muted);
 }
 
 .builder-rows table,
@@ -1606,7 +1606,7 @@
 .builder-items th,
 .builder-items td {
   padding: 2px 6px;
-  border-bottom: 1px solid var(--panel-rule);
+  border-bottom: 1px solid var(--border);
   text-align: left;
 }
 
@@ -1620,7 +1620,7 @@
   align-items: end;
   margin-top: 12px;
   padding: 8px;
-  border: 1px solid var(--panel-rule);
+  border: 1px solid var(--border);
   border-radius: 4px;
 }
 
@@ -1639,7 +1639,7 @@
   width: 100%;
   margin: 0;
   padding: 4px 8px;
-  border: 1px solid var(--panel-rule);
+  border: 1px solid var(--border);
 }
 
 .builder-give-field:has(> input[type="checkbox"]) {
@@ -1667,7 +1667,7 @@
 }
 
 .builder-note {
-  color: var(--panel-muted);
+  color: var(--text-muted);
 }
 
 /* A scenario handed on as a file, and the two ways out of the builder
@@ -1708,9 +1708,9 @@
 /* The landing page (P17.5): where a person decides what to do. */
 .landing {
   min-height: 100%;
-  background: var(--landing-bg);
-  color: var(--panel-text);
-  color-scheme: var(--panel-scheme);
+  background: var(--surface-page);
+  color: var(--text);
+  color-scheme: var(--scheme);
   font-size: 15px;
   line-height: 1.45;
 }
@@ -1722,8 +1722,8 @@
   justify-content: space-between;
   gap: 16px;
   padding: 16px 32px;
-  border-bottom: 1px solid var(--panel-rule);
-  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-panel);
 }
 
 .landing-header h1 {
@@ -1745,7 +1745,7 @@
 
 .landing-lead {
   margin: 0 0 24px;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 .landing-cards {
@@ -1762,9 +1762,9 @@
   gap: 10px;
   min-width: 0;
   padding: 24px;
-  border: 1px solid var(--panel-rule);
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: var(--panel-bg);
+  background: var(--surface-panel);
 }
 
 .landing-card-wide {
@@ -1779,7 +1779,7 @@
 
 .landing-card p {
   margin: 0;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 .landing-link-button {
@@ -1790,16 +1790,16 @@
   box-sizing: border-box;
   min-height: 44px;
   padding: 0 18px;
-  border: 1px solid var(--panel-rule);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  color: var(--panel-text);
+  color: var(--text);
   font-weight: 600;
   text-decoration: none;
 }
 
 .landing-primary {
-  border-color: var(--panel-link);
-  color: var(--panel-link);
+  border-color: var(--action);
+  color: var(--action);
 }
 
 .landing-upload {
@@ -1816,7 +1816,7 @@
 }
 
 .landing-card p.landing-problem {
-  color: var(--panel-warn);
+  color: var(--warn);
 }
 
 .landing-combobox {
@@ -1828,17 +1828,17 @@
 .landing-label {
   font-size: 13px;
   font-weight: 600;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 .landing-input {
   box-sizing: border-box;
   min-height: 44px;
   padding: 0 12px;
-  border: 1px solid var(--panel-muted);
+  border: 1px solid var(--text-muted);
   border-radius: 8px;
-  background: var(--landing-bg);
-  color: var(--panel-text);
+  background: var(--surface-page);
+  color: var(--text);
   font: inherit;
   font-size: 15px;
 }
@@ -1861,9 +1861,9 @@
   padding: 0;
   overflow-y: auto;
   list-style: none;
-  border: 1px solid var(--panel-muted);
+  border: 1px solid var(--text-muted);
   border-radius: 8px;
-  background: var(--landing-bg);
+  background: var(--surface-page);
 }
 
 .landing-option {
@@ -1873,13 +1873,13 @@
   box-sizing: border-box;
   min-height: 44px;
   padding: 8px 14px;
-  border-bottom: 1px solid var(--panel-rule);
+  border-bottom: 1px solid var(--border);
   cursor: pointer;
 }
 
 .landing-option[aria-selected="true"] {
-  background: var(--panel-bg);
-  outline: 2px solid var(--panel-link);
+  background: var(--surface-panel);
+  outline: 2px solid var(--action);
   outline-offset: -2px;
 }
 
@@ -1891,24 +1891,24 @@
 
 .landing-option-note {
   font-size: 13px;
-  color: var(--panel-muted);
+  color: var(--text-muted);
 }
 
 .landing-option-none {
   padding: 12px 14px;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 .landing-option-build {
   justify-content: center;
-  color: var(--panel-link);
+  color: var(--action);
   font-weight: 600;
 }
 
 /* How many runs are kept and what they hold, above the list of them. */
 .landing-kept {
   margin: 0;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
   font-size: 13px;
 }
 
@@ -1916,9 +1916,9 @@
   margin: 8px 0 0;
   padding: 0;
   list-style: none;
-  border: 1px solid var(--panel-rule);
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: var(--panel-bg);
+  background: var(--surface-panel);
 }
 
 .landing-run {
@@ -1927,7 +1927,7 @@
   align-items: center;
   gap: 12px 24px;
   padding: 12px 20px;
-  border-bottom: 1px solid var(--panel-rule);
+  border-bottom: 1px solid var(--border);
 }
 
 .landing-run:last-child {
@@ -1944,7 +1944,7 @@
 .landing-run-name span,
 .landing-run-progress span {
   font-size: 13px;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 .landing-run-progress {
@@ -1961,7 +1961,7 @@
 
 .landing-status {
   padding: 2px 10px;
-  border: 1px solid var(--panel-rule);
+  border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 13px;
   font-weight: 600;
@@ -1969,14 +1969,14 @@
 
 .landing-status-running,
 .landing-status-queued {
-  border-color: var(--panel-link);
-  color: var(--panel-link);
+  border-color: var(--action);
+  color: var(--action);
 }
 
 .landing-status-failed,
 .landing-status-interrupted {
-  border-color: var(--panel-warn);
-  color: var(--panel-warn);
+  border-color: var(--warn);
+  color: var(--warn);
 }
 
 /* The runs of a scenario, in a dialog of their own (P17.5). */
@@ -1986,15 +1986,15 @@
   max-height: calc(100% - 64px);
   padding: 0 0 8px;
   overflow-y: auto;
-  border: 1px solid var(--panel-rule);
+  border: 1px solid var(--border);
   border-radius: 14px;
-  background: var(--landing-bg);
-  color: var(--panel-text);
-  color-scheme: var(--panel-scheme);
+  background: var(--surface-page);
+  color: var(--text);
+  color-scheme: var(--scheme);
 }
 
 .landing-dialog::backdrop {
-  background: var(--landing-backdrop);
+  background: var(--surface-backdrop);
 }
 
 .landing-dialog-head {
@@ -2004,7 +2004,7 @@
   justify-content: space-between;
   gap: 12px 24px;
   padding: 20px 24px 12px;
-  border-bottom: 1px solid var(--panel-rule);
+  border-bottom: 1px solid var(--border);
 }
 
 .landing-dialog-head h2 {
@@ -2015,7 +2015,7 @@
 .landing-dialog-head p {
   margin: 2px 0 0;
   font-size: 13px;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 .landing-dialog-actions {
@@ -2031,30 +2031,30 @@
 }
 
 .landing-dialog p[role="alert"] {
-  color: var(--panel-warn);
+  color: var(--warn);
 }
 
 .landing-button {
   box-sizing: border-box;
   min-height: 44px;
   padding: 0 18px;
-  border: 1px solid var(--panel-rule);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--landing-bg);
-  color: var(--panel-text);
+  background: var(--surface-page);
+  color: var(--text);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
 }
 
 .landing-button-primary {
-  border-color: var(--panel-link);
-  color: var(--panel-link);
+  border-color: var(--action);
+  color: var(--action);
 }
 
 .landing-button-danger {
-  border-color: var(--panel-warn);
-  color: var(--panel-warn);
+  border-color: var(--warn);
+  color: var(--warn);
 }
 
 .landing-form {
@@ -2063,8 +2063,8 @@
   align-items: flex-end;
   gap: 12px 24px;
   padding: 16px 24px;
-  border-bottom: 1px solid var(--panel-rule);
-  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-panel);
 }
 
 .landing-field {
@@ -2072,20 +2072,20 @@
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 .landing-note {
   flex-basis: 100%;
   margin: 0;
   font-size: 13px;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 .landing-empty {
   padding: 32px 24px;
   text-align: center;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 .landing-confirm {
@@ -2107,9 +2107,9 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--landing-bg);
-  color: var(--panel-text);
-  color-scheme: var(--panel-scheme);
+  background: var(--surface-page);
+  color: var(--text);
+  color-scheme: var(--scheme);
   font-size: 14px;
   line-height: 1.4;
 }
@@ -2128,8 +2128,8 @@
 
 .replay-header,
 .replay-transport {
-  background: var(--panel-bg);
-  border: 0 solid var(--panel-rule);
+  background: var(--surface-panel);
+  border: 0 solid var(--border);
 }
 
 .replay-header {
@@ -2149,7 +2149,7 @@
 .replay-title p {
   margin: 0;
   font-size: 13px;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 .replay-spacer {
@@ -2167,10 +2167,10 @@
   min-width: 44px;
   min-height: 44px;
   padding: 0 12px;
-  border: 1px solid var(--panel-rule);
+  border: 1px solid var(--border);
   border-radius: 8px;
   background: transparent;
-  color: var(--panel-text);
+  color: var(--text);
   font: inherit;
   font-weight: 600;
   text-decoration: none;
@@ -2179,14 +2179,14 @@
 
 .replay-play {
   min-width: 52px;
-  border-color: var(--panel-link);
-  color: var(--panel-link);
+  border-color: var(--action);
+  color: var(--action);
 }
 
 .replay-follow[aria-pressed="true"] {
-  border-color: var(--panel-link);
-  background: var(--panel-link);
-  color: var(--landing-bg);
+  border-color: var(--action);
+  background: var(--action);
+  color: var(--surface-page);
 }
 
 .replay-transport {
@@ -2212,28 +2212,28 @@
 }
 
 .replay-computed-text {
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 .replay-refused {
   margin: 0 0 10px;
-  color: var(--panel-warn);
+  color: var(--warn);
 }
 
 .replay-pace {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 .replay-pace select {
   min-height: 44px;
   padding: 0 10px;
-  border: 1px solid var(--panel-rule);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--panel-bg);
-  color: var(--panel-text);
+  background: var(--surface-panel);
+  color: var(--text);
   font: inherit;
 }
 
@@ -2249,8 +2249,8 @@
   border-radius: 7px;
   /* What is not computed yet, hatched in the rule's colour in either theme. */
   background:
-    repeating-linear-gradient(135deg, var(--panel-rule) 0 6px, transparent 6px 12px) center / 100%
-    14px no-repeat;
+    repeating-linear-gradient(135deg, var(--border) 0 6px, transparent 6px 12px) center / 100% 14px
+    no-repeat;
 }
 
 .replay-computed {
@@ -2259,7 +2259,7 @@
   left: 0;
   height: 14px;
   border-radius: 7px 0 0 7px;
-  background: var(--panel-link);
+  background: var(--action);
 }
 
 .replay-frontier {
@@ -2268,7 +2268,7 @@
   width: 2px;
   height: 28px;
   margin-left: -1px;
-  background: var(--panel-link);
+  background: var(--action);
 }
 
 .replay-handle {
@@ -2278,13 +2278,13 @@
   width: 20px;
   height: 32px;
   margin-left: -10px;
-  border: 3px solid var(--panel-link);
+  border: 3px solid var(--action);
   border-radius: 6px;
-  background: var(--panel-text);
+  background: var(--text);
 }
 
 .replay-handle:focus-visible {
-  outline: 3px solid var(--panel-text);
+  outline: 3px solid var(--text);
   outline-offset: 2px;
 }
 
@@ -2292,7 +2292,7 @@
   position: relative;
   height: 18px;
   font-size: 12px;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 .replay-tick {
@@ -2312,7 +2312,7 @@
   padding: 0;
   list-style: none;
   font-size: 12px;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
 
 .replay-legend li {
@@ -2328,15 +2328,15 @@
 }
 
 .replay-swatch-computed {
-  background: var(--panel-link);
+  background: var(--action);
 }
 
 .replay-swatch-pending {
-  background: repeating-linear-gradient(135deg, var(--panel-rule) 0 3px, transparent 3px 6px);
+  background: repeating-linear-gradient(135deg, var(--border) 0 3px, transparent 3px 6px);
 }
 
 .replay-notice {
   padding: 32px 24px;
   text-align: center;
-  color: var(--panel-muted-strong);
+  color: var(--text-soft);
 }
