@@ -90,6 +90,7 @@ export function Landing({
             <ScenarioChoice
               scenarios={scenarios}
               counts={counts}
+              behindDialog={chosen !== undefined}
               onChoose={(id) => {
                 setForm(false);
                 setOpened(id);
@@ -131,11 +132,13 @@ export function Landing({
 function ScenarioChoice({
   scenarios,
   counts,
+  behindDialog,
   onChoose,
   onBuild,
 }: {
   scenarios: ScenariosState;
   counts: ReadonlyMap<string, number> | null;
+  behindDialog: boolean;
   onChoose: (scenarioId: string) => void;
   onBuild: () => void;
 }) {
@@ -145,6 +148,7 @@ function ScenarioChoice({
         <ScenarioCombobox
           scenarios={scenarios.scenarios}
           counts={counts}
+          behindDialog={behindDialog}
           onChoose={onChoose}
           onBuild={onBuild}
         />

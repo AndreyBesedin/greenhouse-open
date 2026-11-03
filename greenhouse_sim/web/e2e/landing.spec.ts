@@ -70,6 +70,25 @@ test("the viewer is at its own address, and an address with a query is still the
   await expect(page.getByRole("heading", { name: "What would you like to do?" })).toHaveCount(0);
 });
 
+test("a dialog closed by Escape gives focus back to the search, with its list shut", async ({
+  page,
+}) => {
+  await page.goto(LANDING_PATH);
+  const search = page.getByRole("combobox", { name: "Scenario" });
+  await search.fill("climate_box");
+  await search.press("Enter");
+  await expect(page.getByRole("dialog").getByRole("heading")).toContainText("Climate box");
+
+  await page.keyboard.press("Escape");
+
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(search).toBeFocused();
+  await expect(page.getByRole("option")).toHaveCount(0);
+  // Asked for, it opens as ever.
+  await search.click();
+  await expect(page.getByRole("option").first()).toBeVisible();
+});
+
 test("a run is started at a seed from a scenario's dialog, listed, and not removed while it computes", async ({
   page,
 }) => {
