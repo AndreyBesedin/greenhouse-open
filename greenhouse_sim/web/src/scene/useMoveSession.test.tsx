@@ -30,10 +30,12 @@ function session({
   followed = null,
   fetchFn = vi.fn() as unknown as typeof fetch,
   source = AT_NOON,
+  applyLayout,
 }: {
   followed?: string | null;
   fetchFn?: typeof fetch;
   source?: SceneSource;
+  applyLayout?: (layout: string) => Promise<string | null>;
 } = {}) {
   const happened: string[] = [];
   const changes: SceneSource[] = [];
@@ -55,6 +57,7 @@ function session({
         setSource,
         defaultLayout: "default",
         followed,
+        applyLayout,
         onPlayback: (load) => {
           happened.push("playback");
           played.push(load);
@@ -226,6 +229,37 @@ describe("a Move session", () => {
       applying: false,
       to: "default~heater:-1:0.5",
       failure: "the simulator answered 400",
+    });
+  });
+
+  it("in a replay, makes a fork in their layout and leaves the view on the run replayed", async () => {
+    const applyLayout = vi.fn(async () => null);
+    const view = session({ applyLayout });
+    current = view;
+    act(() => view.hook.current.start());
+    act(() => view.hook.current.move("heater", { dx: -1, dy: 0.5 }));
+
+    await act(async () => view.hook.current.apply());
+
+    expect(applyLayout).toHaveBeenCalledWith("default~heater:-1:0.5");
+    expect(view.changes).toEqual([]);
+    // The page goes to the fork: the moves stay drawn until then.
+    expect(view.hook.current.session).toMatchObject({ applying: true, failure: null });
+  });
+
+  it("in a replay, keeps its moves and says why, if the fork is refused", async () => {
+    const view = session({ applyLayout: async () => "its crop is another" });
+    current = view;
+    act(() => view.hook.current.start());
+    act(() => view.hook.current.move("heater", { dx: -1, dy: 0.5 }));
+
+    await act(async () => view.hook.current.apply());
+
+    expect(view.changes).toEqual([]);
+    expect(view.hook.current.session).toMatchObject({
+      applying: false,
+      to: "default~heater:-1:0.5",
+      failure: "its crop is another",
     });
   });
 

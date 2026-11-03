@@ -16,7 +16,7 @@ export const PACES_S: readonly number[] = [QUICK_S, BRISK_S, STEADY_S, LEISURELY
 /** The part of a run a position can be at: from its start, which is the
  * run's own, to the frontier. */
 export function spanOf(position: PositionState): Span {
-  return { startS: 0, frontierS: position.frontier_s, endS: position.duration_s };
+  return { startS: position.start_s, frontierS: position.frontier_s, endS: position.duration_s };
 }
 
 /** Whether a run can be followed at its frontier: only while it is still

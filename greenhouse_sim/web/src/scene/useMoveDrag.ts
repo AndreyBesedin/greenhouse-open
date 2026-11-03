@@ -39,6 +39,7 @@ export function useMoveDrag({
   source,
   setSource,
   followed,
+  applyLayout,
   onPlayback,
   sceneLoading,
   snapshot,
@@ -48,6 +49,8 @@ export function useMoveDrag({
   source: SceneSource;
   setSource: (change: SetSource) => void;
   followed: string | null;
+  /** In a replay: applying the moves makes a fork in their layout. */
+  applyLayout?: (layout: string) => Promise<string | null>;
   onPlayback: (load: PlaybackLoad) => void;
   sceneLoading: boolean;
   snapshot: SceneSnapshot | null;
@@ -65,6 +68,7 @@ export function useMoveDrag({
     defaultLayout: DEFAULT_LAYOUT,
     followed,
     onPlayback,
+    applyLayout,
     sceneLoading,
   });
   const session = moves.session;
@@ -125,6 +129,7 @@ export function useMoveDrag({
             .map(([item, by]) => ({ item, label: itemEntities.get(item)?.label ?? item, by })),
           changed: moves.changed,
           following: followed !== null,
+          ...(applyLayout === undefined ? {} : { forking: true }),
           applying: session.applying,
           failure: session.failure,
         };

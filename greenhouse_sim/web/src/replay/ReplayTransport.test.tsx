@@ -126,6 +126,8 @@ describe("what moves a position over a stored run", () => {
 
   it("is over the whole of the run, from its start to the frontier", () => {
     expect(spanOf(position())).toEqual({ startS: 0, frontierS: 41 * DAY_S, endS: 120 * DAY_S });
+    // A fork holds nothing before the state it inherits.
+    expect(spanOf(position({ start_s: 5 * DAY_S })).startS).toBe(5 * DAY_S);
     expect(canFollow(position({ status: "queued" }))).toBe(true);
     expect(canFollow(position({ status: "finished" }))).toBe(false);
   });

@@ -25,6 +25,8 @@ export interface MoveDraft {
   moves: readonly StandingMove[];
   changed: boolean;
   following: boolean;
+  /** Whether applying the moves makes a fork of a stored run, which stays. */
+  forking?: boolean;
   applying: boolean;
   failure: string | null;
 }
@@ -91,7 +93,10 @@ export function MovePanel({
 }
 
 /** Its moves' new run, said in a line before anything is moved. */
-function newRun(following: boolean): string {
+function newRun(following: boolean, forking: boolean): string {
+  if (forking) {
+    return "Drag equipment or a sensor in the view to move it. Applying the moves makes a fork of this stored run from the start of the day shown, and this run stays as it is.";
+  }
   return following
     ? "Drag equipment or a sensor in the view to move it. Applying the moves starts the run played back again from its first day, and the view follows it."
     : "Drag equipment or a sensor in the view to move it. Applying the moves starts the run again from its first day.";
@@ -110,7 +115,7 @@ function Session({
   onApply: () => void;
   onCancel: () => void;
 }) {
-  const { moves, changed, following, applying, failure } = draft;
+  const { moves, changed, following, forking = false, applying, failure } = draft;
   // Applying asks first, in the panel: the run starts again from its first
   // day, which no Back of the view's own undoes for the run played back.
   const [confirming, setConfirming] = useState(false);
@@ -151,7 +156,7 @@ function Session({
   }, [asking]);
   return (
     <div className="move-session" ref={root}>
-      <p data-testid="move-new-run">{newRun(following)}</p>
+      <p data-testid="move-new-run">{newRun(following, forking)}</p>
       <details className="move-details">
         <summary>How moving works</summary>
         <p className="move-hint">
@@ -181,15 +186,17 @@ function Session({
       )}
       {failure !== null && (
         <p role="alert" data-testid="move-failure">
-          The run played back could not start over: {failure}.
+          {forking ? "The run could not be forked" : "The run played back could not start over"}:{" "}
+          {failure}.
         </p>
       )}
       {asking ? (
         <fieldset className="move-confirm" aria-describedby="move-confirm-question">
-          <legend>Start a new run?</legend>
+          <legend>{forking ? "Fork this run?" : "Start a new run?"}</legend>
           <p id="move-confirm-question" data-testid="move-confirm">
-            {following ? "The run played back" : "The run"} starts again from its first day with
-            these moves; the moment reached is left behind.
+            {forking
+              ? "A fork goes on from the start of the day shown with these moves; this run stays as it is."
+              : `${following ? "The run played back" : "The run"} starts again from its first day with these moves; the moment reached is left behind.`}
           </p>
           <div className="move-actions">
             <button
@@ -201,7 +208,7 @@ function Session({
                 onApply();
               }}
             >
-              Start the new run
+              {forking ? "Make the fork" : "Start the new run"}
             </button>
             <button type="button" onClick={() => setConfirming(false)}>
               Back to the moves
@@ -216,7 +223,13 @@ function Session({
             disabled={!changed || applying}
             onClick={() => setConfirming(true)}
           >
-            {applying ? "Starting the new run…" : "Start a new run with these moves"}
+            {forking
+              ? applying
+                ? "Forking…"
+                : "Fork this run with these moves"
+              : applying
+                ? "Starting the new run…"
+                : "Start a new run with these moves"}
           </button>
           <button
             type="button"

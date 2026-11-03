@@ -112,6 +112,37 @@ test("a run that is being computed can be followed at its newest day", async ({ 
   await expect(follow).toHaveAttribute("aria-pressed", "true");
 });
 
+test("a stored run is forked from the moment shown, and stays there to go back to", async ({
+  page,
+}) => {
+  test.setTimeout(WAITS_FOR_A_DAY * 2);
+  await replayOfANewRun(page, "45");
+  const parent = page.url();
+  const handle = page.getByRole("slider", { name: "Position in the run" });
+  await expect
+    .poll(async () => Number(await handle.getAttribute("aria-valuemax")), { timeout: COMPUTES })
+    .toBeGreaterThanOrEqual(DAY_S);
+  await handle.focus();
+  await page.keyboard.press("PageUp");
+  await expect(page.getByTestId("replay-moment")).toHaveText("Day 1, 24:00");
+
+  await page.getByTestId("replay-fork").click();
+
+  // A new epoch, at an address of its own, naming where it comes from.
+  await expect(page).not.toHaveURL(parent);
+  await expect(page.getByTestId("replay-subtitle")).toContainText(
+    "forked from epoch 0 at Day 2, 00:00",
+  );
+  await expect(page.getByTestId("replay-moment")).toHaveText("Day 1, 24:00");
+  await expect(page.locator("canvas")).toBeVisible();
+  // What cannot be a fork says why, rather than drawing another run.
+  await expect(page.getByTestId("replayed-weather")).toContainText("keeps the weather");
+
+  await page.getByRole("link", { name: "The run it came from" }).click();
+  await expect(page).toHaveURL(parent);
+  await expect(page.getByTestId("replay-subtitle")).not.toContainText("forked");
+});
+
 test("an address that names no run, or a run that is not kept, says so and offers the way home", async ({
   page,
 }) => {

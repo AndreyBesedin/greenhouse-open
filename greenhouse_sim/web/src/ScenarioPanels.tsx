@@ -68,6 +68,35 @@ export interface ScenarioLoads {
  * them keeps (how the field's colours run, whether a click places a probe)
  * is the viewer's.
  */
+/** In a replay, levels set are not drawn: they make a fork of the run from the
+ * moment shown, once asked for, a slider moving many times to one level. */
+function ForkLevels({
+  asked,
+  onFork,
+  onPutBack,
+}: {
+  asked: Readonly<Record<string, number>>;
+  onFork: () => void;
+  onPutBack: () => void;
+}) {
+  const none = Object.keys(asked).length === 0;
+  return (
+    <div className="move-actions" data-testid="fork-levels">
+      <p className="targets-note">
+        {none
+          ? "This stored run keeps its levels: those set here make a fork of it from this moment."
+          : `Set ${Object.keys(asked).join(", ")}: not yet this run's or a fork's.`}
+      </p>
+      <button type="button" disabled={none} onClick={onFork}>
+        Fork from here with these levels
+      </button>
+      <button type="button" disabled={none} onClick={onPutBack}>
+        Put them back
+      </button>
+    </div>
+  );
+}
+
 export function ScenarioPanels({
   children,
   source,
@@ -87,6 +116,7 @@ export function ScenarioPanels({
   setpoints,
   onTargets,
   steering,
+  forkLevels,
   played = null,
   onSource,
   onProbes,
@@ -135,6 +165,13 @@ export function ScenarioPanels({
         onLevels: (levels: Record<string, number>) => void;
       }
     | undefined;
+  /** In a replay: the levels set and not yet made a fork of the run, and the
+   * way to make one (P17.8). */
+  forkLevels?: {
+    asked: Readonly<Record<string, number>>;
+    onFork: () => void;
+    onPutBack: () => void;
+  };
   /** The run followed as it plays, whose plan lane the timeline draws
    * (P13.8). */
   played?: PlanLaneRun | null;
@@ -244,7 +281,13 @@ export function ScenarioPanels({
               played={played}
             />
           )}
-          {climate && (
+          {climate && replayed && (
+            <p className="targets-note" data-testid="replayed-checkpoints">
+              A stored run keeps its own checkpoints: to go on from a moment of it, fork it there
+              from the page's header.
+            </p>
+          )}
+          {climate && !replayed && (
             <CheckpointsPanel
               scenarioId={source.scenarioId}
               run={scenarioRun(source)}
@@ -301,6 +344,7 @@ export function ScenarioPanels({
             thermostat={setpoints}
             time={time}
             followed={source.follow === true}
+            forking={replayed}
             onSet={onTargets}
           />
         )}
@@ -310,6 +354,7 @@ export function ScenarioPanels({
             daily={source.daily ?? []}
             time={time}
             days={days}
+            fixed={replayed}
             onTime={setTime}
             onRemove={(index) => onSource(withoutCommand(source, index))}
             onRepeat={(index) => onSource(withRepeated(source, index))}
@@ -368,6 +413,7 @@ export function ScenarioPanels({
               }
             />
           )}
+          {forkLevels !== undefined && snapshot !== null && <ForkLevels {...forkLevels} />}
         </PanelCard>
       )}
       {weather.status !== "none" && (
@@ -378,12 +424,22 @@ export function ScenarioPanels({
             weathers={weathers}
             chosen={source.weather}
             time={time}
-            onChoose={(chosen) => onSource(withWeather(source, chosen))}
             clouds={source.clouds}
-            onClouds={(clouds) => onSource(withClouds(source, clouds))}
             windFrom={source.wind}
-            onWindFrom={(wind) => onSource(withWind(source, wind))}
+            {...(replayed
+              ? {}
+              : {
+                  onChoose: (chosen: string | undefined) => onSource(withWeather(source, chosen)),
+                  onClouds: (clouds: number | undefined) => onSource(withClouds(source, clouds)),
+                  onWindFrom: (wind: number | undefined) => onSource(withWind(source, wind)),
+                })}
           />
+          {replayed && (
+            <p className="targets-note" data-testid="replayed-weather">
+              A stored run keeps the weather it was started under: another weather is a new run, not
+              a fork of this one.
+            </p>
+          )}
         </PanelCard>
       )}
     </>
