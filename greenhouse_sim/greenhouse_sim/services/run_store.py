@@ -629,6 +629,31 @@ class EpochStore:
         for commit in self.commits():
             self._verify_commit(commit)
 
+    def discard_uncommitted(self) -> list[str]:
+        """Removes what a crash left past the last commit, which names what
+        the epoch holds: segments and checkpoints written for a commit that
+        was never made, a commit past a gap, and log entries given after the
+        last commit. The next commit writes over those of its own span; the
+        rest, of another span, would stay. The names removed."""
+        commits = self.commits()
+        kept = {f"{self._home}/manifest.json", f"{self._home}/interventions.jsonl"}
+        for commit in commits:
+            kept.add(f"{self._home}/commits/{commit.seq:0{SEQ_DIGITS}d}.json")
+            kept.update(f"{self._home}/segments/{commit.segment}/{kind}.parquet" for kind in Kind)
+            if commit.checkpoint is not None:
+                kept.add(commit.checkpoint)
+        removed = []
+        for name in self.objects.names(f"{self._home}/"):
+            if name not in kept and name != f"{self._home}/{leases.LEASE}":
+                self.objects.delete(name)
+                removed.append(name)
+        position = commits[-1].log_position if commits else 0
+        held = self.objects.get(f"{self._home}/interventions.jsonl")
+        if held is not None and len(held.splitlines()) > position:
+            self.objects.put(f"{self._home}/interventions.jsonl", self._log_bytes(position))
+            removed.append(f"{self._home}/interventions.jsonl")
+        return removed
+
     def _verify_commit(self, commit: Commit) -> None:
         previous = GENESIS
         if commit.seq:

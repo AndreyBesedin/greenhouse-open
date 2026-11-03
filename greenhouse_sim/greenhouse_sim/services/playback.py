@@ -294,6 +294,11 @@ class _Packed:
     packed: bytes
 
 
+# A day an epoch carried on was kept through already: nothing of it is held, as
+# nothing of it is written again.
+_NOTHING: Final = _Packed(count=0, delivered_s=(), packed=gzip.compress(b"[]"))
+
+
 class _Log[R: (Observation, Event)]:
     """One kind of a run's records, day by day, in delivery order, kept
     compressed, and the latest few days read back."""
@@ -509,6 +514,24 @@ class Playback:
         if self._store is not None:
             self._store.set_status(Status.RUNNING)
         self._worker.start()
+
+    def resume_at(self, time_s: float) -> None:
+        """Carries on an epoch kept through `time_s`, a whole number of days
+        into the run: its days before are not worked out or written again, its
+        clock is there, and the days after it are worked out and written as
+        the epoch's next commits. Only for a playback with an epoch, before it
+        has begun or stepped; the state the days after start from is the
+        checkpoint the epoch's last commit names, restored in the simulator
+        first (`workers.resume`)."""
+        days = round(time_s / DAY_S)
+        if days * DAY_S != time_s or not 0 <= days <= round(self.end_s / DAY_S):
+            raise InvalidRequest(f"an epoch is carried on from a day's end, not {time_s:.15g} s")
+        with self._lock:
+            if self._store is None or self._worker.is_alive() or self._worked:
+                raise Conflict(f"the playback of {self.run_id} has begun or keeps no epoch")
+            self._worked = [(_NOTHING, _NOTHING)] * days
+            self._stored_days = days
+            self._time_s = self._gateway_to(time_s)
 
     def step_to(self, time_s: float) -> PlaybackState:
         """Works its run out to `time_s` into it and moves its clock there,
