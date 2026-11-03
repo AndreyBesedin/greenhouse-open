@@ -28,22 +28,27 @@ export function pageAt(pathname: string, search: string): Page {
   return path === "" && search === "" ? "landing" : "viewer";
 }
 
+const FOLLOW_NEWEST = "follow";
+
 /** The replay of a stored epoch: a run's address names its run and its epoch
- * (decision 0065). */
-export function replayAddress(runId: string, epoch: number): string {
-  return `${REPLAY_PATH}?run=${encodeURIComponent(runId)}&epoch=${epoch}`;
+ * (decision 0065), and says if it opens following the newest day computed. */
+export function replayAddress(runId: string, epoch: number, following = false): string {
+  const follow = following ? `&${FOLLOW_NEWEST}=1` : "";
+  return `${REPLAY_PATH}?run=${encodeURIComponent(runId)}&epoch=${epoch}${follow}`;
 }
 
 /** The run and epoch a replay's address names, or null if it names none that
  * can be asked for: a run, and an epoch that is a whole number. */
-export function replayTarget(search: string): { runId: string; epoch: number } | null {
+export function replayTarget(
+  search: string,
+): { runId: string; epoch: number; following: boolean } | null {
   const parameters = new URLSearchParams(search);
   const runId = parameters.get("run");
   const epoch = parameters.get("epoch");
   if (runId === null || runId === "" || epoch === null || !/^\d+$/.test(epoch)) {
     return null;
   }
-  return { runId, epoch: Number(epoch) };
+  return { runId, epoch: Number(epoch), following: parameters.get(FOLLOW_NEWEST) === "1" };
 }
 
 /** The viewer's address for a scenario, with what else its address says. */
