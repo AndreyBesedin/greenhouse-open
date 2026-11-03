@@ -150,6 +150,8 @@ export function App({
   const [playingClimate, setPlayingClimate] = useState(false);
   const [probeHeight, setProbeHeight] = useState(DEFAULT_PROBE_HEIGHT_M);
   const [presetRequest, setPresetRequest] = useState<PresetRequest | null>(null);
+  // The scenario a preset was chosen in: another's opening frame is its own.
+  const [presetIn, setPresetIn] = useState<string | null>(null);
   const [sample, setSample] = useState<ViewSample | null>(null);
   const [pointer, setPointer] = useState<Point3 | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -325,7 +327,7 @@ export function App({
       source.kind === "scenario" && opensFramed(location.pathname) ? source.scenarioId : null,
     latestScene: sceneProgress.latest,
     ownCamera: source.kind === "scenario" && (source.camera !== undefined || followed !== null),
-    presetChosen: presetRequest !== null,
+    presetChosen: source.kind === "scenario" && presetIn === source.scenarioId,
   });
   // Equipment and sensors moved in a Move session (#209, #271), and the
   // Move panel, for the selected item if it can be moved and for a session
@@ -400,6 +402,7 @@ export function App({
 
   function choosePreset(preset: PresetName): void {
     setPresetRequest((previous) => ({ preset, serial: (previous?.serial ?? 0) + 1 }));
+    setPresetIn(source.kind === "scenario" ? source.scenarioId : null);
   }
 
   return (

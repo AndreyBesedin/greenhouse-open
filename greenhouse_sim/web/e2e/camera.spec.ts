@@ -10,6 +10,7 @@ import {
 import { VIEWER_PATH } from "../src/landing/paths";
 import { formatPoint } from "../src/readouts.ts";
 import type { Point3 } from "../src/world.ts";
+import { chooser } from "./chooser";
 import { unfold } from "./folds";
 import { mainView, onScreen, orbitUntil } from "./view.ts";
 
@@ -137,6 +138,21 @@ test("a scenario opened to look at starts with its house framed, and its address
     .selectOption("shear");
   await expect(page).toHaveURL(/field=shear/);
   await expect(camera).toHaveText(DEFAULT_VIEW);
+});
+
+test("a preset chosen in one scenario leaves another's opening frame as it is", async ({
+  page,
+}) => {
+  await page.goto(`${VIEWER_PATH}?scenario=climate_box`);
+  await expect(page.getByTestId("scene-status")).toContainText("climate_box, day 0");
+  await page.getByRole("button", { name: "Isometric" }).click();
+  const camera = page.getByTestId("camera-position");
+  await expect(camera).toHaveText(DEFAULT_VIEW);
+
+  await (await chooser(page)).getByRole("button", { name: "Open sensor_lab" }).click();
+
+  await expect(page.getByTestId("scene-status")).toContainText("sensor_lab, day 0");
+  await expect(camera).not.toHaveText(DEFAULT_VIEW);
 });
 
 test("a link from before the landing page opens a scenario at the default view", async ({
