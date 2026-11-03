@@ -22,6 +22,11 @@ them (P17.4, decision 0065).
     POST /api/runs/{run}/epochs/{n}/stop  an epoch waiting for a worker or being
                                           executed, ended: interrupted, with what
                                           it had committed
+    POST /api/runs/{run}/epochs/{n}/resume?seconds_per_day=10
+                                          an interrupted epoch, or one still
+                                          running that no one works, carried on
+                                          from its last commit by a worker: the
+                                          same epoch, as the list shows it
     POST /api/runs/{run}/epochs/{n}/positions?seconds_per_day=10
                                           a position at the epoch's start
     GET /api/positions/{id}               where it stands: the moment, whether
@@ -85,6 +90,12 @@ def post(simulator: Simulator, segments: list[str], query: Query, _body: bytes) 
             )
         case ["api", "runs", run_id, "epochs", number, "stop"]:
             return answer(lambda: scheduler.cancel(simulator, run_id, _epoch(number)))
+        case ["api", "runs", run_id, "epochs", number, "resume"]:
+            return answer(
+                lambda: scheduler.resume(
+                    simulator, run_id, _epoch(number), seconds_per_day=pace(query)
+                )
+            )
         case ["api", "runs", run_id, "epochs", number, "delete"]:
             return answer(lambda: runs_kept.delete_epoch(simulator, run_id, _epoch(number)))
         case ["api", "runs", run_id, "epochs", number, "positions"]:
