@@ -474,6 +474,48 @@ def test_a_draft_of_a_recorded_scenario_keeps_the_recording_it_was_uploaded_with
     assert entry is not None and entry.config.weather == _uploaded_config().weather
 
 
+@pytest.mark.parametrize(
+    ("weather", "clouds", "wind", "seed"),
+    [
+        ("default@80", 80.0, 90.0, 0),
+        ("default~270", 40.0, 270.0, 0),
+        ("default#7", 40.0, 90.0, 7),
+        ("default@80~270#7", 80.0, 270.0, 7),
+    ],
+)
+def test_a_draft_of_an_uploaded_scenario_changes_only_what_its_weather_overrides(
+    tmp_path: Path, weather: str, clouds: float, wind: float, seed: int
+) -> None:
+    with _named_as_the_uploaded(tmp_path) as made:
+        ran = drafts.run(made, UPLOADED, None, A_RUN | {"weather": weather})
+        entry = made.catalogue.entry(ran.id)
+        source = made.catalogue.entry(UPLOADED)
+        assert entry is not None and source is not None
+
+        assert entry.config.weather == source.config.weather
+        assert entry.config.site == SITE
+        assert (entry.config.cloud_cover_pct, entry.config.wind_from_deg) == (clouds, wind)
+        assert entry.config.random_seed == seed
+
+
+@pytest.mark.slow
+def test_a_worker_goes_at_the_pace_its_epoch_names(tmp_path: Path) -> None:
+    """A day is written once the clock has passed it, so that the commits of a
+    house this quick to work out lie a pace apart."""
+    objects = FolderStore(tmp_path / "runs")
+    with Simulator(drafts=DraftStore(tmp_path / "drafts.sqlite3"), runs=objects) as made:
+        scenario_id = _built(made)
+        shown = respond(
+            made, "POST", f"/api/scenarios/{scenario_id}/runs?seconds_per_day={SECONDS_PER_DAY}"
+        )
+        assert isinstance(shown.body, dict)
+        epoch = EpochStore(objects, str(shown.body["run_id"]), int(str(shown.body["epoch"])))
+        _until(lambda: epoch.manifest().status == Status.FINISHED, "the epoch to end")
+
+    first, second = sorted(objects.root.glob(f"{epoch.run_id}/{epoch.epoch}/commits/*.json"))
+    assert second.stat().st_mtime - first.stat().st_mtime > SECONDS_PER_DAY / 2
+
+
 def test_a_draft_of_a_scenario_runs_under_the_site_and_weather_it_asks_for(tmp_path: Path) -> None:
     with _named_as_the_uploaded(tmp_path) as made:
         ran = drafts.run(

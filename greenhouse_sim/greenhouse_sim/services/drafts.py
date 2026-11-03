@@ -53,6 +53,7 @@ from greenhouse_sim.services.scenarios import (
     DEFAULT_WEATHER,
     ScenarioSummary,
     scenario_summary,
+    weather_base,
     with_weather,
 )
 from greenhouse_sim.world.site import DEFAULT_SITE, Site
@@ -288,7 +289,8 @@ def _kept_from_its_scenario(
         return {}
     source = entry.config
     kept: dict[str, object] = {} if "site" in asked.model_fields_set else {"site": source.site}
-    if asked.weather == DEFAULT_WEATHER:
+    if weather_base(asked.weather) == DEFAULT_WEATHER:
+        # What the name overrides is applied to these (`with_weather`).
         kept |= {
             "weather": source.weather,
             "cloud_cover_pct": source.cloud_cover_pct,
