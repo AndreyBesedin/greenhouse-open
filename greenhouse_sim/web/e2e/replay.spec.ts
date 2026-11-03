@@ -131,7 +131,7 @@ test("a stored run is forked from the moment shown, and stays there to go back t
   // A new epoch, at an address of its own, naming where it comes from.
   await expect(page).not.toHaveURL(parent);
   await expect(page.getByTestId("replay-subtitle")).toContainText(
-    "forked from epoch 0 at Day 2, 00:00",
+    "forked from epoch 0 at Day 1, 24:00",
   );
   await expect(page.getByTestId("replay-moment")).toHaveText("Day 1, 24:00");
   await expect(page.locator("canvas")).toBeVisible();
