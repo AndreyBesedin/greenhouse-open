@@ -9,6 +9,10 @@ export type { Status, StoredRun };
  * (`GET /api/runs`, P17.5). */
 export const STORED_RUNS_URL = "/api/runs";
 
+/** How long after an answer the runs kept are asked for again, while one is
+ * still being computed. */
+export const RUNS_ASKED_EVERY_MS = 2000;
+
 export type StoredRunsState =
   | { status: "loading" }
   | { status: "unavailable"; reason: string }

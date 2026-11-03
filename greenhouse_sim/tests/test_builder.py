@@ -212,7 +212,7 @@ def test_a_file_refused_says_which_field_is_at_fault() -> None:
     [
         ("{not json}", "", "not JSON"),
         ("[1, 2]", "", "not a JSON object"),
-        ('{"unexpected": "document"}', "schema_version", "format None"),
+        ('{"unexpected": "document"}', "schema_version", "no format named"),
         (json.dumps({"schema_version": SCHEMA_VERSION + 1}), "schema_version", "format"),
         (json.dumps({"schema_version": True}), "schema_version", "format True"),
         (json.dumps({"schema_version": "4"}), "schema_version", "format '4'"),
@@ -234,6 +234,14 @@ def test_a_file_that_is_no_installation_is_refused(text: str, field: str, said: 
 
     (problem,) = refused.value.problems
     assert (problem.field, said in problem.message) == (field, True)
+
+
+def test_what_is_not_json_is_said_so_without_the_parsers_words() -> None:
+    with pytest.raises(InstallationFileError) as refused:
+        import_installation("{not json}")
+
+    (problem,) = refused.value.problems
+    assert problem.message == "not JSON"
 
 
 def test_a_file_giving_a_row_two_crops_says_where() -> None:
