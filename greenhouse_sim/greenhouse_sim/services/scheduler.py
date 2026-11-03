@@ -2,12 +2,14 @@
 in a process of its own, up to a number, and queues the rest.
 
 A run asked for is an epoch started in the run store, `queued`, and a worker
-takes it when there is room: a process that builds its own simulator, executes
-the epoch into the store (`workers.execute`) and ends. Several runs of one
-scenario, at different seeds as when policies are trained, are several
-epochs, each a process. The store is the only channel between a worker and
-the API, so that whoever reads an epoch reads it while it is computed, as far
-as the last commit names (`stored_playback`).
+takes it when there is room: a process given a store's address and an epoch and
+nothing else (decision 0067), which builds its own simulator from what the
+epoch carries, works the epoch out into the store (`workers.resume`, the same
+for one begun and one not) and ends. Several runs of one scenario, at different
+seeds as when policies are trained, are several epochs, each a process. The
+store is the only channel between a worker and the API, so that whoever reads an
+epoch reads it while it is computed, as far as the last commit names
+(`stored_playback`).
 
 A process is the worker because P17.1 measured what a thread costs a process
 that is working: 46% of its speed against 5% for another process.
@@ -19,7 +21,6 @@ that resumes it. An epoch still `queued` or `running` when the producer that
 started it is gone is found at startup (`interrupted.mark`).
 """
 
-import importlib
 import logging
 import multiprocessing
 import threading
@@ -30,7 +31,7 @@ from multiprocessing.context import SpawnProcess
 from pathlib import Path
 from typing import Final
 
-from greenhouse_sim.services import forks, interrupted
+from greenhouse_sim.services import forks, interrupted, scenario_files
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound
 from greenhouse_sim.services.interventions import Asked
 from greenhouse_sim.services.run_store import EpochStore, FolderStore, Status, StoredRun, stored_run
@@ -41,35 +42,41 @@ from greenhouse_sim.services.workers import (
     Free,
     Paced,
     check_resumable,
-    execute,
     queued,
+    scenario_file_of,
 )
 from greenhouse_sim.services.workers import resume as carry_on
 
 logger = logging.getLogger(__name__)
 
-# What a worker builds its simulator with: a name, `module:function`, since a
-# worker is a process that starts from nothing. A simulator whose scenarios
-# are not the packaged ones names its own.
-PACKAGED: Final = "greenhouse_sim.services.simulator:Simulator"
 # How often the scheduler looks at its workers.
 LOOK_EVERY_S: Final = 0.1
 # How long a worker told to end has before it is killed.
 END_WITHIN_S: Final = 10.0
 
 
-def work(
-    root: str, run_id: str, epoch: int, driver: Driver, made_by: str, *, resuming: bool = False
-) -> None:
-    """A worker's process: executes the epoch `epoch` of the run `run_id` in
-    the store under `root`, or carries it on if it is `resuming`, with a
-    simulator `made_by` makes, and exits with 0 if the epoch finished."""
-    module, _, name = made_by.partition(":")
-    simulator = getattr(importlib.import_module(module), name)()
-    with simulator:
-        kept = EpochStore(FolderStore(Path(root)), run_id, epoch)
-        status = (carry_on if resuming else execute)(simulator, kept, driver)
+def work(root: str, run_id: str, epoch: int) -> None:
+    """A worker's process: works out the epoch `epoch` of the run `run_id` in
+    the store under `root`, from all that the store holds of it, and exits with
+    0 if the epoch finished."""
+    kept = EpochStore(FolderStore(Path(root)), run_id, epoch)
+    manifest = kept.manifest()
+    pace = manifest.seconds_per_day
+    with Simulator() as simulator:
+        if manifest.scenario_file is not None:
+            scenario_files.take_up(simulator, kept.objects, manifest.scenario_file)
+        status = carry_on(simulator, kept, Free() if pace is None else Paced(pace))
     raise SystemExit(0 if status == Status.FINISHED else 1)
+
+
+def _pace(driver: Driver | None) -> float | None:
+    """The pace an epoch's manifest gives its worker. A stepped driver takes its
+    moments from its caller's process, which a worker is not."""
+    if driver is None or isinstance(driver, Free):
+        return None
+    if isinstance(driver, Paced):
+        return driver.seconds_per_day
+    raise InvalidRequest("a worker advances its epoch freely or at a pace")
 
 
 @dataclass(frozen=True)
@@ -85,7 +92,6 @@ class Worker:
 class _Job:
     run_id: str
     epoch: int
-    driver: Driver
     resuming: bool = False
 
 
@@ -93,16 +99,13 @@ class Scheduler:
     """The workers of a simulator whose run store is a folder: at most `limit`
     at once, the rest waiting in the order they were asked for."""
 
-    def __init__(
-        self, simulator: Simulator, root: Path, *, limit: int, made_by: str = PACKAGED
-    ) -> None:
+    def __init__(self, simulator: Simulator, root: Path, *, limit: int) -> None:
         if limit < 1:
             raise ValueError(f"a scheduler runs one worker at least, not {limit}")
         self._simulator = simulator
         self._root = root
         self._objects = FolderStore(root)
         self._limit = limit
-        self._made_by = made_by
         # A worker is a process started from nothing, not a copy of this one
         # with its threads and locks.
         self._context = multiprocessing.get_context("spawn")
@@ -128,16 +131,20 @@ class Scheduler:
     ) -> StoredRun:
         """Asks for a run of `scenario_id` at `layout` and `seed`: a new epoch
         of it, started in the store, executed when a worker is free. A driver
-        takes the epoch as fast as it can go, or at a pace; a stepped one
-        takes its moments from its caller's process, which a worker is not."""
-        chosen = Free() if driver is None else driver
-        if not isinstance(chosen, Free | Paced):
-            raise InvalidRequest("a worker advances its epoch freely or at a pace")
+        takes the epoch as fast as it can go, or at a pace."""
+        pace = _pace(driver)
         with self._lock:
             if self._closed.is_set():
                 raise Conflict("the workers are closed")
-            epoch = queued(self._simulator, self._objects, scenario_id, layout=layout, seed=seed)
-            self._waiting.append(_Job(epoch.run_id, epoch.epoch, chosen))
+            epoch = queued(
+                self._simulator,
+                self._objects,
+                scenario_id,
+                layout=layout,
+                seed=seed,
+                seconds_per_day=pace,
+            )
+            self._waiting.append(_Job(epoch.run_id, epoch.epoch))
             self._launch()
             return stored_run(self._objects, epoch.run_id, epoch.epoch)
 
@@ -147,11 +154,10 @@ class Scheduler:
         there is room. An epoch the store still calls `running` whose producer
         is gone is found interrupted first, under the lock the epoch is queued
         under, so that two requests for it are told apart: the second finds
-        the epoch queued. Refused, as `workers.check_resumable` says, if it
-        cannot be; the store is not changed by a refusal."""
-        chosen = Free() if driver is None else driver
-        if not isinstance(chosen, Free | Paced):
-            raise InvalidRequest("a worker advances its epoch freely or at a pace")
+        the epoch queued. Refused, as `workers.check_resumable` and
+        `workers.scenario_file_of` say, if it cannot be; the store is not
+        changed by a refusal."""
+        pace = _pace(driver)
         key = (run_id, epoch)
         if epoch not in stored_epochs(self._objects, run_id):
             raise NotFound(f"run {run_id} has no epoch {epoch} in the store")
@@ -168,8 +174,9 @@ class Scheduler:
                     "only an interrupted one resumes"
                 )
             check_resumable(kept)
-            kept.set_status(Status.QUEUED)
-            self._waiting.append(_Job(run_id, epoch, chosen, resuming=True))
+            scenario_file = scenario_file_of(self._simulator, kept)
+            kept.queue_again(scenario_file=scenario_file, seconds_per_day=pace)
+            self._waiting.append(_Job(run_id, epoch, resuming=True))
             self._launch()
         return stored_run(self._objects, run_id, epoch)
 
@@ -186,16 +193,21 @@ class Scheduler:
         """Asks for a fork of an epoch at `at_s` (`forks.fork`): a new epoch,
         taken by a worker when there is room, which carries it on from the
         state it inherits as it carries on an epoch interrupted."""
-        chosen = Free() if driver is None else driver
-        if not isinstance(chosen, Free | Paced):
-            raise InvalidRequest("a worker advances its epoch freely or at a pace")
+        pace = _pace(driver)
         with self._lock:
             if self._closed.is_set():
                 raise Conflict("the workers are closed")
             made = forks.fork(
-                self._simulator, self._objects, run_id, epoch, at_s, layout=layout, changes=changes
+                self._simulator,
+                self._objects,
+                run_id,
+                epoch,
+                at_s,
+                layout=layout,
+                changes=changes,
+                seconds_per_day=pace,
             )
-            self._waiting.append(_Job(made.run_id, made.epoch, chosen, resuming=True))
+            self._waiting.append(_Job(made.run_id, made.epoch, resuming=True))
             self._launch()
             return stored_run(self._objects, made.run_id, made.epoch)
 
@@ -262,8 +274,7 @@ class Scheduler:
             job = self._waiting.popleft()
             process = self._context.Process(
                 target=work,
-                args=(str(self._root), job.run_id, job.epoch, job.driver, self._made_by),
-                kwargs={"resuming": job.resuming},
+                args=(str(self._root), job.run_id, job.epoch),
                 name=f"worker of {job.run_id}",
                 daemon=True,
             )

@@ -10,8 +10,13 @@ A draft runs as a scenario of its own: its installation, at a revision,
 with what a scenario adds to a house, a period, a site, a seed and a
 weather, registered with the simulator (decision 0048). It is then listed,
 drawn and run as any scenario is, by its identifier, until the simulator
-closes. A draft that the assessment says cannot run is refused, with each
-reason.
+closes, or for as long as the store keeps the file of an epoch of it
+(`services.scenario_files.carry`). A draft that the assessment says cannot
+run is refused, with each reason.
+
+A draft named as a scenario registered with the simulator is a change to that
+scenario's house, as a draft opened from a scenario file is: its run stays under
+that scenario's site and weather, unless it asks for others.
 """
 
 import logging
@@ -94,7 +99,8 @@ class DraftRun(BaseModel):
     """What a draft's run adds to its installation: a scenario's own fields.
     It is named `<draft>_r<revision>`, in lower case with `_` for what a
     scenario's name cannot hold, unless it is given a name; the rest is as
-    a scenario's defaults are."""
+    a scenario's defaults are, or as the scenario the draft is named as has
+    them (`_kept_from_its_scenario`)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -248,6 +254,7 @@ def run(
                 "random_seed": asked.random_seed,
                 "site": asked.site,
             }
+            | _kept_from_its_scenario(simulator, draft_id, asked)
             | dict(house)
         )
     except CannotRun as error:
@@ -267,6 +274,27 @@ def run(
         extra={"event": "registered", "label": entry.scenario_id},
     )
     return scenario_summary(simulator.catalogue, entry.scenario_id)
+
+
+def _kept_from_its_scenario(
+    simulator: Simulator, draft_id: str, asked: DraftRun
+) -> dict[str, object]:
+    """What a run of a draft named as a registered scenario keeps of it: its
+    site, unless the run names one, and its weather with what overrides it,
+    unless the run asks for another. Nothing for a packaged scenario's name,
+    which a draft does not come from."""
+    entry = simulator.catalogue.entry(draft_id)
+    if entry is None or entry.packaged:
+        return {}
+    source = entry.config
+    kept: dict[str, object] = {} if "site" in asked.model_fields_set else {"site": source.site}
+    if asked.weather == DEFAULT_WEATHER:
+        kept |= {
+            "weather": source.weather,
+            "cloud_cover_pct": source.cloud_cover_pct,
+            "wind_from_deg": source.wind_from_deg,
+        }
+    return kept
 
 
 def _store(simulator: Simulator) -> DraftStore:

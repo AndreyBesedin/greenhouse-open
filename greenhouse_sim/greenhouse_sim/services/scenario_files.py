@@ -8,6 +8,12 @@ registers the scenario again. It never starts a run: it answers the house and
 the run settings, for the setup builder to open. A scenario under a recorded
 weather the file does not carry and this process does not offer is not
 registered; the answer names the weather.
+
+An epoch of a scenario that is not packaged carries its file too (decision
+0067): written beside the uploaded ones when the epoch is started, with its
+recording inside, and named by its manifest, so that a worker needs only the
+store (`carry`, `take_up`). A simulator started on the store knows these
+scenarios again as it knows the uploaded ones.
 """
 
 import logging
@@ -16,7 +22,7 @@ from typing import TYPE_CHECKING, Final
 
 from pydantic import BaseModel, ConfigDict, NonNegativeInt, PositiveInt, ValidationError
 
-from greenhouse_sim.scenarios.catalogue import ScenarioRefused
+from greenhouse_sim.scenarios.catalogue import ScenarioRefused, Scenarios, config_digest
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.installation import CannotCopy, Installation, scenario_installation
 from greenhouse_sim.scenarios.scenario_files import (
@@ -32,6 +38,7 @@ from greenhouse_sim.services.errors import (
     ServiceError,
     first_reason,
 )
+from greenhouse_sim.services.run_store import ObjectStore, StoreCorrupt
 from greenhouse_sim.services.scenarios import (
     DEFAULT_WEATHER,
     ScenarioSummary,
@@ -115,12 +122,7 @@ def download(simulator: Simulator, scenario_id: str, with_recording: bool) -> Sc
     `with_recording` is false. Not found if the simulator does not know the
     scenario; refused if it cannot be written as a file."""
     config = scenario(simulator.catalogue, scenario_id)
-    try:
-        text = export_scenario_file(config, with_recording=with_recording)
-    except ScenarioFileError as error:
-        raise InvalidRequest(str(error), [(error.field, error.message)]) from None
-    except FileNotFoundError as error:
-        raise NotFound(f"{scenario_id!r}: {error}") from None
+    text = _written(config, with_recording=with_recording)
     carried = with_recording and isinstance(config.weather, RecordedWeather)
     return ScenarioDownload(
         file_name=f"{scenario_id}{DOWNLOAD_SUFFIX}", text=text, has_recording=carried
@@ -136,8 +138,55 @@ def upload(simulator: Simulator, text: str) -> ScenarioUploaded:
     uploaded = _registered(simulator, text)
     if uploaded.scenario is None or simulator.runs is None:
         return uploaded
-    simulator.runs.put(f"{KEPT_FOLDER}{uploaded.file_digest}{FILE_SUFFIX}", text.encode())
+    simulator.runs.put(kept_name(uploaded.file_digest), text.encode())
     return uploaded.model_copy(update={"kept": True})
+
+
+def carry(catalogue: Scenarios, objects: ObjectStore, scenario_id: str) -> str | None:
+    """The digest of a scenario's file, written into `objects` for an epoch of
+    it to name, with its recording inside; none for a packaged scenario, which
+    every simulator has. Refused if the scenario cannot be written as a file,
+    or would not read back as the same scenario: a worker would run another."""
+    config = scenario(catalogue, scenario_id)
+    entry = catalogue.entry(scenario_id)
+    if entry is not None and entry.packaged:
+        return None
+    text = _written(config, with_recording=True)
+    try:
+        read = import_scenario_file(text)
+    except ScenarioFileError as error:
+        raise InvalidRequest(str(error), [(error.field, error.message)]) from None
+    if config_digest(read.config) != config_digest(config):
+        raise InvalidRequest(f"{scenario_id!r} does not read back from its file as it is")
+    name = kept_name(read.digest)
+    if objects.size(name) is None:
+        objects.put(name, text.encode())
+    return read.digest
+
+
+def take_up(simulator: Simulator, objects: ObjectStore, digest: str) -> None:
+    """Registers the scenario of a file an epoch names, for a worker with no
+    other way to know it. Refused if the file is gone or is not that file."""
+    data = objects.get(kept_name(digest))
+    if data is None:
+        raise StoreCorrupt(f"the scenario file {digest} an epoch names is gone")
+    if _registered(simulator, data.decode()).file_digest != digest:
+        raise StoreCorrupt(f"the scenario file {digest} an epoch names is not what it says")
+
+
+def kept_name(digest: str) -> str:
+    """Where in the run store the file of this digest is kept."""
+    return f"{KEPT_FOLDER}{digest}{FILE_SUFFIX}"
+
+
+def _written(config: ScenarioConfig, *, with_recording: bool) -> str:
+    """A scenario's file, as a service refuses one that cannot be written."""
+    try:
+        return export_scenario_file(config, with_recording=with_recording)
+    except ScenarioFileError as error:
+        raise InvalidRequest(str(error), [(error.field, error.message)]) from None
+    except FileNotFoundError as error:
+        raise NotFound(f"{config.greenhouse_id!r}: {error}") from None
 
 
 def restore(simulator: Simulator) -> int:
