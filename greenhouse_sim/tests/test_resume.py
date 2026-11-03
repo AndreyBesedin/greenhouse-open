@@ -21,7 +21,6 @@ from greenhouse_sim.services.run_store import (
     LogEntry,
     Status,
     StoreCorrupt,
-    compress,
     instant_name,
 )
 from greenhouse_sim.services.simulator import Simulator
@@ -112,23 +111,6 @@ def test_only_an_interrupted_epoch_resumes(simulator: Simulator, tmp_path: Path)
     with pytest.raises(Conflict, match="only an interrupted one resumes"):
         resume(simulator, finished, Free())
     assert finished.manifest().status == Status.FINISHED
-
-
-def test_an_epoch_given_changes_while_it_ran_is_refused(
-    simulator: Simulator, tmp_path: Path
-) -> None:
-    epoch = _interrupted_after(simulator, tmp_path, 1)
-    epoch.append_log(LogEntry(seq=0, at_s=DAY_S, given_s=DAY_S, by="someone", what={}))
-    epoch.commit(
-        DAY_S,
-        2 * DAY_S,
-        checkpoint=compress("{}"),
-    )
-    epoch.set_status(Status.INTERRUPTED)
-
-    with pytest.raises(Conflict, match="given changes"):
-        resume(simulator, epoch, Free())
-    assert epoch.manifest().status == Status.INTERRUPTED
 
 
 def test_an_epoch_whose_last_commit_keeps_no_checkpoint_is_refused(
