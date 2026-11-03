@@ -1,6 +1,6 @@
 # 0067: A run's resources are counted and limited, and all it needs is in the store
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-11-03
 
 ## Context

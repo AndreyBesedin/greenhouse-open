@@ -1,8 +1,8 @@
 # P18: Resources counted and limited, and a run that can move
 
-**Status:** proposed: the design below, with decision
-[0067](../decisions/0067-a-runs-resources-are-counted-and-limited-and-all-it-needs-is-in-the-store.md),
-which this document's pull request records. Part of the
+**Status:** accepted, not begun: the design below, with decision
+[0067](../decisions/0067-a-runs-resources-are-counted-and-limited-and-all-it-needs-is-in-the-store.md).
+Part of the
 [simulator roadmap](README.md).
 
 ## Goal
