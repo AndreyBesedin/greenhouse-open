@@ -16,7 +16,7 @@ export const POSITION_SCHEMA = {
       "type": "string"
     }
   },
-  "description": "Where a position stands over its epoch: the epoch, the moment, both as\nan instant and as seconds into the run (as the viewer asks for a moment),\nwhether it plays or follows, and how far the epoch is committed.",
+  "description": "Where a position stands over its epoch: the epoch, the moment, both as\nan instant and as seconds into the run (as the viewer asks for a moment),\nwhether it plays or follows, how far the epoch is committed, and the\nchanges given to it, as its plan holds them, spelled as a run's `&targets=`,\n`&schedule=` and `&crop=` write them, for the viewer to draw it under.",
   "properties": {
     "position_id": {
       "title": "Position Id",
@@ -96,6 +96,72 @@ export const POSITION_SCHEMA = {
         }
       ],
       "title": "Duration S"
+    },
+    "targets": {
+      "default": [],
+      "items": {
+        "maxItems": 3,
+        "minItems": 3,
+        "prefixItems": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          }
+        ],
+        "type": "array"
+      },
+      "title": "Targets",
+      "type": "array"
+    },
+    "commands": {
+      "default": [],
+      "items": {
+        "maxItems": 3,
+        "minItems": 3,
+        "prefixItems": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          }
+        ],
+        "type": "array"
+      },
+      "title": "Commands",
+      "type": "array"
+    },
+    "crop": {
+      "default": [],
+      "items": {
+        "maxItems": 4,
+        "minItems": 4,
+        "prefixItems": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "string"
+          }
+        ],
+        "type": "array"
+      },
+      "title": "Crop",
+      "type": "array"
     }
   },
   "required": [
@@ -114,7 +180,10 @@ export const POSITION_SCHEMA = {
     "following",
     "seconds_per_day",
     "frontier_s",
-    "duration_s"
+    "duration_s",
+    "targets",
+    "commands",
+    "crop"
   ],
   "title": "PositionState",
   "type": "object"

@@ -15,9 +15,11 @@ draw any moment of a run: for the run the epoch's manifest names (`run`).
 Seeking restores the nearest checkpoint the store holds into the simulator's
 kept states, so that those services take the state over instead of working the
 days before it out again; a checkpoint made by another version of the
-scenario or its models is not restored, and the days are worked out. Changes
-made to a running epoch are not in the store's log yet (P17.8): the scene of
-an epoch that had some is its run's own.
+scenario or its models is not restored, and the days are worked out. The changes
+given to the epoch are in its log (P17.8), and its scene is drawn under the plan
+they made, as the checkpoint at its frontier keeps it: what it carried out by
+then, whatever it was refused, and whoever may do what on the simulator reading
+it. A position stands at or before the frontier, so it needs no more than that.
 """
 
 import json
@@ -50,7 +52,7 @@ from greenhouse_sim.services.run_store import (
     decompress,
 )
 from greenhouse_sim.services.run_store import epochs as stored_epochs
-from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.runs import RunPlan, RunRequest
 from greenhouse_sim.services.sensors import run_start
 
 if TYPE_CHECKING:
@@ -66,7 +68,9 @@ ID_BYTES: Final = 6
 class PositionState(BaseModel):
     """Where a position stands over its epoch: the epoch, the moment, both as
     an instant and as seconds into the run (as the viewer asks for a moment),
-    whether it plays or follows, and how far the epoch is committed."""
+    whether it plays or follows, how far the epoch is committed, and the
+    changes given to it, as its plan holds them, spelled as a run's `&targets=`,
+    `&schedule=` and `&crop=` write them, for the viewer to draw it under."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -86,6 +90,9 @@ class PositionState(BaseModel):
     seconds_per_day: float
     frontier_s: float
     duration_s: float | None
+    targets: list[tuple[float, str, float]] = []
+    commands: list[tuple[float, str, float]] = []
+    crop: list[tuple[float, str, str, str]] = []
 
 
 class Records[RecordT]:
@@ -119,10 +126,28 @@ class StoredEpoch:
         self._commits: list[Commit] = []
         # The outcomes read, and how many commits they were read at.
         self._outcomes: tuple[int, list[ActionOutcome]] = (-1, [])
+        # The plan through its frontier, and how many commits it was read at.
+        self._plan: tuple[int, RunPlan] = (0, RunPlan())
+
+    def plan(self) -> RunPlan:
+        """The plan it was worked out under up to its frontier, as the checkpoint
+        there keeps it; nothing to read if it was given no change."""
+        commits = len(self.commits())
+        with self._lock:
+            if commits == self._plan[0]:
+                return self._plan[1]
+        made = RunPlan()
+        if self.store.logged():
+            found = self.store.checkpoint_at(self.frontier_s())
+            if found is not None and found[1] == CHECKPOINT_TYPE:
+                made = RunPlan.model_validate(json.loads(decompress(found[0])).get("plan", {}))
+        with self._lock:
+            self._plan = (commits, made)
+        return made
 
     def run(self) -> RunRequest:
         """The run the epoch is of, as the by-moment services take it."""
-        return RunRequest(self.scenario_id, layout=self.layout, seed=self.seed)
+        return RunRequest(self.scenario_id, layout=self.layout, plan=self.plan(), seed=self.seed)
 
     def status(self) -> Status:
         return self.store.manifest().status
@@ -281,6 +306,7 @@ class Position:
 
     def _state(self, frontier: float) -> PositionState:
         epoch = self.epoch
+        planned = epoch.plan()
         return PositionState(
             position_id=self.position_id,
             scenario_id=epoch.scenario_id,
@@ -298,6 +324,9 @@ class Position:
             seconds_per_day=self._seconds_per_day,
             frontier_s=frontier,
             duration_s=epoch.duration_s,
+            targets=list(planned.targeted()),
+            commands=list(planned.commanded()),
+            crop=list(planned.crop_spelled()),
         )
 
     def state(self) -> PositionState:

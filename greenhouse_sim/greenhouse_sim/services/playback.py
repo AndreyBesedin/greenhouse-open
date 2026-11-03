@@ -584,19 +584,6 @@ class Playback:
                 commit.counts[Kind.OUTCOMES] for commit in self._store.commits()
             )
 
-    def planned_by(self, epoch: int, logged: Sequence[LogEntry]) -> RunPlan:
-        """The plan an epoch's log makes of this run, which has not begun: what
-        a reader of the epoch draws it under. Nothing is written or worked out,
-        and what it holds at a moment is its log's up to then."""
-        with self._lock:
-            self._epoch = self._gateway.epoch = epoch
-            self._replaying = True
-            for entry in logged:
-                self._gateway.advance(self._executor.instant(entry.given_s))
-                self._apply(entry)
-            self._replaying = False
-            return self._executor.plan()
-
     def _carry_kept(self, before_s: float) -> None:
         """What the run made of crop actions on the days before `before_s`,
         which are not worked out again: as their outcomes in the store say. One
