@@ -59,6 +59,7 @@ function Probe({ fetchFn, runId = "run-1" }: { fetchFn: typeof fetch; runId?: st
   return (
     <div>
       <span data-testid="status">{replay.load.status}</span>
+      <span data-testid="refused">{replay.refused}</span>
       <span data-testid="time">
         {replay.load.status === "loaded" ? replay.load.position.time_s : ""}
       </span>
@@ -184,6 +185,35 @@ describe("a stored epoch replayed", () => {
 
     expect(calls.some((c) => c.url === "/api/positions/p1/seek?t=3600")).toBe(true);
     expect(rendered.container.querySelector('[data-testid="time"]')?.textContent).toBe("3600");
+  });
+
+  it("says why a move was refused, keeps the place it had, and clears it on the next", async () => {
+    let gone = true;
+    const answers = simulator();
+    const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) =>
+      gone && String(input).endsWith("/play")
+        ? Response.json({ error: "no position 'p1'" }, { status: 404 })
+        : answers.fetchFn(input, init),
+    ) as unknown as typeof fetch;
+    rendered = render(<Probe fetchFn={fetchFn} />);
+    await settle();
+    const { container } = rendered;
+    const refused = () => container.querySelector('[data-testid="refused"]')?.textContent;
+    expect(refused()).toBe("");
+
+    pressed(container, "play");
+    await settle();
+    await settle();
+
+    expect(refused()).toBe("no position 'p1'");
+    expect(container.querySelector('[data-testid="status"]')?.textContent).toBe("loaded");
+    expect(shownTime(container)).toBe("0");
+
+    gone = false;
+    pressed(container, "play");
+    await settle();
+    await settle();
+    expect(refused()).toBe("");
   });
 
   it("says why a position could not be opened", async () => {
