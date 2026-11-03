@@ -62,6 +62,6 @@ files = ["greenhouse_sim", "tests"]
 testpaths = ["tests"]
 addopts = "--import-mode=importlib"
 markers = [
-    "slow: slower tests excluded from the pre-commit fast pass",
+    "slow: 30 s or more; left out of the pre-push hook and of a pull request, run on main",
     "cfd: runs OpenFOAM, natively or in Docker; only with -m cfd, and skipped without it",
 ]

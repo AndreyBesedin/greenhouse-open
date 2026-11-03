@@ -158,6 +158,16 @@ def test_a_push_is_planned_from_the_refs_pre_commit_names(
     assert _plan(capsys, "--pushed")["parts"] == ["root"]
 
 
+def test_ci_skips_the_slow_tests_on_a_pull_request_and_runs_them_on_main() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
+    command = re.search(r"scripts/check\.py --only \$\{\{ matrix\.part \}\}(.*)", workflow)
+
+    assert command, "ci.yml's repository checks do not run a part of check.py"
+    assert (
+        command.group(1).strip() == "${{ github.event_name == 'pull_request' && '--fast' || '' }}"
+    )
+
+
 def test_ci_checks_every_part_when_its_plan_is_missing() -> None:
     workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
     fallback = re.search(r"fromJSON\(needs\.changes\.outputs\.parts \|\| '(\[[^']*\])'\)", workflow)

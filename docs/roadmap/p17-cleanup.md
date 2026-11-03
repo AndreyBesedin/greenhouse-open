@@ -16,23 +16,25 @@ takes one checks first that it is still there.
 
 - [x] **The builder has no way home.** Its only ways out are "Save and go back",
   which saves, and a link that appears after a run. The viewer has a Home button.
-- [ ] **A scene opened without following a run is not framed on the house.** The
+- [x] **A scene opened without following a run is not framed on the house.** The
   camera stays at its default (5.2, -5.2, 5.2) and the house runs off under the View
-  panel. Whether this came before the landing page is not known.
+  panel. It came before the landing page: the presets have looked at the world's
+  origin since the viewer's first camera, and only a followed run was framed.
 - [x] **A house with no equipment has no climate run.** It has no climate field and
   gets fixed light, not the sun. It now has one, as any other house has: its crop
   already lived in that run's house air, so the field's grid run is what is added,
   about 6 to 12 s on tomato_compartment for the first moment drawn in an hour of the
   run. Its sensors and its run's id stay its own airflow's, so that no run or record
-  changes: what a sensor reads there differs from the climate drawn, by about 10 °C
-  in tomato_compartment's air.
+  changes. The sensor lab, the one packaged house with sensors and no equipment, reads
+  its prescribed gradient on purpose, about 8 °C from the climate drawn beside it.
 
 ### Low to medium
 
 - [x] **A replay reads one moment three ways:** "Day 10, 02:24", "day 9, 2 h 24 min",
   and a tick "day 0" under "Day 1, 00:00".
-- [ ] **Deleting a running run shows a raw id** and says to stop the run, and the
-  dialog has no stop control.
+- [x] **Deleting a running run shows a raw id** and says to stop the run, and the
+  dialog has no stop control. It says which run, by its seed and epoch, and what to
+  do, and a worker's run has a *Stop* button beside it.
 
 ### Low
 
@@ -43,7 +45,7 @@ takes one checks first that it is still there.
 - [ ] A saved draft is not on the start page.
 - [ ] `GET /playback` shows a red 404 in the console on a first run.
 - [ ] Close drops the keyboard focus.
-- [ ] `/#runs=x` stays in the address, and `/#run=no_such` shows nothing.
+- [x] `/#runs=x` stays in the address, and `/#run=no_such` shows nothing.
 - [ ] Run rows are not aligned, and their links keep the browser's default colour.
 
 **Builder**
@@ -63,18 +65,19 @@ takes one checks first that it is still there.
 
 **Replay**
 
-- [ ] Play at the end does nothing.
-- [ ] `aria-valuenow` can be fractional.
-- [ ] The legend says "not computed yet" on a finished run.
-- [ ] At phone width the panel covers the scene, and the last tick is missing.
+- [x] Play at the end does nothing.
+- [x] `aria-valuenow` can be fractional.
+- [x] The legend says "not computed yet" on a finished run.
+- [ ] At phone width the panel covers the scene. The last tick is labelled now.
 
 ### From a second walk
 
 A walk of the merged pages at commit `2db9f3b7`, on the same setup, with forks and the
 panels in a replay.
 
-- [ ] **Medium: forks cannot be told apart on the start page or in the runs dialog.**
-  They read as rows of "Seed 143 · epoch N".
+- [x] **Medium: forks cannot be told apart on the start page or in the runs dialog.**
+  They read as rows of "Seed 143 · epoch N". A fork's row now says what it came from,
+  as its replay's header does.
 - [ ] **Low to medium: a fork's controls stay enabled at a run's end.** "Fork from here
   with these levels" and the targets form can still be used, and the refusal gives the
   end in seconds ("the run ends at 1209600 s").

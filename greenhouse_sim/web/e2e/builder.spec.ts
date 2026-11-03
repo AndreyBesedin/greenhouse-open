@@ -140,7 +140,7 @@ test("builder: a house drafted, edited, saved, exported, run, reopened and impor
   );
 });
 
-test("builder: a draft saved and a run of it started in one step, followed in the viewer", async ({
+test("builder: a draft saved and a run of it started in one step, on a worker, in its replay", async ({
   page,
 }) => {
   test.setTimeout(120_000);
@@ -157,12 +157,24 @@ test("builder: a draft saved and a run of it started in one step, followed in th
   await page.locator(".builder-run").getByLabel("Days").fill("2");
   await page.getByRole("button", { name: "Save and start a run" }).click();
 
-  await expect(page).toHaveURL(new RegExp(`/view\\?scenario=${id}_r1.*follow=1`), ARRIVES);
+  await expect(page).toHaveURL(new RegExp(`/replay\\?run=${id}_r1.*follow=1`), ARRIVES);
+  await expect(page.getByTestId("replay-status")).toHaveText(/Queued|Running|Finished/, ARRIVES);
   await expect(page.getByTestId("scene-status")).toContainText(`${id}_r1`, ARRIVES);
-  // A house with no equipment has a climate run as any other: the view draws
-  // it, and no moment of the run is said not to be drawn.
-  await expect(page).toHaveURL(/field=climate/, ARRIVES);
-  await expect(page.getByTestId("playback-status")).toContainText("Following run", ARRIVES);
+  // A worker computes it, which knows the scenario only from the store.
+  await expect
+    .poll(
+      async () =>
+        Number(
+          await page
+            .getByRole("slider", { name: "Position in the run" })
+            .getAttribute("aria-valuemax"),
+        ),
+      { timeout: 90_000 },
+    )
+    .toBeGreaterThan(0);
+  await expect(page.getByTestId("replay-status")).toHaveText(/Running|Finished/);
+  // A house with no equipment has a climate run as any other: the replay draws it,
+  // and no moment of the run is said not to be drawn.
   await expect(page.getByTestId("climate-failed")).toHaveCount(0);
   await expect(page.getByText("cannot be read")).toHaveCount(0);
 });

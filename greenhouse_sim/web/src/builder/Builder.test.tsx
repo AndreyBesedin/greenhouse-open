@@ -145,29 +145,28 @@ const SCENARIO = {
   thermostat: null,
 };
 
-const PLAYBACK = {
+// The run a worker is asked for: an epoch queued.
+const STARTED = {
+  run_id: "my_greenhouse_run-climate-abc",
+  epoch: 2,
   scenario_id: "my_greenhouse_run",
-  run_id: "my_greenhouse_run-abc",
+  seed: null,
   layout: "default",
-  epoch: 0,
-  greenhouse_id: "my_greenhouse_run",
-  started_at: "2026-04-01T00:00:00Z",
-  simulated_now: "2026-04-01T00:00:00Z",
-  time_s: 0,
-  day: 0,
-  playing: true,
-  seconds_per_day: 10,
-  worked_out_s: 0,
-  every_s: 300,
-  targets: [],
-  commands: [],
-  crop: [],
+  status: "queued",
+  frontier_s: 0,
+  duration_s: 86400,
+  progress: 0,
+  created_at: null,
+  size_bytes: 0,
+  start_s: 0,
+  fork: null,
+  damaged: false,
 };
 
 /** A simulator that saves, runs a draft as a scenario and starts its run;
  * every request is kept, as its method and address with the body. */
 function runningDrafts(
-  starts: Response = answer(PLAYBACK),
+  starts: Response = answer(STARTED),
   registering: Promise<unknown> = Promise.resolve(),
 ): string[] {
   const asked: string[] = [];
@@ -194,7 +193,7 @@ function runningDrafts(
       await registering;
       return answer(SCENARIO);
     }
-    if (url.includes("/playback/start")) {
+    if (url.endsWith("/runs?seconds_per_day=10") && init?.method === "POST") {
       return starts;
     }
     if (url.startsWith("/api/drafts") || url.startsWith("/api/scenarios")) {
@@ -417,9 +416,9 @@ describe("the setup builder (P12.2)", () => {
       random_seed: 0,
     });
     expect(
-      asked.some((each) => each.startsWith("POST /api/scenarios/my_greenhouse_run/playback/start")),
+      asked.some((each) => each.startsWith("POST /api/scenarios/my_greenhouse_run/runs?")),
     ).toBe(true);
-    expect(went).toEqual(["/view?scenario=my_greenhouse_run&field=climate&follow=1"]);
+    expect(went).toEqual(["/replay?run=my_greenhouse_run-climate-abc&epoch=2&follow=1"]);
   });
 
   it("says that the run was registered and not started when the simulator refuses to start it (P17.11)", async () => {
@@ -516,8 +515,15 @@ describe("the setup builder (P12.2)", () => {
       (input) => input.value,
     );
     expect(fields).toEqual(["2026-03-01", "12", "3"]);
-    // A run made of the draft is of a copy: the file's own can be run as it is.
+    // A run made of the draft keeps the file's weather and site by its name alone,
+    // and the file's own can be run as it is.
     expect(said(page, "builder-uploaded-note")).toContain("opened from a scenario file");
+    expect(said(page, "builder-uploaded-note")).toContain(
+      "While its identifier is the file's, a run made here keeps the file's weather and site",
+    );
+    expect(said(page, "builder-uploaded-note")).toContain(
+      "Given another identifier, it runs under the default weather and site",
+    );
     expect(
       page.querySelector('[data-testid="builder-uploaded-note"] a')?.getAttribute("href"),
     ).toBe("/#run=shared_box");
@@ -591,7 +597,7 @@ describe("the setup builder (P12.2)", () => {
   it("starts no run for a draft left while it was being registered (P17.11)", async () => {
     let registered = () => {};
     const asked = runningDrafts(
-      answer(PLAYBACK),
+      answer(STARTED),
       new Promise((resolve) => {
         registered = () => resolve(undefined);
       }),
@@ -609,7 +615,7 @@ describe("the setup builder (P12.2)", () => {
     registered();
     await settled();
 
-    expect(asked.some((each) => each.includes("/playback/start"))).toBe(false);
+    expect(asked.some((each) => each.includes("/runs?"))).toBe(false);
     expect(went).toEqual([]);
     expect(said(shown.container, "builder-status")).toBe("");
   });

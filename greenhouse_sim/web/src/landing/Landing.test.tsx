@@ -5,9 +5,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DAY_S } from "../clock";
 import type { ScenarioSummary } from "../scenarios";
 import { type Rendered, render } from "../testing/render";
-import { followAddress } from "./follow";
 import { Landing } from "./Landing";
-import { REPOSITORY_URL } from "./paths";
+import { REPOSITORY_URL, replayAddress } from "./paths";
 import { RUNS_ASKED_EVERY_MS, type StoredRun } from "./storedRuns";
 
 // What the simulator sends of a scenario besides its name: how it grows its
@@ -41,28 +40,6 @@ const SCENARIOS: ScenarioSummary[] = [
   },
 ];
 
-/** A scenario's playback, as the simulator answers for it. */
-function playing(runId: string, epoch: number, layout = "default") {
-  return {
-    scenario_id: "reference_greenhouse",
-    run_id: runId,
-    layout,
-    epoch,
-    greenhouse_id: "reference_greenhouse",
-    started_at: "2026-02-28T23:00:00Z",
-    simulated_now: "2026-03-02T11:00:30Z",
-    time_s: 129_630,
-    day: 1,
-    playing: true,
-    seconds_per_day: 10,
-    worked_out_s: 172_800,
-    every_s: 300,
-    targets: [],
-    commands: [],
-    crop: [],
-  };
-}
-
 function run(more: Partial<StoredRun>): StoredRun {
   return {
     run_id: "reference_greenhouse-climate-abc",
@@ -78,6 +55,7 @@ function run(more: Partial<StoredRun>): StoredRun {
     size_bytes: 1024,
     start_s: 0,
     fork: null,
+    damaged: false,
     ...more,
   };
 }
@@ -282,6 +260,34 @@ describe("the page where a person decides what to do", () => {
     await vi.waitFor(() => expect(asks()).toBe(3));
   });
 
+  it("says so when the address asks for a scenario the simulator does not have", async () => {
+    simulator({ "/api/scenarios": SCENARIOS, "/api/runs": [] });
+    page = render(<Landing hash="#run=no_such" navigate={vi.fn()} />);
+    const { container } = page;
+
+    await vi.waitFor(() =>
+      expect(container.querySelector('[role="alert"]')?.textContent).toContain("no_such"),
+    );
+    expect(container.querySelector("dialog")).toBeNull();
+  });
+
+  it("leaves the address that asked for a dialog once the dialog is closed", async () => {
+    history.replaceState(null, "", "/#runs=tomgro_house");
+    simulator({ "/api/scenarios": SCENARIOS, "/api/runs": [] });
+    page = render(<Landing navigate={vi.fn()} />);
+    const { container } = page;
+    await vi.waitFor(() => expect(container.querySelector("dialog")).not.toBeNull());
+
+    const close = [...container.querySelectorAll("dialog button")].find(
+      (each) => each.textContent === "Close",
+    ) as HTMLButtonElement;
+    act(() => close.click());
+
+    expect(container.querySelector("dialog")).toBeNull();
+    expect(location.hash).toBe("");
+    expect(location.pathname).toBe("/");
+  });
+
   it("opens a scenario's form for a new run when the address asks for it", async () => {
     simulator({ "/api/scenarios": SCENARIOS, "/api/runs": [] });
     page = render(<Landing hash="#run=tomgro_house" navigate={vi.fn()} />);
@@ -293,7 +299,7 @@ describe("the page where a person decides what to do", () => {
     expect(container.querySelector("dialog form")).not.toBeNull();
   });
 
-  it("lists the latest runs in words, and offers to follow only one its playback is playing", async () => {
+  it("lists the latest runs in words, and follows only one being computed", async () => {
     const running = run({
       epoch: 1,
       seed: 2,
@@ -314,7 +320,6 @@ describe("the page where a person decides what to do", () => {
           }),
           run({ epoch: 3, status: "failed", frontier_s: 5 * DAY_S, created_at: null }),
         ],
-        "/api/scenarios/reference_greenhouse/playback": playing(running.run_id, 1),
       },
       "Recent runs",
     );
@@ -332,64 +337,9 @@ describe("the page where a person decides what to do", () => {
     expect(rows[2]).not.toContain("Oct");
     const follows = () =>
       [...container.querySelectorAll("a")].filter((each) => each.textContent === "Follow");
-    await vi.waitFor(() => expect(follows()).toHaveLength(1));
     expect(follows().map((each) => each.getAttribute("href"))).toEqual([
-      followAddress("reference_greenhouse"),
+      replayAddress(running.run_id, 1, true),
     ]);
-  });
-
-  it("does not offer to follow a run that its scenario's playback replaced", async () => {
-    const replaced = run({ epoch: 1, status: "running", progress: 0.3 });
-    const { container } = await shown(
-      {
-        "/api/scenarios": SCENARIOS,
-        "/api/runs": [replaced],
-        // The playback is at the run's next epoch by now.
-        "/api/scenarios/reference_greenhouse/playback": playing(replaced.run_id, 2),
-      },
-      "epoch 1",
-    );
-    // Wait for the playback to have been asked about.
-    await vi.waitFor(() =>
-      expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url))).toContain(
-        "/api/scenarios/reference_greenhouse/playback",
-      ),
-    );
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    });
-
-    expect(container.textContent).toContain("Running");
-    expect(
-      [...container.querySelectorAll("a")].filter((each) => each.textContent === "Follow"),
-    ).toHaveLength(0);
-  });
-
-  it("follows a run in the layout it has", async () => {
-    const moved = run({ status: "running", progress: 0.3, layout: "default~heater:-1:0.5" });
-    const { container } = await shown(
-      {
-        "/api/scenarios": SCENARIOS,
-        "/api/runs": [moved],
-        "/api/scenarios/reference_greenhouse/playback": playing(
-          moved.run_id,
-          0,
-          "default~heater:-1:0.5",
-        ),
-      },
-      "epoch 0",
-    );
-    await vi.waitFor(() =>
-      expect(
-        [...container.querySelectorAll("a")].find((each) => each.textContent === "Follow"),
-      ).toBeDefined(),
-    );
-
-    expect(
-      [...container.querySelectorAll("a")]
-        .find((each) => each.textContent === "Follow")
-        ?.getAttribute("href"),
-    ).toBe(followAddress("reference_greenhouse", "default~heater:-1:0.5"));
   });
 
   it("moves a run being computed on by itself, and stops asking once none is", async () => {
@@ -404,12 +354,7 @@ describe("the page where a person decides what to do", () => {
         "fetch",
         vi.fn(async (input: RequestInfo | URL) => {
           const url = String(input);
-          const body =
-            url === "/api/scenarios"
-              ? SCENARIOS
-              : url === "/api/runs"
-                ? (answers.shift() ?? [run({})])
-                : playing("reference_greenhouse-climate-abc", 0);
+          const body = url === "/api/scenarios" ? SCENARIOS : (answers.shift() ?? [run({})]);
           return new Response(JSON.stringify(body));
         }),
       );
@@ -434,6 +379,84 @@ describe("the page where a person decides what to do", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("stops a run from the list and asks for the runs again", async () => {
+    const running = run({ status: "running", frontier_s: DAY_S, progress: 1 / 120 });
+    let stopped = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === `/api/runs/${running.run_id}/epochs/0/stop` && init?.method === "POST") {
+          stopped = true;
+          return new Response(JSON.stringify({ ...running, status: "interrupted" }));
+        }
+        const body =
+          url === "/api/scenarios"
+            ? SCENARIOS
+            : url === "/api/runs"
+              ? [stopped ? { ...running, status: "interrupted" } : running]
+              : undefined;
+        return new Response(JSON.stringify(body), { status: body === undefined ? 404 : 200 });
+      }),
+    );
+    page = render(<Landing navigate={vi.fn()} />);
+    const { container } = page;
+    await vi.waitFor(() =>
+      expect(container.querySelector('button[aria-label^="Stop"]')).not.toBeNull(),
+    );
+
+    act(() =>
+      container
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="Stop the run of Reference greenhouse"]',
+        )
+        ?.click(),
+    );
+
+    await vi.waitFor(() => expect(container.textContent).toContain("Interrupted"));
+    expect(
+      container.querySelector('button[aria-label="Resume the run of Reference greenhouse"]'),
+    ).not.toBeNull();
+  });
+
+  it("calls a run with files missing damaged, with no replay to open", async () => {
+    const { container } = await shown(
+      { "/api/scenarios": SCENARIOS, "/api/runs": [run({ damaged: true })] },
+      "Damaged",
+    );
+
+    expect(container.textContent).not.toContain("Finished");
+    expect(link(container, "Replay")).toBeUndefined();
+  });
+
+  it("says what a fork came from, in its row", async () => {
+    const { container } = await shown(
+      {
+        "/api/scenarios": SCENARIOS,
+        "/api/runs": [
+          run({
+            epoch: 3,
+            fork: {
+              run_id: "reference_greenhouse-climate-abc",
+              epoch: 2,
+              at_s: DAY_S + 3600,
+              start_s: DAY_S,
+              digest: null,
+              checkpoint_sha256: null,
+              inherited: 0,
+              layout: null,
+            },
+          }),
+        ],
+      },
+      "forked",
+    );
+
+    expect(container.querySelector(".landing-run")?.textContent).toContain(
+      "seed 1 · epoch 3 · forked from epoch 2 at Day 2, 01:00 · Oct 28",
+    );
   });
 
   it("lists no more than the latest few", async () => {

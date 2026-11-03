@@ -38,8 +38,8 @@ for the selected item.
    inspector (`greenhouse_sim/web/src/Inspector.tsx`), for a selected item;
    or folded to its summary line with `greenhouse_sim/web/src/folds.ts`.
 4. **Its styles** in `greenhouse_sim/web/src/styles.css`, in a commented
-   block, with colours only as the panels' `var(--panel-…)` tokens. Its
-   classes are lowercase words joined by hyphens, the first naming its
+   block, with colours only as the roles of
+   `greenhouse_sim/web/src/design/tokens.css`. Its classes are lowercase words joined by hyphens, the first naming its
    feature (`weather-day-chart`). A new feature's first word is added to
    `FEATURES` in `greenhouse_sim/web/src/styles.test.ts`, which checks
    both, and also that every class is named by some source. The build fails

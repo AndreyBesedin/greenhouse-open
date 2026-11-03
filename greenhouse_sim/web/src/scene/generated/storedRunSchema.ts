@@ -181,6 +181,11 @@ export const STORED_RUN_SCHEMA = {
         }
       ],
       "default": null
+    },
+    "damaged": {
+      "default": false,
+      "title": "Damaged",
+      "type": "boolean"
     }
   },
   "required": [
@@ -196,7 +201,8 @@ export const STORED_RUN_SCHEMA = {
     "created_at",
     "size_bytes",
     "start_s",
-    "fork"
+    "fork",
+    "damaged"
   ],
   "title": "StoredRun",
   "type": "object"

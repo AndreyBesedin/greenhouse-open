@@ -1,19 +1,19 @@
-/* The panels' colours (#208): dark by default, light if chosen
- * (`panelTheme.ts`). The 3D scene, its legends' colour scales and the
- * charts' coloured lines are the same in both. */
+/* Colours by what they do (decision 0068), on every page: dark by default, light
+ * if chosen (`panelTheme.ts`, #208). The 3D scene, its legends' colour scales and
+ * the charts' coloured lines are the same in both. */
 :root {
-  --panel-scheme: dark;
-  --panel-bg: rgb(17 24 39 / 90%);
-  --panel-text: #e5e9f0;
-  --panel-muted: #a7b1c2;
-  --panel-muted-strong: #c3cad6;
-  --panel-rule: #3d4a5f;
-  --panel-warn: #ffb380;
-  --panel-link: #8cb8ff;
-  --panel-accent: #e277b5;
-  --label-bg: rgb(17 24 39 / 85%);
-  --landing-bg: #0b1220;
-  --landing-backdrop: rgb(0 0 0 / 60%);
+  --scheme: dark;
+  --surface-panel: rgb(17 24 39 / 90%);
+  --text: #e5e9f0;
+  --text-muted: #a7b1c2;
+  --text-soft: #c3cad6;
+  --border: #3d4a5f;
+  --warn: #ffb380;
+  --action: #8cb8ff;
+  --mark: #e277b5;
+  --surface-label: rgb(17 24 39 / 85%);
+  --surface-page: #0b1220;
+  --surface-backdrop: rgb(0 0 0 / 60%);
   --chart-face: #1e293b;
   --chart-ring: #6b7a90;
   --chart-neutral: #b8c2d1;
@@ -25,18 +25,18 @@
 }
 
 :root[data-panels="light"] {
-  --panel-scheme: light;
-  --panel-bg: rgb(255 255 255 / 88%);
-  --panel-text: #000000;
-  --panel-muted: #555555;
-  --panel-muted-strong: #444444;
-  --panel-rule: #cccccc;
-  --panel-warn: #8a3b12;
-  --panel-link: #1f5fbf;
-  --panel-accent: #aa3377;
-  --label-bg: rgb(255 255 255 / 85%);
-  --landing-bg: #f4f6f3;
-  --landing-backdrop: rgb(20 30 25 / 50%);
+  --scheme: light;
+  --surface-panel: rgb(255 255 255 / 88%);
+  --text: #000000;
+  --text-muted: #555555;
+  --text-soft: #444444;
+  --border: #cccccc;
+  --warn: #8a3b12;
+  --action: #1f5fbf;
+  --mark: #aa3377;
+  --surface-label: rgb(255 255 255 / 85%);
+  --surface-page: #f4f6f3;
+  --surface-backdrop: rgb(20 30 25 / 50%);
   --chart-face: #ffffff;
   --chart-ring: #999999;
   --chart-neutral: #555555;
