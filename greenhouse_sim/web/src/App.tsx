@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { type BuildInfo, buildInfo } from "./buildInfo";
 import { ControlsHelp } from "./ControlsHelp";
@@ -43,6 +43,8 @@ import { useQaMode } from "./qaMode/mode";
 import { QaPanel } from "./qaMode/QaPanel";
 import { useQaLoads } from "./qaMode/useQaLoads";
 import type { ViewSample } from "./readouts";
+import type { ForkChange } from "./replay/fork";
+import { forkMoment, withPlanOf } from "./replay/replaySource";
 import { ScenarioPanels } from "./ScenarioPanels";
 import { WhatAmISeeing } from "./SeenInTheView";
 import { DEFAULT_LAYOUT, loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
@@ -90,9 +92,22 @@ export function App({
   /** A stored run replayed (P17.6): the scene it draws, which the page owns
    * and the address never holds, and the moment its position stands at. The
    * scenes to choose from are not offered, for another would not be the run. */
-  replay?: { source: SceneSource; momentS: number | null };
+  replay?: {
+    source: SceneSource;
+    momentS: number | null;
+    /** Moves the position, which is what moves the moment in a replay. */
+    seek: (timeS: number) => void;
+    /** A change in the panels, which draws another run than the one replayed
+     * if it is drawn here: it makes a fork of it from the moment shown. */
+    forkWith: (change: ForkChange, timeS: number) => void;
+    /** Moves applied, as a fork in their layout; why not, if it could not be. */
+    forkInLayout: (layout: string, timeS: number) => Promise<string | null>;
+  };
 }) {
   const [addressed, setAddressed] = useSource(replay?.source);
+  // The levels set in a replay and not yet made a fork: a slider moves many
+  // times to one level, and a fork is made once, asked for.
+  const [replayLevels, setReplayLevels] = useState<Record<string, number>>({});
   // Opened with nothing chosen, at the bare address, the viewer starts with
   // the choice of what to show open (#201).
   const [chooseFirst] = useState(() => searchFor(addressed) === "");
@@ -207,6 +222,15 @@ export function App({
     fieldFailed: failed(fieldProgress.latest),
     onClockMoved: stopClimatePlay,
   });
+  // What a change in a replay's panels forks from: the moment they show.
+  const forkFrom = forkMoment(fieldProgress.shown?.field.timeS, replay?.momentS ?? null);
+  // A running epoch's plan grows while it is replayed: the scene follows it.
+  const replayedSource = replay?.source;
+  useEffect(() => {
+    if (replayedSource !== undefined) {
+      setSource((current) => withPlanOf(current, replayedSource));
+    }
+  }, [replayedSource, setSource]);
   // A run replayed from the store is drawn at the moment its position stands at.
   useReplayMoment({
     momentS: replay?.momentS ?? null,
@@ -307,6 +331,9 @@ export function App({
     source,
     setSource,
     followed,
+    ...(replay === undefined
+      ? {}
+      : { applyLayout: (layout: string) => replay.forkInLayout(layout, forkFrom) }),
     onPlayback: setPlayback,
     sceneLoading: sceneProgress.latest.status === "loading",
     snapshot,
@@ -459,6 +486,10 @@ export function App({
                     : undefined
                 }
                 onTargets={(targets) => {
+                  if (replay !== undefined) {
+                    replay.forkWith({ kind: "targets", targets }, forkFrom);
+                    return;
+                  }
                   if (followed !== null) {
                     steering.setTargets(targets);
                     return;
@@ -468,10 +499,26 @@ export function App({
                   );
                 }}
                 steering={
-                  followed !== null && clockS !== null
-                    ? { at: clockS, asked: steering.asked, onLevels: steering.steer }
-                    : undefined
+                  replay !== undefined
+                    ? {
+                        at: replay.momentS ?? 0,
+                        asked: replayLevels,
+                        onLevels: (levels) => setReplayLevels((was) => ({ ...was, ...levels })),
+                      }
+                    : followed !== null && clockS !== null
+                      ? { at: clockS, asked: steering.asked, onLevels: steering.steer }
+                      : undefined
                 }
+                {...(replay === undefined
+                  ? {}
+                  : {
+                      forkLevels: {
+                        asked: replayLevels,
+                        onFork: () =>
+                          replay.forkWith({ kind: "levels", levels: replayLevels }, forkFrom),
+                        onPutBack: () => setReplayLevels({}),
+                      },
+                    })}
                 played={
                   followed !== null && playback.status === "loaded"
                     ? {
@@ -490,6 +537,7 @@ export function App({
                 probeHeight={probeHeight}
                 playingClimate={playingClimate}
                 replayed={replay !== undefined}
+                {...(replay === undefined ? {} : { onSeek: replay.seek })}
                 onSource={setSource}
                 onProbes={setProbes}
                 onPlacing={setPlacingProbes}

@@ -42,6 +42,7 @@ export function TargetsPanel({
   thermostat,
   time,
   followed,
+  forking = false,
   onSet,
 }: {
   /** The thermostat at the moment drawn, with its setpoints then; null
@@ -51,6 +52,8 @@ export function TargetsPanel({
   time: number;
   /** Whether the view follows the run played back. */
   followed: boolean;
+  /** Whether setting them makes a fork of a stored run, which stays as it was. */
+  forking?: boolean;
   /** Sets the targets changed, by name, in °C. */
   onSet: (targets: Record<string, number>) => void;
 }) {
@@ -68,6 +71,7 @@ export function TargetsPanel({
           thermostat={thermostat}
           time={time}
           followed={followed}
+          forking={forking}
           onSet={onSet}
         />
       )}
@@ -79,11 +83,13 @@ function TargetsForm({
   thermostat,
   time,
   followed,
+  forking,
   onSet,
 }: {
   thermostat: ThermostatAt;
   time: number;
   followed: boolean;
+  forking: boolean;
   onSet: (targets: Record<string, number>) => void;
 }) {
   const [day, setDay] = useState(String(thermostat.dayC));
@@ -102,9 +108,11 @@ function TargetsForm({
     const value = Number(given);
     return given !== "" && value >= LOWEST_C && value <= HIGHEST_C;
   });
-  const from = followed
-    ? "from the run's next minute"
-    : `from ${describeTime(settingMoment(time))}`;
+  const from = forking
+    ? "in a fork of this run, from its next minute"
+    : followed
+      ? "from the run's next minute"
+      : `from ${describeTime(settingMoment(time))}`;
   return (
     <form
       className="targets-form"

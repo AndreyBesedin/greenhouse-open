@@ -3,7 +3,7 @@ import { act } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { type MoveDraft, MovePanel } from "./MovePanel";
-import { button, click, type Rendered, render } from "./testing/render";
+import { button, click, type Rendered, render, said } from "./testing/render";
 
 // A session that moves the heater and a sensor, not yet applied.
 const DRAFT: MoveDraft = {
@@ -177,5 +177,19 @@ describe("moving equipment and sensors", () => {
       "The run played back could not start over: the simulator answered 400.",
     );
     expect(button(container, "Start a new run with these moves").disabled).toBe(false);
+  });
+
+  it("in a replay, says a fork is made and the stored run stays", () => {
+    shown = render(panel({ ...DRAFT, forking: true }));
+    const { container } = shown;
+
+    expect(said(container, "move-new-run")).toMatch(/makes a fork of this stored run/);
+    expect(button(container, "Fork this run with these moves")).toBeDefined();
+  });
+
+  it("in a replay, says why a fork was refused", () => {
+    shown = render(panel({ ...DRAFT, forking: true, failure: "no room" }));
+
+    expect(said(shown.container, "move-failure")).toBe("The run could not be forked: no room.");
   });
 });

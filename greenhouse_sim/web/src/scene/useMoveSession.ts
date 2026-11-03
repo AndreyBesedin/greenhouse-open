@@ -64,6 +64,7 @@ export function useMoveSession({
   followed,
   onPlayback,
   sceneLoading,
+  applyLayout,
   fetchFn = fetch,
 }: {
   source: SceneSource;
@@ -72,6 +73,9 @@ export function useMoveSession({
   followed: string | null;
   onPlayback: (load: PlaybackLoad) => void;
   sceneLoading: boolean;
+  /** Where the moves go instead of the view, in a replay: a fork in their
+   * layout (P17.8), which answers why not if it could not be made. */
+  applyLayout?: ((layout: string) => Promise<string | null>) | undefined;
   fetchFn?: typeof fetch;
 }): MoveSessionControls {
   const [session, setSession] = useState<MoveSession | null>(null);
@@ -107,6 +111,14 @@ export function useMoveSession({
     }
     const { to } = live;
     setSession({ ...live, applying: true, failure: null });
+    if (applyLayout !== undefined) {
+      const failure = await applyLayout(to ?? defaultLayout);
+      // Made, the page goes to the fork; the stored run's scene stays as it is.
+      if (failure !== null) {
+        setSession((was) => was && { ...was, applying: false, failure });
+      }
+      return;
+    }
     if (followed !== null) {
       const restarted = await commandPlayback(followed, "restart", fetchFn, to ?? defaultLayout);
       onPlayback(restarted);

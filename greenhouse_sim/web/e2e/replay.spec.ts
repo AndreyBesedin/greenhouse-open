@@ -38,7 +38,11 @@ async function replayOfANewRun(page: Page, seed: string): Promise<void> {
   await dialog.getByLabel("Seconds per simulated day").fill("1");
   await dialog.getByRole("button", { name: "Start run" }).click();
   const row = dialog.locator(".landing-run").filter({ hasText: `Seed ${seed}` });
-  await row.getByRole("link", { name: /^Replay/ }).click();
+  // A test retried finds its own run of before, and a fork of it, beside this one.
+  await row
+    .getByRole("link", { name: /^Replay/ })
+    .first()
+    .click();
   await expect(page).toHaveURL(new RegExp(`${REPLAY_PATH}\\?run=`));
 }
 
@@ -110,6 +114,37 @@ test("a run that is being computed can be followed at its newest day", async ({ 
   await expect(follow).toHaveAttribute("aria-pressed", "false");
   await follow.click();
   await expect(follow).toHaveAttribute("aria-pressed", "true");
+});
+
+test("a stored run is forked from the moment shown, and stays there to go back to", async ({
+  page,
+}) => {
+  test.setTimeout(WAITS_FOR_A_DAY * 2);
+  await replayOfANewRun(page, "45");
+  const parent = page.url();
+  const handle = page.getByRole("slider", { name: "Position in the run" });
+  await expect
+    .poll(async () => Number(await handle.getAttribute("aria-valuemax")), { timeout: COMPUTES })
+    .toBeGreaterThanOrEqual(DAY_S);
+  await handle.focus();
+  await page.keyboard.press("PageUp");
+  await expect(page.getByTestId("replay-moment")).toHaveText("Day 1, 24:00");
+
+  await page.getByTestId("replay-fork").click();
+
+  // A new epoch, at an address of its own, naming where it comes from.
+  await expect(page).not.toHaveURL(parent);
+  await expect(page.getByTestId("replay-subtitle")).toContainText(
+    /forked from epoch \d+ at Day 1, 24:00/,
+  );
+  await expect(page.getByTestId("replay-moment")).toHaveText("Day 1, 24:00");
+  await expect(page.locator("canvas")).toBeVisible();
+  // What cannot be a fork says why, rather than drawing another run.
+  await expect(page.getByTestId("replayed-weather")).toContainText("keeps the weather");
+
+  await page.getByRole("link", { name: "The run it came from" }).click();
+  await expect(page).toHaveURL(parent);
+  await expect(page.getByTestId("replay-subtitle")).not.toContainText("forked");
 });
 
 test("an address that names no run, or a run that is not kept, says so and offers the way home", async ({
