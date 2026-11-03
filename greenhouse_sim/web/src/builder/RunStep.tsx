@@ -111,6 +111,7 @@ export function RunStep({
           type="number"
           step={1}
           min={0}
+          required
           value={fields.seed}
           onChange={(event) => set({ seed: event.target.value })}
         />

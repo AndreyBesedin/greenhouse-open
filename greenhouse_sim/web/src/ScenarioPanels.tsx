@@ -8,7 +8,7 @@ import { CheckpointsPanel } from "./checkpoints/CheckpointsPanel";
 import { type CheckpointSummary, restored } from "./checkpoints/checkpoints";
 import { EquipmentControls, equipmentIn } from "./EquipmentControls";
 import { ClimateSchedule } from "./fields/ClimateSchedule";
-import { ClimateTime, describeClimateRun, REPLAYED_NOTE } from "./fields/ClimateTime";
+import { ClimateTime, describeClimateRun, describeTime, REPLAYED_NOTE } from "./fields/ClimateTime";
 import type { FieldView, Slice } from "./fields/display";
 import { describeAirField, FieldControls, useFieldNames } from "./fields/FieldControls";
 import { describeProbes, FieldProbes } from "./fields/FieldProbes";
@@ -20,6 +20,7 @@ import { useAbsentClimate } from "./fields/useAbsentClimate";
 import { useFolds } from "./folds";
 import { OpeningControls, openingsIn } from "./OpeningControls";
 import { PanelCard } from "./PanelCard";
+import { dayLabel } from "./replay/timeline";
 import {
   levelsAt,
   openingsAt,
@@ -263,14 +264,19 @@ export function ScenarioPanels({
           {climate && (
             <details className="moment-fold" {...fold("moment")}>
               <summary data-testid="moment-summary">
-                {describeClimateRun(time, shownTime, momentFailed)}
+                {describeClimateRun(
+                  time,
+                  shownTime,
+                  momentFailed,
+                  replayed ? dayLabel : describeTime,
+                )}
               </summary>
               <ClimateTime
                 time={time}
                 shown={shownTime}
                 failed={momentFailed}
                 followed={source.follow === true || replayed}
-                {...(replayed ? { followedNote: REPLAYED_NOTE } : {})}
+                {...(replayed ? { followedNote: REPLAYED_NOTE, describe: dayLabel } : {})}
                 days={days}
                 playing={playingClimate}
                 onTime={setTime}
