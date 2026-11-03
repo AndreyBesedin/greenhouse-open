@@ -398,6 +398,18 @@ class RunExecutor:
             if held.assignment.at == moment and held.assignment.action.kind in CROP_KINDS
         )
 
+    def crop_waiting_before(self, moment: datetime) -> tuple[Assignment, ...]:
+        """The crop actions due before `moment` not said to be done, as a run
+        carried on from there must be told them."""
+        return tuple(
+            held.assignment
+            for held in self._given()
+            if not held.finished
+            and held.carried is None
+            and held.assignment.action.kind in CROP_KINDS
+            and held.assignment.at < moment
+        )
+
     def carried_out(self, carried: Mapping[str, Carried]) -> None:
         """What its run made of crop actions, by assignment, once their day
         is worked out: each is done, or refused, as the clock passes it."""

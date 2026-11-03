@@ -24,13 +24,15 @@ import logging
 import multiprocessing
 import threading
 from collections import deque
+from collections.abc import Sequence
 from dataclasses import dataclass
 from multiprocessing.context import SpawnProcess
 from pathlib import Path
 from typing import Final
 
-from greenhouse_sim.services import interrupted
+from greenhouse_sim.services import forks, interrupted
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound
+from greenhouse_sim.services.interventions import Asked
 from greenhouse_sim.services.run_store import EpochStore, FolderStore, Status, StoredRun, stored_run
 from greenhouse_sim.services.run_store import epochs as stored_epochs
 from greenhouse_sim.services.simulator import Simulator
@@ -170,6 +172,32 @@ class Scheduler:
             self._waiting.append(_Job(run_id, epoch, chosen, resuming=True))
             self._launch()
         return stored_run(self._objects, run_id, epoch)
+
+    def fork(
+        self,
+        run_id: str,
+        epoch: int,
+        at_s: float,
+        *,
+        layout: str | None = None,
+        changes: Sequence[Asked] = (),
+        driver: Driver | None = None,
+    ) -> StoredRun:
+        """Asks for a fork of an epoch at `at_s` (`forks.fork`): a new epoch,
+        taken by a worker when there is room, which carries it on from the
+        state it inherits as it carries on an epoch interrupted."""
+        chosen = Free() if driver is None else driver
+        if not isinstance(chosen, Free | Paced):
+            raise InvalidRequest("a worker advances its epoch freely or at a pace")
+        with self._lock:
+            if self._closed.is_set():
+                raise Conflict("the workers are closed")
+            made = forks.fork(
+                self._simulator, self._objects, run_id, epoch, at_s, layout=layout, changes=changes
+            )
+            self._waiting.append(_Job(made.run_id, made.epoch, chosen, resuming=True))
+            self._launch()
+            return stored_run(self._objects, made.run_id, made.epoch)
 
     def workers(self) -> list[Worker]:
         """The epochs being executed now."""
@@ -332,6 +360,21 @@ def resume(
     """An interrupted epoch asked to be carried on (`Scheduler.resume`)."""
     driver = None if seconds_per_day is None else Paced(seconds_per_day)
     return of(simulator).resume(run_id, epoch, driver=driver)
+
+
+def fork(
+    simulator: Simulator,
+    run_id: str,
+    epoch: int,
+    at_s: float,
+    *,
+    layout: str | None = None,
+    changes: Sequence[Asked] = (),
+    seconds_per_day: float | None = None,
+) -> StoredRun:
+    """A fork of a stored epoch asked for (`Scheduler.fork`)."""
+    driver = None if seconds_per_day is None else Paced(seconds_per_day)
+    return of(simulator).fork(run_id, epoch, at_s, layout=layout, changes=changes, driver=driver)
 
 
 def cancel(simulator: Simulator, run_id: str, epoch: int) -> StoredRun:

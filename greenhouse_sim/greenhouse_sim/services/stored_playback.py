@@ -15,9 +15,11 @@ draw any moment of a run: for the run the epoch's manifest names (`run`).
 Seeking restores the nearest checkpoint the store holds into the simulator's
 kept states, so that those services take the state over instead of working the
 days before it out again; a checkpoint made by another version of the
-scenario or its models is not restored, and the days are worked out. Changes
-made to a running epoch are not in the store's log yet (P17.8): the scene of
-an epoch that had some is its run's own.
+scenario or its models is not restored, and the days are worked out. The changes
+given to the epoch are in its log (P17.8), and its scene is drawn under the plan
+they made, as the checkpoint at its frontier keeps it: what it carried out by
+then, whatever it was refused, and whoever may do what on the simulator reading
+it. A position stands at or before the frontier, so it needs no more than that.
 """
 
 import json
@@ -43,6 +45,7 @@ from greenhouse_sim.services.run_store import (
     CHECKPOINT_TYPE,
     Commit,
     EpochStore,
+    ForkOf,
     Kind,
     ObjectStore,
     Page,
@@ -50,7 +53,7 @@ from greenhouse_sim.services.run_store import (
     decompress,
 )
 from greenhouse_sim.services.run_store import epochs as stored_epochs
-from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.runs import RunPlan, RunRequest
 from greenhouse_sim.services.sensors import run_start
 
 if TYPE_CHECKING:
@@ -66,7 +69,9 @@ ID_BYTES: Final = 6
 class PositionState(BaseModel):
     """Where a position stands over its epoch: the epoch, the moment, both as
     an instant and as seconds into the run (as the viewer asks for a moment),
-    whether it plays or follows, and how far the epoch is committed."""
+    whether it plays or follows, how far the epoch is committed, and the
+    changes given to it, as its plan holds them, spelled as a run's `&targets=`,
+    `&schedule=` and `&crop=` write them, for the viewer to draw it under."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -86,6 +91,12 @@ class PositionState(BaseModel):
     seconds_per_day: float
     frontier_s: float
     duration_s: float | None
+    # Where what the epoch holds begins, and for a fork where it comes from.
+    start_s: float = 0.0
+    fork: ForkOf | None = None
+    targets: list[tuple[float, str, float]] = []
+    commands: list[tuple[float, str, float]] = []
+    crop: list[tuple[float, str, str, str]] = []
 
 
 class Records[RecordT]:
@@ -114,15 +125,35 @@ class StoredEpoch:
             manifest.seed,
         )
         self.duration_s = manifest.duration_s
+        self.fork = manifest.fork
+        self.start_s = 0.0 if manifest.fork is None else manifest.fork.start_s
         self.start = run_start(simulator.catalogue, manifest.scenario_id)
         self._lock = threading.Lock()
         self._commits: list[Commit] = []
         # The outcomes read, and how many commits they were read at.
         self._outcomes: tuple[int, list[ActionOutcome]] = (-1, [])
+        # The plan through its frontier, and how many commits it was read at.
+        self._plan: tuple[int, RunPlan] = (0, RunPlan())
+
+    def plan(self) -> RunPlan:
+        """The plan it was worked out under up to its frontier, as the checkpoint
+        there keeps it; nothing to read if it was given no change."""
+        commits = len(self.commits())
+        with self._lock:
+            if commits == self._plan[0]:
+                return self._plan[1]
+        made = RunPlan()
+        if self.store.logged():
+            found = self.store.checkpoint_at(self.frontier_s())
+            if found is not None and found[1] == CHECKPOINT_TYPE:
+                made = RunPlan.model_validate(json.loads(decompress(found[0])).get("plan", {}))
+        with self._lock:
+            self._plan = (commits, made)
+        return made
 
     def run(self) -> RunRequest:
         """The run the epoch is of, as the by-moment services take it."""
-        return RunRequest(self.scenario_id, layout=self.layout, seed=self.seed)
+        return RunRequest(self.scenario_id, layout=self.layout, plan=self.plan(), seed=self.seed)
 
     def status(self) -> Status:
         return self.store.manifest().status
@@ -134,9 +165,10 @@ class StoredEpoch:
             return list(self._commits)
 
     def frontier_s(self) -> float:
-        """How far the epoch is committed, in seconds into its run."""
+        """How far the epoch is committed, in seconds into its run: where it
+        begins, until a commit says otherwise."""
         commits = self.commits()
-        return commits[-1].end_s if commits else 0.0
+        return commits[-1].end_s if commits else self.start_s
 
     def observations(self, after: int, limit: int, at_s: float) -> Records[Observation]:
         """The observations after position `after` of its log that were
@@ -234,7 +266,7 @@ class Position:
         self.position_id = position_id
         self._clock = clock
         self._lock = threading.Lock()
-        self._time_s = 0.0
+        self._time_s = epoch.start_s
         self._playing = False
         self._following = False
         self._seconds_per_day = seconds_per_day
@@ -281,6 +313,7 @@ class Position:
 
     def _state(self, frontier: float) -> PositionState:
         epoch = self.epoch
+        planned = epoch.plan()
         return PositionState(
             position_id=self.position_id,
             scenario_id=epoch.scenario_id,
@@ -298,6 +331,11 @@ class Position:
             seconds_per_day=self._seconds_per_day,
             frontier_s=frontier,
             duration_s=epoch.duration_s,
+            start_s=epoch.start_s,
+            fork=epoch.fork,
+            targets=list(planned.targeted()),
+            commands=list(planned.commanded()),
+            crop=list(planned.crop_spelled()),
         )
 
     def state(self) -> PositionState:
@@ -334,10 +372,11 @@ class Position:
         if it played. The nearest checkpoint is restored for the scene."""
         with self._lock:
             frontier = self._advance()
-            if not 0.0 <= time_s <= frontier:
+            first = self.epoch.start_s
+            if not first <= time_s <= frontier:
                 raise InvalidRequest(
-                    f"a position is between the run's start and its frontier, 0 to "
-                    f"{frontier:.15g} s, not at {time_s:.15g} s"
+                    f"a position is between where the epoch begins and its frontier, "
+                    f"{first:.15g} to {frontier:.15g} s, not at {time_s:.15g} s"
                 )
             self._time_s, self._following = time_s, False
             self._wait_if_at(frontier)

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DAY_S } from "../clock";
 import { type Rendered, render, said } from "../testing/render";
@@ -24,9 +24,16 @@ function position(more: Partial<PositionState> = {}): PositionState {
     seconds_per_day: 10,
     frontier_s: DAY_S,
     duration_s: 120 * DAY_S,
+    start_s: 0,
+    fork: null,
+    targets: [],
+    commands: [],
+    crop: [],
     ...more,
   };
 }
+
+const noFork = () => undefined;
 
 describe("the replay's header", () => {
   let rendered: Rendered | undefined;
@@ -34,7 +41,12 @@ describe("the replay's header", () => {
 
   it("has the way home, the run's name, its seed and epoch, and its state in words", () => {
     rendered = render(
-      <ReplayHeader name="Reference greenhouse" position={position()} otherRunsHref="/#runs" />,
+      <ReplayHeader
+        name="Reference greenhouse"
+        position={position()}
+        otherRunsHref="/#runs"
+        onFork={noFork}
+      />,
     );
     const { container } = rendered;
 
@@ -51,6 +63,7 @@ describe("the replay's header", () => {
         name={null}
         position={position()}
         otherRunsHref="/#runs=reference_greenhouse"
+        onFork={noFork}
       />,
     );
     const other = [...rendered.container.querySelectorAll("a")].find(
@@ -69,7 +82,12 @@ describe("the replay's header", () => {
       ["failed", "Failed"],
     ] as const) {
       rendered = render(
-        <ReplayHeader name={null} position={position({ status })} otherRunsHref="/" />,
+        <ReplayHeader
+          name={null}
+          position={position({ status })}
+          otherRunsHref="/"
+          onFork={noFork}
+        />,
       );
       expect(said(rendered.container, "replay-status")).toBe(word);
       rendered.unmount();
@@ -80,5 +98,86 @@ describe("the replay's header", () => {
     expect(runSubtitle(position({ seed: null }))).toBe(
       "the scenario's seed · epoch 3 · everything kept",
     );
+  });
+
+  it("forks the run from the moment shown, and says it is at it", () => {
+    const onFork = vi.fn();
+    rendered = render(
+      <ReplayHeader name={null} position={position()} otherRunsHref="/" onFork={onFork} />,
+    );
+    const button = rendered.container.querySelector<HTMLButtonElement>(
+      '[data-testid="replay-fork"]',
+    );
+
+    expect(button?.textContent).toBe("Fork from here");
+    button?.click();
+    expect(onFork).toHaveBeenCalledOnce();
+  });
+
+  it("offers no fork at the run's end, and says why", () => {
+    rendered = render(
+      <ReplayHeader
+        name={null}
+        position={position({ time_s: 120 * DAY_S })}
+        otherRunsHref="/"
+        onFork={noFork}
+      />,
+    );
+    const { container } = rendered;
+
+    expect(
+      container.querySelector<HTMLButtonElement>('[data-testid="replay-fork"]')?.disabled,
+    ).toBe(true);
+    expect(said(container, "replay-no-fork")).toMatch(/ends here/);
+  });
+
+  it("says why a fork was refused, and while one is on its way", () => {
+    rendered = render(
+      <ReplayHeader
+        name={null}
+        position={position()}
+        otherRunsHref="/"
+        forking
+        forkRefused="no room"
+        onFork={noFork}
+      />,
+    );
+    const { container } = rendered;
+
+    expect(said(container, "replay-fork-refused")).toBe("This run could not be forked: no room.");
+    const button = container.querySelector<HTMLButtonElement>('[data-testid="replay-fork"]');
+    expect(button?.disabled).toBe(true);
+    expect(button?.textContent).toBe("Forking…");
+  });
+
+  it("says what a fork came from, and links to it", () => {
+    rendered = render(
+      <ReplayHeader
+        name={null}
+        position={position({
+          fork: {
+            run_id: "parent run",
+            epoch: 1,
+            at_s: DAY_S * 1.5,
+            start_s: DAY_S,
+            digest: null,
+            checkpoint_sha256: null,
+            inherited: 0,
+            layout: null,
+          },
+        })}
+        otherRunsHref="/"
+        onFork={noFork}
+      />,
+    );
+    const { container } = rendered;
+
+    expect(said(container, "replay-subtitle")).toBe(
+      "seed 2 · epoch 3 · everything kept · forked from epoch 1 at Day 2, 12:00",
+    );
+    const parent = [...container.querySelectorAll("a")].find(
+      (link) => link.textContent === "The run it came from",
+    );
+    expect(parent?.getAttribute("href")).toBe("/replay?run=parent%20run&epoch=1");
   });
 });
