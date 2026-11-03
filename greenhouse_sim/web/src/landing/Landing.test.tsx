@@ -463,6 +463,55 @@ describe("the page where a person decides what to do", () => {
     }
   });
 
+  it("stops a worker's run from the list and asks for the runs again; a built one's has no button", async () => {
+    const running = run({ status: "running", frontier_s: DAY_S, progress: 1 / 120 });
+    const built = run({
+      scenario_id: "my_house",
+      run_id: "my_house-climate-abc",
+      status: "running",
+      frontier_s: DAY_S,
+      progress: 1 / 120,
+    });
+    let stopped = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === `/api/runs/${running.run_id}/epochs/0/stop` && init?.method === "POST") {
+          stopped = true;
+          return new Response(JSON.stringify({ ...running, status: "interrupted" }));
+        }
+        const body =
+          url === "/api/scenarios"
+            ? [...SCENARIOS, { ...BUILT[0], id: "my_house", name: "My house" }]
+            : url === "/api/runs"
+              ? [stopped ? { ...running, status: "interrupted" } : running, built]
+              : undefined;
+        return new Response(JSON.stringify(body), { status: body === undefined ? 404 : 200 });
+      }),
+    );
+    page = render(<Landing navigate={vi.fn()} />);
+    const { container } = page;
+    await vi.waitFor(() =>
+      expect(container.querySelector('button[aria-label^="Stop"]')).not.toBeNull(),
+    );
+
+    expect(container.querySelector('button[aria-label="Stop the run of My house"]')).toBeNull();
+    act(() =>
+      container
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="Stop the run of Reference greenhouse"]',
+        )
+        ?.click(),
+    );
+
+    await vi.waitFor(() => expect(container.textContent).toContain("Interrupted"));
+    expect(
+      container.querySelector('button[aria-label="Resume the run of Reference greenhouse"]'),
+    ).not.toBeNull();
+    expect(container.querySelector('button[aria-label="Resume the run of My house"]')).toBeNull();
+  });
+
   it("lists no more than the latest few", async () => {
     const many = Array.from({ length: 8 }, (_, epoch) => run({ epoch }));
     const { container } = await shown(

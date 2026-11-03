@@ -106,6 +106,56 @@ test("two runs of one scenario are computed at once, from the dialog, each follo
   }
 });
 
+test("a run is stopped with what it computed, resumed as the same epoch, and deleted once stopped", async ({
+  page,
+}) => {
+  test.setTimeout(360_000);
+  const seed = "73";
+  await page.goto(runsAddress(SCENARIO));
+  const started = await start(page, seed);
+  await page.goto("about:blank");
+  await page.goto(runsAddress(SCENARIO));
+  const dialog = page.getByRole("dialog");
+  const row = rowOf(dialog, seed);
+  const stop = row.getByRole("button", { name: `Stop the run with seed ${seed}` });
+  const resume = row.getByRole("button", { name: `Resume the run with seed ${seed}` });
+  try {
+    await expect(row).toContainText("Running", WORKS);
+    await expect.poll(() => daysIn(row), WORKS).toBeGreaterThan(0);
+
+    // Deleting it now says which, and what to do, in words, with the control there.
+    await row.getByRole("button", { name: /^Delete the run with seed/ }).click();
+    await row.getByRole("button", { name: /^Delete the run with seed/ }).click();
+    const refused = dialog.getByRole("alert");
+    await expect(refused).toContainText(`seed ${seed}, epoch ${started.epoch}`);
+    await expect(refused).toContainText("stop it, then delete it");
+    await expect(refused).not.toContainText(started.runId);
+
+    await stop.click();
+    await expect(row).toContainText("Interrupted", WORKS);
+    await expect(stop).toHaveCount(0);
+    const kept = await daysIn(row);
+    expect(kept).toBeGreaterThan(0);
+
+    // The same epoch, from what it had: not from its first day.
+    await resume.click();
+    await expect(row).toContainText(`epoch ${started.epoch}`);
+    await expect(row).toContainText(/Queued|Running/, WORKS);
+    expect(await daysIn(row)).toBeGreaterThanOrEqual(kept);
+    await expect.poll(() => daysIn(row), WORKS).toBeGreaterThan(kept);
+
+    await stop.click();
+    await expect(row).toContainText("Interrupted", WORKS);
+    await row.getByRole("button", { name: /^Delete the run with seed/ }).click();
+    await row.getByRole("button", { name: /^Delete the run with seed/ }).click();
+    await expect(row).toHaveCount(0);
+  } finally {
+    await page.request.post(
+      `/api/runs/${encodeURIComponent(started.runId)}/epochs/${started.epoch}/stop`,
+    );
+  }
+});
+
 test("a scenario no worker can run starts by its playback, and says where to follow it", async ({
   page,
 }) => {
@@ -133,4 +183,6 @@ test("a scenario no worker can run starts by its playback, and says where to fol
   await expect(row).toContainText(/Running/, WORKS);
   await expect.poll(() => daysIn(row), WORKS).toBeGreaterThan(0);
   await expect(row).not.toContainText("Failed");
+  // No worker has it, so that neither control would do anything.
+  await expect(row.getByRole("button", { name: /^(Stop|Resume) / })).toHaveCount(0);
 });
