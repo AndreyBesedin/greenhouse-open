@@ -104,10 +104,14 @@ class Scheduler:
         # A worker is a process started from nothing, not a copy of this one
         # with its threads and locks.
         self._context = multiprocessing.get_context("spawn")
-        self._lock = threading.Lock()
+        # Re-entrant: finding an epoch no one works asks the scheduler what it
+        # holds, and is done under the lock a resume is scheduled under.
+        self._lock = threading.RLock()
         self._waiting: deque[_Job] = deque()
         self._running: dict[tuple[str, int], SpawnProcess] = {}
         self._cancelled: set[tuple[str, int]] = set()
+        # The running workers that were asked to carry an epoch on.
+        self._resuming: set[tuple[str, int]] = set()
         self._closed = threading.Event()
         self._watcher = threading.Thread(target=self._watch, name="workers", daemon=True)
         self._watcher.start()
@@ -138,7 +142,10 @@ class Scheduler:
     def resume(self, run_id: str, epoch: int, *, driver: Driver | None = None) -> StoredRun:
         """Asks for an `interrupted` epoch to be carried on from its last
         commit: queued once more, and taken by a worker that resumes it when
-        there is room. Refused, as `workers.check_resumable` says, if it
+        there is room. An epoch the store still calls `running` whose producer
+        is gone is found interrupted first, under the lock the epoch is queued
+        under, so that two requests for it are told apart: the second finds
+        the epoch queued. Refused, as `workers.check_resumable` says, if it
         cannot be; the store is not changed by a refusal."""
         chosen = Free() if driver is None else driver
         if not isinstance(chosen, Free | Paced):
@@ -152,6 +159,7 @@ class Scheduler:
                 raise Conflict("the workers are closed")
             if key in self._running or any((j.run_id, j.epoch) == key for j in self._waiting):
                 raise Conflict(f"epoch {epoch} of {run_id} is waiting for a worker or has one")
+            interrupted.mark_epoch(self._simulator, run_id, epoch)
             if kept.manifest().status != Status.INTERRUPTED:
                 raise Conflict(
                     f"epoch {epoch} of {run_id} is {kept.manifest().status}: "
@@ -240,6 +248,8 @@ class Scheduler:
                 self._say((job.run_id, job.epoch), Status.FAILED)
                 continue
             self._running[(job.run_id, job.epoch)] = process
+            if job.resuming:
+                self._resuming.add((job.run_id, job.epoch))
 
     def _reap(self) -> None:
         """Under the lock: says how each epoch ended whose worker has."""
@@ -248,19 +258,28 @@ class Scheduler:
                 continue
             process.join()
             del self._running[key]
-            self._ended(key, process.exitcode, cancelled=key in self._cancelled)
+            self._ended(
+                key,
+                process.exitcode,
+                cancelled=key in self._cancelled,
+                resuming=key in self._resuming,
+            )
             self._cancelled.discard(key)
+            self._resuming.discard(key)
 
-    def _ended(self, key: tuple[str, int], exit_code: int, *, cancelled: bool) -> None:
+    def _ended(
+        self, key: tuple[str, int], exit_code: int, *, cancelled: bool, resuming: bool
+    ) -> None:
         """An epoch whose worker has ended: left as it says if it ended
-        itself; else interrupted, if it had begun or was cancelled, failed if
-        its worker never began it."""
+        itself; else interrupted, if it had begun, was cancelled or was being
+        carried on, failed if its worker never began it."""
         status = EpochStore(self._objects, *key).manifest().status
         if status in (Status.FINISHED, Status.FAILED, Status.INTERRUPTED):
             return
-        if cancelled or status == Status.RUNNING or EpochStore(self._objects, *key).commits():
+        if cancelled or status == Status.RUNNING or resuming:
             # An epoch asked to be carried on, whose worker ended before it
-            # took it up, is as interrupted as it was.
+            # took it up, is as interrupted as it was, with or without a
+            # commit.
             self._say(key, Status.INTERRUPTED)
             return
         logger.error("the worker of %s ended with %s before it began", key, exit_code)
@@ -310,9 +329,7 @@ def start(
 def resume(
     simulator: Simulator, run_id: str, epoch: int, *, seconds_per_day: float | None = None
 ) -> StoredRun:
-    """An interrupted epoch asked to be carried on: found interrupted first,
-    if its producer is gone and the store still calls it `running`."""
-    interrupted.mark_epoch(simulator, run_id, epoch)
+    """An interrupted epoch asked to be carried on (`Scheduler.resume`)."""
     driver = None if seconds_per_day is None else Paced(seconds_per_day)
     return of(simulator).resume(run_id, epoch, driver=driver)
 

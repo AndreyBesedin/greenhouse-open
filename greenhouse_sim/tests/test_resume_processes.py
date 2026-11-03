@@ -10,12 +10,13 @@ import time
 from collections.abc import Callable, Iterator
 from http import HTTPStatus
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
 import pytest
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.services import interrupted, leases
 from greenhouse_sim.services.run_store import EpochStore, FolderStore, Status, StoredRun
 from greenhouse_sim.services.scheduler import Scheduler
 from greenhouse_sim.services.simulator import Simulator
@@ -115,27 +116,89 @@ def test_an_epoch_asked_to_be_resumed_wrongly_is_refused(
     assert done.manifest().status == Status.FINISHED
 
 
-def test_an_epoch_whose_resuming_worker_ends_before_taking_it_up_is_still_interrupted(
-    simulator: Simulator, tmp_path: Path
-) -> None:
-    assert simulator.runs is not None
-    kept = queued(simulator, simulator.runs, SHORT)
-    assert execute(simulator, kept, Stepped([DAY_S])) == Status.INTERRUPTED
-    # A worker that cannot build its simulator ends at once, having taken up
-    # nothing.
+def _workers_that_end_at_once(simulator: Simulator, tmp_path: Path) -> Scheduler:
+    """Workers that cannot build their simulator: each ends at once, having
+    taken up nothing."""
     assert simulator.scheduler is not None
     simulator.scheduler.close()
     simulator.scheduler = Scheduler(
         simulator, tmp_path / "runs", limit=1, made_by="no_such_module:no_such_function"
     )
+    return simulator.scheduler
 
-    resumed = respond(simulator, "POST", f"/api/runs/{kept.run_id}/epochs/{kept.epoch}/resume")
+
+def _resume_path(kept: EpochStore) -> str:
+    return f"/api/runs/{kept.run_id}/epochs/{kept.epoch}/resume"
+
+
+@pytest.mark.parametrize("days", [1, 0])
+def test_an_epoch_whose_resuming_worker_ends_before_taking_it_up_is_still_interrupted(
+    simulator: Simulator, tmp_path: Path, days: int
+) -> None:
+    assert simulator.runs is not None
+    kept = queued(simulator, simulator.runs, SHORT)
+    assert execute(simulator, kept, Stepped([DAY_S][:days])) == Status.INTERRUPTED
+    assert len(kept.commits()) == days
+    scheduling = _workers_that_end_at_once(simulator, tmp_path)
+
+    resumed = respond(simulator, "POST", _resume_path(kept))
 
     assert resumed.status == HTTPStatus.OK
-    _until(
-        lambda: not simulator.scheduler or not simulator.scheduler.workers(),
-        "the worker to end",
-    )
+    _until(lambda: not scheduling.workers(), "the worker to end")
     _until(lambda: kept.manifest().status != Status.QUEUED, "the epoch to be told")
+    # Not failed, with a commit or with none: it can be asked for again.
     assert kept.manifest().status == Status.INTERRUPTED
-    assert kept.frontier_s() == DAY_S
+    assert kept.frontier_s() == days * DAY_S
+    assert respond(simulator, "POST", _resume_path(kept)).status == HTTPStatus.OK
+
+
+def test_two_requests_to_resume_an_epoch_are_never_looking_for_its_producer_together(
+    simulator: Simulator, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert simulator.runs is not None
+    # The lease of the epoch executed here is written again while its manifest
+    # says it is worked: it is let end before the manifest is made to say so.
+    monkeypatch.setattr(leases, "REFRESH_EVERY_S", 0.02)
+    kept = queued(simulator, simulator.runs, SHORT)
+    assert execute(simulator, kept, Stepped([DAY_S])) == Status.INTERRUPTED
+    time.sleep(0.2)
+    # As a producer that died leaves it: running, and no lease.
+    running = kept.manifest().model_copy(update={"status": Status.RUNNING})
+    simulator.runs.put(
+        f"{kept.run_id}/{kept.epoch}/manifest.json", running.model_dump_json().encode()
+    )
+    _workers_that_end_at_once(simulator, tmp_path)
+    # Each look for the producer takes a while, and counts who else is looking.
+    looking = {"now": 0, "most": 0}
+    counting = threading.Lock()
+    real = interrupted._worked
+
+    def slowly(*args: Any) -> bool:
+        with counting:
+            looking["now"] += 1
+            looking["most"] = max(looking["most"], looking["now"])
+        time.sleep(0.3)
+        try:
+            return real(*args)
+        finally:
+            with counting:
+                looking["now"] -= 1
+
+    monkeypatch.setattr(interrupted, "_worked", slowly)
+    answers = []
+    askers = [
+        threading.Thread(
+            target=lambda: answers.append(respond(simulator, "POST", _resume_path(kept)).status)
+        )
+        for _ in range(2)
+    ]
+
+    for asker in askers:
+        asker.start()
+    for asker in askers:
+        asker.join(WAIT_S)
+
+    # One request at a time looks, under the lock the epoch is queued under, so
+    # that the second finds what the first did.
+    assert looking["most"] == 1
+    assert HTTPStatus.OK in answers
