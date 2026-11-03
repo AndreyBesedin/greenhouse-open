@@ -1877,7 +1877,7 @@ body {
   font-weight: 600;
 }
 
-.landing-problem {
+.landing-card p.landing-problem {
   color: var(--panel-warn);
 }
 
