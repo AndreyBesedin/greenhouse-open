@@ -16,9 +16,10 @@ takes one checks first that it is still there.
 
 - [ ] **The builder has no way home.** Its only ways out are "Save and go back",
   which saves, and a link that appears after a run. The viewer has a Home button.
-- [ ] **A scene opened without following a run is not framed on the house.** The
+- [x] **A scene opened without following a run is not framed on the house.** The
   camera stays at its default (5.2, -5.2, 5.2) and the house runs off under the View
-  panel. Whether this came before the landing page is not known.
+  panel. It came before the landing page: the presets have looked at the world's
+  origin since the viewer's first camera, and only a followed run was framed.
 - [ ] **A house with no equipment has no climate run.** It has no climate field and
   gets fixed light, not the sun. Whether it should have a climate run, and at what
   cost, is open.

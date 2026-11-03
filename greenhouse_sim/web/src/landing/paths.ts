@@ -28,6 +28,16 @@ export function pageAt(pathname: string, search: string): Page {
   return path === "" && search === "" ? "landing" : "viewer";
 }
 
+/**
+ * Whether a scenario opened at this path starts with its house framed: the
+ * viewer's and a replay's own addresses do. A link from before the landing page,
+ * `/?scenario=climate_box`, opens as it always has, at the default view, which
+ * what it points out may be counted from.
+ */
+export function opensFramed(pathname: string): boolean {
+  return pathname.replace(/\/$/, "") !== "";
+}
+
 /** The replay of a stored epoch: a run's address names its run and its epoch
  * (decision 0065). */
 export function replayAddress(runId: string, epoch: number): string {

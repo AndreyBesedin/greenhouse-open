@@ -25,6 +25,7 @@ import { useFieldDrawing } from "./fields/useFieldDrawing";
 import { Hud } from "./Hud";
 import { InfoPanel } from "./InfoPanel";
 import { Inspector } from "./Inspector";
+import { opensFramed } from "./landing/paths";
 import { MovePanel } from "./MovePanel";
 import { PanelSide } from "./PanelSide";
 import { PlaybackPanel } from "./PlaybackPanel";
@@ -63,7 +64,7 @@ import { runApartFromItsMoment, scenarioRun } from "./scene/run";
 import { type SceneSource, searchFor, shownBy } from "./scene/source";
 import { useDrawnSnapshot } from "./scene/useDrawnSnapshot";
 import { useFollow, withoutRunChanges } from "./scene/useFollow";
-import { useFollowFraming } from "./scene/useFollowFraming";
+import { useFollowFraming, useOpeningFrame } from "./scene/useFollowFraming";
 import { useMoveDrag } from "./scene/useMoveDrag";
 import { useReplayMoment } from "./scene/useReplayMoment";
 import { useSceneLoads } from "./scene/useSceneLoads";
@@ -319,6 +320,13 @@ export function App({
     cameraAt: sample?.camera ?? null,
     setSource,
   });
+  const openingPose = useOpeningFrame({
+    scenarioId:
+      source.kind === "scenario" && opensFramed(location.pathname) ? source.scenarioId : null,
+    latestScene: sceneProgress.latest,
+    ownCamera: source.kind === "scenario" && (source.camera !== undefined || followed !== null),
+    presetChosen: presetRequest !== null,
+  });
   // Equipment and sensors moved in a Move session (#209, #271), and the
   // Move panel, for the selected item if it can be moved and for a session
   // under way, whatever is selected; starting one stops placing probes.
@@ -409,7 +417,7 @@ export function App({
           source.kind === "plants"
             ? PLANT_LAB_POSE
             : source.kind === "scenario"
-              ? (source.camera ?? null)
+              ? (source.camera ?? openingPose)
               : null
         }
         onSample={setSample}
