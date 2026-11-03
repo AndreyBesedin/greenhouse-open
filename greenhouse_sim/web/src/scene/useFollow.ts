@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 
+import { CLIMATE_FIELD } from "../fields/source";
 import { DEFAULT_LAYOUT } from "../scenarios";
 import { withCrop, withSchedule, withTargets, withTime } from "./edits";
 import { sameLayout } from "./moves";
@@ -26,6 +27,9 @@ type ScenarioOf<S> = Extract<S, { kind: "scenario" }>;
  * half drawn; the run's own play stands aside (`onClockMoved`). A moment
  * whose field failed (`fieldFailed`) has arrived as far as it will: the view
  * moves on with the clock, and asks for the next, rather than wait on it.
+ * Only the climate field is asked for a moment (`fieldUrl`): any other field
+ * the view draws is the layout's and says no moment, so nothing is waited
+ * for and the clock is never held by it.
  *
  * Followed, the run drawn changes its targets as the run played back does
  * (#274, decision 0043), and its levels and crop actions as the run played
@@ -38,7 +42,7 @@ export function useFollow({
   source,
   addressed,
   setSource,
-  drawingField,
+  field,
   fieldShownMoment,
   fieldFailed,
   onClockMoved,
@@ -46,11 +50,13 @@ export function useFollow({
   source: SceneSource;
   addressed: SceneSource;
   setSource: (change: SetSource) => void;
-  drawingField: boolean;
+  /** The field drawn over the scene, by name, or null for none. */
+  field: string | null;
   fieldShownMoment: number | null;
   fieldFailed: boolean;
   onClockMoved: () => void;
 }) {
+  const waitsForField = field === CLIMATE_FIELD;
   const followed = source.kind === "scenario" && source.follow ? source.scenarioId : null;
   const [playback, setPlayback] = usePlayback(followed);
   const clockMoment = playback.status === "loaded" ? followedMoment(playback.state) : null;
@@ -59,7 +65,7 @@ export function useFollow({
     if (followed === null || clockMoment === null || clockMoment === askedMoment) {
       return;
     }
-    if (drawingField && fieldShownMoment !== askedMoment && !fieldFailed) {
+    if (waitsForField && fieldShownMoment !== askedMoment && !fieldFailed) {
       return;
     }
     onClockMoved();
@@ -71,7 +77,7 @@ export function useFollow({
     clockMoment,
     askedMoment,
     fieldShownMoment,
-    drawingField,
+    waitsForField,
     fieldFailed,
     onClockMoved,
     setSource,

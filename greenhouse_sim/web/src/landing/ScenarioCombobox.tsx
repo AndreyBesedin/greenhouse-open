@@ -30,12 +30,16 @@ export function scrolledTo(
 export function ScenarioCombobox({
   scenarios,
   counts,
+  behindDialog = false,
   onChoose,
   onBuild,
 }: {
   scenarios: readonly ScenarioSummary[];
   /** How many runs each scenario has kept, once they are known. */
   counts: ReadonlyMap<string, number> | null;
+  /** Whether a dialog it opened is showing: closing, the browser gives the input
+   * focus back, which is no asking for the list. */
+  behindDialog?: boolean;
   onChoose: (scenarioId: string) => void;
   onBuild: () => void;
 }) {
@@ -120,7 +124,7 @@ export function ScenarioCombobox({
           setOpen(true);
           setActive(0);
         }}
-        onFocus={() => setOpen(true)}
+        onFocus={() => setOpen(!behindDialog)}
         // Focus is already there after a choice or Escape: a click opens the list again.
         onClick={() => setOpen(true)}
         onBlur={() => setOpen(false)}

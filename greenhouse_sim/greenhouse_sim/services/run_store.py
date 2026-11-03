@@ -11,7 +11,13 @@ backend (`FolderStore`). An epoch's objects, under `{run_id}/{epoch}/`:
   written with DuckDB;
 - `checkpoints/{instant}.json.zst`: a model's state at an instant, kept as
   its content type says;
-- `interventions.jsonl`: the changes given to the epoch, in order;
+- `interventions.jsonl`: the changes given to the epoch, in order, each
+  written before it is acted on (P17.8);
+- `requests/{id}.json`: a change asked of the epoch by someone other than its
+  worker, the only way one reaches it (the store is the only channel between
+  a worker and the API), and `answers/{id}.json`, why its worker did not take
+  it. Each is written once, by the one side, so that no two writers share an
+  object;
 - `commits/{seq}.json`: written last. A commit names one segment, its
   checkpoint if there is one, the position reached in the log, and the
   trajectory digest: a running sha256 over every object the commits so far
@@ -29,7 +35,9 @@ import hashlib
 import json
 import math
 import os
+import secrets
 import tempfile
+import time
 from collections.abc import Callable, Iterable, Sequence
 from compression import zstd
 from dataclasses import dataclass
@@ -58,6 +66,8 @@ MICROSECONDS_A_SECOND: Final = 1_000_000
 INSTANT_DIGITS: Final = 16
 SEQ_DIGITS: Final = 8
 _PARTIAL: Final = ".partial"
+# How much is drawn to tell apart two requests asked in one nanosecond.
+REQUEST_TOKEN_BYTES: Final = 4
 # The instant instants are counted from in a segment's file.
 EPOCH: Final = datetime(1970, 1, 1, tzinfo=UTC)
 
@@ -201,14 +211,28 @@ class EpochManifest(BaseModel):
 
 class LogEntry(BaseModel):
     """A change given to an epoch while it ran: its number in the log, the
-    instant it takes effect, who gave it, and what it is."""
+    instant it takes effect, the moment of the epoch's clock it was given at,
+    who gave it, what it is, and the request it answers if it was asked for
+    through the store. It is applied again at the moment it was given, so
+    that the epoch it makes is the same whenever it is worked out."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     seq: int
     at_s: float
+    given_s: float
     by: str
     what: dict[str, JsonValue]
+    request: str | None = None
+
+
+class Answer(BaseModel):
+    """Why a worker did not act on a request it took, in its own words."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    request: str
+    reason: str
 
 
 class Commit(BaseModel):
@@ -495,16 +519,58 @@ class EpochStore:
     def log(self) -> list[LogEntry]:
         """The changes given to the epoch up to the last commit."""
         commits = self.commits()
-        return self._log_to(commits[-1].log_position if commits else 0)
+        return self.logged()[: commits[-1].log_position if commits else 0]
 
-    def _log_to(self, position: int) -> list[LogEntry]:
+    def logged(self) -> list[LogEntry]:
+        """Every change logged, those no commit names yet included: each is
+        acted on once it is here, and applied again if a crash comes first."""
         data = self.objects.get(f"{self._home}/interventions.jsonl") or b""
-        lines = data.decode().splitlines()[:position]
-        return [LogEntry.model_validate_json(line) for line in lines]
+        return [LogEntry.model_validate_json(line) for line in data.decode().splitlines()]
+
+    def append_log(self, entry: LogEntry) -> None:
+        """Logs a change, its number the next, before it is acted on. Only
+        the epoch's worker writes its log."""
+        held = self.objects.get(f"{self._home}/interventions.jsonl") or b""
+        if entry.seq != len(held.splitlines()):
+            raise ValueError(f"the log of {self._home} is at {len(held.splitlines())}")
+        line = entry.model_dump_json().encode() + b"\n"
+        self.objects.put(f"{self._home}/interventions.jsonl", held + line)
+
+    def ask(self, what: dict[str, JsonValue]) -> str:
+        """Asks the epoch's worker for a change: an object of its own, named
+        so that names sort as they were asked; the name it is known by."""
+        request = f"{time.time_ns():020d}-{secrets.token_hex(REQUEST_TOKEN_BYTES)}"
+        self.objects.put(f"{self._home}/requests/{request}.json", json.dumps(what).encode())
+        return request
+
+    def requests(self) -> list[str]:
+        """The changes asked of the epoch, in the order they were asked."""
+        prefix = f"{self._home}/requests/"
+        return [
+            name.removeprefix(prefix).removesuffix(".json") for name in self.objects.names(prefix)
+        ]
+
+    def request(self, request: str) -> bytes | None:
+        return self.objects.get(f"{self._home}/requests/{request}.json")
+
+    def answer(self, answer: Answer) -> None:
+        """Says why a request was not acted on."""
+        self.objects.put(
+            f"{self._home}/answers/{answer.request}.json", answer.model_dump_json().encode()
+        )
+
+    def answers(self) -> list[Answer]:
+        found = (self.objects.get(n) for n in self.objects.names(f"{self._home}/answers/"))
+        return [Answer.model_validate_json(data) for data in found if data is not None]
 
     def _log_bytes(self, position: int) -> bytes:
-        data = self.objects.get(f"{self._home}/interventions.jsonl") or b""
-        return b"".join(line + b"\n" for line in data.splitlines()[:position])
+        """The log's first `position` entries as a trajectory's digest takes
+        them: what each is, and not the name of the request that brought it,
+        which is drawn afresh each time one is asked."""
+        return b"".join(
+            entry.model_copy(update={"request": None}).model_dump_json().encode() + b"\n"
+            for entry in self.logged()[:position]
+        )
 
     def commit(
         self,
@@ -515,10 +581,11 @@ class EpochStore:
         events: Sequence[Event] = (),
         outcomes: Sequence[ActionOutcome] = (),
         checkpoint: bytes | None = None,
-        log: Sequence[LogEntry] = (),
     ) -> Commit:
-        """Writes a span's segment, its checkpoint and the log's new entries,
-        then the commit that names them, last."""
+        """Writes a span's segment and its checkpoint, then the commit that
+        names them, last, with the log's entries given before the span's end:
+        what its records were worked out under, whatever else is logged by the
+        time it is written, which depends on how the epoch was paced."""
         # Named, and so refused if an instant cannot be, before anything is written.
         segment = f"{instant_name(start_s)}-{instant_name(end_s)}"
         if end_s < start_s:
@@ -544,13 +611,7 @@ class EpochStore:
             kept = f"{self._home}/checkpoints/{instant_name(end_s)}.json.zst"
             self.objects.put(kept, checkpoint)
             parts.append((kept, checkpoint))
-        position = previous.log_position if previous else 0
-        if log:
-            lines = self._log_bytes(position) + b"".join(
-                entry.model_dump_json().encode() + b"\n" for entry in log
-            )
-            self.objects.put(f"{self._home}/interventions.jsonl", lines)
-            position += len(log)
+        position = sum(entry.given_s < end_s for entry in self.logged())
         parts.append((f"{self._home}/interventions.jsonl", self._log_bytes(position)))
         made = Commit(
             seq=len(commits),
@@ -632,9 +693,10 @@ class EpochStore:
     def discard_uncommitted(self) -> list[str]:
         """Removes what a crash left past the last commit, which names what
         the epoch holds: segments and checkpoints written for a commit that
-        was never made, a commit past a gap, and log entries given after the
-        last commit. The next commit writes over those of its own span; the
-        rest, of another span, would stay. The names removed."""
+        was never made, and a commit past a gap. The next commit writes over
+        those of its own span; the rest, of another span, would stay. Log
+        entries past the last commit stay, to be applied again, as do the
+        requests and answers, which no commit names. The names removed."""
         commits = self.commits()
         kept = {f"{self._home}/manifest.json", f"{self._home}/interventions.jsonl"}
         for commit in commits:
@@ -642,16 +704,18 @@ class EpochStore:
             kept.update(f"{self._home}/segments/{commit.segment}/{kind}.parquet" for kind in Kind)
             if commit.checkpoint is not None:
                 kept.add(commit.checkpoint)
+        # By their folders and not by a listing, in which one asked meanwhile
+        # would be missing: the asker is in another process.
+        spared = (f"{self._home}/requests/", f"{self._home}/answers/")
         removed = []
         for name in self.objects.names(f"{self._home}/"):
-            if name not in kept and name != f"{self._home}/{leases.LEASE}":
+            if (
+                name not in kept
+                and name != f"{self._home}/{leases.LEASE}"
+                and not name.startswith(spared)
+            ):
                 self.objects.delete(name)
                 removed.append(name)
-        position = commits[-1].log_position if commits else 0
-        held = self.objects.get(f"{self._home}/interventions.jsonl")
-        if held is not None and len(held.splitlines()) > position:
-            self.objects.put(f"{self._home}/interventions.jsonl", self._log_bytes(position))
-            removed.append(f"{self._home}/interventions.jsonl")
         return removed
 
     def _verify_commit(self, commit: Commit) -> None:

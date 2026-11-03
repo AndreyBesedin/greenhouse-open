@@ -62,6 +62,26 @@ describe("what moves a position over a stored run", () => {
     expect(playing.onPause).toHaveBeenCalledOnce();
   });
 
+  it("says why a move did nothing, and nothing when none was refused", () => {
+    expect(shown(position()).container.querySelector('[role="alert"]')).toBeNull();
+    rendered?.unmount();
+
+    rendered = render(
+      <ReplayTransport
+        position={position()}
+        refused="no position 'p1'"
+        onPlay={vi.fn()}
+        onPause={vi.fn()}
+        onFollow={vi.fn()}
+        onSeek={vi.fn()}
+        onPace={vi.fn()}
+      />,
+    );
+    expect(rendered.container.querySelector('[role="alert"]')?.textContent).toContain(
+      "no position 'p1'",
+    );
+  });
+
   it("moves a day back or on, at the same time of day", () => {
     const { container, onSeek } = shown(position());
 

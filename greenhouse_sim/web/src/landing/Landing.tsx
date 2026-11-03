@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-
 import { BUILDER_PATH } from "../builder/Builder";
+import { GithubMark } from "../icons";
 import { loadScenarios, SCENARIOS_URL, type ScenariosState } from "../scenarios";
 import { useLoad } from "../useLoad";
 import { followAddress } from "./follow";
@@ -85,6 +85,7 @@ export function Landing({
       <header className="landing-header">
         <h1>Greenhouse simulator</h1>
         <a href={REPOSITORY_URL} target="_blank" rel="noopener" className="landing-link-button">
+          <GithubMark />
           Contribute
         </a>
       </header>
@@ -100,6 +101,7 @@ export function Landing({
             <ScenarioChoice
               scenarios={scenarios}
               counts={counts}
+              behindDialog={chosen !== undefined}
               onChoose={(id) => {
                 setForm(false);
                 setOpened(id);
@@ -141,11 +143,13 @@ export function Landing({
 function ScenarioChoice({
   scenarios,
   counts,
+  behindDialog,
   onChoose,
   onBuild,
 }: {
   scenarios: ScenariosState;
   counts: ReadonlyMap<string, number> | null;
+  behindDialog: boolean;
   onChoose: (scenarioId: string) => void;
   onBuild: () => void;
 }) {
@@ -155,6 +159,7 @@ function ScenarioChoice({
         <ScenarioCombobox
           scenarios={scenarios.scenarios}
           counts={counts}
+          behindDialog={behindDialog}
           onChoose={onChoose}
           onBuild={onBuild}
         />

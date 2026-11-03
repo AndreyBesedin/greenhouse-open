@@ -202,7 +202,7 @@ export function App({
     source,
     addressed,
     setSource,
-    drawingField: fieldName !== null,
+    field: fieldName,
     fieldShownMoment: fieldProgress.shown?.field.timeS ?? null,
     fieldFailed: failed(fieldProgress.latest),
     onClockMoved: stopClimatePlay,

@@ -1847,6 +1847,7 @@ body {
 .landing-link-button {
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   align-self: flex-start;
   box-sizing: border-box;
   min-height: 44px;
@@ -1876,7 +1877,7 @@ body {
   font-weight: 600;
 }
 
-.landing-problem {
+.landing-card p.landing-problem {
   color: var(--panel-warn);
 }
 
@@ -2274,6 +2275,11 @@ body {
 
 .replay-computed-text {
   color: var(--panel-muted-strong);
+}
+
+.replay-refused {
+  margin: 0 0 10px;
+  color: var(--panel-warn);
 }
 
 .replay-pace {
