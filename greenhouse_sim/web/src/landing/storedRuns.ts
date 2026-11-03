@@ -124,6 +124,11 @@ export function startedText(run: StoredRun): string {
     : started.toLocaleDateString("en", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
+/** What names a stored epoch, among the runs the simulator keeps. */
+export function runKey(run: Pick<StoredRun, "run_id" | "epoch">): string {
+  return `${run.run_id}/${run.epoch}`;
+}
+
 /** Whether a run is still being computed, when it can be followed and not
  * deleted. */
 export function isComputing(run: StoredRun): boolean {

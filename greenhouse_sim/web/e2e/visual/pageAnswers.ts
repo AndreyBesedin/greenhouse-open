@@ -33,7 +33,6 @@ const SCENARIOS: ScenarioSummary[] = [
     layouts: ["default"],
     weathers: ["default"],
     thermostat: null,
-    packaged: true,
   },
 ];
 

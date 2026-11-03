@@ -1,9 +1,17 @@
 import { expect, type Page, test } from "@playwright/test";
 
-import { CAMERA_PRESETS, DEFAULT_PRESET, PRESET_ORDER, type PresetName } from "../src/camera.ts";
+import {
+  CAMERA_PRESETS,
+  DEFAULT_PRESET,
+  framing,
+  PRESET_ORDER,
+  type PresetName,
+} from "../src/camera.ts";
 import { VIEWER_PATH } from "../src/landing/paths";
 import { formatPoint } from "../src/readouts.ts";
 import type { Point3 } from "../src/world.ts";
+import { chooser } from "./chooser";
+import { unfold } from "./folds";
 import { mainView, onScreen, orbitUntil } from "./view.ts";
 
 const LABELS: Record<PresetName, string> = {
@@ -106,6 +114,54 @@ async function turnWheel(page: Page, notches: number): Promise<void> {
     await page.mouse.wheel(0, Math.sign(notches) * NOTCH_PX);
   }
 }
+
+test("a scenario opened to look at starts with its house framed, and its address says only that", async ({
+  page,
+}) => {
+  await page.goto(`${VIEWER_PATH}?scenario=climate_box`);
+  await expect(page.getByTestId("scene-status")).toContainText("climate_box, day 0");
+  const camera = page.getByTestId("camera-position");
+
+  // The climate box's bounds: 12 m by 6.4 m, 4.8 m to its ridge; the window, 1280 by 720.
+  const framed = framing({ x: 6, y: 3.2, z: 0 }, { x: 12, y: 6.4, z: 4.8 }, 1280 / 720);
+  await expect(camera).toHaveText(formatPoint(framed.position));
+  await expect(page).toHaveURL(/\/view\?scenario=climate_box$/);
+
+  // It only starts there: a preset moves it, and a change of the scene leaves it.
+  await page.getByRole("button", { name: "Isometric" }).click();
+  await expect(camera).toHaveText(DEFAULT_VIEW);
+  await unfold(page, "Air field");
+  await page
+    .getByRole("group", { name: "Air field" })
+    .getByRole("combobox")
+    .first()
+    .selectOption("shear");
+  await expect(page).toHaveURL(/field=shear/);
+  await expect(camera).toHaveText(DEFAULT_VIEW);
+});
+
+test("a preset chosen in one scenario leaves another's opening frame as it is", async ({
+  page,
+}) => {
+  await page.goto(`${VIEWER_PATH}?scenario=climate_box`);
+  await expect(page.getByTestId("scene-status")).toContainText("climate_box, day 0");
+  await page.getByRole("button", { name: "Isometric" }).click();
+  const camera = page.getByTestId("camera-position");
+  await expect(camera).toHaveText(DEFAULT_VIEW);
+
+  await (await chooser(page)).getByRole("button", { name: "Open sensor_lab" }).click();
+
+  await expect(page.getByTestId("scene-status")).toContainText("sensor_lab, day 0");
+  await expect(camera).not.toHaveText(DEFAULT_VIEW);
+});
+
+test("a link from before the landing page opens a scenario at the default view", async ({
+  page,
+}) => {
+  await page.goto("/?scenario=climate_box");
+  await expect(page.getByTestId("scene-status")).toContainText("climate_box, day 0");
+  await expect(page.getByTestId("camera-position")).toHaveText(DEFAULT_VIEW);
+});
 
 test("the wheel zooms towards the greenhouse under the pointer, which stays under it", async ({
   page,

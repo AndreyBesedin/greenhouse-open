@@ -91,6 +91,7 @@ def played(short: Simulator) -> Iterator[Callable[[Epochs, Clock], Playback]]:
         run.stop()
 
 
+@pytest.mark.slow
 def test_a_run_played_to_its_end_is_kept_as_the_consumer_read_it(
     played: Callable[[Epochs, Clock], Playback], tmp_path: Path
 ) -> None:
@@ -139,6 +140,7 @@ def test_a_run_played_to_its_end_is_kept_as_the_consumer_read_it(
     assert again.next(run.run_id) == 1
 
 
+@pytest.mark.slow
 def test_a_restart_and_a_stop_tell_the_epoch_it_was_interrupted(
     played: Callable[[Epochs, Clock], Playback], tmp_path: Path
 ) -> None:
@@ -155,6 +157,7 @@ def test_a_restart_and_a_stop_tell_the_epoch_it_was_interrupted(
     assert by_epoch == {0: Status.INTERRUPTED, 1: Status.INTERRUPTED}
 
 
+@pytest.mark.slow
 def test_a_restart_while_the_last_day_is_kept_leaves_the_new_epoch_running(
     played: Callable[[Epochs, Clock], Playback], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -192,6 +195,7 @@ def test_a_restart_while_the_last_day_is_kept_leaves_the_new_epoch_running(
     assert by_epoch == {0: Status.INTERRUPTED, 1: Status.RUNNING}
 
 
+@pytest.mark.slow
 def test_a_run_whose_simulation_fails_is_kept_as_failed(
     played: Callable[[Epochs, Clock], Playback], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

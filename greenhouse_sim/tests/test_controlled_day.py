@@ -39,6 +39,7 @@ def _controlled(simulator: Simulator, until_s: float) -> HouseTrace:
     )
 
 
+@pytest.mark.slow
 def test_a_schedule_opens_and_shuts_a_vent(simulator: Simulator) -> None:
     def opened(moment: float) -> dict[str, float]:
         at = climate_readings.openings(

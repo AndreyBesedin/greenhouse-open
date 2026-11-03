@@ -343,6 +343,7 @@ def test_an_epoch_has_a_status_and_a_run_its_epochs(tmp_path: Path) -> None:
     assert epochs(FolderStore(tmp_path), "run_c") == []
 
 
+@pytest.mark.slow
 def test_a_checkpoint_kept_restores_a_run_that_replays_as_the_straight_run(
     simulator: Simulator, tmp_path: Path
 ) -> None:

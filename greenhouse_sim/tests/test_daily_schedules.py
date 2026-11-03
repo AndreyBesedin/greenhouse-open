@@ -62,6 +62,7 @@ def test_a_command_for_a_moment_overrides_the_days_then(simulator: Simulator) ->
     )
 
 
+@pytest.mark.slow
 def test_the_sensors_read_a_daily_schedules_run(simulator: Simulator) -> None:
     path = "/api/scenarios/climate_box/climate/truth?t=162000"
     daily = respond(simulator, "GET", f"{path}&daily={EVENINGS}")

@@ -58,6 +58,7 @@ def scored(simulator: Simulator) -> tuple[list[Observation], GroundTruth]:
     return _observed(simulator, UNTIL_S), ground_truth(simulator, RUN, UNTIL_S)
 
 
+@pytest.mark.slow
 def test_every_reading_is_scored_against_what_it_truly_measured(
     scored: tuple[list[Observation], GroundTruth],
 ) -> None:
@@ -72,6 +73,7 @@ def test_every_reading_is_scored_against_what_it_truly_measured(
     assert {ObservationType.AIR_TEMPERATURE_C, ObservationType.OUTSIDE_WIND_DIRECTION_DEG} < kinds
 
 
+@pytest.mark.slow
 def test_clean_sensors_and_an_exact_walk_read_the_truth() -> None:
     """Each reading is held to its own truth: a clean sensor's is its truth
     exactly, and an exact walk's within the tenth its mass and height are
@@ -135,6 +137,7 @@ def test_readings_with_no_true_reading_are_skipped_not_scored(
     assert other.readings == 0
 
 
+@pytest.mark.slow
 def test_a_steered_playbacks_readings_are_scored_under_the_name_it_gives_them(
     simulator: Simulator,
 ) -> None:

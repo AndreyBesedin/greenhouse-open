@@ -49,6 +49,7 @@ def tended(simulator: Simulator) -> Simulator:
     return simulator
 
 
+@pytest.mark.slow
 def test_the_reference_runs_first_days_replay_to_the_digests_kept(simulator: Simulator) -> None:
     kept = json.loads(FIXTURE.read_text())
 

@@ -32,10 +32,6 @@ export interface ScenarioSummary {
   weathers?: string[];
   /** The heater a thermostat runs by the house's air, if it has one. */
   thermostat?: string | null;
-  /** Whether it is packaged with the simulator. A worker runs only those: one
-   * built or uploaded is run by its playback (false), and its runs have no
-   * worker to stop or resume them. */
-  packaged?: boolean;
 }
 
 /** The layout a scenario is defined with. */

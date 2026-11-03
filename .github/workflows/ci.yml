@@ -49,7 +49,8 @@ jobs:
 
   # The repository checks in four jobs at once, a part of
   # `scripts/check.py` each: the three packages and the cross-package
-  # checks at the root. The simulator's tests run in a process per core.
+  # checks at the root. The simulator's tests run in a process per core. A
+  # pull request skips the tests marked slow; a push to main runs them all.
   check:
     name: repository checks (${{ matrix.part }})
     needs: changes
@@ -79,7 +80,7 @@ jobs:
         run: uv sync --locked --no-editable
 
       - name: Run canonical repository checks
-        run: uv run --no-sync python scripts/check.py --only ${{ matrix.part }}
+        run: uv run --no-sync python scripts/check.py --only ${{ matrix.part }} ${{ github.event_name == 'pull_request' && '--fast' || '' }}
 
   # The four parts as the one check the `main` ruleset requires.
   checks:

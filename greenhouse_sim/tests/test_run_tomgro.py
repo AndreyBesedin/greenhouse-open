@@ -161,6 +161,7 @@ def test_an_uploaded_checkpoint_no_run_reaches_is_refused(
         checkpoints.upload_checkpoint(simulator, document)
 
 
+@pytest.mark.slow
 def test_its_records_and_its_truth_name_no_plant(grown: Simulator) -> None:
     start = run_start(grown.catalogue, "tomgro_box")
     _, run_id = air_through_a_run(grown, RUN)
