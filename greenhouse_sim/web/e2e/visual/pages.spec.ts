@@ -97,11 +97,16 @@ test.use({ locale: "en-US", timezoneId: "UTC" });
 
 for (const theme of THEMES) {
   for (const drawn of PAGES) {
-    test(`the ${drawn.name} page matches its baseline, ${theme}`, async ({ page }) => {
+    test(`the ${drawn.name} page matches its baseline, ${theme}`, async ({ page }, testInfo) => {
+      const baseline = `page-${drawn.name}-${theme}.png`;
+      const held = existsSync(testInfo.snapshotPath(baseline, { kind: "screenshot" }));
       const unanswered = await open(page, drawn, theme);
 
-      await expect(page).toHaveScreenshot(`page-${drawn.name}-${theme}.png`, EXACT);
+      await expect(page).toHaveScreenshot(baseline, EXACT);
       expect(unanswered).toEqual([]);
+      // A missing baseline is written, and that comparison passes: this fails it,
+      // which keeps what was drawn for CI's `visual-results`.
+      expect(held, `${baseline} is not committed: take it from visual-results`).toBe(true);
     });
   }
 }

@@ -53,22 +53,11 @@ const RUN: StoredRun = {
 };
 
 // Every state a run's status is told in, since each has its own colours.
+const PART_WAY = { frontier_s: DAYS_COMPUTED * DAY_S, progress: DAYS_COMPUTED / DAYS_OF_THE_RUN };
 const RUNS: StoredRun[] = [
   RUN,
-  {
-    ...RUN,
-    epoch: EPOCH + 1,
-    status: "failed",
-    frontier_s: DAYS_COMPUTED * DAY_S,
-    progress: DAYS_COMPUTED / DAYS_OF_THE_RUN,
-  },
-  {
-    ...RUN,
-    epoch: EPOCH + 2,
-    status: "interrupted",
-    frontier_s: DAYS_COMPUTED * DAY_S,
-    progress: DAYS_COMPUTED / DAYS_OF_THE_RUN,
-  },
+  { ...RUN, ...PART_WAY, epoch: EPOCH + 1, status: "failed" },
+  { ...RUN, ...PART_WAY, epoch: EPOCH + 2, status: "interrupted" },
 ];
 
 // Stopped part of the way, so that a replay's track shows both what is computed
