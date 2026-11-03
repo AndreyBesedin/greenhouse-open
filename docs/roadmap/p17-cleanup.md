@@ -27,8 +27,9 @@ takes one checks first that it is still there.
 
 - [ ] **A replay reads one moment three ways:** "Day 10, 02:24", "day 9, 2 h 24 min",
   and a tick "day 0" under "Day 1, 00:00".
-- [ ] **Deleting a running run shows a raw id** and says to stop the run, and the
-  dialog has no stop control.
+- [x] **Deleting a running run shows a raw id** and says to stop the run, and the
+  dialog has no stop control. It says which run, by its seed and epoch, and what to
+  do, and a worker's run has a *Stop* button beside it.
 
 ### Low
 

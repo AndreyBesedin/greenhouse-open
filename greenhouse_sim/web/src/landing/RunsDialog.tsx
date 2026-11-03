@@ -5,6 +5,7 @@ import type { ScenarioSummary } from "../scenarios";
 import { loadPlayback, parsePlayback } from "../scene/playback";
 import { followAddress } from "./follow";
 import { replayAddress, viewerAddress } from "./paths";
+import { RunControls } from "./RunControls";
 import { FollowLink, RunProgress, StatusChip } from "./RunParts";
 import { startWorkerRun } from "./startRun";
 import { type StoredRun, sizeText, startedText } from "./storedRuns";
@@ -13,16 +14,25 @@ import { type StoredRun, sizeText, startedText } from "./storedRuns";
  * for a simulated day. */
 const DEFAULT_PACE_S = "10";
 
+/** How the simulator refuses to delete a run being computed. */
+const STILL_COMPUTED = 409;
+
 /** What starting a run of a scenario no worker can run did: made one, or found
  * its playback already playing that run and epoch, which starting it again only
  * resumes. */
 type Outcome = { kind: "started" | "resumed"; epoch: number; layout: string };
 
-/** The runs of a scenario the simulator has kept, with a way to start another
- * and to remove one (P17.5, decision 0065). A run started is a worker's, beside
- * any others, and the page goes to its replay; one of a built or uploaded
- * scenario, which a worker cannot run, is its playback's, and the page stays. A
- * modal dialog: the browser keeps the keyboard in it and closes it on Escape. */
+/** Who a run is, as a list of one scenario's says it. */
+function whoIs(run: StoredRun): string {
+  return `${run.seed === null ? "the scenario's seed" : `seed ${run.seed}`}, epoch ${run.epoch}`;
+}
+
+/** The runs of a scenario the simulator has kept, with a way to start another,
+ * to stop, resume and remove one (P17.5, decision 0065). A run started is a
+ * worker's, beside any others, and the page goes to its replay; one of a built
+ * or uploaded scenario, which a worker cannot run, is its playback's, and the
+ * page stays, with no worker to stop or resume it. A modal dialog: the browser
+ * keeps the keyboard in it and closes it on Escape. */
 export function RunsDialog({
   scenario,
   runs,
@@ -153,6 +163,11 @@ export function RunsDialog({
       },
     ).catch(() => null);
     setConfirming(null);
+    if (response?.status === STILL_COMPUTED) {
+      const then = byWorker ? "stop it, then delete it" : "wait for it to end, then delete it";
+      setProblem(`The run with ${whoIs(run)} is still being computed: ${then}.`);
+      return;
+    }
     if (response === null || !response.ok) {
       setProblem(
         response === null ? "The simulator could not be reached." : await refusal(response),
@@ -251,7 +266,7 @@ export function RunsDialog({
         <ul className="landing-runs">
           {runs.map((run) => {
             const key = `${run.run_id}/${run.epoch}`;
-            const who = `${run.seed === null ? "the scenario's seed" : `seed ${run.seed}`}, epoch ${run.epoch}`;
+            const who = whoIs(run);
             const when = startedText(run);
             return (
               <li key={key} className="landing-run">
@@ -272,6 +287,14 @@ export function RunsDialog({
                   Replay
                 </a>
                 <FollowLink run={run} played={followed} />
+                {byWorker && (
+                  <RunControls
+                    key={run.status}
+                    run={run}
+                    name={`the run with ${who}`}
+                    onChanged={onChanged}
+                  />
+                )}
                 {confirming === key ? (
                   <span className="landing-confirm">
                     <button
