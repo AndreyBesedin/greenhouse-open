@@ -36,6 +36,7 @@ from greenhouse_sim.services.checkpoints import Checkpoint, load_openings
 from greenhouse_sim.services.replay import day_probes
 from greenhouse_sim.services.run_store import (
     OBSERVATIONS,
+    Answer,
     EpochManifest,
     EpochStore,
     FolderStore,
@@ -248,21 +249,77 @@ def test_a_changed_object_is_told_by_the_digest(tmp_path: Path) -> None:
         store.observations()
 
 
-def test_the_log_is_the_commits_and_a_crashs_leftovers_are_overwritten(tmp_path: Path) -> None:
-    store = _epoch(tmp_path)
-    entry = LogEntry(seq=0, at_s=60.0, by="operator", what={"target": "heating_day", "value": 24})
-    store.commit(0.0, 100.0, log=[entry])
-    # A line written, whose commit never was.
-    objects = FolderStore(tmp_path)
-    stray = objects.get("run_a/0/interventions.jsonl") or b""
-    objects.put("run_a/0/interventions.jsonl", stray + b'{"seq":1,"at_s":1,"by":"x","what":{}}\n')
+def _entry(seq: int, given_s: float, request: str | None = None) -> LogEntry:
+    return LogEntry(
+        seq=seq,
+        at_s=given_s + 60.0,
+        given_s=given_s,
+        by="person:operator",
+        what={"target": "heating_day", "value": 24},
+        request=request,
+    )
 
-    assert store.log() == [entry]
-    second = LogEntry(seq=1, at_s=150.0, by="operator", what={"target": "heating_day", "value": 22})
-    commit = store.commit(100.0, 200.0, log=[second])
-    assert commit.log_position == 2
-    assert store.log() == [entry, second]
+
+def test_the_log_is_written_first_and_a_commit_names_what_was_given_before_its_span_ended(
+    tmp_path: Path,
+) -> None:
+    store = _epoch(tmp_path)
+    first, second = _entry(0, 50.0), _entry(1, 150.0)
+    store.append_log(first)
+    store.append_log(second)
+
+    # Logged, and not yet a reader's.
+    assert store.logged() == [first, second]
+    assert store.log() == []
+    assert store.commit(0.0, 100.0).log_position == 1
+    assert store.log() == [first]
+    # Given at its end, and not before it: not what the span was worked out under.
+    assert store.commit(100.0, 150.0).log_position == 1
+    assert store.commit(150.0, 200.0).log_position == 2
+    assert store.log() == [first, second]
     store.verify()
+
+
+def test_an_entry_of_the_log_takes_the_next_number(tmp_path: Path) -> None:
+    store = _epoch(tmp_path)
+    with pytest.raises(ValueError, match="is at 0"):
+        store.append_log(_entry(1, 0.0))
+
+
+def test_a_trajectory_takes_a_change_in_and_not_the_name_of_its_request(tmp_path: Path) -> None:
+    named, asked, other = (_epoch(tmp_path / name) for name in ("named", "asked", "other"))
+    named.append_log(_entry(0, 0.0, request="one"))
+    asked.append_log(_entry(0, 0.0, request="two"))
+    other.append_log(_entry(0, 5.0))
+
+    digests = [each.commit(0.0, 100.0).digest for each in (named, asked, other)]
+
+    assert digests[0] == digests[1]
+    assert digests[0] != digests[2]
+    named.verify()
+
+
+def test_a_log_changed_after_its_commit_is_not_what_the_commit_names(tmp_path: Path) -> None:
+    store = _epoch(tmp_path)
+    store.append_log(_entry(0, 0.0))
+    store.commit(0.0, 100.0)
+    objects = FolderStore(tmp_path)
+    held = objects.get("run_a/0/interventions.jsonl") or b""
+    objects.put("run_a/0/interventions.jsonl", held.replace(b"heating_day", b"heating_nit"))
+
+    with pytest.raises(StoreCorrupt):
+        store.verify()
+
+
+def test_requests_are_kept_in_order_and_answered(tmp_path: Path) -> None:
+    store = _epoch(tmp_path)
+    first = store.ask({"kind": "one"})
+    second = store.ask({"kind": "two"})
+
+    assert store.requests() == [first, second]
+    assert store.request(first) == b'{"kind": "one"}'
+    store.answer(Answer(request=second, reason="no"))
+    assert store.answers() == [Answer(request=second, reason="no")]
 
 
 def test_an_epoch_has_a_status_and_a_run_its_epochs(tmp_path: Path) -> None:

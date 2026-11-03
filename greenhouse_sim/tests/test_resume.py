@@ -118,11 +118,11 @@ def test_an_epoch_given_changes_while_it_ran_is_refused(
     simulator: Simulator, tmp_path: Path
 ) -> None:
     epoch = _interrupted_after(simulator, tmp_path, 1)
+    epoch.append_log(LogEntry(seq=0, at_s=DAY_S, given_s=DAY_S, by="someone", what={}))
     epoch.commit(
         DAY_S,
         2 * DAY_S,
         checkpoint=compress("{}"),
-        log=[LogEntry(seq=0, at_s=DAY_S, by="someone", what={})],
     )
     epoch.set_status(Status.INTERRUPTED)
 
@@ -286,7 +286,8 @@ def test_what_a_crash_left_past_the_last_commit_is_removed_before_it_is_carried_
         home = f"{epoch.run_id}/{epoch.epoch}"
         before = _held(epoch)
         # A segment and a checkpoint for a span no commit has, a commit past a
-        # gap, and a log entry given after the last commit.
+        # gap; and a log entry given after the last commit, with the request it
+        # came by, which are not to be lost.
         orphans = {
             f"{home}/segments/{'9' * 16}-{'9' * 16}/events.parquet",
             f"{home}/checkpoints/{'9' * 16}.json.zst",
@@ -294,10 +295,41 @@ def test_what_a_crash_left_past_the_last_commit_is_removed_before_it_is_carried_
         }
         for name in orphans:
             epoch.objects.put(name, b"left by a crash")
-        epoch.objects.put(f"{home}/interventions.jsonl", b'{"seq": 0}\n')
+        entry = LogEntry(seq=0, at_s=DAY_S, given_s=DAY_S, by="someone", what={})
+        epoch.append_log(entry)
+        request = epoch.ask({"kind": "targets", "targets": {}})
 
         removed = epoch.discard_uncommitted()
 
         assert orphans <= set(removed)
-        assert _held(epoch) - {f"{home}/interventions.jsonl"} == before
-        assert epoch.objects.get(f"{home}/interventions.jsonl") == b""
+        assert _held(epoch) == before | {
+            f"{home}/interventions.jsonl",
+            f"{home}/requests/{request}.json",
+        }
+        assert epoch.logged() == [entry]
+
+
+def test_a_request_asked_as_the_epoch_is_tidied_up_is_not_removed(tmp_path: Path) -> None:
+    """The asker is in another process, and may ask between any two listings."""
+
+    class AskingWhileListing(FolderStore):
+        def __init__(self, root: Path) -> None:
+            super().__init__(root)
+            self.asked: list[str] = []
+            self.epoch: EpochStore | None = None
+
+        def names(self, prefix: str = "") -> list[str]:
+            # As the epoch's whole folder is listed, whatever was listed before.
+            if self.epoch is not None and prefix == f"{self.epoch.run_id}/{self.epoch.epoch}/":
+                self.asked.append(self.epoch.ask({"kind": "targets", "targets": {}}))
+            return super().names(prefix)
+
+    with _simulator() as simulator:
+        store = AskingWhileListing(tmp_path)
+        epoch = _epoch(simulator, tmp_path)
+        again = EpochStore(store, epoch.run_id, epoch.epoch)
+        store.epoch = again
+
+        again.discard_uncommitted()
+
+    assert again.requests() == store.asked
