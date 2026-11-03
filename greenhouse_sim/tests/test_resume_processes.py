@@ -31,10 +31,14 @@ import workers_support
 SHORT: Final = workers_support.SHORT
 WAIT_S: Final = 240.0
 # Slow enough that the first day is committed well before the second.
-SECONDS_PER_DAY: Final = 8
+SECONDS_PER_DAY: Final = 3
 
-# Each test starts processes, which import the simulator: tens of seconds.
-pytestmark = pytest.mark.slow
+
+@pytest.fixture(autouse=True)
+def leases_written_often(monkeypatch: pytest.MonkeyPatch) -> None:
+    """So that `workers_support.lease_let_go` does not wait for a lease's thread to
+    wake, from this test or the one before it."""
+    monkeypatch.setattr(leases, "REFRESH_EVERY_S", workers_support.LEASE_BEAT_S)
 
 
 def _until(condition: Callable[[], bool], what: str) -> None:
@@ -138,6 +142,7 @@ def test_an_epoch_whose_resuming_worker_ends_before_taking_it_up_is_still_interr
     kept = queued(simulator, simulator.runs, SHORT)
     assert execute(simulator, kept, Stepped([DAY_S][:days])) == Status.INTERRUPTED
     assert len(kept.commits()) == days
+    workers_support.lease_let_go(kept)
     scheduling = _workers_that_end_at_once(simulator, tmp_path, monkeypatch)
 
     resumed = respond(simulator, "POST", _resume_path(kept))
@@ -157,10 +162,9 @@ def test_two_requests_to_resume_an_epoch_are_never_looking_for_its_producer_toge
     assert simulator.runs is not None
     # The lease of the epoch executed here is written again while its manifest
     # says it is worked: it is let end before the manifest is made to say so.
-    monkeypatch.setattr(leases, "REFRESH_EVERY_S", 0.02)
     kept = queued(simulator, simulator.runs, SHORT)
     assert execute(simulator, kept, Stepped([DAY_S])) == Status.INTERRUPTED
-    time.sleep(0.2)
+    workers_support.lease_let_go(kept)
     # As a producer that died leaves it: running, and no lease.
     running = kept.manifest().model_copy(update={"status": Status.RUNNING})
     simulator.runs.put(

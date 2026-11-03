@@ -31,7 +31,7 @@ from greenhouse_sim.scenarios.scenario_files import (
     export_scenario_file,
     import_scenario_file,
 )
-from greenhouse_sim.services import drafts, scenario_files, scheduler
+from greenhouse_sim.services import drafts, leases, scenario_files, scheduler
 from greenhouse_sim.services.errors import Conflict, InvalidRequest
 from greenhouse_sim.services.playback import FIRST_EPOCH, Epochs, Playback
 from greenhouse_sim.services.run_store import (
@@ -53,6 +53,7 @@ from greenhouse_sim.world.site import DEFAULT_SITE, Site
 # A worker starts from nothing; a test's own scenarios stay in its process.
 sys.path.insert(0, str(Path(__file__).parent))
 
+import short_runs
 import workers_support
 
 SHORT: Final = workers_support.SHORT
@@ -60,7 +61,9 @@ UPLOADED: Final = "uploaded_box"
 DRAFT: Final = "built_house"
 WAIT_S: Final = 240.0
 # Slow enough that the first day is committed well before the second.
-SECONDS_PER_DAY: Final = 8
+SECONDS_PER_DAY: Final = 3
+# Slow enough to tell from a house's days, which take a fraction of it.
+PACE_S: Final = 1.5
 DAYS: Final = 2
 SITE: Final = Site(
     latitude_deg=-33.9,
@@ -76,6 +79,13 @@ RECORDING: Final = "timestamp,outside_air_temperature_c,outside_relative_humidit
 )
 
 
+@pytest.fixture(autouse=True)
+def leases_written_often(monkeypatch: pytest.MonkeyPatch) -> None:
+    """So that `workers_support.lease_let_go` does not wait for a lease's thread to
+    wake, from this test or the one before it."""
+    monkeypatch.setattr(leases, "REFRESH_EVERY_S", workers_support.LEASE_BEAT_S)
+
+
 def _until(condition: Callable[[], bool], what: str) -> None:
     deadline = time.monotonic() + WAIT_S
     while not condition():
@@ -84,10 +94,8 @@ def _until(condition: Callable[[], bool], what: str) -> None:
 
 
 def _uploaded_config() -> ScenarioConfig:
-    return PACKAGED.configs["climate_box"].model_copy(
+    return short_runs.one_plant_box(UPLOADED, DAYS).model_copy(
         update={
-            "greenhouse_id": UPLOADED,
-            "duration_days": DAYS,
             "site": SITE,
             "weather": checked_recording("mine.csv", RECORDING.encode()),
         }
@@ -148,7 +156,6 @@ def _no_scenario_files(objects: FolderStore) -> None:
         objects.delete(name)
 
 
-@pytest.mark.slow
 @pytest.mark.parametrize("make", [_built, _upload], ids=["built", "uploaded"])
 def test_a_scenario_runs_is_killed_and_resumes_in_a_worker_with_only_the_store(
     tmp_path: Path, make: Callable[[Simulator], str]
@@ -197,7 +204,6 @@ def test_a_scenario_runs_is_killed_and_resumes_in_a_worker_with_only_the_store(
     epoch.verify()
 
 
-@pytest.mark.slow
 def test_a_fork_of_an_uploaded_scenario_runs_in_a_worker_under_its_weather_and_site(
     tmp_path: Path,
 ) -> None:
@@ -230,19 +236,19 @@ def _reading(observation: Observation) -> tuple[object, ...]:
     return (observation.timestamp, observation.observation_type, observation.value)
 
 
-@pytest.mark.slow
 def test_an_old_epoch_of_a_packaged_scenario_resumes_as_it_was(tmp_path: Path) -> None:
     objects = FolderStore(tmp_path / "runs")
-    box = "climate_box"
+    packaged = "sensor_lab"
     with Simulator(runs=objects) as made:
-        kept = queued(made, objects, box, seed=5)
+        kept = queued(made, objects, packaged, seed=5)
         assert execute(made, kept, Stepped([DAY_S])) == Status.INTERRUPTED
-        whole = queued(made, FolderStore(tmp_path / "whole"), box, seed=5)
+        whole = queued(made, FolderStore(tmp_path / "whole"), packaged, seed=5)
         assert execute(made, whole, Stepped([DAY_S, 2 * DAY_S])) == Status.INTERRUPTED
         assert kept.manifest().scenario_file is None
         _as_older_code_left(objects, kept)
         run_id = kept.run_id
         made.scheduler = Scheduler(made, objects.root, limit=1)
+        workers_support.lease_let_go(kept)
 
         assert made.scheduler.resume(run_id, kept.epoch).run_id == run_id
         _until(lambda: kept.frontier_s() >= 2 * DAY_S, "another day of it")
@@ -252,7 +258,6 @@ def test_an_old_epoch_of_a_packaged_scenario_resumes_as_it_was(tmp_path: Path) -
     assert kept.manifest().scenario_file is None
 
 
-@pytest.mark.slow
 def test_an_old_epoch_of_a_scenario_this_simulator_knows_is_given_its_file_and_resumes(
     tmp_path: Path,
 ) -> None:
@@ -266,6 +271,7 @@ def test_an_old_epoch_of_a_scenario_this_simulator_knows_is_given_its_file_and_r
         _as_older_code_left(objects, kept)
         _no_scenario_files(objects)
         made.scheduler = Scheduler(made, objects.root, limit=1)
+        workers_support.lease_let_go(kept)
 
         assert made.scheduler.resume(kept.run_id, kept.epoch).run_id == whole.run_id
         _until(lambda: kept.manifest().status == Status.FINISHED, "the epoch to end")
@@ -498,22 +504,19 @@ def test_a_draft_of_an_uploaded_scenario_changes_only_what_its_weather_overrides
         assert entry.config.random_seed == seed
 
 
-@pytest.mark.slow
 def test_a_worker_goes_at_the_pace_its_epoch_names(tmp_path: Path) -> None:
     """A day is written once the clock has passed it, so that the commits of a
     house this quick to work out lie a pace apart."""
     objects = FolderStore(tmp_path / "runs")
     with Simulator(drafts=DraftStore(tmp_path / "drafts.sqlite3"), runs=objects) as made:
         scenario_id = _built(made)
-        shown = respond(
-            made, "POST", f"/api/scenarios/{scenario_id}/runs?seconds_per_day={SECONDS_PER_DAY}"
-        )
+        shown = respond(made, "POST", f"/api/scenarios/{scenario_id}/runs?seconds_per_day={PACE_S}")
         assert isinstance(shown.body, dict)
         epoch = EpochStore(objects, str(shown.body["run_id"]), int(str(shown.body["epoch"])))
         _until(lambda: epoch.manifest().status == Status.FINISHED, "the epoch to end")
 
     first, second = sorted(objects.root.glob(f"{epoch.run_id}/{epoch.epoch}/commits/*.json"))
-    assert second.stat().st_mtime - first.stat().st_mtime > SECONDS_PER_DAY / 2
+    assert second.stat().st_mtime - first.stat().st_mtime > PACE_S / 2
 
 
 def test_a_draft_of_a_scenario_runs_under_the_site_and_weather_it_asks_for(tmp_path: Path) -> None:

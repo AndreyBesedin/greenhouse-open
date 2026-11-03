@@ -2,6 +2,7 @@
 from the checkpoint of its last commit, ending as the epoch that was never
 interrupted does, whatever a crash left past its last commit."""
 
+import sys
 import threading
 import time
 from collections.abc import Iterator
@@ -11,7 +12,6 @@ from typing import Final
 import pytest
 
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import interrupted, leases
 from greenhouse_sim.services.checkpoints import checkpoints
 from greenhouse_sim.services.errors import Conflict, InvalidRequest
@@ -26,19 +26,20 @@ from greenhouse_sim.services.run_store import (
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.workers import Free, Paced, Stepped, execute, queued, resume
 
-BOX: Final = "climate_box"
+sys.path.insert(0, str(Path(__file__).parent))
+
+import short_runs
+
 SHORT: Final = "climate_box_short"
 DAYS: Final = 3
 WAIT_S: Final = 60.0
 
 
 def _simulator() -> Simulator:
-    """The climate box cut to a run of three days; a new one is a process
-    started again, which keeps none of what the one before worked out."""
+    """A run of three days of the one-plant box; a new one is a process started
+    again, which keeps none of what the one before worked out."""
     made = Simulator()
-    made.catalogue.register(
-        SCENARIO_REGISTRY[BOX].model_copy(update=dict(greenhouse_id=SHORT, duration_days=DAYS))
-    )
+    made.catalogue.register(short_runs.one_plant_box(SHORT, DAYS))
     return made
 
 

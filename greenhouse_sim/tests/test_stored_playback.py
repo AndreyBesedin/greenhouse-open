@@ -3,6 +3,7 @@ viewer stands over an epoch kept in the run store. It reads what the epoch
 delivered by its moment, seeks anywhere up to the frontier, follows it, and
 changes nothing the epoch holds or a consumer reads."""
 
+import sys
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -14,8 +15,6 @@ import pytest
 from greenhouse_protocol.observation import Observation
 
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.scenarios import SCENARIO_REGISTRY
-from greenhouse_sim.services.checkpoints import load_openings
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand, delivered
 from greenhouse_sim.services.replay import day_probes
@@ -30,8 +29,11 @@ from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.stored_playback import Position, StoredEpoch
 
-REFERENCE: Final = "reference_greenhouse"
-STORED: Final = "reference_greenhouse_stored"
+sys.path.insert(0, str(Path(__file__).parent))
+
+import short_runs
+
+STORED: Final = "climate_box_stored"
 DAYS: Final = 3
 EVERY_S: Final = 300.0
 ALL: Final = 10**6
@@ -49,10 +51,7 @@ class Clock:
 
 
 def _register(simulator: Simulator) -> None:
-    config = SCENARIO_REGISTRY[REFERENCE].model_copy(
-        update=dict(greenhouse_id=STORED, duration_days=DAYS)
-    )
-    simulator.catalogue.register(config)
+    simulator.catalogue.register(short_runs.tended_box(STORED, DAYS))
 
 
 def _until(condition: Callable[[], bool], what: str) -> None:
@@ -79,7 +78,6 @@ class Kept:
 @pytest.fixture(scope="module")
 def kept(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Kept]:
     with Simulator() as simulator:
-        load_openings(simulator)
         _register(simulator)
         epochs, clock = Epochs(tmp_path_factory.mktemp("runs")), Clock()
         played = Playback(
@@ -362,7 +360,6 @@ def _kept_days(simulator: Simulator) -> list[int]:
     return sorted(kept.day for _, kept in simulator.states.values() if kept.house[0] == STORED)
 
 
-@pytest.mark.slow
 def test_seeking_restores_the_nearest_checkpoint_and_draws_the_straight_runs_moment(
     kept: Kept, tmp_path: Path
 ) -> None:
@@ -370,7 +367,6 @@ def test_seeking_restores_the_nearest_checkpoint_and_draws_the_straight_runs_mom
     # Another simulator, which has worked no day of this run out: a seek gives
     # it the checkpoint, and it draws the run's last day as the straight run did.
     with Simulator() as other:
-        load_openings(other)
         _register(other)
         assert not _kept_days(other)
         position = other.positions.open(other, kept.epochs.objects, kept.run_id, kept.epoch)

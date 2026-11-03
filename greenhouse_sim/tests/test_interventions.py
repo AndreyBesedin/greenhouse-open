@@ -20,7 +20,6 @@ from pydantic import JsonValue
 from greenhouse_sim.api.responses import Response
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import interventions
 from greenhouse_sim.services.errors import Conflict
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR
@@ -38,6 +37,7 @@ from greenhouse_sim.services.workers import Free, Stepped, execute, queued, resu
 # simulator with by name, so that the module is put where its process finds it.
 sys.path.insert(0, str(Path(__file__).parent))
 
+import short_runs
 import workers_support
 
 LONG: Final = workers_support.LONG
@@ -45,19 +45,17 @@ BOX: Final = "climate_box"
 SHORT: Final = "climate_box_short"
 DAYS: Final = 3
 MINUTE_S: Final = 60.0
-REFERENCE: Final = "reference_greenhouse"
-REFERENCE_SHORT: Final = "reference_short"
+TENDED: Final = "climate_box_tended"
 WAIT_S: Final = 180.0
 
 
 def _simulator() -> Simulator:
-    """The climate box cut to a run of three days; a new one is a process
-    started again, which keeps none of what the one before worked out."""
+    """A run of three days of the one-plant box, and of it with a heating loop and
+    an organ crop; a new one is a process started again, which keeps none of what
+    the one before worked out."""
     made = Simulator()
-    for name, cut in ((BOX, SHORT), (REFERENCE, REFERENCE_SHORT)):
-        made.catalogue.register(
-            SCENARIO_REGISTRY[name].model_copy(update=dict(greenhouse_id=cut, duration_days=DAYS))
-        )
+    made.catalogue.register(short_runs.one_plant_box(SHORT, DAYS))
+    made.catalogue.register(short_runs.tended_box(TENDED, DAYS))
     return made
 
 
@@ -361,14 +359,14 @@ def _reference_barriers(
 
 
 def _plant(simulator: Simulator) -> str:
-    return plant_ids(scenario(simulator.catalogue, REFERENCE_SHORT))[0]
+    return plant_ids(scenario(simulator.catalogue, TENDED))[0]
 
 
 def test_targets_and_crop_actions_are_applied_again_as_the_epoch_is_carried_on(
     tmp_path: Path,
 ) -> None:
     with _simulator() as made:
-        whole = queued(made, FolderStore(tmp_path / "whole"), REFERENCE_SHORT)
+        whole = queued(made, FolderStore(tmp_path / "whole"), TENDED)
         status = execute(made, whole, Stepped(_reference_barriers(whole, made)))
     assert status == Status.FINISHED
     assert [entry.what["kind"] for entry in whole.log()] == ["targets_changed", "plan"]
@@ -377,7 +375,7 @@ def test_targets_and_crop_actions_are_applied_again_as_the_epoch_is_carried_on(
     assert harvested.effect is not None
 
     with _simulator() as before:
-        cut = queued(before, FolderStore(tmp_path / "cut"), REFERENCE_SHORT)
+        cut = queued(before, FolderStore(tmp_path / "cut"), TENDED)
         barriers = _reference_barriers(cut, before, last=2)
         assert execute(before, cut, Stepped(barriers)) == Status.INTERRUPTED
     # Its harvest is behind its last commit, and is not worked out again.
@@ -456,9 +454,7 @@ def test_an_epoch_with_no_log_is_drawn_as_its_run_alone(
 @pytest.fixture
 def served(tmp_path: Path) -> Iterator[Simulator]:
     with Simulator(runs=FolderStore(tmp_path)) as made:
-        made.catalogue.register(
-            SCENARIO_REGISTRY[BOX].model_copy(update=dict(greenhouse_id=SHORT, duration_days=DAYS))
-        )
+        made.catalogue.register(short_runs.one_plant_box(SHORT, DAYS))
         yield made
 
 
@@ -535,9 +531,7 @@ def test_a_worker_in_a_process_of_its_own_takes_a_change_through_the_store(tmp_p
     """Nothing but the store between the API and the worker: the worker's own
     process logs the change, and a later commit names it."""
     with Simulator(runs=FolderStore(tmp_path)) as made:
-        made.catalogue.register(
-            SCENARIO_REGISTRY[BOX].model_copy(update=dict(greenhouse_id=LONG, duration_days=8))
-        )
+        made.catalogue.register(short_runs.one_plant_box(LONG, workers_support.LONG_DAYS))
         scheduler = Scheduler(made, tmp_path, limit=1)
         made.scheduler = scheduler
         run = scheduler.start(LONG)
@@ -600,14 +594,14 @@ def test_crop_actions_due_as_they_are_given_are_told_apart_and_end_at_their_mome
     tmp_path: Path,
 ) -> None:
     with _simulator() as made:
-        whole = queued(made, FolderStore(tmp_path / "whole"), REFERENCE_SHORT)
+        whole = queued(made, FolderStore(tmp_path / "whole"), TENDED)
         assert execute(made, whole, Stepped(_inspections(whole, made))) == Status.FINISHED
     one, two = whole.outcomes().records
     assert one.event_id != two.event_id
     assert one.resolved_at == two.resolved_at
 
     with _simulator() as before:
-        cut = queued(before, FolderStore(tmp_path / "cut"), REFERENCE_SHORT)
+        cut = queued(before, FolderStore(tmp_path / "cut"), TENDED)
         barriers = _inspections(cut, before, last=2)
         assert execute(before, cut, Stepped(barriers)) == Status.INTERRUPTED
     assert cut.frontier_s() == 2 * DAY_S
@@ -625,9 +619,7 @@ def test_a_reader_draws_what_the_epoch_did_whoever_may_do_what_on_its_own_simula
     """Its worker's grants were not its reader's: what was done stays done."""
     nobody = AuthorisationConfig(version=1, groups=())
     with Simulator(authorisation=nobody) as reader:
-        reader.catalogue.register(
-            SCENARIO_REGISTRY[BOX].model_copy(update=dict(greenhouse_id=SHORT, duration_days=DAYS))
-        )
+        reader.catalogue.register(short_runs.one_plant_box(SHORT, DAYS))
         held = StoredEpoch(reader, steered.objects, steered.run_id, steered.epoch)
         assert held.plan().commanded() == ((DAY_S + MINUTE_S, "heater", 0.5),)
 

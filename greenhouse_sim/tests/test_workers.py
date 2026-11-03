@@ -2,6 +2,7 @@
 three drivers write the same epoch, a reader sees what is committed while the
 epoch goes on, and an epoch that stops, ends early or fails says so."""
 
+import sys
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -11,7 +12,6 @@ from typing import Any, Final
 import pytest
 
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import playback
 from greenhouse_sim.services.errors import Conflict
 from greenhouse_sim.services.run_store import EpochManifest, EpochStore, FolderStore, Status
@@ -21,7 +21,10 @@ from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.stored_playback import StoredEpoch
 from greenhouse_sim.services.workers import Free, Paced, Stepped, execute, queued
 
-BOX: Final = "climate_box"
+sys.path.insert(0, str(Path(__file__).parent))
+
+import short_runs
+
 SHORT: Final = "climate_box_short"
 DAYS: Final = 2
 WAIT_S: Final = 180.0
@@ -29,12 +32,9 @@ WAIT_S: Final = 180.0
 
 @pytest.fixture
 def simulator() -> Iterator[Simulator]:
-    """A simulator with the climate box cut to a run of two days."""
+    """A simulator with a run of two days of the one-plant box."""
     with Simulator() as made:
-        config = SCENARIO_REGISTRY[BOX].model_copy(
-            update=dict(greenhouse_id=SHORT, duration_days=DAYS)
-        )
-        made.catalogue.register(config)
+        made.catalogue.register(short_runs.one_plant_box(SHORT, DAYS))
         yield made
 
 

@@ -41,9 +41,6 @@ SHORT: Final = workers_support.SHORT
 LONG: Final = workers_support.LONG
 WAIT_S: Final = 240.0
 
-# Each test starts processes, which import the simulator: tens of seconds.
-pytestmark = pytest.mark.slow
-
 
 def _until(condition: Callable[[], bool], what: str) -> None:
     deadline = time.monotonic() + WAIT_S

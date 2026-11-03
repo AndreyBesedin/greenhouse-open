@@ -4,6 +4,7 @@ last commit names, and a digest that tells a changed object."""
 
 import json
 import os
+import sys
 from collections import Counter
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -33,7 +34,7 @@ from greenhouse_protocol.provenance import RecordSource
 
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import checkpoints
-from greenhouse_sim.services.checkpoints import Checkpoint, load_openings
+from greenhouse_sim.services.checkpoints import Checkpoint
 from greenhouse_sim.services.replay import day_probes
 from greenhouse_sim.services.run_store import (
     OBSERVATIONS,
@@ -53,7 +54,12 @@ from greenhouse_sim.services.run_store import (
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
 
+sys.path.insert(0, str(Path(__file__).parent))
+
+import short_runs
+
 SCENARIO: Final = "reference_greenhouse"
+TENDED: Final = "climate_box_tended"
 START: Final = datetime(2026, 3, 1, tzinfo=UTC)
 OPERATOR: Final = Principal(kind=PrincipalKind.PERSON, id="operator")
 
@@ -340,7 +346,8 @@ def test_an_epoch_has_a_status_and_a_run_its_epochs(tmp_path: Path) -> None:
 def test_a_checkpoint_kept_restores_a_run_that_replays_as_the_straight_run(
     simulator: Simulator, tmp_path: Path
 ) -> None:
-    run = RunRequest(SCENARIO)
+    simulator.catalogue.register(short_runs.tended_box(TENDED, 3))
+    run = RunRequest(TENDED)
     straight = day_probes(simulator, run, 3)
     saved = checkpoints.save_checkpoint(simulator, run, time_s=2 * DAY_S)
     made = checkpoints.checkpoint(simulator, saved.checkpoint_id)
@@ -356,7 +363,7 @@ def test_a_checkpoint_kept_restores_a_run_that_replays_as_the_straight_run(
 
     assert restored == made
     with Simulator() as fresh:
-        load_openings(fresh)
+        fresh.catalogue.register(short_runs.tended_box(TENDED, 3))
         checkpoints.upload_checkpoint(fresh, json.loads(restored.model_dump_json()))
         assert day_probes(fresh, run, 3) == straight
 
