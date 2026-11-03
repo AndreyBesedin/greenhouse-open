@@ -22,7 +22,6 @@ import threading
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Final
 
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
@@ -36,16 +35,13 @@ from greenhouse_sim.services.playback import (
     PlaybackCommand,
     check_pace,
 )
-from greenhouse_sim.services.run_store import EpochManifest, EpochStore, ObjectStore, Status
+from greenhouse_sim.services.run_store import ENDED, EpochManifest, EpochStore, ObjectStore, Status
 from greenhouse_sim.services.run_store import epochs as stored_epochs
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import layout_name, scenario
 from greenhouse_sim.services.simulator import Simulator
 
 logger = logging.getLogger(__name__)
-
-# The statuses an epoch does not leave.
-ENDED: Final = frozenset({Status.FINISHED, Status.FAILED, Status.INTERRUPTED})
 
 
 @dataclass(frozen=True)
